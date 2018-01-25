@@ -61,6 +61,7 @@ ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)
 	spha->sqrt_n   = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->sqrtm1_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->K_array  = g_ptr_array_new ();
+	spha->Klm_m    = -1;
 
 	g_ptr_array_set_free_func (spha->K_array, (GDestroyNotify) g_array_unref);
 }
@@ -459,6 +460,8 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint 
 
 				g_array_append_val (Km_array, Km);
 			}
+
+			g_array_set_size (Km_array, lmax - n);
 		}
 
 		spha->lmax = lmax;
@@ -499,3 +502,15 @@ ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
  * length @len.
  *
  */
+/**
+ * ncm_sf_spherical_harmonics_get_Klm: (skip)
+ * @spha: a #NcmSFSphericalHarmonics
+ * @l0: First $l_0$
+ * @m: $m$ index
+ *
+ * Gets an array of #NcmSFSphericalHarmonicsK with the coeficients 
+ * necessary to move the recurence from $(l_0, m)\; \to\; (l_\mathrm{max}, m)$. 
+ * 
+ * Returns: (array) (element-type NcmSFSphericalHarmonicsK): a pointer to an array of #NcmSFSphericalHarmonicsK.
+ */
+

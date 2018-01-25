@@ -67,6 +67,7 @@ struct _NcmSFSphericalHarmonics
 	GArray *sqrt_n;
 	GArray *sqrtm1_n;
 	GPtrArray *K_array;
+	gint Klm_m;
 };
 
 typedef struct _NcmSFSphericalHarmonicsY
@@ -123,10 +124,12 @@ G_INLINE_FUNC gint ncm_sf_spherical_harmonics_Y_get_l (NcmSFSphericalHarmonicsY 
 G_INLINE_FUNC gint ncm_sf_spherical_harmonics_Y_get_m (NcmSFSphericalHarmonicsY *sphaY);
 
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l (NcmSFSphericalHarmonicsY *sphaY);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l2 (NcmSFSphericalHarmonicsY *sphaY, gdouble Yblm[2]);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l4 (NcmSFSphericalHarmonicsY *sphaY, gdouble Yblm[4]);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l2pn (NcmSFSphericalHarmonicsY *sphaY, gdouble *Yblm, const gint n);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l2 (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l4 (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_l2pn (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm, const gint n);
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY);
+
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_reset (NcmSFSphericalHarmonicsY *sphaY);
 
 NcmSFSphericalHarmonicsYArray *ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const guint len, const gdouble abstol);
 NcmSFSphericalHarmonicsYArray *ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa);
@@ -139,10 +142,12 @@ G_INLINE_FUNC gint ncm_sf_spherical_harmonics_Y_array_get_l (NcmSFSphericalHarmo
 G_INLINE_FUNC gint ncm_sf_spherical_harmonics_Y_array_get_m (NcmSFSphericalHarmonicsYArray *sphaYa);
 
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm);
-G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm, const gint n);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm);
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm, const gint n);
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_next_m (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len);
+
+G_INLINE_FUNC void ncm_sf_spherical_harmonics_Y_array_reset (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len);
 
 NcmSFSphericalHarmonics *ncm_sf_spherical_harmonics_new (const guint lmax);
 NcmSFSphericalHarmonics *ncm_sf_spherical_harmonics_ref (NcmSFSphericalHarmonics *spha);
@@ -154,6 +159,7 @@ guint ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha);
 
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsY *sphaY, const gdouble theta);
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, const gdouble *theta);
+G_INLINE_FUNC NcmSFSphericalHarmonicsK *ncm_sf_spherical_harmonics_get_Klm (NcmSFSphericalHarmonics *spha, const gint l0, const gint m);
 
 #define NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL (1.0e-20)
 #define NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL (1.0e-40)
@@ -188,7 +194,7 @@ ncm_sf_spherical_harmonics_Y_next_l (NcmSFSphericalHarmonicsY *sphaY)
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_next_l2 (NcmSFSphericalHarmonicsY *sphaY, gdouble Yblm[2])
+ncm_sf_spherical_harmonics_Y_next_l2 (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm)
 {
 	const gdouble x     = sphaY->x;
 
@@ -202,7 +208,7 @@ ncm_sf_spherical_harmonics_Y_next_l2 (NcmSFSphericalHarmonicsY *sphaY, gdouble Y
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_next_l4 (NcmSFSphericalHarmonicsY *sphaY, gdouble Yblm[4])
+ncm_sf_spherical_harmonics_Y_next_l4 (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm)
 {
 	const gdouble x = sphaY->x;
 
@@ -218,7 +224,7 @@ ncm_sf_spherical_harmonics_Y_next_l4 (NcmSFSphericalHarmonicsY *sphaY, gdouble Y
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_next_l2pn (NcmSFSphericalHarmonicsY *sphaY, gdouble *Yblm, const gint n)
+ncm_sf_spherical_harmonics_Y_next_l2pn (NcmSFSphericalHarmonicsY *sphaY, gdouble * restrict Yblm, const gint n)
 {
 	const gdouble x = sphaY->x;
 	const gint np2  = n + 2;
@@ -290,10 +296,7 @@ ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY)
 		sphaY->l     = sphaY->l0;
 	}
 
-	{
-		GArray *Km_array = g_ptr_array_index (sphaY->spha->K_array, sphaY->m);
-		sphaY->Klm       = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, sphaY->l - sphaY->m);
-	}
+	sphaY->Klm = ncm_sf_spherical_harmonics_get_Klm (spha, sphaY->l, sphaY->m);
 	
 	/*printf ("#(%6d, %6d)[% 22.15g]:", spha->l0, spha->m, fabs (spha->Plm));*/
 	if (fabs (sphaY->Plm) < sphaY->abstol)
@@ -405,7 +408,7 @@ ncm_sf_spherical_harmonics_Y_array_next_l (NcmSFSphericalHarmonicsYArray *sphaYa
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm)
+ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm)
 {
 	guint i;
 	for (i = 0; i < len; i++)
@@ -424,7 +427,7 @@ ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaY
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm)
+ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm)
 {
 	NcmSFSphericalHarmonicsK * restrict Klm = sphaYa->Klm;
 	NcmSFSphericalHarmonicsP * restrict P   = sphaYa->P;
@@ -447,7 +450,7 @@ ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaY
 }
 
 G_INLINE_FUNC void 
-ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm, const gint n)
+ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble * restrict Yblm, const gint n)
 {
 	NcmSFSphericalHarmonicsK * restrict Klm = sphaYa->Klm;
 	NcmSFSphericalHarmonicsP * restrict P   = sphaYa->P;
@@ -462,10 +465,18 @@ ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sph
 	
 	for (j = 0; j < n; j++)
 	{
+		const guint jp0 = (j + 0) * len;
+		const guint jp1 = jp0 + len;
+		const guint jp2 = jp1 + len;
+		const gdouble Klm_lp1 = Klm[j].lp1;
+		const gdouble Klm_l   = Klm[j].l;
+		
 		for (i = 0; i < len; i++)
 		{	
-			const gdouble x = P[i].x;
-			Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 2, len, np2)] = Klm[j].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 1, len, np2)] - Klm[j].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 0, len, np2)];
+			const gdouble x        = P[i].x;
+			const gdouble Klm_lp1x = Klm_lp1 * x;
+			
+			Yblm[jp2 + i] = Klm_lp1x * Yblm[jp1 + i] - Klm_l * Yblm[jp0 + i];
 		}
 	}
 
@@ -543,10 +554,7 @@ ncm_sf_spherical_harmonics_Y_array_next_m (NcmSFSphericalHarmonicsYArray *sphaYa
 		sphaYa->l = sphaYa->l0;
 	}
 
-	{
-		GArray *Km_array = g_ptr_array_index (sphaYa->spha->K_array, sphaYa->m);
-		sphaYa->Klm      = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, sphaYa->l - sphaYa->m);
-	}
+	sphaYa->Klm = ncm_sf_spherical_harmonics_get_Klm (spha, sphaYa->l, sphaYa->m);
 
 	{
 		gdouble min_Plm = GSL_POSINF;
@@ -587,19 +595,56 @@ ncm_sf_spherical_harmonics_Y_array_next_m (NcmSFSphericalHarmonicsYArray *sphaYa
 	}
 }
 
+/* Reset methods */
+
+G_INLINE_FUNC void 
+ncm_sf_spherical_harmonics_Y_reset (NcmSFSphericalHarmonicsY *sphaY)
+{
+	NcmSFSphericalHarmonics *spha = sphaY->spha;
+
+	sphaY->l      = 0;
+	sphaY->l0     = 0;
+	sphaY->m      = 0;
+	sphaY->Klm    = ncm_sf_spherical_harmonics_get_Klm (spha, sphaY->l, sphaY->m);
+	sphaY->Pl0m   = ncm_c_sqrt_1_4pi () / NCM_SF_SPHERICAL_HARMONICS_EPS;
+	sphaY->Pl0p1m = sphaY->x * SN (2 * sphaY->l + 3) * sphaY->Pl0m;
+	sphaY->Plm    = sphaY->Pl0m * NCM_SF_SPHERICAL_HARMONICS_EPS;
+	sphaY->Plp1m  = sphaY->Pl0p1m * NCM_SF_SPHERICAL_HARMONICS_EPS;
+}
+
+G_INLINE_FUNC void 
+ncm_sf_spherical_harmonics_Y_array_reset (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len)
+{
+	NcmSFSphericalHarmonics *spha = sphaYa->spha;
+	guint i;
+
+	g_assert_cmpuint (len, ==, sphaYa->len);
+	
+	sphaYa->l   = 0;
+	sphaYa->l0  = 0;
+	sphaYa->m   = 0;
+	sphaYa->Klm = ncm_sf_spherical_harmonics_get_Klm (spha, sphaYa->l, sphaYa->m);
+
+	for (i = 0; i < len; i++)
+	{
+		sphaYa->P[i].l0m     = ncm_c_sqrt_1_4pi () / NCM_SF_SPHERICAL_HARMONICS_EPS;
+		sphaYa->P[i].l0p1m   = sphaYa->P[i].x * SN (2 * sphaYa->l + 3) * sphaYa->P[i].l0m;
+		sphaYa->P[i].lm      = sphaYa->P[i].l0m   * NCM_SF_SPHERICAL_HARMONICS_EPS;
+		sphaYa->P[i].lp1m    = sphaYa->P[i].l0p1m * NCM_SF_SPHERICAL_HARMONICS_EPS;
+	}
+}
+
 /* Start methods */
 
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsY *sphaY, const gdouble theta)
 {
-	GArray *Km_array = g_ptr_array_index (spha->K_array, 0);
-
 	sincos (theta, &sphaY->sqrt1mx2, &sphaY->x);
 	
 	sphaY->l      = 0;
 	sphaY->l0     = 0;
 	sphaY->m      = 0;
-	sphaY->Klm    = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, 0);
+	sphaY->Klm    = ncm_sf_spherical_harmonics_get_Klm (spha, sphaY->l, sphaY->m);
 	sphaY->Pl0m   = ncm_c_sqrt_1_4pi () / NCM_SF_SPHERICAL_HARMONICS_EPS;
 	sphaY->Pl0p1m = sphaY->x * SN (2 * sphaY->l + 3) * sphaY->Pl0m;
 	sphaY->Plm    = sphaY->Pl0m * NCM_SF_SPHERICAL_HARMONICS_EPS;
@@ -609,12 +654,11 @@ ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, NcmSFSpheri
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, const gdouble *theta)
 {
-	GArray *Km_array = g_ptr_array_index (spha->K_array, 0);
 	guint i;
 
 	g_assert_cmpuint (len, ==, sphaYa->len);
 	
-	sphaYa->Klm = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, 0);
+	sphaYa->Klm = ncm_sf_spherical_harmonics_get_Klm (spha, 0, 0);
 	sphaYa->l   = 0;
 	sphaYa->l0  = 0;
 	sphaYa->m   = 0;
@@ -628,6 +672,13 @@ ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHarmonics *spha, NcmSF
 		sphaYa->P[i].lm      = sphaYa->P[i].l0m   * NCM_SF_SPHERICAL_HARMONICS_EPS;
 		sphaYa->P[i].lp1m    = sphaYa->P[i].l0p1m * NCM_SF_SPHERICAL_HARMONICS_EPS;
 	}
+}
+
+G_INLINE_FUNC NcmSFSphericalHarmonicsK *
+ncm_sf_spherical_harmonics_get_Klm (NcmSFSphericalHarmonics *spha, const gint l0, const gint m)
+{
+	GArray *Km_array = g_ptr_array_index (spha->K_array, m);
+	return &g_array_index (Km_array, NcmSFSphericalHarmonicsK, l0 - m);
 }
 
 #undef NCM_SF_SPHERICAL_HARMONICS_EPS

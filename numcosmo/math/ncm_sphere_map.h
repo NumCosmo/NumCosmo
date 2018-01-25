@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_sphere_map.h
  *
@@ -29,10 +30,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
-#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
-#include <numcosmo/math/ncm_timer.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_vector_float.h>
@@ -50,6 +48,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmSphereMapClass NcmSphereMapClass;
 typedef struct _NcmSphereMap NcmSphereMap;
+typedef struct _NcmSphereMapPrivate NcmSphereMapPrivate;
 
 struct _NcmSphereMapClass
 {
@@ -95,27 +94,7 @@ struct _NcmSphereMap
 {
   /*< private >*/
   GObject parent_instance;
-  gint64 nside;
-  gint64 npix;
-  gint64 face_size;
-  gint64 middle_rings_size;
-  gint64 cap_size;
-  gint64 middle_size;
-  gint64 nrings;
-  gint64 nrings_cap;
-  gint64 nrings_middle;
-  NcmSphereMapOrder order;
-  NcmSphereMapCoordSys coordsys;
-  gpointer pvec;
-  gpointer fft_pvec;
-  GPtrArray *fft_plan_r2c;
-  GPtrArray *fft_plan_c2r;
-  guint lmax;
-  GArray *alm;
-  NcmVector *alm_v;
-  NcmVector *Cl;
-  NcmTimer *t;
-	NcmSFSphericalHarmonics *spha;
+  NcmSphereMapPrivate *priv;
 };
 
 GType ncm_sphere_map_get_type (void) G_GNUC_CONST;

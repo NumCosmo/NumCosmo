@@ -258,7 +258,10 @@ ncm_cfg_init (void)
 
   if (numcosmo_init)
     return;
-  
+
+  if (sizeof (NcmComplex) != sizeof (fftw_complex))
+    g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
+
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))

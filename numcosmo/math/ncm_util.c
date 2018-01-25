@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_util.c
  *
@@ -831,7 +832,7 @@ ncm_complex_new ()
 
 /**
  * ncm_complex_dup:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Allocates a new complex number and copy the contents of @c to it.
  *
@@ -841,13 +842,14 @@ NcmComplex *
 ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
-  cc->z = c->z;
+  cc->z[0] = c->z[0];
+  cc->z[1] = c->z[1];
   return cc;
 }
 
 /**
  * ncm_complex_free:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees @c, it should not be used on a statically allocated NcmComplex.
  *
@@ -860,7 +862,7 @@ ncm_complex_free (NcmComplex *c)
 
 /**
  * ncm_complex_clear:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
  *
@@ -872,32 +874,76 @@ ncm_complex_clear (NcmComplex **c)
 }
 
 /**
+ * ncm_complex_set:
+ * @c: a #NcmComplex
+ * @a: the real part $a$
+ * @b: the imaginary part $b$
+ *
+ * Sets @c to $a + I b$.
+ *
+ */
+/**
+ * ncm_complex_set_zero:
+ * @c: a #NcmComplex
+ *
+ * Sets @c to $0 + I 0$.
+ *
+ */
+/**
  * ncm_complex_Re:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the real part of @c.
  *
  * Returns: Re$(c)$.
  */
-gdouble
-ncm_complex_Re (NcmComplex *c)
-{
-  return creal (c->z);
-}
-
 /**
  * ncm_complex_Im:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the imaginary part of @c.
  *
  * Returns: Im$(c)$.
  */
-gdouble
-ncm_complex_Im (NcmComplex *c)
-{
-  return cimag (c->z);
-}
+
+/**
+ * ncm_complex_res_add_mul_real:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 + @c2 * @v, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+/**
+ * ncm_complex_res_add_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @c3: #NcmComplex
+ *
+ * Computes @c1 = @c1 + @c2 * @c3, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+
+/**
+ * ncm_complex_mul_real:
+ * @c: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 * @v.
+ * 
+ */
+/**
+ * ncm_complex_res_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ *
+ * Computes @c1 = @c1 * @c2, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
 
 /**
  * ncm_util_cvode_check_flag:

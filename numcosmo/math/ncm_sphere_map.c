@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_sphere_map.c
  *
@@ -37,6 +38,9 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sphere_map.h"
+#include "math/ncm_vector.h"
+#include "math/ncm_sf_spherical_harmonics.h"
+#include "math/ncm_timer.h"
 #include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_c.h"
@@ -75,7 +79,7 @@
 #  define _fft_vec_ptr(v,i) (&((gfloat *)(v))[i])
 #elif defined (HAVE_FFTW3)
 #  define _fft_vec_alloc fftw_alloc_real 
-#  define _fft_complex complex double 
+#  define _fft_complex complex double
 #  define _fft_vec_alloc_complex fftw_alloc_complex 
 #  define _fft_vec_free  fftw_free
 #  define _fft_vec_set_zero(v,s) memset ((v), 0, sizeof (gdouble) * (s))
@@ -83,6 +87,8 @@
 #  define _fft_vec_memcpy(dest,orig,s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
 #  define _fft_vec_ptr(v,i) (&((gdouble *)(v))[i])
 #else
+#  define _fft_complex complex double
+#  define _fft_vec_alloc_complex(N) g_new (_fft_complex, (N)) 
 #  define _fft_vec_alloc gsl_vector_float_alloc 
 #  define _fft_vec_free  gsl_vector_float_free
 #  define _fft_vec_set_zero(v,s) gsl_vector_float_set_zero (v)
@@ -98,9 +104,13 @@
 #include <gsl/gsl_sf_trig.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#ifndef NCM_SPHERE_MAP_BLOCK_NC 
 #define NCM_SPHERE_MAP_BLOCK_NC 2
-#define NCM_SPHERE_MAP_BLOCK_NCT (2 * NCM_SPHERE_MAP_BLOCK_NC)
 #define NCM_SPHERE_MAP_BLOCK_STEP 8
+#define NCM_SPHERE_MAP_BLOCK_CM 32
+#endif 
+
+#define NCM_SPHERE_MAP_BLOCK_NCT (2 * NCM_SPHERE_MAP_BLOCK_NC)
 #define NCM_SPHERE_MAP_BLOCK_STEPM2 (NCM_SPHERE_MAP_BLOCK_STEP - 2)
 
 #define NCM_SPHERE_MAP_BLOCK_INV_NC 3
@@ -113,6 +123,46 @@
 
 #define NCM_SPHERE_MAP_BLOCK_DEC(name) NCM_SPHERE_MAP_BLOCK_DEC_X(name,NCM_SPHERE_MAP_BLOCK_STEP,NCM_SPHERE_MAP_BLOCK_NC)
 #define NCM_SPHERE_MAP_BLOCK_INV_DEC(name) NCM_SPHERE_MAP_BLOCK_DEC_X(name,NCM_SPHERE_MAP_BLOCK_INV_STEP,NCM_SPHERE_MAP_BLOCK_INV_NC)
+
+struct _NcmSphereMapPrivate
+{
+  gint64 nside;
+  gint64 npix;
+  gint64 face_size;
+  gint64 middle_rings_size;
+  gint64 cap_size;
+  gint64 middle_size;
+  gint64 nrings;
+  gint64 nrings_cap;
+  gint64 nrings_middle;
+  gint64 block_ring_size;
+  gint64 last_sing_ring;
+  NcmSphereMapOrder order;
+  NcmSphereMapCoordSys coordsys;
+  gpointer pvec;
+  gpointer fft_pvec;
+  GPtrArray *fft_plan_r2c;
+  GPtrArray *fft_plan_c2r;
+  guint lmax;
+  _fft_complex *alm;
+  gint64 alm_len;
+  NcmVector *alm_v;
+  NcmVector *Cl;
+  NcmTimer *t;
+	NcmSFSphericalHarmonics *spha;
+  GPtrArray *sphaY_array;
+  GPtrArray *sphaYa_array;
+  GArray *block_data;
+};
+
+typedef struct _NcmSphereMapBlock 
+{
+  _fft_complex * restrict Fima[NCM_SPHERE_MAP_BLOCK_NCT];
+  gint64 ring_size[NCM_SPHERE_MAP_BLOCK_NCT];
+  gint64 ring_size_2[NCM_SPHERE_MAP_BLOCK_NCT];
+  gdouble theta[NCM_SPHERE_MAP_BLOCK_NCT];
+  gdouble phi[NCM_SPHERE_MAP_BLOCK_NCT];
+} NcmSphereMapBlock;
 
 enum
 {
@@ -128,34 +178,44 @@ G_DEFINE_TYPE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
 static void
 ncm_sphere_map_init (NcmSphereMap *pix)
 {
-  pix->nside             = 0;
-  pix->npix              = 0;
-  pix->face_size         = 0;
-  pix->middle_rings_size = 0;
-  pix->cap_size          = 0;
-  pix->middle_size       = 0;
-  pix->nrings            = 0;
-  pix->nrings_cap        = 0;
-  pix->nrings_middle     = 0;
-  pix->order             = NCM_SPHERE_MAP_ORDER_RING;
-  pix->coordsys          = NCM_SPHERE_MAP_COORD_SYS_LEN;
-  pix->pvec              = NULL;
-  pix->fft_pvec          = NULL;
-  pix->fft_plan_r2c      = g_ptr_array_new ();
-  pix->fft_plan_c2r      = g_ptr_array_new ();
+  NcmSphereMapPrivate * const self = pix->priv = G_TYPE_INSTANCE_GET_PRIVATE (pix, NCM_TYPE_SPHERE_MAP, NcmSphereMapPrivate);
+  self->nside             = 0;
+  self->npix              = 0;
+  self->face_size         = 0;
+  self->middle_rings_size = 0;
+  self->cap_size          = 0;
+  self->middle_size       = 0;
+  self->nrings            = 0;
+  self->nrings_cap        = 0;
+  self->nrings_middle     = 0;
+  self->block_ring_size   = 0;
+  self->last_sing_ring    = 0;
+  self->order             = NCM_SPHERE_MAP_ORDER_RING;
+  self->coordsys          = NCM_SPHERE_MAP_COORD_SYS_LEN;
+  self->pvec              = NULL;
+  self->fft_pvec          = NULL;
+  self->fft_plan_r2c      = g_ptr_array_new ();
+  self->fft_plan_c2r      = g_ptr_array_new ();
 #ifdef NUMCOSMO_HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
-  g_ptr_array_set_free_func (pix->fft_plan_r2c, (GDestroyNotify)fftwf_destroy_plan);
-  g_ptr_array_set_free_func (pix->fft_plan_c2r, (GDestroyNotify)fftwf_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify)fftwf_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify)fftwf_destroy_plan);
 #  else
-  g_ptr_array_set_free_func (pix->fft_plan_r2c, (GDestroyNotify)fftw_destroy_plan);
-  g_ptr_array_set_free_func (pix->fft_plan_c2r, (GDestroyNotify)fftw_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify)fftw_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify)fftw_destroy_plan);
 #  endif
 #endif
-  pix->alm  = g_array_new (FALSE, FALSE, sizeof (gsl_complex));
-  pix->Cl   = NULL;
-  pix->t    = ncm_timer_new ();
-	pix->spha = ncm_sf_spherical_harmonics_new (1 << 12);
+  self->alm          = NULL;
+  self->alm_len      = 0;
+  self->Cl           = NULL;
+  self->t            = ncm_timer_new ();
+	self->spha         = ncm_sf_spherical_harmonics_new (1 << 12);
+  self->sphaY_array  = g_ptr_array_new ();
+  self->sphaYa_array = g_ptr_array_new ();
+  self->block_data   = g_array_new (FALSE, FALSE, sizeof (NcmSphereMapBlock));
+
+  g_ptr_array_set_free_func (self->sphaY_array,  (GDestroyNotify) ncm_sf_spherical_harmonics_Y_free);
+  g_ptr_array_set_free_func (self->sphaYa_array, (GDestroyNotify) ncm_sf_spherical_harmonics_Y_array_free);
 }
 
 static void
@@ -188,12 +248,13 @@ static void
 _ncm_sphere_map_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmSphereMap *pix = NCM_SPHERE_MAP (object);
+  NcmSphereMapPrivate * const self = pix->priv;
   g_return_if_fail (NCM_IS_SPHERE_MAP (object));
 
   switch (prop_id)
   {
     case PROP_NSIDE:
-      g_value_set_int64 (value, pix->nside);
+      g_value_set_int64 (value, self->nside);
       break;
     case PROP_ORDER:
       g_value_set_enum (value, ncm_sphere_map_get_order (pix));
@@ -214,13 +275,14 @@ static void
 _ncm_sphere_map_dispose (GObject *object)
 {
   NcmSphereMap *pix = NCM_SPHERE_MAP (object);
+  NcmSphereMapPrivate * const self = pix->priv;
 
-  /*ncm_vector_clear (&pix->alm);*/
-  g_clear_pointer (&pix->alm,  g_array_unref);
-  ncm_vector_clear (&pix->Cl);
+  /*ncm_vector_clear (&self->alm);*/
+  g_clear_pointer (&self->alm,  g_array_unref);
+  ncm_vector_clear (&self->Cl);
 
-	ncm_timer_clear (&pix->t);
-	ncm_sf_spherical_harmonics_clear (&pix->spha);
+	ncm_timer_clear (&self->t);
+	ncm_sf_spherical_harmonics_clear (&self->spha);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sphere_map_parent_class)->dispose (object);
@@ -230,15 +292,18 @@ static void
 _ncm_sphere_map_finalize (GObject *object)
 {
   NcmSphereMap *pix = NCM_SPHERE_MAP (object);
+  NcmSphereMapPrivate * const self = pix->priv;
 
   ncm_sphere_map_set_nside (pix, 0);
-  g_ptr_array_unref (pix->fft_plan_r2c);
-  g_ptr_array_unref (pix->fft_plan_c2r);
+  g_ptr_array_unref (self->fft_plan_r2c);
+  g_ptr_array_unref (self->fft_plan_c2r);
 
-  /*ncm_vector_clear (&pix->alm);*/
-  g_clear_pointer (&pix->alm,  g_array_unref);
-  ncm_vector_clear (&pix->Cl);
-  
+  /*ncm_vector_clear (&self->alm);*/
+  g_clear_pointer (&self->alm,  g_array_unref);
+  ncm_vector_clear (&self->Cl);
+
+  g_clear_pointer (&self->sphaY_array,  g_ptr_array_unref);
+  g_clear_pointer (&self->sphaYa_array, g_ptr_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sphere_map_parent_class)->finalize (object);
@@ -249,6 +314,8 @@ ncm_sphere_map_class_init (NcmSphereMapClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
+  g_type_class_add_private (klass, sizeof (NcmSphereMapPrivate));
+  
   object_class->set_property = &_ncm_sphere_map_set_property;
   object_class->get_property = &_ncm_sphere_map_get_property;
   object_class->dispose      = &_ncm_sphere_map_dispose;
@@ -345,6 +412,20 @@ ncm_sphere_map_clear (NcmSphereMap **pix)
 
 static gint64 _l_pow_2 (gint64 n) { return n * n; }
 
+static void
+_ncm_sphere_map_prepare_circle (NcmSphereMap *pix, NcmSphereMapBlock *block, const gint64 r_i, const gint64 i)
+{
+  NcmSphereMapPrivate * const self = pix->priv;
+  const gint64 ring_fi = ncm_sphere_map_get_ring_first_index (pix, r_i);
+
+  block->ring_size[i]   = ncm_sphere_map_get_ring_size (pix, r_i);
+  block->ring_size_2[i] = block->ring_size[i] / 2;
+
+  block->Fima[i] = &((_fft_complex *)self->fft_pvec)[ring_fi];
+
+  ncm_sphere_map_pix2ang_ring (pix, ring_fi, &block->theta[i], &block->phi[i]);
+}
+
 /**
  * ncm_sphere_map_set_nside:
  * @pix: a #NcmSphereMap
@@ -356,49 +437,96 @@ static gint64 _l_pow_2 (gint64 n) { return n * n; }
 void
 ncm_sphere_map_set_nside (NcmSphereMap *pix, gint64 nside)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
+  
   if (nside > 0)
     g_assert_cmpint (nside, ==, (gint64) exp2 ((gint64) log2 (nside)));
 
-  if (nside != pix->nside)
+  if (nside != self->nside)
   {
-    g_clear_pointer (&pix->pvec, (GDestroyNotify) _fft_vec_free);
+    g_clear_pointer (&self->pvec, (GDestroyNotify) _fft_vec_free);
 
-    pix->nside             = nside;
-    pix->npix              = 0;
-    pix->face_size         = 0;
-    pix->middle_rings_size = 0;
-    pix->cap_size          = 0;
-    pix->middle_size       = 0;
-    pix->nrings            = 0;
-    pix->nrings_cap        = 0;
-    pix->nrings_middle     = 0;
+    self->nside             = nside;
+    self->npix              = 0;
+    self->face_size         = 0;
+    self->middle_rings_size = 0;
+    self->cap_size          = 0;
+    self->middle_size       = 0;
+    self->nrings            = 0;
+    self->nrings_cap        = 0;
+    self->nrings_middle     = 0;
+    self->block_ring_size   = 0;
+    self->last_sing_ring    = 0;
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
-    g_clear_pointer (&pix->fft_pvec, (GDestroyNotify) fftwf_free);
+    g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftwf_free);
 #  else
-    g_clear_pointer (&pix->fft_pvec, (GDestroyNotify) fftw_free);
+    g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftw_free);
 #  endif
 #endif
-    g_ptr_array_set_size (pix->fft_plan_r2c, 0);
-    g_ptr_array_set_size (pix->fft_plan_c2r, 0);
-    
+
+    g_ptr_array_set_size (self->fft_plan_r2c, 0);
+    g_ptr_array_set_size (self->fft_plan_c2r, 0);
+
+    g_ptr_array_set_size (self->sphaY_array,  0);
+    g_ptr_array_set_size (self->sphaYa_array, 0);
+
     if (nside > 0)
     {
-      pix->npix              = NCM_SPHERE_MAP_N (pix->nside);
-      pix->face_size         = _l_pow_2 (pix->nside);
-      pix->middle_rings_size = 4 * nside;
-      pix->cap_size          = 2 * nside * (nside - 1);
-      pix->nrings            = 4 * nside - 1;
-      pix->nrings_cap        = nside - 1;
-      pix->nrings_middle     = 2 * nside + 1;
-      pix->middle_size       = pix->nrings_middle * pix->middle_rings_size;      
-      pix->pvec              = _fft_vec_alloc (pix->npix);
+      self->npix              = NCM_SPHERE_MAP_N (self->nside);
+      self->face_size         = _l_pow_2 (self->nside);
+      self->middle_rings_size = 4 * nside;
+      self->cap_size          = 2 * nside * (nside - 1);
+      self->nrings            = 4 * nside - 1;
+      self->nrings_cap        = nside - 1;
+      self->nrings_middle     = 2 * nside + 1;
+      self->middle_size       = self->nrings_middle * self->middle_rings_size;      
+      self->pvec              = _fft_vec_alloc (self->npix);
       
-      _fft_vec_set_zero (pix->pvec, pix->npix);
+      _fft_vec_set_zero (self->pvec, self->npix);
       
-      g_assert_cmpint (2 * pix->cap_size + pix->middle_size, ==, pix->npix);
-      
+#ifdef NUMCOSMO_HAVE_FFTW3
+#  ifdef HAVE_FFTW3F
+      self->fft_pvec = fftwf_alloc_complex (self->npix);
+#  else
+      self->fft_pvec = fftw_alloc_complex (self->npix);
+#  endif
+#endif
+
+      g_assert_cmpint (2 * self->cap_size + self->middle_size, ==, self->npix);
+
+      {
+        const gint64 nrings_2 = self->nrings / 2;
+        const gint64 nblocks  = nrings_2 / NCM_SPHERE_MAP_BLOCK_NC;
+        gint64 i, j;
+        
+        self->block_ring_size  = nblocks * NCM_SPHERE_MAP_BLOCK_NC;
+        self->last_sing_ring   = self->nrings - self->block_ring_size;
+
+        g_array_set_size (self->block_data, nblocks); 
+        
+        for (j = 0; j < nblocks; j++)
+        {
+          NcmSFSphericalHarmonicsYArray *sphaYa = ncm_sf_spherical_harmonics_Y_array_new (self->spha, NCM_SPHERE_MAP_BLOCK_NCT, NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL);
+          NcmSphereMapBlock *block              = &g_array_index (self->block_data, NcmSphereMapBlock, j);
+          const gint64 r_ini                    = j * NCM_SPHERE_MAP_BLOCK_NC;
+
+          g_ptr_array_add (self->sphaYa_array, sphaYa);
+          
+          for (i = 0; i < NCM_SPHERE_MAP_BLOCK_NC; i++)
+          {
+            const gint64 r_i   = r_ini + i;
+            const gint64 apr_i = self->nrings - r_i - 1;
+            const gint64 api   = NCM_SPHERE_MAP_BLOCK_NCT - i - 1;
+
+            _ncm_sphere_map_prepare_circle (pix, block, r_i,   i);
+            _ncm_sphere_map_prepare_circle (pix, block, apr_i, api);
+          }
+
+          ncm_sf_spherical_harmonics_start_rec_array (self->spha, sphaYa, NCM_SPHERE_MAP_BLOCK_NCT, block->theta);
+        }
+      }
     }
   }
 }
@@ -414,7 +542,8 @@ ncm_sphere_map_set_nside (NcmSphereMap *pix, gint64 nside)
 gint64
 ncm_sphere_map_get_nside (NcmSphereMap *pix)
 {
-  return pix->nside;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->nside;
 }
 
 /**
@@ -428,7 +557,8 @@ ncm_sphere_map_get_nside (NcmSphereMap *pix)
 gint64
 ncm_sphere_map_get_npix (NcmSphereMap *pix)
 {
-  return pix->npix;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->npix;
 }
 
 /**
@@ -442,7 +572,8 @@ ncm_sphere_map_get_npix (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_cap_size (NcmSphereMap *pix)
 {
-  return pix->cap_size;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->cap_size;
 }
 
 /**
@@ -456,7 +587,8 @@ ncm_sphere_map_get_cap_size (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_middle_size (NcmSphereMap *pix)
 {
-  return pix->middle_size;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->middle_size;
 }
 
 /**
@@ -470,7 +602,8 @@ ncm_sphere_map_get_middle_size (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_nrings (NcmSphereMap *pix)
 {
-  return pix->nrings;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->nrings;
 }
 
 /**
@@ -484,7 +617,8 @@ ncm_sphere_map_get_nrings (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_nrings_cap (NcmSphereMap *pix)
 {
-  return pix->nrings_cap;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->nrings_cap;
 }
 
 /**
@@ -498,7 +632,8 @@ ncm_sphere_map_get_nrings_cap (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_nrings_middle (NcmSphereMap *pix)
 {
-  return pix->nrings_middle;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->nrings_middle;
 }
 
 /**
@@ -513,18 +648,19 @@ ncm_sphere_map_get_nrings_middle (NcmSphereMap *pix)
 gint64 
 ncm_sphere_map_get_ring_size (NcmSphereMap *pix, gint64 r_i)
 {
-  if (r_i < pix->nrings_cap) /* North cap (nside - 1 rings) */
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (r_i < self->nrings_cap) /* North cap (nside - 1 rings) */
   {
     return 4 * (r_i + 1); 
   }
-  else if (r_i >= pix->nrings_cap + pix->nrings_middle) /* South cap (it has 3nside rings above) */
+  else if (r_i >= self->nrings_cap + self->nrings_middle) /* South cap (it has 3nside rings above) */
   {
-    const gint64 rsc_i = r_i - (pix->nrings_cap + pix->nrings_middle); /* South cap index */
-    return 4 * (pix->nside - 1 - rsc_i);
+    const gint64 rsc_i = r_i - (self->nrings_cap + self->nrings_middle); /* South cap index */
+    return 4 * (self->nside - 1 - rsc_i);
   }
   else /* Middle */
   {
-    return pix->middle_rings_size;
+    return self->middle_rings_size;
   }
 }
 
@@ -540,19 +676,20 @@ ncm_sphere_map_get_ring_size (NcmSphereMap *pix, gint64 r_i)
 gint64 
 ncm_sphere_map_get_ring_first_index (NcmSphereMap *pix, gint64 r_i)
 {
-  if (r_i < pix->nrings_cap) /* North cap (nside - 1 rings) */
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (r_i < self->nrings_cap) /* North cap (nside - 1 rings) */
   {
     return 2 * r_i * (r_i + 1); 
   }
-  else if (r_i >= pix->nrings_cap + pix->nrings_middle) /* South cap (it has 3nside rings above) */
+  else if (r_i >= self->nrings_cap + self->nrings_middle) /* South cap (it has 3nside rings above) */
   {
-    const gint64 rsc_i = r_i - (pix->nrings_cap + pix->nrings_middle); /* South cap index */
-    return pix->cap_size + pix->middle_size + 2 * rsc_i * (2 * pix->nside - 1 - rsc_i);
+    const gint64 rsc_i = r_i - (self->nrings_cap + self->nrings_middle); /* South cap index */
+    return self->cap_size + self->middle_size + 2 * rsc_i * (2 * self->nside - 1 - rsc_i);
   }
   else /* Middle */
   {
-    const gint64 rm_i = r_i - pix->nrings_cap; /* Middle index */
-    return pix->cap_size + pix->middle_rings_size * rm_i;
+    const gint64 rm_i = r_i - self->nrings_cap; /* Middle index */
+    return self->cap_size + self->middle_rings_size * rm_i;
   }  
 }
 
@@ -567,26 +704,27 @@ ncm_sphere_map_get_ring_first_index (NcmSphereMap *pix, gint64 r_i)
 void 
 ncm_sphere_map_set_order (NcmSphereMap *pix, NcmSphereMapOrder order)
 {
-  if (pix->order != order)
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (self->order != order)
   {
-    if (pix->nside > 0)
+    if (self->nside > 0)
     {
-      gpointer temp_pix = _fft_vec_alloc (pix->npix);
+      gpointer temp_pix = _fft_vec_alloc (self->npix);
       gint64 (*convert) (NcmSphereMap *pix, gint64) = (order == NCM_SPHERE_MAP_ORDER_NEST ? ncm_sphere_map_ring2nest : ncm_sphere_map_nest2ring);
       gint64 i, j;
 
-      _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
-      for (i = 0; i < pix->npix; i++)
+      _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
+      for (i = 0; i < self->npix; i++)
       {
         gfloat val = _fft_vec_idx (temp_pix, i);
         j = convert (pix, i);
-        /*printf ("%ld => %ld val % 20.15g | % 20.15g\n", i, j, val, _fft_vec_idx (pix->pvec, i));*/
-        _fft_vec_idx (pix->pvec, j) = val;
+        /*printf ("%ld => %ld val % 20.15g | % 20.15g\n", i, j, val, _fft_vec_idx (self->pvec, i));*/
+        _fft_vec_idx (self->pvec, j) = val;
       }
       
       _fft_vec_free (temp_pix);
     }
-    pix->order = order;
+    self->order = order;
   }
 }
 
@@ -601,7 +739,8 @@ ncm_sphere_map_set_order (NcmSphereMap *pix, NcmSphereMapOrder order)
 NcmSphereMapOrder 
 ncm_sphere_map_get_order (NcmSphereMap *pix)
 {
-  return pix->order;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->order;
 }
 
 /**
@@ -615,14 +754,15 @@ ncm_sphere_map_get_order (NcmSphereMap *pix)
 void 
 ncm_sphere_map_set_coordsys (NcmSphereMap *pix, NcmSphereMapCoordSys coordsys)
 {
-  if (pix->coordsys != coordsys)
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (self->coordsys != coordsys)
   {
     switch (coordsys)
     {
       case NCM_SPHERE_MAP_COORD_SYS_GALACTIC:
       case NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC:
       case NCM_SPHERE_MAP_COORD_SYS_CELESTIAL:
-        pix->coordsys = coordsys;
+        self->coordsys = coordsys;
         break;
       default:
         g_error ("ncm_sphere_map_set_coordsys: Unknown coordinate system `%d'.", coordsys);
@@ -642,7 +782,8 @@ ncm_sphere_map_set_coordsys (NcmSphereMap *pix, NcmSphereMapCoordSys coordsys)
 NcmSphereMapCoordSys
 ncm_sphere_map_get_coordsys (NcmSphereMap *pix)
 {
-  return pix->coordsys;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->coordsys;
 }
 
 /**
@@ -657,29 +798,24 @@ ncm_sphere_map_get_coordsys (NcmSphereMap *pix)
 void 
 ncm_sphere_map_set_lmax (NcmSphereMap *pix, guint lmax)
 {
-  if (pix->lmax != lmax)
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (self->lmax != lmax)
   {
-    /*ncm_vector_clear (&pix->alm);*/
-    ncm_vector_clear (&pix->Cl);
-    pix->lmax = lmax;
+    /*ncm_vector_clear (&self->alm);*/
+    ncm_vector_clear (&self->Cl);
+    self->lmax = lmax;
 
-    if (pix->lmax > 0)
+    if (self->lmax > 0)
     {
-      /*pix->alm = ncm_vector_new (2 * NCM_SPHERE_MAP_ALM_SIZE (pix->lmax));*/
-      pix->Cl  = ncm_vector_new (pix->lmax + 1);
+      /*self->alm = ncm_vector_new (2 * NCM_SPHERE_MAP_ALM_SIZE (self->lmax));*/
+      self->Cl  = ncm_vector_new (self->lmax + 1);
 
-      g_array_set_size (pix->alm, NCM_SPHERE_MAP_ALM_SIZE (pix->lmax));
-      {
-        gint lm;
-        for (lm = 0; lm < pix->alm->len; lm++)
-        {
-          GSL_REAL (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
-          GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
-        }
-      }
+      self->alm_len = NCM_SPHERE_MAP_ALM_SIZE (self->lmax);
+      self->alm     = _fft_vec_alloc_complex (self->alm_len);
+      memset (self->alm, 0, sizeof (_fft_complex) * self->alm_len);      
       
-			if (pix->lmax + 2 > ncm_sf_spherical_harmonics_get_lmax (pix->spha))
-				ncm_sf_spherical_harmonics_set_lmax (pix->spha, pix->lmax + 2);
+			if (self->lmax + 2 > ncm_sf_spherical_harmonics_get_lmax (self->spha))
+				ncm_sf_spherical_harmonics_set_lmax (self->spha, self->lmax + 2);
     }
   }
 }
@@ -687,7 +823,8 @@ ncm_sphere_map_set_lmax (NcmSphereMap *pix, guint lmax)
 guint 
 ncm_sphere_map_get_lmax (NcmSphereMap *pix)
 {
-  return pix->lmax;
+  NcmSphereMapPrivate * const self = pix->priv;
+  return self->lmax;
 }
 
 /**
@@ -700,8 +837,9 @@ ncm_sphere_map_get_lmax (NcmSphereMap *pix)
 void 
 ncm_sphere_map_clear_pixels (NcmSphereMap *pix)
 {
-  if (pix->nside > 0)
-    _fft_vec_set_zero (pix->pvec, pix->npix);
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (self->nside > 0)
+    _fft_vec_set_zero (self->pvec, self->npix);
 }
 
 /**
@@ -716,6 +854,7 @@ ncm_sphere_map_clear_pixels (NcmSphereMap *pix)
 gint64
 ncm_sphere_map_nest2ring (NcmSphereMap *pix, const gint64 nest_index)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 ring_index;
   gint64 base_pixel;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
@@ -723,21 +862,21 @@ ncm_sphere_map_nest2ring (NcmSphereMap *pix, const gint64 nest_index)
   gint64 x, y;
   gint64 hf;
 
-  g_assert (nest_index < pix->npix);
+  g_assert (nest_index < self->npix);
   
-  f = nest_index / pix->face_size;
-  l = nest_index % pix->face_size;
+  f = nest_index / self->face_size;
+  l = nest_index % self->face_size;
   
   NCM_SPHERE_MAP_INT_TO_XY (l, x, y);
 
-  h = pix->nside - 1 - y;
-  v = 2 * pix->nside - 2 - y - x;
+  h = self->nside - 1 - y;
+  v = 2 * self->nside - 2 - y - x;
   
   switch (f / 4)
   {
     case 0:
       t = v;
-      if (t < (pix->nside - 1))
+      if (t < (self->nside - 1))
       {
         w   = (t + 1);
         s   = 0;
@@ -747,38 +886,38 @@ ncm_sphere_map_nest2ring (NcmSphereMap *pix, const gint64 nest_index)
       }
       else
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4;
-        base_pixel = pix->cap_size + (t - pix->nside + 1) * pix->middle_rings_size;
+        base_pixel = self->cap_size + (t - self->nside + 1) * self->middle_rings_size;
       }
       break;
     case 1:
-      t   = v + pix->nside;
-      w   = pix->nside;
-      s   = (t - (pix->nside - 1)) / 2;
+      t   = v + self->nside;
+      w   = self->nside;
+      s   = (t - (self->nside - 1)) / 2;
       pad = 0;
       hf  = f % 4;
-      base_pixel = pix->cap_size + (v + 1) * pix->middle_rings_size;
+      base_pixel = self->cap_size + (v + 1) * self->middle_rings_size;
       break;
     case 2:
-      t   = v + 2 * pix->nside;
-      if (v < pix->nside)
+      t   = v + 2 * self->nside;
+      if (v < self->nside)
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4 + 1;
-        base_pixel = pix->cap_size + (v + 1 + pix->nside) * pix->middle_rings_size;
+        base_pixel = self->cap_size + (v + 1 + self->nside) * self->middle_rings_size;
       }
       else
       {
-        w   = 4 * pix->nside - t - 1;
+        w   = 4 * self->nside - t - 1;
         s   = w;
-        pad = (t - 3 * pix->nside + 1);
+        pad = (t - 3 * self->nside + 1);
         hf  = f % 4 + 1;
-        base_pixel = (pix->npix - pix->cap_size) + (4 * pix->nside * (v - pix->nside + 1) - 2 * _l_pow_2 (v - pix->nside + 1) + 2 * (v - pix->nside) + 2 - 4 * pix->nside);
+        base_pixel = (self->npix - self->cap_size) + (4 * self->nside * (v - self->nside + 1) - 2 * _l_pow_2 (v - self->nside + 1) + 2 * (v - self->nside) + 2 - 4 * self->nside);
       }
       break;
     default:
@@ -806,14 +945,15 @@ ncm_sphere_map_nest2ring (NcmSphereMap *pix, const gint64 nest_index)
 gint64
 ncm_sphere_map_ring2nest (NcmSphereMap *pix, const gint64 ring_index)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 nest_index;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
   gint64 x, y;
   
-  g_assert (ring_index < pix->npix);
+  g_assert (ring_index < self->npix);
 
-  if (ring_index < pix->cap_size)
+  if (ring_index < self->cap_size)
   {
     t   = (sqrt (1 + 2 * ring_index) - 1) / 2;
     w   = (t + 1);
@@ -821,36 +961,36 @@ ncm_sphere_map_ring2nest (NcmSphereMap *pix, const gint64 ring_index)
     s   = 0;
     pad = 0;
   }
-  else if (ring_index < (pix->npix - pix->cap_size))
+  else if (ring_index < (self->npix - self->cap_size))
   {
-    l   = ring_index - pix->cap_size;
-    w   = pix->nside;
-    t   = (gint64)(l / pix->middle_rings_size) + (pix->nside - 1);
-    p   = l % pix->middle_rings_size;
-    s   = (t - (pix->nside - 1)) / 2;
+    l   = ring_index - self->cap_size;
+    w   = self->nside;
+    t   = (gint64)(l / self->middle_rings_size) + (self->nside - 1);
+    p   = l % self->middle_rings_size;
+    s   = (t - (self->nside - 1)) / 2;
     pad = 0;
   }
   else
   {
-    l   = ring_index - pix->npix + pix->cap_size;
-    t   = 4 * pix->nside - (1 + sqrt (4 * _l_pow_2 (pix->nside) - 4 * pix->nside + 1 - 2 * l)) / 2;
-    w   = 4 * pix->nside - t - 1;
-    p   = l - (4 * pix->nside * (t - 3 * pix->nside + 1) - 2 * _l_pow_2 (t - 3 * pix->nside + 1) + 2 * (t - 3 * pix->nside) + 2 - 4 * pix->nside);
+    l   = ring_index - self->npix + self->cap_size;
+    t   = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
+    w   = 4 * self->nside - t - 1;
+    p   = l - (4 * self->nside * (t - 3 * self->nside + 1) - 2 * _l_pow_2 (t - 3 * self->nside + 1) + 2 * (t - 3 * self->nside) + 2 - 4 * self->nside);
     s   = w;
-    pad = (t - 3 * pix->nside + 1);
+    pad = (t - 3 * self->nside + 1);
   }
 
   h  = (p + s) % w + pad;
-  v  = (t - h) % pix->nside + h;
-  f  = ((gint64)((t - h) / pix->nside)) * 4;
+  v  = (t - h) % self->nside + h;
+  f  = ((gint64)((t - h) / self->nside)) * 4;
   f += (f == 8) ? ((gint64)((p + s) / w) - 1) : ((gint64)((p + s) / w) % 4);
   
-  x = pix->nside - 1 - (v - h);
-  y = pix->nside - 1 - h;
+  x = self->nside - 1 - (v - h);
+  y = self->nside - 1 - h;
   
   NCM_SPHERE_MAP_XY_TO_INT (x, y, nest_index);
   
-  nest_index += pix->face_size * f;
+  nest_index += self->face_size * f;
   
   return nest_index;
 }
@@ -922,26 +1062,27 @@ _t_p_w_to_vector (const gint64 nside, const gint tm1, const gint pm1, const gint
 void 
 ncm_sphere_map_pix2ang_nest (NcmSphereMap *pix, const gint64 nest_index, gdouble *theta, gdouble *phi)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
   gint64 x, y;
   gint64 hf;
 
-  g_assert (nest_index < pix->npix);
+  g_assert (nest_index < self->npix);
   
-  f = nest_index / pix->face_size;
-  l = nest_index % pix->face_size;
+  f = nest_index / self->face_size;
+  l = nest_index % self->face_size;
   
   NCM_SPHERE_MAP_INT_TO_XY (l, x, y);
  
-  h = pix->nside - 1 - y;
-  v = 2 * pix->nside - 2 - y - x;
+  h = self->nside - 1 - y;
+  v = 2 * self->nside - 2 - y - x;
   
   switch (f / 4)
   {
     case 0:
       t = v;
-      if (t < (pix->nside - 1))
+      if (t < (self->nside - 1))
       {
         w   = (t + 1);
         s   = 0;
@@ -950,33 +1091,33 @@ ncm_sphere_map_pix2ang_nest (NcmSphereMap *pix, const gint64 nest_index, gdouble
       }
       else
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4;
       }
       break;
     case 1:
-      t   = v + pix->nside;
-      w   = pix->nside;
-      s   = (t - (pix->nside - 1)) / 2;
+      t   = v + self->nside;
+      w   = self->nside;
+      s   = (t - (self->nside - 1)) / 2;
       pad = 0;
       hf  = f % 4;
       break;
     case 2:
-      t   = v + 2 * pix->nside;
-      if (v < pix->nside)
+      t   = v + 2 * self->nside;
+      if (v < self->nside)
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4 + 1;
       }
       else
       {
-        w   = 4 * pix->nside - t - 1;
+        w   = 4 * self->nside - t - 1;
         s   = w;
-        pad = (t - 3 * pix->nside + 1);
+        pad = (t - 3 * self->nside + 1);
         hf  = f % 4 + 1;
       }
       break;
@@ -988,7 +1129,7 @@ ncm_sphere_map_pix2ang_nest (NcmSphereMap *pix, const gint64 nest_index, gdouble
   p = (h + hf * w - s - pad);
   if (p < 0) p += 4 * w;
   
-  _t_p_w_to_theta_phi (pix->nside, t, p, w, theta, phi);
+  _t_p_w_to_theta_phi (self->nside, t, p, w, theta, phi);
 }
 
 /**
@@ -1003,32 +1144,33 @@ ncm_sphere_map_pix2ang_nest (NcmSphereMap *pix, const gint64 nest_index, gdouble
 void
 ncm_sphere_map_pix2ang_ring (NcmSphereMap *pix, const gint64 ring_index, gdouble *theta, gdouble *phi)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
   
-  g_assert (ring_index < pix->npix);
+  g_assert (ring_index < self->npix);
 
-  if (ring_index < pix->cap_size)
+  if (ring_index < self->cap_size)
   {
     t   = (sqrt (1 + 2 * ring_index) - 1) / 2;
     w   = (t + 1);
     p   = ring_index - 2 * (_l_pow_2 (t + 1) - t - 1);
   }
-  else if (ring_index < (pix->npix - pix->cap_size))
+  else if (ring_index < (self->npix - self->cap_size))
   {
-    l   = ring_index - pix->cap_size;
-    w   = pix->nside;
-    t   = (gint64)(l / pix->middle_rings_size) + (pix->nside - 1);
-    p   = l % pix->middle_rings_size;
+    l   = ring_index - self->cap_size;
+    w   = self->nside;
+    t   = (gint64)(l / self->middle_rings_size) + (self->nside - 1);
+    p   = l % self->middle_rings_size;
   }
   else
   {
-    l   = ring_index - pix->npix + pix->cap_size;
-    t   = 4 * pix->nside - (1 + sqrt (4 * _l_pow_2 (pix->nside) - 4 * pix->nside + 1 - 2 * l)) / 2;
-    w   = 4 * pix->nside - t - 1;
-    p   = l - (4 * pix->nside * (t - 3 * pix->nside + 1) - 2 * _l_pow_2 (t - 3 * pix->nside + 1) + 2 * (t - 3 * pix->nside) + 2 - 4 * pix->nside);
+    l   = ring_index - self->npix + self->cap_size;
+    t   = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
+    w   = 4 * self->nside - t - 1;
+    p   = l - (4 * self->nside * (t - 3 * self->nside + 1) - 2 * _l_pow_2 (t - 3 * self->nside + 1) + 2 * (t - 3 * self->nside) + 2 - 4 * self->nside);
   }
   
-  _t_p_w_to_theta_phi (pix->nside, t, p, w, theta, phi);
+  _t_p_w_to_theta_phi (self->nside, t, p, w, theta, phi);
 }
 
 /**
@@ -1042,32 +1184,33 @@ ncm_sphere_map_pix2ang_ring (NcmSphereMap *pix, const gint64 ring_index, gdouble
 void 
 ncm_sphere_map_pix2vec_ring (NcmSphereMap *pix, gint64 ring_index, NcmTriVec *vec)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
   
-  g_assert (ring_index < pix->npix);
+  g_assert (ring_index < self->npix);
 
-  if (ring_index < pix->cap_size)
+  if (ring_index < self->cap_size)
   {
     t   = (sqrt (1 + 2 * ring_index) - 1) / 2;
     w   = (t + 1);
     p   = ring_index - 2 * (_l_pow_2 (t + 1) - t - 1);
   }
-  else if (ring_index < (pix->npix - pix->cap_size))
+  else if (ring_index < (self->npix - self->cap_size))
   {
-    l   = ring_index - pix->cap_size;
-    w   = pix->nside;
-    t   = (gint64)(l / pix->middle_rings_size) + (pix->nside - 1);
-    p   = l % pix->middle_rings_size;
+    l   = ring_index - self->cap_size;
+    w   = self->nside;
+    t   = (gint64)(l / self->middle_rings_size) + (self->nside - 1);
+    p   = l % self->middle_rings_size;
   }
   else
   {
-    l   = ring_index - pix->npix + pix->cap_size;
-    t   = 4 * pix->nside - (1 + sqrt (4 * _l_pow_2 (pix->nside) - 4 * pix->nside + 1 - 2 * l)) / 2;
-    w   = 4 * pix->nside - t - 1;
-    p   = l - (4 * pix->nside * (t - 3 * pix->nside + 1) - 2 * _l_pow_2 (t - 3 * pix->nside + 1) + 2 * (t - 3 * pix->nside) + 2 - 4 * pix->nside);
+    l   = ring_index - self->npix + self->cap_size;
+    t   = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
+    w   = 4 * self->nside - t - 1;
+    p   = l - (4 * self->nside * (t - 3 * self->nside + 1) - 2 * _l_pow_2 (t - 3 * self->nside + 1) + 2 * (t - 3 * self->nside) + 2 - 4 * self->nside);
   }
   
-  _t_p_w_to_vector (pix->nside, t, p, w, vec);
+  _t_p_w_to_vector (self->nside, t, p, w, vec);
 }
 
 /**
@@ -1081,26 +1224,27 @@ ncm_sphere_map_pix2vec_ring (NcmSphereMap *pix, gint64 ring_index, NcmTriVec *ve
 void 
 ncm_sphere_map_pix2vec_nest (NcmSphereMap *pix, gint64 nest_index, NcmTriVec *vec)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
   gint64 x, y;
   gint64 hf;
 
-  g_assert (nest_index < pix->npix);
+  g_assert (nest_index < self->npix);
   
-  f = nest_index / pix->face_size;
-  l = nest_index % pix->face_size;
+  f = nest_index / self->face_size;
+  l = nest_index % self->face_size;
 
   NCM_SPHERE_MAP_INT_TO_XY (l, x, y);
  
-  h = pix->nside - 1 - y;
-  v = 2 * pix->nside - 2 - y - x;
+  h = self->nside - 1 - y;
+  v = 2 * self->nside - 2 - y - x;
   
   switch (f / 4)
   {
     case 0:
       t = v;
-      if (t < (pix->nside - 1))
+      if (t < (self->nside - 1))
       {
         w   = (t + 1);
         s   = 0;
@@ -1109,33 +1253,33 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *pix, gint64 nest_index, NcmTriVec *ve
       }
       else
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4;
       }
       break;
     case 1:
-      t   = v + pix->nside;
-      w   = pix->nside;
-      s   = (t - (pix->nside - 1)) / 2;
+      t   = v + self->nside;
+      w   = self->nside;
+      s   = (t - (self->nside - 1)) / 2;
       pad = 0;
       hf  = f % 4;
       break;
     case 2:
-      t   = v + 2 * pix->nside;
-      if (v < pix->nside)
+      t   = v + 2 * self->nside;
+      if (v < self->nside)
       {
-        w   = pix->nside;
-        s   = (t - (pix->nside - 1)) / 2;
+        w   = self->nside;
+        s   = (t - (self->nside - 1)) / 2;
         pad = 0;
         hf  = f % 4 + 1;
       }
       else
       {
-        w   = 4 * pix->nside - t - 1;
+        w   = 4 * self->nside - t - 1;
         s   = w;
-        pad = (t - 3 * pix->nside + 1);
+        pad = (t - 3 * self->nside + 1);
         hf  = f % 4 + 1;
       }
       break;
@@ -1147,12 +1291,13 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *pix, gint64 nest_index, NcmTriVec *ve
   p = (h + hf * w - s - pad);
   if (p < 0) p += 4 * w;
   
-  _t_p_w_to_vector (pix->nside, t, p, w, vec);
+  _t_p_w_to_vector (self->nside, t, p, w, vec);
 }
 
 static void 
 _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *pix, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *nest_index)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   const gdouble two_3 = 2.0 / 3.0;
   const gdouble abs_z = fabs (z);
   const gdouble tt    = fmod (phi / M_PI_2, 4.0);
@@ -1160,33 +1305,33 @@ _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *pix, const gdouble z, const gdouble
 
   if (abs_z <= two_3)
   {
-    const gdouble temp1 = pix->nside * (0.5 + tt);
-    const gdouble temp2 = pix->nside * (z * 0.75);
+    const gdouble temp1 = self->nside * (0.5 + tt);
+    const gdouble temp2 = self->nside * (z * 0.75);
 
     const gint64 jp  = (gint64) (temp1 - temp2);
     const gint64 jm  = (gint64) (temp1 + temp2);
-    const gint64 ifp = jp / pix->nside;
-    const gint64 ifm = jm / pix->nside;
+    const gint64 ifp = jp / self->nside;
+    const gint64 ifm = jm / self->nside;
 
     f = (ifp == ifm) ? (ifp | 4) : ((ifp < ifm) ? ifp : (ifm + 8));
-    x = jm & (pix->nside - 1);
-    y = pix->nside - (jp & (pix->nside - 1)) - 1;
+    x = jm & (self->nside - 1);
+    y = self->nside - (jp & (self->nside - 1)) - 1;
   }
   else
   {
     const gint64 ntt  = GSL_MIN (3, (gint64) (tt));
     const gdouble tp  = tt - ntt;
-    const gdouble tmp = pix->nside * sqrt (3.0 * onemz2 / (1.0 + abs_z));
+    const gdouble tmp = self->nside * sqrt (3.0 * onemz2 / (1.0 + abs_z));
 
     const gint64 jp  = (gint64)(tp * tmp);
     const gint64 jm  = (gint64)((1.0 - tp) * tmp);
-    const gint64 jpm  = GSL_MIN (jp, pix->nside - 1);
-    const gint64 jmm  = GSL_MIN (jm, pix->nside - 1);
+    const gint64 jpm  = GSL_MIN (jp, self->nside - 1);
+    const gint64 jmm  = GSL_MIN (jm, self->nside - 1);
 
     if (z >= 0.0)
     {
-      x = pix->nside - jmm - 1;
-      y = pix->nside - jpm - 1;
+      x = self->nside - jmm - 1;
+      y = self->nside - jpm - 1;
       f = ntt;
     }
     else
@@ -1199,36 +1344,37 @@ _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *pix, const gdouble z, const gdouble
 
   NCM_SPHERE_MAP_XY_TO_INT (x, y, nest_index[0]);
 
-  nest_index[0] += pix->face_size * f;
+  nest_index[0] += self->face_size * f;
 }
 
 static void 
 _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *pix, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *ring_index)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   const gdouble two_3 = 2.0 / 3.0;
   const gdouble abs_z = fabs (z);
   const gdouble tt    = fmod (phi / M_PI_2, 4.0);
 
   if (abs_z <= two_3)
   {
-    const gdouble temp1 = pix->nside * (0.5 + tt);
-    const gdouble temp2 = pix->nside * (z * 0.75);
+    const gdouble temp1 = self->nside * (0.5 + tt);
+    const gdouble temp2 = self->nside * (z * 0.75);
 
     const gint64 jp  = (gint64) (temp1 - temp2);
     const gint64 jm  = (gint64) (temp1 + temp2);
 
-    const gint64 ir     = pix->nside + 1 + jp - jm;
+    const gint64 ir     = self->nside + 1 + jp - jm;
     const gint64 kshift = 1 - (ir & 1);
 
-    const gint64 t1 = (jp + jm - pix->nside + kshift + 1) / 2;
-    const gint64 ip = t1 % pix->middle_rings_size;
+    const gint64 t1 = (jp + jm - self->nside + kshift + 1) / 2;
+    const gint64 ip = t1 % self->middle_rings_size;
 
-    ring_index[0] = pix->cap_size + (ir - 1) * pix->middle_rings_size + ip;
+    ring_index[0] = self->cap_size + (ir - 1) * self->middle_rings_size + ip;
   }
   else  // North & South polar caps
   {
     const gdouble tp  = tt - (gint64)(tt);
-    const gdouble tmp = pix->nside * sqrt (3.0 * onemz2 / (1.0 + abs_z));;
+    const gdouble tmp = self->nside * sqrt (3.0 * onemz2 / (1.0 + abs_z));;
 
     const gint64 jp = (gint64)(tp * tmp);
     const gint64 jm = (gint64)((1.0 - tp) * tmp);
@@ -1242,7 +1388,7 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *pix, const gdouble z, const gdouble
     }
     else
     {
-      ring_index[0] = pix->npix - 2 * ir * (ir + 1) + ip;
+      ring_index[0] = self->npix - 2 * ir * (ir + 1) + ip;
     }
   }
 }
@@ -1335,8 +1481,9 @@ ncm_sphere_map_vec2pix_nest (NcmSphereMap *pix, NcmTriVec *vec, gint64 *nest_ind
 void 
 ncm_sphere_map_add_to_vec (NcmSphereMap *pix, NcmTriVec *vec, const gdouble s)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 index = 0;
-  switch (pix->order)
+  switch (self->order)
   {
     case NCM_SPHERE_MAP_ORDER_NEST:
       ncm_sphere_map_vec2pix_nest (pix, vec, &index);
@@ -1349,7 +1496,7 @@ ncm_sphere_map_add_to_vec (NcmSphereMap *pix, NcmTriVec *vec, const gdouble s)
       break;
   }
 
-  _fft_vec_idx (pix->pvec, index) += s;
+  _fft_vec_idx (self->pvec, index) += s;
 }
 
 /**
@@ -1365,8 +1512,9 @@ ncm_sphere_map_add_to_vec (NcmSphereMap *pix, NcmTriVec *vec, const gdouble s)
 void 
 ncm_sphere_map_add_to_ang (NcmSphereMap *pix, const gdouble theta, const gdouble phi, const gdouble s)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint64 index = 0;
-  switch (pix->order)
+  switch (self->order)
   {
     case NCM_SPHERE_MAP_ORDER_NEST:
       ncm_sphere_map_ang2pix_nest (pix, theta, phi, &index);
@@ -1378,7 +1526,7 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *pix, const gdouble theta, const gdouble
       g_assert_not_reached ();
       break;
   }
-  _fft_vec_idx (pix->pvec, index) += s;
+  _fft_vec_idx (self->pvec, index) += s;
 }
 
 /**
@@ -1393,6 +1541,7 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *pix, const gdouble theta, const gdouble
 void
 ncm_sphere_map_load_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar *signal_name)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gchar comment[FLEN_COMMENT];
   gchar ordering[FLEN_VALUE];
   gchar coordsys[FLEN_VALUE];
@@ -1435,13 +1584,13 @@ ncm_sphere_map_load_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar
 
 #ifdef HAVE_FFTW3F
   fits_read_col_flt (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL, 
-                     _fft_vec_ptr (pix->pvec, 0), &anynul, &status); 
+                     _fft_vec_ptr (self->pvec, 0), &anynul, &status); 
 #elif defined (HAVE_FFTW3)
   fits_read_col_dbl (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL, 
-                     _fft_vec_ptr (pix->pvec, 0), &anynul, &status); 
+                     _fft_vec_ptr (self->pvec, 0), &anynul, &status); 
 #else
   fits_read_col_flt (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL, 
-                     _fft_vec_ptr (pix->pvec, 0), &anynul, &status); 
+                     _fft_vec_ptr (self->pvec, 0), &anynul, &status); 
 #endif  
   NCM_FITS_ERROR (status);
 
@@ -1454,10 +1603,10 @@ ncm_sphere_map_load_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar
   switch (*ordering)
   {
     case 'N':
-      pix->order = NCM_SPHERE_MAP_ORDER_NEST;
+      self->order = NCM_SPHERE_MAP_ORDER_NEST;
       break;
     case 'R':
-      pix->order = NCM_SPHERE_MAP_ORDER_RING;
+      self->order = NCM_SPHERE_MAP_ORDER_RING;
       break;
     default:
       g_error ("ncm_sphere_map_load_fits: Unknown order type `%s'.", ordering);
@@ -1491,6 +1640,7 @@ ncm_sphere_map_load_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar
 void
 ncm_sphere_map_save_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar *signal_name, gboolean overwrite)
 {    
+  NcmSphereMapPrivate * const self = pix->priv;
   const gchar *sname = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
   const gchar *ttype[] = { sname };
   const gchar *tform[] = { "1E" };
@@ -1564,13 +1714,13 @@ ncm_sphere_map_save_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar
   }
 
 #ifdef HAVE_FFTW3F
-  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (pix->pvec, 0), &status);
+  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
   NCM_FITS_ERROR (status);
 #elif defined (HAVE_FFTW3)
-  fits_write_col (fptr, TDOUBLE, 1, 1, 1, npix, _fft_vec_ptr (pix->pvec, 0), &status);
+  fits_write_col (fptr, TDOUBLE, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
   NCM_FITS_ERROR (status);
 #else
-  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (pix->pvec, 0), &status);
+  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
   NCM_FITS_ERROR (status);
 #endif
 
@@ -1690,20 +1840,20 @@ static void
 _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
-  if (pix->fft_plan_r2c->len == 0)
+  NcmSphereMapPrivate * const self = pix->priv;
+  if (self->fft_plan_r2c->len == 0)
   {
     const gint64 npix      = ncm_sphere_map_get_npix (pix);
     const gint64 nring_cap = ncm_sphere_map_get_nrings_cap (pix);
-    gpointer temp_pix      = _fft_vec_alloc (pix->npix);
+    gpointer temp_pix      = _fft_vec_alloc (self->npix);
     gint r_i;
 
     ncm_cfg_load_fftw_wisdom ("ncm_sphere_map_nside_%ld", ncm_sphere_map_get_nside (pix));
 #  ifdef HAVE_FFTW3F
 
-    pix->fft_pvec = fftwf_alloc_complex (npix);
-    _fft_vec_set_zero_complex (pix->fft_pvec, npix);
+    _fft_vec_set_zero_complex (self->fft_pvec, npix);
 
-    _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
+    _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
 
     ncm_cfg_lock_plan_fftw ();
 
@@ -1713,8 +1863,8 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
       const gint64 ring_fi_north = ncm_sphere_map_get_ring_first_index (pix, r_i);
       const gint64 ring_fi_south = ncm_sphere_map_get_ring_first_index (pix, ncm_sphere_map_get_nrings (pix) - r_i - 1);
       const gint64 dist          = ring_fi_south - ring_fi_north;
-      gfloat *pvec               = pix->pvec;
-      complex float *fft_pvec    = pix->fft_pvec;
+      gfloat *pvec               = self->pvec;
+      complex float *fft_pvec    = self->fft_pvec;
 
       fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, 2,
                                                      &pvec[ring_fi_north], NULL, 
@@ -1730,17 +1880,17 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
                                                      1, dist,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
       
-      /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan_r2c);*/
-      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
+      /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, self->npix, plan_r2c);*/
+      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }
     {
-      const gint ring_size     = pix->middle_rings_size;
+      const gint ring_size     = self->middle_rings_size;
       const gint nrings_middle = ncm_sphere_map_get_nrings_middle (pix);
       const gint cap_size      = ncm_sphere_map_get_cap_size (pix);
 
-      gfloat *pvec               = pix->pvec;
-      complex float *fft_pvec    = pix->fft_pvec;
+      gfloat *pvec               = self->pvec;
+      complex float *fft_pvec    = self->fft_pvec;
 
       fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, nrings_middle,
                                                      &pvec[cap_size], NULL, 
@@ -1755,9 +1905,9 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
                                                      &pvec[cap_size], NULL,
                                                      1, ring_size,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
-      /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan_r2c);*/
-      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
+      /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, self->npix, plan_r2c);*/
+      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }  
     fflush (stdout);
 
@@ -1765,10 +1915,9 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
     
 #  else
 
-    pix->fft_pvec = fftw_alloc_complex (npix);
-    _fft_vec_set_zero_complex (pix->fft_pvec, npix);
+    _fft_vec_set_zero_complex (self->fft_pvec, npix);
 
-    _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
+    _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
     
     ncm_cfg_lock_plan_fftw ();
     
@@ -1778,8 +1927,8 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
       const gint64 ring_fi_north = ncm_sphere_map_get_ring_first_index (pix, r_i);
       const gint64 ring_fi_south = ncm_sphere_map_get_ring_first_index (pix, ncm_sphere_map_get_nrings (pix) - r_i - 1);
       const gint64 dist          = ring_fi_south - ring_fi_north;
-      gdouble *pvec              = pix->pvec;
-      complex double *fft_pvec   = pix->fft_pvec;
+      gdouble *pvec              = self->pvec;
+      complex double *fft_pvec   = self->fft_pvec;
 
       fftw_plan plan_r2c = fftw_plan_many_dft_r2c (1, &ring_size, 2,
                                                    &pvec[ring_fi_north], NULL, 
@@ -1794,16 +1943,16 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
                                                    &pvec[ring_fi_north], NULL,
                                                    1, dist,
                                                    fftw_default_flags | FFTW_DESTROY_INPUT);
-      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
+      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }
     {
-      const gint ring_size     = pix->middle_rings_size;
+      const gint ring_size     = self->middle_rings_size;
       const gint nrings_middle = ncm_sphere_map_get_nrings_middle (pix);
       const gint cap_size      = ncm_sphere_map_get_cap_size (pix);
 
-      gdouble *pvec               = pix->pvec;
-      complex double *fft_pvec    = pix->fft_pvec;
+      gdouble *pvec               = self->pvec;
+      complex double *fft_pvec    = self->fft_pvec;
 
       fftw_plan plan_r2c = fftw_plan_many_dft_r2c (1, &ring_size, nrings_middle,
                                                    &pvec[cap_size], NULL, 
@@ -1818,15 +1967,15 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
                                                    1, ring_size,
                                                    fftw_default_flags | FFTW_DESTROY_INPUT);
 
-      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
+      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }    
 
     ncm_cfg_unlock_plan_fftw ();
 
 #  endif
 
-    _fft_vec_memcpy (pix->pvec, temp_pix, pix->npix);
+    _fft_vec_memcpy (self->pvec, temp_pix, self->npix);
     _fft_vec_free (temp_pix);
 
     ncm_cfg_save_fftw_wisdom ("ncm_sphere_map_nside_%ld", ncm_sphere_map_get_nside (pix));
@@ -1841,34 +1990,35 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *pix)
 static void 
 _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *pix)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   gint m, l, lm_index = 0;
 
-  ncm_vector_set_zero (pix->Cl);
+  ncm_vector_set_zero (self->Cl);
   
   m = 0;
-  for (l = m; l <= pix->lmax; l++)
+  for (l = m; l <= self->lmax; l++)
   {
-    const gdouble Re_alm = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
-    const gdouble Im_alm = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
+    const gdouble Re_alm = creal (self->alm[lm_index]);
+    const gdouble Im_alm = cimag (self->alm[lm_index]);
 
     lm_index++;
-    ncm_vector_fast_addto (pix->Cl, l, 1.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
+    ncm_vector_fast_addto (self->Cl, l, 1.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
   }
 
-  for (m = 1; m <= pix->lmax; m++)
+  for (m = 1; m <= self->lmax; m++)
   {
-    for (l = m; l <= pix->lmax; l++)
+    for (l = m; l <= self->lmax; l++)
     {
-      const gdouble Re_alm = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
-      const gdouble Im_alm = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
-
+      const gdouble Re_alm = creal (self->alm[lm_index]);
+      const gdouble Im_alm = cimag (self->alm[lm_index]);
+      
       lm_index++;
-      ncm_vector_fast_addto (pix->Cl, l, 2.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
+      ncm_vector_fast_addto (self->Cl, l, 2.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
     }
   }
-  for (l = 0; l <= pix->lmax; l++)
+  for (l = 0; l <= self->lmax; l++)
   {
-    ncm_vector_fast_mulby (pix->Cl, l, 1.0 / (2.0 * l + 1.0));
+    ncm_vector_fast_mulby (self->Cl, l, 1.0 / (2.0 * l + 1.0));
   }
 }
 
@@ -1885,48 +2035,50 @@ void
 ncm_sphere_map_prepare_alm (NcmSphereMap *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
+  NcmSphereMapPrivate * const self = pix->priv;
   gint i;  
 
-  if (pix->lmax == 0)
+  if (self->lmax == 0)
   {
     g_warning ("ncm_sphere_map_prepare_alm: lmax equal to zero, returning...");
     return;
   }
 #ifdef _NCM_SPHERE_MAP_MEASURE
+  printf ("# Optimization control NC=%d STEP=%d CM=%d\n", NCM_SPHERE_MAP_BLOCK_NC, NCM_SPHERE_MAP_BLOCK_STEP, NCM_SPHERE_MAP_BLOCK_CM);
   printf ("# Preparing ffts!\n");
 	fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
   _ncm_sphere_map_prepare_fft (pix);
 
   ncm_sphere_map_set_order (pix, NCM_SPHERE_MAP_ORDER_RING);
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
-	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
   printf ("# Peforming ffts!\n");
 	fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
     
-  for (i = 0; i < pix->fft_plan_r2c->len; i++)
+  for (i = 0; i < self->fft_plan_r2c->len; i++)
   {
 #  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (pix->fft_plan_r2c, i));    
+    fftwf_execute (g_ptr_array_index (self->fft_plan_r2c, i));    
 #  else
-    fftw_execute (g_ptr_array_index (pix->fft_plan_r2c, i));
+    fftw_execute (g_ptr_array_index (self->fft_plan_r2c, i));
 #endif
   }
   
 #ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
 	printf ("# Transforming rings\n");
   fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
   NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (pix);  
 #ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (pix->t));
+  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (self->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
   _ncm_sphere_map_map2alm_calc_Cl (pix);
@@ -1951,12 +2103,13 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *pix)
 void
 ncm_sphere_map_get_alm (NcmSphereMap *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm)
 {
-  gint lm_index = NCM_SPHERE_MAP_ALM_INDEX (pix->lmax, l, m); 
+  NcmSphereMapPrivate * const self = pix->priv;
+  gint lm_index = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m); 
 
-  /*Re_alm[0] = ncm_vector_fast_get (pix->alm, lm_index + 0);*/
-  /*Im_alm[0] = ncm_vector_fast_get (pix->alm, lm_index + 1);*/
-  Re_alm[0] = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
-  Im_alm[0] = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
+  /*Re_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 0);*/
+  /*Im_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 1);*/
+  Re_alm[0] = creal (self->alm[lm_index]);
+  Im_alm[0] = cimag (self->alm[lm_index]);
 }
 
 /**
@@ -1971,7 +2124,8 @@ ncm_sphere_map_get_alm (NcmSphereMap *pix, guint l, guint m, gdouble *Re_alm, gd
 gdouble
 ncm_sphere_map_get_Cl (NcmSphereMap *pix, guint l)
 {
-  return ncm_vector_fast_get (pix->Cl, l);
+  NcmSphereMapPrivate * const self = pix->priv;
+  return ncm_vector_fast_get (self->Cl, l);
 }
 
 /**
@@ -1985,7 +2139,8 @@ ncm_sphere_map_get_Cl (NcmSphereMap *pix, guint l)
 gdouble 
 ncm_sphere_map_get_pix (NcmSphereMap *pix, guint i)
 {
-  return _fft_vec_idx (pix->pvec, i);
+  NcmSphereMapPrivate * const self = pix->priv;
+  return _fft_vec_idx (self->pvec, i);
 }
 
 /**
@@ -2000,14 +2155,15 @@ ncm_sphere_map_get_pix (NcmSphereMap *pix, guint i)
 void
 ncm_sphere_map_add_noise (NcmSphereMap *pix, const gdouble sd, NcmRNG *rng)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   guint i;
 
   ncm_rng_lock (rng);
   
-  for (i = 0; i < pix->npix; i++)
+  for (i = 0; i < self->npix; i++)
   {
     const gdouble n_i = gsl_ran_gaussian (rng->r, sd);
-    _fft_vec_idx (pix->pvec, i) += n_i;
+    _fft_vec_idx (self->pvec, i) += n_i;
   }
 
   ncm_rng_unlock (rng);
@@ -2024,12 +2180,14 @@ ncm_sphere_map_add_noise (NcmSphereMap *pix, const gdouble sd, NcmRNG *rng)
 void 
 ncm_sphere_map_set_map (NcmSphereMap *pix, GArray *map)
 {
+  NcmSphereMapPrivate * const self = pix->priv;
   guint i;
-  g_assert_cmpuint (map->len, ==, pix->npix);
   
-  for (i = 0; i < pix->npix; i++)
+  g_assert_cmpuint (map->len, ==, self->npix);
+  
+  for (i = 0; i < self->npix; i++)
   {
-    _fft_vec_idx (pix->pvec, i) = g_array_index (map, gdouble, i);
+    _fft_vec_idx (self->pvec, i) = g_array_index (map, gdouble, i);
   }
 }
 
@@ -2044,14 +2202,15 @@ void
 ncm_sphere_map_alm2map (NcmSphereMap *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
+  NcmSphereMapPrivate * const self = pix->priv;
   guint i;
 
-  /*gfloat *temp_pix = _fft_vec_alloc (pix->npix);*/
-  /*gfloat *pixels   = pix->pvec;*/
-  /*_fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);*/
+  /*gfloat *temp_pix = _fft_vec_alloc (self->npix);*/
+  /*gfloat *pixels   = self->pvec;*/
+  /*_fft_vec_memcpy (temp_pix, self->pvec, self->npix);*/
   
-  g_assert_cmpuint (pix->nside, >, 0);
-  if (pix->lmax == 0)
+  g_assert_cmpuint (self->nside, >, 0);
+  if (self->lmax == 0)
   {
     g_warning ("ncm_sphere_map_prepare_alm: lmax equal to zero, returning...");
     return;
@@ -2060,41 +2219,41 @@ ncm_sphere_map_alm2map (NcmSphereMap *pix)
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# Preparing ffts!\n");
 	fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 	
   _ncm_sphere_map_prepare_fft (pix);
 
-  pix->order = NCM_SPHERE_MAP_ORDER_RING;
+  self->order = NCM_SPHERE_MAP_ORDER_RING;
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
-	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
 	printf ("# Transforming rings\n");
   fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
   NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (pix);
 #ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (pix->t));
+  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (self->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
     
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# Peforming ffts!\n");
 	fflush (stdout);
-  ncm_timer_start (pix->t);
+  ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
-	for (i = 0; i < pix->fft_plan_c2r->len; i++)
+	for (i = 0; i < self->fft_plan_c2r->len; i++)
   {
 #  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (pix->fft_plan_c2r, i));    
+    fftwf_execute (g_ptr_array_index (self->fft_plan_c2r, i));    
 #  else
-    fftw_execute (g_ptr_array_index (pix->fft_plan_c2r, i));
+    fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
 #endif
   } 
 #ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
 #else
