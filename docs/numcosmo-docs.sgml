@@ -266,7 +266,6 @@
       <xi:include href="xml/nc_transfer_func_bbks.xml"/>
       <xi:include href="xml/nc_transfer_func_eh.xml"/>
       <xi:include href="xml/nc_transfer_func_camb.xml"/>
-      <xi:include href="xml/nc_transfer_func_pert.xml"/>
     </section>
     <xi:include href="xml/nc_growth_func.xml"/>
     <section>
