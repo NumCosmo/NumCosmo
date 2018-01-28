@@ -212,7 +212,7 @@ ncm_sf_spherical_harmonics_Y_free (NcmSFSphericalHarmonicsY *sphaY)
  * Returns: FIXME
  */
 NcmSFSphericalHarmonicsYArray *
-ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const guint len, const gdouble abstol)
+ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gint len, const gdouble abstol)
 {
   NcmSFSphericalHarmonicsYArray *sphaYa = g_slice_new0 (NcmSFSphericalHarmonicsYArray);
 
@@ -221,7 +221,8 @@ ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gui
 	sphaYa->m        = 0;
 	sphaYa->Klm      = NULL;
 	sphaYa->len      = len;
-	sphaYa->P        = g_new0 (NcmSFSphericalHarmonicsP, len);
+
+	g_assert_cmpuint (len, <=, NCM_SF_SPHERICAL_HARMONICS_MAX_LEN);
 
 	sphaYa->spha     = ncm_sf_spherical_harmonics_ref (spha);
 	sphaYa->abstol   = abstol;
@@ -241,13 +242,9 @@ NcmSFSphericalHarmonicsYArray *
 ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa)
 {
   NcmSFSphericalHarmonicsYArray *sphaYa_dup = ncm_sf_spherical_harmonics_Y_array_new (sphaYa->spha, sphaYa->len, sphaYa->abstol);
-	NcmSFSphericalHarmonicsP *P               = sphaYa_dup->P;
 
 	sphaYa_dup[0] = sphaYa[0];
-	sphaYa_dup->P = P;
 
-	memcpy (P, sphaYa->P, sizeof (NcmSFSphericalHarmonicsP) * sphaYa->len);
-	
   return sphaYa_dup;
 }
 
@@ -262,8 +259,7 @@ void
 ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
 {
 	ncm_sf_spherical_harmonics_clear (&sphaYa->spha);
-	
-	g_free (sphaYa->P);
+
   g_slice_free (NcmSFSphericalHarmonicsYArray, sphaYa);
 }
 
@@ -348,7 +344,7 @@ ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
  * Returns: a new #NcmSFSphericalHarmonics.
  */
 NcmSFSphericalHarmonics *
-ncm_sf_spherical_harmonics_new (const guint lmax)
+ncm_sf_spherical_harmonics_new (const gint lmax)
 {
 	NcmSFSphericalHarmonics *spha = g_object_new (NCM_TYPE_SF_SPHERICAL_HARMONICS,
 	                                              "lmax", lmax,
@@ -409,7 +405,7 @@ ncm_sf_spherical_harmonics_clear (NcmSFSphericalHarmonics **spha)
  * 
  */
 void 
-ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint lmax)
+ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const gint lmax)
 {
 	if (lmax != spha->lmax)
 	{
@@ -476,7 +472,7 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint 
  * 
  * Returns: the currently used lmax.
  */
-guint 
+gint 
 ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
 {
 	return spha->lmax;

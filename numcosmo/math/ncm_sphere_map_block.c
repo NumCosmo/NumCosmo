@@ -102,7 +102,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
     {
       for (j = 0; j < NCM_SPHERE_MAP_BLOCK_NCT; j++)
       {
-        const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_NCT, NCM_SPHERE_MAP_BLOCK_STEP)];
+        const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_NCT)];
         ncm_complex_res_add_mul_real (&alm[i], &Fim_i[j], Ylm_bj);
       }
     }
@@ -120,7 +120,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
     {
       for (j = 0; j < NCM_SPHERE_MAP_BLOCK_NCT; j++)
       {
-        const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_NCT, 2)];
+        const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_NCT)];
         ncm_complex_res_add_mul_real (&alm[i], &Fim_i[j], Ylm_bj);
       }
     }
@@ -134,7 +134,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
     gint j;    
     for (j = 0; j < NCM_SPHERE_MAP_BLOCK_NCT; j++)
     {
-      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lp1m (sphaYa, j);
+      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lp1m (sphaYa, NCM_SPHERE_MAP_BLOCK_NCT, j);
       ncm_complex_res_add_mul_real (&alm[0], &Fim_i[j], Ylm);
     }
   }  
@@ -143,7 +143,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
     gint j;    
     for (j = 0; j < NCM_SPHERE_MAP_BLOCK_NCT; j++)
     {
-      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lm (sphaYa, j);
+      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lm (sphaYa, NCM_SPHERE_MAP_BLOCK_NCT, j);
       ncm_complex_res_add_mul_real (&alm[0], &Fim_i[j], Ylm);      
     }
   }  
@@ -448,7 +448,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap *pix,
 		{
 			for (j = 0; j < NCM_SPHERE_MAP_BLOCK_INV_NCT; j++)
 			{
-				const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_INV_NCT, NCM_SPHERE_MAP_BLOCK_INV_STEP)];
+				const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_BLOCK_INV_NCT)];
         ncm_complex_res_add_mul_real (&D_m[j], &alm_ptr[0][i], Ylm_bj);
 			}
 		}
@@ -464,7 +464,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap *pix,
 			gint j;
 			for (j = 0; j < NCM_SPHERE_MAP_BLOCK_INV_NCT; j++)
 			{
-				const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lm (sphaYa, j);
+				const gdouble Ylm = ncm_sf_spherical_harmonics_Y_array_get_lm (sphaYa, NCM_SPHERE_MAP_BLOCK_INV_NCT, j);
         ncm_complex_res_add_mul_real (&D_m[j], &alm_ptr[0][0], Ylm);
 			}
 			alm_ptr[0]++;

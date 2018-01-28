@@ -79,17 +79,36 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-/*#undef HAVE_SUNDIALS_ARKODE*/
+#undef HAVE_SUNDIALS_ARKODE
+
+#include <nvector/nvector_serial.h>
 
 #ifndef HAVE_SUNDIALS_ARKODE
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
-#else
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h> 
+#endif
+#else /* HAVE_SUNDIALS_ARKODE */
 #include <arkode/arkode.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <arkode/arkode_dense.h>
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <arkode/arkode_direct.h> 
+#endif /* HAVE_SUNDIALS_MAJOR == 2 */
 #endif /* HAVE_SUNDIALS_ARKODE */
 
-#include <nvector/nvector_serial.h>
+#if HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+
+#include <sundials/sundials_types.h> 
 
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_trig.h>
@@ -118,6 +137,10 @@ struct _NcmHOAAPrivate
   N_Vector sigma;
   N_Vector y;
   N_Vector abstol_v;
+#if HAVE_SUNDIALS_MAJOR == 3
+  SUNMatrix A;
+  SUNLinearSolver LS;
+#endif
   gdouble reltol;
   gdouble abstol;
   gdouble ti;
@@ -180,6 +203,13 @@ ncm_hoaa_init (NcmHOAA *hoaa)
   hoaa->priv->sigma     = N_VNew_Serial (1);
   hoaa->priv->y         = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
   hoaa->priv->abstol_v  = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
+#if HAVE_SUNDIALS_MAJOR == 3
+  hoaa->priv->A         = SUNDenseMatrix (NCM_HOAA_VAR_SYS_SIZE, NCM_HOAA_VAR_SYS_SIZE);
+  hoaa->priv->LS        = SUNDenseLinearSolver (hoaa->priv->y, hoaa->priv->A);
+  
+  NCM_CVODE_CHECK ((gpointer)hoaa->priv->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)hoaa->priv->LS, "SUNDenseLinearSolver", 0, );
+#endif
   hoaa->priv->ctrl      = ncm_model_ctrl_new (NULL);
   hoaa->priv->T         = gsl_root_fsolver_brent;
   hoaa->priv->s         = gsl_root_fsolver_alloc (hoaa->priv->T);
@@ -360,6 +390,20 @@ _ncm_hoaa_finalize (GObject *object)
     N_VDestroy (hoaa->priv->abstol_v);
     hoaa->priv->abstol_v = NULL;
   }
+
+#if HAVE_SUNDIALS_MAJOR == 3
+  if (hoaa->priv->A != NULL)
+  {
+    SUNMatDestroy (hoaa->priv->A);
+    hoaa->priv->A = NULL;
+  }
+  
+  if (hoaa->priv->LS != NULL)
+  {
+    SUNLinSolFree (hoaa->priv->LS);
+    hoaa->priv->LS = NULL;
+  }
+#endif
 
   g_clear_pointer (&hoaa->priv->s, (GDestroyNotify) gsl_root_fsolver_free);
 
@@ -673,17 +717,17 @@ _ncm_hoaa_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy,
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi, &sin_2psi, &cos_2psi);
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = dlnmnu * cos_2theta - Vnu * sin_2theta;
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = dlnmnu * cos_2theta - Vnu * sin_2theta;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * (dlnmnu * sin_2theta + Vnu * cos_2theta);
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * (dlnmnu * sin_2theta + Vnu * cos_2theta);
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = dlnmnu * cos_2psi - Vnu * sin_2psi;
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = dlnmnu * cos_2psi - Vnu * sin_2psi;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * (dlnmnu * sin_2psi + Vnu * cos_2psi);
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * (dlnmnu * sin_2psi + Vnu * cos_2psi);
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
   return 0;
 }
@@ -738,17 +782,17 @@ _ncm_hoaa_V_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector f
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = - Vnu * sin_2theta;
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = - Vnu * sin_2theta;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * Vnu * cos_2theta;
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * Vnu * cos_2theta;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = - Vnu * sin_2psi;
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = - Vnu * sin_2psi;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * Vnu * cos_2psi;
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * Vnu * cos_2psi;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
   return 0;
 }
@@ -840,8 +884,13 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   return 0;
 }
 
+
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 _ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_ncm_hoaa_dlnmnu_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcmHOAAArg *arg          = (NcmHOAAArg *) jac_data;
 
@@ -871,24 +920,24 @@ _ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vec
     const gdouble dtanh_epsilon_dupsilon = exp (lnch_lnmnu - 3.0 * lnch_epsilon);
     
     /* + nu * pbar + dlnmnu * tanh_v * qbar / one_p_ch_u_ch_v */
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_QBAR)    = + dlnmnu * tanh_v / (1.0 + ch_u_ch_v);
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_PBAR)    = + nu;
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_UPSILON) = + 0.5 * dlnmnu * qbar * dtanh_epsilon_dupsilon;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_QBAR)    = + dlnmnu * tanh_v / (1.0 + ch_u_ch_v);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_PBAR)    = + nu;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_UPSILON) = + 0.5 * dlnmnu * qbar * dtanh_epsilon_dupsilon;
 
     /* - nu * qbar - dlnmnu * tanh_u * pbar / one_p_ch_v_ch_u */
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_QBAR)    = - nu;
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_PBAR)    = - dlnmnu * tanh_u / (1.0 + 1.0 / ch_u_ch_v);
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_UPSILON) = - 0.5 * dlnmnu * pbar * dtanh_epsilon_dupsilon;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_QBAR)    = - nu;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_PBAR)    = - dlnmnu * tanh_u / (1.0 + 1.0 / ch_u_ch_v);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_UPSILON) = - 0.5 * dlnmnu * pbar * dtanh_epsilon_dupsilon;
 
     /* - 2.0 * dlnmnu * (pbar2 / one_p_ch_v_ch_u - qbar2 / one_p_ch_u_ch_v) */
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_QBAR)    = + 4.0 * dlnmnu * qbar / one_p_ch_u_ch_v;
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_PBAR)    = - 4.0 * dlnmnu * pbar / one_p_ch_v_ch_u;
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON) = - dlnmnu * tanh_lnmnu * exp (- 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_QBAR)    = + 4.0 * dlnmnu * qbar / one_p_ch_u_ch_v;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_PBAR)    = - 4.0 * dlnmnu * pbar / one_p_ch_v_ch_u;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON) = - dlnmnu * tanh_lnmnu * exp (- 2.0 * lnch_epsilon);
 
     /* - 2.0 * dlnmnu * qbar * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon) */
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_QBAR)    = - 2.0 * dlnmnu * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_PBAR)    = - 2.0 * dlnmnu * qbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_UPSILON) = + 4.0 * dlnmnu * qbar * pbar * tanh_epsilon * exp (2.0 * lnch_lnmnu - 3.0 * lnch_epsilon);    
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_QBAR)    = - 2.0 * dlnmnu * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_PBAR)    = - 2.0 * dlnmnu * qbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_UPSILON) = + 4.0 * dlnmnu * qbar * pbar * tanh_epsilon * exp (2.0 * lnch_lnmnu - 3.0 * lnch_epsilon);    
   }
 
   return 0;
@@ -959,7 +1008,11 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 _ncm_hoaa_dlnmnu_only_sing_J (_NCM_SUNDIALS_INT_TYPE N, realtype t_m_ts, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_ncm_hoaa_dlnmnu_only_sing_J (realtype t_m_ts, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcmHOAAArg *arg   = (NcmHOAAArg *) jac_data;
 
@@ -990,24 +1043,24 @@ _ncm_hoaa_dlnmnu_only_sing_J (_NCM_SUNDIALS_INT_TYPE N, realtype t_m_ts, N_Vecto
     const gdouble dtanh_epsilon_dupsilon = exp (lnch_lnmnu - 3.0 * lnch_epsilon);
     
     /* + nu * pbar + dlnmnu * tanh_v * qbar / one_p_ch_u_ch_v */
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_QBAR)    = + dlnmnu * tanh_v / one_p_ch_u_ch_v;
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_PBAR)    = + nu;
-    DENSE_ELEM (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_UPSILON) = + 0.5 * dlnmnu * qbar * dtanh_epsilon_dupsilon;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_QBAR)    = + dlnmnu * tanh_v / one_p_ch_u_ch_v;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_PBAR)    = + nu;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_QBAR,      NCM_HOAA_VAR_UPSILON) = + 0.5 * dlnmnu * qbar * dtanh_epsilon_dupsilon;
 
     /* - nu * qbar - dlnmnu * tanh_u * pbar / one_p_ch_v_ch_u */
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_QBAR)    = - nu;
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_PBAR)    = - dlnmnu * tanh_u / one_p_ch_v_ch_u;
-    DENSE_ELEM (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_UPSILON) = - 0.5 * dlnmnu * pbar * dtanh_epsilon_dupsilon;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_QBAR)    = - nu;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_PBAR)    = - dlnmnu * tanh_u / one_p_ch_v_ch_u;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_PBAR,      NCM_HOAA_VAR_UPSILON) = - 0.5 * dlnmnu * pbar * dtanh_epsilon_dupsilon;
 
     /* - 2.0 * dlnmnu * (pbar2 / one_p_ch_v_ch_u - qbar2 / one_p_ch_u_ch_v) */
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_QBAR)    = + 4.0 * dlnmnu * qbar / one_p_ch_u_ch_v;
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_PBAR)    = - 4.0 * dlnmnu * pbar / one_p_ch_v_ch_u;
-    DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON) = - dlnmnu * tanh_lnmnu * exp (- 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_QBAR)    = + 4.0 * dlnmnu * qbar / one_p_ch_u_ch_v;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_PBAR)    = - 4.0 * dlnmnu * pbar / one_p_ch_v_ch_u;
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON) = - dlnmnu * tanh_lnmnu * exp (- 2.0 * lnch_epsilon);
 
     /* - 2.0 * dlnmnu * qbar * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon) */
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_QBAR)    = - 2.0 * dlnmnu * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_PBAR)    = - 2.0 * dlnmnu * qbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
-    DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_UPSILON) = + 4.0 * dlnmnu * qbar * pbar * tanh_epsilon * exp (2.0 * lnch_lnmnu - 3.0 * lnch_epsilon);    
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_QBAR)    = - 2.0 * dlnmnu * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_PBAR)    = - 2.0 * dlnmnu * qbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
+    SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,     NCM_HOAA_VAR_UPSILON) = + 4.0 * dlnmnu * qbar * pbar * tanh_epsilon * exp (2.0 * lnch_lnmnu - 3.0 * lnch_epsilon);    
   }
   return 0;
 }
@@ -1028,17 +1081,17 @@ _ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vec
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = dlnmnu * cos_2theta;
-  DENSE_ELEM (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_THETAB) = dlnmnu * cos_2theta;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_THETAB, NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * dlnmnu * sin_2theta;
-  DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_THETAB) = 2.0 * dlnmnu * sin_2theta;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_GAMMA)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = dlnmnu * cos_2psi;
-  DENSE_ELEM (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_UPSILON)   = dlnmnu * cos_2psi;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_UPSILON,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * dlnmnu * sin_2psi;
-  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_UPSILON)   = 2.0 * dlnmnu * sin_2psi;
+  SUN_DENSE_ACCESS (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_LNJ)   = 0.0;
 
   return 0;
 }
@@ -1076,16 +1129,26 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 	}
 }
 
+
+
 void 
 _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
   gint flag;
 #ifndef HAVE_SUNDIALS_ARKODE
   CVRhsFn f;
+#if HAVE_SUNDIALS_MAJOR == 2
   CVDlsDenseJacFn J;  
+#elif HAVE_SUNDIALS_MAJOR == 3
+  CVDlsJacFn J;
+#endif
 #else
   ARKRhsFn f;
+#if HAVE_SUNDIALS_MAJOR == 2
   ARKDlsDenseJacFn J;    
+#elif HAVE_SUNDIALS_MAJOR == 3
+  ARKDlsJacFn J;
+#endif
 #endif /* HAVE_SUNDIALS_ARKODE */
   
   switch (hoaa->priv->opt)
@@ -1128,11 +1191,19 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = CVodeSetMaxNumSteps (hoaa->priv->cvode, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = CVDense (hoaa->priv->cvode, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
     flag = CVDlsSetDenseJacFn (hoaa->priv->cvode, J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = CVDlsSetLinearSolver (hoaa->priv->cvode, hoaa->priv->LS, hoaa->priv->A);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+    flag = CVDlsSetJacFn (hoaa->priv->cvode, J);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
 
     flag = CVodeSetInitStep (hoaa->priv->cvode, fabs (t0) * hoaa->priv->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
@@ -1178,11 +1249,19 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = ARKDense (hoaa->priv->arkode, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
     flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode, J);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = ARKDlsSetLinearSolver (hoaa->priv->arkode, hoaa->priv->LS, hoaa->priv->A);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetLinearSolver", 1, );
+
+    flag = ARKDlsSetJacFn (hoaa->priv->arkode, J);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
+#endif
     
     //flag = ARKodeSetLinear (hoaa->priv->arkode, 1);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
@@ -1234,10 +1313,18 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
   gint flag;
 #ifndef HAVE_SUNDIALS_ARKODE
   CVRhsFn f;
+#if HAVE_SUNDIALS_MAJOR == 2
   CVDlsDenseJacFn J;  
+#elif HAVE_SUNDIALS_MAJOR == 3
+  CVDlsJacFn J;
+#endif
 #else
   ARKRhsFn f;
+#if HAVE_SUNDIALS_MAJOR == 2
   ARKDlsDenseJacFn J;    
+#elif HAVE_SUNDIALS_MAJOR == 3
+  ARKDlsJacFn J;
+#endif
 #endif /* HAVE_SUNDIALS_ARKODE */
   
   /*g_assert_cmpfloat (t_m_ts + ts, ==, hoaa->priv->t_cur);*/
@@ -1281,11 +1368,19 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_sing, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = CVDense (hoaa->priv->cvode_sing, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
     flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = CVDlsSetLinearSolver (hoaa->priv->cvode_sing, hoaa->priv->LS, hoaa->priv->A);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+    flag = CVDlsSetJacFn (hoaa->priv->cvode_sing, J);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
 
     flag = CVodeSetMaxErrTestFails (hoaa->priv->cvode_sing, 100);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
@@ -1299,9 +1394,6 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
 
     flag = CVodeSetInitStep (hoaa->priv->cvode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
-
-    flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
   }
 #else
   if (!hoaa->priv->arkode_sing_init)
@@ -1315,11 +1407,19 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_sing, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = ARKDense (hoaa->priv->arkode_sing, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
     flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = ARKDlsSetLinearSolver (hoaa->priv->arkode_sing, hoaa->priv->LS, hoaa->priv->A);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetLinearSolver", 1, );
+
+    flag = ARKDlsSetJacFn (hoaa->priv->arkode_sing, J);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
+#endif
     
     flag = ARKodeSetOrder (hoaa->priv->arkode_sing, 4);
     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
@@ -2685,7 +2785,7 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
       printf ("J:    ");
       for (j = 0; j < 4; j++)
       {
-        printf ("% 22.15e ", DENSE_ELEM (J, i, j));
+        printf ("% 22.15e ", SUN_DENSE_ACCESS (J, i, j));
       }
       printf ("\n");
     }
@@ -2718,7 +2818,7 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
 
     for (j = 0; j < 4; j++)
     {
-      DENSE_ELEM (J, j, i) = (NV_Ith_S (tmp2, j) - NV_Ith_S (tmp3, j)) * one_2h;
+      SUN_DENSE_ACCESS (J, j, i) = (NV_Ith_S (tmp2, j) - NV_Ith_S (tmp3, j)) * one_2h;
     }
   }
 }
@@ -2728,7 +2828,7 @@ printf ("#------------------------FINITEDIFF------------------------------------
       printf ("J:    ");
       for (j = 0; j < 4; j++)
       {
-        printf ("% 22.15e ", DENSE_ELEM (J, i, j));
+        printf ("% 22.15e ", SUN_DENSE_ACCESS (J, i, j));
       }
       printf ("\n");
     }

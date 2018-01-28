@@ -328,7 +328,6 @@ nc_headers = \
 	lss/nc_transfer_func_bbks.h   \
 	lss/nc_transfer_func_eh.h     \
 	lss/nc_transfer_func_camb.h   \
-	lss/nc_transfer_func_pert.h   \
 	lss/nc_growth_func.h          \
 	lss/nc_density_profile.h      \
 	lss/nc_density_profile_nfw.h  \
@@ -390,7 +389,6 @@ nc_headers = \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
-	model/quantum_gravity.h                   \
 	perturbations/nc_hipert.h                 \
 	perturbations/nc_hipert_wkb.h             \
 	perturbations/nc_hipert_itwo_fluids.h     \
@@ -400,9 +398,6 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann.h       \
 	perturbations/nc_hipert_boltzmann_std.h   \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
-	perturbations/linear.h                    \
-	perturbations/covariance.h                \
-	perturbations/linear_internal.h           \
 	xcor/nc_xcor.h                            \
 	xcor/nc_xcor_AB.h                         \
 	xcor/nc_xcor_limber_kernel.h              \
@@ -461,7 +456,6 @@ nc_sources = \
 	lss/nc_transfer_func_bbks.c   \
 	lss/nc_transfer_func_eh.c     \
 	lss/nc_transfer_func_camb.c   \
-	lss/nc_transfer_func_pert.c   \
 	lss/nc_growth_func.c          \
 	lss/nc_density_profile.c      \
 	lss/nc_density_profile_nfw.c  \
@@ -523,7 +517,6 @@ nc_sources = \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
-	model/quantum_gravity.c                   \
 	perturbations/nc_hipert.c                 \
 	perturbations/nc_hipert_wkb.c             \
 	perturbations/nc_hipert_itwo_fluids.c     \
@@ -533,11 +526,6 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann.c       \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
-	perturbations/linear.c                    \
-	perturbations/covariance.c                \
-	perturbations/linear_cvodes.c             \
-	perturbations/linear_gsl_ode.c            \
-	perturbations/linear_gsl_ode2.c           \
 	xcor/nc_xcor.c                            \
 	xcor/nc_xcor_AB.c                         \
 	xcor/nc_xcor_limber_kernel.c              \
@@ -654,7 +642,6 @@ nobase_cosmo_include_HEADERS = \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \
 	math/binsplit_eval.c           \
-	perturbations/linear_generic.c \
 	numcosmo-math.h                \
 	numcosmo.h
 

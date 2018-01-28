@@ -40,10 +40,12 @@
 #include "nc_hipert_boltzmann_std.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_diag.h>
 #include <cvodes/cvodes_band.h>
 #include <cvodes/cvodes_bandpre.h>
 #include <cvodes/cvodes_spbcgs.h>
+#endif 
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -254,7 +256,11 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 }
 
 static gint _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
+#if HAVE_SUNDIALS_MAJOR == 2
 static gint _nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#elif HAVE_SUNDIALS_MAJOR == 3
+static gint _nc_hipert_boltzmann_std_band_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#endif
 
 static void
 _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
@@ -275,11 +281,19 @@ _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
   flag = CVodeSetUserData (pert->cvode, pert);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1,);
 
+#if HAVE_SUNDIALS_MAJOR == 2
   flag = CVBand (pert->cvode, pert->sys_size, 4, 4);
   NCM_CVODE_CHECK (&flag, "CVBand", 1,);
 
   flag = CVDlsSetBandJacFn (pert->cvode, &_nc_hipert_boltzmann_std_band_J);
   NCM_CVODE_CHECK (&flag, "CVDlsSetBandJacFn", 1,);
+#elif HAVE_SUNDIALS_MAJOR == 3
+  flag = CVDlsSetLinearSolver (pert->cvode, pert->LS, pert->A);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+  flag = CVDlsSetJacFn (pert->cvode, &_nc_hipert_boltzmann_std_band_J);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
 
   flag = CVodeSetStopTime (pert->cvode, pb->lambdaf);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1,);
@@ -604,12 +618,16 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
   return 0;
 }
 
-#define _NC_BAND_ELEM(J,i,j) BAND_ELEM ((J), (gint)(i), (gint)(j))
+#define _NC_BAND_ELEM(J,i,j) SUN_BAND_ACCESS ((J), (gint)(i), (gint)(j))
 
 static gint
-_nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#if HAVE_SUNDIALS_MAJOR == 2
+_nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_nc_hipert_boltzmann_std_band_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
-  NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (user_data);
+  NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (jac_data);
   NcHIPert *pert = NC_HIPERT (pb);
   NcHICosmo *cosmo = pb->cosmo;
   const guint lmax = pb->TT_lmax;

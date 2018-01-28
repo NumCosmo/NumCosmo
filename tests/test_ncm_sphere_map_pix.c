@@ -251,7 +251,7 @@ test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
     for (l = 0; l <= lmax; l++)
     {
       const gdouble C_l  = ncm_sphere_map_get_Cl (test->pix, l);
-			const gdouble NC_l = test->pix->npix * C_l / (4.0 * M_PI);
+			const gdouble NC_l = ncm_sphere_map_get_npix (test->pix) * C_l / (4.0 * M_PI);
 			
       g_assert_cmpfloat (NC_l, >, 0.3);
       g_assert_cmpfloat (NC_l, <, 3.0);

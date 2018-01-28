@@ -183,7 +183,6 @@
       <title>Quantum Gravity Bounce</title>
       <xi:include href="xml/nc_hicosmo_qgrw.xml"/>
       <xi:include href="xml/nc_hicosmo_Vexp.xml"/>
-      <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
       <title>Kinematic Models</title>
@@ -234,8 +233,6 @@
 
   <chapter>
     <title>Perturbations</title>
-    <xi:include href="xml/linear.xml"/>
-    <xi:include href="xml/covariance.xml"/>
     <xi:include href="xml/nc_hipert.xml"/>
     <xi:include href="xml/nc_hipert_wkb.xml"/>
     <xi:include href="xml/nc_hipert_adiab.xml"/>

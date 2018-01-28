@@ -55,8 +55,6 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/linear.h>
-#include <numcosmo/perturbations/covariance.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
@@ -87,7 +85,6 @@
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
-#include <numcosmo/model/quantum_gravity.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
@@ -97,7 +94,6 @@
 #include <numcosmo/lss/nc_transfer_func_bbks.h>
 #include <numcosmo/lss/nc_transfer_func_eh.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
-#include <numcosmo/lss/nc_transfer_func_pert.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_density_profile.h>
 #include <numcosmo/lss/nc_density_profile_nfw.h>

@@ -97,7 +97,7 @@ endif
 
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=linear_internal.h         \
+IGNORE_HFILES= \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \

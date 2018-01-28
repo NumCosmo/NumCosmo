@@ -41,7 +41,10 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#endif
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
@@ -144,6 +147,8 @@ G_INLINE_FUNC gdouble nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo,
 /* Internal use */
 void _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo);
 void _nc_recomb_prepare_redshifts (NcRecomb *recomb, NcHICosmo *cosmo);
+
+#define NC_RECOMB_STARTING_X (1.0e12)
 
 G_END_DECLS
 

@@ -49,8 +49,13 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_hyperg.h>
+
 #include <cvode/cvode.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvode/cvode_dense.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h>
+#endif
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -1025,6 +1030,7 @@ ncm_util_cvode_print_stats (gpointer cvode)
 
   flag = CVDlsGetNumJacEvals (cvode, &njaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
+
   flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);
 
