@@ -140,6 +140,13 @@ AX_COMPILER_VENDOR()
 AX_COMPILER_VERSION()
 
 dnl ***************************************************************************
+dnl C keywords
+dnl ***************************************************************************
+AC_C_CONST()
+AC_C_RESTRICT()
+AC_C_VOLATILE()
+
+dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
@@ -191,6 +198,17 @@ case $ax_cv_c_compiler_vendor in #(
 esac
 
 AC_SUBST(PLC_NOWARN_FLAGS)
+
+AC_ARG_ENABLE([simd-ext-flags], 
+  [AS_HELP_STRING([--enable-simd-ext-flags  Enable all SIMD and extension flags])], 
+  [enable_simd_ext_flags="yes"],[])
+  
+if test x$enable_simd_ext_flags = "xyes"; then
+  AX_EXT()
+  AC_SUBST(SIMD_FLAGS)
+  AC_SUBST(CPUEXT_FLAGS)
+  CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
+fi
 
 dnl ***************************************************************************
 dnl Fortran flags
@@ -317,9 +335,7 @@ dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
 GLIB_REQUIRED_VERSION=2.38.0
-GSL_REQUIRED_VERSION=1.13
-GSL_GLF_REQUIRED_VERSION=1.15
-GSL_ODEIV2_REQUIRED_VERSION=1.15
+GSL_REQUIRED_VERSION=2.0
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
 CFITSIO_REQUIRED_VERSION=3.25
@@ -541,9 +557,6 @@ AC_SUBST(GSL_LIBS)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
-PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
-PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
-PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
 PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
 
 dnl ***************************************************************************
@@ -872,8 +885,10 @@ if test "xno" = "xyes"; then
   AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_0_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
 fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUNDIALS_2_6_0], [2.6.1, HAVE_SUNDIALS_2_6_0], [2.6.2, HAVE_SUNDIALS_2_6_0], [2.7.0, HAVE_SUNDIALS_2_7_0]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
@@ -881,11 +896,13 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
+        SUNDIALS_VERSION;
       ],
       [
         if test "x$SUNDIALS_VERSION_FOUND" != "xnone"; then
-          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) double match])
+          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
         fi
+        SUNDIALS_MAJOR=m4_argn([3],SUNDIALS_VERSION_V)
         AC_MSG_RESULT([$SUNDIALS_VERSION])
         AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
         AC_DEFINE_UNQUOTED([$SUNDIALS_DEFINE], [1], [SUNDIALS version])
@@ -894,31 +911,35 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
   ])dnl
 
 if test "x$SUNDIALS_VERSION_FOUND" = "xnone"; then
-  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) none found])
+  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) none found])
 fi
 
-AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
-CFLAGS="$SAVED_CFLAGS"
+AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$SUNDIALS_MAJOR],[SUNDIALS version])
 
-AC_MSG_CHECKING([whenever sundials uses long int])
-SAVED_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#include <cvodes/cvodes_direct.h>
-int test_dense_jac (long int N, realtype t,
-                    N_Vector y, N_Vector fy,
-                    DlsMat Jac, void *user_data,
-                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{ return 0; }
-]],[[
-CVDlsDenseJacFn func = &test_dense_jac;
-func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
-]])],
-[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
- AC_MSG_RESULT([yes])],
-[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
- AC_MSG_RESULT([no])])
-CFLAGS="$SAVED_CFLAGS"
+if test "x$SUNDIALS_MAJOR" = "x2"; then 
+  AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
+  CFLAGS="$SAVED_CFLAGS"
+
+  AC_MSG_CHECKING([whenever sundials uses long int])
+  SAVED_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS -Werror"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  #include <cvodes/cvodes_direct.h>
+  int test_dense_jac (long int N, realtype t,
+                      N_Vector y, N_Vector fy,
+                      DlsMat Jac, void *user_data,
+                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+  { return 0; }
+  ]],[[
+  CVDlsDenseJacFn func = &test_dense_jac;
+  func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
+  ]])],
+  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
+   AC_MSG_RESULT([yes])],
+  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
+   AC_MSG_RESULT([no])])
+  CFLAGS="$SAVED_CFLAGS"
+fi
 
 dnl ***************************************************************************
 dnl PLC

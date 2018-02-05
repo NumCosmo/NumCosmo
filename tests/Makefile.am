@@ -75,8 +75,18 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.c \
 	ncm_data_gauss_cov_test.h
 
+test_ncm_fit_SOURCES = \
+	test_ncm_fit.c            \
+	ncm_data_gauss_cov_mvnd.c \
+	ncm_data_gauss_cov_mvnd.h \
+	ncm_model_mvnd.c          \
+	ncm_model_mvnd.h
+
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
+
+test_ncm_sf_spherical_harmonics_SOURCES =  \
+	test_ncm_sf_spherical_harmonics.c
 
 test_ncm_sphere_map_pix_SOURCES =  \
 	test_ncm_sphere_map_pix.c
@@ -109,33 +119,35 @@ test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
         
 check_PROGRAMS =  \
-	test_ncm_vector               \
-	test_ncm_matrix               \
-	test_ncm_stats_vec            \
-	test_ncm_stats_dist1d_epdf    \
-	test_ncm_spline               \
-	test_ncm_spline2d             \
-	test_ncm_integral1d           \
-	test_ncm_sf_sbessel           \
-	test_ncm_func_eval            \
-	test_ncm_sparam               \
-	test_ncm_diff                 \
-	test_ncm_fftlog               \
-	test_ncm_model                \
-	test_ncm_model_ctrl           \
-	test_ncm_serialize            \
-	test_ncm_mset                 \
-	test_ncm_obj_array            \
-	test_ncm_data_gauss_cov       \
-	test_ncm_sphere_map_pix       \
-	test_nc_hicosmo_de            \
-	test_nc_window                \
-	test_nc_transfer_func         \
-	test_nc_galaxy_acf            \
-	test_nc_recomb                \
-	test_nc_cbe                   \
-	test_nc_data_bao_rdv          \
-        test_nc_data_bao_dvdv         \
+	test_ncm_vector                 \
+	test_ncm_matrix                 \
+	test_ncm_stats_vec              \
+	test_ncm_stats_dist1d_epdf      \
+	test_ncm_spline                 \
+	test_ncm_spline2d               \
+	test_ncm_integral1d             \
+	test_ncm_sf_sbessel             \
+	test_ncm_func_eval              \
+	test_ncm_sparam                 \
+	test_ncm_diff                   \
+	test_ncm_fftlog                 \
+	test_ncm_model                  \
+	test_ncm_model_ctrl             \
+	test_ncm_serialize              \
+	test_ncm_mset                   \
+	test_ncm_obj_array              \
+	test_ncm_data_gauss_cov         \
+	test_ncm_fit                    \
+	test_ncm_sf_spherical_harmonics \
+	test_ncm_sphere_map_pix         \
+	test_nc_hicosmo_de              \
+	test_nc_window                  \
+	test_nc_transfer_func           \
+	test_nc_galaxy_acf              \
+	test_nc_recomb                  \
+	test_nc_cbe                     \
+	test_nc_data_bao_rdv            \
+        test_nc_data_bao_dvdv           \
         test_nc_cluster_pseudo_counts
 
 # TEST_PROGS += $(check_PROGRAMS)
@@ -242,7 +254,19 @@ test_ncm_data_gauss_cov_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_ncm_fit_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_ncm_func_eval_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_sf_spherical_harmonics_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

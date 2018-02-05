@@ -90,6 +90,14 @@ nc_scalefactor_init (NcScalefactor *a)
 
   a->y           = N_VNew_Serial (1);
   a->yQ          = N_VNew_Serial (1);
+#if HAVE_SUNDIALS_MAJOR == 3
+  a->A           = SUNDenseMatrix (1, 1);
+  a->LS          = SUNDenseLinearSolver (a->y, a->A);
+  
+  NCM_CVODE_CHECK ((gpointer)a->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)a->LS, "SUNDenseLinearSolver", 0, );
+#endif
+
 }
 
 static void
@@ -117,7 +125,20 @@ nc_scalefactor_finalize (GObject *object)
   CVodeFree (&a->cvode);
   N_VDestroy (a->y);
   N_VDestroy (a->yQ);
-  
+
+#if HAVE_SUNDIALS_MAJOR == 3
+  if (a->A != NULL)
+  {
+    SUNMatDestroy (a->A);
+    a->A = NULL;
+  }
+  if (a->LS != NULL)
+  {
+    SUNLinSolFree (a->LS);
+    a->LS = NULL;
+  }
+#endif
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_scalefactor_parent_class)->finalize (object);
 }
@@ -254,7 +275,14 @@ nc_scalefactor_class_init (NcScalefactorClass *klass)
 }
 
 static gint dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+
+
+#if HAVE_SUNDIALS_MAJOR == 2
 static gint dz_deta_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#elif HAVE_SUNDIALS_MAJOR == 3
+static gint dz_deta_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#endif
+
 static gint dt_deta (realtype eta, N_Vector y, N_Vector yQdot, gpointer user_data);
 
 /**
@@ -625,11 +653,20 @@ nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
   flag = CVodeSetMaxNumSteps (a->cvode, 50000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+
+#if HAVE_SUNDIALS_MAJOR == 2
   flag = CVDense(a->cvode, 1);
   NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (a->cvode, &dz_deta_J);
   NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+  flag = CVDlsSetLinearSolver (a->cvode, a->LS, a->A);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+  flag = CVDlsSetJacFn (a->cvode, &dz_deta_J);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
   
   return;
 }
@@ -875,21 +912,24 @@ dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 dz_deta_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+dz_deta_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcHICosmo *cosmo = NC_HICOSMO (jac_data);
   const gdouble z = NV_Ith_S (y, 0);
   const gdouble E = nc_hicosmo_E (cosmo, z);
   const gdouble dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
 
-  NCM_UNUSED (N);
   NCM_UNUSED (t);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
   NCM_UNUSED (tmp2);
   NCM_UNUSED (tmp3);
   
-  DENSE_ELEM (J, 0, 0) = - dE2_dz / (2.0 * E);
+  SUN_DENSE_ACCESS (J, 0, 0) = - dE2_dz / (2.0 * E);
 
   return 0;
 }

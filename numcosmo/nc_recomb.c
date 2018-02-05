@@ -150,7 +150,6 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "perturbations/linear.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
@@ -319,7 +318,7 @@ nc_recomb_class_init (NcRecombClass *klass)
                                    g_param_spec_double ("zi",
                                                         NULL,
                                                         "Initial redshift for recombination calculations",
-                                                        0.0, G_MAXDOUBLE, NC_PERTURBATION_START_X,
+                                                        0.0, G_MAXDOUBLE, NC_RECOMB_STARTING_X,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcRecomb:prec:

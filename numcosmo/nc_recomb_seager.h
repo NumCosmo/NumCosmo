@@ -31,6 +31,26 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_recomb.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
+
+#include <nvector/nvector_serial.h>
+
+#if HAVE_SUNDIALS_MAJOR == 2
+#include <cvodes/cvodes_dense.h>
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h> 
+#endif
+
+#if HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+
+#endif /* NUMCOSMO_GIR_SCAN */
+
 G_BEGIN_DECLS
 
 #define NC_TYPE_RECOMB_SEAGER             (nc_recomb_seager_get_type ())
@@ -104,6 +124,10 @@ struct _NcRecombSeager
   N_Vector y0;
   N_Vector y;
   N_Vector abstol;
+#if HAVE_SUNDIALS_MAJOR == 3
+  SUNMatrix A;
+  SUNLinearSolver LS;
+#endif
   guint n;
   NcmSpline *Xe_s;
   NcmSpline *Xe_reion_s;

@@ -37,13 +37,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include <stdio.h>
 #include "perturbations/nc_hipert.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
-#include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -67,6 +67,11 @@ nc_hipert_init (NcHIPert *pert)
   pert->k           = 0.0;
   pert->sys_size    = 0;
   pert->y           = NULL;
+#if HAVE_SUNDIALS_MAJOR == 3
+  pert->A           = NULL;
+  pert->LS          = NULL;
+#endif
+
   pert->vec_abstol  = NULL;
   pert->cvode       = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
   pert->cvode_init  = FALSE;
@@ -147,6 +152,20 @@ nc_hipert_finalize (GObject *object)
     N_VDestroy (pert->y);
     pert->y = NULL;
   }
+
+#if HAVE_SUNDIALS_MAJOR == 3
+  if (pert->A != NULL)
+  {
+    SUNMatDestroy (pert->A);
+    pert->A = NULL;
+  }
+  
+  if (pert->LS != NULL)
+  {
+    SUNLinSolFree (pert->LS);
+    pert->LS = NULL;
+  }
+#endif
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
@@ -298,6 +317,20 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
       N_VDestroy (pert->y);
       pert->y = NULL;
     }
+#if HAVE_SUNDIALS_MAJOR == 3
+    if (pert->A != NULL)
+    {
+      SUNMatDestroy (pert->A);
+      pert->A = NULL;
+    }
+
+    if (pert->LS != NULL)
+    {
+      SUNLinSolFree (pert->LS);
+      pert->LS = NULL;
+    }
+#endif
+    
     if (pert->vec_abstol != NULL)
     {
       N_VDestroy (pert->vec_abstol);
@@ -309,6 +342,14 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
     {
       pert->y          = N_VNew_Serial (sys_size);
       pert->vec_abstol = N_VNew_Serial (sys_size);
+
+#if HAVE_SUNDIALS_MAJOR == 3
+      pert->A          = SUNDenseMatrix (sys_size, sys_size);
+      pert->LS         = SUNDenseLinearSolver (pert->y, pert->A);
+
+      NCM_CVODE_CHECK ((gpointer)pert->A, "SUNDenseMatrix", 0, );
+      NCM_CVODE_CHECK ((gpointer)pert->LS, "SUNDenseLinearSolver", 0, );
+#endif
     }
     pert->prepared = FALSE;
 

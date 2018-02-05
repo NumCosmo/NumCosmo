@@ -82,6 +82,7 @@
       <xi:include href="xml/ncm_mpsf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_sbessel.xml"/>
       <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
+      <xi:include href="xml/ncm_sf_spherical_harmonics.xml"/>
     </section>
     <section>
       <title>Models and Parameters</title>
@@ -154,8 +155,6 @@
     </section>
     <section>
       <title>Spherical maps and Healpix</title>
-      <xi:include href="xml/ncm_sphere_map_pix.xml"/>
-      <xi:include href="xml/healpix.xml"/>
       <xi:include href="xml/ncm_sphere_map.xml"/>
     </section>   
     <section>
@@ -184,7 +183,6 @@
       <title>Quantum Gravity Bounce</title>
       <xi:include href="xml/nc_hicosmo_qgrw.xml"/>
       <xi:include href="xml/nc_hicosmo_Vexp.xml"/>
-      <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
       <title>Kinematic Models</title>
@@ -235,8 +233,6 @@
 
   <chapter>
     <title>Perturbations</title>
-    <xi:include href="xml/linear.xml"/>
-    <xi:include href="xml/covariance.xml"/>
     <xi:include href="xml/nc_hipert.xml"/>
     <xi:include href="xml/nc_hipert_bg_var.xml"/>
     <xi:include href="xml/nc_hipert_wkb.xml"/>
@@ -282,7 +278,6 @@
       <xi:include href="xml/nc_transfer_func_bbks.xml"/>
       <xi:include href="xml/nc_transfer_func_eh.xml"/>
       <xi:include href="xml/nc_transfer_func_camb.xml"/>
-      <xi:include href="xml/nc_transfer_func_pert.xml"/>
     </section>
     <xi:include href="xml/nc_growth_func.xml"/>
     <section>

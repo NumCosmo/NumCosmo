@@ -85,9 +85,9 @@ struct _NcmIntegralFixed
   gdouble *int_nodes;
   gulong n_nodes;
   gulong rule_n;
-#ifdef HAVE_GSL_GLF
+#ifndef NUMCOSMO_GIR_SCAN
   gsl_integration_glfixed_table *glt;
-#endif /* HAVE_GSL_GLF */
+#endif
 };
 
 gint ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);

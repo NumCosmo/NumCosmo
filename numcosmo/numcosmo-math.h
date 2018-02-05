@@ -67,6 +67,7 @@
 #include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
 #include <numcosmo/math/ncm_sf_sbessel_int.h>
+#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
 #include <numcosmo/math/ncm_fftlog_sbessel_j.h>
@@ -144,8 +145,6 @@
 #include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
-#include <numcosmo/math/ncm_sphere_map_pix.h>
 #include <numcosmo/math/ncm_sphere_map.h>
-#include <numcosmo/sphere/healpix.h>
 
 #endif /* _NUMCOSMO_MATH_H */

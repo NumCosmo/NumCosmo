@@ -41,8 +41,11 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#endif
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
