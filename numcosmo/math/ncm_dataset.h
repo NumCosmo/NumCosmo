@@ -84,6 +84,7 @@ struct _NcmDataset
 GType ncm_dataset_get_type (void) G_GNUC_CONST;
 
 NcmDataset *ncm_dataset_new (void);
+NcmDataset *ncm_dataset_new_list (gpointer data0, ...) G_GNUC_NULL_TERMINATED;
 NcmDataset *ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser);
 NcmDataset *ncm_dataset_ref (NcmDataset *dset);
 NcmDataset *ncm_dataset_copy (NcmDataset *dset);

@@ -335,9 +335,7 @@ dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
 GLIB_REQUIRED_VERSION=2.38.0
-GSL_REQUIRED_VERSION=1.13
-GSL_GLF_REQUIRED_VERSION=1.15
-GSL_ODEIV2_REQUIRED_VERSION=1.15
+GSL_REQUIRED_VERSION=2.0
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
 CFITSIO_REQUIRED_VERSION=3.25
@@ -559,9 +557,6 @@ AC_SUBST(GSL_LIBS)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
-PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
-PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
-PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
 PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
 
 dnl ***************************************************************************

@@ -75,6 +75,13 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.c \
 	ncm_data_gauss_cov_test.h
 
+test_ncm_fit_SOURCES = \
+	test_ncm_fit.c            \
+	ncm_data_gauss_cov_mvnd.c \
+	ncm_data_gauss_cov_mvnd.h \
+	ncm_model_mvnd.c          \
+	ncm_model_mvnd.h
+
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
 
@@ -130,6 +137,7 @@ check_PROGRAMS =  \
 	test_ncm_mset                   \
 	test_ncm_obj_array              \
 	test_ncm_data_gauss_cov         \
+	test_ncm_fit                    \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map_pix         \
 	test_nc_hicosmo_de              \
@@ -241,6 +249,12 @@ test_ncm_serialize_LDADD = \
 	$(COVLIBS)
 
 test_ncm_data_gauss_cov_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_fit_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

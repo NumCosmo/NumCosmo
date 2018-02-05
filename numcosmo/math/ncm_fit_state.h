@@ -121,6 +121,11 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
                   ncm_vector_gsl (fstate->ls_f), 0.0, 
                   ncm_vector_gsl (fstate->dm2lnL));
 
+  fstate->m2lnL_prec = sqrt (ncm_vector_dnrm2 (fstate->dm2lnL));
+
+  if (fabs (fstate->m2lnL_curval) > 1.0e-3)
+    fstate->m2lnL_prec = fabs (fstate->m2lnL_prec / fstate->m2lnL_curval);
+    
   ncm_matrix_memcpy (fstate->ls_J, J);
 }
 

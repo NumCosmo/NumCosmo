@@ -139,16 +139,13 @@ _ncm_fit_gsl_ls_reset (NcmFit *fit)
   }
 }
 
-static gdouble ncm_fit_gsl_ls_test_grad (NcmFit *fit);
-
 #define _NCM_FIT_GSL_LS_MIN_PREC_RETRY (1e-3)
 
 gboolean
 _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
-  gint status;
-  gdouble prec = 1e-11;
+  gint status, info = 0;
 
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
     g_error ("_ncm_fit_gsl_ls_run: GSL algorithms do not support constraints.");
@@ -158,56 +155,35 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   gsl_multifit_fdfsolver_set (fit_gsl_ls->ls, &fit_gsl_ls->f, ncm_vector_gsl (fit->fstate->fparams));
 
-  do
-  {
-    fit->fstate->niter++;
-    status = gsl_multifit_fdfsolver_iterate (fit_gsl_ls->ls);
-
-    if (fit->fstate->niter == 1 && !gsl_finite (gsl_blas_dnrm2(fit_gsl_ls->ls->f)))
-    {
-      ncm_fit_params_set_vector (fit, fit->fstate->fparams);
-      return FALSE;
-    }
-    prec = ncm_fit_gsl_ls_test_grad (fit);
-    ncm_fit_state_set_params_prec (fit->fstate, prec);
-
-    if (status)
-    {
-      if (mtype > NCM_FIT_RUN_MSGS_NONE)
-        ncm_fit_log_step_error (fit, gsl_strerror (status));
-      if (status == GSL_CONTINUE)
-        break;
-    }
-
-    //status = gsl_multifit_test_gradient (fit->grad, prec);
-    status = gsl_multifit_test_delta (fit_gsl_ls->ls->dx, fit_gsl_ls->ls->x, 1e-13, 1e-13);
-
-    {
-      gdouble sqrt_m2lnL = gsl_blas_dnrm2 (fit_gsl_ls->ls->f);
-      ncm_fit_state_set_m2lnL_curval (fit->fstate, sqrt_m2lnL * sqrt_m2lnL);
-      ncm_fit_log_step (fit);
-    }
-  }
-  while (status == GSL_CONTINUE && fit->fstate->niter < fit->maxiter);
+  status = gsl_multifit_fdfsolver_driver (fit_gsl_ls->ls, 
+                                          fit->maxiter, 
+                                          ncm_fit_get_params_reltol (fit),
+                                          ncm_fit_get_m2lnL_reltol (fit),
+                                          ncm_fit_get_m2lnL_reltol (fit),
+                                          &info
+                                          );
 
   {
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
     NcmVector *_f = ncm_vector_new_gsl_static (fit_gsl_ls->ls->f);
-#ifdef HAVE_GSL_2_0
     NcmMatrix *_J = ncm_matrix_new (fit_gsl_ls->f.p, fit_gsl_ls->f.p);
+
     gsl_multifit_fdfsolver_jac (fit_gsl_ls->ls, ncm_matrix_gsl (_J));
-#else
-    NcmMatrix *_J = ncm_matrix_new_gsl_static (fit_gsl_ls->ls->J);
-#endif
+
     ncm_fit_params_set_vector (fit, _x);
-    ncm_fit_state_set_params_prec (fit->fstate, prec);
+    ncm_fit_state_set_params_prec (fit->fstate, ncm_fit_get_params_reltol (fit));
     ncm_fit_state_set_ls (fit->fstate, _f, _J);
+    ncm_fit_state_set_niter (fit->fstate, gsl_multifit_fdfsolver_niter (fit_gsl_ls->ls));
+
     ncm_vector_free (_x);
     ncm_vector_free (_f);
     ncm_matrix_free (_J);
   }
 
-  return TRUE;
+  if (status == GSL_SUCCESS)
+    return TRUE;
+  else
+    return FALSE;
 }
 
 static gint
@@ -220,6 +196,7 @@ ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
+  ncm_fit_log_step (fit);
   ncm_fit_ls_f (fit, fv);
 
   ncm_vector_free (fv);
@@ -236,6 +213,7 @@ ncm_fit_gsl_ls_df (const gsl_vector *x, gpointer p, gsl_matrix *J)
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
+  ncm_fit_log_step (fit);
   ncm_fit_ls_J (fit, Jm);
 
   ncm_matrix_free (Jm);
@@ -253,6 +231,7 @@ ncm_fit_gsl_ls_fdf (const gsl_vector *x, gpointer p, gsl_vector *f, gsl_matrix *
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
+  ncm_fit_log_step (fit);
   ncm_fit_ls_f_J (fit, fv, Jm);
 
   ncm_vector_free (fv);
@@ -268,44 +247,9 @@ _ncm_fit_gsl_ls_get_desc (NcmFit *fit)
   {
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
     desc = g_strdup_printf ("GSL Least Squares:%s",
-                            fit_gsl_ls->ls != NULL ? gsl_multifit_fdfsolver_name (fit_gsl_ls->ls) : "not-set"
-                            );
+                            fit_gsl_ls->ls != NULL ? gsl_multifit_fdfsolver_name (fit_gsl_ls->ls) : "not-set");
   }
   return desc;
-}
-
-static gdouble
-ncm_fit_gsl_ls_test_grad (NcmFit *fit)
-{
-  NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
-  guint i;
-  gdouble final_error = 0.0;
-  gsl_vector *f = fit_gsl_ls->ls->f;
-#ifdef HAVE_GSL_2_0
-  gsl_matrix *J = gsl_matrix_alloc (fit_gsl_ls->f.p, fit_gsl_ls->f.p);
-  gsl_multifit_fdfsolver_jac (fit_gsl_ls->ls, J);
-#else
-  gsl_matrix *J = fit_gsl_ls->ls->J;
-#endif /* HAVE_GSL_2_0 */
-
-  for (i = 0; i < J->size2; i++)
-  {
-    guint j;
-    gdouble sum = 0.0, max_abs, min, max;
-    gsl_vector_view J_col = gsl_matrix_column (J, i);
-    gsl_vector_memcpy (ncm_vector_gsl (fit->fstate->ls_f), f);
-    gsl_vector_mul (ncm_vector_gsl (fit->fstate->ls_f), &J_col.vector);
-    for (j = 0; j < ncm_vector_len (fit->fstate->ls_f); j++)
-      sum += ncm_vector_get (fit->fstate->ls_f, j);
-    gsl_vector_minmax (ncm_vector_gsl (fit->fstate->ls_f), &min, &max);
-    max_abs = GSL_MAX (fabs(min), fabs(max));
-    final_error += fabs (sum / max_abs);
-  }
-
-#ifdef HAVE_GSL_2_0
-  gsl_matrix_free (J);
-#endif /* HAVE_GSL_2_0 */
-  return final_error;
 }
 
 /**

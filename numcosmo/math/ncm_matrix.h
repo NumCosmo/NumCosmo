@@ -31,6 +31,7 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_rng.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_matrix.h>
@@ -171,6 +172,8 @@ void ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);
 gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
+
+void ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng);
 
 G_END_DECLS
 

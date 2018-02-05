@@ -828,7 +828,7 @@ void
 ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
 {
   const guint nrows = ncm_matrix_nrows (cm);
-  const guint ncols = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
   guint i, j;
 
   if (nrows != ncols)
@@ -995,6 +995,72 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
     }
     g_message ("\n");
   }
+}
+
+/**
+ * ncm_matrix_fill_rand_cov:
+ * @cm: a square #NcmMatrix
+ * @sigma_min: mininum standard deviation
+ * @sigma_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ * 
+ */
+void 
+ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+{
+  const guint n   = ncm_matrix_nrows (cm);
+  const guint nm1 = n - 1;
+  
+  g_assert_cmpfloat (cor_level, >, 0.0);
+  g_assert_cmpuint (n, ==, ncm_matrix_ncols (cm));
+
+  ncm_rng_lock (rng);
+  {
+    NcmMatrix *P = ncm_matrix_dup (cm);
+    gint k;
+    
+    ncm_matrix_set_all (P, 0.0);
+    ncm_matrix_set_identity (cm);
+
+    for (k = 0; k < nm1; k++)
+    {
+      gint i;
+      for (i = k + 1; i < n; i++)
+      {
+        gdouble p = (gsl_ran_beta (rng->r, cor_level, cor_level) - 0.5) * 2.0;
+        gint l;
+        
+        ncm_matrix_set (P, k, i, p);
+
+        for (l = k - 1; l >= 0; l--)
+        {
+          const gdouble Pli = ncm_matrix_get (P, l, i);
+          const gdouble Plk = ncm_matrix_get (P, l, k);
+          p = p * sqrt ((1.0 - gsl_pow_2 (Pli)) * (1.0 - gsl_pow_2 (Plk))) + Pli * Plk;
+        }
+
+        ncm_matrix_set (cm, k, i, p);
+        ncm_matrix_set (cm, i, k, p);
+      }
+    }
+
+    for (k = 0; k < n; k++)
+    {
+      const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
+      ncm_matrix_mul_col (cm, k, sigma_k);
+      ncm_matrix_mul_row (cm, k, sigma_k);
+    }
+
+    ncm_matrix_free (P);
+  }
+
+  ncm_rng_unlock (rng);
 }
 
 /**
