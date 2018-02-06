@@ -102,7 +102,8 @@ nc_density_profile_new_from_name (gchar *density_profile_name)
   if (!g_type_is_a (density_profile_type, NC_TYPE_DENSITY_PROFILE))
     g_error ("nc_density_profile_new_from_name: NcDensityProfile %s do not descend from %s.", density_profile_name, 
              g_type_name (NC_TYPE_DENSITY_PROFILE));
-  return NC_DENSITY_PROFILE (obj);
+
+	return NC_DENSITY_PROFILE (obj);
 }
 
 /**
@@ -214,4 +215,20 @@ gdouble
 nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z) 
 { 
   return NC_DENSITY_PROFILE_GET_CLASS (dp)->eval_fourier (dp, cosmo, k, M, z);
+}
+
+/**
+ * nc_density_profile_scale_radius:
+ * @dp: a #NcDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ *  
+ * This function computes the scale radius $r_s$. 
+ *
+ * Returns: The value of the scale radius $r_s$.
+ */
+gdouble
+nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z) 
+{ 
+  return NC_DENSITY_PROFILE_GET_CLASS (dp)->scale_radius (dp, cosmo, z);
 }

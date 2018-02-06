@@ -51,6 +51,7 @@ struct _NcDensityProfileClass
   gdouble (*integral_density_los) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
   gdouble (*integral_density_2d) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
   gdouble (*eval_fourier) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
+	gdouble (*scale_radius) (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z);
 };
 
 struct _NcDensityProfile
@@ -73,6 +74,7 @@ gdouble nc_density_profile_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo,
 gdouble nc_density_profile_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
 gdouble nc_density_profile_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
 gdouble nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
+gdouble nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z);
 
 G_END_DECLS
 
