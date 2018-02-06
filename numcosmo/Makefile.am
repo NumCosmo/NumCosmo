@@ -406,9 +406,6 @@ nc_headers = \
 	perturbations/nc_hipert_grav_einstein.h   \
 	perturbations/nc_hipert_comp.h            \
 	perturbations/nc_hipert_comp_pb.h         \
-	perturbations/linear.h                    \
-	perturbations/covariance.h                \
-	perturbations/linear_internal.h           \
 	xcor/nc_xcor.h                            \
 	xcor/nc_xcor_AB.h                         \
 	xcor/nc_xcor_limber_kernel.h              \
@@ -538,19 +535,11 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann.c       \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
-<<<<<<< HEAD
 	perturbations/nc_hipert_first_order.c     \
 	perturbations/nc_hipert_grav.c            \
 	perturbations/nc_hipert_grav_einstein.c   \
 	perturbations/nc_hipert_comp.c            \
 	perturbations/nc_hipert_comp_pb.c         \
-	perturbations/linear.c                    \
-	perturbations/covariance.c                \
-	perturbations/linear_cvodes.c             \
-	perturbations/linear_gsl_ode.c            \
-	perturbations/linear_gsl_ode2.c           \
-=======
->>>>>>> master
 	xcor/nc_xcor.c                            \
 	xcor/nc_xcor_AB.c                         \
 	xcor/nc_xcor_limber_kernel.c              \
