@@ -32,8 +32,20 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h>
 #endif
+#if HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+#include <nvector/nvector_serial.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -91,6 +103,10 @@ struct _NcScalefactor
   gdouble abstol;
   N_Vector y;
   N_Vector yQ;
+#if HAVE_SUNDIALS_MAJOR == 3
+  SUNMatrix A;
+  SUNLinearSolver LS;
+#endif
 };
 
 GType nc_scalefactor_get_type (void) G_GNUC_CONST;

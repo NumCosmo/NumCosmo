@@ -31,6 +31,7 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_rng.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_matrix.h>
@@ -160,6 +161,11 @@ NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
 void ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size);
 void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
 
+gdouble ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
+gdouble ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
+
+NcmMatrix *ncm_matrix_norma_diag (const NcmMatrix *cm1, NcmMatrix *cm2);
+
 void ncm_matrix_free (NcmMatrix *cm);
 void ncm_matrix_clear (NcmMatrix **cm);
 void ncm_matrix_const_free (const NcmMatrix *cm);
@@ -171,6 +177,8 @@ void ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);
 gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
+
+void ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng);
 
 G_END_DECLS
 

@@ -43,8 +43,20 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h> 
+#endif
+
+#if HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -57,6 +69,13 @@ nc_growth_func_init (NcGrowthFunc *gf)
   gf->cvode      = NULL;
   gf->yv         = N_VNew_Serial (2);
   gf->yQ         = N_VNew_Serial (1);
+#if HAVE_SUNDIALS_MAJOR == 3
+  gf->A          = SUNDenseMatrix (2, 2);
+  gf->LS         = SUNDenseLinearSolver (gf->yv, gf->A);
+  
+  NCM_CVODE_CHECK ((gpointer)gf->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)gf->LS, "SUNDenseLinearSolver", 0, );
+#endif
   gf->zf         = 0.0;
   gf->Da0        = 0.0;
   gf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
@@ -83,6 +102,19 @@ _nc_growth_func_finalize (GObject *object)
   N_VDestroy (gf->yv);
   N_VDestroy (gf->yQ);
 
+#if HAVE_SUNDIALS_MAJOR == 3
+  if (gf->A != NULL)
+  {
+    SUNMatDestroy (gf->A);
+    gf->A = NULL;
+  }
+  if (gf->LS != NULL)
+  {
+    SUNLinSolFree (gf->LS);
+    gf->LS = NULL;
+  }
+#endif
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
 }
@@ -172,7 +204,11 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype a, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcHICosmo *cosmo       = NC_HICOSMO (jac_data);
   const gdouble a2       = a * a;
@@ -182,18 +218,17 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype a, N_Vector y, N_Vector fy, DlsMat 
   const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
 
-  NCM_UNUSED (N);
   NCM_UNUSED (y);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
   NCM_UNUSED (tmp2);
   NCM_UNUSED (tmp3);
   
-  DENSE_ELEM (J, 0, 0) = 0.0;
-  DENSE_ELEM (J, 0, 1) = 1.0;
+  SUN_DENSE_ACCESS (J, 0, 0) = 0.0;
+  SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
 
-  DENSE_ELEM (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
-  DENSE_ELEM (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
+  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
+  SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
 
   return 0;
 }
@@ -260,11 +295,19 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
     CVodeQuadInit (gf->cvode, &dust_norma, gf->yQ);
     NCM_CVODE_CHECK (&flag, "CVodeQuadInit", 1, );    
 
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = CVDense (gf->cvode, 2);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
     flag = CVDlsSetDenseJacFn (gf->cvode, &growth_J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = CVDlsSetLinearSolver (gf->cvode, gf->LS, gf->A);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+    flag = CVDlsSetJacFn (gf->cvode, &growth_J);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
   }
   else
   {

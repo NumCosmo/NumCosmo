@@ -698,7 +698,7 @@ ncm_c_class_init (NcmCClass *klass)
  * As in the recomendation above $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G}$.
  * Here we use the CODATA 2014 value for $G$, see ncm_c_G().
  *
- * Returns: One solar mass $\mathrm{M}_\odot = 1.9884754 \times 10^{30} \,\left[\mathrm{kg}\right]$.
+ * Returns: One solar mass $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G} \,\left[\mathrm{kg}\right]$.
  */
 
 /*******************************************************************************

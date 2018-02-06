@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_util.c
  *
@@ -48,8 +49,13 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_hyperg.h>
+
 #include <cvode/cvode.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvode/cvode_dense.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h>
+#endif
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -396,65 +402,6 @@ ncm_sphPlm_x (gint l, gint m, gint order)
   while (status == GSL_CONTINUE && iter < max_iter);
   gsl_root_fsolver_free (s);
   return x;
-}
-
-/**
- * ncm_sphPlm_test_theta:
- * @theta: FIXME
- * @lmax: FIXME
- * @lmin_data: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data)
-{
-  gdouble x = cos (theta);
-  gint m;
-#ifdef HAVE_GSL_2_0
-  gsize a_size = gsl_sf_legendre_array_n (lmax);
-  gdouble *Plm_data = g_new0 (gdouble, a_size);
-  g_free (Plm_data);
-  gsl_sf_legendre_array (GSL_SF_LEGENDRE_SPHARM, lmax, x, Plm_data);
-  for (m = 0; m <= lmax; m++)
-  {
-    gint last = lmax - m;
-    gint l;
-    for (l = 0; l <= last; l++)
-    {
-      if (fabs (Plm_data[gsl_sf_legendre_array_index (l, m)]) > 1e-20)
-      {
-        lmin_data[m] = l + m;
-        break;
-      }
-    }
-  }
-#else
-  gdouble Plm_data[4096];
-  gsl_vector_int_view lmin_view = gsl_vector_int_view_array (lmin_data, lmax+1);
-
-  g_assert (lmax <= 4096);
-  gsl_vector_int_set_all (&lmin_view.vector, 1.0e9);
-
-  for (m = 0; m <= lmax; m++)
-  {
-    gint last = gsl_sf_legendre_array_size (lmax, m);
-    gint l;
-
-    gsl_sf_legendre_sphPlm_array (lmax, m, x, Plm_data);
-    for (l = 0; l < last; l++)
-    {
-      if (fabs (Plm_data[l]) > 1e-20)
-      {
-        lmin_data[m] = l + m;
-        break;
-      }
-    }
-  }
-#endif /* HAVE_GSL_2_0 */
-  return 0.0;
 }
 
 /**
@@ -831,7 +778,7 @@ ncm_complex_new ()
 
 /**
  * ncm_complex_dup:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Allocates a new complex number and copy the contents of @c to it.
  *
@@ -841,13 +788,14 @@ NcmComplex *
 ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
-  cc->z = c->z;
+  cc->z[0] = c->z[0];
+  cc->z[1] = c->z[1];
   return cc;
 }
 
 /**
  * ncm_complex_free:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees @c, it should not be used on a statically allocated NcmComplex.
  *
@@ -860,7 +808,7 @@ ncm_complex_free (NcmComplex *c)
 
 /**
  * ncm_complex_clear:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
  *
@@ -872,32 +820,76 @@ ncm_complex_clear (NcmComplex **c)
 }
 
 /**
+ * ncm_complex_set:
+ * @c: a #NcmComplex
+ * @a: the real part $a$
+ * @b: the imaginary part $b$
+ *
+ * Sets @c to $a + I b$.
+ *
+ */
+/**
+ * ncm_complex_set_zero:
+ * @c: a #NcmComplex
+ *
+ * Sets @c to $0 + I 0$.
+ *
+ */
+/**
  * ncm_complex_Re:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the real part of @c.
  *
  * Returns: Re$(c)$.
  */
-gdouble
-ncm_complex_Re (NcmComplex *c)
-{
-  return creal (c->z);
-}
-
 /**
  * ncm_complex_Im:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the imaginary part of @c.
  *
  * Returns: Im$(c)$.
  */
-gdouble
-ncm_complex_Im (NcmComplex *c)
-{
-  return cimag (c->z);
-}
+
+/**
+ * ncm_complex_res_add_mul_real:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 + @c2 * @v, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+/**
+ * ncm_complex_res_add_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @c3: #NcmComplex
+ *
+ * Computes @c1 = @c1 + @c2 * @c3, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+
+/**
+ * ncm_complex_mul_real:
+ * @c: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 * @v.
+ * 
+ */
+/**
+ * ncm_complex_res_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ *
+ * Computes @c1 = @c1 * @c2, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
 
 /**
  * ncm_util_cvode_check_flag:
@@ -979,6 +971,7 @@ ncm_util_cvode_print_stats (gpointer cvode)
 
   flag = CVDlsGetNumJacEvals (cvode, &njaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
+
   flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);
 

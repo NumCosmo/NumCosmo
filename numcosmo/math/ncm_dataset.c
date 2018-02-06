@@ -185,6 +185,37 @@ ncm_dataset_new (void)
 }
 
 /**
+ * ncm_dataset_new_list:
+ *
+ * Creates a new #NcmDataset object and adds a NULL ended list
+ * of #NcmData. 
+ *
+ * Returns: a new #NcmDataset.
+ */
+NcmDataset *
+ncm_dataset_new_list (gpointer data0, ...)
+{
+  va_list ap;
+  NcmDataset *dset = ncm_dataset_new ();
+
+  if (data0 != NULL)
+  {
+    NcmData *data = NULL;
+    
+    va_start (ap, data0);
+
+    ncm_dataset_append_data (dset, data0);
+        
+    while ((data = va_arg (ap, NcmData *)) != NULL)
+      ncm_dataset_append_data (dset, data);
+
+    va_end (ap);
+  }
+  
+  return dset;
+}
+
+/**
  * ncm_dataset_ref:
  * @dset: pointer to type defined by #NcmDataset
  *
@@ -269,6 +300,7 @@ ncm_dataset_append_data (NcmDataset *dset, NcmData *data)
 {
   gboolean enable = (dset->bstype != NCM_DATASET_BSTRAP_DISABLE) ? TRUE : FALSE;
 
+  g_assert (NCM_IS_DATA (data));
   ncm_obj_array_add (dset->oa, G_OBJECT (data));
 
   if (enable)

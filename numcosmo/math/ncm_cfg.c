@@ -81,7 +81,6 @@
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
 #include "lss/nc_transfer_func_camb.h"
-#include "lss/nc_transfer_func_pert.h"
 #include "lss/nc_density_profile.h"
 #include "lss/nc_density_profile_nfw.h"
 #include "lss/nc_multiplicity_func.h"
@@ -258,7 +257,10 @@ ncm_cfg_init (void)
 
   if (numcosmo_init)
     return;
-  
+
+  if (sizeof (NcmComplex) != sizeof (fftw_complex))
+    g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
+
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
@@ -376,7 +378,6 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_PERT);
 
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE_NFW);
