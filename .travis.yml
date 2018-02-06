@@ -62,6 +62,7 @@ script:
   - "./configure $CONFDOCS"
   - make V=1 
   - make check
+  - cat numcosmo/Makefile
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
 
 deploy:
