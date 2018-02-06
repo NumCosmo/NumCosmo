@@ -816,6 +816,108 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 }
 
 /**
+ * ncm_matrix_cmp:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  gdouble reltol    = 0.0;
+  gint i, j;
+  
+  g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
+  g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      const gdouble cm1_ij    = ncm_matrix_get (cm1, i, j);
+      const gdouble cm2_ij    = ncm_matrix_get (cm2, i, j);
+      const gdouble reltol_ij = fabs ((cm1_ij - cm2_ij) / (scale + cm2_ij));
+      reltol = MAX (reltol, reltol_ij);
+    }
+  }
+  return reltol;
+}
+
+/**
+ * ncm_matrix_cmp_diag:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  const gdouble len = MIN (nrows, ncols);
+  gdouble reltol    = 0.0;
+  gint i;
+  
+  g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
+  g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble cm1_ii    = ncm_matrix_get (cm1, i, i);
+    const gdouble cm2_ii    = ncm_matrix_get (cm2, i, i);
+    const gdouble reltol_ii = fabs ((cm1_ii - cm2_ii) / (scale + cm2_ii));
+    reltol = MAX (reltol, reltol_ii);
+  }
+  return reltol;
+}
+
+/**
+ * ncm_matrix_norma_diag:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmMatrix *
+ncm_matrix_norma_diag (const NcmMatrix *cm1, NcmMatrix *cm2)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  gint i;
+
+  g_assert_cmpuint (nrows, ==, ncols);
+
+  if (cm2 != cm1)
+    ncm_matrix_memcpy (cm2, cm1);
+
+  for (i = 0; i < nrows; i++)
+  {
+    const gdouble var_i = ncm_matrix_get (cm1, i, i);
+    gdouble sigma_i;
+    
+    g_assert_cmpfloat (var_i, >, 0.0);
+    sigma_i = sqrt (var_i);
+
+    ncm_matrix_mul_col (cm2, i, 1.0 / sigma_i);
+    ncm_matrix_mul_row (cm2, i, 1.0 / sigma_i);
+  }
+
+  return cm2;
+}
+
+/**
  * ncm_matrix_copy_triangle:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 

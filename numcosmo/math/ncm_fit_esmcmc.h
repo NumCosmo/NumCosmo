@@ -108,6 +108,7 @@ GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
 NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
 NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
+NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 

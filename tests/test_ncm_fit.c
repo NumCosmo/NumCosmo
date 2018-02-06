@@ -31,38 +31,38 @@
 #include "ncm_data_gauss_cov_mvnd.h"
 #include "ncm_model_mvnd.h"
 
-typedef struct _TestNcmSparam
+typedef struct _TestNcmFit
 {
   NcmFit *fit;
   NcmRNG *rng;
   NcmDataGaussCovMVND *data_mvnd;
   guint ntests;
-} TestNcmSparam;
+} TestNcmFit;
 
 #define TESTS_NCM_DECL(lib,algo) \
-void test_ncm_fit_##lib##_##algo##_new (TestNcmSparam *test, gconstpointer pdata); \
-void test_ncm_fit_##lib##_##algo##_traps (TestNcmSparam *test, gconstpointer pdata);
+void test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata); \
+void test_ncm_fit_##lib##_##algo##_traps (TestNcmFit *test, gconstpointer pdata);
 
 #define TESTS_NCM_ADD(lib,algo) \
-  g_test_add ("/ncm/fit/" #lib "/" #algo "/run", TestNcmSparam, NULL, \
+  g_test_add ("/ncm/fit/" #lib "/" #algo "/run", TestNcmFit, NULL, \
               &test_ncm_fit_##lib##_##algo##_new, \
               &test_ncm_fit_run, \
               &test_ncm_fit_free); \
 \
-  g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmSparam, NULL, \
+  g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
               &test_ncm_fit_##lib##_##algo##_new, \
               &test_ncm_fit_##lib##_##algo##_traps, \
               &test_ncm_fit_free);
 
 #define TESTS_NCM_ADD_INVALID(lib,algo) \
-  g_test_add ("/ncm/fit/" #lib "/" #algo "/invalid/run/subprocess", TestNcmSparam, NULL, \
+  g_test_add ("/ncm/fit/" #lib "/" #algo "/invalid/run/subprocess", TestNcmFit, NULL, \
               &test_ncm_fit_##lib##_##algo##_new, \
               &test_ncm_fit_invalid_run, \
               &test_ncm_fit_free);
 
 #define TESTS_NCM_NEW(lib,algo,lib_enum,algo_str,max_dim,max_iter) \
 void \
-test_ncm_fit_##lib##_##algo##_new (TestNcmSparam *test, gconstpointer pdata) \
+test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata) \
 { \
   const gint dim                 = g_test_rand_int_range (1, max_dim); \
   NcmRNG *rng                    = ncm_rng_new (NULL); \
@@ -94,7 +94,7 @@ test_ncm_fit_##lib##_##algo##_new (TestNcmSparam *test, gconstpointer pdata) \
 #if GLIB_CHECK_VERSION(2,38,0)
 #define TESTS_NCM_TRAPS(lib,algo) \
 void \
-test_ncm_fit_##lib##_##algo##_traps (TestNcmSparam *test, gconstpointer pdata) \
+test_ncm_fit_##lib##_##algo##_traps (TestNcmFit *test, gconstpointer pdata) \
 { \
   g_test_trap_subprocess ("/ncm/fit/" #lib "/" #algo "/invalid/run/subprocess", 0, 0); \
   g_test_trap_assert_failed (); \
@@ -102,7 +102,7 @@ test_ncm_fit_##lib##_##algo##_traps (TestNcmSparam *test, gconstpointer pdata) \
 #else
 #define TESTS_NCM_TRAPS(lib,algo) \
 void \
-test_ncm_fit_##lib##_##algo##_traps (TestNcmSparam *test, gconstpointer pdata) \
+test_ncm_fit_##lib##_##algo##_traps (TestNcmFit *test, gconstpointer pdata) \
 { \
 }
 #endif
@@ -124,9 +124,9 @@ TESTS_NCM_DECL (gsl, nmsimplex)
 TESTS_NCM_DECL (gsl, nmsimplex2)
 TESTS_NCM_DECL (gsl, nmsimplex2rand)
 
-void test_ncm_fit_free (TestNcmSparam *test, gconstpointer pdata);
-void test_ncm_fit_run (TestNcmSparam *test, gconstpointer pdata);
-void test_ncm_fit_invalid_run (TestNcmSparam *test, gconstpointer pdata);
+void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -191,7 +191,7 @@ TESTS_NCM_NEW (gsl, nmsimplex2, NCM_FIT_TYPE_GSL_MMS,     "nmsimplex2",     5, 1
 TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, "nmsimplex2rand", 5, 10000000)
 
 void
-test_ncm_fit_free (TestNcmSparam *test, gconstpointer pdata)
+test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
   NCM_TEST_FREE (ncm_fit_free, fit);
@@ -199,7 +199,7 @@ test_ncm_fit_free (TestNcmSparam *test, gconstpointer pdata)
 }
 
 void
-test_ncm_fit_run (TestNcmSparam *test, gconstpointer pdata)
+test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
 
@@ -236,7 +236,7 @@ TESTS_NCM_TRAPS (gsl, nmsimplex2)
 TESTS_NCM_TRAPS (gsl, nmsimplex2rand)
 
 void
-test_ncm_fit_invalid_run (TestNcmSparam *test, gconstpointer pdata)
+test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata)
 {
   /*NcmFit *fit = test->fit;*/
   g_assert_not_reached ();

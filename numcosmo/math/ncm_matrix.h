@@ -161,6 +161,11 @@ NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
 void ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size);
 void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
 
+gdouble ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
+gdouble ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
+
+NcmMatrix *ncm_matrix_norma_diag (const NcmMatrix *cm1, NcmMatrix *cm2);
+
 void ncm_matrix_free (NcmMatrix *cm);
 void ncm_matrix_clear (NcmMatrix **cm);
 void ncm_matrix_const_free (const NcmMatrix *cm);
