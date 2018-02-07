@@ -247,15 +247,24 @@ test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
   ncm_sphere_map_prepare_alm (test->pix);
 
   {
+    gdouble t = 0.0;
     guint l;
+
     for (l = 0; l <= lmax; l++)
     {
       const gdouble C_l  = ncm_sphere_map_get_Cl (test->pix, l);
 			const gdouble NC_l = ncm_sphere_map_get_npix (test->pix) * C_l / (4.0 * M_PI);
-			
-      g_assert_cmpfloat (NC_l, >, 1.0e-5);
-      g_assert_cmpfloat (NC_l, <, 20.0);
+      
+      t += NC_l;
+      if (l > 10)
+      {
+        g_assert_cmpfloat (NC_l, >, 1.0e-3);
+        g_assert_cmpfloat (NC_l, <, 5.0);
+      }
     }
+
+    g_assert_cmpfloat (fabs (t / (lmax + 1.0) - 1.0), <, 1.0e-1);
+    /*printf ("%u % 22.15e\n", lmax+1, fabs (t / (lmax + 1.0) - 1.0));*/
   }
 
   ncm_rng_free (rng);
