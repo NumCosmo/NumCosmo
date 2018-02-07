@@ -44,10 +44,10 @@ typedef struct _TestNcmFitESMCMC
 void test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata);
 
-void test_ncm_fit_free (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_run (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 gint
@@ -59,29 +59,29 @@ main (gint argc, gchar *argv[])
 
   g_test_add ("/ncm/fit/esmcmc/run", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
-              &test_ncm_fit_run,
-              &test_ncm_fit_free);
+              &test_ncm_fit_esmcmc_run,
+              &test_ncm_fit_esmcmc_free);
 
   g_test_add ("/ncm/fit/esmcmc/run_lre", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
-              &test_ncm_fit_run_lre,
-              &test_ncm_fit_free);
+              &test_ncm_fit_esmcmc_run_lre,
+              &test_ncm_fit_esmcmc_free);
 
   g_test_add ("/ncm/fit/esmcmc/run_lre/auto_trim", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
-              &test_ncm_fit_run_lre_auto_trim,
-              &test_ncm_fit_free);
+              &test_ncm_fit_esmcmc_run_lre_auto_trim,
+              &test_ncm_fit_esmcmc_free);
 
   g_test_add ("/ncm/fit/esmcmc/traps", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
               &test_ncm_fit_esmcmc_traps,
-              &test_ncm_fit_free);
+              &test_ncm_fit_esmcmc_free);
   
 #if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/fit/esmcmc/invalid/run/subprocess", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
               &test_ncm_fit_invalid_run,
-              &test_ncm_fit_free);
+              &test_ncm_fit_esmcmc_free);
 #endif
   g_test_run ();
 }
@@ -91,8 +91,8 @@ test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint dim                      = test->dim = g_test_rand_int_range (2, 10);
   const gint nwalkers                 = 10 * g_test_rand_int_range (2, 5);
-  NcmRNG *rng                         = ncm_rng_new (NULL);
-  NcmDataGaussCovMVND *data_mvnd      = test->data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 5.0e-1, 1.0, 1.0, 2.0, rng);
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 5.0e-1, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
@@ -115,13 +115,16 @@ test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata)
                                 NCM_FIT_ESMCMC_WALKER (stretch), 
                                 NCM_FIT_RUN_MSGS_NONE);
 
+  ncm_fit_esmcmc_set_rng (esmcmc, rng);
+
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
   ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.01);
-  
-  test->esmcmc = ncm_fit_esmcmc_ref (esmcmc);
-  test->fit    = ncm_fit_ref (fit);
-  test->rng    = rng;
+
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd);
+  test->esmcmc    = ncm_fit_esmcmc_ref (esmcmc);
+  test->fit       = ncm_fit_ref (fit);
+  test->rng       = rng;
 
   g_assert (NCM_IS_FIT (fit));
 
@@ -137,15 +140,16 @@ test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata)
 }
 
 void
-test_ncm_fit_free (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_fit_esmcmc_free, test->esmcmc);
   NCM_TEST_FREE (ncm_fit_free, test->fit);
+  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
   NCM_TEST_FREE (ncm_rng_free, test->rng);
 }
 
 void
-test_ncm_fit_run (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run      = test->dim * g_test_rand_int_range (15000, 20000);
   NcmMatrix *data_cov = NCM_DATA_GAUSS_COV (test->data_mvnd)->cov;
@@ -185,7 +189,7 @@ test_ncm_fit_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 }
 
 void
-test_ncm_fit_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run      = test->dim * g_test_rand_int_range (1500, 2000);
   NcmMatrix *data_cov = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
@@ -226,7 +230,7 @@ test_ncm_fit_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
 }
 
 void
-test_ncm_fit_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run      = test->dim * g_test_rand_int_range (1500, 2000);
   gdouble prec        = 1.0e-2;

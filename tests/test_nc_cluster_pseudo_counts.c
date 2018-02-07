@@ -244,9 +244,7 @@ void
 test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   gdouble m2lnL;
-  NcmRNG *rng = ncm_rng_new (NULL);
-
-  ncm_rng_set_seed (rng, g_test_rand_int ());
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
 
   nc_data_cluster_pseudo_counts_init_from_sampling (test->dcpc, test->fit->mset, rng, 100);
 

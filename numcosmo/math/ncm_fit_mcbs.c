@@ -99,7 +99,7 @@ ncm_fit_mcbs_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_object (value, mcbs->fit);
       break;
     case PROP_FILE:
-      g_value_set_string (value, mcbs->mcat->file);
+      g_value_set_string (value, ncm_mset_catalog_peek_filename (mcbs->mcat));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -283,6 +283,7 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
 void 
 ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, guint bsmt)
 {
+  NcmRNG *mcat_rng = ncm_mset_catalog_peek_rng (mcbs->mcat);
   guint i;
   gboolean cat_has_rng = FALSE;
 
@@ -290,9 +291,9 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_set_mtype (mcbs->mc_resample, NCM_FIT_RUN_MSGS_SIMPLE);
   ncm_fit_mc_set_fiducial (mcbs->mc_resample, fiduc);
 
-  if (mcbs->mcat->rng != NULL)
+  if (mcat_rng != NULL)
   {
-    NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcbs->mcat->rng), ncm_rng_get_seed (mcbs->mcat->rng));
+    NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcat_rng), ncm_rng_get_seed (mcat_rng));
     ncm_fit_mc_set_rng (mcbs->mc_resample, rng);
     ncm_rng_free (rng);
     cat_has_rng = TRUE;
@@ -301,7 +302,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_start_run (mcbs->mc_resample);
 
   if (!cat_has_rng)
-    ncm_mset_catalog_set_rng (mcbs->mcat, mcbs->mc_resample->mcat->rng);
+    ncm_mset_catalog_set_rng (mcbs->mcat, ncm_mset_catalog_peek_rng (mcbs->mc_resample->mcat));
   
   if (ni > 0)
     ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, ni);
@@ -330,7 +331,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_start_run (mcbs->mc_bstrap);
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
-    ncm_mset_catalog_add_from_vector (mcbs->mcat, mcbs->mc_bstrap->mcat->pstats->mean);
+    ncm_mset_catalog_add_from_vector (mcbs->mcat, ncm_mset_catalog_peek_pstats (mcbs->mc_bstrap->mcat)->mean);
     ncm_mset_catalog_log_current_stats (mcbs->mcat);
 
     ncm_fit_mc_end_run (mcbs->mc_bstrap);

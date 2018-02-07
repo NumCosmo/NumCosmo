@@ -244,9 +244,9 @@ main (gint argc, gchar *argv[])
       ncm_cfg_msg_sepa ();
       g_message ("# Catalog run type: `%s'.\n", rtype_str);
       g_message ("# Catalog size:      %u.\n", ncm_mset_catalog_len (mcat));
-      g_message ("# Catalog n-chains:  %u.\n", mcat->nchains);
-      g_message ("# Catalog nadd-vals: %u.\n", mcat->nadd_vals);
-      g_message ("# Catalog weighted:  %s.\n", mcat->weighted ? "yes" : "no");
+      g_message ("# Catalog n-chains:  %u.\n", ncm_mset_catalog_nchains (mcat));
+      g_message ("# Catalog nadd-vals: %u.\n", ncm_mset_catalog_nadd_vals (mcat));
+      g_message ("# Catalog weighted:  %s.\n", ncm_mset_catalog_weighted (mcat) ? "yes" : "no");
       ncm_mset_catalog_log_current_chain_stats (mcat);
 
       {
@@ -276,8 +276,9 @@ main (gint argc, gchar *argv[])
 
     if (chain_evol)
     {
-      guint last_t = ncm_mset_catalog_max_time (mcat);
-      const gdouble nchains = mcat->nchains;
+      NcmStatsVec *pstats   = ncm_mset_catalog_peek_pstats (mcat);
+      guint last_t          = ncm_mset_catalog_max_time (mcat);
+      const gdouble nchains = ncm_mset_catalog_nchains (mcat);
       guint i;
       
       ncm_message ("# Chain evolution from 0 to %u\n", last_t);
@@ -291,8 +292,8 @@ main (gint argc, gchar *argv[])
         ncm_message ("%10u", i);
         for (j = 0; j < len; j++)
         {
-          const gdouble mean_j = ncm_stats_vec_get_mean (mcat->pstats, j);
-          const gdouble var_j  = ncm_stats_vec_get_var (mcat->pstats, j);
+          const gdouble mean_j = ncm_stats_vec_get_mean (pstats, j);
+          const gdouble var_j  = ncm_stats_vec_get_var (pstats, j);
           const gdouble sd_j   = sqrt (var_j / nchains);
           
           ncm_message (" % 20.15g % 20.15g", (ncm_vector_get (e_mean, j) - mean_j) / sd_j, sqrt (ncm_vector_get (e_var, j) / nchains) / sd_j);
@@ -552,8 +553,10 @@ main (gint argc, gchar *argv[])
       g_message ("%s\n", header->str);
 
       {
-        const guint cat_len = ncm_mset_catalog_len (mcat);
-        NcmVector *res_v    = ncm_vector_new (max_dim);
+        const guint cat_len   = ncm_mset_catalog_len (mcat);
+        const guint nadd_vals = ncm_mset_catalog_nadd_vals (mcat);
+        NcmMSet *mset         = ncm_mset_catalog_peek_mset (mcat);
+        NcmVector *res_v      = ncm_vector_new (max_dim);
         guint i;
         
         for (i = 0; i < cat_len; i++)
@@ -561,7 +564,7 @@ main (gint argc, gchar *argv[])
           NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
           guint j;
           
-          ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
+          ncm_mset_fparams_set_vector_offset (mset, row, nadd_vals);
 
           g_message (" ");
           for (j = 0; j < mset_func_array->len; j++)
@@ -570,7 +573,7 @@ main (gint argc, gchar *argv[])
             const guint dim        = ncm_mset_func_get_dim (mset_func);
             guint k;
 
-            ncm_mset_func_eval (mset_func, mcat->mset, NULL, ncm_vector_data (res_v));
+            ncm_mset_func_eval (mset_func, mset, NULL, ncm_vector_data (res_v));
             for (k = 0; k < dim; k++)
             {
               g_message (" % 22.15g", ncm_vector_get (res_v, k));
@@ -983,11 +986,15 @@ main (gint argc, gchar *argv[])
         }
 
         {
-          gint fpi          = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + mcat->nadd_vals) : add_param;
-          gdouble mean      = 0.0;
-          gdouble var       = 0.0;
-          NcmVector *cumsum = ncm_stats_vec_visual_heidel_diag (mcat->nchains > 1 ? mcat->e_mean_stats : mcat->pstats, fpi, 0, &mean, &var);
-          const gdouble sd  = sqrt (var);
+          NcmStatsVec *pstats       = ncm_mset_catalog_peek_pstats (mcat);
+          NcmStatsVec *e_mean_stats = ncm_mset_catalog_peek_e_mean_stats (mcat);
+          const guint nchains       = ncm_mset_catalog_nchains (mcat);
+          const guint nadd_vals     = ncm_mset_catalog_nadd_vals (mcat);
+          gint fpi                  = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + nadd_vals) : add_param;
+          gdouble mean              = 0.0;
+          gdouble var               = 0.0;
+          NcmVector *cumsum         = ncm_stats_vec_visual_heidel_diag (nchains > 1 ? e_mean_stats : pstats, fpi, 0, &mean, &var);
+          const gdouble sd          = sqrt (var);
 
           for (k = 0; k < ncm_vector_len (cumsum); k++)
           {
@@ -1020,13 +1027,14 @@ main (gint argc, gchar *argv[])
 
     if (dump_chain >= 0)
     {
-      if (dump_chain >= mcat->nchains)
+      const guint nchains = ncm_mset_catalog_nchains (mcat);
+      if (dump_chain >= nchains)
       {
-        g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, mcat->nchains);
+        g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, nchains);
       }
       else
       {
-        NcmStatsVec *chain = g_ptr_array_index (mcat->chain_pstats, dump_chain);
+        NcmStatsVec *chain = ncm_mset_catalog_peek_chain_pstats (mcat, dump_chain);
         guint nitens = ncm_stats_vec_nitens (chain);
         guint i;
 

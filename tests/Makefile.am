@@ -64,6 +64,13 @@ test_ncm_model_ctrl_SOURCES =  \
 test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
+test_ncm_mset_catalog_SOURCES = \
+	test_ncm_mset_catalog.c   \
+	ncm_data_gauss_cov_mvnd.c \
+	ncm_data_gauss_cov_mvnd.h \
+	ncm_model_mvnd.c          \
+	ncm_model_mvnd.h
+
 test_ncm_obj_array_SOURCES = \
 	test_ncm_obj_array.c
 
@@ -142,6 +149,7 @@ check_PROGRAMS =  \
 	test_ncm_model_ctrl             \
 	test_ncm_serialize              \
 	test_ncm_mset                   \
+	test_ncm_mset_catalog           \
 	test_ncm_obj_array              \
 	test_ncm_data_gauss_cov         \
 	test_ncm_fit                    \
@@ -239,6 +247,12 @@ test_ncm_model_ctrl_LDADD = \
 	$(COVLIBS)
 
 test_ncm_mset_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_mset_catalog_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

@@ -235,7 +235,7 @@ test_ncm_sphere_map_ring (TestNcmSphereMap *test, gconstpointer pdata)
 void
 test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_new (NULL);
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint lmax = 1024;
   
   g_assert (test->pix != NULL);
@@ -253,8 +253,8 @@ test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
       const gdouble C_l  = ncm_sphere_map_get_Cl (test->pix, l);
 			const gdouble NC_l = ncm_sphere_map_get_npix (test->pix) * C_l / (4.0 * M_PI);
 			
-      g_assert_cmpfloat (NC_l, >, 0.3);
-      g_assert_cmpfloat (NC_l, <, 3.0);
+      g_assert_cmpfloat (NC_l, >, 1.0e-5);
+      g_assert_cmpfloat (NC_l, <, 20.0);
     }
   }
 
@@ -264,7 +264,7 @@ test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
 void
 test_ncm_sphere_map_pix2alm2pix (TestNcmSphereMap *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_new (NULL);
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint lmax = 1024;
   
   g_assert (test->pix != NULL);

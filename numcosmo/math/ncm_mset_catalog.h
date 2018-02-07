@@ -33,15 +33,6 @@
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d_epdf.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#include <gsl/gsl_eigen.h>
-#include <gsl/gsl_vector_complex.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_MSET_CATALOG             (ncm_mset_catalog_get_type ())
@@ -53,6 +44,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
 typedef struct _NcmMSetCatalog NcmMSetCatalog;
+typedef struct _NcmMSetCatalogPrivate NcmMSetCatalogPrivate;
 
 struct _NcmMSetCatalogClass
 {
@@ -114,53 +106,7 @@ struct _NcmMSetCatalog
 {
   /*< private >*/
   GObject parent_instance;
-  NcmMSet *mset;
-  guint nadd_vals;
-  GPtrArray *add_vals_names;
-  GPtrArray *add_vals_symbs;
-  NcmStatsVec *pstats;
-  NcmMSetCatalogSync smode;
-  gboolean readonly;
-  NcmRNG *rng;
-  gboolean weighted;
-  gboolean first_flush;
-  guint nchains;
-  GPtrArray *chain_pstats;
-  NcmStatsVec *mean_pstats;
-  NcmStatsVec *e_stats;
-  NcmStatsVec *e_mean_stats;
-  GPtrArray *e_var_array;
-  NcmVector *chain_means;
-  NcmVector *chain_vars;
-  NcmMatrix *chain_cov;
-  NcmMatrix *chain_sM;
-  gsl_eigen_nonsymm_workspace *chain_sM_ws;
-  gsl_vector_complex *chain_sM_ev;
-  NcmMSetCatalogTauMethod tau_method;
-  NcmVector *tau;
-  gchar *rng_inis;
-  gchar *rng_stat;
-  GTimer *sync_timer;
-  gdouble sync_interval;
-  gchar *file;
-  gchar *mset_file;
-  gchar *rtype_str;
-  GArray *porder;
-  NcmVector *quantile_ws;
-  gint first_id;
-  gint cur_id;
-  gint file_first_id;
-  gint file_cur_id;
-  glong burnin;
-#ifdef NUMCOSMO_HAVE_CFITSIO
-  fitsfile *fptr;
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-  NcmVector *params_max;
-  NcmVector *params_min;
-  glong pdf_i;
-  gsl_histogram *h;
-  gsl_histogram_pdf *h_pdf;
-  gboolean constructed;
+  NcmMSetCatalogPrivate *priv;
 };
 
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
@@ -195,6 +141,8 @@ gdouble ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_len (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_max_time (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_nadd_vals (NcmMSetCatalog *mcat);
+gboolean ncm_mset_catalog_weighted (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
 gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
 gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
@@ -208,12 +156,17 @@ NcmMSetCatalogTauMethod ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax);
 void ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals);
+void ncm_mset_catalog_add_from_vector_array (NcmMSetCatalog *mcat, NcmVector *vals, gdouble *ax);
 void ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat);
 
 NcmMSet *ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat);
+NcmMSet *ncm_mset_catalog_peek_mset (NcmMSetCatalog *mcat);
 const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
 
+NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
+NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
+NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat);

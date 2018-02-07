@@ -65,8 +65,8 @@ void \
 test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata) \
 { \
   const gint dim                 = g_test_rand_int_range (1, max_dim); \
-  NcmRNG *rng                    = ncm_rng_new (NULL); \
-  NcmDataGaussCovMVND *data_mvnd = test->data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e0, 50.0, -1.0, 1.0, rng); \
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ()); \
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e0, 50.0, -1.0, 1.0, rng); \
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim); \
   NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL); \
   NcmLikelihood *lh              = ncm_likelihood_new (dset); \
@@ -78,8 +78,9 @@ test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata) \
   fit = ncm_fit_new (lib_enum, algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL); \
   ncm_fit_set_maxiter (fit, max_iter); \
  \
-  test->fit = ncm_fit_ref (fit); \
-  test->rng = rng; \
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd); \
+  test->fit       = ncm_fit_ref (fit); \
+  test->rng       = rng; \
    \
   g_assert (NCM_IS_FIT (fit)); \
  \
@@ -195,6 +196,7 @@ test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
   NCM_TEST_FREE (ncm_fit_free, fit);
+  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
   NCM_TEST_FREE (ncm_rng_free, test->rng);
 }
 

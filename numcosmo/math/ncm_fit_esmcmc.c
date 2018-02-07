@@ -1522,9 +1522,12 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
 void
 ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (esmcmc->mcat);
+  
   ncm_mset_catalog_get_mean (esmcmc->mcat, &esmcmc->fit->fstate->fparams);
   ncm_mset_catalog_get_covar (esmcmc->mcat, &esmcmc->fit->fstate->covar);
-  ncm_mset_fparams_set_vector (esmcmc->mcat->mset, esmcmc->fit->fstate->fparams);
+  ncm_mset_fparams_set_vector (mset, esmcmc->fit->fstate->fparams);
+  
   esmcmc->fit->fstate->has_covar = TRUE;
 }
 
