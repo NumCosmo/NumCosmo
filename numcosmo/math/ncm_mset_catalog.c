@@ -1118,13 +1118,12 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         g_warning ("_ncm_mset_catalog_open_create_file: catalog does not contain `%s' key, using original value `%d'.",
                    NCM_MSET_CATALOG_M2LNP_ID_LABEL,
                    m2lnp_var);
+        self->m2lnp_var = m2lnp_var;
       }
       else
       {
         NCM_FITS_ERROR (status);
       }
-      
-      self->m2lnp_var = m2lnp_var;
       status = 0;
     }
     
