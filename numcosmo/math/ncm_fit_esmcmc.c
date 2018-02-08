@@ -170,6 +170,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
                                              NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
                                              NULL);
       }
+      ncm_mset_catalog_set_m2lnp_var (esmcmc->mcat, 0);
       ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC");
 
       for (k = 0; k < esmcmc->nwalkers; k++)

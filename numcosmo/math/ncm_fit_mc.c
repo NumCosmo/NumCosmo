@@ -255,6 +255,7 @@ _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
   mc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, 
                                    NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
                                    NULL);
+  ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
 }
 
 /**

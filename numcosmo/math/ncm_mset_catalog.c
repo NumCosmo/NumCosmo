@@ -54,6 +54,7 @@
 #include "math/ncm_mset_catalog.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_func_eval.h"
+#include "math/ncm_c.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -62,6 +63,7 @@
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_vector_complex.h>
+#include <gsl/gsl_cdf.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -76,6 +78,7 @@ enum
   PROP_NADD_VALS,
   PROP_ADD_VAL_NAMES,
   PROP_ADD_VAL_SYMBS,
+  PROP_M2LNP_VAR,
   PROP_WEIGHTED,
   PROP_NCHAINS,
   PROP_BURNIN,
@@ -92,6 +95,12 @@ struct _NcmMSetCatalogPrivate
 {
   NcmMSet *mset;
   guint nadd_vals;
+  gint m2lnp_var;
+  NcmVector *bestfit_row;
+  gdouble bestfit;
+  gdouble post_lnnorm;
+  gboolean post_lnnorm_up;
+  GTree *order_cat;
   GPtrArray *add_vals_names;
   GPtrArray *add_vals_symbs;
   NcmStatsVec *pstats;
@@ -139,6 +148,13 @@ struct _NcmMSetCatalogPrivate
   gboolean constructed;
 };
 
+static gint
+_ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer user_data)
+{
+  NCM_UNUSED (user_data);
+  return gsl_fcmp ( *((gdouble *)a), *((gdouble *)b), 1e-15);
+}
+
 static void
 ncm_mset_catalog_init (NcmMSetCatalog *mcat)
 {
@@ -146,6 +162,12 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   
   self->mset           = NULL;
   self->nadd_vals      = 0;
+  self->m2lnp_var      = -1;
+  self->bestfit_row    = NULL;
+  self->bestfit        = GSL_POSINF;
+  self->post_lnnorm    = 0.0;
+  self->post_lnnorm_up = FALSE;
+  self->order_cat      = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);
   self->add_vals_names = g_ptr_array_new_with_free_func (g_free);
   self->add_vals_symbs = g_ptr_array_new_with_free_func (g_free);
   self->pstats         = NULL;
@@ -343,6 +365,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_ADD_VAL_SYMBS:
       _ncm_mset_catalog_set_add_val_symbol_array (mcat, g_value_get_boxed (value));
       break;
+    case PROP_M2LNP_VAR:
+      ncm_mset_catalog_set_m2lnp_var (mcat, g_value_get_int (value));
+      break;
     case PROP_WEIGHTED:
       self->weighted = g_value_get_boolean (value);
       break;
@@ -424,6 +449,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
 
       break;
     }
+    case PROP_M2LNP_VAR:
+      g_value_set_int (value, ncm_mset_catalog_get_m2lnp_var (mcat));
+      break;
     case PROP_WEIGHTED:
       g_value_set_boolean (value, self->weighted);
       break;
@@ -472,6 +500,9 @@ _ncm_mset_catalog_dispose (GObject *object)
     ncm_serialize_free (ser);
   }
 
+  ncm_vector_clear (&self->bestfit_row);
+  g_clear_pointer (&self->order_cat, g_tree_unref);
+  
   ncm_mset_clear (&self->mset);
   ncm_rng_clear (&self->rng);
   ncm_stats_vec_clear (&self->pstats);
@@ -577,6 +608,13 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                        "Additional value symbols",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+  g_object_class_install_property (object_class,
+                                   PROP_M2LNP_VAR,
+                                   g_param_spec_int ("m2lnp-var",
+                                                       NULL,
+                                                       "Index of the variable representing m2lnp",
+                                                       -1, G_MAXINT, -1,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   g_object_class_install_property (object_class,
                                    PROP_WEIGHTED,
                                    g_param_spec_boolean ("weighted",
@@ -1064,6 +1102,26 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                    &self->file_first_id, NULL, &status);
     NCM_FITS_ERROR (status);
 
+    {
+      const gint m2lnp_var = self->m2lnp_var;
+      
+      fits_read_key (self->fptr, TINT, NCM_MSET_CATALOG_M2LNP_ID_LABEL,
+                     &self->m2lnp_var, NULL, &status);
+      if (status == KEY_NO_EXIST)
+      {
+        g_warning ("_ncm_mset_catalog_open_create_file: catalog does not contain `%s' key, using original value `%d'.",
+                   NCM_MSET_CATALOG_M2LNP_ID_LABEL,
+                   m2lnp_var);
+      }
+      else
+      {
+        NCM_FITS_ERROR (status);
+      }
+      
+      self->m2lnp_var = m2lnp_var;
+      status = 0;
+    }
+    
     fits_read_key (self->fptr, TSTRING, NCM_MSET_CATALOG_RTYPE_LABEL,
                    key_text, NULL, &status);
     NCM_FITS_ERROR (status);
@@ -1395,6 +1453,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
   _ncm_mset_catalog_sync_rng (mcat);  
 
   _ncm_fits_update_key_int (self->fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, self->file_first_id, "Id of the first element.", !self->readonly);
+  _ncm_fits_update_key_int (self->fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, self->m2lnp_var,     "Id of the m2lnp variable.", !self->readonly);
   
   if (!self->readonly)
   {
@@ -1792,6 +1851,9 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       fits_update_key (self->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &self->file_first_id, "Id of the first element.", &status);
       NCM_FITS_ERROR (status);
 
+      fits_update_key (self->fptr, TINT, NCM_MSET_CATALOG_M2LNP_ID_LABEL, &self->m2lnp_var,     "Id of the m2lnp variable.", &status);
+      NCM_FITS_ERROR (status);
+
       need_flush = TRUE;
     }
     else if (self->file_first_id < self->first_id)
@@ -1956,8 +2018,15 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
   }
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
   ncm_vector_set_all (self->params_min, GSL_POSINF);
-}
 
+  self->bestfit_row    = NULL;
+  self->bestfit        = GSL_POSINF;
+  self->post_lnnorm    = 0.0;
+  self->post_lnnorm_up = FALSE;
+
+  g_tree_unref (self->order_cat);
+  self->order_cat = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);  
+}
 
 /**
  * ncm_mset_catalog_reset:
@@ -1990,6 +2059,14 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
   ncm_vector_set_all (self->params_min, GSL_POSINF);
 
+  self->bestfit_row    = NULL;
+  self->bestfit        = GSL_POSINF;
+  self->post_lnnorm    = 0.0;
+  self->post_lnnorm_up = FALSE;
+
+  g_tree_unref (self->order_cat);
+  self->order_cat = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);  
+  
   self->cur_id    = self->first_id - 1;
 #ifdef NUMCOSMO_HAVE_CFITSIO
   self->file_cur_id = self->file_first_id - 1;
@@ -2026,6 +2103,37 @@ ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
   }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 }
+
+/**
+ * ncm_mset_catalog_set_m2lnp_var:
+ * @mcat: a #NcmMSetCatalog
+ * @p: $-2\ln(p)$ parameter index
+ * 
+ * Sets @p as the $-2\ln(p)$ parameter index.
+ *
+ */
+void 
+ncm_mset_catalog_set_m2lnp_var (NcmMSetCatalog *mcat, const gint p)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  self->m2lnp_var = p;
+}
+
+/**
+ * ncm_mset_catalog_get_m2lnp_var:
+ * @mcat: a #NcmMSetCatalog
+ * 
+ * Gets the $-2\ln(p)$ parameter index.
+ * 
+ * Returns: the $-2\ln(p)$ parameter index, -1 if unset.
+ */
+gint 
+ncm_mset_catalog_get_m2lnp_var (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  return self->m2lnp_var;
+}
+
 
 /**
  * ncm_mset_catalog_peek_filename:
@@ -2400,6 +2508,19 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
       ncm_stats_vec_reset (self->e_stats, FALSE);
     }
+  }
+
+  self->post_lnnorm_up = FALSE;
+  if (self->m2lnp_var >= 0)
+  {
+    gdouble *m2lnp = ncm_vector_ptr (x, self->m2lnp_var);
+    if (*m2lnp < self->bestfit)
+    {
+      ncm_vector_clear (&self->bestfit_row);
+      self->bestfit_row = ncm_vector_ref (x);
+      self->bestfit     = *m2lnp;
+    }
+    g_tree_insert (self->order_cat, m2lnp, ncm_vector_ref (x));
   }
   
   switch (self->smode)
@@ -2813,6 +2934,172 @@ ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t)
   
   g_assert_cmpuint (t, <, self->e_var_array->len);
   return g_ptr_array_index (self->e_var_array, t);
+}
+
+/**
+ * ncm_mset_catalog_get_post_lnnorm:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Computes, if necessary, the posterior normalization.
+ *
+ * Returns: the current the posterior normalization logarithm.
+ */
+gdouble 
+ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+
+  if (self->m2lnp_var < 0)
+  {
+    g_warning ("ncm_mset_catalog_get_post_lnnorm: m2lnp variable not set, cannot calculate the posterior normalization.");
+    return 0.0;
+  }
+  
+  if (!self->post_lnnorm_up)
+  {
+    const guint fparams_len = ncm_mset_fparams_len (self->mset);
+    const guint cat_len     = ncm_mset_catalog_len (mcat);
+    NcmMatrix *cov          = NULL;
+    NcmVector *mean         = NULL;
+    NcmVector *v            = ncm_vector_new (fparams_len);
+    gdouble lnNorma         = 0.0;
+    gdouble s               = 0.0;
+    gint i, ret;
+
+    ncm_mset_catalog_get_covar (mcat, &cov);
+    ncm_mset_catalog_get_mean (mcat, &mean);
+
+    /*ncm_matrix_log_vals (cov, "# COV : ", "% 22.15g");*/
+    ncm_matrix_scale (cov, gsl_pow_2 (1.0 / 3.0));
+    /*ncm_matrix_log_vals (cov, "# RCOV: ", "% 22.15g");*/
+
+    ret = ncm_matrix_cholesky_decomp (cov, 'U');
+
+    if (ret != 0)
+    {
+      g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
+
+      ncm_vector_clear (&mean);
+      ncm_matrix_clear (&cov);
+      ncm_vector_free (v);
+      return 0.0;
+    }
+
+    lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov));
+
+    /*printf ("# lnNorma = % 22.15g, bestfit = % 22.15g\n", lnNorma, self->bestfit);*/
+    
+    for (i = 0; i < cat_len; i++)
+    {
+      NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i);
+      const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
+      gdouble m2lnp_i       = 0.0;
+
+      ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
+      ncm_vector_sub (v, mean);
+      
+      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+                            ncm_matrix_gsl (cov), ncm_vector_gsl (v));
+      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+      ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
+      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+      /*ncm_vector_log_vals (v, "# V   :", "% 22.15g", TRUE);*/
+      /*printf ("%d % 22.15g % 22.15g % 22.15g % 22.15e\n", i, s, m2lnL_i, m2lnp_i, 0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));*/
+      
+      s += exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
+    }
+
+    self->post_lnnorm    = - (log (s / cat_len) - lnNorma + 0.5 * self->bestfit);
+    self->post_lnnorm_up = TRUE;
+
+    ncm_vector_clear (&mean);
+    ncm_matrix_clear (&cov);
+    ncm_vector_free (v);
+  }
+  
+  return self->post_lnnorm;
+}
+
+typedef struct _NcmMSetCatalogPostVol
+{
+  const gdouble bestfit;
+  gdouble s;
+  gint nitens;
+} NcmMSetCatalogPostVol;
+
+static gboolean
+_ncm_mset_catalog_get_post_lnvol_calc (gpointer key,
+                                     gpointer value,
+                                     gpointer data)
+{
+  NcmMSetCatalogPostVol *pvol = (NcmMSetCatalogPostVol *) data;
+  const gdouble *m2lnp_i = (gdouble *) key;
+
+  pvol->s += exp (0.5 * (*m2lnp_i - pvol->bestfit));
+  pvol->nitens--;
+
+  if (pvol->nitens > 0)
+    return FALSE;
+  else
+    return TRUE;
+}
+
+/**
+ * ncm_mset_catalog_get_post_lnvol:
+ * @mcat: a #NcmMSetCatalog
+ * @level: percentage of the posterior
+ * @glnvol: (out) (nullable): the log volume of the Gaussian approximation  
+ *
+ * Computes the volume of the @level region of the posterior.
+ * Sets into @glnvol the log volume of the Gaussian approximation
+ * of the posterior.
+ *
+ * Returns: the current the posterior @level volume logarithm.
+ */
+gdouble 
+ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  const gdouble lnnorm       = ncm_mset_catalog_get_post_lnnorm (mcat);
+  const guint cat_len        = ncm_mset_catalog_len (mcat);
+  const gint nitens          = cat_len * level;
+  NcmMSetCatalogPostVol pvol = {self->bestfit, 0.0, nitens};
+
+  g_assert_cmpfloat (level, >, 0.0);
+  g_assert_cmpfloat (level, <, 1.0);
+  if (nitens <= 0)
+  {
+    g_warning ("ncm_mset_catalog_get_post_lnvol: too few points in the catalog `%u', or level too close to zero %2f%%.\n",
+               cat_len, level * 100.0);
+    return 0.0;
+  }
+
+  g_tree_foreach (self->order_cat, 
+                  &_ncm_mset_catalog_get_post_lnvol_calc, 
+                  &pvol);
+
+  if (glnvol != NULL)
+  {
+    NcmMatrix *cov             = NULL;
+    gint signp                 = 0;
+    const guint fparams_len    = ncm_mset_fparams_len (self->mset);
+    const gdouble lnVnball     = fparams_len * ncm_c_lnpi () / 2.0 - lgamma_r (fparams_len / 2.0 + 1.0, &signp);
+    const gdouble lnsigma_size = log (gsl_cdf_chisq_Pinv (level, fparams_len));
+
+    ncm_mset_catalog_get_covar (mcat, &cov);
+
+    ncm_matrix_cholesky_decomp (cov, 'U');
+
+    ncm_matrix_cholesky_lndet (cov);
+
+    glnvol[0] = lnVnball + 0.5 * ncm_matrix_cholesky_lndet (cov) + 0.5 * fparams_len * lnsigma_size;
+
+    ncm_matrix_clear (&cov);
+  }
+
+  return lnnorm + 0.5 * self->bestfit + log (pvol.s / cat_len);
 }
 
 /**

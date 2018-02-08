@@ -132,6 +132,9 @@ void ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_reset (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);
 
+void ncm_mset_catalog_set_m2lnp_var (NcmMSetCatalog *mcat, const gint p);
+gint ncm_mset_catalog_get_m2lnp_var (NcmMSetCatalog *mcat);
+
 const gchar *ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat);
 NcmRNG *ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat);
 NcmRNG *ncm_mset_catalog_peek_rng (NcmMSetCatalog *mcat);
@@ -174,6 +177,9 @@ NcmVector *ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t);
 NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
+gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat);
+gdouble ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol);
+
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
 void ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
@@ -212,6 +218,7 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"
 #define NCM_MSET_CATALOG_M2LNL_SYMBOL "-2\\ln(L)"
 #define NCM_MSET_CATALOG_FIRST_ID_LABEL "FIRST_ID"
+#define NCM_MSET_CATALOG_M2LNP_ID_LABEL "M2LNP_ID"
 #define NCM_MSET_CATALOG_RNG_ALGO_LABEL "RNG_ALGO"
 #define NCM_MSET_CATALOG_RNG_SEED_LABEL "RNG_SEED"
 #define NCM_MSET_CATALOG_RNG_STAT_LABEL "RNG_STAT"

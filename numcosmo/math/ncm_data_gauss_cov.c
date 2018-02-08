@@ -300,16 +300,24 @@ _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 static void
 _ncm_data_gauss_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL)
 {
-  gint exponent = 0;
+  *m2lnL += gauss->np * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (gauss->LLT);
+}
+
+static void
+_ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap, gdouble *m2lnL)
+{
+  const gdouble lb = 1.0e-200;
+  const gdouble ub = 1.0e+200;
+  gdouble detL     = 1.0;
+  glong exponent   = 0;
   guint i;
-  gdouble detL = 1.0;
-  //gdouble lndetL = 0.0;
 
   for (i = 0; i < gauss->np; i++)
   {
-    const gdouble Lii = ncm_matrix_get (gauss->LLT, i, i);
+    const guint k       = ncm_bootstrap_get (bstrap, i);
+    const gdouble Lii   = ncm_matrix_get (gauss->LLT, k, k);
     const gdouble ndetL = detL * Lii;
-    if (ndetL < 1.0e-300 || ndetL > 1.0e300)
+    if (G_UNLIKELY ((ndetL < lb) || (ndetL > ub)))
     {
       gint exponent_i = 0;
       detL = frexp (ndetL, &exponent_i);
@@ -317,25 +325,9 @@ _ncm_data_gauss_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2
     }
     else
       detL = ndetL;
-    //    lndetL += log (Lii);
   }
 
   *m2lnL += gauss->np * ncm_c_ln2pi () + 2.0 * (log (detL) + exponent * M_LN2);
-  //return gauss->np * ncm_c_ln2pi () + 2.0 * lndetL;
-}
-
-static void
-_ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap, gdouble *m2lnL)
-{
-  guint i;
-  gdouble detL = 1.0;
-
-  for (i = 0; i < gauss->np; i++)
-  {
-    guint k = ncm_bootstrap_get (bstrap, i);
-    detL *= ncm_matrix_get (gauss->LLT, k, k);
-  }
-  *m2lnL += gauss->np * ncm_c_ln2pi () + 2.0 * log (detL);
 }
 
 static void
