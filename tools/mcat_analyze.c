@@ -80,6 +80,7 @@ main (gint argc, gchar *argv[])
   gboolean auto_trim      = FALSE;
   gboolean info           = FALSE;
   gboolean info_scf       = FALSE;
+  gboolean evidence       = FALSE;
   gboolean diag_chains    = FALSE;
   gboolean chain_evol     = FALSE;
   gboolean list_all       = FALSE;
@@ -116,6 +117,7 @@ main (gint argc, gchar *argv[])
     { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,      "Auto trim the catalog.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
     { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,       "Calculates the selfcorrelation time using the full sample not the ensemble averages.", NULL },
+    { "evidence",       'E', 0, G_OPTION_ARG_NONE,         &evidence,       "Computes the ln-Bayesian evidence and the 1sigma parameter space ln-volume.", NULL },
     { "diag-chains",      0, 0, G_OPTION_ARG_NONE,         &diag_chains,    "Applies diagnostics to all chains.", NULL },
     { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,         "Number of tests to use in the diagnostics.", NULL },
     { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
@@ -263,6 +265,18 @@ main (gint argc, gchar *argv[])
       ncm_mset_catalog_log_full_covar (mcat);
       /*ncm_matrix_clear (&cov);*/
       ncm_mset_catalog_log_current_stats (mcat);
+    }
+
+    if (evidence)
+    {
+      gdouble glnvol;
+      const gdouble be     = ncm_mset_catalog_get_post_lnnorm (mcat);
+      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (mcat, gsl_cdf_chisq_P (1.0, 1.0), &glnvol);
+
+      ncm_cfg_msg_sepa ();
+      g_message ("# Bayesian evidence:                                 % 22.15g\n", be);
+      g_message ("# 1 sigma posterior volume:                          % 22.15g\n", lnevol);
+      g_message ("# 1 sigma posterior volume (Gaussian approximation): % 22.15g\n", glnvol);      
     }
 
     if (diag_chains)
