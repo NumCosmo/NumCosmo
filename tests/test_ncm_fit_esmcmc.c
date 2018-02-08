@@ -48,6 +48,7 @@ void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 gint
@@ -72,6 +73,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_fit_esmcmc_run_lre_auto_trim,
               &test_ncm_fit_esmcmc_free);
 
+  g_test_add ("/ncm/fit/esmcmc/run_lre/auto_trim/vol", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new,
+              &test_ncm_fit_esmcmc_run_lre_auto_trim_vol,
+              &test_ncm_fit_esmcmc_free);
+  
   g_test_add ("/ncm/fit/esmcmc/traps", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
               &test_ncm_fit_esmcmc_traps,
@@ -269,8 +275,6 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
 
       ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
       ncm_mset_catalog_get_full_covar (test->esmcmc->mcat, &cat_fcov);
-
-      printf ("prec % 22.15g | %e\n", prec, fabs (ncm_matrix_get (cat_fcov, 0, 0) * 0.5 / test->dim - 1.0));
       
       g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
     }      
@@ -299,6 +303,36 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
   ncm_matrix_free (data_cor);
   ncm_matrix_free (data_cov);
 }
+
+void
+test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  const gint run = test->dim * g_test_rand_int_range (1500, 2000);
+  gdouble prec   = 1.0e-2;
+  
+  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
+
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->esmcmc->mcat) / test->dim), <, 0.2);
+
+  if (FALSE)
+  {
+    gdouble glnvol;
+    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->esmcmc->mcat));
+    printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (test->esmcmc->mcat, 0.6827, &glnvol));
+    printf ("% 22.15g\n", glnvol);  
+  }
+
+  {
+    gdouble glnvol;
+    const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (test->esmcmc->mcat, 0.6827, &glnvol);
+    ncm_assert_cmpdouble_e (lnevol, ==, glnvol, 0.5, 0.0);
+  }
+}
+
 
 #if GLIB_CHECK_VERSION(2,38,0)
 void

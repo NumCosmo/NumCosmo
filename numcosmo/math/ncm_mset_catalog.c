@@ -100,7 +100,8 @@ struct _NcmMSetCatalogPrivate
   gdouble bestfit;
   gdouble post_lnnorm;
   gboolean post_lnnorm_up;
-  GTree *order_cat;
+  GPtrArray *order_cat;
+  gboolean order_cat_sort;
   GPtrArray *add_vals_names;
   GPtrArray *add_vals_symbs;
   NcmStatsVec *pstats;
@@ -149,10 +150,14 @@ struct _NcmMSetCatalogPrivate
 };
 
 static gint
-_ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer user_data)
+_ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer data)
 {
-  NCM_UNUSED (user_data);
-  return gsl_fcmp ( *((gdouble *)a), *((gdouble *)b), 1e-15);
+  const NcmVector **row_a = (const NcmVector **) a;
+  const NcmVector **row_b = (const NcmVector **) b;
+  const gint i            = GPOINTER_TO_INT (data);
+  const gdouble a_m2lnp   = ncm_vector_get (*row_a, i);
+  const gdouble b_m2lnp   = ncm_vector_get (*row_b, i);
+  return (a_m2lnp == b_m2lnp) ? 0.0 : ((a_m2lnp > b_m2lnp) ? +1 : -1);
 }
 
 static void
@@ -167,7 +172,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->bestfit        = GSL_POSINF;
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
-  self->order_cat      = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);
+  self->order_cat      = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_vector_free);
+  self->order_cat_sort = FALSE;
   self->add_vals_names = g_ptr_array_new_with_free_func (g_free);
   self->add_vals_symbs = g_ptr_array_new_with_free_func (g_free);
   self->pstats         = NULL;
@@ -501,7 +507,7 @@ _ncm_mset_catalog_dispose (GObject *object)
   }
 
   ncm_vector_clear (&self->bestfit_row);
-  g_clear_pointer (&self->order_cat, g_tree_unref);
+  g_clear_pointer (&self->order_cat, g_ptr_array_unref);
   
   ncm_mset_clear (&self->mset);
   ncm_rng_clear (&self->rng);
@@ -2024,8 +2030,8 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
 
-  g_tree_unref (self->order_cat);
-  self->order_cat = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);  
+  g_ptr_array_set_size (self->order_cat, 0);
+  self->order_cat_sort = FALSE;
 }
 
 /**
@@ -2064,8 +2070,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
 
-  g_tree_unref (self->order_cat);
-  self->order_cat = g_tree_new_full (_ncm_mset_catalog_double_compare, NULL, NULL, (GDestroyNotify) ncm_vector_free);  
+  g_ptr_array_set_size (self->order_cat, 0);
+  self->order_cat_sort = FALSE;
   
   self->cur_id    = self->first_id - 1;
 #ifdef NUMCOSMO_HAVE_CFITSIO
@@ -2520,7 +2526,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       self->bestfit_row = ncm_vector_ref (x);
       self->bestfit     = *m2lnp;
     }
-    g_tree_insert (self->order_cat, m2lnp, ncm_vector_ref (x));
+    g_ptr_array_add (self->order_cat, ncm_vector_ref (x));
+    self->order_cat_sort = FALSE;
   }
   
   switch (self->smode)
@@ -3022,30 +3029,6 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat)
   return self->post_lnnorm;
 }
 
-typedef struct _NcmMSetCatalogPostVol
-{
-  const gdouble bestfit;
-  gdouble s;
-  gint nitens;
-} NcmMSetCatalogPostVol;
-
-static gboolean
-_ncm_mset_catalog_get_post_lnvol_calc (gpointer key,
-                                     gpointer value,
-                                     gpointer data)
-{
-  NcmMSetCatalogPostVol *pvol = (NcmMSetCatalogPostVol *) data;
-  const gdouble *m2lnp_i = (gdouble *) key;
-
-  pvol->s += exp (0.5 * (*m2lnp_i - pvol->bestfit));
-  pvol->nitens--;
-
-  if (pvol->nitens > 0)
-    return FALSE;
-  else
-    return TRUE;
-}
-
 /**
  * ncm_mset_catalog_get_post_lnvol:
  * @mcat: a #NcmMSetCatalog
@@ -3065,7 +3048,8 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
   const gdouble lnnorm       = ncm_mset_catalog_get_post_lnnorm (mcat);
   const guint cat_len        = ncm_mset_catalog_len (mcat);
   const gint nitens          = cat_len * level;
-  NcmMSetCatalogPostVol pvol = {self->bestfit, 0.0, nitens};
+  gdouble s = 0.0;
+  gint i;
 
   g_assert_cmpfloat (level, >, 0.0);
   g_assert_cmpfloat (level, <, 1.0);
@@ -3076,9 +3060,17 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
     return 0.0;
   }
 
-  g_tree_foreach (self->order_cat, 
-                  &_ncm_mset_catalog_get_post_lnvol_calc, 
-                  &pvol);
+  if (!self->order_cat_sort)
+  {
+    g_ptr_array_sort_with_data (self->order_cat, &_ncm_mset_catalog_double_compare, GINT_TO_POINTER (self->m2lnp_var));
+    self->order_cat_sort = TRUE;
+  }
+
+  for (i = 0; i < nitens; i++)
+  {
+    const gdouble m2lnp_i = ncm_vector_get (g_ptr_array_index (self->order_cat, i), self->m2lnp_var);
+    s += exp (0.5 * (m2lnp_i - self->bestfit));
+  }
 
   if (glnvol != NULL)
   {
@@ -3099,7 +3091,7 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
     ncm_matrix_clear (&cov);
   }
 
-  return lnnorm + 0.5 * self->bestfit + log (pvol.s / cat_len);
+  return lnnorm + 0.5 * self->bestfit + log (s / cat_len);
 }
 
 /**

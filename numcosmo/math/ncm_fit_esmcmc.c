@@ -1493,7 +1493,10 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
     {
+      gdouble glnvol;
+      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (esmcmc->mcat, 0.6827, &glnvol);
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
+      g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (esmcmc->mcat));
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
 

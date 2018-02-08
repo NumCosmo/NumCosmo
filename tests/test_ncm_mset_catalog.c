@@ -244,7 +244,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
   }
 
-  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->mcat) / test->dim), <, 0.2);    
+  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->mcat) / test->dim), <, 0.2);
 }
 
 void
@@ -271,11 +271,13 @@ test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
     const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (test->mcat, 0.6827, &glnvol);
     ncm_assert_cmpdouble_e (lnevol, ==, glnvol, 0.2, 0.0);
   }
-/*
-  printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->mcat));
-  printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (test->mcat, 0.6827, &glnvol));
-  printf ("% 22.15g\n", glnvol);  
-*/
+
+  if (FALSE)
+  {
+    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->mcat));
+    printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (test->mcat, 0.6827, &glnvol));
+    printf ("% 22.15g\n", glnvol);  
+  }
 }
  
 
