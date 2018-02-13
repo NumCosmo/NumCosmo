@@ -31,6 +31,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_quaternion.h>
+#include <numcosmo/math/ncm_spline.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_vector_float.h>
@@ -100,63 +101,66 @@ struct _NcmSphereMap
 GType ncm_sphere_map_get_type (void) G_GNUC_CONST;
 
 NcmSphereMap *ncm_sphere_map_new (const gint64 nside);
-NcmSphereMap *ncm_sphere_map_ref (NcmSphereMap *pix);
-void ncm_sphere_map_free (NcmSphereMap *pix);
-void ncm_sphere_map_clear (NcmSphereMap **pix);
+NcmSphereMap *ncm_sphere_map_ref (NcmSphereMap *smap);
+void ncm_sphere_map_free (NcmSphereMap *smap);
+void ncm_sphere_map_clear (NcmSphereMap **smap);
 
-void ncm_sphere_map_set_nside (NcmSphereMap *pix, gint64 nside);
-gint64 ncm_sphere_map_get_nside (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_npix (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_cap_size (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_middle_size (NcmSphereMap *pix);
+void ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside);
+gint64 ncm_sphere_map_get_nside (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_nsmap (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_cap_size (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_middle_size (NcmSphereMap *smap);
 
-gint64 ncm_sphere_map_get_nrings (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_nrings_cap (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_nrings_middle (NcmSphereMap *pix);
-gint64 ncm_sphere_map_get_ring_size (NcmSphereMap *pix, gint64 r_i);
-gint64 ncm_sphere_map_get_ring_first_index (NcmSphereMap *pix, gint64 r_i);
+gint64 ncm_sphere_map_get_nrings (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_nrings_cap (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_nrings_middle (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_ring_size (NcmSphereMap *smap, gint64 r_i);
+gint64 ncm_sphere_map_get_ring_first_index (NcmSphereMap *smap, gint64 r_i);
 
-void ncm_sphere_map_set_order (NcmSphereMap *pix, NcmSphereMapOrder order);
-NcmSphereMapOrder ncm_sphere_map_get_order (NcmSphereMap *pix);
+void ncm_sphere_map_set_order (NcmSphereMap *smap, NcmSphereMapOrder order);
+NcmSphereMapOrder ncm_sphere_map_get_order (NcmSphereMap *smap);
 
-void ncm_sphere_map_set_coordsys (NcmSphereMap *pix, NcmSphereMapCoordSys coordsys);
-NcmSphereMapCoordSys ncm_sphere_map_get_coordsys (NcmSphereMap *pix);
+void ncm_sphere_map_set_coordsys (NcmSphereMap *smap, NcmSphereMapCoordSys coordsys);
+NcmSphereMapCoordSys ncm_sphere_map_get_coordsys (NcmSphereMap *smap);
 
-void ncm_sphere_map_set_lmax (NcmSphereMap *pix, guint lmax);
-guint ncm_sphere_map_get_lmax (NcmSphereMap *pix);
+void ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax);
+guint ncm_sphere_map_get_lmax (NcmSphereMap *smap);
 
-void ncm_sphere_map_clear_pixels (NcmSphereMap *pix);
+void ncm_sphere_map_clear_smapels (NcmSphereMap *smap);
 
-gint64 ncm_sphere_map_nest2ring (NcmSphereMap *pix, const gint64 nest_index);
-gint64 ncm_sphere_map_ring2nest (NcmSphereMap *pix, const gint64 ring_index);
-void ncm_sphere_map_pix2ang_nest (NcmSphereMap *pix, const gint64 nest_index, gdouble *theta, gdouble *phi);
-void ncm_sphere_map_pix2ang_ring (NcmSphereMap *pix, const gint64 ring_index, gdouble *theta, gdouble *phi);
-void ncm_sphere_map_pix2vec_nest (NcmSphereMap *pix, const gint64 nest_index, NcmTriVec *vec);
-void ncm_sphere_map_pix2vec_ring (NcmSphereMap *pix, const gint64 ring_index, NcmTriVec *vec);
-void ncm_sphere_map_ang2pix_nest (NcmSphereMap *pix, const gdouble theta, const gdouble phi, gint64 *nest_index);
-void ncm_sphere_map_ang2pix_ring (NcmSphereMap *pix, const gdouble theta, const gdouble phi, gint64 *ring_index);
+gint64 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index);
+gint64 ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index);
+void ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdouble *theta, gdouble *phi);
+void ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdouble *theta, gdouble *phi);
+void ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, const gint64 nest_index, NcmTriVec *vec);
+void ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, const gint64 ring_index, NcmTriVec *vec);
+void ncm_sphere_map_ang2pix_nest (NcmSphereMap *smap, const gdouble theta, const gdouble phi, gint64 *nest_index);
+void ncm_sphere_map_ang2pix_ring (NcmSphereMap *smap, const gdouble theta, const gdouble phi, gint64 *ring_index);
 
-void ncm_sphere_map_vec2pix_ring (NcmSphereMap *pix, NcmTriVec *vec, gint64 *ring_index);
-void ncm_sphere_map_vec2pix_nest (NcmSphereMap *pix, NcmTriVec *vec, gint64 *nest_index);
+void ncm_sphere_map_vec2pix_ring (NcmSphereMap *smap, NcmTriVec *vec, gint64 *ring_index);
+void ncm_sphere_map_vec2pix_nest (NcmSphereMap *smap, NcmTriVec *vec, gint64 *nest_index);
 
-void ncm_sphere_map_add_to_vec (NcmSphereMap *pix, NcmTriVec *vec, const gdouble s);
-void ncm_sphere_map_add_to_ang (NcmSphereMap *pix, const gdouble theta, const gdouble phi, const gdouble s);
+void ncm_sphere_map_add_to_vec (NcmSphereMap *smap, NcmTriVec *vec, const gdouble s);
+void ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdouble phi, const gdouble s);
 
-void ncm_sphere_map_load_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar *signal_name);
-void ncm_sphere_map_save_fits (NcmSphereMap *pix, const gchar *fits_file, const gchar *signal_name, gboolean overwrite);
+void ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name);
+void ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name, gboolean overwrite);
 
-void ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *pix, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S);
+void ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S);
 
-void ncm_sphere_map_prepare_alm (NcmSphereMap *pix);
+void ncm_sphere_map_prepare_alm (NcmSphereMap *smap);
 
-void ncm_sphere_map_get_alm (NcmSphereMap *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
-gdouble ncm_sphere_map_get_Cl (NcmSphereMap *pix, guint l);
-gdouble ncm_sphere_map_get_pix (NcmSphereMap *pix, guint i);
+void ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
+gdouble ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l);
+gdouble ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i);
 
-void ncm_sphere_map_add_noise (NcmSphereMap *pix, const gdouble sd, NcmRNG *rng);
-void ncm_sphere_map_set_map (NcmSphereMap *pix, GArray *map);
+void ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng);
+void ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map);
+void ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls);
 
-void ncm_sphere_map_alm2map (NcmSphereMap *pix);
+void ncm_sphere_map_alm2map (NcmSphereMap *smap);
+
+NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol);
 
 #define NCM_SPHERE_MAP_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_INT_TO_XY(i,x,y) \

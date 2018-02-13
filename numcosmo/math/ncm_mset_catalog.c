@@ -2524,6 +2524,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       ncm_vector_clear (&self->bestfit_row);
       self->bestfit_row = ncm_vector_ref (x);
       self->bestfit     = *m2lnp;
+
+      ncm_mset_fparams_set_vector_offset (self->mset, x, self->nadd_vals);
     }
     g_ptr_array_add (self->order_cat, ncm_vector_ref (x));
     self->order_cat_sort = FALSE;
@@ -3183,9 +3185,10 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
     if (i < self->nadd_vals)
     {
       const gchar *pname = g_ptr_array_index (self->add_vals_names, i);      
-      g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
+      g_message ("# %*s[%05d:%02d] = % -12.4g (% -12.4g) +/- % -12.4g |",
                  name_size, pname, 99999, i,
                  ncm_stats_vec_get_mean (self->pstats, i),
+                 self->bestfit_row != NULL ? ncm_vector_get (self->bestfit_row, i) : GSL_NAN,
                  ncm_stats_vec_get_sd (self->pstats, i)
                  );
     }
@@ -3194,9 +3197,10 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
       const gint fpi          = i - self->nadd_vals;
       const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (self->mset, fpi);
       const gchar *pname      = ncm_mset_fparam_name (self->mset, fpi);
-      g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
+      g_message ("# %*s[%05d:%02d] = % -12.4g (% -12.4g) +/- % -12.4g |",
                  name_size, pname, pi->mid, pi->pid,
                  ncm_stats_vec_get_mean (self->pstats, i),
+                 self->bestfit_row != NULL ? ncm_vector_get (self->bestfit_row, i) : GSL_NAN,
                  ncm_stats_vec_get_sd (self->pstats, i)
                  );
     }
