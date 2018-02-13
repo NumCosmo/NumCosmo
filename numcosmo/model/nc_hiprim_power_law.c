@@ -80,13 +80,13 @@ nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
 
   /* Set ln10e10ASA param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_LN10E10ASA, "\\log(10^{10}A_{SA})", "ln10e10ASA",
-                              -200000.0, 5.0, 1.0e0,
+                              0.0, 5.0, 1.0e0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_LN10E10ASA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set T_SA_ratio param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
-                              0.0, 10.0e250, 1.0e-1,
+                              0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
 
