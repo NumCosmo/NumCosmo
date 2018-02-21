@@ -176,6 +176,7 @@ void ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble 
 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);
 gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
+gdouble ncm_matrix_cholesky_lndet (NcmMatrix *cm);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
 
 void ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng);

@@ -361,6 +361,9 @@ ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2)
 G_INLINE_FUNC void
 ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size)
 {
+  g_assert_cmpuint (ncm_vector_len (cv1), >=, size + cv1_start);
+  g_assert_cmpuint (ncm_vector_len (cv2), >=, size + cv2_start);
+  
   memcpy (ncm_vector_ptr (cv1, cv1_start), ncm_vector_const_ptr (cv2, cv2_start), sizeof (gdouble) * size);
 }
 

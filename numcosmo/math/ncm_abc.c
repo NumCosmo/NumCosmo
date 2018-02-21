@@ -153,7 +153,7 @@ _ncm_abc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
   switch (prop_id)
   {
     case PROP_MSET:
-      g_value_set_object (value, abc->mcat->mset);
+      g_value_set_object (value, ncm_mset_catalog_peek_mset (abc->mcat));
       break;
     case PROP_PRIOR:
       g_value_set_object (value, abc->prior);
@@ -424,7 +424,7 @@ ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
   ncm_mset_catalog_set_file (abc->mcat, filename);
   
   if (abc->started)
-    g_assert_cmpint (abc->cur_sample_id, ==, abc->mcat->cur_id);
+    g_assert_cmpint (abc->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (abc->mcat));
 }
 
 /**
@@ -654,6 +654,8 @@ static void ncm_abc_intern_skip (NcmABC *abc, guint n);
 void 
 ncm_abc_start_run (NcmABC *abc)
 {
+  NcmMSet *mset     = ncm_mset_catalog_peek_mset (abc->mcat);
+  const gint cur_id = ncm_mset_catalog_get_cur_id (abc->mcat);
   if (abc->started)
     g_error ("ncm_abc_start_run: run already started, run ncm_abc_end_run() first.");
 
@@ -666,7 +668,7 @@ ncm_abc_start_run (NcmABC *abc)
       ncm_message ("%s", ncm_abc_log_info (abc));
       ncm_cfg_msg_sepa ();
       g_message ("# NcmABC: Model set:\n");
-      ncm_mset_pretty_log (abc->mcat->mset);
+      ncm_mset_pretty_log (mset);
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       break;
@@ -674,14 +676,17 @@ ncm_abc_start_run (NcmABC *abc)
       break;
   }
 
-  if (abc->mcat->rng == NULL)
+  if (ncm_mset_catalog_peek_rng (abc->mcat) == NULL)
   {
     NcmRNG *rng = ncm_rng_new (NULL);
+    
     ncm_rng_set_random_seed (rng, FALSE);
     ncm_abc_set_rng (abc, rng);
+
     if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
       g_message ("# NcmABC: No RNG was defined, using algorithm: `%s' and seed: %lu.\n",
                  ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
+
     ncm_rng_free (rng);
   }
 
@@ -689,7 +694,7 @@ ncm_abc_start_run (NcmABC *abc)
   abc->started = TRUE;
 
   {
-    guint fparam_len = ncm_mset_fparam_len (abc->mcat->mset);
+    guint fparam_len = ncm_mset_fparam_len (mset);
     if (abc->theta != NULL)
     {
       ncm_vector_free (abc->theta);
@@ -705,14 +710,14 @@ ncm_abc_start_run (NcmABC *abc)
   ncm_mset_catalog_set_sync_interval (abc->mcat, NCM_ABC_MIN_SYNC_INTERVAL);
 
   ncm_mset_catalog_sync (abc->mcat, TRUE);
-  if (abc->mcat->cur_id > abc->cur_sample_id)
+  if (cur_id > abc->cur_sample_id)
   {
-    ncm_abc_intern_skip (abc, abc->mcat->cur_id - abc->cur_sample_id);
-    g_assert_cmpint (abc->cur_sample_id, ==, abc->mcat->cur_id);
+    ncm_abc_intern_skip (abc, cur_id - abc->cur_sample_id);
+    g_assert_cmpint (abc->cur_sample_id, ==, cur_id);
   }
-  else if (abc->mcat->cur_id < abc->cur_sample_id)
+  else if (cur_id < abc->cur_sample_id)
     g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-             abc->mcat->cur_id, abc->cur_sample_id);
+             cur_id, abc->cur_sample_id);
   
   {
     NcmVector *cur_row = NULL;
@@ -720,7 +725,7 @@ ncm_abc_start_run (NcmABC *abc)
     cur_row = ncm_mset_catalog_peek_current_row (abc->mcat);
     if (cur_row != NULL)
     {
-      ncm_mset_fparams_set_vector_offset (abc->mcat->mset, cur_row, 2);
+      ncm_mset_fparams_set_vector_offset (mset, cur_row, 2);
     }
   }
 
@@ -745,8 +750,9 @@ ncm_abc_start_run (NcmABC *abc)
 void
 ncm_abc_end_run (NcmABC *abc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+  gdouble WT    = 0.0;
   guint i;
-  gdouble WT = 0.0;
 
   g_assert (abc->started);
   
@@ -769,9 +775,9 @@ ncm_abc_end_run (NcmABC *abc)
     case NCM_FIT_RUN_MSGS_FULL:
       g_message ("# NcmABC:Current covariance matrix:\n");
       ncm_mset_catalog_get_mean (abc->mcat, &abc->theta);
-      ncm_mset_fparams_set_vector (abc->mcat->mset, abc->theta);
+      ncm_mset_fparams_set_vector (mset, abc->theta);
       ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);
-      ncm_mset_fparams_log_covar (abc->mcat->mset, abc->covar);
+      ncm_mset_fparams_log_covar (mset, abc->covar);
       break;
     default:
       break;
@@ -896,26 +902,29 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
 static void 
 _ncm_abc_run_single (NcmABC *abc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+  NcmRNG *rng   = ncm_mset_catalog_peek_rng (abc->mcat);
+
   guint i = 0;
   
   for (i = 0; i < abc->n;)
   {
     gdouble dist = 0.0, prob = 0.0;
-    ncm_mset_trans_kern_prior_sample (abc->prior, abc->thetastar, abc->mcat->rng);
+    ncm_mset_trans_kern_prior_sample (abc->prior, abc->thetastar, rng);
 
-    ncm_mset_fparams_set_vector (abc->mcat->mset, abc->thetastar);
-    ncm_dataset_resample (abc->dset_mock, abc->mcat->mset, abc->mcat->rng);
+    ncm_mset_fparams_set_vector (mset, abc->thetastar);
+    ncm_dataset_resample (abc->dset_mock, mset, rng);
     
-    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, abc->mcat->rng);
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, rng);
     prob = ncm_abc_distance_prob (abc, dist);
 
     abc->ntotal++;
     
-    if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abc->mcat->rng->r) < prob))
+    if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (rng->r) < prob))
     {
       abc->cur_sample_id++;
       abc->naccepted++;
-      _ncm_abc_update (abc, abc->mcat->mset, dist, 1.0);
+      _ncm_abc_update (abc, mset, dist, 1.0);
       i++;
     }
   }
@@ -933,17 +942,19 @@ static gpointer
 _ncm_abc_dup_thread (gpointer userdata)
 {
   G_LOCK_DEFINE_STATIC (dup_thread);
-  NcmABC *abc = NCM_ABC (userdata);
+  NcmABC *abc        = NCM_ABC (userdata);
   NcmABCThread *abct = g_new (NcmABCThread, 1);
+  NcmMSet *mset      = ncm_mset_catalog_peek_mset (abc->mcat);
+  NcmRNG *rng        = ncm_mset_catalog_peek_rng (abc->mcat);
 
   G_LOCK (dup_thread);
   {
-    abct->mset      = ncm_mset_dup (abc->mcat->mset, abc->ser);
+    abct->mset      = ncm_mset_dup (mset, abc->ser);
     abct->dset      = ncm_dataset_dup (abc->dset, abc->ser);
     abct->thetastar = ncm_vector_dup (abc->thetastar);
     abct->rng       = ncm_rng_new (NULL);
     
-    ncm_rng_set_seed (abct->rng, gsl_rng_get (abc->mcat->rng->r));
+    ncm_rng_set_seed (abct->rng, gsl_rng_get (rng->r));
 
     ncm_serialize_reset (abc->ser, TRUE);
 
@@ -1034,6 +1045,8 @@ _ncm_abc_run_mt (NcmABC *abc)
 void 
 ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+ 
   gdouble lerror;
   const gdouble lre2 = lre * lre;
 
@@ -1042,7 +1055,7 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
 
   if (prerun == 0)
   {
-    guint fparam_len = ncm_mset_fparam_len (abc->mcat->mset);
+    guint fparam_len = ncm_mset_fparam_len (mset);
     prerun = fparam_len * 100;
   }
 
@@ -1087,9 +1100,11 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
 void
 ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+  
   ncm_mset_catalog_get_mean (abc->mcat, &fit->fstate->fparams);
   ncm_mset_catalog_get_covar (abc->mcat, &fit->fstate->covar);
-  ncm_mset_fparams_set_vector (abc->mcat->mset, fit->fstate->fparams);
+  ncm_mset_fparams_set_vector (mset, fit->fstate->fparams);
   fit->fstate->has_covar = TRUE;
 }
 
@@ -1103,6 +1118,9 @@ ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
 void 
 ncm_abc_start_update (NcmABC *abc)
 {
+  NcmMSet *mset     = ncm_mset_catalog_peek_mset (abc->mcat);
+  const gint cur_id = ncm_mset_catalog_get_cur_id (abc->mcat);
+  
   if (abc->started)
     g_error ("ncm_abc_start_update: particle generation not finished, run ncm_abc_end_run() first.");
   if (abc->started_up)
@@ -1120,7 +1138,7 @@ ncm_abc_start_update (NcmABC *abc)
       ncm_message ("%s", ncm_abc_log_info (abc));
       ncm_cfg_msg_sepa ();
       g_message ("# NcmABC: Model set:\n");
-      ncm_mset_pretty_log (abc->mcat->mset);
+      ncm_mset_pretty_log (mset);
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       ncm_cfg_msg_sepa ();
@@ -1130,19 +1148,22 @@ ncm_abc_start_update (NcmABC *abc)
       break;
   }
 
-  if (abc->mcat->rng == NULL)
+  if (ncm_mset_catalog_peek_rng (abc->mcat) == NULL)
   {
     NcmRNG *rng = ncm_rng_new (NULL);
+    
     ncm_rng_set_random_seed (rng, FALSE);
     ncm_abc_set_rng (abc, rng);
+
     if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
       g_message ("# NcmABC: No RNG was defined, using algorithm: `%s' and seed: %lu.\n",
                  ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
+    
     ncm_rng_free (rng);
   }
 
   {
-    guint fparam_len = ncm_mset_fparam_len (abc->mcat->mset);
+    guint fparam_len = ncm_mset_fparam_len (mset);
     if (abc->theta != NULL)
     {
       ncm_vector_free (abc->theta);
@@ -1155,14 +1176,14 @@ ncm_abc_start_update (NcmABC *abc)
   }
   
   ncm_mset_catalog_sync (abc->mcat, TRUE);
-  if (abc->mcat->cur_id > abc->cur_sample_id)
+  if (cur_id > abc->cur_sample_id)
   {
-    ncm_abc_intern_skip (abc, abc->mcat->cur_id - abc->cur_sample_id);
-    g_assert_cmpint (abc->cur_sample_id, ==, abc->mcat->cur_id);
+    ncm_abc_intern_skip (abc, cur_id - abc->cur_sample_id);
+    g_assert_cmpint (abc->cur_sample_id, ==, cur_id);
   }
-  else if (abc->mcat->cur_id < abc->cur_sample_id)
+  else if (cur_id < abc->cur_sample_id)
     g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-             abc->mcat->cur_id, abc->cur_sample_id);
+             cur_id, abc->cur_sample_id);
 
   g_assert_cmpuint (abc->weights->len, ==, abc->nparticles);
   g_clear_pointer (&abc->wran, gsl_ran_discrete_free);
@@ -1198,6 +1219,7 @@ ncm_abc_start_update (NcmABC *abc)
 void
 ncm_abc_end_update (NcmABC *abc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
   guint i;
   gdouble WT = 0.0;
 
@@ -1223,9 +1245,9 @@ ncm_abc_end_update (NcmABC *abc)
     case NCM_FIT_RUN_MSGS_FULL:
       g_message ("# NcmABC:Current covariance matrix:\n");
       ncm_mset_catalog_get_mean (abc->mcat, &abc->theta);
-      ncm_mset_fparams_set_vector (abc->mcat->mset, abc->theta);
+      ncm_mset_fparams_set_vector (mset, abc->theta);
       ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);
-      ncm_mset_fparams_log_covar (abc->mcat->mset, abc->covar);
+      ncm_mset_fparams_log_covar (mset, abc->covar);
       break;
     default:
       break;
@@ -1288,27 +1310,29 @@ ncm_abc_update (NcmABC *abc)
 static void 
 _ncm_abc_update_single (NcmABC *abc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+  NcmRNG *rng   = ncm_mset_catalog_peek_rng (abc->mcat);
   guint i = 0;
   
   for (i = 0; i < abc->n;)
   {
     gdouble dist = 0.0, prob = 0.0;
-    gsize np = gsl_ran_discrete (abc->mcat->rng->r, abc->wran);
+    gsize np = gsl_ran_discrete (rng->r, abc->wran);
 
     NcmVector *row = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
     
-    ncm_mset_trans_kern_generate (abc->tkern, theta, abc->thetastar, abc->mcat->rng);
-    ncm_mset_fparams_set_vector (abc->mcat->mset, abc->thetastar);
-    ncm_dataset_resample (abc->dset_mock, abc->mcat->mset, abc->mcat->rng);
+    ncm_mset_trans_kern_generate (abc->tkern, theta, abc->thetastar, rng);
+    ncm_mset_fparams_set_vector (mset, abc->thetastar);
+    ncm_dataset_resample (abc->dset_mock, mset, rng);
     
-    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, abc->mcat->rng);
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, rng);
     prob = ncm_abc_distance_prob (abc, dist);
     ncm_vector_free (theta);
 
     abc->ntotal++;
     
-    if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abc->mcat->rng->r) < prob))
+    if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (rng->r) < prob))
     {
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (abc->prior, abc->thetastar);
       gdouble denom = 0.0;
@@ -1324,7 +1348,7 @@ _ncm_abc_update_single (NcmABC *abc)
 
       abc->naccepted++;
       abc->cur_sample_id++;
-      _ncm_abc_update (abc, abc->mcat->mset, dist, new_weight);
+      _ncm_abc_update (abc, mset, dist, new_weight);
       i++;
     }
   }

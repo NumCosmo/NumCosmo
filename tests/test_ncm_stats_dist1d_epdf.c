@@ -102,15 +102,13 @@ static void
 test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
-  NcmRNG *rng         = ncm_rng_new (NULL);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint ntest   = 100000;
   const gdouble mu    = g_test_rand_double_range (-100.0, 100.0);
   const gdouble sigma = pow (10.0, g_test_rand_double_range (-2.0, 3.0));
   const gdouble xl    = mu - 3.0 * sigma;
   const gdouble xu    = mu + 3.0 * sigma;
   guint i;
-
-  ncm_rng_set_random_seed (rng, TRUE);
 
   for (i = 0; i < ntest; i++)
   {
@@ -170,11 +168,9 @@ static void
 test_ncm_stats_dist1d_epdf_beta_meta (TestNcmStatsDist1dEPDF *test, gconstpointer pdata, const gdouble a, const gdouble b, const gdouble xl, const gdouble xu)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
-  NcmRNG *rng         = ncm_rng_new (NULL);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint ntest   = 100000;
   guint i;
-
-  ncm_rng_set_random_seed (rng, TRUE);
 
   for (i = 0; i < ntest; i++)
   {
@@ -232,15 +228,13 @@ static void
 test_ncm_stats_dist1d_epdf_isampling (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
-  NcmRNG *rng         = ncm_rng_new (NULL);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint ntest   = 100000;
   const gdouble a     = 2.0;
   const gdouble b     = 5.0;  
   const gdouble xl    = 0.1;
   const gdouble xu    = 0.9;
   guint i;
-
-  ncm_rng_set_random_seed (rng, TRUE);
 
   for (i = 0; i < ntest; i++)
   {

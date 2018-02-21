@@ -124,7 +124,7 @@ gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov
 
 void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta);
 
-#define NC_SNIA_DIST_COV_DEFAULT_ALPHA (1.45)
+#define NC_SNIA_DIST_COV_DEFAULT_ALPHA (0.145)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
 #define NC_SNIA_DIST_COV_DEFAULT_M1 (-19.1686133146)
 #define NC_SNIA_DIST_COV_DEFAULT_M2 (-19.1856133146)

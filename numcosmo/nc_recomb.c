@@ -1318,14 +1318,13 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
   const gdouble Xe      = nc_recomb_Xe (func->recomb, func->cosmo, lambda);
-
   return Xe * nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
 static gdouble 
 _nc_recomb_mdtau_dlambda (gdouble y, gdouble x, gpointer userdata)
 {
-  const gdouble lambda = - x;  
+  const gdouble lambda = - x;
   return - _nc_recomb_dtau_dlambda (lambda, userdata);
 }
 

@@ -1075,6 +1075,42 @@ ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 }
 
 /**
+ * ncm_matrix_cholesky_lndet:
+ * @cm: a #NcmMatrix
+ *
+ * Calculates determinant of a symmetric positive definite matrix,
+ * that was previously decomposed using ncm_matrix_cholesky_decomp().
+ * 
+ * Returns: the log determinant of @cm.
+ */
+gdouble 
+ncm_matrix_cholesky_lndet (NcmMatrix *cm)
+{
+  const gdouble lb = 1.0e-200;
+  const gdouble ub = 1.0e+200;
+  const guint n    = ncm_matrix_nrows (cm);
+  gdouble detL     = 1.0;
+  glong exponent   = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble Lii = ncm_matrix_get (cm, i, i);
+    const gdouble ndetL = detL * Lii;
+    if (G_UNLIKELY ((ndetL < lb) || (ndetL > ub)))
+    {
+      gint exponent_i = 0;
+      detL = frexp (ndetL, &exponent_i);
+      exponent += exponent_i;
+    }
+    else
+      detL = ndetL;
+  }
+
+  return 2.0 * (log (detL) + exponent * M_LN2);
+}
+
+/**
  * ncm_matrix_log_vals:
  * @cm: a #NcmMatrix
  * @prefix: the prefixed text

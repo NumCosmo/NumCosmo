@@ -64,6 +64,13 @@ test_ncm_model_ctrl_SOURCES =  \
 test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
+test_ncm_mset_catalog_SOURCES = \
+	test_ncm_mset_catalog.c   \
+	ncm_data_gauss_cov_mvnd.c \
+	ncm_data_gauss_cov_mvnd.h \
+	ncm_model_mvnd.c          \
+	ncm_model_mvnd.h
+
 test_ncm_obj_array_SOURCES = \
 	test_ncm_obj_array.c
 
@@ -95,8 +102,8 @@ test_ncm_func_eval_SOURCES =  \
 test_ncm_sf_spherical_harmonics_SOURCES =  \
 	test_ncm_sf_spherical_harmonics.c
 
-test_ncm_sphere_map_pix_SOURCES =  \
-	test_ncm_sphere_map_pix.c
+test_ncm_sphere_map_SOURCES =  \
+	test_ncm_sphere_map.c
 
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
@@ -151,12 +158,13 @@ check_PROGRAMS =  \
 	test_ncm_model_ctrl             \
 	test_ncm_serialize              \
 	test_ncm_mset                   \
+	test_ncm_mset_catalog           \
 	test_ncm_obj_array              \
 	test_ncm_data_gauss_cov         \
 	test_ncm_fit                    \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
-	test_ncm_sphere_map_pix         \
+	test_ncm_sphere_map             \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
 	test_nc_transfer_func           \
@@ -256,6 +264,12 @@ test_ncm_mset_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_ncm_mset_catalog_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_ncm_obj_array_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
@@ -298,7 +312,7 @@ test_ncm_sf_spherical_harmonics_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
-test_ncm_sphere_map_pix_LDADD = \
+test_ncm_sphere_map_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
