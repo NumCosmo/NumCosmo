@@ -27,9 +27,38 @@
  * @title: NcWLSurfaceMassDensity
  * @short_description: Weak lensing surface mass density
  *
- * FIXME
+ * This object implements the projected surface mass density and related quantities, such as the convergence and tangential shear.
  * 
- *
+ * The projected surface mass density is [nc_wl_surface_mass_density_sigma()]  
+ * \begin{equation}\label{eq:sigma}
+ * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt(R^2 + \chi^2) \right), 
+ * \end{equation} 
+ * where $\rho(r)$ is the three-dimensional mass density profile (#NcDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a 
+ * two-dimensional vector from the halo center. In particular, we consider a projection $\Sigma (R)$ onto the lens plane. 
+ * $\chi$ is the distance along the line of sight. 
+ * 
+ * The mean surface mass density within a circular aperture of radius $R$ is, [nc_wl_surface_mass_density_sigma_mean()]
+ * \begin{equation}\label{eq:sigma_mean}
+ * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, \Sigma (R^\prime).
+ * \end{equation}
+ * 
+ * The convergence $\kappa (R)$ [nc_wl_surface_mass_density_convergence()] and the shear $\gamma(R)$ [nc_wl_surface_mass_density_shear()] 
+ * are given by, respectively,
+ * \begin{equation}\label{eq:convergence}
+ * \kappa (R) = \frac{\Sigma (R)}{\Sigma_{crit}},
+ * \end{equation}
+ * * \begin{equation}\label{eq:shear}
+ * \gamma (R) = \frac{\Delta\Sigma (R)}{\Sigma_{crit}} = \frac{\overline{\Sigma} (<R) - \Sigma (R)}{\Sigma_{crit}},
+ * \end{equation}
+ * where $\Sigma_{crit}$ is the critical surface density [nc_wl_surface_mass_density_sigma_critical()],
+ * \begin{equation}\label{eq:sigma_critical}
+ * \Sigma_{crit} = \frac{c^2}{4\pi G} \frac{D_s}{D_l D_{ls}}.
+ * \end{equation}
+ * where $c^2$ is the speed of light squared [ncm_c_c2()], $G$ is the gravitational constant [ncm_c_G()], $D_s$ and $Dl$ are the angular diameter distances 
+ * to the source and lens, respectively, and $D_{ls}$ is the angular diameter distance between the lens and source.  
+ * 
+ * See, e.g., [Mandelbaum (2006)][XMandelbaum2006], [Umetsu (2012)][XUmetsu2012], [Applegate (2014)][XApplegate2014], 
+ * [Melchior (2017)][XMelchior2017], [Parroni (2017)][XParroni2017].
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,7 +83,6 @@ G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODE
 enum
 {
   PROP_0,
-	PROP_DENSITY_PROFILE,
 	PROP_DISTANCE,
 	PROP_ZSOURCE,
 	PROP_ZLENS,
@@ -66,12 +94,12 @@ enum
 static void
 nc_wl_surface_mass_density_init (NcWLSurfaceMassDensity *smd)
 {
-  smd->dp         = NULL;
 	smd->dist       = NULL;
   smd->zsource    = 0.0;
   smd->zlens      = 0.0;
 	smd->zcluster   = 0.0;
 	smd->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+	smd->ctrl_dp = ncm_model_ctrl_new (NULL);
   
 }
 
@@ -83,10 +111,7 @@ _nc_wl_surface_mass_density_set_property (GObject *object, guint prop_id, const 
 
   switch (prop_id)
   {
-    case PROP_DENSITY_PROFILE:
-      smd->dp = g_value_dup_object (value);
-      break;
-		case PROP_DISTANCE:
+    case PROP_DISTANCE:
       smd->dist = g_value_dup_object (value);
       break;
 		case PROP_ZSOURCE:
@@ -114,9 +139,6 @@ _nc_wl_surface_mass_density_get_property (GObject *object, guint prop_id, GValue
   {
     case PROP_DISTANCE:
       g_value_set_object (value, smd->dist);
-      break;
-		case PROP_DENSITY_PROFILE:
-		  g_value_set_object (value, smd->dp);
       break;
 		case PROP_ZSOURCE:
 			g_value_set_double (value, smd->zsource);
@@ -150,9 +172,9 @@ _nc_wl_surface_mass_density_dispose (GObject *object)
 {
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);
 
-	nc_density_profile_clear (&smd->dp);
 	nc_distance_clear (&smd->dist);
-    
+
+	ncm_model_ctrl_clear (&smd->ctrl_dp);
   ncm_model_ctrl_clear (&smd->ctrl_cosmo);
 
   /* Chain up : end */
@@ -199,27 +221,13 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
    * NcWLSurfaceMassDensity:Roff:
    * 
    * Scale length of the miscentering probability distribution. 
-   * FIXME Set correct values (limits) Units: Mpc/h
+   * FIXME Set correct values (limits) Units: Mpc
    */
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_ROFF, "R_{off}", "Roff",
                               0.0,  2.0, 1e-1,
                               NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF,
                               NCM_PARAM_TYPE_FIXED);
 
-	/**
-   * NcWLSurfaceMassDensity:density-profile:
-   *
-   * This property keeps the object NcDensityProfile.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DISTANCE,
-                                   g_param_spec_object ("density-profile",
-                                                        NULL,
-                                                        "Density Profile",
-                                                        NC_TYPE_DENSITY_PROFILE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-                                                        | G_PARAM_STATIC_BLURB));
-	
 	 /**
    * NcWLSurfaceMassDensity:distance:
    *
@@ -281,7 +289,6 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
 
 /**
  * nc_wl_surface_mass_density_new:
- * @dp: a #NcDensityProfile
  * @dist: a #NcDistance
  * 
  * This function allocates memory for a new #NcWLSurfaceMassDensity object and sets its properties to the values from
@@ -290,10 +297,9 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
  * Returns: a new #NcWLSurfaceMassDensity
  */
 NcWLSurfaceMassDensity *
-nc_wl_surface_mass_density_new (NcDensityProfile *dp, NcDistance *dist)
+nc_wl_surface_mass_density_new (NcDistance *dist)
 {
 	NcWLSurfaceMassDensity *smd = g_object_new (NC_TYPE_WL_SURFACE_MASS_DENSITY, 
-                       "density-profile", dp,
                        "distance", dist, 
                        NULL);
   return smd;
@@ -341,22 +347,46 @@ nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd)
   g_clear_object (smd);
 }
 
-
 /**
- * nc_wl_surface_mass_density_prepare:
+ * nc_wl_surface_mass_density_set_zcluster:
  * @smd: a #NcWLSurfaceMassDensity
- * @cosmo: a #NcHICosmo
+ * @zcluster: cluster's redshift
  *
- * FIXME
+ * Sets the value of the property zcluster.
  *
  */
 void
-nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+nc_wl_surface_mass_density_set_zcluster (NcWLSurfaceMassDensity *smd, gdouble zcluster)
 {
-  /*IMPLEMENT FIXME */
-  ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo));
+  smd->zcluster = zcluster;
+}
 
-  return;
+/**
+ * nc_wl_surface_mass_density_set_zsource:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @zsource: source's redshift
+ *
+ * Sets the value of the property zsource.
+ *
+ */
+void
+nc_wl_surface_mass_density_set_zsource (NcWLSurfaceMassDensity *smd, gdouble zsource)
+{
+  smd->zsource = zsource;
+}
+
+/**
+ * nc_wl_surface_mass_density_set_zlens:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @zlens: lens' redshift
+ *
+ * Sets the value of the property zlens.
+ *
+ */
+void
+nc_wl_surface_mass_density_set_zlens (NcWLSurfaceMassDensity *smd, gdouble zlens)
+{
+  smd->zlens = zlens;
 }
 
 /**
@@ -366,10 +396,10 @@ nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosm
  *
  * Computes the critical surface density, 
  * \begin{equation}\label{eq:def:SigmaC}
- * \Sigma_c = \frac{c^2}{4\pi G} \frac{D_s}{D_l D_{ls})},
+ * \Sigma_c = \frac{c^2}{4\pi G} \frac{D_s}{D_l D_{ls}},
  * \end{equation}
  * where $c^2$ is the speed of light squared [ncm_c_c2 ()], $G$ is the gravitational constant in units of $m^3/s^2 M_\odot^{-1}$ [ncm_c_G_mass_solar()],
- * $D_s$ ($D_l$) is the angular diameter distance from the observer to the source (lens), and $D_{sl}$ is the angular diameter distance between 
+ * $D_s$ ($D_l$) is the angular diameter distance from the observer to the source (lens), and $D_{ls}$ is the angular diameter distance between 
  * the lens and the source.
  *
  * Returns: the critical surface density $\Sigma_c$ in units of $M_\odot / Mpc^2$
@@ -383,11 +413,7 @@ gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, 
 	/* Dls below is only valid for Omega_k >= 0 */
 	gdouble Dls = (nc_distance_transverse (smd->dist, cosmo, smd->zsource) - nc_distance_transverse (smd->dist, cosmo, smd->zlens))/ (1.0 + smd->zsource);
 	gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  //gdouble beta = Dls / Ds; 
-
-  //printf ("a = %.5g beta = %.5g\n", a, beta);
-  //printf ("Ds = %.10g Dl = %.10g Dls = %.10g\n", Ds * RH_Mpc, Dl * RH_Mpc, Dls* RH_Mpc);
-	
+  
   return a * Ds / (Dl * Dls * RH_Mpc);
 }
 
@@ -396,11 +422,11 @@ gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, 
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * FIXME
+ * Computes the surface mass density at @R, see Eq. $\eqref{eq:sigma}$.
  *
- * Returns: FIXME 
+ * Returns: $\Sigma (R)$
  */
 gdouble
 nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R)
@@ -416,11 +442,11 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile 
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * FIXME
+ * Computes the mean surface mass density inside the circle with radius @R, Eq. $\eqref{eq:sigma_mean}$.
  *
- * Returns: FIXME 
+ * Returns: $\overline{\Sigma} (<R)$
  */
 gdouble 
 nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R)
@@ -428,14 +454,15 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityPro
 	gdouble rs = nc_density_profile_scale_radius (dp, cosmo, smd->zcluster);
 	gdouble x  = R / rs;
   gdouble x2 = x * x;
-	
+
 	gdouble mean_sigma_2x2 = nc_density_profile_integral_density_2d (dp, cosmo, R, smd->zcluster);
-		
+
 	return (2.0 / x2) * mean_sigma_2x2;
 }
 
 /* Correction term: Central point mass */
 
+/*
 static gdouble 
 _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble R)
 {
@@ -443,25 +470,16 @@ _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble
 	
 	return M0 / (M_PI * R2);
 }
-
-/* Correction term: no-weak shear */
-
-static gdouble 
-_nc_wl_surface_mass_density_nw (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble R)
-{
-	gdouble R2 = R * R;
-	
-	return 0.0;
-}
+*/
 
 /**
  * nc_wl_surface_mass_density_convergence:
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * Computes the convergence 
+ * Computes the convergence $\kappa(R)$ at @R, see Eq $\eqref{eq:convergence}$.
  *
  * Returns: $\kappa(R)$
  */
@@ -480,9 +498,9 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * FIXME
+ * Computes the shear $\gamma(R)$ at @R, see Eq $\eqref{eq:shear}$. 
  *
  * Returns: $\gamma(R)$ 
  */
@@ -501,11 +519,13 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * FIXME 
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)}$$ 
- *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$ 
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].	 
+ * 
  * Returns: $g(R)$
  */
 gdouble 
@@ -524,23 +544,34 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
- * @R: FIXME
+ * @R: projected radius with respect to the center of the lens / halo
  *
- * FIXME 
- *
- * Returns: $g_{\infity}(R)$
+ * Computes the reduced shear assuming a lensed source at infinite redshift:
+ * $$ g(R) = \frac{\beta_s(zb)\gamma(R)}{1 - \beta_s(zb) \kappa(R)}, $$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()], $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()], $z_b$ is the background-galaxy redshift and 
+ * $$\beta_s = \frac{D_s}{D_l D_{ls}} \frac{D_\infty}{D_l D_{l\infty}}.$$ 
+ * See [Applegate (2014)][XApplegate2014] 
+ * 
+ * Returns: $g(R)$, source at $z = \infty$
  */
 gdouble 
 nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R)
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
-  gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, smd->zsource);
+  gdouble Dinf, betainf, beta_s;
+	gdouble convergence_inf, shear_inf;
+	gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, smd->zsource);
 	gdouble Dls             = (nc_distance_transverse (smd->dist, cosmo, smd->zsource) - nc_distance_transverse (smd->dist, cosmo, smd->zlens))/ (1.0 + smd->zsource);
-  gdouble Dinf            = nc_distance_angular_diameter (smd->dist, cosmo, 1.0e6);
-	gdouble Dlinf           = (nc_distance_transverse (smd->dist, cosmo, 1.0e6) - nc_distance_transverse (smd->dist, cosmo, smd->zlens))/ (1.0 + 1.0e6);
-	gdouble beta_s          = (Dls / Ds) * (Dinf / Dlinf);
-  gdouble convergence_inf = beta_s * nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R);
-	gdouble shear_inf       = beta_s * nc_wl_surface_mass_density_shear (smd, dp, cosmo, R);
+  gdouble beta            = Dls / Ds;
+	
+ 	Dinf     =  nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
+	/* Angular diamater distance lens to infinity over angular diameter distance obs to infinity. It's equivalent to compute the ratio of the transverse distances. Source at infinity */
+	betainf  = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, smd->zlens) / Dinf;
+	beta_s          = beta / betainf;
+
+	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R);
+	shear_inf       = beta_s * nc_wl_surface_mass_density_shear (smd, dp, cosmo, R);
 	
 	return shear_inf / (1.0 - convergence_inf);
 }

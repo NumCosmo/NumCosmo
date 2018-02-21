@@ -83,19 +83,22 @@ struct _NcWLSurfaceMassDensity
 	gdouble zlens;
 	gdouble zcluster;
 	NcmModelCtrl *ctrl_cosmo;
+	NcmModelCtrl *ctrl_dp;
 };
 
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_wl_surface_mass_density);
 
-NcWLSurfaceMassDensity *nc_wl_surface_mass_density_new (NcDensityProfile *dp, NcDistance *dist);
+NcWLSurfaceMassDensity *nc_wl_surface_mass_density_new (NcDistance *dist);
 NcWLSurfaceMassDensity *nc_wl_surface_mass_density_ref (NcWLSurfaceMassDensity *smd);
-
-void nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 
 void nc_wl_surface_mass_density_free (NcWLSurfaceMassDensity *smd);
 void nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd);
+
+void nc_wl_surface_mass_density_set_zcluster (NcWLSurfaceMassDensity *smd, gdouble zcluster);
+void nc_wl_surface_mass_density_set_zsource (NcWLSurfaceMassDensity *smd, gdouble zsource);
+void nc_wl_surface_mass_density_set_zlens (NcWLSurfaceMassDensity *smd, gdouble zlens);
 
 gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
 gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
@@ -113,17 +116,6 @@ G_END_DECLS
 #ifndef _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_
 #define _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-G_BEGIN_DECLS
-
-G_INLINE_FUNC void
-nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
-{
-  if (ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_wl_surface_mass_density_prepare (smd, cosmo);
-}
-
-G_END_DECLS
 
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_ */

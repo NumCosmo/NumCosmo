@@ -162,8 +162,8 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.0482);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
 
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);  
+  ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
+  ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);  
 
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Asz", 0.7);  //1.0);
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bsz", 0.35); //0.2);

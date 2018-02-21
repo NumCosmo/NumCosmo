@@ -59,7 +59,7 @@
  * c(M, z) = A_{vir} \left( \frac{M}{2 \times 10^{12} \text{h}^{-1}M_{\odot}}\right)^{B_{vir}} (1+z)^{C_{vir}}.
  * \end{equation}
  *
- * References: astro-ph/0206508 and arxiv:1010.0744.
+ * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -148,10 +148,9 @@ static gdouble _nc_density_profile_nfw_scale_radius (NcDensityProfile *dp, NcHIC
 static void
 nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
 {
-
-  GObjectClass* object_class       = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class          = G_OBJECT_CLASS (klass);
   NcDensityProfileClass *parent_class = NC_DENSITY_PROFILE_CLASS (klass);
-  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_density_profile_nfw_set_property;
   model_class->get_property = &_nc_density_profile_nfw_get_property;
@@ -316,9 +315,7 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
   gdouble onepx   = 1.0 + x;
   gdouble onepx2  = onepx * onepx; 
 
-	printf ("rs = %.5g\n", rs);
-	
-  return delta_c * rho_c/(x * onepx2);
+	return delta_c * rho_c/(x * onepx2);
 }
 
 /* los = line of sight */
@@ -332,16 +329,16 @@ _nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *c
   gdouble rs      = _nc_density_profile_nfw_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
-  gdouble x2      = x * x;
-  
-  if (x < 1.0)
-    return A / (x2 - 1.0) * (1.0 - 2.0/sqrt(1.0 - x2) * atanh(sqrt((1.0 - x)/(1.0 + x))));
+	gdouble xm1     = x - 1.0;
+	gdouble xp1     = x + 1.0;
+	gdouble x2m1    = xm1 * xp1;
 
-  else if (x == 1.0)
-    return A / 3.0;
-
+	if (fabs (xm1) < 1.0e-6)
+    return A * (1.0 / 3.0 + (- 2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * xm1) * xm1) * xm1);	
+  else if (xm1 < 0.0)
+    return A / x2m1 * (1.0 - 2.0 / sqrt (-x2m1) * atanh (sqrt (-xm1 / xp1)));
   else
-    return A / (x2 - 1.0) * (1.0 - 2.0/sqrt(x2 - 1.0) * atan(sqrt((x - 1.0)/(1.0 + x))));
+    return A / x2m1 * (1.0 - 2.0 / sqrt (x2m1) * atan (sqrt (xm1 / xp1)));
   
 }
 
@@ -355,15 +352,17 @@ _nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *co
   gdouble rs      = _nc_density_profile_nfw_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
-  gdouble x2      = x * x;
-    
-  if (x < 1.0)
-    return 2.0 * A * (2.0/sqrt(1.0 - x2) * atanh(sqrt((1.0 - x)/(1.0 + x))) + log(x) - M_LN2);
+	gdouble xm1     = x - 1.0;
+	gdouble xp1     = x + 1.0;
+	gdouble x2m1    = xm1 * xp1;
 
-  else if (x == 1.0)
-    return 2.0 * A * x2 * (1.0 + log (0.5));
+  if (fabs (xm1) < 1.0e-6)
+    return A * (2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (- 1.0 / 15.0 - 2.0 / 105.0 * xm1) * xm1) * xm1);	
+	
+  else if (xm1 < 0.0)
+    return 2.0 * A * (2.0/sqrt(- x2m1) * atanh(sqrt(-xm1 / xp1)) + log(x) - M_LN2);
 
   else
-    return 2.0 * A * (2.0/sqrt(x2 - 1.0) * atan(sqrt((x - 1.0)/(1.0 + x))) + log(x) - M_LN2);
+    return 2.0 * A * (2.0/sqrt(x2m1) * atan(sqrt(xm1 / xp1)) + log(x) - M_LN2);
   
 }
