@@ -40,6 +40,7 @@
       <xi:include href="xml/ncm_func_eval.xml"/>
       <xi:include href="xml/ncm_timer.xml"/>
       <xi:include href="xml/ncm_rng.xml"/>
+      <xi:include href="xml/ncm_qm_prop.xml"/>
       <xi:include href="xml/ncm_quaternion.xml"/>
     </section>
     <section>

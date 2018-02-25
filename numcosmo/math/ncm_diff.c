@@ -362,7 +362,6 @@ ncm_diff_new (void)
   return diff;
 }
 
-
 /**
  * ncm_diff_ref:
  * @diff: a #NcmDiff

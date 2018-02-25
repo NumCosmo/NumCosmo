@@ -68,6 +68,7 @@ ncm_sources = \
 	math/ncm_integral1d.c                \
 	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
+	math/ncm_qm_prop.c                   \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
 	math/ncm_stats_dist1d_spline.c       \
@@ -179,6 +180,7 @@ ncm_headers =                                \
 	math/ncm_integral1d.h                \
 	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
+	math/ncm_qm_prop.h                   \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \
 	math/ncm_stats_dist1d_spline.h       \

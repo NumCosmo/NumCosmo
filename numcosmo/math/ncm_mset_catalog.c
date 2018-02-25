@@ -3172,7 +3172,7 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
 
   ncm_cfg_msg_sepa ();
   g_message ("# NcmMSetCatalog full covariance matrix\n");
-  g_message ("#                                                          ");
+  g_message ("#                                                           ");
   for (i = 0; i < name_size; i++) g_message (" ");
 
   for (i = 0; i < params_len; i++)
@@ -3210,7 +3210,7 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
     }
     g_message ("\n");
   }  
-  g_message ("#                                                          ");
+  g_message ("#                                                           ");
   for (i = 0; i < name_size; i++) g_message (" ");
   for (i = 0; i < params_len; i++)
     i ? g_message ("%s", box) : g_message ("-%s",box);

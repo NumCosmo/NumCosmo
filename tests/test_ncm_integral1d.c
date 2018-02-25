@@ -202,6 +202,12 @@ test_ncm_integral1d_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer pdata
 
   result = ncm_integral1d_eval_gauss_hermite_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (1.01985127282864194182872307604L);
+
+  result = ncm_integral1d_eval_gauss_hermite1_p (test->int1d, &err);
+  NCM_INTEGRAL1D_TESTCMP (0.76017345053314040280597007337L);
+
+  result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
+  NCM_INTEGRAL1D_TESTCMP (0.99069139051646674889119598685L);  
 }
 
 void
@@ -267,6 +273,12 @@ test_ncm_integral1d_x5_2_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer 
 
   result = ncm_integral1d_eval_gauss_hermite_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (2.15674842608261378569273430710L);
+
+  result = ncm_integral1d_eval_gauss_hermite1_p (test->int1d, &err);
+  NCM_INTEGRAL1D_TESTCMP (1.94952102958065012896733613706L);
+
+  result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
+  NCM_INTEGRAL1D_TESTCMP (2.84228407966796943455719401910L);  
 }
 
 void
