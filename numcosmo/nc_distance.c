@@ -130,6 +130,7 @@ nc_distance_init (NcDistance *dist)
 
   dist->comoving_distance_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
 
+	dist->comoving_infinity        = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->time_cache               = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->lookback_time_cache      = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->conformal_time_cache     = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
@@ -200,6 +201,7 @@ _nc_distance_dispose (GObject *object)
   NcDistance *dist = NC_DISTANCE (object);
 
   ncm_function_cache_clear (&dist->comoving_distance_cache);
+	ncm_function_cache_clear (&dist->comoving_infinity);
   ncm_function_cache_clear (&dist->time_cache);
   ncm_function_cache_clear (&dist->lookback_time_cache);
   ncm_function_cache_clear (&dist->conformal_time_cache);
@@ -355,9 +357,10 @@ void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
   dist->comoving_distance_cache->clear = TRUE;
-  dist->time_cache->clear = TRUE;
-  dist->lookback_time_cache->clear = TRUE;
-  dist->conformal_time_cache->clear = TRUE;
+	dist->comoving_infinity->clear       = TRUE;
+  dist->time_cache->clear              = TRUE;
+  dist->lookback_time_cache->clear     = TRUE;
+  dist->conformal_time_cache->clear    = TRUE;
 
   dist->sound_horizon_cache->clear = TRUE;
 
@@ -1073,6 +1076,96 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble DA = nc_distance_angular_diameter (dist, cosmo, z);
   return DA / r_zd;
+}
+
+/* Distances from z to infinity */
+
+static gdouble
+_nc_distance_comoving_infinity_integrand (gdouble logx, gpointer p)
+{
+  if (logx > GSL_LOG_DBL_MAX)
+    return 0.0;
+  else
+  {
+    NcHICosmo *cosmo = NC_HICOSMO (p);
+    const gdouble z = expm1 (logx);
+    const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
+
+    if (gsl_finite (E))
+      return (1.0 + z) / E;
+    else
+      return 0.0;
+  }
+}
+
+/**
+ * nc_distance_comoving_z_to_infinity:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ * 
+ * Computes the comoving distance from @z to infinity.
+ * 
+ * Returns: $D_c$ from $z$ to $\infity$
+ */
+gdouble
+nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble result, error;
+  gsl_function F;
+  F.function = &_nc_distance_comoving_infinity_integrand;
+  F.params = cosmo;
+
+  if (dist->use_cache)
+    ncm_integral_cached_x_inf (dist->comoving_infinity, &F, log1p (z), &result, &error);
+  else
+    ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
+
+  return result;
+}
+
+
+/**
+ * nc_distance_transverse_z_to_infinity:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Compute the transverse comoving distance $D_t (z)$ (defined in Eq. $\eqref{eq:def:Dt}$) 
+ * but from @z to infinity.
+ *
+ * Returns: $D_t(z)$ from $z$ to $\infity$
+ */
+gdouble
+nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gdouble comoving_dist = nc_distance_comoving_z_to_infinity (dist, cosmo, z);
+  const gint k = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  gdouble Dt;
+
+  if (gsl_isinf (comoving_dist))
+    return comoving_dist;
+
+  switch (k)
+  {
+    case 0:
+      Dt = comoving_dist;
+      break;
+    case -1:
+      Dt = sinh (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0;
+      break;
+    case 1:
+      Dt = fabs (sin (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0);
+      break;
+    default:
+      g_assert_not_reached();
+      Dt = 0.0;
+      break;
+  }
+
+  return Dt;
 }
 
 /***************************************************************************

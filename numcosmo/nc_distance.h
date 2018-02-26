@@ -60,6 +60,7 @@ struct _NcDistance
   GObject parent_instance;
   NcmOdeSpline *comoving_distance_spline;
   NcmFunctionCache *comoving_distance_cache;
+	NcmFunctionCache *comoving_infinity;
   NcmFunctionCache *time_cache;
   NcmFunctionCache *lookback_time_cache;
   NcmFunctionCache *conformal_time_cache;
@@ -136,6 +137,8 @@ gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdoub
 gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 /***************************************************************************
  *            cosmic_time.h
