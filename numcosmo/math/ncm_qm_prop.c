@@ -47,6 +47,9 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_func.h"
 
+#if HAVE_SUNDIALS_MAJOR == 3
+#ifdef HAVE_ACB_H
+
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <math.h>
@@ -57,8 +60,6 @@
 #include <acb.h>
 #include <acb_hypgeom.h>
 #endif /* NUMCOSMO_GIR_SCAN */
-
-#if HAVE_SUNDIALS_MAJOR == 3
 
 #include <arkode/arkode.h>
 #include <nvector/nvector_serial.h>
@@ -1427,4 +1428,5 @@ ncm_qm_prop_get_Im_psi (NcmQMProp *qm_prop)
   return s;
 }
 
+#endif /* HAVE_ACB_H  */
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */

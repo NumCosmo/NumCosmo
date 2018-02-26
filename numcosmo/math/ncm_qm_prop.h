@@ -78,8 +78,12 @@ typedef struct _NcmQMPropGauss
  */
 typedef void (*NcmQMPropPsi) (gpointer psi_data, const gdouble x, gdouble *psi);
 
+#if HAVE_SUNDIALS_MAJOR == 3
+#ifdef HAVE_ACB_H
+
 GType ncm_qm_prop_get_type (void) G_GNUC_CONST;
 GType ncm_qm_prop_gauss_get_type (void) G_GNUC_CONST;
+
 
 NcmQMPropGauss *ncm_qm_prop_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi);
 NcmQMPropGauss *ncm_qm_prop_gauss_dup (NcmQMPropGauss *qm_gauss);
@@ -118,6 +122,8 @@ NcmSpline *ncm_qm_prop_get_dS (NcmQMProp *qm_prop);
 NcmSpline *ncm_qm_prop_get_Re_psi (NcmQMProp *qm_prop);
 NcmSpline *ncm_qm_prop_get_Im_psi (NcmQMProp *qm_prop);
 
+#endif
+#endif
 
 G_END_DECLS
 
