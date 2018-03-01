@@ -29,7 +29,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_distance.h>
+#include <numcosmo/lss/nc_density_profile.h>
 #include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 
 G_BEGIN_DECLS
@@ -44,35 +47,67 @@ G_BEGIN_DECLS
 typedef struct _NcWLSurfaceMassDensityClass NcWLSurfaceMassDensityClass;
 typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
 
+/**
+ * NcWLSurfaceMassDensityParams:
+ * @NC_WL_SURFACE_MASS_DENSITY_PCC:  percentage of correctly centered clusters
+ * @NC_WL_SURFACE_MASS_DENSITY_ROFF: scale length of the miscentering probability distribution [Mpc/h]
+ *
+ * FIXME
+ */
+typedef enum _NcWLSurfaceMassDensityParams
+{
+  NC_WL_SURFACE_MASS_DENSITY_PCC = 0,
+  NC_WL_SURFACE_MASS_DENSITY_ROFF, 
+  /* < private > */
+  NC_WL_SURFACE_MASS_DENSITY_SPARAM_LEN, /*< skip >*/
+} NcWLSurfaceMassDensityParams;
+
+#define NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PCC  (0.8)
+#define NC_WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF  (1.0)
+
+#define NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL (0.0)
+
 struct _NcWLSurfaceMassDensityClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+	NcmModelClass parent_class;
 };
 
 struct _NcWLSurfaceMassDensity
 {
   /*< private >*/
-  GObject parent_instance;
-  NcmModelCtrl *ctrl;
-  gboolean misc;
-  gboolean twoh;
-  gboolean cg;
-  gboolean nw;
+  NcmModel parent_instance;
+  NcDensityProfile *dp;
+	NcDistance *dist;
+	gdouble zsource;
+	gdouble zlens;
+	gdouble zcluster;
+	NcmModelCtrl *ctrl_cosmo;
+	NcmModelCtrl *ctrl_dp;
 };
 
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 
-NcWLSurfaceMassDensity *nc_wl_surface_mass_density_new (gdouble zf);
+NCM_MSET_MODEL_DECLARE_ID (nc_wl_surface_mass_density);
+
+NcWLSurfaceMassDensity *nc_wl_surface_mass_density_new (NcDistance *dist);
 NcWLSurfaceMassDensity *nc_wl_surface_mass_density_ref (NcWLSurfaceMassDensity *smd);
-
-void nc_wl_surface_mass_density_require_zf (NcWLSurfaceMassDensity *smd, const gdouble zf);
-
-void nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 
 void nc_wl_surface_mass_density_free (NcWLSurfaceMassDensity *smd);
 void nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd);
 
+void nc_wl_surface_mass_density_set_zcluster (NcWLSurfaceMassDensity *smd, gdouble zcluster);
+void nc_wl_surface_mass_density_set_zsource (NcWLSurfaceMassDensity *smd, gdouble zsource);
+void nc_wl_surface_mass_density_set_zlens (NcWLSurfaceMassDensity *smd, gdouble zlens);
+
+gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
+
+gdouble nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R);
 
 G_END_DECLS
 
@@ -81,17 +116,6 @@ G_END_DECLS
 #ifndef _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_
 #define _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-G_BEGIN_DECLS
-
-G_INLINE_FUNC void
-nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
-{
-  if (ncm_model_ctrl_update (smd->ctrl, NCM_MODEL (cosmo)))
-    nc_wl_surface_mass_density_prepare (smd, cosmo);
-}
-
-G_END_DECLS
 
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_ */

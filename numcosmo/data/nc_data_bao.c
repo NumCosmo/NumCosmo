@@ -87,7 +87,6 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       data = NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_2D_BAUTISTA2017:
-      printf ("Aqui1\n");
       data = NCM_DATA (nc_data_bao_empirical_fit_2d_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015: 

@@ -28,12 +28,12 @@ np.random.seed (0)
 # n = number of points to reconstruct the distribution
 # Sampling from a Gaussian distribution
 #
-cut_l  = -0.4
-cut_u  =  0.4
-peak1  =  0.5
-sigma1 =  0.2
-peak2  = -0.5
-sigma2 =  0.2
+cut_l  = -0.6
+cut_u  =  0.6
+peak1  = -0.1
+sigma1 =  0.05
+peak2  = +0.1
+sigma2 =  0.05
 
 # Cumulative distribution function
 def true_cdf (x):
@@ -49,7 +49,7 @@ rbnorm = 1.0 - cdf_cut
 def true_p (x):
   return 0.5 * (norm.pdf (x, peak1, sigma1) + norm.pdf (x, peak2, sigma2)) / rbnorm
 
-n = 800000
+n = 8000
 s = np.concatenate ((np.random.normal (peak1, sigma1, n), np.random.normal (peak2, sigma2, n)), axis = 0)
 
 sa = []

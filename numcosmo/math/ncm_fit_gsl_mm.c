@@ -221,7 +221,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     gdouble pscale;
     fit->fstate->niter++;
     status = gsl_multimin_fdfminimizer_iterate (fit_gsl_mm->mm);
-    pscale = prec * (fit_gsl_mm->mm->f != 0.0 ? fit_gsl_mm->mm->f : 1.0);
+    pscale = prec * fabs (fit_gsl_mm->mm->f != 0.0 ? fit_gsl_mm->mm->f : 1.0);
 
     if ((fit->fstate->niter == 1) && !gsl_finite(fit_gsl_mm->mm->f))
     {

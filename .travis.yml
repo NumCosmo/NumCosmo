@@ -22,7 +22,6 @@ addons:
     - libglib2.0-dev
     - libgmp3-dev
     - libmpfr-dev
-    - libgsl0-dev
     - libfftw3-dev
     - libcfitsio3-dev
     - libsundials-serial-dev
@@ -36,14 +35,16 @@ addons:
     - libxml-libxml-perl
 
 compiler:
-  - clang
   - gcc
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CONFDOCS="--enable-man --enable-gtk-doc" ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CONFDOCS="--enable-man --enable-gtk-doc"                  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo add-apt-repository -y ppa:tsvetko.tsvetkov/trusty-backports ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update                                              ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libgsl-dev                                  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then hash -r                                         ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update                                     ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew tap homebrew/science                       ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew cask uninstall oclint                      ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gcc                                ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gobject-introspection              ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gsl gtk-doc gmp mpfr               ; fi
@@ -58,10 +59,9 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
-  - make V=1
+  - make V=1 
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
-
 
 deploy:
   provider: releases

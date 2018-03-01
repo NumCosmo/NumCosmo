@@ -681,7 +681,7 @@ G_INLINE_FUNC gdouble ncm_c_G_mass_solar (void)
 { return 1.3271244e20; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_solar (void)
-{ return 1.98892e30; }
+{ return ncm_c_G_mass_solar () / ncm_c_G (); }
 
 /*******************************************************************************
  * END: IAU related constants

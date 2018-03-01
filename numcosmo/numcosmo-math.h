@@ -40,6 +40,7 @@
 #include <numcosmo/math/ncm_integral1d.h>
 #include <numcosmo/math/ncm_integral1d_ptr.h>
 #include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_qm_prop.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d.h>
 #include <numcosmo/math/ncm_stats_dist1d_spline.h>
@@ -145,8 +146,6 @@
 #include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
-#include <numcosmo/math/ncm_sphere_map_pix.h>
 #include <numcosmo/math/ncm_sphere_map.h>
-#include <numcosmo/sphere/healpix.h>
 
 #endif /* _NUMCOSMO_MATH_H */

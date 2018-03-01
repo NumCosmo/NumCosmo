@@ -84,6 +84,9 @@ gdouble ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, const gdouble mu, gdouble *err);
 
+gdouble ncm_integral1d_eval_gauss_hermite1_p (NcmIntegral1d *int1d, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
+
 gdouble ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
 

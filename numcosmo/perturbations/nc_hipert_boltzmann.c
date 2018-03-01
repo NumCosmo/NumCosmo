@@ -42,8 +42,6 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
-#include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h>
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -66,6 +64,10 @@ enum
   PROP_EB_LMAX,
   PROP_SIZE,
 };
+
+guint _itheta_table[3]       = {NC_HIPERT_BOLTZMANN_THETA0, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_THETA2};
+guint _itheta_p_table[3]     = {NC_HIPERT_BOLTZMANN_THETA_P0, NC_HIPERT_BOLTZMANN_THETA_P1, NC_HIPERT_BOLTZMANN_THETA_P2};
+guint _nc_default_los_init[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 0};
 
 static void
 nc_hipert_boltzmann_init (NcHIPertBoltzmann *pb)

@@ -150,7 +150,6 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "perturbations/linear.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
@@ -321,7 +320,7 @@ nc_recomb_class_init (NcRecombClass *klass)
                                    g_param_spec_double ("zi",
                                                         NULL,
                                                         "Initial redshift for recombination calculations",
-                                                        0.0, G_MAXDOUBLE, NC_PERTURBATION_START_X,
+                                                        0.0, G_MAXDOUBLE, NC_RECOMB_STARTING_X,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcRecomb:prec:
@@ -1319,14 +1318,13 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
   const gdouble Xe      = nc_recomb_Xe (func->recomb, func->cosmo, lambda);
-
   return Xe * nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
 static gdouble 
 _nc_recomb_mdtau_dlambda (gdouble y, gdouble x, gpointer userdata)
 {
-  const gdouble lambda = - x;  
+  const gdouble lambda = - x;
   return - _nc_recomb_dtau_dlambda (lambda, userdata);
 }
 

@@ -115,10 +115,10 @@ void
 test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
-  guint resample_size = 10000 * gauss->np;
-  NcmStatsVec *stat = ncm_stats_vec_new (gauss->np, NCM_STATS_VEC_COV, FALSE);
-  NcmRNG *rng = ncm_rng_new (NULL);
-  NcmVector *mean = ncm_vector_new (gauss->np);
+  guint resample_size    = 10000 * gauss->np;
+  NcmStatsVec *stat      = ncm_stats_vec_new (gauss->np, NCM_STATS_VEC_COV, FALSE);
+  NcmRNG *rng            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmVector *mean        = ncm_vector_new (gauss->np);
   guint nerr = 0;
   guint i;
 

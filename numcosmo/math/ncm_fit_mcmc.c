@@ -231,6 +231,7 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
   mcmc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, 
                                      NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
                                      NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcmc->mcat, 0);
 }
 
 /**
@@ -302,7 +303,7 @@ ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
   ncm_mset_catalog_set_file (mcmc->mcat, filename);
   
   if (mcmc->started)
-    g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->mcat->cur_id);
+    g_assert_cmpint (mcmc->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (mcmc->mcat));
 }
 
 /**
@@ -446,6 +447,8 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
 void 
 ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
 {
+  const gint cur_id = ncm_mset_catalog_get_cur_id (mcmc->mcat);
+  
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_start_run: run already started, run ncm_fit_mcmc_end_run() first.");
 
@@ -466,7 +469,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
       break;
   }
 
-  if (mcmc->mcat->rng == NULL)
+  if (ncm_mset_catalog_peek_rng (mcmc->mcat) == NULL)
   {
     NcmRNG *rng = ncm_rng_new (NULL);
     ncm_rng_set_random_seed (rng, FALSE);
@@ -497,14 +500,14 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   ncm_mset_catalog_set_sync_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_SYNC_INTERVAL);
 
   ncm_mset_catalog_sync (mcmc->mcat, TRUE);
-  if (mcmc->mcat->cur_id > mcmc->cur_sample_id)
+  if (cur_id > mcmc->cur_sample_id)
   {
-    ncm_fit_mcmc_intern_skip (mcmc, mcmc->mcat->cur_id - mcmc->cur_sample_id);
-    g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->mcat->cur_id);
+    ncm_fit_mcmc_intern_skip (mcmc, cur_id - mcmc->cur_sample_id);
+    g_assert_cmpint (mcmc->cur_sample_id, ==, cur_id);
   }
-  else if (mcmc->mcat->cur_id < mcmc->cur_sample_id)
+  else if (cur_id < mcmc->cur_sample_id)
     g_error ("ncm_fit_mcmc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-             mcmc->mcat->cur_id, mcmc->cur_sample_id);
+             cur_id, mcmc->cur_sample_id);
   
   {
     NcmVector *cur_row = NULL;
@@ -601,7 +604,9 @@ ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
 void 
 ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
 {
-  if (mcmc->mcat->first_id == first_sample_id)
+  const gint first_id = ncm_mset_catalog_get_first_id (mcmc->mcat);
+  
+  if (first_id == first_sample_id)
     return;
 
   if (!mcmc->started)
@@ -609,7 +614,7 @@ ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
 
   if (first_sample_id <= mcmc->cur_sample_id)
     g_error ("ncm_fit_mcmc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, mcmc->mcat->first_id, mcmc->cur_sample_id);
+             first_sample_id, first_id, mcmc->cur_sample_id);
 
   ncm_mset_catalog_set_first_id (mcmc->mcat, first_sample_id);
 }
@@ -681,6 +686,7 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
 static void 
 _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 {
+  NcmRNG *rng = ncm_mset_catalog_peek_rng (mcmc->mcat);
   guint i = 0;
   
   for (i = 0; i < mcmc->n; i++)
@@ -689,7 +695,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
     gdouble m2lnL_star, prob, jump = 0.0;
     
     ncm_mset_fparams_get_vector (mcmc->fit->mset, mcmc->theta);
-    ncm_mset_trans_kern_generate (mcmc->tkern, mcmc->theta, mcmc->thetastar, mcmc->mcat->rng);
+    ncm_mset_trans_kern_generate (mcmc->tkern, mcmc->theta, mcmc->thetastar, rng);
     ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->thetastar);
 
     ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
@@ -706,7 +712,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 
     if (prob != 1.0)
     {
-      jump = gsl_rng_uniform (mcmc->mcat->rng->r);
+      jump = gsl_rng_uniform (rng->r);
       if (jump > prob)
       {
         ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->theta);
@@ -861,7 +867,7 @@ ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
 {
   ncm_mset_catalog_get_mean (mcmc->mcat, &mcmc->fit->fstate->fparams);
   ncm_mset_catalog_get_covar (mcmc->mcat, &mcmc->fit->fstate->covar);
-  ncm_mset_fparams_set_vector (mcmc->mcat->mset, mcmc->fit->fstate->fparams);
+  ncm_mset_fparams_set_vector (ncm_mset_catalog_peek_mset (mcmc->mcat), mcmc->fit->fstate->fparams);
   mcmc->fit->fstate->has_covar = TRUE;
 }
 

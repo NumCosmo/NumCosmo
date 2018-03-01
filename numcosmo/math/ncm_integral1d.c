@@ -58,9 +58,7 @@ struct _NcmIntegral1dPrivate
   gdouble abstol;
   guint rule;
   gsl_integration_workspace *ws;
-#ifdef HAVE_GSL_GLF  
   gsl_integration_cquad_workspace *cquad_ws;
-#endif /* HAVE_GSL_GLF */
 };
 
 enum
@@ -83,9 +81,7 @@ ncm_integral1d_init (NcmIntegral1d *int1d)
   int1d->priv->reltol    = 0.0;
   int1d->priv->abstol    = 0.0;
   int1d->priv->ws        = NULL;
-#ifdef HAVE_GSL_GLF  
   int1d->priv->cquad_ws  = NULL;
-#endif /* #ifdef HAVE_GSL_GLF */
 }
 
 static void
@@ -146,9 +142,7 @@ ncm_integral1d_finalize (GObject *object)
   NcmIntegral1d *int1d = NCM_INTEGRAL1D (object);
 
   g_clear_pointer (&int1d->priv->ws,       gsl_integration_workspace_free);
-#ifdef HAVE_GSL_GLF  
   g_clear_pointer (&int1d->priv->cquad_ws, gsl_integration_cquad_workspace_free);
-#endif /* #ifdef HAVE_GSL_GLF */
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integral1d_parent_class)->finalize (object);
@@ -373,12 +367,30 @@ _ncm_integral1d_eval_gauss_hermite_p (gdouble alpha, gpointer userdata)
 }
 
 static gdouble 
+_ncm_integral1d_eval_gauss_hermite1_p (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = sqrt (- 2.0 * log (alpha));
+
+  return ncm_integral1d_integrand (int1d_H->int1d, x, alpha);
+}
+
+static gdouble 
 _ncm_integral1d_eval_gauss_hermite_r_p (gdouble alpha, gpointer userdata)
 {
   NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
   const gdouble x = gsl_cdf_ugaussian_Qinv (alpha);
 
   return ncm_integral1d_integrand (int1d_H->int1d, x / int1d_H->r, alpha);
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_hermite1_r_p (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = sqrt (- 2.0 * log (alpha) / int1d_H->r);
+
+  return ncm_integral1d_integrand (int1d_H->int1d, x, alpha);
 }
 
 static gdouble 
@@ -570,6 +582,66 @@ ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, co
 
   result = ncm_c_sqrt_2pi () * result / r;
   err[0] = ncm_c_sqrt_2pi () * err[0] / r;
+  
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite1_p:
+ * @int1d: a #NcmIntegral1d
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H^p_F = \int_{0}^{\infty}xe^{-x^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H^p_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite1_p (NcmIntegral1d *int1d, gdouble *err)
+{
+  NcIntegral1dHermite int1d_H = {int1d, 0.0, 0.0};
+  gdouble result = 0.0;
+  gsl_function F;
+  gint ret;
+
+  F.function = &_ncm_integral1d_eval_gauss_hermite1_p;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 1.0, int1d->priv->abstol, int1d->priv->reltol, int1d->priv->partition, int1d->priv->rule, int1d->priv->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_hermite1_p: %s.", gsl_strerror (ret));
+
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite1_r_p:
+ * @int1d: a #NcmIntegral1d
+ * @r: Gaussian scale $r$
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H^p_F = \int_{0}^{\infty}xe^{-x^2r^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H^p_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
+{
+  NcIntegral1dHermite int1d_H = {int1d, 0.0, r};
+  gdouble result = 0.0;
+  gsl_function F;
+  gint ret;
+
+  g_assert_cmpfloat (r, >, 0.0);
+  
+  F.function = &_ncm_integral1d_eval_gauss_hermite1_r_p;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 1.0, int1d->priv->abstol, int1d->priv->reltol, int1d->priv->partition, int1d->priv->rule, int1d->priv->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_hermite1_r_p: %s.", gsl_strerror (ret));
+
+  result = result / r;
+  err[0] = err[0] / r;
   
   return result;
 }

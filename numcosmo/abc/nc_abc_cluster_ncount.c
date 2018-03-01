@@ -92,7 +92,7 @@ _nc_abc_cluster_ncount_constructed (GObject *object)
     NcmABC *abc = NCM_ABC (object);
 
     NcmMSetTransKernGauss *tkerng = ncm_mset_trans_kern_gauss_new (0);
-    ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tkerng), abc->mcat->mset);
+    ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tkerng), ncm_mset_catalog_peek_mset (abc->mcat));
     ncm_mset_trans_kern_gauss_set_cov_from_scale (tkerng);
     ncm_abc_set_trans_kern (abc, NCM_MSET_TRANS_KERN (tkerng));
   }

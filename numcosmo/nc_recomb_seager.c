@@ -121,7 +121,12 @@ enum
 };
 
 static gint H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
+
+#if HAVE_SUNDIALS_MAJOR == 2
 static gint H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#elif HAVE_SUNDIALS_MAJOR == 3
+static gint H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+#endif
 
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean_gcor (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
@@ -179,6 +184,15 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
   recomb_seager->y                     = N_VNew_Serial (recomb_seager->n);
   recomb_seager->abstol                = N_VNew_Serial (recomb_seager->n);
 
+#if HAVE_SUNDIALS_MAJOR == 3
+  recomb_seager->A                     = SUNDenseMatrix (recomb_seager->n, recomb_seager->n);
+  recomb_seager->LS                    = SUNDenseLinearSolver (recomb_seager->y, recomb_seager->A);
+  
+  NCM_CVODE_CHECK ((gpointer)recomb_seager->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)recomb_seager->LS, "SUNDenseLinearSolver", 0, );
+#endif
+
+  
   recomb_seager->Xe_s                  = ncm_spline_cubic_notaknot_new ();
   recomb_seager->Xe_reion_s            = ncm_spline_cubic_notaknot_new ();
   recomb_seager->Xe_recomb_s           = ncm_spline_cubic_notaknot_new ();
@@ -252,6 +266,20 @@ _nc_recomb_seager_finalize (GObject* object)
   N_VDestroy (recomb_seager->y);
   N_VDestroy (recomb_seager->y0);
   N_VDestroy (recomb_seager->abstol);
+
+#if HAVE_SUNDIALS_MAJOR == 3
+  if (recomb_seager->A != NULL)
+  {
+    SUNMatDestroy (recomb_seager->A);
+    recomb_seager->A = NULL;
+  }
+  
+  if (recomb_seager->LS != NULL)
+  {
+    SUNLinSolFree (recomb_seager->LS);
+    recomb_seager->LS = NULL;
+  }
+#endif
 
   CVodeFree (&recomb_seager->cvode);
 
@@ -529,7 +557,11 @@ H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcRecombSeagerParams* rsp = (NcRecombSeagerParams*)jac_data;
   const gdouble x     = exp (-lambda);
@@ -541,26 +573,25 @@ H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy
   const gdouble XHeI  = (XHe - XHeII);
   gdouble grad[3];
 
-  NCM_UNUSED (N);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
   NCM_UNUSED (tmp2);
   NCM_UNUSED (tmp3);
 
   nc_recomb_seager_HII_ion_rate_grad (rsp->recomb_seager, rsp->cosmo, XHI, XHII, Tm, XHeI, XHeII, x, grad);
-  DENSE_ELEM (J, 0, 0) = -x * grad[0];
-  DENSE_ELEM (J, 0, 1) = -x * grad[1];
-  DENSE_ELEM (J, 0, 2) = -x * grad[2];
+  SUN_DENSE_ACCESS (J, 0, 0) = -x * grad[0];
+  SUN_DENSE_ACCESS (J, 0, 1) = -x * grad[1];
+  SUN_DENSE_ACCESS (J, 0, 2) = -x * grad[2];
 
   nc_recomb_seager_Tm_dx_grad (rsp->recomb_seager, rsp->cosmo, XHI, XHII, Tm, XHeI, XHeII, x, grad);
-  DENSE_ELEM (J, 1, 0) = -x * grad[0];
-  DENSE_ELEM (J, 1, 1) = -x * grad[1];
-  DENSE_ELEM (J, 1, 2) = -x * grad[2];
+  SUN_DENSE_ACCESS (J, 1, 0) = -x * grad[0];
+  SUN_DENSE_ACCESS (J, 1, 1) = -x * grad[1];
+  SUN_DENSE_ACCESS (J, 1, 2) = -x * grad[2];
 
   nc_recomb_seager_HeII_ion_rate_grad (rsp->recomb_seager, rsp->cosmo, XHI, XHII, Tm, XHeI, XHeII, x, grad);
-  DENSE_ELEM (J, 2, 0) = -x * grad[0];
-  DENSE_ELEM (J, 2, 1) = -x * grad[1];
-  DENSE_ELEM (J, 2, 2) = -x * grad[2];
+  SUN_DENSE_ACCESS (J, 2, 0) = -x * grad[0];
+  SUN_DENSE_ACCESS (J, 2, 1) = -x * grad[1];
+  SUN_DENSE_ACCESS (J, 2, 2) = -x * grad[2];
 
   return 0;
 }
@@ -652,11 +683,20 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     flag = CVodeSetMaxNumSteps (recomb_seager->cvode, 100000);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+
+#if HAVE_SUNDIALS_MAJOR == 2
     flag = CVDense (recomb_seager->cvode, recomb_seager->n);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
     flag = CVDlsSetDenseJacFn (recomb_seager->cvode, &H_ion_full_J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+#elif HAVE_SUNDIALS_MAJOR == 3
+    flag = CVDlsSetLinearSolver (recomb_seager->cvode, recomb_seager->LS, recomb_seager->A);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+
+    flag = CVDlsSetJacFn (recomb_seager->cvode, &H_ion_full_J);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
 
     flag = CVodeSetStopTime (recomb_seager->cvode, lambdaf);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );

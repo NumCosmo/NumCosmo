@@ -22,6 +22,7 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS)    \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
+	 $(OPENMP_CFLAGS)     \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
@@ -31,7 +32,6 @@ MY_CFLAGS = \
 
 AM_CFLAGS =    \
 	 -Wall \
-	 $(OPENMP_CFLAGS)     \
 	 $(MY_CFLAGS)
 
 SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
@@ -68,6 +68,7 @@ ncm_sources = \
 	math/ncm_integral1d.c                \
 	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
+	math/ncm_qm_prop.c                   \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
 	math/ncm_stats_dist1d_spline.c       \
@@ -149,7 +150,7 @@ ncm_sources = \
 	math/ncm_lh_ratio2d.c                \
 	math/ncm_abc.c                       \
 	math/ncm_quaternion.c                \
-	math/ncm_sphere_map_pix.c            \
+	math/ncm_sphere_map.c                \
 	math/poly.c               \
 	math/integral.c           \
 	math/function_cache.c     \
@@ -160,9 +161,7 @@ ncm_sources = \
 	math/mpq_tree.c           \
 	math/grid_one.c           \
 	math/dividedifference.c   \
-	math/memory_pool.c        \
-	math/ncm_sphere_map.c     \
-	sphere/healpix.c
+	math/memory_pool.c
 
 ncm_sources_nogi = \
 	math/Faddeeva.c
@@ -181,6 +180,7 @@ ncm_headers =                                \
 	math/ncm_integral1d.h                \
 	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
+	math/ncm_qm_prop.h                   \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \
 	math/ncm_stats_dist1d_spline.h       \
@@ -262,7 +262,7 @@ ncm_headers =                                \
 	math/ncm_lh_ratio2d.h                \
 	math/ncm_abc.h                       \
 	math/ncm_quaternion.h                \
-	math/ncm_sphere_map_pix.h            \
+	math/ncm_sphere_map.h                \
 	math/function_cache.h     \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
@@ -273,9 +273,7 @@ ncm_headers =                                \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
 	math/dividedifference.h   \
-	math/memory_pool.h        \
-	math/ncm_sphere_map.h     \
-	sphere/healpix.h
+	math/memory_pool.h
 
 ncm_headers_nogi = \
 	math/Faddeeva.h
@@ -332,7 +330,6 @@ nc_headers = \
 	lss/nc_transfer_func_bbks.h   \
 	lss/nc_transfer_func_eh.h     \
 	lss/nc_transfer_func_camb.h   \
-	lss/nc_transfer_func_pert.h   \
 	lss/nc_growth_func.h          \
 	lss/nc_density_profile.h      \
 	lss/nc_density_profile_nfw.h  \
@@ -394,7 +391,6 @@ nc_headers = \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
-	model/quantum_gravity.h                   \
 	perturbations/nc_hipert.h                 \
 	perturbations/nc_hipert_wkb.h             \
 	perturbations/nc_hipert_itwo_fluids.h     \
@@ -404,9 +400,6 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann.h       \
 	perturbations/nc_hipert_boltzmann_std.h   \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
-	perturbations/linear.h                    \
-	perturbations/covariance.h                \
-	perturbations/linear_internal.h           \
 	xcor/nc_xcor.h                            \
 	xcor/nc_xcor_AB.h                         \
 	xcor/nc_xcor_limber_kernel.h              \
@@ -465,7 +458,6 @@ nc_sources = \
 	lss/nc_transfer_func_bbks.c   \
 	lss/nc_transfer_func_eh.c     \
 	lss/nc_transfer_func_camb.c   \
-	lss/nc_transfer_func_pert.c   \
 	lss/nc_growth_func.c          \
 	lss/nc_density_profile.c      \
 	lss/nc_density_profile_nfw.c  \
@@ -527,7 +519,6 @@ nc_sources = \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
-	model/quantum_gravity.c                   \
 	perturbations/nc_hipert.c                 \
 	perturbations/nc_hipert_wkb.c             \
 	perturbations/nc_hipert_itwo_fluids.c     \
@@ -537,11 +528,6 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann.c       \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
-	perturbations/linear.c                    \
-	perturbations/covariance.c                \
-	perturbations/linear_cvodes.c             \
-	perturbations/linear_gsl_ode.c            \
-	perturbations/linear_gsl_ode2.c           \
 	xcor/nc_xcor.c                            \
 	xcor/nc_xcor_AB.c                         \
 	xcor/nc_xcor_limber_kernel.c              \
@@ -658,7 +644,6 @@ nobase_cosmo_include_HEADERS = \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \
 	math/binsplit_eval.c           \
-	perturbations/linear_generic.c \
 	numcosmo-math.h                \
 	numcosmo.h
 
@@ -678,6 +663,7 @@ EXTRA_DIST = \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
 	ncm_fit_nlopt_enum_meta.c       \
+	math/ncm_sphere_map_block.c     \
 	math/rquantile.c                \
 	math/gsl_rstat.h
 
