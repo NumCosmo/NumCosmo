@@ -67,6 +67,14 @@ typedef struct _NcmQMPropGauss
   gdouble lnNorm;
 } NcmQMPropGauss;
 
+typedef struct _NcmQMPropExp
+{
+  gdouble n;
+  gdouble V; 
+  gdouble pV;
+  gdouble lnNorm;
+} NcmQMPropExp;
+
 /**
  * NcmQMPropPsi:
  * @psi_data: object pointer
@@ -78,12 +86,9 @@ typedef struct _NcmQMPropGauss
  */
 typedef void (*NcmQMPropPsi) (gpointer psi_data, const gdouble x, gdouble *psi);
 
-#if HAVE_SUNDIALS_MAJOR == 3
-#ifdef HAVE_ACB_H
-
 GType ncm_qm_prop_get_type (void) G_GNUC_CONST;
 GType ncm_qm_prop_gauss_get_type (void) G_GNUC_CONST;
-
+GType ncm_qm_prop_exp_get_type (void) G_GNUC_CONST;
 
 NcmQMPropGauss *ncm_qm_prop_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi);
 NcmQMPropGauss *ncm_qm_prop_gauss_dup (NcmQMPropGauss *qm_gauss);
@@ -91,6 +96,12 @@ void ncm_qm_prop_gauss_free (NcmQMPropGauss *qm_gauss);
 
 void ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
 void ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
+
+NcmQMPropExp *ncm_qm_prop_exp_new (const gdouble n, const gdouble V, const gdouble pV);
+NcmQMPropExp *ncm_qm_prop_exp_dup (NcmQMPropExp *qm_exp);
+void ncm_qm_prop_exp_free (NcmQMPropExp *qm_exp);
+
+void ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi);
 
 NcmQMProp *ncm_qm_prop_new (void);
 NcmQMProp *ncm_qm_prop_ref (NcmQMProp *qm_prop);
@@ -111,10 +122,12 @@ gdouble ncm_qm_prop_propto_norm (NcmQMProp *qm_prop, const gdouble t);
 
 void ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0, gpointer psi_data, const gdouble xi, const gdouble xf);
 void ncm_qm_prop_set_init_cond_gauss (NcmQMProp *qm_prop, NcmQMPropGauss *qm_gauss, const gdouble xi, const gdouble xf);
+void ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const gdouble xi, const gdouble xf);
 
 void ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf);
 GArray *ncm_qm_prop_get_knots (NcmQMProp *qm_prop);
 GArray *ncm_qm_prop_get_psi (NcmQMProp *qm_prop);
+GArray *ncm_qm_prop_get_spec_knots (NcmQMProp *qm_prop);
 
 NcmSpline *ncm_qm_prop_get_rho (NcmQMProp *qm_prop);
 NcmSpline *ncm_qm_prop_get_dS (NcmQMProp *qm_prop);
@@ -122,10 +135,8 @@ NcmSpline *ncm_qm_prop_get_dS (NcmQMProp *qm_prop);
 NcmSpline *ncm_qm_prop_get_Re_psi (NcmQMProp *qm_prop);
 NcmSpline *ncm_qm_prop_get_Im_psi (NcmQMProp *qm_prop);
 
-#endif
-#endif
+void ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t);
 
 G_END_DECLS
 
 #endif /* _NCM_QM_PROP_H_ */
-

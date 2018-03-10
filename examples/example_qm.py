@@ -49,29 +49,39 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p = Ncm.QMProp.new ()
-p.props.abstol     = 1.0e-300
+p.props.abstol     = 1.0e-30
 p.props.reltol     = 1.0e-9
-p.props.nknots     = 201
+p.props.nknots     = 1000
 p.props.noboundary = False
 p.set_property ("lambda", 0.0)
 
-psi0 = Ncm.QMPropGauss.new (-2.0, 1.0, 1.0, -2.0)
+psi0 = Ncm.QMPropGauss.new (0.0, 1.0, 1.0, -1.0)
+#psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
 #print psi0.eval (1.0)
-tstep = 0.005
-xf    = 8.0
+tstep = 1.1e-6
+xf    = 60.0
+xfp   = 20.0
 p.set_init_cond_gauss (psi0, 0.0, xf)
+#p.set_init_cond_exp (psi0, 0.0, xf)
 
-x          = np.linspace (0.0, xf, 2000) #p.get_knots ()
+x             = np.linspace (0.0, xfp, 2000) #p.get_knots ()
 #x          = p.get_knots ()
-rho_s      = p.get_rho ()
-rho_s_eval = np.vectorize (rho_s.eval)
-psi        = rho_s_eval (x)
+Re_psi_s      = p.get_Re_psi ()
+Re_psi_s_eval = np.vectorize (Re_psi_s.eval)
+Im_psi_s      = p.get_Im_psi ()
+Im_psi_s_eval = np.vectorize (Im_psi_s.eval)
+
+max_Re_psi    = max (np.abs (Re_psi_s_eval (x)))
+max_Im_psi    = max (np.abs (Im_psi_s_eval (x)))
+yb            = max (max_Re_psi, max_Im_psi)
+
 #psi   = np.array (p.get_psi ())
 
 fig = plt.figure()
 
-ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.0 * max (psi), 5.0 * max (psi)))
+ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.5e0 * yb, 1.5e0 * yb))
+ax.grid ()
 #ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-700.0, 2.0 * max (psi)))
 #ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-xf, xf))
 
@@ -80,7 +90,7 @@ ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
 
 #print psi
 
-N = 3
+N = 4
 lines = [plt.plot([], [])[0] for _ in range(N)]
 
 lines.append (ttl)
@@ -90,11 +100,12 @@ def init():
   lines[0].set_data ([], [])
   lines[1].set_data ([], [])
   lines[2].set_data ([], [])
+  lines[3].set_data ([], [])
   return lines
 
 def animate(i):
   tf = tstep * i
-  p.evolve (tf)
+  p.evolve_spec (tf)
   #psi = np.array (p.get_psi ())
   rho_s      = p.get_rho ()
   dS_s       = p.get_dS ()
@@ -113,13 +124,13 @@ def animate(i):
   lines[0].set_data (x, np.sqrt (np.abs (rho_s_eval (x))))
   lines[1].set_data (x, Re_psi_s_eval (x))
   lines[2].set_data (x, Im_psi_s_eval (x))
-  #lines[1].set_data (x, dS_s_eval (x) / (2.0 * xf))
+  lines[3].set_data (x, dS_s_eval (x) / 10.0)
   #ax.set_title("nhoca %d" % i)
   ttl.set_text ("t = % .15f, norma = % .15f" % (tf, rho_s.eval_integ (0.0, xf)))
 
   return lines
 
-anim = animation.FuncAnimation (fig, animate, np.arange (0, 20000), init_func = init, interval = 1, blit = True, repeat = False)
+anim = animation.FuncAnimation (fig, animate, np.arange (0, 200000), init_func = init, interval = 1, blit = True, repeat = False)
 
 #mywriter = animation.FFMpegWriter()
 #anim.save ('mymovie.mp4', writer = mywriter)

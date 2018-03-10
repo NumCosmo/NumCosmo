@@ -8,15 +8,15 @@ main (gint argc, gchar *argv[])
   
   {
     NcmQMProp *p         = ncm_qm_prop_new ();
-    NcmQMPropGauss *psi0 = ncm_qm_prop_gauss_new (0.0, 1.0, 1.0, 1.0);
+    NcmQMPropGauss *psi0 = ncm_qm_prop_gauss_new (0.0, 1.0, 1.0, -2.0);
     gint i;
     
     g_object_set (p, 
-      "nknots", 1500, 
+      "nknots", 250, 
       "lambda", 0.0, 
       NULL);
       
-    ncm_qm_prop_set_init_cond_gauss (p, psi0, 0.0, 30.0);
+    ncm_qm_prop_set_init_cond_gauss (p, psi0, 0.0, 8.0);
     
     for (i = 0; i < 10; i++)
     {
