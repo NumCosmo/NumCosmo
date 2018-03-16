@@ -46,6 +46,10 @@ G_BEGIN_DECLS
 
 typedef struct _NcmSFSphericalHarmonicsClass NcmSFSphericalHarmonicsClass;
 typedef struct _NcmSFSphericalHarmonics NcmSFSphericalHarmonics;
+typedef struct _NcmSFSphericalHarmonicsK NcmSFSphericalHarmonicsK;
+typedef struct _NcmSFSphericalHarmonicsY NcmSFSphericalHarmonicsY;
+typedef	struct _NcmSFSphericalHarmonicsP NcmSFSphericalHarmonicsP;
+typedef struct _NcmSFSphericalHarmonicsYArray NcmSFSphericalHarmonicsYArray;
 
 struct _NcmSFSphericalHarmonicsClass
 {
@@ -53,11 +57,19 @@ struct _NcmSFSphericalHarmonicsClass
 	GObjectClass parent_class;
 };
 
-typedef struct _NcmSFSphericalHarmonicsK
+/**
+ * NcmSFSphericalHarmonicsK:
+ * @l: $K_l$
+ * @lp1: $K_{l+1}$
+ * 
+ * Recurrence coefficients.
+ * 
+ */
+struct _NcmSFSphericalHarmonicsK
 {
 	gdouble l;
 	gdouble lp1;
-} NcmSFSphericalHarmonicsK;
+};
 
 struct _NcmSFSphericalHarmonics
 {
@@ -70,7 +82,25 @@ struct _NcmSFSphericalHarmonics
 	gint Klm_m;
 };
 
-typedef struct _NcmSFSphericalHarmonicsY
+/**
+ * NcmSFSphericalHarmonicsY:
+ * @x: $x$
+ * @sqrt1mx2: $\sqrt{1-x^2}$ 
+ * @l: $l$
+ * @l0: $l_0$
+ * @m: $m$
+ * @Klm: #NcmSFSphericalHarmonicsK pointer
+ * @Pl0m: $P_{l_0}^m$
+ * @Pl0p1m: $P_{l_0+1}^m$
+ * @Plm: $P_{l}^m$
+ * @Plp1m: $P_{l+1}^m$
+ * @spha: pointer to parent #NcmSFSphericalHarmonics
+ * @abstol: absolute tolerance
+ * 
+ * Recurrence boxed object.
+ * 
+ */
+struct _NcmSFSphericalHarmonicsY
 {
 	gdouble x;
 	gdouble sqrt1mx2;
@@ -84,9 +114,21 @@ typedef struct _NcmSFSphericalHarmonicsY
 	gdouble Plp1m;
 	NcmSFSphericalHarmonics *spha;
 	gdouble abstol;
-} NcmSFSphericalHarmonicsY;
+};
 
-typedef	struct _NcmSFSphericalHarmonicsP 
+/**
+ * NcmSFSphericalHarmonicsP:
+ * @x: $x$
+ * @sqrt1mx2: $\sqrt{1-x^2}$ 
+ * @l0m: $P_{l_0}^m$
+ * @l0p1m: $P_{l_0+1}^m$
+ * @lm: $P_{l}^m$
+ * @lp1m: $P_{l+1}^m$
+ * 
+ * Boxed P values.
+ * 
+ */
+struct _NcmSFSphericalHarmonicsP 
 {
 	gdouble x;
 	gdouble sqrt1mx2;
@@ -94,11 +136,27 @@ typedef	struct _NcmSFSphericalHarmonicsP
 	gdouble l0p1m;
 	gdouble lm;
 	gdouble lp1m;
-} NcmSFSphericalHarmonicsP;
+};
 
 #define NCM_SF_SPHERICAL_HARMONICS_MAX_LEN 6
 
-typedef struct _NcmSFSphericalHarmonicsYArray
+/**
+ * NcmSFSphericalHarmonicsYArray:
+ * @l: $l$
+ * @l0: $l_0$
+ * @m: $m$
+ * @x: array of $x$
+ * @sqrt1mx2: array of $\sqrt{1-x^2}$
+ * @Yl0m: array of $Y_{l_0}^m$
+ * @Ylm: array of $Y_{l}^m$
+ * @Klm: #NcmSFSphericalHarmonicsK pointer
+ * @spha: pointer to parent #NcmSFSphericalHarmonics
+ * @abstol: absolute tolerance
+ * 
+ * Recurrence array boxed object.
+ * 
+ */
+struct _NcmSFSphericalHarmonicsYArray
 {
 	gint l;
 	gint l0;
@@ -111,8 +169,7 @@ typedef struct _NcmSFSphericalHarmonicsYArray
 	NcmSFSphericalHarmonicsK * restrict Klm;
 	NcmSFSphericalHarmonics *spha;
 	gdouble abstol;
-} NcmSFSphericalHarmonicsYArray;
-
+};
 
 GType ncm_sf_spherical_harmonics_Y_get_type (void) G_GNUC_CONST;
 GType ncm_sf_spherical_harmonics_Y_array_get_type (void) G_GNUC_CONST;

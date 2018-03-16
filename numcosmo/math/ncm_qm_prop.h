@@ -44,6 +44,8 @@ G_BEGIN_DECLS
 typedef struct _NcmQMPropClass NcmQMPropClass;
 typedef struct _NcmQMProp NcmQMProp;
 typedef struct _NcmQMPropPrivate NcmQMPropPrivate;
+typedef struct _NcmQMPropGauss NcmQMPropGauss;
+typedef struct _NcmQMPropExp NcmQMPropExp;
 
 struct _NcmQMPropClass
 {
@@ -58,22 +60,36 @@ struct _NcmQMProp
   NcmQMPropPrivate *priv;
 };
 
-typedef struct _NcmQMPropGauss
+/**
+ * NcmQMPropGauss:
+ * 
+ * Gaussian wave-function.
+ * 
+ */
+struct _NcmQMPropGauss
 {
+  /*< private >*/
   gdouble mean;
   gdouble alpha; 
   gdouble sigma;
   gdouble Hi;
   gdouble lnNorm;
-} NcmQMPropGauss;
+};
 
-typedef struct _NcmQMPropExp
+/**
+ * NcmQMPropExp:
+ * 
+ * Exponential wave-function.
+ * 
+ */
+struct _NcmQMPropExp
 {
+  /*< private >*/
   gdouble n;
   gdouble V; 
   gdouble pV;
   gdouble lnNorm;
-} NcmQMPropExp;
+};
 
 /**
  * NcmQMPropPsi:
