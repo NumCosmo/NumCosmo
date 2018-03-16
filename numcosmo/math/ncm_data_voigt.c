@@ -215,7 +215,7 @@ _ncm_data_voigt_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < voigt->h->n; i++)
   {
     const gdouble lambda_i = voigt_class->mean_func (voigt, mset, i);
-    const gdouble N_i      = gsl_ran_voigt (rng->r, lambda_i);
+    const gdouble N_i      = gsl_ran_poisson (rng->r, lambda_i);
     
 		voigt->h->bin[i] = N_i;
   }

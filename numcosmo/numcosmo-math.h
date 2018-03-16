@@ -92,6 +92,7 @@
 #include <numcosmo/math/ncm_data_gauss_cov.h>
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/math/ncm_data_poisson.h>
+#include <numcosmo/math/ncm_data_voigt.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_prior.h>
