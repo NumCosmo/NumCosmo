@@ -68,7 +68,7 @@ deploy:
   provider: releases
   api_key:
     secure: ZtGqjolvjQ3RAbj+inJZxAs3WnZrguryO68bjRZ0N0VfxmhNVhgJ4i3uXVTCnfiX5avIsm2HgnJfuXzag/FI3dSRTv8++iC68VrxJnQtrrRHSmKIBBDFMbVbJJFmlQfpsnwaH1LzByj90kZpDH4qJJrK1KeFRDhTy8yG20FShw+ieklxdUmeCHlWusWMkkBGfFJ4xB+rthtEIVvJ/HXAl1wATwCdruB1CPIYHMReqIQpHPMhipYHtHW8/K56tAVytcPslQl0Jdxhe9KPiZZANvxolME7i+jkRVjIwI6X2tR4+D7matST2pGDwMk5wrX3i1masXIIYktCByuCh1oICCfTI6BL/xhwqBAAEzoPEI+OI1QH/KOoyJxs0/X0yFBLJ+UdseQVTCzdajCExU1h5kWkS6QrMm8RPV02V6iZwYI5fwMWlPCQdVbQZRhSuE/bf2jEezGKznQYWOSP11cjjrmhyg+JSNBS69LlTb2sLy/a/CV37Op0MTahLMmOv/DwXvluAgPsSrcUZcNR7NU2V+cNh6E6cB44OQqH1fV7fXDs3yV4Bjwlx572rKy7+Yo640f4Sn2NFHD5U9yE+4h9mYmfxaSQmgyjqcZH86FAgYVMWWPKrGOr10w+I8kRw6tZud9j4cdV3w8QnBy9Nybk1xho9hlCpFX/Om0mQfZmrC4=
-  file: numcosmo-*.tar.gz
+  file: numcosmo-0.14.0.tar.gz
   skip_cleanup: true
   on:
     tags: true
