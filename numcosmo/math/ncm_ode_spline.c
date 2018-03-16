@@ -407,7 +407,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 #if defined (HAVE_SUNDIALS_2_5_0) || defined (HAVE_SUNDIALS_2_6_0)
   if (os->xi != 0.0)
   {
-    flag = CVodeSetInitStep (os->cvode, os->xi * 1.0e-11);
+    flag = CVodeSetInitStep (os->cvode, fabs (os->xi * 1.0e-11) * GSL_SIGN (os->xf - os->xi));
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
   }
 #endif
