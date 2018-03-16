@@ -3,7 +3,849 @@ CHANGELOG
 
 [Current]
 
+[v0.14.0]
+ * Tweaking tests.
+
+ * Fixed new package (in progress).
+
+ * Implementing ncm_data_voigt object: work in progress
+
+ * Workaround for older sundials bug (2).
+
+ * Tweaking tests and workaround for older sundials bug.
+
+ * Fixed missing prototype and numpy on travis-ci.
+
+ * Tweaking tests.
+
+ * Minor fixes (portability related).
+
+ * Improved error msgs in ncm_spline_func.c. Working on ncm_qm_prop.
+
+ * Working on ncm_qm_prop.
+
+ * Working on ncm_qm_prop.
+
+ * Conditional compilation of NcmQMProp.
+
+ * New test QM object.
+
+ * Created three tests: distance, density profile (NFW) and surface mass density.
+
+     Distance: Implemented functions to compute the comoving and transverse
+     distances from z to infinity
+
+     DensityProfileNFW: fixed bugs, tested
+
+     NcWLSurfaceMassDensity : implemented functions like convergence, shear and
+     reduced shear... all funtions tested using NFW density profile.
+
+     Included example for NcWLSurfaceMassDensity.
+
+ * Fixed log spacing.
+
+ * Fixed parameter ranges.
+
+ * Improvement in example_hiprim_Tmodes.py. Minor fixes. Added C(theta) calc in
+     ncm_sphere_map.h.
+
+ * Updated default alpha in nc_snia_dist_cov.h.
+
+ * Fixed error in reading m2lnp_var from catalog file.
+
+ * Added option to calculate evidence in mcat_analyze.
+
+ * Added volume estimator testing to test_ncm_fit_esmcmc (fixed bug in vol
+     estimation when the catalog contains repeated points).
+
+ * New code for Bayesian evidence and posterior volume and its unit tests.
+
+ * Better parameters for test_ncm_sphere_map.c.
+
+ * Renamed test to match the new object name.
+
+ * Encapsulated the NcmMSetCatalog object. New NcmMSetCatalog tests.
+
+ * Removed travis-ci brew science tap.
+
+ * Working on wl related objects (in progress).
+
+ * New test test_ncm_fit_esmcmc.c. Fixed solar/G consistence.
+
+ * Travis-ci backports (removed debug).
+
+ * Travis-ci backports (debug1).
+
+ * Travis-ci backports (debug).
+
+ * Travis-ci backports.
+
+ * Travis-ci backports.
+
+ * Travis-ci backports.
+
+ * Travis-ci backports.
+
+ * Testing backports in travis-ci.
+
+ * New test for NcmFit. GSL requirement changed to 2.0. Old code related to older
+     gsl versions removed. New NcmDataset constructor. Updated NcmFitLS.
+
+ * Removed old doc file.
+
+ * Finished sphere_map. Removed old codes. Added support fo sundials 3.x.x.
+
+ * Finished organizing and further folding of the sphere_map map2alm algo.
+
+ * Fixing gcc install issue in macos/travis-ci.
+
+ * Finished organizing code.
+
+ * Fixed old sphere/ scan in docs. Split block algo from main code in
+     ncm_sphere_map.c.
+
+ * Renamed new sphere map object: NcmSphereMapPix -> NcmSphereMap.
+
+ * Removed old Spherical Map/Healpix implementation.
+
+ * removed clang support in travis-ci.
+
+ * Travis...
+
+ * Travis...
+
+ * Still fixing travis...
+
+ * Trying to fix openmp+clang problem in travis.
+
+ * Adding openmp cflags to the introspection cflags.
+
+ * Removed march from the options added zhen using --enable-opt-cflags. Removed
+     debug messages from ncm_sphere_map_pix.c. Updated ax_gcc_archflag.m4.
+     Testing clang options for travis-ci.
+
+ * Finished block opt for sphere map pix.
+
+ * Updates.
+
+ * Improvements in NcmSphereMapPix (optimization of alm2map in progress).
+
+ * Finished alm2map (missing block algo).
+
+ * Finished block algorithms and tests.
+
+ * Finishing new block interface for SF SH. Added tests for SF SH.
+
+ * Updated m4/ax_cc_maxopt.m4 and m4/ax_gcc_archflag.m4. Working on optimization
+     of ncm_sphere_map_pix.
+
+ * Optimizing code (unstable).
+
+ * Missing m4 in some platforms.
+
+ * Testing new optimizations, new Spherical Harmonics object, finishing sphere_map
+     object.
+
+ * New example NcmDiff.
+
+ * Applied fix (gtkdoc/glib-mkenums scan) to the ncm namespace.
+
+ * Fixed gtkdoc/glib-mkenums scan problem.
+
+ * Added a guard to avoid introspection into wrong headers. Solving the enum
+     parsing erros/warnings (glib's bug).
+
+ * Update deprecated glib function.
+
+ * New kinetic w function.
+
+ * Updated scripts/corner.py, new acoustic scale in Mpc function in NcDistance.
+
+ * Documentation.
+
+ * New option to print out functions in mcat_analyze. Fixed minor bug in
+     plot2DCorner.
+
+ * Reordered fortran probing in configure.ac (fix problems in some weird gcc
+     installations).
+
+ * Removed two prints and p-mode member. Included test of the x and y (splines)
+     bounds to compute m2lnL (bao empirical fit 2D).
+
+ * Added Bautista et al. obj in the Makefile.
+
+ * Corrected typo on the documentaion.
+
+ * Removed log printing.
+
+ * Fixing instrospection in macos.
+
+ * cat config.log in travis ci.
+
+ * Fixing macos build.
+
+ * Still trying to fix maxos build.
+
+ * Implemented NcmDataDist2d: data described by two-variable (arbitrary)
+     distribution.
+
+     Implemented NcDataBaoEmpiricalFit2d: included Bautista et al. 2017 data
+     (SDSS/BOSS DR12).
+
+ * Testing travis ci.
+
+ * Trying fix numpy install using brew.
+
+ * Right order.
+
+ * overwrite option added to numpy at travis ci.
+
+ * Added numpy to brew install in travis ci.
+
+ * Added condition on having fftw to the unit test.
+
+ * Minor tweaks. Improved NcmFftlog and added unit testing. Updated NcmABC and
+     NcABCClusterNCount.
+
+ * Update py_sline_gauss.py
+
+     fixing dsymm call to met the new arguments order.
+ * Update py_sline_gauss.py
+
+     Fixing dsymm parameters order
+ * Finished objects infrastructure.
+
+ * Added tests for inverse distribution computation.
+
+ * Improved ncm_stats_dist1d, including new tests in test_ncm_stats_dist1d_epdf.
+
+ * Comment Evrard's formula for ST multiplicity.
+
+ * Minor tweaks.
+
+ * Improving ncm_stats_dist1 (not ready!)
+
+ * Fix minor bugs.
+
+ * Minor tweaks.
+
+ * New structure for NcDensityProfile and NcDensityProfileNFW objects. They must
+     implement more functions, which are used to compute the Weak Lensing (WL)
+     surface mass density, WL shear... Work in progress! Not tested.
+
+     New object: NcWLSurfaceMassDensity. Work in progress! Not finalized nor
+     tested.
+
+     Property included in NcmStats2dSpline to indicate which marginal to be
+     computed.
+
+ * Added arxiv numbers.
+
+ * Fixed doc.
+
+ * Fixed freed null pointer in NcmReparam.
+
+ * Removed debug message in darkenergy. Fixed minor leaks.
+
+ * Implemented framework for Fisher matrix calculation. Finished implementation of
+     general Fisher matrix calculation for NcmDataGauss* family. Organized
+     methods of NcmFit to calculated covariance through observed or expected
+     Fisher matrix. Added new methods for NcmMatrix.
+
+ * Improved error handling in NcmDiff.
+
+ * Removed old ncm_numdiff functions. Updated code to use the new NcmDiff object.
+
+ * Fixed minor typos. Included NcmDiff use in NcmFit.
+
+ * Improved documentation of NcHICosmoVexp. Added paper Bacalhau et al. (2017). 
+     Corrected typo on the documention of ncm_stats_dist2d.c.
+
+ * New NcmDiff object that contains all numerical differentiation in a organized
+     framework. Improved ncm_assert_cmpdouble test and error message.
+
+ * Included more BAO points in the example. Minor modifications on the plot.
+
+ * Created abstract class and one child to compute reconstruct an arbitrary
+     two-dimensional probability distribution. Work in progress!
+
+ * New smooth bpl model.
+
+ * Documentation completed. Included PROP_SIZE in the stats_dist1d enumerator.
+
+ * Removed debug message.
+
+ * New Spherical Bessel FFTLog code.
+
+ * Minor tweaks.
+
+ * Improved the documentation on both hiprim examples.
+
+ * Improved the documentation.
+
+ * NcRecomb documentation is completed.
+
+ * New full C example.
+
+ * Few improvements on the recombinatio figures, new format svg.
+
+ * Documentation and figure improvements.
+
+ * Example better documented, plots added and small bugs fixed.
+
+ * Fixed example name in Makefile.am
+
+ * New example.
+
+ * Modified the file name, included the computation of the halo mass function. All
+     figures are in svg format.
+
+ * Fixed mixing http/https in docs. Removed old doc from README.
+
+ * Fixed manual url.
+
+ * Updated automake and some examples, removed old docs (merged into the new
+     site).
+
+ * Added the initial and final masses and redsfhits as properties in the
+     NcHaloMassFunction object.
+
+ * Renamed the DE model Linder and Pad to CPL and JBP, respectively.
+
+     Documentation improvements.
+
+ * Documentation.
+
+ * Fixed doc typo.
+
+ * Removing old docs (merging all docs in a single place). Fixed bugs in
+     recomb_seager.
+
+ * Qlinear and Qconst -- documentation completed.
+
+ * Documentation improvements.
+
+ * Fixed log typo.
+
+ * Added restart run in NcmFit. Added restart option in darkenergy. Reorganized
+     NcRecomb and added tau_drag functions.
+
+ * Removed typo from data file.
+
+ * Removed -u option in cp since this flag is missing on macos.
+
+ * Fixed doc typo and adjusted OmegaL range in HICosmoDE.
+
+ * Improved the documentation for the xcor module and data object.
+
+ * Fixing doc typos.
+
+ * Adjusted r range and scale.
+
+ * Implemented the object NcPowspecMLFixSpline: it computes the linear matter
+     power spectrum from a file, which contains the knots k and their respective
+     P(k) values.
+
+     Included PROP_SIZE in the enumerator of some objects. Small improvements on
+     the documentation.
+
+ * Added example with tensor contributions to CMB.
+
+ * Fixed indentation and moved the interface (XHeII and XHII) to NcRecomb (as
+     virtual functions).
+
+ * Added functions in NcRecomSeager to evaluate XHII and XHeII.
+
+ * Updated values using data from https://sdss3.org/science/boss_publications.php
+
+ * Fixed data object.
+
+ * Last tweaks after merging with WL branch.
+
+ * Removed before merging with WL.
+
+ * Last tweaks after xcor merge.
+
+ * Removing old files, preparing for the merge with xcor.
+
+ * Fixing indentation before merge.
+
+ * Fixing indentation in ncm_data_gauss_cov.c
+
+ * Tested and fixed the last ensemble check in NcmFitESMCMC.
+
+ * Added last ensemble check to ESMCMC.
+
+ * Removed trailing space in Makefile.am.
+
+ * Fixed the dumb error in .travis.yml and the NcScalefactor GO interface.
+
+ * Trying another way to find the right gcc in travis-ci+macos
+
+ * Fixing travisci build in macos.
+
+ * Checking error in macos build.
+
+ * New interacting dark energy model IDEM2
+
+ * New interacting dark energy model IDEM2
+
+ * Removed spurious - in HOAA. Finished the addition of a new BAO point.
+
+ * Fully working version of HOAA for tensor and scalar modes of the Vexp model.
+
+ * New interaction dakr energy model IDEM2
+
+ * Included new BAO data point: Ata et al. (2017), BOSS DR14 QSO catalog.
+
+ * Code reorganization and examples improvements.
+
+ * Found a good parametrization for HOAA and a method to avoid roundoff during the
+     transitions.
+
+ * Still testing parametrizations in HOAA.
+
+ * Testing parametrizations in HOAA>
+
+ * Working on reparametrization of HOAA during singular transitions.
+
+ * NcHICosmoDE documentation (header file).
+
+ * Improve the documentation of some functions such that the bindings can be
+     properly created. For instance, @lnM_obs: (array) (element-type gdouble):
+     logarithm base e of the observed mass.
+
+ * Finishing HOAA cleaning and testing.
+
+ * Documentation fix.
+
+ * Tweaking examples.
+
+ * New examples and improvements on Vexp and HOAA.
+
+ * Test gcc detection in travis-ci.
+
+ * Cleaning and organizing NcmHOAA.
+
+ * Minor tweaks.
+
+ * Trying travis ci releases.
+
+ * Missing header in toeplitz.
+
+ * Better status control on _ncm_mset_catalog_open_create_file.
+
+ * Fixed bug when reading a catalog with wrong mset fmap.
+
+ * Better output notation for visual HW.
+
+ * Fixed wrong parameter call in visual HW and added an assert to
+     ncm_stats_vec_ar_ess to avoid future error like this.
+
+ * Using the ensemble mean when the catalog has more than one chain.
+
+ * New visual HW test added.
+
+ * Fixed ar_fit 0 order case.
+
+ * Missing reset status.
+
+ * Fixed string allocation.
+
+ * Support for reading fits + incompatible mset file.
+
+ * Typo in mcat_analize.
+
+ * Fixed typo in assert.
+
+ * Improved script.
+
+ * Updated .gitignore to include backup files and others.
+
+ * Better asserts.
+
+ * Improved interface with gsl minimizers. Included restarting for mms algorithms.
+
+ * Improved example.
+
+ * Chains diag output fix.
+
+ * Missing refs and typo.
+
+ * Added new diagnostics to NcmMSetCatalog, max ESS and Heidelberger and Welch's
+     convergence diagnostic.
+
+     Both can be applied to any NcmStatsVec object or through the NcmMSetCatalog
+     interface. In the latter the test can be applied to individual chains, to
+     the full catalog and to the ensemble average. Added an option to
+     NcmFitESMCMC to automatically trim  the catalog during an ESMCMC run using
+     the diagnostics to estimate the best burnin. Added options to run the
+     diagnostics to mcat_analize.
+
+ * Not allowing travis to fail on osx.
+
+ * Removed duplicate sundials on travis+osx.
+
+ * Removed klu support on sundials for osx.
+
+ * Added another no-warning flag.
+
+ * Better compilers warnings switches.
+
+ * Added new object to docs.
+
+ * Adding new Toeplitz solvers to docs ignore list.
+
+ * New Toeplitz solvers added. Improved NcmMSetCatalog and NcmFitESMCMC. Added new
+     helper functions in several objects.
+
+ * Building docs on linux .travis.yml
+
+ * Trying gcc-6 in .travis.yml
+
+ * Added support for gcov.
+
+ * Trying to rehash in osx.
+
+ * Updated old finite call in levmar, ignoring errors in travis+osx.
+
+ * Fixed all plc warnings and minor bugs.
+
+ * Removed gcc recomp in .travis.yml
+
+ * Reordered commands in .travis.yml
+
+ * Removed CC export in .travis.yml
+
+ * Asserting that gcc will be used in .travis.yml
+
+ * Adding science deps on .travis.yml.
+
+ * Other osx deps.
+
+ * Trying to install gfortran via brew for osx travis.
+
+ * Adding gfortran dep to travis osx build.
+
+ * Adding deps for travis+osx.
+
+ * Removed wrong dist-hook.
+
+ * Log on check and dist.
+
+ * Testing MACOS build.
+
+ * Testing macos support for travis. Fixed minor doc typos.
+
+ * Removed travis log output.
+
+ * Still fixing doc building in travis.
+
+ * Missing texlive package for travis doc compilation.
+
+ * Log try typo.
+
+ * Testing doc building in travis.
+
+ * Better make mensages in travis.
+
+ * Added latex support for travis.
+
+ * Building docs on travis.
+
+ * Fixed type warning in tests/test_ncm_integral1d.c.
+
+ * Fixing last clang related warnings.
+
+ * Fixed another set of minors clang related bugs.
+
+ * Fixed several clang warning related minor bugs.
+
+ * Added return to avoid warnings. Fixed multiple typedefs.
+
+ * Fix plc's Makefile.am.
+
+ * Fixed typo.
+
+ * Conditional use of warning flags depending on the compiler. Fixed abs -> fabs
+     bug in Planck likelihood.
+
+ * Changing to make check.
+
+ * Missing deps.
+
+ * Testing trusty.
+
+ * Removed update line.
+
+ * Trying lucid.
+
+ * Testing deps.
+
+ * Testing dependencies .travis.yml
+
+ * Removed debug gtkdocize on .travis.yml
+
+ * Improved autogen.sh to work with old gtkdoc (and without it!).
+
+ * Testing gtk-doc + .travis.yml
+
+ * Testing .travis.yml
+
+ * Including dependencies.
+
+ * Testing travis.yml.
+
+ * Improvements on NcHICosmoGCG. Testing new MCMC diagnostics and NcmStatsVec
+     algorithms. Including support for Travis CI.
+
+ * Created functions to obtain the expected means and the observed values.
+
+ * New GCG model. Testing new diagnostics tool for catalogs.
+
+ * Connected the knots vector of Poisson data with mass_knots.
+
+ * Implemented data object for cluster number counts in a box (not redshift
+     space). It follows a Poisson distribution.
+
+     Implemented Crocce's et al. 2009 multiplicity function.
+
+     NcmData: Better hooks for begin function.
+
+     NcmDataPoisson: improved.
+
+ * Using a warning instead of a assert in the final optimization test.
+
+ * Testing better optimization finishing clean-up.
+
+ * Created Crocce's 2009 multiplicity function.
+
+     Created Cluster counts data in a box (not redshift space). In progress.
+
+ * Fixed dependency link bug.
+
+ * Removed log from bflike_smw.f90.
+
+ * Moved prepare if needed to nc_hicosmo_sigma8.
+
+ * Increased parameters scale.
+
+ * Fixed typos and increased parameters scales in NcHIPrim*.
+
+ * Fixed typo and increased lambdac range in BPL.
+
+ * Updated c2 variables.
+
+ * Added support for weighted observations in ncm_stats_dist1d_epdf. Added tests
+     for ncm_stats_dist1d_epdf. New sampling functions in NcmRNG.
+
+ * Added current time to (ES)MC(MC) logs.
+
+ * Added gtkdocize to autogen.sh.
+
+ * Added autoreset of the acc when splines are reset. Fixed warnings in CLASS
+     lensing.c.
+
+ * Added doc.
+
+ * Fixed NcClusterMassAscaso compilation errors.
+
+ * Improved example, added a child of NcmDataGaussCov.
+
+ * Added a new parameter to Atan HIPrim model. Better (de)serialization for
+     NcmMatrix. New serialization to binary file. Improved examples.
+
+ * Created new cluster mass (relation provided in Ascaso et al. 2016). Work in
+     progress.
+
+ * Included additional parameter at the autocorrelation time calculation.
+
+ * Fixed nlopt search libs.
+
+ * Updated NLOPT library name from PKG_MODULE.
+
+ * Update Dockerfile
+ * Update Dockerfile
+ * Added support from partial reset (only autosaved objects) for NcmSerialize.
+
+ * Fixed conditional compilation for old GSL.
+
+ * Fixed bug in cubic spline and removed PKEqual debug messages.
+
+ * Fixed typos and commented old code.
+
+ * Fixed typo in references.bib
+
+ * Added PKEqual for HaloFit+Linder parametrization.
+
+ * Imported improvements from xcor branch.
+
+ * New deg2 to steradian convertion factor.
+
+ * Modified NcXcor to select method for Limber integrals at construction.
+
+ * Created function to compute the p-value of a function, giving the upper limits
+     of the integral of the probability distribution function.
+
+     Created option in mcat_analyze to compute the p-value of a function at
+     different redshift values, giving the upper limits of the integral of the
+     probability distribution function.
+
+ * Correction to the Dockerfile for multi-threading.
+
+ * Fixed a bug in Halofit
+
+ * Fixed nc_hicosmo_de_reparam_cmb bug.
+
+ * Switch xcor_limber integrals back to GSL (for now)
+
+ * Updated Halofit (not tested yet)
+
+ * Missing test file.
+
+ * Fixed example neutrino masses. Fixed high-z neutrino calculations at
+     NcHICosmoDE (needs improvement).
+
+ * Missing doc tags.
+
+ * Updated implementation flag on xcor.
+
+ * Removed old files.
+
+ * Added tests on CBE background. Pulled improvements on NcmSplineFunc from
+     another branch. Improved speed on NcHICosmoDE using splines for massive
+     neutrino calculations.
+
+ * Fixed test.
+
+ * Update examples to use massive neutrinos.
+
+ * First tests OK. Working beta.
+
+ * Fixed Omega_m usage.
+
+ * Updated implementation flags code, and improving CLASS/NumCosmo comparison.
+     TESTING VERSION!
+
+ * CLASS updated to v2.5.0. Finishing massive neutrino interface and
+     implementation on NcHICosmoDE.
+
+ * Documentation NcmFit (in progress).
+
+ * Replaced Omega_m0*(1+z)^3 by nc_hicosmo_E2Omega_m in several objects to take
+     neutrinos into account.
+
+ * Imported work in progress on NcHICosmoDE from xcor.
+
+ * Working on singularity crossing.
+
+ * WARNING : unfinished work on neutrinos in nc_hi_cosmo_de
+
+ * Included GObject-introspection in the requirement list.
+
+ * Improved massive neutrino interface. Split NcmIntegral1d.
+
+ * Added missing author.
+
+ * Imported Dockerfile from xcor.
+
+ * Imported neutrino interface improvement from xcor branch.
+
+ * Working on the massive neutrino interface.
+
+ * Update Dockerfile
+ * Update Dockerfile
+ * Update Dockerfile
+ * Update Dockerfile
+ * Create Dockerfile
+ * Initial commit for weak lensing branch.
+
+ * Some debugging for interfacing neutrinos/ncdm with CLASS...
+
+ * Added a minimal interface for massive neutrinos (will change in the near
+     future), testing code. Simple implementation of this interface in
+     NcHICosmoDE (not matching the CLASS background yet).
+
+ * Work in progress Vexp, NcHICosmoAdiab and NcmHOAA.
+
+ * Working version Vexp + HOAA + Adiab, it needs structure.
+
+ * Typo corrections.
+
+ * Added sincos detection to configure. New Harmonic Oscillator Action Angle
+     variable object. Improvements on NcHICosmoVexp.
+
+ * New Vexp model.
+
+ * New mcat_join tool, it joins different catalogs of the same experiment.
+
+ * Changed safeguard in nc_cbe
+
+ * Missing doc tag.
+
+ * Fixed indentation.
+
+ * Organized and improved (testing phase).
+
+ * Added a safeguard for halofit (Brent solver, in case fdf solver crashes).
+
+ * Corrected a bug in halofit.
+
+ * Corrected leaks in nc_data_xcor.c and modified ncm_data_gauss_cov.c in case of
+     singular matrix.
+
+ * Corrected some leaks in NcDataXcor.
+
+ * Increasing maxsteps in xcor.
+
+ * Modified xcor and halofit.
+
+ * Fixed conflicts.
+
+ * Fixed header name.
+
+ * Corrections in xcor and cbe.
+
+ * Fixed the close to the edge bug (emanating from CLASS).
+
+ * Fixed inconsistencies.
+
+ * Small fixes.
+
+ * Increased output sampling of NcPowspecCBE to avoid interpolation errors.
+
+ * Correction in nc_xcor.c and ncm_vector.h
+
+ * Organizing code.
+
+ * Organizing code.
+
+ * Adding Xcor data objects.
+
+ * Organizing and tweaking new Xcor objects.
+
+ * Imported updated XCor codes. First tweaks and documentations fixes.
+
+ * plop
+
+ * Increased output sampling of NcPowspecCBE to avoid interpolation errors.
+
+ * Correction in nc_xcor.c and ncm_vector.h
+
+ * Organizing code.
+
+ * Organizing code.
+
+ * Adding Xcor data objects.
+
+ * Organizing and tweaking new Xcor objects.
+
+ * Imported updated XCor codes. First tweaks and documentations fixes.
+
+
 [v0.13.3]
+ * Updated changelog.
+
  * New changelog file.
 
  * Version bumped to 0.13.3.
@@ -1120,6 +1962,8 @@ CHANGELOG
 
      Transformed all NcClusterRedshift and descendants to NcmModel.
 
+
+[0.12.0rc1]
  * Minor fixes, release candidate 0.12.0rc1.
 
      Working on NcPertTwoFluids. Make vala bindings conditional, default no. 
