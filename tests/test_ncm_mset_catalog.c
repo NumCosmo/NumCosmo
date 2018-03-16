@@ -244,7 +244,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
   }
 
-  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->mcat) / test->dim), <, 0.2);
+  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->mcat) / test->dim), <, 0.3);
 }
 
 void
