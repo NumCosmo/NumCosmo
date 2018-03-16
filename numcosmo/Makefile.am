@@ -119,6 +119,7 @@ ncm_sources = \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
 	math/ncm_data_poisson.c              \
+	math/ncm_data_voigt.c                \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
 	math/ncm_prior.c                     \
@@ -231,6 +232,7 @@ ncm_headers =                                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
 	math/ncm_data_poisson.h              \
+	math/ncm_data_voigt.h                \
 	math/ncm_dataset.h                   \
 	math/ncm_likelihood.h                \
 	math/ncm_mset_trans_kern.h           \
