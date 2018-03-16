@@ -205,6 +205,7 @@ ncm_sf_spherical_harmonics_Y_free (NcmSFSphericalHarmonicsY *sphaY)
 /**
  * ncm_sf_spherical_harmonics_Y_array_new:
  * @spha: a #NcmSFSphericalHarmonics
+ * @len: array length
  * @abstol: absolute tolerance
  * 
  * FIXME 	
@@ -338,6 +339,7 @@ ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
 
 /**
  * ncm_sf_spherical_harmonics_new:
+ * @lmax: $\ell_\mathrm{max}$
  * 
  * Creates a new #NcmSFSphericalHarmonics object.
  * 

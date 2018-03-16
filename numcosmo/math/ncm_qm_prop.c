@@ -56,7 +56,6 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_blas.h>
-#include <gsl/gsl_multifit_nlinear.h>
 #include <gsl/gsl_dht.h>
 #include <gsl/gsl_poly.h>
 
@@ -324,11 +323,13 @@ _ncm_qm_prop_finalize (GObject *object)
   NcmQMProp *qm_prop = NCM_QM_PROP (object);
   NcmQMPropPrivate * const self = qm_prop->priv;
 
+#if HAVE_SUNDIALS_MAJOR == 3
   if (self->arkode != NULL)
   {
     ARKodeFree (&self->arkode);
     self->arkode = NULL;
   }
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
   g_clear_pointer (&self->dht, gsl_dht_free);
   
@@ -718,9 +719,10 @@ ncm_qm_prop_eval (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gd
 /**
  * ncm_qm_prop_eval_array:
  * @qm_prop: a #NcmQMProp
- * @t: time difference
  * @x: $x$ coordinate
  * @ya: $y$ coordinate
+ * @n: number of elements 
+ * @t: time difference
  * @G: $G$
  * 
  * Calculates the propagator at $G (x,\;y;\;t)$.
@@ -798,9 +800,10 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
 /**
  * ncm_qm_prop_gauss_ini:
  * @qm_prop: a #NcmQMProp
- * @alpha: FIXME
- * @sigma: FIXME
- * @Hi: FIXME
+ * @mean: Gaussian mean
+ * @alpha: power-law
+ * @sigma: standard deviation
+ * @Hi: Initial $H(t_i) = H_i$
  * 
  * Calculates the propagator at $G (x,\;y;\;t)$.
  * 
@@ -808,6 +811,7 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
 void
 ncm_qm_prop_gauss_ini (NcmQMProp *qm_prop, const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi)
 {
+#ifdef HAVE_GSL_2_4
   NcmQMPropPrivate * const self = qm_prop->priv;
   NcmQMPropGauss *qm_gauss = ncm_qm_prop_gauss_new (mean, alpha, sigma, Hi);
 
@@ -849,6 +853,7 @@ ncm_qm_prop_gauss_ini (NcmQMProp *qm_prop, const gdouble mean, const gdouble alp
 
   ncm_qm_prop_gauss_free (qm_gauss);
   gsl_integration_fixed_free (ws);
+#endif /* HAVE_GSL_2_4 */
 }
 
 typedef struct _NcmQMPropInt
@@ -1464,6 +1469,8 @@ _ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const c
   return a * fp2 + b * f + c * fp1;
 }
 
+#if HAVE_SUNDIALS_MAJOR == 3
+
 static gint 
 _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
 {
@@ -1559,6 +1566,8 @@ _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpo
   
   return 0; 
 }
+
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 static gdouble
 _ncm_qm_prop_calc_dS (gdouble x, NcmQMPropPrivate * const self)
@@ -1946,6 +1955,7 @@ ncm_qm_prop_get_Im_psi (NcmQMProp *qm_prop)
 /**
  * ncm_qm_prop_evolve_spec:
  * @qm_prop: a #NcmQMProp
+ * @t: final time
  * 
  * Evolves the system using spectral methods.
  * 

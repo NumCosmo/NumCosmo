@@ -1141,6 +1141,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  * @sigma_min: mininum standard deviation
  * @sigma_max: maximum standard deviation
  * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
  * 
  * Overwrite @cm with a random covariance matrix, the
  * parameter @cor_level controls the correlation between

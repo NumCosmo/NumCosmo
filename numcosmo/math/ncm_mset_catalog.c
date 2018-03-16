@@ -642,7 +642,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                    g_param_spec_long ("burnin",
                                                       NULL,
                                                       "Burn-in size",
-                                                      0, G_MAXINT64, 0,
+                                                      0, G_MAXLONG, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
