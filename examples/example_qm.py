@@ -59,13 +59,13 @@ psi0 = Ncm.QMPropGauss.new (0.0, 1.0, 1.0, -1.0)
 #psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
 #print psi0.eval (1.0)
-tstep = 5.1e-4
-xf    = 30.0
-xfp   = 20.0
+tstep = 5.1e-6
+xf    = 20.0
+xfp   = 2.0
 p.set_init_cond_gauss (psi0, 0.0, xf)
 #p.set_init_cond_exp (psi0, 0.0, xf)
 
-x             = np.linspace (0.0, xfp, 2000) #p.get_knots ()
+x             = np.linspace (0.0, xfp, 1000) #p.get_knots ()
 #x          = p.get_knots ()
 Re_psi_s      = p.get_Re_psi ()
 Re_psi_s_eval = np.vectorize (Re_psi_s.eval)
