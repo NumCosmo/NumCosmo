@@ -404,6 +404,14 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   flag = CVodeSetUserData (os->cvode, &f_data);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
+#if defined (HAVE_SUNDIALS_2_5_0) || defined (HAVE_SUNDIALS_2_6_0)
+  if (os->xi != 0.0)
+  {
+    flag = CVodeSetInitStep (os->cvode, os->xi * 1.0e-11);
+    NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
+  }
+#endif
+  
   x0 = os->xi;
   if (!gsl_finite (os->dydx (NV_Ith_S (os->y, 0), x0, f_data.userdata)))
     g_error ("ncm_ode_spline_prepare: not finite integrand.");
