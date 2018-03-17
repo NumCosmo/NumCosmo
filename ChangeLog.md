@@ -4,6 +4,14 @@ CHANGELOG
 [Current]
 
 [v0.14.0]
+ * NumCosmo version written by autoconf in numcosmo-docs.sgml.
+
+ * Updated print in python scripts.
+
+ * Fixed deploy file.
+
+ * Bumped version and updated ChangeLog.
+
  * Tweaking tests.
 
  * Fixed new package (in progress).
