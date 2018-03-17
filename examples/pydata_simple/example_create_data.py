@@ -23,7 +23,7 @@ from py_sline_gauss import PySLineGauss
 #
 sld = None
 if (len (sys.argv) != 2) or (sys.argv[1] != '--plain' and sys.argv[1] != '--gauss'):
-  print "usage: example_create_data.py --plain or --gauss"
+  print ("usage: example_create_data.py --plain or --gauss")
   sys.exit (-1)
 elif sys.argv[1] == '--plain':
   sld = PySLineData (len = 5000)

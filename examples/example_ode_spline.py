@@ -48,5 +48,5 @@ for i in range (100):
   x = 1.0 / 99.0 * i
   expx = exp (x)
   odex = os.s.eval (x)
-  print x, expx, odex, fabs ((expx - odex) / expx)
+  print (x, expx, odex, fabs ((expx - odex) / expx))
 

@@ -65,7 +65,7 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 #
 #  Printing the parameters used.
 #
-print "# Model parameters: ", 
+print ("# Model parameters: ", end=' ') 
 cosmo.params_log_all ()
 
 #
@@ -87,19 +87,19 @@ cosmo.add_submodel (prim)
 #
 cbe.prepare (cosmo)
 
-print "# theta100CMB % 22.15e" % (dist.theta100CMB (cosmo))
-print "# zt          % 22.15e" % (cosmo.zt (5.0))
-print "# Omega_mnu0  % 22.15e" % (cosmo.Omega_mnu0 ())
-print "# Press_mnu0  % 22.15e" % (cosmo.Press_mnu0 ())
-print "# Omega_k0    % 22.15e" % (cosmo.Omega_k0 ())
+print ("# theta100CMB % 22.15e" % (dist.theta100CMB (cosmo)))
+print ("# zt          % 22.15e" % (cosmo.zt (5.0)))
+print ("# Omega_mnu0  % 22.15e" % (cosmo.Omega_mnu0 ()))
+print ("# Press_mnu0  % 22.15e" % (cosmo.Press_mnu0 ()))
+print ("# Omega_k0    % 22.15e" % (cosmo.Omega_k0 ()))
 
 ztest = 1.0e4
-print "# E2Omega_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest))
-print "# E2Press_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Press_mnu (ztest))
-print "# E2Omega_mnu_d (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest) - 3.0 * cosmo.E2Press_mnu (ztest))
-print "# E2Omega_b     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_b (ztest))
-print "# E2Omega_c     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_c (ztest))
-print "# Neff           % 22.15e" % (cosmo.Neff ())
+print ("# E2Omega_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest)))
+print ("# E2Press_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Press_mnu (ztest)))
+print ("# E2Omega_mnu_d (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest) - 3.0 * cosmo.E2Press_mnu (ztest)))
+print ("# E2Omega_b     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_b (ztest)))
+print ("# E2Omega_c     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_c (ztest)))
+print ("# Neff           % 22.15e" % (cosmo.Neff ()))
 
 #
 # Printing comparison between CLASS and NumCosmo background

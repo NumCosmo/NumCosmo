@@ -58,7 +58,7 @@ p.set_property ("lambda", 0.0)
 psi0 = Ncm.QMPropGauss.new (0.0, 1.0, 1.0, -1.0)
 #psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
-#print psi0.eval (1.0)
+#print (psi0.eval (1.0))
 tstep = 5.1e-6
 xf    = 20.0
 xfp   = 2.0
@@ -88,7 +88,7 @@ ax.grid ()
 #ax.set_title("nhoca")
 ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
 
-#print psi
+#print (psi)
 
 N = 4
 lines = [plt.plot([], [])[0] for _ in range(N)]

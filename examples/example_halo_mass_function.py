@@ -91,7 +91,7 @@ cosmo.props.w       = -1.0
 #
 #  Printing the parameters used.
 #
-print "# Model parameters: ", 
+print ("# Model parameters: ", end=' ') 
 cosmo.params_log_all ()
 
 #
@@ -118,7 +118,7 @@ for i in range (0, np):
   za.append (z)
   Da.append (D)
   dDa.append (dD)
-  print z, D
+  print (z, D)
 
 #
 #  Ploting growth function.

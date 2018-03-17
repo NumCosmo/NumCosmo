@@ -59,32 +59,32 @@ gw.set_k (k)
 gw.set_reltol (reltol)
 
 #If = lambda x: gw.eval_nu (Vexp, x, k) / gw.eval_mnu (Vexp, x, k)
-#print integrate.quad (If, -2.0, 2.0)
+#print (integrate.quad (If, -2.0, 2.0))
 #for n in np.logspace (-40, -1, 10000):
-#  print n, If (n), If (-n)
+#  print (n, If (n), If (-n))
 #exit ()
 
-print "# Preparing ADIAB"
+print ("# Preparing ADIAB")
 adiab.prepare (Vexp)
 
 #exit ()
 
-print "# Preparing GW"
+print ("# Preparing GW")
 gw.prepare (Vexp)
 
 #(t0, t1) = adiab.get_t0_t1 (Vexp)
 (t0, t1) = gw.get_t0_t1 (Vexp)
 
-print "# BACKG (t0, t1) = (% 21.15e, % 21.15e)" % (Vexp.tau_min (), Vexp.tau_max ())
-print "# ADIAB (t0, t1) = (% 21.15e, % 21.15e)" % (t0, t1)
+print ("# BACKG (t0, t1) = (% 21.15e, % 21.15e)" % (Vexp.tau_min (), Vexp.tau_max ()))
+print ("# ADIAB (t0, t1) = (% 21.15e, % 21.15e)" % (t0, t1))
 
 (Delta_zeta_c, Delta_Pzeta_c) = adiab.eval_Delta (Vexp, tc)
 (Delta_h_c, Delta_Ph_c)       = gw.eval_Delta (Vexp, tc)
 
-print "# Time of x_e = 10^15:     tau_c     = % 21.15f" % tc
-print "# Power spectrum at tau_c: PS_ADIAB  = % 21.15e" % Delta_zeta_c
-print "# Power spectrum at tau_c: PS_GW     = % 21.15e" % Delta_h_c
-print "# Power spectrum at tau_c: r         = % 21.15e" % (2.0 * Delta_h_c / Delta_zeta_c)
+print ("# Time of x_e = 10^15:     tau_c     = % 21.15f" % tc)
+print ("# Power spectrum at tau_c: PS_ADIAB  = % 21.15e" % Delta_zeta_c)
+print ("# Power spectrum at tau_c: PS_GW     = % 21.15e" % Delta_h_c)
+print ("# Power spectrum at tau_c: r         = % 21.15e" % (2.0 * Delta_h_c / Delta_zeta_c))
 
 t_a     = np.linspace (t0, t1, 100000)
 alpha_a = []

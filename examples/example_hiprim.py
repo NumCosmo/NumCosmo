@@ -34,9 +34,9 @@ lmax = 2500
 #
 prim = PyHIPrimExample ()
 
-print "# As        = ", prim.props.As
-print "# P (k = 1) = ", prim.SA_powspec_k (1.0)
-print "# (a, b, c) = ( ", prim.props.a, ", ", prim.props.b, ", ", prim.props.c, " )"
+print ("# As        = ", prim.props.As)
+print ("# P (k = 1) = ", prim.SA_powspec_k (1.0))
+print ("# (a, b, c) = ( ", prim.props.a, ", ", prim.props.b, ", ", prim.props.c, " )")
 
 #
 #  New CLASS backend precision object
@@ -96,7 +96,7 @@ Cls2_a = Cls2.dup_array ()
 Cls1_a = np.array (Cls1_a[2:])
 Cls2_a = np.array (Cls2_a[2:])
 
-ell = np.array (range (2, lmax + 1))
+ell = np.array (list(range(2, lmax + 1)))
 
 Cls1_a = ell * (ell + 1.0) * Cls1_a
 Cls2_a = ell * (ell + 1.0) * Cls2_a

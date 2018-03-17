@@ -82,8 +82,8 @@ hoaa.prepare ()
 
 (Aq, Av) = hoaa.eval_solution (None, ti, S1, PS1)
 
-print "# ", t0, t1
-print "# ", Aq, Av
+print ("# ", t0, t1)
+print ("# ", Aq, Av)
 
 ta = np.linspace (-5.0e-1, +5.0e-1, 1000000)
 
@@ -101,5 +101,5 @@ for t in ta:
   I = 0.5 * (mnu * q**2 + Pq**2 / mnu)
   J = 0.5 * (mnu * v**2 + Pv**2 / mnu)
 
-  print t, S, sol_q (k, t), PS, sol_p (k, t), I, J, math.sqrt (I * J), upsilon, gamma, qbar, pbar, (qbar**2 + pbar**2) / math.hypot (upsilon, 1.0 / math.cosh (lnmnu)) - 1.0, Aq * q / (Av * v) + 1.0
+  print (t, S, sol_q (k, t), PS, sol_p (k, t), I, J, math.sqrt (I * J), upsilon, gamma, qbar, pbar, (qbar**2 + pbar**2) / math.hypot (upsilon, 1.0 / math.cosh (lnmnu)) - 1.0, Aq * q / (Av * v) + 1.0)
 
