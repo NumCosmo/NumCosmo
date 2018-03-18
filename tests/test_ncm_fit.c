@@ -214,7 +214,7 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 
     for (i = 0; i < ncm_vector_len (y); i++)
     {
-      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 1.0e-2, 1.0e-2);
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
       /* printf ("[%4d] % 22.15g % 22.15g %e\n", i, ncm_vector_get (y, i), ncm_vector_get (ym, i), fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0)); */
     }
   }

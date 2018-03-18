@@ -4,6 +4,8 @@ CHANGELOG
 [Current]
 
 [v0.14.0]
+ * Fixed data install path. Tweaked fit tests.
+
  * NumCosmo version written by autoconf in numcosmo-docs.sgml.
 
  * Updated print in python scripts.
@@ -1718,1141 +1720,428 @@ CHANGELOG
 
 [v0.12.1]
  * New minor version. Several improvements.
-
-     Better building tool support for lapack/BLAS. Improved speed using
-     different interfaces for Lapack/BLAS. Included levmar internally and
-     removed as optional dependency. Levmar intreface now supports box
-     constraints. Added virtual functions for lnNorma2 and resample in
-     NcmDataGaussCov. Updated interval vector usage in NcmFitNLOpt and
-     NcmFitLevmar. Added support for estimating true width and colour in
-     NcDataSNIACov. Improved resampling in NcDataSNIACov, now it resamples all
-     data m_B, w and c. Several new functions in NcmMatrix (support to writing
-     data in col-major order). New ncm_mset_catalog_calc_ci for calculating
-     confidence intervals for generic function using a NcmMSetCatalog. Added
-     option for confidence intervals from catalogs in darkenergy. Added
-     templates as dependency for NcmFitNLOpt enums files.
-
-     NcDataSNIACov now uses the (hopefully) the right normalization (new feature
-     still experimental).
-
-     Added some misc statistical functions in NcmUtil (experimental).
-
  * Added option for unordered MC runs. Fixed typo in parameter of NcSNIADistCov.
-
  * Several minor fixes and improvements.
-
-     Fixed some type detection problem in configure. Fix darkenergy problem when
-     using --runconf with the = symbol. Added timeout log on ESMCMC and MCMC. 
-     Some adjustments on the default parameters bound of NcHICosmoDE and
-     NcHICosmoDEXcdm. Fixed parameters symbols in NcSNIADistCov. Added some
-     helper function on NcmMSet to change parameters scale. Added test for zero
-     derivative in ncm_fit_numdiff_m2lnL_hessian and a workaround. Added
-     ncm_mset_fparam_valid_bounds to check if the new parameters would respect
-     bounds. Used ncm_mset_fparam_valid_bounds in both MCMC and ESMCMC to avoid
-     stepping out of the box.
-
  * Formated section documentation for all object, some simple doc fixes.
-
-     Removed some very old tools and object.
-
  * Added option to OGbject introspection scanner use the same CC flag.
-
  * Added checks for file open/close.
-
  * Documentation: changed titles and short description: BAO
-
  * Missing files.
-
  * Added missing references.
-
  * New test: test_nc_data_bao_dvdv.c Added nc_cor_cluster_cmb_lens_limber.h in
      numcomso.h
-
  * Fixed typo in name nc_data_bao_empirical_fit. Support for data filenames. New
      BAO data.
-
-     New BAO data in nc_data_bao_empirical_fit_ross2015.obj, simple txt file 
-     format to include new data.
-
  * Improved NcmSpline is now serializable. New ncm_stats_dist1d_* family. New BAO
      data nc_data_bao_empirical_fit. Alpha^3 version of the new Boltzmann
      object.
-
-     Added the necessary properties to allow NcmSpline to be serializable, added
-     the related tests to test_ncm_spline.
-
-     New Boltzmann object, slowly migrating the old Perturbations object.
-
-     New abstract class NcmStatsDist1d that gives support for generic 1d 
-     distribution, it calculates the pdf and inverse pdf to allow resampling it
-     can also calculates the mode of the distribution.
-
-     New object NcmStatsDist1dSpline that implements NcmStatsDist1d for the case
-     where the distribution is given by a NcmSpline object.
-
  * Created test for object nc_data_bao_rdv.
-
-     Included Kazin et al. (2014) BAO data - WiggleZ. Object nc_data_bao_rdv can
-     now be written as r_s/D_v or D_v/r_s. Data from Anderson et al. and 
-     Padmanabhan et al. were modified, i.e., written as  D_v/r_s. Function
-     nc_data_bao_rdv_set_sample was modified.
-
-     Documentation: in progress, references added, documentation of
-     ncm_mset_catalog_get_shrink_factor is incomplete.
-
  * Include catalog description in the fits in NcDataSNIACov and fixed minors
      leaks.
-
-     New catalogs and updates catalogs available in
-     http://download.savannah.gnu.org/releases/numcosmo/
-
  * Added dataset minimum id check in NcDataSNIACov.
-
  * Fixed documentation.
-
  * Fixed missing docs tag in nc_snia_dist_cov.h.
-
  * Added SNIa from SDSS-II/SNLS3 ( arXiv:1401.4064 ).
-
-     Combined in a single fits the data from SDSS-II/SNLS3 as we previously done 
-     for SNLS3 only. The same model work for both.
-
  * Object ncm_lapck.c was documented.
-
-     Minor modifications in the documentation of the NcmFit children.
-
  * Fixed other compilation problems.
-
  * Fixed some minor compilation problems.
-
  * New Ensemble Monte Carlo object added, several minor fixes and MC codes
      organization. Work in progress on nc_hipert_two_fluids family.
-
-     - New object NcmFitESMCMC for ensemble sampling Markov Chain Monte Carlo
-     analysis.
-      One move method implemented (stretch move) in serial and parallel forms.
-     - Autocorrelation (and its integrated) code added to NcmStatsVec and its
-     test unity.
-     - Both autocorrelation and shrink factor added to EsMCMC as chain
-     diagnosis.
-     - Added autocorrelation tau correction for the effective number of points
-     in a MCMC
-      analysis to improve the adaptive method.
-     - Studying the possibility of using different variables to solve the
-     TwoFluids problem,
-      work in progress (unstable code).
-     - Several minor functions added in NcmLapack, NcmVector, etc, to sustain
-     the additions above.
-
  * Testing twofluids_wkb. Added precision property in nc_mass_function, default
      10^{-6}.
-
  * Better error message in ncm_fit_new and fixed wrong parameters in
      example_simple.py and example_simple.c.
-
  * Added README to conform with automake. Fixed verbosity in NCM_TEST_FAIL and
      NCM_TEST_PASS.
-
  * Added links to README.md
-
  * Corrected file.
-
  * Added generic INSTALL file.
-
  * Removed old README.
-
  * Reorganized data objects. Improved README.md and docs.
-
  * Fixed bug in g_clear_pointer usage.
-
  * Added support for old cfitsio >= 3.25.
-
  * Added traceback for error messages. Testing differents summaries in
      NcABCClusterNCount.
-
  * Added support for the new version of libcuba 4.0.
-
  * Trying different ABC summary statistics.
-
  * Removed old gdarkenergy from building. Scale fisher matrix by two when using in
      the transition kernel in mcmc.
-
  * Removed debug message.
-
  * Fixed bug, trying to compile a vala source without vala available.
-
  * Fixed memory leaks in NcABCClusterNCount and NcClusterAbundance. Some new
      additions and more stable ABC code.
-
-     Added log function for NcmSerialize. Better implementation of NcmABC and
-     NcABCClusterNCount. Changed summary statistics in NcABCClusterNCount. First
-     functional version of NcABCClusterNCount.
-
  * Better error message in prepare_base.
-
  * Updated the threaded evaluation function.
-
  * Fixed binning methods.
-
  * Fixed documentation in NcABCClusterNCount.
-
  * Added more options for binning in nc_data_cluster_ncount and
      nc_abc_cluster_ncount.
-
  * Fixed bug in ncm_abc.c (wrong number of additional columns). New main-seed and
      nthreads options in darkenergy.
-
  * Improvement on ABC interface. Added seed and nthreads options to darkenergy.
-
-
-[v0.12.0rc4_corrected]
  * Fixed more compilation problems (when lacking of fftw3l).
-
  * Fixed some compilation errors for systems without fftw or cfitsio.
-
  * Missing file in EXTRA.
-
-
-[v0.12.0rc4]
  * Fix several minor memory leaks, racing conditions. Functional version of NcmABC
      and NcABCClusterNCount.
-
-     Improved log functions on NcmFit, NcmMSet and NcmDataset. Fixed old leak in
-     cvode functions. Fixed bug in NcmStatsVec for online covariance estimates
-     for weigthed samples. Fixed several minor bugs and leaks. Added mutex lock
-     to avoid threads problems in _nc_matter_var_prepare_fft. Included cubature
-     for systems without libcuba. New NcABCClusterNCount for ABC analysis of
-     cluster number counts.
-
  * Improvement on NcmSplineCubicNotaknot and NcmABC.
-
-     Improved spline_cubic_notaknot algorithm (faster and simpler). Improved
-     tests on spline_cubic_notaknot.
-
-
-[v0.12.0rc3]
  * Improved blas/lapack search.
-
  * Fixed non-defined variable for lapackless systems.
-
  * Fixed lapack header inclusion.
-
  * Better support for blas and lapack search in configure and code organization
      and new NcmABC.
-
-     Better support for searching blas and lapack libs through ax_blas and
-     ax_lapack. Organized lapack calling code in ncm_lapack. Renamed
-     NcmMCSampler to NcmMSetTransKern (transition kernel) to better represent
-     the object functions. NcmMSetTransKern can also be used as a prior (fixing
-     one of the points). Added NcmMSetTransFlat to work as a flat transition
-     kernel or prior. Adapted NcmFitMCMC to use NcmMSetTransKern. Renamed
-     NcmFitCatalog to NcmMSetCatalog to better represent the object functions. 
-     Removed old cvode_util reorganized its code in ncm_util.
-
-     New NcmABC (Approximate Bayesian Computation) object, abstract object used
-     to perform ABC analysis.
-
  * Fixed: property seed is no longer G_PARAM_CONSTRUCT (ncm_rng.c).
-
-     Included a supernovae sample from SDSS provided by Emille Ishida.
-
-
-[v0.12.0rc2]
  * Fixed wrong casting.
-
  * Organized mc samplers in NcmMCSampler abstract object. New methods for Vector,
      Matrix, Model and MSet. Fixed bugs in NcClusterPhotozGaussGlobal.
-
  * Fixed nc_hicosmo_de prototypes for better bindings. New get/set functions by
      parameter names.
-
  * New example ode_spline. NcClusterRedshift transformed in NcmModel.
-
-     Transformed all NcClusterRedshift and descendants to NcmModel.
-
-
-[0.12.0rc1]
  * Minor fixes, release candidate 0.12.0rc1.
-
-     Working on NcPertTwoFluids. Make vala bindings conditional, default no. 
-     Fixed minor doc bugs.
-
-
-[v0.12.0rc0]
  * Fixed tests (using g_test_trap_fork unitl glib < 2.40).
-
-     Updated ChangeLog.
-
  * Several fixes for release candidate 0.12.0rc0.
-
-     Fixed cflags for g-ir-scanner. Fixed includes in Makefile.am. Fixed
-     g_clear_pointer macro and its usage. Added macros to control usage of
-     subprocess in tests.
-
  * Fixed references.bib.
-
  * Updated ChangeLog.
-
  * Improved nc_data_cluster_ncount and fixed documentation typos.
-
-     Adapted nc_data_cluster_ncount for the case where there is no objects
-     generated by resample.
-
-     Corrected documentation of the kinematical models (desceleration ->
-     deceleration).
-
  * New WKB codes and improvements in the perturbations code. Bumped to 0.12.0.
-
-     Organized all wkb codes in nc_hipert_wkb which are used internally by 
-     NcHIPertAdiab and NcHIPertTwoFluids.
-
-     Fixed problem when compiling against a static glib.
-
  * Improving adiabatic perturbations code.
-
  * New perl bindings example. Fixed bugs in ncm_spline.c. New expermental code in
      adiab.
-
  * Improved example_ca_sampling.py.
-
  * Added methods to exam a NcDataClusterNCount contents. Improved
      example_ca_sampling.py.
-
  * Added new example to Makefile.am
-
  * Fixed parameters setting order.
-
  * Removed testing code.
-
  * Better adaptation of NcCluster* to generating better bindings.
-
  * Added missing files.
-
  * Fixed documentation issues.
-
  * Improved README of examples. Introduced NUMCOSMO_DATA_DIR environment variable
      to allow running darkenergy with data without installing the library.
-
-     Added examples of perturbations usage. Adiabatic and Two fluids.
-
- * Fixed bug (infinity recursion to compute dE2/dz) in nc_hicosmo_qspline.c. 
+ * Fixed bug (infinity recursion to compute dE2/dz) in nc_hicosmo_qspline.c.
      Documentation of ncm_fftlog.c is partially done.
-
  * Finishing conversion of perturbation code to interfaces.
-
  * Fixed warnings.
-
  * Fixed header paths.
-
  * Create objects related to the matter density profile (abstract and NFW) and the
      computation of the cross corelation between clusters and CMB lensing
      potential. These codes are in development.
-
-     Implemented the normalized multiplicity function (Tinker et al. 2010),
-     which is required by the Halo Model approach.
-
-     Documentation of ncm_c was partially done.
-
  * Improved tests. Organizing old code. New perturbations code.
-
-     Fixed test unities, now everyone uses subprocess insteaded of fork. New
-     perturbation code in development, code from NcMatterVar moved to NcmFftlog
-     and generalized for different scenarios, in development.
-
  * Several additions.
-
-     New radiation + w-fluid model (NcHICosmoQGRW). New NcmPert base model for
-     implementations of perturbations on top of a HI model. New NcmPertAdiabatic
-     implementing the evolution of the adiabatic mode (zeta) of cosmological
-     perturbations. New NcmFitMCMC (experimental) mcmc object.
-
-     Bug fixes.
-
  * Fixed many memory leaks.
-
  * Added ncm_func_eval_threaded_loop_full to run one worker per index.
-
-     Fixed bug in ncm_func_eval_threaded_loop_nw.
-
  * Fixed memory leaks in serialization and minor bugs.
-
-     Added new Hubble data points Zhang 2012.
-
  * Two arXiv references were added as comment. Modify redshift from Beutler et al.
      2011 (before z = 0.1, now z = 0.106).
-
  * Adapting tests to conform to the new g_test_trap_subprocess. Fixed cvodes/cvode
      usage.
-
  * Removed gtester support.
-
  * Fixed bugs in testing.
-
  * Fixed gtkdoc's and introspection warnings.
-
-     Version updated to 0.11.0
-
-
-[v0.11.0]
- * Fixed gtkdoc's and introspection warnings.
-
-     Version updated to 0.11.0
-
  * Lower bound of the Dsz parameter from NcClusterMassBenson model is now 0.01.
-
  * Several minor improvements.
-
  * Added support for general gaussian priors in darkenergy.
-
  * Fixed minor bug (params_max and params_min were not being allocated).
-
  * Removed old code from nc_cluster_mass_lnnormal.c.
-
  * New NcmFitCatalog and NcmFitMCBS objects.
-
-     NcmFitCatalog general likelihood catalog object used to store likelihood
-     evaluations. NcmFitMCBS is a Montecarlo bootstrap analyzes object. Added
-     sync between Montecarlo data and a catalog through NcmFitCatalog.
-
-     Several minor bug fixes and improvements.
-
  * Comments removed in these files.
-
  * NcClusterMassLnnormal has now two properties: bias and sigma.
-
  * Added cpu core counting to set NTHREADS automatically.
-
  * Added support to libcuba 3.3.
-
  * Bug fixed.
-
  * Angular reduction when looking for bounds to avoid infinity repetition.
-
  * Fixed bug in NcmData which didn't called begin when a sample was generated by a
      resampling.
-
  * Fixed but in NcDataClusterNCount which discarded old references of
      NcClusterMass and NcClusterRedshift.
-
  * Fixed bug in darkenergy (always setting params reltol to 1e-5).
-
  * Added support for setting reltol and params-reltol in the NcmFit object.
-
  * Added global variables initialization for gsl_rng functions.
-
  * Fixed bug in ncm_func_eval_threaded_loop.
-
  * Fixed lock/unlock problem in NcDataCluster resampling.
-
  * Fixed miscellaneous bugs with valgrind (memcheck and helgrind).
-
  * Finished support for multithreading montecarlo and bootstraping.
-
  * Several improvements.
-
-     Improved documentation (mainly on NcmModel). Improved serialization, added
-     option to serialize to GVariant. Added new log functions to NcmVector. Now
-     model_copy uses serialization to perform copying. Added tests (in
-     TestNcmModel) to check the model copying by serialization. Transformed
-     several macros of NcmMatrix to inline functions. Compiling with -Wextra. 
-     Fixing all objects (NcmData* NcmModel*) to serialize correctly. Added
-     NcmObjArray boxed type to support array of GObjects serialization. Renamed
-     util.* to ncm_util.* and organized all utilities from ncm_cfg to it. Added
-     support for multi-threaded montecarlo in NcmFitMC.
-
  * Several improvements and new objects.
-
-     Improved NcmFit and NcmFitState for better state control, precisions and
-     tolerances. Fixed precision and tolerance usage in NcmFitNlopt. Added
-     abstol control in NcHICosmoQSplineContPrior. Fixed warnings from the
-     documentation compilation. Added NcmStatsVec object to calculate statistics
-     (mean, variance, covariance) interactively. Added tests for NcmStatsVec. 
-     Added NcmTimer object to calculate elapsed time, time left and task speed. 
-     Added NcmBootstrap object to calculate general bootstrap for data objects. 
-     Added support for bootstrap in every NcmData* objects. Fixed and completed
-     support for ncm_data_dup in every object descending from NcmData. (non
-     completed) Added NcmRNG object to add support for mult-threading and
-     saving/loading for GSL random number generators. Organized all
-     serialization code in the NcmSerialize object. Renamed serialization tests
-     to match the new object, i.e., test_ncm_serialize.
-
  * Adding support for bootstrap in ncm_data_gauss_cov. Improved continuity prior
      on nc_hicosmo_qspline (using three knots with five points straight line
      fitting for continuity prior).
-
  * Inverted Class struct possition to avoid gtk-doc's bug.
-
  * Modified qspline continuity prior to fit line using n points for each three
      knots.
-
  * Separeted two types of priors in NcmLikelihood chisq and m2lnL. Modified
      continuity prior to use m2lnL priors. Modified darkenergy to receive the
      snia_cov serialized object.
-
  * Transformed continuity priors in NcmModel to fit the prior variance. Added
      automatically (set|get)_property to object_class in
      ncm_model_class_add_params and check for right functions. Changed models
      and tests accordingly.
-
  * Fixed compilation error in 32bits platforms.
-
  * Minor version increased, adapted glib versioning system.
-
-
-[v0.10.0]
- * Minor version increased, adapted glib versioning system.
-
  * Fixed continuity constraints in hicosmo_qspline. Improved continuity prior by
      using linear fitting to aproximate three points by a straight line.
-
  * Changed from g_hash_table_contains to g_hash_table_lookup != NULL to work with
      older glib.
-
  * Testing a new penalty function for overfitting in NcmDataGaussCov. Fixed
      compilation with new libcuba release. Improving documentation.
-
  * Still testing.
-
  * Testing new continuity priors in HICosmoQSpline.
-
  * Fixing documentation issues.
-
  * Reorganized NcSNIADistCov and NcDataSNIACov. Now all data is allocated in
      NcDataSNIACov and only model parameters stay in NcSNIADistCov. This fix the
      montecarlo with fiducial model issues.
-
  * Added an assert to NcSNIADistCov to check if the data is loaded.
-
  * Fixed bug model changing in NcDataSNIACov, now it work with alternating
      NcSNIADistCov models.
-
  * Testing different continuity priors in HICosmoQSpline. Added missing doc tags.
-
  * Added support for constraints in NcmFit and multiple algorithms in NcmFitNLOpt.
-
  * Improved numerical differentiation calculation through better choice of steps.
-
  * Removed wrong documentation.
-
  * Better update control in NcHICosmoQSpline object (fixed bug).
-
  * Fixed parameter name in function documentation.
-
  * Transformed QSpline continuity prior in an object. Added subdir-objects to
      automake.
-
  * Included numcosmo/build_cfg.h  in every header to generate bindings for
      conditional compilation functions.
-
  * Included missing header.
-
  * Improved catalog functions in nc_data_snia to allow better bindings.
-
  * Added missing parameters documentations in mset macros. Removed debugging
      g_error.
-
  * Modified model id framework, now the ids are exported by functions to allow
      better bindings through introspection.
-
  * Added function to count number of named instances and correct type annotation
      for named instances functions.
-
-
-[v0.9.0rc5]
  * Improved NcmFitMC, log messages and support for different fitting and fiducial
      models.
-
  * Fixed free error in darkenergy.
-
  * Support for named instances, a global object pool. Added serialization of named
      instances. Added mset_load/save method for mset serialization. Added
-     save-mset and fiducial options to darkenergy to allow saving
-      NcmMSet used in a analysis and defining a arbitrary fiducial
-      model for Montecarlo studies. Better organization of model registry and
-     id.
-
+     save-mset and fiducial options to darkenergy to allow saving   NcmMSet used
+     in a analysis and defining a arbitrary fiducial   model for Montecarlo
+     studies. Better organization of model registry and id.
  * New test: test_ncm_data_gauss_cov, testing resample and sanity.
-
  * Working on fftlog. Added kinematic functions for DEC and WEC. Added DEC and WEC
      tests to darkenergy option --kinematics-sigma.
-
  * Added property maxiter and method to change it in NcmFit. Connected this method
      with the --max-iter option in darkenergy. Included kinematic output in the
      --out option in darkenergy.
-
  * Imported some code from glib to allow serialization under glib < 2.30. Fixed
      warnings for compilations without sqlite3.
-
  * Workaround to g_clear_object usage.
-
  * Added workaround to check for sundials header correctly.
-
  * Implemented function to compute the inverse of the square normalized Hubble
      function (nc_hicosmo_Em2). Modified q-sigma, q-n and q-z-max DE options to
      kinematics-sigma, kinematics-n and kinematics-z-max. The kinematics-sigma
      option computes the deceleration parameter, the squared normalized Hubble
      function, its inverse and their error bars via Fisher Matrix approach.
-
  * Fixed default option for qspline continuity priors.
-
  * Several additions.
-
-     New method to compute the highest non null derivative (nmax) of a function
-     in all ncm_spline... objects. New function which adds continuity priors to
-     compute the deceleration parameter via spline (nc_hicosmo_qspline.c). New
-     method to calculate a NcmMSetFunc gradient. New method to compute the error
-     propagation from Fisher Matrix in ncm_fit.c. Implemented the option in
-     darkenergy program to compute the best-fit and error bar (Fisher Matrix) of
-     the deceleration parameter. Implemented the option in darkenergy program to
-     include continuity priors on NcHICosmoQSpline model analysis.
-
-     Started the development of gdarkenergy the gnome front end for darkenergy. 
-     Added the support for Gtk+ 3.0 when available.
-
  * Implemented function nc_hicosmo_Omega_mh2. Functions
      nc_distance_decoupling_redshift and nc_distance_drag_redshift now use
      nc_hicosmo_Omega_bh2 and nc_hicosmo_Omega_mh2. Function
      nc_distance_dsound_horizon_dz was included in nc_distance.h. Documentation
      of nc_distance.c in progress (approximately 2/3 ready).
-
  * Updated ChangeLog.
-
-
-[v0.9.0rc4]
  * Removed functions: nc_distance_curvature, nc_distance_comoving_a0 and
      nc_distance_comoving_a0_lss. nc_distance documentation im progress.
-
  * New data included. Silent rules by default during make.
-
-     New Hubble function data (Moresco 2012). New Hubble BAO data (Busca 2013). 
-     Added support for Hubble BAO data (H(z)r_s(z_d)/(1+z)). Added support for
-     Hubble BAO data usage in darkenergy.
-
  * Move back the functions p_limits and n_limits to be computed with 7 * sigma.
-
-     Start documentation of nc_data_bao_a.c.
-
  * Added support for NcmVector and NcmMatrix serialization and their repective
      tests.
-
  * Updated integration on zeta true. The gap (1 < zeta < 2) was removed and the
      integration is performed in the entire interval. This is different from SPT
      code (their normalization does not take into account this gap), but it is
      consistent with the normalization used.
-
  * Improving tests and examples.
-
-     Testing new test (make check) manager. Better scripts for lapack
-     availability. Fixed doc in nc_data_hubble.h. Improved sparam and vector
-     tests. New cluster abundance example. Organized examples file names.
-
  * Improving tests and examples.
-
-     Testing new test (make check) manager. Better scripts for lapack
-     availability. Fixed doc in nc_data_hubble.h. Improved sparam and vector
-     tests. New cluster abundance example. Organized examples file names.
-
  * Added support for repeated options in darkenergy. New H(z) and BAO data.
      Support for non darkenergy models in darkenergy application.
-
-     Updated name method in NcmSpline to support more detailed names. Update
-     ncm_cfg_keyfile_to_arg to correctly transform repeated options. Improved
-     model->copy method to work with complex (several properties, including
-     object properties) models. Added new BAO data (as used in WMAP9 cosmology
-     paper). Included the acoustic scale in the drag epoch r_s(z_d) as a model
-     function, with this kinematic models can use some BAO data fitting
-     r_s(z_d).
-
  * Updated to glib 2.36, g_type_init no longer required. Added macros for testing
      for older versions.
-
  * Baryonic density (Omega_b) Gaussian prior from Big Bang Nucleosynthesis (BBN)
      was implemented.
-
-     Created functions which return bryonic, cold dark matter and radiation
-     densities times h^2 (Omega_b * h^2, Omega_c * h^2 and Omega_r * h^2,
-     respectively).
-
-     Fixed prior_add_function which keeps a reference to NcmMSetFunc.
-
-     Added BBN Omega_b * h2 prior in darkenergy.
-
-     Completed NcClusterMassBensonXRay implementation.
-
-     Bug fixed: 6th argument of fits_read_col and fits_write_col were fixed
-     (multiplied by number of 'repeat') in nc_data_cluster_ncount_catalog_load
-     and nc_data_cluster_ncount_catalog_save functions, respectively.
-
-     Adapted NcClusterMassBenson according to SPT code (Reichardt).
-
  * Fixed bug: _ncm_data_gauss_resample now correctly uses the lower diagonal of
      the Cholesky decomposition.
-
  * File nc_data_cmb_dist_priors.c was documented.
-
  * Included WMAP 9 year distance priors.
-
  * Splitting namespace in NumCosmo and NumCosmoMath.
-
-     Bindings divided for each namespace. Updated examples to new namespaces. 
-     Fixed conditional vapi building. Added new gdarkenergy program: gnome
-     interface to
-      darkenergy written in vala. Fixed missing headers in installation. Changed
-     test_ncm_sparam to use g_assert instead of g_test_fail. Added
-     ncm_assert_cmpdouble to compare doubles. Modified in all tests. Added
-     conditional (now it checks for glib >= 2.30) tests for serialization. Fixed
-     wrong usage of g_variant_builder_.
-
-     Changed non-constructors functions with _new in their names
-      to _create. This avoids binding these functions as constructors.
-
  * Testing.
-
  * Improving documentation, removed old files and fixed msg in autogen.sh.
-
  * Improvements to allow better bindings.
-
-     Created a boxed object NcmLHRatio2dRegion to describe a single
-      confidence region.
-
-     Fixed bug in NcmLHRatio2d: now it test to see if the parameter was
-      fitted before proceding.
-
-     New example in python: examples/example_rg_snia_bao.py
-
-     Fixed messages in examples.
-
  * Better code for prereq finding during configure.
-
  * Copied the values of the magnitude from NcSNIaDistCovt to NcDataSNIaCov.
-
-     This allows correct generation of mock catalogs.
-
  * Testing SPT fitting.
-
  * New example: simple SN Ia model fitting.
-
  * Fixed g-ir-scanner sources argument.
-
  * Changed vector parameter in models to GVariant to improve serialization.
-
-     Necessary function and tests to NcmVector were added.
-
  * Added examples to dist and installation.
-
-     Moved obs data to data/ dir in installation. Added conditional compilation
-     of catalog loading.
-
  * Updated ChangeLog.
-
-
-[v0.9.0rc1]
  * Better organization of SN Ia data. Added BAO data.
-
-     United all SN Ia data in the same enumerator. Added BAO data from Percival
-     2010.
-
  * Several bugs fixed. New supernovae Ia data with covariance matrix.
-
-     Removed generated files from the distribution. Fixed several segfault in
-     ncm_ode_spline. Added ncm_matrix_add_mul to sum matrices. Fixed name:
-     distance modulo => modulus. Updated ChangeLog. Improved distances
-     documentation. Improved documentation. Code complexity were increasing to
-     maintain the usage of NcmMatrix
-      and NcmVector as floating objects, to avoid such problems they
-      were converted to standard objects (GInitiallyUnowned => GObject).
-      This fixed several bugs related to vector and matrix reference
-      counting. Added cholesky decomposition function for NcmMatrix which use
-     the
-      best algorithm available (lapack/atlas or gsl). New function
-     ncm_cfg_object_set_property: set object properties from
-      a serialized version. New supernovae data with covariance matrices.
-     NcSNIADistCov object
-      represent the covariance model and NcDataSNIACov the NcmData.
-      Create a fits format for these data and load/save_catalog functions.
-      Repacked in fits format two catalogs from Conley 2011, statistical
-      and systematics and statistical only covariance.
-      All functions and connections necessary to make model analysis using
-      this data.
-
  * Fixed bug: Modified the number of bins to build the histogram of -2lnL (Monte
      Carlo). Fixed bug: set has_covar fit member equal to TRUE in function
      ncm_fit_mc_mean_covar.
-
  * Several improvements in documentation.
-
  * Removed enum doc.
-
  * Reorganized the conditional compilation of levmar and nlopt. Better solution
      for nlopt header processing.
-
  * Removed bugged unnecessary copy in numcosmo/Makefile.am.
-
  * Translated confidence region in NcmLHRatio1d and NcmLHRatio2d objects. Improved
      two dimensional confidence region algorithm. Added test in NcmOdeSpline to
      detect integration problems. Added test in NcGrowthFunc to detect
      integration problems. Bumped to version 0.9.0. Organized Monte Carlo code
      in NcmFitMC including gof tests. Added new functions on NcmMSet to set/get
      all models parameters.
-
  * Fixed bug in ncm_cfg_create_from_string which didnt indentify object strings
      with leading whitespaces.
-
  * Improved comment organization in keyfile generation.
-
  * Fixed segfault in darkenergy.
-
  * Fixed tests and clear functions in NcmSpline2d.
-
  * Fixed bugs in allocation in NcmSpline2d. Fixed wrong property name in
      NcMassFunction. Added support to validity check in NcmModel, NcmMSet and
-     added
-      these checks in the minimization algorithms. Fixed NcDataClusterNCount
-     description.
-
+     added   these checks in the minimization algorithms. Fixed
+     NcDataClusterNCount description.
  * Added --fit-list printing all Fit options. Added get_dof to NcmData, returns
      the effective degrees of freedom of that data. Fixed bug in floating
      objects (matrix|vector) now all saved references are sunk. Fixing
      indentation. Fixed bug in Fit numerical differentiation that uses the wrong
-     function to obtain
-      the number of free parameters. New ncm_(matrix|vector)_new_gsl_static
-     functions. Fixed bug in levmar (it was using wrong measurement vector). 
-     Converted NcmFit object and its derivatives to GObject framework. Included
-     the nlopt enum to obtain the correct list of algorithms. Fixing memory
-     leaks with valgrind memcheck. Added ncm_message_ww to suport logging with
-     word-wrap.
-
+     function to obtain   the number of free parameters. New
+     ncm_(matrix|vector)_new_gsl_static functions. Fixed bug in levmar (it was
+     using wrong measurement vector). Converted NcmFit object and its
+     derivatives to GObject framework. Included the nlopt enum to obtain the
+     correct list of algorithms. Fixing memory leaks with valgrind memcheck.
+     Added ncm_message_ww to suport logging with word-wrap.
  * Removed: old nc_data_cluster_abundance.c.
-
  * Converted Data object (and its derived objects) to GObject framework. Converted
      Dataset and Likelihood to GObject framework. Fixed dispose method in every
      object. Added clear method for all objects. Reorganized priors in
      ncm_priors.(c|h) and nc_hicosmo_priors.(c|h). Added warning and LU
      decomposition in NcmFit when inverting the covariance matrix.
-
-     New data cluster objects not tested.
-
  * Static function (_ncm_fit_run_empty) was created to compute m2lnL when there is
      no free parameter. This is used to compute profile likelihood confidence
      regions.
-
-     Get propertities functions from large scale structure objects
-     (mass_function, matter_var...) were modified: g_value_get_object (old) ->
-     g_value_dup_object (new).
-
-     Fixed bug at darkenergy.c: cluster catalog (fits) was included twice.
-
-     Fixed bug at nc_data_cluster_abundance (load catalog funtion): if there is
-     not a certain column in the fits file, status is set equal to 0.
-
  * Added darkenergy.1 to dist. Added test_nc_recomb. New function ncm_cmp to
      compare doubles.
-
- * Updating recombination object to GObject framework and several improvements. 
+ * Updating recombination object to GObject framework and several improvements.
      Updating documentation.
-
-     Added ncm_vector_fast_* functions which assume that stride == 1. Added
-     ncm_vector_dup_array to return a new array containing the
-      vector components, usefull to get the vector values in a binded
-      language. Added example in python using NcRecomb object. Added script
-     addmathjax.pl to add MathJax and other customizations
-      to the html files. Added css to improve manual look.
-
-     Minor fixes.
-
  * Implemented shift parameter and distance priors for WMAP7. Corrected value of
      WMAP5 shift parameter standard deviation. Message log with models and data
      used are printed for Monte Carlo runs.
-
  * Improving examples.
-
  * Testing function to print mass functions data from catalog.
-
- * New function ncm_model_id_by_type. Added project's URLs in configure.ac. 
+ * New function ncm_model_id_by_type. Added project's URLs in configure.ac.
      Updated glib's threads usage. Fixed several documentation bugs. Fixed
      NCM_TYPE_GMSET -> NCM_TYPE_MSET. Fixed NCM_TYPE_GMSET_FUNC ->
      NCM_TYPE_MSET_FUNC Fixed make check, still missing several tests. Fixed
      lapack functions conditional compilation. Fixed constructors names
      ncm_mset_func_new_hicosmo_func(0|1). Added backward compatibility to
-     compile with glib >= 2.26. Fixed backward compatibility with gsl < 1.15. 
+     compile with glib >= 2.26. Fixed backward compatibility with gsl < 1.15.
      Reworked the constants to be compatible with introspection. Working
      examples in C and Python.
-
  * Testing...
-
  * Added NUMCOSMO_HAVE_LAPACK test in ncm_lapack.h.
-
  * Complety rework of headers organization. Removed old lss/Makefile.am. Added a
      compatibility layer for g-ir-scan.
-
  * Fixed redefinition of NUMCOSMO_HAVE_INLINE.
-
  * Much simpler method for compiling inlined functions. Removed extra argument in
      darkenergy man page.
-
  * Added missing file.
-
  * Fixing inline functions. Added a new *_inline.c to explicity compile the
      inlined functions.
-
  * Fixed inline functions macros.
-
  * Fixed (updated) example.
-
  * Added backward compat for older fftw.
-
  * Removed INSTALL from installed docs.
-
  * Added format to fprintf in: ncm_cfg.c, confidence_region.c, util.c, recomb.c,
      darkenergy.c.
-
  * Fixed entries in darkenergy.xml.
-
  * Removed old catalog_parser doc
-
  * Fixed several bugs in conditional building. Removed asciidoc parsing to remove
      this dependency when building from repository.
-
-     Added darkenergy man page.
-
  * Fixed positivity prior to use the original parameters.
-
  * Added test to avoid writting comments for empty entries.
-
  * Added positivity prior for Omega_x.
-
  * Removed all exit(); calls from the library.
-
  * Updated NEWS.
-
  * Including cfitsio via PKG_CHECK_MODULES.
-
  * Bugs: sizeof format and fgets return fixes.
-
  * Added tests for fit support in darkenergy.
-
  * Added return tests for scanf/fread/etc family functions.
-
  * Removed spurious header fitsio.h from print_data.c.
-
  * Fixed NCM_(WRITE|READ)_* macros. Added platform independent format when
      printing sizeof.
-
- * Added correct ifdef for cfitsio presence. Corrected printf types in ncm_cfg.c. 
+ * Added correct ifdef for cfitsio presence. Corrected printf types in ncm_cfg.c.
      Added read/write error testing in NCM_(WRITE|READ)_* macros.
-
  * Removed old catalog_parser.
-
  * Organized data object in nc_ namespace. Added support to choose data samples by
      name or nick when runnig darkenergy. Added list options in darkenergy to
      list available data options.
-
  * Corrected requested minimum version of gsl to use
      gsl_integration_glfixed_table.
-
  * Removed old INCLUDES from tools/Makefile.am. Added atlas libraries when testing
      for atlas_lapack.
-
  * Improved Tinker multiplicity function (critical density): for Delta_z > 3200
      the multiplicity function coefficients are now computed using the fitting
      formula given in Tinker et al. paper. Previously, when Delta_z > 3200, the
      coefficients were computed assuming Delta_z =  3200.
-
-     Defined a new macro NCM_SPLINE_KNOT_DIFF_TOL at ncm_spline_func.h. Included
-     a test in the function ncm_spline_new_function_spline to assure that the
-     distance betwwen the knots of a spline is greater than
-     NCM_SPLINE_KNOT_DIFF_TOL.
-
  * Changed precedence in darkenergy, now command line options takes precedence
      over configuration file.
-
  * Reworked darkenergy command line options, now each run can be saved as a ini
      file, also the options now can be specified by a .ini file which takes
      precedence over the command line options.
-
-     Fix bug: when running a fit without any free parameters. A warning is
-     emitted when a NcmFit object is created without free parameters and a error
-     if ncm_fit_run is called.
-
  * Fixed bug: when copying a likelihood the priors were copied without increasing
      their reference count. Extended NcmModel: added new property for each
      parameter describing the fit type. darkenergy not functional, changing from
      --fit-params to directly setting the fit type by setting the parameter
      property.
-
  * NcClusterMass... (Vanderlinde, BensonXRay, Lnnormal, Nodist) were adapted to
      NcmModel.
-
-     The integrals _nc_cluster_mass_benson_significance_m_p and
-     _nc_cluster_mass_benson_intp were optimized.
-
  * Fixed bug: HICosmo macros were modified (old: NC_MODEL; new: NC_HICOSMO...).
-
-     The parent class of NcClusterMass object was modified from GObject to
-     NcmModel. Function nc_cluster_mass_log_all_models was created. 
-     NcClusterMassBenson was adapted to NcmModel.
-
  * The integrations _nc_cluster_mass_vanderlinde_significance_m_p and
      _nc_cluster_mass_vanderlinde_intp were optimized.
-
  * The integrals to compute the probability distributions of the Vanderlinde
      mass-observable relation is being optimized.
-
  * Removed old INCLUES in Makefile.am. Threaded evaluation for real data in
      cluster abundance. Reorganized ncm_func_eval_threaded_loop to simply run
      the loop function when threads are disabled. Added CUBACORES=0 to
      environment in to avoid parallelization in libcuba.
-
  * Documentation fixes.
-
  * Memory leak fixed in nc_cluster_mass_benson.c and
      nc_cluster_mass_vanderlinde.c. Debug messages were removed.
-
  * Moved gobj_itest from bin_PROGRAMS to noinst_PROGRAMS. Added transfer full to
      the return value of ncm_reparam_ref.
-
  * Bug fixed: when it was set a reparametrization, all other parameters were reset
      to their default values. Now only those parameters modified by the
      reparametrization are set to the new parameter default values.
-
-     Internal function _ncm_model_reset_sparam -> _ncm_model_set_sparam. Created
-     function _ncm_model_sparams_remove_reparam.
-
  * Tinker multiplicity function - critical: for Delta > 3200, it is set Delta =
      3200 and a warning message is provided.
-
  * Testing resample and montecarlo tools.
-
  * Fixed bug in ncm_fit_montecarlo_matrix
-
-     ncm_mset_prepare_fparam_map is now correctly called when resampling.
-
  * Developing new mass-observable relation.
-
  * Fixed bugs in reparams. Now --flat works again.
-
  * Testing cr algorithms.
-
  * Extended limits in Omega variables.
-
  * Added test to check if libnlopt exists. Testing nc_galaxy_acf.
-
-     There is a bug in nlopt package, when built with c++ support it builds only
-     the libnlopt_cxx library which cannot be linked to a pure C library. Also,
-     in the nlopt.pc it informs that the library is linked using -lnlopt, even
-     though the correct would be -lnlopt_cxx. Thus, we added a extra check to
-     see if -lnlopt is available.
-
  * New implementations of NcClusterMass.
-
-     Removed old structure NcClusterAbundanceOpt. NcClusterMassVanderlinde:
-     Implemented SZ signal-mass relation as described in Vanderlinde et al., The
-     Astrophysical Journal, 722:1180-1196, 2010. NcClusterMassBenson:
-     Implemented SZ signal-mass relation as described in Benson et al.,
-     arxiv:1112.5435. NcClusterBensonXRay: Implemented SZ signal-mass and X-ray
-     relations as described in Benson et al., arxiv:1112.5435. WORK IN PROGRESS!
-
  * Renamed special functions to comply with the library standards.
-
  * Reorganized NcMassFunction. Adjusted to correct functions names and _prepare
      function usage.
-
-     Optimized NcMassFunction and NcClusterAbundance functions. Optimized
-     NcmSpline2dCubic eval function. Optimized NcMassFunction putting some
-     functions as inline functions.
-
-     Fixed bug in ncm_numdiff_2_err that wont put the correct value of ferr. 
-     Fixed bug in function_eval that readed an already freed memory. Fixed bug
-     in ncm_fit_numdiff_m2lnL_hessian, wrong comparions between absolute and
-     relative errors.
-
-     Fixed leak in ncm_cfg_create_from_name_params, changed g_variant_dup_string
-     => g_variant_get_string. Fixed leak in darkenergy.c, added g_strfreev ()
-     after g_strsplit (). Fixed leak in ncm_mset.c, added free for fpi_array in
-     finalize. Fixed leak several (almost all) detected using valgrind's
-     memecheck.
-
-     Reworked several objects to comply with ref/unref paradigm.
-
  * Fixed indentation.
-
  * Included g_assert in Tinker multiplicity functions (mean and critical) to
      assert that Delta <= 3200.
-
  * Renamed flag plane => flat.
-
  * Finished NcClusterMassLnnormal.
-
-     Renamed internal variables in nc_cluster_mass_nodist.c.
-
  * Finished paralelization to compute m2ln of cluster abundance. Still in test.
-
-     Registered NcClusterMassLnnormal in ncm_cfg.c.
-
  * Fixed bug in function_eval lf => lfunc.
-
  * Updated configure.ac using autoupdate.
-
-     Added test to check if sundials uses long int instead of int and a macro to
-     use the appropriated type. This is necessary since in version 2.5.0
-     sundials' api have changed.
-
  * New organization of NcClusterAbundance and NcDataClusterAbundance.
-
-     Removed old nc_data_cluster_abundance_binned_init_from_text_file_gkey. 
-     Removed old nc_data_cluster_abundance_binned_init_from_text_file. Removed
-     old nc_cluster_matching_catalog_save. Removed old
-     nc_cluster_matching_catalog_load.
-
-     Adapted darkenergy to use new NcClusterAbundance and NcDataClusterAbundance 
-     framework.
-
-     Testing function_eval on NcDataClusterAbundance.
-
-     Reworked function_eval to split loops.
-
-     Renamed NC_THREAD_POOL_MAX to NCM_THREAD_POOL_MAX.
-
  * Missing files.
-
  * Bug fixing and new implementations.
-
-     Moved NcClusterPhotoz to NcClusterRedshift. Moved NcClusterPhotozInd to
-     NcClusterPhotoz.
-
-     Removed old functions from NcClusterAbundance.
-
-     Bug - NCM_GMODEL macro was used instead of NCM_MODEL - fixed. Bug -
-     NcClusterRedshift should be abstract class - fixed. Bug - NcHaloBiasType
-     should be abstract class - fixed. Bug - NcMultiplicityFunc should be
-     abstract class - fixed. Bug - NcTransferFunc should be abstract class -
-     fixed. Bug - NcWindow should be abstract class - fixed. Bug - Unintialized
-     splines in NcMatterVar - fixed. Bug - DataClusterPrepare passing wrong
-     pointer to NcClusterAbundance - fixed. Bug - In Spline2d functions
-     int_d(x|y)_spline there were one extra iteration in the loops - fixed.
-
-     Added pz_min and pz_max properties to NcClusterPhotozGlobal and
-     NcClusterPhotoz Added new abstract class NcClusterMass. Added new abstract
-     class NcClusterMass implementation NcClusterMassNodist. Added new abstract
-     class NcClusterRedshift implementation NcClusterRedshiftNodist. Added more
-     objects to the register config in ncm_cfg_init.
-
-     Optimized NcClusterAbundance inverse calc, still room for improvement.
-
-     Still working in NcClusterAbundance NcClusterMass* NcClusterRedshift* api
-     not fixed yet
-
  * Added a simple GObject (de)serialization function set. Added nc_hicosmo_free
      function. Added tests for GObject (de)serialization. This msg is for the
      last commit.
-
  * Updated manual URL
-
  * Updated manual URL
-
  * Fixed documentation build.
-
-
-[v0.8.0]
  * New repository for savannah upload. Corrected AUTHORS and README, added
      COPYING. Erased old TODO. Version bumped to 0.8.0.
