@@ -116,6 +116,7 @@
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
 #include "lss/nc_wl_surface_mass_density.h"
+#include "lss/nc_reduced_shear_cluster_mass.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
