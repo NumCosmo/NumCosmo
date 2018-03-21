@@ -49,9 +49,9 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p = Ncm.QMProp.new ()
-p.props.abstol     = 1.0e-30
-p.props.reltol     = 1.0e-9
-p.props.nknots     = 1000
+p.props.abstol     = 1.0e-230
+p.props.reltol     = 1.0e-7
+p.props.nknots     = 101
 p.props.noboundary = False
 p.set_property ("lambda", 0.0)
 
@@ -59,36 +59,25 @@ psi0 = Ncm.QMPropGauss.new (0.0, 1.0, 1.0, -1.0)
 #psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
 #print (psi0.eval (1.0))
-tstep = 5.1e-6
-xf    = 20.0
-xfp   = 2.0
-p.set_init_cond_gauss (psi0, 0.0, xf)
+tstep = 1.0e-3
+xf    = 10.0
+xfp   = 10.0
+p.set_init_cond_gauss (psi0, 1.0e-2, xf)
 #p.set_init_cond_exp (psi0, 0.0, xf)
 
-x             = np.linspace (0.0, xfp, 1000) #p.get_knots ()
-#x          = p.get_knots ()
-Re_psi_s      = p.get_Re_psi ()
-Re_psi_s_eval = np.vectorize (Re_psi_s.eval)
-Im_psi_s      = p.get_Im_psi ()
-Im_psi_s_eval = np.vectorize (Im_psi_s.eval)
-
-max_Re_psi    = max (np.abs (Re_psi_s_eval (x)))
-max_Im_psi    = max (np.abs (Im_psi_s_eval (x)))
-yb            = max (max_Re_psi, max_Im_psi)
-
-#psi   = np.array (p.get_psi ())
+x          = np.linspace (0.0, xfp, 10000) #p.get_knots ()
+psi        = p.eval_psi (x)
+max_Re_psi = max (np.abs (psi[0::2]))
+max_Im_psi = max (np.abs (psi[1::2]))
+yb         = max (max_Re_psi, max_Im_psi)
 
 fig = plt.figure()
 
 ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.5e0 * yb, 1.5e0 * yb))
+#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-0.1, 0.1))
 ax.grid ()
-#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-700.0, 2.0 * max (psi)))
-#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-xf, xf))
 
-#ax.set_title("nhoca")
 ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
-
-#print (psi)
 
 N = 4
 lines = [plt.plot([], [])[0] for _ in range(N)]
@@ -105,27 +94,19 @@ def init():
 
 def animate(i):
   tf = tstep * i
-  p.evolve_spec (tf)
-  #psi = np.array (p.get_psi ())
-  rho_s      = p.get_rho ()
-  dS_s       = p.get_dS ()
-  Re_psi_s   = p.get_Re_psi ()
-  Im_psi_s   = p.get_Im_psi ()
+  #p.evolve_spec (tf)
+  p.evolve (tf)
 
-  Re_psi_s_eval = np.vectorize (Re_psi_s.eval)
-  Im_psi_s_eval = np.vectorize (Im_psi_s.eval)
-  rho_s_eval    = np.vectorize (rho_s.eval)
-  dS_s_eval     = np.vectorize (dS_s.eval)
+  psi   = np.array (p.eval_psi (x))
+  rho   = np.array (p.eval_rho (x))
+  dS    = np.array (p.eval_dS (x))
+  rho_s = p.peek_rho_s ()
   
-  #lines[0].set_data (x, psi[::2]) 
-  #lines[1].set_data (x, psi[1::2]) 
-  #lines[2].set_data (x, rho_s_eval (x)) 
-  #lines[0].set_data (x, np.log (np.abs(rho_s_eval (x))) / 700.0)
-  lines[0].set_data (x, np.sqrt (np.abs (rho_s_eval (x))))
-  lines[1].set_data (x, Re_psi_s_eval (x))
-  lines[2].set_data (x, Im_psi_s_eval (x))
-  lines[3].set_data (x, dS_s_eval (x) / 10.0)
-  #ax.set_title("nhoca %d" % i)
+  lines[0].set_data (x, np.sqrt (np.abs (rho)))
+  lines[1].set_data (x, psi[0::2])
+  lines[2].set_data (x, psi[1::2])
+  lines[3].set_data (x, dS / 10.0)
+
   ttl.set_text ("t = % .15f, norma = % .15f" % (tf, rho_s.eval_integ (0.0, xf)))
 
   return lines
@@ -136,34 +117,4 @@ anim = animation.FuncAnimation (fig, animate, np.arange (0, 200000), init_func =
 #anim.save ('mymovie.mp4', writer = mywriter)
 
 plt.show ()
-#plt.savefig ("anim.mpeg")
 
-'''
-p.props.np = 1000
-p.gauss_ini (0.0, 10.0, 1.0, 1.0)
-p.propto (1.0, 0.05)
-
-def psi(x,t):                                     
-  r = p.propto (x, t)
-  return r[0] + 1j * r[1]
-
-psiv = np.vectorize (lambda x, t: abs (psi(x, t)))
-
-fig, ax = plt.subplots()
-
-x     = np.linspace (0, 60, 1000)
-line, = plt.plot (x, psiv(x, 0.01))
-
-def animate(i):
-  line.set_ydata (psiv (x, 0.02 * (i + 1)))  # update the data
-  return line,
-
-# Init only required for blitting to give a clean slate.
-def init():
-    line.set_ydata (np.ma.array (x, mask = True))
-    return line,
-
-ani = animation.FuncAnimation(fig, animate, np.arange(0, 100), init_func=init, interval=5, blit=True)
-
-plt.show ()
-'''

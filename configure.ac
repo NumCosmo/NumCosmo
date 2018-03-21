@@ -893,7 +893,7 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
-    AC_EGREP_CPP([$SUNDIALS_VERSION],
+    AC_EGREP_CPP([\"$SUNDIALS_VERSION\"],
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
