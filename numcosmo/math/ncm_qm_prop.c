@@ -1413,7 +1413,7 @@ ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const g
 }
 
 static gint _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
-static gint _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);
+/*static gint _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);*/
 
 void
 _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
@@ -1595,7 +1595,7 @@ _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
   
   return 0; 
 }
-
+/*
 static gint 
 _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp) 
 { 
@@ -1634,7 +1634,7 @@ _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpo
   
   return 0; 
 }
-
+*/
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 static gdouble

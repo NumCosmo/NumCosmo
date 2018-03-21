@@ -340,6 +340,7 @@
     <section>
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
+      <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
     </section>
   </chapter>
   

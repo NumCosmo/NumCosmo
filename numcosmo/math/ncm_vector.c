@@ -438,6 +438,7 @@ ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
  * @cv: a #NcmVector
  * @k: component index of the original vector
  * @size: number of components of the subvector
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double
  *
  * This function returns a #NcmVector which is a subvector of the vector @cv.
  * The start of the new vector is the component @k from the original vector @cv.
