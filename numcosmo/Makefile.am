@@ -119,7 +119,6 @@ ncm_sources = \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
 	math/ncm_data_poisson.c              \
-	math/ncm_data_voigt.c                \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
 	math/ncm_prior.c                     \
@@ -232,7 +231,6 @@ ncm_headers =                                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
 	math/ncm_data_poisson.h              \
-	math/ncm_data_voigt.h                \
 	math/ncm_dataset.h                   \
 	math/ncm_likelihood.h                \
 	math/ncm_mset_trans_kern.h           \
@@ -369,6 +367,7 @@ nc_headers = \
         lss/nc_cluster_pseudo_counts.h         \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
+        lss/nc_reduced_shear_cluster_mass.h    \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -497,6 +496,7 @@ nc_sources = \
 	lss/nc_cluster_pseudo_counts.c         \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
+	lss/nc_reduced_shear_cluster_mass.c    \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
 	data/nc_data_snia_cov.c                \
