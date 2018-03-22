@@ -108,6 +108,8 @@ struct _NcReducedShearClusterMass
 {
   /*< private >*/
   NcmModel parent_instance;
+  gdouble R_Mpc;
+  gdouble nzbins;
   const gsl_multifit_fdfsolver_type *T;
   gsl_multifit_fdfsolver *s;
   gdouble *workz;

@@ -61,14 +61,18 @@ G_DEFINE_TYPE (NcReducedShearClusterMass, nc_reduced_shear_cluster_mass, NCM_TYP
 enum
 {
   PROP_0,
-  PROP_SIZE
+  PROP_R,
+  PROP_NZBINS,
+  PROP_SIZE,
 };
 
 static void
 nc_reduced_shear_cluster_mass_init (NcReducedShearClusterMass *rscm)
 {
-  rscm->T = gsl_multifit_fdfsolver_lmsder;
-  rscm->s = gsl_multifit_fdfsolver_alloc (rscm->T, 4, 2);
+  rscm->R_Mpc  = 0.0;
+  rscm->nzbins = 1;
+  rscm->T      = gsl_multifit_fdfsolver_lmsder;
+  rscm->s      = gsl_multifit_fdfsolver_alloc (rscm->T, 4, 2);
 }
 
 static void
@@ -77,14 +81,18 @@ _nc_reduced_shear_cluster_mass_set_property (GObject *object, guint prop_id, con
   NcReducedShearClusterMass *rscm = NC_REDUCED_SHEAR_CLUSTER_MASS (object);
   g_return_if_fail (NC_IS_REDUCED_SHEAR_CLUSTER_MASS (object));
 
-  /*
   switch (prop_id)
   {
+    case PROP_R:
+      rscm->R_Mpc = g_value_get_double (value);
+      break;
+    case PROP_NZBINS:
+      rscm->nzbins = g_value_get_uint (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-  */
 }
 
 static void
@@ -93,14 +101,18 @@ _nc_reduced_shear_cluster_mass_get_property (GObject *object, guint prop_id, GVa
   NcReducedShearClusterMass *rscm = NC_REDUCED_SHEAR_CLUSTER_MASS (object);
   g_return_if_fail (NC_IS_REDUCED_SHEAR_CLUSTER_MASS (object));
 
-  /*
   switch (prop_id)
   {
-     default:
+    case PROP_R:
+      g_value_set_double (value, rscm->R_Mpc);
+      break;
+    case PROP_NZBINS:
+      g_value_set_uint (value, rscm->nzbins);
+      break;  
+    default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-  */
 }
 
 static void
@@ -138,7 +150,32 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   ncm_model_class_set_name_nick (model_class, "Lensing observable for cluster mass estimation: reduced shear", "ReducedShearClusterMass");
   ncm_model_class_add_params (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_SPARAM_LEN, 0, PROP_SIZE);
   
-   
+
+   /**
+   * NcClusterPseudoCounts:R_Mpc:
+   *
+   * Scale/distance in Mpc from the center of the lens.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_R,
+                                   g_param_spec_double ("R",
+                                                        NULL,
+                                                        "Distance from the center of the lens",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+   /**
+   * NcClusterPseudoCounts:nzbins:
+   *
+   * Number of redshift bins.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NZBINS,
+                                   g_param_spec_uint ("number-z-bins",
+                                                      NULL,
+                                                      "Number of redshift bins",
+                                                      1, G_MAXUINT, 10,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcReducedShearClusterMass:a:
    * 
