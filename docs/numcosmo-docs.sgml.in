@@ -367,6 +367,7 @@
     <xi:include href="xml/nc_data_cluster_poisson.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_data_cluster_counts_box_poisson.xml"/>
+    <xi:include href="xml/nc_data_reduced_shear_cluster_mass.xml">
     <xi:include href="xml/nc_data_planck_lkl.xml"/>
     <xi:include href="xml/nc_data_xcor.xml"/>
     <section>

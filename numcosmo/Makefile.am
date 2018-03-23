@@ -389,6 +389,7 @@ nc_headers = \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
+	data/nc_data_reduced_shear_cluster_mass.h \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
@@ -518,6 +519,7 @@ nc_sources = \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
+	data/nc_data_reduced_shear_cluster_mass.c \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
