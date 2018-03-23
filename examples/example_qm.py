@@ -49,23 +49,23 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p = Ncm.QMProp.new ()
-p.props.abstol     = 1.0e-230
-p.props.reltol     = 1.0e-7
-p.props.nknots     = 101
+p.props.abstol     = 0.0
+p.props.reltol     = 1.0e-11
+p.props.nknots     = 601
 p.props.noboundary = False
 p.set_property ("lambda", 0.0)
 
-psi0 = Ncm.QMPropGauss.new (0.0, 1.0, 1.0, -1.0)
+psi0 = Ncm.QMPropGauss.new (8.0, 1.0, 1.0, -1.0)
 #psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
 #print (psi0.eval (1.0))
 tstep = 1.0e-3
-xf    = 10.0
-xfp   = 10.0
-p.set_init_cond_gauss (psi0, 1.0e-2, xf)
+xf    = 15.0
+xfp   = 16.0
+p.set_init_cond_gauss (psi0, 0.0001, xf)
 #p.set_init_cond_exp (psi0, 0.0, xf)
 
-x          = np.linspace (0.0, xfp, 10000) #p.get_knots ()
+x          = np.linspace (-1.0, xfp, 10000) #p.get_knots ()
 psi        = p.eval_psi (x)
 max_Re_psi = max (np.abs (psi[0::2]))
 max_Im_psi = max (np.abs (psi[1::2]))
@@ -73,8 +73,8 @@ yb         = max (max_Re_psi, max_Im_psi)
 
 fig = plt.figure()
 
-ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.5e0 * yb, 1.5e0 * yb))
-#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-0.1, 0.1))
+#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.5e0 * yb, 1.5e0 * yb))
+ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-6.1, 6.1))
 ax.grid ()
 
 ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
@@ -97,15 +97,19 @@ def animate(i):
   #p.evolve_spec (tf)
   p.evolve (tf)
 
+  rho_s = p.peek_rho_s ()
+  q = rho_s.get_xv ().dup_array ()
+  x = np.linspace (q[0], q[-1], 10000)
+  
   psi   = np.array (p.eval_psi (x))
   rho   = np.array (p.eval_rho (x))
   dS    = np.array (p.eval_dS (x))
-  rho_s = p.peek_rho_s ()
+  
   
   lines[0].set_data (x, np.sqrt (np.abs (rho)))
-  lines[1].set_data (x, psi[0::2])
-  lines[2].set_data (x, psi[1::2])
-  lines[3].set_data (x, dS / 10.0)
+  #lines[1].set_data (x, psi[0::2])
+  #lines[2].set_data (x, psi[1::2])
+  lines[3].set_data (x, dS / xf)
 
   ttl.set_text ("t = % .15f, norma = % .15f" % (tf, rho_s.eval_integ (0.0, xf)))
 

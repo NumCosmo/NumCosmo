@@ -112,14 +112,14 @@ void ncm_qm_prop_gauss_free (NcmQMPropGauss *qm_gauss);
 
 void ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
 void ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
-void ncm_qm_prop_gauss_eval_RS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *RS);
+void ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *lnRS);
 
 NcmQMPropExp *ncm_qm_prop_exp_new (const gdouble n, const gdouble V, const gdouble pV);
 NcmQMPropExp *ncm_qm_prop_exp_dup (NcmQMPropExp *qm_exp);
 void ncm_qm_prop_exp_free (NcmQMPropExp *qm_exp);
 
 void ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi);
-void ncm_qm_prop_exp_eval_RS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *RS);
+void ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS);
 
 NcmQMProp *ncm_qm_prop_new (void);
 NcmQMProp *ncm_qm_prop_ref (NcmQMProp *qm_prop);
@@ -138,7 +138,7 @@ void ncm_qm_prop_propto (NcmQMProp *qm_prop, const gdouble x, const gdouble t, g
 
 gdouble ncm_qm_prop_propto_norm (NcmQMProp *qm_prop, const gdouble t);
 
-void ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_RS, gpointer psi_data, const gdouble xi, const gdouble xf);
+void ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf);
 void ncm_qm_prop_set_init_cond_gauss (NcmQMProp *qm_prop, NcmQMPropGauss *qm_gauss, const gdouble xi, const gdouble xf);
 void ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const gdouble xi, const gdouble xf);
 

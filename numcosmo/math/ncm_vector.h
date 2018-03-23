@@ -379,9 +379,22 @@ G_INLINE_FUNC GArray *
 ncm_vector_dup_array (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
-  GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-  g_array_append_vals (a, ncm_vector_data (cv), len);
-  return a;
+  if (ncm_vector_stride (cv) == 1)
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	g_array_append_vals (a, ncm_vector_data (cv), len);
+	return a;
+  }
+  else
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	gint i;
+
+	g_array_set_size (a, len);
+	for (i = 0; i < len; i++)
+	  g_array_index (a, gdouble, i) = ncm_vector_get (cv, i);
+	return a;
+  }
 }
 
 G_INLINE_FUNC gdouble *
