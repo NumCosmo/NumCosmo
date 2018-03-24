@@ -1008,7 +1008,7 @@ numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
-docs/numcosmo-docs.sgml
+docs/manual_head.xml
 examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile

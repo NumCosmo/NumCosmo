@@ -5,16 +5,8 @@
   <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
 ]>
 <book id="index">
-  <bookinfo>
-    <title>NumCosmo Reference Manual</title>
-    <releaseinfo>
-      for NumCosmo @NUMCOSMO_VERSION@.
-      The latest version of this documentation can be found on-line at
-      <ulink role="online-location" url="https://numcosmo.github.io/manual/">https://numcosmo.github.io/manual/</ulink>,      
-      <ulink role="online-location" url="https://numcosmo.github.io/">NumCosmo website</ulink>.
-    </releaseinfo>
-  </bookinfo>
-
+  <xi:include href="manual_head.xml"/>
+  
   <chapter>
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
@@ -367,7 +359,7 @@
     <xi:include href="xml/nc_data_cluster_poisson.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_data_cluster_counts_box_poisson.xml"/>
-    <xi:include href="xml/nc_data_reduced_shear_cluster_mass.xml">
+    <xi:include href="xml/nc_data_reduced_shear_cluster_mass.xml"/>
     <xi:include href="xml/nc_data_planck_lkl.xml"/>
     <xi:include href="xml/nc_data_xcor.xml"/>
     <section>

@@ -2054,7 +2054,7 @@ nc_cbe_thermodyn_z_d (NcCBE *cbe)
  *
  * Returns: (transfer full): a #NcmSpline2d for the logarithm base e of the matter power spectrum, $\ln P(\ln k, z)$.
  */
-NcmSpline2d*
+NcmSpline2d *
 nc_cbe_get_matter_ps (NcCBE* cbe)
 {
 	const gint z_size  = cbe->priv->psp.ln_tau_size;
@@ -2163,6 +2163,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 /**
  * nc_cbe_get_all_Cls:
  * @cbe: a #NcCBE
+ * @PHIPHI_Cls: a #NcmVector
  * @TT_Cls: a #NcmVector
  * @EE_Cls: a #NcmVector
  * @BB_Cls: a #NcmVector
@@ -2173,7 +2174,8 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
  * ignored.
  *
  */
-void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVector* BB_Cls, NcmVector* TE_Cls)
+void 
+nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVector* BB_Cls, NcmVector* TE_Cls)
 {
 	guint all_Cls_size, index_pp, index_tt, index_ee, index_bb, index_te;
 	gboolean has_pp, has_tt, has_ee, has_bb, has_te;
@@ -2271,7 +2273,6 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, N
 	}
 }
 
-
 /**
  * nc_cbe_debug_test:
  * @cbe: a #NcCBE
@@ -2279,7 +2280,8 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, N
  * Temporary debug function
  *
  */
-void nc_cbe_debug_test (NcCBE *cbe)
+void 
+nc_cbe_debug_test (NcCBE *cbe)
 {
 	NCM_UNUSED (cbe);
 	g_assert_not_reached ();

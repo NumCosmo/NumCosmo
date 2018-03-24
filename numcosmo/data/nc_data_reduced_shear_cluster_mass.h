@@ -54,7 +54,7 @@ struct _NcDataReducedShearClusterMassClass
  * NcDataReducedShearClusterMassObs:
  * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_ZCLUSTER: cluster redshift
  * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_GOBS: measured reduced shear
- * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_PZ: (photometric) redshift distribution 
+ * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_PZ: redshift distribution (photometric)
  * 
  */
 typedef enum _NcDataReducedShearClusterMassObs
@@ -82,17 +82,17 @@ GType nc_data_reduced_shear_cluster_mass_get_type (void) G_GNUC_CONST;
 
 NcDataReducedShearClusterMass *nc_data_reduced_shear_cluster_mass_new ();
 NcDataReducedShearClusterMass *nc_data_reduced_shear_cluster_mass_new_from_file (const gchar *filename);
-NcDataReducedShearClusterMass *nc_data_reduced_shear_cluster_mass_ref (NcDataReducedShearClusterMass *dcpc);
-void nc_data_reduced_shear_cluster_mass_free (NcDataReducedShearClusterMass *dcpc);
-void nc_data_reduced_shear_cluster_mass_clear (NcDataReducedShearClusterMass **dcpc);
+NcDataReducedShearClusterMass *nc_data_reduced_shear_cluster_mass_ref (NcDataReducedShearClusterMass *drs);
+void nc_data_reduced_shear_cluster_mass_free (NcDataReducedShearClusterMass *drs);
+void nc_data_reduced_shear_cluster_mass_clear (NcDataReducedShearClusterMass **drs);
 
-void nc_data_reduced_shear_cluster_mass_set_ngalaxies (NcDataReducedShearClusterMass *dcpc, guint ngals);
-guint nc_data_reduced_shear_cluster_mass_get_ngalaxies (NcDataReducedShearClusterMass *dcpc);
-void nc_data_reduced_shear_cluster_mass_set_nzbins (NcDataReducedShearClusterMass *dcpc, guint nzbins);
-guint nc_data_reduced_shear_cluster_mass_get_nzbins (NcDataReducedShearClusterMass *dcpc);
-void nc_data_reduced_shear_cluster_mass_set_gobs (NcDataReducedShearClusterMass *dcpc, const NcmMatrix *m);
-void nc_data_reduced_shear_cluster_mass_set_pz (NcDataReducedShearClusterMass *dcpc, const NcmMatrix *m);
-void nc_data_reduced_shear_cluster_mass_set_true_data (NcDataReducedShearClusterMass *dcpc, const NcmMatrix *m);
+void nc_data_reduced_shear_cluster_mass_set_ngalaxies (NcDataReducedShearClusterMass *drs, guint ngals);
+guint nc_data_reduced_shear_cluster_mass_get_ngalaxies (NcDataReducedShearClusterMass *drs);
+void nc_data_reduced_shear_cluster_mass_set_nzbins (NcDataReducedShearClusterMass *drs, guint nzbins);
+guint nc_data_reduced_shear_cluster_mass_get_nzbins (NcDataReducedShearClusterMass *drs);
+void nc_data_reduced_shear_cluster_mass_set_gobs (NcDataReducedShearClusterMass *drs, const NcmMatrix *m);
+void nc_data_reduced_shear_cluster_mass_set_pz (NcDataReducedShearClusterMass *drs, const NcmMatrix *m);
+void nc_data_reduced_shear_cluster_mass_set_true_data (NcDataReducedShearClusterMass *drs, const NcmMatrix *m);
 
 G_END_DECLS
 

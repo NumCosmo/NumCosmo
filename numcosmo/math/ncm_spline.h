@@ -183,6 +183,7 @@ ncm_spline_min_size (const NcmSpline *s)
 	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
+#ifndef __GTK_DOC_IGNORE__
 static gsize
 _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const gdouble x, gsize index_lo, gsize index_hi)
 {
@@ -206,7 +207,8 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
 {
   gsize x_index = a->cache;
  
-  if(x < xa[x_index * stride]) {
+  if (x < xa[x_index * stride]) 
+	{
     a->miss_count++;
     a->cache = _ncm_spline_bsearch_stride (xa, stride, x, 0, x_index);
   }
@@ -222,6 +224,7 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
   
   return a->cache;
 }
+#endif
 
 G_INLINE_FUNC guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
