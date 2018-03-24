@@ -495,7 +495,7 @@ nc_data_cluster_pseudo_counts_set_nclusters (NcDataClusterPseudoCounts *dcpc, gu
  * Returns: the number of clusters 
  */
 guint 
-nc_data_cluster_pseudo_counts_get_obs (NcDataClusterPseudoCounts *dcpc)
+nc_data_cluster_pseudo_counts_get_nclusters (NcDataClusterPseudoCounts *dcpc)
 {
   return dcpc->np;
 }
