@@ -183,13 +183,66 @@ ncm_spline_min_size (const NcmSpline *s)
 	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
+#ifndef __GTK_DOC_IGNORE__
+static gsize
+_ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const gdouble x, gsize index_lo, gsize index_hi)
+{
+  gsize ilo = index_lo;
+  gsize ihi = index_hi;
+	
+  while (ihi > ilo + 1) 
+	{
+    gsize i = (ihi + ilo)/2;
+    if (x_array[i * stride] > x)
+      ihi = i;
+    else
+      ilo = i;
+  }
+  
+  return ilo;
+}
+
+static gsize
+_ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint stride, gsize len, gdouble x)
+{
+  gsize x_index = a->cache;
+ 
+  if (x < xa[x_index * stride]) 
+	{
+    a->miss_count++;
+    a->cache = _ncm_spline_bsearch_stride (xa, stride, x, 0, x_index);
+  }
+  else if (x >= xa[stride * (x_index + 1)]) 
+	{
+    a->miss_count++;
+    a->cache = _ncm_spline_bsearch_stride (xa, stride, x, x_index, len - 1);
+  }
+  else 
+	{
+    a->hit_count++;
+  }
+  
+  return a->cache;
+}
+#endif
+
 G_INLINE_FUNC guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 {
-  if (s->acc && ncm_vector_stride (s->xv) == 1)
-  	return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x);
+	if (ncm_vector_stride (s->xv) == 1)
+	{
+		if (s->acc)
+			return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x);
+		else
+			return gsl_interp_bsearch (ncm_vector_ptr (s->xv, 0), x, 0, ncm_vector_len (s->xv) - 1);
+	}
 	else
-		return gsl_interp_bsearch (ncm_vector_ptr (s->xv, 0), x, 0, ncm_vector_len (s->xv) - 1);
+	{
+		if (s->acc)
+			return _ncm_spline_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), s->len, x);
+		else
+			return _ncm_spline_bsearch_stride (ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), x, 0, ncm_vector_len (s->xv) - 1);
+	}
 }
 
 /* Utilities -- internal use */

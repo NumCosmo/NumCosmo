@@ -139,7 +139,7 @@ gdouble nc_cbe_thermodyn_z_d (NcCBE *cbe);
 
 NcmSpline2d *nc_cbe_get_matter_ps (NcCBE *cbe);
 
-void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
+void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *PHIPHI_Cls, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
 void nc_cbe_debug_test (NcCBE* cbe);
 
 G_END_DECLS

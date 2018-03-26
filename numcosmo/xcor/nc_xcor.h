@@ -81,7 +81,6 @@ struct _NcXcorClass
 	gpointer (*alloc) (void);
 };
 
-
 typedef struct _NcXcorKinetic
 {
   gdouble xi_z;

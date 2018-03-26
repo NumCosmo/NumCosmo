@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [13])
-m4_define([numcosmo_micro_version], [3])
+m4_define([numcosmo_minor_version], [14])
+m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -558,6 +558,7 @@ TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
 PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
+PKG_CHECK_EXISTS([gsl >= 2.4], [AC_DEFINE([HAVE_GSL_2_4],[1], [gsl 2.4])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -892,7 +893,8 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
-    AC_EGREP_CPP([$SUNDIALS_VERSION],
+    SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
+    AC_EGREP_CPP([\"$SUNDIALS_VERSION_REGEX\"],
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
@@ -1006,6 +1008,7 @@ numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
+docs/manual_head.xml
 examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile

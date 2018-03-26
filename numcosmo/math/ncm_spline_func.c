@@ -315,9 +315,13 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
         const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
 #endif /* _NCM_SPLINE_TEST_DIFF */
 
-        if (fabs ((x - x0)/x) < NCM_SPLINE_KNOT_DIFF_TOL)
-          g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at % 20.15g."
-                   "Function value at f(x0) = % 22.15g and f(x) = % 22.15g.", x, y0, y);
+        if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
+          g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
+                   "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).", 
+                   x0, x, x1, 
+                   y0, y, y1, 
+                   fabs (y0 / y - 1.0), 
+                   fabs (y1 / y - 1.0));
 
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
@@ -441,6 +445,14 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
         const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
 #endif /* _NCM_SPLINE_TEST_DIFF */
 
+        if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
+          g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
+                   "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).", 
+                   x0, x, x1, 
+                   y0, y, y1, 
+                   fabs (y0 / y - 1.0), 
+                   fabs (y1 / y - 1.0));
+        
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
         g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
@@ -563,6 +575,14 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, gdouble 
         const gdouble dys = ncm_spline_eval_deriv (s, x);
         const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
 #endif /* _NCM_SPLINE_TEST_DIFF */
+
+        if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
+          g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
+                   "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).", 
+                   x0, x, x1, 
+                   y0, y, y1, 
+                   fabs (y0 / y - 1.0), 
+                   fabs (y1 / y - 1.0));
 
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);

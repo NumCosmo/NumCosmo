@@ -2,12 +2,13 @@
 
 # Local xml files
 XML_FILES= \
-          introduction.xml \
-          darkenergy.xml   \
-          refs.xml
+	introduction.xml \
+	darkenergy.xml   \
+	refs.xml
 
 # Generated xml files
-XML_GEN_FILES=references.xml
+XML_GEN_FILES= \
+	references.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
@@ -25,6 +26,8 @@ DOC_MODULE=numcosmo
 
 # The top-level SGML file. You can change this if you want to.
 DOC_MAIN_SGML_FILE=$(DOC_MODULE)-docs.sgml
+
+$(DOC_MAIN_SGML_FILE): manual_head.xml
 
 # Directories containing the source code, relative to $(srcdir).
 # gtk-doc will search all .c and .h files beneath these paths
@@ -138,7 +141,7 @@ GTKDOC_LIBS=$(top_builddir)/numcosmo/libnumcosmo.la
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make
 
-setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
+setup-build.stamp: $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in

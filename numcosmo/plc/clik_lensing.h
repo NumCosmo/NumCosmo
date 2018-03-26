@@ -27,4 +27,11 @@ double* clik_lensing_cltt_fid(clik_lensing_object* lclik, error **err);
 double* clik_lensing_clpp_fid(clik_lensing_object* lclik, error **_err);
 void clik_lensing_selftest(clik_lensing_object *lclik, char *fpath, error **err);
 
+/*
+ * Author: Sandro Dias Pinto Vitenti
+ * Date: 24/03/2018
+ * Function: clik_lensing_get_check_param
+ */
+void clik_lensing_get_check_param (clik_lensing_object *lclik, char *fpath, double **chkp, double *check_value, int *npar_out, error **err);
+
 #endif

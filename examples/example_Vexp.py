@@ -49,7 +49,7 @@ tau_max = min (cosmo1.tau_max (), -cosmo1.tau_xc (1.0e12))
 k       = 1.0e0
 xb      = cosmo1.xbe ()
 
-print "# tau interval:  (% 22.15g, % 22.15g)" % (tau_min, tau_max)
+print ("# tau interval:  (% 22.15g, % 22.15g)" % (tau_min, tau_max))
 
 Nn    = 100000
 LS    = 1.0e-30
@@ -125,7 +125,7 @@ for tau in tau_a:
 
 mylw = 1
 
-print "# tau classical: (% 22.15g, % 22.15g)" % (cosmo1.tau_qt_c (), cosmo1.tau_qt_e ())
+print ("# tau classical: (% 22.15g, % 22.15g)" % (cosmo1.tau_qt_c (), cosmo1.tau_qt_e ()))
 
 plt.plot (alpha_a, np.array (x1_a)**(-2),     lw=mylw, label = r'$x^{-2}_1$')
 plt.plot (alpha_a, np.array (x2_a)**(-2),     lw=mylw, label = r'$x^{-2}_2$')

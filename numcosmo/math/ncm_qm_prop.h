@@ -44,6 +44,8 @@ G_BEGIN_DECLS
 typedef struct _NcmQMPropClass NcmQMPropClass;
 typedef struct _NcmQMProp NcmQMProp;
 typedef struct _NcmQMPropPrivate NcmQMPropPrivate;
+typedef struct _NcmQMPropGauss NcmQMPropGauss;
+typedef struct _NcmQMPropExp NcmQMPropExp;
 
 struct _NcmQMPropClass
 {
@@ -58,14 +60,36 @@ struct _NcmQMProp
   NcmQMPropPrivate *priv;
 };
 
-typedef struct _NcmQMPropGauss
+/**
+ * NcmQMPropGauss:
+ * 
+ * Gaussian wave-function.
+ * 
+ */
+struct _NcmQMPropGauss
 {
+  /*< private >*/
   gdouble mean;
   gdouble alpha; 
   gdouble sigma;
   gdouble Hi;
   gdouble lnNorm;
-} NcmQMPropGauss;
+};
+
+/**
+ * NcmQMPropExp:
+ * 
+ * Exponential wave-function.
+ * 
+ */
+struct _NcmQMPropExp
+{
+  /*< private >*/
+  gdouble n;
+  gdouble V; 
+  gdouble pV;
+  gdouble lnNorm;
+};
 
 /**
  * NcmQMPropPsi:
@@ -78,12 +102,9 @@ typedef struct _NcmQMPropGauss
  */
 typedef void (*NcmQMPropPsi) (gpointer psi_data, const gdouble x, gdouble *psi);
 
-#if HAVE_SUNDIALS_MAJOR == 3
-#ifdef HAVE_ACB_H
-
 GType ncm_qm_prop_get_type (void) G_GNUC_CONST;
 GType ncm_qm_prop_gauss_get_type (void) G_GNUC_CONST;
-
+GType ncm_qm_prop_exp_get_type (void) G_GNUC_CONST;
 
 NcmQMPropGauss *ncm_qm_prop_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi);
 NcmQMPropGauss *ncm_qm_prop_gauss_dup (NcmQMPropGauss *qm_gauss);
@@ -91,6 +112,14 @@ void ncm_qm_prop_gauss_free (NcmQMPropGauss *qm_gauss);
 
 void ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
 void ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi);
+void ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *lnRS);
+
+NcmQMPropExp *ncm_qm_prop_exp_new (const gdouble n, const gdouble V, const gdouble pV);
+NcmQMPropExp *ncm_qm_prop_exp_dup (NcmQMPropExp *qm_exp);
+void ncm_qm_prop_exp_free (NcmQMPropExp *qm_exp);
+
+void ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi);
+void ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS);
 
 NcmQMProp *ncm_qm_prop_new (void);
 NcmQMProp *ncm_qm_prop_ref (NcmQMProp *qm_prop);
@@ -109,23 +138,19 @@ void ncm_qm_prop_propto (NcmQMProp *qm_prop, const gdouble x, const gdouble t, g
 
 gdouble ncm_qm_prop_propto_norm (NcmQMProp *qm_prop, const gdouble t);
 
-void ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0, gpointer psi_data, const gdouble xi, const gdouble xf);
+void ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf);
 void ncm_qm_prop_set_init_cond_gauss (NcmQMProp *qm_prop, NcmQMPropGauss *qm_gauss, const gdouble xi, const gdouble xf);
+void ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const gdouble xi, const gdouble xf);
 
 void ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf);
-GArray *ncm_qm_prop_get_knots (NcmQMProp *qm_prop);
-GArray *ncm_qm_prop_get_psi (NcmQMProp *qm_prop);
+void ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t);
 
-NcmSpline *ncm_qm_prop_get_rho (NcmQMProp *qm_prop);
-NcmSpline *ncm_qm_prop_get_dS (NcmQMProp *qm_prop);
+GArray *ncm_qm_prop_eval_psi (NcmQMProp *qm_prop, const gdouble *x, const guint len);
+GArray *ncm_qm_prop_eval_rho (NcmQMProp *qm_prop, const gdouble *x, const guint len);
+GArray *ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint len);
 
-NcmSpline *ncm_qm_prop_get_Re_psi (NcmQMProp *qm_prop);
-NcmSpline *ncm_qm_prop_get_Im_psi (NcmQMProp *qm_prop);
-
-#endif
-#endif
+NcmSpline *ncm_qm_prop_peek_rho_s (NcmQMProp *qm_prop);
 
 G_END_DECLS
 
 #endif /* _NCM_QM_PROP_H_ */
-

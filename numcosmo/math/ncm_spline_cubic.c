@@ -158,13 +158,12 @@ _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x)
 {
 	const NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
 	const size_t i = ncm_spline_get_index (s, x);
-
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
     const gdouble a_i  = ncm_vector_get (s->yv, i);
 		const gdouble b_i  = ncm_vector_fast_get (sc->b, i);
 		const gdouble c_i  = ncm_vector_fast_get (sc->c, i);
-		const gdouble d_i  = ncm_vector_fast_get (sc->d, i);
+		const gdouble d_i  = ncm_vector_fast_get (sc->d, i);		
 #ifdef HAVE_FMA
     return fma (fma (fma (d_i, delx, c_i), delx, b_i), delx, a_i);
 #else

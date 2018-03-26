@@ -186,6 +186,8 @@ ncm_dataset_new (void)
 
 /**
  * ncm_dataset_new_list:
+ * @data0: first #NcmData to be added.
+ * @...: a NULL ended list of #NcmData
  *
  * Creates a new #NcmDataset object and adds a NULL ended list
  * of #NcmData. 

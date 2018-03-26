@@ -43,7 +43,7 @@ sld = None
 data_file = "example_data.obj"
 ser = Ncm.Serialize.new (0)
 if not os.path.exists (data_file):
-  print "data file does not exists, run example_create_data.py first."
+  print ("data file does not exists, run example_create_data.py first.")
   sys.exit (-1)
 else:
   sld = ser.from_binfile (data_file)

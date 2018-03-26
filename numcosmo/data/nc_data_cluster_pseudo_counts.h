@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * nc_data_cluster_pseudo_counts.h
- * Copyright (C) 2015 Mariana Penna Lima <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -95,7 +95,7 @@ void nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc);
 void nc_data_cluster_pseudo_counts_set_cad (NcDataClusterPseudoCounts *dcpc, NcClusterAbundance *cad);
 
 void nc_data_cluster_pseudo_counts_set_nclusters (NcDataClusterPseudoCounts *dcpc, guint np);
-guint nc_data_cluster_pseudo_counts_get_obs (NcDataClusterPseudoCounts *dcpc);
+guint nc_data_cluster_pseudo_counts_get_nclusters (NcDataClusterPseudoCounts *dcpc);
 void nc_data_cluster_pseudo_counts_set_obs (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
 void nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
 

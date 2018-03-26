@@ -152,7 +152,7 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                    g_param_spec_ulong ("seed",
                                                         NULL,
                                                         "Algorithm seed",
-                                                        0, G_MAXUINT64, 0,
+                                                        0, G_MAXULONG, 0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,

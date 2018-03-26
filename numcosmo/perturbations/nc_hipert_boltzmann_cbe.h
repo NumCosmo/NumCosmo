@@ -56,6 +56,7 @@ struct _NcHIPertBoltzmannCBE
   /*< private >*/
   NcHIPertBoltzmann parent_instance;
   NcCBE *cbe;
+	NcmVector *PHIPHI_Cls;
   NcmVector *TT_Cls;
   NcmVector *EE_Cls;
   NcmVector *BB_Cls;

@@ -64,7 +64,7 @@ cosmo.props.massnu  = massnu_v
 #
 #  Printing the parameters used.
 #
-print "# Model parameters: "
+print ("# Model parameters: ")
 cosmo.params_log_all ()
 
 #
@@ -78,6 +78,6 @@ for i in range (0, N):
   Dc = dist.comoving (cosmo, z)
   dc = RH_Mpc * Dc
   
-  print "% 10.8f % 22.15g [c/H0] % 22.15g [Mpc]" % (z, Dc, dc)
+  print ("% 10.8f % 22.15g [c/H0] % 22.15g [Mpc]" % (z, Dc, dc))
 
 

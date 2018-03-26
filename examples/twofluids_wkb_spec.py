@@ -33,7 +33,7 @@ Ncm.cfg_init ()
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
 if len (sys.argv) != 2:
-  print "%s w" % (sys.argv[0])
+  print ("%s w" % (sys.argv[0]))
   sys.exit (0)
 
 w      = float (sys.argv[1])
@@ -77,13 +77,13 @@ for lnk in tqdm (lnk_a):
 
   alphaf = cosmo.abs_alpha (1.0e20)
 
-  #print "# Evolving mode %e from %f to %f" % (k, alphai, alphaf)
+  #print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
 
   alphai = -cosmo.abs_alpha (start_alpha1 * k**2)
   pert.get_init_cond_zetaS (cosmo, alphai, 1, 0.25 * math.pi, ci)
   pert.set_init_cond (cosmo, alphai, False, ci)
   
-  print "# Mode 1 k % 21.15e, state module %f" % (k, pert.get_state_mod ())
+  print ("# Mode 1 k % 21.15e, state module %f" % (k, pert.get_state_mod ()))
 
   pert.evolve (cosmo, alphaf)
   v, alphac = pert.peek_state ()
@@ -102,7 +102,7 @@ for lnk in tqdm (lnk_a):
   pert.get_init_cond_zetaS (cosmo, alphai, 2, 0.25 * math.pi, ci)
   pert.set_init_cond (cosmo, alphai, False, ci)
 
-  print "# Mode 2 k % 21.15e, state module %f" % (k, pert.get_state_mod ())
+  print ("# Mode 2 k % 21.15e, state module %f" % (k, pert.get_state_mod ()))
 
   pert.evolve (cosmo, alphaf)
   v, alphac = pert.peek_state ()
