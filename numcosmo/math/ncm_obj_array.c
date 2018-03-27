@@ -223,9 +223,11 @@ ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj)
   g_assert_cmpuint (i, <, oa->len);
 
   g_assert (obj != NULL);
-  
-  g_object_unref (g_ptr_array_index ((GPtrArray *)oa, i));
-  g_ptr_array_index ((GPtrArray *)oa, i) = g_object_ref (obj);
+  if (obj != g_ptr_array_index ((GPtrArray *)oa, i))
+	{
+		g_object_unref (g_ptr_array_index ((GPtrArray *)oa, i));
+		g_ptr_array_index ((GPtrArray *)oa, i) = g_object_ref (obj);
+	}
 }
 
 /**

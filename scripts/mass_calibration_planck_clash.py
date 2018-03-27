@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
    
 #from math import *
 
