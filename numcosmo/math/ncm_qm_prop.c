@@ -537,7 +537,7 @@ ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble 
   const gdouble xmean2  = xmean * xmean;
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   const gdouble lnR     = - 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
-  const gdouble S       = 0.5 * xmean2 * qm_gauss->Hi;
+  const gdouble S       = 0.5 * xmean * qm_gauss->Hi;
 
   lnRS[0] = lnR;
   lnRS[1] = S;
@@ -1241,7 +1241,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
     g_assert_cmpfloat (xi, >, 0.0);
     g_assert_cmpfloat (xf, >, xi);
 
-    if (TRUE)
+    if (FALSE)
     {
       ncm_vector_fast_set (self->knots, 0, xi);
       for (i = 1; i < lp + 1; i++)
@@ -1610,7 +1610,7 @@ _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
     else
       Ydot[i] = 0.0;
   }
-  else
+  else if (FALSE)
   {
     gdouble *Yt      = N_VGetArrayPointer (y);
     gdouble *dYt     = N_VGetArrayPointer (ydot);
@@ -1652,6 +1652,56 @@ _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
     ncm_spline_free (lnR_s);
     ncm_spline_free (S_s);
   }
+  else
+  {
+    gdouble *Yt  = N_VGetArrayPointer (y);
+    gdouble *dYt = N_VGetArrayPointer (ydot);
+    gdouble x[7], S[7], lnR[7];
+    gint np = 5;
+    gint sp = np / 2;
+    gint i;
+    gsl_spline *S_s   = gsl_spline_alloc (gsl_interp_polynomial, np);
+    gsl_spline *lnR_s = gsl_spline_alloc (gsl_interp_polynomial, np);
+    
+    for (i = 0; i < self->nknots; i++)
+    {
+      gdouble xi = Yt[i * 3 + 0];
+      gdouble dSi, d2Si, dlnRi, d2lnRi;
+      gint fi, j;
+      
+      if (i < sp)
+        fi = 0;
+      else if (i + sp + 1 > self->nknots)
+        fi = self->nknots - np;
+      else
+        fi = i - sp;
+
+      for (j = 0; j < np; j++)
+      {
+        gint k = fi + j;
+        x[j]   = Yt[k * 3 + 0];
+        lnR[j] = Yt[k * 3 + 1];
+        S[j]   = Yt[k * 3 + 2];
+      }
+
+      gsl_spline_init (lnR_s, x, lnR, np);
+      gsl_spline_init (S_s, x, S, np);
+
+      dlnRi  = gsl_spline_eval_deriv (lnR_s, xi, NULL);
+      d2lnRi = gsl_spline_eval_deriv2 (lnR_s, xi, NULL);
+      dSi    = gsl_spline_eval_deriv (S_s, xi, NULL);
+      d2Si   = gsl_spline_eval_deriv2 (S_s, xi, NULL);
+      
+      dYt[i * 3 + 0] = 2.0 * dSi;
+      dYt[i * 3 + 1] = - d2Si;
+      dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
+
+    }
+    
+    gsl_spline_free (S_s);
+    gsl_spline_free (lnR_s);
+  }
+    
   return 0; 
 }
 /*
@@ -2108,12 +2158,15 @@ ncm_qm_prop_eval_psi (NcmQMProp *qm_prop, const gdouble *x, const guint len)
   
   for (i = 0; i < len; i++)
   {
-    const gdouble Re_psi_i = ncm_spline_eval (self->Re_psi_s, x[i]);
-    const gdouble Im_psi_i = ncm_spline_eval (self->Im_psi_s, x[i]);
+    const gdouble lnR_i        = ncm_spline_eval (self->rho_s, x[i]);
+    const gdouble S_i          = ncm_spline_eval (self->dS_s, x[i]);
+    const complex double psi_i = cexp (lnR_i + I * S_i);
+    /*const gdouble Re_psi_i = ncm_spline_eval (self->Re_psi_s, x[i]);*/
+    /*const gdouble Im_psi_i = ncm_spline_eval (self->Im_psi_s, x[i]);*/
     /*const gdouble f1       = pow (x[i], self->gamma);*/
 
-    g_array_index (psi, gdouble, 2 * i + 0) = Re_psi_i;
-    g_array_index (psi, gdouble, 2 * i + 1) = Im_psi_i;
+    g_array_index (psi, gdouble, 2 * i + 0) = creal (psi_i);
+    g_array_index (psi, gdouble, 2 * i + 1) = cimag (psi_i);
   }
 
   return psi;
@@ -2145,7 +2198,7 @@ ncm_qm_prop_eval_rho (NcmQMProp *qm_prop, const gdouble *x, const guint len)
     /*const gdouble f1    = pow (x[i], 2.0 * self->gamma);*/
 
     /*printf ("rho(% 22.15g) = % 22.15g, % 22.15g\n", x[i], rho_i, sqrt (rho_i));*/
-    g_array_index (rho, gdouble, i) = lnR_i;
+    g_array_index (rho, gdouble, i) = exp (2.0 * lnR_i);
   }
 
   return rho;
@@ -2172,7 +2225,7 @@ ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint len)
 
   for (i = 0; i < len; i++)
   {
-    const gdouble dS_i  = ncm_spline_eval (self->dS_s, x[i]);
+    const gdouble dS_i  = ncm_spline_eval_deriv (self->dS_s, x[i]);
     g_array_index (dS, gdouble, i) = dS_i;
   }
 
@@ -2192,4 +2245,48 @@ ncm_qm_prop_peek_rho_s (NcmQMProp *qm_prop)
 {
   NcmQMPropPrivate * const self = qm_prop->priv;
   return self->rho_s;
+}
+
+static gdouble
+_ncm_qm_prop_eval_rho (const gdouble x, gpointer user_data)
+{
+  NcmQMPropPrivate * const self = user_data;
+  const gdouble lnR_i = ncm_spline_eval (self->rho_s, x);
+
+  return exp (2.0 * lnR_i);
+}
+
+/**
+ * ncm_qm_prop_eval_int_rho:
+ * @qm_prop: a #NcmQMProp
+ * 
+ * Computes $\int\mathrm{d}x\rho(x)$.
+ * 
+ * Returns: $\int\mathrm{d}x\rho(x)$.
+ */
+gdouble
+ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble int_rho = 0.0;
+  gdouble int_err = 0.0;
+  NcmVector *x = ncm_spline_get_xv (self->rho_s);
+
+  F.function = &_ncm_qm_prop_eval_rho;
+  F.params   = self;
+
+  
+
+  gsl_integration_qag (&F, 
+                       ncm_vector_get (x, 0), 
+                       ncm_vector_get (x, self->nknots - 1), 
+                       0.0, self->reltol, 
+                       NCM_INTEGRAL_PARTITION, 6, *w, &int_rho, &int_err);
+
+  ncm_memory_pool_return (w);
+  ncm_vector_free (x);
+  
+  return int_rho;
 }

@@ -334,6 +334,10 @@
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
     </section>
+    <section>
+      <title>Galaxy ACF</title>
+      <xi:include href="xml/nc_galaxy_selfunc.xml"/>    
+    </section>
   </chapter>
   
   <chapter>
