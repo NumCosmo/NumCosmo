@@ -65,9 +65,10 @@
 #endif /* HAVE_ACB_H  */
 
 #include <nvector/nvector_serial.h>
+/*
 #include <nvector/nvector_pthreads.h>
 #include <nvector/nvector_openmp.h>
-
+*/
 #if HAVE_SUNDIALS_MAJOR == 3
 #include <arkode/arkode.h>
 #include <sunlinsol/sunlinsol_band.h>
@@ -1318,7 +1319,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
 
   g_clear_pointer (&self->y, N_VDestroy);
   self->y = N_VNew_Serial (3 * self->nknots);
-  //self->y = N_VNew_OpenMP (3 * self->nknots, 20);
+  /*self->y = N_VNew_OpenMP (3 * self->nknots, 20);*/
   NCM_CVODE_CHECK (&self->y, "N_VNew_Serial", 0, );
 
   if (FALSE)
