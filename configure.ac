@@ -864,6 +864,8 @@ AC_SUBST(SUNDIALS_LIBS)
 AC_SUBST(SUNDIALS_CFLAGS)
 
 AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[

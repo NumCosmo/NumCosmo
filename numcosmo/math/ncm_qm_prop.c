@@ -65,11 +65,15 @@
 #endif /* HAVE_ACB_H  */
 
 #include <nvector/nvector_serial.h>
+#include <nvector/nvector_pthreads.h>
+#include <nvector/nvector_openmp.h>
 
 #if HAVE_SUNDIALS_MAJOR == 3
 #include <arkode/arkode.h>
+#include <sunlinsol/sunlinsol_band.h>
 #include <sunlinsol/sunlinsol_pcg.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
+#include <arkode/arkode_direct.h>
 #include <arkode/arkode_spils.h>
 #include <arkode/arkode_bandpre.h>
 #include <sundials/sundials_types.h>
@@ -124,6 +128,7 @@ struct _NcmQMPropPrivate
   N_Vector yt;
 #if HAVE_SUNDIALS_MAJOR == 3
   SUNLinearSolver LS;
+  SUNMatrix A;
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
   gpointer arkode;
   gsl_dht *dht;
@@ -193,6 +198,7 @@ ncm_qm_prop_init (NcmQMProp *qm_prop)
   self->yt         = NULL;
 #if HAVE_SUNDIALS_MAJOR == 3
   self->LS         = NULL;
+  self->A          = NULL;
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
   self->arkode     = NULL;
 
@@ -291,6 +297,7 @@ _ncm_qm_prop_dispose (GObject *object)
   g_clear_pointer (&self->y, N_VDestroy);
 #if HAVE_SUNDIALS_MAJOR == 3
   g_clear_pointer (&self->LS, SUNLinSolFree);
+  g_clear_pointer (&self->A, SUNMatDestroy);
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
   ncm_vector_clear (&self->knots);
@@ -1311,6 +1318,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
 
   g_clear_pointer (&self->y, N_VDestroy);
   self->y = N_VNew_Serial (3 * self->nknots);
+  //self->y = N_VNew_OpenMP (3 * self->nknots, 20);
   NCM_CVODE_CHECK (&self->y, "N_VNew_Serial", 0, );
 
   if (FALSE)
@@ -1383,7 +1391,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
       Y[i * 3] = x;
       psi0_lnRS (psi_data, x, &Y[i * 3 + 1]);
 
-      printf ("% 22.15g % 22.15g % 22.15g\n", Y[i * 3 + 0], Y[i * 3 + 1], Y[i * 3 + 2]);
+      /*printf ("% 22.15g % 22.15g % 22.15g\n", Y[i * 3 + 0], Y[i * 3 + 1], Y[i * 3 + 2]);*/
     }
 
     _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y);
@@ -1462,30 +1470,49 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
 
   //flag = ARKodeSetAdaptivityMethod (self->arkode, 2, 1, 0, NULL);
   //NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptivityMethod", 1, );
-  
+
   //flag = ARKodeSetPredictorMethod (self->arkode, 4);
   //NCM_CVODE_CHECK (&flag, "ARKodeSetPredictorMethod", 1, );
 
   //flag = ARKodeSetLinear (self->arkode, 0);
   //NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
 
-  self->LS = SUNSPGMR (self->y, PREC_NONE, self->nknots);
-  NCM_CVODE_CHECK (&flag, "SUNSPGMR", 1, );  
-  
-/*  
-  self->LS = SUNPCG (self->y, 0, self->nknots);
-  NCM_CVODE_CHECK (&flag, "SUNPCG", 1, );
-*/
-  flag = ARKSpilsSetLinearSolver (self->arkode, self->LS);
-  NCM_CVODE_CHECK (&flag, "ARKSpilsSetLinearSolver", 1, );
+  if (TRUE)
+  {
+    self->LS = SUNSPGMR (self->y, PREC_NONE, self->nknots);
+    NCM_CVODE_CHECK (&flag, "SUNSPGMR", 1, );  
+
+    self->LS = SUNPCG (self->y, 0, self->nknots);
+    NCM_CVODE_CHECK (&flag, "SUNPCG", 1, );
+
+    flag = ARKSpilsSetLinearSolver (self->arkode, self->LS);
+    NCM_CVODE_CHECK (&flag, "ARKSpilsSetLinearSolver", 1, );
+
 /*
-  flag = ARKSpilsSetJacTimes (self->arkode, NULL, _ncm_qm_prop_J);
-  NCM_CVODE_CHECK (&flag, "ARKSpilsSetJacTimes", 1, );
+     flag = ARKSpilsSetJacTimes (self->arkode, NULL, _ncm_qm_prop_J);
+     NCM_CVODE_CHECK (&flag, "ARKSpilsSetJacTimes", 1, );
 */
-/*  
-  flag = ARKBandPrecInit (self->arkode, 2 * self->nknots, 4, 4);
-  NCM_CVODE_CHECK (&flag, "ARKBandPrecInit", 1, );
+/*
+    flag = ARKBandPrecInit (self->arkode, 3 * self->nknots, 12, 12);
+    NCM_CVODE_CHECK (&flag, "ARKBandPrecInit", 1, );
 */
+  }
+  else
+  {
+    self->A = SUNBandMatrix (3 * self->nknots, 12, 12, 24);
+    NCM_CVODE_CHECK ((gpointer)self->A, "SUNBandMatrix", 0, );
+
+    self->LS = SUNBandLinearSolver (self->y, self->A);
+    NCM_CVODE_CHECK ((gpointer)self->LS, "SUNBandLinearSolver", 0, );
+
+    flag = ARKDlsSetLinearSolver (self->arkode, self->LS, self->A);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetLinearSolver", 1, );
+
+    /* Use a difference quotient Jacobian */
+    flag = ARKDlsSetJacFn (self->arkode, NULL);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
+    
+  }
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 }
 
@@ -2017,7 +2044,7 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
   flag = ARKodeSetStopTime (self->arkode, tf);
   NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-  /*printf ("# Evolving! % 22.15g => % 22.15g\n", t, tf);*/
+  printf ("# Evolving! % 22.15g => % 22.15g\n", t, tf);
 #if 0
   glong iout = 0;
   glong nni, nni_cur = 0; 
@@ -2035,7 +2062,7 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
 
     /*_ncm_qm_prop_prepare_splines (self, t, Y);*/
     /*printf ("# STEP % 22.15g\n", t);*/
-    printf ("# STEP % 22.15g % 22.15g % 22.15g % 22.15g\n", t, Y[0], Y[1], Y[2]);
+    /*printf ("# STEP % 22.15g % 22.15g % 22.15g % 22.15g\n", t, Y[0], Y[1], Y[2]);*/
 
 #if 0
     flag = ARKodeGetLastStep (self->arkode, &olddt);
