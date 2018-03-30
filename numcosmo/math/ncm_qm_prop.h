@@ -152,6 +152,7 @@ GArray *ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint l
 NcmSpline *ncm_qm_prop_peek_rho_s (NcmQMProp *qm_prop);
 
 gdouble ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop);
 
 G_END_DECLS
 

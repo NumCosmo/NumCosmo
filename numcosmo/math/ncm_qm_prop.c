@@ -545,7 +545,7 @@ ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble 
   const gdouble xmean2  = xmean * xmean;
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   const gdouble lnR     = - 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
-  const gdouble S       = 0.5 * xmean * qm_gauss->Hi;
+  const gdouble S       = 0.5 * x * x * qm_gauss->Hi;
 
   lnRS[0] = lnR;
   lnRS[1] = S;
@@ -2284,6 +2284,15 @@ _ncm_qm_prop_eval_rho (const gdouble x, gpointer user_data)
   return exp (2.0 * lnR_i);
 }
 
+static gdouble
+_ncm_qm_prop_eval_xrho (const gdouble x, gpointer user_data)
+{
+  NcmQMPropPrivate * const self = user_data;
+  const gdouble lnR_i = ncm_spline_eval (self->rho_s, x);
+
+  return x * exp (2.0 * lnR_i);
+}
+
 /**
  * ncm_qm_prop_eval_int_rho:
  * @qm_prop: a #NcmQMProp
@@ -2306,6 +2315,39 @@ ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop)
   F.params   = self;
 
   
+
+  gsl_integration_qag (&F, 
+                       ncm_vector_get (x, 0), 
+                       ncm_vector_get (x, self->nknots - 1), 
+                       0.0, self->reltol, 
+                       NCM_INTEGRAL_PARTITION, 6, *w, &int_rho, &int_err);
+
+  ncm_memory_pool_return (w);
+  ncm_vector_free (x);
+  
+  return int_rho;
+}
+
+/**
+ * ncm_qm_prop_eval_int_xrho:
+ * @qm_prop: a #NcmQMProp
+ * 
+ * Computes $\int\mathrm{d}x\;x\rho(x)$.
+ * 
+ * Returns: $\int\mathrm{d}x\;x\rho(x)$.
+ */
+gdouble
+ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble int_rho = 0.0;
+  gdouble int_err = 0.0;
+  NcmVector *x = ncm_spline_get_xv (self->rho_s);
+
+  F.function = &_ncm_qm_prop_eval_xrho;
+  F.params   = self;
 
   gsl_integration_qag (&F, 
                        ncm_vector_get (x, 0), 

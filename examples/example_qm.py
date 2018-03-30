@@ -50,7 +50,7 @@ Ncm.cfg_init ()
 
 p = Ncm.QMProp.new ()
 l1                 = 500.0
-H0                 = -3.0
+H0                 = -1.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-11
 p.props.nknots     = 151
@@ -68,7 +68,7 @@ psi0 = Ncm.QMPropGauss.new (offset + 10.0, 1.0, 1.0, H0)
 #print (psi0.eval (1.0))
 sim   = True
 tstep = 5.0e-3
-tf    = 4.5
+tf    = 5.0
 xf    = offset + 15.01
 xfp   = offset + 20.0
 xi    = offset
@@ -113,7 +113,9 @@ fig.tight_layout()
 #lines = [ax.plot([], [])[0] for _ in range(N)]
 lines.append (ttl)
 
-lines.append (ax2.plot ([], [], 'bo')[0])
+lines.append (ax2.plot ([], [], 'bo', label=r'Bohm')[0])
+lines.append (ax2.plot ([], [], 'ro', label=r'$\langle a(t)\rangle$')[0])
+ax2.legend (loc='best')
 
 ta   = [0.0]
 traj = []
@@ -125,6 +127,9 @@ for i in range (n1):
   qi = [q[i * s1]]
   traj.append (qi)
 
+lines.append (ax2.plot ([], [])[0])
+traj.append ([p.eval_int_xrho ()])
+
 def init():    
   lines[0].set_data ([], [])
   lines[1].set_data ([], [])
@@ -132,8 +137,9 @@ def init():
   lines[3].set_data ([], [])
   lines[4].set_text (None)
   lines[5].set_data ([], [])
+  lines[6].set_data ([], [])
   for i in range (n1):
-    lines[i + 6].set_data ([], [])
+    lines[i + 7].set_data ([], [])
 
   return lines
 
@@ -152,12 +158,15 @@ if not sim:
   
     y = []
   
+    qm = p.eval_int_xrho ()
+  
     y.append (np.sqrt (rho))
     y.append (psi[0::2])
     y.append (psi[1::2])
     y.append (dS / xf)
     y.append (q[::s1])
     y.append (p.eval_int_rho ())
+    y.append (qm)
 
     x_t.append (x)
     y_t.append (y)
@@ -165,6 +174,7 @@ if not sim:
     ta.append (tf)
     for i in range (n1):
       traj[i].append (q[i * s1])
+    traj[n1].append (qm)
 
 def animate(i):
   tf = tstep * i
@@ -185,14 +195,20 @@ def animate(i):
     lines[2].set_data (x, psi[1::2])
     lines[3].set_data (x, dS / xf)
   
+    qm = p.eval_int_xrho ()
+  
     nq = len (q[::s1])
     tfa = [tf] * nq
     lines[5].set_data (tfa, q[::s1])
+    lines[6].set_data ([tf], [qm])
 
     ta.append (tf)
     for i in range (n1):
       traj[i].append (q[i * s1])
-      lines[i + 6].set_data (ta, traj[i])
+      lines[i + 7].set_data (ta, traj[i])
+    
+    traj[n1].append (qm)
+    lines[n1 + 7].set_data (ta, traj[n1])
 
     ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.eval_int_rho ()))
   
@@ -204,8 +220,12 @@ def animate(i):
     lines[3].set_data (x_t[i], y_t[i][3])
   
     lines[5].set_data (ta[i], y_t[i][4])
+    lines[6].set_data (ta[i], y_t[i][6])
+    
     for j in range (n1):
-      lines[j + 6].set_data (ta[0:i], traj[j][0:i])
+      lines[j + 7].set_data (ta[0:i], traj[j][0:i])
+    
+    lines[n1 + 7].set_data (ta[0:i], traj[n1][0:i])
 
     ttl.set_text ("t = % .15f, norma = % .15f" % (ta[i], y_t[i][5]))
 
@@ -213,8 +233,8 @@ def animate(i):
 
 anim = animation.FuncAnimation (fig, animate, np.arange (0, int (tf / tstep)), init_func = init, interval = 1, blit = True, repeat = True)
 
-mywriter = animation.FFMpegWriter(fps = 24)
-anim.save ('qm_evol_lambda_%f_H0_%f.mp4' % (l1, H0), writer = mywriter)
+#mywriter = animation.FFMpegWriter(fps = 24)
+#anim.save ('qm3_evol_lambda_%f_H0_%f.mp4' % (l1, H0), writer = mywriter)
 
-#plt.show ()
+plt.show ()
 
