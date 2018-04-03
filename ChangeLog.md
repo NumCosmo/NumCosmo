@@ -3,6 +3,38 @@ CHANGELOG
 
 [Current]
 
+[v0.14.1]
+ * New version 0.14.1.
+
+ * Included link for parallel linear solvers in sundials. Fixed bug in nc_cbe
+     (lensed CMB requirements).
+
+ * Updated examples to python3. New object nc_galaxy_selfunc. Working on
+     ncm_qm_prop.
+
+ * Fixed possible (impossible in practice) overflow in background.c. Added support
+     for binder.
+
+ * Fixed several documentation glitches.
+
+ * Finished support for Planck lensing likelihood.
+
+ * Created data object NcDataReducedShearClusterMass. Work on progress.
+
+ * Fixed bug in ncm_spline.h. Working on ncm_qm_prop.
+
+ * Included properties. Work in progress.
+
+ * Improved regex that greps SUNDIALS_VERSION in configure.ac.
+
+ * Working on example_qm.c, removed old file from numcosmo-docs.sgml.in, added
+     quotes to SUNDIALS_VERSION grep in configure.ac.
+
+ * Implementing object to estimate mass from reduced shear. Work in progress.
+
+ * Fixed data install path. Tweaked fit tests.
+
+
 [v0.14.0]
  * Fixed data install path. Tweaked fit tests.
 

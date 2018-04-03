@@ -674,7 +674,8 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
 
   g_object_class_install_property (object_class, prop_id,
                                    g_param_spec_double (ncm_sparam_name (sparam), NULL, ncm_sparam_symbol (sparam),
-                                                        ncm_sparam_get_lower_bound (sparam), ncm_sparam_get_upper_bound (sparam),
+                                                        /*ncm_sparam_get_lower_bound (sparam), ncm_sparam_get_upper_bound (sparam),*/ /*old behavior*/
+                                                        -G_MAXDOUBLE, +G_MAXDOUBLE, 
                                                         ncm_sparam_get_default_value (sparam),
                                                         G_PARAM_READWRITE));
 

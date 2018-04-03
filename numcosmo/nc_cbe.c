@@ -1313,7 +1313,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 
 	cbe->priv->ppt.has_cl_cmb_temperature              = cbe->target_Cls & NC_DATA_CMB_TYPE_TT ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_cl_cmb_polarization             = cbe->target_Cls & (NC_DATA_CMB_TYPE_EE | NC_DATA_CMB_TYPE_BB | NC_DATA_CMB_TYPE_TE) ? _TRUE_ : _FALSE_;
-	cbe->priv->ppt.has_cl_cmb_lensing_potential        = cbe->target_Cls & NC_DATA_CMB_TYPE_PHIPHI ? _TRUE_ : _FALSE_;
+	cbe->priv->ppt.has_cl_cmb_lensing_potential        = ((cbe->target_Cls & NC_DATA_CMB_TYPE_PHIPHI) || (cbe->use_lensed_Cls)) ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_cl_number_count                 = _FALSE_;
 	cbe->priv->ppt.has_cl_lensing_potential            = _FALSE_;
 	cbe->priv->ppt.has_pk_matter                       = cbe->calc_transfer ? _TRUE_ : _FALSE_;
@@ -1529,7 +1529,7 @@ _nc_cbe_set_spectra (NcCBE* cbe, NcHICosmo* cosmo)
 static void
 _nc_cbe_set_lensing (NcCBE* cbe, NcHICosmo* cosmo)
 {
-	cbe->priv->ple.has_lensed_cls = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
+	cbe->priv->ple.has_lensed_cls  = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
 	cbe->priv->ple.lensing_verbose = cbe->lensing_verbose;
 }
 
@@ -2217,11 +2217,11 @@ nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, NcmVec
 		const gdouble T_gamma0 = cbe->priv->pba.T_cmb;
 		const gdouble Cl_fac   = gsl_pow_2 (1.0e6 * T_gamma0);
 		gdouble *all_Cls       = g_new0 (gdouble, all_Cls_size);
-		guint PHIPHI_lmax      = has_tt ? (PHIPHI_Cls != NULL ? ncm_vector_len (PHIPHI_Cls) : 0) : 0;
+		guint PHIPHI_lmax      = has_pp ? (PHIPHI_Cls != NULL ? ncm_vector_len (PHIPHI_Cls) : 0) : 0;
 		guint TT_lmax          = has_tt ? (TT_Cls     != NULL ? ncm_vector_len (TT_Cls)     : 0) : 0;
-		guint EE_lmax          = has_tt ? (EE_Cls     != NULL ? ncm_vector_len (EE_Cls)     : 0) : 0;
-		guint BB_lmax          = has_tt ? (BB_Cls     != NULL ? ncm_vector_len (BB_Cls)     : 0) : 0;
-		guint TE_lmax          = has_tt ? (TE_Cls     != NULL ? ncm_vector_len (TE_Cls)     : 0) : 0;
+		guint EE_lmax          = has_ee ? (EE_Cls     != NULL ? ncm_vector_len (EE_Cls)     : 0) : 0;
+		guint BB_lmax          = has_bb ? (BB_Cls     != NULL ? ncm_vector_len (BB_Cls)     : 0) : 0;
+		guint TE_lmax          = has_te ? (TE_Cls     != NULL ? ncm_vector_len (TE_Cls)     : 0) : 0;
 		guint l;
 
 		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_PHIPHI) || has_pp);
