@@ -930,6 +930,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Gets the minimum/maximum value of the vector components.
  *
  */
+/**
+ * ncm_vector_is_finite:
+ * @cv: a @NcmVector.
+ *
+ * Tests all entries, if one or more are not finite return FALSE.
+ * Otherwise returns TRUE;
+ * 
+ * Returns: whether all components of @cv are finite.
+ */
 
 /**
  * ncm_vector_get_absminmax:

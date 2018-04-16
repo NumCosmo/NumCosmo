@@ -74,6 +74,8 @@
 void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
 void dpotrf_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
 void dpotri_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
+void dpotrs_ (const char *uplo, const gint *n, const gint *nrhs, double *a, const gint *lda, double *b, const gint *ldb, gint *info);
+void dposv_ (const char *uplo, const gint *n, const gint *nrhs, double *a, const gint *lda, double *b, const gint *ldb, gint *info);
 void dggglm_ (const gint *N, const gint *M, const gint *P, gdouble *X, const gint *LDA, gdouble *L, const gint *LDB, 
               gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
 #endif /* HAVE_LAPACK */
@@ -140,9 +142,9 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size)
 /**
  * ncm_lapack_dpotrf:
  * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @size: The order of the matrix @a.  @size >= 0
+ * @size: The order of the matrix @a, @size >= 0
  * @a: array of doubles with dimension (@size, @lda)
- * @lda: The leading dimension of the array @a.  @lda >= max(1,@size)
+ * @lda: The leading dimension of the array @a, @lda >= max (1,@size)
  *
  * This function computes the Cholesky factorization of a real symmetric
  * positive definite matrix @a.
@@ -169,11 +171,7 @@ ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
 #elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
   gint ret = clapack_dpotrf (CblasRowMajor, 
                              uplo == 'U' ? CblasUpper : CblasLower, 
-                             size, a, size);
-  if (ret < 0)
-    g_error ("ncm_lapack_dpotrf: invalid parameter %d", -ret);
-  else if (ret > 0)
-    g_error ("ncm_lapack_dpotrf: the leading minor of order %d is not positive definite", ret);
+                             size, a, lda);
   return ret;
 #elif defined HAVE_LAPACK
   gint info = 0;
@@ -187,7 +185,7 @@ ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
   gint ret;
   gsl_matrix_view mv = gsl_matrix_view_array_with_tda (a, size, size, lda);
   ret = gsl_linalg_cholesky_decomp (&mv.matrix);
-  NCM_TEST_GSL_RESULT("gsl_linalg_cholesky_decomp", ret);
+  NCM_TEST_GSL_RESULT ("gsl_linalg_cholesky_decomp", ret);
   return ret; /* THAT'S NOT OK FIXME */
 #endif
 }
@@ -195,13 +193,13 @@ ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
 /**
  * ncm_lapack_dpotri:
  * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @size: The order of the matrix @a.  @size >= 0
+ * @size: The order of the matrix @a, @size >= 0
  * @a: array of doubles with dimension (@size, @lda)
- * @lda: The leading dimension of the array @a.  @lda >= max(1,@size)
+ * @lda: The leading dimension of the array @a, @lda >= max (1,@size)
  *
  * This function computes the inverse of a real symmetric positive
  * definite matrix @a = A using the Cholesky factorization 
- * $A = U^T*U$ or $A = L*L^T$ computed by %ncm_lapack_dpotrf.
+ * $A = U^T*U$ or $A = L*L^T$ computed by ncm_lapack_dpotrf().
  *
  * Returns: i = 0:  successful exit
  * 
@@ -219,11 +217,7 @@ ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda)
 #elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
   gint ret = clapack_dpotri (CblasRowMajor, 
                              uplo == 'U' ? CblasUpper : CblasLower, 
-                             size, a, size);
-  if (ret < 0)
-    g_error ("ncm_lapack_dpotrf: invalid parameter %d", -ret);
-  else if (ret > 0)
-    g_error ("ncm_lapack_dpotrf: the leading minor of order %d is not positive definite", ret);
+                             size, a, lda);
   return ret;
 #elif defined HAVE_LAPACK
   gint info = 0;
@@ -237,8 +231,105 @@ ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda)
   gint ret;
   gsl_matrix_view mv = gsl_matrix_view_array_with_tda (a, size, size, lda);
   ret = gsl_linalg_cholesky_invert (&mv.matrix);
-  NCM_TEST_GSL_RESULT("gsl_linalg_cholesky_decomp", ret);
+  NCM_TEST_GSL_RESULT ("gsl_linalg_cholesky_decomp", ret);
   return ret; /* THAT'S NOT OK FIXME */
+#endif
+}
+
+/**
+ * ncm_lapack_dpotrs:
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
+ * @size: The order of the matrix @a, @size >= 0
+ * @nrhs: Number of right-hand-side vectors to solve
+ * @a: array of doubles with dimension (@size, @lda)
+ * @lda: The leading dimension of the array @a, @lda >= max (1, @size)
+ * @b: array of doubles with dimension (@size, @ldb)
+ * @ldb: The leading dimension of the array @b, @ldb >= max (1, @size)
+ *
+ * This function computes the solution of $A X = B$ for a real symmetric positive
+ * definite matrix @a = A using the Cholesky factorization $A = U^T*U$ or $A = L*L^T$
+ * already performed by ncm_lapack_dpotrf().
+ * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
+ * is 0.
+ *
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U
+ *            or L is zero, and the inverse could not be computed.
+ */
+gint 
+ncm_lapack_dpotrs (gchar uplo, guint size, guint nrhs, gdouble *a, guint lda, gdouble *b, guint ldb)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info = LAPACKE_dpotrs (LAPACK_ROW_MAJOR, uplo, size, nrhs, a, lda, b, ldb);
+  return info;
+#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
+	gint ret = clapack_dpotrs (CblasRowMajor, 
+	                          uplo == 'U' ? CblasUpper : CblasLower, 
+	                          size, a, lda, b, ldb);
+  return ret;
+#elif defined HAVE_LAPACK
+  gint info = 0;
+  gint n    = size;
+  gint NRHS = nrhs;
+  gint LDA  = lda;
+  gint LDB  = ldb;
+  
+  uplo = _NCM_LAPACK_CONV_UPLO (uplo);
+  dpotrs_ (&uplo, &n, &NRHS, a, &LDA, b, &LDB, &info);  
+  return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dpotrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dposv:
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
+ * @size: The order of the matrix @a, @size >= 0
+ * @nrhs: Number of right-hand-side vectors to solve
+ * @a: array of doubles with dimension (@size, @lda)
+ * @lda: The leading dimension of the array @a, @lda >= max (1, @size)
+ * @b: array of doubles with dimension (@size, @ldb)
+ * @ldb: The leading dimension of the array @b, @ldb >= max (1, @size)
+ *
+ * This function computes the solution of $A X = B$ for a real symmetric positive
+ * definite matrix @a = A using the Cholesky factorization $A = U^T*U$ or $A = L*L^T$.
+ * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
+ * is 0.
+ *
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U
+ *            or L is zero, and the inverse could not be computed.
+ */
+gint 
+ncm_lapack_dposv (gchar uplo, guint size, guint nrhs, gdouble *a, guint lda, gdouble *b, guint ldb)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info = LAPACKE_dposv (LAPACK_ROW_MAJOR, uplo, size, nrhs, a, lda, b, ldb);
+  return info;
+#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
+	gint ret = clapack_dposv (CblasRowMajor, 
+	                          uplo == 'U' ? CblasUpper : CblasLower, 
+	                          size, a, lda, b, ldb);
+  return ret;
+#elif defined HAVE_LAPACK
+  gint info = 0;
+  gint n    = size;
+  gint NRHS = nrhs;
+  gint LDA  = lda;
+  gint LDB  = ldb;
+  
+  uplo = _NCM_LAPACK_CONV_UPLO (uplo);
+  dposv_ (&uplo, &n, &NRHS, a, &LDA, b, &LDB, &info);  
+  return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dposv: lapack not present, no fallback implemented.");
 #endif
 }
 

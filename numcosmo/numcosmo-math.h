@@ -54,6 +54,7 @@
 #include <numcosmo/math/ncm_spline_gsl.h>
 #include <numcosmo/math/ncm_spline_cubic.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/math/ncm_spline_rbf.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>

@@ -53,7 +53,7 @@ l1                 = 500.0
 H0                 = -1.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-11
-p.props.nknots     = 151
+p.props.nknots     = 101
 p.props.noboundary = False
 p.set_property ("lambda", l1)
 s1 = int (p.props.nknots / 10)
@@ -67,11 +67,12 @@ psi0 = Ncm.QMPropGauss.new (offset + 10.0, 1.0, 1.0, H0)
 
 #print (psi0.eval (1.0))
 sim   = True
-tstep = 5.0e-3
+tstep = 9.0e-3
 tf    = 5.0
 xf    = offset + 15.01
 xfp   = offset + 20.0
 xi    = offset
+dSdiv = xf
 p.set_init_cond_gauss (psi0, offset + 5.0, xf)
 #p.set_init_cond_exp (psi0, 0.0, xf)
 
@@ -163,7 +164,7 @@ if not sim:
     y.append (np.sqrt (rho))
     y.append (psi[0::2])
     y.append (psi[1::2])
-    y.append (dS / xf)
+    y.append (dS / dSdiv)
     y.append (q[::s1])
     y.append (p.eval_int_rho ())
     y.append (qm)
@@ -193,7 +194,7 @@ def animate(i):
     lines[0].set_data (x, np.sqrt (rho))
     lines[1].set_data (x, psi[0::2])
     lines[2].set_data (x, psi[1::2])
-    lines[3].set_data (x, dS / xf)
+    lines[3].set_data (x, dS / dSdiv)
   
     qm = p.eval_int_xrho ()
   

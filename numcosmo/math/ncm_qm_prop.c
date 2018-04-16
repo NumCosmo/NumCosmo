@@ -1438,7 +1438,8 @@ ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const g
   ncm_qm_prop_set_init_cond (qm_prop, (NcmQMPropPsi) &ncm_qm_prop_exp_eval_lnRS, qm_exp, xi, xf);
 }
 
-static gint _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
+static gint _ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
+static gint _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
 /*static gint _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);*/
 
 void
@@ -1457,7 +1458,7 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
   self->arkode = ARKodeCreate ();
   NCM_CVODE_CHECK (&self->arkode, "ARKodeCreate", 0, );
 
-  flag = ARKodeInit (self->arkode, NULL, &_ncm_qm_prop_f, t0, self->y);
+  flag = ARKodeInit (self->arkode, &_ncm_qm_prop_f_expl, &_ncm_qm_prop_f_impl, t0, self->y);
   NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
   flag = ARKodeSetUserData (self->arkode, (void *) qm_prop);
@@ -1483,9 +1484,9 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
     self->LS = SUNSPGMR (self->y, PREC_NONE, self->nknots);
     NCM_CVODE_CHECK (&flag, "SUNSPGMR", 1, );  
 
-    self->LS = SUNPCG (self->y, 0, self->nknots);
+/*    self->LS = SUNPCG (self->y, 0, self->nknots);
     NCM_CVODE_CHECK (&flag, "SUNPCG", 1, );
-
+*/
     flag = ARKSpilsSetLinearSolver (self->arkode, self->LS);
     NCM_CVODE_CHECK (&flag, "ARKSpilsSetLinearSolver", 1, );
 
@@ -1498,7 +1499,7 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
     NCM_CVODE_CHECK (&flag, "ARKBandPrecInit", 1, );
 */
   }
-  else
+  else if (FALSE)
   {
     self->A = SUNBandMatrix (3 * self->nknots, 12, 12, 24);
     NCM_CVODE_CHECK ((gpointer)self->A, "SUNBandMatrix", 0, );
@@ -1513,6 +1514,11 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
     flag = ARKDlsSetJacFn (self->arkode, NULL);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
     
+  }
+  else
+  {
+    flag = ARKodeSetFixedPoint (self->arkode, 100);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetFixedPoint", 1, );
   }
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 }
@@ -1598,7 +1604,7 @@ _ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const c
 #if HAVE_SUNDIALS_MAJOR == 3
 
 static gint 
-_ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
+_ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
 {
   NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
   NcmQMPropPrivate * const self = qm_prop->priv;
@@ -1721,6 +1727,142 @@ _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
       d2Si   = gsl_spline_eval_deriv2 (S_s, xi, NULL);
       
       dYt[i * 3 + 0] = 2.0 * dSi;
+/*      dYt[i * 3 + 1] = - d2Si;
+      dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
+*/
+    }
+    
+    gsl_spline_free (S_s);
+    gsl_spline_free (lnR_s);
+  }
+    
+  return 0; 
+}
+
+static gint 
+_ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
+{
+  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  complex double *Y    = NULL;
+  complex double *Ydot = NULL;
+  sunindextype i;
+  
+  Y    = (complex double *) N_VGetArrayPointer (y);
+  Ydot = (complex double *) N_VGetArrayPointer (ydot);
+
+  N_VConst (0.0, ydot);
+
+  if (FALSE)
+  {
+    Ydot[0] = 0.0;
+    for (i = 1; i < self->nknots - 1; i++)
+    {
+      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
+      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
+      const gdouble xip1        = ncm_vector_fast_get (self->knots, i + 1);
+      const complex double d2Yi = _ncm_qm_prop_cdiff2 (Y[i + 1], Y[i - 1], Y[i], xip1 - xi, xim1 - xi); 
+
+      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
+    }
+    i = self->nknots - 1;
+    if (self->noboundary)
+    {
+      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
+      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
+      const complex double YN   = _ncm_qm_prop_get_YN (qm_prop, t);
+      const complex double d2Yi = _ncm_qm_prop_cdiff2 (YN, Y[i - 1], Y[i], self->h, xim1 - xi); 
+
+      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
+
+      /*printf ("%ld % 22.15g % 22.15g % 22.15g\n", i, xi, creal (Ydot[i]), cimag (Ydot[i]));*/
+    }
+    else
+      Ydot[i] = 0.0;
+  }
+  else if (FALSE)
+  {
+    gdouble *Yt      = N_VGetArrayPointer (y);
+    gdouble *dYt     = N_VGetArrayPointer (ydot);
+    NcmVector *x     = ncm_vector_new_data_static (&Yt[0], self->nknots, 3);
+    NcmVector *lnR   = ncm_vector_new_data_static (&Yt[1], self->nknots, 3);
+    NcmVector *S     = ncm_vector_new_data_static (&Yt[2], self->nknots, 3);
+    NcmSpline *lnR_s = ncm_spline_cubic_notaknot_new_full (x, lnR, TRUE);
+    NcmSpline *S_s   = ncm_spline_cubic_notaknot_new_full (x, S,   TRUE);
+    gint i;
+
+    ncm_spline_prepare (lnR_s);
+    ncm_spline_prepare (S_s);
+    
+    for (i = 0; i < self->nknots; i++)
+    {
+      const gdouble xi     = ncm_vector_get (x, i);
+      const gdouble dSi    = ncm_spline_eval_deriv (S_s, xi);
+      const gdouble d2Si   = ncm_spline_eval_deriv2 (S_s, xi);
+      const gdouble dlnRi  = ncm_spline_eval_deriv (lnR_s, xi);
+      const gdouble d2lnRi = ncm_spline_eval_deriv2 (lnR_s, xi);
+      
+      dYt[i * 3 + 0] = 2.0 * dSi;
+      dYt[i * 3 + 1] = - d2Si;
+      dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
+
+      if (FALSE)
+      {
+        printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
+                Yt[i * 3 + 0],  Yt[i * 3 + 1],  Yt[i * 3 + 2],
+                dYt[i * 3 + 0], dYt[i * 3 + 1], dYt[i * 3 + 2]
+                );
+      }
+    }
+
+    ncm_vector_free (x);
+    ncm_vector_free (lnR);
+    ncm_vector_free (S);
+
+    ncm_spline_free (lnR_s);
+    ncm_spline_free (S_s);
+  }
+  else
+  {
+    gdouble *Yt  = N_VGetArrayPointer (y);
+    gdouble *dYt = N_VGetArrayPointer (ydot);
+    gdouble x[7], S[7], lnR[7];
+    gint np = 5;
+    gint sp = np / 2;
+    gint i;
+    gsl_spline *S_s   = gsl_spline_alloc (gsl_interp_polynomial, np);
+    gsl_spline *lnR_s = gsl_spline_alloc (gsl_interp_polynomial, np);
+    
+    for (i = 0; i < self->nknots; i++)
+    {
+      gdouble xi = Yt[i * 3 + 0];
+      gdouble dSi, d2Si, dlnRi, d2lnRi;
+      gint fi, j;
+      
+      if (i < sp)
+        fi = 0;
+      else if (i + sp + 1 > self->nknots)
+        fi = self->nknots - np;
+      else
+        fi = i - sp;
+
+      for (j = 0; j < np; j++)
+      {
+        gint k = fi + j;
+        x[j]   = Yt[k * 3 + 0];
+        lnR[j] = Yt[k * 3 + 1];
+        S[j]   = Yt[k * 3 + 2];
+      }
+
+      gsl_spline_init (lnR_s, x, lnR, np);
+      gsl_spline_init (S_s, x, S, np);
+
+      dlnRi  = gsl_spline_eval_deriv (lnR_s, xi, NULL);
+      d2lnRi = gsl_spline_eval_deriv2 (lnR_s, xi, NULL);
+      dSi    = gsl_spline_eval_deriv (S_s, xi, NULL);
+      d2Si   = gsl_spline_eval_deriv2 (S_s, xi, NULL);
+      
+      /*dYt[i * 3 + 0] = 2.0 * dSi;*/
       dYt[i * 3 + 1] = - d2Si;
       dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
 
@@ -1732,6 +1874,7 @@ _ncm_qm_prop_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
     
   return 0; 
 }
+
 /*
 static gint 
 _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp) 
@@ -2253,7 +2396,7 @@ ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint len)
 
   for (i = 0; i < len; i++)
   {
-    const gdouble dS_i  = ncm_spline_eval_deriv (self->dS_s, x[i]);
+    const gdouble dS_i  = ncm_spline_eval_deriv2 (self->dS_s, x[i]);
     g_array_index (dS, gdouble, i) = dS_i;
   }
 

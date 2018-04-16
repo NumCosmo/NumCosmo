@@ -1054,7 +1054,7 @@ ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha
 gint
 ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
   return ret;
 }
 
@@ -1070,7 +1070,7 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 gint
 ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
   return ret;
 }
 
@@ -1108,6 +1108,51 @@ ncm_matrix_cholesky_lndet (NcmMatrix *cm)
   }
 
   return 2.0 * (log (detL) + exponent * M_LN2);
+}
+
+/**
+ * ncm_matrix_cholesky_solve:
+ * @cm: a #NcmMatrix
+ * @b: a #NcmVector
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ *
+ * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * definite matrix and solve the system $A x = B$ where $A=$@cm and $B$=@b.
+ * 
+ */
+gint 
+ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL)
+{
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
+	g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
+
+	return ncm_lapack_dposv (UL, ncm_matrix_nrows (cm), 1, 
+	                         ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+	                         ncm_vector_data (b),  ncm_vector_len (b));
+}
+
+/**
+ * ncm_matrix_cholesky_solve2:
+ * @cm: a #NcmMatrix
+ * @b: a #NcmVector
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ *
+ * Using a previously computed Cholesky decomposition in @cm, through 
+ * ncm_matrix_cholesky_decomp(), solves the system $A x = B$ where 
+ * $A=$@cm and $B$=@b.
+ * 
+ */
+gint 
+ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
+{
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
+	g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
+
+	return ncm_lapack_dpotrs (UL, ncm_matrix_nrows (cm), 1, 
+	                          ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+	                          ncm_vector_data (b),  ncm_vector_len (b));
 }
 
 /**

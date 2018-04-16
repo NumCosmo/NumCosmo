@@ -80,6 +80,7 @@ ncm_sources = \
 	math/ncm_spline_gsl.c                \
 	math/ncm_spline_cubic.c              \
 	math/ncm_spline_cubic_notaknot.c     \
+	math/ncm_spline_rbf.c                \
 	math/ncm_spline_func.c               \
 	math/ncm_spline2d.c                  \
 	math/ncm_spline2d_spline.c           \
@@ -192,6 +193,7 @@ ncm_headers =                                \
 	math/ncm_spline_gsl.h                \
 	math/ncm_spline_cubic.h              \
 	math/ncm_spline_cubic_notaknot.h     \
+	math/ncm_spline_rbf.h                \
 	math/ncm_spline_func.h               \
 	math/ncm_spline2d.h                  \
 	math/ncm_spline2d_spline.h           \
