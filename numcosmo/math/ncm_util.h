@@ -362,26 +362,25 @@ ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *the
 G_INLINE_FUNC gdouble 
 ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
 {
-
-	const gdouble deg2rad  = M_PI / 180.0; 
-  const gdouble ra1_rad  = ra1 * deg2rad;
+  const gdouble deg2rad  = M_PI / 180.0; 
+	const gdouble ra1_rad  = ra1 * deg2rad;  
   const gdouble dec1_rad = dec1 * deg2rad;
 	const gdouble ra2_rad  = ra2 * deg2rad;
   const gdouble dec2_rad = dec2 * deg2rad;
   const gdouble raDelta  = ra2_rad - ra1_rad;
   const gdouble theta    = atan2 (sin(raDelta), cos(dec1_rad) * tan(dec2_rad) - sin(dec1_rad) * cos(raDelta)); 
 
-	return -((M_PI / 2.0) - theta);
+	return theta;
 }
 
 G_INLINE_FUNC gdouble 
 ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
 {
 	const gdouble deg2rad  = M_PI / 180.0;
-	const gdouble phi1     = dec1 * deg2rad;
+	const gdouble phi1     = dec1 * deg2rad; 
   const gdouble lam1     = ra1 * deg2rad;
-  const gdouble phi2     = dec2 * deg2rad;
-  const gdouble lam2     = ra2 * deg2rad;
+  const gdouble phi2     = dec2 * deg2rad;;
+  const gdouble lam2     = ra2 * deg2rad;;
   const gdouble deltaLam = fabs(lam1 - lam2);
 
 	const gdouble cosphi1  = cos (phi1);
@@ -392,12 +391,12 @@ ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble 
 	const gdouble cosdeltaLam  = cos(deltaLam);
 	const gdouble sindeltaLam  = sin(deltaLam);	
 	
-  const gdouble n1    = gsl_pow_2 (cosphi2 * sindeltaLam);
-  const gdouble n2    = gsl_pow_2 (cosphi1 * sinphi2 - sinphi1 * cosphi2 * cosdeltaLam);
-	const gdouble num   = sqrt (n1 + n2);
-  const gdouble d1    = sinphi1 * sinphi2;
-  const gdouble d2    = cosphi1 * cosphi2 * cosdeltaLam;
-  const gdouble denom = d1 + d2;
+  const gdouble n1      = gsl_pow_2 (cosphi2 * sindeltaLam);
+  const gdouble n2      = gsl_pow_2 (cosphi1 * sinphi2 - sinphi1 * cosphi2 * cosdeltaLam);
+	const gdouble num     = sqrt (n1 + n2);
+  const gdouble d1      = sinphi1 * sinphi2;
+  const gdouble d2      = cosphi1 * cosphi2 * cosdeltaLam;
+  const gdouble denom   = d1 + d2;
 
 	return atan2(num, denom) / deg2rad; 
 }
