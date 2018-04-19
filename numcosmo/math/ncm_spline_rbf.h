@@ -68,7 +68,7 @@ struct _NcmSplineRBF
 typedef enum _NcmSplineRBFType
 {
 	NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS = 0,
-	NCM_SPLINE_RBF_TYPE_GAUSS = 0,
+	NCM_SPLINE_RBF_TYPE_GAUSS,
 	/* < private > */
 	NCM_SPLINE_RBF_TYPE_LEN, /*< skip >*/
 } NcmSplineRBFType;

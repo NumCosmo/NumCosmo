@@ -53,7 +53,7 @@ l1                 = 500.0
 H0                 = -1.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-11
-p.props.nknots     = 101
+p.props.nknots     = 151
 p.props.noboundary = False
 p.set_property ("lambda", l1)
 s1 = int (p.props.nknots / 10)
@@ -62,12 +62,12 @@ offset = 5.0
 
 print ("# ", n1, " ", s1)
 
-psi0 = Ncm.QMPropGauss.new (offset + 10.0, 1.0, 1.0, H0)
+psi0 = Ncm.QMPropGauss.new (offset + 10.0, 1.0, 1.2, H0)
 #psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
 
 #print (psi0.eval (1.0))
 sim   = True
-tstep = 9.0e-3
+tstep = 1.0e-3
 tf    = 5.0
 xf    = offset + 15.01
 xfp   = offset + 20.0

@@ -86,6 +86,8 @@ NcDataReducedShearClusterMass *nc_data_reduced_shear_cluster_mass_ref (NcDataRed
 void nc_data_reduced_shear_cluster_mass_free (NcDataReducedShearClusterMass *drs);
 void nc_data_reduced_shear_cluster_mass_clear (NcDataReducedShearClusterMass **drs);
 
+void nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs, const gchar *hdf5_file, const gchar ftype);
+
 void nc_data_reduced_shear_cluster_mass_set_ngalaxies (NcDataReducedShearClusterMass *drs, guint ngals);
 guint nc_data_reduced_shear_cluster_mass_get_ngalaxies (NcDataReducedShearClusterMass *drs);
 void nc_data_reduced_shear_cluster_mass_set_nzbins (NcDataReducedShearClusterMass *drs, guint nzbins);

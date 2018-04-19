@@ -42,7 +42,16 @@
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_abundance.h"
+#include "lss/nc_galaxy_redshift_spec.h"
+#include "lss/nc_galaxy_redshift_spline.h"
 #include "math/ncm_cfg.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#ifdef HAVE_HDF5
+#include <hdf5.h>
+#include <hdf5_hl.h>
+#endif /* HAVE_HDF5  */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -319,6 +328,480 @@ void
 nc_data_reduced_shear_cluster_mass_clear (NcDataReducedShearClusterMass **drs)
 {
   g_clear_object (drs);
+}
+
+#ifdef HAVE_HDF5
+typedef struct _NcmHDF5Table
+{
+	gchar *name;
+	hsize_t nfields;
+	hsize_t nrecords;
+	GPtrArray *field_names;
+	GArray *field_sizes;
+	GArray *field_offsets;
+	size_t type_size;
+	hid_t h5f;
+	hid_t table_h5d;
+	hid_t table_h5t;
+} NcmHDF5Table;
+
+NcmHDF5Table *
+ncm_hdf5_table_new (hid_t h5f, const gchar *tname)
+{
+	NcmHDF5Table *h5tb = g_new (NcmHDF5Table, 1);
+	gint ret, i;
+
+	/* Table info: init */
+	h5tb->h5f           = h5f;
+	h5tb->name          = g_strdup (tname);
+	h5tb->field_names   = g_ptr_array_new_with_free_func (g_free);
+	h5tb->field_sizes   = g_array_new (TRUE, TRUE, sizeof (size_t));
+	h5tb->field_offsets = g_array_new (TRUE, TRUE, sizeof (size_t));
+		
+	/* Table info: read table info */
+	ret = H5TBget_table_info (h5f, tname, &h5tb->nfields, &h5tb->nrecords);
+	g_assert_cmpint (ret, !=, -1);
+
+	g_ptr_array_set_size (h5tb->field_names,   h5tb->nfields);
+	g_array_set_size     (h5tb->field_sizes,   h5tb->nfields);
+	g_array_set_size     (h5tb->field_offsets, h5tb->nfields);
+	
+	for (i = 0; i < h5tb->nfields; i++) 
+		g_ptr_array_index (h5tb->field_names, i) = g_new (gchar, 255);
+
+	/* Table info: read fields info */
+	ret = H5TBget_field_info (h5f, tname, (gchar **)h5tb->field_names->pdata, (size_t *)h5tb->field_sizes->data, (size_t *)h5tb->field_offsets->data, &h5tb->type_size);
+	g_assert_cmpint (ret, !=, -1);
+
+	/* Table datatype */
+	h5tb->table_h5d = H5Dopen2 (h5f, tname, H5P_DEFAULT);
+	h5tb->table_h5t = H5Dget_type (h5tb->table_h5d);
+
+	/* Consistence check */
+	{
+		H5T_class_t table_h5t_class = H5Tget_class (h5tb->table_h5t);
+		if (table_h5t_class != H5T_COMPOUND)
+			g_error ("ncm_hdf5_table_new: only support tables with compound elements.");
+	}
+
+	return h5tb;
+}
+
+void
+ncm_hdf5_table_free (NcmHDF5Table *h5tb)
+{
+	g_free (h5tb->name);
+	g_ptr_array_unref (h5tb->field_names);
+	g_array_unref (h5tb->field_sizes);
+	g_array_unref (h5tb->field_offsets);
+
+	H5Dclose (h5tb->table_h5d);
+	H5Tclose (h5tb->table_h5t);
+
+	g_free (h5tb);
+}
+
+gboolean
+ncm_hdf5_table_has_col (NcmHDF5Table *h5tb, const gchar *col)
+{
+	return g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, NULL);
+}
+
+void
+ncm_hdf5_table_read_col_as_vec (NcmHDF5Table *h5tb, const gchar *col, NcmVector **vec)
+{
+	size_t field_sizes_sd[1] = { sizeof (gdouble) };
+	size_t field_offset[1]   = { 0 };
+	hid_t mtype, mntype;
+	guint _cindex = 0;
+	gint cindex;
+	gint mi, ret;
+	
+	if (*vec != NULL)
+		g_assert_cmpuint (ncm_vector_len (*vec), ==, h5tb->nrecords);
+	else
+		*vec = ncm_vector_new (h5tb->nrecords);
+
+	mi      = H5Tget_member_index (h5tb->table_h5t, col);
+	mtype   = H5Tget_member_type (h5tb->table_h5t, mi);
+	mntype  = H5Tget_native_type (mtype, H5T_DIR_ASCEND);
+
+	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
+
+	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
+		g_error ("ncm_hdf5_table_read_col_as_vec: column `%s' not found in table `%s'.", col, h5tb->name);
+	cindex = _cindex;
+
+	g_assert_cmpint (cindex, ==, mi);
+
+	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble), field_offset, field_sizes_sd, ncm_vector_data (*vec));
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (mntype);
+	g_assert_cmpint (ret, !=, -1);
+	ret = H5Tclose (mtype);
+	g_assert_cmpint (ret, !=, -1);
+}
+
+void
+ncm_hdf5_table_read_col_as_longarray (NcmHDF5Table *h5tb, const gchar *col, GArray **a)
+{
+	size_t field_sizes_sd[1] = { sizeof (glong) };
+	size_t field_offset[1]   = { 0 };
+	hid_t mtype, mntype;
+	guint _cindex = 0;
+	gint cindex;
+	gint mi, ret;
+	
+	if (*a != NULL)
+	{
+		g_array_set_size (*a, h5tb->nrecords);
+	}
+	else
+	{
+		*a = g_array_new (TRUE, TRUE, sizeof (glong));
+		g_array_set_size (*a, h5tb->nrecords);
+	}
+
+	mi      = H5Tget_member_index (h5tb->table_h5t, col);
+	mtype   = H5Tget_member_type (h5tb->table_h5t, mi);
+	mntype  = H5Tget_native_type (mtype, H5T_DIR_ASCEND);
+
+	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_LONG), >, 0);
+
+	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
+		g_error ("ncm_hdf5_table_read_col_as_longarray: column `%s' not found in table `%s'.", col, h5tb->name);
+	cindex = _cindex;
+
+	g_assert_cmpint (cindex, ==, mi);
+
+	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble), field_offset, field_sizes_sd, (*a)->data);
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (mntype);
+	g_assert_cmpint (ret, !=, -1);
+	ret = H5Tclose (mtype);
+	g_assert_cmpint (ret, !=, -1);
+}
+
+void
+ncm_hdf5_table_read_col_as_mat (NcmHDF5Table *h5tb, const gchar *col, NcmMatrix **mat)
+{
+	size_t field_offset[1] = { 0 };
+	size_t field_sizes_sd[1];
+	hid_t mtype, btype, mntype;
+	guint _cindex = 0;
+	gint cindex;
+	gint mi, ret;
+	H5T_class_t mtype_class;
+	hsize_t ncols;
+	
+	mi          = H5Tget_member_index (h5tb->table_h5t, col);
+	mtype       = H5Tget_member_type (h5tb->table_h5t, mi);
+	mtype_class = H5Tget_class (mtype);
+
+	g_assert_cmpint (mtype_class, ==, H5T_ARRAY);
+
+	btype  = H5Tget_super (mtype);
+	mntype = H5Tget_native_type (btype, H5T_DIR_ASCEND);
+
+	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
+
+	g_assert_cmpint (H5Tget_array_ndims (mtype), ==, 1);
+
+	ret = H5Tget_array_dims2 (mtype, &ncols); 
+	g_assert_cmpint (ret, !=, -1);
+	
+	if (*mat != NULL)
+	{
+		g_assert_cmpuint (ncm_matrix_nrows (*mat), ==, h5tb->nrecords);
+		g_assert_cmpuint (ncm_matrix_ncols (*mat), ==, ncols);
+	}
+	else
+		*mat = ncm_matrix_new (h5tb->nrecords, ncols);
+	
+	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
+		g_error ("ncm_hdf5_table_read_col_as_mat: column `%s' not found in table `%s'.", col, h5tb->name);
+	cindex = _cindex;
+
+	g_assert_cmpint (cindex, ==, mi);
+
+	field_sizes_sd[0] = sizeof (gdouble) * ncols;
+	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble) * ncols, field_offset, field_sizes_sd, ncm_matrix_data (*mat));
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (mntype);
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (btype);
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (mtype);
+	g_assert_cmpint (ret, !=, -1);
+}
+
+void
+ncm_hdf5_table_read_col_as_fixstr (NcmHDF5Table *h5tb, const gchar *col, GArray **a)
+{
+	size_t field_offset[1] = { 0 };
+	size_t field_sizes_sd[1];
+	hid_t mtype;
+	guint _cindex = 0;
+	gint cindex;
+	gint mi, ret;
+	H5T_class_t mtype_class;
+	size_t len;
+	
+	mi          = H5Tget_member_index (h5tb->table_h5t, col);
+	mtype       = H5Tget_member_type (h5tb->table_h5t, mi);
+	mtype_class = H5Tget_class (mtype);
+
+	g_assert_cmpint (mtype_class, ==, H5T_STRING);
+	g_assert_cmpint (H5Tis_variable_str (mtype), ==, 0);
+	g_assert_cmpint (H5Tget_cset (mtype), ==, H5T_CSET_ASCII);
+
+	len = H5Tget_size (mtype);
+	
+	if (*a != NULL)
+		g_assert_cmpuint (g_array_get_element_size (*a), ==, len);
+	else
+		*a = g_array_new (TRUE, TRUE, len);
+	g_array_set_size (*a, h5tb->nrecords);
+	
+	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
+		g_error ("ncm_hdf5_table_read_col_as_fixstr: column `%s' not found in table `%s'.", col, h5tb->name);
+	cindex = _cindex;
+
+	g_assert_cmpint (cindex, ==, mi);
+	
+	field_sizes_sd[0] = sizeof (gchar) * len;
+	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, field_sizes_sd[0], field_offset, field_sizes_sd, (*a)->data);
+	g_assert_cmpint (ret, !=, -1);
+
+	ret = H5Tclose (mtype);
+	g_assert_cmpint (ret, !=, -1);
+}
+
+#endif /* HAVE_HDF5 */
+
+/**
+ * nc_data_reduced_shear_cluster_mass_load_hdf5:
+ * @drs: a #NcDataReducedShearClusterMass
+ * @hdf5_file: a file containing #NcDataReducedShearClusterMass data
+ * @ftype: filter type ('u', 'g', 'r', 'i', 'z')
+ * 
+ * Loads from a HDF5 file the data, filters by @ftype when available.
+ * 
+ */
+void 
+nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs, const gchar *hdf5_file, const gchar ftype)
+{
+#ifdef HAVE_HDF5
+	GHashTable *fdata  = g_hash_table_new_full (g_int64_hash, g_int64_equal, NULL, NULL); 
+	NcmVector *vecs[5] = {NULL, NULL, NULL, NULL, NULL};
+	NcmMatrix *mats[2] = {NULL, NULL};
+	NcmHDF5Table *gal_table;
+	NcmHDF5Table *photz_table;
+	GArray *gal_id = NULL;
+	GArray *photz_id = NULL;
+	GArray *filter = NULL;
+	hid_t h5f;
+	herr_t ret;
+	gint i;
+	
+	h5f = H5Fopen (hdf5_file, H5F_ACC_RDONLY, H5P_DEFAULT); 
+	g_assert_cmpint (h5f, !=, -1);
+
+	gal_table   = ncm_hdf5_table_new (h5f, "deepCoadd_meas");
+	photz_table = ncm_hdf5_table_new (h5f, "zphot_ref");
+		
+	{
+		const gchar *cols[] = {"coord_ra_deg", "coord_dec_deg", "ext_shapeHSM_HsmShapeRegauss_e1", "ext_shapeHSM_HsmShapeRegauss_e2"};
+		for (i = 0; i < 4; i++)
+		{
+			vecs[i] = NULL;
+			ncm_hdf5_table_read_col_as_vec (gal_table, cols[i], &vecs[i]);
+		}
+
+		if (ncm_hdf5_table_has_col (gal_table, "id"))
+			ncm_hdf5_table_read_col_as_longarray (gal_table, "id", &gal_id);
+		else
+			g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: cannot find id in galaxy data table.");
+		
+		if (ncm_hdf5_table_has_col (gal_table, "filter"))
+		{
+			ncm_hdf5_table_read_col_as_fixstr (gal_table, "filter", &filter);
+			
+			for (i = 0; i < gal_table->nrecords; i++)
+			{
+				if (g_array_index (filter, gchar, i) == ftype)
+				{
+					gint64 *key_ptr = &g_array_index (gal_id, glong, i);
+					gint64 key      = g_array_index (gal_id, glong, i);
+
+					if (g_hash_table_contains (fdata, &key))
+					{
+						g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: duplicated key %ld\n", key);
+					}
+					else
+					{
+						g_hash_table_insert (fdata, key_ptr, GINT_TO_POINTER (i));
+					}
+				}
+			}
+		}
+		else
+		{
+			for (i = 0; i < gal_table->nrecords; i++)
+			{
+				gint64 *key_ptr = &g_array_index (gal_id, glong, i);
+				gint64 key      = g_array_index (gal_id, glong, i);
+
+				if (g_hash_table_contains (fdata, &key))
+				{
+					g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: duplicated key %ld\n", key);
+				}
+				else
+				{
+					g_hash_table_insert (fdata, key_ptr, GINT_TO_POINTER (i));
+				}
+			}
+		}
+	}
+
+	if (g_hash_table_size (fdata) != photz_table->nrecords)
+	{
+		g_warning ("nc_data_reduced_shear_cluster_mass_load_hdf5: filtered galaxy data and photz tables do not match in size (%u %llu). Using only galaxy with data in both tables.", 
+		           g_hash_table_size (fdata), photz_table->nrecords);
+	}
+
+	{
+		const gchar *cols[]  = {"Z_BEST"};
+		const gchar *acols[] = {"zbins", "pdz"};
+		for (i = 0; i < 1; i++)
+		{
+			vecs[i+4] = NULL;
+			ncm_hdf5_table_read_col_as_vec (photz_table, cols[i], &vecs[i+4]);
+		}
+		for (i = 0; i < 2; i++)
+		{
+			mats[i] = NULL;
+			ncm_hdf5_table_read_col_as_mat (photz_table, acols[i], &mats[i]);
+		}
+
+		if (ncm_hdf5_table_has_col (photz_table, "id"))
+			ncm_hdf5_table_read_col_as_longarray (photz_table, "id", &photz_id);
+		else if (ncm_hdf5_table_has_col (photz_table, "objectId"))
+			ncm_hdf5_table_read_col_as_longarray (photz_table, "objectId", &photz_id);
+		else
+			g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: cannot find id in photoz table.");
+	}
+
+	NcmRNG *rng = ncm_rng_new (NULL);
+	
+	for (i = 0; i < photz_table->nrecords; i++)
+	{
+		gint64 photz_id_i = g_array_index (photz_id, glong, i);
+		if (!g_hash_table_contains (fdata, &photz_id_i))
+			continue;
+		else
+		{
+			const gint gindex = GPOINTER_TO_INT (g_hash_table_lookup (fdata, &photz_id_i));
+			const gdouble ra  = ncm_vector_get (vecs[0], gindex);
+			const gdouble dec = ncm_vector_get (vecs[1], gindex);
+			const gdouble e1  = ncm_vector_get (vecs[2], gindex);
+			const gdouble e2  = ncm_vector_get (vecs[3], gindex);
+			const gdouble zb  = ncm_vector_get (vecs[4], i);
+			const guint ncols = ncm_matrix_ncols (mats[0]);
+
+			gint first_nz     = -1;
+			gint last_nz      = -1;
+			gint j;
+
+			g_assert_cmpuint (ncm_matrix_ncols (mats[0]), ==, ncm_matrix_ncols (mats[1]));
+			g_assert_cmpuint (ncm_matrix_nrows (mats[0]), ==, ncm_matrix_nrows (mats[1]));
+
+			for (j = 0; j < ncols; j++)
+			{
+				const gdouble Pz_j = ncm_matrix_get (mats[1], i, j);
+
+				if (Pz_j > 0.0)
+				{
+					if (first_nz == -1)
+					{
+						first_nz = j;
+					}
+					last_nz = j;
+				}
+			}
+
+			if (first_nz == -1)
+			{
+				g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: galaxy %d, empty P_z.", i);
+			}
+
+			{
+				NcGalaxyRedshift *gz = NULL;
+				gboolean is_delta = (first_nz == last_nz);
+				if (is_delta)
+				{
+					gz = NC_GALAXY_REDSHIFT (nc_galaxy_redshift_spec_new (zb));
+				}
+				else
+				{
+					NcmVector *zv               = ncm_matrix_get_row (mats[0], i);
+					NcmVector *Pzv              = ncm_matrix_get_row (mats[1], i);
+					NcGalaxyRedshiftSpline *gzs = nc_galaxy_redshift_spline_new ();
+
+					gz = NC_GALAXY_REDSHIFT (gzs);
+					
+					nc_galaxy_redshift_spline_init_from_vectors (gzs, zv, Pzv);
+					
+					ncm_vector_clear (&zv);
+					ncm_vector_clear (&Pzv);
+				}
+				
+				printf ("[%ld %ld] % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %5d %5d", 
+				        g_array_index (gal_id, glong, gindex), 
+				        g_array_index (photz_id, glong, i), 
+				        ra, dec, e1, e2, zb, first_nz, last_nz);
+				if (nc_galaxy_redshift_has_dist (gz))
+				{
+					printf (" DISTR Z_BEST % 22.15g NINTERVALS %d", nc_galaxy_redshift_mode (gz), nc_galaxy_redshift_nintervals (gz));
+					if (nc_galaxy_redshift_nintervals (gz) > 1)
+					{
+						gint k;
+						for (k = 0; k < nc_galaxy_redshift_nintervals (gz); k++)
+						{
+							printf (" % 22.15g", nc_galaxy_redshift_interval_weight (gz, k));
+						}
+					}
+					printf (" | % 22.15g\n", nc_galaxy_redshift_gen (gz, rng));
+				}
+				else
+					printf (" DELTA Z_BEST % 22.15g\n", nc_galaxy_redshift_mode (gz));
+			}
+		}
+	}
+	
+	ncm_hdf5_table_free (gal_table);
+	ncm_hdf5_table_free (photz_table);
+	g_hash_table_unref (fdata);
+
+	for (i = 0; i < 5; i++)
+		ncm_vector_clear (&vecs[i]);
+	for (i = 0; i < 2; i++)
+		ncm_matrix_clear (&mats[i]);
+
+	g_array_unref (gal_id);
+	g_array_unref (photz_id);
+	g_array_unref (filter);
+
+	ret = H5Fclose (h5f);
+	g_assert_cmpint (ret, !=, -1);
+#else  /* HAVE_HDF5 */
+	g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: numcosmo built without support for HDF5 files.");
+#endif /* HAVE_HDF5 */
 }
 
 /**

@@ -23,6 +23,7 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
 	 $(OPENMP_CFLAGS)     \
+	 $(HDF5_CFLAGS)       \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
@@ -38,6 +39,10 @@ SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
+libnumcosmo_la_LDFLAGS = \
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
+	$(HDF5_LDFLAGS)
+
 libnumcosmo_la_LIBADD =         \
 	$(SUNDIALS_LIBS)        \
 	$(FFTW3_LIBS)           \
@@ -47,6 +52,7 @@ libnumcosmo_la_LIBADD =         \
 	$(GSL_LIBS)             \
 	$(CFITSIO_LIBS)         \
 	$(LIBCUBA_PLACE)        \
+	$(HDF5_LIBS)            \
 	$(CODE_COVERAGE_LIBS)   \
 	plc/libclik.la          \
 	levmar/liblevmar.la     \
@@ -367,6 +373,9 @@ nc_headers = \
         lss/nc_cluster_mass_ascaso.h           \
         lss/nc_cluster_abundance.h             \
         lss/nc_cluster_pseudo_counts.h         \
+        lss/nc_galaxy_redshift.h               \
+        lss/nc_galaxy_redshift_spec.h          \
+        lss/nc_galaxy_redshift_spline.h        \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
         lss/nc_reduced_shear_cluster_mass.h    \
@@ -411,7 +420,6 @@ nc_headers = \
 	xcor/nc_xcor_limber_kernel_gal.h          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.h  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.h
-
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -498,6 +506,9 @@ nc_sources = \
         lss/nc_cluster_mass_ascaso.c           \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cluster_pseudo_counts.c         \
+	lss/nc_galaxy_redshift.c               \
+	lss/nc_galaxy_redshift_spec.c          \
+	lss/nc_galaxy_redshift_spline.c        \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
 	lss/nc_reduced_shear_cluster_mass.c    \
@@ -542,9 +553,6 @@ nc_sources = \
 	xcor/nc_xcor_limber_kernel_gal.c          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.c
-
-
-libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 cosmo_includedir = \
 	$(pkgincludedir)

@@ -331,6 +331,12 @@
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
     <section>
+      <title>Galaxy Redshift</title>
+      <xi:include href="xml/nc_galaxy_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_redshift_spec.xml"/>
+      <xi:include href="xml/nc_galaxy_redshift_spline.xml"/>
+    </section>	
+    <section>
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>

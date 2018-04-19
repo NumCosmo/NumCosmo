@@ -165,9 +165,9 @@ ncm_stats_dist1d_spline_tail_init (NcmStatsDist1dSplineTail *tail, gdouble xb, g
 static gdouble
 ncm_stats_dist1d_spline_tail_eval (NcmStatsDist1dSplineTail *tail, gdouble x)
 {
-  const gdouble xmxb = x - tail->xb;
-  const gdouble xmxb2 = xmxb * xmxb;
-  const gdouble xmxb3 = xmxb2 * xmxb;
+  const gdouble xmxb   = x - tail->xb;
+  const gdouble xmxb2  = xmxb * xmxb;
+  const gdouble xmxb3  = xmxb2 * xmxb;
   const gdouble sigma2 = tail->sigma * tail->sigma;
   
   return tail->a + tail->b * xmxb + 0.5 * tail->c * xmxb2 + fabs (xmxb3) * exp (0.5 * xmxb2 / sigma2);
