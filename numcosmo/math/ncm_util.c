@@ -892,6 +892,33 @@ ncm_complex_clear (NcmComplex **c)
  */
 
 /**
+ * ncm_util_position_angle:
+ * @ra1: Right ascension of object 1 
+ * @dec1: Declination of object 1 
+ * @ra2: Right ascension of object 2 
+ * @dec2: Declination of object 2
+ *  
+ * Computes the on-sky position angle (East of North) between object1 (@ra1, @dec1) and object2 (@ra2, dec2).
+ * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.  
+ * 
+ * Returns: the position angle in radians 
+ */
+
+/**
+ * ncm_util_great_circle_distance:
+ * @ra1: Right ascension of object 1 
+ * @dec1: Declination of object 1 
+ * @ra2: Right ascension of object 2 
+ * @dec2: Declination of object 2
+ *  
+ * Compute the great circle distance (or separation, as defined in astropy) between poistion 1 (@ra1, @dec1) and position 2 (@ra2, @dec2).  
+ * See [Great-circle distance](https://en.wikipedia.org/wiki/Great-circle_distance), in particular the Vincenty equation (implemented here).
+ * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.  
+ * 
+ * Returns: the great circle distance in decimal degrees
+ */
+
+/**
  * ncm_util_cvode_check_flag:
  * @flagvalue: FIXME
  * @funcname: FIXME
