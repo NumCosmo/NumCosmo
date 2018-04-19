@@ -399,8 +399,7 @@ ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble 
   const gdouble d2    = cosphi1 * cosphi2 * cosdeltaLam;
   const gdouble denom = d1 + d2;
 
-	//printf ("num = %.5g denom = %.5g\n", num, denom);	
-	return atan2(num, denom); // / deg2rad; 
+	return atan2(num, denom) / deg2rad; 
 }
 
 #ifndef NUMCOSMO_GIR_SCAN
