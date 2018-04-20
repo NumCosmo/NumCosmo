@@ -45,16 +45,6 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_cblas.h>
 
-#include <sundials/sundials_types.h>
-#include <sunlinsol/sunlinsol_pcg.h>
-#include <sunlinsol/sunlinsol_spgmr.h>
-#include <sunlinsol/sunlinsol_sptfqmr.h>
-#include <sunlinsol/sunlinsol_spbcgs.h>
-#include <nvector/nvector_serial.h>
-#include <sundials/sundials_iterative.h>
-#include <sundials/sundials_math.h>
-
-
 struct _NcmSplineRBFPrivate
 {
 	NcmSplineRBFType type_id;
