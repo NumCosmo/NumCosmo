@@ -119,11 +119,12 @@ GType nc_reduced_shear_cluster_mass_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_reduced_shear_cluster_mass);
 
-NcReducedShearClusterMass *nc_reduced_shear_cluster_mass_new (guint nclusters);
+NcReducedShearClusterMass *nc_reduced_shear_cluster_mass_new (void);
 NcReducedShearClusterMass *nc_reduced_shear_cluster_mass_ref (NcReducedShearClusterMass *rscm);
 void nc_reduced_shear_cluster_mass_free (NcReducedShearClusterMass *rscm);
 void nc_reduced_shear_cluster_mass_clear (NcReducedShearClusterMass **rscm);
 
+gdouble nc_reduced_shear_cluster_mass_P_z_gth_gobs (NcReducedShearClusterMass *rscm, NcHICosmo *cosmo, const gdouble z, const gdouble g_th, const gdouble g_obs);
 gdouble nc_reduced_shear_cluster_mass_posterior_no_shear_calibration (NcReducedShearClusterMass *rscm, NcHICosmo *cosmo, const gdouble z, const gdouble g_obs);
 
 G_END_DECLS

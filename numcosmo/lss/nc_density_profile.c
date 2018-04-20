@@ -80,6 +80,13 @@ nc_density_profile_class_init (NcDensityProfileClass *klass)
   object_class->dispose     = &_nc_density_profile_dispose;
   object_class->finalize    = &_nc_density_profile_finalize;
 
+  ncm_mset_model_register_id (model_class,
+                              "NcDensityProfile",
+                              "NcDensityProfile.",
+                              NULL,
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
+
   ncm_model_class_set_name_nick (model_class, "Matter Density Profile", "DensityProfile");
   //ncm_model_class_add_params (model_class, NC_DENSITY_PROFILE_SPARAM_LEN, 0, PROP_SIZE);
   

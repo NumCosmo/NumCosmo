@@ -1690,17 +1690,16 @@ _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
   {
     gdouble *Yt  = N_VGetArrayPointer (y);
     gdouble *dYt = N_VGetArrayPointer (ydot);
-    gdouble x[7], S[7], lnR[7];
+    gdouble x[7], S[7];
     gint np = 5;
     gint sp = np / 2;
     gint i;
     gsl_spline *S_s   = gsl_spline_alloc (gsl_interp_polynomial, np);
-    gsl_spline *lnR_s = gsl_spline_alloc (gsl_interp_polynomial, np);
     
     for (i = 0; i < self->nknots; i++)
     {
       gdouble xi = Yt[i * 3 + 0];
-      gdouble dSi, d2Si, dlnRi, d2lnRi;
+      gdouble dSi;
       gint fi, j;
       
       if (i < sp)
@@ -1714,26 +1713,17 @@ _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
       {
         gint k = fi + j;
         x[j]   = Yt[k * 3 + 0];
-        lnR[j] = Yt[k * 3 + 1];
         S[j]   = Yt[k * 3 + 2];
       }
 
-      gsl_spline_init (lnR_s, x, lnR, np);
       gsl_spline_init (S_s, x, S, np);
 
-      dlnRi  = gsl_spline_eval_deriv (lnR_s, xi, NULL);
-      d2lnRi = gsl_spline_eval_deriv2 (lnR_s, xi, NULL);
-      dSi    = gsl_spline_eval_deriv (S_s, xi, NULL);
-      d2Si   = gsl_spline_eval_deriv2 (S_s, xi, NULL);
+      dSi = gsl_spline_eval_deriv (S_s, xi, NULL);
       
       dYt[i * 3 + 0] = 2.0 * dSi;
-/*      dYt[i * 3 + 1] = - d2Si;
-      dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
-*/
     }
     
     gsl_spline_free (S_s);
-    gsl_spline_free (lnR_s);
   }
     
   return 0; 
@@ -1862,7 +1852,6 @@ _ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
       dSi    = gsl_spline_eval_deriv (S_s, xi, NULL);
       d2Si   = gsl_spline_eval_deriv2 (S_s, xi, NULL);
       
-      /*dYt[i * 3 + 0] = 2.0 * dSi;*/
       dYt[i * 3 + 1] = - d2Si;
       dYt[i * 3 + 2] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
 

@@ -45,6 +45,9 @@
 #include "lss/nc_galaxy_redshift_spec.h"
 #include "lss/nc_galaxy_redshift_spline.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_HDF5
@@ -53,12 +56,25 @@
 #endif /* HAVE_HDF5  */
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcDataReducedShearClusterMassPrivate
+{
+	NcDistance *dist;
+	NcmObjArray *photoz_array;
+	NcmMatrix *gal_obs;
+	gdouble z_cluster;
+	gdouble ra_cluster;
+	gdouble dec_cluster;
+};
+
 enum
 {
   PROP_0,
-  PROP_NGALS,
-  PROP_NZBINS,
-  PROP_TRUE_DATA, 
+	PROP_DIST,
+  PROP_PHOTOZ_ARRAY,
+  PROP_GAL_OBS,
+  PROP_Z_CLUSTER, 
+  PROP_RA_CLUSTER, 
+  PROP_DEC_CLUSTER, 
   PROP_SIZE,
 };
 
@@ -67,30 +83,63 @@ G_DEFINE_TYPE (NcDataReducedShearClusterMass, nc_data_reduced_shear_cluster_mass
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)
 {
-  drs->rscm      = NULL;
-  drs->g_obs      = NULL;
-  drs->Pz        = NULL;
-  drs->true_data = NULL;
-  drs->ngals     = 0;
-  drs->nzbins    = 0;
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv = G_TYPE_INSTANCE_GET_PRIVATE (drs, NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS, NcDataReducedShearClusterMassPrivate);
+	self->dist         = NULL;
+  self->photoz_array = ncm_obj_array_new ();
+  self->gal_obs      = NULL;
+  self->z_cluster    = 0.0;
+  self->ra_cluster   = 0.0;
+  self->dec_cluster  = 0.0;
 }
 
 static void
 nc_data_reduced_shear_cluster_mass_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (object);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
   g_return_if_fail (NC_IS_DATA_REDUCED_SHEAR_CLUSTER_MASS (object));
 
   switch (prop_id)
   {
-    case PROP_NGALS:
-      nc_data_reduced_shear_cluster_mass_set_ngalaxies (drs, g_value_get_uint (value));
+    case PROP_DIST:
+      nc_data_reduced_shear_cluster_mass_set_dist (drs, g_value_get_object (value));
       break;
-    case PROP_NZBINS:
-      nc_data_reduced_shear_cluster_mass_set_nzbins (drs, g_value_get_uint (value));
+    case PROP_PHOTOZ_ARRAY:
+		{
+			NcmObjArray *photoz_array = g_value_get_boxed (value);
+			
+			g_clear_pointer (&self->photoz_array, ncm_obj_array_unref);
+			self->photoz_array = ncm_obj_array_ref (photoz_array);
+
+			if (self->gal_obs != NULL)
+			{
+				g_assert_cmpuint (self->photoz_array->len, ==, ncm_matrix_nrows (self->gal_obs));
+			}
+
       break;
-    case PROP_TRUE_DATA:
-      nc_data_reduced_shear_cluster_mass_set_true_data (drs, g_value_get_object (value));
+		}
+    case PROP_GAL_OBS:
+		{
+			NcmMatrix *gal_obs = g_value_get_object (value);
+
+			ncm_matrix_clear (&self->gal_obs);
+			self->gal_obs = ncm_matrix_ref (gal_obs);
+
+			if (self->photoz_array != NULL)
+			{
+				g_assert_cmpuint (self->photoz_array->len, ==, ncm_matrix_nrows (self->gal_obs));
+			}
+
+			break;
+		}
+    case PROP_Z_CLUSTER:
+      self->z_cluster = g_value_get_double (value);
+      break;
+    case PROP_RA_CLUSTER:
+      self->ra_cluster = g_value_get_double (value);
+      break;
+    case PROP_DEC_CLUSTER:
+      self->dec_cluster = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -102,18 +151,28 @@ static void
 nc_data_reduced_shear_cluster_mass_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (object);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
   g_return_if_fail (NC_IS_DATA_REDUCED_SHEAR_CLUSTER_MASS (object));
 
   switch (prop_id)
   {
-    case PROP_NGALS:
-      g_value_set_uint (value, drs->ngals);
+    case PROP_DIST:
+      g_value_set_object (value, self->dist);
       break;
-    case PROP_NZBINS:
-      g_value_set_uint (value, drs->nzbins);
+		case PROP_PHOTOZ_ARRAY:
+      g_value_set_boxed (value, self->photoz_array);
       break;
-    case PROP_TRUE_DATA:
-      g_value_set_object (value, drs->true_data);
+		case PROP_GAL_OBS:
+      g_value_set_object (value, self->gal_obs);
+      break;
+    case PROP_Z_CLUSTER:
+      g_value_set_double (value, self->z_cluster);
+      break;
+    case PROP_RA_CLUSTER:
+      g_value_set_double (value, self->ra_cluster);
+      break;
+    case PROP_DEC_CLUSTER:
+      g_value_set_double (value, self->dec_cluster);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -125,11 +184,12 @@ static void
 nc_data_reduced_shear_cluster_mass_dispose (GObject *object)
 {
   NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (object);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
 
-  ncm_matrix_clear (&drs->g_obs);
-  ncm_matrix_clear (&drs->Pz);
-  ncm_matrix_clear (&drs->true_data);
-  
+  ncm_matrix_clear (&self->gal_obs);
+	ncm_obj_array_clear (&self->photoz_array);
+	nc_distance_clear (&self->dist);
+	
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_reduced_shear_cluster_mass_parent_class)->dispose (object);
 }
@@ -144,8 +204,8 @@ nc_data_reduced_shear_cluster_mass_finalize (GObject *object)
 }
 
 static void _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
-static guint _nc_data_reduced_shear_cluster_mass_get_len (NcmData *data) { return NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (data)->ngals; }
-//static void _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset);
+static guint _nc_data_reduced_shear_cluster_mass_get_len (NcmData *data);
+static void _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset);
 
 static void
 nc_data_reduced_shear_cluster_mass_class_init (NcDataReducedShearClusterMassClass *klass)
@@ -153,106 +213,209 @@ nc_data_reduced_shear_cluster_mass_class_init (NcDataReducedShearClusterMassClas
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class = NCM_DATA_CLASS (klass);
 
+	g_type_class_add_private (klass, sizeof (NcDataReducedShearClusterMassPrivate));
+	
   object_class->set_property = nc_data_reduced_shear_cluster_mass_set_property;
   object_class->get_property = nc_data_reduced_shear_cluster_mass_get_property;
   object_class->dispose      = nc_data_reduced_shear_cluster_mass_dispose;
   object_class->finalize     = nc_data_reduced_shear_cluster_mass_finalize;
 
-  g_object_class_install_property (object_class,
-                                   PROP_NGALS,
-                                   g_param_spec_uint ("ngals",
-                                                      NULL,
-                                                      "Number of galaxies",
-                                                      0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_NZBINS,
-                                   g_param_spec_object ("nzbins",
+	g_object_class_install_property (object_class,
+	                                 PROP_DIST,
+	                                 g_param_spec_object ("dist",
+	                                                      NULL,
+	                                                      "Distance object",
+	                                                      NC_TYPE_DISTANCE,
+	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_PHOTOZ_ARRAY,
+	                                 g_param_spec_boxed ("photoz-array",
+	                                                     NULL,
+	                                                     "Array of photometric redshift objects",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_GAL_OBS,
+	                                 g_param_spec_object ("gal-obs",
+	                                                      NULL,
+	                                                      "Matrix containing galaxy observables",
+	                                                      NCM_TYPE_MATRIX,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+                                   PROP_Z_CLUSTER,
+                                   g_param_spec_double ("z-cluster",
                                                          NULL,
-                                                         "Number of redshift bins",
-                                                         NCM_TYPE_MATRIX,
+                                                         "Cluster (halo) redshift",
+                                                         0.0, G_MAXDOUBLE, 0.0,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_TRUE_DATA,
-                                   g_param_spec_object ("true-data",
+	g_object_class_install_property (object_class,
+                                   PROP_RA_CLUSTER,
+                                   g_param_spec_double ("ra-cluster",
                                                          NULL,
-                                                         "Cluster (halo) true data (redshift and mass)",
-                                                         NCM_TYPE_MATRIX,
+                                                         "Cluster (halo) RA",
+                                                         -360.0, 360.0, 0.0,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+                                   PROP_DEC_CLUSTER,
+                                   g_param_spec_double ("dec-cluster",
+                                                         NULL,
+                                                         "Cluster (halo) DEC",
+                                                         -360.0, 360.0, 0.0,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
  
   data_class->m2lnL_val  = &_nc_data_reduced_shear_cluster_mass_m2lnL_val;
   data_class->get_length = &_nc_data_reduced_shear_cluster_mass_get_len;
-  //data_class->prepare    = &_nc_data_reduced_shear_cluster_mass_prepare;
+  data_class->prepare    = &_nc_data_reduced_shear_cluster_mass_prepare;
 }
 
+typedef struct _NcDataReducedShearClusterMassInteg
+{
+	NcGalaxyRedshift *gz;
+	NcReducedShearClusterMass *rs;
+	NcDistance *dist;
+	NcHICosmo *cosmo;
+	NcWLSurfaceMassDensity *smd;
+	NcDensityProfile *dp;
+	gdouble z_cluster;
+	gdouble R_Mpc;
+	gdouble dt_cluster;
+	gdouble betainf;
+	gdouble g_obs;
+	guint interval_index;
+} NcDataReducedShearClusterMassInteg;
+
+static gdouble
+_nc_data_reduced_shear_cluster_mass_Pgal (gdouble z_gal, NcDataReducedShearClusterMassInteg *integ)
+{
+	const gdouble Ds          = nc_distance_angular_diameter (integ->dist, integ->cosmo, z_gal);
+	const gdouble Dls         = (nc_distance_transverse (integ->dist, integ->cosmo, z_gal) - integ->dt_cluster) / (1.0 + z_gal);
+	const gdouble beta        = Dls / Ds;
+	const gdouble beta_s      = beta / integ->betainf;
+	const gdouble convergence = nc_wl_surface_mass_density_convergence (integ->smd, integ->dp, integ->cosmo, integ->R_Mpc, z_gal, integ->z_cluster, integ->z_cluster);
+	const gdouble shear       = nc_wl_surface_mass_density_shear (integ->smd, integ->dp, integ->cosmo, integ->R_Mpc, z_gal, integ->z_cluster, integ->z_cluster);	
+	const gdouble g_th        = beta_s * shear / (1.0 - beta_s * convergence);
+	const gdouble Pgal        = nc_reduced_shear_cluster_mass_P_z_gth_gobs (integ->rs, integ->cosmo, z_gal, g_th, integ->g_obs);
+
+	return Pgal;
+}
+
+static gdouble
+_nc_data_reduced_shear_cluster_mass_PgalPz (gdouble z_gal, NcDataReducedShearClusterMassInteg *integ)
+{
+	const gdouble Pgal = _nc_data_reduced_shear_cluster_mass_Pgal (z_gal, integ);
+	const gdouble Pz   = nc_galaxy_redshift_pdf (integ->gz, integ->interval_index, z_gal);
+
+	return Pgal * Pz;
+}
 
 static void
 _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (data);
-  NcHICosmo *cosmo                = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
+  NcHICosmo *cosmo              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *smd   = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcDensityProfile *dp          = NC_DENSITY_PROFILE (ncm_mset_peek (mset, nc_density_profile_id ()));
+	NcReducedShearClusterMass *rs = NC_REDUCED_SHEAR_CLUSTER_MASS (ncm_mset_peek (mset, nc_reduced_shear_cluster_mass_id ()));
+	const guint ngal              = self->photoz_array->len;
+	const gdouble RH              = nc_hicosmo_RH_Mpc (cosmo);
+	const gdouble dA              = nc_distance_angular_diameter (self->dist, cosmo, self->z_cluster) * RH;
+	const gdouble dt              = nc_distance_transverse (self->dist, cosmo, self->z_cluster);
+	const gdouble dinf            = nc_distance_transverse_z_to_infinity (self->dist, cosmo, 0.0);
+	const gdouble betainf         = nc_distance_transverse_z_to_infinity (self->dist, cosmo, self->z_cluster) / dinf;
+	gsl_integration_workspace **w = ncm_integral_get_workspace ();
+
+	NcDataReducedShearClusterMassInteg integ_data;
+	gint i;
+
   g_assert (cosmo != NULL);
+  g_assert (smd != NULL);
+  g_assert (dp != NULL);
+  g_assert (rs != NULL);
 
-  {
-    gdouble Ndet = 0.0; //nc_cluster_pseudo_counts_ndet (cpc, drs->cad->mfp, cosmo);
-    gdouble lnNdet = log (Ndet);
-    gint i;
-    *m2lnL = 0.0;
+	integ_data.rs         = rs;
+	integ_data.dist       = self->dist;
+	integ_data.cosmo      = cosmo;
+	integ_data.smd        = smd;
+	integ_data.dp         = dp;
+	integ_data.z_cluster  = self->z_cluster;
+	integ_data.betainf    = betainf;
+	integ_data.dt_cluster = dt;
 
-    if (Ndet < 1.0)
-    {
-      *m2lnL = GSL_POSINF;
-      return;
-    }
-    else
-      *m2lnL = 0.0;
+	m2lnL[0] = 0.0;
+		
+	for (i = 0; i < ngal; i++)
+	{
+		NcGalaxyRedshift *gz      = NC_GALAXY_REDSHIFT (ncm_obj_array_peek (self->photoz_array, i));
+		const gdouble r_arcmin    = ncm_matrix_get (self->gal_obs, i, 0);
+		const gdouble g_obs       = ncm_matrix_get (self->gal_obs, i, 1);
+		const gdouble R_Mpc       = (r_arcmin / 60.0) * (M_PI / 180.0) * dA;
 
-    for (i = 0; i < drs->ngals; i++)
-    {
-      const gdouble z = 0.0; //ncm_matrix_get (drs->gobs, i, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_Z);
-      const gdouble *M = NULL; //ncm_matrix_ptr (drs->gobs, i, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_MPL);
-      const gdouble *M_params = NULL; //ncm_matrix_ptr (drs->gobs, i, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_SD_MPL);
-      //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-      const gdouble m2lnL_i = 0.0; //log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, drs->cad->mfp, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
+		integ_data.gz    = gz;
+		integ_data.R_Mpc = R_Mpc;
+		integ_data.g_obs = g_obs;
+		
+		if (!nc_galaxy_redshift_has_dist (gz))
+		{
+			const gdouble z_gal = nc_galaxy_redshift_mode (gz);
+			const gdouble P_i   = _nc_data_reduced_shear_cluster_mass_Pgal (z_gal, &integ_data);
 
-      /*printf ("%d % 20.15g % 20.15g % 20.15g\n", i, z, log (nc_hicosmo_E (cosmo, z)), m2lnL_i);*/
-      if (!gsl_finite (m2lnL_i))
-      {
-        *m2lnL += m2lnL_i;
-        break;
-      }
-      else
-      {
-        *m2lnL += m2lnL_i;
-      }
-    }
+			m2lnL[0] += log (P_i);
+		}
+		else
+		{
+			const guint ndists = nc_galaxy_redshift_nintervals (gz);
+			gint j;
 
-    *m2lnL -= drs->ngals * lnNdet;
-  }
-  
-  *m2lnL = -2.0 * (*m2lnL);
+			for (j = 0; j < ndists; j++)
+			{
+				gdouble z_gal_lower, z_gal_upper, P_ij, abserr;
+				gsl_function F;
+				
+				nc_galaxy_redshift_pdf_limits (gz, j, &z_gal_lower, &z_gal_upper);
+
+				integ_data.interval_index = j;
+
+				F.params   = &integ_data;
+				F.function = (gdouble (*)(gdouble,gpointer)) &_nc_data_reduced_shear_cluster_mass_PgalPz;
+				
+				gsl_integration_qag (&F, z_gal_lower, z_gal_upper, 0.0, 1.0e-5, NCM_INTEGRAL_PARTITION, 1, *w, &P_ij, &abserr);
+
+				m2lnL[0] += log (P_ij);
+			}
+		}
+	}
+
+	m2lnL[0] = -2.0 * m2lnL[0];
+
+	ncm_memory_pool_return (w);
   return;
 }
 
-/*
+static guint 
+_nc_data_reduced_shear_cluster_mass_get_len (NcmData *data)
+{ 
+	NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (data);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
+
+	return (self->photoz_array != NULL) ? self->photoz_array->len : 0; 
+}
+
 static void 
 _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataReducedShearClusterMass *drs = NC_DATA_REDUCED_SHEAR_CLUSTER_MASS (data);
-  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ())); 
-  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterPseudoCounts *cpc  = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
+	NcHICosmo *cosmo              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *smd   = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcDensityProfile *dp          = NC_DENSITY_PROFILE (ncm_mset_peek (mset, nc_density_profile_id ()));
+  NcReducedShearClusterMass *rs = NC_REDUCED_SHEAR_CLUSTER_MASS (ncm_mset_peek (mset, nc_reduced_shear_cluster_mass_id ()));
+	
+  g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL) && (rs != NULL));
 
-  if (drs->cad == NULL)
-    g_error ("_nc_data_reduced_shear_cluster_mass_prepare: NcClusterAbundance not set, call _l");
-  
-  g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL) && (cpc != NULL));
-
-  nc_cluster_abundance_prepare_if_needed (drs->cad, cosmo, clusterz, clusterm);  
+  nc_distance_prepare_if_needed (self->dist, cosmo);
 }
-*/
+
 
 /**
  * nc_data_reduced_shear_cluster_mass_new:
@@ -262,13 +425,12 @@ _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset)
  * Returns: the newly created #NcDataReducedShearClusterMass.
  */
 NcDataReducedShearClusterMass *
-nc_data_reduced_shear_cluster_mass_new ()
+nc_data_reduced_shear_cluster_mass_new (NcDistance *dist)
 {
-  NcDataReducedShearClusterMass *drs;
-
-  drs = g_object_new (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS,
-                       NULL);
-  
+	NcDataReducedShearClusterMass *drs = g_object_new (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS,
+	                                                   "dist", dist,
+	                                                   NULL);
+	
   return drs;
 }
 
@@ -328,6 +490,23 @@ void
 nc_data_reduced_shear_cluster_mass_clear (NcDataReducedShearClusterMass **drs)
 {
   g_clear_object (drs);
+}
+
+/**
+ * nc_data_reduced_shear_cluster_mass_set_dist:
+ * @drs: a NcDataReducedShearClusterMass
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
+ */
+void 
+nc_data_reduced_shear_cluster_mass_set_dist (NcDataReducedShearClusterMass *drs, NcDistance *dist)
+{
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
+	
+  nc_distance_clear (&self->dist);
+  self->dist = nc_distance_ref (dist);
 }
 
 #ifdef HAVE_HDF5
@@ -589,22 +768,28 @@ ncm_hdf5_table_read_col_as_fixstr (NcmHDF5Table *h5tb, const gchar *col, GArray 
  * @drs: a #NcDataReducedShearClusterMass
  * @hdf5_file: a file containing #NcDataReducedShearClusterMass data
  * @ftype: filter type ('u', 'g', 'r', 'i', 'z')
+ * @z_cluster: cluster redshift
+ * @ra_cluster: cluster RA
+ * @dec_cluster: cluster DEC
  * 
- * Loads from a HDF5 file the data, filters by @ftype when available.
+ * Loads from a HDF5 file the data, filters by @ftype when available, using
+ * the cluster information in @z_cluster, @ra_cluster and @dec_cluster.
  * 
  */
 void 
-nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs, const gchar *hdf5_file, const gchar ftype)
+nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs, const gchar *hdf5_file, const gchar ftype, const gdouble z_cluster, const gdouble ra_cluster, const gdouble dec_cluster)
 {
 #ifdef HAVE_HDF5
-	GHashTable *fdata  = g_hash_table_new_full (g_int64_hash, g_int64_equal, NULL, NULL); 
-	NcmVector *vecs[5] = {NULL, NULL, NULL, NULL, NULL};
-	NcmMatrix *mats[2] = {NULL, NULL};
-	NcmHDF5Table *gal_table;
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
+	GHashTable *fdata     = g_hash_table_new_full (g_int64_hash, g_int64_equal, NULL, NULL); 
+	NcmVector *vecs[5]    = {NULL, NULL, NULL, NULL, NULL};
+	NcmMatrix *mats[2]    = {NULL, NULL};
+	GArray *gal_id        = NULL;
+	GArray *photz_id      = NULL;
+	GArray *filter        = NULL;
+	GArray *gal_obs_array = NULL;
 	NcmHDF5Table *photz_table;
-	GArray *gal_id = NULL;
-	GArray *photz_id = NULL;
-	GArray *filter = NULL;
+	NcmHDF5Table *gal_table;
 	hid_t h5f;
 	herr_t ret;
 	gint i;
@@ -697,8 +882,12 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 			g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: cannot find id in photoz table.");
 	}
 
-	NcmRNG *rng = ncm_rng_new (NULL);
-	
+	g_ptr_array_set_size ((GPtrArray *) self->photoz_array, 0);
+	self->z_cluster   = z_cluster;
+	self->ra_cluster  = ra_cluster;
+	self->dec_cluster = dec_cluster;
+	gal_obs_array     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
 	for (i = 0; i < photz_table->nrecords; i++)
 	{
 		gint64 photz_id_i = g_array_index (photz_id, glong, i);
@@ -760,29 +949,55 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 					ncm_vector_clear (&zv);
 					ncm_vector_clear (&Pzv);
 				}
-				
-				printf ("[%ld %ld] % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %5d %5d", 
-				        g_array_index (gal_id, glong, gindex), 
-				        g_array_index (photz_id, glong, i), 
-				        ra, dec, e1, e2, zb, first_nz, last_nz);
-				if (nc_galaxy_redshift_has_dist (gz))
+
+				if (gsl_finite (ra) && gsl_finite (dec) && gsl_finite (e1) && gsl_finite (e2))
 				{
-					printf (" DISTR Z_BEST % 22.15g NINTERVALS %d", nc_galaxy_redshift_mode (gz), nc_galaxy_redshift_nintervals (gz));
-					if (nc_galaxy_redshift_nintervals (gz) > 1)
-					{
-						gint k;
-						for (k = 0; k < nc_galaxy_redshift_nintervals (gz); k++)
-						{
-							printf (" % 22.15g", nc_galaxy_redshift_interval_weight (gz, k));
-						}
-					}
-					printf (" | % 22.15g\n", nc_galaxy_redshift_gen (gz, rng));
+					const gdouble r_arcmin = ncm_util_great_circle_distance (ra, dec, ra_cluster, dec_cluster) * 60.0;
+					const gdouble posangle = -(0.5 * M_PI - ncm_util_position_angle (ra, dec, ra_cluster, dec_cluster));
+					const gdouble cos2phi  = cos (2.0 * posangle);
+					const gdouble sin2phi  = sin (2.0 * posangle);
+					const gdouble g_obs    = - (e1 * cos2phi + e2 * sin2phi); 
+					
+					ncm_obj_array_add (self->photoz_array, G_OBJECT (gz));
+
+					g_array_append_val (gal_obs_array, r_arcmin);
+					g_array_append_val (gal_obs_array, g_obs);
 				}
-				else
-					printf (" DELTA Z_BEST % 22.15g\n", nc_galaxy_redshift_mode (gz));
+
+				if (FALSE)
+				{
+					printf ("[%ld %ld] % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %5d %5d", 
+					        g_array_index (gal_id, glong, gindex), 
+					        g_array_index (photz_id, glong, i), 
+					        ra, dec, e1, e2, zb, first_nz, last_nz);
+
+					if (nc_galaxy_redshift_has_dist (gz))
+					{
+						printf (" DISTR Z_BEST % 22.15g NINTERVALS %d", nc_galaxy_redshift_mode (gz), nc_galaxy_redshift_nintervals (gz));
+						if (nc_galaxy_redshift_nintervals (gz) > 1)
+						{
+							gint k;
+							for (k = 0; k < nc_galaxy_redshift_nintervals (gz); k++)
+							{
+								printf (" % 22.15g", nc_galaxy_redshift_interval_weight (gz, k));
+							}
+						}
+						printf ("\n");
+					}
+					else
+						printf (" DELTA Z_BEST % 22.15g\n", nc_galaxy_redshift_mode (gz));
+				}
+
+				nc_galaxy_redshift_free (gz);
 			}
 		}
 	}
+
+	ncm_matrix_clear (&self->gal_obs);
+	self->gal_obs = ncm_matrix_new_array (gal_obs_array, 2);
+	g_assert_cmpuint (self->photoz_array->len, ==, ncm_matrix_nrows (self->gal_obs));
+
+	ncm_data_set_init (NCM_DATA (drs), TRUE);
 	
 	ncm_hdf5_table_free (gal_table);
 	ncm_hdf5_table_free (photz_table);
@@ -795,7 +1010,9 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 
 	g_array_unref (gal_id);
 	g_array_unref (photz_id);
-	g_array_unref (filter);
+	g_array_unref (gal_obs_array);
+	if (filter != NULL)
+		g_array_unref (filter);
 
 	ret = H5Fclose (h5f);
 	g_assert_cmpint (ret, !=, -1);
@@ -803,143 +1020,3 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 	g_error ("nc_data_reduced_shear_cluster_mass_load_hdf5: numcosmo built without support for HDF5 files.");
 #endif /* HAVE_HDF5 */
 }
-
-/**
- * nc_data_reduced_shear_cluster_mass_set_ngalaxies:
- * @drs: a #NcDataReducedShearClusterMass
- * @ngals: number of galaxies
- *
- * Sets @ngals representing the total number of galaxies that belongs to a cluster.
- * 
- */
-void 
-nc_data_reduced_shear_cluster_mass_set_ngalaxies (NcDataReducedShearClusterMass *drs, guint ngals)
-{
-  if (ngals == drs->ngals)
-    return;
-  else
-  {
-    ncm_matrix_clear (&drs->g_obs);
-    ncm_matrix_clear (&drs->true_data);
-    drs->ngals        = ngals;
-    if (ngals > 0)
-    {      
-      drs->g_obs       = ncm_matrix_new (drs->ngals, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_LEN);
-      drs->true_data = ncm_matrix_new (drs->ngals, 2);
-    }
-    ncm_data_set_init (NCM_DATA (drs), FALSE);
-  }  
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_get_ngalaxies:
- * @drs: a #NcDataReducedShearClusterMass
- * 
- * Returns: the number of galaxies 
- */
-guint 
-nc_data_reduced_shear_cluster_mass_get_ngalaxies (NcDataReducedShearClusterMass *drs)
-{
-  return drs->ngals;
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_set_nzbins:
- * @drs: a #NcDataReducedShearClusterMass
- * @nzbins: number of redshift bins
- *
- * Sets @nzbins representing the number of redshift bins of the (photometric) redshift distribution.
- * 
- */
-void 
-nc_data_reduced_shear_cluster_mass_set_nzbins (NcDataReducedShearClusterMass *drs, guint nzbins)
-{
-  if (nzbins == drs->nzbins)
-    return;
-  else
-  {
-    ncm_matrix_clear (&drs->g_obs);
-    ncm_matrix_clear (&drs->true_data);
-    drs->nzbins        = nzbins;
-    if (nzbins > 0)
-    {      
-      drs->Pz       = ncm_matrix_new (drs->nzbins, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_LEN);
-      drs->true_data = ncm_matrix_new (drs->nzbins, 2);
-    }
-    ncm_data_set_init (NCM_DATA (drs), FALSE);
-  }  
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_get_nzbins:
- * @drs: a #NcDataReducedShearClusterMass
- * 
- * Returns: the number of redshift bins
- */
-guint 
-nc_data_reduced_shear_cluster_mass_get_nzbins (NcDataReducedShearClusterMass *drs)
-{
-  return drs->nzbins;
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_set_gobs:
- * @drs: a #NcDataReducedShearClusterMass
- * @m: a #NcmMatrix
- *
- * Sets the matrix @m representing the measured reduced shear of the galaxies that belong to a cluster.
- * 
- * The function nc_data_reduced_shear_cluster_mass_set_ngalaxies must be called before this one.
- *
- */
-void 
-nc_data_reduced_shear_cluster_mass_set_gobs (NcDataReducedShearClusterMass *drs, const NcmMatrix *m)
-{
-  g_assert (m != NULL);
-  g_assert_cmpuint (ncm_matrix_nrows (m), ==, drs->ngals);
-  g_assert_cmpuint (ncm_matrix_ncols (m), ==, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_LEN);
-  
-  ncm_matrix_memcpy (drs->g_obs, m);
-  ncm_data_set_init (NCM_DATA (drs), TRUE);
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_set_pz:
- * @drs: a #NcDataReducedShearClusterMass
- * @m: a #NcmMatrix
- *
- * Sets the matrix @m representing the redshift probability distribution of a galaxy.
- * 
- * The function nc_data_reduced_shear_cluster_mass_set_nzbins must be called before this one.
- *
- */
-void 
-nc_data_reduced_shear_cluster_mass_set_pz (NcDataReducedShearClusterMass *drs, const NcmMatrix *m)
-{
-  g_assert (m != NULL);
-  g_assert_cmpuint (ncm_matrix_nrows (m), ==, drs->nzbins);
-  g_assert_cmpuint (ncm_matrix_ncols (m), ==, NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_LEN);
-  
-  ncm_matrix_memcpy (drs->Pz, m);
-  ncm_data_set_init (NCM_DATA (drs), TRUE);
-}
-
-/**
- * nc_data_reduced_shear_cluster_mass_set_true_data:
- * @drs: a #NcDataReducedShearClusterMass
- * @m: a #NcmMatrix
- *
- * FIXME
- * Sets the matrix @m representing 
- * 
- */
-void 
-nc_data_reduced_shear_cluster_mass_set_true_data (NcDataReducedShearClusterMass *drs, const NcmMatrix *m)
-{
-  g_assert (m != NULL);
-  g_assert_cmpuint (ncm_matrix_nrows (m), ==, drs->ngals);
-  g_assert_cmpuint (ncm_matrix_ncols (m), ==, 2);
-       
-  ncm_matrix_memcpy (drs->true_data, m);
-}
-
