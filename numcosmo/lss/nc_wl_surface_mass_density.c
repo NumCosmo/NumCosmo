@@ -368,7 +368,7 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityPro
 
 /*
 static gdouble 
-_nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble R)
+_nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, const gdouble R)
 {
 	gdouble R2 = R * R;
 	
@@ -391,7 +391,7 @@ _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble
  * Returns: $\kappa(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
@@ -414,7 +414,7 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
  * Returns: $\gamma(R)$ 
  */
 gdouble 
-nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
@@ -441,7 +441,7 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * Returns: $g(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once*/
   gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
@@ -471,7 +471,7 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
  * Returns: $g(R)$, source at $z = \infty$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
   gdouble Dinf, betainf, beta_s;
