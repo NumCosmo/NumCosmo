@@ -39,6 +39,9 @@ mset.param_set_ftype (Nc.DensityProfile.id (), Nc.DensityProfileNFWParams.M_DELT
 d1 = Nc.DataReducedShearClusterMass.new (dist) 
 d1.load_hdf5 ("cat07_sim_leftra.hdf5", ord ('i'), 0.3, 0.1, 0.1)
 
+ser = Ncm.Serialize.new (0)
+ser.to_file (d1, "test.obj")
+
 dset = Ncm.Dataset ()
 dset.append_data (d1)
 
