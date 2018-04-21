@@ -40,9 +40,10 @@
 #include "math/ncm_rng.h"
 #include "math/ncm_cfg.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcClusterPhotozGauss, nc_cluster_photoz_gauss, NC_TYPE_CLUSTER_REDSHIFT);
 

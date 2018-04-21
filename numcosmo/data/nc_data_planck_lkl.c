@@ -41,7 +41,10 @@
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
 #include "data/nc_data_planck_lkl.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include "plc/clik.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -75,29 +78,31 @@ G_STMT_START { \
 static void
 nc_data_planck_lkl_init (NcDataPlanckLKL *plik)
 {
-  plik->filename    = NULL;
-  plik->pb          = NULL;
-  plik->obj         = NULL;
-  plik->is_lensing  = FALSE;
-  plik->nparams     = 0;
-  plik->ndata_entry = 0;
-  plik->pnames      = NULL;
-  plik->chksum      = NULL;
-  plik->cmb_data    = 0;
-  plik->data_params = NULL;
+  plik->filename           = NULL;
+  plik->pb                = NULL;
+  plik->obj               = NULL;
+  plik->is_lensing        = FALSE;
+  plik->nparams           = 0;
+  plik->ndata_entry       = 0;
+  plik->pnames            = NULL;
+  plik->chksum            = NULL;
+	plik->check_m2lnL       = 0.0;
+  plik->cmb_data          = 0;
+  plik->data_params       = NULL;
   plik->check_data_params = NULL;
-  plik->data_TT     = NULL;
-  plik->data_EE     = NULL;
-  plik->data_BB     = NULL;
-  plik->data_TE     = NULL;
-  plik->data_TB     = NULL;
-  plik->data_EB     = NULL;
-  plik->params      = NULL;
-  plik->pfi_ctrl    = ncm_model_ctrl_new (NULL);
-  plik->cosmo_ctrl  = ncm_model_ctrl_new (NULL);
-  plik->cm2lnL      = 0.0;
-  plik->A_planck    = 0.0;
-  plik->param_map   = g_array_new (TRUE, TRUE, sizeof (guint));
+	plik->data_PHIPHI       = NULL;
+  plik->data_TT           = NULL;
+  plik->data_EE           = NULL;
+  plik->data_BB           = NULL;
+  plik->data_TE           = NULL;
+  plik->data_TB           = NULL;
+  plik->data_EB           = NULL;
+  plik->params            = NULL;
+  plik->pfi_ctrl           = ncm_model_ctrl_new (NULL);
+  plik->cosmo_ctrl        = ncm_model_ctrl_new (NULL);
+  plik->cm2lnL            = 0.0;
+  plik->A_planck          = 0.0;
+  plik->param_map         = g_array_new (TRUE, TRUE, sizeof (guint));
 }
 
 static void
@@ -158,6 +163,7 @@ nc_data_planck_lkl_dispose (GObject *object)
 
   ncm_vector_clear (&plik->data_params);
   ncm_vector_clear (&plik->check_data_params);
+  ncm_vector_clear (&plik->data_PHIPHI);
   ncm_vector_clear (&plik->data_TT);
   ncm_vector_clear (&plik->data_EE);
   ncm_vector_clear (&plik->data_BB);
@@ -370,7 +376,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     }
   }
 
-  pfi_up   = ncm_model_ctrl_update (clik->pfi_ctrl, NCM_MODEL (pfi));
+  pfi_up    = ncm_model_ctrl_update (clik->pfi_ctrl, NCM_MODEL (pfi));
   cosmo_up = ncm_model_ctrl_update (clik->cosmo_ctrl, NCM_MODEL (cosmo));
 
   if (pfi_up && clik->nparams == 1 && g_array_index (clik->param_map, guint, 0) == NC_PLANCK_FI_COR_TT_A_planck)
@@ -390,7 +396,10 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   
   if (cosmo_up)
   {
-    if (clik->cmb_data & NC_DATA_CMB_TYPE_TT)
+    if (clik->cmb_data & NC_DATA_CMB_TYPE_PHIPHI)
+      nc_hipert_boltzmann_get_PHIPHI_Cls (clik->pb, clik->data_PHIPHI);
+
+		if (clik->cmb_data & NC_DATA_CMB_TYPE_TT)
       nc_hipert_boltzmann_get_TT_Cls (clik->pb, clik->data_TT);
 
     if (clik->cmb_data & NC_DATA_CMB_TYPE_EE)
@@ -456,7 +465,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
     gint data_params_len = 0;
     guint i;
 
-    plik->is_lensing = clik_try_lensing (plik->filename, &err) == 1;
+    plik->is_lensing = (clik_try_lensing (plik->filename, &err) == 1);
     CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_try_lensing]", err);
 
     {
@@ -582,13 +591,32 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       gdouble check_value = 0.0;
       gdouble *chkp       = NULL;
 
-      clik_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
-
+			if (plik->is_lensing)
+				clik_lensing_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
+			else
+				clik_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
+			
       ncm_vector_set_data (plik->data_params, chkp, npar_out);
       ncm_vector_clear (&plik->check_data_params);
 
       plik->check_data_params = ncm_vector_dup (plik->data_params);
+			plik->check_m2lnL       = -2.0 * check_value;
 
+			{
+				gdouble check_m2lnL = 0.0;
+				if (plik->is_lensing)
+				{
+					check_m2lnL = -2.0 * clik_lensing_compute (plik->obj, chkp, &err);
+					CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_lensing_compute]", err);
+				}
+				else
+				{
+					check_m2lnL = -2.0 * clik_compute (plik->obj, chkp, &err);
+					CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
+				}
+				ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
+			}
+			
       g_free (chkp);
     }
 
@@ -697,6 +725,12 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
 
   nc_hipert_boltzmann_append_target_Cls (plik->pb, plik->cmb_data);
 
+  if (plik->data_PHIPHI != NULL)
+  {
+    guint PHIPHI_lmax = ncm_vector_len (plik->data_PHIPHI) - 1;
+    if (PHIPHI_lmax > nc_hipert_boltzmann_get_PHIPHI_lmax (plik->pb))
+      nc_hipert_boltzmann_set_PHIPHI_lmax (plik->pb, PHIPHI_lmax);
+  }
   if (plik->data_TT != NULL)
   {
     guint TT_lmax = ncm_vector_len (plik->data_TT) - 1;

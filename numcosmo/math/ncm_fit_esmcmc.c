@@ -42,7 +42,9 @@
 #include "math/ncm_func_eval.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -168,6 +170,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
                                              NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
                                              NULL);
       }
+      ncm_mset_catalog_set_m2lnp_var (esmcmc->mcat, 0);
       ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC");
 
       for (k = 0; k < esmcmc->nwalkers; k++)
@@ -577,6 +580,20 @@ ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sa
   return esmcmc;
 }
 
+
+/**
+ * ncm_fit_esmcmc_ref:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmFitESMCMC *
+ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc)
+{
+  return g_object_ref (esmcmc);
+}
 
 /**
  * ncm_fit_esmcmc_free:
@@ -1150,6 +1167,8 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
     ncm_timer_task_end (esmcmc->nt);
 
   ncm_mset_catalog_sync (esmcmc->mcat, TRUE);
+  if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_mset_catalog_log_current_stats (esmcmc->mcat);
   
   esmcmc->started = FALSE;
 }
@@ -1447,9 +1466,15 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   if (catlen < prerun)
   {
     guint prerun_left = prerun - catlen;
+    
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
       g_message ("# NcmFitESMCMC: Running first %u pre-runs...\n", prerun_left);
+
     ncm_fit_esmcmc_run (esmcmc, prerun);
+    if (esmcmc->auto_trim)
+    {
+      ncm_mset_catalog_trim_by_type (esmcmc->mcat, esmcmc->auto_trim_div, esmcmc->trim_type, esmcmc->mtype);
+    }
   }
 
   ncm_mset_catalog_estimate_autocorrelation_tau (esmcmc->mcat, FALSE);
@@ -1460,7 +1485,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     const gdouble lerror2 = lerror * lerror;
     gdouble n             = ncm_mset_catalog_len (esmcmc->mcat);
     gdouble m             = n * lerror2 / lre2;
-    guint runs            = ((m - n) > 1000.0) ? ceil ((m - n) * 1.0e-1) : ceil (m - n);
+    guint runs            = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * 1.0e-1), 100000) : ceil (m - n);
     guint ti              = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
 
     runs = GSL_MIN (ncm_timer_task_estimate_by_time (esmcmc->nt, esmcmc->max_runs_time), runs);
@@ -1468,7 +1493,10 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
     {
+      gdouble glnvol;
+      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (esmcmc->mcat, 0.6827, &glnvol);
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
+      g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (esmcmc->mcat));
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
 
@@ -1498,9 +1526,12 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
 void
 ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
 {
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (esmcmc->mcat);
+  
   ncm_mset_catalog_get_mean (esmcmc->mcat, &esmcmc->fit->fstate->fparams);
   ncm_mset_catalog_get_covar (esmcmc->mcat, &esmcmc->fit->fstate->covar);
-  ncm_mset_fparams_set_vector (esmcmc->mcat->mset, esmcmc->fit->fstate->fparams);
+  ncm_mset_fparams_set_vector (mset, esmcmc->fit->fstate->fparams);
+  
   esmcmc->fit->fstate->has_covar = TRUE;
 }
 

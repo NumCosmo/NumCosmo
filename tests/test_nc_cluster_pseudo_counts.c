@@ -162,8 +162,8 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.0482);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
 
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);  
+  ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
+  ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);  
 
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Asz", 0.7);  //1.0);
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bsz", 0.35); //0.2);
@@ -221,7 +221,7 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   I1p2 = nc_cluster_pseudo_counts_posterior_numerator (cpc, mfp, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
   I3d = nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, mfp, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 
-  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2);
+  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2, 0.0);
 }
 
 void
@@ -237,16 +237,14 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   I1p2 = nc_cluster_pseudo_counts_posterior_numerator (cpc, mfp, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
   I3d = nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, mfp, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 
-  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2);
+  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2, 0.0);
 }
 
 void
 test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   gdouble m2lnL;
-  NcmRNG *rng = ncm_rng_new (NULL);
-
-  ncm_rng_set_seed (rng, g_test_rand_int ());
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
 
   nc_data_cluster_pseudo_counts_init_from_sampling (test->dcpc, test->fit->mset, rng, 100);
 

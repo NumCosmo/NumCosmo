@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_recomb.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/function_cache.h>
@@ -59,6 +60,7 @@ struct _NcDistance
   GObject parent_instance;
   NcmOdeSpline *comoving_distance_spline;
   NcmFunctionCache *comoving_distance_cache;
+	NcmFunctionCache *comoving_infinity;
   NcmFunctionCache *time_cache;
   NcmFunctionCache *lookback_time_cache;
   NcmFunctionCache *conformal_time_cache;
@@ -66,6 +68,7 @@ struct _NcDistance
   NcmModelCtrl *ctrl;
   gdouble zf;
   gboolean use_cache;
+  NcRecomb *recomb;
 };
 
 typedef struct _NcDistanceFunc
@@ -90,6 +93,7 @@ NcDistance *nc_distance_new (gdouble zf);
 NcDistance *nc_distance_ref (NcDistance *dist);
 
 void nc_distance_require_zf (NcDistance *dist, const gdouble zf);
+void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
@@ -111,6 +115,7 @@ gdouble nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_Omega_k0 (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
 
 /***************************************************************************
  * Redshift dependent 'distances'
@@ -132,6 +137,8 @@ gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdoub
 gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 /***************************************************************************
  *            cosmic_time.h

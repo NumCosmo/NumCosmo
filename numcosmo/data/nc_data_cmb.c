@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_data_cmb
  * @title: NcDataCMB
- * @short_description: Helper function for instantiating CMB data.
+ * @short_description: Helper function for instantiating CMB data
  *
  * FIXME
  * 
@@ -44,12 +44,12 @@
 
 /**
  * nc_data_cmb_create:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataCMBId
  *
- * FIXME
+ * Creates a new #NcmData of type #NcDataCMBId.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a #NcmData
  */
 NcmData *
 nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)

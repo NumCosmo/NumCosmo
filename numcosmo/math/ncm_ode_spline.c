@@ -39,11 +39,16 @@
 #include "math/ncm_ode_spline.h"
 #include "math/integral.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#endif
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_linalg.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -53,6 +58,7 @@ enum
   PROP_XI,
   PROP_XF,
   PROP_YI,
+  PROP_YF,
   PROP_DYDX,
   PROP_SPLINE,
   PROP_STOP_HNIL,
@@ -68,9 +74,10 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   os->y          = N_VNew_Serial (1);
   os->y_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   os->x_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  os->xi         = 0.0;
-  os->xf         = 0.0;
-  os->yi         = 0.0;
+  os->xi         = GSL_NAN;
+  os->xf         = GSL_NAN;
+  os->yi         = GSL_NAN;
+	os->yf         = GSL_NAN;
   os->reltol     = 0.0;
   os->abstol     = 0.0;
   os->dydx       = NULL;
@@ -82,7 +89,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
 }
 
 static void
-ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmOdeSpline *os = NCM_ODE_SPLINE (object);
   g_return_if_fail (NCM_IS_ODE_SPLINE (object));
@@ -104,6 +111,9 @@ ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_YI:
       ncm_ode_spline_set_yi (os, g_value_get_double (value));
       break;
+    case PROP_YF:
+      ncm_ode_spline_set_yf (os, g_value_get_double (value));
+      break;
     case PROP_DYDX:
       os->dydx = (NcmOdeSplineDydx) g_value_get_pointer (value);
       break;
@@ -120,7 +130,7 @@ ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value
 }
 
 static void
-ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmOdeSpline *os = NCM_ODE_SPLINE (object);
   g_return_if_fail (NCM_IS_ODE_SPLINE (object));
@@ -142,6 +152,9 @@ ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_YI:
       g_value_set_double (value, os->yi);
       break;
+    case PROP_YF:
+      g_value_set_double (value, os->yf);
+      break;
     case PROP_DYDX:
       g_value_set_pointer (value, os->dydx);
       break;
@@ -158,7 +171,7 @@ ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPar
 }
 
 static void
-ncm_ode_spline_dispose (GObject *object)
+_ncm_ode_spline_dispose (GObject *object)
 {
   NcmOdeSpline *os = NCM_ODE_SPLINE (object);
 
@@ -172,7 +185,7 @@ ncm_ode_spline_dispose (GObject *object)
 }
 
 static void
-ncm_ode_spline_finalize (GObject *object)
+_ncm_ode_spline_finalize (GObject *object)
 {
   NcmOdeSpline *os = NCM_ODE_SPLINE (object);
 
@@ -196,10 +209,10 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = &ncm_ode_spline_set_property;
-  object_class->get_property = &ncm_ode_spline_get_property;
-  object_class->dispose      = &ncm_ode_spline_dispose;
-  object_class->finalize     = &ncm_ode_spline_finalize;
+  object_class->set_property = &_ncm_ode_spline_set_property;
+  object_class->get_property = &_ncm_ode_spline_get_property;
+  object_class->dispose      = &_ncm_ode_spline_dispose;
+  object_class->finalize     = &_ncm_ode_spline_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -241,6 +254,14 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+	g_object_class_install_property (object_class,
+                                   PROP_YF,
+                                   g_param_spec_double ("yf",
+                                                        NULL,
+                                                        "Final Value",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_DYDX,
                                    g_param_spec_pointer ("dydx",
@@ -272,7 +293,7 @@ typedef struct _NcmOdeSplineDydxData NcmOdeSplineDydxData;
  */
 struct _NcmOdeSplineDydxData
 {
-  NcmOdeSplineDydx dydx;
+	NcmOdeSpline *os;
   gpointer userdata;
 };
 
@@ -280,7 +301,7 @@ static gint
 _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmOdeSplineDydxData *dydx_data = (NcmOdeSplineDydxData *) f_data;
-  NV_Ith_S (ydot, 0) = dydx_data->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
+  NV_Ith_S (ydot, 0) = dydx_data->os->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
   /*printf ("% 20.15g % 20.15g % 20.15g\n", x, NV_Ith_S (y, 0), NV_Ith_S (ydot, 0));*/
   return 0;
 }
@@ -329,6 +350,16 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
   return os;
 }
 
+static gint 
+_ncm_ode_spline_yf_root (realtype lambda, N_Vector y, realtype *gout, gpointer user_data)
+{
+  NcmOdeSplineDydxData *dydx_data = (NcmOdeSplineDydxData *) user_data;
+
+	gout[0] = (NV_Ith_S (y, 0) - dydx_data->os->yf);
+
+	return 0;
+} 
+
 /**
  * ncm_ode_spline_prepare:
  * @os: a #NcmOdeSpline
@@ -339,7 +370,7 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
 void
 ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 {
-  NcmOdeSplineDydxData f_data = {os->dydx, userdata};
+  NcmOdeSplineDydxData f_data = {os, userdata};
   gdouble x, x0;
   gint flag;
 
@@ -370,45 +401,102 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   flag = CVodeSetMaxNumSteps (os->cvode, NCM_INTEGRAL_PARTITION);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
   
-  flag = CVodeSetStopTime (os->cvode, os->xf);
-  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
-  
   flag = CVodeSetUserData (os->cvode, &f_data);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
+#if defined (HAVE_SUNDIALS_2_5_0) || defined (HAVE_SUNDIALS_2_6_0)
+  if (os->xi != 0.0)
+  {
+    flag = CVodeSetInitStep (os->cvode, fabs (os->xi * 1.0e-11) * GSL_SIGN (os->xf - os->xi));
+    NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
+  }
+#endif
+  
   x0 = os->xi;
   if (!gsl_finite (os->dydx (NV_Ith_S (os->y, 0), x0, f_data.userdata)))
     g_error ("ncm_ode_spline_prepare: not finite integrand.");
 
-  os->hnil = FALSE;
-  while (TRUE)
-  {
-    flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
-    NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
+	if (!gsl_finite (os->yf))
+	{
+		g_assert (gsl_finite (os->xf));
+		
+		flag = CVodeSetStopTime (os->cvode, os->xf);
+		NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-    if (G_UNLIKELY (os->hnil))
-    {
-      if (os->stop_hnil)
-      {
-        g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
-      }
-      else
-        break;
-    }
+		os->hnil = FALSE;
+		while (TRUE)
+		{
+			flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
+			NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
 
-    /*if (((x0 != 0.0) ? fabs ((x - x0) / x0) : fabs (x - x0)) > NCM_ODE_SPLINE_MIN_STEP)*/
-    if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
-    {
-      g_array_append_val (os->x_array, x);
-      g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
-      /*printf ("% 20.15g % 20.15g\n", x, NV_Ith_S (os->y, 0));*/
-      x0 = x;
-    }
+			if (G_UNLIKELY (os->hnil))
+			{
+				if (os->stop_hnil)
+				{
+					g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
+				}
+				else
+					break;
+			}
 
-    if (x == os->xf)
-      break;
-  }
+			/*if (((x0 != 0.0) ? fabs ((x - x0) / x0) : fabs (x - x0)) > NCM_ODE_SPLINE_MIN_STEP)*/
+			if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
+			{
+				g_array_append_val (os->x_array, x);
+				g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
+				/*printf ("% 20.15g % 20.15g\n", x, NV_Ith_S (os->y, 0));*/
+				x0 = x;
+			}
 
+			if (x == os->xf)
+				break;
+		}
+	}
+	else
+	{
+		const gdouble xf = (os->xi != 0.0) ? os->xi * 2.0 : 1.0;
+		gdouble last_y = GSL_NEGINF;
+		
+		flag = CVodeRootInit (os->cvode, 1, &_ncm_ode_spline_yf_root);
+		NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );    
+		
+		os->hnil = FALSE;
+		while (TRUE)
+		{
+			flag = CVode (os->cvode, xf, os->y, &x, CV_ONE_STEP);
+			NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
+
+			if (G_UNLIKELY (os->hnil))
+			{
+				if (os->stop_hnil)
+				{
+					g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
+				}
+				else
+					break;
+			}
+
+			if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
+			{
+				g_array_append_val (os->x_array, x);
+				g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
+				x0 = x;
+			}
+
+			/* Possible problem if the integrand stalls for a long time but resume growing afterwards! ATT */
+			if (NV_Ith_S (os->y, 0) == last_y)
+				break;
+			last_y = NV_Ith_S (os->y, 0);
+			
+			if (flag == CV_ROOT_RETURN)
+				break;
+		}
+
+		if (ncm_cmp (last_y, os->yf, 1.0e-2, 0.0) != 0)
+			g_warning ("ncm_ode_spline_prepare: system has saturated at `% 22.15g' before attaining the required final value `% 22.15g'.",
+			           last_y, os->yf);
+	}
+	
   ncm_spline_set_array (os->s, os->x_array, os->y_array, TRUE);
   os->s_init = TRUE;
 }
@@ -450,6 +538,8 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
 void 
 ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble xf)
 {
+  g_assert_cmpfloat (xf, >, xi);
+  
   ncm_ode_spline_set_xi (os, xi);
   ncm_ode_spline_set_xf (os, xf);
   ncm_ode_spline_set_yi (os, yi);
@@ -509,6 +599,10 @@ void
 ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
 {
   os->xf = xf;
+	if (gsl_finite (os->yf))
+	{
+		g_warning ("ncm_ode_spline_set_xf: setting xf when yf was also set, yf will take precedence.");
+	}
 }
 
 /**
@@ -523,4 +617,22 @@ void
 ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
 {
   os->yi = yi;
+}
+
+/**
+ * ncm_ode_spline_set_yf:
+ * @os: a #NcmOdeSpline
+ * @yf: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf)
+{
+  os->yf = yf;
+	if (gsl_finite (os->xf))
+	{
+		g_warning ("ncm_ode_spline_set_yf: setting yf when xf was also set, yf will take precedence.");
+	}
 }

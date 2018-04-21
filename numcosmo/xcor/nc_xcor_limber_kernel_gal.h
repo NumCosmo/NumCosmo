@@ -53,9 +53,10 @@ typedef struct _NcXcorLimberKernelGal NcXcorLimberKernelGal;
  */
 typedef enum _NcXcorLimberKernelGalSParams
 {
-	NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS = 0,
-	NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS, /*< private >*/
-	NC_XCOR_LIMBER_KERNEL_GAL_SPARAM_LEN, /*< skip >*/
+  NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS = 0,
+  NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS, 
+  /* < private > */
+  NC_XCOR_LIMBER_KERNEL_GAL_SPARAM_LEN, /*< skip >*/
 } NcXcorLimberKernelGalSParams;
 
 /**
@@ -65,37 +66,38 @@ typedef enum _NcXcorLimberKernelGalSParams
  */
 typedef enum _NcXcorLimberKernelGalVParams
 {
-	NC_XCOR_LIMBER_KERNEL_GAL_BIAS, /*< private >*/
-	NC_XCOR_LIMBER_KERNEL_GAL_VPARAM_LEN, /*< skip >*/
+  NC_XCOR_LIMBER_KERNEL_GAL_BIAS, 
+  /* < private > */
+  NC_XCOR_LIMBER_KERNEL_GAL_VPARAM_LEN, /*< skip >*/
 } NcXcorLimberKernelGalVParams;
 
 struct _NcXcorLimberKernelGal
 {
-	/*< private >*/
-	NcXcorLimberKernel parent_instance;
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
 
-	NcmSpline* dn_dz;
+  NcmSpline* dn_dz;
 
-	NcmSpline* bias_spline;
-	guint nknots;
-	gdouble* bias;
+  NcmSpline* bias_spline;
+  guint nknots;
+  gdouble* bias;
 
-	NcDistance* dist;
+  NcDistance* dist;
 
-	NcmSpline* g_func;
-	gboolean domagbias;
+  NcmSpline* g_func;
+  gboolean domagbias;
 
-	gboolean fast_update;
-	gdouble bias_old;
-	gdouble noise_bias_old;
+  gboolean fast_update;
+  gdouble bias_old;
+  gdouble noise_bias_old;
 
-	gdouble nbarm1;
+  gdouble nbarm1;
 };
 
 struct _NcXcorLimberKernelGalClass
 {
-	/*< private >*/
-	NcXcorLimberKernelClass parent_class;
+  /*< private >*/
+  NcXcorLimberKernelClass parent_class;
 };
 
 #define NC_XCOR_LIMBER_KERNEL_GAL_BIAS_DEFAULT_LEN (1)

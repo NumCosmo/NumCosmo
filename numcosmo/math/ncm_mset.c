@@ -1852,7 +1852,7 @@ ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset)
  * @mset: a #NcmMSet
  * @params: a #NcmVector
  *
- * Sets the models parameters using values from @params.
+ * Sets the models parameters using values from the #NcmVector @params.
  *
  */
 void
@@ -1907,6 +1907,30 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
         ncm_vector_set (params, j++, ncm_model_param_get (item->model, pid));
       }
     }
+  }
+}
+
+/**
+ * ncm_mset_param_set_mset:
+ * @mset_dest: a #NcmMSet
+ * @mset_src: a #NcmMSet
+ *
+ * Copy parameters from @mset_src to @mset_dest, both #NcmMSet must
+ * be compatible.
+ *
+ */
+void 
+ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src)
+{
+  g_assert_cmpint (ncm_mset_cmp_all (mset_dest, mset_src), ==, 0);
+  {
+    const guint n     = ncm_mset_total_len (mset_dest);
+    NcmVector *params = ncm_vector_new (n);
+
+    ncm_mset_param_get_vector (mset_src, params);
+    ncm_mset_param_set_vector (mset_dest, params);
+
+    ncm_vector_free (params);
   }
 }
 

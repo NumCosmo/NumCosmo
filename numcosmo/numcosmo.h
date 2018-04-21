@@ -37,6 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
+#include <numcosmo/nc_powspec_ml_fix_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
@@ -54,8 +55,6 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/linear.h>
-#include <numcosmo/perturbations/covariance.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
@@ -72,9 +71,8 @@
 #include <numcosmo/model/nc_hicosmo_de.h>
 #include <numcosmo/model/nc_hicosmo_de_reparam_ok.h>
 #include <numcosmo/model/nc_hicosmo_de_reparam_cmb.h>
-#include <numcosmo/model/nc_hicosmo_de_linder.h>
-#include <numcosmo/model/nc_hicosmo_de_pad.h>
-#include <numcosmo/model/nc_hicosmo_de_qe.h>
+#include <numcosmo/model/nc_hicosmo_de_cpl.h>
+#include <numcosmo/model/nc_hicosmo_de_jbp.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
@@ -86,7 +84,7 @@
 #include <numcosmo/model/nc_hiprim_atan.h>
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
-#include <numcosmo/model/quantum_gravity.h>
+#include <numcosmo/model/nc_hiprim_sbpl.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
@@ -96,7 +94,6 @@
 #include <numcosmo/lss/nc_transfer_func_bbks.h>
 #include <numcosmo/lss/nc_transfer_func_eh.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
-#include <numcosmo/lss/nc_transfer_func_pert.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_density_profile.h>
 #include <numcosmo/lss/nc_density_profile_nfw.h>
@@ -132,7 +129,13 @@
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
+#include <numcosmo/lss/nc_galaxy_redshift.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spec.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spline.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
+#include <numcosmo/lss/nc_wl_surface_mass_density.h>
+#include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>
+#include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -145,6 +148,7 @@
 #include <numcosmo/data/nc_data_bao_rdv.h>
 #include <numcosmo/data/nc_data_bao_dvdv.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
+#include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>
@@ -155,6 +159,7 @@
 #include <numcosmo/data/nc_data_cluster_poisson.h>
 #include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
+#include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 
@@ -166,6 +171,7 @@
 #include <numcosmo/xcor/nc_xcor_AB.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_lensing.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_CMB_lensing.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
 
 #endif /* _NUMCOSMO_H */

@@ -60,6 +60,7 @@ nc_hiprim_expc_finalize (GObject *object)
 }
 
 static gdouble _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
+static gdouble _nc_hiprim_expc_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
 nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
@@ -87,7 +88,7 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 
   /* Set lambdac param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_LAMBDAC, "\\lambda_c", "lambdac",
-                              0.0, 10.0, 1.0,
+                              0.0, 30.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_LAMBDAC,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */
@@ -101,10 +102,23 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_C,
                               NCM_PARAM_TYPE_FIXED);
 
+  /* Set T_SA_ratio param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+                              0.0, 10.0, 1.0e-1,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_T_SA_RATIO,
+                              NCM_PARAM_TYPE_FIXED);
+  
+  /* Set N_T param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_N_T, "n_{T}", "n_T",
+                              -0.5, 0.5, 1.0e-2,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_N_T,
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
   nc_hiprim_set_lnSA_powspec_lnk_impl (prim_class, &_nc_hiprim_expc_lnSA_powespec_lnk);
+  nc_hiprim_set_lnT_powspec_lnk_impl (prim_class, &_nc_hiprim_expc_lnT_powespec_lnk);
 }
 
 /**
@@ -128,6 +142,8 @@ nc_hiprim_expc_new (void)
 #define LAMBDAC    (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_LAMBDAC))
 #define LNKC       (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_LNKC))
 #define C          (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_C))
+#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_T_SA_RATIO))
+#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_N_T))
 
 /****************************************************************************
  * Power spectrum
@@ -151,4 +167,11 @@ _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
     ln_expc_fac = log (- expm1 (- k_kc_lambda_c));
 
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_expc_fac;
+}
+
+static gdouble
+_nc_hiprim_expc_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
+{
+  const gdouble ln_ka = lnk - prim->lnk_pivot;
+  return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }

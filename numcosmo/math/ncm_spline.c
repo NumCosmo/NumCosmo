@@ -199,15 +199,15 @@ ncm_spline_class_init (NcmSplineClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->name = NULL;
-  klass->reset = NULL;
-  klass->prepare = NULL;
+  klass->name         = NULL;
+  klass->reset        = NULL;
+  klass->prepare      = NULL;
   klass->prepare_base = NULL;
-  klass->min_size = NULL;
-  klass->eval = NULL;
-  klass->deriv = NULL;
-  klass->deriv2 = NULL;
-  klass->integ = NULL;  
+  klass->min_size     = NULL;
+  klass->eval         = NULL;
+  klass->deriv        = NULL;
+  klass->deriv2       = NULL;
+  klass->integ        = NULL;  
 }
 
 /**
@@ -570,7 +570,7 @@ NcmVector *
 ncm_spline_get_xv (NcmSpline *s)
 {
 	if (s->xv != NULL)
-    return g_object_ref (s->xv);
+    return ncm_vector_ref (s->xv);
   else
     return NULL;
 }
@@ -587,7 +587,7 @@ NcmVector *
 ncm_spline_get_yv (NcmSpline *s)
 {
   if (s->yv != NULL)
-    return g_object_ref (s->yv);
+    return ncm_vector_ref (s->yv);
   else
     return NULL;
 }

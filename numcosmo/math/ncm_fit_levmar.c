@@ -42,7 +42,9 @@
 #include "ncm_enum_types.h"
 #include "levmar/levmar.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -119,7 +121,7 @@ _ncm_fit_levmar_get_property (GObject *object, guint prop_id, GValue *value, GPa
 }
 
 static void
-ncm_fit_levmar_dispose (GObject *object)
+_ncm_fit_levmar_dispose (GObject *object)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
 
@@ -131,7 +133,7 @@ ncm_fit_levmar_dispose (GObject *object)
 }
 
 static void
-ncm_fit_levmar_finalize (GObject *object)
+_ncm_fit_levmar_finalize (GObject *object)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
 
@@ -155,8 +157,8 @@ ncm_fit_levmar_class_init (NcmFitLevmarClass *klass)
   object_class->constructed  = &_ncm_fit_levmar_constructed;
   object_class->set_property = &_ncm_fit_levmar_set_property;
   object_class->get_property = &_ncm_fit_levmar_get_property;
-  object_class->dispose      = &ncm_fit_levmar_dispose;
-  object_class->finalize     = &ncm_fit_levmar_finalize;
+  object_class->dispose      = &_ncm_fit_levmar_dispose;
+  object_class->finalize     = &_ncm_fit_levmar_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ALGO,
@@ -282,7 +284,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
-  fit->fstate->niter = info[5];
+  ncm_fit_state_set_niter (fit->fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
@@ -322,7 +324,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
-  fit->fstate->niter = info[5];
+  ncm_fit_state_set_niter (fit->fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
@@ -363,7 +365,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
-  fit->fstate->niter = info[5];
+  ncm_fit_state_set_niter (fit->fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
@@ -404,7 +406,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
-  fit->fstate->niter = info[5];
+  ncm_fit_state_set_niter (fit->fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
@@ -575,4 +577,3 @@ ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
     }
   }
 }
-

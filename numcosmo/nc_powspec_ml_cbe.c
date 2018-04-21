@@ -46,6 +46,7 @@ enum
 {
   PROP_0,
   PROP_CBE,
+	PROP_SIZE
 };
 
 G_DEFINE_TYPE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML);

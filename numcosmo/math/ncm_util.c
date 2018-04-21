@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_util.c
  *
@@ -39,6 +40,7 @@
 #include "math/ncm_util.h"
 #include "math/memory_pool.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_randist.h>
@@ -47,8 +49,13 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_hyperg.h>
+
 #include <cvode/cvode.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvode/cvode_dense.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h>
+#endif
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -56,6 +63,7 @@
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_random_seed:
@@ -397,65 +405,6 @@ ncm_sphPlm_x (gint l, gint m, gint order)
 }
 
 /**
- * ncm_sphPlm_test_theta:
- * @theta: FIXME
- * @lmax: FIXME
- * @lmin_data: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data)
-{
-  gdouble x = cos (theta);
-  gint m;
-#ifdef HAVE_GSL_2_0
-  gsize a_size = gsl_sf_legendre_array_n (lmax);
-  gdouble *Plm_data = g_new0 (gdouble, a_size);
-  g_free (Plm_data);
-  gsl_sf_legendre_array (GSL_SF_LEGENDRE_SPHARM, lmax, x, Plm_data);
-  for (m = 0; m <= lmax; m++)
-  {
-    gint last = lmax - m;
-    gint l;
-    for (l = 0; l <= last; l++)
-    {
-      if (fabs (Plm_data[gsl_sf_legendre_array_index (l, m)]) > 1e-20)
-      {
-        lmin_data[m] = l + m;
-        break;
-      }
-    }
-  }
-#else
-  gdouble Plm_data[4096];
-  gsl_vector_int_view lmin_view = gsl_vector_int_view_array (lmin_data, lmax+1);
-
-  g_assert (lmax <= 4096);
-  gsl_vector_int_set_all (&lmin_view.vector, 1.0e9);
-
-  for (m = 0; m <= lmax; m++)
-  {
-    gint last = gsl_sf_legendre_array_size (lmax, m);
-    gint l;
-
-    gsl_sf_legendre_sphPlm_array (lmax, m, x, Plm_data);
-    for (l = 0; l < last; l++)
-    {
-      if (fabs (Plm_data[l]) > 1e-20)
-      {
-        lmin_data[m] = l + m;
-        break;
-      }
-    }
-  }
-#endif /* HAVE_GSL_2_0 */
-  return 0.0;
-}
-
-/**
  * ncm_mpfr_out_raw: (skip)
  * @stream: FIXME
  * @op: FIXME
@@ -638,199 +587,6 @@ ncm_sum (gdouble *d, gulong n)
 }
 
 /**
- * ncm_numdiff_1: (skip)
- * @F: FIXME
- * @x: FIXME
- * @ho: FIXME
- * @err: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
-{
-  const gint ntab = 20;
-  const gdouble con = 2.0;
-  const gdouble con2 = (con * con);
-  const gdouble big = 1e300;
-  const gdouble safe = 2.0;
-  volatile gdouble temp = x + ho;
-  const gdouble h = temp - x;
-  gint i,j;
-  gdouble errt, fac, hh, ans;
-  gdouble a[ntab * ntab];
-  //  guint count = 0;
-
-  if (h == 0.0)
-    g_error ("ncm_numdiff_1: Step h too small");
-
-  hh = h;
-
-  a[ntab * 0 + 0] = ans = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0*hh);
-  //  count += 2;
-  *err = big;
-
-  for (i = 1; i < ntab; i++)
-  {
-    hh /= con;
-    a[0 * ntab + i] = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0 * hh);
-    //    count += 2;
-    fac = con2;
-
-    for (j = 1; j <= i; j++)
-    {
-      a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
-      fac = con2 * fac;
-      errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
-      if (errt <= *err)
-      {
-        *err = errt;
-        ans = a[j * ntab + i];
-      }
-    }
-    if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
-      break;
-  }
-  //  printf ("# Count %u\n", count);
-  return ans;
-}
-
-#define NCM_NUMDIFF_RETRY_PP (0.2)
-#define NCM_NUMDIFF_RETRY_N (8)
-
-/**
- * ncm_numdiff_2_err: (skip)
- * @F: FIXME
- * @ofx: FIXME
- * @x: FIXME
- * @ho: FIXME
- * @err: FIXME
- * @ferr: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr)
-{
-  gdouble herr;
-  gdouble hans, lans;
-  gdouble try_h = ho;
-  gdouble try_again = FALSE;
-  gdouble c = NCM_NUMDIFF_RETRY_PP;
-  gint deteriorate = 0;
-
-  lans = ncm_numdiff_2 (F, ofx, x, ho, ferr);
-  //printf ("#D2 % 20.15g +/- % 20.15g [% 20.15g] | (% 20.15g, % 20.15g)\n", lans, lerr, ho, x, *ofx);
-  if (fabs (ferr[0] / lans) < err)
-    return lans;
-  try_h = ho;
-
-  do {
-    try_h *= c;
-    hans = ncm_numdiff_2 (F, ofx, x, try_h, &herr);
-    //printf ("#   % 20.15g +/- % 20.15g [% 20.15g]<%d> lerr % 20.15g\n", hans, herr, try_h, deteriorate, lerr);
-    if (fabs(herr) > fabs(ferr[0]))
-    {
-      if (deteriorate < NCM_NUMDIFF_RETRY_N)
-      {
-        deteriorate++;
-        try_again = TRUE;
-      }
-      else if (c == NCM_NUMDIFF_RETRY_PP)
-      {
-        try_h = ho;
-        c = 1.0 + NCM_NUMDIFF_RETRY_PP;
-        try_again = TRUE;
-        deteriorate = 0;
-      }
-      else
-      {
-        try_again = FALSE;
-        lans = hans;
-      }
-    }
-    else
-    {
-      try_again = (fabs(herr/hans) > fabs(err));
-      lans = hans;
-      ferr[0] = herr;
-    }
-  } while (try_again);
-
-  return lans;
-}
-
-/**
- * ncm_numdiff_2: (skip)
- * @F: FIXME
- * @ofx: FIXME
- * @x: FIXME
- * @ho: FIXME
- * @err: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err)
-{
-  const gint ntab = 20;
-  const gdouble con = 2.0;
-  const gdouble con2 = (con * con);
-  const gdouble big = 1e300;
-  const gdouble safe = 2.0;
-  volatile gdouble temp = x + ho;
-  const gdouble h = temp - x;
-  gint i,j;
-  gdouble errt, fac, hh, ans;
-  gdouble a[ntab * ntab];
-  gdouble fx;
-  //  guint count = 0;
-  if (ofx == NULL)
-    fx = F->function (x, F->params);
-  else
-    fx = *ofx;
-
-  if (h == 0.0)
-    g_error ("ncm_numdiff_2: Step h too small");
-
-  hh = h;
-
-  a[ntab * 0 + 0] = ans = (F->function (x + hh, F->params) - 2.0 * fx + F->function (x - hh, F->params)) / (hh * hh);
-  //  count += 2;
-  *err = big;
-
-  for (i = 1; i < ntab; i++)
-  {
-    hh /= con;
-    a[0 * ntab + i] = (F->function (x + hh, F->params) - 2.0 * fx + F->function (x - hh, F->params)) / (hh * hh);
-    //    count += 2;
-    fac = con2;
-
-    for (j = 1; j <= i; j++)
-    {
-      a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
-      fac = con2 * fac;
-      errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
-      if (errt <= *err)
-      {
-        *err = errt;
-        ans = a[j * ntab + i];
-      }
-    }
-    if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
-      break;
-  }
-
-  return ans;
-}
-
-/**
  * ncm_util_sqrt1px_m1:
  * @x: a real number $&gt;-1$
  *
@@ -964,9 +720,10 @@ ncm_d3exprel (const gdouble x)
 
 /**
  * ncm_cmp:
- * @x: a double.
- * @y: a double.
- * @reltol: relative precision.
+ * @x: a double
+ * @y: a double
+ * @reltol: relative precision
+ * @abstol: the absolute precision
  *
  * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
  * all comparisons are done with precision @prec.
@@ -974,15 +731,17 @@ ncm_d3exprel (const gdouble x)
  * Returns: -1, 0, 1.
  */
 gint
-ncm_cmp (gdouble x, gdouble y, gdouble reltol)
+ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol)
 {
   if (G_UNLIKELY (x == 0.0 && y == 0.0))
     return 0;
   else
   {
     const gdouble delta = (x - y);
-    const gdouble mean  = G_UNLIKELY (x == 0 || y == 0) ? 1.0 : 0.5 * fabs (x + y);
-    if (fabs (delta / mean) < reltol)
+    const gdouble abs_x = fabs (x);
+    const gdouble abs_y = fabs (y);
+    const gdouble mean  = G_UNLIKELY (x == 0.0 || y == 0.0) ? 1.0 : GSL_MAX (abs_x, abs_y);
+    if (fabs (delta) <= reltol * mean + abstol)
       return 0;
     else
       return delta < 0 ? -1 : 1;
@@ -990,9 +749,14 @@ ncm_cmp (gdouble x, gdouble y, gdouble reltol)
 }
 
 void
-_ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2)
+_ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol)
 {
-  gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g)", expr, arg1, cmp, arg2);
+  gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g) (reltol %.17g diff_rel %.17g, abstol %.17g diff %.17g)", 
+                              expr, arg1, cmp, arg2, reltol,
+                              fabs (arg1) > fabs (arg2) ? fabs (arg2 / arg1 - 1.0) : fabs (arg1 / arg2 - 1.0),
+                              abstol,
+                              fabs (arg1 - arg2) 
+                              );
   g_assertion_message (domain, file, line, func, s);
   g_free (s);
 }
@@ -1014,7 +778,7 @@ ncm_complex_new ()
 
 /**
  * ncm_complex_dup:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Allocates a new complex number and copy the contents of @c to it.
  *
@@ -1024,13 +788,14 @@ NcmComplex *
 ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
-  cc->z = c->z;
+  cc->z[0] = c->z[0];
+  cc->z[1] = c->z[1];
   return cc;
 }
 
 /**
  * ncm_complex_free:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees @c, it should not be used on a statically allocated NcmComplex.
  *
@@ -1043,7 +808,7 @@ ncm_complex_free (NcmComplex *c)
 
 /**
  * ncm_complex_clear:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
  *
@@ -1055,32 +820,103 @@ ncm_complex_clear (NcmComplex **c)
 }
 
 /**
+ * ncm_complex_set:
+ * @c: a #NcmComplex
+ * @a: the real part $a$
+ * @b: the imaginary part $b$
+ *
+ * Sets @c to $a + I b$.
+ *
+ */
+/**
+ * ncm_complex_set_zero:
+ * @c: a #NcmComplex
+ *
+ * Sets @c to $0 + I 0$.
+ *
+ */
+/**
  * ncm_complex_Re:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the real part of @c.
  *
  * Returns: Re$(c)$.
  */
-gdouble
-ncm_complex_Re (NcmComplex *c)
-{
-  return creal (c->z);
-}
-
 /**
  * ncm_complex_Im:
- * @c: a #NcmComplex.
+ * @c: a #NcmComplex
  *
  * Returns the imaginary part of @c.
  *
  * Returns: Im$(c)$.
  */
-gdouble
-ncm_complex_Im (NcmComplex *c)
-{
-  return cimag (c->z);
-}
+
+/**
+ * ncm_complex_res_add_mul_real:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 + @c2 * @v, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+/**
+ * ncm_complex_res_add_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ * @c3: #NcmComplex
+ *
+ * Computes @c1 = @c1 + @c2 * @c3, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+
+/**
+ * ncm_complex_mul_real:
+ * @c: a #NcmComplex
+ * @v: a gdouble
+ *
+ * Computes @c1 = @c1 * @v.
+ * 
+ */
+/**
+ * ncm_complex_res_mul:
+ * @c1: a #NcmComplex
+ * @c2: a #NcmComplex
+ *
+ * Computes @c1 = @c1 * @c2, assuming that 
+ * @c1 and @c2 are different.
+ * 
+ */
+
+/**
+ * ncm_util_position_angle:
+ * @ra1: Right ascension of object 1 
+ * @dec1: Declination of object 1 
+ * @ra2: Right ascension of object 2 
+ * @dec2: Declination of object 2
+ *  
+ * Computes the on-sky position angle (East of North) between object1 (@ra1, @dec1) and object2 (@ra2, dec2).
+ * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.  
+ * 
+ * Returns: the position angle in radians 
+ */
+
+/**
+ * ncm_util_great_circle_distance:
+ * @ra1: Right ascension of object 1 
+ * @dec1: Declination of object 1 
+ * @ra2: Right ascension of object 2 
+ * @dec2: Declination of object 2
+ *  
+ * Compute the great circle distance (or separation, as defined in astropy) between poistion 1 (@ra1, @dec1) and position 2 (@ra2, @dec2).  
+ * See [Great-circle distance](https://en.wikipedia.org/wiki/Great-circle_distance), in particular the Vincenty equation (implemented here).
+ * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.  
+ * 
+ * Returns: the great circle distance in decimal degrees
+ */
 
 /**
  * ncm_util_cvode_check_flag:
@@ -1162,6 +998,7 @@ ncm_util_cvode_print_stats (gpointer cvode)
 
   flag = CVDlsGetNumJacEvals (cvode, &njaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
+
   flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);
 
@@ -1376,7 +1213,6 @@ _ncm_util_set_destroyed (gpointer b)
 
  =====================================================================*/
 
-#include <math.h>
 #include <stdlib.h>
 
 #define num_Pi     3.14159265358979323846 /* PI */

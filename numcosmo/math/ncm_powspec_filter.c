@@ -70,7 +70,8 @@ enum
   PROP_ZI,
   PROP_ZF,
   PROP_RELTOL,
-  PROP_POWERSPECTRUM
+  PROP_POWERSPECTRUM,
+	PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT);
@@ -394,7 +395,7 @@ _ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
   F.params   = arg;
 
   arg->z = z;
-  ncm_fftlog_eval_by_function (arg->psf->fftlog, &F);
+  ncm_fftlog_eval_by_gsl_function (arg->psf->fftlog, &F);
   /*printf ("# z-knots % 20.15g % 20.15g\n", z, ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0));*/
   return ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0);
 }
@@ -446,7 +447,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
     
-    ncm_fftlog_calibrate_size (psf->fftlog, &F, psf->reltol);
+    ncm_fftlog_calibrate_size_gsl (psf->fftlog, &F, psf->reltol);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
     {
@@ -483,7 +484,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
 
       arg.z = ncm_vector_get (z_vec, i);
-      ncm_fftlog_eval_by_function (psf->fftlog, &F);
+      ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
@@ -518,7 +519,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
 
       arg.z = ncm_vector_get (psf->var->yv, i);
-      ncm_fftlog_eval_by_function (psf->fftlog, &F);
+      ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));

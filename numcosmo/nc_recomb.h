@@ -34,14 +34,18 @@
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/function_cache.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
+#if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
+#elif HAVE_SUNDIALS_MAJOR == 3
 #endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -60,6 +64,9 @@ struct _NcRecombClass
   /*< private >*/
   GObjectClass parent_class;
   void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
+  gdouble (*Xe) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+  gdouble (*XHII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+  gdouble (*XHeII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 };
 
 struct _NcRecomb
@@ -70,11 +77,16 @@ struct _NcRecomb
   gdouble init_frac;
   gsl_min_fminimizer *fmin;
   gsl_root_fsolver *fsol;
-  NcmSpline *Xe_s;
   NcmSpline *dtau_dlambda_s;
   NcmSpline *tau_s;
+  NcmOdeSpline *tau_ode_s;
+  NcmOdeSpline *tau_drag_ode_s;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
+  gdouble v_tau_max_z, v_tau_max_lambda;
+  gdouble tau_z, tau_lambda;
+  gdouble tau_drag_z, tau_drag_lambda;
+  gdouble tau_cutoff_z, tau_cutoff_lambda;
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;
@@ -84,7 +96,12 @@ NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
 void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+
 G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
+
+G_INLINE_FUNC gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+G_INLINE_FUNC gdouble nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+G_INLINE_FUNC gdouble nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 gdouble nc_recomb_HI_ion_saha (NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, const gdouble x);
@@ -100,30 +117,38 @@ gdouble nc_recomb_equilibrium_XHeI (NcRecomb *recomb, NcHICosmo *cosmo, const gd
 gdouble nc_recomb_equilibrium_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
 
-gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d3tau_dlambda3 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+gdouble nc_recomb_tau_drag (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda0, const gdouble lambda1);
 gdouble nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
-gdouble nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo);
 void nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble logref, gdouble *lambda_max, gdouble *lambda_l, gdouble *lambda_u);
 
-gdouble nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo);
-gdouble nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo);
-gdouble nc_recomb_tau_zdrag (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_v_tau_max_lambda (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_lambda (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_drag_lambda (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_cutoff_lambda (NcRecomb *recomb, NcHICosmo *cosmo);
+
+G_INLINE_FUNC gdouble nc_recomb_get_v_tau_max_z (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_z (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_drag_z (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_recomb_get_tau_cutoff_z (NcRecomb *recomb, NcHICosmo *cosmo);
 
 G_INLINE_FUNC gdouble nc_recomb_dtau_dlambda_Xe (NcHICosmo *cosmo, const gdouble lambda);
 G_INLINE_FUNC gdouble nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo, const gdouble lambda);
 
 /* Internal use */
 void _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo);
+void _nc_recomb_prepare_redshifts (NcRecomb *recomb, NcHICosmo *cosmo);
+
+#define NC_RECOMB_STARTING_X (1.0e12)
 
 G_END_DECLS
 
@@ -142,6 +167,24 @@ nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
 
   if (cosmo_up)
     nc_recomb_prepare (recomb, cosmo);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->Xe (recomb, cosmo, lambda);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHII (recomb, cosmo, lambda);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHeII (recomb, cosmo, lambda);
 }
 
 G_INLINE_FUNC gdouble
@@ -173,8 +216,55 @@ nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo, const gdouble lambda)
 	return -Xe * ncm_c_c () * ncm_c_thomson_cs () * n_0 * x3 / H;
 }
 
+G_INLINE_FUNC gdouble 
+nc_recomb_get_v_tau_max_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->v_tau_max_lambda;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_lambda;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_drag_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_drag_lambda;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_cutoff_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_cutoff_lambda;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_v_tau_max_z (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->v_tau_max_z;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_z (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_z;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_drag_z (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_drag_z;
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_get_tau_cutoff_z (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  return recomb->tau_cutoff_z;
+}
+
 G_END_DECLS
 
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_RECOMB_INLINE_H_ */
-

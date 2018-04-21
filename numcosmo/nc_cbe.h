@@ -132,10 +132,14 @@ void nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo);
 void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
 
 gdouble nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp);
+
 NcmSpline *nc_cbe_thermodyn_get_Xe (NcCBE *cbe);
+gdouble nc_cbe_thermodyn_v_tau_max_z (NcCBE *cbe);
+gdouble nc_cbe_thermodyn_z_d (NcCBE *cbe);
+
 NcmSpline2d *nc_cbe_get_matter_ps (NcCBE *cbe);
 
-void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
+void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *PHIPHI_Cls, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
 void nc_cbe_debug_test (NcCBE* cbe);
 
 G_END_DECLS

@@ -37,7 +37,10 @@
 #include "build_cfg.h"
 
 #include "lss/nc_transfer_func_eh.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_bessel.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANSFER_FUNC);
 

@@ -58,7 +58,9 @@
 #include "math/memory_pool.h"
 #include "math/ncm_mset_func_list.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcHIReion, nc_hireion, NCM_TYPE_MODEL);
 

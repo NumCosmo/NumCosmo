@@ -43,13 +43,13 @@ typedef struct _NcHICosmoQLinear NcHICosmoQLinear;
 
 /**
  * NcHICosmoQLinearParams:
- * @NC_HICOSMO_QLINEAR_H0: FIXME
- * @NC_HICOSMO_QLINEAR_OMEGA_T: FIXME
- * @NC_HICOSMO_QLINEAR_CD: FIXME
- * @NC_HICOSMO_QLINEAR_E: FIXME
- * @NC_HICOSMO_QLINEAR_Q: FIXME
- * @NC_HICOSMO_QLINEAR_QP: FIXME
- * @NC_HICOSMO_QLINEAR_Z1: FIXME
+ * @NC_HICOSMO_QLINEAR_H0: Hubble constant
+ * @NC_HICOSMO_QLINEAR_OMEGA_T: total energy density of the universe
+ * @NC_HICOSMO_QLINEAR_CD: comoving distance in units of the Hubble radius today
+ * @NC_HICOSMO_QLINEAR_E: normalized Hubble function at Z1
+ * @NC_HICOSMO_QLINEAR_Q: q-intercept term of the linear function
+ * @NC_HICOSMO_QLINEAR_QP: slope of the linear function
+ * @NC_HICOSMO_QLINEAR_Z1: initial redshift
  *
  */
 typedef enum _NcHICosmoQLinearParams
@@ -60,7 +60,8 @@ typedef enum _NcHICosmoQLinearParams
   NC_HICOSMO_QLINEAR_E,
   NC_HICOSMO_QLINEAR_Q,
   NC_HICOSMO_QLINEAR_QP,
-  NC_HICOSMO_QLINEAR_Z1,         /*< private >*/
+  NC_HICOSMO_QLINEAR_Z1,         
+  /* < private > */
   NC_HICOSMO_QLINEAR_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQLinearParams;
 

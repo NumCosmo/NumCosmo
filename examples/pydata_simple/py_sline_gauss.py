@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import gi
 import math
 from scipy.stats import norm
@@ -130,7 +132,7 @@ class PySLineGauss (Ncm.DataGaussCov):
       # to guarantee that it is posdef 
       #
       tmp1 = cov.dup ()
-      tmp1.dsymm ('U', 1.0, tmp1, 0.0, cov)
+      cov.dsymm('U', 1.0, tmp1, tmp1, 0.0);
 
       # Remove to print the covariance matrix
       # cov.log_vals ("# COV: ", "% 15.8g")

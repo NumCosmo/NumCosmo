@@ -25,9 +25,13 @@
 /**
  * SECTION:nc_hicosmo_qconst
  * @title: NcHICosmoQConst
- * @short_description: Constant deceleration parameter kinetic model.
+ * @short_description:  Kinetic model -- Constant deceleration function
  *
- * FIXME
+ * The deceleration function is defined as a constant, $q(z) = q_0$.  
+ * The comoving distance in units of the Hubble radius today is
+ * 
+ * $$D_c(z) = CD + \frac{(1+ z_1)^{-q_0}}{q_0} \left[ 1 - \left( \frac{1+z}{1+z_1} \right)^{-q_0} \right],$$
+ * where 	CD is the comoving distance from 0 to $z_1$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -36,8 +40,11 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qconst.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_log.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 

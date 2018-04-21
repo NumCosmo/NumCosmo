@@ -39,9 +39,12 @@
 
 #include "math/ncm_mset_trans_kern_gauss.h"
 #include "math/ncm_c.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

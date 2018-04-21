@@ -35,8 +35,11 @@
 #include <numcosmo/math/ncm_data.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_histogram2d.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -60,7 +63,8 @@ typedef enum _NcDataClusterAbundanceId
 {
   NC_DATA_CLUSTER_ABUNDANCE_FIT,
   NC_DATA_CLUSTER_ABUNDANCE_TXT,
-  NC_DATA_CLUSTER_ABUNDANCE_SAMPLING, /*< private >*/
+  NC_DATA_CLUSTER_ABUNDANCE_SAMPLING, 
+  /* < private > */
   NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
 } NcDataClusterAbundanceId;
 

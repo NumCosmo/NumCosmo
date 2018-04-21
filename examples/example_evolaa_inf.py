@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -81,8 +81,8 @@ hoaa.prepare ()
 
 (Aq, Av) = hoaa.eval_solution (None, ti, S1, PS1)
 
-print "# ", t0, t1
-print "# ", Aq, Av
+print ("# ", t0, t1)
+print ("# ", Aq, Av)
 
 ta = np.linspace (-42.0, -39.00, 100000)
 
@@ -99,5 +99,5 @@ for t in ta:
   I = 0.5 * (mnu * q**2 + Pq**2 / mnu)
   J = 0.5 * (mnu * v**2 + Pv**2 / mnu)
 
-  print t, S, sol_q (k, t), PS, sol_p (k, t), I, J, math.sqrt (I * J), math.cosh (epsilon)
+  print (t, S, sol_q (k, t), PS, sol_p (k, t), I, J, math.sqrt (I * J), math.cosh (epsilon))
 

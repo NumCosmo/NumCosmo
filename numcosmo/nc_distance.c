@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -116,13 +116,77 @@ typedef struct _ComovingDistanceArgument{
 enum
 {
   PROP_0,
-  PROP_ZF
+  PROP_ZF,
+  PROP_RECOMB,
+  PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcDistance, nc_distance, G_TYPE_OBJECT);
 
 static void
-nc_distance_constructed (GObject *object)
+nc_distance_init (NcDistance *dist)
+{
+  dist->use_cache                = TRUE;
+
+  dist->comoving_distance_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+
+	dist->comoving_infinity        = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->time_cache               = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->lookback_time_cache      = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->conformal_time_cache     = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+
+  dist->sound_horizon_cache      = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+
+  dist->comoving_distance_spline = NULL;
+
+  dist->recomb                   = NULL;
+  
+  dist->ctrl = ncm_model_ctrl_new (NULL);
+}
+
+static void
+_nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcDistance *dist = NC_DISTANCE (object);
+  g_return_if_fail (NC_IS_DISTANCE (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZF:
+      dist->zf = g_value_get_double (value);
+      ncm_model_ctrl_force_update (dist->ctrl);
+      break;
+    case PROP_RECOMB:
+      nc_distance_set_recomb (dist, g_value_get_object (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcDistance *dist = NC_DISTANCE (object);
+  g_return_if_fail (NC_IS_DISTANCE (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZF:
+      g_value_set_double (value, dist->zf);
+      break;
+    case PROP_RECOMB:
+      g_value_set_object (value, dist->recomb);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_distance_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
@@ -132,11 +196,12 @@ nc_distance_constructed (GObject *object)
 }
 
 static void
-nc_distance_dispose (GObject *object)
+_nc_distance_dispose (GObject *object)
 {
   NcDistance *dist = NC_DISTANCE (object);
 
   ncm_function_cache_clear (&dist->comoving_distance_cache);
+	ncm_function_cache_clear (&dist->comoving_infinity);
   ncm_function_cache_clear (&dist->time_cache);
   ncm_function_cache_clear (&dist->lookback_time_cache);
   ncm_function_cache_clear (&dist->conformal_time_cache);
@@ -151,7 +216,7 @@ nc_distance_dispose (GObject *object)
 }
 
 static void
-nc_distance_finalize (GObject *object)
+_nc_distance_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -159,50 +224,15 @@ nc_distance_finalize (GObject *object)
 }
 
 static void
-nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcDistance *dist = NC_DISTANCE (object);
-  g_return_if_fail (NC_IS_DISTANCE (object));
-
-  switch (prop_id)
-  {
-    case PROP_ZF:
-      dist->zf = g_value_get_double (value);
-      ncm_model_ctrl_force_update (dist->ctrl);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcDistance *dist = NC_DISTANCE (object);
-  g_return_if_fail (NC_IS_DISTANCE (object));
-
-  switch (prop_id)
-  {
-    case PROP_ZF:
-      g_value_set_double (value, dist->zf);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
 nc_distance_class_init (NcDistanceClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->constructed  = nc_distance_constructed;
-  object_class->set_property = nc_distance_set_property;
-  object_class->get_property = nc_distance_get_property;
-  object_class->dispose = nc_distance_dispose;
-  object_class->finalize = nc_distance_finalize;
+  object_class->constructed  = &_nc_distance_constructed;
+  object_class->set_property = &_nc_distance_set_property;
+  object_class->get_property = &_nc_distance_get_property;
+  object_class->dispose      = &_nc_distance_dispose;
+  object_class->finalize     = &_nc_distance_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ZF,
@@ -212,6 +242,13 @@ nc_distance_class_init (NcDistanceClass *klass)
                                                         0.0,
                                                         G_MAXDOUBLE,
                                                         10.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECOMB,
+                                   g_param_spec_object ("recomb",
+                                                        NULL,
+                                                        "Recombination object",
+                                                        NC_TYPE_RECOMB,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -290,6 +327,22 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
   }
 }
 
+void 
+nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb)
+{
+  if (dist->recomb != recomb)
+  {
+    nc_recomb_clear (&dist->recomb);
+
+    if (recomb != NULL)
+    {
+      dist->recomb = nc_recomb_ref (recomb);
+    }
+
+    ncm_model_ctrl_force_update (dist->ctrl);
+  }
+}
+
 static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
@@ -304,9 +357,10 @@ void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
   dist->comoving_distance_cache->clear = TRUE;
-  dist->time_cache->clear = TRUE;
-  dist->lookback_time_cache->clear = TRUE;
-  dist->conformal_time_cache->clear = TRUE;
+	dist->comoving_infinity->clear       = TRUE;
+  dist->time_cache->clear              = TRUE;
+  dist->lookback_time_cache->clear     = TRUE;
+  dist->conformal_time_cache->clear    = TRUE;
 
   dist->sound_horizon_cache->clear = TRUE;
 
@@ -321,35 +375,12 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 
   ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
 
+  if (dist->recomb != NULL)
+    nc_recomb_prepare_if_needed (dist->recomb, cosmo);
+  
   ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo));
 
   return;
-}
-
-/**
- * nc_distance_prepare_if_needed:
- * @dist: a #NcDistance
- * @cosmo: a #NcHICosmo
- *
- * FIXME
- *
- */
-static void
-nc_distance_init (NcDistance *dist)
-{
-  dist->use_cache = TRUE;
-
-  dist->comoving_distance_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-
-  dist->time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-  dist->lookback_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-  dist->conformal_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-
-  dist->sound_horizon_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-
-  dist->comoving_distance_spline = NULL;
-
-  dist->ctrl = ncm_model_ctrl_new (NULL);
 }
 
 /**
@@ -422,6 +453,7 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   NCM_UNUSED (cd);
+
   return 1.0 / sqrt (E2);
 }
 
@@ -862,9 +894,10 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  *
  * Drag redshift is the epoch at which baryons were released from photons.
- *
- * This function computes $z_d$ using the fitting formula given in
- * [Eisenstein & Hu (1998)][XEisenstein1998],
+ * 
+ * If the @dist object constains a NcRecomb object, it calculates the drag
+ * redshift through the recombination history. Otherwise, it computes $z_d$ 
+ * using the fitting formula given in [Eisenstein & Hu (1998)][XEisenstein1998],
  * $$z_d = \frac{1291 (\Omega_{m0} h^2)^{0.251}}{(1 + 0.659 (\Omega_{m0} h^2)^{0.828})}
  * \left(1 + b_1 (\Omega_{b0} h^2)^{b_2}\right),$$
  * where $\Omega_{b0} h^2$ [nc_hicosmo_Omega_b0h2()] and $\Omega_{m0} h^2$ [nc_hicosmo_Omega_m0h2()]
@@ -879,15 +912,22 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
 gdouble
 nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
-  gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
-  gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
-  gdouble b1 = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
-  gdouble b2 = 0.238 * pow (omega_m_h2, 0.223);
+  if (dist->recomb != NULL)
+  {
+    return nc_recomb_get_tau_drag_z (dist->recomb, cosmo);
+  }
+  else
+  {
+    gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+    gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+    gdouble b1 = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
+    gdouble b2 = 0.238 * pow (omega_m_h2, 0.223);
 
-  NCM_UNUSED (dist);
+    NCM_UNUSED (dist);
 
-  return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
-    (1.0 + b1 * pow (omega_b_h2, b2));
+    return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
+      (1.0 + b1 * pow (omega_b_h2, b2));
+  }
 }
 
 /**
@@ -969,6 +1009,21 @@ nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 }
 
 /**
+ * nc_distance_r_zd_Mpc:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ *
+ * $r (z_d) R_H\, [\mathrm{Mpc}]$.
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo)
+{
+  return nc_distance_r_zd (dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+/**
  * nc_distance_bao_r_Dv:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
@@ -992,9 +1047,10 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $H(z) / (c r_{z_d})$.
+ * Computes the ratio between the Hubble (distance) radius and the sound horizon at the drag epoch, 
+ * $$\frac{R_H}{r_s(z_d)} = c / (H(z) r_d).$$  
  *
- * Returns: FIXME
+ * Returns: $R_H/r_d = c / (H(z) r_d)$
  */
 gdouble
 nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -1010,9 +1066,9 @@ nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $D_A(z) / (c r_{z_d})$.
+ * Computes the ratio between the angular-diameter distance and the sound horizon at the drag epoch, $$D_A(z) / (c r_s(z_d)).$$
  *
- * Returns: FIXME
+ * Returns: $D_A(z) / (c r_d)$
  */
 gdouble
 nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -1020,6 +1076,96 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble DA = nc_distance_angular_diameter (dist, cosmo, z);
   return DA / r_zd;
+}
+
+/* Distances from z to infinity */
+
+static gdouble
+_nc_distance_comoving_infinity_integrand (gdouble logx, gpointer p)
+{
+  if (logx > GSL_LOG_DBL_MAX)
+    return 0.0;
+  else
+  {
+    NcHICosmo *cosmo = NC_HICOSMO (p);
+    const gdouble z = expm1 (logx);
+    const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
+
+    if (gsl_finite (E))
+      return (1.0 + z) / E;
+    else
+      return 0.0;
+  }
+}
+
+/**
+ * nc_distance_comoving_z_to_infinity:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ * 
+ * Computes the comoving distance from @z to infinity.
+ * 
+ * Returns: $D_c$ from $z$ to $\infity$
+ */
+gdouble
+nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble result, error;
+  gsl_function F;
+  F.function = &_nc_distance_comoving_infinity_integrand;
+  F.params = cosmo;
+
+  if (dist->use_cache)
+    ncm_integral_cached_x_inf (dist->comoving_infinity, &F, log1p (z), &result, &error);
+  else
+    ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
+
+  return result;
+}
+
+
+/**
+ * nc_distance_transverse_z_to_infinity:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Compute the transverse comoving distance $D_t (z)$ (defined in Eq. $\eqref{eq:def:Dt}$) 
+ * but from @z to infinity.
+ *
+ * Returns: $D_t(z)$ from $z$ to $\infity$
+ */
+gdouble
+nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gdouble comoving_dist = nc_distance_comoving_z_to_infinity (dist, cosmo, z);
+  const gint k = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  gdouble Dt;
+
+  if (gsl_isinf (comoving_dist))
+    return comoving_dist;
+
+  switch (k)
+  {
+    case 0:
+      Dt = comoving_dist;
+      break;
+    case -1:
+      Dt = sinh (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0;
+      break;
+    case 1:
+      Dt = fabs (sin (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0);
+      break;
+    default:
+      g_assert_not_reached();
+      Dt = 0.0;
+      break;
+  }
+
+  return Dt;
 }
 
 /***************************************************************************
@@ -1175,6 +1321,7 @@ _NC_DISTANCE_FUNC0_TO_FLIST (acoustic_scale)
 _NC_DISTANCE_FUNC0_TO_FLIST (theta100CMB)
 _NC_DISTANCE_FUNC0_TO_FLIST (angular_diameter_curvature_scale)
 _NC_DISTANCE_FUNC0_TO_FLIST (r_zd)
+_NC_DISTANCE_FUNC0_TO_FLIST (r_zd_Mpc)
 
 #define _NC_DISTANCE_FUNC1_TO_FLIST(fname) \
 static void _nc_distance_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
@@ -1207,7 +1354,8 @@ _nc_distance_register_functions (void)
   ncm_mset_func_list_register ("acoustic_scale",                   "r_\\mathrm{ac}",           "NcDistance", "Acoustic scale at lss",            NC_TYPE_DISTANCE, _nc_distance_flist_acoustic_scale,                   0, 1);
   ncm_mset_func_list_register ("theta100CMB",                      "100\\theta_\\mathrm{CMB}", "NcDistance", "CMB angular scale times 100",      NC_TYPE_DISTANCE, _nc_distance_flist_theta100CMB,                      0, 1);
   ncm_mset_func_list_register ("angular_diameter_curvature_scale", "z_\\mathrm{dec}",          "NcDistance", "Angular diameter curvature scale", NC_TYPE_DISTANCE, _nc_distance_flist_angular_diameter_curvature_scale, 0, 1);
-  ncm_mset_func_list_register ("r_zd",                             "z_\\mathrm{dec}",          "NcDistance", "Sound horizon at drag redshift",   NC_TYPE_DISTANCE, _nc_distance_flist_r_zd,                             0, 1);
+  ncm_mset_func_list_register ("r_zd",                             "r_\\mathrm{dec}",          "NcDistance", "Sound horizon at drag redshift",   NC_TYPE_DISTANCE, _nc_distance_flist_r_zd,                             0, 1);
+  ncm_mset_func_list_register ("r_zd_Mpc",                         "r_\\mathrm{dec}R_H",       "NcDistance", "Sound horizon at drag redshift in Mpc", NC_TYPE_DISTANCE, _nc_distance_flist_r_zd_Mpc,                    0, 1);
 
   ncm_mset_func_list_register ("comoving",         "d_\\mathrm{c}",               "NcDistance", "Comoving distance",          NC_TYPE_DISTANCE, _nc_distance_flist_comoving,         1, 1);
   ncm_mset_func_list_register ("transverse",       "d_\\mathrm{t}",               "NcDistance", "Transverse distance",        NC_TYPE_DISTANCE, _nc_distance_flist_transverse,       1, 1);

@@ -25,12 +25,16 @@
 #ifndef _NCM_VECTOR_H_
 #define _NCM_VECTOR_H_
 
-#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <string.h>
+#include <math.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -103,6 +107,7 @@ const NcmVector *ncm_vector_const_new_variant (GVariant *var);
 const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
+NcmVector *ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride);
 GVariant *ncm_vector_get_variant (const NcmVector *v);
 GVariant *ncm_vector_peek_variant (const NcmVector *v);
 
@@ -113,6 +118,10 @@ void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gc
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
+void ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
+void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
+void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
+void ncm_vector_reciprocal (NcmVector *cv);
 
 G_INLINE_FUNC gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
@@ -134,6 +143,7 @@ G_INLINE_FUNC void ncm_vector_set_data (NcmVector *cv, const gdouble *array, gui
 G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, GArray *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_add_constant (NcmVector *cv, const gdouble val);
+G_INLINE_FUNC void ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2);
@@ -156,6 +166,8 @@ G_INLINE_FUNC gsize ncm_vector_get_max_index (const NcmVector *cv);
 G_INLINE_FUNC gsize ncm_vector_get_min_index (const NcmVector *cv);
 
 G_INLINE_FUNC void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+
+G_INLINE_FUNC gboolean ncm_vector_is_finite (const NcmVector *cv);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
@@ -314,9 +326,15 @@ ncm_vector_add_constant (NcmVector *cv, const gdouble val)
 }
 
 G_INLINE_FUNC void
+ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2)
+{
+  gsl_vector_mul (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
+}
+
+G_INLINE_FUNC void
 ncm_vector_div (NcmVector *cv1, const NcmVector *cv2)
 {
-  gsl_vector_div (ncm_vector_gsl(cv1), ncm_vector_const_gsl(cv2));
+  gsl_vector_div (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
 }
 
 G_INLINE_FUNC void
@@ -347,6 +365,9 @@ ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2)
 G_INLINE_FUNC void
 ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size)
 {
+  g_assert_cmpuint (ncm_vector_len (cv1), >=, size + cv1_start);
+  g_assert_cmpuint (ncm_vector_len (cv2), >=, size + cv2_start);
+  
   memcpy (ncm_vector_ptr (cv1, cv1_start), ncm_vector_const_ptr (cv2, cv2_start), sizeof (gdouble) * size);
 }
 
@@ -361,9 +382,22 @@ G_INLINE_FUNC GArray *
 ncm_vector_dup_array (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
-  GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-  g_array_append_vals (a, ncm_vector_data (cv), len);
-  return a;
+  if (ncm_vector_stride (cv) == 1)
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	g_array_append_vals (a, ncm_vector_data (cv), len);
+	return a;
+  }
+  else
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	gint i;
+
+	g_array_set_size (a, len);
+	for (i = 0; i < len; i++)
+	  g_array_index (a, gdouble, i) = ncm_vector_get (cv, i);
+	return a;
+  }
 }
 
 G_INLINE_FUNC gdouble *
@@ -430,6 +464,20 @@ G_INLINE_FUNC void
 ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
 {
   gsl_vector_minmax (ncm_vector_const_gsl (cv), min, max);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_vector_is_finite (const NcmVector *cv)
+{
+	const guint len = ncm_vector_len (cv);
+	guint i;
+	for (i = 0; i < len; i++)
+	{
+		if (!isfinite (ncm_vector_get (cv, i)))
+			return FALSE;
+	}
+	
+	return TRUE;
 }
 
 G_END_DECLS

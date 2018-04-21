@@ -40,10 +40,12 @@
 #include "math/ncm_data_gauss_diag.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -158,6 +160,9 @@ static guint _ncm_data_gauss_diag_get_dof (NcmData *data);
 static void _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
+static void _ncm_data_gauss_diag_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
+static void _ncm_data_gauss_diag_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+
 static void _ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np);
 static guint _ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag);
 
@@ -212,6 +217,8 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
   data_class->resample         = &_ncm_data_gauss_diag_resample;
   data_class->m2lnL_val        = &_ncm_data_gauss_diag_m2lnL_val;
   data_class->leastsquares_f   = &_ncm_data_gauss_diag_leastsquares_f;
+  data_class->mean_vector      = &_ncm_data_gauss_diag_mean_vector;
+  data_class->inv_cov_UH       = &_ncm_data_gauss_diag_inv_cov_UH;
 
   gauss_diag_class->mean_func  = NULL;
   gauss_diag_class->sigma_func = NULL;
@@ -410,6 +417,35 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
       const gdouble r_i = (yt_i - y_i) / sigma_i;
       ncm_vector_set (v, i, r_i);
     }
+  }
+}
+
+static void
+_ncm_data_gauss_diag_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
+{
+  NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+
+  gauss_diag_class->mean_func (diag, mset, mu);
+}
+
+static void
+_ncm_data_gauss_diag_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
+{
+  NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  guint i;
+
+  if (ncm_data_bootstrap_enabled (data))
+    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+  
+  if (gauss_diag_class->sigma_func != NULL)
+    gauss_diag_class->sigma_func (diag, mset, diag->sigma);
+  
+  for (i = 0; i < diag->np; i++)
+  {
+    const gdouble sigma_i = ncm_vector_get (diag->sigma, i);
+    ncm_matrix_mul_col (H, i, 1.0 / sigma_i);
   }
 }
 

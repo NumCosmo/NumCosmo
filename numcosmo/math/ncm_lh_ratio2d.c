@@ -44,10 +44,12 @@
 #include "math/ncm_matrix.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_deriv.h>
 #include <gsl/gsl_eigen.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -83,50 +85,7 @@ ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
   lhr2d->shift[1]    = 0.0;
   lhr2d->border_prec = 0.0;
   lhr2d->angular     = FALSE;
-}
-
-static void _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d);
-
-static void
-ncm_lh_ratio2d_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->constructed (object);
-  {
-    NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (object);
-    NcmSerialize *ser = ncm_serialize_global ();
-    NcmMSet *mset = ncm_mset_dup (lhr2d->fit->mset, ser);
-    gint i;
-
-    ncm_serialize_free (ser);
-    g_assert (lhr2d->fit->fstate->is_best_fit);
-
-    for (i = 0; i < 2; i++)
-    {
-      g_assert_cmpint (lhr2d->pi[i].mid, >=, 0);
-
-      if (ncm_mset_peek (lhr2d->fit->mset, lhr2d->pi[i].mid) == NULL)
-        g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set.", 
-                 lhr2d->pi[i].mid, lhr2d->pi[i].pid);
-
-      if (ncm_mset_param_get_ftype (lhr2d->fit->mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid) != NCM_PARAM_TYPE_FREE)
-        g_error ("ncm_lh_ratio2d_constructed: cannot find for a non fitted parameter[%d:%u].", 
-                 lhr2d->pi[i].mid, lhr2d->pi[i].pid);
-
-      ncm_mset_param_set_ftype (mset,
-                                lhr2d->pi[i].mid, lhr2d->pi[i].pid, 
-                                NCM_PARAM_TYPE_FIXED);
-
-      lhr2d->lb[i] = ncm_mset_param_get_lower_bound (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
-      lhr2d->ub[i] = ncm_mset_param_get_upper_bound (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
-      lhr2d->bf[i] = ncm_mset_param_get (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
-    }
-    
-    lhr2d->constrained = ncm_fit_copy_new (lhr2d->fit, lhr2d->fit->lh, mset,
-                                           lhr2d->fit->grad.gtype);
-    ncm_mset_free (mset);
-    _ncm_lh_ratio2d_prepare_coords (lhr2d);
-  }
+  lhr2d->diff        = ncm_diff_new ();
 }
 
 static void
@@ -190,6 +149,50 @@ ncm_lh_ratio2d_get_property (GObject *object, guint prop_id, GValue *value, GPar
   }
 }
 
+static void _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d);
+
+static void
+ncm_lh_ratio2d_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->constructed (object);
+  {
+    NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (object);
+    NcmSerialize *ser = ncm_serialize_global ();
+    NcmMSet *mset = ncm_mset_dup (lhr2d->fit->mset, ser);
+    gint i;
+
+    ncm_serialize_free (ser);
+    g_assert (lhr2d->fit->fstate->is_best_fit);
+
+    for (i = 0; i < 2; i++)
+    {
+      g_assert_cmpint (lhr2d->pi[i].mid, >=, 0);
+
+      if (ncm_mset_peek (lhr2d->fit->mset, lhr2d->pi[i].mid) == NULL)
+        g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set.", 
+                 lhr2d->pi[i].mid, lhr2d->pi[i].pid);
+
+      if (ncm_mset_param_get_ftype (lhr2d->fit->mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid) != NCM_PARAM_TYPE_FREE)
+        g_error ("ncm_lh_ratio2d_constructed: cannot find for a non fitted parameter[%d:%u].", 
+                 lhr2d->pi[i].mid, lhr2d->pi[i].pid);
+
+      ncm_mset_param_set_ftype (mset,
+                                lhr2d->pi[i].mid, lhr2d->pi[i].pid, 
+                                NCM_PARAM_TYPE_FIXED);
+
+      lhr2d->lb[i] = ncm_mset_param_get_lower_bound (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
+      lhr2d->ub[i] = ncm_mset_param_get_upper_bound (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
+      lhr2d->bf[i] = ncm_mset_param_get (lhr2d->fit->mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid);
+    }
+    
+    lhr2d->constrained = ncm_fit_copy_new (lhr2d->fit, lhr2d->fit->lh, mset,
+                                           lhr2d->fit->grad.gtype);
+    ncm_mset_free (mset);
+    _ncm_lh_ratio2d_prepare_coords (lhr2d);
+  }
+}
+
 static void
 ncm_lh_ratio2d_dispose (GObject *object)
 {
@@ -200,6 +203,7 @@ ncm_lh_ratio2d_dispose (GObject *object)
   ncm_matrix_clear (&lhr2d->e_vec);
   ncm_vector_clear (&lhr2d->e_val);
   ncm_rng_clear (&lhr2d->rng);
+  ncm_diff_clear (&lhr2d->diff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->dispose (object);
@@ -495,14 +499,14 @@ _ncm_lh_ratio2d_inside_interval (gdouble *p, const gdouble lb, const gdouble ub,
   NCM_UNUSED (prec);
   if (p[0] < lb)
   {
-    if (ncm_cmp (p[0], lb, 1e-4) == 0)
+    if (ncm_cmp (p[0], lb, 1e-4, 0.0) == 0)
       p[0] = lb;
     else
       return FALSE;
   }
   else if (p[0] > ub)
   {
-    if (ncm_cmp (p[0], ub, 1e-4) == 0)
+    if (ncm_cmp (p[0], ub, 1e-4, 0.0) == 0)
       p[0] = ub;
     else
       return FALSE;
@@ -621,11 +625,10 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
 static gdouble
 ncm_lh_ratio2d_numdiff_df (gdouble x, gpointer p)
 {
-  gsl_function F;
+  NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (p);
   gdouble res, err;
-  F.function = &ncm_lh_ratio2d_f;
-  F.params = p;
-  res = ncm_numdiff_1 (&F, x, x * 1e-5, &err);
+
+  res = ncm_diff_rf_d1_1_to_1 (lhr2d->diff, x, ncm_lh_ratio2d_f, p, &err);
 
   return res;
 }
@@ -634,7 +637,7 @@ static void
 ncm_lh_ratio2d_numdiff_fdf (gdouble x, gpointer p, gdouble *y, gdouble *dy)
 {
   *dy = ncm_lh_ratio2d_numdiff_df (x, p);
-  *y = ncm_lh_ratio2d_f (x, p);
+  *y  = ncm_lh_ratio2d_f (x, p);
   return;
 }
 

@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_data_snia_cov
  * @title: NcDataSNIACov
- * @short_description: Supernovae Ia Data with covariance error matrix.
+ * @short_description: Type Ia supernovae data with covariance error matrix
  * 
  * See #NcSNIADistCov.
  * 
@@ -44,12 +44,15 @@
 #include "math/ncm_cfg.h"
 
 #include <glib/gstdio.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -1266,7 +1269,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
       {
         const gdouble cov_ij = ncm_matrix_get (snia_cov->cov_full, i, j);
         const gdouble cov_ji = ncm_matrix_get (snia_cov->cov_full, j, i);
-        if (((i / mu_len) == (j / mu_len)) && ncm_cmp (cov_ij, cov_ji, NC_DATA_SNIA_COV_SYMM_TOL) != 0)
+        if (((i / mu_len) == (j / mu_len)) && ncm_cmp (cov_ij, cov_ji, NC_DATA_SNIA_COV_SYMM_TOL, 0.0) != 0)
         {
           g_error ("nc_data_snia_cov_load_txt: full covariance matrix is not symmetric in %ld %ld [% 20.15g != % 20.15g]\n", 
                    i, j, cov_ij, cov_ji);

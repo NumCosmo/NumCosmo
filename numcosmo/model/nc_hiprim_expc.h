@@ -51,6 +51,8 @@ typedef struct _NcHIPrimExpc NcHIPrimExpc;
  * @NC_HIPRIM_EXPC_LAMBDAC: Exp parameter $\lambda_c$
  * @NC_HIPRIM_EXPC_LNKC: Exp parameter $\ln(k_c)$
  * @NC_HIPRIM_EXPC_C: Exp cut parameter $c$
+ * @NC_HIPRIM_EXPC_T_SA_RATIO: Tensor-to-scalar ratio
+ * @NC_HIPRIM_EXPC_N_T: Tensor spectral index
  * 
  * FIXME
  * 
@@ -61,7 +63,10 @@ typedef enum _NcHIPrimExpcParams
   NC_HIPRIM_EXPC_N_SA,
   NC_HIPRIM_EXPC_LAMBDAC,
   NC_HIPRIM_EXPC_LNKC,
-  NC_HIPRIM_EXPC_C,          /*< private >*/
+  NC_HIPRIM_EXPC_C,          
+  NC_HIPRIM_EXPC_T_SA_RATIO,
+  NC_HIPRIM_EXPC_N_T,        
+  /* < private > */
   NC_HIPRIM_EXPC_SPARAM_LEN, /*< skip >*/
 } NcHIPrimExpcParams;
 
@@ -86,6 +91,8 @@ NcHIPrimExpc *nc_hiprim_expc_new (void);
 #define NC_HIPRIM_EXPC_DEFAULT_LAMBDAC (0.5)
 #define NC_HIPRIM_EXPC_DEFAULT_LNKC (-7.98)
 #define NC_HIPRIM_EXPC_DEFAULT_C (0.5)
+#define NC_HIPRIM_EXPC_DEFAULT_T_SA_RATIO (0.2)
+#define NC_HIPRIM_EXPC_DEFAULT_N_T (0.0)
 
 G_END_DECLS
 

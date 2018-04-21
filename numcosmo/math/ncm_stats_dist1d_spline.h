@@ -75,4 +75,3 @@ NcmStatsDist1dSpline *ncm_stats_dist1d_spline_new (NcmSpline *m2lnp);
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST1D_SPLINE_H_ */
-

@@ -41,11 +41,11 @@
 #include "math/ncm_spline_func.h"
 #include "nc_hipert_wkb.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
-#include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -408,7 +408,11 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 _nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_nc_hipert_wkb_phase_J (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcHIPertWKBArg *arg  = (NcHIPertWKBArg *) jac_data;
   gdouble nu = 0.0, V = 0.0;
@@ -421,11 +425,11 @@ _nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_
     const gdouble Rnunu = Rnu / nu;
     const gdouble nu2   = nu * nu;
 
-    DENSE_ELEM (J, 0, 0) = - Rnunu * U;
-    DENSE_ELEM (J, 0, 1) = - Rnunu;
+    SUN_DENSE_ACCESS (J, 0, 0) = - Rnunu * U;
+    SUN_DENSE_ACCESS (J, 0, 1) = - Rnunu;
 
-    DENSE_ELEM (J, 1, 0) = - (1.0 / Rnunu) * (nu2 * expm1 (4.0 * rnu) + V) + (4.0 * nu2 / Rnunu) * gsl_pow_4 (Rnu);
-    DENSE_ELEM (J, 1, 1) = 0.0;
+    SUN_DENSE_ACCESS (J, 1, 0) = - (1.0 / Rnunu) * (nu2 * expm1 (4.0 * rnu) + V) + (4.0 * nu2 / Rnunu) * gsl_pow_4 (Rnu);
+    SUN_DENSE_ACCESS (J, 1, 1) = 0.0;
     
     return 0;
   }
@@ -482,8 +486,8 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
     dlnF    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
 
-  if (pert->y == NULL)
-    pert->y = N_VNew_Serial (2);
+
+  nc_hipert_set_sys_size (pert, 2);
 
   {
     gdouble nu, nu2, V, dVnu2;
@@ -519,12 +523,20 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
   flag = CVodeSetMaxNumSteps (pert->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+#if HAVE_SUNDIALS_MAJOR == 2
   flag = CVDense (pert->cvode, 2);
   NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (pert->cvode, &_nc_hipert_wkb_phase_J);
   NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
+#elif HAVE_SUNDIALS_MAJOR == 3
+  flag = CVDlsSetLinearSolver (pert->cvode, pert->LS, pert->A);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
 
+  flag = CVDlsSetJacFn (pert->cvode, &_nc_hipert_wkb_phase_J);
+  NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
+#endif
+  
   {
     gdouble last = wkb->alpha_i;
     NcHIPertWKBArg arg;

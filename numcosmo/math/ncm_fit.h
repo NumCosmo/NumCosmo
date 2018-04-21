@@ -31,18 +31,21 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_diff.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_fit_state.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_NLOPT_2_2
 #include <nlopt.h>
 #endif /* HAVE_NLOPT_2_2 */
 
 #include <gsl/gsl_multifit_nlin.h>
 #include <gsl/gsl_multimin.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -161,6 +164,7 @@ struct _NcmFit
   GPtrArray *equality_constraints;
   GPtrArray *inequality_constraints;
   NcmFit *sub_fit;
+  NcmDiff *diff;
 };
 
 struct _NcmFitConstraint
@@ -249,11 +253,17 @@ G_INLINE_FUNC void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
+void ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J);
 
 G_INLINE_FUNC void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+void ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+
+void ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher);
+void ncm_fit_obs_fisher (NcmFit *fit);
+void ncm_fit_fisher (NcmFit *fit);
 
 void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
@@ -280,6 +290,7 @@ gdouble ncm_fit_chisq_test (NcmFit *fit, size_t bins);
 
 void ncm_fit_reset (NcmFit *fit);
 gboolean ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype);
+void ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file);
 
 gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble dir, NcmMSetFunc *func, gdouble z, gboolean walk);
 void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f);
@@ -288,7 +299,7 @@ gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMS
 #define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-8)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)
 #define NCM_FIT_DEFAULT_PARAMS_RELTOL (1e-5)
-#define NCM_FIT_DEFAULT_MAXITER 10000
+#define NCM_FIT_DEFAULT_MAXITER 100000
 
 G_END_DECLS
 

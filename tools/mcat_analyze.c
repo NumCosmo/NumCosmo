@@ -80,6 +80,7 @@ main (gint argc, gchar *argv[])
   gboolean auto_trim      = FALSE;
   gboolean info           = FALSE;
   gboolean info_scf       = FALSE;
+  gboolean evidence       = FALSE;
   gboolean diag_chains    = FALSE;
   gboolean chain_evol     = FALSE;
   gboolean list_all       = FALSE;
@@ -98,6 +99,7 @@ main (gint argc, gchar *argv[])
   gint ntests = 100;
   gchar **funcs          = NULL;
   gchar **distribs       = NULL;
+  gchar **dist_tab       = NULL;
   gchar **params         = NULL;
   gchar **params_evol    = NULL;
   gchar **mode_errors    = NULL;
@@ -115,6 +117,7 @@ main (gint argc, gchar *argv[])
     { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,      "Auto trim the catalog.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
     { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,       "Calculates the selfcorrelation time using the full sample not the ensemble averages.", NULL },
+    { "evidence",       'E', 0, G_OPTION_ARG_NONE,         &evidence,       "Computes the ln-Bayesian evidence and the 1sigma parameter space ln-volume.", NULL },
     { "diag-chains",      0, 0, G_OPTION_ARG_NONE,         &diag_chains,    "Applies diagnostics to all chains.", NULL },
     { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,         "Number of tests to use in the diagnostics.", NULL },
     { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
@@ -136,6 +139,7 @@ main (gint argc, gchar *argv[])
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
+    { "dist-tab",       'W', 0, G_OPTION_ARG_STRING_ARRAY, &dist_tab,       "Print a table with functions values for reach catalog point.", NULL },
     { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,      "Print the points to the visual HW test.", NULL },
     { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved.", NULL },
     { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain.", "N"},
@@ -242,9 +246,9 @@ main (gint argc, gchar *argv[])
       ncm_cfg_msg_sepa ();
       g_message ("# Catalog run type: `%s'.\n", rtype_str);
       g_message ("# Catalog size:      %u.\n", ncm_mset_catalog_len (mcat));
-      g_message ("# Catalog n-chains:  %u.\n", mcat->nchains);
-      g_message ("# Catalog nadd-vals: %u.\n", mcat->nadd_vals);
-      g_message ("# Catalog weighted:  %s.\n", mcat->weighted ? "yes" : "no");
+      g_message ("# Catalog n-chains:  %u.\n", ncm_mset_catalog_nchains (mcat));
+      g_message ("# Catalog nadd-vals: %u.\n", ncm_mset_catalog_nadd_vals (mcat));
+      g_message ("# Catalog weighted:  %s.\n", ncm_mset_catalog_weighted (mcat) ? "yes" : "no");
       ncm_mset_catalog_log_current_chain_stats (mcat);
 
       {
@@ -263,6 +267,18 @@ main (gint argc, gchar *argv[])
       ncm_mset_catalog_log_current_stats (mcat);
     }
 
+    if (evidence)
+    {
+      gdouble glnvol;
+      const gdouble be     = ncm_mset_catalog_get_post_lnnorm (mcat);
+      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (mcat, gsl_cdf_chisq_P (1.0, 1.0), &glnvol);
+
+      ncm_cfg_msg_sepa ();
+      g_message ("# Bayesian evidence:                                 % 22.15g\n", be);
+      g_message ("# 1 sigma posterior volume:                          % 22.15g\n", lnevol);
+      g_message ("# 1 sigma posterior volume (Gaussian approximation): % 22.15g\n", glnvol);      
+    }
+
     if (diag_chains)
     {
       gdouble max_ess   = 0.0;
@@ -274,8 +290,9 @@ main (gint argc, gchar *argv[])
 
     if (chain_evol)
     {
-      guint last_t = ncm_mset_catalog_max_time (mcat);
-      const gdouble nchains = mcat->nchains;
+      NcmStatsVec *pstats   = ncm_mset_catalog_peek_pstats (mcat);
+      guint last_t          = ncm_mset_catalog_max_time (mcat);
+      const gdouble nchains = ncm_mset_catalog_nchains (mcat);
       guint i;
       
       ncm_message ("# Chain evolution from 0 to %u\n", last_t);
@@ -289,8 +306,8 @@ main (gint argc, gchar *argv[])
         ncm_message ("%10u", i);
         for (j = 0; j < len; j++)
         {
-          const gdouble mean_j = ncm_stats_vec_get_mean (mcat->pstats, j);
-          const gdouble var_j  = ncm_stats_vec_get_var (mcat->pstats, j);
+          const gdouble mean_j = ncm_stats_vec_get_mean (pstats, j);
+          const gdouble var_j  = ncm_stats_vec_get_var (pstats, j);
           const gdouble sd_j   = sqrt (var_j / nchains);
           
           ncm_message (" % 20.15g % 20.15g", (ncm_vector_get (e_mean, j) - mean_j) / sd_j, sqrt (ncm_vector_get (e_var, j) / nchains) / sd_j);
@@ -371,12 +388,10 @@ main (gint argc, gchar *argv[])
 
         for (k = 0; k < nsteps; k++)
         {
-          ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", 
-                       ncm_vector_get (z_vec, k), 
-                       ncm_matrix_get (res, k, 0), 
-                       ncm_matrix_get (res, k, 1), ncm_matrix_get (res, k, 2), 
-                       ncm_matrix_get (res, k, 3), ncm_matrix_get (res, k, 4), 
-                       ncm_matrix_get (res, k, 5), ncm_matrix_get (res, k, 6));
+          NcmVector *row = ncm_matrix_get_row (res, k);
+          ncm_message ("% 22.15g ", ncm_vector_get (z_vec, k));
+          ncm_vector_log_vals (row, "", "% 22.15g", TRUE);
+          ncm_vector_clear (&row);
         }
         ncm_message ("\n\n");
 
@@ -470,6 +485,122 @@ main (gint argc, gchar *argv[])
         ncm_mset_func_free (mset_func);
       }
       nc_distance_clear (&dist);
+    }
+    /*********************************************************************************************************
+     * 
+     * Distributions table
+     * 
+     *********************************************************************************************************/
+    if (dist_tab != NULL)
+    {
+      guint ndist_tab            = g_strv_length (dist_tab);
+      NcDistance *dist           = nc_distance_new (zf + 0.2);
+      GPtrArray *mset_func_array = g_ptr_array_new ();
+      GString *header            = g_string_new (NULL);
+      guint max_dim              = 0;
+
+      g_ptr_array_set_free_func (mset_func_array, (GDestroyNotify) ncm_mset_func_free);
+      g_string_append_printf (header, "#");
+
+      for (i = 0; i < ndist_tab; i++)
+      {
+        NcmMSetFunc *mset_func = NULL;
+        gdouble *x = NULL;
+        guint len, dim;
+        gchar *func_name = ncm_util_function_params (dist_tab[i], &x, &len);
+        guint j;
+
+        g_assert (func_name != NULL);
+
+        if (mset_func == NULL)
+        {
+          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", func_name))
+          {
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", func_name, NULL));
+            if (len > 0)
+              ncm_mset_func_set_eval_x (mset_func, x, len);
+            
+            if (!ncm_mset_func_is_const (mset_func))
+            {
+              g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
+              continue;
+            }
+            ncm_cfg_msg_sepa ();
+            g_message ("# Printing NcHICosmo function: `%s'.\n", ncm_mset_func_peek_desc (mset_func));
+          }
+        }
+        if (mset_func == NULL)
+        {
+          if (ncm_mset_func_list_has_ns_name ("NcDistance", func_name))
+          {
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, G_OBJECT (dist)));
+            if (len > 0)
+              ncm_mset_func_set_eval_x (mset_func, x, len);
+
+            if (!ncm_mset_func_is_const (mset_func))
+            {
+              g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
+              continue;
+            }
+            ncm_cfg_msg_sepa ();
+            g_message ("# Printing NcDistance function: `%s'.\n", ncm_mset_func_peek_desc (mset_func));
+          }
+        }
+        if (mset_func == NULL)
+        {
+          g_warning ("# Function `%s' not found, skipping...\n", func_name);
+          continue;
+        }
+
+        dim     = ncm_mset_func_get_dim (mset_func);
+        max_dim = GSL_MAX (max_dim, dim);
+        g_ptr_array_add (mset_func_array, mset_func);
+
+        for (j = 0; j < dim; j++)
+        {
+          g_string_append_printf (header, " %18s[%02u]", func_name, j);
+        }
+        g_free (func_name);
+      }
+      g_message ("%s\n", header->str);
+
+      {
+        const guint cat_len   = ncm_mset_catalog_len (mcat);
+        const guint nadd_vals = ncm_mset_catalog_nadd_vals (mcat);
+        NcmMSet *mset         = ncm_mset_catalog_peek_mset (mcat);
+        NcmVector *res_v      = ncm_vector_new (max_dim);
+        guint i;
+        
+        for (i = 0; i < cat_len; i++)
+        {
+          NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+          guint j;
+          
+          ncm_mset_fparams_set_vector_offset (mset, row, nadd_vals);
+
+          g_message (" ");
+          for (j = 0; j < mset_func_array->len; j++)
+          {
+            NcmMSetFunc *mset_func = g_ptr_array_index (mset_func_array, j);
+            const guint dim        = ncm_mset_func_get_dim (mset_func);
+            guint k;
+
+            ncm_mset_func_eval (mset_func, mset, NULL, ncm_vector_data (res_v));
+            for (k = 0; k < dim; k++)
+            {
+              g_message (" % 22.15g", ncm_vector_get (res_v, k));
+            }
+          }
+          g_message ("\n");
+        }
+
+      }
+      
+      nc_distance_clear (&dist);
+      g_ptr_array_unref (mset_func_array);
+      g_string_free (header, TRUE);
     }
 
     /*********************************************************************************************************
@@ -869,11 +1000,15 @@ main (gint argc, gchar *argv[])
         }
 
         {
-          gint fpi          = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + mcat->nadd_vals) : add_param;
-          gdouble mean      = 0.0;
-          gdouble var       = 0.0;
-          NcmVector *cumsum = ncm_stats_vec_visual_heidel_diag (mcat->nchains > 1 ? mcat->e_mean_stats : mcat->pstats, fpi, 0, &mean, &var);
-          const gdouble sd  = sqrt (var);
+          NcmStatsVec *pstats       = ncm_mset_catalog_peek_pstats (mcat);
+          NcmStatsVec *e_mean_stats = ncm_mset_catalog_peek_e_mean_stats (mcat);
+          const guint nchains       = ncm_mset_catalog_nchains (mcat);
+          const guint nadd_vals     = ncm_mset_catalog_nadd_vals (mcat);
+          gint fpi                  = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + nadd_vals) : add_param;
+          gdouble mean              = 0.0;
+          gdouble var               = 0.0;
+          NcmVector *cumsum         = ncm_stats_vec_visual_heidel_diag (nchains > 1 ? e_mean_stats : pstats, fpi, 0, &mean, &var);
+          const gdouble sd          = sqrt (var);
 
           for (k = 0; k < ncm_vector_len (cumsum); k++)
           {
@@ -906,13 +1041,14 @@ main (gint argc, gchar *argv[])
 
     if (dump_chain >= 0)
     {
-      if (dump_chain >= mcat->nchains)
+      const guint nchains = ncm_mset_catalog_nchains (mcat);
+      if (dump_chain >= nchains)
       {
-        g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, mcat->nchains);
+        g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, nchains);
       }
       else
       {
-        NcmStatsVec *chain = g_ptr_array_index (mcat->chain_pstats, dump_chain);
+        NcmStatsVec *chain = ncm_mset_catalog_peek_chain_pstats (mcat, dump_chain);
         guint nitens = ncm_stats_vec_nitens (chain);
         guint i;
 

@@ -31,6 +31,26 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_recomb.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
+
+#include <nvector/nvector_serial.h>
+
+#if HAVE_SUNDIALS_MAJOR == 2
+#include <cvodes/cvodes_dense.h>
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#include <cvodes/cvodes_direct.h> 
+#endif
+
+#if HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+
+#endif /* NUMCOSMO_GIR_SCAN */
+
 G_BEGIN_DECLS
 
 #define NC_TYPE_RECOMB_SEAGER             (nc_recomb_seager_get_type ())
@@ -58,9 +78,9 @@ struct _NcRecombSeagerClass
  * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012: Includes Sobolev scape probability for the $2p\,{}^3\\!P_{0,1,2} \to 1s\,{}^1\\!S_{0}$.
  * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO: Also includes the continum opacity effect due to H.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcRecombSeagerOpt
 {
@@ -70,7 +90,8 @@ typedef enum _NcRecombSeagerOpt
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO   = 1 << 3,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012    = 1 << 4,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO = 1 << 5,
-  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, 
+  /* < private > */
   NC_RECOM_SEAGER_OPT_LEN,                                  /*< skip >*/
 } NcRecombSeagerOpt;
 
@@ -103,7 +124,16 @@ struct _NcRecombSeager
   N_Vector y0;
   N_Vector y;
   N_Vector abstol;
+#if HAVE_SUNDIALS_MAJOR == 3
+  SUNMatrix A;
+  SUNLinearSolver LS;
+#endif
   guint n;
+  NcmSpline *Xe_s;
+  NcmSpline *Xe_reion_s;
+  NcmSpline *Xe_recomb_s;
+  NcmSpline *XHII_s;
+  NcmSpline *XHeII_s;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;

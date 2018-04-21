@@ -62,6 +62,7 @@ ncm_mset_func_init (NcmMSetFunc *func)
   func->desc    = NULL;
   func->uname   = NULL;
   func->usymbol = NULL;
+  func->diff    = ncm_diff_new ();
 }
 
 static void
@@ -114,6 +115,7 @@ _ncm_mset_func_dispose (GObject *object)
   NcmMSetFunc *func = NCM_MSET_FUNC (object);
 
   ncm_vector_clear (&func->eval_x);
+  ncm_diff_clear (&func->diff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
@@ -420,14 +422,15 @@ typedef struct __ncm_mset_func_numdiff_fparams_1
   NcmMSetFunc *func;
   NcmMSet *mset;
   const gdouble *x;
-  guint n;
-} __ncm_mset_func_numdiff_fparams_1;
+} _ncm_mset_func_numdiff_fparams_1;
 
 static gdouble
-_mset_func_numdiff_fparams_1_val (gdouble x, gpointer userdata)
+_mset_func_numdiff_fparams_1_val (NcmVector *x_v, gpointer userdata)
 {
-  __ncm_mset_func_numdiff_fparams_1 *nd = (__ncm_mset_func_numdiff_fparams_1 *)userdata;
-  ncm_mset_fparam_set (nd->mset, nd->n, x);
+  _ncm_mset_func_numdiff_fparams_1 *nd = (_ncm_mset_func_numdiff_fparams_1 *)userdata;
+
+  ncm_mset_fparams_set_vector (nd->mset, x_v);
+  
   return ncm_mset_func_eval_nvar (nd->func, nd->mset, nd->x);
 }
 
@@ -440,44 +443,40 @@ _mset_func_numdiff_fparams_1_val (gdouble x, gpointer userdata)
  *
  * FIXME
  *
- * Returns: (transfer full): FIXME
  */
-NcmVector *
-ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out)
+void
+ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector **out)
 {
-  gsl_function F;
-  __ncm_mset_func_numdiff_fparams_1 nd;
-  guint fparam_len = ncm_mset_fparam_len (mset);
-  guint i;
+  const guint fparam_len = ncm_mset_fparam_len (mset);
+  GArray *x_a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x_v         = NULL;
+  GArray *grad_a         = NULL;
+  _ncm_mset_func_numdiff_fparams_1 nd;
 
+  g_array_set_size (x_a, fparam_len);
+  x_v = ncm_vector_new_array (x_a);
+  ncm_mset_fparams_get_vector (mset, x_v);
+  
   nd.mset  = mset;
   nd.func  = func;
   nd.x     = x;
-  F.params = &nd;
-  F.function = &_mset_func_numdiff_fparams_1_val;
 
-  if (out == NULL)
-  {
-    out = ncm_vector_new (fparam_len);
-  }
-  else if (ncm_vector_len (out) != fparam_len)
-  {
-    ncm_vector_free (out);
-    out = ncm_vector_new (fparam_len);
-  }
+  grad_a = ncm_diff_rf_d1_N_to_1 (func->diff, x_a, _mset_func_numdiff_fparams_1_val, &nd, NULL);
 
-  for (i = 0; i < fparam_len; i++)
+  ncm_mset_fparams_set_vector (mset, x_v);
+  
+  if (*out == NULL)
   {
-    const gdouble p = ncm_mset_fparam_get (mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (mset, i);
-    gdouble err, diff;
-    nd.n = i;
-    diff = ncm_numdiff_1 (&F, p, p_scale, &err);
-    ncm_vector_set (out, i, diff);
-    ncm_mset_fparam_set (mset, i, p);
+    *out = ncm_vector_new_array (grad_a);
+  }
+  else 
+  {
+    g_assert_cmpuint (fparam_len, ==, ncm_vector_len (*out));
+    ncm_vector_set_array (*out, grad_a);
   }
 
-  return out;
+  g_array_unref (x_a);
+  g_array_unref (grad_a);
 }
 
 /**

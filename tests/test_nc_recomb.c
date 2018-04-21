@@ -91,15 +91,15 @@ test_nc_recomb_seager_wmap_zstar (void)
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
-    const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4);
+    const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
+    ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4, 0.0);
   }
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
-    const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4);
+    const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
+    ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4, 0.0);
   }
 
   nc_hireion_free (reion);
@@ -118,7 +118,7 @@ test_nc_recomb_seager_Xe_ini (void)
 
   {
     const gdouble Xe_ini = nc_recomb_Xe (recomb, cosmo, recomb->lambdai);
-    ncm_assert_cmpdouble_e (Xe_ini, == , 1.0 + 2.0 * nc_hicosmo_XHe (cosmo), recomb->prec * 1.0e2);
+    ncm_assert_cmpdouble_e (Xe_ini, == , 1.0 + 2.0 * nc_hicosmo_XHe (cosmo), recomb->prec * 1.0e2, 0.0);
   }
   
   nc_hireion_free (reion);

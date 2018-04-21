@@ -40,8 +40,11 @@
 
 #include "math/ncm_mset_trans_kern_cat.h"
 #include "math/ncm_c.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -145,10 +148,11 @@ ncm_mset_trans_kern_cat_class_init (NcmMSetTransKernCatClass *klass)
 static void
 _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
-  NcmMSetTransKernCat *tcat = NCM_MSET_TRANS_KERN_CAT (tkern); 
+  NcmMSetTransKernCat *tcat = NCM_MSET_TRANS_KERN_CAT (tkern);
+  NcmMSet *mcat_mset        = ncm_mset_catalog_peek_mset (tcat->mcat);
   NCM_UNUSED (mset);
   
-  if (!ncm_mset_cmp (mset, tcat->mcat->mset, FALSE))
+  if (!ncm_mset_cmp (mset, mcat_mset, FALSE))
     g_error ("_ncm_mset_trans_kern_cat_set_mset: incompatible mset.");  
 }
 
@@ -156,8 +160,9 @@ static void
 _ncm_mset_trans_kern_cat_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
   NcmMSetTransKernCat *tcat = NCM_MSET_TRANS_KERN_CAT (tkern);
+  NcmMSet *mcat_mset        = ncm_mset_catalog_peek_mset (tcat->mcat);
   const guint cat_len       = ncm_mset_catalog_len (tcat->mcat);
-  const guint theta_size    = ncm_mset_fparams_len (tcat->mcat->mset);
+  const guint theta_size    = ncm_mset_fparams_len (mcat_mset);
 
   g_assert_cmpuint (theta_size, ==, ncm_vector_len (theta));
   
@@ -167,7 +172,7 @@ _ncm_mset_trans_kern_cat_generate (NcmMSetTransKern *tkern, NcmVector *theta, Nc
     gulong i = gsl_rng_uniform_int (rng->r, cat_len);
     NcmVector *row = ncm_mset_catalog_peek_row (tcat->mcat, i);
 
-    ncm_vector_memcpy2 (thetastar, row, 0, tcat->mcat->nadd_vals, theta_size);
+    ncm_vector_memcpy2 (thetastar, row, 0, ncm_mset_catalog_nadd_vals (tcat->mcat), theta_size);
 
     if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
       break;

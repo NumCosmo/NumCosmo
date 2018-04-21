@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_util.h
  *
@@ -29,13 +30,13 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_min.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <gmp.h>
 #include <mpfr.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -43,11 +44,7 @@ gdouble *ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass);
 gdouble ncm_topology_comoving_a0_lss (guint n, gdouble alpha);
 gdouble ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha);
 gdouble ncm_sphPlm_x (gint l, gint m, gint order);
-gdouble ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data);
 gdouble ncm_sum (gdouble *d, gulong n);
-gdouble ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err);
-gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err);
-gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 
 G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
 G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x);
@@ -70,12 +67,12 @@ gsize ncm_mpq_inp_raw (mpq_t q, FILE *f);
 
 gulong ncm_random_seed (void);
 
-gint ncm_cmp (gdouble x, gdouble y, gdouble reltol);
+gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
 void ncm_rational_coarce_double (gdouble x, mpq_t q);
 void ncm_mpz_inits (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mpz_clears (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
-void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
+void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol);
 
 gboolean ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt);
 gboolean ncm_util_cvode_print_stats (gpointer cvode);
@@ -88,14 +85,9 @@ gulong ncm_util_fact_size (const gulong n);
 
 typedef struct _NcmComplex NcmComplex;
 
-struct _NcmComplex
+struct _NcmComplex 
 {
-  /*< private >*/
-#ifndef NUMCOSMO_GIR_SCAN
-  complex double z;
-#else
-  gdouble Rez, Imz;
-#endif /* NUMCOSMO_GIR_SCAN */
+  gdouble z[2];
 };
 
 GType ncm_complex_get_type (void) G_GNUC_CONST;
@@ -106,11 +98,23 @@ NcmComplex *ncm_complex_dup (NcmComplex *c);
 void ncm_complex_free (NcmComplex *c);
 void ncm_complex_clear (NcmComplex **c);
 
-gdouble ncm_complex_Re (NcmComplex *c);
-gdouble ncm_complex_Im (NcmComplex *c);
+G_INLINE_FUNC void ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b);
+G_INLINE_FUNC void ncm_complex_set_zero (NcmComplex *c);
+
+G_INLINE_FUNC gdouble ncm_complex_Re (NcmComplex *c);
+G_INLINE_FUNC gdouble ncm_complex_Im (NcmComplex *c);
+
+G_INLINE_FUNC void ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v);
+G_INLINE_FUNC void ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3);
+
+G_INLINE_FUNC void ncm_complex_mul_real (NcmComplex *c, const gdouble v);
+G_INLINE_FUNC void ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2);
 
 G_INLINE_FUNC gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
 G_INLINE_FUNC void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
+
+G_INLINE_FUNC gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+G_INLINE_FUNC gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
 
 /* Macros */
 
@@ -144,16 +148,16 @@ memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));
 
 #define ncm_assert_cmpdouble(n1,cmp,n2) \
 do { \
-  if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON) cmp 0) ; else \
+  if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON, 0.0) cmp 0) ; else \
     _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), GSL_DBL_EPSILON, 0.0); \
 } while (0)
 
-#define ncm_assert_cmpdouble_e(n1,cmp,n2,epsilon) \
+#define ncm_assert_cmpdouble_e(n1,cmp,n2,epsilon,abstol) \
 do { \
-  if (ncm_cmp ((n1), (n2), (epsilon)) cmp 0) ; else \
+  if (ncm_cmp ((n1), (n2), (epsilon), (abstol)) cmp 0) ; else \
     _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), (epsilon), (abstol)); \
 } while (0)
 
 #define NCM_RETURN_IF_INF(a) if (gsl_isinf(a)) return a
@@ -164,52 +168,9 @@ do { \
 
 #define NCM_TEST_GSL_RESULT(func,ret) if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
-#define NCM_COMPLEX_INC_MUL_REAL_TEST(a,b,c) \
-((fabs(GSL_REAL((b))*(c)/GSL_REAL((a))) < 1e-16) && (fabs(GSL_IMAG((b))*(c)/GSL_IMAG((a))) < 1e-16))
-
-#define NCM_COMPLEX_INC_MUL_REAL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) += GSL_REAL((b))*(c); \
-  GSL_IMAG((a)) += GSL_IMAG((b))*(c); \
-} G_STMT_END
-
-#define NCM_COMPLEX_INC_MUL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) += GSL_REAL((b)) * GSL_REAL((c)) - GSL_IMAG((b)) * GSL_IMAG((c)); \
-  GSL_IMAG((a)) += GSL_REAL((b)) * GSL_IMAG((c)) + GSL_IMAG((b)) * GSL_REAL((c)); \
-} G_STMT_END
-
-#define NCM_COMPLEX_INC_MUL_MUL_REAL(a,b,c,d) \
-G_STMT_START { \
-  GSL_REAL((a)) += (GSL_REAL((b)) * GSL_REAL((c)) - GSL_IMAG((b)) * GSL_IMAG((c))) * (d); \
-  GSL_IMAG((a)) += (GSL_REAL((b)) * GSL_IMAG((c)) + GSL_IMAG((b)) * GSL_REAL((c))) * (d); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL_REAL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) = GSL_REAL((b)) * (c); \
-  GSL_IMAG((a)) = GSL_IMAG((b)) * (c); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL(a,b) \
-G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) - GSL_IMAG((a)) * GSL_IMAG((b)); \
-  GSL_IMAG(a) = GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
-  GSL_REAL(a) = temp; \
-} G_STMT_END
-
-#define NCM_COMPLEX_ADD(a,b) \
-G_STMT_START { \
-  GSL_REAL(a) += GSL_REAL((b)); \
-  GSL_IMAG(a) += GSL_IMAG((b)); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL_CONJUGATE(a,b) \
-G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) + GSL_IMAG((a)) * GSL_IMAG((b)); \
-  GSL_IMAG(a) = - GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
-  GSL_REAL(a) = temp; \
-} G_STMT_END
+#define NCM_COMPLEX_ZERO {{0.0, 0.0}}
+#define NCM_COMPLEX(p) ((NcmComplex *)(p))
+#define NCM_COMPLEX_PTR(p) ((NcmComplex **)(p))
 
 #define NCM_WRITE_INT32(_ff,_ii) G_STMT_START { gint32 _temp_i = GINT32_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(gint32), (1), _ff) != 1) g_error ("NCM_WRITE_INT32: io error"); } G_STMT_END
 #define NCM_WRITE_UINT32(_ff,_ii) G_STMT_START { guint32 _temp_i = GUINT32_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(guint32), (1), _ff) != 1) g_error ("NCM_WRITE_UINT32: io error"); } G_STMT_END
@@ -398,6 +359,48 @@ ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *the
   theta1[0] = 1.0 / (1.0 + exp_mgz);
 }
 
+G_INLINE_FUNC gdouble 
+ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
+{
+  const gdouble deg2rad  = M_PI / 180.0; 
+	const gdouble ra1_rad  = ra1 * deg2rad;  
+  const gdouble dec1_rad = dec1 * deg2rad;
+	const gdouble ra2_rad  = ra2 * deg2rad;
+  const gdouble dec2_rad = dec2 * deg2rad;
+  const gdouble raDelta  = ra2_rad - ra1_rad;
+  const gdouble theta    = atan2 (sin(raDelta), cos(dec1_rad) * tan(dec2_rad) - sin(dec1_rad) * cos(raDelta)); 
+
+	return theta;
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
+{
+	const gdouble deg2rad  = M_PI / 180.0;
+	const gdouble phi1     = dec1 * deg2rad; 
+  const gdouble lam1     = ra1 * deg2rad;
+  const gdouble phi2     = dec2 * deg2rad;;
+  const gdouble lam2     = ra2 * deg2rad;;
+  const gdouble deltaLam = fabs(lam1 - lam2);
+
+	const gdouble cosphi1  = cos (phi1);
+	const gdouble sinphi1  = sin (phi1);
+	const gdouble cosphi2  = cos (phi2);
+	const gdouble sinphi2  = sin (phi2);
+	
+	const gdouble cosdeltaLam  = cos(deltaLam);
+	const gdouble sindeltaLam  = sin(deltaLam);	
+	
+  const gdouble n1      = gsl_pow_2 (cosphi2 * sindeltaLam);
+  const gdouble n2      = gsl_pow_2 (cosphi1 * sinphi2 - sinphi1 * cosphi2 * cosdeltaLam);
+	const gdouble num     = sqrt (n1 + n2);
+  const gdouble d1      = sinphi1 * sinphi2;
+  const gdouble d2      = cosphi1 * cosphi2 * cosdeltaLam;
+  const gdouble denom   = d1 + d2;
+
+	return atan2(num, denom) / deg2rad; 
+}
+
 #ifndef NUMCOSMO_GIR_SCAN
 #ifndef HAVE_SINCOS
 G_INLINE_FUNC void 
@@ -408,6 +411,62 @@ sincos (gdouble x, gdouble *s, gdouble *c)
 }
 #endif
 #endif
+
+/* NcmComplex methods */
+
+G_INLINE_FUNC void 
+ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b)
+{
+  c->z[0] = a;
+  c->z[1] = b;
+}
+
+G_INLINE_FUNC void 
+ncm_complex_set_zero (NcmComplex *c)
+{
+  c->z[0] = c->z[1] = 0.0;
+}
+
+G_INLINE_FUNC gdouble
+ncm_complex_Re (NcmComplex *c)
+{
+  return c->z[0];
+}
+
+G_INLINE_FUNC gdouble
+ncm_complex_Im (NcmComplex *c)
+{
+  return c->z[1];
+}
+
+G_INLINE_FUNC void
+ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v)
+{
+  c1->z[0] += c2->z[0] * v;
+  c1->z[1] += c2->z[1] * v;
+}
+
+G_INLINE_FUNC void
+ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3)
+{
+  c1->z[0] += c2->z[0] * c3->z[0] - c2->z[1] * c3->z[1];
+  c1->z[1] += c2->z[0] * c3->z[1] + c2->z[1] * c3->z[0];
+}
+
+G_INLINE_FUNC void 
+ncm_complex_mul_real (NcmComplex *c, const gdouble v)
+{
+  c->z[0] *= v;
+  c->z[1] *= v;  
+}
+
+G_INLINE_FUNC void 
+ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
+{
+  const gdouble Re_c1 = c1->z[0] * c2->z[0] - c1->z[1] * c1->z[1];
+  c1->z[1] = c1->z[0] * c2->z[1] + c1->z[1] * c2->z[0];
+  c1->z[0] = Re_c1;
+}
 
 G_END_DECLS
 

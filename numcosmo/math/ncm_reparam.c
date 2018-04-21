@@ -39,7 +39,9 @@
 #include "math/ncm_model.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcmReparam, ncm_reparam, G_TYPE_OBJECT);
 
@@ -123,7 +125,9 @@ _ncm_reparam_constructed (GObject *object)
     g_assert_cmpuint (reparam->length, >, 0);
 
     reparam->new_params = ncm_vector_new (reparam->length);
+
     reparam->sparams = g_ptr_array_sized_new (reparam->length);
+    
     g_ptr_array_set_size (reparam->sparams, reparam->length);
   }
 }
@@ -132,6 +136,14 @@ static void
 _ncm_reparam_finalize (GObject *object)
 {
   NcmReparam *reparam = NCM_REPARAM (object);
+  guint i;
+
+  for (i = 0; i < reparam->sparams->len; i++)
+  {
+    NcmSParam *sp_i = g_ptr_array_index (reparam->sparams, i);
+    if (sp_i != NULL)
+      ncm_sparam_free (sp_i);
+  }
 
   g_clear_pointer (&reparam->sparams_name_id, g_hash_table_unref);
   g_clear_pointer (&reparam->sparams, g_ptr_array_unref);
@@ -458,9 +470,11 @@ void
 ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *sp = ncm_sparam_new (name, symbol, lower_bound, upper_bound,
-                                         scale, abstol, default_val, ftype);
+                                  scale, abstol, default_val, ftype);
 
   ncm_reparam_set_param_desc (reparam, i, sp);
+
+  
   ncm_sparam_free (sp);
 }
 

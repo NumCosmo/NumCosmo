@@ -55,7 +55,8 @@ typedef enum _NcmDatasetBStrapType
 {
   NCM_DATASET_BSTRAP_DISABLE = 0,
   NCM_DATASET_BSTRAP_PARTIAL,
-  NCM_DATASET_BSTRAP_TOTAL, /*< private >*/
+  NCM_DATASET_BSTRAP_TOTAL, 
+  /* < private > */
   NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
 } NcmDatasetBStrapType;
 
@@ -83,6 +84,7 @@ struct _NcmDataset
 GType ncm_dataset_get_type (void) G_GNUC_CONST;
 
 NcmDataset *ncm_dataset_new (void);
+NcmDataset *ncm_dataset_new_list (gpointer data0, ...) G_GNUC_NULL_TERMINATED;
 NcmDataset *ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser);
 NcmDataset *ncm_dataset_ref (NcmDataset *dset);
 NcmDataset *ncm_dataset_copy (NcmDataset *dset);
@@ -126,6 +128,8 @@ void ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad);
 void ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
 
 void ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i);
+
+void ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM);
 
 G_END_DECLS
 

@@ -26,9 +26,9 @@
 /**
  * SECTION:ncm_stats_dist1d_epdf
  * @title: NcmStatsDist1dEPDF
- * @short_description: One dimensional probability distribution based on an EPDF.
+ * @short_description: One dimensional probability distribution based on an EPDF
  * 
- * Empirical Probability Distribution Function (EPDF).
+ * Reconstruction of an arbitrary one dimensional probability distribution based on a Empirical Probability Distribution Function (EPDF).
  * 
  */
 
@@ -43,11 +43,13 @@
 #include "math/ncm_c.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

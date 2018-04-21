@@ -63,9 +63,8 @@
 #include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
-#include "model/nc_hicosmo_de_linder.h"
-#include "model/nc_hicosmo_de_pad.h"
-#include "model/nc_hicosmo_de_qe.h"
+#include "model/nc_hicosmo_de_cpl.h"
+#include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
@@ -74,6 +73,7 @@
 #include "model/nc_hiprim_atan.h"
 #include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_sbpl.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -81,7 +81,6 @@
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
 #include "lss/nc_transfer_func_camb.h"
-#include "lss/nc_transfer_func_pert.h"
 #include "lss/nc_density_profile.h"
 #include "lss/nc_density_profile_nfw.h"
 #include "lss/nc_multiplicity_func.h"
@@ -116,8 +115,11 @@
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
+#include "lss/nc_wl_surface_mass_density.h"
+#include "lss/nc_reduced_shear_cluster_mass.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
+#include "nc_recomb_cbe.h"
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
@@ -135,11 +137,13 @@
 #include "data/nc_data_bao_dvdv.h"
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_counts_box_poisson.h"
+#include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -148,8 +152,10 @@
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
-#include "xcor/nc_xcor_limber_kernel_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -167,6 +173,7 @@
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif /* HAVE_EXECINFO_H */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;
@@ -263,7 +270,10 @@ ncm_cfg_init (void)
 
   if (numcosmo_init)
     return;
-  
+
+  if (sizeof (NcmComplex) != sizeof (fftw_complex))
+    g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
+
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
@@ -349,9 +359,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);  
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
@@ -368,6 +377,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_SBPL);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
@@ -381,7 +391,6 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_PERT);
 
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE_NFW);
@@ -428,9 +437,12 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
 
+  ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
+  ncm_cfg_register_obj (NC_TYPE_RECOMB_CBE);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
   ncm_cfg_register_obj (NC_TYPE_HIREION);
@@ -454,6 +466,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_RDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
 
@@ -470,7 +483,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
@@ -1019,10 +1033,10 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
  * FIXME
  *
  */
-void 
+void
 ncm_cfg_lock_plan_fftw (void)
 {
-  G_LOCK (fftw_plan_lock);  
+  G_LOCK (fftw_plan_lock);
 }
 
 /**
@@ -1031,10 +1045,10 @@ ncm_cfg_lock_plan_fftw (void)
  * FIXME
  *
  */
-void 
+void
 ncm_cfg_unlock_plan_fftw (void)
 {
-  G_UNLOCK (fftw_plan_lock);  
+  G_UNLOCK (fftw_plan_lock);
 }
 
 /**
@@ -1056,7 +1070,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_assert (numcosmo_init);
 
   G_LOCK (fftw_saveload_lock);
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
@@ -1092,7 +1106,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return ret;
 }
 
@@ -1143,7 +1157,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return TRUE;
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */

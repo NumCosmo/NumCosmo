@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [13])
-m4_define([numcosmo_micro_version], [3])
+m4_define([numcosmo_minor_version], [14])
+m4_define([numcosmo_micro_version], [1])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -178,6 +178,13 @@ AX_COMPILER_VENDOR()
 AX_COMPILER_VERSION()
 
 dnl ***************************************************************************
+dnl C keywords
+dnl ***************************************************************************
+AC_C_CONST()
+AC_C_RESTRICT()
+AC_C_VOLATILE()
+
+dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
@@ -235,6 +242,17 @@ esac
 
 AC_SUBST(PLC_NOWARN_FLAGS)
 
+AC_ARG_ENABLE([simd-ext-flags], 
+  [AS_HELP_STRING([--enable-simd-ext-flags  Enable all SIMD and extension flags])], 
+  [enable_simd_ext_flags="yes"],[])
+  
+if test x$enable_simd_ext_flags = "xyes"; then
+  AX_EXT()
+  AC_SUBST(SIMD_FLAGS)
+  AC_SUBST(CPUEXT_FLAGS)
+  CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
+fi
+
 dnl ***************************************************************************
 dnl Fortran flags
 dnl ***************************************************************************
@@ -242,6 +260,27 @@ dnl ***************************************************************************
 AX_GFORTRAN_VERSION()
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
+
+AC_F77_LIBRARY_LDFLAGS()
+AC_FC_LIBRARY_LDFLAGS()
+
+if test "x$FLIBS" != x; then
+  FLIBS_WL="-Wl"
+  for fc_opt in $FLIBS; do
+    FLIBS_WL="$FLIBS_WL,${fc_opt}"
+  done
+  FLIBS="$FLIBS_WL"
+fi
+
+if test "x$FCLIBS" != x; then
+  FCLIBS_WL="-Wl"
+  for fc_opt in $FCLIBS; do
+    FCLIBS_WL="$FCLIBS_WL,${fc_opt}"
+  done
+  FCLIBS="$FCLIBS_WL"
+  LIBS="$FCLIBS $LIBS"
+fi
+
 AC_F77_WRAPPERS()
 
 if test x$GFORTRAN_VERSION != x; then
@@ -339,9 +378,7 @@ dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
 GLIB_REQUIRED_VERSION=2.38.0
-GSL_REQUIRED_VERSION=1.13
-GSL_GLF_REQUIRED_VERSION=1.15
-GSL_ODEIV2_REQUIRED_VERSION=1.15
+GSL_REQUIRED_VERSION=2.0
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
 CFITSIO_REQUIRED_VERSION=3.25
@@ -467,26 +504,6 @@ AC_CHECK_HEADERS([execinfo.h],[
 ],[])
 
 dnl ***************************************************************************
-dnl Check for fortran lib.
-dnl ***************************************************************************
-AC_F77_LIBRARY_LDFLAGS
-AC_FC_LIBRARY_LDFLAGS
-if test "x$FCLIBS" != x; then
-  FCLIBS_WL="-Wl"
-  for fc_opt in $FCLIBS; do
-    FCLIBS_WL="$FCLIBS_WL,${fc_opt}"
-  done
-  FLIBS_WL="-Wl"
-  for fc_opt in $FLIBS; do
-    FLIBS_WL="$FLIBS_WL,${fc_opt}"
-  done
-
-  FLIBS="$FLIBS_WL"
-  FCLIBS="$FCLIBS_WL"
-  LIBS="$FCLIBS $LIBS"
-fi
-
-dnl ***************************************************************************
 dnl Check for math.h
 dnl ***************************************************************************
 
@@ -583,10 +600,8 @@ AC_SUBST(GSL_LIBS)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
-PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
-PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
-PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
 PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
+PKG_CHECK_EXISTS([gsl >= 2.4], [AC_DEFINE([HAVE_GSL_2_4],[1], [gsl 2.4])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -605,6 +620,14 @@ AC_CHECK_LIB([arb],[arb_set])
 if test "x$ac_cv_lib_arb_arb_set" != "x"; then
   AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])
 fi
+
+dnl ***************************************************************************
+dnl Check for hdf5 support
+dnl ***************************************************************************
+AX_LIB_HDF5()
+AC_SUBST(HDF5_CFLAGS)
+AC_SUBST(HDF5_LDFLAGS)
+AC_SUBST(HDF5_LIBS)
 
 dnl ***************************************************************************
 dnl Check for fftw3
@@ -892,6 +915,8 @@ AC_SUBST(SUNDIALS_LIBS)
 AC_SUBST(SUNDIALS_CFLAGS)
 
 AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
@@ -914,20 +939,25 @@ if test "xno" = "xyes"; then
   AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_0_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
 fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUNDIALS_2_6_0], [2.6.1, HAVE_SUNDIALS_2_6_0], [2.6.2, HAVE_SUNDIALS_2_6_0], [2.7.0, HAVE_SUNDIALS_2_7_0]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
-    AC_EGREP_CPP([$SUNDIALS_VERSION],
+    SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
+    AC_EGREP_CPP([\"$SUNDIALS_VERSION_REGEX\"],
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
+        SUNDIALS_VERSION;
       ],
       [
         if test "x$SUNDIALS_VERSION_FOUND" != "xnone"; then
-          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) double match])
+          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
         fi
+        SUNDIALS_MAJOR=m4_argn([3],SUNDIALS_VERSION_V)
         AC_MSG_RESULT([$SUNDIALS_VERSION])
         AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
         AC_DEFINE_UNQUOTED([$SUNDIALS_DEFINE], [1], [SUNDIALS version])
@@ -936,31 +966,35 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
   ])dnl
 
 if test "x$SUNDIALS_VERSION_FOUND" = "xnone"; then
-  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) none found])
+  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) none found])
 fi
 
-AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
-CFLAGS="$SAVED_CFLAGS"
+AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$SUNDIALS_MAJOR],[SUNDIALS version])
 
-AC_MSG_CHECKING([whenever sundials uses long int])
-SAVED_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#include <cvodes/cvodes_direct.h>
-int test_dense_jac (long int N, realtype t,
-                    N_Vector y, N_Vector fy,
-                    DlsMat Jac, void *user_data,
-                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{ return 0; }
-]],[[
-CVDlsDenseJacFn func = &test_dense_jac;
-func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
-]])],
-[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
- AC_MSG_RESULT([yes])],
-[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
- AC_MSG_RESULT([no])])
-CFLAGS="$SAVED_CFLAGS"
+if test "x$SUNDIALS_MAJOR" = "x2"; then 
+  AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
+  CFLAGS="$SAVED_CFLAGS"
+
+  AC_MSG_CHECKING([whenever sundials uses long int])
+  SAVED_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS -Werror"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  #include <cvodes/cvodes_direct.h>
+  int test_dense_jac (long int N, realtype t,
+                      N_Vector y, N_Vector fy,
+                      DlsMat Jac, void *user_data,
+                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+  { return 0; }
+  ]],[[
+  CVDlsDenseJacFn func = &test_dense_jac;
+  func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
+  ]])],
+  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
+   AC_MSG_RESULT([yes])],
+  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
+   AC_MSG_RESULT([no])])
+  CFLAGS="$SAVED_CFLAGS"
+fi
 
 dnl ***************************************************************************
 dnl PLC
@@ -1027,7 +1061,9 @@ numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
+docs/manual_head.xml
 examples/Makefile
+examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
 data/Makefile
 numcosmo/build_cfg.h
@@ -1042,27 +1078,37 @@ echo "--------------------------------------------------------------------"
 if [ test "x$have_fftw3_support" != x ]; then
        echo "Building with FFTW3 support: ....................................YES"
 else
-       echo "Building  with FFTW3 support: ....................................NO"
+       echo "Building with FFTW3 support: .....................................NO"
        echo "        Requires FFTW3 (>= $FFTW3_REQUIRED_VERSION)"
 fi
        echo "Building with BLAS support: .....................................$blas_support"
 if [ test "x$have_lapack" != "xno" ]; then
        echo "Building with Lapack support: ...................................$lapack_support"
 else
-       echo "Building  with Lapack support: ...................................NO"
+       echo "Building with Lapack support: ....................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
 fi
 if [ test "x$have_cfitsio_support" != x ]; then
        echo "Building with cfitsio support: ..................................YES"
 else
-       echo "Building  with cfitsio support: ..................................NO"
+       echo "Building with cfitsio support: ...................................NO"
        echo "        Requires cfitsio - A FITS File Subroutine Library"
 fi
 if [ test "x$have_nlopt_support" != x ]; then
        echo "Building with nlopt support: ....................................YES"
 else
-       echo "Building  with nlopt support: ....................................NO"
+       echo "Building with nlopt support: .....................................NO"
        echo "        Requires nlopt - NonLinear OPTimization library"
+fi
+if [ test "x$with_hdf5" = xyes ]; then
+       echo "Building with HDF5 support: .....................................YES"
+else
+       echo "Building with HDF5 support: ......................................NO"
+fi
+if [ test "x$ac_cv_lib_arb_arb_set" = xyes ]; then
+       echo "Building with ARB support: ......................................YES"
+else
+       echo "Building with ARB support: .......................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

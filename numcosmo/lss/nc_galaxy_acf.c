@@ -41,23 +41,24 @@
 #include "math/integral.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_bessel.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcGalaxyAcf, nc_galaxy_acf, G_TYPE_OBJECT);
 
 NcGalaxyAcf *
 nc_galaxy_acf_new (NcGrowthFunc *gf, NcDistance *dist, NcTransferFunc *tf)
 {
-  NcGalaxyAcf *acf;
-  acf = g_object_new (NC_TYPE_GALAXY_ACF, NULL);
-  acf->gf = gf;      /* FIXME REF */
+  NcGalaxyAcf *acf = g_object_new (NC_TYPE_GALAXY_ACF, NULL);
+  acf->gf   = gf;
   acf->dist = dist;
-  acf->tf = tf;
-  acf->b = 2.0;
-  acf->s = ncm_spline_cubic_notaknot_new ();
+  acf->tf   = tf;
+  acf->b    = 2.0;
+  acf->s    = ncm_spline_cubic_notaknot_new ();
   {
-	NcWindow *wp = nc_window_tophat_new ();
-	nc_window_free (wp);
+  	NcWindow *wp = nc_window_tophat_new ();
+	  nc_window_free (wp);
   }
   return acf;
 }

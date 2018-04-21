@@ -26,9 +26,17 @@
 /**
  * SECTION:nc_xcor
  * @title: Cross-correlations
- * @short_description: Cross-spectra using the Limber approximation
+ * @short_description: Angular auto- and cross-spectra.
  *
- * FIXME
+ * The angular power spectrum between observables $A$ and $B$ with kernels $W^A$ and $W^B$ is
+ * \begin{equation}
+ * C_{\ell}^{AB} &= \int dz W^A(z) \int dz^\prime W^B (z^\prime) \times \int dk \frac{2}{\pi} k^2 P(k, z, z^\prime) j_{\ell}(k\chi(z)) j_{\ell} (k\chi(z^\prime)).
+ * \end{equation}
+ * In the Limber approximation, it reduces to
+ * \begin{equation}
+ * C_{\ell}^{AB} = \int_0^{z_*} dz \frac{H(z)}{c \chi^2(z)} W^A(z) W^B (z) P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right),
+ * \end{equation}
+ * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $chi(z)$ the comoving distance (a #NcDistance).
  *
  */
 
@@ -44,9 +52,11 @@
 #include "xcor/nc_xcor.h"
 #include "nc_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cuba.h>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -195,7 +205,7 @@ nc_xcor_class_init (NcXcorClass* klass)
  * @ps: a #NcmPowspec
  * @meth: a #NcXcorLimberMethod to compute the Limber integrals
  *
- * FIXME
+ * Two methods are available to compute Limber-approximated integrals: independent GSL numerical integration or vector integration using Sundials's CVode algorithm.
  *
  * Returns: FIXME
  *
@@ -346,7 +356,6 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
 	for (i = 0; i < xclc->nell; i++)
 	{
 		NV_Ith_S (ydot, i) = ncm_vector_fast_get (xclc->Pk, i) * geoW1W2;
-		/*printf ("# dCls: %8u % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", i, z, ncm_vector_get (xclc->Pk, i), geoW1W2, NV_Ith_S (ydot, i), NV_Ith_S (y, i));*/
 	}
 
 	return 0;
@@ -361,7 +370,7 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	N_Vector yv = N_VNew_Serial (nell);
 	N_Vector yv0 = N_VNew_Serial (nell);
 	gpointer cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-	gpointer cvodefunc = &_xcor_limber_cvode_int; //isauto ? &_xcor_limber_cvode_auto_int : &_xcor_limber_cvode_cross_int;
+	gpointer cvodefunc = &_xcor_limber_cvode_int;
 	NcmVector* Pk = ncm_vector_new (nell);
 	NcmVector* k = ncm_vector_new (nell);
 	gdouble z;
@@ -371,7 +380,7 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	ncm_vector_set_zero (k);
 	ncm_vector_set_zero (Pk);
 
-	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo }; //, cons_factor };
+	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo };
 
 	/* Find initial value = y'(zmid) * dz */
 	_xcor_limber_cvode_int (zmid, yv, yv0, &xclc);
@@ -451,12 +460,6 @@ _xcor_limber_gsl_auto_int (gdouble z, gpointer ptr)
 	const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
 	const gdouble k1z = nc_xcor_limber_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
 
-	// if (gsl_isnan ( E_z * gsl_pow_2 (k1z / xi_z) * power_spec))
-	// {
-	// 	printf("%g %g %g %g %g %g\n", xi_z, xi_z_phys, E_z, k, power_spec, k1z);
-	// 	g_error("_xcor_limber_gsl_auto_int");
-	// }
-
 	return E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 }
 
@@ -513,7 +516,7 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
  * @lmax: a #guint
  * @vp: a #NcmVector
  *
- * FIXME
+ * Performs the computation of the power spectrum $C_{\ell}^{AB}$ in the Limber approximation. The kernels of observables A and B are @xclk1 and @xclk2. If @xclk2 is NULL, the auto power spectrum is computed. The result for multipoles lmin to lmax (included) is stored in the #NcmVector @vp.
  *
  */
 void nc_xcor_limber (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp)

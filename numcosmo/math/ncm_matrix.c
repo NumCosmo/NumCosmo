@@ -40,12 +40,14 @@
 #include "math/ncm_matrix.h"
 #include "math/ncm_lapack.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
 #include <clapack.h>
 #else
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
 #endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -814,6 +816,108 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 }
 
 /**
+ * ncm_matrix_cmp:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  gdouble reltol    = 0.0;
+  gint i, j;
+  
+  g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
+  g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      const gdouble cm1_ij    = ncm_matrix_get (cm1, i, j);
+      const gdouble cm2_ij    = ncm_matrix_get (cm2, i, j);
+      const gdouble reltol_ij = fabs ((cm1_ij - cm2_ij) / (scale + cm2_ij));
+      reltol = MAX (reltol, reltol_ij);
+    }
+  }
+  return reltol;
+}
+
+/**
+ * ncm_matrix_cmp_diag:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  const gdouble len = MIN (nrows, ncols);
+  gdouble reltol    = 0.0;
+  gint i;
+  
+  g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
+  g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble cm1_ii    = ncm_matrix_get (cm1, i, i);
+    const gdouble cm2_ii    = ncm_matrix_get (cm2, i, i);
+    const gdouble reltol_ii = fabs ((cm1_ii - cm2_ii) / (scale + cm2_ii));
+    reltol = MAX (reltol, reltol_ii);
+  }
+  return reltol;
+}
+
+/**
+ * ncm_matrix_norma_diag:
+ * @cm1: FIXME
+ * @cm2: FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmMatrix *
+ncm_matrix_norma_diag (const NcmMatrix *cm1, NcmMatrix *cm2)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  gint i;
+
+  g_assert_cmpuint (nrows, ==, ncols);
+
+  if (cm2 != cm1)
+    ncm_matrix_memcpy (cm2, cm1);
+
+  for (i = 0; i < nrows; i++)
+  {
+    const gdouble var_i = ncm_matrix_get (cm1, i, i);
+    gdouble sigma_i;
+    
+    g_assert_cmpfloat (var_i, >, 0.0);
+    sigma_i = sqrt (var_i);
+
+    ncm_matrix_mul_col (cm2, i, 1.0 / sigma_i);
+    ncm_matrix_mul_row (cm2, i, 1.0 / sigma_i);
+  }
+
+  return cm2;
+}
+
+/**
  * ncm_matrix_copy_triangle:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
@@ -826,7 +930,7 @@ void
 ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
 {
   const guint nrows = ncm_matrix_nrows (cm);
-  const guint ncols = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
   guint i, j;
 
   if (nrows != ncols)
@@ -860,29 +964,82 @@ ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
  * ncm_matrix_dsymm:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
- * @alpha: FIXME
- * @b: FIXME
- * @beta: FIXME
- * @c: FIXME
- *
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix $A$
+ * @B: a #NcmMatrix $B$
+ * @beta: $\beta$
+ * 
  * FIXME
  *
  */
 void 
-ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c)
+ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta)
 {
   g_assert (UL == 'U' || UL == 'L');
-  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (b));
-  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (b));
-  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (c));
-  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (c));
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, ncm_matrix_ncols (B));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (B));
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, ncm_matrix_ncols (cm));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (cm));
 
   cblas_dsymm (CblasRowMajor, CblasLeft, (UL == 'U') ? CblasUpper : CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm), 
                alpha, 
-               ncm_matrix_data (cm), ncm_matrix_gsl (cm)->tda,
-               ncm_matrix_data (b), ncm_matrix_gsl (b)->tda, 
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (B), ncm_matrix_tda (B), 
                beta,
-               ncm_matrix_data (c), ncm_matrix_gsl (c)->tda);
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+enum CBLAS_ORDER
+_ncm_matrix_check_trans (const gchar *func_name, gchar T)
+{
+  switch (T)
+  {
+    case 'C':
+    case 'T':
+      return CblasTrans;
+    case 'N':
+      return CblasNoTrans;
+      break;
+    default:
+      g_error ("%s: Unknown Trans type %c.", func_name, T);
+      return 0;
+  }
+}
+
+/**
+ * ncm_matrix_dgemm:
+ * @cm: a #NcmMatrix $C$
+ * @TransA: char indicating 'T'ranspose or 'N'ot transposed matrix 
+ * @TransB: char indicating 'T'ranspose or 'N'ot transposed matrix 
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix $A$
+ * @B: a #NcmMatrix $B$
+ * @beta: $\beta$
+ *
+ * Calculates $C = \alpha\mathrm{op}(A)\mathrm{op}(B) + \beta C$.
+ *
+ */
+void 
+ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta)
+{
+  enum CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransA);
+  enum CBLAS_TRANSPOSE cblas_TransB = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransB);
+  const gsize opA_nrows             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_nrows (A) : ncm_matrix_ncols (A);
+  const gsize opA_ncols             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
+  const gsize opB_nrows             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_nrows (B) : ncm_matrix_ncols (B);
+  const gsize opB_ncols             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_ncols (B) : ncm_matrix_nrows (B);
+
+  g_assert_cmpuint (opA_ncols, ==, opB_nrows);
+
+  g_assert_cmpuint (opA_nrows, ==, ncm_matrix_nrows (cm));
+  g_assert_cmpuint (opB_ncols, ==, ncm_matrix_ncols (cm));
+  
+  cblas_dgemm (CblasRowMajor, cblas_TransA, cblas_TransB, opA_nrows, opB_ncols, opA_ncols, 
+               alpha,
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (B), ncm_matrix_tda (B),
+               beta, 
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
 }
 
 /**
@@ -897,7 +1054,7 @@ ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *b, co
 gint
 ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
   return ret;
 }
 
@@ -913,8 +1070,89 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 gint
 ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
   return ret;
+}
+
+/**
+ * ncm_matrix_cholesky_lndet:
+ * @cm: a #NcmMatrix
+ *
+ * Calculates determinant of a symmetric positive definite matrix,
+ * that was previously decomposed using ncm_matrix_cholesky_decomp().
+ * 
+ * Returns: the log determinant of @cm.
+ */
+gdouble 
+ncm_matrix_cholesky_lndet (NcmMatrix *cm)
+{
+  const gdouble lb = 1.0e-200;
+  const gdouble ub = 1.0e+200;
+  const guint n    = ncm_matrix_nrows (cm);
+  gdouble detL     = 1.0;
+  glong exponent   = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble Lii = ncm_matrix_get (cm, i, i);
+    const gdouble ndetL = detL * Lii;
+    if (G_UNLIKELY ((ndetL < lb) || (ndetL > ub)))
+    {
+      gint exponent_i = 0;
+      detL = frexp (ndetL, &exponent_i);
+      exponent += exponent_i;
+    }
+    else
+      detL = ndetL;
+  }
+
+  return 2.0 * (log (detL) + exponent * M_LN2);
+}
+
+/**
+ * ncm_matrix_cholesky_solve:
+ * @cm: a #NcmMatrix
+ * @b: a #NcmVector
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ *
+ * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * definite matrix and solve the system $A x = B$ where $A=$@cm and $B$=@b.
+ * 
+ */
+gint 
+ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL)
+{
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
+	g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
+
+	return ncm_lapack_dposv (UL, ncm_matrix_nrows (cm), 1, 
+	                         ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+	                         ncm_vector_data (b),  ncm_vector_len (b));
+}
+
+/**
+ * ncm_matrix_cholesky_solve2:
+ * @cm: a #NcmMatrix
+ * @b: a #NcmVector
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ *
+ * Using a previously computed Cholesky decomposition in @cm, through 
+ * ncm_matrix_cholesky_decomp(), solves the system $A x = B$ where 
+ * $A=$@cm and $B$=@b.
+ * 
+ */
+gint 
+ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
+{
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
+	g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
+
+	return ncm_lapack_dpotrs (UL, ncm_matrix_nrows (cm), 1, 
+	                          ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+	                          ncm_vector_data (b),  ncm_vector_len (b));
 }
 
 /**
@@ -940,6 +1178,73 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
     }
     g_message ("\n");
   }
+}
+
+/**
+ * ncm_matrix_fill_rand_cov:
+ * @cm: a square #NcmMatrix
+ * @sigma_min: mininum standard deviation
+ * @sigma_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ * 
+ */
+void 
+ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+{
+  const guint n   = ncm_matrix_nrows (cm);
+  const guint nm1 = n - 1;
+  
+  g_assert_cmpfloat (cor_level, >, 0.0);
+  g_assert_cmpuint (n, ==, ncm_matrix_ncols (cm));
+
+  ncm_rng_lock (rng);
+  {
+    NcmMatrix *P = ncm_matrix_dup (cm);
+    gint k;
+    
+    ncm_matrix_set_all (P, 0.0);
+    ncm_matrix_set_identity (cm);
+
+    for (k = 0; k < nm1; k++)
+    {
+      gint i;
+      for (i = k + 1; i < n; i++)
+      {
+        gdouble p = (gsl_ran_beta (rng->r, cor_level, cor_level) - 0.5) * 2.0;
+        gint l;
+        
+        ncm_matrix_set (P, k, i, p);
+
+        for (l = k - 1; l >= 0; l--)
+        {
+          const gdouble Pli = ncm_matrix_get (P, l, i);
+          const gdouble Plk = ncm_matrix_get (P, l, k);
+          p = p * sqrt ((1.0 - gsl_pow_2 (Pli)) * (1.0 - gsl_pow_2 (Plk))) + Pli * Plk;
+        }
+
+        ncm_matrix_set (cm, k, i, p);
+        ncm_matrix_set (cm, i, k, p);
+      }
+    }
+
+    for (k = 0; k < n; k++)
+    {
+      const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
+      ncm_matrix_mul_col (cm, k, sigma_k);
+      ncm_matrix_mul_row (cm, k, sigma_k);
+    }
+
+    ncm_matrix_free (P);
+  }
+
+  ncm_rng_unlock (rng);
 }
 
 /**
@@ -1034,6 +1339,43 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  * This function sets all the elements of the matrix @cm to @val.
  *
  */
+
+/**
+ * ncm_matrix_add:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function adds the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_sub:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function subtracts the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_mul_elements:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function multiplies the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_div_elements:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function divides the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
 /**
  * ncm_matrix_scale:
  * @cm: a #NcmMatrix
@@ -1043,6 +1385,34 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  * The result is stored in @cm.
  *
  */
+/**
+ * ncm_matrix_add_constant:
+ * @cm: a #NcmMatrix
+ * @val: a double
+ *
+ * This function adds the the constant factor @val to the elements of the matrix @cm.
+ * The result is stored in @cm.
+ *
+ */
+/**
+ * ncm_matrix_mul_row:
+ * @cm: a #NcmMatrix
+ * @row_i: row index
+ * @val: a double
+ *
+ * This function multiplies row @row_i elements by @val.
+ *
+ */
+/**
+ * ncm_matrix_mul_col:
+ * @cm: a #NcmMatrix
+ * @col_i: column index
+ * @val: a double
+ *
+ * This function multiplies column @col_i elements by @val.
+ *
+ */
+
 /**
  * ncm_matrix_memcpy:
  * @cm1: a #NcmMatrix

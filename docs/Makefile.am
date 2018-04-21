@@ -1,15 +1,14 @@
 ## Process this file with automake to produce Makefile.in
 
 # Local xml files
-XML_FILES=dependencies.xml \
-          compiling.xml    \
-          introduction.xml \
-          darkenergy.xml   \
-          refs.xml         \
-          gobject_introd.xml
+XML_FILES= \
+	introduction.xml \
+	darkenergy.xml   \
+	refs.xml
 
 # Generated xml files
-XML_GEN_FILES=references.xml
+XML_GEN_FILES= \
+	references.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
@@ -28,6 +27,8 @@ DOC_MODULE=numcosmo
 # The top-level SGML file. You can change this if you want to.
 DOC_MAIN_SGML_FILE=$(DOC_MODULE)-docs.sgml
 
+$(DOC_MAIN_SGML_FILE): manual_head.xml
+
 # Directories containing the source code, relative to $(srcdir).
 # gtk-doc will search all .c and .h files beneath these paths
 # for inline comments documenting functions and macros.
@@ -39,7 +40,6 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/model \
 	       $(top_srcdir)/numcosmo/data \
 	       $(top_srcdir)/numcosmo/perturbations \
-	       $(top_srcdir)/numcosmo/sphere \
 	       $(top_srcdir)/numcosmo/xcor \
 	       $(top_builddir)/numcosmo
 
@@ -78,8 +78,7 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
 	   $(top_srcdir)/numcosmo/model/*.h \
 	   $(top_srcdir)/numcosmo/data/*.h \
-	   $(top_srcdir)/numcosmo/perturbations/*.h \
-	   $(top_srcdir)/numcosmo/sphere/*.h
+	   $(top_srcdir)/numcosmo/perturbations/*.h
 
 CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/lss/*.c \
@@ -87,8 +86,7 @@ CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \
 	   $(top_srcdir)/numcosmo/model/*.c \
 	   $(top_srcdir)/numcosmo/data/*.c \
-	   $(top_srcdir)/numcosmo/perturbations/*.c \
-	   $(top_srcdir)/numcosmo/sphere/*.c
+	   $(top_srcdir)/numcosmo/perturbations/*.c
 
 # Extra header to include when scanning, which are not under DOC_SOURCE_DIR
 # e.g. EXTRA_HFILES=$(top_srcdir}/contrib/extra.h
@@ -102,9 +100,10 @@ endif
 
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=linear_internal.h         \
+IGNORE_HFILES= \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
+              ncm_sphere_map_block.c    \
               gsl_rstat.h               \
               rquantile.c               \
               $(ignore_nlopt)           \
@@ -142,7 +141,7 @@ GTKDOC_LIBS=$(top_builddir)/numcosmo/libnumcosmo.la
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make
 
-setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
+setup-build.stamp: $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
@@ -201,7 +200,7 @@ numcosmo-docs-clean: clean
 
 bibfile.stamp: $(top_srcdir)/docs/references.bib
 	-$(GTK_DOC_V_SETUP)if test "$(abs_srcdir)" != "$(abs_builddir)" ; then \
-	    cp -pu $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
+	    cp -p $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
 	fi
 	$(AM_V_at)touch bibfile.stamp
 
@@ -223,7 +222,7 @@ endif
 addmathjax.stamp: html-build.stamp
 	$(AM_V_at)echo "  DOC   Adding support to MathJax"
 	$(AM_V_at)$(top_srcdir)/docs/addmathjax.pl $(DOC_TARGET_DIR)/html/*.html > $(@F).addmathjax.log 2>&1
-	$(AM_V_at)cp -pu $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
+	$(AM_V_at)cp -p $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
 	$(AM_V_at)touch addmathjax.stamp
 
 -include $(top_srcdir)/git.mk

@@ -576,7 +576,7 @@ contains
     end do
 
 !data
-    allocate(dt(ntot,ndata))
+		allocate(dt(ntot,ndata))
     do j=1,ndata
        il = iu +1
        iu = il +ntot-1

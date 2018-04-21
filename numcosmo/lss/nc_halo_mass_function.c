@@ -41,8 +41,6 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_cfg.h"
 
-#include <gsl/gsl_integration.h>
-
 enum
 {
   PROP_0,
@@ -51,6 +49,11 @@ enum
   PROP_MULTIPLICITY,
   PROP_AREA,
   PROP_PREC,
+	PROP_LNMI,
+	PROP_LNMF,
+	PROP_ZI,
+	PROP_ZF,
+	PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcHaloMassFunction, nc_halo_mass_function, G_TYPE_OBJECT);
@@ -70,6 +73,21 @@ nc_halo_mass_function_init (NcHaloMassFunction *mfp)
   mfp->prec        = 0.0;
   mfp->ctrl_cosmo  = ncm_model_ctrl_new (NULL);
   mfp->ctrl_reion  = ncm_model_ctrl_new (NULL);
+}
+
+static void
+_nc_halo_mass_function_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_halo_mass_function_parent_class)->constructed (object);
+
+	{
+		NcHaloMassFunction *mfp = NC_HALO_MASS_FUNCTION (object);
+
+		g_assert_cmpfloat (mfp->lnMi, <, mfp->lnMf);
+	  g_assert_cmpfloat (mfp->zi, <, mfp->zf);
+
+	}
 }
 
 static void
@@ -122,6 +140,18 @@ _nc_halo_mass_function_set_property (GObject *object, guint prop_id, const GValu
     case PROP_PREC:
       nc_halo_mass_function_set_prec (mfp, g_value_get_double (value));
       break;
+		case PROP_LNMI:
+			mfp->lnMi = g_value_get_double (value);
+			break;
+		case PROP_LNMF:
+			mfp->lnMf = g_value_get_double (value);
+			break;	
+		case PROP_ZI:
+			mfp->zi = g_value_get_double (value);
+			break;
+		case PROP_ZF:
+			mfp->zf = g_value_get_double (value);
+			break;	
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -151,6 +181,18 @@ _nc_halo_mass_function_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_PREC:
       g_value_set_double (value, mfp->prec);
       break;
+		case PROP_LNMI:
+			g_value_set_double (value, mfp->lnMi);
+			break;
+		case PROP_LNMF:
+			g_value_set_double (value, mfp->lnMf);
+			break;	
+		case PROP_ZI:
+			g_value_set_double (value, mfp->zi);
+			break;
+		case PROP_ZF:
+			g_value_set_double (value, mfp->zf);
+			break;	
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -163,6 +205,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
+	object_class->constructed = &_nc_halo_mass_function_constructed;
   object_class->dispose = &_nc_halo_mass_function_dispose;
   object_class->finalize = &_nc_halo_mass_function_finalize;
   object_class->set_property = &_nc_halo_mass_function_set_property;
@@ -236,6 +279,64 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                                         "Precision",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+	/**
+   * NcHaloMassFunction:lnMi:
+   *
+   * This property sets the minimum halo mass (logarithm base e).
+   * 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNMI,
+                                   g_param_spec_double ("lnMi",
+                                                        NULL,
+                                                        "Lower mass",
+                                                        27.5, 36.84, 32.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+	/**
+   * NcHaloMassFunction:lnMf:
+   *
+   * This property sets the maximum halo mass (logarithm base e).
+   * 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNMF,
+                                   g_param_spec_double ("lnMf",
+                                                        NULL,
+                                                        "Upper mass",
+                                                        27.5, 36.84, 36.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+	/**
+   * NcHaloMassFunction:zi:
+   *
+   * This property sets the initial redshift.
+   * 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZI,
+                                   g_param_spec_double ("zi",
+                                                        NULL,
+                                                        "Lower redshift",
+                                                        0.0, 2.0, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+	/**
+   * NcHaloMassFunction:zf:
+   *
+   * This property sets the final redshift.
+   * 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZF,
+                                   g_param_spec_double ("zf",
+                                                        NULL,
+                                                        "Upper redshift",
+                                                        0.0, 2.0, 1.4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	
+	
 }
 
 
@@ -519,6 +620,9 @@ nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd)
 void
 nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf)
 {
+	g_assert_cmpfloat (lnMi, <, lnMf);
+	g_assert_cmpfloat (zi, <, zf);
+
   if (lnMi != mfp->lnMi || mfp->lnMf != lnMf || mfp->zi != zi || mfp->zf != zf)
   {
     mfp->lnMi = lnMi;
@@ -648,7 +752,7 @@ _encapsulated_z (gdouble z, gpointer p)
   gdouble A = args->mfp->area_survey *
     nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
     nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
-
+  /*printf ("z   % 22.15g % 22.15g\n", z, A);*/
   return A;
 }
 
@@ -658,7 +762,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
   gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, lnM, args->z);
-
+  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);*/
   return A;
 }
 
@@ -667,7 +771,10 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
 {
   gsl_function Fx, Fy;
   _encapsulated_function_args args;
-  g_assert (mfp->d2NdzdlnM == NULL);
+
+	g_assert (mfp->d2NdzdlnM == NULL);
+	g_assert_cmpfloat (mfp->lnMi, <, mfp->lnMf);
+	g_assert_cmpfloat (mfp->zi, <, mfp->zf);
 
   args.mfp = mfp;
   args.cosmo = cosmo;
@@ -680,7 +787,7 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
 
   Fy.function = _encapsulated_z;
   Fy.params = &args;
-
+  /*ncm_model_orig_params_log_all (NCM_MODEL (cosmo));*/
   mfp->d2NdzdlnM = ncm_spline2d_bicubic_notaknot_new ();
   ncm_spline2d_set_function (mfp->d2NdzdlnM,
                              NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy, mfp->lnMi, mfp->lnMf, mfp->zi, mfp->zf, rel_error);

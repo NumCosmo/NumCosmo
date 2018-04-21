@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 import sys
 import gi
@@ -43,7 +43,7 @@ sld = None
 data_file = "example_data.obj"
 ser = Ncm.Serialize.new (0)
 if not os.path.exists (data_file):
-  print "data file does not exists, run example_create_data.py first."
+  print ("data file does not exists, run example_create_data.py first.")
   sys.exit (-1)
 else:
   sld = ser.from_binfile (data_file)
@@ -93,6 +93,7 @@ fit.log_covar ()
 # run.
 #
 mc = Ncm.FitMC.new (fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.SIMPLE)
+mc.set_nthreads (2)
 
 #
 # Using `example_mcmc_out.fits' as the catalog file, if there

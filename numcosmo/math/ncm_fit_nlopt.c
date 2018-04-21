@@ -385,7 +385,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_params_set_vector (fit, fit->fstate->fparams);
     ncm_fit_m2lnL_val (fit, &m2lnL);
 
-    if (ncm_cmp (m2lnL, minf, fit->fstate->m2lnL_prec) != 0)
+    if (ncm_cmp (m2lnL, minf, fit->fstate->m2lnL_prec, 0.0) != 0)
     {
       g_warning ("_ncm_fit_nlopt_run: algorithm minimum differs from evaluated m2lnL % 22.15g != % 22.15g (prec = %e)\n",
                  m2lnL, minf, fit->fstate->m2lnL_prec);
@@ -451,7 +451,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   if (grad != NULL)
   {
     NcmVector *gradv = ncm_vector_new_data_static (grad, n, 1);
-    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, gradv);
+    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, &gradv);
     ncm_vector_scale (gradv, 2.0 * constraint);
     ncm_vector_free (gradv);
   }

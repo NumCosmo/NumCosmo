@@ -165,15 +165,17 @@ test_ncm_model_child_child_new (TestNcmModel *test, gconstpointer pdata)
 NcmReparam *
 _test_ncm_model_create_reparam (TestNcmModel *test)
 {
-  guint size = ncm_model_len (NCM_MODEL (test->tm));
-  NcmMatrix *T = ncm_matrix_new (size, size);
-  NcmVector *v = ncm_vector_new (size);
-  NcmReparamLinear *relin;
+  const guint size     = ncm_model_len (NCM_MODEL (test->tm));
+  NcmMatrix *T         = ncm_matrix_new (size, size);
+  NcmVector *v         = ncm_vector_new (size);
   NcmBootstrap *bstrap = ncm_bootstrap_sized_new (size);
-  NcmRNG *rng = ncm_rng_new (NULL);
+  NcmRNG *rng          = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  guint cdesc_n        = size / 10;
+  NcmReparamLinear *relin;
   guint i;
-  guint cdesc_n = size / 10;
-  if (cdesc_n == 0) cdesc_n = 1;
+  
+  if (cdesc_n == 0) 
+    cdesc_n = 1;
 
   ncm_bootstrap_remix (bstrap, rng);
 

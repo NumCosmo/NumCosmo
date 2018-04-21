@@ -65,6 +65,7 @@ nc_hiprim_atan_finalize (GObject *object)
 }
 
 static gdouble _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
+static gdouble _nc_hiprim_atan_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
 nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
@@ -107,22 +108,35 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   /* Set lambda param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_LAMBDA, "\\lambda", "lambda",
-                              0.0, 5.0, 1.0,
+                              0.0, 60.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_LAMBDA,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Set T_SA_ratio param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+                              0.0, 10.0, 1.0e-1,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_T_SA_RATIO,
+                              NCM_PARAM_TYPE_FIXED);
+  
+  /* Set N_T param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_N_T, "n_{T}", "n_T",
+                              -0.5, 0.5, 1.0e-2,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_N_T,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
   nc_hiprim_set_lnSA_powspec_lnk_impl (prim_class, &_nc_hiprim_atan_lnSA_powespec_lnk);
+  nc_hiprim_set_lnT_powspec_lnk_impl  (prim_class, &_nc_hiprim_atan_lnT_powespec_lnk);
 }
 
 /**
  * nc_hiprim_atan_new: (constructor)
  *
- * FIXME
+ * This function instantiates a new object of type #NcHIPrimAtan.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): A new #NcHIPrimAtan
  */
 NcHIPrimAtan *
 nc_hiprim_atan_new (void)
@@ -139,6 +153,8 @@ nc_hiprim_atan_new (void)
 #define C2         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C2))
 #define C3         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C3))
 #define LAMBDA     (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LAMBDA))
+#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_T_SA_RATIO))
+#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_N_T))
 
 /****************************************************************************
  * Power spectrum
@@ -162,3 +178,12 @@ _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_atan_fac;
 }
+
+static gdouble
+_nc_hiprim_atan_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
+{
+  const gdouble ln_ka = lnk - prim->lnk_pivot;
+  return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
+}
+
+

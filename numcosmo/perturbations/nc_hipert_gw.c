@@ -62,11 +62,11 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/nc_hipert_gw.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
-#include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h>
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT);
 

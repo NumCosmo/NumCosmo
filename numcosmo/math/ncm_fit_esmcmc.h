@@ -35,10 +35,13 @@
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -105,6 +108,7 @@ GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
 NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
 NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
+NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 

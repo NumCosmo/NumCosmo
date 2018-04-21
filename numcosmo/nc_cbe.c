@@ -48,13 +48,15 @@
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
+#ifndef NUMCOSMO_GIR_SCAN
 #include "class/include/class.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_xcdm.h"
-#include "model/nc_hicosmo_de_linder.h"
+#include "model/nc_hicosmo_de_cpl.h"
 #include "nc_cbe.h"
 #include "nc_enum_types.h"
 #include "nc_hiprim.h"
@@ -696,7 +698,8 @@ nc_cbe_ref (NcCBE* cbe)
  * Decreases the reference count of @cbe.
  *
  */
-void nc_cbe_free (NcCBE* cbe)
+void 
+nc_cbe_free (NcCBE* cbe)
 {
 	g_object_unref (cbe);
 }
@@ -708,7 +711,8 @@ void nc_cbe_free (NcCBE* cbe)
  * Decreases the reference count of *@cbe and sets *@cbe to NULL.
  *
  */
-void nc_cbe_clear (NcCBE** cbe)
+void 
+nc_cbe_clear (NcCBE** cbe)
 {
 	g_clear_object (cbe);
 }
@@ -721,7 +725,8 @@ void nc_cbe_clear (NcCBE** cbe)
  * Sets the @cbe_prec as the precision object.
  *
  */
-void nc_cbe_set_precision (NcCBE* cbe, NcCBEPrecision* cbe_prec)
+void 
+nc_cbe_set_precision (NcCBE* cbe, NcCBEPrecision* cbe_prec)
 {
 	nc_cbe_precision_clear (&cbe->prec);
 	cbe->prec = nc_cbe_precision_ref (cbe_prec);
@@ -738,7 +743,8 @@ static void _nc_cbe_update_callbacks (NcCBE* cbe);
  * Sets the @target_Cls target.
  *
  */
-void nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
+void 
+nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
 {
 	if (cbe->target_Cls != target_Cls)
 	{
@@ -755,7 +761,8 @@ void nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
  * Sets whether it should calculate the transfer function.
  *
  */
-void nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
+void 
+nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
 {
 	if ((calc_transfer && !cbe->calc_transfer) || (!calc_transfer && cbe->calc_transfer))
 	{
@@ -772,7 +779,8 @@ void nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
  * Sets whether it should use lensed Cl's.
  *
  */
-void nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
+void 
+nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
 {
 	cbe->use_lensed_Cls = use_lensed_Cls;
 	_nc_cbe_update_callbacks (cbe);
@@ -786,7 +794,8 @@ void nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
  * Sets whether it should use tensor contribution.
  *
  */
-void nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
+void 
+nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
 {
 	cbe->use_tensor = use_tensor;
 	ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
@@ -800,7 +809,8 @@ void nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
  * Sets whether it should use the thermodynamics module.
  *
  */
-void nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
+void 
+nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
 {
 	cbe->use_thermodyn = use_thermodyn;
 	ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
@@ -815,7 +825,8 @@ void nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
  * angular power spectrum $C_{\ell}$ of the scalar mode is computed.
  *
  */
-void nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
+void 
+nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
 {
 	if (cbe->scalar_lmax != scalar_lmax)
 	{
@@ -833,7 +844,8 @@ void nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
  * angular power spectrum $C_{\ell}$ of the vector mode is computed.
  *
  */
-void nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
+void 
+nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
 {
 	if (cbe->vector_lmax != vector_lmax)
 	{
@@ -851,7 +863,8 @@ void nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
  * angular power spectrum $C_{\ell}$ of the tensor mode is computed.
  *
  */
-void nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
+void 
+nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
 {
 	if (cbe->tensor_lmax != tensor_lmax)
 	{
@@ -868,7 +881,8 @@ void nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
  * Sets $z_\mathrm{max}$ for (until?) which the matter power spectrum $P(k, z)$ is evaluated.
  *
  */
-void nc_cbe_set_max_matter_pk_z (NcCBE* cbe, gdouble zmax)
+void 
+nc_cbe_set_max_matter_pk_z (NcCBE* cbe, gdouble zmax)
 {
 	if (cbe->priv->psp.z_max_pk != zmax)
 	{
@@ -1204,10 +1218,10 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       cbe->priv->pba.cs2_fld         = 1.0;
     }
   }
-  else if (NC_IS_HICOSMO_DE_LINDER (cosmo))
+  else if (NC_IS_HICOSMO_DE_CPL (cosmo))
   {
-    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W0);
-    const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W1);
+    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
+    const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
     const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
 
     cbe->priv->pba.Omega0_lambda   = 0.0;
@@ -1299,7 +1313,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 
 	cbe->priv->ppt.has_cl_cmb_temperature              = cbe->target_Cls & NC_DATA_CMB_TYPE_TT ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_cl_cmb_polarization             = cbe->target_Cls & (NC_DATA_CMB_TYPE_EE | NC_DATA_CMB_TYPE_BB | NC_DATA_CMB_TYPE_TE) ? _TRUE_ : _FALSE_;
-	cbe->priv->ppt.has_cl_cmb_lensing_potential        = _TRUE_;
+	cbe->priv->ppt.has_cl_cmb_lensing_potential        = ((cbe->target_Cls & NC_DATA_CMB_TYPE_PHIPHI) || (cbe->use_lensed_Cls)) ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_cl_number_count                 = _FALSE_;
 	cbe->priv->ppt.has_cl_lensing_potential            = _FALSE_;
 	cbe->priv->ppt.has_pk_matter                       = cbe->calc_transfer ? _TRUE_ : _FALSE_;
@@ -1397,8 +1411,8 @@ _nc_cbe_set_prim (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
 	/*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
 	cbe->priv->ppm.external_Pk_callback_pks = &_external_Pk_callback_pks;
-  
-	if (cbe->use_tensor)
+
+  if (cbe->use_tensor)
 	{
 		g_assert (ncm_model_check_impl_opt (NCM_MODEL (prim), NC_HIPRIM_IMPL_lnT_powspec_lnk));
 		cbe->priv->ppm.external_Pk_callback_pkt = &_external_Pk_callback_pkt;
@@ -1515,7 +1529,7 @@ _nc_cbe_set_spectra (NcCBE* cbe, NcHICosmo* cosmo)
 static void
 _nc_cbe_set_lensing (NcCBE* cbe, NcHICosmo* cosmo)
 {
-	cbe->priv->ple.has_lensed_cls = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
+	cbe->priv->ple.has_lensed_cls  = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
 	cbe->priv->ple.lensing_verbose = cbe->lensing_verbose;
 }
 
@@ -1989,7 +2003,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
 
 	for (i = 0; i < size; i++)
 	{
-		const gdouble z_i = cbe->priv->pth.z_table[i];
+		const gdouble z_i  = cbe->priv->pth.z_table[i];
 		const gdouble Xe_i = cbe->priv->pth.thermodynamics_table[cbe->priv->pth.th_size * i + cbe->priv->pth.index_th_xe];
 
 		ncm_vector_fast_set (z_v, size - 1 - i, -log (z_i + 1.0));
@@ -2005,6 +2019,34 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
 }
 
 /**
+ * nc_cbe_thermodyn_v_tau_max_z:
+ * @cbe: a #NcCBE
+ *
+ * Gets the redshift of the maximum visibility function.
+ *
+ * Returns: $z_\mathrm{rec}$.
+ */
+gdouble 
+nc_cbe_thermodyn_v_tau_max_z (NcCBE *cbe)
+{
+  return cbe->priv->pth.z_rec;
+}
+
+/**
+ * nc_cbe_thermodyn_z_d:
+ * @cbe: a #NcCBE
+ *
+ * Gets drag redshift.
+ *
+ * Returns: $z_d$.
+ */
+gdouble 
+nc_cbe_thermodyn_z_d (NcCBE *cbe)
+{
+  return cbe->priv->pth.z_d;
+}
+
+/**
  * nc_cbe_get_matter_ps:
  * @cbe: a #NcCBE
  *
@@ -2012,7 +2054,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
  *
  * Returns: (transfer full): a #NcmSpline2d for the logarithm base e of the matter power spectrum, $\ln P(\ln k, z)$.
  */
-NcmSpline2d*
+NcmSpline2d *
 nc_cbe_get_matter_ps (NcCBE* cbe)
 {
 	const gint z_size  = cbe->priv->psp.ln_tau_size;
@@ -2121,6 +2163,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 /**
  * nc_cbe_get_all_Cls:
  * @cbe: a #NcCBE
+ * @PHIPHI_Cls: a #NcmVector
  * @TT_Cls: a #NcmVector
  * @EE_Cls: a #NcmVector
  * @BB_Cls: a #NcmVector
@@ -2131,20 +2174,23 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
  * ignored.
  *
  */
-void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVector* BB_Cls, NcmVector* TE_Cls)
+void 
+nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* PHIPHI_Cls, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVector* BB_Cls, NcmVector* TE_Cls)
 {
-	guint all_Cls_size, index_tt, index_ee, index_bb, index_te;
-	gboolean has_tt, has_ee, has_bb, has_te;
+	guint all_Cls_size, index_pp, index_tt, index_ee, index_bb, index_te;
+	gboolean has_pp, has_tt, has_ee, has_bb, has_te;
 
 	if (cbe->use_lensed_Cls)
 	{
 		struct lensing *ptr = &cbe->priv->ple;
 
     all_Cls_size = ptr->lt_size;
+		index_pp     = ptr->index_lt_pp;
 		index_tt     = ptr->index_lt_tt;
 		index_ee     = ptr->index_lt_ee;
 		index_bb     = ptr->index_lt_bb;
 		index_te     = ptr->index_lt_te;
+		has_pp       = ptr->has_pp;
 		has_tt       = ptr->has_tt;
 		has_ee       = ptr->has_ee;
 		has_bb       = ptr->has_bb;
@@ -2155,10 +2201,12 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
 		struct spectra* ptr = &cbe->priv->psp;
 
     all_Cls_size = ptr->ct_size;
+		index_pp     = ptr->index_ct_pp;
 		index_tt     = ptr->index_ct_tt;
 		index_ee     = ptr->index_ct_ee;
 		index_bb     = ptr->index_ct_bb;
 		index_te     = ptr->index_ct_te;
+		has_pp       = ptr->has_pp;
 		has_tt       = ptr->has_tt;
 		has_ee       = ptr->has_ee;
 		has_bb       = ptr->has_bb;
@@ -2169,16 +2217,18 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
 		const gdouble T_gamma0 = cbe->priv->pba.T_cmb;
 		const gdouble Cl_fac   = gsl_pow_2 (1.0e6 * T_gamma0);
 		gdouble *all_Cls       = g_new0 (gdouble, all_Cls_size);
-		guint TT_lmax          = has_tt ? (TT_Cls != NULL ? ncm_vector_len (TT_Cls) : 0) : 0;
-		guint EE_lmax          = has_tt ? (EE_Cls != NULL ? ncm_vector_len (EE_Cls) : 0) : 0;
-		guint BB_lmax          = has_tt ? (BB_Cls != NULL ? ncm_vector_len (BB_Cls) : 0) : 0;
-		guint TE_lmax          = has_tt ? (TE_Cls != NULL ? ncm_vector_len (TE_Cls) : 0) : 0;
+		guint PHIPHI_lmax      = has_pp ? (PHIPHI_Cls != NULL ? ncm_vector_len (PHIPHI_Cls) : 0) : 0;
+		guint TT_lmax          = has_tt ? (TT_Cls     != NULL ? ncm_vector_len (TT_Cls)     : 0) : 0;
+		guint EE_lmax          = has_ee ? (EE_Cls     != NULL ? ncm_vector_len (EE_Cls)     : 0) : 0;
+		guint BB_lmax          = has_bb ? (BB_Cls     != NULL ? ncm_vector_len (BB_Cls)     : 0) : 0;
+		guint TE_lmax          = has_te ? (TE_Cls     != NULL ? ncm_vector_len (TE_Cls)     : 0) : 0;
 		guint l;
 
-		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_TT) || has_tt);
-		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_EE) || has_ee);
-		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_BB) || has_bb);
-		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_TE) || has_te);
+		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_PHIPHI) || has_pp);
+		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_TT)     || has_tt);
+		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_EE)     || has_ee);
+		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_BB)     || has_bb);
+		g_assert (!(cbe->target_Cls & NC_DATA_CMB_TYPE_TE)     || has_te);
 
 		for (l = 0; l <= cbe->scalar_lmax; l++)
 		{
@@ -2187,6 +2237,12 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
 			else
 				spectra_cl_at_l (&cbe->priv->psp, l, all_Cls, NULL, NULL);
 
+			if (PHIPHI_lmax > 0)
+			{
+				const gdouble PHIPHI_Cl = all_Cls[index_pp];
+				ncm_vector_set (PHIPHI_Cls, l, PHIPHI_Cl);
+				PHIPHI_lmax--;
+			}
 			if (TT_lmax > 0)
 			{
 				const gdouble TT_Cl = all_Cls[index_tt];
@@ -2217,7 +2273,6 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
 	}
 }
 
-
 /**
  * nc_cbe_debug_test:
  * @cbe: a #NcCBE
@@ -2225,10 +2280,9 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
  * Temporary debug function
  *
  */
-void nc_cbe_debug_test (NcCBE* cbe)
+void 
+nc_cbe_debug_test (NcCBE *cbe)
 {
-	if (cbe->priv->pba.has_ncdm)
-		printf ("cbe->priv->pba.has_ncdm");
-	else
-		printf ("boooooooooo !\n");
+	NCM_UNUSED (cbe);
+	g_assert_not_reached ();
 }

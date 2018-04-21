@@ -32,15 +32,19 @@
  *
  * The NFW profile is defined as
  * \begin{equation}
- * \rho(r) = \frac{\rho_s}{(r/r_s)(1 + r/r_s)^2},
+ * \rho(r) = \frac{\delta_c \rho_{crit}}{(r/r_s)(1 + r/r_s)^2},
  * \end{equation}
- * where $\rho_s$ is ... and $r_s$ is the scale radius,
+ * where $\rho_{crit} (z) = \frac{3 H^2(z)}{8\pi G} [M_\odot / Mpc^3]$, 
  * \begin{equation}
- * r_s \equiv \frac{r_{vir}}{c} = \left(\frac{3}{4\pi} \frac{M}{\Delta \overline{\rho}_m(z) c^3}\right)^{1/3},
+ * \delta_c = \frac{\Delta}{3} \frac{c^3}{\ln (1 + c) - \frac{c}{1 + c}},
  * \end{equation}
- * where $M$ is the virial mass, $\overline{\rho}_m(z)$ is the mean matter density, $\Delta$ is the overdensity
- * parameter (as defined in #NcMultiplicityFunc).
+ * $c$ is the concentration parameter and $r_s$ is the scale radius,
+ * \begin{equation}
+ * r_s [Mpc] \equiv \frac{r_{\Delta}}{c} = \left(\frac{3}{4\pi} \frac{M}{\Delta \rho_{crit}(z) c^3}\right)^{1/3},
+ * \end{equation}
+ * where $M$ is the halo mass $[M_\odot]$, $\Delta$ is the overdensity parameter (as defined in #NcMultiplicityFunc).
  *
+ * FIXME 
  * The normalized NFW density profile ($u_M(r) = \rho(r) / M$) in the Fourier space is given by
  * \begin{equation}
  * \tilde{u}_M(k) = \frac{1}{m_{nfw}(c)} \left[ \sin(x) \left[\text{Si}((1+c)x) - \text{Si}(x) \right] + \cos(x) \left[\text{Ci}((1+c)x) - \text{Ci}(x) \right] - \frac{\sin(cx)}{(1+c)x} \right],
@@ -55,7 +59,7 @@
  * c(M, z) = A_{vir} \left( \frac{M}{2 \times 10^{12} \text{h}^{-1}M_{\odot}}\right)^{B_{vir}} (1+z)^{C_{vir}}.
  * \end{equation}
  *
- * References: astro-ph/0206508 and arxiv:1010.0744.
+ * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -63,13 +67,141 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_density_profile_nfw.h"
+#include "lss/nc_density_profile_nfw.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+#include "math/integral.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>
-#include <math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcDensityProfileNFW, nc_density_profile_nfw, NC_TYPE_DENSITY_PROFILE);
+
+#define VECTOR (NCM_MODEL (dpnfw)->params)
+#define C_DELTA   (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_NFW_C_DELTA))
+#define M_DELTA   (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_NFW_M_DELTA))
+
+enum
+{
+  PROP_0,
+  PROP_DELTA,
+  PROP_SIZE,
+};
+
+
+static void
+nc_density_profile_nfw_init (NcDensityProfileNFW *dpnfw)
+{
+  dpnfw->Delta = 200.0;
+  dpnfw->r_Delta = 0.0;
+}
+
+static void
+_nc_density_profile_nfw_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (object);
+  g_return_if_fail (NC_IS_DENSITY_PROFILE_NFW (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA:
+      dpnfw->Delta = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_density_profile_nfw_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (object);
+  g_return_if_fail (NC_IS_DENSITY_PROFILE_NFW (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA:
+      g_value_set_double (value, dpnfw->Delta);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+nc_density_profile_nfw_finalize (GObject *object)
+{
+  /* TODO: Add deinitalization code here */
+
+  G_OBJECT_CLASS (nc_density_profile_nfw_parent_class)->finalize (object);
+}
+
+static gdouble _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+static gdouble _nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_density_profile_nfw_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
+static gdouble _nc_density_profile_nfw_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+
+static void
+nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
+{
+  GObjectClass* object_class          = G_OBJECT_CLASS (klass);
+  NcDensityProfileClass *parent_class = NC_DENSITY_PROFILE_CLASS (klass);
+  NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
+
+  model_class->set_property = &_nc_density_profile_nfw_set_property;
+  model_class->get_property = &_nc_density_profile_nfw_get_property;
+  object_class->finalize    = &nc_density_profile_nfw_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "NFW Density Profile", "NFW");
+  ncm_model_class_add_params (model_class, NC_DENSITY_PROFILE_NFW_SPARAM_LEN, 0, PROP_SIZE);
+
+  /**
+   * NcDensityProfileNFW:Delta:
+   *
+   * Constant that indicates the overdensity with respect to the critical density. 
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DELTA,
+                                   g_param_spec_double ("Delta",
+                                                        NULL,
+                                                        "Overdensity constant",
+                                                        200, 1500, 200,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDensityProfileNFW:cDelta:
+   * 
+   * Concentration parameter.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_NFW_C_DELTA, "c_{\\Delta}", "cDelta",
+                              0.5,  10.0, 1.0e-1,
+                              NC_DENSITY_PROFILE_NFW_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_NFW_DEFAULT_C_DELTA,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcDensityProfileNFW:MDelta:
+   * 
+   * Cluster mass within $R_\Delta$, where $\Delta$ is the overdensity.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_NFW_M_DELTA, "M_{\\Delta}", "MDelta",
+                              1.0e13,  1.0e16, 1.0e13,
+                              NC_DENSITY_PROFILE_NFW_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_NFW_DEFAULT_M_DELTA,
+                              NCM_PARAM_TYPE_FIXED);
+  
+  parent_class->eval_density         = &_nc_density_profile_nfw_eval_density;
+  parent_class->integral_density_los = &_nc_density_profile_nfw_integral_density_los;
+  parent_class->integral_density_2d  = &_nc_density_profile_nfw_integral_density_2d;
+  parent_class->eval_fourier         = &_nc_density_profile_nfw_eval_fourier;
+	parent_class->scale_radius         = &_nc_density_profile_nfw_scale_radius;
+  
+}
 
 /**
  * nc_density_profile_nfw_new:
@@ -84,10 +216,12 @@ nc_density_profile_nfw_new ()
   return g_object_new (NC_TYPE_DENSITY_PROFILE_NFW, NULL);
 }
 
+/// Old code: review it! //////////////////////////////
+
 static gdouble
-_nc_density_profile_nfw_scale_radius (NcHICosmo *model, const gdouble M, const gdouble z, const gdouble Delta)
+_nc_density_profile_nfw_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
 {
-  const gdouble rho_mz = nc_hicosmo_E2Omega_m (model, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  const gdouble rho_mz = nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   const gdouble v = 4.0 * M_PI / 3.0;
   gdouble rs_mnfw = cbrt (M / (rho_mz * v * Delta ));
   //printf("Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), Omega_m0, M);
@@ -109,14 +243,14 @@ _nc_density_profile_nfw_concentration_parameter (const gdouble M, const gdouble 
 //end Cooray comparison
 
 static gdouble
-_nc_density_profile_nfw_eval_fourier (NcDensityProfile *dp, NcHICosmo *model, const gdouble k, const gdouble M, const gdouble z)
+_nc_density_profile_nfw_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
 {
   NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
   gdouble c = _nc_density_profile_nfw_concentration_parameter (M, z);
   gdouble onepc = (1.0 + c);
   gdouble m_nfw = log(onepc) - c / onepc;
   gdouble factor_rs = 1.0 / c;
-  gdouble rs = _nc_density_profile_nfw_scale_radius (model, M, z, dpnfw->Delta) * factor_rs;
+  gdouble rs = _nc_density_profile_nfw_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
   gdouble x = (1.0 + z) * k * rs;
   gdouble onepcx = onepc * x;
   gdouble u = 1.0 / m_nfw * (sin(x) * (gsl_sf_Si (onepcx) -  gsl_sf_Si (x)) +
@@ -129,27 +263,106 @@ _nc_density_profile_nfw_eval_fourier (NcDensityProfile *dp, NcHICosmo *model, co
   return u;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void
-nc_density_profile_nfw_init (NcDensityProfileNFW *dpnfw)
+static gdouble 
+_rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
 {
-  dpnfw->Delta = 200.0;
+	/* Critical density in M_solar / Mpc^3 units */
+  return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
 }
 
-static void
-nc_density_profile_nfw_finalize (GObject *object)
+static gdouble
+_nc_density_profile_nfw_r_delta (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, gdouble z)
 {
-  /* TODO: Add deinitalization code here */
+  gdouble rho_c = _rho_crit_solar_mass_Mpc3 (cosmo, z);
+  gdouble rD3 = 3.0 * M_DELTA / (4.0 * M_PI * dpnfw->Delta * rho_c);
+  gdouble r_Delta = cbrt (rD3);
 
-  G_OBJECT_CLASS (nc_density_profile_nfw_parent_class)->finalize (object);
+  return r_Delta; 
 }
 
-static void
-nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
+static gdouble
+_nc_density_profile_nfw_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcDensityProfileClass *parent_class = NC_DENSITY_PROFILE_CLASS (klass);
+	NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+  gdouble r_Delta = _nc_density_profile_nfw_r_delta (dpnfw, cosmo, z);
 
-  parent_class->eval_fourier = &_nc_density_profile_nfw_eval_fourier;
-  object_class->finalize     = nc_density_profile_nfw_finalize;
+	return r_Delta / C_DELTA;
+}
+
+static gdouble 
+_nc_density_profile_nfw_deltac (NcDensityProfileNFW *dpnfw)
+{
+  gdouble onepc = 1.0 + C_DELTA;
+  gdouble c2    = C_DELTA * C_DELTA;
+  gdouble c3    = c2 * C_DELTA;
+
+  gdouble delta_c = (dpnfw->Delta / 3.0) * c3 / (log(onepc) - C_DELTA /onepc); 
+
+  return delta_c;
+}
+
+static gdouble
+_nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
+{
+  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+
+  gdouble rs      = _nc_density_profile_nfw_scale_radius (dp, cosmo, z);
+  gdouble x       = r / rs;
+  gdouble delta_c = _nc_density_profile_nfw_deltac (dpnfw);
+  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
+  gdouble onepx   = 1.0 + x;
+  gdouble onepx2  = onepx * onepx; 
+
+	return delta_c * rho_c/(x * onepx2);
+}
+
+/* los = line of sight */
+static gdouble 
+_nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+{
+  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+
+  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
+  gdouble delta_c = _nc_density_profile_nfw_deltac (dpnfw);
+  gdouble rs      = _nc_density_profile_nfw_scale_radius (dp, cosmo, z); 
+  gdouble A       = rs * delta_c * rho_c;
+  gdouble x       = R / rs;
+	gdouble xm1     = x - 1.0;
+	gdouble xp1     = x + 1.0;
+	gdouble x2m1    = xm1 * xp1;
+
+	if (fabs (xm1) < 1.0e-6)
+    return A * (1.0 / 3.0 + (- 2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * xm1) * xm1) * xm1);	
+  else if (xm1 < 0.0)
+    return A / x2m1 * (1.0 - 2.0 / sqrt (-x2m1) * atanh (sqrt (-xm1 / xp1)));
+  else
+    return A / x2m1 * (1.0 - 2.0 / sqrt (x2m1) * atan (sqrt (xm1 / xp1)));
+  
+}
+
+static gdouble 
+_nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+{
+  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+
+  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
+  gdouble delta_c = _nc_density_profile_nfw_deltac (dpnfw);
+  gdouble rs      = _nc_density_profile_nfw_scale_radius (dp, cosmo, z); 
+  gdouble A       = rs * delta_c * rho_c;
+  gdouble x       = R / rs;
+	gdouble xm1     = x - 1.0;
+	gdouble xp1     = x + 1.0;
+	gdouble x2m1    = xm1 * xp1;
+
+  if (fabs (xm1) < 1.0e-6)
+    return A * (2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (- 1.0 / 15.0 - 2.0 / 105.0 * xm1) * xm1) * xm1);	
+	
+  else if (xm1 < 0.0)
+    return 2.0 * A * (2.0/sqrt(- x2m1) * atanh(sqrt(-xm1 / xp1)) + log(x) - M_LN2);
+
+  else
+    return 2.0 * A * (2.0/sqrt(x2m1) * atan(sqrt(xm1 / xp1)) + log(x) - M_LN2);
+  
 }

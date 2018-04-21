@@ -30,8 +30,11 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hireion.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -62,7 +65,8 @@ struct _NcHIReionCambClass
 typedef enum _NcHIReionCambParams
 {
   NC_HIREION_CAMB_HII_HEII_Z = 0,
-  NC_HIREION_CAMB_HEIII_Z,    /*< private >*/
+  NC_HIREION_CAMB_HEIII_Z,    
+  /* < private > */
   NC_HIREION_CAMB_SPARAM_LEN, /*< skip >*/
 } NcHIReionCambParams;
 

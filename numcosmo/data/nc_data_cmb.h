@@ -45,8 +45,11 @@ G_BEGIN_DECLS
  * @NC_DATA_CMB_TYPE_PHIPHI: $\phi$ - $\phi$ correlation data
  * @NC_DATA_CMB_TYPE_ALL: All types above
  *
- * FIXME
- *
+ * Each type corresponds to one CMB two-point correlation function data to be used:
+ * TT (temperature only), EE (E-mode only), BB (B-mode only), TE (temperature and E-mode polarization),
+ * TB (temperature and B-mode polarization), EB (E- and B-mode polarization) and $\phi\phi$ (CMB lensing).
+ * The last option `ALL' selects all data listed above. 
+ * 
  */
 typedef enum _NcDataCMBDataType
 {
@@ -57,20 +60,30 @@ typedef enum _NcDataCMBDataType
   NC_DATA_CMB_TYPE_TB     = 1 << 4,
   NC_DATA_CMB_TYPE_EB     = 1 << 5,
   NC_DATA_CMB_TYPE_PHIPHI = 1 << 6,
-  NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, /*< private >*/
-  NC_DATA_CMB_TYPE_LEN,                   /*< skip >*/
+  NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, 
+  /* < private > */
+  NC_DATA_CMB_TYPE_LEN, /*< skip >*/
 } NcDataCMBDataType;
 
 /**
  * NcDataCMBId:
- * @NC_DATA_CMB_SHIFT_PARAM_WMAP3: FIXME
- * @NC_DATA_CMB_SHIFT_PARAM_WMAP5: FIXME
- * @NC_DATA_CMB_SHIFT_PARAM_WMAP7: FIXME
- * @NC_DATA_CMB_DIST_PRIORS_WMAP5: FIXME
- * @NC_DATA_CMB_DIST_PRIORS_WMAP7: FIXME
- * @NC_DATA_CMB_DIST_PRIORS_WMAP9: FIXME
+ * @NC_DATA_CMB_SHIFT_PARAM_WMAP3: three-year WMAP shift parameter
+ * @NC_DATA_CMB_SHIFT_PARAM_WMAP5: five-year WMAP shift parameter
+ * @NC_DATA_CMB_SHIFT_PARAM_WMAP7: seven-year WMAP shift parameter
+ * @NC_DATA_CMB_DIST_PRIORS_WMAP5: five-year WMAP distance priors
+ * @NC_DATA_CMB_DIST_PRIORS_WMAP7: seven-year WMAP distance priors
+ * @NC_DATA_CMB_DIST_PRIORS_WMAP9: nine-year WMAP distance priors
  *
- * FIXME
+ * Wilkinson Microwave Anisotropy Probe (WMAP) distance priors and shift parameter estimates.
+ * 
+ * The so-called distance priors comprises the location of the first acoustic peak $l_A$ 
+ * and the shift parameter $R$, that is,
+ * $$l_A \equiv (1 + z_\star) \frac{\pi D_A(z_\star)}{r_s(z_\star)}$$
+ * and
+ * $$R = \frac{\sqrt{\Omega_m H_0^2}}{c} (1 + z_\star) D_A(z_\star),$$
+ * where $z_\star$ is the redshift at decoupling, $D_A(z)$ is the angular diameter distance, and
+ * $r_s(z_\star)$ is the sound horizon size.
+ * 
  */
 typedef enum _NcDataCMBId
 {
@@ -79,8 +92,9 @@ typedef enum _NcDataCMBId
   NC_DATA_CMB_SHIFT_PARAM_WMAP7,
   NC_DATA_CMB_DIST_PRIORS_WMAP5,
   NC_DATA_CMB_DIST_PRIORS_WMAP7,
-  NC_DATA_CMB_DIST_PRIORS_WMAP9,     /*< private >*/
-  NC_DATA_CMB_NSAMPLES,  /*< skip >*/
+  NC_DATA_CMB_DIST_PRIORS_WMAP9,
+  /* < private > */
+  NC_DATA_CMB_NSAMPLES, /*< skip >*/
 } NcDataCMBId;
 
 NcmData *nc_data_cmb_create (NcDistance *dist, NcDataCMBId id);

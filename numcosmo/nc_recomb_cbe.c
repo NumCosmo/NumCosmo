@@ -53,11 +53,8 @@ G_DEFINE_TYPE (NcRecombCBE, nc_recomb_cbe, NC_TYPE_RECOMB);
 static void
 nc_recomb_cbe_init (NcRecombCBE *recomb_cbe)
 {
-  NcRecomb *recomb = NC_RECOMB (recomb_cbe);
-  
-  recomb_cbe->cbe = NULL;
-
-  recomb->Xe_s = ncm_spline_cubic_notaknot_new ();
+  recomb_cbe->cbe  = NULL;
+  recomb_cbe->Xe_s = ncm_spline_cubic_notaknot_new ();
 }
 
 static void
@@ -66,6 +63,7 @@ nc_recomb_cbe_dispose (GObject *object)
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (object);
 
   nc_cbe_clear (&recomb_cbe->cbe);
+  ncm_spline_clear (&recomb_cbe->Xe_s);
   
 	/* Chain up : end */  
   G_OBJECT_CLASS (nc_recomb_cbe_parent_class)->dispose (object);
@@ -113,7 +111,8 @@ nc_recomb_cbe_get_property (GObject *object, guint prop_id, GValue *value, GPara
   }
 }
 
-static void nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+static void _nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+static gdouble _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 static void
 nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
@@ -134,25 +133,42 @@ nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
                                                         NC_TYPE_CBE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	recomb_class->prepare = &nc_recomb_cbe_prepare;
+	recomb_class->prepare = &_nc_recomb_cbe_prepare;
+  recomb_class->Xe      = &_nc_recomb_Xe;
 }
 
 static void
-nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
+_nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (recomb);
 
   nc_cbe_thermodyn_prepare (recomb_cbe->cbe, cosmo);
 
-  ncm_spline_clear (&recomb->Xe_s);
-  ncm_spline_clear (&recomb->tau_s);
-  ncm_spline_clear (&recomb->dtau_dlambda_s);
+  ncm_spline_clear (&recomb_cbe->Xe_s);
 
-  recomb->Xe_s           = nc_cbe_thermodyn_get_Xe (recomb_cbe->cbe);
-  recomb->tau_s          = ncm_spline_copy_empty (recomb->Xe_s);
-	recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
+  recomb_cbe->Xe_s       = nc_cbe_thermodyn_get_Xe (recomb_cbe->cbe);
 
 	_nc_recomb_prepare_tau_splines (recomb, cosmo);
+
+  recomb->v_tau_max_z       = nc_cbe_thermodyn_v_tau_max_z (recomb_cbe->cbe);
+  recomb->tau_drag_z        = nc_cbe_thermodyn_z_d (recomb_cbe->cbe);
+
+  recomb->v_tau_max_lambda  = -log1p (recomb->v_tau_max_z);
+  recomb->tau_drag_lambda   = -log1p (recomb->tau_drag_z);
+
+  recomb->tau_lambda        = GSL_NAN;
+  recomb->tau_z             = GSL_NAN;
+  
+  recomb->tau_cutoff_lambda = GSL_NAN;
+  recomb->tau_cutoff_z      = GSL_NAN;
+}
+
+static gdouble 
+_nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (recomb);
+  
+  return ncm_spline_eval (recomb_cbe->Xe_s, lambda);
 }
 
 /**

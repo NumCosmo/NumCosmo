@@ -46,14 +46,24 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
 
 /**
  * NcHIPrimAtanParams:
- * @NC_HIPRIM_ATAN_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
- * @NC_HIPRIM_ATAN_N_SA: Adiabatic scalar spectral index
+ * @NC_HIPRIM_ATAN_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^{10}\mathcal{A}_{\mathrm{s}})$
+ * @NC_HIPRIM_ATAN_N_SA: Adiabatic scalar spectral index $n_s$
  * @NC_HIPRIM_ATAN_LNKC: Arctan parameter $\ln(k_c)$
  * @NC_HIPRIM_ATAN_C2: Arctan parameter $c_2$
  * @NC_HIPRIM_ATAN_C3: Arctan parameter $c_3$
  * @NC_HIPRIM_ATAN_LAMBDA: Arctan parameter $\lambda$
+ * @NC_HIPRIM_ATAN_T_SA_RATIO: Tensor-to-scalar ratio $r$
+ * @NC_HIPRIM_ATAN_N_T: Tensor spectral index $n_T$
  *
- * FIXME
+ * Primordial adiabatic scalar power spectrum:
+ * $$ \mathcal{P}_{SA}(k) = \xi_\mathrm{neq}(k)\mathcal{P}_{\mathrm{F}}(k),$$
+ * where 
+ * $$ \mathcal{P}_{\mathrm{F}}(k) \equiv \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 } $$
+ * and 
+ * $$ \xi_\mathrm{neq}(k) = \arctan \left[ \left(\frac{k}{k_\mathrm{c}}\right)^\lambda + c_2\right] - \frac{\pi}{2} + c_3. $$
+ * 
+ * Primordial tensor power spectrum:
+ * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  * 
  */
 typedef enum _NcHIPrimAtanParams
@@ -63,7 +73,10 @@ typedef enum _NcHIPrimAtanParams
   NC_HIPRIM_ATAN_LNKC,
   NC_HIPRIM_ATAN_C2,
   NC_HIPRIM_ATAN_C3,
-  NC_HIPRIM_ATAN_LAMBDA,     /*< private >*/
+  NC_HIPRIM_ATAN_LAMBDA,     
+  NC_HIPRIM_ATAN_T_SA_RATIO,
+  NC_HIPRIM_ATAN_N_T,
+  /* < private > */
   NC_HIPRIM_ATAN_SPARAM_LEN, /*< skip >*/
 } NcHIPrimAtanParams;
 
@@ -89,6 +102,8 @@ NcHIPrimAtan *nc_hiprim_atan_new (void);
 #define NC_HIPRIM_ATAN_DEFAULT_C2 (0.5)
 #define NC_HIPRIM_ATAN_DEFAULT_C3 (1.0)
 #define NC_HIPRIM_ATAN_DEFAULT_LAMBDA (1.0)
+#define NC_HIPRIM_ATAN_DEFAULT_T_SA_RATIO (0.2)
+#define NC_HIPRIM_ATAN_DEFAULT_N_T (0.0)
 
 G_END_DECLS
 

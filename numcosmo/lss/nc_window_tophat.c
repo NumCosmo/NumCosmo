@@ -65,8 +65,9 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_bessel.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcWindowTophat, nc_window_tophat, NC_TYPE_WINDOW);
 

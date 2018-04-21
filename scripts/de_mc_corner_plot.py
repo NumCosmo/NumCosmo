@@ -1,4 +1,4 @@
-#!/usr/bin/python2 
+#!/usr/bin/env python 
 
 from astropy.io import fits
 from plot2DCorner import plotCorner

@@ -60,8 +60,9 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcWindowGaussian, nc_window_gaussian, NC_TYPE_WINDOW);
 

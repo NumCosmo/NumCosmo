@@ -28,7 +28,10 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -93,6 +96,7 @@ G_INLINE_FUNC void ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble pr
 G_INLINE_FUNC gdouble ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate);
 G_INLINE_FUNC void ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec);
 G_INLINE_FUNC gdouble ncm_fit_state_get_params_prec (NcmFitState *fstate);
+G_INLINE_FUNC guint ncm_fit_state_get_data_len (NcmFitState *fstate);
 
 G_END_DECLS
 
@@ -117,6 +121,11 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
                   ncm_vector_gsl (fstate->ls_f), 0.0, 
                   ncm_vector_gsl (fstate->dm2lnL));
 
+  fstate->m2lnL_prec = sqrt (ncm_vector_dnrm2 (fstate->dm2lnL));
+
+  if (fabs (fstate->m2lnL_curval) > 1.0e-3)
+    fstate->m2lnL_prec = fabs (fstate->m2lnL_prec / fstate->m2lnL_curval);
+    
   ncm_matrix_memcpy (fstate->ls_J, J);
 }
 
@@ -166,6 +175,12 @@ G_INLINE_FUNC gdouble
 ncm_fit_state_get_params_prec (NcmFitState *fstate)
 {
   return fstate->params_prec;
+}
+
+G_INLINE_FUNC guint 
+ncm_fit_state_get_data_len (NcmFitState *fstate)
+{
+  return fstate->data_len;
 }
 
 G_END_DECLS

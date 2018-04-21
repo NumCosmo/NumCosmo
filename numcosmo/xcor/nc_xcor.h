@@ -29,14 +29,10 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-// #include <numcosmo/lss/nc_growth_func.h>
-// #include <numcosmo/lss/nc_transfer_func.h>
-// #include <numcosmo/lss/nc_halofit.h>
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
-// #include <numcosmo/xcor/nc_matter_power_spectrum.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel.h>
 #include <numcosmo/math/ncm_powspec.h>
 
@@ -84,7 +80,6 @@ struct _NcXcorClass
 	GObjectClass parent_class;
 	gpointer (*alloc) (void);
 };
-
 
 typedef struct _NcXcorKinetic
 {

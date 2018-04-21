@@ -43,6 +43,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_BLAS
 #  ifdef HAVE_MKL_CBLAS_H
 #    include <mkl_cblas.h>
@@ -57,6 +58,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -410,13 +412,13 @@ ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size)
  * @size: number of components of the subvector
  *
  * This function returns a #NcmVector which is a subvector of the vector @cv.
- * The start of the new vector is the @k-th component from the original vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
  * The new vector has @size elements.
  *
  * Returns: (transfer full): A #NcmVector.
  */
 NcmVector *
-ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
+ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 {
   NcmVector *scv = g_object_new (NCM_TYPE_VECTOR, NULL);
 
@@ -424,6 +426,37 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
   g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
 
   scv->vv    = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
+  scv->type  = NCM_VECTOR_DERIVED;
+  scv->pdata = ncm_vector_ref (cv);
+  scv->pfree = (GDestroyNotify) &ncm_vector_free;
+
+  return scv;
+}
+
+/**
+ * ncm_vector_get_subvector_stride:
+ * @cv: a #NcmVector
+ * @k: component index of the original vector
+ * @size: number of components of the subvector
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ *
+ * This function returns a #NcmVector which is a subvector of the vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
+ * The new vector has @size elements.
+ *
+ * Returns: (transfer full): A #NcmVector.
+ */
+NcmVector *
+ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride)
+{
+  NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_data (cv), size, stride);
+  const gsize len = ncm_vector_len (cv);
+
+  g_assert_cmpuint (size,   >, 0);
+  g_assert_cmpuint (stride, >, 0);
+  
+  g_assert_cmpuint ((size - 1) * stride + k, <, len);
+
   scv->type  = NCM_VECTOR_DERIVED;
   scv->pdata = ncm_vector_ref (cv);
   scv->pfree = (GDestroyNotify) &ncm_vector_free;
@@ -719,6 +752,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  *
  */
 /**
+ * ncm_vector_mul:
+ * @cv1: a #NcmVector, numerator
+ * @cv2: a #NcmVector, denominator
+ *
+ * This function multiplies the components of the vector @cv1 by the components of the vector @cv2.
+ * The two vectors must have the same length.
+ *
+ */
+/**
  * ncm_vector_div:
  * @cv1: a #NcmVector, numerator
  * @cv2: a #NcmVector, denominator
@@ -888,6 +930,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Gets the minimum/maximum value of the vector components.
  *
  */
+/**
+ * ncm_vector_is_finite:
+ * @cv: a @NcmVector.
+ *
+ * Tests all entries, if one or more are not finite return FALSE.
+ * Otherwise returns TRUE;
+ * 
+ * Returns: whether all components of @cv are finite.
+ */
 
 /**
  * ncm_vector_get_absminmax:
@@ -968,6 +1019,120 @@ ncm_vector_dnrm2 (const NcmVector *cv)
   return cblas_dnrm2 (ncm_vector_len (cv),
                       ncm_vector_const_ptr (cv, 0),
                       ncm_vector_stride (cv));
+}
+
+/**
+ * ncm_vector_axpy:
+ * @cv1: a #NcmVector $y$
+ * @alpha: a double $\alpha$
+ * @cv2: a #NcmVector $x$
+ * 
+ * Performs the operation $y = \alpha x + y$.
+ *
+ */
+void 
+ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  cblas_daxpy (len, alpha, ncm_vector_const_data (cv2), ncm_vector_stride (cv2), ncm_vector_data (cv1), ncm_vector_stride (cv1));
+}
+
+/**
+ * ncm_vector_cmp:
+ * @cv1: a #NcmVector $x_1$
+ * @cv2: a #NcmVector $x_2$
+ * 
+ * Performs a comparison, component-wise, of the two vectors and 
+ * puts the weighted difference in @cv1.
+ *
+ */
+void 
+ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x1_i = ncm_vector_get (cv1, i);
+    const gdouble x2_i = ncm_vector_get (cv2, i);
+
+    if (G_UNLIKELY (x1_i == 0.0))
+    {
+      if (G_UNLIKELY (x2_i == 0.0))
+        ncm_vector_set (cv1, i, 0.0);
+      else
+        ncm_vector_set (cv1, i, fabs (x2_i));
+    }
+    else if (G_UNLIKELY (x2_i == 0.0))
+    {
+      ncm_vector_set (cv1, i, fabs (x1_i));
+    }
+    else
+    {
+      const gdouble abs_x1_i  = fabs (x1_i);
+      const gdouble abs_x2_i  = fabs (x2_i);
+      const gdouble max_x12_i = GSL_MIN (abs_x1_i, abs_x2_i);
+      ncm_vector_set (cv1, i, fabs ((x1_i - x2_i) / max_x12_i));
+    }
+  }
+}
+
+/**
+ * ncm_vector_sub_round_off:
+ * @cv1: a #NcmVector $x_1$
+ * @cv2: a #NcmVector $x_2$
+ * 
+ * Estimate the round-off error component wise in the
+ * subtraction of @cv1 by @cv2.
+ *
+ */
+void 
+ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x1_i        = ncm_vector_get (cv1, i);
+    const gdouble x2_i        = ncm_vector_get (cv2, i);
+    const gdouble abs_x1_i    = fabs (x1_i);
+    const gdouble abs_x2_i    = fabs (x2_i);
+    const gdouble x2_i_m_x1_i = fabs (x2_i - x1_i);
+    
+    if (G_UNLIKELY (x2_i_m_x1_i == 0.0))
+    {
+      ncm_vector_set (cv1, i, 1.0);
+    }
+    else
+    {
+      const gdouble max_x12_i = GSL_MAX (abs_x1_i, abs_x2_i);
+      ncm_vector_set (cv1, i, max_x12_i * GSL_DBL_EPSILON / x2_i_m_x1_i );
+    }
+  }
+}
+
+/**
+ * ncm_vector_reciprocal:
+ * @cv: a #NcmVector
+ * 
+ * Calculates the reciprocal of @cv1.
+ *
+ */
+void 
+ncm_vector_reciprocal (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+    ncm_vector_set (cv, i, 1.0 / x_i);
+  }
 }
 
 /**
@@ -1150,7 +1315,7 @@ _ncm_vector_nvector_free (N_Vector nv)
 
 static struct _generic_N_Vector_Ops _ncm_ops =
 {
-#ifdef HAVE_SUNDIALS_2_7_0
+#if defined (HAVE_SUNDIALS_2_7_0) || (HAVE_SUNDIALS_MAJOR == 3)
   NULL,
 #endif /* HAVE_SUNDIALS_2_7_0 */
   &_ncm_nvclone,

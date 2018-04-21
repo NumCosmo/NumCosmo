@@ -39,10 +39,13 @@
 
 #include "math/ncm_data_gauss.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_lapack.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -146,8 +149,12 @@ static guint _ncm_data_gauss_get_length (NcmData *data);
 static void _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
+static void _ncm_data_gauss_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
+static void _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+
 static void _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
 static guint _ncm_data_gauss_get_size (NcmDataGauss *gauss);
+
 
 static void
 ncm_data_gauss_class_init (NcmDataGaussClass *klass)
@@ -193,6 +200,9 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
   data_class->resample       = &_ncm_data_gauss_resample;
   data_class->m2lnL_val      = &_ncm_data_gauss_m2lnL_val;
   data_class->leastsquares_f = &_ncm_data_gauss_leastsquares_f;
+
+  data_class->mean_vector    = &_ncm_data_gauss_mean_vector;
+  data_class->inv_cov_UH     = &_ncm_data_gauss_inv_cov_UH;
 
   gauss_class->mean_func     = NULL;
   gauss_class->inv_cov_func  = NULL;
@@ -330,6 +340,35 @@ _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT("_ncm_data_gauss_leastsquares_f", ret);
+}
+
+static void
+_ncm_data_gauss_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
+{
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+
+  gauss_class->mean_func (gauss, mset, mu);
+}
+
+static void
+_ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
+{
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+  gboolean inv_cov_update = FALSE;
+  gint ret;
+
+  if (gauss_class->inv_cov_func != NULL)
+    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, gauss->inv_cov);
+
+  if (inv_cov_update || !gauss->prepared_LLT)
+    _ncm_data_gauss_prepare_LLT (data);
+
+  ret = gsl_blas_dtrmm (CblasRight, CblasUpper, CblasTrans, CblasNonUnit, 
+                        1.0, ncm_matrix_gsl (gauss->LLT), ncm_matrix_gsl (H));
+
+  NCM_TEST_GSL_RESULT("_ncm_data_gauss_inv_cov_UH", ret);
 }
 
 void 

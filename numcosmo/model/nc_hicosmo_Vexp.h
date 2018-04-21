@@ -50,13 +50,13 @@ struct _NcHICosmoVexpClass
 
 /**
  * NcHICosmoVexpParams:
- * @NC_HICOSMO_VEXP_H0: FIXME
- * @NC_HICOSMO_VEXP_OMEGA_C: FIXME
- * @NC_HICOSMO_VEXP_OMEGA_L: FIXME
- * @NC_HICOSMO_VEXP_SIGMA_PHI: FIXME
- * @NC_HICOSMO_VEXP_D_PHI: FIXME
- * @NC_HICOSMO_VEXP_ALPHA_B: FIXME
- * @NC_HICOSMO_VEXP_X_B: FIXME
+ * @NC_HICOSMO_VEXP_H0: Hubble constant
+ * @NC_HICOSMO_VEXP_OMEGA_C: scalar field energy density when in a dust-like phase
+ * @NC_HICOSMO_VEXP_OMEGA_L: scalar field energy density when in a dark energy-like phase
+ * @NC_HICOSMO_VEXP_SIGMA_PHI: standard deviation of the scalar field wave function
+ * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
+ * @NC_HICOSMO_VEXP_ALPHA_B: lorgarithm base e of the scale factor at the bounce
+ * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce 
  *
  * FIXME
  * 
@@ -69,7 +69,8 @@ typedef enum _NcHICosmoVexpParams
   NC_HICOSMO_VEXP_SIGMA_PHI,
   NC_HICOSMO_VEXP_D_PHI,
   NC_HICOSMO_VEXP_ALPHA_B,
-  NC_HICOSMO_VEXP_X_B,        /*< private >*/
+  NC_HICOSMO_VEXP_X_B,        
+  /* < private > */
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoVexpParams;
 
@@ -91,6 +92,7 @@ gdouble nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
+gdouble nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 

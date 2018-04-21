@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
+#include <numcosmo/math/ncm_diff.h>
 
 G_BEGIN_DECLS
 
@@ -84,6 +85,7 @@ struct _NcmLHRatio2d
   guint niter;
   guint func_eval;
   guint grad_eval;
+  NcmDiff *diff;
 };
 
 typedef struct _NcmLHRatio2dPoint NcmLHRatio2dPoint;

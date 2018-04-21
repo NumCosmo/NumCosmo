@@ -23,6 +23,28 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+ /**
+  * SECTION:nc_data_xcor
+  * @title: NcDataXcor
+  * @short_description: cross-correlation data object.
+  *
+  * This object implements the gaussian likelihood described in \cite{2017arXiv170604583D} for the joint analysis of an abitrary number of cosmic probes with their auto- and cross-angular pseudo power spectra. The covariance of the pseudo spectra implemented here is
+  * \begin{align}
+  * \mathrm{Cov}\left( \tilde{C}_{\ell}^{AB}, \tilde{C}_{\ell'}^{CD} \right) = & \sqrt{ D_{\ell}^{AD} D_{\ell'}^{AD} D_{\ell}^{BC} D_{\ell'}^{BC}} \mathbfss{X_1}_{\ell \ell'}^{ABCD}\nonumber \\
+  * &+ \sqrt{ D_{\ell}^{AC} D_{\ell'}^{AC} D_{\ell}^{BD} D_{\ell'}^{BD}} \mathbfss{X_2}_{\ell \ell'}^{ABCD}
+  * \end{align}
+  * with
+  * \begin{equation}
+  * D_{\ell}^{AB} = \left\{
+  * 	\begin{array}{ll}
+  * 	C_{\ell}^{AB} & \text{if } A \neq B \\
+  * 	C_{\ell}^{AA} + N_{\ell}^{A} & \text{if } A=B \\
+  * 	\end{array}\right. .
+  * \end{equation}
+  *
+  * The matrices $X_{1/2}$ are fixed and describe the mixing between spectra due to the effect of the masks.
+  */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -38,25 +60,23 @@
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 
 #include <glib/gstdio.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
    PROP_0,
    PROP_NOBS,
    PROP_XCAB_OA,
-   // PROP_ELL,
-   // PROP_ELLTH,
-   // PROP_CLDATA,
-   // PROP_OBS_POS,
    PROP_X1,
    PROP_X2,
-   // PROP_MIXING,
    PROP_XC,
    PROP_SIZE,
  };
@@ -77,9 +97,7 @@ nc_data_xcor_init (NcDataXcor* dxc)
 {
   dxc->nobs = 0;
 
-  dxc->xcab_oa = NULL; //ncm_obj_array_new ();
-
-  // dxc->xcab_oa_ctr = 0;
+  dxc->xcab_oa = NULL;
 
   dxc->xcidx_ctr = 0;
 
@@ -94,30 +112,16 @@ nc_data_xcor_init (NcDataXcor* dxc)
   dxc->cosmo_ctrl = ncm_model_ctrl_new (NULL);
   dxc->xclk_ctrl = g_ptr_array_new ();
 
-  guint a, b; //, c, d;
+  guint a, b;
   for (a = 0; a < NC_DATA_XCOR_MAX; a++)
   {
     for (b = 0; b < NC_DATA_XCOR_MAX; b++)
     {
       dxc->xcidx[a][b] = -1;
 
-      // NcXcorAB xcab = { -1, -1, -1, -1, -1, -1, NULL, NULL, NULL };
       dxc->xcab[a][b] = NULL;
     }
   }
-
-  // guint i, j;
-  // for (i = 0; i < NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX; i++)
-  // {
-  // 	for (j = 0; j < 2; j++)
-  // 	{
-  // 		dxc->xcab_oa_idx[i][j] = 99;
-  // 	}
-  // }
-  // dxc->xcidx_ctr = 0;
-  //
-  // dxc->X1 = NULL;
-  // dxc->X2 = NULL;
 }
 
 static void
@@ -134,7 +138,6 @@ nc_data_xcor_set_property (GObject* object, guint prop_id, const GValue* value, 
     }
     case PROP_XCAB_OA:
     {
-      // dxc->xcab_oa = g_value_dup_object (value);
       NcmObjArray* oa = (NcmObjArray*)g_value_get_boxed (value);
       if (oa != NULL)
       {
@@ -177,13 +180,8 @@ nc_data_xcor_get_property (GObject* object, guint prop_id, GValue* value, GParam
     }
     case PROP_XCAB_OA:
     {
-      // g_value_set_object (value, dxc->xcab_oa);
       NcmObjArray* oa = ncm_obj_array_new ();
-      // guint a, b;
       guint k, diag;
-      // for (a = 0; a < dxc->nobs; a++)
-      // {
-      // 	for (b = a; b < dxc->nobs; b++)
       for (diag = 0; diag < dxc->nobs; diag++)
       {
         for (k = 0; k < dxc->nobs - diag; k++)
@@ -254,12 +252,6 @@ nc_data_xcor_dispose (GObject* object)
 
   ncm_matrix_clear (&dxc->pcov);
   ncm_vector_clear (&dxc->pcl);
-
-  // ncm_matrix_clear (&dxc->mixing);
-  // ncm_matrix_clear (&dxc->clorder);
-  //
-  // ncm_vector_clear (&dxc->ell);
-  // ncm_vector_clear (&dxc->ellth);
 
   nc_xcor_clear (&dxc->xc);
 
@@ -356,15 +348,12 @@ _nc_data_xcor_fast_update (NcDataXcor* dxc, NcXcorLimberKernel* xcl, guint a, Nc
     if (xclkg->fast_update)
     {
       const gdouble biasratio = *(xclkg->bias) / xclkg->bias_old;
-      // printf ("fast bias thingy\n");
-      // printf ("%g %g %g\n", *(xclkg->bias), xclkg->bias_old, biasratio);
 
       NcmVector* cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
       NcmVector* cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
       ncm_vector_add_constant (cl_th_0_aa, -1.0 * xclkg->noise_bias_old);
       ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
-      // ncm_vector_add_constant (ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), ncm_vector_get (NCM_MODEL (xclkg)->params, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS));
       nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
 
       ncm_vector_free(cl_th_0_aa);
@@ -419,7 +408,6 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 {
   NcDataXcor* dxc = NC_DATA_XCOR (data);
   NcHICosmo* cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  // NcHIReion* reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
   const guint nobs = dxc->nobs;
 
   /* Array of booleans where prep[a][b] = TRUE means that the theoretical spectrum C_l^{a,b} needs to
@@ -485,8 +473,6 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
       NcmVector* cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
       NcmVector* cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
-      // nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa, NC_XCOR_LIMBER_METHOD_CVODE);
-      // nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa, NC_XCOR_LIMBER_METHOD_GSL);
       nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
 
       nc_xcor_limber_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
@@ -499,7 +485,6 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
     {
       for (b = a + 1; b < nobs; b++)
       {
-        // printf("%i %i \n", a, b);
         if (prep[a][b])
         {
           NcXcorLimberKernel* xcl2 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), b));
@@ -507,8 +492,6 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
           NcmVector* cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
           NcmVector* cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-          // nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab, NC_XCOR_LIMBER_METHOD_CVODE);
-          // nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab, NC_XCOR_LIMBER_METHOD_GSL);
           nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
 
           ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
@@ -542,7 +525,6 @@ nc_data_xcor_mean_func_ab (NcDataXcor* dxc, NcmVector* vp, guint a, guint b)
   {
     NcXcorAB* xcab = dxc->xcab[a][b];
 
-    // NcmVector* vp_sub = ncm_vector_get_subvector (vp, ell_idx, xcab->nell_lik);
     NcmVector* cl_th = ncm_matrix_get_col (xcab->cl_th, 0);
     NcmMatrix* mixing_sub = ncm_matrix_get_submatrix (xcab->mixing, xcab->ell_lik_min, 0, xcab->nell_lik, xcab->ell_th_cut_off + 1);
 
@@ -551,7 +533,6 @@ nc_data_xcor_mean_func_ab (NcDataXcor* dxc, NcmVector* vp, guint a, guint b)
     if (ret != 0)
       g_error ("_nc_data_xcor_compute_cl : %i", ret);
 
-    // ncm_vector_free (vp_sub);
     ncm_vector_free (cl_th);
     ncm_matrix_free (mixing_sub);
   }
@@ -665,34 +646,22 @@ nc_data_xcor_cov_func_abcd (NcDataXcor* dxc, NcmMatrix* cov, guint a, guint b, g
         _nc_data_xcor_sort (a, d, &aa, &dd);
         _nc_data_xcor_sort (b, c, &bb, &cc);
 
-        // printf ("%i %i %i %i %i %i %i %i \n", a, b, c, d, aa, bb, cc, dd);
-
         res = sqrt (fabs (ncm_matrix_get (dxc->xcab[aa][dd]->cl_th, l, 1) *
                           ncm_matrix_get (dxc->xcab[aa][dd]->cl_th, ll, 1) *
                           ncm_matrix_get (dxc->xcab[bb][cc]->cl_th, l, 1) *
                           ncm_matrix_get (dxc->xcab[bb][cc]->cl_th, ll, 1))) *
           ncm_matrix_get (dxc->X1, ix, jx);
 
-        // printf ("%g %g %g %g %g %g", ncm_matrix_get (dxc->xcab[aa][dd]->cl_th, l, 1),
-        //         ncm_matrix_get (dxc->xcab[aa][dd]->cl_th, ll, 1),
-        //         ncm_matrix_get (dxc->xcab[bb][cc]->cl_th, l, 1),
-        //         ncm_matrix_get (dxc->xcab[bb][cc]->cl_th, ll, 1),
-        //         ncm_matrix_get (dxc->X1, ix, jx),
-        //         res);
 
         _nc_data_xcor_sort (a, c, &aa, &cc);
         _nc_data_xcor_sort (b, d, &bb, &dd);
 
-        // if ((a != b) && (c != d))
-        // {
         res += sqrt (fabs (ncm_matrix_get (dxc->xcab[aa][cc]->cl_th, l, 1) *
                            ncm_matrix_get (dxc->xcab[aa][cc]->cl_th, ll, 1) *
                            ncm_matrix_get (dxc->xcab[bb][dd]->cl_th, l, 1) *
                            ncm_matrix_get (dxc->xcab[bb][dd]->cl_th, ll, 1))) *
           ncm_matrix_get (dxc->X2, ix, jx);
-        // }
 
-        // printf ("%g\n", res);
         ncm_matrix_set (cov, i, j, res);
         ncm_matrix_set (cov, j, i, res);
       }
@@ -784,9 +753,9 @@ _nc_data_xcor_cov_func (NcmDataGaussCov* gauss, NcmMSet* mset, NcmMatrix* cov)
 
 /**
  * nc_data_xcor_new_full:
- * @nobs: a #guint
- * @xc: a #NcXcor
- * @use_norma: a #gboolean
+ * @nobs: a #guint, the number of observables
+ * @xc: a #NcXcor to perform the computation of theoretical power spectra.
+ * @use_norma: a #gboolean, whether to normalize the likehood.
  *
  * FIXME
  *
@@ -805,9 +774,9 @@ nc_data_xcor_new_full (const guint nobs, NcXcor* xc, const gboolean use_norma) /
 /**
  * nc_data_xcor_set_AB:
  * @dxc: a #NcDataXcor
- * @xcab: a #NcXcorAB
+ * @xcab: a #NcXcorAB containing the data for the correlation of observables $A$ and $B$.
  *
- * FIXME
+ * Links the data object to the object actually containing the data.
  *
  */
 void
@@ -823,19 +792,6 @@ nc_data_xcor_set_AB (NcDataXcor* dxc, NcXcorAB* xcab)
     // Set C_l counters
     dxc->xcidx[a][b] = dxc->xcidx_ctr;
     dxc->xcidx_ctr += xcab->nell_lik;
-
-    // Set OA indices
-    // dxc->xcab_oa_idx[dxc->xcab_oa_ctr][0] = a;
-    // dxc->xcab_oa_idx[dxc->xcab_oa_ctr][1] = b;
-    // dxc->xcab_oa_ctr += 1;
-
-
-    // ncm_obj_array_add (dxc->xcab_oa, xcab);
-
-    // ncm_matrix_free (mixing_full);
-
-    //
-    // // dxc->ncl += 1;
   }
 
   // Ref the xcor_AB obejct
@@ -854,16 +810,6 @@ _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
       nc_xcor_AB_clear(&dxc->xcab[a][b]);
     }
   }
-
-  // Reset index for ObjectArray serialization
-  // guint i, j;
-  // for (i = 0; i < NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX; i++)
-  // {
-  // 	for (j = 0; j < 2; j++)
-  // 	{
-  // 		dxc->xcab_oa_idx[i][j] = 99;
-  // 	}
-  // }
 
   // Reset the counters
   dxc->xcidx_ctr = 0;
@@ -891,7 +837,7 @@ _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
  * nc_data_xcor_set_3:
  * @dxc: a #NcDataXcor
  *
- * FIXME
+ * To be used once all data storage objects have been set.
  *
  */
 void
@@ -973,15 +919,15 @@ nc_data_xcor_set_3 (NcDataXcor* dxc)
 /**
  * nc_data_xcor_set_4:
  * @dxc: a #NcDataXcor
- * @a: a #guint
- * @b: a #guint
- * @c: a #guint
- * @d: a #guint
- * @X1_filename: a #gchar
- * @X2_filename: a #gchar
- * @X_filelength: a #guint
+ * @a: a #guint, the index of observable $A$
+ * @b: a #guint, the index of observable $B$
+ * @c: a #guint, the index of observable $C$
+ * @d: a #guint, the index of observable $D$
+ * @X1_filename: a #gchar, the name of the file where the matrix $X_1^{ABCD}$ is stored
+ * @X2_filename: a #gchar, the name of the file where the matrix $X_2^{ABCD}$ is stored
+ * @X_filelength: a #guint, the size of the actual matrices stored in theses files (in case it is larger than the maximum multipole used)
  *
- * FIXME
+ * Sets the $X_1$ and $X_2$ matrices used in the covariance matrix for observables $A$, $B$ $C$ and $D$.
  *
  */
 void
@@ -990,8 +936,6 @@ nc_data_xcor_set_4 (NcDataXcor* dxc, guint a, guint b, guint c, guint d, const g
   if ((b < a) | (d < c))
     g_error ("b,d must be greater or equal to a,c");
 
-  // NcXcorAB* xcab = ncm_obj_array_peek (dxc->xcab_oa, dxc->xcab_oa_idx[a][b])
-  // NcXcorAB* xccd = ncm_obj_array_peek (dxc->xcab_oa, dxc->xcab_oa_idx[c][d])
   NcXcorAB* xcab = dxc->xcab[a][b];
   NcXcorAB* xccd = dxc->xcab[c][d];
 
@@ -1001,9 +945,7 @@ nc_data_xcor_set_4 (NcDataXcor* dxc, guint a, guint b, guint c, guint d, const g
   fclose (f1);
 
   NcmMatrix* X1f_sub = ncm_matrix_get_submatrix (X1f, xcab->ell_lik_min, xccd->ell_lik_min, xcab->nell_lik, xccd->nell_lik);
-  // printf ("%i %i %i %i \n", dxc->xcab[a][b]->ell_lik_min, dxc->xcab[c][d]->ell_lik_min, dxc->xcab[a][b]->nell_lik, dxc->xcab[c][d]->nell_lik);
   NcmMatrix* X1_sub = ncm_matrix_get_submatrix (dxc->X1, dxc->xcidx[a][b], dxc->xcidx[c][d], xcab->nell_lik, xccd->nell_lik);
-  // printf ("%i %i %i %i \n", dxc->xcidx[a][b], dxc->xcidx[c][d], dxc->xcab[a][b]->nell_lik, dxc->xcab[c][d]->nell_lik);
 
   ncm_matrix_memcpy (X1_sub, X1f_sub);
 
@@ -1018,27 +960,21 @@ nc_data_xcor_set_4 (NcDataXcor* dxc, guint a, guint b, guint c, guint d, const g
   fclose (f2);
 
   NcmMatrix* X2f_sub = ncm_matrix_get_submatrix (X2f, xcab->ell_lik_min, xccd->ell_lik_min, xcab->nell_lik, xccd->nell_lik);
-  // printf ("%i %i %i %i \n", dxc->xcab[a][b]->ell_lik_min, dxc->xcab[c][d]->ell_lik_min, dxc->xcab[a][b]->nell_lik, dxc->xcab[c][d]->nell_lik);
   NcmMatrix* X2_sub = ncm_matrix_get_submatrix (dxc->X2, dxc->xcidx[a][b], dxc->xcidx[c][d], xcab->nell_lik, xccd->nell_lik);
-  // printf ("%i %i %i %i \n", dxc->xcidx[a][b], dxc->xcidx[c][d], dxc->xcab[a][b]->nell_lik, dxc->xcab[c][d]->nell_lik);
 
   ncm_matrix_memcpy (X2_sub, X2f_sub);
 
   ncm_matrix_free (X2f);
   ncm_matrix_free (X2f_sub);
   ncm_matrix_free (X2_sub);
-  // dxc->X1[a][b][c][d] = ncm_matrix_ref (X1);
-  // dxc->X1[c][d][a][b] = ncm_matrix_ref (X1);
-  //
-  // dxc->X2[a][b][c][d] = ncm_matrix_ref (X2);
-  // dxc->X2[c][d][a][b] = ncm_matrix_ref (X2);
+
 }
 
 /**
  * nc_data_xcor_set_5:
  * @dxc: a #NcDataXcor
  *
- * FIXME
+ * To be used once all $X_{1/2}$ matrices have been set.
  *
  */
 void

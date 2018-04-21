@@ -50,6 +50,8 @@ typedef struct _NcHIPrimBPL NcHIPrimBPL;
  * @NC_HIPRIM_BPL_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_BPL_DELTA: Exp parameter $\delta$
  * @NC_HIPRIM_BPL_LNKB: Exp parameter $\ln(k_b)$
+ * @NC_HIPRIM_BPL_T_SA_RATIO: Tensor-to-scalar ratio
+ * @NC_HIPRIM_BPL_N_T: Tensor spectral index
  * 
  * FIXME
  * 
@@ -59,7 +61,10 @@ typedef enum _NcHIPrimBPLParams
   NC_HIPRIM_BPL_LN10E10ASA,
   NC_HIPRIM_BPL_N_SA,
   NC_HIPRIM_BPL_DELTA,
-  NC_HIPRIM_BPL_LNKB,       /*< private >*/
+  NC_HIPRIM_BPL_LNKB,       
+  NC_HIPRIM_BPL_T_SA_RATIO,
+  NC_HIPRIM_BPL_N_T,        
+  /* < private > */
   NC_HIPRIM_BPL_SPARAM_LEN, /*< skip >*/
 } NcHIPrimBPLParams;
 
@@ -83,6 +88,8 @@ NcHIPrimBPL *nc_hiprim_bpl_new (void);
 #define NC_HIPRIM_BPL_DEFAULT_N_SA (0.9742)
 #define NC_HIPRIM_BPL_DEFAULT_DELTA (1.14)
 #define NC_HIPRIM_BPL_DEFAULT_LNKB (-7.55)
+#define NC_HIPRIM_BPL_DEFAULT_T_SA_RATIO (0.2)
+#define NC_HIPRIM_BPL_DEFAULT_N_T (0.0)
 
 G_END_DECLS
 

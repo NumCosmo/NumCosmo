@@ -60,6 +60,7 @@ nc_hiprim_bpl_finalize (GObject *object)
 }
 
 static gdouble _nc_hiprim_bpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
+static gdouble _nc_hiprim_bpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
 nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
@@ -96,10 +97,24 @@ nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_LNKB,
                               NCM_PARAM_TYPE_FIXED);
 
+  /* Set T_SA_ratio param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+                              0.0, 10.0, 1.0e-1,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_T_SA_RATIO,
+                              NCM_PARAM_TYPE_FIXED);
+  
+  /* Set N_T param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_N_T, "n_{T}", "n_T",
+                              -0.5, 0.5, 1.0e-2,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_N_T,
+                              NCM_PARAM_TYPE_FIXED);
+
+  
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
   nc_hiprim_set_lnSA_powspec_lnk_impl (prim_class, &_nc_hiprim_bpl_lnSA_powespec_lnk);
+  nc_hiprim_set_lnT_powspec_lnk_impl  (prim_class, &_nc_hiprim_bpl_lnT_powespec_lnk);
 }
 
 /**
@@ -122,6 +137,8 @@ nc_hiprim_bpl_new (void)
 #define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_SA))
 #define DELTA      (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_DELTA))
 #define LNKB       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_LNKB))
+#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_T_SA_RATIO))
+#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_T))
 
 /****************************************************************************
  * Power spectrum
@@ -144,3 +161,11 @@ _nc_hiprim_bpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 
   return n_tot * ln_ka + lnA_eff;
 }
+
+static gdouble
+_nc_hiprim_bpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
+{
+  const gdouble ln_ka = lnk - prim->lnk_pivot;
+  return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
+}
+

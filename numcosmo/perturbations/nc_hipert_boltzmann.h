@@ -82,6 +82,7 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannGetN get_theta;
   NcHIPertBoltzmannGetN get_theta_p;
   NcHIPertBoltzmannGetN get_los_theta;
+  NcHIPertBoltzmannGetCl get_PHIPHI_Cls;
   NcHIPertBoltzmannGetCl get_TT_Cls;
   NcHIPertBoltzmannGetCl get_EE_Cls;
   NcHIPertBoltzmannGetCl get_BB_Cls;
@@ -120,7 +121,8 @@ typedef enum _NcHIPertBoltzmannVars
   NC_HIPERT_BOLTZMANN_THETA2,
   NC_HIPERT_BOLTZMANN_THETA_P0,
   NC_HIPERT_BOLTZMANN_THETA_P1,
-  NC_HIPERT_BOLTZMANN_THETA_P2, /*< private >*/
+  NC_HIPERT_BOLTZMANN_THETA_P2, 
+  /* < private > */
   NC_HIPERT_BOLTZMANN_LEN,      /*< skip >*/
 } NcHIPertBoltzmannVars;
 
@@ -156,7 +158,7 @@ struct _NcHIPertBoltzmann
   gboolean calc_transfer;
   gboolean use_lensed_Cls;
   gboolean use_tensor;
-  guint TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
+  guint PHIPHI_lmax, TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
   gboolean tight_coupling;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_prim;
@@ -183,6 +185,7 @@ gboolean nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor);
 gboolean nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb);
 
+void nc_hipert_boltzmann_set_PHIPHI_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_BB_lmax (NcHIPertBoltzmann *pb, guint lmax);
@@ -190,6 +193,7 @@ void nc_hipert_boltzmann_set_TE_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_TB_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax);
 
+guint nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb);
@@ -200,6 +204,7 @@ guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
 void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
 
+void nc_hipert_boltzmann_get_PHIPHI_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);

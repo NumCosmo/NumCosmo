@@ -136,12 +136,12 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
 
 /**
  * nc_hiprim_new_from_name:
- * @parent_type: FIXME
- * @prim_name: FIXME
+ * @parent_type: #GType of the parent model
+ * @prim_name: name of the primordial spcetrum model
  *
- * FIXME
+ * This function instantiates a new object of type #NcHIPrim.
  *
- * Returns: FIXME
+ * Returns: A new #NcHIPrim
  */
 NcHIPrim *
 nc_hiprim_new_from_name (GType parent_type, gchar *prim_name)
@@ -158,9 +158,9 @@ nc_hiprim_new_from_name (GType parent_type, gchar *prim_name)
  * nc_hiprim_ref:
  * @prim: a #NcHIPrim
  *
- * FIXME
+ * Increases the reference count of @prim by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @prim
  */
 NcHIPrim *
 nc_hiprim_ref (NcHIPrim *prim)
@@ -172,7 +172,8 @@ nc_hiprim_ref (NcHIPrim *prim)
  * nc_hiprim_free:
  * @prim: a #NcHIPrim
  *
- * FIXME
+ * Atomically decreases the reference count of @prim by one. If the reference count drops to 0,
+ * all memory allocated by @prim is released.
  *
  */
 void
@@ -185,7 +186,7 @@ nc_hiprim_free (NcHIPrim *prim)
  * nc_hiprim_clear:
  * @prim: a #NcHIPrim
  *
- * FIXME
+ * The reference count of @prim is decreased and the pointer is set to NULL.
  *
  */
 void
@@ -217,9 +218,9 @@ _nc_hiprim_log_all_models_go (GType model_type, guint n)
 
 /**
  * nc_hiprim_log_all_models:
- * @parent: a #GType
+ * @parent: #GType of the parent model
  *
- * FIXME
+ * Logs all models descending from @parent.
  *
  */
 void
@@ -234,7 +235,7 @@ nc_hiprim_log_all_models (GType parent)
  * @prim: a #NcHIPrim
  * @k_pivot: pivotal $k$ in units of $1/\mathrm{Mpc}$
  *
- * FIXME
+ * Sets @k_pivot to the respective property. 
  *
  */
 void

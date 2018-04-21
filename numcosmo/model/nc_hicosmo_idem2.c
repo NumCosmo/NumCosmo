@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_idem2
  * @title: NcHICosmoIDEM2
- * @short_description: IDEM2 desc.
+ * @short_description: Interacting Dark Energy Model
  *
  * FIXME
  * 

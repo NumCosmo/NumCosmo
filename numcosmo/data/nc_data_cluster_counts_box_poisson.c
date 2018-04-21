@@ -213,7 +213,7 @@ _nc_data_cluster_counts_box_poisson_prepare (NcmData *data, NcmMSet *mset)
 	gsl_function F;
 
   g_assert (cpoisson->mfp != NULL);
-	
+
   nc_halo_mass_function_prepare_if_needed (cpoisson->mfp, cosmo);
 
 	F.function = &_nc_data_cluster_counts_box_poisson_dndlog10M;

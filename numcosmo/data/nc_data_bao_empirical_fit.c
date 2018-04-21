@@ -29,7 +29,7 @@
  * @short_description: Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
  * 
  * This object implements the BAO data when its likelihood function is provided, 
- * e.g., [Ross et al. (2015)][XRoss2014].
+ * e.g., [Ross et al. (2015)][XRoss2015].
  * 
  */
 
@@ -51,6 +51,7 @@ enum
   PROP_Z,
   PROP_M2LNP,
   PROP_DIST,
+	PROP_SIZE 
 };
 
 G_DEFINE_TYPE (NcDataBaoEmpiricalFit, nc_data_bao_empirical_fit, NCM_TYPE_DATA_DIST1D);

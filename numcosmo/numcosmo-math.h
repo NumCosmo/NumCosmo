@@ -40,10 +40,13 @@
 #include <numcosmo/math/ncm_integral1d.h>
 #include <numcosmo/math/ncm_integral1d_ptr.h>
 #include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_qm_prop.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d.h>
 #include <numcosmo/math/ncm_stats_dist1d_spline.h>
 #include <numcosmo/math/ncm_stats_dist1d_epdf.h>
+#include <numcosmo/math/ncm_stats_dist2d.h>
+#include <numcosmo/math/ncm_stats_dist2d_spline.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -51,6 +54,7 @@
 #include <numcosmo/math/ncm_spline_gsl.h>
 #include <numcosmo/math/ncm_spline_cubic.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/math/ncm_spline_rbf.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>
@@ -65,8 +69,10 @@
 #include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
 #include <numcosmo/math/ncm_sf_sbessel_int.h>
+#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
+#include <numcosmo/math/ncm_fftlog_sbessel_j.h>
 #include <numcosmo/math/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/math/ncm_fftlog_gausswin2.h>
 #include <numcosmo/math/ncm_sparam.h>
@@ -99,6 +105,7 @@
 #include <numcosmo/math/function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
+#include <numcosmo/math/ncm_diff.h>
 #include <numcosmo/math/ncm_timer.h>
 
 /* Likelihood object */
@@ -140,8 +147,6 @@
 #include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
-#include <numcosmo/math/ncm_sphere_map_pix.h>
 #include <numcosmo/math/ncm_sphere_map.h>
-#include <numcosmo/sphere/healpix.h>
 
 #endif /* _NUMCOSMO_MATH_H */

@@ -12,6 +12,7 @@ data_observational_DATA = \
 	nc_data_bao_dvdv_percival2007.obj       \
 	nc_data_bao_dvdv_percival2010.obj       \
 	nc_data_bao_empirical_fit_ross2015.obj  \
+	nc_data_bao_empirical_fit_2d_bautista2017.obj \
 	nc_data_bao_rdv_percival2007.obj        \
 	nc_data_bao_rdv_percival2010.obj        \
 	nc_data_bao_rdv_beutler2011.obj         \
@@ -47,16 +48,28 @@ data_observational_DATA = \
 	nc_data_snia_diag_sdss_emille.obj       \
 	nc_data_snia_diag_union.obj             \
 	nc_data_snia_diag_union2.obj            \
-	nc_data_snia_diag_union2_1.obj          \
-	class_data/bbn/sBBN.dat                 \
+	nc_data_snia_diag_union2_1.obj
+
+data_observationaldir = \
+	$(pkgdatadir)-$(VERSION)/data
+
+class_data_bbn_DATA = \
+	class_data/bbn/sBBN.dat
+
+class_data_bbndir = \
+	$(pkgdatadir)-$(VERSION)/data/class_data/bbn
+
+class_data_hyrec_DATA = \
 	class_data/hyrec/Alpha_inf.dat          \
 	class_data/hyrec/input.dat              \
 	class_data/hyrec/R_inf.dat              \
 	class_data/hyrec/two_photon_tables.dat
 
-data_observationaldir = \
-	$(pkgdatadir)-$(VERSION)/data
+class_data_hyrecdir = \
+	$(pkgdatadir)-$(VERSION)/data/class_data/hyrec
 
 EXTRA_DIST = \
-	$(data_observational_DATA)
+	$(data_observational_DATA) \
+	$(class_data_bbn_DATA)     \
+	$(class_data_hyrec_DATA)
 

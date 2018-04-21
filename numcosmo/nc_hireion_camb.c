@@ -166,12 +166,12 @@ nc_hireion_camb_class_init (NcHIReionCambClass *klass)
 
   /* Set HII_HEII_Z param info */
   ncm_model_class_set_sparam (model_class, NC_HIREION_CAMB_HII_HEII_Z, "z_\\mathrm{re}", "z_re",
-                               0.0, 50.0, 0.1,
+                               0.0, 50.0, 1.0,
                                NC_HIREION_DEFAULT_PARAMS_ABSTOL, NC_HIREION_CAMB_DEFAULT_HII_HEII_Z,
                                NCM_PARAM_TYPE_FIXED);
   /* Set HEIII_Z param info */
   ncm_model_class_set_sparam (model_class, NC_HIREION_CAMB_HEIII_Z, "z^\\mathrm{He}_\\mathrm{re}", "z_He_re",
-                               0.0,  10.0, 1.0e-2,
+                               0.0,  10.0, 1.0e-1,
                                NC_HIREION_DEFAULT_PARAMS_ABSTOL, NC_HIREION_CAMB_DEFAULT_HEIII_Z,
                                NCM_PARAM_TYPE_FIXED);
 
@@ -241,9 +241,9 @@ static gdouble
 _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb)
 {
   NcHIReionCamb *reion_camb = NC_HIREION_CAMB (reion);
-  const gdouble XHe = nc_hicosmo_XHe (cosmo);
-  const gdouble XH_XHe = 1.0 + XHe;
-  gdouble Xe = 0.0;
+  const gdouble XHe         = nc_hicosmo_XHe (cosmo);
+  const gdouble XH_XHe      = 1.0 + XHe;
+  gdouble Xe                = 0.0;
 
   _nc_hireion_camb_prepare_if_needed (reion, cosmo);
 

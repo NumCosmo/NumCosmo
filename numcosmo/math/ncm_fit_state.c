@@ -500,4 +500,12 @@ ncm_fit_state_realloc (NcmFitState *fstate)
  * 
  * Returns: FIXME
  */
+/**
+ * ncm_fit_state_get_data_len:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
 

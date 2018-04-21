@@ -30,7 +30,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_util.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -678,7 +681,7 @@ G_INLINE_FUNC gdouble ncm_c_G_mass_solar (void)
 { return 1.3271244e20; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_solar (void)
-{ return 1.98892e30; }
+{ return ncm_c_G_mass_solar () / ncm_c_G (); }
 
 /*******************************************************************************
  * END: IAU related constants
