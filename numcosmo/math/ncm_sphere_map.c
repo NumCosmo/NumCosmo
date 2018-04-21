@@ -2124,7 +2124,7 @@ ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, g
  * @l: value of $l < \ell_\mathrm{max}$
  *
  * Gets the value of $C_{\ell}$ previously calculated by
- * ncm_sphere_map_prepare_alm() or ncm_sphere_map_prepare_Cl(). 
+ * ncm_sphere_map_prepare_alm(). 
  * 
  */
 gdouble

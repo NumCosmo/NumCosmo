@@ -65,6 +65,7 @@ struct _NcDataPlanckLKL
   guint ndata_entry;
   gchar **pnames;
   gchar *chksum;
+	gdouble check_m2lnL;
   NcDataCMBDataType cmb_data;
   NcmVector *data_params;
   NcmVector *check_data_params;

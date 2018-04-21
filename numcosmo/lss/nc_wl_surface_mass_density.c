@@ -59,6 +59,10 @@
  * 
  * See, e.g., [Mandelbaum (2006)][XMandelbaum2006], [Umetsu (2012)][XUmetsu2012], [Applegate (2014)][XApplegate2014], 
  * [Melchior (2017)][XMelchior2017], [Parroni (2017)][XParroni2017].
+ * 
+ * Usually $z_{lens} = z_{cluster}, but we define these two properties in order to handle cases where shear signal has been 
+ * rescaled to a different cluster redshift (following D. Applegate's code.).
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -95,12 +99,8 @@ static void
 nc_wl_surface_mass_density_init (NcWLSurfaceMassDensity *smd)
 {
 	smd->dist       = NULL;
-  smd->zsource    = 0.0;
-  smd->zlens      = 0.0;
-	smd->zcluster   = 0.0;
 	smd->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-	smd->ctrl_dp = ncm_model_ctrl_new (NULL);
-  
+	smd->ctrl_dp    = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -114,15 +114,6 @@ _nc_wl_surface_mass_density_set_property (GObject *object, guint prop_id, const 
     case PROP_DISTANCE:
       smd->dist = g_value_dup_object (value);
       break;
-		case PROP_ZSOURCE:
-			smd->zsource = g_value_get_double (value);
-			break;
-		case PROP_ZLENS:
-			smd->zlens = g_value_get_double (value);
-			break;
-		case PROP_ZCLUSTER:
-			smd->zcluster = g_value_get_double (value);
-			break;	
 		default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -140,15 +131,6 @@ _nc_wl_surface_mass_density_get_property (GObject *object, guint prop_id, GValue
     case PROP_DISTANCE:
       g_value_set_object (value, smd->dist);
       break;
-		case PROP_ZSOURCE:
-			g_value_set_double (value, smd->zsource);
-			break;
-		case PROP_ZLENS:
-			g_value_set_double (value, smd->zlens);
-			break;
-		case PROP_ZCLUSTER:
-			g_value_set_double (value, smd->zcluster);
-			break;	
 		default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -161,9 +143,9 @@ _nc_wl_surface_mass_density_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_wl_surface_mass_density_parent_class)->constructed (object);
   {
-     NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);
+		/*NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);*/
 
-		g_assert_cmpfloat (smd->zlens, <, smd->zsource);
+		
   }
 }
 
@@ -197,16 +179,23 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->constructed  = &_nc_wl_surface_mass_density_constructed;
+  object_class->constructed = &_nc_wl_surface_mass_density_constructed;
   model_class->set_property = &_nc_wl_surface_mass_density_set_property;
   model_class->get_property = &_nc_wl_surface_mass_density_get_property;
-  object_class->dispose      = &_nc_wl_surface_mass_density_dispose;
-  object_class->finalize     = &_nc_wl_surface_mass_density_finalize;
+  object_class->dispose     = &_nc_wl_surface_mass_density_dispose;
+  object_class->finalize    = &_nc_wl_surface_mass_density_finalize;
 
+  ncm_mset_model_register_id (model_class,
+                              "NcWLSurfaceMassDensity",
+                              "NcWLSurfaceMassDensity.",
+                              NULL,
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
+	
   ncm_model_class_set_name_nick (model_class, "WL Surface Mass Density", "WLSMD");
   ncm_model_class_add_params (model_class, NC_WL_SURFACE_MASS_DENSITY_SPARAM_LEN, 0, PROP_SIZE);
 	
-  	/**
+	/**
    * NcWLSurfaceMassDensity:pcc:
    * 
    * Percentage of correctly centered clusters.
@@ -214,8 +203,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
    */
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_PCC, "p_{cc}", "pcc",
                               0.0,  1.0, 5e-2,
-                              NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PCC,
-                              NCM_PARAM_TYPE_FIXED);
+                              NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PCC, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcWLSurfaceMassDensity:Roff:
@@ -225,8 +213,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
    */
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_ROFF, "R_{off}", "Roff",
                               0.0,  2.0, 1e-1,
-                              NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF,
-                              NCM_PARAM_TYPE_FIXED);
+                              NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF, NCM_PARAM_TYPE_FIXED);
 
 	 /**
    * NcWLSurfaceMassDensity:distance:
@@ -239,52 +226,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
                                                         NULL,
                                                         "Distance",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-                                                        | G_PARAM_STATIC_BLURB));
-	/**
-   * NcWLSurfaceMassDensity:zsource:
-   *
-   * This property sets the source's redshift.
-   * 
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ZSOURCE,
-                                   g_param_spec_double ("zsource",
-                                                        NULL,
-                                                        "z_{source}",
-                                                        0.0, 6.0, 1.5,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/**
-   * NcWLSurfaceMassDensity:zlens:
-   *
-   * This property sets the lens' redshift.
-   * Usually zlens = zcluster, but we define these two properties 
-	 * in order to handle cases where shear signal has been rescaled to a different cluster redshift (following D. Applegate's code.). 
-	 *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ZLENS,
-                                   g_param_spec_double ("zlens",
-                                                        NULL,
-                                                        "z_{lens}",
-                                                        0.0, 5.5, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/**
-   * NcWLSurfaceMassDensity:zcluster:
-   *
-   * This property sets the cluster's redshift.
-	 * 
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ZCLUSTER,
-                                   g_param_spec_double ("zcluster",
-                                                        NULL,
-                                                        "z_{cluster}",
-                                                        0.0, 5.5, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
-  
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 }
 
 /**
@@ -300,9 +242,9 @@ NcWLSurfaceMassDensity *
 nc_wl_surface_mass_density_new (NcDistance *dist)
 {
 	NcWLSurfaceMassDensity *smd = g_object_new (NC_TYPE_WL_SURFACE_MASS_DENSITY, 
-                       "distance", dist, 
-                       NULL);
-  return smd;
+	                                            "distance", dist, 
+	                                            NULL);
+	return smd;
 }
 
 /**
@@ -348,51 +290,12 @@ nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd)
 }
 
 /**
- * nc_wl_surface_mass_density_set_zcluster:
- * @smd: a #NcWLSurfaceMassDensity
- * @zcluster: cluster's redshift
- *
- * Sets the value of the property zcluster.
- *
- */
-void
-nc_wl_surface_mass_density_set_zcluster (NcWLSurfaceMassDensity *smd, gdouble zcluster)
-{
-  smd->zcluster = zcluster;
-}
-
-/**
- * nc_wl_surface_mass_density_set_zsource:
- * @smd: a #NcWLSurfaceMassDensity
- * @zsource: source's redshift
- *
- * Sets the value of the property zsource.
- *
- */
-void
-nc_wl_surface_mass_density_set_zsource (NcWLSurfaceMassDensity *smd, gdouble zsource)
-{
-  smd->zsource = zsource;
-}
-
-/**
- * nc_wl_surface_mass_density_set_zlens:
- * @smd: a #NcWLSurfaceMassDensity
- * @zlens: lens' redshift
- *
- * Sets the value of the property zlens.
- *
- */
-void
-nc_wl_surface_mass_density_set_zlens (NcWLSurfaceMassDensity *smd, gdouble zlens)
-{
-  smd->zlens = zlens;
-}
-
-/**
  * nc_wl_surface_mass_density_sigma_critical:
  * @smd: a #NcWLSurfaceMassDensity
  * @cosmo: a #NcHICosmo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the critical surface density, 
  * \begin{equation}\label{eq:def:SigmaC}
@@ -404,15 +307,16 @@ nc_wl_surface_mass_density_set_zlens (NcWLSurfaceMassDensity *smd, gdouble zlens
  *
  * Returns: the critical surface density $\Sigma_c$ in units of $M_\odot / Mpc^2$
  */
-gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+gdouble 
+nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	//g_assert_cmpfloat (nc_hicosmo_Omega_k0 (cosmo), >=, 0.0);
-	const gdouble a = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
-	gdouble Ds = nc_distance_angular_diameter (smd->dist, cosmo, smd->zsource);
-	gdouble Dl = nc_distance_angular_diameter (smd->dist, cosmo, smd->zlens);
+	const gdouble a      = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
+	const gdouble Ds     = nc_distance_angular_diameter (smd->dist, cosmo, zs);
+	const gdouble Dl     = nc_distance_angular_diameter (smd->dist, cosmo, zl);
 	/* Dls below is only valid for Omega_k >= 0 */
-	gdouble Dls = (nc_distance_transverse (smd->dist, cosmo, smd->zsource) - nc_distance_transverse (smd->dist, cosmo, smd->zlens))/ (1.0 + smd->zsource);
-	gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+	const gdouble Dls    = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl)) / (1.0 + zs);
+	const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
   
   return a * Ds / (Dl * Dls * RH_Mpc);
 }
@@ -423,16 +327,16 @@ gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, 
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the surface mass density at @R, see Eq. $\eqref{eq:sigma}$.
  *
  * Returns: $\Sigma (R)$
  */
 gdouble
-nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R)
+nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	smd->dp = dp;
-	gdouble sigma_2 = nc_density_profile_integral_density_los (smd->dp, cosmo, R, smd->zcluster);
+	gdouble sigma_2 = nc_density_profile_integral_density_los (dp, cosmo, R, zc);
 		
 	return 2.0 * sigma_2;
 }
@@ -443,19 +347,19 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * @dp: a #NcDensityProfile 
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the mean surface mass density inside the circle with radius @R, Eq. $\eqref{eq:sigma_mean}$.
  *
  * Returns: $\overline{\Sigma} (<R)$
  */
 gdouble 
-nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R)
+nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	gdouble rs = nc_density_profile_scale_radius (dp, cosmo, smd->zcluster);
-	gdouble x  = R / rs;
-  gdouble x2 = x * x;
-
-	gdouble mean_sigma_2x2 = nc_density_profile_integral_density_2d (dp, cosmo, R, smd->zcluster);
+	const gdouble rs             = nc_density_profile_scale_radius (dp, cosmo, zc);
+	const gdouble x              = R / rs;
+  const gdouble x2             = x * x;
+	const gdouble mean_sigma_2x2 = nc_density_profile_integral_density_2d (dp, cosmo, R, zc);
 
 	return (2.0 / x2) * mean_sigma_2x2;
 }
@@ -464,7 +368,7 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityPro
 
 /*
 static gdouble 
-_nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble R)
+_nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, const gdouble R)
 {
 	gdouble R2 = R * R;
 	
@@ -478,17 +382,19 @@ _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, gdouble
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the convergence $\kappa(R)$ at @R, see Eq $\eqref{eq:convergence}$.
  *
  * Returns: $\kappa(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R)
+nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-	smd->dp = dp;
-  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, smd->dp, cosmo, R);
-	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo);
+  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
 
 	return sigma / sigma_crit;
 }
@@ -499,17 +405,20 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the shear $\gamma(R)$ at @R, see Eq $\eqref{eq:shear}$. 
  *
  * Returns: $\gamma(R)$ 
  */
 gdouble 
-nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R)
+nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R);
-	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R);
-	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo);
+  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
+	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
 
 	return (mean_sigma - sigma) / sigma_crit;
 }
@@ -520,6 +429,9 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear:
  * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$ 
@@ -529,11 +441,11 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * Returns: $g(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R)
+nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once*/
-  gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R);
-	gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R);
+  gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
+	gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
 	gdouble reduced_shear = shear / (1.0 - convergence); 
 
 	return reduced_shear;
@@ -545,6 +457,9 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
  * @dp: a #NcDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear assuming a lensed source at infinite redshift:
  * $$ g(R) = \frac{\beta_s(zb)\gamma(R)}{1 - \beta_s(zb) \kappa(R)}, $$
@@ -556,22 +471,22 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
  * Returns: $g(R)$, source at $z = \infty$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, gdouble R)
+nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
   gdouble Dinf, betainf, beta_s;
 	gdouble convergence_inf, shear_inf;
-	gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, smd->zsource);
-	gdouble Dls             = (nc_distance_transverse (smd->dist, cosmo, smd->zsource) - nc_distance_transverse (smd->dist, cosmo, smd->zlens))/ (1.0 + smd->zsource);
+	gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, zs);
+	gdouble Dls             = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl))/ (1.0 + zs);
   gdouble beta            = Dls / Ds;
 	
- 	Dinf     =  nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
+ 	Dinf            =  nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
 	/* Angular diamater distance lens to infinity over angular diameter distance obs to infinity. It's equivalent to compute the ratio of the transverse distances. Source at infinity */
-	betainf  = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, smd->zlens) / Dinf;
+	betainf         = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl) / Dinf;
 	beta_s          = beta / betainf;
 
-	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R);
-	shear_inf       = beta_s * nc_wl_surface_mass_density_shear (smd, dp, cosmo, R);
+	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
+	shear_inf       = beta_s * nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
 	
 	return shear_inf / (1.0 - convergence_inf);
 }

@@ -87,6 +87,7 @@ NcmSpline *ncm_spline_gsl_new (const gsl_interp_type *type);
 NcmSpline *ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init);
 void ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type);
 void ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id);
+void ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name);
 
 G_END_DECLS
 

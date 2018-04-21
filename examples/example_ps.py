@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -53,9 +53,9 @@ cosmo.add_submodel (prim)
 #
 #  Printing the parameters used.
 #
-print "# Model parameters: ", 
+print ("# Model parameters: ", end=' ') 
 cosmo.params_log_all ()
-print "# Omega_X0: % 22.15g" % (cosmo.E2Omega_de (0.0))
+print ("# Omega_X0: % 22.15g" % (cosmo.E2Omega_de (0.0)))
 
 ps_cbe  = Nc.PowspecMLCBE.new ()
 ps_eh   = Nc.PowspecMLTransfer.new (Nc.TransferFuncEH.new ())
@@ -148,9 +148,9 @@ psf_cbe.prepare (cosmo)
 psf_eh.prepare (cosmo)
 
 
-print "# CBE sigma8 = % 20.15g, EH sigma8 = % 20.15g" % (psf_cbe.eval_sigma (0.0, Rh8), psf_eh.eval_sigma (0.0, Rh8))
-print "# kmin % 20.15g kmax % 20.15g" % (ps_cbe.props.kmin, ps_cbe.props.kmax)
-print "# Rmin % 20.15g Rmax % 20.15g" % (psf_cbe.get_r_min (), psf_cbe.get_r_max ())
+print ("# CBE sigma8 = % 20.15g, EH sigma8 = % 20.15g" % (psf_cbe.eval_sigma (0.0, Rh8), psf_eh.eval_sigma (0.0, Rh8)))
+print ("# kmin % 20.15g kmax % 20.15g" % (ps_cbe.props.kmin, ps_cbe.props.kmax))
+print ("# Rmin % 20.15g Rmax % 20.15g" % (psf_cbe.get_r_min (), psf_cbe.get_r_max ()))
 
 lnRmin = math.log (psf_cbe.get_r_min ())
 lnRmax = math.log (psf_cbe.get_r_max ())
@@ -245,5 +245,5 @@ psf_cbenl = Ncm.PowspecFilter.new (pshf, Ncm.PowspecFilterType.TOPHAT)
 psf_cbenl.set_best_lnr0 ()
 psf_cbenl.prepare (cosmo)
 
-print "# CBE+HaloFit sigma8 = % 20.15g" % (psf_cbenl.eval_sigma (0.0, Rh8))
+print ("# CBE+HaloFit sigma8 = % 20.15g" % (psf_cbenl.eval_sigma (0.0, Rh8)))
 

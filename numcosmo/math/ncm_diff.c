@@ -393,7 +393,7 @@ ncm_diff_free (NcmDiff *diff)
  * ncm_diff_clear:
  * @diff: a #NcmDiff
  *
- * Decrease the reference count of @diff by one, and sets the pointer *diff to
+ * Decrease the reference count of @diff by one, and sets the pointer *@diff to
  * NULL.
  *
  */

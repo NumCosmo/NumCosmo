@@ -51,7 +51,212 @@ enum
   PROP_SIZE,
 };
 
+static void
+ncm_spline_gsl_init (NcmSplineGsl *sg)
+{
+  sg->interp = NULL;
+  sg->type = NULL;
+  sg->type_id = NCM_SPLINE_GSL_TYPES_LEN;
+  sg->inst_name = NULL;
+}
+
+static void
+_ncm_spline_gsl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmSplineGsl *fit = NCM_SPLINE_GSL (object);
+  g_return_if_fail (NCM_IS_SPLINE_GSL (object));
+
+  switch (prop_id)
+  {
+    case PROP_TYPE_NAME:
+      ncm_spline_gsl_set_type_by_name (fit, g_value_get_string (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_spline_gsl_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmSplineGsl *sgsl = NCM_SPLINE_GSL (object);
+  g_return_if_fail (NCM_IS_SPLINE_GSL (object));
+
+  switch (prop_id)
+  {
+    case PROP_TYPE_NAME:
+    {
+      const GEnumValue *e = ncm_cfg_enum_get_value (NCM_TYPE_SPLINE_GSL_TYPE, sgsl->type_id);
+      g_value_set_string (value, e->value_name);
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_spline_gsl_finalize (GObject *object)
+{
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (object);
+
+  gsl_interp_free (sg->interp);
+  sg->type = gsl_interp_linear;
+  g_free (sg->inst_name);
+
+  G_OBJECT_CLASS (ncm_spline_gsl_parent_class)->finalize (object);
+}
+
 static void _ncm_spline_gsl_reset (NcmSpline *s);
+static const gchar *_ncm_spline_gsl_name (NcmSpline *s);
+static void _ncm_spline_gsl_prepare (NcmSpline *s);
+static gsize _ncm_spline_gsl_min_size (const NcmSpline *s);
+static gdouble _ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
+static NcmSpline *_ncm_spline_gsl_copy_empty (const NcmSpline *s);
+
+static void
+ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmSplineClass *s_class = NCM_SPLINE_CLASS (klass);
+
+  object_class->set_property = &_ncm_spline_gsl_set_property;
+  object_class->get_property = &_ncm_spline_gsl_get_property;
+  object_class->finalize     = &ncm_spline_gsl_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_TYPE_NAME,
+                                   g_param_spec_string ("type-name",
+                                                        NULL,
+                                                        "GSL Interpolation method name",
+                                                        "NCM_SPLINE_GSL_CSPLINE",
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+  
+  s_class->name         = &_ncm_spline_gsl_name;
+  s_class->reset        = &_ncm_spline_gsl_reset;
+  s_class->prepare      = &_ncm_spline_gsl_prepare;
+  s_class->prepare_base = NULL;
+  s_class->min_size     = &_ncm_spline_gsl_min_size;
+  s_class->eval         = &_ncm_spline_gsl_eval;
+  s_class->deriv        = &_ncm_spline_gsl_deriv;
+  s_class->deriv2       = &_ncm_spline_gsl_deriv2;
+  s_class->deriv_nmax   = &_ncm_spline_gsl_deriv_nmax;
+  s_class->integ        = &_ncm_spline_gsl_integ;
+  s_class->copy_empty   = &_ncm_spline_gsl_copy_empty;  
+}
+
+static void 
+_ncm_spline_gsl_reset (NcmSpline *s)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+
+  if (sg->interp != NULL)
+  {
+    if (sg->interp->size != s->len)
+    {
+      gsl_interp_free (sg->interp);
+      sg->interp = gsl_interp_alloc (sg->type, s->len);
+    }
+  }
+  else
+  {
+    sg->interp = gsl_interp_alloc (sg->type, s->len);
+    g_free (sg->inst_name);
+    sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", gsl_interp_name (sg->interp));
+  }
+}
+
+static const gchar *
+_ncm_spline_gsl_name (NcmSpline *s)
+{
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return sg->inst_name;
+}
+
+static void 
+_ncm_spline_gsl_prepare (NcmSpline *s) 
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+
+	g_assert_cmpint (ncm_vector_stride (s->xv), ==, 1);
+	g_assert_cmpint (ncm_vector_stride (s->yv), ==, 1);
+	
+  gsl_interp_init (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), s->len); 
+}
+
+static gsize 
+_ncm_spline_gsl_min_size (const NcmSpline *s)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return sg->type->min_size;
+}
+
+static gdouble 
+_ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return gsl_interp_eval (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc); 
+}
+
+static gdouble 
+_ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x) 
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc);
+}
+
+static gdouble 
+_ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc); 
+}
+
+static gdouble 
+_ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  if (sg->type == gsl_interp_linear)
+  {
+    return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc);
+  }
+  else if (sg->type == gsl_interp_cspline || sg->type == gsl_interp_cspline_periodic || 
+           sg->type == gsl_interp_akima || sg->type == gsl_interp_akima_periodic)
+  {
+    const guint knot_i = ncm_spline_get_index (s, x);
+    const gdouble x_i = ncm_vector_get (s->xv, knot_i);
+    const gdouble x_ip1 = ncm_vector_get (s->xv, knot_i + 1);
+    const gdouble dx = x_ip1 - x_i; 
+    gdouble two_c_i = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x_i, s->acc);
+    gdouble two_c_i_p_6d_i_dx = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x_ip1, s->acc);
+    return (two_c_i_p_6d_i_dx - two_c_i) / dx;
+  }
+  else
+  {
+    g_error ("ncm_spline_gsl_deriv_nmax: Calculation of the nmax derivative not supported.");
+    return 0.0;
+  }
+}
+
+static gdouble 
+_ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
+{ 
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return gsl_interp_eval_integ (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x0, x1, s->acc); 
+}
+
+static NcmSpline *
+_ncm_spline_gsl_copy_empty (const NcmSpline *s)
+{
+  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  return ncm_spline_gsl_new (sg->type);
+}
 
 /**
  * ncm_spline_gsl_new: (skip)
@@ -174,197 +379,4 @@ ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name)
     g_error ("NcmSplineGsl type '%s' not found. Availables types above.", type_name);
   }
   ncm_spline_gsl_set_type_by_id (sg, type_id->value);
-}
-
-static NcmSpline *
-_ncm_spline_gsl_copy_empty (const NcmSpline *s)
-{
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return ncm_spline_gsl_new (sg->type);
-}
-
-static const gchar *
-_ncm_spline_gsl_name (NcmSpline *s)
-{
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return sg->inst_name;
-}
-
-static void 
-_ncm_spline_gsl_reset (NcmSpline *s)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-
-  if (sg->interp != NULL)
-  {
-    if (sg->interp->size != s->len)
-    {
-      gsl_interp_free (sg->interp);
-      sg->interp = gsl_interp_alloc (sg->type, s->len);
-    }
-  }
-  else
-  {
-    sg->interp = gsl_interp_alloc (sg->type, s->len);
-    g_free (sg->inst_name);
-    sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", gsl_interp_name (sg->interp));
-  }
-}
-
-static void 
-_ncm_spline_gsl_prepare (NcmSpline *s) 
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  gsl_interp_init (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), s->len); 
-}
-
-static gsize 
-_ncm_spline_gsl_min_size (const NcmSpline *s)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return sg->type->min_size;
-}
-
-static gdouble 
-_ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return gsl_interp_eval (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc); 
-}
-
-static gdouble 
-_ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x) 
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc);
-}
-
-static gdouble 
-_ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc); 
-}
-
-static gdouble 
-_ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  if (sg->type == gsl_interp_linear)
-  {
-    return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x, s->acc);
-  }
-  else if (sg->type == gsl_interp_cspline || sg->type == gsl_interp_cspline_periodic || 
-           sg->type == gsl_interp_akima || sg->type == gsl_interp_akima_periodic)
-  {
-    const guint knot_i = ncm_spline_get_index (s, x);
-    const gdouble x_i = ncm_vector_get (s->xv, knot_i);
-    const gdouble x_ip1 = ncm_vector_get (s->xv, knot_i + 1);
-    const gdouble dx = x_ip1 - x_i; 
-    gdouble two_c_i = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x_i, s->acc);
-    gdouble two_c_i_p_6d_i_dx = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x_ip1, s->acc);
-    return (two_c_i_p_6d_i_dx - two_c_i) / dx;
-  }
-  else
-  {
-    g_error ("ncm_spline_gsl_deriv_nmax: Calculation of the nmax derivative not supported.");
-    return 0.0;
-  }
-}
-
-static gdouble 
-_ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
-{ 
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
-  return gsl_interp_eval_integ (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), x0, x1, s->acc); 
-}
-
-static void
-ncm_spline_gsl_init (NcmSplineGsl *sg)
-{
-  sg->interp = NULL;
-  sg->type = NULL;
-  sg->type_id = NCM_SPLINE_GSL_TYPES_LEN;
-  sg->inst_name = NULL;
-}
-
-static void
-_ncm_spline_gsl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcmSplineGsl *fit = NCM_SPLINE_GSL (object);
-  g_return_if_fail (NCM_IS_SPLINE_GSL (object));
-
-  switch (prop_id)
-  {
-    case PROP_TYPE_NAME:
-      ncm_spline_gsl_set_type_by_name (fit, g_value_get_string (value));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_ncm_spline_gsl_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmSplineGsl *sgsl = NCM_SPLINE_GSL (object);
-  g_return_if_fail (NCM_IS_SPLINE_GSL (object));
-
-  switch (prop_id)
-  {
-    case PROP_TYPE_NAME:
-    {
-      const GEnumValue *e = ncm_cfg_enum_get_value (NCM_TYPE_SPLINE_GSL_TYPE, sgsl->type_id);
-      g_value_set_string (value, e->value_name);
-      break;
-    }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_spline_gsl_finalize (GObject *object)
-{
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (object);
-
-  gsl_interp_free (sg->interp);
-  sg->type = gsl_interp_linear;
-  g_free (sg->inst_name);
-
-  G_OBJECT_CLASS (ncm_spline_gsl_parent_class)->finalize (object);
-}
-
-static void
-ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmSplineClass *s_class = NCM_SPLINE_CLASS (klass);
-
-  object_class->set_property = &_ncm_spline_gsl_set_property;
-  object_class->get_property = &_ncm_spline_gsl_get_property;
-  object_class->finalize     = &ncm_spline_gsl_finalize;
-
-  g_object_class_install_property (object_class,
-                                   PROP_TYPE_NAME,
-                                   g_param_spec_string ("type-name",
-                                                        NULL,
-                                                        "GSL Interpolation method name",
-                                                        "NCM_SPLINE_GSL_CSPLINE",
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
-  
-  s_class->name         = &_ncm_spline_gsl_name;
-  s_class->reset        = &_ncm_spline_gsl_reset;
-  s_class->prepare      = &_ncm_spline_gsl_prepare;
-  s_class->prepare_base = NULL;
-  s_class->min_size     = &_ncm_spline_gsl_min_size;
-  s_class->eval         = &_ncm_spline_gsl_eval;
-  s_class->deriv        = &_ncm_spline_gsl_deriv;
-  s_class->deriv2       = &_ncm_spline_gsl_deriv2;
-  s_class->deriv_nmax   = &_ncm_spline_gsl_deriv_nmax;
-  s_class->integ        = &_ncm_spline_gsl_integ;
-  s_class->copy_empty   = &_ncm_spline_gsl_copy_empty;
-  
 }

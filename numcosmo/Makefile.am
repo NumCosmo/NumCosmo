@@ -23,6 +23,7 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
 	 $(OPENMP_CFLAGS)     \
+	 $(HDF5_CFLAGS)       \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
@@ -38,6 +39,10 @@ SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
+libnumcosmo_la_LDFLAGS = \
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
+	$(HDF5_LDFLAGS)
+
 libnumcosmo_la_LIBADD =         \
 	$(SUNDIALS_LIBS)        \
 	$(FFTW3_LIBS)           \
@@ -47,6 +52,7 @@ libnumcosmo_la_LIBADD =         \
 	$(GSL_LIBS)             \
 	$(CFITSIO_LIBS)         \
 	$(LIBCUBA_PLACE)        \
+	$(HDF5_LIBS)            \
 	$(CODE_COVERAGE_LIBS)   \
 	plc/libclik.la          \
 	levmar/liblevmar.la     \
@@ -80,6 +86,7 @@ ncm_sources = \
 	math/ncm_spline_gsl.c                \
 	math/ncm_spline_cubic.c              \
 	math/ncm_spline_cubic_notaknot.c     \
+	math/ncm_spline_rbf.c                \
 	math/ncm_spline_func.c               \
 	math/ncm_spline2d.c                  \
 	math/ncm_spline2d_spline.c           \
@@ -193,6 +200,7 @@ ncm_headers =                                \
 	math/ncm_spline_gsl.h                \
 	math/ncm_spline_cubic.h              \
 	math/ncm_spline_cubic_notaknot.h     \
+	math/ncm_spline_rbf.h                \
 	math/ncm_spline_func.h               \
 	math/ncm_spline2d.h                  \
 	math/ncm_spline2d_spline.h           \
@@ -367,8 +375,13 @@ nc_headers = \
         lss/nc_cluster_mass_ascaso.h           \
         lss/nc_cluster_abundance.h             \
         lss/nc_cluster_pseudo_counts.h         \
+        lss/nc_galaxy_redshift.h               \
+        lss/nc_galaxy_redshift_spec.h          \
+        lss/nc_galaxy_redshift_spline.h        \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
+        lss/nc_reduced_shear_cluster_mass.h    \
+        lss/nc_galaxy_selfunc.h                \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -390,6 +403,7 @@ nc_headers = \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
+	data/nc_data_reduced_shear_cluster_mass.h \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
@@ -414,7 +428,6 @@ nc_headers = \
 	xcor/nc_xcor_limber_kernel_gal.h          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.h  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.h
-
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -501,8 +514,13 @@ nc_sources = \
         lss/nc_cluster_mass_ascaso.c           \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cluster_pseudo_counts.c         \
+	lss/nc_galaxy_redshift.c               \
+	lss/nc_galaxy_redshift_spec.c          \
+	lss/nc_galaxy_redshift_spline.c        \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
+	lss/nc_reduced_shear_cluster_mass.c    \
+        lss/nc_galaxy_selfunc.c                \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
 	data/nc_data_snia_cov.c                \
@@ -524,6 +542,7 @@ nc_sources = \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
+	data/nc_data_reduced_shear_cluster_mass.c \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
@@ -548,9 +567,6 @@ nc_sources = \
 	xcor/nc_xcor_limber_kernel_gal.c          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.c
-
-
-libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 cosmo_includedir = \
 	$(pkgincludedir)

@@ -107,6 +107,7 @@ void ncm_sphere_map_clear (NcmSphereMap **smap);
 
 void ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside);
 gint64 ncm_sphere_map_get_nside (NcmSphereMap *smap);
+gint64 ncm_sphere_map_get_npix (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_nsmap (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_cap_size (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_middle_size (NcmSphereMap *smap);

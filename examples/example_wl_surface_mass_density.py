@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import math
 import numpy as np
@@ -46,9 +46,6 @@ zsource = 1.5
 # New weak lensing surface mass density
 #
 smd = Nc.WLSurfaceMassDensity.new (dist)
-smd.props.zsource = zsource
-smd.props.zlens = zcluster
-smd.props.zcluster = zcluster
 
 #
 #  Setting values for the cosmological model, those not set keep their
@@ -76,13 +73,14 @@ reduced_shear = []
 reduced_shear_inf = []
 
 for i in range(0, npoints): 
-  ri = r_a[i]
-  Sig = smd.sigma (nfw, cosmo, ri)  
-  meanSig = smd.sigma_mean (nfw, cosmo, ri)
-  kappa = smd.convergence (nfw, cosmo, ri)
-  sh = smd.shear (nfw, cosmo, ri)
-  reds  = smd.reduced_shear (nfw, cosmo, ri)
-  reds_inf = smd.reduced_shear_infinity (nfw, cosmo, ri)
+  ri       = r_a[i]
+  Sig      = smd.sigma (nfw, cosmo, ri, zcluster)  
+  meanSig  = smd.sigma_mean (nfw, cosmo, ri, zcluster)
+  kappa    = smd.convergence (nfw, cosmo, ri, zsource, zcluster, zcluster)
+  sh       = smd.shear (nfw, cosmo, ri, zsource, zcluster, zcluster)
+  reds     = smd.reduced_shear (nfw, cosmo, ri, zsource, zcluster, zcluster)
+  reds_inf = smd.reduced_shear_infinity (nfw, cosmo, ri, zsource, zcluster, zcluster)
+  
   Sigma.append (Sig)
   meanSigma.append (meanSig)
   DeltaSigma.append (meanSig - Sig) 

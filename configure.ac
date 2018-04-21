@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [13])
-m4_define([numcosmo_micro_version], [3])
+m4_define([numcosmo_minor_version], [14])
+m4_define([numcosmo_micro_version], [1])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -558,6 +558,7 @@ TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
 PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
+PKG_CHECK_EXISTS([gsl >= 2.4], [AC_DEFINE([HAVE_GSL_2_4],[1], [gsl 2.4])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -576,6 +577,14 @@ AC_CHECK_LIB([arb],[arb_set])
 if test "x$ac_cv_lib_arb_arb_set" != "x"; then
   AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])
 fi
+
+dnl ***************************************************************************
+dnl Check for hdf5 support
+dnl ***************************************************************************
+AX_LIB_HDF5()
+AC_SUBST(HDF5_CFLAGS)
+AC_SUBST(HDF5_LDFLAGS)
+AC_SUBST(HDF5_LIBS)
 
 dnl ***************************************************************************
 dnl Check for fftw3
@@ -863,6 +872,8 @@ AC_SUBST(SUNDIALS_LIBS)
 AC_SUBST(SUNDIALS_CFLAGS)
 
 AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
@@ -892,7 +903,8 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
-    AC_EGREP_CPP([$SUNDIALS_VERSION],
+    SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
+    AC_EGREP_CPP([\"$SUNDIALS_VERSION_REGEX\"],
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
@@ -1006,6 +1018,7 @@ numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
+docs/manual_head.xml
 examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
@@ -1022,27 +1035,37 @@ echo "--------------------------------------------------------------------"
 if [ test "x$have_fftw3_support" != x ]; then
        echo "Building with FFTW3 support: ....................................YES"
 else
-       echo "Building  with FFTW3 support: ....................................NO"
+       echo "Building with FFTW3 support: .....................................NO"
        echo "        Requires FFTW3 (>= $FFTW3_REQUIRED_VERSION)"
 fi
        echo "Building with BLAS support: .....................................$blas_support"
 if [ test "x$have_lapack" != "xno" ]; then
        echo "Building with Lapack support: ...................................$lapack_support"
 else
-       echo "Building  with Lapack support: ...................................NO"
+       echo "Building with Lapack support: ....................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
 fi
 if [ test "x$have_cfitsio_support" != x ]; then
        echo "Building with cfitsio support: ..................................YES"
 else
-       echo "Building  with cfitsio support: ..................................NO"
+       echo "Building with cfitsio support: ...................................NO"
        echo "        Requires cfitsio - A FITS File Subroutine Library"
 fi
 if [ test "x$have_nlopt_support" != x ]; then
        echo "Building with nlopt support: ....................................YES"
 else
-       echo "Building  with nlopt support: ....................................NO"
+       echo "Building with nlopt support: .....................................NO"
        echo "        Requires nlopt - NonLinear OPTimization library"
+fi
+if [ test "x$with_hdf5" = xyes ]; then
+       echo "Building with HDF5 support: .....................................YES"
+else
+       echo "Building with HDF5 support: ......................................NO"
+fi
+if [ test "x$ac_cv_lib_arb_arb_set" = xyes ]; then
+       echo "Building with ARB support: ......................................YES"
+else
+       echo "Building with ARB support: .......................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -154,7 +154,7 @@ ncdata.resample (mset, rng)
 # Checking if it has the mass truth table, if so gets it
 #
 has_lnM_true = ncdata.has_lnM_true ()
-print "# Has mass truth table = ", has_lnM_true
+print ("# Has mass truth table = ", has_lnM_true)
 lnM_true = None
 if ncdata.has_lnM_true ():
   lnM_true = ncdata.get_lnM_true ()
@@ -163,7 +163,7 @@ if ncdata.has_lnM_true ():
 # Checking if it has the redshift truth table, if so gets it
 #
 has_z_true = ncdata.has_z_true ()
-print "# Has redshift truth table = ", has_z_true
+print ("# Has redshift truth table = ", has_z_true)
 z_true = None
 if ncdata.has_z_true ():
   z_true = ncdata.get_z_true ()
@@ -184,7 +184,7 @@ z_obs_params = ncdata.get_z_obs_params ()
 # Print everything in a file
 #
 nobjects = ncdata.get_len ()
-print "# There are ", nobjects, " objects in the catalog (%d, %d)" % (lnM_obs.col_len (), z_obs.col_len ())
+print ("# There are ", nobjects, " objects in the catalog (%d, %d)" % (lnM_obs.col_len (), z_obs.col_len ()))
 
 f = open ('ca_data.dat', 'w')
 

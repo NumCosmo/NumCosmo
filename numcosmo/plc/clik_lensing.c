@@ -750,6 +750,7 @@ void clik_lensing_selftest(clik_lensing_object *lclik, char *fpath, error **err)
   free(clX);
   }
 
+	/*
   res = clik_lensing_compute(lclik,clt,err);
   forwardError(*err,__LINE__,);
   if (lclik->has_check==1) {
@@ -757,8 +758,75 @@ void clik_lensing_selftest(clik_lensing_object *lclik, char *fpath, error **err)
   } else {
     printf("Checking lensing likelihood '%s' on test data. got %g\n",fpath,res);
   }
-
+	*/
+	
   free(clt);
 }
 
+/*
+ * Author: Sandro Dias Pinto Vitenti
+ * Date: 24/03/2018
+ * Function: clik_lensing_get_check_param
+ */
+void 
+clik_lensing_get_check_param (clik_lensing_object *lclik, char *fpath, double **chkp, double *check_value, int *npar_out, error **err)
+{
+  int nextra, ndim;
+  double *clX, *clt;
+  double res;
+  int lmax[7];
+  int i, cmbdim;
 
+  clik_lensing_get_lmaxs (lclik, lmax, err);
+  forwardError (*err, __LINE__, );
+
+  nextra = clik_lensing_get_extra_parameter_names (lclik, NULL, err);
+  forwardError (*err, __LINE__,);
+
+  ndim = nextra + lmax[0] + 1;
+  cmbdim = 0;
+  for (i = 1; i < 7; i++) 
+	{
+    cmbdim += lmax[i] + 1;
+  }
+  ndim += cmbdim;
+
+  clt = malloc_err (sizeof (double) * ndim, err);
+  forwardError (*err, __LINE__, );
+
+  clX = clik_lensing_clpp_fid (lclik, err);
+  forwardError(*err, __LINE__, );
+
+  memcpy (clt, clX, sizeof(double) * (lmax[0] + 1));
+
+  free (clX);
+  
+  if (cmbdim > 0) 
+	{
+    clX = clik_lensing_clcmb_fid (lclik, err);
+    forwardError (*err, __LINE__, );
+		
+    memcpy (clt + (lmax[0] + 1), clX, sizeof (double) * (ndim - nextra - (lmax[0] + 1)));
+
+    if (nextra == 1) {
+      clt[ndim - nextra] = 1;
+    }
+
+    free(clX);
+  }
+
+  res = clik_lensing_compute (lclik, clt, err);
+  forwardError (*err, __LINE__, );
+	
+  if (lclik->has_check==1) 
+	{
+		*check_value = lclik->check;
+  } 
+	else 
+	{
+		*check_value = 0.0;
+  }
+
+	*npar_out = ndim;
+  *chkp     = clt;
+}

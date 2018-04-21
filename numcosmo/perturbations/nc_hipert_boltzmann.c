@@ -56,6 +56,7 @@ enum
   PROP_CALC_TRANSFER,
   PROP_USE_LENSED_CLS,
   PROP_USE_TENSOR,
+  PROP_PHIPHI_LMAX,
   PROP_TT_LMAX,
   PROP_EE_LMAX,
   PROP_BB_LMAX,
@@ -87,6 +88,8 @@ nc_hipert_boltzmann_init (NcHIPertBoltzmann *pb)
   pb->use_lensed_Cls         = FALSE;
   pb->use_tensor             = FALSE;
   pb->calc_transfer          = FALSE;
+
+	pb->PHIPHI_lmax            = 0;
   pb->TT_lmax                = 0;
   pb->EE_lmax                = 0;
   pb->BB_lmax                = 0;
@@ -121,6 +124,9 @@ _nc_hipert_boltzmann_set_property (GObject *object, guint prop_id, const GValue 
       break;
     case PROP_USE_TENSOR:
       nc_hipert_boltzmann_set_tensor (pb, g_value_get_boolean (value));
+      break;
+    case PROP_PHIPHI_LMAX:
+      nc_hipert_boltzmann_set_PHIPHI_lmax (pb, g_value_get_uint (value));
       break;
     case PROP_TT_LMAX:
       nc_hipert_boltzmann_set_TT_lmax (pb, g_value_get_uint (value));
@@ -168,6 +174,9 @@ _nc_hipert_boltzmann_get_property (GObject *object, guint prop_id, GValue *value
       break;
     case PROP_USE_TENSOR:
       g_value_set_boolean (value, nc_hipert_boltzmann_tensor (pb));
+      break;
+    case PROP_PHIPHI_LMAX:
+      g_value_set_uint (value, nc_hipert_boltzmann_get_PHIPHI_lmax (pb));
       break;
     case PROP_TT_LMAX:
       g_value_set_uint (value, nc_hipert_boltzmann_get_TT_lmax (pb));
@@ -269,6 +278,13 @@ nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
+                                   PROP_PHIPHI_LMAX,
+                                   g_param_spec_uint ("PHIPHI-l-max",
+                                                      NULL,
+                                                      "Last multipole in the PHIPHI correlation",
+                                                      4, G_MAXUINT32, 4,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
                                    PROP_TT_LMAX,
                                    g_param_spec_uint ("TT-l-max",
                                                       NULL,
@@ -317,6 +333,7 @@ nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
   NC_HIPERT_CLASS (klass)->set_reltol        = &_nc_hipert_boltzmann_set_reltol;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare           = &_nc_hipert_boltzmann_prepare;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare_if_needed = &_nc_hipert_boltzmann_prepare_if_needed;
+  NC_HIPERT_BOLTZMANN_CLASS (klass)->get_PHIPHI_Cls    = NULL;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_TT_Cls        = NULL;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_EE_Cls        = NULL;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_BB_Cls        = NULL;
@@ -556,6 +573,23 @@ nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb)
 }
 
 /**
+ * nc_hipert_boltzmann_set_PHIPHI_lmax:
+ * @pb: a #NcHIPertBoltzmann.
+ * @lmax: last mutipole.
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_boltzmann_set_PHIPHI_lmax (NcHIPertBoltzmann *pb, guint lmax)
+{
+  g_assert_cmpuint (lmax, >=, 4);
+
+  pb->PHIPHI_lmax = lmax;
+  ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+}
+
+/**
  * nc_hipert_boltzmann_set_TT_lmax:
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
@@ -653,6 +687,15 @@ nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax)
   ncm_model_ctrl_force_update (pb->ctrl_cosmo);
 }
 
+/**
+ * nc_hipert_boltzmann_get_PHIPHI_lmax:
+ * @pb: a #NcHIPertBoltzmann.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+guint nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb) { return pb->PHIPHI_lmax; }
 /**
  * nc_hipert_boltzmann_get_TT_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -754,6 +797,30 @@ void
 nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 {
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->prepare_if_needed (pb, cosmo);
+}
+
+/**
+ * nc_hipert_boltzmann_get_PHIPHI_Cls: (virtual get_PHIPHI_Cls)
+ * @pb: a #NcHIPertBoltzmann.
+ * @Cls: a #NcmVector
+ *
+ * Prepares the #NcHIPertBoltzmann object.
+ *
+ */
+void
+nc_hipert_boltzmann_get_PHIPHI_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
+{
+  guint lmax = ncm_vector_len (Cls);
+  g_assert_cmpuint (lmax, >, 1);
+  lmax--;
+
+  if (!(pb->target_Cls & NC_DATA_CMB_TYPE_PHIPHI))
+    g_error ("nc_hipert_boltzmann_get_PHIPHI_Cls: PHIPHI was not calculated, include it on the targets.");
+  if (lmax > pb->PHIPHI_lmax)
+    g_error ("nc_hipert_boltzmann_get_PHIPHI_Cls: PHIPHI was calculated up to ell = %u, but ell = %u was requested.",
+             pb->PHIPHI_lmax, lmax);
+
+  NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->get_PHIPHI_Cls (pb, Cls);
 }
 
 /**

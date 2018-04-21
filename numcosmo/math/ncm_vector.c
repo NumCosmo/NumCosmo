@@ -412,13 +412,13 @@ ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size)
  * @size: number of components of the subvector
  *
  * This function returns a #NcmVector which is a subvector of the vector @cv.
- * The start of the new vector is the @k-th component from the original vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
  * The new vector has @size elements.
  *
  * Returns: (transfer full): A #NcmVector.
  */
 NcmVector *
-ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
+ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 {
   NcmVector *scv = g_object_new (NCM_TYPE_VECTOR, NULL);
 
@@ -426,6 +426,37 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
   g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
 
   scv->vv    = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
+  scv->type  = NCM_VECTOR_DERIVED;
+  scv->pdata = ncm_vector_ref (cv);
+  scv->pfree = (GDestroyNotify) &ncm_vector_free;
+
+  return scv;
+}
+
+/**
+ * ncm_vector_get_subvector_stride:
+ * @cv: a #NcmVector
+ * @k: component index of the original vector
+ * @size: number of components of the subvector
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ *
+ * This function returns a #NcmVector which is a subvector of the vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
+ * The new vector has @size elements.
+ *
+ * Returns: (transfer full): A #NcmVector.
+ */
+NcmVector *
+ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride)
+{
+  NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_data (cv), size, stride);
+  const gsize len = ncm_vector_len (cv);
+
+  g_assert_cmpuint (size,   >, 0);
+  g_assert_cmpuint (stride, >, 0);
+  
+  g_assert_cmpuint ((size - 1) * stride + k, <, len);
+
   scv->type  = NCM_VECTOR_DERIVED;
   scv->pdata = ncm_vector_ref (cv);
   scv->pfree = (GDestroyNotify) &ncm_vector_free;
@@ -898,6 +929,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  *
  * Gets the minimum/maximum value of the vector components.
  *
+ */
+/**
+ * ncm_vector_is_finite:
+ * @cv: a @NcmVector.
+ *
+ * Tests all entries, if one or more are not finite return FALSE.
+ * Otherwise returns TRUE;
+ * 
+ * Returns: whether all components of @cv are finite.
  */
 
 /**

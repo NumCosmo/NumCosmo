@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -137,8 +137,8 @@ Cls2_TE_a = Cls2_TE.dup_array ()
 Cls2_EE_a = Cls2_EE.dup_array ()
 Cls2_BB_a = Cls2_BB.dup_array ()
 
-ell    = np.array (range (2, lmax + 1))
-ell_BB = np.array (range (2, 31))
+ell    = np.array (list(range(2, lmax + 1)))
+ell_BB = np.array (list(range(2, 31)))
 
 Cls1_TT_a = ell * (ell + 1.0) * np.array (Cls1_TT_a[2:])
 Cls1_TE_a = ell * (ell + 1.0) * np.array (Cls1_TE_a[2:])
@@ -150,21 +150,21 @@ Cls2_TE_a = ell * (ell + 1.0) * np.array (Cls2_TE_a[2:])
 Cls2_EE_a = ell * (ell + 1.0) * np.array (Cls2_EE_a[2:])
 Cls2_BB_a = ell_BB * (ell_BB + 1.0) * np.array (Cls2_BB_a[2:])
 
-print "TT"
-print Cls1_TT_a[:28]
-print Cls2_TT_a[:28]
+print ("TT")
+print (Cls1_TT_a[:28])
+print (Cls2_TT_a[:28])
 
-print "TE"
-print Cls1_TE_a[:28]
-print Cls2_TE_a[:28]
+print ("TE")
+print (Cls1_TE_a[:28])
+print (Cls2_TE_a[:28])
 
-print "EE"
-print Cls1_EE_a[:28]
-print Cls2_EE_a[:28]
+print ("EE")
+print (Cls1_EE_a[:28])
+print (Cls2_EE_a[:28])
 
-print "BB"
-print Cls1_EE_a[:28]
-print Cls2_EE_a[:28]
+print ("BB")
+print (Cls1_EE_a[:28])
+print (Cls2_EE_a[:28])
 
 #
 #  Ploting the TT angular power spcetrum

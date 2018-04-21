@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -59,7 +59,7 @@ for si in s:
 s = sa
 n = len (s)
 
-print "# Number of points = %u" % (n)
+print ("# Number of points = %u" % (n))
 
 #
 # Creating a new Ncm.StatsDist1dEPDF object with

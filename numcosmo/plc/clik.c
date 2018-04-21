@@ -293,7 +293,7 @@ clik_get_check_param (clik_object *target, char* hdffilepath, double **chkp, dou
   if (hk == 1)
   {
     int npar;
-    double res,res2;
+    double res, res2;
     npar = clik_get_extra_parameter_names (target, NULL, err) + n_cl;
     _forwardError(*err,__LINE__,);
 

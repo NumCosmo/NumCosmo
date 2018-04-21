@@ -135,8 +135,13 @@
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
+#include <numcosmo/lss/nc_galaxy_redshift.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spec.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spline.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
+#include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>
+#include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -160,6 +165,7 @@
 #include <numcosmo/data/nc_data_cluster_poisson.h>
 #include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
+#include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 

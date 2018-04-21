@@ -48,8 +48,6 @@ G_DEFINE_ABSTRACT_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE);
 static void
 ncm_spline_cubic_init (NcmSplineCubic *sc)
 {
-	sc->init    = FALSE;
-
 	sc->b       = NULL;
 	sc->c       = NULL;
 	sc->d       = NULL;
@@ -57,6 +55,9 @@ ncm_spline_cubic_init (NcmSplineCubic *sc)
 	sc->g       = NULL;
 	sc->diag    = NULL;
 	sc->offdiag = NULL;
+
+	sc->init    = FALSE;
+	sc->len     = 0;
 }
 
 static void _ncm_spline_cubic_free (NcmSplineCubic *sc);
@@ -103,12 +104,12 @@ _ncm_spline_cubic_alloc (NcmSplineCubic *sc, gsize n)
 	sc->c = ncm_vector_new (n);
 	sc->d = ncm_vector_new (n);
 
-	sc->g = ncm_vector_new (n);
-	sc->diag = ncm_vector_new (n);
+	sc->g       = ncm_vector_new (n);
+	sc->diag    = ncm_vector_new (n);
 	sc->offdiag = ncm_vector_new (n);
 
 	sc->init = TRUE;
-	sc->len = n;
+	sc->len  = n;
 
 	return;
 }
@@ -118,19 +119,13 @@ _ncm_spline_cubic_free (NcmSplineCubic *sc)
 {
 	if (sc->init)
 	{
-		ncm_vector_free (sc->b);
-		ncm_vector_free (sc->c);
-		ncm_vector_free (sc->d);
-		sc->b = NULL;
-		sc->c = NULL;
-		sc->d = NULL;
+		ncm_vector_clear (&sc->b);
+		ncm_vector_clear (&sc->c);
+		ncm_vector_clear (&sc->d);
 
-		ncm_vector_free (sc->g);
-		ncm_vector_free (sc->diag);
-		ncm_vector_free (sc->offdiag);
-		sc->g = NULL;
-		sc->diag = NULL;
-		sc->offdiag = NULL;
+		ncm_vector_clear (&sc->g);
+		ncm_vector_clear (&sc->diag);
+		ncm_vector_clear (&sc->offdiag);
 
 		sc->init = FALSE;
 	}
@@ -141,16 +136,13 @@ _ncm_spline_cubic_reset (NcmSpline *s)
 {
 	NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
 
-	if (sc->init)
+	if (sc->len != s->len)
 	{
-		if (sc->len != s->len)
-		{
+		if (sc->init)
 			_ncm_spline_cubic_free (sc);
-			_ncm_spline_cubic_alloc (sc, s->len);
-		}
-	}
-	else
+		
 		_ncm_spline_cubic_alloc (sc, s->len);
+	}	
 }
 
 static gdouble
@@ -158,13 +150,12 @@ _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x)
 {
 	const NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
 	const size_t i = ncm_spline_get_index (s, x);
-
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
     const gdouble a_i  = ncm_vector_get (s->yv, i);
 		const gdouble b_i  = ncm_vector_fast_get (sc->b, i);
 		const gdouble c_i  = ncm_vector_fast_get (sc->c, i);
-		const gdouble d_i  = ncm_vector_fast_get (sc->d, i);
+		const gdouble d_i  = ncm_vector_fast_get (sc->d, i);		
 #ifdef HAVE_FMA
     return fma (fma (fma (d_i, delx, c_i), delx, b_i), delx, a_i);
 #else

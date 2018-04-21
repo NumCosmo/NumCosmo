@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -32,7 +32,7 @@ Ncm.cfg_init ()
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
 if len (sys.argv) != 3:
-  print "twofluids_wkb_mode.py mode_k w"
+  print ("twofluids_wkb_mode.py mode_k w")
   sys.exit (0)
 
 w      = float (sys.argv[2])
@@ -61,7 +61,7 @@ alpha_mode2sub  = pert.get_cross_time (cosmo, Nc.HIPertTwoFluidsCross.MODE2SUB, 
 alphai = alpha_mode1sub
 alphaf = +cosmo.abs_alpha (1.0e20)
 
-print "# Mode k = % 21.15g" % (mode_k)
+print ("# Mode k = % 21.15g" % (mode_k))
 
 pert.set_stiff_solver (False)
 
@@ -84,7 +84,7 @@ for alpha in np.linspace (alphai, alphaf, 10000):
   nu1_a.append (eom.nu1)
   nu2_a.append (eom.nu2)
 
-print "# Calculating mode 1, initial time % 20.15f [%8.2e]: " % (alphai, cosmo.x_alpha (alphai))
+print ("# Calculating mode 1, initial time % 20.15f [%8.2e]: " % (alphai, cosmo.x_alpha (alphai)))
 
 ci = Ncm.Vector.new (8)
 
@@ -109,12 +109,12 @@ for alpha in tqdm (alpha_a[1:]):
   Ps_S1.append     (math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     0.0*v.get (Nc.HIPertITwoFluidsVars.S_I))**2)
   Ps_Pzeta1.append (math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), 0.0*v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2)
   Ps_PS1.append    (math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    0.0*v.get (Nc.HIPertITwoFluidsVars.PS_I))**2)
-  print "norm = % 8.2e % 21.15f [%8.2e]" % (pert.get_state_mod () - 1.0, alpha, cosmo.x_alpha (alpha))
+  print ("norm = % 8.2e % 21.15f [%8.2e]" % (pert.get_state_mod () - 1.0, alpha, cosmo.x_alpha (alpha)))
 
 """
 alphai = alpha_mode2main 
 
-print "# Calculating mode 2, initial time % 20.15f [%8.2e]: " % (alphai, cosmo.x_alpha (alphai))
+print ("# Calculating mode 2, initial time % 20.15f [%8.2e]: " % (alphai, cosmo.x_alpha (alphai)))
 
 pert.get_init_cond_zetaS (cosmo, alphai, 2, 0.25 * math.pi, ci)
 pert.set_init_cond (cosmo, alphai, 2, False, ci)
@@ -172,10 +172,10 @@ Delta_Pzeta1 = mode_k**3 * Ps_Pzeta1.pop () / (2.0 * math.pi**2 * cosmo.RH_planc
 Delta_PS1    = mode_k**3 * Ps_PS1.pop () / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
 #Delta_PS2    = mode_k**3 * Ps_PS2.pop () / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
 
-#print "# Final values k= % 20.15g Ps_zeta1 = % 21.15e Ps_zeta2 = % 21.15e Ps_S1 = % 21.15e Ps_S2 = % 21.15e" % (mode_k, Delta_zeta1,  Delta_zeta2,  Delta_S1,  Delta_S2)
-#print "# Final values k= % 20.15g Ps_Pzeta1= % 21.15e Ps_Pzeta2= % 21.15e Ps_PS1= % 21.15e Ps_PS2= % 21.15e" % (mode_k, Delta_Pzeta1, Delta_Pzeta2, Delta_PS1, Delta_PS2)
-print "# Final values k= % 20.15g Ps_zeta1 = % 21.15e Ps_Pzeta1 = % 21.15e Ps_S1 = % 21.15e Ps_PS1 = % 21.15e" % (mode_k, Delta_zeta1,  Delta_Pzeta1,  Delta_S1,  Delta_PS1)
-#print "# Final values k= % 20.15g Ps_zeta2 = % 21.15e Ps_Pzeta2 = % 21.15e Ps_S2 = % 21.15e Ps_PS2 = % 21.15e" % (mode_k, Delta_zeta2,  Delta_Pzeta2,  Delta_S2,  Delta_PS2)
+#print ("# Final values k= % 20.15g Ps_zeta1 = % 21.15e Ps_zeta2 = % 21.15e Ps_S1 = % 21.15e Ps_S2 = % 21.15e" % (mode_k, Delta_zeta1,  Delta_zeta2,  Delta_S1,  Delta_S2))
+#print ("# Final values k= % 20.15g Ps_Pzeta1= % 21.15e Ps_Pzeta2= % 21.15e Ps_PS1= % 21.15e Ps_PS2= % 21.15e" % (mode_k, Delta_Pzeta1, Delta_Pzeta2, Delta_PS1, Delta_PS2))
+print ("# Final values k= % 20.15g Ps_zeta1 = % 21.15e Ps_Pzeta1 = % 21.15e Ps_S1 = % 21.15e Ps_PS1 = % 21.15e" % (mode_k, Delta_zeta1,  Delta_Pzeta1,  Delta_S1,  Delta_PS1))
+#print ("# Final values k= % 20.15g Ps_zeta2 = % 21.15e Ps_Pzeta2 = % 21.15e Ps_S2 = % 21.15e Ps_PS2 = % 21.15e" % (mode_k, Delta_zeta2,  Delta_Pzeta2,  Delta_S2,  Delta_PS2))
 
 plt.show ()
 plt.clf ()

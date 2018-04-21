@@ -31,6 +31,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
+#include <math.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -106,6 +107,7 @@ const NcmVector *ncm_vector_const_new_variant (GVariant *var);
 const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
+NcmVector *ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride);
 GVariant *ncm_vector_get_variant (const NcmVector *v);
 GVariant *ncm_vector_peek_variant (const NcmVector *v);
 
@@ -164,6 +166,8 @@ G_INLINE_FUNC gsize ncm_vector_get_max_index (const NcmVector *cv);
 G_INLINE_FUNC gsize ncm_vector_get_min_index (const NcmVector *cv);
 
 G_INLINE_FUNC void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+
+G_INLINE_FUNC gboolean ncm_vector_is_finite (const NcmVector *cv);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
@@ -378,9 +382,22 @@ G_INLINE_FUNC GArray *
 ncm_vector_dup_array (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
-  GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-  g_array_append_vals (a, ncm_vector_data (cv), len);
-  return a;
+  if (ncm_vector_stride (cv) == 1)
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	g_array_append_vals (a, ncm_vector_data (cv), len);
+	return a;
+  }
+  else
+  {
+	GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+	gint i;
+
+	g_array_set_size (a, len);
+	for (i = 0; i < len; i++)
+	  g_array_index (a, gdouble, i) = ncm_vector_get (cv, i);
+	return a;
+  }
 }
 
 G_INLINE_FUNC gdouble *
@@ -447,6 +464,20 @@ G_INLINE_FUNC void
 ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
 {
   gsl_vector_minmax (ncm_vector_const_gsl (cv), min, max);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_vector_is_finite (const NcmVector *cv)
+{
+	const guint len = ncm_vector_len (cv);
+	guint i;
+	for (i = 0; i < len; i++)
+	{
+		if (!isfinite (ncm_vector_get (cv, i)))
+			return FALSE;
+	}
+	
+	return TRUE;
 }
 
 G_END_DECLS

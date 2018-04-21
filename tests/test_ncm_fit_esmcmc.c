@@ -154,6 +154,8 @@ test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_rng_free, test->rng);
 }
 
+#define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
+
 void
 test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
@@ -171,12 +173,12 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
     NcmMatrix *cat_cov = NULL;
     ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
     ncm_matrix_norma_diag (data_cov, data_cov);
     ncm_matrix_norma_diag (cat_cov, cat_cov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
     if (FALSE)
     {
@@ -211,12 +213,12 @@ test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
     NcmMatrix *cat_cov = NULL;
     ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
     ncm_matrix_norma_diag (data_cov, data_cov);
     ncm_matrix_norma_diag (cat_cov, cat_cov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, TEST_NCM_FIT_ESMCMC_TOL);
     
     if (FALSE)
     {
@@ -258,7 +260,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
     ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
     ncm_mset_catalog_get_full_covar (test->esmcmc->mcat, &cat_fcov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
     ncm_matrix_norma_diag (cat_cov, cat_cov);
 
@@ -276,7 +278,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
       ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
       ncm_mset_catalog_get_full_covar (test->esmcmc->mcat, &cat_fcov);
       
-      g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
+      g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
     }      
     
     ncm_assert_cmpdouble_e (test->dim, ==, ncm_matrix_get (cat_fcov, 0, 0) * 0.5, 0.1, 0.0);

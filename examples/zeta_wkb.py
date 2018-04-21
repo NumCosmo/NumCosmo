@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 
 try:
   import gi
@@ -41,13 +41,13 @@ alphaf_wkb = pert.wkb_maxtime (cosmo, alpha_minf, -alphaf)
 alphai     = pert.wkb_maxtime_prec (cosmo, Nc.HIPertWKBCmp.POTENTIAL, wkb_prec, alpha_minf, -alphaf)
 alphai     = -cosmo.abs_alpha (cosmo.x_alpha (alphai) * 1.0)
 
-print "# Required precision ", pert.reltol
-print "# wkb ini = % 7.5e, ewkb ini = % 7.5e, wkb end = % 7.5e, end = % 7.5e" % (cosmo.x_alpha (alpha_minf), cosmo.x_alpha (alphai), cosmo.x_alpha (alphaf_wkb), cosmo.x_alpha (alphaf))
+print ("# Required precision ", pert.reltol)
+print ("# wkb ini = % 7.5e, ewkb ini = % 7.5e, wkb end = % 7.5e, end = % 7.5e" % (cosmo.x_alpha (alpha_minf), cosmo.x_alpha (alphai), cosmo.x_alpha (alphaf_wkb), cosmo.x_alpha (alphaf)))
 
 pert.prepare_wkb (cosmo, wkb_prec, alpha_minf, -alphaf)
 pert.set_stiff_solver (True)
 
-print "# WKB prepared"
+print ("# WKB prepared")
 
 pert.set_init_cond_wkb (cosmo, alphai)
 
@@ -56,9 +56,9 @@ for i in range (10000):
   pert.evolve (cosmo, alpha)
   (alphas, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta) = pert.get_values ()
   (wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta) = pert.wkb_zeta_Pzeta (cosmo, alphas)
-  #print alphas, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta, wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta
+  #print (alphas, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta, wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta)
   abs_zeta = math.hypot (Re_zeta, Im_zeta)
   abs_wkb_zeta = math.hypot (wkb_Re_zeta, wkb_Im_zeta)
-  print "%f %e %g %g %e %e" % (alphas, cosmo.x_alpha (alphas), abs_zeta, abs_wkb_zeta, abs ((abs_zeta - abs_wkb_zeta)/abs_zeta), abs ((Re_zeta - wkb_Re_zeta)/Re_zeta))
+  print ("%f %e %g %g %e %e" % (alphas, cosmo.x_alpha (alphas), abs_zeta, abs_wkb_zeta, abs ((abs_zeta - abs_wkb_zeta)/abs_zeta), abs ((Re_zeta - wkb_Re_zeta)/Re_zeta)))
 
 
