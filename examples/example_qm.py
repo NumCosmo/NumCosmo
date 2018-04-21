@@ -49,32 +49,35 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p = Ncm.QMProp.new ()
-l1                 = 500.0
+l1                 = 0.0
 H0                 = -1.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-11
 p.props.nknots     = 151
 p.props.noboundary = False
 p.set_property ("lambda", l1)
-s1 = int (p.props.nknots / 10)
-n1 = ceil (p.props.nknots / s1)
-offset = 5.0
+s1     = int (p.props.nknots / 10)
+n1     = ceil (p.props.nknots / s1)
+#offset = 5.0
+#center = (offset + 10.0)
+offset = 0.0
+center = 0.5
 
 print ("# ", n1, " ", s1)
 
-psi0 = Ncm.QMPropGauss.new (offset + 10.0, 1.0, 1.2, H0)
-#psi0 = Ncm.QMPropExp.new (3.0, 2.0, -1.0)
+psi0 = Ncm.QMPropGauss.new (center, 1.0, 1.0, H0)
+#psi0 = Ncm.QMPropExp.new (3.0, 1.0, H0)
 
 #print (psi0.eval (1.0))
 sim   = True
-tstep = 1.0e-3
+tstep = 9.0e-3
 tf    = 5.0
-xf    = offset + 15.01
-xfp   = offset + 20.0
-xi    = offset
+xf    = center + 5.01
+xfp   = center + 10.0
+xi    = offset * 0.0 
 dSdiv = xf
-p.set_init_cond_gauss (psi0, offset + 5.0, xf)
-#p.set_init_cond_exp (psi0, 0.0, xf)
+p.set_init_cond_gauss (psi0, 5.0e-1, xf)
+#p.set_init_cond_exp (psi0, 9.0e-2, xf)
 
 rho_s      = p.peek_rho_s ()
 q          = rho_s.get_xv ().dup_array ()
@@ -104,18 +107,18 @@ ax2.set_ylabel (r'$a(t)$')
 N = 4
 ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
 lines = []
-lines.append (ax.plot ([], [], label=r'$\sqrt{\psi^*\psi}$')[0])
-lines.append (ax.plot ([], [], label=r'$\mathrm{Re}(\psi)$')[0])
-lines.append (ax.plot ([], [], label=r'$\mathrm{Im}(\psi)$')[0])
-lines.append (ax.plot ([], [], label=r'$\partial_aS$')[0])
+lines.append (ax.plot ([], [], label=r'$\sqrt{\psi^*\psi}$', animated=True)[0])
+lines.append (ax.plot ([], [], label=r'$\mathrm{Re}(\psi)$', animated=True)[0])
+lines.append (ax.plot ([], [], label=r'$\mathrm{Im}(\psi)$', animated=True)[0])
+lines.append (ax.plot ([], [], label=r'$\partial_aS$', animated=True)[0])
 ax.legend (loc='best')
 
 fig.tight_layout()
 #lines = [ax.plot([], [])[0] for _ in range(N)]
 lines.append (ttl)
 
-lines.append (ax2.plot ([], [], 'bo', label=r'Bohm')[0])
-lines.append (ax2.plot ([], [], 'ro', label=r'$\langle a(t)\rangle$')[0])
+lines.append (ax2.plot ([], [], 'bo', label=r'Bohm', animated=True)[0])
+lines.append (ax2.plot ([], [], 'ro', label=r'$\langle a(t)\rangle$', animated=True)[0])
 ax2.legend (loc='best')
 
 ta   = [0.0]
@@ -139,8 +142,12 @@ def init():
   lines[4].set_text (None)
   lines[5].set_data ([], [])
   lines[6].set_data ([], [])
+
   for i in range (n1):
     lines[i + 7].set_data ([], [])
+
+  for p in lines:
+    p.set_visible (False)
 
   return lines
 
@@ -179,10 +186,15 @@ if not sim:
 
 def animate(i):
   tf = tstep * i
+
+  if (i == 1):
+    for pl in lines:
+      pl.set_visible (True)
+
   if sim:
     #p.evolve_spec (tf)
     p.evolve (tf)
-
+    
     rho_s = p.peek_rho_s ()
     q = rho_s.get_xv ().dup_array ()
     x = np.linspace (q[0], q[-1], 10000)
