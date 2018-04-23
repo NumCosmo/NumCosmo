@@ -38,6 +38,9 @@
 
 #include "math/ncm_cfg.h"
 #include "math/ncm_rng.h"
+#include "math/ncm_mpi_job.h"
+#include "math/ncm_mpi_job_test.h"
+#include "math/ncm_mpi_job_fit.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
@@ -248,9 +251,8 @@ void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 
 #ifdef HAVE_MPI
-static gint _ncm_mpi_rank = 0;
-static gint _ncm_mpi_size = 0;
 static void _ncm_cfg_mpi_main_loop (void);
+NcmMPIJobCtrl _mpi_ctrl;
 #endif /* HAVE_MPI */
 
 /**
@@ -323,6 +325,10 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
   ncm_cfg_register_obj (NCM_TYPE_MATRIX);
+
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_TEST);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FIT);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
@@ -502,17 +508,27 @@ ncm_cfg_init (void)
   {
     gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
     gint len = 0;
+
+		_mpi_ctrl.size           = 0;
+		_mpi_ctrl.rank           = 0;
+		_mpi_ctrl.nslaves        = 0;
+		_mpi_ctrl.working_slaves = 0;
     
-    MPI_Comm_size (MPI_COMM_WORLD, &_ncm_mpi_size);
-    MPI_Comm_rank (MPI_COMM_WORLD, &_ncm_mpi_rank);
+    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
+    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
     MPI_Get_processor_name (mpi_hostname, &len);
 
-    /*printf ("We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _ncm_mpi_size, _ncm_mpi_rank, mpi_hostname);*/
+    /*printf ("[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);*/
 
-    if (_ncm_mpi_rank > 0)
+    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     {
       _ncm_cfg_mpi_main_loop ();
     }
+		else
+		{
+			_mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
+			_mpi_ctrl.working_slaves = 0;
+		}
   }
 #endif /* HAVE_MPI */
   return;
@@ -526,7 +542,7 @@ static void
 _ncm_cfg_mpi_main_loop (void)
 {
   GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
-  /*printf ("#[%d %d] Starting slave !\n", _ncm_mpi_size, _ncm_mpi_rank);*/
+  /*printf ("#[%d %d] Starting slave !\n", _mpi_ctrl.size, _mpi_ctrl.rank);*/
 
   g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, NULL);
   
@@ -541,13 +557,207 @@ _ncm_cfg_mpi_main_loop (void)
 static gboolean 
 _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 {
-  guint cmd = 0;
-  MPI_Request irreq;
-  /*printf ("#[%d %d] Waiting for command...\n", _ncm_mpi_size, _ncm_mpi_rank);*/
-  MPI_Irecv (&cmd, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &irreq);
-  /*printf ("#[%d %d] Recevied %d\n", _ncm_mpi_size, _ncm_mpi_rank, cmd);*/
-  
-  return TRUE;
+	NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+	NcmMPIJob *mpi_job       = NULL;
+	gboolean init            = FALSE;
+	GArray *input_array      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+	GArray *work_ret_request = g_array_new (FALSE, FALSE, sizeof (MPI_Request));
+	GArray *work_ret_status  = g_array_new (FALSE, FALSE, sizeof (MPI_Status));
+	NcmVector *input_vec     = NULL;
+
+	while (TRUE)
+	{
+		gboolean end  = FALSE;
+		gint cmd      = 0;
+		MPI_Status status;
+
+		/*printf ("#[%3d %3d] Waiting for command...\n", _mpi_ctrl.size, _mpi_ctrl.rank);*/
+
+		MPI_Recv (&cmd, 1, MPI_INT, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD, &status);
+
+		/*printf ("#[%3d %3d] Received %d\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);*/
+
+		switch (cmd)
+		{
+			case NCM_MPI_CTRL_SLAVE_INIT:
+			{
+				GVariant *job_ser = NULL;
+				gint job_size     = 0;
+				gint job_recv     = 0;
+				gchar *job        = NULL;
+
+				if (init)
+					g_error ("_ncm_cfg_mpi_cmd_handler: slave %d already initialized.", _mpi_ctrl.rank);
+
+				/*printf ("#[%3d %3d] Initializing slave.\n", _mpi_ctrl.size, _mpi_ctrl.rank);*/
+
+				MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
+				MPI_Get_count (&status, MPI_BYTE, &job_size);
+
+				job = g_new (gchar, job_size);
+				MPI_Recv (job, job_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
+				MPI_Get_count (&status, MPI_BYTE, &job_recv);
+
+				g_assert_cmpint (job_recv, ==, job_size);
+			
+				job_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), job, job_size, TRUE, g_free, job);
+
+				mpi_job = NCM_MPI_JOB (ncm_serialize_from_variant (ser, job_ser));
+
+				ncm_mpi_job_work_init (mpi_job);
+				input_vec = ncm_vector_new (ncm_mpi_job_get_input_vec_size (mpi_job));
+
+				g_assert (NCM_IS_MPI_JOB (mpi_job));
+
+				g_variant_unref (job_ser);
+				
+				init = TRUE;
+				break;
+			}
+			case NCM_MPI_CTRL_SLAVE_FREE:
+				ncm_mpi_job_clear (&mpi_job);
+				end = TRUE;
+				break;
+			case NCM_MPI_CTRL_SLAVE_WORK:
+			{
+				if (!init)
+				{
+					g_error ("_ncm_cfg_mpi_cmd_handler: uninitialized slave `%d' received work.", _mpi_ctrl.rank);
+				}
+				else
+				{
+					GVariant *input_ser = NULL;
+					GVariant *ret_ser   = NULL;
+					gint input_size     = 0;
+					gint ret_size       = 0;
+					gint input_recv     = 0;
+					gchar *input        = NULL;
+					const gchar *ret    = NULL;
+					GObject *input_obj  = NULL;
+					GObject *ret_obj    = NULL;
+					
+					MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+					MPI_Get_count (&status, MPI_BYTE, &input_size);
+
+					input = g_new (gchar, input_size);
+					MPI_Recv (input, input_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+					MPI_Get_count (&status, MPI_BYTE, &input_recv);
+
+					g_assert_cmpint (input_recv, ==, input_size);
+
+					input_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), input, input_size, TRUE, g_free, input);
+					input_obj = ncm_serialize_from_variant (ser, input_ser);
+					g_variant_unref (input_ser);
+
+					g_assert (G_IS_OBJECT (input_obj));
+
+					ret_obj = ncm_mpi_job_run (mpi_job, input_obj);
+					g_clear_object (&input_obj);
+
+					g_assert (G_IS_OBJECT (ret_obj));
+
+					ret_ser  = ncm_serialize_to_variant (ser, ret_obj);
+					ret_size = g_variant_get_size (ret_ser);
+					ret      = g_variant_get_data (ret_ser);
+
+					MPI_Send (ret, ret_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD);
+
+					g_variant_unref (ret_ser);
+				}
+				break;
+			}
+			case NCM_MPI_CTRL_SLAVE_WORK_VECTOR:
+			{
+				if (!init)
+				{
+					g_error ("_ncm_cfg_mpi_cmd_handler: uninitialized slave `%d' received work (vector).", _mpi_ctrl.rank);
+				}
+				else
+				{
+					NcmVector *input = NULL;
+					NcmVector *ret   = NULL;
+					gint input_size  = 0;
+					gint input_recv  = 0;
+					MPI_Request wr_request;
+					MPI_Status wr_status;
+
+					if (FALSE)
+					{
+						MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+						MPI_Get_count (&status, MPI_DOUBLE, &input_size);
+
+						g_array_set_size (input_array, input_size);
+						input = ncm_vector_new_array (input_array);
+
+						MPI_Recv (ncm_vector_data (input), input_size, MPI_DOUBLE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+						MPI_Get_count (&status, MPI_DOUBLE, &input_recv);
+
+						g_assert_cmpint (input_recv, ==, input_size);
+
+						ret = ncm_mpi_job_run_vector (mpi_job, input);
+						ncm_vector_clear (&input);
+					}
+					else
+					{
+						input_size = ncm_vector_len (input_vec);
+						MPI_Recv (ncm_vector_data (input_vec), input_size, MPI_DOUBLE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+						MPI_Get_count (&status, MPI_DOUBLE, &input_recv);
+						
+						g_assert_cmpint (input_recv, ==, input_size);
+						ret = ncm_mpi_job_run_vector (mpi_job, input_vec);
+					}
+
+					g_assert (NCM_IS_VECTOR (ret));
+
+					/*printf ("#[%3d %3d] Returning %d doubles!\n", _mpi_ctrl.size, _mpi_ctrl.rank, ncm_vector_len (ret));*/
+					
+					MPI_Isend (ncm_vector_data (ret), ncm_vector_len (ret), MPI_DOUBLE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
+					g_array_append_val (work_ret_request, wr_request);
+					g_array_append_val (work_ret_status,  wr_status);
+				}
+				break;
+			}
+			default:
+				g_error ("_ncm_cfg_mpi_cmd_handler: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
+				break;
+		}
+
+		if (work_ret_request->len > 0)
+		{
+			gint i;
+			/*printf ("#[%3d %3d] Testing %d sends:\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_status->len);*/
+			for (i = work_ret_status->len - 1; i >= 0; i--)
+			{
+				gint done = 0;
+				MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &g_array_index (work_ret_status, MPI_Status, i));
+				/*printf ("#[%3d %3d] Send %d is %s!\n", _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");*/
+				if (done)
+				{
+					g_array_remove_index_fast (work_ret_request, i);
+					g_array_remove_index_fast (work_ret_status, i);
+				}
+			}
+		}
+
+		/*printf ("#[%3d %3d] Finished command %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);*/
+
+		if (end)
+			break;
+	}
+
+	if (work_ret_request->len > 0)
+	{
+		MPI_Waitall (work_ret_request->len, (MPI_Request *)work_ret_request->data, (MPI_Status *)work_ret_status->data);
+	}
+
+	g_array_unref (input_array);
+	g_array_unref (work_ret_request);
+	g_array_unref (work_ret_status);
+
+	ncm_vector_clear (&input_vec);
+	ncm_mpi_job_clear (&mpi_job);
+
+	return TRUE;
 }
 
 #endif /* HAVE_MPI */

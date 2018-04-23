@@ -31,6 +31,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/math/ncm_mpi_job.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
@@ -60,6 +61,12 @@ void ncm_cfg_set_logfile (gchar *filename);
 void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 void ncm_cfg_logfile_flush_now (void);
+
+#ifdef NUMCOSMO_HAVE_MPI
+guint ncm_cfg_mpi_free_slaves (void);
+gint ncm_cfg_mpi_get_slave (void);
+void ncm_cfg_mpi_init_slave (gint slave, NcmMPIJob *mpi_job);
+#endif /* NUMCOSMO_HAVE_MPI */
 
 void ncm_message (const gchar *msg, ...) G_GNUC_PRINTF (1, 2);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);

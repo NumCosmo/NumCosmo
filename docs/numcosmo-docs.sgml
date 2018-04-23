@@ -36,6 +36,12 @@
       <xi:include href="xml/ncm_quaternion.xml"/>
     </section>
     <section>
+      <title>MPI Objects</title>
+      <xi:include href="xml/ncm_mpi_job.xml"/>      
+      <xi:include href="xml/ncm_mpi_job_test.xml"/>
+      <xi:include href="xml/ncm_mpi_job_fit.xml"/>
+    </section>
+    <section>
       <title>FFTLog</title>
       <xi:include href="xml/ncm_fftlog.xml"/>
       <xi:include href="xml/ncm_fftlog_sbessel_j.xml"/>

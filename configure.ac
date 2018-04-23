@@ -156,6 +156,8 @@ AX_PROG_FC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
 
 if test x$use_mpi != "xno"; then
   AC_DEFINE(HAVE_MPI,1,[Define if you have the MPI library.])
+  have_mpi_support="#define NUMCOSMO_HAVE_MPI 1"
+  AC_SUBST(have_mpi_support)
 fi
 
 AC_PROG_CC_C99
