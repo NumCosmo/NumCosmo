@@ -31,7 +31,7 @@
  * 
  * The projected surface mass density is [nc_wl_surface_mass_density_sigma()]  
  * \begin{equation}\label{eq:sigma}
- * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt(R^2 + \chi^2) \right), 
+ * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt{R^2 + \chi^2} \right), 
  * \end{equation} 
  * where $\rho(r)$ is the three-dimensional mass density profile (#NcDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a 
  * two-dimensional vector from the halo center. In particular, we consider a projection $\Sigma (R)$ onto the lens plane. 
