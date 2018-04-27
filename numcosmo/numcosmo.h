@@ -129,6 +129,9 @@
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
+#include <numcosmo/lss/nc_galaxy_redshift.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spec.h>
+#include <numcosmo/lss/nc_galaxy_redshift_spline.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 #include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>

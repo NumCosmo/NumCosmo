@@ -31,6 +31,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
+#include <math.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -165,6 +166,8 @@ G_INLINE_FUNC gsize ncm_vector_get_max_index (const NcmVector *cv);
 G_INLINE_FUNC gsize ncm_vector_get_min_index (const NcmVector *cv);
 
 G_INLINE_FUNC void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+
+G_INLINE_FUNC gboolean ncm_vector_is_finite (const NcmVector *cv);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
@@ -461,6 +464,20 @@ G_INLINE_FUNC void
 ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
 {
   gsl_vector_minmax (ncm_vector_const_gsl (cv), min, max);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_vector_is_finite (const NcmVector *cv)
+{
+	const guint len = ncm_vector_len (cv);
+	guint i;
+	for (i = 0; i < len; i++)
+	{
+		if (!isfinite (ncm_vector_get (cv, i)))
+			return FALSE;
+	}
+	
+	return TRUE;
 }
 
 G_END_DECLS

@@ -38,6 +38,7 @@ typedef struct _TestNcWLSurfaceMassDensity
   NcDensityProfile *dp;
   NcHICosmo *cosmo;
   gdouble R1, R2, R3;
+	gdouble zs, zl, zc;
 } TestNcWLSurfaceMassDensity;
 
 void test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
@@ -128,10 +129,10 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
-  nc_wl_surface_mass_density_set_zcluster (test->smd, 1.0);
-	nc_wl_surface_mass_density_set_zlens (test->smd, 1.0);
-	nc_wl_surface_mass_density_set_zsource (test->smd, 1.5);
-	
+  test->zc = 1.0;
+	test->zl = 1.0;
+	test->zs = 1.5;
+
   nc_distance_free (dist);
 }
 
@@ -142,11 +143,11 @@ test_nc_wl_surface_mass_density_sigma (TestNcWLSurfaceMassDensity *test, gconstp
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble sig1 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R1);
-  gdouble sig2 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R2);
-  gdouble sig3 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R3);
+  gdouble sig1 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R1, test->zc);
+  gdouble sig2 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R2, test->zc);
+  gdouble sig3 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R3, test->zc);
 
   ncm_assert_cmpdouble_e (sig1, ==, 6.349089e+14, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (sig2, ==, 5.241061e+14, 1.0e-5, 0.0);
@@ -160,11 +161,11 @@ test_nc_wl_surface_mass_density_sigma_mean (TestNcWLSurfaceMassDensity *test, gc
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble sig1 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R1);
-  gdouble sig2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R2);
-  gdouble sig3 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R3);
+  gdouble sig1 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R1, test->zc);
+  gdouble sig2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R2, test->zc);
+  gdouble sig3 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R3, test->zc);
 
   ncm_assert_cmpdouble_e (sig1, ==, 1.116721e+15, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (sig2, ==, 9.649405e+14, 1.0e-5, 0.0);
@@ -178,7 +179,7 @@ test_nc_wl_surface_mass_density_sigma_critical (TestNcWLSurfaceMassDensity *test
   NcHICosmo *cosmo            = test->cosmo;
   NcWLSurfaceMassDensity *smd = test->smd;
 		
-  gdouble sig_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo);
+  gdouble sig_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, test->zs, test->zl, test->zc);
   
   ncm_assert_cmpdouble_e (sig_crit, ==, 4.145043e+15, 1.0e-5, 0.0);
 
@@ -191,14 +192,14 @@ test_nc_wl_surface_mass_density_convergence (TestNcWLSurfaceMassDensity *test, g
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble k1 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R1);
-  gdouble k2 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R2);
-  gdouble k3 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R3);
+  gdouble k1 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
+  gdouble k2 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
+  gdouble k3 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R3, test->zs, test->zl, test->zc);
 
-  ncm_assert_cmpdouble_e (k1, ==, 0.153173057, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k2, ==, 0.126441657, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k1, ==, 0.153173057,   1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k2, ==, 0.126441657,   1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (k3, ==, 0.00044914867, 1.0e-5, 0.0);
 }
 
@@ -209,14 +210,14 @@ test_nc_wl_surface_mass_density_shear (TestNcWLSurfaceMassDensity *test, gconstp
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble k1 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R1);
-  gdouble k2 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R2);
-  gdouble k3 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R3);
+  gdouble k1 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
+  gdouble k2 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
+  gdouble k3 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R3, test->zs, test->zl, test->zc);
 
-  ncm_assert_cmpdouble_e (k1, ==, 0.1162381196, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k2, ==, 0.1063522168, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k1, ==, 0.1162381196,  1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k2, ==, 0.1063522168,  1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (k3, ==, 0.00211550005, 1.0e-5, 0.0);
 }
 
@@ -227,14 +228,14 @@ test_nc_wl_surface_mass_density_reduced_shear (TestNcWLSurfaceMassDensity *test,
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble k1 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R1);
-  gdouble k2 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R2);
-  gdouble k3 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R3);
+  gdouble k1 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
+  gdouble k2 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
+  gdouble k3 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R3, test->zs, test->zl, test->zc);
 
-  ncm_assert_cmpdouble_e (k1, ==, 0.137263133389, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k2, ==, 0.121745980289, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k1, ==, 0.137263133389,  1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k2, ==, 0.121745980289,  1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (k3, ==, 0.0021164506538, 1.0e-5, 0.0);
 }
 
@@ -245,13 +246,13 @@ test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensi
   NcDensityProfile *dp        = test->dp;
 	NcWLSurfaceMassDensity *smd = test->smd;
 		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->smd->zcluster);
+  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
 
-  gdouble k1 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R1);
-  gdouble k2 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R2);
-  gdouble k3 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R3);
+  gdouble k1 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
+  gdouble k2 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
+  gdouble k3 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R3, test->zs, test->zl, test->zc);
 
-  ncm_assert_cmpdouble_e (k1, ==, 0.03893883, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k2, ==, 0.0353109280915, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k1, ==, 0.03893883,        1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k2, ==, 0.0353109280915,   1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (k3, ==, 0.000674183293825, 1.0e-5, 0.0);
 }

@@ -37,6 +37,8 @@ G_BEGIN_DECLS
 gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size);
 gint ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda);
 gint ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda);
+gint ncm_lapack_dpotrs (gchar uplo, guint size, guint nrhs, gdouble *a, guint lda, gdouble *b, guint ldb);
+gint ncm_lapack_dposv (gchar uplo, guint size, guint nrhs, gdouble *a, guint lda, gdouble *b, guint ldb);
 
 GArray *ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
 gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);

@@ -48,6 +48,7 @@
       <xi:include href="xml/ncm_spline_gsl.xml"/>
       <xi:include href="xml/ncm_spline_cubic.xml"/>
       <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
+      <xi:include href="xml/ncm_spline_rbf.xml"/>
       <xi:include href="xml/ncm_spline_func.xml"/>
       <xi:include href="xml/ncm_ode_spline.xml"/>
     </section>
@@ -329,6 +330,12 @@
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
+    <section>
+      <title>Galaxy Redshift</title>
+      <xi:include href="xml/nc_galaxy_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_redshift_spec.xml"/>
+      <xi:include href="xml/nc_galaxy_redshift_spline.xml"/>
+    </section>	
     <section>
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>

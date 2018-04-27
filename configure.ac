@@ -579,6 +579,14 @@ if test "x$ac_cv_lib_arb_arb_set" != "x"; then
 fi
 
 dnl ***************************************************************************
+dnl Check for hdf5 support
+dnl ***************************************************************************
+AX_LIB_HDF5()
+AC_SUBST(HDF5_CFLAGS)
+AC_SUBST(HDF5_LDFLAGS)
+AC_SUBST(HDF5_LIBS)
+
+dnl ***************************************************************************
 dnl Check for fftw3
 dnl ***************************************************************************
 
@@ -1027,27 +1035,37 @@ echo "--------------------------------------------------------------------"
 if [ test "x$have_fftw3_support" != x ]; then
        echo "Building with FFTW3 support: ....................................YES"
 else
-       echo "Building  with FFTW3 support: ....................................NO"
+       echo "Building with FFTW3 support: .....................................NO"
        echo "        Requires FFTW3 (>= $FFTW3_REQUIRED_VERSION)"
 fi
        echo "Building with BLAS support: .....................................$blas_support"
 if [ test "x$have_lapack" != "xno" ]; then
        echo "Building with Lapack support: ...................................$lapack_support"
 else
-       echo "Building  with Lapack support: ...................................NO"
+       echo "Building with Lapack support: ....................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
 fi
 if [ test "x$have_cfitsio_support" != x ]; then
        echo "Building with cfitsio support: ..................................YES"
 else
-       echo "Building  with cfitsio support: ..................................NO"
+       echo "Building with cfitsio support: ...................................NO"
        echo "        Requires cfitsio - A FITS File Subroutine Library"
 fi
 if [ test "x$have_nlopt_support" != x ]; then
        echo "Building with nlopt support: ....................................YES"
 else
-       echo "Building  with nlopt support: ....................................NO"
+       echo "Building with nlopt support: .....................................NO"
        echo "        Requires nlopt - NonLinear OPTimization library"
+fi
+if [ test "x$with_hdf5" = xyes ]; then
+       echo "Building with HDF5 support: .....................................YES"
+else
+       echo "Building with HDF5 support: ......................................NO"
+fi
+if [ test "x$ac_cv_lib_arb_arb_set" = xyes ]; then
+       echo "Building with ARB support: ......................................YES"
+else
+       echo "Building with ARB support: .......................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"
