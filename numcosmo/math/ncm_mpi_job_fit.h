@@ -69,6 +69,7 @@ struct _NcmMPIJobFit
 typedef enum _NcmMPIJobFitType
 {
 	NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL = 0,
+	NCM_MPI_JOB_FIT_TYPE_RESAMPLE_FIT,
 	/* < private > */
 	NCM_MPI_JOB_FIT_TYPE_LEN, /*< skip >*/
 } NcmMPIJobFitType;

@@ -47,7 +47,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_HDF5

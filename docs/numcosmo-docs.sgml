@@ -396,7 +396,7 @@
     <xi:include href="xml/grid_one.xml"/>
     <xi:include href="xml/quadrature.xml"/>
     <xi:include href="xml/function_cache.xml"/>
-    <xi:include href="xml/memory_pool.xml"/>
+    <xi:include href="xml/ncm_memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>
   </chapter>
 

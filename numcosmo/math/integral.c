@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

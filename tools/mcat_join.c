@@ -48,7 +48,7 @@ main (gint argc, gchar *argv[])
     { NULL }
   };
 
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   
   context = g_option_context_new ("- join different compatible catalogs in a single one.");
   g_option_context_set_summary (context, "catalog join");

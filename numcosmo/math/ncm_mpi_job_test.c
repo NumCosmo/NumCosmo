@@ -47,7 +47,7 @@
 struct _NcmMPIJobTestPrivate
 {
 	NcmVector *vec;
-	GPtrArray *ret_array;
+	NcmVector *ret;
 	NcmRNG *rng;
 };
 
@@ -64,9 +64,9 @@ ncm_mpi_job_test_init (NcmMPIJobTest *mjt)
 {
 	NcmMPIJobTestPrivate * const self = mjt->priv = G_TYPE_INSTANCE_GET_PRIVATE (mjt, NCM_TYPE_MPI_JOB_TEST, NcmMPIJobTestPrivate);
 
-	self->vec       = NULL;
-	self->ret_array = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
-	self->rng       = ncm_rng_new (NULL);
+	self->vec = NULL;
+	self->ret = NULL;
+	self->rng = ncm_rng_new (NULL);
 
 	ncm_rng_set_random_seed (self->rng, FALSE);
 }
@@ -101,7 +101,6 @@ _ncm_mpi_job_test_get_property (GObject *object, guint prop_id, GValue *value, G
 	{
 		case PROP_VECTOR:
 			g_value_set_object (value, self->vec);
-			ncm_mpi_job_set_vec_sizes (NCM_MPI_JOB (object), 1, 1);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -116,8 +115,8 @@ _ncm_mpi_job_test_dispose (GObject *object)
 	NcmMPIJobTestPrivate * const self = mjt->priv;
 	
 	ncm_vector_clear (&self->vec);
+	ncm_vector_clear (&self->ret);
 	ncm_rng_clear (&self->rng);
-	g_clear_pointer (&self->ret_array, g_ptr_array_unref);
 
 	/* Chain up : end */
 	G_OBJECT_CLASS (ncm_mpi_job_test_parent_class)->dispose (object);
@@ -131,8 +130,28 @@ _ncm_mpi_job_test_finalize (GObject *object)
 	G_OBJECT_CLASS (ncm_mpi_job_test_parent_class)->finalize (object);
 }
 
-static GObject *_ncm_mpi_job_test_run (NcmMPIJob *mpi_job, GObject *input);
-static NcmVector *_ncm_mpi_job_test_run_vector (NcmMPIJob *mpi_job, NcmVector *input);
+static MPI_Datatype _ncm_mpi_job_test_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static MPI_Datatype _ncm_mpi_job_test_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+
+static gpointer _ncm_mpi_job_test_create_input (NcmMPIJob *mpi_job);
+static gpointer _ncm_mpi_job_test_create_return (NcmMPIJob *mpi_job);
+
+static void _ncm_mpi_job_test_destroy_input (NcmMPIJob *mpi_job, gpointer input);
+static void _ncm_mpi_job_test_destroy_return (NcmMPIJob *mpi_job, gpointer ret);
+
+static gpointer _ncm_mpi_job_test_get_input_buffer (NcmMPIJob *mpi_job, gpointer input);
+static gpointer _ncm_mpi_job_test_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret);
+
+static void _ncm_mpi_job_test_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf);
+static void _ncm_mpi_job_test_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf);
+
+static gpointer _ncm_mpi_job_test_pack_input (NcmMPIJob *mpi_job, gpointer input);
+static gpointer _ncm_mpi_job_test_pack_return (NcmMPIJob *mpi_job, gpointer ret);
+
+static void _ncm_mpi_job_test_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input);
+static void _ncm_mpi_job_test_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret);
+
+static void _ncm_mpi_job_test_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
 
 static void
 ncm_mpi_job_test_class_init (NcmMPIJobTestClass *klass)
@@ -155,37 +174,134 @@ ncm_mpi_job_test_class_init (NcmMPIJobTestClass *klass)
 	                                                      NCM_TYPE_VECTOR,
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	mpi_job_class->run        = &_ncm_mpi_job_test_run;
-	mpi_job_class->run_vector = &_ncm_mpi_job_test_run_vector;
+	mpi_job_class->input_datatype        = &_ncm_mpi_job_test_input_datatype;
+	mpi_job_class->return_datatype       = &_ncm_mpi_job_test_return_datatype;
+	
+	mpi_job_class->create_input          = &_ncm_mpi_job_test_create_input;
+	mpi_job_class->create_return         = &_ncm_mpi_job_test_create_return;
+
+	mpi_job_class->destroy_input         = &_ncm_mpi_job_test_destroy_input;
+	mpi_job_class->destroy_return        = &_ncm_mpi_job_test_destroy_return;
+
+	mpi_job_class->get_input_buffer      = &_ncm_mpi_job_test_get_input_buffer;
+	mpi_job_class->get_return_buffer     = &_ncm_mpi_job_test_get_return_buffer;
+	
+	mpi_job_class->destroy_input_buffer  = &_ncm_mpi_job_test_destroy_input_buffer;
+	mpi_job_class->destroy_return_buffer = &_ncm_mpi_job_test_destroy_return_buffer;
+	
+	mpi_job_class->pack_input            = &_ncm_mpi_job_test_pack_input;
+	mpi_job_class->pack_return           = &_ncm_mpi_job_test_pack_return;
+	
+	mpi_job_class->unpack_input          = &_ncm_mpi_job_test_unpack_input;
+	mpi_job_class->unpack_return         = &_ncm_mpi_job_test_unpack_return;
+
+	mpi_job_class->run                   = &_ncm_mpi_job_test_run;
 }
 
-static GObject *
-_ncm_mpi_job_test_run (NcmMPIJob *mpi_job, GObject *input)
+static MPI_Datatype 
+_ncm_mpi_job_test_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
-	return G_OBJECT (_ncm_mpi_job_test_run_vector (mpi_job, NCM_VECTOR (input)));
+	len[0]  = 1;
+	size[0] = sizeof (gdouble);
+	return MPI_DOUBLE;
 }
 
-static NcmVector *
-_ncm_mpi_job_test_run_vector (NcmMPIJob *mpi_job, NcmVector *input)
+static MPI_Datatype 
+_ncm_mpi_job_test_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
+{
+	len[0]  = 1;
+	size[0] = sizeof (gdouble);
+	return MPI_DOUBLE;
+}
+
+static gpointer 
+_ncm_mpi_job_test_create_input (NcmMPIJob *mpi_job)
+{
+	return ncm_vector_new (1);
+}
+
+static gpointer 
+_ncm_mpi_job_test_create_return (NcmMPIJob *mpi_job)
+{
+	return ncm_vector_new (1);
+}
+
+static void 
+_ncm_mpi_job_test_destroy_input (NcmMPIJob *mpi_job, gpointer input)
+{
+	ncm_vector_free (input);
+}
+
+static void 
+_ncm_mpi_job_test_destroy_return (NcmMPIJob *mpi_job, gpointer ret)
+{
+	ncm_vector_free (ret);
+}
+
+static gpointer 
+_ncm_mpi_job_test_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
+{
+	return ncm_vector_data (input);
+}
+
+static gpointer 
+_ncm_mpi_job_test_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
+{
+	return ncm_vector_data (ret);
+}
+
+static void 
+_ncm_mpi_job_test_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+}
+
+static void 
+_ncm_mpi_job_test_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+}
+
+static gpointer 
+_ncm_mpi_job_test_pack_input (NcmMPIJob *mpi_job, gpointer input)
+{
+	return ncm_vector_data (input);
+}
+
+static gpointer 
+_ncm_mpi_job_test_pack_return (NcmMPIJob *mpi_job, gpointer ret)
+{
+	return ncm_vector_data (ret);
+}
+
+static void 
+_ncm_mpi_job_test_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+}
+
+static void 
+_ncm_mpi_job_test_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+}
+
+void
+_ncm_mpi_job_test_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
 	g_assert_cmpuint  (ncm_vector_len (input), ==, 1);
 	{
 		NcmMPIJobTest *mjt = NCM_MPI_JOB_TEST (mpi_job);
 		NcmMPIJobTestPrivate * const self = mjt->priv;
-		
-		NcmVector *ret = ncm_vector_new (1);
 		guint index    = floor (ncm_vector_get (input, 0));
 
 		g_assert_cmpuint (index, <, ncm_vector_len (self->vec));
 
 		ncm_vector_set (ret, 0, ncm_vector_get (self->vec, index));
-		g_ptr_array_add (self->ret_array, ret);
 
 		/*printf ("# Received %.5u.\n", index);*/
-		//sleep (1 + gsl_rng_uniform_int (self->rng->r, 4));
+		sleep (0 + gsl_rng_uniform_int (self->rng->r, 2));
 		/*printf ("# Received %.5u done!\n", index);*/
-
-		return ret;
 	}
 }
 

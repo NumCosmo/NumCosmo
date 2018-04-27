@@ -141,7 +141,7 @@
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
-#include <numcosmo/math/memory_pool.h>
+#include <numcosmo/math/ncm_memory_pool.h>
 #include <numcosmo/math/mpq_tree.h>
 #include <numcosmo/math/integral.h>
 #include <numcosmo/math/poly.h>

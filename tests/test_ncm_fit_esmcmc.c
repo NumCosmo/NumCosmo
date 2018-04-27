@@ -55,7 +55,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_add ("/ncm/fit/esmcmc/run", TestNcmFitESMCMC, NULL,
@@ -166,12 +166,12 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run (test->esmcmc, run);
-  ncm_mset_catalog_trim (test->esmcmc->mcat, run * 0.1);
+  ncm_mset_catalog_trim (ncm_fit_esmcmc_peek_catalog (test->esmcmc), run * 0.1);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
   {
     NcmMatrix *cat_cov = NULL;
-    ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
+    ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
 
     g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
@@ -206,12 +206,12 @@ test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, 1.0e-2);
-  ncm_mset_catalog_trim (test->esmcmc->mcat, run * 0.1);
+  ncm_mset_catalog_trim (ncm_fit_esmcmc_peek_catalog (test->esmcmc), run * 0.1);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
   {
     NcmMatrix *cat_cov = NULL;
-    ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
+    ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
 
     g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
@@ -257,8 +257,8 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
     NcmMatrix *cat_cov  = NULL;
     NcmMatrix *cat_fcov = NULL;
 
-    ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
-    ncm_mset_catalog_get_full_covar (test->esmcmc->mcat, &cat_fcov);
+    ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
+    ncm_mset_catalog_get_full_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_fcov);
 
     g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
 
@@ -275,8 +275,8 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
       ncm_matrix_clear (&cat_cov);
       ncm_matrix_clear (&cat_fcov);
 
-      ncm_mset_catalog_get_covar (test->esmcmc->mcat, &cat_cov);
-      ncm_mset_catalog_get_full_covar (test->esmcmc->mcat, &cat_fcov);
+      ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
+      ncm_mset_catalog_get_full_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_fcov);
       
       g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
     }      
@@ -318,19 +318,19 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
-  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->esmcmc->mcat) / test->dim), <, 0.2);
+  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc)) / test->dim), <, 0.2);
 
   if (FALSE)
   {
     gdouble glnvol;
-    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->esmcmc->mcat));
-    printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (test->esmcmc->mcat, 0.6827, &glnvol));
+    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc)));
+    printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (ncm_fit_esmcmc_peek_catalog (test->esmcmc), 0.6827, &glnvol));
     printf ("% 22.15g\n", glnvol);  
   }
 
   {
     gdouble glnvol;
-    const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (test->esmcmc->mcat, 0.6827, &glnvol);
+    const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (ncm_fit_esmcmc_peek_catalog (test->esmcmc), 0.6827, &glnvol);
     ncm_assert_cmpdouble_e (lnevol, ==, glnvol, 0.5, 0.0);
   }
 }

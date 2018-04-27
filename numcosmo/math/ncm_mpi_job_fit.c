@@ -45,7 +45,6 @@ struct _NcmMPIJobFitPrivate
 {
 	NcmFit *fit;
   NcmMPIJobFitType job_type;
-	NcmVector *ret;
 };
 
 enum
@@ -64,7 +63,6 @@ ncm_mpi_job_fit_init (NcmMPIJobFit *mjfit)
 
 	self->fit      = NULL;
 	self->job_type = NCM_MPI_JOB_FIT_TYPE_LEN;
-	self->ret      = NULL;
 
 }
 
@@ -80,20 +78,11 @@ _ncm_mpi_job_fit_set_property (GObject *object, guint prop_id, const GValue *val
 		case PROP_FIT:
 			g_assert (self->fit == NULL);
 			self->fit = g_value_dup_object (value);
-			ncm_mpi_job_set_vec_sizes (NCM_MPI_JOB (object), 1, ncm_mset_fparam_len (self->fit->mset));
 			break;
 		case PROP_JOB_TYPE:
 			g_assert_cmpint (self->job_type, ==, NCM_MPI_JOB_FIT_TYPE_LEN);
 			self->job_type = g_value_get_enum (value);
-			switch (self->job_type)
-			{
-				case NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL:
-					self->ret = ncm_vector_new (1);
-					break;
-				default:
-					g_assert_not_reached ();
-					break;
-			}
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
@@ -141,8 +130,28 @@ _ncm_mpi_job_fit_finalize (GObject *object)
 	G_OBJECT_CLASS (ncm_mpi_job_fit_parent_class)->finalize (object);
 }
 
-static GObject *_ncm_mpi_job_fit_run (NcmMPIJob *mpi_job, GObject *input);
-static NcmVector *_ncm_mpi_job_fit_run_vector (NcmMPIJob *mpi_job, NcmVector *input);
+static MPI_Datatype _ncm_mpi_job_fit_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static MPI_Datatype _ncm_mpi_job_fit_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+
+static gpointer _ncm_mpi_job_fit_create_input (NcmMPIJob *mpi_job);
+static gpointer _ncm_mpi_job_fit_create_return (NcmMPIJob *mpi_job);
+
+static void _ncm_mpi_job_fit_destroy_input (NcmMPIJob *mpi_job, gpointer input);
+static void _ncm_mpi_job_fit_destroy_return (NcmMPIJob *mpi_job, gpointer ret);
+
+static gpointer _ncm_mpi_job_fit_get_input_buffer (NcmMPIJob *mpi_job, gpointer input);
+static gpointer _ncm_mpi_job_fit_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret);
+
+static void _ncm_mpi_job_fit_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf);
+static void _ncm_mpi_job_fit_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf);
+
+static gpointer _ncm_mpi_job_fit_pack_input (NcmMPIJob *mpi_job, gpointer input);
+static gpointer _ncm_mpi_job_fit_pack_return (NcmMPIJob *mpi_job, gpointer ret);
+
+static void _ncm_mpi_job_fit_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input);
+static void _ncm_mpi_job_fit_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret);
+
+static void _ncm_mpi_job_fit_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
 
 static void
 ncm_mpi_job_fit_class_init (NcmMPIJobFitClass *klass)
@@ -173,38 +182,139 @@ ncm_mpi_job_fit_class_init (NcmMPIJobFitClass *klass)
 	                                                    NCM_TYPE_MPI_JOB_FIT_TYPE, NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL,
 	                                                    G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 	
-	mpi_job_class->run        = &_ncm_mpi_job_fit_run;
-	mpi_job_class->run_vector = &_ncm_mpi_job_fit_run_vector;
+	mpi_job_class->input_datatype        = &_ncm_mpi_job_fit_input_datatype;
+	mpi_job_class->return_datatype       = &_ncm_mpi_job_fit_return_datatype;
+	
+	mpi_job_class->create_input          = &_ncm_mpi_job_fit_create_input;
+	mpi_job_class->create_return         = &_ncm_mpi_job_fit_create_return;
+
+	mpi_job_class->destroy_input         = &_ncm_mpi_job_fit_destroy_input;
+	mpi_job_class->destroy_return        = &_ncm_mpi_job_fit_destroy_return;
+
+	mpi_job_class->get_input_buffer      = &_ncm_mpi_job_fit_get_input_buffer;
+	mpi_job_class->get_return_buffer     = &_ncm_mpi_job_fit_get_return_buffer;
+	
+	mpi_job_class->destroy_input_buffer  = &_ncm_mpi_job_fit_destroy_input_buffer;
+	mpi_job_class->destroy_return_buffer = &_ncm_mpi_job_fit_destroy_return_buffer;
+	
+	mpi_job_class->pack_input            = &_ncm_mpi_job_fit_pack_input;
+	mpi_job_class->pack_return           = &_ncm_mpi_job_fit_pack_return;
+	
+	mpi_job_class->unpack_input          = &_ncm_mpi_job_fit_unpack_input;
+	mpi_job_class->unpack_return         = &_ncm_mpi_job_fit_unpack_return;
+
+	mpi_job_class->run                   = &_ncm_mpi_job_fit_run;
 }
 
-static GObject *
-_ncm_mpi_job_fit_run (NcmMPIJob *mpi_job, GObject *input)
+static MPI_Datatype 
+_ncm_mpi_job_fit_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
-	return G_OBJECT (_ncm_mpi_job_fit_run_vector (mpi_job, NCM_VECTOR (input)));
+	NcmMPIJobFit *mjfit = NCM_MPI_JOB_FIT (mpi_job);
+	NcmMPIJobFitPrivate * const self = mjfit->priv;
+	len[0]  = ncm_mset_fparam_len (self->fit->mset);
+	size[0] = sizeof (gdouble) * len[0];
+	return MPI_DOUBLE;
 }
 
-static NcmVector *
-_ncm_mpi_job_fit_run_vector (NcmMPIJob *mpi_job, NcmVector *input)
+static MPI_Datatype 
+_ncm_mpi_job_fit_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
-	g_assert_cmpuint  (ncm_vector_len (input), ==, 1);
+	len[0]  = 1;
+	size[0] = sizeof (gdouble);
+	return MPI_DOUBLE;
+}
+
+static gpointer 
+_ncm_mpi_job_fit_create_input (NcmMPIJob *mpi_job)
+{
+	NcmMPIJobFit *mjfit = NCM_MPI_JOB_FIT (mpi_job);
+	NcmMPIJobFitPrivate * const self = mjfit->priv;
+	return ncm_vector_new (ncm_mset_fparam_len (self->fit->mset));
+}
+
+static gpointer 
+_ncm_mpi_job_fit_create_return (NcmMPIJob *mpi_job)
+{
+	return ncm_vector_new (1);
+}
+
+static void 
+_ncm_mpi_job_fit_destroy_input (NcmMPIJob *mpi_job, gpointer input)
+{
+	ncm_vector_free (input);
+}
+
+static void 
+_ncm_mpi_job_fit_destroy_return (NcmMPIJob *mpi_job, gpointer ret)
+{
+	ncm_vector_free (ret);
+}
+
+static gpointer 
+_ncm_mpi_job_fit_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
+{
+	return ncm_vector_data (input);
+}
+
+static gpointer 
+_ncm_mpi_job_fit_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
+{
+	return ncm_vector_data (ret);
+}
+
+static void 
+_ncm_mpi_job_fit_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+}
+
+static void 
+_ncm_mpi_job_fit_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+}
+
+static gpointer 
+_ncm_mpi_job_fit_pack_input (NcmMPIJob *mpi_job, gpointer input)
+{
+	return ncm_vector_data (input);
+}
+
+static gpointer 
+_ncm_mpi_job_fit_pack_return (NcmMPIJob *mpi_job, gpointer ret)
+{
+	return ncm_vector_data (ret);
+}
+
+static void 
+_ncm_mpi_job_fit_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+}
+
+static void 
+_ncm_mpi_job_fit_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
+{
+	g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+}
+
+static void
+_ncm_mpi_job_fit_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
+{
+	NcmMPIJobFit *mjt = NCM_MPI_JOB_FIT (mpi_job);
+	NcmMPIJobFitPrivate * const self = mjt->priv;
+	
+	switch (self->job_type)
 	{
-		NcmMPIJobFit *mjt = NCM_MPI_JOB_FIT (mpi_job);
-		NcmMPIJobFitPrivate * const self = mjt->priv;
-
-		switch (self->job_type)
+		case NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL:
 		{
-			case NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL:
-			{
-				ncm_fit_params_set_vector (self->fit, input);
-				ncm_fit_m2lnL_val (self->fit, ncm_vector_ptr (self->ret, 0));
-				return self->ret;
-				break;
-			}
-			default:
-				g_assert_not_reached ();
-				break;
+			ncm_fit_params_set_vector (self->fit, input);
+			ncm_fit_m2lnL_val (self->fit, ncm_vector_ptr (ret, 0));
+			break;
 		}
-		return NULL;
+		default:
+			g_assert_not_reached ();
+			break;
 	}
 }
 

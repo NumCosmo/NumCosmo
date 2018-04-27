@@ -1,5 +1,5 @@
 /***************************************************************************
- *            memory_pool.c
+ *            ncm_memory_pool.c
  *
  *  Wed June 15 18:53:30 2011
  *  Copyright  2011 Sandro Dias Pinto Vitenti
@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:memory_pool
+ * SECTION:ncm_memory_pool
  * @title: NcmMemoryPool
  * @short_description: Generic memory pool.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,7 +36,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 
 /**
  * ncm_memory_pool_new: (skip)
@@ -54,8 +55,10 @@ NcmMemoryPool *
 ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free)
 {
   NcmMemoryPool *mp = g_slice_new (NcmMemoryPool);
-  g_mutex_init (&mp->update);
+
+	g_mutex_init (&mp->update);
   g_cond_init (&mp->finish);
+	
   mp->slices_in_use = 0;
   mp->slices        = g_ptr_array_new ();
   mp->alloc         = mp_alloc;
