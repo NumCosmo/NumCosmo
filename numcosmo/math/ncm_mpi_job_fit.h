@@ -59,24 +59,9 @@ struct _NcmMPIJobFit
 	NcmMPIJobFitPrivate *priv;
 };
 
-/**
- * NcmMPIJobFitType:
- * @NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL: computes $-2\ln(L)$.
- * 
- * #NcmMPIJobFit job types.
- * 
- */ 
-typedef enum _NcmMPIJobFitType
-{
-	NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL = 0,
-	NCM_MPI_JOB_FIT_TYPE_RESAMPLE_FIT,
-	/* < private > */
-	NCM_MPI_JOB_FIT_TYPE_LEN, /*< skip >*/
-} NcmMPIJobFitType;
-
 GType ncm_mpi_job_fit_get_type (void) G_GNUC_CONST;
 
-NcmMPIJobFit *ncm_mpi_job_fit_new (NcmFit *fit, NcmMPIJobFitType job_type);
+NcmMPIJobFit *ncm_mpi_job_fit_new (NcmFit *fit, NcmObjArray *func_oa);
 NcmMPIJobFit *ncm_mpi_job_fit_ref (NcmMPIJobFit *mjfit);
 
 void ncm_mpi_job_fit_free (NcmMPIJobFit *mjfit);

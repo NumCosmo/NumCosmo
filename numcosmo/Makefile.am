@@ -66,6 +66,7 @@ ncm_sources = \
 	math/ncm_mpi_job.c                   \
 	math/ncm_mpi_job_test.c              \
 	math/ncm_mpi_job_fit.c               \
+	math/ncm_mpi_job_mcmc.c              \
 	math/ncm_util.c                      \
 	math/ncm_diff.c                      \
 	math/ncm_timer.c                     \
@@ -182,6 +183,7 @@ ncm_headers =                                \
 	math/ncm_mpi_job.h                   \
 	math/ncm_mpi_job_test.h              \
 	math/ncm_mpi_job_fit.h               \
+	math/ncm_mpi_job_mcmc.h              \
 	math/ncm_util.h                      \
 	math/ncm_diff.h                      \
 	math/ncm_timer.h                     \

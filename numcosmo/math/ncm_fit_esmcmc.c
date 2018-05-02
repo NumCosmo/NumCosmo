@@ -42,7 +42,7 @@
 #include "math/ncm_func_eval.h"
 #include "math/ncm_timer.h"
 #include "math/ncm_memory_pool.h"
-#include "math/ncm_mpi_job_fit.h"
+#include "math/ncm_mpi_job_mcmc.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -73,8 +73,8 @@ struct _NcmFitESMCMCPrivate
   NcmVector *jumps;
   GArray *accepted;
   GArray *offboard;
-  NcmObjArray *funcs_oa;
-  gchar *funcs_oa_file;
+  NcmObjArray *func_oa;
+  gchar *func_oa_file;
   guint nadd_vals;
   guint fparam_len;
   guint nthreads;
@@ -108,7 +108,7 @@ enum
   PROP_NTHREADS,
   PROP_USE_MPI,
   PROP_DATA_FILE,
-  PROP_FUNCS_ARRAY,
+  PROP_FUNC_ARRAY,
 };
 
 G_DEFINE_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT);
@@ -157,8 +157,8 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->accepted        = g_array_new (TRUE, TRUE, sizeof (gboolean));
   self->offboard        = g_array_new (TRUE, TRUE, sizeof (gboolean));
 
-  self->funcs_oa        = NULL;
-  self->funcs_oa_file   = NULL;
+  self->func_oa         = NULL;
+  self->func_oa_file    = NULL;
   
   self->nthreads        = 0;
   self->use_mpi         = FALSE;
@@ -189,7 +189,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
     g_assert_cmpint (self->nwalkers, >, 0);
     self->fparam_len = ncm_mset_fparam_len (self->fit->mset);
     {
-      const guint nfuncs    = (self->funcs_oa != NULL) ? self->funcs_oa->len : 0;
+      const guint nfuncs    = (self->func_oa != NULL) ? self->func_oa->len : 0;
       const guint nadd_vals = self->nadd_vals = nfuncs + 1;
       const guint theta_len = self->fparam_len + nadd_vals;
 
@@ -203,7 +203,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
 
         for (k = 0; k < nfuncs; k++)
         {
-          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->funcs_oa, k));
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, k));
           g_assert (NCM_IS_MSET_FUNC (func));
 
           names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
@@ -306,15 +306,16 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_DATA_FILE:
       ncm_fit_esmcmc_set_data_file (esmcmc, g_value_get_string (value));
       break;
-    case PROP_FUNCS_ARRAY:
+    case PROP_FUNC_ARRAY:
     {
-      self->funcs_oa = g_value_dup_boxed (value);
-      if (self->funcs_oa != NULL)
+			ncm_obj_array_clear (&self->func_oa);
+      self->func_oa = g_value_dup_boxed (value);
+      if (self->func_oa != NULL)
       {
         guint i;
-        for (i = 0; i < self->funcs_oa->len; i++)
+        for (i = 0; i < self->func_oa->len; i++)
         {
-          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->funcs_oa, i));
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
           g_assert (NCM_IS_MSET_FUNC (func));
           g_assert (ncm_mset_func_is_scalar (func));
           g_assert (ncm_mset_func_is_const (func));
@@ -376,8 +377,8 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (self->mcat));
       break;
-    case PROP_FUNCS_ARRAY:
-      g_value_set_boxed (value, self->funcs_oa);
+    case PROP_FUNC_ARRAY:
+      g_value_set_boxed (value, self->func_oa);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -401,9 +402,9 @@ _ncm_fit_esmcmc_dispose (GObject *object)
 
   ncm_vector_clear (&self->jumps);
 
-  ncm_obj_array_clear (&self->funcs_oa);
+  ncm_obj_array_clear (&self->func_oa);
 
-  g_clear_pointer (&self->funcs_oa_file, g_free);
+  g_clear_pointer (&self->func_oa_file, g_free);
   
   g_clear_pointer (&self->m2lnL, g_ptr_array_unref);
   g_clear_pointer (&self->theta, g_ptr_array_unref);
@@ -547,8 +548,8 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_FUNCS_ARRAY,
-                                   g_param_spec_boxed ("functions-array",
+                                   PROP_FUNC_ARRAY,
+                                   g_param_spec_boxed ("function-array",
                                                        NULL,
                                                        "Functions array",
                                                        NCM_TYPE_OBJ_ARRAY,
@@ -574,8 +575,8 @@ _ncm_fit_esmcmc_worker_dup (gpointer userdata)
     
     fw->fit = ncm_fit_dup (self->fit, self->ser);
 
-    if (self->funcs_oa != NULL)
-      fw->funcs_array = ncm_obj_array_dup (self->funcs_oa, self->ser);    
+    if (self->func_oa != NULL)
+      fw->funcs_array = ncm_obj_array_dup (self->func_oa, self->ser);    
     else
       fw->funcs_array = NULL;
 
@@ -606,7 +607,7 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
   self->fit = ncm_fit_ref (fit);
 
 	g_assert (self->mj == NULL);
-	self->mj = NCM_MPI_JOB (ncm_mpi_job_fit_new (fit, NCM_MPI_JOB_FIT_TYPE_M2LNL_VAL));
+	self->mj = NCM_MPI_JOB (ncm_mpi_job_mcmc_new (fit, self->func_oa));
 }
 
 /**
@@ -652,11 +653,11 @@ ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sa
 {
   NcmFitESMCMC *esmcmc = g_object_new (NCM_TYPE_FIT_ESMCMC, 
                                        "fit", fit,
-                                       "nwalkers",        nwalkers,
-                                       "sampler",         sampler,
-                                       "walker",          walker,
-                                       "mtype",           mtype,
-                                       "functions-array", funcs_array,
+                                       "nwalkers",       nwalkers,
+                                       "sampler",        sampler,
+                                       "walker",         walker,
+                                       "mtype",          mtype,
+                                       "function-array", funcs_array,
                                        NULL);
   return esmcmc;
 }
@@ -724,14 +725,14 @@ ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
 
   ncm_mset_catalog_set_file (self->mcat, filename);
 
-  if (self->funcs_oa != NULL)
+  if (self->func_oa != NULL)
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     gchar *base_name      = ncm_util_basename_fits (filename);
-    self->funcs_oa_file = g_strdup_printf ("%s.oa", base_name);
+    self->func_oa_file = g_strdup_printf ("%s.oa", base_name);
     g_free (base_name); 
 
-    ncm_obj_array_save (self->funcs_oa, ser, self->funcs_oa_file, TRUE);
+    ncm_obj_array_save (self->func_oa, ser, self->func_oa_file, TRUE);
 
     ncm_serialize_free (ser);
   }

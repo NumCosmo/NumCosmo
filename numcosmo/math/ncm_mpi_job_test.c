@@ -300,7 +300,8 @@ _ncm_mpi_job_test_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 		ncm_vector_set (ret, 0, ncm_vector_get (self->vec, index));
 
 		/*printf ("# Received %.5u.\n", index);*/
-		sleep (0 + gsl_rng_uniform_int (self->rng->r, 2));
+		/*sleep (0 + gsl_rng_uniform_int (self->rng->r, 2));*/
+		sleep (1);
 		/*printf ("# Received %.5u done!\n", index);*/
 	}
 }
