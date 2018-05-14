@@ -1,13 +1,13 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
- *            ncm_qm_prop.c
+ *            nc_hiqg_1d.c
  *
  *  Thu February 15 14:44:56 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * ncm_qm_prop.c
+ * nc_hiqg_1d.c
  * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
  */
 
 /**
- * SECTION:ncm_qm_prop
- * @title: NcmQMProp
- * @short_description: Numerical QM propagator object
+ * SECTION:nc_hiqg_1d
+ * @title: NcHIQG1D
+ * @short_description: Minisuperspace 1D quantum gravity models
  *
  * FIXME
  *
@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_qm_prop.h"
+#include "nc_hiqg_1d.h"
 #include "math/ncm_matrix.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
@@ -89,7 +89,7 @@
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmQMPropPrivate
+struct _NcHIQG1DPrivate
 {
   gdouble lambda;
   gdouble acs_a;
@@ -186,14 +186,14 @@ enum
   PROP_NOBOUNDARY,
 };
 
-G_DEFINE_TYPE (NcmQMProp, ncm_qm_prop, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcmQMPropGauss, ncm_qm_prop_gauss, ncm_qm_prop_gauss_dup, ncm_qm_prop_gauss_free);
-G_DEFINE_BOXED_TYPE (NcmQMPropExp,   ncm_qm_prop_exp,   ncm_qm_prop_exp_dup,   ncm_qm_prop_exp_free);
+G_DEFINE_TYPE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
+G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
 
 static void
-ncm_qm_prop_init (NcmQMProp *qm_prop)
+nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv = G_TYPE_INSTANCE_GET_PRIVATE (qm_prop, NCM_TYPE_QM_PROP, NcmQMPropPrivate);
+  NcHIQG1DPrivate * const self = qg1d->priv = G_TYPE_INSTANCE_GET_PRIVATE (qg1d, NC_TYPE_HIQG_1D, NcHIQG1DPrivate);
 
   self->lambda  = 0.0;
   self->acs_a   = 0.0;
@@ -290,11 +290,11 @@ ncm_qm_prop_init (NcmQMProp *qm_prop)
 
 
 static void
-_ncm_qm_prop_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (object);
-  NcmQMPropPrivate * const self = qm_prop->priv;
-  g_return_if_fail (NCM_IS_QM_PROP (object));
+  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  g_return_if_fail (NC_IS_HIQG_1D (object));
 
   switch (prop_id)
   {
@@ -314,7 +314,7 @@ _ncm_qm_prop_set_property (GObject *object, guint prop_id, const GValue *value, 
       self->reltol = g_value_get_double (value);
       break;
     case PROP_NKNOTS:
-      ncm_qm_prop_set_nknots (qm_prop, g_value_get_uint (value));
+      nc_hiqg_1d_set_nknots (qg1d, g_value_get_uint (value));
       break;
     case PROP_NOBOUNDARY:
       self->noboundary = g_value_get_boolean (value);
@@ -326,11 +326,11 @@ _ncm_qm_prop_set_property (GObject *object, guint prop_id, const GValue *value, 
 }
 
 static void
-_ncm_qm_prop_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_hiqg_1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (object);
-  NcmQMPropPrivate * const self = qm_prop->priv;
-  g_return_if_fail (NCM_IS_QM_PROP (object));
+  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  g_return_if_fail (NC_IS_HIQG_1D (object));
 
   switch (prop_id)
   {
@@ -347,7 +347,7 @@ _ncm_qm_prop_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_double (value, self->reltol);
       break;
     case PROP_NKNOTS:
-      g_value_set_uint (value, ncm_qm_prop_get_nknots (qm_prop));
+      g_value_set_uint (value, nc_hiqg_1d_get_nknots (qg1d));
       break;
     case PROP_NOBOUNDARY:
       g_value_set_boolean (value, self->noboundary);
@@ -359,10 +359,10 @@ _ncm_qm_prop_get_property (GObject *object, guint prop_id, GValue *value, GParam
 }
 
 static void
-_ncm_qm_prop_dispose (GObject *object)
+_nc_hiqg_1d_dispose (GObject *object)
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (object);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1DPrivate * const self = qg1d->priv;
 
   g_clear_pointer (&self->nodes,   g_free);
   g_clear_pointer (&self->weights, g_free);
@@ -436,14 +436,14 @@ _ncm_qm_prop_dispose (GObject *object)
   g_clear_pointer (&self->yBohm, N_VDestroy);
 
   /* Chain up : end */
-  G_OBJECT_CLASS (ncm_qm_prop_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_hiqg_1d_parent_class)->dispose (object);
 }
 
 static void
-_ncm_qm_prop_finalize (GObject *object)
+_nc_hiqg_1d_finalize (GObject *object)
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (object);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1DPrivate * const self = qg1d->priv;
 
 #if HAVE_SUNDIALS_MAJOR == 3
   if (self->arkode != NULL)
@@ -461,20 +461,20 @@ _ncm_qm_prop_finalize (GObject *object)
   g_clear_pointer (&self->dht, gsl_dht_free);
   
   /* Chain up : end */
-  G_OBJECT_CLASS (ncm_qm_prop_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_hiqg_1d_parent_class)->finalize (object);
 }
 
 static void
-ncm_qm_prop_class_init (NcmQMPropClass *klass)
+nc_hiqg_1d_class_init (NcHIQG1DClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (NcmQMPropPrivate));
+  g_type_class_add_private (klass, sizeof (NcHIQG1DPrivate));
 
-  object_class->set_property = &_ncm_qm_prop_set_property;
-  object_class->get_property = &_ncm_qm_prop_get_property;
-  object_class->dispose      = &_ncm_qm_prop_dispose;
-  object_class->finalize     = &_ncm_qm_prop_finalize;
+  object_class->set_property = &_nc_hiqg_1d_set_property;
+  object_class->get_property = &_nc_hiqg_1d_get_property;
+  object_class->dispose      = &_nc_hiqg_1d_dispose;
+  object_class->finalize     = &_nc_hiqg_1d_finalize;
   
   g_object_class_install_property (object_class,
                                    PROP_LAMBDA,
@@ -522,7 +522,7 @@ ncm_qm_prop_class_init (NcmQMPropClass *klass)
 }
 
 /**
- * ncm_qm_prop_gauss_new:
+ * nc_hiqg_1d_gauss_new:
  * @mean: gaussian mean
  * @alpha: power-law 
  * @sigma: Gaussian width 
@@ -530,12 +530,12 @@ ncm_qm_prop_class_init (NcmQMPropClass *klass)
  * 
  * Creates a new Gaussian wave function.
  * 
- * Returns: (transfer full): a new #NcmQMPropGauss
+ * Returns: (transfer full): a new #NcHIQG1DGauss
  */
-NcmQMPropGauss *
-ncm_qm_prop_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi)
+NcHIQG1DGauss *
+nc_hiqg_1d_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi)
 {
-  NcmQMPropGauss *qm_gauss = g_new (NcmQMPropGauss, 1);
+  NcHIQG1DGauss *qm_gauss = g_new (NcHIQG1DGauss, 1);
 
   qm_gauss->mean  = mean;
   qm_gauss->alpha = alpha;
@@ -570,38 +570,38 @@ ncm_qm_prop_gauss_new (const gdouble mean, const gdouble alpha, const gdouble si
 }
 
 /**
- * ncm_qm_prop_gauss_dup:
- * @qm_gauss: a #NcmQMPropGauss
+ * nc_hiqg_1d_gauss_dup:
+ * @qm_gauss: a #NcHIQG1DGauss
  * 
  * Duplicates @qm_gauss.
  * 
  * Returns: (transfer full): a duplicate of @qm_gauss.
  */
-NcmQMPropGauss *
-ncm_qm_prop_gauss_dup (NcmQMPropGauss *qm_gauss)
+NcHIQG1DGauss *
+nc_hiqg_1d_gauss_dup (NcHIQG1DGauss *qm_gauss)
 {
-  NcmQMPropGauss *qm_gauss_dup = g_new (NcmQMPropGauss, 1);
+  NcHIQG1DGauss *qm_gauss_dup = g_new (NcHIQG1DGauss, 1);
   qm_gauss_dup[0] = qm_gauss[0];
 
   return qm_gauss_dup;
 }
 
 /**
- * ncm_qm_prop_gauss_free:
- * @qm_gauss: a #NcmQMPropGauss
+ * nc_hiqg_1d_gauss_free:
+ * @qm_gauss: a #NcHIQG1DGauss
  * 
  * Frees @qm_gauss.
  * 
  */
 void 
-ncm_qm_prop_gauss_free (NcmQMPropGauss *qm_gauss)
+nc_hiqg_1d_gauss_free (NcHIQG1DGauss *qm_gauss)
 {
   g_free (qm_gauss);
 }
 
 /**
- * ncm_qm_prop_gauss_eval:
- * @qm_gauss: a #NcmQMPropGauss
+ * nc_hiqg_1d_gauss_eval:
+ * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi$
  * 
@@ -609,7 +609,7 @@ ncm_qm_prop_gauss_free (NcmQMPropGauss *qm_gauss)
  * 
  */
 void 
-ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi)
+nc_hiqg_1d_gauss_eval (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
 {  
   const gdouble lnx     = log (x);
   const gdouble xmean   = x - qm_gauss->mean;
@@ -622,8 +622,8 @@ ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi)
 }
 
 /**
- * ncm_qm_prop_gauss_eval_hermit:
- * @qm_gauss: a #NcmQMPropGauss
+ * nc_hiqg_1d_gauss_eval_hermit:
+ * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi$
  * 
@@ -631,7 +631,7 @@ ncm_qm_prop_gauss_eval (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi)
  * 
  */
 void 
-ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *psi)
+nc_hiqg_1d_gauss_eval_hermit (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
 {  
   const gdouble xmean   = x - qm_gauss->mean;
   const gdouble xmean2  = xmean * xmean;
@@ -642,8 +642,8 @@ ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdoubl
 }
 
 /**
- * ncm_qm_prop_gauss_eval_lnRS:
- * @qm_gauss: a #NcmQMPropGauss
+ * nc_hiqg_1d_gauss_eval_lnRS:
+ * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
  * 
@@ -651,7 +651,7 @@ ncm_qm_prop_gauss_eval_hermit (NcmQMPropGauss *qm_gauss, const gdouble x, gdoubl
  * 
  */
 void 
-ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble *lnRS)
+nc_hiqg_1d_gauss_eval_lnRS (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *lnRS)
 {  
   const gdouble lnx     = log (x);
   const gdouble xmean   = x - qm_gauss->mean;
@@ -665,19 +665,19 @@ ncm_qm_prop_gauss_eval_lnRS (NcmQMPropGauss *qm_gauss, const gdouble x, gdouble 
 }
 
 /**
- * ncm_qm_prop_exp_new:
+ * nc_hiqg_1d_exp_new:
  * @n: power-law 
  * @V: Volume 
  * @pV: Volume momentum
  * 
  * Creates a new Exponential wave function.
  * 
- * Returns: (transfer full): a new #NcmQMPropExp
+ * Returns: (transfer full): a new #NcHIQG1DExp
  */
-NcmQMPropExp *
-ncm_qm_prop_exp_new (const gdouble n, const gdouble V, const gdouble pV)
+NcHIQG1DExp *
+nc_hiqg_1d_exp_new (const gdouble n, const gdouble V, const gdouble pV)
 {
-  NcmQMPropExp *qm_exp = g_new (NcmQMPropExp, 1);
+  NcHIQG1DExp *qm_exp = g_new (NcHIQG1DExp, 1);
 
   qm_exp->n  = n;
   qm_exp->V  = V;
@@ -695,38 +695,38 @@ ncm_qm_prop_exp_new (const gdouble n, const gdouble V, const gdouble pV)
 }
 
 /**
- * ncm_qm_prop_exp_dup:
- * @qm_exp: a #NcmQMPropExp
+ * nc_hiqg_1d_exp_dup:
+ * @qm_exp: a #NcHIQG1DExp
  * 
  * Duplicates @qm_exp.
  * 
  * Returns: (transfer full): a duplicate of @qm_exp.
  */
-NcmQMPropExp *
-ncm_qm_prop_exp_dup (NcmQMPropExp *qm_exp)
+NcHIQG1DExp *
+nc_hiqg_1d_exp_dup (NcHIQG1DExp *qm_exp)
 {
-  NcmQMPropExp *qm_exp_dup = g_new (NcmQMPropExp, 1);
+  NcHIQG1DExp *qm_exp_dup = g_new (NcHIQG1DExp, 1);
   qm_exp_dup[0] = qm_exp[0];
 
   return qm_exp_dup;
 }
 
 /**
- * ncm_qm_prop_exp_free:
- * @qm_exp: a #NcmQMPropExp
+ * nc_hiqg_1d_exp_free:
+ * @qm_exp: a #NcHIQG1DExp
  * 
  * Frees @qm_exp.
  * 
  */
 void 
-ncm_qm_prop_exp_free (NcmQMPropExp *qm_exp)
+nc_hiqg_1d_exp_free (NcHIQG1DExp *qm_exp)
 {
   g_free (qm_exp);
 }
 
 /**
- * ncm_qm_prop_exp_eval:
- * @qm_exp: a #NcmQMPropExp
+ * nc_hiqg_1d_exp_eval:
+ * @qm_exp: a #NcHIQG1DExp
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $psi$
  * 
@@ -734,7 +734,7 @@ ncm_qm_prop_exp_free (NcmQMPropExp *qm_exp)
  * 
  */
 void 
-ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi)
+nc_hiqg_1d_exp_eval (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *psi)
 {  
   const gdouble xV      = x / qm_exp->V;
   const gdouble lnxV    = log (xV);
@@ -745,8 +745,8 @@ ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi)
 }
 
 /**
- * ncm_qm_prop_exp_eval_lnRS:
- * @qm_exp: a #NcmQMPropExp
+ * nc_hiqg_1d_exp_eval_lnRS:
+ * @qm_exp: a #NcHIQG1DExp
  * @x: the point where to evaluate $\psi(x)$
  * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
  * 
@@ -754,7 +754,7 @@ ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi)
  * 
  */
 void 
-ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS)
+nc_hiqg_1d_exp_eval_lnRS (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *lnRS)
 {  
   const gdouble xV   = x / qm_exp->V;
   const gdouble lnxV = log (xV);
@@ -766,92 +766,92 @@ ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS)
 }
 
 /**
- * ncm_qm_prop_new:
+ * nc_hiqg_1d_new:
  * 
- * Creates a new #NcmQMProp object.
+ * Creates a new #NcHIQG1D object.
  * 
- * Returns: (transfer full): a new #NcmQMProp.
+ * Returns: (transfer full): a new #NcHIQG1D.
  */
-NcmQMProp *
-ncm_qm_prop_new (void)
+NcHIQG1D *
+nc_hiqg_1d_new (void)
 {
-  NcmQMProp *qm_prop = g_object_new (NCM_TYPE_QM_PROP,
-                                     NULL);
-  return qm_prop;
+  NcHIQG1D *qg1d = g_object_new (NC_TYPE_HIQG_1D,
+                                 NULL);
+  return qg1d;
 }
 
 /**
- * ncm_qm_prop_new_full:
+ * nc_hiqg_1d_new_full:
  * @nknots: number of knots
  * @lambda: $\lambda$
  * 
- * Creates a new #NcmQMProp object.
+ * Creates a new #NcHIQG1D object.
  * 
- * Returns: (transfer full): a new #NcmQMProp.
+ * Returns: (transfer full): a new #NcHIQG1D.
  */
-NcmQMProp *
-ncm_qm_prop_new_full (guint nknots, gdouble lambda)
+NcHIQG1D *
+nc_hiqg_1d_new_full (guint nknots, gdouble lambda)
 {
-  NcmQMProp *qm_prop = g_object_new (NCM_TYPE_QM_PROP,
-                                     "nknots", nknots,
-                                     "lambda", lambda,
-                                     NULL);
-  return qm_prop;
+  NcHIQG1D *qg1d = g_object_new (NC_TYPE_HIQG_1D,
+                                 "nknots", nknots,
+                                 "lambda", lambda,
+                                  NULL);
+  return qg1d;
 }
 
 /**
- * ncm_qm_prop_ref:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_ref:
+ * @qg1d: a #NcHIQG1D
  *
- * Increase the reference of @qm_prop by one.
+ * Increase the reference of @qg1d by one.
  *
- * Returns: (transfer full): @qm_prop.
+ * Returns: (transfer full): @qg1d.
  */
-NcmQMProp *
-ncm_qm_prop_ref (NcmQMProp *qm_prop)
+NcHIQG1D *
+nc_hiqg_1d_ref (NcHIQG1D *qg1d)
 {
-  return g_object_ref (qm_prop);
+  return g_object_ref (qg1d);
 }
 
 /**
- * ncm_qm_prop_free:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_free:
+ * @qg1d: a #NcHIQG1D
  *
- * Decrease the reference count of @qm_prop by one.
+ * Decrease the reference count of @qg1d by one.
  *
  */
 void
-ncm_qm_prop_free (NcmQMProp *qm_prop)
+nc_hiqg_1d_free (NcHIQG1D *qg1d)
 {
-  g_object_unref (qm_prop);
+  g_object_unref (qg1d);
 }
 
 /**
- * ncm_qm_prop_clear:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_clear:
+ * @qg1d: a #NcHIQG1D
  *
- * Decrease the reference count of @qm_prop by one, and sets the pointer *qm_prop to
+ * Decrease the reference count of @qg1d by one, and sets the pointer *qg1d to
  * NULL.
  *
  */
 void
-ncm_qm_prop_clear (NcmQMProp **qm_prop)
+nc_hiqg_1d_clear (NcHIQG1D **qg1d)
 {
-  g_clear_object (qm_prop);
+  g_clear_object (qg1d);
 }
 
 /**
- * ncm_qm_prop_set_nknots:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_set_nknots:
+ * @qg1d: a #NcHIQG1D
  * @nknots: number of knots
  *
  * Sets the initial number of knots to be used in the wave function mesh.
  * 
  */
 void 
-ncm_qm_prop_set_nknots (NcmQMProp *qm_prop, const guint nknots)
+nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   if (self->nknots != nknots)
   {
     if (self->nknots > 0)
@@ -896,22 +896,22 @@ ncm_qm_prop_set_nknots (NcmQMProp *qm_prop, const guint nknots)
 }
 
 /**
- * ncm_qm_prop_get_nknots:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_get_nknots:
+ * @qg1d: a #NcHIQG1D
  *
  * Gets the current number of knots used in the wave function mesh.
  * 
  * Returns: the current number of knots used in the wave function mesh.
  */
 guint 
-ncm_qm_prop_get_nknots (NcmQMProp *qm_prop)
+nc_hiqg_1d_get_nknots (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->nknots;
 }
 
 static gdouble 
-_ncm_qm_prop_Jnu (const gdouble nu, const gdouble z)
+_nc_hiqg_1d_Jnu (const gdouble nu, const gdouble z)
 {
   if (nu >= 0.0)
     return gsl_sf_bessel_Jnu (nu, z);
@@ -920,8 +920,8 @@ _ncm_qm_prop_Jnu (const gdouble nu, const gdouble z)
 }
 
 /**
- * ncm_qm_prop_eval:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval:
+ * @qg1d: a #NcHIQG1D
  * @t: time difference
  * @x: $x$ coordinate
  * @y: $y$ coordinate
@@ -931,13 +931,13 @@ _ncm_qm_prop_Jnu (const gdouble nu, const gdouble z)
  * 
  */
 void
-ncm_qm_prop_eval (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble t, gdouble *G)
+nc_hiqg_1d_eval (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble t, gdouble *G)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   const gdouble x2  = x * x;
   const gdouble y2  = y * y;
   const gdouble f1  = 0.5 * sqrt (x * y) / t;
-  const gdouble f2  = _ncm_qm_prop_Jnu (self->nu, 0.5 * x * y / t);
+  const gdouble f2  = _nc_hiqg_1d_Jnu (self->nu, 0.5 * x * y / t);
   complex double Gc = -I * f1 * f2 * cexp (I * (x2 + y2) * 0.25 / t - I * M_PI * 0.5 * self->nu);
 
   /*printf ("% 22.15g\n", f2);*/
@@ -947,8 +947,8 @@ ncm_qm_prop_eval (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gd
 }
 
 /**
- * ncm_qm_prop_eval_array:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_array:
+ * @qg1d: a #NcHIQG1D
  * @x: $x$ coordinate
  * @ya: $y$ coordinate
  * @n: number of elements 
@@ -959,9 +959,9 @@ ncm_qm_prop_eval (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gd
  * 
  */
 void
-ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, gsize n, const gdouble t, gdouble *G)
+nc_hiqg_1d_eval_array (NcHIQG1D *qg1d, const gdouble x, const gdouble *ya, gsize n, const gdouble t, gdouble *G)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   const gdouble x2   = x * x;
   complex double *Gc = (complex double *) G;
 
@@ -987,7 +987,7 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
 
       self->Jnu[i] = arf_get_d (arb_midref (acb_realref (res)), ARF_RND_NEAR);
 
-      /*printf ("% 22.15g % 22.15g\n", arg, _ncm_qm_prop_Jnu (self->nu, arg) / self->Jnu[i] - 1.0);*/
+      /*printf ("% 22.15g % 22.15g\n", arg, _nc_hiqg_1d_Jnu (self->nu, arg) / self->Jnu[i] - 1.0);*/
     }
 
     acb_clear (nu);
@@ -1010,7 +1010,7 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
     for (i = 0; i < n; i++)
     {
       const gdouble arg = 0.5 * x * ya[i] / t;
-      self->Jnu[i] = _ncm_qm_prop_Jnu (self->nu, arg);
+      self->Jnu[i] = _nc_hiqg_1d_Jnu (self->nu, arg);
     }
   }
   
@@ -1028,8 +1028,8 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
 }
 
 /**
- * ncm_qm_prop_gauss_ini:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_gauss_ini:
+ * @qg1d: a #NcHIQG1D
  * @mean: Gaussian mean
  * @alpha: power-law
  * @sigma: standard deviation
@@ -1039,11 +1039,11 @@ ncm_qm_prop_eval_array (NcmQMProp *qm_prop, const gdouble x, const gdouble *ya, 
  * 
  */
 void
-ncm_qm_prop_gauss_ini (NcmQMProp *qm_prop, const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi)
+nc_hiqg_1d_gauss_ini (NcHIQG1D *qg1d, const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi)
 {
 #ifdef HAVE_GSL_2_4
-  NcmQMPropPrivate * const self = qm_prop->priv;
-  NcmQMPropGauss *qm_gauss = ncm_qm_prop_gauss_new (mean, alpha, sigma, Hi);
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DGauss *qm_gauss = nc_hiqg_1d_gauss_new (mean, alpha, sigma, Hi);
 
   gsl_integration_fixed_workspace * ws = 
     gsl_integration_fixed_alloc (gsl_integration_fixed_hermite, self->np, 0.0, 0.25 / (sigma * sigma), alpha, 0.0);
@@ -1071,7 +1071,7 @@ ncm_qm_prop_gauss_ini (NcmQMProp *qm_prop, const gdouble mean, const gdouble alp
       const gdouble x = nodes[i];
       complex double psi0c;
 
-      ncm_qm_prop_gauss_eval_hermit (qm_gauss, x, (gdouble *)&psi0c);
+      nc_hiqg_1d_gauss_eval_hermit (qm_gauss, x, (gdouble *)&psi0c);
 
       self->nodes[self->n]   = x;
       self->weights[self->n] = psi0c * weights[i];
@@ -1081,26 +1081,26 @@ ncm_qm_prop_gauss_ini (NcmQMProp *qm_prop, const gdouble mean, const gdouble alp
     }
   }
 
-  ncm_qm_prop_gauss_free (qm_gauss);
+  nc_hiqg_1d_gauss_free (qm_gauss);
   gsl_integration_fixed_free (ws);
 #endif /* HAVE_GSL_2_4 */
 }
 
-typedef struct _NcmQMPropInt
+typedef struct _NcHIQG1DInt
 {
-  NcmQMProp *qm_prop;
-  NcmQMPropPrivate * const self;
+  NcHIQG1D *qg1d;
+  NcHIQG1DPrivate * const self;
   const gdouble t;
   const gdouble x;
   const gdouble alpha;
   const gdouble sigma;
   const gdouble Hi;
-} NcmQMPropInt;
+} NcHIQG1DInt;
 
 static gdouble 
-_ncm_qm_prop_propto_Re_integ (gpointer userdata, const gdouble y, const gdouble w)
+_nc_hiqg_1d_propto_Re_integ (gpointer userdata, const gdouble y, const gdouble w)
 {
-  NcmQMPropInt *integ   = (NcmQMPropInt *) userdata;
+  NcHIQG1DInt *integ   = (NcHIQG1DInt *) userdata;
   gint signp            = 0;
   const gdouble x       = integ->x;
   const gdouble t       = integ->t;
@@ -1116,7 +1116,7 @@ _ncm_qm_prop_propto_Re_integ (gpointer userdata, const gdouble y, const gdouble 
   const gdouble lng     = lgamma_r (ap12, &signp);
   complex double psi0   = cexp (f1 - ap12 * lnsigma + (alpha - 1.0) * lny - 0.5 * lng + 0.5 * y2 * I * Hi);
   const gdouble f2      = 0.5 * sqrt (x * y) / t;
-  complex double G      = -I * f2 *  _ncm_qm_prop_Jnu (integ->self->nu, 0.5 * x * y / t) * cexp (I * (x2 + y2) * 0.25 / t - I * M_PI * 0.5 * integ->self->nu); 
+  complex double G      = -I * f2 *  _nc_hiqg_1d_Jnu (integ->self->nu, 0.5 * x * y / t) * cexp (I * (x2 + y2) * 0.25 / t - I * M_PI * 0.5 * integ->self->nu); 
 
   /*printf ("% 22.15g % 22.15g % 22.15g\n", y, creal (psi0 * G), cimag (psi0 * G));*/
   
@@ -1124,9 +1124,9 @@ _ncm_qm_prop_propto_Re_integ (gpointer userdata, const gdouble y, const gdouble 
 }
 
 static gdouble 
-_ncm_qm_prop_propto_Im_integ (gpointer userdata, const gdouble y, const gdouble w)
+_nc_hiqg_1d_propto_Im_integ (gpointer userdata, const gdouble y, const gdouble w)
 {
-  NcmQMPropInt *integ   = (NcmQMPropInt *) userdata;
+  NcHIQG1DInt *integ   = (NcHIQG1DInt *) userdata;
   gint signp            = 0;
   const gdouble x       = integ->x;
   const gdouble t       = integ->t;
@@ -1142,14 +1142,14 @@ _ncm_qm_prop_propto_Im_integ (gpointer userdata, const gdouble y, const gdouble 
   const gdouble lng     = lgamma_r (ap12, &signp);
   complex double psi0   = cexp (f1 - ap12 * lnsigma + (alpha - 1.0) * lny - 0.5 * lng + 0.5 * y2 * I * Hi);
   const gdouble f2      = 0.5 * sqrt (x * y) / t;
-  complex double G      = -I * f2 *  _ncm_qm_prop_Jnu (integ->self->nu, 0.5 * x * y / t) * cexp (I * (x2 + y2) * 0.25 / t - I * M_PI * 0.5 * integ->self->nu); 
+  complex double G      = -I * f2 *  _nc_hiqg_1d_Jnu (integ->self->nu, 0.5 * x * y / t) * cexp (I * (x2 + y2) * 0.25 / t - I * M_PI * 0.5 * integ->self->nu); 
 
   return cimag (psi0 * G);
 }
 
 /**
- * ncm_qm_prop_propto:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_propto:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @t: FIXME
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $G$
@@ -1158,15 +1158,15 @@ _ncm_qm_prop_propto_Im_integ (gpointer userdata, const gdouble y, const gdouble 
  * 
  */
 void
-ncm_qm_prop_propto (NcmQMProp *qm_prop, const gdouble x, const gdouble t, gdouble *psi)
+nc_hiqg_1d_propto (NcHIQG1D *qg1d, const gdouble x, const gdouble t, gdouble *psi)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   complex double psic = 0.0;
   gint i;
 
   if (TRUE)
   {
-    ncm_qm_prop_eval_array (qm_prop, x, self->nodes, self->n, t, (gdouble *)self->G);
+    nc_hiqg_1d_eval_array (qg1d, x, self->nodes, self->n, t, (gdouble *)self->G);
 
     for (i = 0; i < self->n; i++)
     {
@@ -1182,14 +1182,14 @@ ncm_qm_prop_propto (NcmQMProp *qm_prop, const gdouble x, const gdouble t, gdoubl
     const gdouble alpha = 1.0;
     const gdouble sigma = 1.0;
     const gdouble Hi    = 1.0;
-    NcmQMPropInt integ = {qm_prop, self, t, x, alpha, sigma, Hi};
+    NcHIQG1DInt integ = {qg1d, self, t, x, alpha, sigma, Hi};
     gdouble err = 0.0;
     
     ncm_integral1d_clear (&self->Re_int);
     ncm_integral1d_clear (&self->Im_int);
 
-    self->Re_int = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&_ncm_qm_prop_propto_Re_integ, NULL));
-    self->Im_int = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&_ncm_qm_prop_propto_Im_integ, NULL));
+    self->Re_int = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&_nc_hiqg_1d_propto_Re_integ, NULL));
+    self->Im_int = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&_nc_hiqg_1d_propto_Im_integ, NULL));
 
     ncm_integral1d_set_reltol (self->Re_int, 1.0e-5);
     ncm_integral1d_set_reltol (self->Im_int, 1.0e-5);
@@ -1203,35 +1203,35 @@ ncm_qm_prop_propto (NcmQMProp *qm_prop, const gdouble x, const gdouble t, gdoubl
 }
 
 static gdouble 
-_ncm_qm_prop_propto_norm (const gdouble x, gpointer p)
+_nc_hiqg_1d_propto_norm (const gdouble x, gpointer p)
 {
-  NcmQMPropInt *integ = (NcmQMPropInt *) p;
+  NcHIQG1DInt *integ = (NcHIQG1DInt *) p;
   complex double psi;
 
-  ncm_qm_prop_propto (integ->qm_prop, x, integ->t, (gdouble *)&psi);
+  nc_hiqg_1d_propto (integ->qg1d, x, integ->t, (gdouble *)&psi);
 
   return creal (psi) * creal (psi) + cimag (psi) * cimag (psi);
 }
 
 /**
- * ncm_qm_prop_propto_norm:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_propto_norm:
+ * @qg1d: a #NcHIQG1D
  * @t: FIXME
  * 
  * Calculates the propagator at $G (x,\;y;\;t)$.
  * 
  */
 gdouble
-ncm_qm_prop_propto_norm (NcmQMProp *qm_prop, const gdouble t)
+nc_hiqg_1d_propto_norm (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
-  NcmQMPropInt integ = {qm_prop, self, t};
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DInt integ = {qg1d, self, t};
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gdouble result, abserr;
   gsl_function F;
 
   F.params   = &integ;
-  F.function = &_ncm_qm_prop_propto_norm;
+  F.function = &_nc_hiqg_1d_propto_norm;
 
   gsl_integration_qagiu (&F, 0.0, 1.0e-7, 1.0e-7, NCM_INTEGRAL_PARTITION, *w, &result, &abserr);
 
@@ -1240,16 +1240,16 @@ ncm_qm_prop_propto_norm (NcmQMProp *qm_prop, const gdouble t)
   return result;
 }
 
-typedef struct _NcmQMPropInitCond
+typedef struct _NcHIQG1DInitCond
 {
-  NcmQMPropPsi psi0_lnRS;
+  NcHIQG1DPsi psi0_lnRS;
   gpointer psi_data;
-} NcmQMPropInitCond;
+} NcHIQG1DInitCond;
 
 static gdouble
-_ncm_qm_prop_set_init_cond_real (gdouble x, gpointer p)
+_nc_hiqg_1d_set_init_cond_real (gdouble x, gpointer p)
 {
-  NcmQMPropInitCond *ic = (NcmQMPropInitCond *) p;
+  NcHIQG1DInitCond *ic = (NcHIQG1DInitCond *) p;
   gdouble lnRS[2];
 
   ic->psi0_lnRS (ic->psi_data, x, lnRS);
@@ -1258,9 +1258,9 @@ _ncm_qm_prop_set_init_cond_real (gdouble x, gpointer p)
 }
 
 static complex double
-_ncm_qm_prop_set_init_cond_complex (gdouble x, gpointer p)
+_nc_hiqg_1d_set_init_cond_complex (gdouble x, gpointer p)
 {
-  NcmQMPropInitCond *ic = (NcmQMPropInitCond *) p;
+  NcHIQG1DInitCond *ic = (NcHIQG1DInitCond *) p;
   gdouble lnRS[2];
 
   ic->psi0_lnRS (ic->psi_data, x, lnRS);
@@ -1268,14 +1268,14 @@ _ncm_qm_prop_set_init_cond_complex (gdouble x, gpointer p)
   return cexp (lnRS[0] + I * lnRS[1]);
 }
 
-void _ncm_qm_prop_init_solver (NcmQMProp *qm_prop);
-void _ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop);
-void _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic);
+void _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d);
+void _nc_hiqg_1d_spec_init_solver (NcHIQG1D *qg1d);
+void _nc_hiqg_1d_init_spec_solver (NcHIQG1D *qg1d, NcHIQG1DInitCond *ic);
 
 complex double
-_ncm_qm_prop_get_YN (NcmQMProp *qm_prop, const gdouble t)
+_nc_hiqg_1d_get_YN (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   if (self->YNp1->len == 0)
   {
     return 0.0;
@@ -1360,23 +1360,23 @@ _ncm_qm_prop_get_YN (NcmQMProp *qm_prop, const gdouble t)
 }
 
 gdouble
-_ncm_qm_prop_get_Re_YN (const gdouble t, gpointer qm_prop)
+_nc_hiqg_1d_get_Re_YN (const gdouble t, gpointer qg1d)
 {
-  /*printf ("% 22.15g % 22.15g\n", t, creal (_ncm_qm_prop_get_YN (qm_prop, t)));*/
-  return creal (_ncm_qm_prop_get_YN (qm_prop, t));
+  /*printf ("% 22.15g % 22.15g\n", t, creal (_nc_hiqg_1d_get_YN (qg1d, t)));*/
+  return creal (_nc_hiqg_1d_get_YN (qg1d, t));
 }
 
 gdouble
-_ncm_qm_prop_get_Im_YN (const gdouble t, gpointer qm_prop)
+_nc_hiqg_1d_get_Im_YN (const gdouble t, gpointer qg1d)
 {
-  return cimag (_ncm_qm_prop_get_YN (qm_prop, t));
+  return cimag (_nc_hiqg_1d_get_YN (qg1d, t));
 }
 
-static void _ncm_qm_prop_prepare_splines (NcmQMPropPrivate * const self, const gdouble t, NcmVector *knots, gdouble *Y);
+static void _nc_hiqg_1d_prepare_splines (NcHIQG1DPrivate * const self, const gdouble t, NcmVector *knots, gdouble *Y);
 
 /**
- * ncm_qm_prop_set_init_cond:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_set_init_cond:
+ * @qg1d: a #NcHIQG1D
  * @psi0_lnRS: (scope call): Initial wave-function in polar form
  * @psi_data: Initial wave-function data
  * @xi: initial point
@@ -1387,10 +1387,10 @@ static void _ncm_qm_prop_prepare_splines (NcmQMPropPrivate * const self, const g
  * 
  */
 void
-ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf)
+nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
-  NcmQMPropInitCond ic = {psi0_lnRS, psi_data};
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DInitCond ic = {psi0_lnRS, psi_data};
   gboolean use_spline  = FALSE;
   gsl_function F;
   gint i;
@@ -1406,7 +1406,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
   if (use_spline)
   {
     F.params   = &ic;
-    F.function = _ncm_qm_prop_set_init_cond_real;
+    F.function = _nc_hiqg_1d_set_init_cond_real;
     ncm_spline_set_func (self->psi0_s, NCM_SPLINE_FUNCTION_SPLINE, &F, xi, xf, 0, 1.0e-2/*self->reltol*/);
 
     self->knots  = ncm_spline_get_xv (self->psi0_s);
@@ -1521,7 +1521,7 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
     for (i = 0; i < self->nknots - 1; i++)
     {
       const gdouble x = ncm_vector_fast_get (self->knots, i);
-      Y[i] = _ncm_qm_prop_set_init_cond_complex (x, &ic);
+      Y[i] = _nc_hiqg_1d_set_init_cond_complex (x, &ic);
     }
 
     if (!self->noboundary)
@@ -1542,11 +1542,11 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
       self->bN         = +2.0 / (h * h) + self->lambda / gsl_pow_2 (xNm1);
       self->sqrt_aN_cN = sqrt (self->aN / self->cN);
 
-      Y[self->nknots - 1] = _ncm_qm_prop_set_init_cond_complex (xNm1, &ic);
+      Y[self->nknots - 1] = _nc_hiqg_1d_set_init_cond_complex (xNm1, &ic);
       
       while (TRUE)
       {
-        const complex double Yx = _ncm_qm_prop_set_init_cond_complex (x, &ic);
+        const complex double Yx = _nc_hiqg_1d_set_init_cond_complex (x, &ic);
         absY = cabs (Yx);
 
         if (absY > self->abstol)
@@ -1562,12 +1562,12 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
       {
         gsl_function F;
 
-        F.params   = qm_prop;
+        F.params   = qg1d;
         
-        F.function = &_ncm_qm_prop_get_Re_YN;
+        F.function = &_nc_hiqg_1d_get_Re_YN;
         ncm_spline_set_func (self->YNp1_Re_R, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, 10.0, 0, 1.0e-2);
 
-        F.function = &_ncm_qm_prop_get_Im_YN;
+        F.function = &_nc_hiqg_1d_get_Im_YN;
         ncm_spline_set_func (self->YNp1_Im_R, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, 10.0, 0, 1.0e-2);      
       }
     }
@@ -1592,59 +1592,59 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
       /*printf ("% 22.15g % 22.15g % 22.15g\n", Y[_XI (i, self->nknots)], Y[_LNRI (i, self->nknots)], Y[_SI (i, self->nknots)]);*/
     }
 
-    /* _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y); */
+    /* _nc_hiqg_1d_prepare_splines (self, self->ti, self->knots, Y); */
   }
 
   if (FALSE)
-    _ncm_qm_prop_init_spec_solver (qm_prop, &ic);
-  _ncm_qm_prop_init_solver (qm_prop);
+    _nc_hiqg_1d_init_spec_solver (qg1d, &ic);
+  _nc_hiqg_1d_init_solver (qg1d);
 }
 
 /**
- * ncm_qm_prop_set_init_cond_gauss:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_set_init_cond_gauss:
+ * @qg1d: a #NcHIQG1D
  * @qm_gauss: Initial wave-function data
  * @xi: initial point
  * @xf: final point
  * 
- * Sets the initial condition using @psi0 and ncm_qm_prop_gauss_eval(), 
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_gauss_eval(), 
  * it calculates the best mesh for the initial condition using the real 
  * part of @psi0.
  * 
  */
 void
-ncm_qm_prop_set_init_cond_gauss (NcmQMProp *qm_prop, NcmQMPropGauss *qm_gauss, const gdouble xi, const gdouble xf)
+nc_hiqg_1d_set_init_cond_gauss (NcHIQG1D *qg1d, NcHIQG1DGauss *qm_gauss, const gdouble xi, const gdouble xf)
 {
-  ncm_qm_prop_set_init_cond (qm_prop, (NcmQMPropPsi) &ncm_qm_prop_gauss_eval_lnRS, qm_gauss, xi, xf);
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_gauss_eval_lnRS, qm_gauss, xi, xf);
 }
 
 /**
- * ncm_qm_prop_set_init_cond_exp:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_set_init_cond_exp:
+ * @qg1d: a #NcHIQG1D
  * @qm_exp: Initial wave-function data
  * @xi: initial point
  * @xf: final point
  * 
- * Sets the initial condition using @psi0 and ncm_qm_prop_exp_eval(), 
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_exp_eval(), 
  * it calculates the best mesh for the initial condition using the real 
  * part of @psi0.
  * 
  */
 void
-ncm_qm_prop_set_init_cond_exp (NcmQMProp *qm_prop, NcmQMPropExp *qm_exp, const gdouble xi, const gdouble xf)
+nc_hiqg_1d_set_init_cond_exp (NcHIQG1D *qg1d, NcHIQG1DExp *qm_exp, const gdouble xi, const gdouble xf)
 {
-  ncm_qm_prop_set_init_cond (qm_prop, (NcmQMPropPsi) &ncm_qm_prop_exp_eval_lnRS, qm_exp, xi, xf);
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_exp_eval_lnRS, qm_exp, xi, xf);
 }
 
-static gint _ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
-static gint _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
-/*static gint _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);*/
+static gint _nc_hiqg_1d_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
+static gint _nc_hiqg_1d_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data);
+/*static gint _nc_hiqg_1d_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);*/
 
 void
-_ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
+_nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 {
 #if HAVE_SUNDIALS_MAJOR == 3
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   const gdouble t0 = 0.0;
   gint flag;
 
@@ -1656,10 +1656,10 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
   self->arkode = ARKodeCreate ();
   NCM_CVODE_CHECK (&self->arkode, "ARKodeCreate", 0, );
 
-  flag = ARKodeInit (self->arkode, &_ncm_qm_prop_f_expl, &_ncm_qm_prop_f_impl, t0, self->y);
+  flag = ARKodeInit (self->arkode, &_nc_hiqg_1d_f_expl, &_nc_hiqg_1d_f_impl, t0, self->y);
   NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-  flag = ARKodeSetUserData (self->arkode, (void *) qm_prop);
+  flag = ARKodeSetUserData (self->arkode, (void *) qg1d);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
   flag = ARKodeSetMaxNumSteps (self->arkode, 10000);
@@ -1696,7 +1696,7 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
     NCM_CVODE_CHECK (&flag, "ARKSpilsSetLinearSolver", 1, );
 
 /*
-     flag = ARKSpilsSetJacTimes (self->arkode, NULL, _ncm_qm_prop_J);
+     flag = ARKSpilsSetJacTimes (self->arkode, NULL, _nc_hiqg_1d_J);
      NCM_CVODE_CHECK (&flag, "ARKSpilsSetJacTimes", 1, );
 */
 
@@ -1729,9 +1729,9 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
 }
 
 void
-_ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
+_nc_hiqg_1d_init_spec_solver (NcHIQG1D *qg1d, NcHIQG1DInitCond *ic)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   complex double *Y = (complex double *) ncm_vector_data (self->spec_Y);
   gint i;
 
@@ -1766,7 +1766,7 @@ _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
   for (i = 0; i < self->nknots - 1; i++)
   {
     const gdouble x   = gsl_dht_x_sample (self->dht, i);
-    complex double Yi = _ncm_qm_prop_set_init_cond_complex (x, ic);
+    complex double Yi = _nc_hiqg_1d_set_init_cond_complex (x, ic);
     complex double Yn = Yi / sqrt (x);
 
     ncm_vector_fast_set (self->spec_knots, i + 1, x);
@@ -1779,12 +1779,12 @@ _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
   gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ReY), ncm_vector_data (self->specReW));
   gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ImY), ncm_vector_data (self->specImW));
 
-  /*_ncm_qm_prop_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y));*/
+  /*_nc_hiqg_1d_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y));*/
 }
 
 /*
 static gdouble
-_ncm_qm_prop_diff (const gdouble fp2, const gdouble fp1, const gdouble f, const gdouble dx2, const gdouble dx1)
+_nc_hiqg_1d_diff (const gdouble fp2, const gdouble fp1, const gdouble f, const gdouble dx2, const gdouble dx1)
 {
   const gdouble ddx = dx2 - dx1;
   const gdouble a   = -dx1 / (ddx * dx2);
@@ -1796,7 +1796,7 @@ _ncm_qm_prop_diff (const gdouble fp2, const gdouble fp1, const gdouble f, const 
 */
 
 /*static complex double
-_ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const complex double f, const gdouble dx2, const gdouble dx1)
+_nc_hiqg_1d_cdiff2 (const complex double fp2, const complex double fp1, const complex double f, const gdouble dx2, const gdouble dx1)
 {
   const gdouble ddx = dx2 - dx1;
   const gdouble a   = +2.0 / (ddx * dx2);
@@ -1811,10 +1811,10 @@ _ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const c
 #define LOCAL_STENCIL 6
 
 static gint 
-_ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
+_nc_hiqg_1d_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (user_data);
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble *Yt   = N_VGetArrayPointer (y);
   gdouble *dYt  = N_VGetArrayPointer (ydot);
   const gint np = LOCAL_STENCIL;
@@ -1867,10 +1867,10 @@ _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 }
 
 static gint 
-_ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
+_nc_hiqg_1d_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (user_data);
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble *Yt   = N_VGetArrayPointer (y);
   gdouble *dYt  = N_VGetArrayPointer (ydot);
   const gint np = LOCAL_STENCIL;
@@ -1943,10 +1943,10 @@ _ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 
 /*
 static gint 
-_ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp) 
+_nc_hiqg_1d_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp) 
 { 
-  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (user_data);
+  NcHIQG1DPrivate * const self = qg1d->priv;
   complex double *V  = NULL;
   complex double *JV = NULL;
   sunindextype i;
@@ -1962,7 +1962,7 @@ _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpo
     const gdouble xi          = ncm_vector_fast_get (self->knots, i);
     const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
     const gdouble xip1        = ncm_vector_fast_get (self->knots, i + 1);
-    const complex double d2Vi = _ncm_qm_prop_cdiff2 (V[i + 1], V[i - 1], V[i], xip1 - xi, xim1 - xi); 
+    const complex double d2Vi = _nc_hiqg_1d_cdiff2 (V[i + 1], V[i - 1], V[i], xip1 - xi, xim1 - xi); 
 
     JV[i] = -I * (- d2Vi + self->lambda * V[i] / (xi * xi));
   }
@@ -1971,7 +1971,7 @@ _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpo
   {
     const gdouble xi          = ncm_vector_fast_get (self->knots, i);
     const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
-    const complex double d2Vi = _ncm_qm_prop_cdiff2 (0.0, V[i - 1], V[i], self->h, xim1 - xi); 
+    const complex double d2Vi = _nc_hiqg_1d_cdiff2 (0.0, V[i - 1], V[i], self->h, xim1 - xi); 
 
     JV[i] = -I * (- d2Vi + self->lambda * V[i] / (xi * xi));
   }
@@ -1984,7 +1984,7 @@ _ncm_qm_prop_J (N_Vector v, N_Vector Jv, gdouble t, N_Vector y, N_Vector fy, gpo
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 static gdouble
-_ncm_qm_prop_calc_dS (gdouble x, NcmQMPropPrivate * const self)
+_nc_hiqg_1d_calc_dS (gdouble x, NcHIQG1DPrivate * const self)
 {
   const gdouble x0 = ncm_vector_fast_get (self->knots, 1);
 
@@ -2017,7 +2017,7 @@ _ncm_qm_prop_calc_dS (gdouble x, NcmQMPropPrivate * const self)
 }
 
 static void
-_ncm_qm_prop_prepare_splines (NcmQMPropPrivate * const self, const gdouble t, NcmVector *knots, gdouble *Y)
+_nc_hiqg_1d_prepare_splines (NcHIQG1DPrivate * const self, const gdouble t, NcmVector *knots, gdouble *Y)
 {
   if (!self->up_splines)
   {
@@ -2193,7 +2193,7 @@ _ncm_qm_prop_prepare_splines (NcmQMPropPrivate * const self, const gdouble t, Nc
       printf ("# xf = % 22.15g, gamma % 22.15g\n", xf, gamma);
       
       F.params   = self;
-      F.function = (gdouble (*) (gdouble, gpointer)) &_ncm_qm_prop_calc_dS;
+      F.function = (gdouble (*) (gdouble, gpointer)) &_nc_hiqg_1d_calc_dS;
 
       ncm_spline_set_func (self->dS_s, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, xf, 10000, self->reltol);
     }
@@ -2235,18 +2235,18 @@ _ncm_qm_prop_prepare_splines (NcmQMPropPrivate * const self, const gdouble t, Nc
 }
 
 /**
- * ncm_qm_prop_evolve:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_evolve:
+ * @qg1d: a #NcHIQG1D
  * @tf: final time
  * 
  * Evolve the wave-function to @tf.
  * 
  */
 void
-ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
+nc_hiqg_1d_evolve (NcHIQG1D *qg1d, const gdouble tf)
 {
 #if HAVE_SUNDIALS_MAJOR == 3
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble t  = self->ti;
   gdouble *Y = N_VGetArrayPointer (self->y);
   gint flag;
@@ -2270,7 +2270,7 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
 
     Y = N_VGetArrayPointer (self->y);
 
-    /*_ncm_qm_prop_prepare_splines (self, t, Y);*/
+    /*_nc_hiqg_1d_prepare_splines (self, t, Y);*/
     /*printf ("# STEP % 22.15g\n", t);*/
 /*
     printf ("# STEP % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g\n",
@@ -2333,22 +2333,22 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
 
   self->ti = t;
   self->up_splines = FALSE;
-  /* _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y); */
+  /* _nc_hiqg_1d_prepare_splines (self, self->ti, self->knots, Y); */
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 }
 
 /**
- * ncm_qm_prop_evolve_spec:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_evolve_spec:
+ * @qg1d: a #NcHIQG1D
  * @t: final time
  * 
  * Evolves the system using spectral methods.
  * 
  */
 void
-ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t)
+nc_hiqg_1d_evolve_spec (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   complex double *Y   = (complex double *) ncm_vector_data (self->spec_Y);
   const gdouble norma = gsl_pow_2 (gsl_dht_k_sample (self->dht, 0) / gsl_dht_x_sample (self->dht, 0));
   gint i;
@@ -2378,12 +2378,12 @@ ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t)
   self->ti = t;
   self->up_splines = FALSE;
 
-  /* _ncm_qm_prop_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y)); */
+  /* _nc_hiqg_1d_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y)); */
 }
 
 /**
- * ncm_qm_prop_eval_psi:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_psi:
+ * @qg1d: a #NcHIQG1D
  * @x: (array length=len) (element-type gdouble): array of points
  * @len: array length
  * 
@@ -2392,9 +2392,9 @@ ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t)
  * Returns: (transfer full) (array) (element-type gdouble): array of length 2*@len containing the real and imaginary parts of $\psi$
  */
 GArray *
-ncm_qm_prop_eval_psi (NcmQMProp *qm_prop, const gdouble *x, const guint len)
+nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble *x, const guint len)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   GArray *psi = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gint i;
 
@@ -2417,8 +2417,8 @@ ncm_qm_prop_eval_psi (NcmQMProp *qm_prop, const gdouble *x, const guint len)
 }
 
 /**
- * ncm_qm_prop_eval_rho:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_rho:
+ * @qg1d: a #NcHIQG1D
  * @x: (array length=len) (element-type gdouble): array of points
  * @len: array length
  * 
@@ -2427,9 +2427,9 @@ ncm_qm_prop_eval_psi (NcmQMProp *qm_prop, const gdouble *x, const guint len)
  * Returns: (transfer full) (array) (element-type gdouble): array of length @len containing $\rho$
  */
 GArray *
-ncm_qm_prop_eval_rho (NcmQMProp *qm_prop, const gdouble *x, const guint len)
+nc_hiqg_1d_eval_rho (NcHIQG1D *qg1d, const gdouble *x, const guint len)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   GArray *rho = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gint i;
 
@@ -2449,8 +2449,8 @@ ncm_qm_prop_eval_rho (NcmQMProp *qm_prop, const gdouble *x, const guint len)
 }
 
 /**
- * ncm_qm_prop_eval_dS:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_dS:
+ * @qg1d: a #NcHIQG1D
  * @x: (array length=len) (element-type gdouble): array of points
  * @len: array length
  * 
@@ -2459,9 +2459,9 @@ ncm_qm_prop_eval_rho (NcmQMProp *qm_prop, const gdouble *x, const guint len)
  * Returns: (transfer full) (array) (element-type gdouble): array of length @len containing $\partial_x S$
  */
 GArray *
-ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint len)
+nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble *x, const guint len)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   GArray *dS = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gint i;
 
@@ -2477,57 +2477,57 @@ ncm_qm_prop_eval_dS (NcmQMProp *qm_prop, const gdouble *x, const guint len)
 }
 
 /**
- * ncm_qm_prop_peek_rho_s:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_peek_rho_s:
+ * @qg1d: a #NcHIQG1D
  * 
  * Peeks the current $\rho(x)$ #NcmSpline.
  * 
  * Returns: (transfer none): $\rho(x)$ #NcmSpline
  */
 NcmSpline *
-ncm_qm_prop_peek_rho_s (NcmQMProp *qm_prop)
+nc_hiqg_1d_peek_rho_s (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->rho_s;
 }
 
 static gdouble
-_ncm_qm_prop_eval_rho (const gdouble x, gpointer user_data)
+_nc_hiqg_1d_eval_rho (const gdouble x, gpointer user_data)
 {
-  NcmQMPropPrivate * const self = user_data;
+  NcHIQG1DPrivate * const self = user_data;
   const gdouble lnR_i = ncm_spline_eval (self->rho_s, x);
 
   return exp (2.0 * lnR_i);
 }
 
 static gdouble
-_ncm_qm_prop_eval_xrho (const gdouble x, gpointer user_data)
+_nc_hiqg_1d_eval_xrho (const gdouble x, gpointer user_data)
 {
-  NcmQMPropPrivate * const self = user_data;
+  NcHIQG1DPrivate * const self = user_data;
   const gdouble lnR_i = ncm_spline_eval (self->rho_s, x);
 
   return x * exp (2.0 * lnR_i);
 }
 
 /**
- * ncm_qm_prop_eval_int_rho:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_int_rho:
+ * @qg1d: a #NcHIQG1D
  * 
  * Computes $\int\mathrm{d}x\rho(x)$.
  * 
  * Returns: $\int\mathrm{d}x\rho(x)$.
  */
 gdouble
-ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop)
+nc_hiqg_1d_eval_int_rho (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gsl_function F;
   gdouble int_rho = 0.0;
   gdouble int_err = 0.0;
   NcmVector *x = ncm_spline_get_xv (self->rho_s);
 
-  F.function = &_ncm_qm_prop_eval_rho;
+  F.function = &_nc_hiqg_1d_eval_rho;
   F.params   = self;
 
   gsl_integration_qag (&F, 
@@ -2543,24 +2543,24 @@ ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop)
 }
 
 /**
- * ncm_qm_prop_eval_int_xrho:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_eval_int_xrho:
+ * @qg1d: a #NcHIQG1D
  * 
  * Computes $\int\mathrm{d}x\;x\rho(x)$.
  * 
  * Returns: $\int\mathrm{d}x\;x\rho(x)$.
  */
 gdouble
-ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop)
+nc_hiqg_1d_eval_int_xrho (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gsl_function F;
   gdouble int_rho = 0.0;
   gdouble int_err = 0.0;
   NcmVector *x = ncm_spline_get_xv (self->rho_s);
 
-  F.function = &_ncm_qm_prop_eval_xrho;
+  F.function = &_nc_hiqg_1d_eval_xrho;
   F.params   = self;
 
   gsl_integration_qag (&F, 
@@ -2576,7 +2576,7 @@ ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop)
 }
 
 gdouble
-_ncm_qm_prop_spec_basis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+_nc_hiqg_1d_spec_basis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
   const gdouble h2   = h * h;
   const gdouble xy   = x * y;
@@ -2597,8 +2597,8 @@ _ncm_qm_prop_spec_basis (const gdouble x, const gdouble y, const gdouble h, cons
 }
 
 /**
- * ncm_qm_prop_spec_basis:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_basis:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @y: FIXME
  * @h: FIXME
@@ -2609,13 +2609,13 @@ _ncm_qm_prop_spec_basis (const gdouble x, const gdouble y, const gdouble h, cons
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_basis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+nc_hiqg_1d_spec_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
-  return _ncm_qm_prop_spec_basis (x, y, h, a);
+  return _nc_hiqg_1d_spec_basis (x, y, h, a);
 }
 
 static gdouble
-_ncm_qm_prop_spec_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+_nc_hiqg_1d_spec_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
   const gdouble h2   = h * h;
   const gdouble xy   = x * y;
@@ -2636,8 +2636,8 @@ _ncm_qm_prop_spec_Hbasis (const gdouble x, const gdouble y, const gdouble h, con
 }
 
 /**
- * ncm_qm_prop_spec_Hbasis:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_Hbasis:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @y: FIXME
  * @h: FIXME
@@ -2648,13 +2648,13 @@ _ncm_qm_prop_spec_Hbasis (const gdouble x, const gdouble y, const gdouble h, con
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_Hbasis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+nc_hiqg_1d_spec_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
-  return _ncm_qm_prop_spec_Hbasis (x, y, h, a);
+  return _nc_hiqg_1d_spec_Hbasis (x, y, h, a);
 }
 
 static gdouble
-_ncm_qm_prop_spec_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+_nc_hiqg_1d_spec_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
   const gdouble h2   = h * h;
   const gdouble xy   = x * y;
@@ -2675,7 +2675,7 @@ _ncm_qm_prop_spec_basis_xxa (const gdouble x, const gdouble y, const gdouble h, 
 }
 
 static gdouble
-_ncm_qm_prop_spec_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
+_nc_hiqg_1d_spec_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
   const gdouble h2      = h * h;
   const gdouble h2x     = h * h * x;
@@ -2707,8 +2707,8 @@ _ncm_qm_prop_spec_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2
 }
 
 /**
- * ncm_qm_prop_spec_Sbasis_x3:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_Sbasis_x3:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @y1: FIXME
  * @y2: FIXME
@@ -2720,73 +2720,73 @@ _ncm_qm_prop_spec_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_Sbasis_x3 (NcmQMProp *qm_prop, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
+nc_hiqg_1d_spec_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
-  return _ncm_qm_prop_spec_Sbasis_x3 (x, y1, y2, h, a);
+  return _nc_hiqg_1d_spec_Sbasis_x3 (x, y1, y2, h, a);
 }
 
 /**
- * ncm_qm_prop_spec_get_lambda:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_get_lambda:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_get_lambda (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_get_lambda (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->lambda;
 }
 
 /**
- * ncm_qm_prop_spec_get_basis_a:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_get_basis_a:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_get_basis_a (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_get_basis_a (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->basis_a;
 }
 
 /**
- * ncm_qm_prop_spec_get_acs_a:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_get_acs_a:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_get_acs_a (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_get_acs_a (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->acs_a;
 }
 
 /**
- * ncm_qm_prop_spec_get_nu:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_get_nu:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_get_nu (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_get_nu (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->nu;
 }
 
 static gdouble
-_ncm_qm_prop_spec_If2 (const gdouble y1, const gdouble y2, const gdouble h)
+_nc_hiqg_1d_spec_If2 (const gdouble y1, const gdouble y2, const gdouble h)
 {
   const gdouble h2      = h * h;
   const gdouble y12     = y1 * y1;
@@ -2805,7 +2805,7 @@ _ncm_qm_prop_spec_If2 (const gdouble y1, const gdouble y2, const gdouble h)
 }
 
 static gdouble
-_ncm_qm_prop_spec_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
+_nc_hiqg_1d_spec_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
 {
   const gdouble h2     = h * h;
   const gdouble ym12   = 0.5 * h * (y1 - y2);
@@ -2816,32 +2816,32 @@ _ncm_qm_prop_spec_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
   return (exp (-ym12_2) * yp12 * erf (yp12) - exp (-yp12_2) * ym12 * erf (ym12)) * ncm_c_sqrt_pi () / h2;
 }
 
-static void _ncm_qm_prop_spec_evol_C (NcmQMProp *qm_prop, const gdouble t);
+static void _nc_hiqg_1d_spec_evol_C (NcHIQG1D *qg1d, const gdouble t);
 
 static gint
-_ncm_qm_prop_spec_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
+_nc_hiqg_1d_spec_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
-  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1D *qg1d = NC_HIQG_1D (user_data);
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble *Y  = N_VGetArrayPointer (y);
   gdouble *dY = N_VGetArrayPointer (ydot);
   gint i;
 
-  _ncm_qm_prop_spec_evol_C (qm_prop, t);
+  _nc_hiqg_1d_spec_evol_C (qg1d, t);
 
   for (i = 0; i < self->nBohm; i++)
   {
-    dY[i] = 2.0 * ncm_qm_prop_spec_eval_dS (qm_prop, Y[i]);
+    dY[i] = 2.0 * nc_hiqg_1d_spec_eval_dS (qg1d, Y[i]);
   }
 
   return 0;
 }
 
 void
-_ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop)
+_nc_hiqg_1d_spec_init_solver (NcHIQG1D *qg1d)
 {
 #if HAVE_SUNDIALS_MAJOR == 3
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   const gdouble t0 = 0.0;
   gint flag;
 
@@ -2867,10 +2867,10 @@ _ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop)
   self->bohm = ARKodeCreate ();
   NCM_CVODE_CHECK (&self->bohm, "ARKodeCreate", 0, );
 
-  flag = ARKodeInit (self->bohm, &_ncm_qm_prop_spec_bohm_f, NULL, t0, self->yBohm);
+  flag = ARKodeInit (self->bohm, &_nc_hiqg_1d_spec_bohm_f, NULL, t0, self->yBohm);
   NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-  flag = ARKodeSetUserData (self->bohm, (void *) qm_prop);
+  flag = ARKodeSetUserData (self->bohm, (void *) qg1d);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
   flag = ARKodeSetMaxNumSteps (self->bohm, 10000);
@@ -2883,16 +2883,16 @@ _ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop)
 }
 
 /**
- * ncm_qm_prop_spec_prepare:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_prepare:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  */
 void
-ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_prepare (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gint i, ret;
 
   /* WARNING self->h must not be a integer multiple of y-x */
@@ -2934,8 +2934,8 @@ ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop)
 	{
 		const gdouble x1    = ncm_vector_get (self->knots, i);
     const gdouble hi    = ncm_vector_get (self->hv, i);
-    const gdouble Ix1x1 = _ncm_qm_prop_spec_basis (x1, x1, hi, self->basis_a);
-    const gdouble Kx1x1 = /*Ix1x1;//*/_ncm_qm_prop_spec_Hbasis (x1, x1, hi, self->basis_a);
+    const gdouble Ix1x1 = _nc_hiqg_1d_spec_basis (x1, x1, hi, self->basis_a);
+    const gdouble Kx1x1 = /*Ix1x1;//*/_nc_hiqg_1d_spec_Hbasis (x1, x1, hi, self->basis_a);
     guint j;
 
     ncm_matrix_set (self->IM, i, i, Ix1x1);
@@ -2945,9 +2945,9 @@ ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop)
 		{
 			const gdouble x2    = ncm_vector_get (self->knots, j);
       const gdouble hj    = ncm_vector_get (self->hv, j);
-			const gdouble Ix1x2 = _ncm_qm_prop_spec_basis (x1, x2, hj, self->basis_a);
-			const gdouble Kx1x2 = /*Ix1x2;//*/_ncm_qm_prop_spec_Hbasis (x1, x2, hj, self->basis_a);
-			const gdouble Kx2x1 = /*Ix1x2;//*/_ncm_qm_prop_spec_Hbasis (x2, x1, hj, self->basis_a);
+			const gdouble Ix1x2 = _nc_hiqg_1d_spec_basis (x1, x2, hj, self->basis_a);
+			const gdouble Kx1x2 = /*Ix1x2;//*/_nc_hiqg_1d_spec_Hbasis (x1, x2, hj, self->basis_a);
+			const gdouble Kx2x1 = /*Ix1x2;//*/_nc_hiqg_1d_spec_Hbasis (x2, x1, hj, self->basis_a);
 
 			ncm_matrix_set (self->IM, j, i, Ix1x2);
       ncm_matrix_set (self->KM, i, j, Kx2x1);
@@ -3167,27 +3167,27 @@ ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop)
     }
   }
 
-  _ncm_qm_prop_spec_init_solver (qm_prop);
+  _nc_hiqg_1d_spec_init_solver (qg1d);
 }
 
 /**
- * ncm_qm_prop_spec_peek_knots:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_peek_knots:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: (transfer none): FIXME
  */
 NcmVector *
-ncm_qm_prop_spec_peek_knots (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_peek_knots (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return self->knots;
 }
 
 /**
- * ncm_qm_prop_spec_eval_ev:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_eval_ev:
+ * @qg1d: a #NcHIQG1D
  * @i: FIXME
  * @x: FIXME
  *
@@ -3196,9 +3196,9 @@ ncm_qm_prop_spec_peek_knots (NcmQMProp *qm_prop)
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x)
+nc_hiqg_1d_spec_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   g_assert_cmpint (i, <, self->nknots);
   {
     NcmVector *vr_i = ncm_matrix_get_row (self->vr, i);
@@ -3210,7 +3210,7 @@ ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x)
       const gdouble xj = ncm_vector_get (self->knots, j);
       const gdouble cj = ncm_vector_get (vr_i, j);
 
-      res += cj * _ncm_qm_prop_spec_basis (x, xj, self->h, self->basis_a);
+      res += cj * _nc_hiqg_1d_spec_basis (x, xj, self->h, self->basis_a);
     }
 
     ncm_vector_free (vr_i);
@@ -3220,8 +3220,8 @@ ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x)
 }
 
 /**
- * ncm_qm_prop_spec_eval_psi0:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_eval_psi0:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @psi0: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
  *
@@ -3229,9 +3229,9 @@ ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x)
  *
  */
 void
-ncm_qm_prop_spec_eval_psi0 (NcmQMProp *qm_prop, const gdouble x, gdouble *psi0)
+nc_hiqg_1d_spec_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gint i;
 
   psi0[0] = 0.0;
@@ -3241,7 +3241,7 @@ ncm_qm_prop_spec_eval_psi0 (NcmQMProp *qm_prop, const gdouble x, gdouble *psi0)
     const gdouble xi     = ncm_vector_get (self->knots, i);
     const gdouble ReC0_i = ncm_vector_get (self->spec_ReC0, i);
     const gdouble ImC0_i = ncm_vector_get (self->spec_ImC0, i);
-    const gdouble Kxxi   = _ncm_qm_prop_spec_basis (x, xi, self->h, self->basis_a);
+    const gdouble Kxxi   = _nc_hiqg_1d_spec_basis (x, xi, self->h, self->basis_a);
 
     psi0[0] += ReC0_i * Kxxi;
     psi0[1] += ImC0_i * Kxxi;
@@ -3249,9 +3249,9 @@ ncm_qm_prop_spec_eval_psi0 (NcmQMProp *qm_prop, const gdouble x, gdouble *psi0)
 }
 
 static void
-_ncm_qm_prop_spec_evol_C (NcmQMProp *qm_prop, const gdouble t)
+_nc_hiqg_1d_spec_evol_C (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   complex double *A0 = (complex double *) ncm_vector_data (self->spec_A0);
   gint i;
 
@@ -3267,18 +3267,18 @@ _ncm_qm_prop_spec_evol_C (NcmQMProp *qm_prop, const gdouble t)
 
 
 /**
- * ncm_qm_prop_spec_evol:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_evol:
+ * @qg1d: a #NcHIQG1D
  * @t: FIXME
  *
  * FIXME
  *
  */
 void
-ncm_qm_prop_spec_evol (NcmQMProp *qm_prop, const gdouble t)
+nc_hiqg_1d_spec_evol (NcHIQG1D *qg1d, const gdouble t)
 {
 #if HAVE_SUNDIALS_MAJOR == 3
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   /*gdouble *Y = N_VGetArrayPointer (self->yBohm);*/
   gdouble ts = 0.0;
   gint flag;
@@ -3295,12 +3295,12 @@ ncm_qm_prop_spec_evol (NcmQMProp *qm_prop, const gdouble t)
 
   /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, Y[0], Y[1], Y[2], Y[3]);*/
 
-  _ncm_qm_prop_spec_evol_C (qm_prop, t);
+  _nc_hiqg_1d_spec_evol_C (qg1d, t);
 }
 
 /**
- * ncm_qm_prop_spec_eval_psi:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_eval_psi:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
  *
@@ -3308,9 +3308,9 @@ ncm_qm_prop_spec_evol (NcmQMProp *qm_prop, const gdouble t)
  *
  */
 void
-ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi)
+nc_hiqg_1d_spec_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gint i;
 
   psi[0] = 0.0;
@@ -3320,7 +3320,7 @@ ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi)
     const gdouble xi    = ncm_vector_get (self->knots, i);
     const gdouble ReC_i = ncm_vector_get (self->spec_C, 2 * i + 0);
     const gdouble ImC_i = ncm_vector_get (self->spec_C, 2 * i + 1);
-    const gdouble Kxxi  = _ncm_qm_prop_spec_basis (x, xi, self->h, self->basis_a);
+    const gdouble Kxxi  = _nc_hiqg_1d_spec_basis (x, xi, self->h, self->basis_a);
 
     psi[0] += ReC_i * Kxxi;
     psi[1] += ImC_i * Kxxi;
@@ -3328,8 +3328,8 @@ ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi)
 }
 
 /**
- * ncm_qm_prop_spec_eval_dS:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_eval_dS:
+ * @qg1d: a #NcHIQG1D
  * @x: FIXME
  *
  * FIXME
@@ -3337,9 +3337,9 @@ ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi)
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x)
+nc_hiqg_1d_spec_eval_dS (NcHIQG1D *qg1d, const gdouble x)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble dS_rho_x3 = 0.0;
   gdouble Re_psi_x  = 0.0;
   gdouble Im_psi_x  = 0.0;
@@ -3352,7 +3352,7 @@ ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x)
     const gdouble xi     = ncm_vector_get (self->knots, i);
     const gdouble ReC_i  = ncm_vector_get (self->spec_C, 2 * i + 0);
     const gdouble ImC_i  = ncm_vector_get (self->spec_C, 2 * i + 1);
-    const gdouble Kxxi_x = _ncm_qm_prop_spec_basis_xxa (x, xi, self->h, self->basis_a);
+    const gdouble Kxxi_x = _nc_hiqg_1d_spec_basis_xxa (x, xi, self->h, self->basis_a);
 
     Re_psi_x += ReC_i * Kxxi_x;
     Im_psi_x += ImC_i * Kxxi_x;
@@ -3364,7 +3364,7 @@ ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x)
       const gdouble xj    = ncm_vector_get (self->knots, j);
       const gdouble ReC_j = ncm_vector_get (self->spec_C, 2 * j + 0);
       const gdouble ImC_j = ncm_vector_get (self->spec_C, 2 * j + 1);
-      const gdouble Sij   = _ncm_qm_prop_spec_Sbasis_x3 (x, xi, xj, self->h, self->basis_a);
+      const gdouble Sij   = _nc_hiqg_1d_spec_Sbasis_x3 (x, xi, xj, self->h, self->basis_a);
       const gdouble Cij   = (ImC_j * ReC_i - ReC_j * ImC_i);
 
       /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", self->h, x, xi, xj, Sij, Cij, dS_rho_x3);*/
@@ -3377,17 +3377,17 @@ ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x)
 }
 
 /**
- * ncm_qm_prop_spec_int_rho_0_inf:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_int_rho_0_inf:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_int_rho_0_inf (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble int_rho = 0.0;
   gint i, j;
 
@@ -3396,7 +3396,7 @@ ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop)
     const gdouble xi       = ncm_vector_get (self->knots, i);
     const gdouble ReC_i    = ncm_vector_get (self->spec_C, 2 * i + 0);
     const gdouble ImC_i    = ncm_vector_get (self->spec_C, 2 * i + 1);
-    const gdouble IKxixi_x = _ncm_qm_prop_spec_If2 (xi, xi, self->h);
+    const gdouble IKxixi_x = _nc_hiqg_1d_spec_If2 (xi, xi, self->h);
 
     int_rho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
 
@@ -3405,7 +3405,7 @@ ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop)
       const gdouble xj       = ncm_vector_get (self->knots, j);
       const gdouble ReC_j    = ncm_vector_get (self->spec_C, 2 * j + 0);
       const gdouble ImC_j    = ncm_vector_get (self->spec_C, 2 * j + 1);
-      const gdouble IKxixi_x = _ncm_qm_prop_spec_If2 (xi, xj, self->h);
+      const gdouble IKxixi_x = _nc_hiqg_1d_spec_If2 (xi, xj, self->h);
       const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
 
       int_rho += IKxixi_x * CRij;
@@ -3416,17 +3416,17 @@ ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop)
 }
 
 /**
- * ncm_qm_prop_spec_int_xrho_0_inf:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_int_xrho_0_inf:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_int_xrho_0_inf (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble int_xrho = 0.0;
   gint i, j;
 
@@ -3435,7 +3435,7 @@ ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop)
     const gdouble xi       = ncm_vector_get (self->knots, i);
     const gdouble ReC_i    = ncm_vector_get (self->spec_C, 2 * i + 0);
     const gdouble ImC_i    = ncm_vector_get (self->spec_C, 2 * i + 1);
-    const gdouble IKxixi_x = _ncm_qm_prop_spec_Ixf2 (xi, xi, self->h);
+    const gdouble IKxixi_x = _nc_hiqg_1d_spec_Ixf2 (xi, xi, self->h);
 
     int_xrho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
 
@@ -3444,7 +3444,7 @@ ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop)
       const gdouble xj       = ncm_vector_get (self->knots, j);
       const gdouble ReC_j    = ncm_vector_get (self->spec_C, 2 * j + 0);
       const gdouble ImC_j    = ncm_vector_get (self->spec_C, 2 * j + 1);
-      const gdouble IKxixi_x = _ncm_qm_prop_spec_Ixf2 (xi, xj, self->h);
+      const gdouble IKxixi_x = _nc_hiqg_1d_spec_Ixf2 (xi, xj, self->h);
       const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
 
       int_xrho += IKxixi_x * CRij;
@@ -3455,24 +3455,24 @@ ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop)
 }
 
 /**
- * ncm_qm_prop_spec_nBohm:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_nBohm:
+ * @qg1d: a #NcHIQG1D
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gint
-ncm_qm_prop_spec_nBohm (NcmQMProp *qm_prop)
+nc_hiqg_1d_spec_nBohm (NcHIQG1D *qg1d)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
 
   return self->nBohm;
 }
 
 /**
- * ncm_qm_prop_spec_Bohm:
- * @qm_prop: a #NcmQMProp
+ * nc_hiqg_1d_spec_Bohm:
+ * @qg1d: a #NcHIQG1D
  * @i: FIXME
  *
  * FIXME
@@ -3480,9 +3480,9 @@ ncm_qm_prop_spec_nBohm (NcmQMProp *qm_prop)
  * Returns: FIXME
  */
 gdouble
-ncm_qm_prop_spec_Bohm (NcmQMProp *qm_prop, gint i)
+nc_hiqg_1d_spec_Bohm (NcHIQG1D *qg1d, gint i)
 {
-  NcmQMPropPrivate * const self = qm_prop->priv;
+  NcHIQG1DPrivate * const self = qg1d->priv;
   return NV_Ith_S (self->yBohm, i);
 }
 
