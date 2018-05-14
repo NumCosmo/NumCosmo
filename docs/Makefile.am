@@ -102,6 +102,7 @@ endif
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
 IGNORE_HFILES= \
               config.h                  \
+              ncm_gsl_blas_types.h      \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \
               gsl_rstat.h               \

@@ -39,6 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_qm_prop.h"
+#include "math/ncm_matrix.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_integral1d.h"
@@ -46,12 +47,16 @@
 #include "math/ncm_util.h"
 #include "math/ncm_spline_rbf.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_func.h"
+#include "math/ncm_lapack.h"
+#include "math/ncm_c.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <math.h>
 #include <stdio.h>
+#include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_sf_hyperg.h>
 #include <gsl/gsl_integration.h>
@@ -87,6 +92,8 @@
 struct _NcmQMPropPrivate
 {
   gdouble lambda;
+  gdouble acs_a;
+  gdouble basis_a;
   gdouble nu;
   gsize n;
   gsize np;
@@ -104,6 +111,11 @@ struct _NcmQMPropPrivate
   NcmVector *knots;
   NcmVector *spec_knots;
   NcmVector *spec_Y;
+  NcmMatrix *spec_C0;
+  NcmVector *spec_ReC0;
+  NcmVector *spec_ImC0;
+  NcmVector *spec_A0;
+  NcmVector *spec_C;
   NcmVector *dS_v;
   NcmVector *rho_v;
   NcmVector *Re_psi_v;
@@ -133,14 +145,35 @@ struct _NcmQMPropPrivate
   SUNMatrix A;
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
   gpointer arkode;
+  gpointer bohm;
   gsl_dht *dht;
-  NcmVector *specReY;
-  NcmVector *specImY;
-  NcmVector *specReYt;
-  NcmVector *specImYt;
+  NcmVector *spec_ReY;
+  NcmVector *spec_ImY;
+  NcmVector *spec_ReYt;
+  NcmVector *spec_ImYt;
   NcmVector *specReW;
   NcmVector *specImW;
-};
+  GArray *work;
+  GArray *ipiv;
+  GArray *iwork;
+  NcmVector *hv;
+  NcmMatrix *IM;
+  NcmMatrix *IM_fact;
+  NcmMatrix *KM;
+  NcmMatrix *JM;
+  NcmMatrix *err_norm;
+  NcmMatrix *err_comp;
+  NcmVector *scaling;
+  NcmVector *Escaling;
+  NcmVector *berr;
+  NcmVector *wr;
+  NcmVector *wi;
+  NcmMatrix *vl;
+  NcmMatrix *vr;
+  NcmVector *vlvr;
+  gint nBohm;
+  N_Vector yBohm;
+ };
 
 enum
 {
@@ -162,6 +195,11 @@ ncm_qm_prop_init (NcmQMProp *qm_prop)
 {
   NcmQMPropPrivate * const self = qm_prop->priv = G_TYPE_INSTANCE_GET_PRIVATE (qm_prop, NCM_TYPE_QM_PROP, NcmQMPropPrivate);
 
+  self->lambda  = 0.0;
+  self->acs_a   = 0.0;
+  self->basis_a = 0.0;
+  self->nu      = 0.0;
+
   self->np      = 0;
   self->n       = 0;
   self->abstol  = 0.0;
@@ -179,6 +217,11 @@ ncm_qm_prop_init (NcmQMProp *qm_prop)
   self->knots      = NULL;
   self->spec_knots = NULL;
   self->spec_Y     = NULL;
+  self->spec_C0    = NULL;
+  self->spec_ReC0  = NULL;
+  self->spec_ImC0  = NULL;
+  self->spec_A0    = NULL;
+  self->spec_C     = NULL;
   self->dS_v       = NULL;
   self->rho_v      = NULL;
   self->Re_psi_v   = NULL;
@@ -203,14 +246,38 @@ ncm_qm_prop_init (NcmQMProp *qm_prop)
   self->A          = NULL;
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
   self->arkode     = NULL;
+  self->bohm       = NULL;
 
   self->dht        = NULL;
-  self->specReY    = NULL;
-  self->specImY    = NULL;
-  self->specReYt   = NULL;
-  self->specImYt   = NULL;
+  self->spec_ReY   = NULL;
+  self->spec_ImY   = NULL;
+  self->spec_ReYt  = NULL;
+  self->spec_ImYt  = NULL;
   self->specReW    = NULL;
   self->specImW    = NULL;
+
+  self->work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->ipiv       = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->iwork      = g_array_new (FALSE, FALSE, sizeof (gint));
+
+  self->hv         = NULL;
+  self->IM         = NULL;
+  self->IM_fact    = NULL;
+  self->KM         = NULL;
+  self->JM         = NULL;
+  self->err_norm   = NULL;
+  self->err_comp   = NULL;
+  self->scaling    = NULL;
+  self->Escaling   = NULL;
+  self->berr       = NULL;
+  self->wr         = NULL;
+  self->wi         = NULL;
+  self->vl         = NULL;
+  self->vr         = NULL;
+  self->vlvr       = NULL;
+
+  self->nBohm      = 0;
+  self->yBohm      = NULL;
 }
 
 #define _XI(i,n)   (i)
@@ -232,8 +299,10 @@ _ncm_qm_prop_set_property (GObject *object, guint prop_id, const GValue *value, 
   switch (prop_id)
   {
     case PROP_LAMBDA:
-      self->lambda = g_value_get_double (value);
-      self->nu     = sqrt (self->lambda + 0.25);
+      self->lambda  = g_value_get_double (value);
+      self->acs_a   = 1.0 + 2.0 * self->lambda + 2.0 * sqrt (self->lambda * (self->lambda - 1.0));
+      self->basis_a = 0.5 * ncm_util_sqrt1px_m1 (4.0 * self->lambda);
+      self->nu      = sqrt (self->lambda + 0.25);
       break;
     case PROP_NP:
       self->np = g_value_get_uint (value);
@@ -314,11 +383,18 @@ _ncm_qm_prop_dispose (GObject *object)
   ncm_vector_clear (&self->knots);
   ncm_vector_clear (&self->spec_knots);
   ncm_vector_clear (&self->spec_Y);
+  ncm_matrix_clear (&self->spec_C0);
+  ncm_vector_clear (&self->spec_ReC0);
+  ncm_vector_clear (&self->spec_ImC0);
+  ncm_vector_clear (&self->spec_A0);
+  ncm_vector_clear (&self->spec_C);
   ncm_vector_clear (&self->dS_v);
   ncm_vector_clear (&self->rho_v);
   ncm_vector_clear (&self->Re_psi_v);
   ncm_vector_clear (&self->Im_psi_v);
   
+  ncm_spline_clear (&self->psi0_s);
+
   ncm_spline_clear (&self->dS_s);
   ncm_spline_clear (&self->rho_s);
 
@@ -328,14 +404,36 @@ _ncm_qm_prop_dispose (GObject *object)
   ncm_spline_clear (&self->YNp1_Re_R);
   ncm_spline_clear (&self->YNp1_Im_R);
 
-  ncm_vector_clear (&self->specReY);
-  ncm_vector_clear (&self->specImY);
+  ncm_vector_clear (&self->spec_ReY);
+  ncm_vector_clear (&self->spec_ImY);
 
-  ncm_vector_clear (&self->specReYt);
-  ncm_vector_clear (&self->specImYt);
+  ncm_vector_clear (&self->spec_ReYt);
+  ncm_vector_clear (&self->spec_ImYt);
 
   ncm_vector_clear (&self->specReW);
   ncm_vector_clear (&self->specImW);
+
+  g_clear_pointer (&self->work, g_array_unref);
+  g_clear_pointer (&self->ipiv, g_array_unref);
+  g_clear_pointer (&self->iwork, g_array_unref);
+
+  ncm_vector_clear (&self->hv);
+  ncm_matrix_clear (&self->IM);
+  ncm_matrix_clear (&self->IM_fact);
+  ncm_matrix_clear (&self->KM);
+  ncm_matrix_clear (&self->JM);
+  ncm_matrix_clear (&self->err_norm);
+  ncm_matrix_clear (&self->err_comp);
+  ncm_vector_clear (&self->scaling);
+  ncm_vector_clear (&self->Escaling);
+  ncm_vector_clear (&self->berr);
+  ncm_vector_clear (&self->wr);
+  ncm_vector_clear (&self->wi);
+  ncm_matrix_clear (&self->vl);
+  ncm_matrix_clear (&self->vr);
+  ncm_vector_clear (&self->vlvr);
+
+  g_clear_pointer (&self->yBohm, N_VDestroy);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_qm_prop_parent_class)->dispose (object);
@@ -352,6 +450,11 @@ _ncm_qm_prop_finalize (GObject *object)
   {
     ARKodeFree (&self->arkode);
     self->arkode = NULL;
+  }
+  if (self->bohm != NULL)
+  {
+    ARKodeFree (&self->bohm);
+    self->bohm = NULL;
   }
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
@@ -667,12 +770,31 @@ ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS)
  * 
  * Creates a new #NcmQMProp object.
  * 
- * Returns: a new #NcmQMProp.
+ * Returns: (transfer full): a new #NcmQMProp.
  */
 NcmQMProp *
 ncm_qm_prop_new (void)
 {
   NcmQMProp *qm_prop = g_object_new (NCM_TYPE_QM_PROP,
+                                     NULL);
+  return qm_prop;
+}
+
+/**
+ * ncm_qm_prop_new_full:
+ * @nknots: number of knots
+ * @lambda: $\lambda$
+ * 
+ * Creates a new #NcmQMProp object.
+ * 
+ * Returns: (transfer full): a new #NcmQMProp.
+ */
+NcmQMProp *
+ncm_qm_prop_new_full (guint nknots, gdouble lambda)
+{
+  NcmQMProp *qm_prop = g_object_new (NCM_TYPE_QM_PROP,
+                                     "nknots", nknots,
+                                     "lambda", lambda,
                                      NULL);
   return qm_prop;
 }
@@ -730,7 +852,47 @@ void
 ncm_qm_prop_set_nknots (NcmQMProp *qm_prop, const guint nknots)
 {
   NcmQMPropPrivate * const self = qm_prop->priv;
-  self->nknots = nknots;
+  if (self->nknots != nknots)
+  {
+    if (self->nknots > 0)
+    {
+      ncm_vector_clear (&self->hv);
+      ncm_matrix_clear (&self->IM);
+      ncm_matrix_clear (&self->IM_fact);
+      ncm_matrix_clear (&self->KM);
+      ncm_matrix_clear (&self->JM);
+      ncm_matrix_clear (&self->err_norm);
+      ncm_matrix_clear (&self->err_comp);
+      ncm_vector_clear (&self->scaling);
+      ncm_vector_clear (&self->Escaling);
+      ncm_vector_clear (&self->berr);
+      ncm_vector_clear (&self->wr);
+      ncm_vector_clear (&self->wi);
+      ncm_matrix_clear (&self->vl);
+      ncm_matrix_clear (&self->vr);
+      ncm_vector_clear (&self->vlvr);
+    }
+
+    self->nknots = nknots;
+    if (self->nknots > 0)
+    {
+      self->hv       = ncm_vector_new (self->nknots);
+      self->IM       = ncm_matrix_new (self->nknots, self->nknots);
+      self->IM_fact  = ncm_matrix_new (self->nknots, self->nknots);
+      self->KM       = ncm_matrix_new (self->nknots, self->nknots);
+      self->JM       = ncm_matrix_new (self->nknots, self->nknots);
+      self->err_norm = ncm_matrix_new (3, self->nknots);
+      self->err_comp = ncm_matrix_new (3, self->nknots);
+      self->scaling  = ncm_vector_new (self->nknots);
+      self->Escaling = ncm_vector_new (self->nknots);
+      self->berr     = ncm_vector_new (self->nknots);
+      self->wr       = ncm_vector_new (self->nknots);
+      self->wi       = ncm_vector_new (self->nknots);
+      self->vl       = ncm_matrix_new (self->nknots, self->nknots);
+      self->vr       = ncm_matrix_new (self->nknots, self->nknots);
+      self->vlvr     = ncm_vector_new (self->nknots);
+    }
+  }
 }
 
 /**
@@ -1107,6 +1269,7 @@ _ncm_qm_prop_set_init_cond_complex (gdouble x, gpointer p)
 }
 
 void _ncm_qm_prop_init_solver (NcmQMProp *qm_prop);
+void _ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop);
 void _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic);
 
 complex double
@@ -1251,37 +1414,42 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
   }
   else
   {
-    self->knots        = ncm_vector_new (self->nknots);
-    const gdouble lnxi = log (xi);
-    const guint lp     = 25;
-    /*const gdouble lnxf = log (xf);*/
+    self->knots         = ncm_vector_new (self->nknots);
+    const guint lp      = (self->nknots / 10) > 1 ? (self->nknots / 10) : 2;
+    const gint np       = self->nknots - lp;
+    const gdouble fxi   = xf / (np * 1.0);
+    const gdouble lnfxi = log (fxi);
+    const gdouble lnxi  = (xi == 0.0) ? (lnfxi - 4.0 * M_LN10) : log (xi);
 
-    g_assert_cmpfloat (xi, >, 0.0);
+    g_assert_cmpfloat (lnfxi, >, lnxi);
+    g_assert_cmpfloat (xi, >=, 0.0);
     g_assert_cmpfloat (xf, >, xi);
 
     if (FALSE)
     {
-      ncm_vector_fast_set (self->knots, 0, xi);
-      for (i = 1; i < lp + 1; i++)
+      ncm_vector_fast_set (self->knots, 0, exp (lnxi));
+      for (i = 0; i < lp; i++)
       {
-        const gdouble lnx = lnxi - lnxi / (1.0 * lp) * i;
+        const gdouble lnx = lnxi + (lnfxi - lnxi) / (1.0 * lp) * i;
         const gdouble x   = exp (lnx);
 
         ncm_vector_fast_set (self->knots, i, x);
       }
 
-      for (i = lp + 1; i < self->nknots; i++)
+      for (i = 0; i < np; i++)
       {
-        const gdouble x = 1.0 + (xf - 1.0) / (self->nknots - lp - 1.0) * (i - lp);
+        const gdouble x = fxi * (i + 1.0);
 
-        ncm_vector_fast_set (self->knots, i, x);
+        ncm_vector_fast_set (self->knots, i + lp, x);
       }
+
+      /*ncm_vector_log_vals (self->knots, "# KNOTS: ", "% 22.15g", TRUE);*/
     }
     else
     {
       for (i = 0; i < self->nknots; i++)
       {
-        const gdouble x = xi + (xf - xi) / (self->nknots - 1.0) * i;
+        const gdouble x = xi + (xf - xi) / (self->nknots * 1.0) * (i + 1);
         ncm_vector_fast_set (self->knots, i, x);
       }
     }
@@ -1290,6 +1458,11 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
   {
     ncm_vector_clear (&self->spec_knots);
     ncm_vector_clear (&self->spec_Y);
+    ncm_matrix_clear (&self->spec_C0);
+    ncm_vector_clear (&self->spec_ReC0);
+    ncm_vector_clear (&self->spec_ImC0);
+    ncm_vector_clear (&self->spec_A0);
+    ncm_vector_clear (&self->spec_C);
 
     ncm_vector_clear (&self->dS_v);
     ncm_vector_clear (&self->rho_v);
@@ -1311,6 +1484,13 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
 
     self->spec_knots = ncm_vector_new (self->nknots);
     self->spec_Y     = ncm_vector_new (self->nknots * 2);
+    self->spec_C0    = ncm_matrix_new (2, self->nknots);
+    self->spec_A0    = ncm_vector_new (self->nknots * 2);
+    self->spec_C     = ncm_vector_new (self->nknots * 2);
+    self->spec_ReY   = ncm_vector_get_subvector_stride (self->spec_Y, 0, self->nknots, 2);
+    self->spec_ImY   = ncm_vector_get_subvector_stride (self->spec_Y, 1, self->nknots, 2);
+    self->spec_ReC0  = ncm_matrix_get_row (self->spec_C0, 0);
+    self->spec_ImC0  = ncm_matrix_get_row (self->spec_C0, 1);
 
     self->rho_v      = ncm_vector_new (self->nknots);
     self->dS_v       = ncm_vector_new (self->nknots);
@@ -1399,16 +1579,24 @@ ncm_qm_prop_set_init_cond (NcmQMProp *qm_prop, NcmQMPropPsi psi0_lnRS, gpointer 
     for (i = 0; i < self->nknots; i++)
     {
       const gdouble x = ncm_vector_fast_get (self->knots, i);
+      complex double psi;
+
       Y[_XI (i, self->nknots)] = x;
       psi0_lnRS (psi_data, x, &Y[_LNRI (i, self->nknots)]);
+
+      psi = cexp (*((complex double *)&Y[_LNRI (i, self->nknots)]));
+
+      ncm_vector_set (self->spec_Y, 2 * i + 0, creal (psi));
+      ncm_vector_set (self->spec_Y, 2 * i + 1, cimag (psi));
 
       /*printf ("% 22.15g % 22.15g % 22.15g\n", Y[_XI (i, self->nknots)], Y[_LNRI (i, self->nknots)], Y[_SI (i, self->nknots)]);*/
     }
 
-    _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y);
+    /* _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y); */
   }
 
-  _ncm_qm_prop_init_spec_solver (qm_prop, &ic);
+  if (FALSE)
+    _ncm_qm_prop_init_spec_solver (qm_prop, &ic);
   _ncm_qm_prop_init_solver (qm_prop);
 }
 
@@ -1481,11 +1669,11 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
 
   //flag = ARKodeSetARKTableNum (self->arkode, ARK324L2SA_DIRK_4_2_3, ARK324L2SA_ERK_4_2_3);
-  flag = ARKodeSetARKTableNum (self->arkode, ARK548L2SA_DIRK_8_4_5, ARK548L2SA_ERK_8_4_5);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetARKTableNum", 1, );
+  //flag = ARKodeSetARKTableNum (self->arkode, ARK548L2SA_DIRK_8_4_5, ARK548L2SA_ERK_8_4_5);
+  //NCM_CVODE_CHECK (&flag, "ARKodeSetARKTableNum", 1, );
 
-  flag = ARKodeSetOrder (self->arkode, 3);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
+  //flag = ARKodeSetOrder (self->arkode, 3);
+  //NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
   
   //flag = ARKodeSetAdaptivityMethod (self->arkode, 2, 1, 0, NULL);
   //NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptivityMethod", 1, );
@@ -1496,7 +1684,7 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
   //flag = ARKodeSetLinear (self->arkode, 0);
   //NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
 
-  if (FALSE)
+  if (TRUE)
   {
     self->LS = SUNSPGMR (self->y, PREC_NONE, self->nknots);
     NCM_CVODE_CHECK (&flag, "SUNSPGMR", 1, );  
@@ -1511,10 +1699,10 @@ _ncm_qm_prop_init_solver (NcmQMProp *qm_prop)
      flag = ARKSpilsSetJacTimes (self->arkode, NULL, _ncm_qm_prop_J);
      NCM_CVODE_CHECK (&flag, "ARKSpilsSetJacTimes", 1, );
 */
-/*
-    flag = ARKBandPrecInit (self->arkode, 3 * self->nknots, 12, 12);
+
+    flag = ARKBandPrecInit (self->arkode, 3 * self->nknots, 8, 8);
     NCM_CVODE_CHECK (&flag, "ARKBandPrecInit", 1, );
-*/
+
   }
   else if (TRUE)
   {
@@ -1549,11 +1737,11 @@ _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
 
   g_clear_pointer (&self->dht, gsl_dht_free);
   
-  ncm_vector_clear (&self->specReY);
-  ncm_vector_clear (&self->specImY);
+  ncm_vector_clear (&self->spec_ReY);
+  ncm_vector_clear (&self->spec_ImY);
 
-  ncm_vector_clear (&self->specReYt);
-  ncm_vector_clear (&self->specImYt);
+  ncm_vector_clear (&self->spec_ReYt);
+  ncm_vector_clear (&self->spec_ImYt);
 
   ncm_vector_clear (&self->specReW);
   ncm_vector_clear (&self->specImW);
@@ -1561,11 +1749,11 @@ _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
   self->dht = gsl_dht_alloc (self->nknots - 1);
   gsl_dht_init (self->dht, self->nu, self->xf);
 
-  self->specReY    = ncm_vector_new (self->nknots - 1);
-  self->specImY    = ncm_vector_new (self->nknots - 1);
+  self->spec_ReY    = ncm_vector_new (self->nknots - 1);
+  self->spec_ImY    = ncm_vector_new (self->nknots - 1);
 
-  self->specReYt   = ncm_vector_new (self->nknots - 1);
-  self->specImYt   = ncm_vector_new (self->nknots - 1);
+  self->spec_ReYt   = ncm_vector_new (self->nknots - 1);
+  self->spec_ImYt   = ncm_vector_new (self->nknots - 1);
 
   self->specReW    = ncm_vector_new (self->nknots - 1);
   self->specImW    = ncm_vector_new (self->nknots - 1);
@@ -1584,12 +1772,12 @@ _ncm_qm_prop_init_spec_solver (NcmQMProp *qm_prop, NcmQMPropInitCond *ic)
     ncm_vector_fast_set (self->spec_knots, i + 1, x);
     Y[i + 1] = Yi;
 
-    ncm_vector_fast_set (self->specReY, i, creal (Yn));
-    ncm_vector_fast_set (self->specImY, i, cimag (Yn));
+    ncm_vector_fast_set (self->spec_ReY, i, creal (Yn));
+    ncm_vector_fast_set (self->spec_ImY, i, cimag (Yn));
   }
   
-  gsl_dht_apply (self->dht, ncm_vector_data (self->specReY), ncm_vector_data (self->specReW));
-  gsl_dht_apply (self->dht, ncm_vector_data (self->specImY), ncm_vector_data (self->specImW));
+  gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ReY), ncm_vector_data (self->specReW));
+  gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ImY), ncm_vector_data (self->specImW));
 
   /*_ncm_qm_prop_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y));*/
 }
@@ -1607,7 +1795,7 @@ _ncm_qm_prop_diff (const gdouble fp2, const gdouble fp1, const gdouble f, const 
 }
 */
 
-static complex double
+/*static complex double
 _ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const complex double f, const gdouble dx2, const gdouble dx1)
 {
   const gdouble ddx = dx2 - dx1;
@@ -1617,143 +1805,65 @@ _ncm_qm_prop_cdiff2 (const complex double fp2, const complex double fp1, const c
   
   return a * fp2 + b * f + c * fp1;
 }
-
+*/
 #if HAVE_SUNDIALS_MAJOR == 3
 
-#define LOCAL_STENCIL 7
+#define LOCAL_STENCIL 6
 
 static gint 
 _ncm_qm_prop_f_expl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data) 
 {
   NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
   NcmQMPropPrivate * const self = qm_prop->priv;
-  complex double *Y    = NULL;
-  complex double *Ydot = NULL;
-  sunindextype i;
-  
-  Y    = (complex double *) N_VGetArrayPointer (y);
-  Ydot = (complex double *) N_VGetArrayPointer (ydot);
+  gdouble *Yt   = N_VGetArrayPointer (y);
+  gdouble *dYt  = N_VGetArrayPointer (ydot);
+  const gint np = LOCAL_STENCIL;
+  const gint sp = np / 2;
+  gdouble x[LOCAL_STENCIL], S[LOCAL_STENCIL];
+  NcmVector *xv      = ncm_vector_new_data_static (x, LOCAL_STENCIL, 1);
+  NcmVector *Sv      = ncm_vector_new_data_static (S, LOCAL_STENCIL, 1);
+  /*NcmSplineRBF *Srbf = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_GAUSS);*/
+  /*NcmSpline *Ss      = NCM_SPLINE (Srbf);*/
+  NcmSpline *Ss      = ncm_spline_gsl_new (gsl_interp_polynomial);
+  /*NcmSpline *Ss      = ncm_spline_cubic_notaknot_new ();*/
+  gint i;
 
   N_VConst (0.0, ydot);
 
-  if (FALSE)
+  ncm_spline_set (Ss, xv, Sv, FALSE);
+
+  for (i = 0; i < self->nknots; i++)
   {
-    Ydot[0] = 0.0;
-    for (i = 1; i < self->nknots - 1; i++)
-    {
-      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
-      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
-      const gdouble xip1        = ncm_vector_fast_get (self->knots, i + 1);
-      const complex double d2Yi = _ncm_qm_prop_cdiff2 (Y[i + 1], Y[i - 1], Y[i], xip1 - xi, xim1 - xi); 
+    gdouble xi = Yt[_XI (i, self->nknots)];
+    gdouble dSi;
+    gint fi, j;
 
-      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
-    }
-    i = self->nknots - 1;
-    if (self->noboundary)
-    {
-      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
-      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
-      const complex double YN   = _ncm_qm_prop_get_YN (qm_prop, t);
-      const complex double d2Yi = _ncm_qm_prop_cdiff2 (YN, Y[i - 1], Y[i], self->h, xim1 - xi); 
-
-      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
-
-      /*printf ("%ld % 22.15g % 22.15g % 22.15g\n", i, xi, creal (Ydot[i]), cimag (Ydot[i]));*/
-    }
+    if (i < sp)
+      fi = 0;
+    else if (i + sp + 1 > self->nknots)
+      fi = self->nknots - np;
     else
-      Ydot[i] = 0.0;
-  }
-  else if (FALSE)
-  {
-    gdouble *Yt      = N_VGetArrayPointer (y);
-    gdouble *dYt     = N_VGetArrayPointer (ydot);
-    NcmVector *x     = ncm_vector_new_data_static (&Yt[_XI   (0, self->nknots)], self->nknots, _XI_STRIDE);
-    NcmVector *lnR   = ncm_vector_new_data_static (&Yt[_LNRI (0, self->nknots)], self->nknots, _LNRI_STRIDE);
-    NcmVector *S     = ncm_vector_new_data_static (&Yt[_SI   (0, self->nknots)], self->nknots, _SI_STRIDE);
-    NcmSpline *lnR_s = ncm_spline_cubic_notaknot_new_full (x, lnR, TRUE);
-    NcmSpline *S_s   = ncm_spline_cubic_notaknot_new_full (x, S,   TRUE);
-    gint i;
+      fi = i - sp;
 
-    ncm_spline_prepare (lnR_s);
-    ncm_spline_prepare (S_s);
-    
-    for (i = 0; i < self->nknots; i++)
+    for (j = 0; j < np; j++)
     {
-      const gdouble xi     = ncm_vector_get (x, i);
-      const gdouble dSi    = ncm_spline_eval_deriv (S_s, xi);
-      const gdouble d2Si   = ncm_spline_eval_deriv2 (S_s, xi);
-      const gdouble dlnRi  = ncm_spline_eval_deriv (lnR_s, xi);
-      const gdouble d2lnRi = ncm_spline_eval_deriv2 (lnR_s, xi);
-      
-      dYt[_XI   (i, self->nknots)] = 2.0 * dSi;
-      dYt[_LNRI (i, self->nknots)] = - d2Si;
-      dYt[_SI   (i, self->nknots)] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
-
-      if (FALSE)
-      {
-        printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
-                 Yt[_XI (i, self->nknots)],  Yt[_LNRI (i, self->nknots)],  Yt[_SI (i, self->nknots)],
-                dYt[_XI (i, self->nknots)], dYt[_LNRI (i, self->nknots)], dYt[_SI (i, self->nknots)]
-                );
-      }
+      gint k = fi + j;
+      x[j]   = Yt[_XI (k, self->nknots)];
+      S[j]   = Yt[_SI (k, self->nknots)];
     }
 
-    ncm_vector_free (x);
-    ncm_vector_free (lnR);
-    ncm_vector_free (S);
+    ncm_spline_prepare (Ss);
 
-    ncm_spline_free (lnR_s);
-    ncm_spline_free (S_s);
-  }
-  else
-  {
-    gdouble *Yt   = N_VGetArrayPointer (y);
-    gdouble *dYt  = N_VGetArrayPointer (ydot);
-    const gint np = LOCAL_STENCIL;
-    const gint sp = np / 2;
-    gdouble x[LOCAL_STENCIL], S[LOCAL_STENCIL];
-    NcmVector *xv      = ncm_vector_new_data_static (x, LOCAL_STENCIL, 1);
-    NcmVector *Sv      = ncm_vector_new_data_static (S, LOCAL_STENCIL, 1);
-    /*NcmSplineRBF *Srbf = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_GAUSS);*/
-    /*NcmSpline *Ss      = NCM_SPLINE (Srbf);*/
-    NcmSpline *Ss      = ncm_spline_cubic_notaknot_new ();
-    gint i;
+    dSi = ncm_spline_eval_deriv (Ss, xi);
 
-    ncm_spline_set (Ss, xv, Sv, FALSE);
-    
-    for (i = 0; i < self->nknots; i++)
-    {
-      gdouble xi = Yt[_XI (i, self->nknots)];
-      gdouble dSi;
-      gint fi, j;
-      
-      if (i < sp)
-        fi = 0;
-      else if (i + sp + 1 > self->nknots)
-        fi = self->nknots - np;
-      else
-        fi = i - sp;
-
-      for (j = 0; j < np; j++)
-      {
-        gint k = fi + j;
-        x[j]   = Yt[_XI (k, self->nknots)];
-        S[j]   = Yt[_SI (k, self->nknots)];
-      }
-
-      ncm_spline_prepare (Ss);
-
-      dSi = ncm_spline_eval_deriv (Ss, xi);
-      
-      dYt[_XI (i, self->nknots)] = 2.0 * dSi;
-    }
-
-    ncm_vector_free (xv);
-    ncm_vector_free (Sv);
-    ncm_spline_free (Ss);
+    dYt[_XI (i, self->nknots)] = 2.0 * dSi;
   }
 
-  return 0; 
+  ncm_vector_free (xv);
+  ncm_vector_free (Sv);
+  ncm_spline_free (Ss);
+
+  return 0;
 }
 
 static gint 
@@ -1761,147 +1871,74 @@ _ncm_qm_prop_f_impl (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
   NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
   NcmQMPropPrivate * const self = qm_prop->priv;
-  complex double *Y    = NULL;
-  complex double *Ydot = NULL;
-  sunindextype i;
-  
-  Y    = (complex double *) N_VGetArrayPointer (y);
-  Ydot = (complex double *) N_VGetArrayPointer (ydot);
+  gdouble *Yt   = N_VGetArrayPointer (y);
+  gdouble *dYt  = N_VGetArrayPointer (ydot);
+  const gint np = LOCAL_STENCIL;
+  const gint sp = np / 2;
+  gdouble x[LOCAL_STENCIL], lnR[LOCAL_STENCIL], S[LOCAL_STENCIL];
+  NcmVector *xv        = ncm_vector_new_data_static (x, LOCAL_STENCIL, 1);
+  NcmVector *Sv        = ncm_vector_new_data_static (S, LOCAL_STENCIL, 1);
+  NcmVector *lnRv      = ncm_vector_new_data_static (lnR, LOCAL_STENCIL, 1);
+  /*NcmSplineRBF *Srbf   = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_GAUSS);*/
+  /*NcmSplineRBF *lnRrbf = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS);*/
+  /*NcmSpline *Ss        = NCM_SPLINE (Srbf);*/
+  /*NcmSpline *lnRs      = NCM_SPLINE (lnRrbf);*/
+  NcmSpline *Ss        = ncm_spline_gsl_new (gsl_interp_polynomial);
+  NcmSpline *lnRs      = ncm_spline_gsl_new (gsl_interp_polynomial);
+  /*NcmSpline *Ss        = ncm_spline_cubic_notaknot_new ();*/
+  /*NcmSpline *lnRs      = ncm_spline_cubic_notaknot_new ();*/
+  gint i;
 
   N_VConst (0.0, ydot);
 
-  if (FALSE)
+  ncm_spline_set (Ss,   xv, Sv,   FALSE);
+  ncm_spline_set (lnRs, xv, lnRv, FALSE);
+
+  for (i = 0; i < self->nknots; i++)
   {
-    Ydot[0] = 0.0;
-    for (i = 1; i < self->nknots - 1; i++)
-    {
-      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
-      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
-      const gdouble xip1        = ncm_vector_fast_get (self->knots, i + 1);
-      const complex double d2Yi = _ncm_qm_prop_cdiff2 (Y[i + 1], Y[i - 1], Y[i], xip1 - xi, xim1 - xi); 
+    const gdouble l0 = 1.0;
+    gdouble xi       = Yt[_XI (i, self->nknots)];
+    gdouble dSi, d2Si, dlnRi, d2lnRi;
+    gint fi, j;
 
-      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
-    }
-    i = self->nknots - 1;
-    if (self->noboundary)
-    {
-      const gdouble xi          = ncm_vector_fast_get (self->knots, i);
-      const gdouble xim1        = ncm_vector_fast_get (self->knots, i - 1);
-      const complex double YN   = _ncm_qm_prop_get_YN (qm_prop, t);
-      const complex double d2Yi = _ncm_qm_prop_cdiff2 (YN, Y[i - 1], Y[i], self->h, xim1 - xi); 
 
-      Ydot[i] = -I * (- d2Yi + self->lambda * Y[i] / (xi * xi));
-
-      /*printf ("%ld % 22.15g % 22.15g % 22.15g\n", i, xi, creal (Ydot[i]), cimag (Ydot[i]));*/
-    }
+    if (i < sp)
+      fi = 0;
+    else if (i + sp + 1 > self->nknots)
+      fi = self->nknots - np;
     else
-      Ydot[i] = 0.0;
-  }
-  else if (FALSE)
-  {
-    gdouble *Yt      = N_VGetArrayPointer (y);
-    gdouble *dYt     = N_VGetArrayPointer (ydot);
-    NcmVector *x     = ncm_vector_new_data_static (&Yt[_XI   (0, self->nknots)], self->nknots, _XI_STRIDE);
-    NcmVector *lnR   = ncm_vector_new_data_static (&Yt[_LNRI (0, self->nknots)], self->nknots, _LNRI_STRIDE);
-    NcmVector *S     = ncm_vector_new_data_static (&Yt[_SI   (0, self->nknots)], self->nknots, _SI_STRIDE);
-    NcmSpline *lnR_s = ncm_spline_cubic_notaknot_new_full (x, lnR, TRUE);
-    NcmSpline *S_s   = ncm_spline_cubic_notaknot_new_full (x, S,   TRUE);
-    gint i;
+      fi = i - sp;
 
-    ncm_spline_prepare (lnR_s);
-    ncm_spline_prepare (S_s);
-    
-    for (i = 0; i < self->nknots; i++)
+    for (j = 0; j < np; j++)
     {
-      const gdouble xi     = ncm_vector_get (x, i);
-      const gdouble dSi    = ncm_spline_eval_deriv (S_s, xi);
-      const gdouble d2Si   = ncm_spline_eval_deriv2 (S_s, xi);
-      const gdouble dlnRi  = ncm_spline_eval_deriv (lnR_s, xi);
-      const gdouble d2lnRi = ncm_spline_eval_deriv2 (lnR_s, xi);
-      
-      dYt[_XI   (i, self->nknots)] = 2.0 * dSi;
-      dYt[_LNRI (i, self->nknots)] = - d2Si;
-      dYt[_SI   (i, self->nknots)] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
-
-      if (FALSE)
-      {
-        printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
-                 Yt[_XI (i, self->nknots)],  Yt[_LNRI (i, self->nknots)],  Yt[_SI (i, self->nknots)],
-                dYt[_XI (i, self->nknots)], dYt[_LNRI (i, self->nknots)], dYt[_SI (i, self->nknots)]
-                );
-      }
+      gint k = fi + j;
+      x[j]   = Yt[_XI   (k, self->nknots)];
+      lnR[j] = Yt[_LNRI (k, self->nknots)] - l0 * log (x[j]);
+      S[j]   = Yt[_SI   (k, self->nknots)];
     }
 
-    ncm_vector_free (x);
-    ncm_vector_free (lnR);
-    ncm_vector_free (S);
+    ncm_spline_prepare (Ss);
+    ncm_spline_prepare (lnRs);
 
-    ncm_spline_free (lnR_s);
-    ncm_spline_free (S_s);
+    dlnRi  = ncm_spline_eval_deriv  (lnRs, xi) + l0 / xi;
+    d2lnRi = ncm_spline_eval_deriv2 (lnRs, xi) - l0 / (xi * xi);
+    dSi    = ncm_spline_eval_deriv  (Ss,   xi);
+    d2Si   = ncm_spline_eval_deriv2 (Ss,   xi);
+
+    dYt[_LNRI (i, self->nknots)] = - d2Si;
+    dYt[_SI   (i, self->nknots)] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
+
+    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", t, dSi * dSi, d2lnRi, dlnRi * dlnRi);*/
   }
-  else
-  {
-    gdouble *Yt   = N_VGetArrayPointer (y);
-    gdouble *dYt  = N_VGetArrayPointer (ydot);
-    const gint np = LOCAL_STENCIL;
-    const gint sp = np / 2;
-    gdouble x[LOCAL_STENCIL], lnR[LOCAL_STENCIL], S[LOCAL_STENCIL];
-    NcmVector *xv        = ncm_vector_new_data_static (x, LOCAL_STENCIL, 1);
-    NcmVector *Sv        = ncm_vector_new_data_static (S, LOCAL_STENCIL, 1);
-    NcmVector *lnRv      = ncm_vector_new_data_static (lnR, LOCAL_STENCIL, 1);
-    /*NcmSplineRBF *Srbf   = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_GAUSS);*/
-    /*NcmSplineRBF *lnRrbf = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS);*/
-    /*NcmSpline *Ss        = NCM_SPLINE (Srbf);*/
-    /*NcmSpline *lnRs      = NCM_SPLINE (lnRrbf);*/
-    NcmSpline *Ss        = ncm_spline_cubic_notaknot_new ();
-    NcmSpline *lnRs      = ncm_spline_cubic_notaknot_new ();
-    gint i;
-    
-    ncm_spline_set (Ss,   xv, Sv,   FALSE);
-    ncm_spline_set (lnRs, xv, lnRv, FALSE);
 
-    for (i = 0; i < self->nknots; i++)
-    {
-      gdouble xi = Yt[_XI (i, self->nknots)];
-      gdouble dSi, d2Si, dlnRi, d2lnRi;
-      gint fi, j;
-      
-      if (i < sp)
-        fi = 0;
-      else if (i + sp + 1 > self->nknots)
-        fi = self->nknots - np;
-      else
-        fi = i - sp;
+  ncm_vector_free (xv);
+  ncm_vector_free (lnRv);
+  ncm_vector_free (Sv);
 
-      for (j = 0; j < np; j++)
-      {
-        gint k = fi + j;
-        x[j]   = Yt[_XI   (k, self->nknots)];
-        lnR[j] = Yt[_LNRI (k, self->nknots)];
-        S[j]   = Yt[_SI   (k, self->nknots)];
-      }
+  ncm_spline_free (lnRs);
+  ncm_spline_free (Ss);
 
-      ncm_spline_prepare (Ss);
-      ncm_spline_prepare (lnRs);
-
-      dlnRi  = ncm_spline_eval_deriv  (lnRs, xi);
-      d2lnRi = ncm_spline_eval_deriv2 (lnRs, xi);
-      dSi    = ncm_spline_eval_deriv  (Ss,   xi);
-      d2Si   = ncm_spline_eval_deriv2 (Ss,   xi);
-      
-      dYt[_SI   (i, self->nknots)] = - d2Si;
-      dYt[_LNRI (i, self->nknots)] = dSi * dSi - self->lambda / (xi * xi) + d2lnRi + dlnRi * dlnRi;
-    }
-    
-    ncm_vector_free (xv);
-    ncm_vector_free (lnRv);
-    ncm_vector_free (Sv);
-
-    ncm_spline_free (lnRs);
-    ncm_spline_free (Ss);
-  }
-    
-  return 0; 
+  return 0;
 }
 
 /*
@@ -2217,7 +2254,7 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
   flag = ARKodeSetStopTime (self->arkode, tf);
   NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-  printf ("# Evolving! % 22.15g => % 22.15g\n", t, tf);
+  /*printf ("# Evolving! % 22.15g => % 22.15g\n", t, tf);*/
 #if 0
   glong iout = 0;
   glong nni, nni_cur = 0; 
@@ -2235,7 +2272,14 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
 
     /*_ncm_qm_prop_prepare_splines (self, t, Y);*/
     /*printf ("# STEP % 22.15g\n", t);*/
-    /*printf ("# STEP % 22.15g % 22.15g % 22.15g % 22.15g\n", t, Y[0], Y[1], Y[2]);*/
+/*
+    printf ("# STEP % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g\n",
+            t,
+            Y[_XI   (0, self->nknots)], Y[_XI   (1, self->nknots)], Y[_XI   (2, self->nknots)],
+            Y[_LNRI (0, self->nknots)], Y[_LNRI (1, self->nknots)], Y[_LNRI (2, self->nknots)],
+            Y[_SI   (0, self->nknots)], Y[_SI   (1, self->nknots)], Y[_SI   (2, self->nknots)]
+            );
+*/
 
 #if 0
     flag = ARKodeGetLastStep (self->arkode, &olddt);
@@ -2289,7 +2333,7 @@ ncm_qm_prop_evolve (NcmQMProp *qm_prop, const gdouble tf)
 
   self->ti = t;
   self->up_splines = FALSE;
-  _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y);
+  /* _ncm_qm_prop_prepare_splines (self, self->ti, self->knots, Y); */
 #endif /* HAVE_SUNDIALS_MAJOR == 3 */
 }
 
@@ -2315,18 +2359,18 @@ ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t)
     complex double W  = ncm_vector_fast_get (self->specReW, i) + I * ncm_vector_fast_get (self->specImW, i);
     complex double Wt = cexp (-I * li * li * t) * W;
 
-    ncm_vector_fast_set (self->specReY, i, creal (Wt));
-    ncm_vector_fast_set (self->specImY, i, cimag (Wt));
+    ncm_vector_fast_set (self->spec_ReY, i, creal (Wt));
+    ncm_vector_fast_set (self->spec_ImY, i, cimag (Wt));
   }
 
-  gsl_dht_apply (self->dht, ncm_vector_data (self->specReY), ncm_vector_data (self->specReYt));
-  gsl_dht_apply (self->dht, ncm_vector_data (self->specImY), ncm_vector_data (self->specImYt));
+  gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ReY), ncm_vector_data (self->spec_ReYt));
+  gsl_dht_apply (self->dht, ncm_vector_data (self->spec_ImY), ncm_vector_data (self->spec_ImYt));
 
   Y[0] = 0.0;
   for (i = 0; i < self->nknots - 1; i++)
   {
     const gdouble x   = gsl_dht_x_sample (self->dht, i);    
-    complex double Yt = norma * sqrt (x) * (ncm_vector_fast_get (self->specReYt, i) + I * ncm_vector_fast_get (self->specImYt, i));
+    complex double Yt = norma * sqrt (x) * (ncm_vector_fast_get (self->spec_ReYt, i) + I * ncm_vector_fast_get (self->spec_ImYt, i));
 
     Y[i + 1] = Yt;
   }
@@ -2334,7 +2378,7 @@ ncm_qm_prop_evolve_spec (NcmQMProp *qm_prop, const gdouble t)
   self->ti = t;
   self->up_splines = FALSE;
 
-  _ncm_qm_prop_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y));
+  /* _ncm_qm_prop_prepare_splines (self, self->ti, self->spec_knots, ncm_vector_data (self->spec_Y)); */
 }
 
 /**
@@ -2530,3 +2574,915 @@ ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop)
   
   return int_rho;
 }
+
+gdouble
+_ncm_qm_prop_spec_basis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+{
+  const gdouble h2   = h * h;
+  const gdouble xy   = x * y;
+  const gdouble xyh2 = xy * h2;
+  const gdouble x2   = x * x;
+  const gdouble y2   = y * y;
+  const gdouble a1   = 0.5 * h2 * (x2 + y2);
+  const gdouble xya  = pow (xy, a);
+
+  if (xyh2 < 1.0)
+  {
+    return 2.0 * xya * sinh (xyh2) * exp (-a1);
+  }
+  else
+  {
+    return 2.0 * xya * exp (-a1 + gsl_sf_lnsinh (xyh2));
+  }
+}
+
+/**
+ * ncm_qm_prop_spec_basis:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ * @y: FIXME
+ * @h: FIXME
+ * @a: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_basis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+{
+  return _ncm_qm_prop_spec_basis (x, y, h, a);
+}
+
+static gdouble
+_ncm_qm_prop_spec_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+{
+  const gdouble h2   = h * h;
+  const gdouble xy   = x * y;
+  const gdouble xyh2 = xy * h2;
+  const gdouble x2   = x * x;
+  const gdouble y2   = y * y;
+  const gdouble a1   = 0.5 * h2 * (x2 + y2);
+  const gdouble xya  = pow (xy, a);
+
+  if (xyh2 < 1.0)
+  {
+    return 2.0 * h2 * xya * (2.0 * xyh2 * cosh (xyh2) + (1.0 + 2.0 * a - 2.0 * a1) * sinh (xyh2) + 2.0 * h2 * xyh2 * y2 * a * ncm_util_sinhx_m_xcoshx_x3 (xyh2)) * exp (-a1);
+  }
+  else
+  {
+    return 2.0 * h2 * xya * (2.0 * xyh2 * (1.0 - a / (h2 * x2)) * exp (-a1 + gsl_sf_lncosh (xyh2)) + (1.0 + 2.0 * a - 2.0 * a1 + 2.0 * a / (h2 * x2)) * exp (-a1 + gsl_sf_lnsinh (xyh2)));
+  }
+}
+
+/**
+ * ncm_qm_prop_spec_Hbasis:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ * @y: FIXME
+ * @h: FIXME
+ * @a: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_Hbasis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+{
+  return _ncm_qm_prop_spec_Hbasis (x, y, h, a);
+}
+
+static gdouble
+_ncm_qm_prop_spec_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
+{
+  const gdouble h2   = h * h;
+  const gdouble xy   = x * y;
+  const gdouble xyh2 = xy * h2;
+  const gdouble x2   = x * x;
+  const gdouble y2   = y * y;
+  const gdouble a1   = 0.5 * h2 * (x2 + y2);
+  const gdouble ya   = pow (y, a);
+
+  if (xyh2 < 1.0)
+  {
+    return 2.0 * ya * y * h2 * ncm_util_sinh1 (xyh2) * exp (-a1);
+  }
+  else
+  {
+    return 2.0 * ya * exp (-a1 + gsl_sf_lnsinh (xyh2)) / x;
+  }
+}
+
+static gdouble
+_ncm_qm_prop_spec_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
+{
+  const gdouble h2      = h * h;
+  const gdouble h2x     = h * h * x;
+  const gdouble h8      = gsl_pow_4 (h2);
+  const gdouble y12     = y1 * y1;
+  const gdouble y22     = y2 * y2;
+  const gdouble x2      = x * x;
+  const gdouble y1my2   = y1 - y2;
+  const gdouble y1py2   = y1 + y2;
+  const gdouble y1my2_2 = y1my2 * y1my2;
+  const gdouble y1py2_2 = y1py2 * y1py2;
+  const gdouble y12my22 = y1py2 * y1my2;
+  const gdouble a1      = 0.5 * h2 * (y12 + y22 + 2.0 * x2);
+  const gdouble y1y2    = y1 * y2;
+  const gdouble y1y2a   = pow (y1y2, a);
+
+  if ((fabs (h2x * y1my2) < 1.0) && (fabs (h2x * y1py2) < 1.0))
+  {
+    return exp (-a1) * (h8 / 6.0) * y1y2a * y12my22 * (ncm_util_sinh3 (h2x * y1my2) * y1my2_2 - ncm_util_sinh3 (h2x * y1py2) * y1py2_2);
+  }
+  else
+  {
+    const gdouble x3 = x2 * x;
+    if (y1 > y2)
+      return (h2 / x3) * y1y2a * (+exp (-a1 + gsl_sf_lnsinh (+h2x * y1my2)) * y1py2 - exp (-a1 + gsl_sf_lnsinh (h2x * y1py2)) * y1my2);
+    else
+      return (h2 / x3) * y1y2a * (-exp (-a1 + gsl_sf_lnsinh (-h2x * y1my2)) * y1py2 - exp (-a1 + gsl_sf_lnsinh (h2x * y1py2)) * y1my2);
+  }
+}
+
+/**
+ * ncm_qm_prop_spec_Sbasis_x3:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ * @y1: FIXME
+ * @y2: FIXME
+ * @h: FIXME
+ * @a: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_Sbasis_x3 (NcmQMProp *qm_prop, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
+{
+  return _ncm_qm_prop_spec_Sbasis_x3 (x, y1, y2, h, a);
+}
+
+/**
+ * ncm_qm_prop_spec_get_lambda:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_get_lambda (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return self->lambda;
+}
+
+/**
+ * ncm_qm_prop_spec_get_basis_a:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_get_basis_a (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return self->basis_a;
+}
+
+/**
+ * ncm_qm_prop_spec_get_acs_a:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_get_acs_a (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return self->acs_a;
+}
+
+/**
+ * ncm_qm_prop_spec_get_nu:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_get_nu (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return self->nu;
+}
+
+static gdouble
+_ncm_qm_prop_spec_If2 (const gdouble y1, const gdouble y2, const gdouble h)
+{
+  const gdouble h2      = h * h;
+  const gdouble y12     = y1 * y1;
+  const gdouble y22     = y2 * y2;
+  const gdouble b1      = 0.5 * h2 * y1 * y2;
+  const gdouble a1      = 0.25 * h2 * (y12 + y22);
+
+  if (b1 < 1.0)
+  {
+    return exp (-a1) * sinh (b1) * 2.0 * ncm_c_sqrt_pi () / h;
+  }
+  else
+  {
+    return exp (-a1 + gsl_sf_lnsinh (b1)) * 2.0 * ncm_c_sqrt_pi () / h;
+  }
+}
+
+static gdouble
+_ncm_qm_prop_spec_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
+{
+  const gdouble h2     = h * h;
+  const gdouble ym12   = 0.5 * h * (y1 - y2);
+  const gdouble yp12   = 0.5 * h * (y1 + y2);
+  const gdouble ym12_2 = ym12 * ym12;
+  const gdouble yp12_2 = yp12 * yp12;
+
+  return (exp (-ym12_2) * yp12 * erf (yp12) - exp (-yp12_2) * ym12 * erf (ym12)) * ncm_c_sqrt_pi () / h2;
+}
+
+static void _ncm_qm_prop_spec_evol_C (NcmQMProp *qm_prop, const gdouble t);
+
+static gint
+_ncm_qm_prop_spec_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
+{
+  NcmQMProp *qm_prop = NCM_QM_PROP (user_data);
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gdouble *Y  = N_VGetArrayPointer (y);
+  gdouble *dY = N_VGetArrayPointer (ydot);
+  gint i;
+
+  _ncm_qm_prop_spec_evol_C (qm_prop, t);
+
+  for (i = 0; i < self->nBohm; i++)
+  {
+    dY[i] = 2.0 * ncm_qm_prop_spec_eval_dS (qm_prop, Y[i]);
+  }
+
+  return 0;
+}
+
+void
+_ncm_qm_prop_spec_init_solver (NcmQMProp *qm_prop)
+{
+#if HAVE_SUNDIALS_MAJOR == 3
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  const gdouble t0 = 0.0;
+  gint flag;
+
+  if (self->bohm != NULL)
+    ARKodeFree (&self->bohm);
+
+  self->nBohm = 10;
+
+  g_clear_pointer (&self->y, N_VDestroy);
+  self->yBohm = N_VNew_Serial (self->nBohm);
+
+  NV_Ith_S (self->yBohm, 0) = 0.01;
+  NV_Ith_S (self->yBohm, 1) = 0.21;
+  NV_Ith_S (self->yBohm, 2) = 0.41;
+  NV_Ith_S (self->yBohm, 3) = 0.61;
+  NV_Ith_S (self->yBohm, 4) = 0.81;
+  NV_Ith_S (self->yBohm, 5) = 1.01;
+  NV_Ith_S (self->yBohm, 6) = 1.21;
+  NV_Ith_S (self->yBohm, 7) = 1.41;
+  NV_Ith_S (self->yBohm, 8) = 1.61;
+  NV_Ith_S (self->yBohm, 9) = 1.81;
+
+  self->bohm = ARKodeCreate ();
+  NCM_CVODE_CHECK (&self->bohm, "ARKodeCreate", 0, );
+
+  flag = ARKodeInit (self->bohm, &_ncm_qm_prop_spec_bohm_f, NULL, t0, self->yBohm);
+  NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
+
+  flag = ARKodeSetUserData (self->bohm, (void *) qm_prop);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
+
+  flag = ARKodeSetMaxNumSteps (self->bohm, 10000);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
+
+  flag = ARKodeSStolerances (self->bohm, self->reltol, self->abstol);
+  NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
+
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
+}
+
+/**
+ * ncm_qm_prop_spec_prepare:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ */
+void
+ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gint i, ret;
+
+  /* WARNING self->h must not be a integer multiple of y-x */
+  self->h = 1.0 / (1.99 * (self->xf - self->xi) / (1.0 * self->nknots));
+  ncm_matrix_set_zero (self->IM);
+
+	for (i = 0; i < self->nknots; i++)
+	{
+		const gdouble x1 = ncm_vector_get (self->knots, i);
+    const gdouble f1 = 2.49;
+    if (i == 0)
+    {
+      const gdouble si = x1;
+      const gdouble hi = 1.0 / (f1 * si);
+
+      ncm_vector_set (self->hv, i, hi);
+    }
+    else if (i + 1 == self->nknots)
+    {
+      const gdouble x1m1 = ncm_vector_get (self->knots, i - 1);
+      const gdouble si   = x1 - x1m1;
+      const gdouble hi   = 1.0 / (f1 * si);
+
+      ncm_vector_set (self->hv, i, hi);
+    }
+    else
+    {
+      const gdouble x1m1 = ncm_vector_get (self->knots, i - 1);
+      const gdouble x1p1 = ncm_vector_get (self->knots, i + 1);
+      const gdouble si   = MAX (x1 - x1m1, x1p1 - x1);
+      const gdouble hi   = 1.0 / (f1 * si);
+
+      ncm_vector_set (self->hv, i, hi);
+    }
+    ncm_vector_set (self->hv, i, self->h);
+  }
+
+	for (i = 0; i < self->nknots; i++)
+	{
+		const gdouble x1    = ncm_vector_get (self->knots, i);
+    const gdouble hi    = ncm_vector_get (self->hv, i);
+    const gdouble Ix1x1 = _ncm_qm_prop_spec_basis (x1, x1, hi, self->basis_a);
+    const gdouble Kx1x1 = /*Ix1x1;//*/_ncm_qm_prop_spec_Hbasis (x1, x1, hi, self->basis_a);
+    guint j;
+
+    ncm_matrix_set (self->IM, i, i, Ix1x1);
+    ncm_matrix_set (self->KM, i, i, Kx1x1);
+    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", h, x1, x1, Ix1x1);*/
+		for (j = i + 1; j < self->nknots; j++)
+		{
+			const gdouble x2    = ncm_vector_get (self->knots, j);
+      const gdouble hj    = ncm_vector_get (self->hv, j);
+			const gdouble Ix1x2 = _ncm_qm_prop_spec_basis (x1, x2, hj, self->basis_a);
+			const gdouble Kx1x2 = /*Ix1x2;//*/_ncm_qm_prop_spec_Hbasis (x1, x2, hj, self->basis_a);
+			const gdouble Kx2x1 = /*Ix1x2;//*/_ncm_qm_prop_spec_Hbasis (x2, x1, hj, self->basis_a);
+
+			ncm_matrix_set (self->IM, j, i, Ix1x2);
+      ncm_matrix_set (self->KM, i, j, Kx2x1);
+      ncm_matrix_set (self->KM, j, i, Kx1x2);
+    }
+	}
+  /*ncm_vector_log_vals (self->knots, "#    KNOTS:  ", "% .5e", TRUE);*/
+  /*ncm_vector_log_vals (self->hv,    "#       HV:  ", "% .5e", TRUE);*/
+  printf ("#        H:  % 22.15g\n", self->h);
+
+  {
+    gint lwork  = -1;
+    gchar equed = 'Y';
+
+    g_array_set_size (self->ipiv, self->nknots);
+    g_array_set_size (self->iwork, 2 * self->nknots);
+
+    if (self->work->len < 1)
+      g_array_set_size (self->work, 1);
+
+    /*ncm_matrix_log_vals (self->IM, "#     IM: ", "% .5e");*/
+    /*ncm_matrix_log_vals (self->KM, "#     KM: ", "% .5e");*/
+
+    if (FALSE)
+    {
+      ret = ncm_lapack_dsytrf ('L', self->nknots,
+                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                               (gint *)self->ipiv->data, (gdouble *)self->work->data, lwork);
+      g_assert_cmpint (ret, ==, 0);
+
+      lwork = g_array_index (self->work, gdouble, 0);
+      if (lwork > self->work->len)
+        g_array_set_size (self->work, lwork);
+
+      ret = ncm_lapack_dsytrf ('L', self->nknots,
+                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                               (gint *)self->ipiv->data, (gdouble *)self->work->data, lwork);
+      g_assert_cmpint (ret, ==, 0);
+
+      ncm_matrix_memcpy (self->IM_fact, self->IM);
+      /*ncm_matrix_log_vals (self->IM, "# DEC IM: ", "% .5e");*/
+
+      ret = ncm_lapack_dsytrs ('L', self->nknots, self->nknots,
+                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                               (gint *)self->ipiv->data,
+                               ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM));
+      g_assert_cmpint (ret, ==, 0);
+
+      ncm_matrix_memcpy (self->JM, self->KM);
+      /*ncm_matrix_log_vals (self->JM, "#     JM: ", "% .5e");*/
+    }
+    else
+    {
+      gdouble rcond, rpvgrw;
+
+      ncm_matrix_set_zero (self->err_norm);
+      ncm_matrix_set_zero (self->err_comp);
+
+      g_array_set_size (self->work, 4 * self->nknots);
+      ret = ncm_lapack_dsysvxx ('E', 'L', self->nknots, self->nknots,
+                                ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                                ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                                (gint *)self->ipiv->data, &equed,
+                                ncm_vector_data (self->scaling),
+                                ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
+                                ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                                &rcond, &rpvgrw,
+                                ncm_vector_data (self->berr),
+                                3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), 0, NULL,
+                                (gdouble *)self->work->data, (gint *)self->iwork->data);
+
+      printf ("#    RCOND:  % 22.15g\n", rcond);
+      printf ("#   RPVGRW:  % 22.15g\n", rpvgrw);
+
+      /*ncm_vector_log_vals (self->scaling,  "#  SCALING:  ", "% .5e", TRUE);*/
+      /*ncm_vector_log_vals (self->berr,     "#     BERR:  ", "% .5e", TRUE);*/
+      /*ncm_matrix_log_vals (self->err_norm, "# ERR_NORM: ",  "% .5e");*/
+      /*ncm_matrix_log_vals (self->err_comp, "# ERR_COMP: ",  "% .5e");*/
+      /*ncm_matrix_log_vals (self->JM,       "#       JM: ",  "% .5e");*/
+
+      g_assert_cmpint (ret, ==, 0);
+    }
+
+    if (FALSE)
+    {
+      lwork = -1;
+      ret = ncm_lapack_dgeev ('V', 'V', self->nknots,
+                              ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                              ncm_vector_data (self->wr),
+                              ncm_vector_data (self->wi),
+                              ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
+                              ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
+                              (gdouble *)self->work->data, lwork);
+      g_assert_cmpint (ret, ==, 0);
+
+      lwork = g_array_index (self->work, gdouble, 0);
+      if (lwork > self->work->len)
+        g_array_set_size (self->work, lwork);
+
+      ret = ncm_lapack_dgeev ('V', 'V', self->nknots,
+                              ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                              ncm_vector_data (self->wr), ncm_vector_data (self->wi),
+                              ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
+                              ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
+                              (gdouble *)self->work->data, lwork);
+      g_assert_cmpint (ret, ==, 0);
+    }
+    else
+    {
+      gint ilo, ihi;
+      gdouble abnrm;
+
+      lwork = -1;
+      ret = ncm_lapack_dgeevx ('B', 'V', 'V', 'B', self->nknots,
+                               ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                               ncm_vector_data (self->wr), ncm_vector_data (self->wi),
+                               ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
+                               ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
+                               &ilo, &ihi,
+                               ncm_vector_data (self->Escaling),
+                               &abnrm, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp),
+                               (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+      g_assert_cmpint (ret, ==, 0);
+
+      lwork = g_array_index (self->work, gdouble, 0);
+      if (lwork > self->work->len)
+        g_array_set_size (self->work, lwork);
+
+      ret = ncm_lapack_dgeevx ('B', 'V', 'V', 'B', self->nknots,
+                               ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                               ncm_vector_data (self->wr), ncm_vector_data (self->wi),
+                               ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
+                               ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
+                               &ilo, &ihi,
+                               ncm_vector_data (self->Escaling),
+                               &abnrm, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp),
+                               (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+      g_assert_cmpint (ret, ==, 0);
+    }
+
+    /*ncm_vector_log_vals (self->wr, "#       WR:  ", "% .5e", TRUE);*/
+    /*ncm_vector_log_vals (self->wi, "#       WI:  ", "% .5e", TRUE);*/
+
+    /*ncm_matrix_log_vals (self->vl, "#       VL: ", "% .5e");*/
+    /*ncm_matrix_log_vals (self->vr, "#       VR: ", "% .5e");*/
+
+    ncm_vector_memcpy (self->spec_ReC0, self->spec_ReY);
+    ncm_vector_memcpy (self->spec_ImC0, self->spec_ImY);
+
+    memcpy (ncm_vector_data (self->spec_Y), ncm_matrix_data (self->spec_C0), sizeof (gdouble) * self->nknots * 2);
+
+    /*ncm_vector_log_vals (self->spec_ReC0, "# ReY:  ", "% .5e", TRUE);*/
+    /*ncm_vector_log_vals (self->spec_ImC0, "# ImY:  ", "% .5e", TRUE);*/
+
+    if (FALSE)
+    {
+      ret = ncm_lapack_dsytrs ('L', self->nknots, 2,
+                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                               (gint *)self->ipiv->data,
+                               ncm_matrix_data (self->spec_C0), ncm_matrix_tda (self->spec_C0));
+      g_assert_cmpint (ret, ==, 0);
+    }
+    else
+    {
+      gdouble rcond, rpvgrw;
+
+      ncm_matrix_set_zero (self->err_norm);
+      ncm_matrix_set_zero (self->err_comp);
+
+      ret = ncm_lapack_dsysvxx ('F', 'L', self->nknots, 2,
+                                ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                                ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                                (gint *)self->ipiv->data, &equed,
+                                ncm_vector_data (self->scaling),
+                                ncm_vector_data (self->spec_Y), ncm_matrix_tda (self->spec_C0),
+                                ncm_matrix_data (self->spec_C0), ncm_matrix_tda (self->spec_C0),
+                                &rcond, &rpvgrw,
+                                ncm_vector_data (self->berr),
+                                3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), 0, NULL,
+                                (gdouble *)self->work->data, (gint *)self->iwork->data);
+
+      printf ("#    RCOND:  % 22.15g\n", rcond);
+      printf ("#   RPVGRW:  % 22.15g\n", rpvgrw);
+
+      /*ncm_vector_log_vals (self->scaling,  "#  SCALING:",  "% .5e", TRUE);*/
+      /*ncm_vector_log_vals (self->berr,     "#     BERR:",  "% .5e", TRUE);*/
+      /*ncm_matrix_log_vals (self->err_norm, "# ERR_NORM: ", "% .5e");*/
+      /*ncm_matrix_log_vals (self->err_comp, "# ERR_COMP: ", "% .5e");*/
+
+      g_assert_cmpint (ret, ==, 0);
+    }
+
+    /*ncm_matrix_log_vals (self->spec_C0, "#     C0: ", "% .5e");*/
+
+    for (i = 0; i < self->nknots; i++)
+    {
+      NcmVector *vr_i      = ncm_matrix_get_row (self->vr, i);
+      NcmVector *vl_i      = ncm_matrix_get_row (self->vl, i);
+      const gdouble n_i    = ncm_vector_dot (vl_i, vr_i);
+      const gdouble ReC0_i = ncm_matrix_get (self->spec_C0, 0, i);
+      const gdouble ImC0_i = ncm_matrix_get (self->spec_C0, 1, i);
+      const gdouble ReA0_i = ncm_vector_dot (vl_i, self->spec_ReC0) / n_i;
+      const gdouble ImA0_i = ncm_vector_dot (vl_i, self->spec_ImC0) / n_i;
+
+      ncm_vector_set (self->vlvr, i, n_i);
+
+      ncm_vector_set (self->spec_A0, 2 * i + 0, ReA0_i);
+      ncm_vector_set (self->spec_A0, 2 * i + 1, ImA0_i);
+
+      ncm_vector_set (self->spec_C,  2 * i + 0, ReC0_i);
+      ncm_vector_set (self->spec_C,  2 * i + 1, ImC0_i);
+
+      /*printf ("#      DOT:  % 22.15g % 22.15g % 22.15g\n", ncm_vector_dot (vl_i, vl_i), ncm_vector_dot (vr_i, vr_i), ncm_vector_dot (vl_i, vr_i));*/
+
+      ncm_vector_free (vr_i);
+      ncm_vector_free (vl_i);
+    }
+  }
+
+  _ncm_qm_prop_spec_init_solver (qm_prop);
+}
+
+/**
+ * ncm_qm_prop_spec_peek_knots:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmVector *
+ncm_qm_prop_spec_peek_knots (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return self->knots;
+}
+
+/**
+ * ncm_qm_prop_spec_eval_ev:
+ * @qm_prop: a #NcmQMProp
+ * @i: FIXME
+ * @x: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  g_assert_cmpint (i, <, self->nknots);
+  {
+    NcmVector *vr_i = ncm_matrix_get_row (self->vr, i);
+    gdouble res = 0.0;
+    gint j;
+
+    for (j = 0; j < self->nknots; j++)
+    {
+      const gdouble xj = ncm_vector_get (self->knots, j);
+      const gdouble cj = ncm_vector_get (vr_i, j);
+
+      res += cj * _ncm_qm_prop_spec_basis (x, xj, self->h, self->basis_a);
+    }
+
+    ncm_vector_free (vr_i);
+
+    return res;
+  }
+}
+
+/**
+ * ncm_qm_prop_spec_eval_psi0:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ * @psi0: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
+ *
+ * FIXME
+ *
+ */
+void
+ncm_qm_prop_spec_eval_psi0 (NcmQMProp *qm_prop, const gdouble x, gdouble *psi0)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gint i;
+
+  psi0[0] = 0.0;
+  psi0[1] = 0.0;
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi     = ncm_vector_get (self->knots, i);
+    const gdouble ReC0_i = ncm_vector_get (self->spec_ReC0, i);
+    const gdouble ImC0_i = ncm_vector_get (self->spec_ImC0, i);
+    const gdouble Kxxi   = _ncm_qm_prop_spec_basis (x, xi, self->h, self->basis_a);
+
+    psi0[0] += ReC0_i * Kxxi;
+    psi0[1] += ImC0_i * Kxxi;
+  }
+}
+
+static void
+_ncm_qm_prop_spec_evol_C (NcmQMProp *qm_prop, const gdouble t)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  complex double *A0 = (complex double *) ncm_vector_data (self->spec_A0);
+  gint i;
+
+  ncm_vector_set_zero (self->spec_C);
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble wr = ncm_vector_get (self->wr, i);
+    complex double A = A0[i] * cexp (-I * wr * t);
+    cblas_daxpy (self->nknots, creal (A), ncm_matrix_ptr (self->vr, i, 0), 1, ncm_vector_ptr (self->spec_C, 0), 2);
+    cblas_daxpy (self->nknots, cimag (A), ncm_matrix_ptr (self->vr, i, 0), 1, ncm_vector_ptr (self->spec_C, 1), 2);
+  }
+}
+
+
+/**
+ * ncm_qm_prop_spec_evol:
+ * @qm_prop: a #NcmQMProp
+ * @t: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+ncm_qm_prop_spec_evol (NcmQMProp *qm_prop, const gdouble t)
+{
+#if HAVE_SUNDIALS_MAJOR == 3
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  /*gdouble *Y = N_VGetArrayPointer (self->yBohm);*/
+  gdouble ts = 0.0;
+  gint flag;
+
+  if (t > 0.0)
+  {
+    flag = ARKodeSetStopTime (self->bohm, t);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
+
+    flag = ARKode (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
+    NCM_CVODE_CHECK (&flag, "ARKode", 1, );
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
+  }
+
+  /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, Y[0], Y[1], Y[2], Y[3]);*/
+
+  _ncm_qm_prop_spec_evol_C (qm_prop, t);
+}
+
+/**
+ * ncm_qm_prop_spec_eval_psi:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
+ *
+ * FIXME
+ *
+ */
+void
+ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gint i;
+
+  psi[0] = 0.0;
+  psi[1] = 0.0;
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi    = ncm_vector_get (self->knots, i);
+    const gdouble ReC_i = ncm_vector_get (self->spec_C, 2 * i + 0);
+    const gdouble ImC_i = ncm_vector_get (self->spec_C, 2 * i + 1);
+    const gdouble Kxxi  = _ncm_qm_prop_spec_basis (x, xi, self->h, self->basis_a);
+
+    psi[0] += ReC_i * Kxxi;
+    psi[1] += ImC_i * Kxxi;
+  }
+}
+
+/**
+ * ncm_qm_prop_spec_eval_dS:
+ * @qm_prop: a #NcmQMProp
+ * @x: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gdouble dS_rho_x3 = 0.0;
+  gdouble Re_psi_x  = 0.0;
+  gdouble Im_psi_x  = 0.0;
+  gint i, j;
+
+  /*return 1.0;*/
+
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi     = ncm_vector_get (self->knots, i);
+    const gdouble ReC_i  = ncm_vector_get (self->spec_C, 2 * i + 0);
+    const gdouble ImC_i  = ncm_vector_get (self->spec_C, 2 * i + 1);
+    const gdouble Kxxi_x = _ncm_qm_prop_spec_basis_xxa (x, xi, self->h, self->basis_a);
+
+    Re_psi_x += ReC_i * Kxxi_x;
+    Im_psi_x += ImC_i * Kxxi_x;
+
+    /*printf ("PSI_x % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", self->h, x, xi, Kxxi_x, Re_psi_x, Im_psi_x);*/
+
+    for (j = i + 1; j < self->nknots; j++)
+    {
+      const gdouble xj    = ncm_vector_get (self->knots, j);
+      const gdouble ReC_j = ncm_vector_get (self->spec_C, 2 * j + 0);
+      const gdouble ImC_j = ncm_vector_get (self->spec_C, 2 * j + 1);
+      const gdouble Sij   = _ncm_qm_prop_spec_Sbasis_x3 (x, xi, xj, self->h, self->basis_a);
+      const gdouble Cij   = (ImC_j * ReC_i - ReC_j * ImC_i);
+
+      /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", self->h, x, xi, xj, Sij, Cij, dS_rho_x3);*/
+      dS_rho_x3 += Sij * Cij;
+    }
+  }
+  /*printf ("# BLA % 22.15g % 22.15g % 22.15g\n", x * x * x * dS_rho_x3, x * x * (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x), x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x));*/
+
+  return 2.0 * x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x);
+}
+
+/**
+ * ncm_qm_prop_spec_int_rho_0_inf:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gdouble int_rho = 0.0;
+  gint i, j;
+
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi       = ncm_vector_get (self->knots, i);
+    const gdouble ReC_i    = ncm_vector_get (self->spec_C, 2 * i + 0);
+    const gdouble ImC_i    = ncm_vector_get (self->spec_C, 2 * i + 1);
+    const gdouble IKxixi_x = _ncm_qm_prop_spec_If2 (xi, xi, self->h);
+
+    int_rho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
+
+    for (j = i + 1; j < self->nknots; j++)
+    {
+      const gdouble xj       = ncm_vector_get (self->knots, j);
+      const gdouble ReC_j    = ncm_vector_get (self->spec_C, 2 * j + 0);
+      const gdouble ImC_j    = ncm_vector_get (self->spec_C, 2 * j + 1);
+      const gdouble IKxixi_x = _ncm_qm_prop_spec_If2 (xi, xj, self->h);
+      const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
+
+      int_rho += IKxixi_x * CRij;
+    }
+  }
+
+  return int_rho;
+}
+
+/**
+ * ncm_qm_prop_spec_int_xrho_0_inf:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  gdouble int_xrho = 0.0;
+  gint i, j;
+
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi       = ncm_vector_get (self->knots, i);
+    const gdouble ReC_i    = ncm_vector_get (self->spec_C, 2 * i + 0);
+    const gdouble ImC_i    = ncm_vector_get (self->spec_C, 2 * i + 1);
+    const gdouble IKxixi_x = _ncm_qm_prop_spec_Ixf2 (xi, xi, self->h);
+
+    int_xrho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
+
+    for (j = i + 1; j < self->nknots; j++)
+    {
+      const gdouble xj       = ncm_vector_get (self->knots, j);
+      const gdouble ReC_j    = ncm_vector_get (self->spec_C, 2 * j + 0);
+      const gdouble ImC_j    = ncm_vector_get (self->spec_C, 2 * j + 1);
+      const gdouble IKxixi_x = _ncm_qm_prop_spec_Ixf2 (xi, xj, self->h);
+      const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
+
+      int_xrho += IKxixi_x * CRij;
+    }
+  }
+
+  return int_xrho;
+}
+
+/**
+ * ncm_qm_prop_spec_nBohm:
+ * @qm_prop: a #NcmQMProp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gint
+ncm_qm_prop_spec_nBohm (NcmQMProp *qm_prop)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+
+  return self->nBohm;
+}
+
+/**
+ * ncm_qm_prop_spec_Bohm:
+ * @qm_prop: a #NcmQMProp
+ * @i: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_qm_prop_spec_Bohm (NcmQMProp *qm_prop, gint i)
+{
+  NcmQMPropPrivate * const self = qm_prop->priv;
+  return NV_Ith_S (self->yBohm, i);
+}
+

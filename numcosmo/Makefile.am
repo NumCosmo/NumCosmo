@@ -284,7 +284,8 @@ ncm_headers =                                \
 	math/memory_pool.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h
+	math/Faddeeva.h           \
+	math/ncm_gsl_blas_types.h
 
 ncm_headers_internal =
 

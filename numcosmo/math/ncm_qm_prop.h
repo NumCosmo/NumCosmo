@@ -122,6 +122,7 @@ void ncm_qm_prop_exp_eval (NcmQMPropExp *qm_exp, const gdouble x, gdouble *psi);
 void ncm_qm_prop_exp_eval_lnRS (NcmQMPropExp *qm_exp, const gdouble x, gdouble *lnRS);
 
 NcmQMProp *ncm_qm_prop_new (void);
+NcmQMProp *ncm_qm_prop_new_full (guint nknots, gdouble lambda);
 NcmQMProp *ncm_qm_prop_ref (NcmQMProp *qm_prop);
 
 void ncm_qm_prop_free (NcmQMProp *qm_prop);
@@ -153,6 +154,28 @@ NcmSpline *ncm_qm_prop_peek_rho_s (NcmQMProp *qm_prop);
 
 gdouble ncm_qm_prop_eval_int_rho (NcmQMProp *qm_prop);
 gdouble ncm_qm_prop_eval_int_xrho (NcmQMProp *qm_prop);
+
+gdouble ncm_qm_prop_spec_basis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
+gdouble ncm_qm_prop_spec_Hbasis (NcmQMProp *qm_prop, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
+gdouble ncm_qm_prop_spec_Sbasis_x3 (NcmQMProp *qm_prop, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a);
+
+gdouble ncm_qm_prop_spec_get_lambda (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_get_basis_a (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_get_acs_a (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_get_nu (NcmQMProp *qm_prop);
+
+void ncm_qm_prop_spec_prepare (NcmQMProp *qm_prop);
+NcmVector *ncm_qm_prop_spec_peek_knots (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_eval_ev (NcmQMProp *qm_prop, const gint i, const gdouble x);
+void ncm_qm_prop_spec_eval_psi0 (NcmQMProp *qm_prop, const gdouble x, gdouble *psi0);
+void ncm_qm_prop_spec_evol (NcmQMProp *qm_prop, const gdouble t);
+void ncm_qm_prop_spec_eval_psi (NcmQMProp *qm_prop, const gdouble x, gdouble *psi);
+gdouble ncm_qm_prop_spec_eval_dS (NcmQMProp *qm_prop, const gdouble x);
+gdouble ncm_qm_prop_spec_int_rho_0_inf (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_int_xrho_0_inf (NcmQMProp *qm_prop);
+
+gint ncm_qm_prop_spec_nBohm (NcmQMProp *qm_prop);
+gdouble ncm_qm_prop_spec_Bohm (NcmQMProp *qm_prop, gint i);
 
 G_END_DECLS
 

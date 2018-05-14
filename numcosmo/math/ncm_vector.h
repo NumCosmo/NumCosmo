@@ -156,6 +156,7 @@ G_INLINE_FUNC gdouble *ncm_vector_data (NcmVector *cv);
 G_INLINE_FUNC const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 G_INLINE_FUNC gsl_vector *ncm_vector_gsl (NcmVector *cv);
+G_INLINE_FUNC gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
@@ -416,6 +417,12 @@ G_INLINE_FUNC gsl_vector *
 ncm_vector_gsl (NcmVector *cv)
 {
   return &(cv->vv.vector);
+}
+
+G_INLINE_FUNC gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
 }
 
 G_INLINE_FUNC const gsl_vector *
