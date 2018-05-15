@@ -7,6 +7,7 @@ try:
 except:
   pass
 
+import sys
 import math
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
@@ -48,57 +49,55 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 #
 Ncm.cfg_init ()
 
-p = Ncm.QMProp.new ()
+p                  = Nc.HIQG1D.new ()
 l1                 = 0.0
-H0                 = -1.0e-1
+H0                 = -15.0e-1
 p.props.abstol     = 0.0
-p.props.reltol     = 1.0e-11
-p.props.nknots     = 151
+p.props.reltol     = 1.0e-7
+p.props.nknots     = 200
 p.props.noboundary = False
 p.set_property ("lambda", l1)
-s1     = int (p.props.nknots / 10)
-n1     = ceil (p.props.nknots / s1)
-#offset = 5.0
-#center = (offset + 10.0)
-offset = 0.0
-center = 0.5
+offset = 5.0
+center = (10.0 + offset) * 0.0 + 0.0
 
-print ("# ", n1, " ", s1)
+print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g" % (p.get_lambda (), p.get_basis_a (), p.get_acs_a (), p.get_nu ()))
 
-psi0 = Ncm.QMPropGauss.new (center, 1.0, 1.0, H0)
-#psi0 = Ncm.QMPropExp.new (3.0, 1.0, H0)
+psi0 = Nc.HIQG1DGauss.new (center, 1.0001, 1.0, H0)
+#psi0 = Nc.HIQG1DExp.new (p.get_acs_a (), 2.0, H0)
+#psi0 = Nc.HIQG1DExp.new (3.0, 2.0, H0)
 
 #print (psi0.eval (1.0))
+npp   = 1000
 sim   = True
-tstep = 9.0e-3
-tf    = 5.0
-xf    = center + 5.01
-xfp   = center + 10.0
-xi    = offset * 0.0 
-dSdiv = xf
-p.set_init_cond_gauss (psi0, 5.0e-1, xf)
-#p.set_init_cond_exp (psi0, 9.0e-2, xf)
+tstep = 5.0e-3
+tf    = 4.0
+xf    = center + 50.0
+xfp   = center + 50.0
+xi    = (center - 7.0) * 0.0 + 0.0
+dSdiv = 10.0
 
-rho_s      = p.peek_rho_s ()
-q          = rho_s.get_xv ().dup_array ()
-x          = np.linspace (offset - 1.0, xfp, 10000) #p.get_knots ()
-psi        = p.eval_psi (x)
-max_Re_psi = max (np.abs (psi[0::2]))
-max_Im_psi = max (np.abs (psi[1::2]))
+p.set_init_cond_gauss (psi0, xi, xf)
+#p.set_init_cond_exp (psi0, xi, xf)
+p.prepare ()
+n1 = p.nBohm ()
+
+q          = p.peek_knots ().dup_array ()
+xa         = np.linspace (xi, xfp, npp)
+psi        = [p.eval_psi (x) for x in xa]
+max_Re_psi = max (np.abs (psi[:][0]))
+max_Im_psi = max (np.abs (psi[:][1]))
 yb         = max (max_Re_psi, max_Im_psi)
-
-#fig = plt.figure()
 
 fig, [ax, ax2] = plt.subplots (1, 2, figsize = (16, 12))
 
-#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-1.5e0 * yb, 1.5e0 * yb))
-#ax = plt.axes (xlim = (x[0], x[-1]), ylim = (-6.1, 6.1))
-ax.set_xlim (xi, x[-1])
-ax.set_ylim (-0.6, 0.8)
+ax.set_xlim (xi, xfp)
+ax.set_ylim (-0.8, 0.8)
 ax.grid ()
 
-ax2.set_xlim (-0.1, tf)
-ax2.set_ylim (xi, xfp)
+ax2.set_xlim (0.0, 10.0)
+ax2.set_ylim (1.0e-2, 1e2)
+ax2.set_xscale ('symlog', linthreshy=0.1)
+ax2.set_yscale ('log')
 
 ax.set_xlabel (r'$a(t)$')
 ax2.set_xlabel (r'$t$')
@@ -114,7 +113,6 @@ lines.append (ax.plot ([], [], label=r'$\partial_aS$', animated=True)[0])
 ax.legend (loc='best')
 
 fig.tight_layout()
-#lines = [ax.plot([], [])[0] for _ in range(N)]
 lines.append (ttl)
 
 lines.append (ax2.plot ([], [], 'bo', label=r'Bohm', animated=True)[0])
@@ -128,11 +126,11 @@ y_t  = []
 
 for i in range (n1):
   lines.append (ax2.plot ([], [])[0])
-  qi = [q[i * s1]]
+  qi = [p.Bohm (i)]
   traj.append (qi)
 
 lines.append (ax2.plot ([], [])[0])
-traj.append ([p.eval_int_xrho ()])
+traj.append ([p.int_xrho_0_inf ()])
 
 def init():    
   lines[0].set_data ([], [])
@@ -154,34 +152,33 @@ def init():
 if not sim:
   for i in np.arange (0, ceil (tf / tstep)):
     tf = tstep * i
-    p.evolve (tf)
+    p.evol (tf)
 
-    rho_s = p.peek_rho_s ()
-    q = rho_s.get_xv ().dup_array ()
-    x = np.linspace (q[0], q[-1], 10000)
-  
-    psi   = np.array (p.eval_psi (x))
-    rho   = np.array (p.eval_rho (x))
-    dS    = np.array (p.eval_dS (x))
-  
+    q  = p.peek_knots ().dup_array ()
+    xa = np.linspace (xi, xfp, npp)
+
+    psi = np.array ([p.eval_psi (x) for x in xa])
+    rho = [np.sum (psi_i**2) for psi_i in psi]
+    dS  = np.array ([0.0] * len (xa))
+    #dS  = [p.eval_dS (x) for x in xa]
     y = []
   
-    qm = p.eval_int_xrho ()
+    qm = p.int_xrho_0_inf ()
   
     y.append (np.sqrt (rho))
-    y.append (psi[0::2])
-    y.append (psi[1::2])
+    y.append (psi[:][0])
+    y.append (psi[:][1])
     y.append (dS / dSdiv)
     y.append (q[::s1])
-    y.append (p.eval_int_rho ())
+    y.append (p.int_rho_0_inf ())
     y.append (qm)
 
-    x_t.append (x)
+    x_t.append (xa)
     y_t.append (y)
 
     ta.append (tf)
     for i in range (n1):
-      traj[i].append (q[i * s1])
+      traj[i].append (p.Bohm (i))
     traj[n1].append (qm)
 
 def animate(i):
@@ -192,38 +189,41 @@ def animate(i):
       pl.set_visible (True)
 
   if sim:
-    #p.evolve_spec (tf)
-    p.evolve (tf)
+    p.evol (tf)
     
-    rho_s = p.peek_rho_s ()
-    q = rho_s.get_xv ().dup_array ()
-    x = np.linspace (q[0], q[-1], 10000)
+    q  = p.peek_knots ().dup_array ()
+    xa = np.linspace (xi, xfp, npp)
+    #print ("% 22.15g % 22.15g % 22.15g % 22.15g" % (q[0], q[1], q[2], q[3]))
   
-    psi   = np.array (p.eval_psi (x))
-    rho   = np.array (p.eval_rho (x))
-    dS    = np.array (p.eval_dS (x))
+    psi = np.array ([p.eval_psi (x) for x in xa])
+    rho = np.array ([np.sum (psi_i**2) for psi_i in psi])
+    dS  = np.array ([0.0] * len (xa))
+    #dS  = np.array ([p.eval_dS (x) for x in xa])
+
+    #print (dS / xa)
     
-    lines[0].set_data (x, np.sqrt (rho))
-    lines[1].set_data (x, psi[0::2])
-    lines[2].set_data (x, psi[1::2])
-    lines[3].set_data (x, dS / dSdiv)
+    lines[0].set_data (xa, np.sqrt (rho))
+    lines[1].set_data (xa, psi[:,0])
+    lines[2].set_data (xa, psi[:,1])
+    lines[3].set_data (xa, dS / dSdiv)
+    
+    #print (dS)
   
-    qm = p.eval_int_xrho ()
+    qm = p.int_xrho_0_inf ()
   
-    nq = len (q[::s1])
-    tfa = [tf] * nq
-    lines[5].set_data (tfa, q[::s1])
+    tfa = [tf] * n1
+    lines[5].set_data (tfa, [p.Bohm (i) for i in range (n1)])
     lines[6].set_data ([tf], [qm])
 
     ta.append (tf)
     for i in range (n1):
-      traj[i].append (q[i * s1])
+      traj[i].append (p.Bohm (i))
       lines[i + 7].set_data (ta, traj[i])
     
     traj[n1].append (qm)
     lines[n1 + 7].set_data (ta, traj[n1])
 
-    ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.eval_int_rho ()))
+    ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.int_rho_0_inf ()))
   
   else:
   

@@ -46,19 +46,24 @@ gdouble ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigm
 gdouble ncm_sphPlm_x (gint l, gint m, gint order);
 gdouble ncm_sum (gdouble *d, gulong n);
 
-G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
-G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x);
-G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
 
-gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
-gdouble ncm_exprel (const gdouble x);
-gdouble ncm_d1exprel (const gdouble x);
-gdouble ncm_d2exprel (const gdouble x);
-gdouble ncm_d3exprel (const gdouble x);
+gdouble ncm_cmpdbl (const gdouble x, const gdouble y) G_GNUC_CONST;
+gdouble ncm_exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d1exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d2exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d3exprel (const gdouble x) G_GNUC_CONST;
+
+gdouble ncm_util_sinh1 (const gdouble x) G_GNUC_CONST;
+gdouble ncm_util_sinh3 (const gdouble x) G_GNUC_CONST;
+
+gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
 
 gsize ncm_mpfr_out_raw (FILE *stream, mpfr_t op);
 gsize ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream);

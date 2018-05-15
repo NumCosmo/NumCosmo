@@ -78,7 +78,6 @@ ncm_sources = \
 	math/ncm_integral1d.c                \
 	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
-	math/ncm_qm_prop.c                   \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
 	math/ncm_stats_dist1d_spline.c       \
@@ -195,7 +194,6 @@ ncm_headers =                                \
 	math/ncm_integral1d.h                \
 	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
-	math/ncm_qm_prop.h                   \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \
 	math/ncm_stats_dist1d_spline.h       \
@@ -292,7 +290,8 @@ ncm_headers =                                \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h
+	math/Faddeeva.h           \
+	math/ncm_gsl_blas_types.h
 
 ncm_headers_internal =
 
@@ -320,6 +319,7 @@ nc_headers = \
 	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
+	nc_hiqg_1d.h                  \
 	model/nc_hicosmo_idem2.h      \
 	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
@@ -453,6 +453,7 @@ nc_sources = \
 	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
+	nc_hiqg_1d.c                  \
 	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \

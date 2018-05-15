@@ -250,9 +250,9 @@ ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 G_INLINE_FUNC gdouble
 _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble ci, const gdouble di, const gdouble xi, const gdouble a, const gdouble b)
 {
-  const gdouble r1 = a - xi;
-  const gdouble r2 = b - xi;
-  const gdouble r12 = r1 + r2;
+  const gdouble r1    = (a - xi);
+  const gdouble r2    = (b - xi);
+  const gdouble r12   = (r1 + r2);
   const gdouble bterm = 0.5 * bi * r12;
   const gdouble cterm = (1.0 / 3.0) * ci * (r1 * r1 + r2 * r2 + r1 * r2);
   const gdouble dterm = 0.25 * di * r12 * (r1 * r1 + r2 * r2);

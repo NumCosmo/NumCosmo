@@ -38,15 +38,11 @@
 #include "build_cfg.h"
 
 #include "math/ncm_matrix.h"
+#include "math/ncm_vector.h"
 #include "math/ncm_lapack.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
-#include <clapack.h>
-#else
-#include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
-#endif
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -461,6 +457,10 @@ NcmMatrix *
 ncm_matrix_get_submatrix (NcmMatrix *cm, guint k1, guint k2, guint nrows, guint ncols)
 {
   NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
+
+	g_assert_cmpuint (nrows + k1, <=, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncols + k2, <=, ncm_matrix_ncols (cm));
+	
   scm->mv = gsl_matrix_submatrix (ncm_matrix_gsl (cm), k1, k2, nrows, ncols);
 
   scm->pdata = g_object_ref (cm);
@@ -989,7 +989,7 @@ ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, Nc
                ncm_matrix_data (cm), ncm_matrix_tda (cm));
 }
 
-enum CBLAS_ORDER
+CBLAS_ORDER
 _ncm_matrix_check_trans (const gchar *func_name, gchar T)
 {
   switch (T)
@@ -1022,12 +1022,12 @@ _ncm_matrix_check_trans (const gchar *func_name, gchar T)
 void 
 ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta)
 {
-  enum CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransA);
-  enum CBLAS_TRANSPOSE cblas_TransB = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransB);
-  const gsize opA_nrows             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_nrows (A) : ncm_matrix_ncols (A);
-  const gsize opA_ncols             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
-  const gsize opB_nrows             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_nrows (B) : ncm_matrix_ncols (B);
-  const gsize opB_ncols             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_ncols (B) : ncm_matrix_nrows (B);
+  CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransA);
+  CBLAS_TRANSPOSE cblas_TransB = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransB);
+  const gsize opA_nrows        = (cblas_TransA == CblasNoTrans) ? ncm_matrix_nrows (A) : ncm_matrix_ncols (A);
+  const gsize opA_ncols        = (cblas_TransA == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
+  const gsize opB_nrows        = (cblas_TransB == CblasNoTrans) ? ncm_matrix_nrows (B) : ncm_matrix_ncols (B);
+  const gsize opB_ncols        = (cblas_TransB == CblasNoTrans) ? ncm_matrix_ncols (B) : ncm_matrix_nrows (B);
 
   g_assert_cmpuint (opA_ncols, ==, opB_nrows);
 

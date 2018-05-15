@@ -43,7 +43,6 @@
 #include "ncm_enum_types.h"
 
 #include <gsl/gsl_min.h>
-#include <gsl/gsl_cblas.h>
 
 struct _NcmSplineRBFPrivate
 {

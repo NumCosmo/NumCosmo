@@ -44,16 +44,6 @@
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_BLAS
-#  ifdef HAVE_MKL_CBLAS_H
-#    include <mkl_cblas.h>
-#  elif defined (HAVE_CBLAS_H)
-#    include <cblas.h>
-#  else
-#    include <gsl/gsl_cblas.h>
-#  endif
-#endif
-
 #include <complex.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -449,7 +439,7 @@ ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 NcmVector *
 ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride)
 {
-  NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_data (cv), size, stride);
+  NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_ptr (cv, k), size, stride);
   const gsize len = ncm_vector_len (cv);
 
   g_assert_cmpuint (size,   >, 0);
