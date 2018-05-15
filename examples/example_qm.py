@@ -49,8 +49,8 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 #
 Ncm.cfg_init ()
 
-p = Ncm.QMProp.new ()
-l1                 = 5.0
+p                  = Nc.HIQG1D.new ()
+l1                 = 0.0
 H0                 = -15.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-7
@@ -60,28 +60,30 @@ p.set_property ("lambda", l1)
 offset = 5.0
 center = (10.0 + offset) * 0.0 + 0.0
 
-print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g" % (p.spec_get_lambda (), p.spec_get_basis_a (), p.spec_get_acs_a (), p.spec_get_nu ()))
+print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g" % (p.get_lambda (), p.get_basis_a (), p.get_acs_a (), p.get_nu ()))
 
-#psi0 = Ncm.QMPropGauss.new (center, 3.0, 1.0, H0)
-psi0 = Ncm.QMPropExp.new (p.spec_get_acs_a (), 3.0, H0)
+psi0 = Nc.HIQG1DGauss.new (center, 1.0001, 1.0, H0)
+#psi0 = Nc.HIQG1DExp.new (p.get_acs_a (), 2.0, H0)
+#psi0 = Nc.HIQG1DExp.new (3.0, 2.0, H0)
 
 #print (psi0.eval (1.0))
 npp   = 1000
 sim   = True
-tstep = 1.0e-3
+tstep = 5.0e-3
 tf    = 4.0
 xf    = center + 50.0
 xfp   = center + 50.0
 xi    = (center - 7.0) * 0.0 + 0.0
 dSdiv = 10.0
-#p.set_init_cond_gauss (psi0, xi, xf)
-p.set_init_cond_exp (psi0, xi, xf)
-p.spec_prepare ()
-n1 = p.spec_nBohm ()
 
-q          = p.spec_peek_knots ().dup_array ()
+p.set_init_cond_gauss (psi0, xi, xf)
+#p.set_init_cond_exp (psi0, xi, xf)
+p.prepare ()
+n1 = p.nBohm ()
+
+q          = p.peek_knots ().dup_array ()
 xa         = np.linspace (xi, xfp, npp)
-psi        = [p.spec_eval_psi (x) for x in xa]
+psi        = [p.eval_psi (x) for x in xa]
 max_Re_psi = max (np.abs (psi[:][0]))
 max_Im_psi = max (np.abs (psi[:][1]))
 yb         = max (max_Re_psi, max_Im_psi)
@@ -92,8 +94,10 @@ ax.set_xlim (xi, xfp)
 ax.set_ylim (-0.8, 0.8)
 ax.grid ()
 
-ax2.set_xlim (-0.1, tf)
-ax2.set_ylim (0.0, 4)
+ax2.set_xlim (0.0, 10.0)
+ax2.set_ylim (1.0e-2, 1e2)
+ax2.set_xscale ('symlog', linthreshy=0.1)
+ax2.set_yscale ('log')
 
 ax.set_xlabel (r'$a(t)$')
 ax2.set_xlabel (r'$t$')
@@ -122,11 +126,11 @@ y_t  = []
 
 for i in range (n1):
   lines.append (ax2.plot ([], [])[0])
-  qi = [p.spec_Bohm (i)]
+  qi = [p.Bohm (i)]
   traj.append (qi)
 
 lines.append (ax2.plot ([], [])[0])
-traj.append ([p.eval_int_xrho ()])
+traj.append ([p.int_xrho_0_inf ()])
 
 def init():    
   lines[0].set_data ([], [])
@@ -148,25 +152,25 @@ def init():
 if not sim:
   for i in np.arange (0, ceil (tf / tstep)):
     tf = tstep * i
-    p.spec_evolve (tf)
+    p.evol (tf)
 
-    q  = p.spec_peek_knots ().dup_array ()
+    q  = p.peek_knots ().dup_array ()
     xa = np.linspace (xi, xfp, npp)
 
-    psi = np.array ([p.spec_eval_psi (x) for x in xa])
+    psi = np.array ([p.eval_psi (x) for x in xa])
     rho = [np.sum (psi_i**2) for psi_i in psi]
     dS  = np.array ([0.0] * len (xa))
-    #dS  = [p.spec_eval_dS (x) for x in xa]
+    #dS  = [p.eval_dS (x) for x in xa]
     y = []
   
-    qm = p.spec_int_xrho_0_inf ()
+    qm = p.int_xrho_0_inf ()
   
     y.append (np.sqrt (rho))
     y.append (psi[:][0])
     y.append (psi[:][1])
     y.append (dS / dSdiv)
     y.append (q[::s1])
-    y.append (p.spec_int_rho_0_inf ())
+    y.append (p.int_rho_0_inf ())
     y.append (qm)
 
     x_t.append (xa)
@@ -174,7 +178,7 @@ if not sim:
 
     ta.append (tf)
     for i in range (n1):
-      traj[i].append (p.spec_Bohm (i))
+      traj[i].append (p.Bohm (i))
     traj[n1].append (qm)
 
 def animate(i):
@@ -185,18 +189,16 @@ def animate(i):
       pl.set_visible (True)
 
   if sim:
-    #p.evolve_spec (tf)
-    #p.evolve (tf)
-    p.spec_evol (tf)
+    p.evol (tf)
     
-    q  = p.spec_peek_knots ().dup_array ()
+    q  = p.peek_knots ().dup_array ()
     xa = np.linspace (xi, xfp, npp)
     #print ("% 22.15g % 22.15g % 22.15g % 22.15g" % (q[0], q[1], q[2], q[3]))
   
-    psi = np.array ([p.spec_eval_psi (x) for x in xa])
+    psi = np.array ([p.eval_psi (x) for x in xa])
     rho = np.array ([np.sum (psi_i**2) for psi_i in psi])
     dS  = np.array ([0.0] * len (xa))
-    #dS  = np.array ([p.spec_eval_dS (x) for x in xa])
+    #dS  = np.array ([p.eval_dS (x) for x in xa])
 
     #print (dS / xa)
     
@@ -207,21 +209,21 @@ def animate(i):
     
     #print (dS)
   
-    qm = p.spec_int_xrho_0_inf ()
+    qm = p.int_xrho_0_inf ()
   
     tfa = [tf] * n1
-    lines[5].set_data (tfa, [p.spec_Bohm (i) for i in range (n1)])
+    lines[5].set_data (tfa, [p.Bohm (i) for i in range (n1)])
     lines[6].set_data ([tf], [qm])
 
     ta.append (tf)
     for i in range (n1):
-      traj[i].append (p.spec_Bohm (i))
+      traj[i].append (p.Bohm (i))
       lines[i + 7].set_data (ta, traj[i])
     
     traj[n1].append (qm)
     lines[n1 + 7].set_data (ta, traj[n1])
 
-    ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.spec_int_rho_0_inf ()))
+    ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.int_rho_0_inf ()))
   
   else:
   

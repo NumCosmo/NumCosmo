@@ -457,6 +457,10 @@ NcmMatrix *
 ncm_matrix_get_submatrix (NcmMatrix *cm, guint k1, guint k2, guint nrows, guint ncols)
 {
   NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
+
+	g_assert_cmpuint (nrows + k1, <=, ncm_matrix_nrows (cm));
+	g_assert_cmpuint (ncols + k2, <=, ncm_matrix_ncols (cm));
+	
   scm->mv = gsl_matrix_submatrix (ncm_matrix_gsl (cm), k1, k2, nrows, ncols);
 
   scm->pdata = g_object_ref (cm);

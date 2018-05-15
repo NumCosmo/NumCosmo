@@ -131,51 +131,32 @@ void nc_hiqg_1d_clear (NcHIQG1D **qg1d);
 void nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots);
 guint nc_hiqg_1d_get_nknots (NcHIQG1D *qg1d);
 
-void nc_hiqg_1d_eval (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble t, gdouble *G);
-void nc_hiqg_1d_eval_array (NcHIQG1D *qg1d, const gdouble x, const gdouble *ya, gsize n, const gdouble t, gdouble *G);
-
-void nc_hiqg_1d_gauss_ini (NcHIQG1D *qg1d, const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi);
-void nc_hiqg_1d_propto (NcHIQG1D *qg1d, const gdouble x, const gdouble t, gdouble *psi);
-
-gdouble nc_hiqg_1d_propto_norm (NcHIQG1D *qg1d, const gdouble t);
-
 void nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf);
 void nc_hiqg_1d_set_init_cond_gauss (NcHIQG1D *qg1d, NcHIQG1DGauss *qm_gauss, const gdouble xi, const gdouble xf);
 void nc_hiqg_1d_set_init_cond_exp (NcHIQG1D *qg1d, NcHIQG1DExp *qm_exp, const gdouble xi, const gdouble xf);
 
-void nc_hiqg_1d_evolve (NcHIQG1D *qg1d, const gdouble tf);
-void nc_hiqg_1d_evolve_spec (NcHIQG1D *qg1d, const gdouble t);
+gdouble nc_hiqg_1d_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
+gdouble nc_hiqg_1d_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
+gdouble nc_hiqg_1d_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a);
 
-GArray *nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble *x, const guint len);
-GArray *nc_hiqg_1d_eval_rho (NcHIQG1D *qg1d, const gdouble *x, const guint len);
-GArray *nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble *x, const guint len);
+gdouble nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_get_nu (NcHIQG1D *qg1d);
 
-NcmSpline *nc_hiqg_1d_peek_rho_s (NcHIQG1D *qg1d);
+void nc_hiqg_1d_prepare (NcHIQG1D *qg1d);
 
-gdouble nc_hiqg_1d_eval_int_rho (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_eval_int_xrho (NcHIQG1D *qg1d);
+NcmVector *nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x);
+void nc_hiqg_1d_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0);
+void nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t);
+void nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi);
+gdouble nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x);
+gdouble nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d);
 
-gdouble nc_hiqg_1d_spec_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
-gdouble nc_hiqg_1d_spec_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
-gdouble nc_hiqg_1d_spec_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a);
-
-gdouble nc_hiqg_1d_spec_get_lambda (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_get_basis_a (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_get_acs_a (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_get_nu (NcHIQG1D *qg1d);
-
-void nc_hiqg_1d_spec_prepare (NcHIQG1D *qg1d);
-NcmVector *nc_hiqg_1d_spec_peek_knots (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x);
-void nc_hiqg_1d_spec_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0);
-void nc_hiqg_1d_spec_evol (NcHIQG1D *qg1d, const gdouble t);
-void nc_hiqg_1d_spec_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi);
-gdouble nc_hiqg_1d_spec_eval_dS (NcHIQG1D *qg1d, const gdouble x);
-gdouble nc_hiqg_1d_spec_int_rho_0_inf (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_int_xrho_0_inf (NcHIQG1D *qg1d);
-
-gint nc_hiqg_1d_spec_nBohm (NcHIQG1D *qg1d);
-gdouble nc_hiqg_1d_spec_Bohm (NcHIQG1D *qg1d, gint i);
+gint nc_hiqg_1d_nBohm (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i);
 
 G_END_DECLS
 
