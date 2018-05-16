@@ -19,6 +19,12 @@ from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
 #
+#  Initializing the library objects, this must be called before
+#  any other library function.
+#
+Ncm.cfg_init ()
+
+#
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
@@ -74,7 +80,7 @@ fit.log_info ()
 #
 # Setting single thread calculation.
 #
-Ncm.func_eval_set_max_threads (1)
+Ncm.func_eval_set_max_threads (0)
 Ncm.func_eval_log_pool_stats ()
 
 #
@@ -96,7 +102,7 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-nwalkers = 50
+nwalkers = 150
 stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 #
@@ -126,6 +132,7 @@ esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsg
 esmcmc.set_auto_trim (True)
 esmcmc.set_auto_trim_div (100)
 esmcmc.set_max_runs_time (2.0 * 60.0)
+esmcmc.set_nthreads (0)
 
 #
 # Using `example_esmcmc_out.fits' as the catalog file, if there

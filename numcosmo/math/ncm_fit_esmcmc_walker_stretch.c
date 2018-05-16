@@ -146,6 +146,7 @@ static guint _ncm_fit_esmcmc_walker_stretch_get_nparams (NcmFitESMCMCWalker *wal
 static void _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
 static void _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 static gdouble _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+static gdouble _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_stretch_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker);
 
@@ -182,6 +183,7 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
   walker_class->setup       = &_ncm_fit_esmcmc_walker_stretch_setup;
   walker_class->step        = &_ncm_fit_esmcmc_walker_stretch_step;
   walker_class->prob        = &_ncm_fit_esmcmc_walker_stretch_prob;
+  walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_stretch_prob_norm;
   walker_class->clean       = &_ncm_fit_esmcmc_walker_stretch_clean;
   walker_class->desc        = &_ncm_fit_esmcmc_walker_stretch_desc;
 }
@@ -275,7 +277,6 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *the
       const guint subensemble = (k < stretch->size_2) ? stretch->size_2 : 0;
       const gdouble u         = gsl_rng_uniform (rng->r);
       const gdouble z         = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
-      /*const gdouble z         = pow (1.0 + (pow (stretch->a, stretch->nparams) - 1.0) * u, 2.0 / stretch->nparams) / stretch->a;*/
       const guint j           = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;
 
       /*printf ("# Walker %u using z = % 20.15g and other walker %u to move.\n", k, z, j);*/
@@ -441,6 +442,22 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   else
   {
     return exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (stretch->norm_box, k));
+  }
+}
+
+static gdouble 
+_ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+{
+  NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
+  
+  if (!stretch->multi)
+  {
+    const gdouble z = ncm_matrix_get (stretch->z, k, 0);
+    return (stretch->nparams - 1.0) * log (z) + ncm_vector_get (stretch->norm_box, k);
+  }
+  else
+  {
+    return ncm_vector_get (stretch->norm_box, k);
   }
 }
 

@@ -55,6 +55,7 @@ struct _NcmFitESMCMCWalkerClass
   void (*setup) (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
   void (*step) (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
   gdouble (*prob) (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+  gdouble (*prob_norm) (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
   void (*clean) (NcmFitESMCMCWalker *walker, guint ki, guint kf);
   const gchar *(*desc) (NcmFitESMCMCWalker *walker);
 };
@@ -80,6 +81,7 @@ guint ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker);
 void ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
 void ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 gdouble ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+gdouble ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 void ncm_fit_esmcmc_walker_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 const gchar *ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker);
 

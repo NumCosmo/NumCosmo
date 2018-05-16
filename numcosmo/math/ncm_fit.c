@@ -111,10 +111,12 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_LIKELIHOOD:
       ncm_likelihood_clear (&fit->lh);
       fit->lh = g_value_dup_object (value);
+			g_assert (fit->lh != NULL);
       break;
     case PROP_MSET:
       ncm_mset_clear (&fit->mset);
       fit->mset = g_value_dup_object (value);
+			g_assert (fit->mset != NULL);
       break;
     case PROP_STATE:
       ncm_fit_state_clear (&fit->fstate);

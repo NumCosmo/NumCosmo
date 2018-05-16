@@ -43,6 +43,7 @@
 
 #ifndef HAVE_MPI
 #define MPI_DATATYPE_NULL (0)
+#define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
 struct _NcmMPIJobPrivate
@@ -162,6 +163,7 @@ _ncm_mpi_job_constructed (GObject *object)
 	{
 		NcmMPIJob *mpi_job = NCM_MPI_JOB (object);
 		NcmMPIJobPrivate * const self = mpi_job->priv;
+		
 		self->input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &self->input_len,  &self->input_size);
 		self->return_dtype = ncm_mpi_job_return_datatype (mpi_job, &self->return_len, &self->return_size);
 	}
@@ -821,7 +823,7 @@ ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *re
 	}
 #else
 	g_error ("ncm_mpi_job_run_array: MPI unsupported.");
-	return NULL;
+	return;
 #endif /* HAVE_MPI */
 }
 

@@ -108,6 +108,8 @@ gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 
 #define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
+#define NCM_FIT_ESMCMC_MPI_IN_LEN (3)
+#define NCM_FIT_ESMCMC_MPI_OUT_LEN (1)
 
 G_END_DECLS
 

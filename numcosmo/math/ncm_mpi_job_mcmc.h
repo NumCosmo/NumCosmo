@@ -70,4 +70,3 @@ void ncm_mpi_job_mcmc_clear (NcmMPIJobMCMC **mjmcmc);
 G_END_DECLS
 
 #endif /* _NCM_MPI_JOB_MCMC_H_ */
-

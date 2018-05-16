@@ -42,6 +42,7 @@
 #include "math/ncm_mpi_job.h"
 #include "math/ncm_mpi_job_test.h"
 #include "math/ncm_mpi_job_fit.h"
+#include "math/ncm_mpi_job_mcmc.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
@@ -444,6 +445,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_TEST);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FIT);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_MCMC);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
@@ -637,13 +639,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 	MPI_Initialized (&_mpi_ctrl.initialized);
 	if (!_mpi_ctrl.initialized)
 	{
-		NCM_MPI_JOB_DEBUG_PRINT ("MPI not initalized, calling MPI_Init.\n");
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initalized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
 		MPI_Init (argc, argv);
 		MPI_Initialized (&_mpi_ctrl.initialized);
 	}
 	else
 	{
-		NCM_MPI_JOB_DEBUG_PRINT ("MPI was already initalized!\n");
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initalized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
 	}
   {
     gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
@@ -653,7 +655,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
     MPI_Get_processor_name (mpi_hostname, &len);
 
-    NCM_MPI_JOB_DEBUG_PRINT ("[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
 
     if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     {
@@ -678,7 +680,7 @@ static void
 _ncm_cfg_mpi_main_loop (void)
 {
   GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%d %d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
 
   g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, mpi_ml);
   

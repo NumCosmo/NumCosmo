@@ -44,6 +44,11 @@
 #include <unistd.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#ifndef HAVE_MPI
+#define MPI_DATATYPE_NULL (0)
+#define MPI_DOUBLE (0)
+#endif /* HAVE_MPI */
+
 struct _NcmMPIJobTestPrivate
 {
 	NcmVector *vec;

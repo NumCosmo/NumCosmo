@@ -41,6 +41,11 @@
 #include "ncm_enum_types.h"
 #include "math/ncm_mpi_job_fit.h"
 
+#ifndef HAVE_MPI
+#define MPI_DATATYPE_NULL (0)
+#define MPI_DOUBLE (0)
+#endif /* HAVE_MPI */
+
 struct _NcmMPIJobFitPrivate
 {
 	NcmFit *fit;

@@ -19,6 +19,12 @@ from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
 #
+#  Initializing the library objects, this must be called before
+#  any other library function.
+#
+Ncm.cfg_init ()
+
+#
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
