@@ -1177,6 +1177,7 @@ _nc_hiqg_1d_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
 
 static void _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t);
 
+#if HAVE_SUNDIALS_MAJOR == 3
 static gint
 _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
@@ -1195,6 +1196,7 @@ _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 
   return 0;
 }
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 void
 _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
