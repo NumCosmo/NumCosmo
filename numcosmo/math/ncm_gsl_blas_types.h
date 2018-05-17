@@ -42,12 +42,24 @@
 
 __BEGIN_DECLS
 
+#if defined (CBLAS_H) || defined (__GSL_CBLAS_H__) || defined (__GSL_CBLAS_H__)
+
+#ifdef NCM_BLAS_NOT_TYPEDEFED
+typedef  enum CBLAS_ORDER     CBLAS_ORDER;
+typedef  enum CBLAS_TRANSPOSE CBLAS_TRANSPOSE;
+typedef  enum CBLAS_UPLO      CBLAS_UPLO;
+typedef  enum CBLAS_DIAG      CBLAS_DIAG;
+typedef  enum CBLAS_SIDE      CBLAS_SIDE;
+#endif /* NCM_HAS_BLAS_TYPEDEF */
+
 typedef  CBLAS_INDEX       CBLAS_INDEX_t;
 typedef  CBLAS_ORDER       CBLAS_ORDER_t;
 typedef  CBLAS_TRANSPOSE   CBLAS_TRANSPOSE_t;
 typedef  CBLAS_UPLO        CBLAS_UPLO_t;
 typedef  CBLAS_DIAG        CBLAS_DIAG_t;
 typedef  CBLAS_SIDE        CBLAS_SIDE_t;
+
+#endif 
 
 __END_DECLS
 

@@ -648,20 +648,24 @@ if test "x$have_blas" != "xno"; then
 
   if test "x$blas_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_cblas.h],[],[AC_MSG_ERROR([unable to find mkl_cblas.h])])
+    AX_CHECK_TYPEDEF([CBLAS_ORDER],[mkl_cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEF 1"]])
     numcosmo_blas_include="\
 #include <mkl_cblas.h>
 #define CBLAS_H
 #define __GSL_CBLAS_H__
+$blas_types
 #include <numcosmo/math/ncm_gsl_blas_types.h>
 "
   else
     AC_CHECK_HEADERS([cblas.h],[],[AC_MSG_ERROR([unable to find cblas.h])])
+    AX_CHECK_TYPEDEF([CBLAS_ORDER],[cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEF 1"]])
     numcosmo_blas_include="\
 #include <cblas.h>
 #define __MKL_CBLAS_H__
 #define __GSL_CBLAS_H__
+$blas_types
 #include <numcosmo/math/ncm_gsl_blas_types.h>
-"    
+"
   fi
   LIBS="$BLAS_LIBS $LIBS"
 
