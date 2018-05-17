@@ -95,6 +95,11 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $\sqrt{1 / (4 \pi)}$.
  */
 /**
+ * ncm_c_sqrt_pi:
+ *
+ * Returns: $\sqrt{\pi}$.
+ */
+/**
  * ncm_c_sqrt_2pi:
  *
  * Returns: $\sqrt{2 \pi}$.

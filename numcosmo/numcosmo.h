@@ -48,6 +48,8 @@
 #include <numcosmo/nc_planck_fi_cor_ttteee.h>
 #include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
+#include <numcosmo/nc_hiqg_1d.h>
+
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>

@@ -647,10 +647,21 @@ if test "x$have_blas" != "xno"; then
   AC_MSG_RESULT([$blas_support])
 
   if test "x$blas_mkl" != "x"; then
-    AC_CHECK_HEADERS([mkl_blas.h])
-    AC_CHECK_HEADERS([mkl_cblas.h])
+    AC_CHECK_HEADERS([mkl_cblas.h],[],[AC_MSG_ERROR([unable to find mkl_cblas.h])])
+    numcosmo_blas_include="\
+#include <mkl_cblas.h>
+#define CBLAS_H
+#define __GSL_CBLAS_H__
+#include <numcosmo/math/ncm_gsl_blas_types.h>
+"
   else
-    AC_CHECK_HEADERS([cblas.h])
+    AC_CHECK_HEADERS([cblas.h],[],[AC_MSG_ERROR([unable to find cblas.h])])
+    numcosmo_blas_include="\
+#include <cblas.h>
+#define __MKL_CBLAS_H__
+#define __GSL_CBLAS_H__
+#include <numcosmo/math/ncm_gsl_blas_types.h>
+"    
   fi
   LIBS="$BLAS_LIBS $LIBS"
 
@@ -659,22 +670,21 @@ if test "x$have_blas" != "xno"; then
 
   if test "x$have_cblas" != "xyes"; then
     AC_MSG_RESULT([no])
-    AC_SEARCH_LIBS([cblas_dgemm],[cblas],[have_cblas="yes"],[])  
+    AC_SEARCH_LIBS([cblas_dgemm],[cblas],[have_cblas="yes"],[AC_MSG_ERROR([unable to link to blas])])  
   else
     AC_MSG_RESULT([yes])
-  fi
-
-  AC_MSG_CHECKING([which cblas to use])
-  if test "x$have_cblas" = "xyes"; then
-    AC_MSG_RESULT([cblas, removing gslcblas])
-    GSL_LIBS=`echo $GSL_LIBS | $SED 's/\-lgslcblas//g'`
-  else
-    AC_MSG_RESULT([none found, using gslcblas])
   fi
 else
   AC_MSG_RESULT([GSL's BLAS])
   AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS])
+  AC_DEFINE([HAVE_BLAS], [1], [use GSL's BLAS])
+  numcosmo_blas_include="\
+#include <gsl/gsl_cblas.h>
+#define __MKL_CBLAS_H__
+#define CBLAS_H
+"    
 fi
+AC_SUBST(numcosmo_blas_include)
 
 AC_CHECK_FUNCS([openblas_set_num_threads MKL_Set_Num_Threads])
 
@@ -898,8 +908,9 @@ if test "xno" = "xyes"; then
   AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_3_0_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_1_1],[1],[SUNDIALS version])
 fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3], [3.1.1, HAVE_SUNDIALS_3_1_1, 3]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)

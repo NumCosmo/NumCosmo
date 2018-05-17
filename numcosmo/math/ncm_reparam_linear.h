@@ -32,8 +32,7 @@
 #include <numcosmo/math/ncm_model.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_blas.h>
+#include <gsl/gsl_permutation.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
