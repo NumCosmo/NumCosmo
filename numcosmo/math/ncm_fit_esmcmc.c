@@ -413,6 +413,8 @@ _ncm_fit_esmcmc_dispose (GObject *object)
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
 
   ncm_fit_clear (&self->fit);
+	ncm_mpi_job_clear (&self->mj);
+	
   ncm_mset_trans_kern_clear (&self->sampler);
   ncm_timer_clear (&self->nt);
   ncm_serialize_clear (&self->ser);

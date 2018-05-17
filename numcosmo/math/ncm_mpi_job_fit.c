@@ -142,6 +142,7 @@ _ncm_mpi_job_fit_dispose (GObject *object)
 	NcmMPIJobFitPrivate * const self = mjfit->priv;
 
 	ncm_fit_clear (&self->fit);
+	ncm_obj_array_clear (&self->func_oa);
 	
 	/* Chain up : end */
 	G_OBJECT_CLASS (ncm_mpi_job_fit_parent_class)->dispose (object);
