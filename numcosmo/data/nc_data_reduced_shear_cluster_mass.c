@@ -279,7 +279,6 @@ typedef struct _NcDataReducedShearClusterMassInteg
 	gdouble z_cluster;
 	gdouble R_Mpc;
 	gdouble dt_cluster;
-	gdouble betainf;
 	gdouble g_obs;
 	guint interval_index;
 } NcDataReducedShearClusterMassInteg;
@@ -287,15 +286,9 @@ typedef struct _NcDataReducedShearClusterMassInteg
 static gdouble
 _nc_data_reduced_shear_cluster_mass_Pgal (gdouble z_gal, NcDataReducedShearClusterMassInteg *integ)
 {
-	const gdouble Ds          = nc_distance_angular_diameter (integ->dist, integ->cosmo, z_gal);
-	const gdouble Dls         = (nc_distance_transverse (integ->dist, integ->cosmo, z_gal) - integ->dt_cluster) / (1.0 + z_gal);
-	const gdouble beta        = Dls / Ds;
-	const gdouble beta_s      = beta / integ->betainf;
-	const gdouble convergence = nc_wl_surface_mass_density_convergence (integ->smd, integ->dp, integ->cosmo, integ->R_Mpc, z_gal, integ->z_cluster, integ->z_cluster);
-	const gdouble shear       = nc_wl_surface_mass_density_shear (integ->smd, integ->dp, integ->cosmo, integ->R_Mpc, z_gal, integ->z_cluster, integ->z_cluster);	
-	const gdouble g_th        = beta_s * shear / (1.0 - beta_s * convergence);
+	const gdouble g_th        = nc_wl_surface_mass_density_reduced_shear_infinity (integ->smd, integ->dp, integ->cosmo, integ->R_Mpc, z_gal, integ->z_cluster, integ->z_cluster);
 	const gdouble Pgal        = nc_reduced_shear_cluster_mass_P_z_gth_gobs (integ->rs, integ->cosmo, z_gal, g_th, integ->g_obs);
-
+	
 	return Pgal;
 }
 
@@ -321,8 +314,6 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 	const gdouble RH              = nc_hicosmo_RH_Mpc (cosmo);
 	const gdouble dA              = nc_distance_angular_diameter (self->dist, cosmo, self->z_cluster) * RH;
 	const gdouble dt              = nc_distance_transverse (self->dist, cosmo, self->z_cluster);
-	const gdouble dinf            = nc_distance_transverse_z_to_infinity (self->dist, cosmo, 0.0);
-	const gdouble betainf         = nc_distance_transverse_z_to_infinity (self->dist, cosmo, self->z_cluster) / dinf;
 	gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
 	NcDataReducedShearClusterMassInteg integ_data;
@@ -339,7 +330,6 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 	integ_data.smd        = smd;
 	integ_data.dp         = dp;
 	integ_data.z_cluster  = self->z_cluster;
-	integ_data.betainf    = betainf;
 	integ_data.dt_cluster = dt;
 
 	m2lnL[0] = 0.0;
@@ -351,7 +341,13 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 		const gdouble g_obs       = ncm_matrix_get (self->gal_obs, i, 1);
 		const gdouble R_Mpc       = (r_arcmin / 60.0) * (M_PI / 180.0) * dA;
 
-		integ_data.gz    = gz;
+		if (R_Mpc < 0.75 || R_Mpc > 3.0)
+		{
+			//printf ("r_arcmin = %.5g R_Mpc = %.5g\n", r_arcmin, R_Mpc);
+			continue;
+		}
+
+    integ_data.gz    = gz;
 		integ_data.R_Mpc = R_Mpc;
 		integ_data.g_obs = g_obs;
 		
@@ -360,6 +356,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 			const gdouble z_gal = nc_galaxy_redshift_mode (gz);
 			const gdouble P_i   = _nc_data_reduced_shear_cluster_mass_Pgal (z_gal, &integ_data);
 
+			//printf ("zgal = %.5g\n", z_gal);
 			m2lnL[0] += log (P_i);
 		}
 		else
@@ -374,6 +371,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 				
 				nc_galaxy_redshift_pdf_limits (gz, j, &z_gal_lower, &z_gal_upper);
 
+				//printf ("zgal_l = %.5g zgal_u = %.5g\n", z_gal_lower, z_gal_upper);
 				integ_data.interval_index = j;
 
 				F.params   = &integ_data;
@@ -419,6 +417,7 @@ _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset)
 
 /**
  * nc_data_reduced_shear_cluster_mass_new:
+ * @dist: a #NcDistance 
  * 
  * Creates a new #NcDataReducedShearClusterMass.
  * 
