@@ -61,7 +61,6 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
-  - cat numcosmo/build_cfg.h
   - make
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi

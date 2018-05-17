@@ -105,9 +105,6 @@ test_ncm_sf_spherical_harmonics_SOURCES =  \
 test_ncm_sphere_map_SOURCES =  \
 	test_ncm_sphere_map.c
 
-test_ncm_qm_prop_SOURCES =  \
-	test_ncm_qm_prop.c
-
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
 
@@ -125,6 +122,9 @@ test_nc_recomb_SOURCES =  \
 
 test_nc_cbe_SOURCES =  \
 	test_nc_cbe.c
+
+test_nc_hiqg_1d_SOURCES =  \
+	test_nc_hiqg_1d.c
 
 test_nc_data_bao_rdv_SOURCES =  \
         test_nc_data_bao_rdv.c
@@ -168,7 +168,7 @@ check_PROGRAMS =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
-	test_ncm_qm_prop                \
+	test_nc_hiqg_1d                \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
 	test_nc_transfer_func           \
@@ -322,12 +322,6 @@ test_ncm_sphere_map_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
-test_ncm_qm_prop_LDADD = \
-	$(top_builddir)/numcosmo/libnumcosmo.la \
-	$(GLIB_LIBS) \
-	$(GSL_LIBS) \
-	$(COVLIBS)
-
 test_nc_hicosmo_de_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
@@ -359,6 +353,12 @@ test_nc_recomb_LDADD = \
 	$(COVLIBS)
 
 test_nc_cbe_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_nc_hiqg_1d_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

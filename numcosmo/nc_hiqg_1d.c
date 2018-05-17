@@ -364,10 +364,10 @@ _nc_hiqg_1d_dispose (GObject *object)
 static void
 _nc_hiqg_1d_finalize (GObject *object)
 {
+#if HAVE_SUNDIALS_MAJOR == 3
   NcHIQG1D *qg1d = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
 
-#if HAVE_SUNDIALS_MAJOR == 3
   if (self->bohm != NULL)
   {
     ARKodeFree (&self->bohm);
@@ -1644,12 +1644,11 @@ nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 
     flag = ARKode (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "ARKode", 1, );
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
   }
+#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
   _nc_hiqg_1d_evol_C (qg1d, t);
   _nc_hiqg_1d_prepare_splines (qg1d);
-  
 }
 
 /**
