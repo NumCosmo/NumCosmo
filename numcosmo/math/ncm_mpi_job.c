@@ -837,9 +837,8 @@ ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *re
 void 
 ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job)
 {
-#ifdef HAVE_MPI
 	NcmMPIJobPrivate * const self = mpi_job->priv;
-
+#ifdef HAVE_MPI
 	if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
 		return;
 
@@ -870,7 +869,6 @@ ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job)
 		_mpi_ctrl.working_slaves = 0;
 		self->owned_slaves       = 0;
 	}
-#else
-	g_error ("ncm_mpi_job_free_all_slaves: MPI unsupported.");
 #endif /* HAVE_MPI */
+	g_assert_cmpint (self->owned_slaves, ==, 0);
 }
