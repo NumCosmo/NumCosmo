@@ -252,7 +252,7 @@ test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensi
   gdouble k2 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
   gdouble k3 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R3, test->zs, test->zl, test->zc);
 
-  ncm_assert_cmpdouble_e (k1, ==, 0.03893883,        1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k2, ==, 0.0353109280915,   1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (k3, ==, 0.000674183293825, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k1, ==, 0.13726313,   1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k2, ==, 0.12174598,   1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (k3, ==, 0.0021164506, 1.0e-5, 0.0);
 }
