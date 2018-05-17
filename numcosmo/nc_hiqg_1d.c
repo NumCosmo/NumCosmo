@@ -1288,9 +1288,12 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
   {
     gint lwork  = -1;
     gchar equed = 'Y';
+    gdouble rcond;
+#ifdef HAVE_DSYSVXX_
     gint nparams = 3;
     gdouble params[3] = {1.0, 99.0, 0.0};
-    gdouble rcond, rpvgrw;
+    gdouble rpvgrw;
+#endif /* HAVE_DSYSVXX_ */
     gint ilo, ihi;
     gdouble abnrm;
 
@@ -1306,6 +1309,7 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     ncm_matrix_set_zero (self->err_norm);
     ncm_matrix_set_zero (self->err_comp);
 
+#ifdef HAVE_DSYSVXX_
     g_array_set_size (self->work, 4 * self->nknots);
     ret = ncm_lapack_dsysvxx ('E', 'L', self->nknots, self->nknots,
                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
@@ -1318,7 +1322,34 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
                               ncm_vector_data (self->berr),
                               3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), 0, NULL,
                               (gdouble *)self->work->data, (gint *)self->iwork->data);
+#elif defined (HAVE_DSYSVX_)
+    lwork = -1;
+    equed = 'N';
+    ret = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
+                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                             (gint *)self->ipiv->data, 
+                             ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
+                             ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                             &rcond, ncm_matrix_data (self->err_norm),
+                             ncm_vector_data (self->berr),
+                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data); 
+    g_assert_cmpint (ret, ==, 0);
 
+    lwork = g_array_index (self->work, gdouble, 0);
+    if (lwork > self->work->len)
+      g_array_set_size (self->work, lwork);
+
+    ret = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
+                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                             (gint *)self->ipiv->data, 
+                             ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
+                             ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                             &rcond, ncm_matrix_data (self->err_norm),
+                             ncm_vector_data (self->berr),
+                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data); 
+#endif /* HAVE_DSYSVXX_ */
     /*printf ("#    RCOND:  % 22.15g\n", rcond);*/
     /*printf ("#   RPVGRW:  % 22.15g\n", rpvgrw);*/
 
@@ -1372,6 +1403,7 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     /*ncm_matrix_log_vals (self->psi, "#      PSI: ", "% .5e");*/
     /*printf ("#  PSI TDA:  %d\n", ncm_matrix_tda (self->psi));*/
 
+#ifdef HAVE_DSYSVXX_
     ret = ncm_lapack_dsysvxx ('F', 'L', self->nknots, 2,
                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
@@ -1383,6 +1415,33 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
                               ncm_vector_data (self->berr),
                               3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), nparams, params,
                               (gdouble *)self->work->data, (gint *)self->iwork->data);
+#elif defined (HAVE_DSYSVX_)
+    lwork = -1;
+    ret = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,
+                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                             (gint *)self->ipiv->data, 
+                             ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
+                             ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
+                             &rcond, ncm_matrix_data (self->err_norm),
+                             ncm_vector_data (self->berr),
+                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+    g_assert_cmpint (ret, ==, 0);
+    
+    lwork = g_array_index (self->work, gdouble, 0);
+    if (lwork > self->work->len)
+      g_array_set_size (self->work, lwork);
+    
+    ret = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,
+                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                             (gint *)self->ipiv->data, 
+                             ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
+                             ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
+                             &rcond, ncm_matrix_data (self->err_norm),
+                             ncm_vector_data (self->berr),
+                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+#endif /* HAVE_DSYSVXX_ */
 
     /*printf ("#    RCOND:  % 22.15g\n", rcond);*/
     /*printf ("#   RPVGRW:  % 22.15g\n", rpvgrw);*/

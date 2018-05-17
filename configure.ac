@@ -648,7 +648,7 @@ if test "x$have_blas" != "xno"; then
 
   if test "x$blas_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_cblas.h],[],[AC_MSG_ERROR([unable to find mkl_cblas.h])])
-    AX_CHECK_TYPEDEF([CBLAS_ORDER],[mkl_cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEF 1"]])
+    AX_CHECK_TYPEDEF([CBLAS_ORDER],[mkl_cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEFED 1"]])
     numcosmo_blas_include="\
 #include <mkl_cblas.h>
 #define CBLAS_H
@@ -657,15 +657,26 @@ $blas_types
 #include <numcosmo/math/ncm_gsl_blas_types.h>
 "
   else
-    AC_CHECK_HEADERS([cblas.h],[],[AC_MSG_ERROR([unable to find cblas.h])])
-    AX_CHECK_TYPEDEF([CBLAS_ORDER],[cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEF 1"]])
-    numcosmo_blas_include="\
+    AC_CHECK_HEADERS([cblas.h],[have_cblas_h="yes"],[have_cblas_h="no"])
+    if test "x$have_cblas_h" = "xyes"; then
+      AX_CHECK_TYPEDEF([CBLAS_ORDER],[cblas.h],[blas_types="#define NCM_BLAS_NOT_TYPEDEFED 1"]])
+      numcosmo_blas_include="\
 #include <cblas.h>
 #define __MKL_CBLAS_H__
 #define __GSL_CBLAS_H__
 $blas_types
 #include <numcosmo/math/ncm_gsl_blas_types.h>
 "
+    else
+      AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS header])
+      numcosmo_blas_include="\
+#include <gsl/gsl_cblas.h>
+#define __MKL_CBLAS_H__
+#define CBLAS_H
+#define NCM_BLAS_NOT_TYPEDEFED 1
+#include <numcosmo/math/ncm_gsl_blas_types.h>
+"
+    fi
   fi
   LIBS="$BLAS_LIBS $LIBS"
 
@@ -680,12 +691,14 @@ $blas_types
   fi
 else
   AC_MSG_RESULT([GSL's BLAS])
-  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS])
+  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS header])
   AC_DEFINE([HAVE_BLAS], [1], [use GSL's BLAS])
   numcosmo_blas_include="\
 #include <gsl/gsl_cblas.h>
 #define __MKL_CBLAS_H__
 #define CBLAS_H
+#define NCM_BLAS_NOT_TYPEDEFED 1
+#include <numcosmo/math/ncm_gsl_blas_types.h>
 "    
 fi
 AC_SUBST(numcosmo_blas_include)
@@ -722,6 +735,8 @@ if test "x$have_lapack" != "xno"; then
 
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
+  
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsysvx_ dsysvxx_ dgeev_ dgeevx_ dggglm_],[],[])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],

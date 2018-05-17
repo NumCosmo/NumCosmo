@@ -50,7 +50,7 @@ typedef  enum CBLAS_TRANSPOSE CBLAS_TRANSPOSE;
 typedef  enum CBLAS_UPLO      CBLAS_UPLO;
 typedef  enum CBLAS_DIAG      CBLAS_DIAG;
 typedef  enum CBLAS_SIDE      CBLAS_SIDE;
-#endif /* NCM_HAS_BLAS_TYPEDEF */
+#endif /* NCM_BLAS_NOT_TYPEDEFED */
 
 typedef  CBLAS_INDEX       CBLAS_INDEX_t;
 typedef  CBLAS_ORDER       CBLAS_ORDER_t;
@@ -59,7 +59,7 @@ typedef  CBLAS_UPLO        CBLAS_UPLO_t;
 typedef  CBLAS_DIAG        CBLAS_DIAG_t;
 typedef  CBLAS_SIDE        CBLAS_SIDE_t;
 
-#endif 
+#endif
 
 __END_DECLS
 
