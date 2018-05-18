@@ -734,6 +734,14 @@ $blas_types
   else
     AC_MSG_RESULT([yes])
   fi
+  
+  AC_MSG_CHECKING([which cblas to use])
+  if test "x$have_cblas" = "xyes"; then
+    AC_MSG_RESULT([cblas, removing gslcblas])
+    GSL_LIBS=`echo $GSL_LIBS | $SED 's/\-lgslcblas//g'`
+  else
+    AC_MSG_RESULT([none found, using gslcblas])
+fi  
 else
   AC_MSG_RESULT([GSL's BLAS])
   AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS header])
