@@ -749,7 +749,9 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
                                          "nadd-val-symbols", symbols,
                                          NULL);
 
-    return mcat;
+		g_free (names);
+		g_free (symbols);
+		return mcat;
   }
 }
 
@@ -2021,10 +2023,12 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
     ncm_stats_vec_reset (self->e_stats, FALSE);
     ncm_stats_vec_reset (self->e_mean_stats, FALSE);
   }
+	
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
   ncm_vector_set_all (self->params_min, GSL_POSINF);
 
-  self->bestfit_row    = NULL;
+  ncm_vector_clear (&self->bestfit_row);
+	
   self->bestfit        = GSL_POSINF;
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
@@ -2064,7 +2068,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
   ncm_vector_set_all (self->params_min, GSL_POSINF);
 
-  self->bestfit_row    = NULL;
+  ncm_vector_clear (&self->bestfit_row);
+	
   self->bestfit        = GSL_POSINF;
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
@@ -4196,44 +4201,47 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc)
   NcmMSetCatalogPrivate *self = mcat->priv;
   if (tc > 0)
   {
-    GPtrArray *rows      = ncm_stats_vec_dup_saved_x (self->pstats);
-    gchar *file          = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+    GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
+    gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
     guint t;
 
-    ncm_mset_catalog_set_file (mcat, NULL);
-    ncm_mset_catalog_reset (mcat);
+		if (file != NULL)
+			ncm_mset_catalog_set_file (mcat, NULL);
 
-    ncm_mset_catalog_set_first_id (mcat, self->first_id + tc * self->nchains);
+		ncm_mset_catalog_reset (mcat);
 
-    for (t = tc * self->nchains; t < rows->len; t++)
-    {
-      NcmVector *row_t = g_ptr_array_index (rows, t);
-      _ncm_mset_catalog_post_update (mcat, row_t);
-    }
+		ncm_mset_catalog_set_first_id (mcat, self->first_id + tc * self->nchains);
 
-    {
-      guint bak_n = 0;
-      while (TRUE)
-      {
-        gchar *bak_name = g_strdup_printf ("%s.%d.bak", file, bak_n);
+		for (t = tc * self->nchains; t < rows->len; t++)
+		{
+			NcmVector *row_t = g_ptr_array_index (rows, t);
+			_ncm_mset_catalog_post_update (mcat, row_t);
+		}
 
-        if (!g_file_test (bak_name, G_FILE_TEST_EXISTS))
-        {
-          g_rename (file, bak_name);
-          ncm_mset_catalog_set_file (mcat, file);
-          g_free (bak_name);
+		if (file != NULL)
+		{
+			guint bak_n = 0;
+			while (TRUE)
+			{
+				gchar *bak_name = g_strdup_printf ("%s.%d.bak", file, bak_n);
 
-          break;
-        }
+				if (!g_file_test (bak_name, G_FILE_TEST_EXISTS))
+				{
+					g_rename (file, bak_name);
+					ncm_mset_catalog_set_file (mcat, file);
+					g_free (bak_name);
 
-        g_free (bak_name);
-        bak_n++;
-      }
-    }
+					break;
+				}
 
-    g_ptr_array_unref (rows);
-    g_free (file);
-  }
+				g_free (bak_name);
+				bak_n++;
+			}
+		}
+
+		g_ptr_array_unref (rows);
+		g_free (file);
+	}
 }
 
 /**

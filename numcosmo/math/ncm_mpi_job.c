@@ -172,8 +172,11 @@ _ncm_mpi_job_constructed (GObject *object)
 static void
 _ncm_mpi_job_dispose (GObject *object)
 {
-	/*NcmMPIJob *mpi_job = NCM_MPI_JOB (object);*/
-	/*NcmMPIJobPrivate * const self = mpi_job->priv;*/
+	NcmMPIJob *mpi_job = NCM_MPI_JOB (object);
+	NcmMPIJobPrivate * const self = mpi_job->priv;
+
+	g_clear_pointer (&self->input_buf_table, g_hash_table_unref);
+	g_clear_pointer (&self->return_buf_table, g_hash_table_unref);
 	
 	/* Chain up : end */
 	G_OBJECT_CLASS (ncm_mpi_job_parent_class)->dispose (object);

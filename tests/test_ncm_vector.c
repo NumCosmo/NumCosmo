@@ -538,6 +538,8 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
   ncm_assert_cmpdouble (ncm_vector_get (v, 1), ==, 0.0);
   for (i = 0; i < v_size - 2; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
+
+	ncm_vector_clear (&cv);
 }
 
 void

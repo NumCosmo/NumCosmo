@@ -193,6 +193,8 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
       ncm_matrix_log_vals (cat_cov,  "# CMP     : ", "% 12.5e");
     }
+
+		ncm_matrix_clear (&cat_cov);
   }
 }
 
@@ -232,6 +234,8 @@ test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
 
       ncm_matrix_log_vals (cat_cov,  "# CMP     : ", "% 12.5e");
     }
+
+		ncm_matrix_clear (&cat_cov);
   }
 
   ncm_matrix_free (data_cov);

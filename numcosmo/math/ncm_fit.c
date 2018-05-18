@@ -269,6 +269,8 @@ ncm_fit_dispose (GObject *object)
 
   g_clear_pointer (&fit->equality_constraints, ncm_obj_array_unref);
   g_clear_pointer (&fit->inequality_constraints, ncm_obj_array_unref);
+  g_clear_pointer (&fit->equality_constraints_tot, g_array_unref);
+  g_clear_pointer (&fit->inequality_constraints_tot, g_array_unref);
 
   ncm_fit_clear (&fit->sub_fit);
 
