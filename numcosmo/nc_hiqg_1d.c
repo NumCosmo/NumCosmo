@@ -41,7 +41,7 @@
 #include "nc_hiqg_1d.h"
 #include "math/ncm_matrix.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral1d_ptr.h"
 #include "math/ncm_util.h"

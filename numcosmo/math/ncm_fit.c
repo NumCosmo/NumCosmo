@@ -41,7 +41,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_fit_gsl_ls.h"
 #include "math/ncm_fit_gsl_mm.h"
 #include "math/ncm_fit_gsl_mms.h"
@@ -72,13 +72,14 @@ enum
   PROP_M2LNL_ABSTOL,
   PROP_PARAMS_RELTOL,
   PROP_EQC,
+  PROP_EQC_TOT,
   PROP_INEQC,
+  PROP_INEQC_TOT,
   PROP_SUBFIT,
   PROP_SIZE,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmFit, ncm_fit, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcmFitConstraint, ncm_fit_constraint, (GBoxedCopyFunc)&ncm_fit_constraint_dup, (GBoxedFreeFunc)&ncm_fit_constraint_free);
 
 static void
 ncm_fit_init (NcmFit *fit)
@@ -90,11 +91,10 @@ ncm_fit_init (NcmFit *fit)
   fit->timer         = g_timer_new ();
   fit->mtype         = NCM_FIT_RUN_MSGS_NONE;
 
-  fit->equality_constraints = g_ptr_array_sized_new (10);
-  g_ptr_array_set_free_func (fit->equality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
-
-  fit->inequality_constraints = g_ptr_array_sized_new (10);
-  g_ptr_array_set_free_func (fit->inequality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
+  fit->equality_constraints       = ncm_obj_array_new ();
+  fit->inequality_constraints     = ncm_obj_array_new ();
+  fit->equality_constraints_tot   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  fit->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   fit->sub_fit = NULL;
   fit->diff    = ncm_diff_new ();
@@ -111,10 +111,12 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_LIKELIHOOD:
       ncm_likelihood_clear (&fit->lh);
       fit->lh = g_value_dup_object (value);
+			g_assert (fit->lh != NULL);
       break;
     case PROP_MSET:
       ncm_mset_clear (&fit->mset);
       fit->mset = g_value_dup_object (value);
+			g_assert (fit->mset != NULL);
       break;
     case PROP_STATE:
       ncm_fit_state_clear (&fit->fstate);
@@ -136,27 +138,34 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       ncm_fit_set_params_reltol (fit, g_value_get_double (value));
       break;
     case PROP_EQC:
-    {
-      gint64 p = g_value_get_int64 (value);
-      GPtrArray *eqc = GSIZE_TO_POINTER (p);
-      if (eqc != fit->equality_constraints)
-      {
-        g_ptr_array_unref (fit->equality_constraints);
-        fit->equality_constraints = g_ptr_array_ref (eqc);
-      }
+			g_clear_pointer (&fit->equality_constraints, g_ptr_array_unref);
+			fit->equality_constraints = g_value_dup_boxed (value);
       break;
-    }
+    case PROP_EQC_TOT:
+		{
+			NcmVector *v = g_value_get_object (value);
+			g_clear_pointer (&fit->equality_constraints_tot, g_array_unref);
+			if (v != NULL)
+				fit->equality_constraints_tot = ncm_vector_dup_array (v);
+			else
+				fit->equality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      break;
+		}
     case PROP_INEQC:
-    {
-      gint64 p = g_value_get_int64 (value);
-      GPtrArray *ineqc = GSIZE_TO_POINTER (p);
-      if (ineqc != fit->inequality_constraints)
-      {
-        g_ptr_array_unref (fit->inequality_constraints);
-        fit->inequality_constraints = g_ptr_array_ref (ineqc);
-      }
+			g_clear_pointer (&fit->inequality_constraints, g_ptr_array_unref);
+			fit->inequality_constraints = g_value_dup_boxed (value);
       break;
-    }
+    case PROP_INEQC_TOT:
+		{
+			NcmVector *v = g_value_get_object (value);
+			g_clear_pointer (&fit->inequality_constraints_tot, g_array_unref);
+				
+			if (v != NULL)
+				fit->inequality_constraints_tot = ncm_vector_dup_array (v);
+			else
+				fit->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      break;
+		}
     case PROP_SUBFIT:
       ncm_fit_set_sub_fit (fit, g_value_get_object (value));
       break;
@@ -199,10 +208,22 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       g_value_set_double (value, ncm_fit_get_params_reltol (fit));
       break;
     case PROP_EQC:
-      g_value_set_int64 (value, GPOINTER_TO_SIZE (fit->equality_constraints));
+      g_value_set_boxed (value, fit->equality_constraints);
+      break;
+    case PROP_EQC_TOT:
+			if (fit->equality_constraints_tot->len > 0)
+				g_value_take_object (value, ncm_vector_new_array (fit->equality_constraints_tot));
+			else
+				g_value_set_object (value, NULL);
       break;
     case PROP_INEQC:
-      g_value_set_int64 (value, GPOINTER_TO_SIZE (fit->inequality_constraints));
+      g_value_set_boxed (value, fit->inequality_constraints);
+      break;
+    case PROP_INEQC_TOT:
+			if (fit->inequality_constraints_tot->len > 0)
+				g_value_take_object (value, ncm_vector_new_array (fit->inequality_constraints_tot));
+			else
+				g_value_set_object (value, NULL);
       break;
     case PROP_SUBFIT:
       g_value_set_object (value, fit->sub_fit);
@@ -265,8 +286,10 @@ ncm_fit_dispose (GObject *object)
   ncm_mset_clear (&fit->mset);
   ncm_fit_state_clear (&fit->fstate);
 
-  g_clear_pointer (&fit->equality_constraints, g_ptr_array_unref);
-  g_clear_pointer (&fit->inequality_constraints, g_ptr_array_unref);
+  g_clear_pointer (&fit->equality_constraints, ncm_obj_array_unref);
+  g_clear_pointer (&fit->inequality_constraints, ncm_obj_array_unref);
+  g_clear_pointer (&fit->equality_constraints_tot, g_array_unref);
+  g_clear_pointer (&fit->inequality_constraints_tot, g_array_unref);
 
   ncm_fit_clear (&fit->sub_fit);
 
@@ -361,22 +384,35 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Relative tolarence in fitted parameters",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_PARAMS_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_EQC,
-                                   g_param_spec_int64 ("equality-constraints",
-                                                       NULL,
-                                                       "Equality constraints pointer",
-                                                       G_MININT64, G_MAXINT64, 0,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_INEQC,
-                                   g_param_spec_int64 ("inequality-constraints",
-                                                       NULL,
-                                                       "Inequality constraints pointer",
-                                                       G_MININT64, G_MAXINT64, 0,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
+	g_object_class_install_property (object_class,
+	                                 PROP_EQC,
+	                                 g_param_spec_boxed ("equality-constraints",
+	                                                     NULL,
+	                                                     "Equality constraints array",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_EQC_TOT,
+	                                 g_param_spec_object ("equality-constraints-tot",
+	                                                      NULL,
+	                                                      "Equality constraints tolerance",
+	                                                      NCM_TYPE_VECTOR,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_INEQC,
+	                                 g_param_spec_boxed ("inequality-constraints",
+	                                                     NULL,
+	                                                     "Inequality constraints array",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_INEQC_TOT,
+	                                 g_param_spec_object ("inequality-constraints-tot",
+	                                                      NULL,
+	                                                      "Inequality constraints tolerance",
+	                                                      NCM_TYPE_VECTOR,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
                                    PROP_SUBFIT,
                                    g_param_spec_object ("sub-fit",
                                                         NULL,
@@ -404,55 +440,6 @@ _ncm_fit_reset (NcmFit *fit)
                            NCM_FIT_GET_CLASS (fit)->is_least_squares);
     ncm_fit_state_reset (fit->fstate);
   }
-}
-
-/**
- * ncm_fit_constraint_new:
- * @fit: a #NcmFit
- * @func: a #NcmMSetFunc
- * @tot: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmFitConstraint *
-ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
-{
-  NcmFitConstraint *fitc = g_new (NcmFitConstraint, 1);
-  g_assert (ncm_mset_func_is_scalar (func) && ncm_mset_func_is_const (func));
-  fitc->fit = ncm_fit_ref (fit);
-  fitc->func = ncm_mset_func_ref (func);
-  fitc->tot = tot;
-  return fitc;
-}
-
-/**
- * ncm_fit_constraint_dup:
- * @fitc: a #NcmFitConstraint
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmFitConstraint *
-ncm_fit_constraint_dup (NcmFitConstraint *fitc)
-{
-  return ncm_fit_constraint_new (fitc->fit, fitc->func, fitc->tot);
-}
-
-/**
- * ncm_fit_constraint_free:
- * @fitc: a #NcmFitConstraint
- *
- * FIXME
- *
- */
-void
-ncm_fit_constraint_free (NcmFitConstraint *fitc)
-{
-  ncm_mset_func_free (fitc->func);
-  g_free (fitc);
 }
 
 /**
@@ -821,7 +808,7 @@ ncm_fit_get_params_reltol (NcmFit *fit)
 /**
  * ncm_fit_params_set_array:
  * @fit: a #NcmFit
- * @x: an array of gdoubles
+ * @x: (in) (array) (element-type gdouble): an array of gdoubles
  *
  * FIXME
  *
@@ -852,10 +839,10 @@ ncm_fit_get_params_reltol (NcmFit *fit)
  *
  */
 void
-ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, const gdouble tot)
 {
-  NcmFitConstraint *fitc = ncm_fit_constraint_new (fit, func, tot);
-  g_ptr_array_add (fit->equality_constraints, fitc);
+  ncm_obj_array_add (fit->equality_constraints, G_OBJECT (func));
+	g_array_append_val (fit->equality_constraints_tot, tot);
 }
 
 /**
@@ -868,10 +855,10 @@ ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
  *
  */
 void
-ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, const gdouble tot)
 {
-  NcmFitConstraint *fitc = ncm_fit_constraint_new (fit, func, tot);
-  g_ptr_array_add (fit->inequality_constraints, fitc);
+  ncm_obj_array_add (fit->inequality_constraints, G_OBJECT (func));
+	g_array_append_val (fit->inequality_constraints_tot, tot);
 }
 
 /**
@@ -885,6 +872,7 @@ void
 ncm_fit_remove_equality_constraints (NcmFit *fit)
 {
   g_ptr_array_set_size (fit->equality_constraints, 0);
+  g_array_set_size (fit->equality_constraints_tot, 0);
 }
 
 /**
@@ -898,6 +886,7 @@ void
 ncm_fit_remove_inequality_constraints (NcmFit *fit)
 {
   g_ptr_array_set_size (fit->inequality_constraints, 0);
+  g_array_set_size (fit->inequality_constraints_tot, 0);
 }
 
 /**

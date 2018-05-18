@@ -134,6 +134,7 @@ static guint _ncm_fit_esmcmc_walker_walk_get_nparams (NcmFitESMCMCWalker *walker
 static void _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
 static void _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 static gdouble _ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+static gdouble _ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_walk_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_walk_desc (NcmFitESMCMCWalker *walker);
 
@@ -163,6 +164,7 @@ ncm_fit_esmcmc_walker_walk_class_init (NcmFitESMCMCWalkerWalkClass *klass)
   walker_class->setup       = &_ncm_fit_esmcmc_walker_walk_setup;
   walker_class->step        = &_ncm_fit_esmcmc_walker_walk_step;
   walker_class->prob        = &_ncm_fit_esmcmc_walker_walk_prob;
+  walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_walk_prob_norm;
   walker_class->clean       = &_ncm_fit_esmcmc_walker_walk_clean;
   walker_class->desc        = &_ncm_fit_esmcmc_walker_walk_desc;
 }
@@ -325,6 +327,12 @@ static gdouble
 _ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
   return exp ((m2lnL_cur - m2lnL_star) * 0.5);
+}
+
+static gdouble 
+_ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+{
+  return 0.0;
 }
 
 static void 

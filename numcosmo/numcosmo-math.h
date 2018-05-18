@@ -32,6 +32,12 @@
 #include <numcosmo/ncm_enum_types.h>
 #include <numcosmo/math/ncm_c.h>
 
+/* MPI Objects */
+#include <numcosmo/math/ncm_mpi_job.h>
+#include <numcosmo/math/ncm_mpi_job_test.h>
+#include <numcosmo/math/ncm_mpi_job_fit.h>
+#include <numcosmo/math/ncm_mpi_job_mcmc.h>
+
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
@@ -135,7 +141,7 @@
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
-#include <numcosmo/math/memory_pool.h>
+#include <numcosmo/math/ncm_memory_pool.h>
 #include <numcosmo/math/mpq_tree.h>
 #include <numcosmo/math/integral.h>
 #include <numcosmo/math/poly.h>

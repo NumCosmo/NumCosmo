@@ -63,6 +63,10 @@ ncm_sources = \
 	ncm_build_inline.c                   \
 	math/ncm_c.c                         \
 	math/ncm_cfg.c                       \
+	math/ncm_mpi_job.c                   \
+	math/ncm_mpi_job_test.c              \
+	math/ncm_mpi_job_fit.c               \
+	math/ncm_mpi_job_mcmc.c              \
 	math/ncm_util.c                      \
 	math/ncm_diff.c                      \
 	math/ncm_timer.c                     \
@@ -167,7 +171,7 @@ ncm_sources = \
 	math/mpq_tree.c           \
 	math/grid_one.c           \
 	math/dividedifference.c   \
-	math/memory_pool.c
+	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
 	math/Faddeeva.c
@@ -175,6 +179,10 @@ ncm_sources_nogi = \
 ncm_headers =                                \
 	math/ncm_c.h                         \
 	math/ncm_cfg.h                       \
+	math/ncm_mpi_job.h                   \
+	math/ncm_mpi_job_test.h              \
+	math/ncm_mpi_job_fit.h               \
+	math/ncm_mpi_job_mcmc.h              \
 	math/ncm_util.h                      \
 	math/ncm_diff.h                      \
 	math/ncm_timer.h                     \
@@ -279,7 +287,7 @@ ncm_headers =                                \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
 	math/dividedifference.h   \
-	math/memory_pool.h
+	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
 	math/Faddeeva.h           \

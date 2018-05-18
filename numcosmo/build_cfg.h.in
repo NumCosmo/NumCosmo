@@ -33,6 +33,8 @@
 @have_cfitsio_support@
 
 @have_nlopt_support@
+@have_mpi_support@
+
 /*
 @have_atlas_support@
 @have_lapack_support@

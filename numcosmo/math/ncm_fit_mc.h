@@ -32,7 +32,7 @@
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_mset_catalog.h>
 #include <numcosmo/math/ncm_timer.h>
-#include <numcosmo/math/memory_pool.h>
+#include <numcosmo/math/ncm_memory_pool.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>

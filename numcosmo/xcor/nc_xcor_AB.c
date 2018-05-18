@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
 #include "xcor/nc_xcor_AB.h"

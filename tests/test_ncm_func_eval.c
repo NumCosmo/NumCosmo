@@ -46,7 +46,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   
   g_test_add ("/ncm/func_eval/run", TestNcmSparam, NULL, 

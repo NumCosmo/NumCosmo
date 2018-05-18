@@ -38,7 +38,7 @@
 
 #include "math/ncm_mpsf_0F1.h"
 #include "math/binsplit.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_util.h"
 
 typedef struct __binsplit_0F1

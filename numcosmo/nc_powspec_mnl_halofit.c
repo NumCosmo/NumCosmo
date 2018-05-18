@@ -48,7 +48,7 @@
 #include "nc_distance.h"
 
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

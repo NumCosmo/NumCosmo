@@ -49,7 +49,7 @@ main (gint argc, gchar *argv[])
     { NULL }
   };
 
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
 
   context = g_option_context_new ("- generate a NcmMSet catalog.");
   g_option_context_set_summary (context, "MSet generator");

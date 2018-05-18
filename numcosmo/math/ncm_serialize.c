@@ -738,8 +738,8 @@ ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
 
   {
     GVariant *obj_name = g_variant_get_child_value (var_obj, 0);
-    GVariant *params = g_variant_get_child_value (var_obj, 1);
-    GObject *obj = ncm_serialize_from_name_params (ser, g_variant_get_string (obj_name, NULL), params);
+    GVariant *params   = g_variant_get_child_value (var_obj, 1);
+		GObject *obj       = ncm_serialize_from_name_params (ser, g_variant_get_string (obj_name, NULL), params);
 
     g_variant_unref (obj_name);
     g_variant_unref (params);
@@ -908,7 +908,6 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   if (g_regex_match (ser->is_named_regex, obj_name, 0, &match_info))
   {
     gchar *cobj_name = g_match_info_fetch (match_info, 1);
-
     name = g_match_info_fetch (match_info, 2);
 
     gtype = g_type_from_name (cobj_name);
@@ -929,7 +928,7 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
 */
     if (ncm_serialize_contain_name (ser, name))
       obj = ncm_serialize_get_by_name (ser, name);
-  }
+	}
 
   if (obj != NULL)
   {
@@ -1042,6 +1041,7 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
 #else
     obj = g_object_newv (gtype, nprop, gprop);
 #endif /* GLIB_CHECK_VERSION(2,54,0) */
+
     for (i = 0; i < nprop; i++)
       g_value_unset (&gprop[i].value);
 

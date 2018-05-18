@@ -11,12 +11,6 @@ from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
 #
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
-
-#
 # New ModelBuilder object, defines a new model NcHIPrimExample implementing
 # the base Ncm.Model abstract class.
 # 
