@@ -142,17 +142,30 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 			fit->equality_constraints = g_value_dup_boxed (value);
       break;
     case PROP_EQC_TOT:
+		{
+			NcmVector *v = g_value_get_object (value);
 			g_clear_pointer (&fit->equality_constraints_tot, g_array_unref);
-			fit->equality_constraints_tot = ncm_vector_dup_array (g_value_get_object (value));
+			if (v != NULL)
+				fit->equality_constraints_tot = ncm_vector_dup_array (v);
+			else
+				fit->equality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
       break;
+		}
     case PROP_INEQC:
 			g_clear_pointer (&fit->inequality_constraints, g_ptr_array_unref);
 			fit->inequality_constraints = g_value_dup_boxed (value);
       break;
     case PROP_INEQC_TOT:
+		{
+			NcmVector *v = g_value_get_object (value);
 			g_clear_pointer (&fit->inequality_constraints_tot, g_array_unref);
-			fit->inequality_constraints_tot = ncm_vector_dup_array (g_value_get_object (value));
+				
+			if (v != NULL)
+				fit->inequality_constraints_tot = ncm_vector_dup_array (v);
+			else
+				fit->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
       break;
+		}
     case PROP_SUBFIT:
       ncm_fit_set_sub_fit (fit, g_value_get_object (value));
       break;
@@ -198,13 +211,19 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       g_value_set_boxed (value, fit->equality_constraints);
       break;
     case PROP_EQC_TOT:
-      g_value_take_object (value, ncm_vector_new_array (fit->equality_constraints_tot));
+			if (fit->equality_constraints_tot->len > 0)
+				g_value_take_object (value, ncm_vector_new_array (fit->equality_constraints_tot));
+			else
+				g_value_set_object (value, NULL);
       break;
     case PROP_INEQC:
       g_value_set_boxed (value, fit->inequality_constraints);
       break;
     case PROP_INEQC_TOT:
-      g_value_take_object (value, ncm_vector_new_array (fit->inequality_constraints_tot));
+			if (fit->inequality_constraints_tot->len > 0)
+				g_value_take_object (value, ncm_vector_new_array (fit->inequality_constraints_tot));
+			else
+				g_value_set_object (value, NULL);
       break;
     case PROP_SUBFIT:
       g_value_set_object (value, fit->sub_fit);

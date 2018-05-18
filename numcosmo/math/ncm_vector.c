@@ -175,10 +175,13 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
 NcmVector *
 ncm_vector_new_array (GArray *a)
 {
-  NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1,
-                                       g_array_ref (a), (GDestroyNotify) &g_array_unref);
-  cv->type = NCM_VECTOR_ARRAY;
-  return cv;
+	g_assert_cmpint (a->len, >, 0);
+	{
+		NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1,
+		                                     g_array_ref (a), (GDestroyNotify) &g_array_unref);
+		cv->type = NCM_VECTOR_ARRAY;
+		return cv;
+	}
 }
 
 /**
