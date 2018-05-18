@@ -579,6 +579,34 @@ ncm_hdf5_table_free (NcmHDF5Table *h5tb)
 	g_free (h5tb);
 }
 
+#if !GLIB_CHECK_VERSION(2,54,0)
+gboolean
+g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
+                                  gconstpointer  needle,
+                                  GEqualFunc     equal_func,
+                                  guint         *index_)
+{
+  guint i;
+
+  g_return_val_if_fail (haystack != NULL, FALSE);
+
+  if (equal_func == NULL)
+    equal_func = g_direct_equal;
+
+  for (i = 0; i < haystack->len; i++)
+    {
+      if (equal_func (g_ptr_array_index (haystack, i), needle))
+        {
+          if (index_ != NULL)
+            *index_ = i;
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+#endif
+
 gboolean
 ncm_hdf5_table_has_col (NcmHDF5Table *h5tb, const gchar *col)
 {
