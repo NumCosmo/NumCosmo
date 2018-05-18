@@ -92,11 +92,17 @@ NcmVector *
 ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
+
+	g_assert (d != NULL);
+	g_assert_cmpuint (size,   >, 0);
+  g_assert_cmpuint (stride, >, 0);
+	
   if (stride != 1)
     cv->vv = gsl_vector_view_array_with_stride (d, stride, size);
   else
     cv->vv = gsl_vector_view_array (d, size);
-  cv->type = NCM_VECTOR_DERIVED;
+
+	cv->type = NCM_VECTOR_DERIVED;
   g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
   cv->pdata = pdata;
   cv->pfree = pfree;
@@ -116,9 +122,10 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
-  gdouble *d = fftw_alloc_real (size);
+  gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
-  cv->type = NCM_VECTOR_MALLOC;
+  cv->type      = NCM_VECTOR_MALLOC;
+
   return cv;
 }
 
