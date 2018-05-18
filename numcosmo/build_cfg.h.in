@@ -42,7 +42,9 @@
 */
 @have_inline_support@
 
+#ifndef NUMCOSMO_GIR_SCAN
 @numcosmo_blas_include@
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #define NUMCOSMO_MAJOR_VERSION @NUMCOSMO_MAJOR_VERSION@
 #define NUMCOSMO_MINOR_VERSION @NUMCOSMO_MINOR_VERSION@
