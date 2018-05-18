@@ -40,8 +40,7 @@ SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
 lib_LTLIBRARIES = libnumcosmo.la
 
 libnumcosmo_la_LDFLAGS = \
-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
-	$(HDF5_LDFLAGS)
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 
 
 libnumcosmo_la_LIBADD =         \
 	$(SUNDIALS_LIBS)        \
@@ -52,6 +51,7 @@ libnumcosmo_la_LIBADD =         \
 	$(GSL_LIBS)             \
 	$(CFITSIO_LIBS)         \
 	$(LIBCUBA_PLACE)        \
+	$(HDF5_LDFLAGS)         \
 	$(HDF5_LIBS)            \
 	$(CODE_COVERAGE_LIBS)   \
 	plc/libclik.la          \
