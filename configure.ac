@@ -200,6 +200,7 @@ dnl ***************************************************************************
 dnl Compiler flags for C
 dnl ***************************************************************************
 NC_CFLAGS="$CFLAGS"
+ac_[]_AC_LANG_ABBREV[]_werror_flag=yes; dnl Push AC_LANG_WERROR    
 AC_ARG_ENABLE([opt-cflags], 
   [AS_HELP_STRING([--enable-opt-cflags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)])], 
   [enable_comp_flags="yes"],[])
@@ -254,6 +255,7 @@ if test x$enable_simd_ext_flags = "xyes"; then
   AC_SUBST(CPUEXT_FLAGS)
   CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
 fi
+ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 dnl ***************************************************************************
 dnl Fortran flags
@@ -293,7 +295,7 @@ AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
 dnl ***************************************************************************
 dnl For intel family compilers we must -diag-error=all to 
-dnl make it fails on bad flags
+dnl make it fails on bad flags (not enough, see below)
 dnl ***************************************************************************
   FCFLAGS_CHECK=""
   
@@ -302,17 +304,23 @@ dnl ***************************************************************************
       AX_APPEND_COMPILE_FLAGS([-diag-error=all], [FCFLAGS_CHECK])
     ;;
   esac
-    
-  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
+
+dnl ***************************************************************************
+dnl Ensure any optimization flags we maintain produce no warnings
+dnl Required because Intel ifort barfs on bad flags
+dnl ***************************************************************************
+  ac_[]_AC_LANG_ABBREV[]_werror_flag=yes; dnl Push AC_LANG_WERROR    
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -threads -recursive -automatic -fautomatic -frecursive -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
 
   if test $GFORTRAN_VERSION_MAJOR -gt 4; then
     AX_APPEND_COMPILE_FLAGS([-Wno-tabs], [FCFLAGS], [$FCFLAGS_CHECK])
   else
-    AX_APPEND_COMPILE_FLAGS([-Wtabs], [FCFLAGS], [$FCFLAGS_CHECK])  
+    AX_APPEND_COMPILE_FLAGS([-Wtabs], [FCFLAGS], [$FCFLAGS_CHECK])
   fi
 
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
+  ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 AC_LANG_POP([Fortran])
 

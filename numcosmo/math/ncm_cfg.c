@@ -63,6 +63,8 @@
 #include "math/ncm_dataset.h"
 #include "math/ncm_fit.h"
 #include "math/ncm_fit_nlopt.h"
+#include "math/ncm_prior_gauss_param.h"
+#include "math/ncm_prior_gauss_func.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -141,6 +143,7 @@
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
 #include "nc_planck_fi_cor_ttteee.h"
+#include "perturbations/nc_hipert_boltzmann_cbe.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -158,6 +161,7 @@
 #include "data/nc_data_hubble.h"
 #include "data/nc_data_snia_cov.h"
 #include "data/nc_data_xcor.h"
+#include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
@@ -478,6 +482,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 	ncm_cfg_register_obj (NCM_TYPE_FIT);
 	ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 
+	ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
+	ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
+
   ncm_cfg_register_obj (NCM_TYPE_DATA);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
@@ -590,6 +597,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TTTEEE);
 
+	ncm_cfg_register_obj (NC_TYPE_HIPERT_BOLTZMANN_CBE);
+	
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
@@ -618,6 +627,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
+
+	ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
