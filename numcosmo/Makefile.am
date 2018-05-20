@@ -117,6 +117,7 @@ ncm_sources = \
 	math/ncm_model_builder.c             \
 	math/ncm_mset.c                      \
 	math/ncm_mset_func.c                 \
+	math/ncm_mset_func1.c                \
 	math/ncm_mset_func_list.c            \
 	math/ncm_calc.c                      \
 	math/ncm_ode_spline.c                \
@@ -233,6 +234,7 @@ ncm_headers =                                \
 	math/ncm_model_builder.h             \
 	math/ncm_mset.h                      \
 	math/ncm_mset_func.h                 \
+	math/ncm_mset_func1.h                \
 	math/ncm_mset_func_list.h            \
 	math/ncm_calc.h                      \
 	math/ncm_ode_spline.h                \

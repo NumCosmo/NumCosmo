@@ -17,6 +17,7 @@ from gi.repository import NumCosmoMath as Ncm
 from py_sline_model import PySLineModel
 from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
+from py_sline_mfunc import PyTestFunc
 
 #
 #  Initializing the library objects, this must be called before
@@ -114,13 +115,22 @@ stretch.set_scale (2.5)
 stretch.set_box_mset (mset)
 
 #
+# Additional functions of mset to be computed during the sampling 
+# process.
+#
+mfunc_oa = Ncm.ObjArray.new ()
+
+tf = PyTestFunc ()
+mfunc_oa.add (tf)
+
+#
 # Initialize the ESMCMC object using the objects above. It will
 # use 50 walkers, i.e., each point in the MCMC chain contains
 # 50 points in the parametric space. Each step uses the last point
 # in the chain (the last 50 parametric points) to calculate the
 # proposal points.
 #
-esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsgs.SIMPLE)
+esmcmc  = Ncm.FitESMCMC.new_funcs_array (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsgs.SIMPLE, mfunc_oa)
 
 #
 # These methods enable the auto-trim options on ESMCMC. This option 

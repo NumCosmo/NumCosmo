@@ -584,7 +584,7 @@ main (gint argc, gchar *argv[])
           for (j = 0; j < mset_func_array->len; j++)
           {
             NcmMSetFunc *mset_func = g_ptr_array_index (mset_func_array, j);
-            const guint dim        = ncm_mset_func_get_dim (mset_func);
+						guint dim              = ncm_mset_func_get_dim (mset_func);
             guint k;
 
             ncm_mset_func_eval (mset_func, mset, NULL, ncm_vector_data (res_v));

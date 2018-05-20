@@ -237,6 +237,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
 				                                   NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
 				                                   NULL);
 			}
+			
       ncm_mset_catalog_set_m2lnp_var (self->mcat, 0);
       ncm_mset_catalog_set_run_type (self->mcat, "Ensemble Sampler MCMC");
 
@@ -273,6 +274,9 @@ _ncm_fit_esmcmc_constructed (GObject *object)
 
     ncm_fit_esmcmc_walker_set_size (self->walker, self->nwalkers);
     ncm_fit_esmcmc_walker_set_nparams (self->walker, self->fparam_len);
+
+		g_assert (self->mj == NULL);
+		self->mj = NCM_MPI_JOB (ncm_mpi_job_mcmc_new (self->fit, self->func_oa));
   }
 }
 
@@ -630,9 +634,6 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
   g_assert (self->fit == NULL);
   self->fit = ncm_fit_ref (fit);
-
-	g_assert (self->mj == NULL);
-	self->mj = NCM_MPI_JOB (ncm_mpi_job_mcmc_new (fit, self->func_oa));
 }
 
 /**
@@ -1110,6 +1111,8 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
 		{
 			NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
 			NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
+
+			/*printf ("# AHA %ld % 22.15g % 22.15g\n", k, ncm_vector_get (full_thetastar_k, 0), ncm_vector_get (full_thetastar_k, 1));*/
 			
 			ncm_vector_memcpy (full_theta_k, full_thetastar_k);
 
@@ -1118,11 +1121,11 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
 		}
 	}
 
-	if (k < f)
-		_ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, k, f);
-
 	g_ptr_array_unref (thetastar_in_a);
 	g_ptr_array_unref (thetastar_out_a);
+
+	if (k < f)
+		_ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, k, f);
 }
 
 static void 

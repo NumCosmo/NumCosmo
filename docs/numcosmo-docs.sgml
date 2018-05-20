@@ -93,6 +93,7 @@
       <xi:include href="xml/ncm_model_builder.xml"/>
       <xi:include href="xml/ncm_mset.xml"/>
       <xi:include href="xml/ncm_mset_func.xml"/>
+      <xi:include href="xml/ncm_mset_func1.xml"/>
       <xi:include href="xml/ncm_mset_func_list.xml"/>
       <xi:include href="xml/ncm_calc.xml"/>
     </section>
