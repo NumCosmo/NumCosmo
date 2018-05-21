@@ -142,7 +142,7 @@ esmcmc  = Ncm.FitESMCMC.new_funcs_array (fit, nwalkers, init_sampler, stretch, N
 esmcmc.set_auto_trim (True)
 esmcmc.set_auto_trim_div (100)
 esmcmc.set_max_runs_time (2.0 * 60.0)
-esmcmc.set_nthreads (0)
+esmcmc.set_nthreads (2)
 
 #
 # Using `example_esmcmc_out.fits' as the catalog file, if there

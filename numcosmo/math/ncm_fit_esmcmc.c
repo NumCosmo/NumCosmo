@@ -1364,7 +1364,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 				ncm_cfg_msg_sepa ();
 				g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the catalog may be corrupted, removing last ensemble and retrying...\n");
 			}
-
+			ncm_fit_esmcmc_end_run (esmcmc);
+			
 			ncm_mset_catalog_remove_last_ensemble (self->mcat);
 
 			self->cur_sample_id -= self->nwalkers;
@@ -1389,6 +1390,12 @@ void
 ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
+
+  if (!self->started)
+    g_error ("ncm_fit_esmcmc_end_run: run not started, run ncm_fit_esmcmc_start_run() first.");
+
+	ncm_mpi_job_free_all_slaves (self->mj);
+	
   if (ncm_timer_task_is_running (self->nt))
     ncm_timer_task_end (self->nt);
 
@@ -1895,6 +1902,78 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
   ncm_memory_pool_return (fk_ptr);
 }
 
+static void 
+_ncm_fit_esmcmc_validate_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
+{
+	NcmFitESMCMCPrivate * const self = esmcmc->priv;
+	GPtrArray *thetastar_in_a  = g_ptr_array_new ();
+	GPtrArray *thetastar_out_a = g_ptr_array_new ();
+	const glong len            = MIN (f - i, self->thetastar->len);
+  glong j, k;
+
+  for (j = 0; j < len; j++)
+  {
+		glong k                     = i + j;
+		NcmVector *cur_row          = ncm_mset_catalog_peek_row (self->mcat, k);
+    NcmVector *thetastar_in_j   = g_ptr_array_index (self->thetastar_in, j);
+    NcmVector *thetastar_out_j  = g_ptr_array_index (self->thetastar_out, j);
+    NcmVector *full_thetastar_j = g_ptr_array_index (self->full_thetastar, j);
+		
+		ncm_vector_memcpy (full_thetastar_j, cur_row);
+		
+		ncm_vector_set (thetastar_in_j, self->fparam_len + 0, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
+		ncm_vector_set (thetastar_in_j, self->fparam_len + 1, -1.0);
+		ncm_vector_set (thetastar_in_j, self->fparam_len + 2, -1.0);
+		
+		g_ptr_array_add (thetastar_in_a,  thetastar_in_j);
+		g_ptr_array_add (thetastar_out_a, thetastar_out_j);
+	}
+
+	ncm_mpi_job_run_array (self->mj, thetastar_in_a, thetastar_out_a);
+
+	k = i;
+  for (j = 0; j < thetastar_out_a->len; j++)
+  {
+		NcmVector *thetastar_out_j = g_ptr_array_index (thetastar_out_a, j);
+		NcmVector *thetastar_in_j  = g_ptr_array_index (thetastar_in_a, j);
+		const gdouble m2lnL_cur    = ncm_vector_get (thetastar_in_j, self->fparam_len + 0);
+		const gdouble m2lnL        = ncm_vector_get (thetastar_out_j, NCM_FIT_ESMCMC_MPI_OUT_LEN + NCM_FIT_ESMCMC_M2LNL_ID);
+    const gdouble diff         = fabs ((m2lnL_cur - m2lnL) / m2lnL_cur);
+    
+    if (diff > 1.0e-3)
+    {
+      if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+      {
+				NcmVector *cur_row = ncm_mset_catalog_peek_row (self->mcat, k);
+        ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAILED.\n",
+                     k, m2lnL_cur, m2lnL, diff);
+				ncm_message ("# NcmFitESMCMC: row %5lu values: ", k);
+				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
+      }
+			g_array_index (self->accepted, gboolean, 0) = FALSE;
+		}
+    else if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e, SUCCEEDED!\n",
+                   k, m2lnL_cur, m2lnL, diff);
+			if (self->mtype >= NCM_FIT_RUN_MSGS_FULL)
+			{
+				NcmVector *cur_row = ncm_mset_catalog_peek_row (self->mcat, k);
+				ncm_message ("# NcmFitESMCMC: row %5lu values:", k);
+				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
+			}
+    }
+		k++;
+	}
+
+	g_ptr_array_unref (thetastar_in_a);
+	g_ptr_array_unref (thetastar_out_a);
+
+	if (k < f)
+		_ncm_fit_esmcmc_validate_mpi (esmcmc, k, f);
+}
+
+
 /**
  * ncm_fit_esmcmc_validate:
  * @esmcmc: a #NcmFitESMCMC
@@ -1936,7 +2015,12 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
 
 	g_array_index (self->accepted, gboolean, 0) = TRUE;
   if (self->nthreads > 1)
-    ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_validade_mt_eval, pi, pf, esmcmc);
+	{
+		if (self->has_mpi)
+			_ncm_fit_esmcmc_validate_mpi (esmcmc, pi, pf);
+		else
+			ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_validade_mt_eval, pi, pf, esmcmc);
+	}
   else
     _ncm_fit_esmcmc_validade_mt_eval (pi, pf, esmcmc);
 

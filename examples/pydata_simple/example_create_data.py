@@ -32,9 +32,9 @@ if (len (sys.argv) != 2) or (sys.argv[1] != '--plain' and sys.argv[1] != '--gaus
   print ("usage: example_create_data.py --plain or --gauss")
   sys.exit (-1)
 elif sys.argv[1] == '--plain':
-  sld = PySLineData (len = 5000)
+  sld = PySLineData (len = 7000)
 else: 
-  sld = PySLineGauss (len = 5000)
+  sld = PySLineGauss (len = 7000)
   sld.xv.set_array (np.linspace (0.0, 10.0, sld.get_size ()))
   
 #
