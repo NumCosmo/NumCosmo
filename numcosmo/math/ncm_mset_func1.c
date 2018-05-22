@@ -136,6 +136,7 @@ ncm_mset_func1_clear (NcmMSetFunc1 **f1)
 
 /**
  * ncm_mset_func1_eval1: (virtual eval1)
+ * @mset: a #NcmMSet
  * @f1: a #NcmMSetFunc1
  * @x: (array) (element-type double): function argument
  *
