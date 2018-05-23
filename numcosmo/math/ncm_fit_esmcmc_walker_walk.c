@@ -326,7 +326,7 @@ _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 static gdouble 
 _ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
-  return exp ((m2lnL_cur - m2lnL_star) * 0.5);
+  return exp ((m2lnL_cur - m2lnL_star) * 0.5 / walker->temperature);
 }
 
 static gdouble 

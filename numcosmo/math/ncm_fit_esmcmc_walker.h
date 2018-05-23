@@ -64,6 +64,7 @@ struct _NcmFitESMCMCWalker
 {
   /*< private >*/
   GObject parent_instance;
+	gdouble temperature;
 };
 
 GType ncm_fit_esmcmc_walker_get_type (void) G_GNUC_CONST;
@@ -77,6 +78,8 @@ void ncm_fit_esmcmc_walker_set_size (NcmFitESMCMCWalker *walker, guint size);
 guint ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker);
 void ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
 guint ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker);
+void ncm_fit_esmcmc_walker_set_temperature (NcmFitESMCMCWalker *walker, const gdouble T);
+gdouble ncm_fit_esmcmc_walker_get_temperature (NcmFitESMCMCWalker *walker);
 
 void ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
 void ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);

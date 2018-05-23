@@ -103,6 +103,7 @@ void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 NcmSerialize *ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc);
 NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
 NcmMSetCatalog *ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc);
+NcmFitESMCMCWalker *ncm_fit_esmcmc_peek_walker (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 

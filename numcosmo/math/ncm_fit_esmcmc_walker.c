@@ -45,7 +45,7 @@ enum
   PROP_0,
   PROP_SIZE,
   PROP_NPARAMS,
-  
+	PROP_TEMP,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmFitESMCMCWalker, ncm_fit_esmcmc_walker, G_TYPE_OBJECT);
@@ -77,6 +77,9 @@ ncm_fit_esmcmc_walker_set_property (GObject *object, guint prop_id, const GValue
     case PROP_NPARAMS:
       ncm_fit_esmcmc_walker_set_nparams (walker, g_value_get_uint (value));
       break;
+    case PROP_TEMP:
+      ncm_fit_esmcmc_walker_set_temperature (walker, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -96,6 +99,9 @@ ncm_fit_esmcmc_walker_get_property (GObject *object, guint prop_id, GValue *valu
       break;
     case PROP_NPARAMS:
       g_value_set_uint (value, ncm_fit_esmcmc_walker_get_nparams (walker));
+      break;
+    case PROP_TEMP:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_get_temperature (walker));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -138,7 +144,14 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
                                                       "Number of parameters",
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+	g_object_class_install_property (object_class,
+	                                 PROP_TEMP,
+	                                 g_param_spec_double ("temperature",
+	                                                      NULL,
+	                                                      "Walker temperature",
+	                                                      1.0e-3, G_MAXDOUBLE, 1.0,
+	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	
   klass->set_size    = _ncm_fit_esmcmc_walker_set_size;
   klass->get_size    = _ncm_fit_esmcmc_walker_get_size;
   klass->set_nparams = _ncm_fit_esmcmc_walker_set_nparams;
@@ -262,6 +275,34 @@ guint
 ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
 {
   return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->get_nparams (walker);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_set_temperature:
+ * @walker: a #NcmMSetCatalog
+ * @T: temperature
+ *
+ * Sets walker temperature.
+ *
+ */
+void 
+ncm_fit_esmcmc_walker_set_temperature (NcmFitESMCMCWalker *walker, const gdouble T)
+{
+	walker->temperature = T;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_get_temperature:
+ * @walker: a #NcmMSetCatalog
+ *
+ * Gets walker current temperature.
+ *
+ * Returns: walker temperature T.
+ */
+gdouble 
+ncm_fit_esmcmc_walker_get_temperature (NcmFitESMCMCWalker *walker)
+{
+	return walker->temperature;
 }
 
 /**

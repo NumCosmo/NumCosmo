@@ -344,18 +344,21 @@ G_INLINE_FUNC void
 ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
 {
   ncm_dataset_m2lnL_val (fit->lh->dset, fit->mset, data_m2lnL);
+	data_m2lnL[0] = data_m2lnL[0];
 }
 
 G_INLINE_FUNC void
 ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 {
   ncm_likelihood_priors_m2lnL_val (fit->lh, fit->mset, priors_m2lnL);
+	priors_m2lnL[0] = priors_m2lnL[0];
 }
 
 G_INLINE_FUNC void
 ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
 {
   ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);
+	m2lnL[0] = m2lnL[0];
   fit->fstate->func_eval++;
 }
 

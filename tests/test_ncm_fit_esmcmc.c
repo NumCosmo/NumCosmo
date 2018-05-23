@@ -41,11 +41,13 @@ typedef struct _TestNcmFitESMCMC
   guint ntests;
 } TestNcmFitESMCMC;
 
+void test_ncm_fit_esmcmc_new_mp (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_temp (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -61,6 +63,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/fit/esmcmc/run", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new,
               &test_ncm_fit_esmcmc_run,
+              &test_ncm_fit_esmcmc_free);
+
+  g_test_add ("/ncm/fit/esmcmc/run/temperature", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_mp,
+              &test_ncm_fit_esmcmc_run_temp,
               &test_ncm_fit_esmcmc_free);
 
   g_test_add ("/ncm/fit/esmcmc/run_lre", TestNcmFitESMCMC, NULL,
@@ -146,6 +153,63 @@ test_ncm_fit_esmcmc_new (TestNcmFitESMCMC *test, gconstpointer pdata)
 }
 
 void
+test_ncm_fit_esmcmc_new_mp (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  const gint dim                      = test->dim = 20;
+  const gint nwalkers                 = 1000;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd1     = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 5.0e-1, 50.0, +5.0, +5.0, rng);
+  NcmDataGaussCovMVND *data_mvnd2     = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 5.0e-1, 50.0, +5.0, +5.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd1, data_mvnd2, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+
+  NcmFitESMCMCWalkerStretch *stretch;
+  NcmFitESMCMC *esmcmc;
+  NcmFit *fit;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  ncm_fit_set_maxiter (fit, 10000000);
+
+  stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
+	ncm_fit_esmcmc_walker_stretch_set_box_mset (stretch, mset);
+	
+  esmcmc  = ncm_fit_esmcmc_new (fit, 
+                                nwalkers, 
+                                NCM_MSET_TRANS_KERN (init_sampler), 
+                                NCM_FIT_ESMCMC_WALKER (stretch), 
+                                NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_esmcmc_set_rng (esmcmc, rng);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.01);
+
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd1);
+  test->esmcmc    = ncm_fit_esmcmc_ref (esmcmc);
+  test->fit       = ncm_fit_ref (fit);
+  test->rng       = rng;
+
+  g_assert (NCM_IS_FIT (fit));
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd1);
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd2);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_fit_clear (&fit);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+  ncm_fit_esmcmc_clear (&esmcmc);
+}
+
+void
 test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_fit_esmcmc_free, test->esmcmc);
@@ -182,6 +246,100 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
     if (FALSE)
     {
+      ncm_matrix_log_vals (cat_cov,  "# CAT  COV: ", "% 12.5g");
+      ncm_matrix_log_vals (data_cov, "# DATA COV: ", "% 12.5g");
+
+      printf ("# WDIFF   : % 22.15e\n", ncm_matrix_cmp (cat_cov, data_cov, 0.0));
+      printf ("# WDIFFD  : % 22.15e\n", ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0));
+
+      ncm_matrix_sub (cat_cov, data_cov);
+      ncm_matrix_div_elements (cat_cov, data_cov);
+
+      ncm_matrix_log_vals (cat_cov,  "# CMP     : ", "% 12.5e");
+    }
+
+		ncm_matrix_clear (&cat_cov);
+  }
+}
+
+void
+test_ncm_fit_esmcmc_run_temp (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  gint run                   = 100;
+  NcmMatrix *data_cov        = NCM_DATA_GAUSS_COV (test->data_mvnd)->cov;
+	NcmFitESMCMCWalker *walker = ncm_fit_esmcmc_peek_walker (test->esmcmc);
+	NcmMSetCatalog *mcat;
+
+	ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_SIMPLE);
+
+  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
+
+	mcat = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
+
+	ncm_fit_esmcmc_walker_set_temperature (walker, 1.0e4);
+	ncm_fit_esmcmc_walker_stretch_set_scale (NCM_FIT_ESMCMC_WALKER_STRETCH (walker), 6.0);
+	
+	while (TRUE)
+	{
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_run (test->esmcmc, run);
+  /*ncm_mset_catalog_trim (mcat, run * 0.1);*/
+
+/*	
+	ncm_cfg_msg_sepa ();
+	ncm_mset_catalog_log_current_chain_stats (mcat);
+	ncm_mset_catalog_log_current_stats (mcat);
+*/
+
+
+	ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);
+	ncm_mset_catalog_trim_by_type (mcat, 1000, NCM_MSET_CATALOG_TRIM_TYPE_ESS, NCM_FIT_RUN_MSGS_SIMPLE);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+
+	ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);
+	ncm_cfg_msg_sepa ();
+	ncm_mset_catalog_log_current_chain_stats (mcat);
+	ncm_mset_catalog_log_current_stats (mcat);
+
+	{
+		const gdouble Ti = ncm_fit_esmcmc_walker_get_temperature (walker);
+		gdouble T        = MAX (Ti / 10.0, 1.0);
+
+		if (Ti > 1.0)
+		{
+			gint tf = ncm_mset_catalog_max_time (mcat);
+			ncm_mset_catalog_trim (mcat, tf - 1);
+			ncm_cfg_msg_sepa ();
+			printf ("# Lowering temperature % 22.15g => % 22.15g.\n", Ti, T);
+			/*ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);*/
+			ncm_mset_catalog_log_current_chain_stats (mcat);
+			ncm_mset_catalog_log_current_stats (mcat);			
+		}
+				
+		ncm_fit_esmcmc_walker_set_temperature (walker, T);
+	}
+
+		run += 1000;
+	}
+	
+  {
+    NcmMatrix *cat_cov = NULL;
+    ncm_mset_catalog_get_covar (mcat, &cat_cov);
+/*
+			ncm_cfg_msg_sepa ();
+      ncm_matrix_log_vals (cat_cov,  "# CAT  COV: ", "% 12.5g");
+      ncm_matrix_log_vals (data_cov, "# DATA COV: ", "% 12.5g");
+*/
+		/*g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);*/
+
+    ncm_matrix_norma_diag (data_cov, data_cov);
+    ncm_matrix_norma_diag (cat_cov, cat_cov);
+
+    /*g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, TEST_NCM_FIT_ESMCMC_TOL);*/
+
+    if (FALSE)
+    {
+			ncm_cfg_msg_sepa ();
       ncm_matrix_log_vals (cat_cov,  "# CAT  COV: ", "% 12.5g");
       ncm_matrix_log_vals (data_cov, "# DATA COV: ", "% 12.5g");
 

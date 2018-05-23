@@ -1845,6 +1845,21 @@ ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc)
   return self->mcat;
 }
 
+/**
+ * ncm_fit_esmcmc_peek_walker:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Gets the used #NcmFitESMCMCWalker object.
+ * 
+ * Returns: (transfer none): the #NcmFitESMCMCWalker object.
+ */
+NcmFitESMCMCWalker *
+ncm_fit_esmcmc_peek_walker (NcmFitESMCMC *esmcmc)
+{
+	NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  return self->walker;
+}
+
 static void 
 _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
 {

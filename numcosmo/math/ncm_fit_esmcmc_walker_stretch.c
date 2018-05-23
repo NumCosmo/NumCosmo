@@ -437,11 +437,11 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   if (!stretch->multi)
   {
     const gdouble z = ncm_matrix_get (stretch->z, k, 0);
-    return pow (z, stretch->nparams - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (stretch->norm_box, k));
+    return pow (z, stretch->nparams - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5 / walker->temperature + ncm_vector_get (stretch->norm_box, k));
   }
   else
   {
-    return exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (stretch->norm_box, k));
+    return exp ((m2lnL_cur - m2lnL_star) * 0.5 / walker->temperature + ncm_vector_get (stretch->norm_box, k));
   }
 }
 

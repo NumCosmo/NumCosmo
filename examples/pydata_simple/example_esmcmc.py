@@ -123,6 +123,8 @@ mfunc_oa = Ncm.ObjArray.new ()
 tf = PyTestFunc ()
 mfunc_oa.add (tf)
 
+fit.set_temperature (10.0)
+
 #
 # Initialize the ESMCMC object using the objects above. It will
 # use 50 walkers, i.e., each point in the MCMC chain contains

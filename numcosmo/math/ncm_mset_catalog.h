@@ -150,6 +150,10 @@ guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
 gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
 gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
+guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_col_name (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat);
+
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
 
