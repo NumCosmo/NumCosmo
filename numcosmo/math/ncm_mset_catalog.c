@@ -2474,7 +2474,7 @@ g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
  * 
  * Returns: whether if @name was found in catalog.
  */
-gboolean 
+static gboolean 
 ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index)
 {
 	NcmMSetCatalogPrivate *self = mcat->priv;
