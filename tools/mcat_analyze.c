@@ -1034,31 +1034,18 @@ main (gint argc, gchar *argv[])
       const guint cat_size = ncm_mset_catalog_len (mcat);
       const guint nparams  = (dump_param != NULL) ? g_strv_length (dump_param) : 0;
 			GArray *pindex       = g_array_new (FALSE, FALSE, sizeof (gint));
-			
-      for (i = 0; i < nparams; i++)
-      {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, dump_param[i]);
-        gchar *end_ptr          = NULL;
-        glong add_param         = strtol (dump_param[i], &end_ptr, 10);
-				
-        if (pi == NULL && (dump_param[i] == end_ptr))
-        {
-          g_warning ("# Parameter `%s' not found, skipping...\n", dump_param[i]);
-          continue;
-        }
 
-				if (pi != NULL)
+			for (i = 0; i < nparams; i++)
+			{
+				guint pfi;
+				if (!ncm_mset_catalog_col_by_name (mcat, dump_param[i], &pfi))
 				{
-					const gint pfi = ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + ncm_mset_catalog_nadd_vals (mcat);
-					g_array_append_val (pindex, pfi);
+					g_warning ("# Parameter `%s' not found, skipping...\n", dump_param[i]);
+					continue;
 				}
-				else
-				{
-					const gint pfi = add_param;
-					g_array_append_val (pindex, pfi);
-				}				
+				g_array_append_val (pindex, pfi);
 			}
-
+			
 			if (pindex->len == 0)
 			{
 				ncm_message ("#");
@@ -1114,26 +1101,13 @@ main (gint argc, gchar *argv[])
 
 				for (i = 0; i < nparams; i++)
 				{
-					const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, dump_param[i]);
-					gchar *end_ptr          = NULL;
-					glong add_param         = strtol (dump_param[i], &end_ptr, 10);
-
-					if (pi == NULL && (dump_param[i] == end_ptr))
+					guint pfi;
+					if (!ncm_mset_catalog_col_by_name (mcat, dump_param[i], &pfi))
 					{
 						g_warning ("# Parameter `%s' not found, skipping...\n", dump_param[i]);
 						continue;
 					}
-
-					if (pi != NULL)
-					{
-						const gint pfi = ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + ncm_mset_catalog_nadd_vals (mcat);
-						g_array_append_val (pindex, pfi);
-					}
-					else
-					{
-						const gint pfi = add_param;
-						g_array_append_val (pindex, pfi);
-					}				
+					g_array_append_val (pindex, pfi);
 				}
 
 				if (pindex->len == 0)

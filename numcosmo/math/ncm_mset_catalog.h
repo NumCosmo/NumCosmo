@@ -154,6 +154,8 @@ guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);
 const gchar *ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i);
 const gchar *ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i);
 
+gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index);
+
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
 
