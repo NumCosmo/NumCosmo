@@ -2437,7 +2437,7 @@ ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i)
 }
 
 #if !GLIB_CHECK_VERSION(2,54,0)
-gboolean
+static gboolean
 g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
                                   gconstpointer  needle,
                                   GEqualFunc     equal_func,
@@ -2474,7 +2474,7 @@ g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
  * 
  * Returns: whether if @name was found in catalog.
  */
-static gboolean 
+gboolean 
 ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index)
 {
 	NcmMSetCatalogPrivate *self = mcat->priv;
