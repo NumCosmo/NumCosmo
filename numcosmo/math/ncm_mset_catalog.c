@@ -2390,6 +2390,53 @@ ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_ncols:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: total number of columns in the catalog.
+ */
+guint 
+ncm_mset_catalog_ncols (NcmMSetCatalog *mcat)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	return ncm_mset_fparam_len (self->mset) + self->nadd_vals;
+}
+
+/**
+ * ncm_mset_catalog_col_name:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the name of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	if (i < self->nadd_vals)
+		return g_ptr_array_index (self->add_vals_names, i);
+	else
+		return ncm_mset_fparam_name (self->mset, i - self->nadd_vals);
+}
+
+/**
+ * ncm_mset_catalog_col_symb:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the symbol of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	if (i < self->nadd_vals)	
+		return g_ptr_array_index (self->add_vals_symbs, i);
+	else
+		return ncm_mset_fparam_symbol (self->mset, i - self->nadd_vals);
+}
+
+/**
  * ncm_mset_catalog_set_burnin:
  * @mcat: a #NcmMSetCatalog
  * @burnin: number of elements to ignore

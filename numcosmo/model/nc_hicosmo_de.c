@@ -254,18 +254,18 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
-                              40.0, 120.0, 1.0,
+                              31.0, 99.0, 1.0,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0, NCM_PARAM_TYPE_FIXED);
 
   /* Set Omega_c0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_{c0}", "Omegac",
-                              1e-8, 0.9, 1.0e-2,
+                              0.01, 0.9, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
                               NCM_PARAM_TYPE_FREE);
 
   /* Set Omega_x0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_{x0}", "Omegax",
-                              1e-8, 1.4, 1.0e-2,
+                              0.01, 1.4, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
                               NCM_PARAM_TYPE_FREE);
 
