@@ -40,7 +40,7 @@
 
 #include "lss/nc_cluster_mass_plcl.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

@@ -147,7 +147,7 @@ main (gint argc, gchar *argv[])
     { NULL }
   };
 
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   
   context = g_option_context_new ("- analyze catalogs from Monte Carlo (MC, MCMC, ESMCMC, bootstrap MC).");
   g_option_context_set_summary (context, "catalog analyzer");
@@ -584,7 +584,7 @@ main (gint argc, gchar *argv[])
           for (j = 0; j < mset_func_array->len; j++)
           {
             NcmMSetFunc *mset_func = g_ptr_array_index (mset_func_array, j);
-            const guint dim        = ncm_mset_func_get_dim (mset_func);
+						guint dim              = ncm_mset_func_get_dim (mset_func);
             guint k;
 
             ncm_mset_func_eval (mset_func, mset, NULL, ncm_vector_data (res_v));

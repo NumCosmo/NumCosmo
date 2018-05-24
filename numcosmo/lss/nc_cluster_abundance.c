@@ -40,7 +40,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

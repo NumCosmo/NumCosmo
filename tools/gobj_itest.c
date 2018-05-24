@@ -84,7 +84,7 @@ main (gint argc, gchar *argv[])
   NcHICosmo *model;
   gdouble max_err = 0.0;
 
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   if (argc > 1)
   {
     model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, argv[1]);

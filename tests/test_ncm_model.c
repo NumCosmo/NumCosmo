@@ -63,7 +63,7 @@ main (gint argc, gchar *argv[])
   gint i;
 
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   gpointer ccc[TEST_NCM_MODEL_NTYPES][3] = {
     {"model",            &test_ncm_model_new,             &test_ncm_model_free},

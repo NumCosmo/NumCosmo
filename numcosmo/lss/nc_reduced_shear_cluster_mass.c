@@ -41,7 +41,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/Faddeeva.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -49,14 +49,6 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcReducedShearClusterMass, nc_reduced_shear_cluster_mass, NCM_TYPE_MODEL);
-
-#define VECTOR  (NCM_MODEL (rscm)->params)
-#define A  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
-#define B (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
-#define C    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
-#define XP    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
-#define VSIGMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
-#define VGAMMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
 
 enum
 {
@@ -234,7 +226,7 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
    * Voigt profile parameter, $\Gamma$ is the width of the  Lorentzian profile. Range: $\Gamma \in [0.003, 0.1]$.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA, "\\Gamma", "Gamma",
-                              3e-3,  0.1, 1.0e-2,
+                              0.003,  0.1, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_VGAMMA,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -249,19 +241,26 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
                               NCM_MSET_MODEL_MAIN);
 }
 
+#define VECTOR  (NCM_MODEL (rscm)->params)
+#define A  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
+#define B (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
+#define C    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
+#define XP    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
+#define VSIGMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
+#define VGAMMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
+
 /**
  * nc_reduced_shear_cluster_mass_new: 
- * @nclusters: total number of clusters (resample)
  *
  * This function instantiates a new object of type #NcReducedShearClusterMass.
  *
  * Returns: A new #NcReducedShearClusterMass.
  */
 NcReducedShearClusterMass *
-nc_reduced_shear_cluster_mass_new (guint nclusters)
+nc_reduced_shear_cluster_mass_new (void)
 {
   NcReducedShearClusterMass *rscm = g_object_new (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS,
-                                          NULL);
+                                                  NULL);
   return rscm;
 }
 
@@ -306,78 +305,28 @@ nc_reduced_shear_cluster_mass_clear (NcReducedShearClusterMass **rscm)
   g_clear_object (rscm);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-typedef struct _integrand_data
-{
-  NcReducedShearClusterMass *rscm;
-  NcWLSurfaceMassDensity *smd;
-  NcDensityProfile *dp;
-  NcHICosmo *cosmo;
-  gdouble R;
-  gdouble z;
-  gdouble g_obs;
-} integrand_data;
-
-static gdouble
-_posterior_integrand_no_shear_calibration (gdouble z, gpointer userdata)
-{
-  integrand_data *data = (integrand_data *) userdata;
-  NcReducedShearClusterMass *rscm = data->rscm;
-  gdouble g  = nc_wl_surface_mass_density_reduced_shear_infinity (data->smd, data->dp, data->cosmo, data->R);
-  gdouble mu = data->g_obs - g;
-  double complex Z = (mu + I * VGAMMA) / (M_SQRT2 * VSIGMA);
-  gdouble voigt = creal (Faddeeva_w (Z, 1e-6)) / (M_SQRT2 * M_SQRTPI * VSIGMA) ;
-  gdouble pz = 0.0; /* FIXME histogram, spline???? */
-  const gdouble small = exp (-200.0);
-  gdouble result;
-  
-  if (pz == 0.0)
-    result = small;
-  else
-  {
-    result =  voigt *pz + small;
-  }  
-  return result;
-}
+/********************************************************************************/
 
 /**
- * nc_reduced_shear_cluster_mass_posterior_no_shear_calibration:
+ * nc_reduced_shear_cluster_mass_P_z_gth_gobs:
  * @rscm: a #NcReducedShearClusterMass
  * @cosmo: a #NcHICosmo 
- * @z: spectroscopic redshift
- * @g_obs: observed reduced shear
- * 
- * FIXME
+ * @z: the redshift $z$
+ * @g_th: the computed reduced shear $g_\mathrm{th}$
+ * @g_obs: the observed reduced shear $g_\mathrm{obs}$
  *
- * Returns: FIXME
-*/
+ * Computes the probability distribution $P(g_\mathrm{obs} | g_\mathrm{th}, z)$.
+ * 
+ * Returns: $P(g_\mathrm{obs} | g_\mathrm{th}, z)$
+ */
 gdouble
-nc_reduced_shear_cluster_mass_posterior_no_shear_calibration (NcReducedShearClusterMass *rscm, NcHICosmo *cosmo, const gdouble z, const gdouble g_obs)
+nc_reduced_shear_cluster_mass_P_z_gth_gobs (NcReducedShearClusterMass *rscm, NcHICosmo *cosmo, const gdouble z, const gdouble g_th, const gdouble g_obs)
 {
-  integrand_data data;
-  gdouble P, err;
+  const gdouble mu       = g_obs - g_th;
+  const double complex Z = (mu + I * VGAMMA) / (M_SQRT2 * VSIGMA);
+  const gdouble voigt    = creal (Faddeeva_w (Z, 1.0e-6)) / (M_SQRT2 * M_SQRTPI * VSIGMA) ;
 
-  gsl_function F;
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-
-  data.rscm  = rscm;
-  data.cosmo = cosmo;
-  data.g_obs = g_obs;
-  data.z     = z;
-    
-  F.function = &_posterior_integrand_no_shear_calibration;
-  F.params = &data;
-
-  {
-    gdouble lnM_min, lnM_max;
-    lnM_min = log (1.0e12); //32.292; //    
-    lnM_max = log (1.0e16); //34.561; //log (1.0e16);     
-    gsl_integration_qag (&F, lnM_min, lnM_max, 0.0, 1.0e2 * NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &P, &err);
-  }
-
-  ncm_memory_pool_return (w);
-  /*printf ("numerator = %.8g err = %.8g\n", P, err / P);*/
-  return P;
-  
+	return voigt;
 }
+
+

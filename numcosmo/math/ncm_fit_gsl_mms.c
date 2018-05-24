@@ -63,34 +63,6 @@ ncm_fit_gsl_mms_init (NcmFitGSLMMS *fit_gsl_mms)
   fit_gsl_mms->ss   = NULL;
 }
 
-static gdouble nc_residual_multimin_f (const gsl_vector *x, gpointer p);
-
-static void
-_ncm_fit_gsl_mms_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_fit_gsl_mms_parent_class)->constructed (object);
-  {
-    NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
-    NcmFit *fit = NCM_FIT (fit_gsl_mms);
-    guint i;
-
-    fit_gsl_mms->f.f      = &nc_residual_multimin_f;
-    fit_gsl_mms->f.n      = fit->fstate->fparam_len;
-    fit_gsl_mms->f.params = fit_gsl_mms;
-
-    fit_gsl_mms->ss       = ncm_vector_new (fit->fstate->fparam_len); 
-
-    for (i = 0; i < ncm_mset_fparams_len (fit->mset); i++)
-    {
-      gdouble pscale = ncm_mset_fparam_get_scale (fit->mset, i);
-      ncm_vector_set (fit_gsl_mms->ss, i, pscale * 1e-3);
-    }
-
-    ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
-  }
-}
-
 static void
 _ncm_fit_gsl_mms_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -130,8 +102,47 @@ _ncm_fit_gsl_mms_get_property (GObject *object, guint prop_id, GValue *value, GP
   }
 }
 
+static gdouble nc_residual_multimin_f (const gsl_vector *x, gpointer p);
+
 static void
-ncm_fit_gsl_mms_finalize (GObject *object)
+_ncm_fit_gsl_mms_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_fit_gsl_mms_parent_class)->constructed (object);
+  {
+    NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
+    NcmFit *fit = NCM_FIT (fit_gsl_mms);
+    guint i;
+
+    fit_gsl_mms->f.f      = &nc_residual_multimin_f;
+    fit_gsl_mms->f.n      = fit->fstate->fparam_len;
+    fit_gsl_mms->f.params = fit_gsl_mms;
+
+    fit_gsl_mms->ss       = ncm_vector_new (fit->fstate->fparam_len); 
+
+    for (i = 0; i < ncm_mset_fparams_len (fit->mset); i++)
+    {
+      gdouble pscale = ncm_mset_fparam_get_scale (fit->mset, i);
+      ncm_vector_set (fit_gsl_mms->ss, i, pscale * 1e-3);
+    }
+
+    ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
+  }
+}
+
+static void
+_ncm_fit_gsl_mms_dispose (GObject *object)
+{
+  NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
+
+	ncm_vector_clear (&fit_gsl_mms->ss);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_fit_gsl_mms_parent_class)->dispose (object);
+}
+
+static void
+_ncm_fit_gsl_mms_finalize (GObject *object)
 {
   NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
 
@@ -153,10 +164,11 @@ ncm_fit_gsl_mms_class_init (NcmFitGSLMMSClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmFitClass* fit_class     = NCM_FIT_CLASS (klass);
 
-  object_class->constructed  = &_ncm_fit_gsl_mms_constructed;
   object_class->set_property = &_ncm_fit_gsl_mms_set_property;
   object_class->get_property = &_ncm_fit_gsl_mms_get_property;
-  object_class->finalize     = &ncm_fit_gsl_mms_finalize;
+  object_class->constructed  = &_ncm_fit_gsl_mms_constructed;
+  object_class->dispose      = &_ncm_fit_gsl_mms_dispose;
+  object_class->finalize     = &_ncm_fit_gsl_mms_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ALGO,

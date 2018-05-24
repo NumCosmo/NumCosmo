@@ -138,11 +138,7 @@ static gdouble
 _ncm_prior_flat_func_mean (NcmPriorFlat *pf, NcmMSet *mset)
 {
   NcmPriorFlatFunc *pff = NCM_PRIOR_FLAT_FUNC (pf);
-  gdouble res = 0.0;
-  
-  ncm_mset_func_eval (pff->mean_func, mset, &pf->var, &res);
-  
-  return res;
+  return ncm_mset_func_eval1 (pff->mean_func, mset, pf->var);
 }
 
 /**

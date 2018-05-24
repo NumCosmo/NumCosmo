@@ -15,12 +15,6 @@ from gi.repository import NumCosmoMath as Ncm
 from py_sline_model import PySLineModel
 
 #
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
-
-#
 # Creating a new class implementing our object Ncm.Data
 #
 class PySLineData (Ncm.Data):

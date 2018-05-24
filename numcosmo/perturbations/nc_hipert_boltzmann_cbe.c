@@ -40,7 +40,6 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
 /*
  * It must be include before anything else, several symbols clash
@@ -49,6 +48,8 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include "class/include/class.h"
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "build_cfg.h"
 
 #include "nc_hiprim.h"
 #include "model/nc_hicosmo_de.h"

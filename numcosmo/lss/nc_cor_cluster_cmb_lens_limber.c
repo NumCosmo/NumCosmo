@@ -38,7 +38,7 @@
 
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcCorClusterCmbLensLimber, nc_cor_cluster_cmb_lens_limber, G_TYPE_OBJECT);

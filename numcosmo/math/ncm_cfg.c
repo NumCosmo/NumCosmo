@@ -38,6 +38,11 @@
 
 #include "math/ncm_cfg.h"
 #include "math/ncm_rng.h"
+#include "math/ncm_memory_pool.h"
+#include "math/ncm_mpi_job.h"
+#include "math/ncm_mpi_job_test.h"
+#include "math/ncm_mpi_job_fit.h"
+#include "math/ncm_mpi_job_mcmc.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
@@ -54,6 +59,12 @@
 #include "math/ncm_data.h"
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
+#include "math/ncm_data.h"
+#include "math/ncm_dataset.h"
+#include "math/ncm_fit.h"
+#include "math/ncm_fit_nlopt.h"
+#include "math/ncm_prior_gauss_param.h"
+#include "math/ncm_prior_gauss_func.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -132,6 +143,7 @@
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
 #include "nc_planck_fi_cor_ttteee.h"
+#include "perturbations/nc_hipert_boltzmann_cbe.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -147,7 +159,9 @@
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
+#include "data/nc_data_snia_cov.h"
 #include "data/nc_data_xcor.h"
+#include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
@@ -156,11 +170,16 @@
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
+#include <stdlib.h>
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <cuba.h>
+
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif /* HAVE_MPI */
 
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
@@ -243,21 +262,134 @@ void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 
+#ifdef HAVE_MPI
+static void _ncm_cfg_mpi_main_loop (void);
+#endif /* HAVE_MPI */
+
+NcmMPIJobCtrl _mpi_ctrl;
+
+void 
+ncm_cfg_mpi_kill_all_slaves (void)
+{
+#ifdef HAVE_MPI
+	if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+		return;
+
+	if (_mpi_ctrl.size > 1)
+	{
+		gint i;
+
+		for (i = 0; i < _mpi_ctrl.nslaves; i++)
+		{
+			gint slave_id = i + 1;
+			gint cmd      = NCM_MPI_CTRL_SLAVE_KILL;
+			
+			MPI_Send (&cmd, 1, MPI_INT, slave_id, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD);	
+		}
+
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All slaves killed!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+	}
+#else
+#endif /* HAVE_MPI */
+}
+
+static void
+_ncm_cfg_exit (void)
+{
+#ifdef HAVE_MPI
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying [%d]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.initialized);
+	if (_mpi_ctrl.initialized)
+	{
+		ncm_cfg_mpi_kill_all_slaves ();
+		MPI_Barrier (MPI_COMM_WORLD);
+		MPI_Finalize ();
+	}
+#endif /* HAVE_MPI */
+}
+
 /**
  * ncm_cfg_init:
  *
- * Main library configuration function. Must be called before any
- * other function of NumCosmo.
+ * Main library configuration function. Must be called before any other function of NumCosmo.
  *
- * Initializes internal variables and sets
- * all other library number of threads to one.
+ * Initializes internal variables and sets all other library number of threads to one.
  *
+ * See also: ncm_cfg_init_full() ncm_cfg_init_full_ptr().
  */
 void
 ncm_cfg_init (void)
 {
-  const gchar *home;
+	ncm_cfg_init_full (0, NULL);
+}
 
+static gchar **
+_ncm_cfg_make_strv (gint argc, gchar **argv)
+{
+	if ((argc == 0) || (argv == NULL))
+		return NULL;
+	else
+	{
+		gchar **argv_dup = g_new (gchar *, argc + 1);
+		gint i;
+		for (i = 0; i < argc; i++)
+		{
+			argv_dup[i] = g_strdup (argv[i]);
+		}
+		argv_dup[i] = NULL;
+
+		return argv_dup;
+	}
+}
+
+/**
+ * ncm_cfg_init_full:
+ * @argc: a pointer to argc
+ * @argv: (array length=argc): a pointer to argv
+ *
+ * Main library configuration function. Must be called before any other function of NumCosmo.
+ *
+ * Initializes internal variables and sets all other library number of threads to one.
+ * This function passes the arguments to other libraries, e.g, MPI. If that is not necessary
+ * ncm_cfg_init() should be used. This version is compatible with bindings and can be safely
+ * called from other languages.
+ * 
+ * See also: ncm_cfg_init() ncm_cfg_init_full_ptr().
+ * 
+ * Returns: (transfer full) (array zero-terminated=1): the possibly modified argv
+ */
+gchar **
+ncm_cfg_init_full (gint argc, gchar **argv)
+{
+	gchar **argv1 = _ncm_cfg_make_strv (argc, argv);
+	gchar **argv2 = argv1;
+	gchar **argv_ret;
+	
+	ncm_cfg_init_full_ptr (&argc, &argv1);
+
+	argv_ret = _ncm_cfg_make_strv (argc, argv1);
+	g_strfreev (argv2);
+	
+	return argv_ret;
+}
+
+/**
+ * ncm_cfg_init_full_ptr:
+ * @argc: a pointer to argc
+ * @argv: (array length=argc): a pointer to argv
+ *
+ * Main library configuration function. Must be called before any other function of NumCosmo.
+ *
+ * Initializes internal variables and sets all other library number of threads to one.
+ * This function passes the arguments to other libraries, e.g, MPI. If that is not necessary
+ * ncm_cfg_init() should be used. This version should be used from C applications passing
+ * @argc and @argv pointers from main.
+ * 
+ * See also: ncm_cfg_init() ncm_cfg_init_full().
+ */
+void
+ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
+{
+  const gchar *home;
   if (numcosmo_init)
     return;
 
@@ -291,7 +423,7 @@ ncm_cfg_init (void)
 #endif
 
   gsl_err = gsl_set_error_handler_off ();
-
+  
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_set_timelimit (10.0);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
@@ -313,6 +445,11 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
   ncm_cfg_register_obj (NCM_TYPE_MATRIX);
+
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_TEST);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FIT);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_MCMC);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
@@ -338,6 +475,15 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
+
+	ncm_cfg_register_obj (NCM_TYPE_DATA);
+	ncm_cfg_register_obj (NCM_TYPE_DATASET);
+	
+	ncm_cfg_register_obj (NCM_TYPE_FIT);
+	ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
+
+	ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
+	ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
 
@@ -451,6 +597,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TTTEEE);
 
+	ncm_cfg_register_obj (NC_TYPE_HIPERT_BOLTZMANN_CBE);
+	
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
@@ -463,6 +611,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
+
+	ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
@@ -478,6 +628,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
+	ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
@@ -486,10 +637,271 @@ ncm_cfg_init (void)
   _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
+
+	_mpi_ctrl.initialized    = 0;
+	_mpi_ctrl.size           = 1;
+	_mpi_ctrl.rank           = 0;
+	_mpi_ctrl.nslaves        = 0;
+	_mpi_ctrl.working_slaves = 0;
+
+	atexit (_ncm_cfg_exit);
+
+#ifdef HAVE_MPI
+	MPI_Initialized (&_mpi_ctrl.initialized);
+	if (!_mpi_ctrl.initialized)
+	{
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initalized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+		MPI_Init (argc, argv);
+		MPI_Initialized (&_mpi_ctrl.initialized);
+	}
+	else
+	{
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initalized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+	}
+  {
+    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
+    gint len = 0;
+    
+    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
+    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
+    MPI_Get_processor_name (mpi_hostname, &len);
+
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+
+    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+    {
+      _ncm_cfg_mpi_main_loop ();
+    }
+		else
+		{
+			_mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
+			_mpi_ctrl.working_slaves = 0;
+		}
+  }
+#endif /* HAVE_MPI */
+
   return;
 }
 
-/**
+#ifdef HAVE_MPI
+
+static gboolean _ncm_cfg_mpi_cmd_handler (gpointer user_data);
+
+static void
+_ncm_cfg_mpi_main_loop (void)
+{
+  GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
+  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
+  g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, mpi_ml);
+  
+  g_main_loop_run (mpi_ml);
+  
+  g_main_loop_unref (mpi_ml);
+
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%d %d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+  exit (0);
+}
+
+static gboolean 
+_ncm_cfg_mpi_cmd_handler (gpointer user_data)
+{
+	enum buf_type { input_type, ret_type, msg_type, };
+	struct buf_desc { gpointer obj; gpointer buf; enum buf_type t; };
+	GMainLoop *mpi_ml        = user_data;
+	NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+	NcmMPIJob *mpi_job       = NULL;
+	gboolean init            = FALSE;
+	GArray *input_array      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+	GArray *work_ret_request = g_array_new (FALSE, FALSE, sizeof (MPI_Request));
+	GArray *work_ret_bufs    = g_array_new (FALSE, TRUE, sizeof (struct buf_desc));
+	gpointer input           = NULL;
+	gpointer input_buf       = NULL;
+	gint input_len           = 0;
+	gint input_size          = 0;
+	gint return_len          = 0;
+	gint return_size         = 0;
+	gboolean normal_exit     = TRUE;
+	MPI_Datatype input_dtype;
+	MPI_Datatype return_dtype;
+
+	while (TRUE)
+	{
+		gboolean end  = FALSE;
+		gint cmd      = 0;
+		MPI_Status status;
+
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Waiting for command...\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
+		MPI_Recv (&cmd, 1, MPI_INT, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD, &status);
+
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Received %d\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
+
+		switch (cmd)
+		{
+			case NCM_MPI_CTRL_SLAVE_INIT:
+			{
+				GVariant *job_ser = NULL;
+				gint job_size     = 0;
+				gint job_recv     = 0;
+				gchar *job        = NULL;
+
+				if (init)
+					g_error ("_ncm_cfg_mpi_cmd_handler: slave %d already initialized.", _mpi_ctrl.rank);
+
+				NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Initializing slave.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
+				MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
+				MPI_Get_count (&status, MPI_BYTE, &job_size);
+
+				NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_size);
+			
+				job = g_new (gchar, job_size);
+				MPI_Recv (job, job_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
+				MPI_Get_count (&status, MPI_BYTE, &job_recv);
+
+				NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_recv);
+
+				g_assert_cmpint (job_recv, ==, job_size);
+			
+				job_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), job, job_size, TRUE, g_free, job);
+
+				/*NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received string `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, g_variant_print (job_ser, TRUE));*/
+			
+				mpi_job = NCM_MPI_JOB (ncm_serialize_from_variant (ser, job_ser));
+
+				ncm_mpi_job_work_init (mpi_job);
+
+				input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &input_len,  &input_size);
+				return_dtype = ncm_mpi_job_return_datatype (mpi_job, &return_len, &return_size);
+				input        = ncm_mpi_job_create_input (mpi_job);
+				input_buf    = ncm_mpi_job_get_input_buffer (mpi_job, input);
+				
+				g_assert (NCM_IS_MPI_JOB (mpi_job));
+
+				g_variant_unref (job_ser);
+				
+				init = TRUE;
+				break;
+			}
+			case NCM_MPI_CTRL_SLAVE_FREE:
+				end = TRUE;
+				break;
+			case NCM_MPI_CTRL_SLAVE_KILL:
+				end         = TRUE;
+				normal_exit = FALSE;
+				break;
+			case NCM_MPI_CTRL_SLAVE_WORK:
+			{
+				if (!init)
+				{
+					g_error ("_ncm_cfg_mpi_cmd_handler: uninitialized slave `%d' received work (vector).", _mpi_ctrl.rank);
+				}
+				else
+				{
+					struct buf_desc bd = {NULL, NULL, ret_type};
+					gint input_recv    = 0;
+					MPI_Request wr_request;
+
+					MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
+					MPI_Get_count (&status, input_dtype, &input_recv);
+
+					g_assert_cmpint (input_recv, ==, input_len);
+
+					ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
+
+					bd.obj = ncm_mpi_job_create_return (mpi_job);
+					
+					ncm_mpi_job_run (mpi_job, input, bd.obj);
+					bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
+					
+					NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+					
+					MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
+					
+					g_array_append_val (work_ret_request, wr_request);
+					g_array_append_val (work_ret_bufs,    bd);
+				}
+				break;
+			}
+			default:
+				g_error ("_ncm_cfg_mpi_cmd_handler: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
+				break;
+		}
+
+		if (work_ret_request->len > 0)
+		{
+			gint i;
+			NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Testing %d sends:\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
+			for (i = work_ret_request->len - 1; i >= 0; i--)
+			{
+				gint done = 0;
+				MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &status);
+				NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n", _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
+				if (done)
+				{
+					struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
+					ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
+					ncm_mpi_job_destroy_return (mpi_job, bd.obj);
+					
+					g_array_remove_index_fast (work_ret_request, i);
+					g_array_remove_index_fast (work_ret_bufs, i);
+				}
+			}
+		}
+
+		NCM_MPI_JOB_DEBUG_PRINT	("#[%3d %3d] Finished command, %d requests left, %d%s\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len, cmd, end ? ", exiting!" : ".");
+
+		if (end)
+			break;
+	}
+
+	if (work_ret_request->len > 0)
+	{
+		gint i;
+		MPI_Waitall (work_ret_request->len, (MPI_Request *)work_ret_request->data, MPI_STATUSES_IGNORE);
+
+		NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All sent, freeing %d buffers!\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
+
+		for (i = 0; i < work_ret_bufs->len; i++)
+		{
+			struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
+			ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
+			ncm_mpi_job_destroy_return (mpi_job, bd.obj);
+		}		
+	}
+
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing arrays!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+	
+	g_array_unref (input_array);
+	g_array_unref (work_ret_request);
+	g_array_unref (work_ret_bufs);
+
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input buffer %p [input %p, mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_buf, input, mpi_job);
+
+	if (input_buf != NULL)
+		ncm_mpi_job_destroy_input_buffer (mpi_job, input, input_buf);
+	
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input %p [mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input, mpi_job);
+
+	if (input != NULL)
+		ncm_mpi_job_destroy_input (mpi_job, input);
+	
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Clearing MPI job %p!\n", _mpi_ctrl.size, _mpi_ctrl.rank, mpi_job);
+
+	ncm_mpi_job_clear (&mpi_job);
+
+	NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning %d!\n", _mpi_ctrl.size, _mpi_ctrl.rank, normal_exit);
+
+	if (!normal_exit)
+		g_main_loop_quit (mpi_ml);
+
+	return normal_exit;
+}
+
+#endif /* HAVE_MPI */
+
+/** 
  * ncm_cfg_enable_gsl_err_handler:
  *
  * FIXME
@@ -518,6 +930,17 @@ ncm_cfg_register_obj (GType obj)
   gpointer obj_class = g_type_class_ref (obj);
   g_type_class_unref (obj_class);
   nreg_model++;
+}
+
+/**
+ * ncm_cfg_mpi_nslaves:
+ * 
+ * Returns: the total number of available slaves.
+ */ 
+guint 
+ncm_cfg_mpi_nslaves (void)
+{
+	return _mpi_ctrl.nslaves;
 }
 
 /**

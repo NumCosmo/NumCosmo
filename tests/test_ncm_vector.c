@@ -68,7 +68,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   /* Default vector allocation */
@@ -538,6 +538,8 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
   ncm_assert_cmpdouble (ncm_vector_get (v, 1), ==, 0.0);
   for (i = 0; i < v_size - 2; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
+
+	ncm_vector_clear (&cv);
 }
 
 void

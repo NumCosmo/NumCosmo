@@ -15,12 +15,6 @@ from gi.repository import NumCosmoMath as Ncm
 from py_sline_model import PySLineModel
 
 #
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
-
-#
 # Creating a new class implementing our object Ncm.Data
 #
 class PySLineGauss (Ncm.DataGaussCov):
@@ -132,7 +126,7 @@ class PySLineGauss (Ncm.DataGaussCov):
       # to guarantee that it is posdef 
       #
       tmp1 = cov.dup ()
-      cov.dsymm('U', 1.0, tmp1, tmp1, 0.0);
+      cov.dsymm (ord ('U'), 1.0, tmp1, tmp1, 0.0);
 
       # Remove to print the covariance matrix
       # cov.log_vals ("# COV: ", "% 15.8g")

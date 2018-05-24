@@ -31,6 +31,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
+#include <math.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -155,6 +156,7 @@ G_INLINE_FUNC gdouble *ncm_vector_data (NcmVector *cv);
 G_INLINE_FUNC const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 G_INLINE_FUNC gsl_vector *ncm_vector_gsl (NcmVector *cv);
+G_INLINE_FUNC gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
@@ -165,6 +167,8 @@ G_INLINE_FUNC gsize ncm_vector_get_max_index (const NcmVector *cv);
 G_INLINE_FUNC gsize ncm_vector_get_min_index (const NcmVector *cv);
 
 G_INLINE_FUNC void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+
+G_INLINE_FUNC gboolean ncm_vector_is_finite (const NcmVector *cv);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
@@ -415,6 +419,12 @@ ncm_vector_gsl (NcmVector *cv)
   return &(cv->vv.vector);
 }
 
+G_INLINE_FUNC gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
+}
+
 G_INLINE_FUNC const gsl_vector *
 ncm_vector_const_gsl (const NcmVector *cv)
 {
@@ -461,6 +471,20 @@ G_INLINE_FUNC void
 ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
 {
   gsl_vector_minmax (ncm_vector_const_gsl (cv), min, max);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_vector_is_finite (const NcmVector *cv)
+{
+	const guint len = ncm_vector_len (cv);
+	guint i;
+	for (i = 0; i < len; i++)
+	{
+		if (!isfinite (ncm_vector_get (cv, i)))
+			return FALSE;
+	}
+	
+	return TRUE;
 }
 
 G_END_DECLS

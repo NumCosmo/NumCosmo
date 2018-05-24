@@ -68,7 +68,7 @@ main (gint argc, gchar *argv[])
   NcmMSetCatalog *mcat = NULL;
   NcmSerialize *ser = ncm_serialize_global ();
 
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   
   context = g_option_context_new ("- test the dark energy models");
   g_option_context_set_summary (context, "general darkenergy and kinematic models analyzer");
@@ -958,12 +958,12 @@ main (gint argc, gchar *argv[])
     ncm_fit_esmcmc_run_lre (esmcmc, de_fit.mc_prerun, de_fit.mc_lre);
     ncm_fit_esmcmc_end_run (esmcmc);
 
-    ncm_fit_esmcmc_mean_covar (esmcmc);
-    ncm_mset_catalog_param_pdf (esmcmc->mcat, 0);
-    ncm_fit_log_covar (fit);
-
     ncm_mset_catalog_clear (&mcat);
     mcat = ncm_fit_esmcmc_get_catalog (esmcmc);
+
+		ncm_fit_esmcmc_mean_covar (esmcmc);
+    ncm_mset_catalog_param_pdf (mcat, 0);
+    ncm_fit_log_covar (fit);
 
     ncm_fit_esmcmc_clear (&esmcmc);
     ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));

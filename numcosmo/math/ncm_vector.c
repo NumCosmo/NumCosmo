@@ -44,16 +44,6 @@
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_BLAS
-#  ifdef HAVE_MKL_CBLAS_H
-#    include <mkl_cblas.h>
-#  elif defined (HAVE_CBLAS_H)
-#    include <cblas.h>
-#  else
-#    include <gsl/gsl_cblas.h>
-#  endif
-#endif
-
 #include <complex.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -102,11 +92,17 @@ NcmVector *
 ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
+
+	g_assert (d != NULL);
+	g_assert_cmpuint (size,   >, 0);
+  g_assert_cmpuint (stride, >, 0);
+	
   if (stride != 1)
     cv->vv = gsl_vector_view_array_with_stride (d, stride, size);
   else
     cv->vv = gsl_vector_view_array (d, size);
-  cv->type = NCM_VECTOR_DERIVED;
+
+	cv->type = NCM_VECTOR_DERIVED;
   g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
   cv->pdata = pdata;
   cv->pfree = pfree;
@@ -126,9 +122,10 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
-  gdouble *d = fftw_alloc_real (size);
+  gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
-  cv->type = NCM_VECTOR_MALLOC;
+  cv->type      = NCM_VECTOR_MALLOC;
+
   return cv;
 }
 
@@ -178,10 +175,13 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
 NcmVector *
 ncm_vector_new_array (GArray *a)
 {
-  NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1,
-                                       g_array_ref (a), (GDestroyNotify) &g_array_unref);
-  cv->type = NCM_VECTOR_ARRAY;
-  return cv;
+	g_assert_cmpint (a->len, >, 0);
+	{
+		NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1,
+		                                     g_array_ref (a), (GDestroyNotify) &g_array_unref);
+		cv->type = NCM_VECTOR_ARRAY;
+		return cv;
+	}
 }
 
 /**
@@ -201,7 +201,7 @@ ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = ncm_vector_new_full (d, size, stride,
                                        NULL, NULL);
-  cv->type  = NCM_VECTOR_SLICE;
+  cv->type = NCM_VECTOR_SLICE;
   return cv;
 }
 
@@ -372,7 +372,7 @@ ncm_vector_const_new_variant (GVariant *var)
 NcmVector *
 ncm_vector_dup (const NcmVector *cv)
 {
-  NcmVector *cv_cp = ncm_vector_new (ncm_vector_len(cv));
+  NcmVector *cv_cp = ncm_vector_new (ncm_vector_len (cv));
   gsl_vector_memcpy (ncm_vector_gsl (cv_cp), ncm_vector_const_gsl (cv));
   return cv_cp;
 }
@@ -449,19 +449,20 @@ ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 NcmVector *
 ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride)
 {
-  NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_data (cv), size, stride);
-  const gsize len = ncm_vector_len (cv);
-
   g_assert_cmpuint (size,   >, 0);
   g_assert_cmpuint (stride, >, 0);
-  
-  g_assert_cmpuint ((size - 1) * stride + k, <, len);
+	{
+		NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_ptr (cv, k), size, stride);
+		const gsize len = ncm_vector_len (cv);
 
-  scv->type  = NCM_VECTOR_DERIVED;
-  scv->pdata = ncm_vector_ref (cv);
-  scv->pfree = (GDestroyNotify) &ncm_vector_free;
+		g_assert_cmpuint ((size - 1) * stride + k, <, len);
 
-  return scv;
+		scv->type  = NCM_VECTOR_DERIVED;
+		scv->pdata = ncm_vector_ref (cv);
+		scv->pfree = (GDestroyNotify) &ncm_vector_free;
+
+		return scv;
+	}
 }
 
 /**
@@ -930,6 +931,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Gets the minimum/maximum value of the vector components.
  *
  */
+/**
+ * ncm_vector_is_finite:
+ * @cv: a @NcmVector.
+ *
+ * Tests all entries, if one or more are not finite return FALSE.
+ * Otherwise returns TRUE;
+ * 
+ * Returns: whether all components of @cv are finite.
+ */
 
 /**
  * ncm_vector_get_absminmax:
@@ -1160,7 +1170,7 @@ _ncm_vector_finalize (GObject *object)
   switch (cv->type)
   {
     case NCM_VECTOR_SLICE:
-      g_slice_free1 (sizeof(gdouble) * ncm_vector_len (cv) * ncm_vector_stride (cv), ncm_vector_data (cv));
+      g_slice_free1 (sizeof (gdouble) * ncm_vector_len (cv) * ncm_vector_stride (cv), ncm_vector_data (cv));
       break;
     case NCM_VECTOR_ARRAY:
     case NCM_VECTOR_MALLOC:

@@ -311,7 +311,7 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
     sd1->norma = ncm_spline_eval (sd1->pdf->s, sd1->xf);
 
     ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
-  }
+	}
 }
 
 /**

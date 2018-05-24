@@ -171,7 +171,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_add_func ("/ncm/spline2d_bicubic/notaknot/new_empty", &test_ncm_spline2d_bicubic_notaknot_new_empty);

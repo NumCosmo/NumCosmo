@@ -46,19 +46,24 @@ gdouble ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigm
 gdouble ncm_sphPlm_x (gint l, gint m, gint order);
 gdouble ncm_sum (gdouble *d, gulong n);
 
-G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
-G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x);
-G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
-G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
 
-gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
-gdouble ncm_exprel (const gdouble x);
-gdouble ncm_d1exprel (const gdouble x);
-gdouble ncm_d2exprel (const gdouble x);
-gdouble ncm_d3exprel (const gdouble x);
+gdouble ncm_cmpdbl (const gdouble x, const gdouble y) G_GNUC_CONST;
+gdouble ncm_exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d1exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d2exprel (const gdouble x) G_GNUC_CONST;
+gdouble ncm_d3exprel (const gdouble x) G_GNUC_CONST;
+
+gdouble ncm_util_sinh1 (const gdouble x) G_GNUC_CONST;
+gdouble ncm_util_sinh3 (const gdouble x) G_GNUC_CONST;
+
+gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
 
 gsize ncm_mpfr_out_raw (FILE *stream, mpfr_t op);
 gsize ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream);
@@ -112,6 +117,9 @@ G_INLINE_FUNC void ncm_complex_res_mul (NcmComplex * restrict c1, const NcmCompl
 
 G_INLINE_FUNC gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
 G_INLINE_FUNC void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
+
+G_INLINE_FUNC gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+G_INLINE_FUNC gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
 
 /* Macros */
 
@@ -354,6 +362,48 @@ ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *the
   const gdouble exp_mgz = 1.0 / exp_gz;
   theta0[0] = 1.0 / (1.0 + exp_gz);
   theta1[0] = 1.0 / (1.0 + exp_mgz);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
+{
+  const gdouble deg2rad  = M_PI / 180.0; 
+	const gdouble ra1_rad  = ra1 * deg2rad;  
+  const gdouble dec1_rad = dec1 * deg2rad;
+	const gdouble ra2_rad  = ra2 * deg2rad;
+  const gdouble dec2_rad = dec2 * deg2rad;
+  const gdouble raDelta  = ra2_rad - ra1_rad;
+  const gdouble theta    = atan2 (sin(raDelta), cos(dec1_rad) * tan(dec2_rad) - sin(dec1_rad) * cos(raDelta)); 
+
+	return theta;
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
+{
+	const gdouble deg2rad  = M_PI / 180.0;
+	const gdouble phi1     = dec1 * deg2rad; 
+  const gdouble lam1     = ra1 * deg2rad;
+  const gdouble phi2     = dec2 * deg2rad;;
+  const gdouble lam2     = ra2 * deg2rad;;
+  const gdouble deltaLam = fabs(lam1 - lam2);
+
+	const gdouble cosphi1  = cos (phi1);
+	const gdouble sinphi1  = sin (phi1);
+	const gdouble cosphi2  = cos (phi2);
+	const gdouble sinphi2  = sin (phi2);
+	
+	const gdouble cosdeltaLam  = cos(deltaLam);
+	const gdouble sindeltaLam  = sin(deltaLam);	
+	
+  const gdouble n1      = gsl_pow_2 (cosphi2 * sindeltaLam);
+  const gdouble n2      = gsl_pow_2 (cosphi1 * sinphi2 - sinphi1 * cosphi2 * cosdeltaLam);
+	const gdouble num     = sqrt (n1 + n2);
+  const gdouble d1      = sinphi1 * sinphi2;
+  const gdouble d2      = cosphi1 * cosphi2 * cosdeltaLam;
+  const gdouble denom   = d1 + d2;
+
+	return atan2(num, denom) / deg2rad; 
 }
 
 #ifndef NUMCOSMO_GIR_SCAN

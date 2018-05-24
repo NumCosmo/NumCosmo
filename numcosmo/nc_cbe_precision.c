@@ -42,13 +42,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
 /*
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
 #include "class/include/class.h"
+
+#include "build_cfg.h"
 
 #include "nc_cbe_precision.h"
 #include "math/ncm_cfg.h"

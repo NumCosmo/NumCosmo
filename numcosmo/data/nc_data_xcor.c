@@ -414,7 +414,7 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
    * be recalculated
    * Only the upper diagonal should be used !
    */
-  gboolean prep[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX] = { FALSE };
+  gboolean prep[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX] = {{FALSE}};
 
   guint a, b;
 
