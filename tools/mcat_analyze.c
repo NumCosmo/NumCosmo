@@ -107,6 +107,7 @@ main (gint argc, gchar *argv[])
   gchar **bestfit_errors = NULL;
   gchar **funcs_pvalue   = NULL;
   gchar **visual_hw      = NULL;
+  gchar **dump_param     = NULL;
   guint i;
   
   GError *error = NULL;
@@ -141,8 +142,9 @@ main (gint argc, gchar *argv[])
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
     { "dist-tab",       'W', 0, G_OPTION_ARG_STRING_ARRAY, &dist_tab,       "Print a table with functions values for reach catalog point.", NULL },
     { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,      "Print the points to the visual HW test.", NULL },
-    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved.", NULL },
-    { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain.", "N"},
+    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved, if --dump-param not specified dump all columns.", NULL },
+    { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain, if --dump-param not specified dump all columns.", "N"},
+    { "dump-param",       0, 0, G_OPTION_ARG_STRING_ARRAY, &dump_param,     "Parameters to dump.", "param-name"},
     { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
     { NULL }
   };
@@ -1030,13 +1032,57 @@ main (gint argc, gchar *argv[])
     if (dump)
     {
       const guint cat_size = ncm_mset_catalog_len (mcat);
-      guint i;
+      const guint nparams  = (dump_param != NULL) ? g_strv_length (dump_param) : 0;
+			GArray *pindex       = g_array_new (FALSE, FALSE, sizeof (gint));
 
-      for (i = 0; i < cat_size; i++)
-      {
-        NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
-        ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
-      }
+			for (i = 0; i < nparams; i++)
+			{
+				guint pfi;
+				if (!ncm_mset_catalog_col_by_name (mcat, dump_param[i], &pfi))
+				{
+					g_warning ("# Parameter `%s' not found, skipping...\n", dump_param[i]);
+					continue;
+				}
+				g_array_append_val (pindex, pfi);
+			}
+			
+			if (pindex->len == 0)
+			{
+				ncm_message ("#");
+				for (i = 0; i < ncm_mset_catalog_ncols (mcat); i++)
+				{
+					ncm_message (" %-22s", ncm_mset_catalog_col_name (mcat, i));
+				}				
+				ncm_message ("\n");
+				for (i = 0; i < cat_size; i++)
+				{
+					NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
+					ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
+				}
+			}
+			else
+			{
+				ncm_message ("#");
+				for (i = 0; i < pindex->len; i++)
+				{
+					ncm_message (" %-22s", ncm_mset_catalog_col_name (mcat, g_array_index (pindex, gint, i)));
+				}				
+				ncm_message ("\n");
+				for (i = 0; i < cat_size; i++)
+				{
+					NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
+					gint j;
+
+					ncm_message (" ");
+					for (j = 0; j < pindex->len; j++)
+					{
+						ncm_message (" %- 22.15g", ncm_vector_get (vec, g_array_index (pindex, gint, j)));
+					}
+					ncm_message ("\n");
+				}
+			}
+
+			g_array_unref (pindex);
     }
 
     if (dump_chain >= 0)
@@ -1048,15 +1094,58 @@ main (gint argc, gchar *argv[])
       }
       else
       {
-        NcmStatsVec *chain = ncm_mset_catalog_peek_chain_pstats (mcat, dump_chain);
-        guint nitens = ncm_stats_vec_nitens (chain);
-        guint i;
+        NcmStatsVec *chain   = ncm_mset_catalog_peek_chain_pstats (mcat, dump_chain);
+        guint nitens         = ncm_stats_vec_nitens (chain);
+				const guint nparams  = (dump_param != NULL) ? g_strv_length (dump_param) : 0;
+				GArray *pindex       = g_array_new (FALSE, FALSE, sizeof (gint));
 
-        for (i = 0; i < nitens; i++)
-        {
-          NcmVector *vec = ncm_stats_vec_peek_row (chain, i);
-          ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
-        }
+				for (i = 0; i < nparams; i++)
+				{
+					guint pfi;
+					if (!ncm_mset_catalog_col_by_name (mcat, dump_param[i], &pfi))
+					{
+						g_warning ("# Parameter `%s' not found, skipping...\n", dump_param[i]);
+						continue;
+					}
+					g_array_append_val (pindex, pfi);
+				}
+
+				if (pindex->len == 0)
+				{
+					ncm_message ("#");
+					for (i = 0; i < ncm_mset_catalog_ncols (mcat); i++)
+					{
+						ncm_message (" %-22s", ncm_mset_catalog_col_name (mcat, i));
+					}				
+					ncm_message ("\n");
+					for (i = 0; i < nitens; i++)
+					{
+						NcmVector *vec = ncm_stats_vec_peek_row (chain, i);
+						ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
+					}
+				}
+				else
+				{
+					ncm_message ("#");
+					for (i = 0; i < pindex->len; i++)
+					{
+						ncm_message (" %-22s", ncm_mset_catalog_col_name (mcat, g_array_index (pindex, gint, i)));
+					}				
+					ncm_message ("\n");
+					for (i = 0; i < nitens; i++)
+					{
+						NcmVector *vec = ncm_stats_vec_peek_row (chain, i);
+						gint j;
+
+						ncm_message (" ");
+						for (j = 0; j < pindex->len; j++)
+						{
+							ncm_message (" %- 22.15g", ncm_vector_get (vec, g_array_index (pindex, gint, j)));
+						}
+						ncm_message ("\n");
+					}
+				}
+				g_array_unref (pindex);
       }
     }
     
