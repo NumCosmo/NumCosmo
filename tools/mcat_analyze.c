@@ -295,24 +295,31 @@ main (gint argc, gchar *argv[])
       NcmStatsVec *pstats   = ncm_mset_catalog_peek_pstats (mcat);
       guint last_t          = ncm_mset_catalog_max_time (mcat);
       const gdouble nchains = ncm_mset_catalog_nchains (mcat);
-      guint i;
+			const guint len       = ncm_stats_vec_len (pstats);
+			NcmStatsVec *evol     = ncm_stats_vec_new (len, NCM_STATS_VEC_VAR, FALSE);
+      gint i;
       
       ncm_message ("# Chain evolution from 0 to %u\n", last_t);
-      for (i = 0; i < last_t; i++)
+      for (i = last_t - 1; i >= 0; i--)
       {
         NcmVector *e_mean = ncm_mset_catalog_peek_e_mean_t (mcat, i);
         NcmVector *e_var  = ncm_mset_catalog_peek_e_var_t (mcat, i);
-        const guint len = ncm_vector_len (e_mean);
         guint j;
-        
+
+				ncm_stats_vec_append (evol, e_mean, FALSE);
+
+				if (i == last_t - 1)
+					continue;
+				
         ncm_message ("%10u", i);
         for (j = 0; j < len; j++)
         {
-          const gdouble mean_j = ncm_stats_vec_get_mean (pstats, j);
-          const gdouble var_j  = ncm_stats_vec_get_var (pstats, j);
-          const gdouble sd_j   = sqrt (var_j / nchains);
+          const gdouble mean_j      = ncm_vector_get (e_mean, j);
+          const gdouble sd_j        = sqrt (ncm_vector_get (e_var, j) / nchains);
+					const gdouble evol_mean_j = ncm_stats_vec_get_mean (evol, j);
+					const gdouble evol_sd_j   = ncm_stats_vec_get_sd (evol, j);
           
-          ncm_message (" % 20.15g % 20.15g", (ncm_vector_get (e_mean, j) - mean_j) / sd_j, sqrt (ncm_vector_get (e_var, j) / nchains) / sd_j);
+          ncm_message (" % 22.15g % 22.15g % 22.15g % 22.15g", mean_j, evol_mean_j, sd_j, evol_sd_j);
         }
         ncm_message ("\n");
       }
