@@ -128,21 +128,24 @@ _ncm_model_set_sparams (NcmModel *model)
 static void
 _ncm_model_set_sparams_from_array (NcmModel *model, GPtrArray *sparams)
 {
-  guint i;
+	if (sparams != NULL && sparams->len > 0)
+	{
+		guint i;
 
-  g_hash_table_remove_all (model->sparams_name_id);
-  g_ptr_array_set_size (model->sparams, 0);
-  g_ptr_array_set_size (model->sparams, model->total_len);
+		g_hash_table_remove_all (model->sparams_name_id);
+		g_ptr_array_set_size (model->sparams, 0);
+		g_ptr_array_set_size (model->sparams, model->total_len);
 
-	g_assert_cmpuint (sparams->len, ==, model->total_len);
+		g_assert_cmpuint (sparams->len, ==, model->total_len);
 
-  for (i = 0; i < sparams->len; i++)
-  {
-    NcmSParam *sp = NCM_SPARAM (ncm_obj_array_peek (sparams, i));
-		
-    g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-    g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
-  }
+		for (i = 0; i < sparams->len; i++)
+		{
+			NcmSParam *sp = NCM_SPARAM (ncm_obj_array_peek (sparams, i));
+
+			g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
+			g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
+		}
+	}
 }
 
 static void
