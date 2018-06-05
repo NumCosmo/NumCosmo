@@ -341,9 +341,12 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 		const gdouble g_obs       = ncm_matrix_get (self->gal_obs, i, 1);
 		const gdouble R_Mpc       = (r_arcmin / 60.0) * (M_PI / 180.0) * dA;
 
-		if (R_Mpc < 0.75 || R_Mpc > 3.0)
+		const gdouble z_gal       = nc_galaxy_redshift_mode (gz);
+
+		if (R_Mpc < 0.75 || R_Mpc > 3.0) // || z_gal  < self->z_cluster + 0.1 || z_gal > 1.25)
 		{
 			//printf ("r_arcmin = %.5g R_Mpc = %.5g\n", r_arcmin, R_Mpc);
+			//printf ("z_gal = %.5g\n", z_gal);
 			continue;
 		}
 
@@ -353,7 +356,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 		
 		if (!nc_galaxy_redshift_has_dist (gz))
 		{
-			const gdouble z_gal = nc_galaxy_redshift_mode (gz);
+			//const gdouble z_gal = nc_galaxy_redshift_mode (gz);
 			const gdouble P_i   = _nc_data_reduced_shear_cluster_mass_Pgal (z_gal, &integ_data);
 
 			//printf ("zgal = %.5g\n", z_gal);
@@ -632,16 +635,39 @@ ncm_hdf5_table_read_col_as_vec (NcmHDF5Table *h5tb, const gchar *col, NcmVector 
 	mtype   = H5Tget_member_type (h5tb->table_h5t, mi);
 	mntype  = H5Tget_native_type (mtype, H5T_DIR_ASCEND);
 
-	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
-
 	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
 		g_error ("ncm_hdf5_table_read_col_as_vec: column `%s' not found in table `%s'.", col, h5tb->name);
+
 	cindex = _cindex;
 
 	g_assert_cmpint (cindex, ==, mi);
+	
+	if (H5Tequal (mntype, H5T_NATIVE_FLOAT) > 0)
+	{
+		GArray *tmp = g_array_new (FALSE, FALSE, sizeof (gfloat)); 
+		gint i;
+		
+		g_array_set_size (tmp, h5tb->nrecords);
 
-	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble), field_offset, field_sizes_sd, ncm_vector_data (*vec));
-	g_assert_cmpint (ret, !=, -1);
+		field_sizes_sd[0] = sizeof (gfloat);
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gfloat), field_offset, field_sizes_sd, tmp->data);
+		g_assert_cmpint (ret, !=, -1);
+
+		for (i = 0; i < h5tb->nrecords; i++)
+		{
+			ncm_vector_set (*vec, i, g_array_index (tmp, gfloat, i));
+		}
+		
+		g_array_unref (tmp);
+	}
+	else
+	{
+		g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
+
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble), field_offset, field_sizes_sd, ncm_vector_data (*vec));
+		g_assert_cmpint (ret, !=, -1);
+	}
+
 
 	ret = H5Tclose (mntype);
 	g_assert_cmpint (ret, !=, -1);
@@ -673,16 +699,39 @@ ncm_hdf5_table_read_col_as_longarray (NcmHDF5Table *h5tb, const gchar *col, GArr
 	mtype   = H5Tget_member_type (h5tb->table_h5t, mi);
 	mntype  = H5Tget_native_type (mtype, H5T_DIR_ASCEND);
 
-	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_LONG), >, 0);
-
-	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
+  if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
 		g_error ("ncm_hdf5_table_read_col_as_longarray: column `%s' not found in table `%s'.", col, h5tb->name);
 	cindex = _cindex;
 
 	g_assert_cmpint (cindex, ==, mi);
 
-	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble), field_offset, field_sizes_sd, (*a)->data);
-	g_assert_cmpint (ret, !=, -1);
+
+	if (H5Tequal (mntype, H5T_NATIVE_INT) > 0)
+	{
+		GArray *tmp = g_array_new (TRUE, TRUE, sizeof (gint)); 
+		gint i;
+
+		g_array_set_size (tmp, h5tb->nrecords);
+
+		//printf ("name '%s', nrecords %llu\n", h5tb->name, h5tb->nrecords);
+		field_sizes_sd[0] = sizeof (gint);
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gfloat), field_offset, field_sizes_sd, tmp->data);
+		g_assert_cmpint (ret, !=, -1);
+
+		for (i = 0; i < h5tb->nrecords; i++)
+		{
+			g_array_index (*a, glong, i) = g_array_index (tmp, gint, i);
+		}
+
+		g_array_unref (tmp);
+	}
+  else
+	{
+		g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_LONG), >, 0);
+		
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (glong), field_offset, field_sizes_sd, (*a)->data);
+	  g_assert_cmpint (ret, !=, -1);
+	}
 
 	ret = H5Tclose (mntype);
 	g_assert_cmpint (ret, !=, -1);
@@ -711,8 +760,6 @@ ncm_hdf5_table_read_col_as_mat (NcmHDF5Table *h5tb, const gchar *col, NcmMatrix 
 	btype  = H5Tget_super (mtype);
 	mntype = H5Tget_native_type (btype, H5T_DIR_ASCEND);
 
-	g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
-
 	g_assert_cmpint (H5Tget_array_ndims (mtype), ==, 1);
 
 	ret = H5Tget_array_dims2 (mtype, &ncols); 
@@ -725,16 +772,44 @@ ncm_hdf5_table_read_col_as_mat (NcmHDF5Table *h5tb, const gchar *col, NcmMatrix 
 	}
 	else
 		*mat = ncm_matrix_new (h5tb->nrecords, ncols);
-	
+
 	if (!g_ptr_array_find_with_equal_func (h5tb->field_names, col, g_str_equal, &_cindex))
 		g_error ("ncm_hdf5_table_read_col_as_mat: column `%s' not found in table `%s'.", col, h5tb->name);
 	cindex = _cindex;
 
 	g_assert_cmpint (cindex, ==, mi);
 
-	field_sizes_sd[0] = sizeof (gdouble) * ncols;
-	ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble) * ncols, field_offset, field_sizes_sd, ncm_matrix_data (*mat));
-	g_assert_cmpint (ret, !=, -1);
+	if (H5Tequal (mntype, H5T_NATIVE_FLOAT) > 0)
+	{
+		GArray *tmp = g_array_new (FALSE, FALSE, sizeof (gfloat)); 
+		gint i;
+		
+		g_array_set_size (tmp, h5tb->nrecords * ncols);
+
+		field_sizes_sd[0] = sizeof (gfloat) * ncols;
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gfloat) * ncols, field_offset, field_sizes_sd, tmp->data);
+		g_assert_cmpint (ret, !=, -1);
+
+		for (i = 0; i < h5tb->nrecords; i++)
+		{
+			gint j;
+			gfloat *row = &g_array_index (tmp, gfloat, i * ncols);
+			for (j = 0; j < ncols; j++)
+			{
+				ncm_matrix_set (*mat, i, j, row[j]);
+			}
+		}
+		
+		g_array_unref (tmp);
+	}
+	else
+	{
+		g_assert_cmpint (H5Tequal (mntype, H5T_NATIVE_DOUBLE), >, 0);
+
+	  field_sizes_sd[0] = sizeof (gdouble) * ncols;
+	  ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gdouble) * ncols, field_offset, field_sizes_sd, ncm_matrix_data (*mat));
+	  g_assert_cmpint (ret, !=, -1);
+	}
 
 	ret = H5Tclose (mntype);
 	g_assert_cmpint (ret, !=, -1);
