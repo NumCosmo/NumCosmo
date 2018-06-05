@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
 #include <numcosmo/math/ncm_reparam.h>
@@ -85,7 +86,7 @@ struct _NcmModel
   /*< private >*/
   GObject parent_instance;
   NcmReparam *reparam;
-  GPtrArray *sparams;
+  NcmObjArray *sparams;
   NcmVector *params;
   NcmVector *p;
   GArray *vparam_pos;

@@ -184,22 +184,22 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
-                               10.0, 500.0, 1.0,
+                               31.0, 99.0, 1.0,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0,
                                NCM_PARAM_TYPE_FIXED);
   /* Set Omega_c0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_{c0}", "Omegac",
-                               1e-8,  0.9, 1.0e-2,
+                               0.01,  0.9, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
                                NCM_PARAM_TYPE_FREE);
   /* Set Omega_x0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_{x0}", "Omegax",
-                               1e-8,  2.0, 1.0e-2,
+                               0.01,  2.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
                                NCM_PARAM_TYPE_FREE);
   /* Set T_gamma0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_T_GAMMA0, "T_{\\gamma0}", "Tgamma0",
-                               1e-8,  10.0, 1.0e-2,
+                               2.0, 3.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                                NCM_PARAM_TYPE_FIXED);
   /* Set He Yp param info */
@@ -214,7 +214,7 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   /* Set Omega_b0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_{b0}", "Omegab",
-                               1e-8,  0.9, 1.0e-2,
+                               0.03,  0.05, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                                NCM_PARAM_TYPE_FIXED);
   /* Check for errors in parameters initialization */

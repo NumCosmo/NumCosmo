@@ -2390,6 +2390,125 @@ ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_ncols:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: total number of columns in the catalog.
+ */
+guint 
+ncm_mset_catalog_ncols (NcmMSetCatalog *mcat)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	return ncm_mset_fparam_len (self->mset) + self->nadd_vals;
+}
+
+/**
+ * ncm_mset_catalog_col_name:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the name of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	if (i < self->nadd_vals)
+		return g_ptr_array_index (self->add_vals_names, i);
+	else
+		return ncm_mset_fparam_name (self->mset, i - self->nadd_vals);
+}
+
+/**
+ * ncm_mset_catalog_col_symb:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the symbol of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	if (i < self->nadd_vals)	
+		return g_ptr_array_index (self->add_vals_symbs, i);
+	else
+		return ncm_mset_fparam_symbol (self->mset, i - self->nadd_vals);
+}
+
+#if !GLIB_CHECK_VERSION(2,54,0)
+static gboolean
+g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
+                                  gconstpointer  needle,
+                                  GEqualFunc     equal_func,
+                                  guint         *index_)
+{
+  guint i;
+
+  g_return_val_if_fail (haystack != NULL, FALSE);
+
+  if (equal_func == NULL)
+    equal_func = g_direct_equal;
+
+  for (i = 0; i < haystack->len; i++)
+    {
+      if (equal_func (g_ptr_array_index (haystack, i), needle))
+        {
+          if (index_ != NULL)
+            *index_ = i;
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+#endif
+
+/**
+ * ncm_mset_catalog_col_by_name:
+ * @mcat: a #NcmMSetCatalog
+ * @name: column name
+ * @col_index: (out): column index
+ * 
+ * Finds the column @name in the catalog @mcat.
+ * 
+ * Returns: whether if @name was found in catalog.
+ */
+gboolean 
+ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index)
+{
+	NcmMSetCatalogPrivate *self = mcat->priv;
+	const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (self->mset, name);
+	if (pi == NULL)
+	{
+		if (g_ptr_array_find_with_equal_func (self->add_vals_names, name, g_str_equal, col_index))
+		{
+			return TRUE;
+		}
+		else
+		{
+			gchar *end_ptr  = NULL;
+			glong add_param = strtol (name, &end_ptr, 10);
+
+			if (name != end_ptr)
+			{
+				col_index[0] = add_param;
+				return TRUE;
+			}
+			else
+				return FALSE;
+		}
+	}
+	else
+	{
+		col_index[0] = ncm_mset_fparam_get_fpi (self->mset, pi->mid, pi->pid) + ncm_mset_catalog_nadd_vals (mcat);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+/**
  * ncm_mset_catalog_set_burnin:
  * @mcat: a #NcmMSetCatalog
  * @burnin: number of elements to ignore

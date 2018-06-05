@@ -583,7 +583,7 @@ ncm_hdf5_table_free (NcmHDF5Table *h5tb)
 }
 
 #if !GLIB_CHECK_VERSION(2,54,0)
-gboolean
+static gboolean
 g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
                                   gconstpointer  needle,
                                   GEqualFunc     equal_func,
