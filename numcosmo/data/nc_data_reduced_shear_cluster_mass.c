@@ -318,7 +318,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 
 	NcDataReducedShearClusterMassInteg integ_data;
 	gint i;
-
+	
   g_assert (cosmo != NULL);
   g_assert (smd != NULL);
   g_assert (dp != NULL);
@@ -333,6 +333,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 	integ_data.dt_cluster = dt;
 
 	m2lnL[0] = 0.0;
+	
 		
 	for (i = 0; i < ngal; i++)
 	{
@@ -343,7 +344,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 
 		const gdouble z_gal       = nc_galaxy_redshift_mode (gz);
 
-		if (R_Mpc < 0.75 || R_Mpc > 3.0) // || z_gal  < self->z_cluster + 0.1 || z_gal > 1.25)
+		if (R_Mpc < 0.75 || R_Mpc > 3.0 || z_gal < self->z_cluster + 0.1 || z_gal > 1.25)
 		{
 			//printf ("r_arcmin = %.5g R_Mpc = %.5g\n", r_arcmin, R_Mpc);
 			//printf ("z_gal = %.5g\n", z_gal);
@@ -358,7 +359,6 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 		{
 			//const gdouble z_gal = nc_galaxy_redshift_mode (gz);
 			const gdouble P_i   = _nc_data_reduced_shear_cluster_mass_Pgal (z_gal, &integ_data);
-
 			//printf ("zgal = %.5g\n", z_gal);
 			m2lnL[0] += log (P_i);
 		}
@@ -388,7 +388,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 	}
 
 	m2lnL[0] = -2.0 * m2lnL[0];
-
+	
 	ncm_memory_pool_return (w);
   return;
 }

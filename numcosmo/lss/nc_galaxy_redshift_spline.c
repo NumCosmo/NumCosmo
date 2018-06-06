@@ -174,8 +174,15 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 	                                 g_param_spec_double ("z-best",
 	                                                      NULL,
 	                                                      "Distributions mode",
-	                                                      0, G_MAXUINT, 0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	                                                      0.0, G_MAXDOUBLE, 0.0,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_DISTS,
+	                                 g_param_spec_boxed ("dists",
+	                                                     NULL,
+	                                                     "Distribution objects",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));	
 	
 	gz_class->has_dist        = &_nc_galaxy_redshift_spline_has_dist;
 	gz_class->mode            = &_nc_galaxy_redshift_spline_mode;
