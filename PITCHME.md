@@ -8,9 +8,9 @@ Numerical Cosmology Library
 
 ---?code=examples/pydata_simple/py_sline_model.py&lang=python&title=SLine model
 
-@[1,3-6](Present code found within any repo source file.)
-@[8-18](Without ever leaving your slideshow.)
-@[19-28](Using GitPitch code-presenting with (optional) annotations.)
+@[1-14](Importing NumCosmo and NumCosmoMath using GI.)
+@[16-20](Creating a new model using the NcmModelBuilder object.)
+@[22-29, 31-38](Adding parameters to the model.)
 
 ---
 
