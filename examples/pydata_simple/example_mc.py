@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc

@@ -181,7 +181,9 @@ gint ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
 
+void ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng);
 void ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng);
+void ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_min, const gdouble reltol_max, const gdouble cor_level, NcmRNG *rng);
 
 G_END_DECLS
 

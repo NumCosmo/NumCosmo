@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -103,7 +106,7 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-nwalkers = 150
+nwalkers = 20
 stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 #
@@ -111,7 +114,7 @@ stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 # step done between two walkers and circumscribe the walkers inside
 # the box defined by the parameters inside the mset object.
 #
-stretch.set_scale (2.5)
+stretch.set_scale (6.0)
 stretch.set_box_mset (mset)
 
 #
@@ -160,7 +163,7 @@ esmcmc.set_data_file ("example_esmcmc_out.fits")
 # 
 #
 esmcmc.start_run ()
-esmcmc.run_lre (10, 1.0e-3)
+esmcmc.run_lre (10, 2.0e-3)
 esmcmc.end_run ()
 
 #

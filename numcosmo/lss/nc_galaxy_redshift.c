@@ -71,6 +71,7 @@ static gdouble _nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const 
 static void _nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax) { g_error ("_nc_galaxy_redshift_pdf_limits: method not implemented."); }
 static gdouble _nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z) { g_error ("_nc_galaxy_redshift_pdf: method not implemented."); return 0.0; }
 static gdouble _nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng) { g_error ("_nc_galaxy_redshift_gen: method not implemented."); return 0.0; }
+static gdouble _nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q) { g_error ("_nc_galaxy_redshift_quantile: method not implemented."); return 0.0; }
 
 static void
 nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
@@ -88,6 +89,7 @@ nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
 	klass->pdf_limits      = &_nc_galaxy_redshift_pdf_limits;
 	klass->pdf             = &_nc_galaxy_redshift_pdf;
 	klass->gen             = &_nc_galaxy_redshift_gen;
+	klass->quantile        = &_nc_galaxy_redshift_quantile;
 }
 
 /**
@@ -183,4 +185,13 @@ nc_galaxy_redshift_clear (NcGalaxyRedshift **gz)
  * Generates a redshift from the distribution using @rng.
  * 
  * Returns: the generated value $z$.
+ */
+/**
+ * nc_galaxy_redshift_quantile: (virtual quantile)
+ * @gz: a #NcGalaxyRedshift
+ * @q: the quantile $q \in [0, 1]$
+ * 
+ * Computes the $q$ quantile.
+ * 
+ * Returns: the $q$ quantile.
  */

@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -75,7 +78,8 @@ fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType
 #
 #  Running the fitter printing messages.
 #
-fit.run (Ncm.FitRunMsgs.SIMPLE)
+if not (len (sys.argv) > 1 and sys.argv[1] == "n"):
+  fit.run (Ncm.FitRunMsgs.SIMPLE)
 
 #
 #  Printing fitting informations.
@@ -83,11 +87,14 @@ fit.run (Ncm.FitRunMsgs.SIMPLE)
 fit.log_info ()
 
 #
-#  Calculating the parameters covariance using numerical differentiation.
+#  Calculating the parameters covariance using numerical differentiation (observed Fisher matrix).
 #
-fit.numdiff_m2lnL_covar ()
+fit.obs_fisher ()
+fit.log_covar ()
 
 #
-#  Printing the covariance matrix.
-# 
+#  Calculating the parameters covariance using numerical differentiation (expected Fisher matrix).
+#
+fit.fisher ()
 fit.log_covar ()
+
