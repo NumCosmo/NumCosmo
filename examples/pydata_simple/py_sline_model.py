@@ -22,36 +22,28 @@ mb = Ncm.ModelBuilder.new (Ncm.Model, "NcPySLineModel",
 
 #
 # New parameter m to describe the slope 
-# Allowed interval: [0, 5]
-# Default scale: 0.1
-# Absolute tolerance: 0
-# Default value: 2
+# Allowed interval: [0, 5]; Default scale: 0.1
+# Absolute tolerance: 0; Default value: 2
 #
-mb.add_sparam ("m", "m", 0.0, 5.0, 0.1, 0.0, 2.0, Ncm.ParamType.FREE)
+mb.add_sparam ("m", "m", 0.0, 5.0, 0.1, 0.0, 2.0, 
+               Ncm.ParamType.FREE)
 
 #
 # New parameter b to describe the intercept
-# Allowed interval: [-10, 10]
-# Default scale: 0.1
-# Absolute tolerance: 0
-# Default value: 1
+# Allowed interval: [-10, 10]; Default scale: 0.1
+# Absolute tolerance: 0; Default value: 1
 #
-mb.add_sparam ("b", "b", -10.0, 10.0, 0.1, 0.0, 1.0, Ncm.ParamType.FREE)
+mb.add_sparam ("b", "b", -10.0, 10.0, 0.1, 0.0, 1.0, 
+               Ncm.ParamType.FREE)
 
 #
-# Creates a new GObject, it is not a Python object yet!
+# Creates a new GObject, it is not a Python object yet! Then register 
+# the new object in the GObject type system by creating a new 
+# instance. Finally, gets the Python version of the object (.pytype) 
+# and register it as a PyGObject object.
 #
 GNcPySLineModel = mb.create ()
-
-#
-# Register the new object in the GObject type system by creating a new instance
-#
 GObject.new (GNcPySLineModel)
-
-#
-# Gets the Python version of the object (.pytype) and register
-# it as a PyGObject object.
-#
 NcPySLineModel = GNcPySLineModel.pytype
 GObject.type_register (NcPySLineModel)
 
