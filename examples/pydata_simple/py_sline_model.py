@@ -14,10 +14,11 @@ from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
 #
-# New ModelBuilder object, defines a new model NcHIPrimExample implementing
-# the base Ncm.Model abstract class.
+# New ModelBuilder object, defines a new model NcHIPrimExample 
+# implementing the base Ncm.Model abstract class.
 # 
-mb = Ncm.ModelBuilder.new (Ncm.Model, "NcPySLineModel", "A simple python example model")
+mb = Ncm.ModelBuilder.new (Ncm.Model, "NcPySLineModel", 
+                           "A simple python example model")
 
 #
 # New parameter m to describe the slope 
