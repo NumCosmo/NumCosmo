@@ -37,8 +37,8 @@ rng = Ncm.RNG.seeded_new (None, 123)
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.987
-slm.props.b = 0.123
+slm.props.alpha = 1.0
+slm.props.a     = 0.5
 
 #
 # Instantiating a new empty SLine data object.

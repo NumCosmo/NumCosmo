@@ -26,8 +26,8 @@ from py_sline_gauss import PySLineGauss
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.9
-slm.props.b = 0.1
+slm.props.alpha = 0.9
+slm.props.a     = 0.1
 
 #
 # New Model set object including slm with parameters

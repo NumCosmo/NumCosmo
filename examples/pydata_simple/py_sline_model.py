@@ -21,19 +21,19 @@ mb = Ncm.ModelBuilder.new (Ncm.Model, "NcPySLineModel",
                            "A simple python example model")
 
 #
-# New parameter m to describe the slope 
+# New parameter `alpha' to describe the ln-slope 
 # Allowed interval: [0, 5]; Default scale: 0.1
 # Absolute tolerance: 0; Default value: 2
 #
-mb.add_sparam ("m", "m", 0.0, 5.0, 0.1, 0.0, 2.0, 
+mb.add_sparam (r'\alpha', 'alpha', 0.0, 5.0, 0.1, 0.0, 2.0, 
                Ncm.ParamType.FREE)
 
 #
-# New parameter b to describe the intercept
-# Allowed interval: [-10, 10]; Default scale: 0.1
+# New parameter `a' to describe the amplitude
+# Allowed interval: [0.1, 10]; Default scale: 0.1
 # Absolute tolerance: 0; Default value: 1
 #
-mb.add_sparam ("b", "b", -10.0, 10.0, 0.1, 0.0, 1.0, 
+mb.add_sparam ("a", "a", 0.1, 10.0, 0.1, 0.0, 1.0, 
                Ncm.ParamType.FREE)
 
 #
@@ -67,7 +67,7 @@ class PySLineModel (NcPySLineModel):
   # Method to calculate the y(x)
   #
   def f_x (self, x):
-    return math.exp (self.props.m * x) * self.props.b
+    return math.exp (self.props.alpha * x) * self.props.a
 
 #
 # Register our new Python class PyNcPySLineModel

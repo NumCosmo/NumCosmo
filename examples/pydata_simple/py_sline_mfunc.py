@@ -23,8 +23,8 @@ from py_sline_model import PySLineModel
 class PyTestFunc (Ncm.MSetFunc1):
   def __init__ (self):
     Ncm.MSetFunc.__init__ (self, dimension  = 1, nvariables = 0)
-    self.symbol = "m+b"
-    self.name   = "m_plus_b"
+    self.symbol = r'f(1)'
+    self.name   = r'f_1'
 
   def do_eval1 (self, mset, x):
     mid = mset.get_id_by_ns ("NcPySLineModel")
