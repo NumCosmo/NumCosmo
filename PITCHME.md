@@ -29,8 +29,8 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 
 ## Data object
 
-The data object will describe the observation error distribution. For simplicity we describe
-$\delta f_i = f^o_i - f(x_i),$ as a multivariate Gaussian distribution with zero 
+The data object will describe the observation error distribution. For simplicity we describe 
+the variable $\delta f_i = f^o_i - f(x_i),$ as a multivariate Gaussian distribution with zero 
 mean and covariance $C_{ij}$ randomly generated the standard deviation of $\delta_ f_i$ will 
 be draw from a uniform distribution between $[0.5, 2]$.
 
