@@ -42,8 +42,14 @@ be draw from a uniform distribution between $[0.5, 2]$.
 @[28](Our distribution have an one dimensional vector of independent variables $x$ which we define here.)
 @[33-41](In the initialization process, we first chain-up to the father's initialization.)
 @[53-54, 59-60](Here we implement the necessary virtual functions of NcmDataGaussCov.)
+@[69-70, 77-78](In our simple likelihood it is not necessary to have a begin or a prepare function, usually needed when precalculations are necessary.)
+@[85-93](Here we inform the NcmDataGaussCov object how to compute $f(x_i)$.)
+@[95-100](We define a method to create a random covariance matrix, with the correlation factor 15 and the standard deviations ranging from 0.5 to 2.)
+@[108](As the last step we register the new object in the type system.)
 
 ---
+
+
 
 
 

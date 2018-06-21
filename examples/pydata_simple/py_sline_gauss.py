@@ -32,7 +32,7 @@ class PySLineGauss (Ncm.DataGaussCov):
   # 
   def __init__ (self, len = 600):
     Ncm.DataGaussCov.__init__ (self, n_points = len)
-    self.dof = self.np
+
     if self.np > 0:
       self.xv = Ncm.Vector.new (self.np)
     else:
