@@ -9,6 +9,10 @@ Numerical Cosmology Library
 In this example we build a model and a data object in Python and the use all NumCosmo
 tools to analyze the data.
 
+The object of the model is to describe a simple function $f(x) \in \mathbb{R}$ of some independent
+variable $x \in \mathbb{R}$.
+
+
 +++?code=examples/pydata_simple/py_sline_model.py&lang=python&title=SLine model
 @[5-14](Importing NumCosmo and NumCosmoMath using GI.)
 @[20-21](Creating a new model using the NcmModelBuilder object.)
