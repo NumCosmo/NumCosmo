@@ -31,9 +31,17 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 
 The data object will describe the observation error distribution. For simplicity we describe 
 the variable $ \delta f_i = f^\mathrm{obs}_i - f(x_i) $, with a multivariate Gaussian distribution with zero 
-mean and covariance `C` randomly generated the standard deviation of $ \delta f_i $ will 
-be draw from a uniform distribution between $ [0.5, 2] $.
+mean and covariance `C` randomly generated. The standard deviation of $ \delta f_i $ will 
+be draw from a uniform distribution between $[0.5, 2]$.
 
++++?code=examples/pydata_simple/py_sline_gauss.py&lang=python&title=SLine data
+
+@[7-16](Importing NumCosmo and NumCosmoMath using GI.)
+@[18](Imports our model.)
+@[23](Define a new data class, child of NcmDataGaussCov.)
+@[28](Our distribution have an one dimensional vector of independent variables $x$ which we define here.)
+@[33-41](In the initialization process, we first chain-up to the father's initialization.)
+@[53-54, 59-60](Here we implement the necessary virtual functions of NcmDataGaussCov.)
 
 ---
 
