@@ -31,7 +31,7 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 
 The data object will describe the observation error distribution. For simplicity we describe 
 the variable $ \delta f_i = f^\mathrm{obs}_i - f(x_i) $, with a multivariate Gaussian distribution with zero 
-mean and covariance $$C_{ij}$$ randomly generated the standard deviation of $ \delta f_i $ will 
+mean and covariance `$C_{ij}$` randomly generated the standard deviation of $ \delta f_i $ will 
 be draw from a uniform distribution between $ [0.5, 2] $.
 
 
