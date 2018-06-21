@@ -30,7 +30,8 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 ## Data object
 
 The data object will describe the observation error distribution. For simplicity we describe 
-the variable $\delta f_i = f^\mathrm{obs}_i - f(x_i),$ 
+the variable $\delta f_i = f^\mathrm{obs}_i - f(x_i),$ with a multivariate Gaussian distribution with zero 
+mean and covariance $C_{ij}$
 
 
 ---
