@@ -6,8 +6,10 @@ Numerical Cosmology Library
 
 ### NumCosmo Python example
 
----?code=examples/pydata_simple/py_sline_model.py&lang=python&title=SLine model
+In this example we build a model and a data object in Python and the use all NumCosmo
+tools to analyze the data.
 
++++?code=examples/pydata_simple/py_sline_model.py&lang=python&title=SLine model
 @[5-14](Importing NumCosmo and NumCosmoMath using GI.)
 @[20-21](Creating a new model using the NcmModelBuilder object.)
 @[28-29, 36-37](Adding parameters to the model.)
@@ -18,5 +20,6 @@ Numerical Cosmology Library
 @[69-70](Defines the only method of this object, the function $f(x) = e^{x m}b.$)
 @[75](As the last step we register the new object in the type system.)
 ---
+
 
 
