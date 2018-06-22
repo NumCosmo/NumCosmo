@@ -83,10 +83,55 @@ $\langle\partial_i\partial_j(-2\ln L)\rangle$.
 @[53, 58](We create a new serialization object and load the data from the datafile.)
 @[63-65, 72-73](The data set *NcmDataset* contains our data and is used to build the likelihood *NcmLikelihood* and the fit *NcmFit* objects.)
 @[79, 84](We then run the minimization process and log the results.)
-@[89-90, 85-86](Now, at the best-fit we compute the Fisher matrix both ways.)
+@[89-90, 95-96](Now, at the best-fit we compute the Fisher matrix both ways.)
+
++++
+
+### Results from fit
+
+```bash
+#----------------------------------------------------------------------------------
+# Model fitting. Interating using:
+#  - solver:            NLOpt:ln-neldermead
+#  - differentiation:   Numerical differentiantion (forward)
+#................
+#  Minimum found with precision: |df|/f =  1.00000e-08 and |dx| =  1.00000e-05
+#  Elapsed time: 00 days, 00:00:00.0134530
+#  iteration            [000073]
+#  function evaluations [000074]
+#  gradient evaluations [000000]
+#  degrees of freedom   [000048]
+#  m2lnL     =     48.2024604329839 (      48.20246 )
+#  Fit parameters:
+#     1.00686253235027     0.47436330251462
+#----------------------------------------------------------------------------------
+# Data used:
+#   - py_sline_gauss+PySLineGauss
+#----------------------------------------------------------------------------------
+# Model[00000]:
+#   - NcPySLineModel : A simple python example model
+#----------------------------------------------------------------------------------
+# Model parameters
+#   - alpha[00]:  1.00686253235027    [FREE]
+#   -     a[01]:  0.47436330251462    [FREE]
+# Observed Fisher Matrix
+#----------------------------------------------------------------------------------
+# NcmMSet parameters covariance matrix
+#                                                 -------------------------------
+# alpha[00000:00] =  1.007       +/-  0.01927     |  1           | -0.8932      |
+#     a[00000:01] =  0.4744      +/-  0.05232     | -0.8932      |  1           |
+#                                                 -------------------------------
+# Expected Fisher matrix
+#----------------------------------------------------------------------------------
+# NcmMSet parameters covariance matrix
+#                                                 -------------------------------
+# alpha[00000:00] =  1.007       +/-  0.01839     |  1           | -0.8844      |
+#     a[00000:01] =  0.4744      +/-  0.05041     | -0.8844      |  1           |
+#                                                 -------------------------------
+```
+@[8](Number of steps to find the minimum.)
 
 ---
-
 
 
 
