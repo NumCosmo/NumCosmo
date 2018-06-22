@@ -70,8 +70,8 @@ to do it
 ### Fitting the generated data
 
 In the next script we exemplify how to fit and compute the Fisher matrix, both observed and expected.
-The observed fisher matrix is simple proportional to $\partial_{\theta_i}\partial_{\theta_j}(-2\ln L)$
-and must be computed at the maximum of $L$ to be a good estimate of $\langle\partial_{\theta_i}\partial_{\theta_j}(-2\ln L)\rangle$
+The observed fisher matrix is simple proportional to $\partial_{\theta_i}\partial_{\theta_j}(-2\ln l)$
+and must be computed at the maximum of $l$ to be a good estimate of $\langle\partial_{\theta_i}\partial_{\theta_j}(-2\ln l)\rangle$
 
 ---
 
