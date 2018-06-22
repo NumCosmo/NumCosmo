@@ -129,7 +129,13 @@ $\langle\partial_i\partial_j(-2\ln L)\rangle$.
 #     a[00000:01] =  0.4744      +/-  0.05041     | -0.8844      |  1           |
 #                                                 -------------------------------
 ```
+@[3-4](The algorithm used for the minimization process and differentiation (if needed).)
 @[8](Number of steps to find the minimum.)
+@[12, 14](The best-fit value for $-2\ln L$ and the parameters at the minimum.)
+@[17, 20](The data and models which were used in the run.)
+@[23-24](Here we show all paremeters, fixed or not.)
+@[29-30](The observed Fisher matrix.)
+@[36-56](The expected Fisher matrix.)
 
 ---
 
