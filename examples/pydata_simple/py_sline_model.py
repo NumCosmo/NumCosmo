@@ -30,10 +30,10 @@ mb.add_sparam (r'\alpha', 'alpha', 0.0, 5.0, 0.1, 0.0, 2.0,
 
 #
 # New parameter `a' to describe the amplitude
-# Allowed interval: [0.1, 10]; Default scale: 0.1
+# Allowed interval: [0.2, 2]; Default scale: 0.1
 # Absolute tolerance: 0; Default value: 1
 #
-mb.add_sparam ("a", "a", 0.1, 10.0, 0.1, 0.0, 1.0, 
+mb.add_sparam ("a", "a", 0.2, 2.0, 0.1, 0.0, 1.0, 
                Ncm.ParamType.FREE)
 
 #

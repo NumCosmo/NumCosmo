@@ -137,7 +137,21 @@ $\langle\partial_i\partial_j(-2\ln L)\rangle$.
 @[29-30](The observed Fisher matrix.)
 @[36-37](The expected Fisher matrix.)
 
++++
+
+### Monte Carlo study
+
+We now perform a Monte Carlo study: we first get the best-fit and then use it as a
+fiducial model. From the fiducial model we compute several realizations of the data
+and for each one we compute the best fit.
+
++++?code=examples/pydata_simple/example_mc.py&lang=python&title=SLine model MC
+
+@[104-105](The script is the same for the fit up to this point, here we create a *NcmFitMC* object.)
+@[122-124, 130-131](Then we just need to run it, and print out the results.)
+
 ---
+
 
 
 

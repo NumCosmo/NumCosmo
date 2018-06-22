@@ -33,7 +33,7 @@ Ncm.cfg_init ()
 #
 slm = PySLineModel ()
 slm.props.alpha = 0.9
-slm.props.a     = 0.1
+slm.props.a     = 0.2
 
 #
 # New Model set object including slm with parameters

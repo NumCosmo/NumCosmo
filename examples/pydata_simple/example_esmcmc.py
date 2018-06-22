@@ -34,7 +34,7 @@ Ncm.cfg_init ()
 #
 slm = PySLineModel ()
 slm.props.alpha = 0.9
-slm.props.a     = 0.1
+slm.props.a     = 0.2
 
 #
 # New Model set object including slm with parameters
@@ -114,7 +114,7 @@ stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 # step done between two walkers and circumscribe the walkers inside
 # the box defined by the parameters inside the mset object.
 #
-stretch.set_scale (6.0)
+stretch.set_scale (3.0)
 stretch.set_box_mset (mset)
 
 #
@@ -163,7 +163,7 @@ esmcmc.set_data_file ("example_esmcmc_out.fits")
 # 
 #
 esmcmc.start_run ()
-esmcmc.run_lre (10, 2.0e-3)
+esmcmc.run_lre (10, 1.0e-3)
 esmcmc.end_run ()
 
 #
