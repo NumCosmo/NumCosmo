@@ -150,10 +150,35 @@ and for each one we compute the best fit.
 @[104-106](The script is the same for the fit up to this point, here we create a *NcmFitMC* object.)
 @[123-125, 131-132](Then we just need to run it, and print out the results.)
 
++++
+
+### Monte Carlo results
+
+```bash
+# NcmMSetCatalog: Current mean:   48.059       1.0068       0.47597    
+# NcmMSetCatalog: Current msd:    0.092678     0.00017523   0.00047581 
+# NcmMSetCatalog: Current sd:     9.7263       0.01839      0.049936   
+# NcmMSetCatalog: Current var:    94.601       0.0003382    0.0024936  
+# NcmMSetCatalog: Current tau:    1            1            1          
+# Task:NcmFitMC, completed: 11014 of 11014, elapsed time: 00:11:42.5975
+# Task:NcmFitMC, mean time: 00:00:00.0638 +/- 00:00:00.0006
+# Task:NcmFitMC, time left: 00:00:00.0000 +/- 00:00:00.0000
+# Task:NcmFitMC, current time:        Fri Jun 22 2018, 09:34:48
+# Task:NcmFitMC, estimated to end at: Fri Jun 22 2018, 09:34:48 +/- 00:00:00.0000
+# NcmFitMC: Largest relative error 1.000000e-03 attained: 9.996788e-04
+#----------------------------------------------------------------------------------
+# NcmMSet parameters covariance matrix
+#                                                 -------------------------------
+# alpha[00000:00] =  1.007       +/-  0.01839     |  1           | -0.886       |
+#     a[00000:01] =  0.476       +/-  0.04994     | -0.886       |  1           |
+#                                                 -------------------------------
+```
+@[1](The means for $-2\ln L$, $\alpha$ and $a$.)
+@[2](The standard deviation on the means.)
+@[3](The standard deviation on the parameters.)
+@[15-16](The covariance matrix from the sample of best-fits.)
+
 ---
-
-
-
 
 
 
