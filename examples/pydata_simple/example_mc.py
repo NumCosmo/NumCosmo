@@ -101,7 +101,8 @@ fit.log_covar ()
 # i.e., it will use the best-fit found above to resample during the MC
 # run.
 #
-mc = Ncm.FitMC.new (fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.SIMPLE)
+mc = Ncm.FitMC.new (fit, Ncm.FitMCResampleType.FROM_MODEL, 
+                    Ncm.FitRunMsgs.SIMPLE)
 mc.set_nthreads (2)
 
 #

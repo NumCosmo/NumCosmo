@@ -147,8 +147,8 @@ and for each one we compute the best fit.
 
 +++?code=examples/pydata_simple/example_mc.py&lang=python&title=SLine model MC
 
-@[104-105](The script is the same for the fit up to this point, here we create a *NcmFitMC* object.)
-@[122-124, 130-131](Then we just need to run it, and print out the results.)
+@[104-106](The script is the same for the fit up to this point, here we create a *NcmFitMC* object.)
+@[123-125, 131-132](Then we just need to run it, and print out the results.)
 
 ---
 
