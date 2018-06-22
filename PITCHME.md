@@ -22,7 +22,7 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 @[53](Defines a implementation of the class built above)
 @[58](If we need a property that is not a model parameter that's how we define it.)
 @[63-64](In the constructor we need to chain-up the father's constructor.)
-@[69-70](Defines the only method of this object, the function $f(x) = e^{x m}b.$)
+@[69-70](Defines the only method of this object, the function $f(x) = e^{x \alpha}a.$)
 @[75](As the last step we register the new object in the type system.)
 
 +++
