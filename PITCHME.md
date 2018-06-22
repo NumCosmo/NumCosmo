@@ -186,6 +186,10 @@ and for each one we compute the best fit.
 
 ---
 
+# Questions?
+
+---
+
 
 
 
