@@ -176,7 +176,7 @@ and for each one we compute the best fit.
 @[1](The means for $-2\ln L$, $\alpha$ and $a$.)
 @[2](The standard deviation on the means.)
 @[3](The standard deviation on the parameters.)
-@[15-16](The covariance matrix from the sample of best-fits.)
+@[15-16](The covariance matrix from the sample of best-fits. Remember that the fiducial model had $\alpha = 1.007$ and $a = 0.4744$.)
 
 ---
 
