@@ -81,7 +81,9 @@ $\langle\partial_i\partial_j(-2\ln L)\rangle$.
 @[34-36](Here we define model and the initial guess point.)
 @[42-45](We need a model set *NcmMSet* to transport our model and the free parameters map.)
 @[53, 58](We create a new serialization object and load the data from the datafile.)
-@[63-64, 69, 76](The data set *NcmDataset* contains our data and is used to build the likelihood *NcmLikelihood* and the fit *NcmFit* objects.)
+@[63-65, 72-73](The data set *NcmDataset* contains our data and is used to build the likelihood *NcmLikelihood* and the fit *NcmFit* objects.)
+@[79, 84](We then run the minimization process and log the results.)
+@[89-90, 85-86](Now, at the best-fit we compute the Fisher matrix both ways.)
 
 ---
 
