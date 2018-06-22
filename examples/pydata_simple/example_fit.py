@@ -58,14 +58,10 @@ else:
   sld = ser.from_binfile (data_file)
 
 #
-# New data set object with sld added.
+# New data set object with sld added and the likelihood using it.
 #
 dset = Ncm.Dataset.new ()
 dset.append_data (sld)
-
-#
-# New likelihood object using dset.
-#
 lh = Ncm.Likelihood.new (dset)
 
 #
@@ -73,7 +69,8 @@ lh = Ncm.Likelihood.new (dset)
 #  fit the model set mset using the Likelihood lh and using a numerical differentiation
 #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
 #
-fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
+fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, 
+                   Ncm.FitGradType.NUMDIFF_FORWARD)
 
 #
 #  Running the fitter printing messages.
