@@ -70,8 +70,18 @@ to do it
 ### Fitting the generated data
 
 In the next script we exemplify how to fit and compute the Fisher matrix, both observed and expected.
-The observed fisher matrix is simple proportional to $\partial_i\partial_j(-2\ln l)$
-and must be computed at the maximum of `L` to be a good estimate of $\langle\partial_i\partial_j(-2\ln l)\rangle$
+The observed fisher matrix is simple proportional to $\partial_i\partial_j(-2\ln L)$
+and must be computed at the maximum of `L` to be a good estimate of the expected 
+$\langle\partial_i\partial_j(-2\ln L)\rangle$.
+
++++?code=examples/pydata_simple/example_fit.py&lang=python&title=SLine model fit
+
+@[9-22](Loads everything.)
+@[28](In a executable script using NumCosmo must call Ncm.cfg_init before any other NumCosmo functions.)
+@[34-36](Here we define model and the initial guess point.)
+@[42-45](We need a model set *NcmMSet* to transport our model and the free parameters map.)
+@[53, 58](We create a new serialization object and load the data from the datafile.)
+@[63-64, 69, 76](The data set *NcmDataset* contains our data and is used to build the likelihood *NcmLikelihood* and the fit *NcmFit* objects.)
 
 ---
 
