@@ -178,10 +178,13 @@ and for each one we compute the best fit.
 @[3](The standard deviation on the parameters.)
 @[15-16](The covariance matrix from the sample of best-fits. Remember that the fiducial model had $\alpha = 1.007$ and $a = 0.4744$.)
 
++++
+
+### Monte Carlo results
+
+![MC](examples/pydata_simple/example_mc_out.png)
+
 ---
-
-
-
 
 
 
