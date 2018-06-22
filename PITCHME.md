@@ -4,7 +4,7 @@ Numerical Cosmology Library
 
 ---
 
-# NumCosmo Python example
+## NumCosmo Python example
 
 In this example we build a model and a data object in Python and the use all NumCosmo
 tools to analyze the data.
@@ -135,7 +135,7 @@ $\langle\partial_i\partial_j(-2\ln L)\rangle$.
 @[17, 20](The data and models which were used in the run.)
 @[23-24](Here we show all paremeters, fixed or not.)
 @[29-30](The observed Fisher matrix.)
-@[36-56](The expected Fisher matrix.)
+@[36-37](The expected Fisher matrix.)
 
 ---
 
