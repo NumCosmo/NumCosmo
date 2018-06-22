@@ -9,7 +9,8 @@ Numerical Cosmology Library
 In this example we build a model and a data object in Python and the use all NumCosmo
 tools to analyze the data.
 
-## Model object
+Model object
+============
 
 The objective of the model is to describe a simple function $f(x) \in \mathbb{R}$ of some 
 independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) = a e^{\alpha x}$.
@@ -27,7 +28,8 @@ independent variable $x \in \mathbb{R}$. Below we implement a model where $f(x) 
 
 +++
 
-## Data object
+Data object
+===========
 
 The data object will describe the observation error distribution. For simplicity we describe 
 the variable $ \delta f_i = f^\mathrm{obs}_i - f(x_i) $, with a multivariate Gaussian distribution with zero 
@@ -47,7 +49,46 @@ be draw from a uniform distribution between $[0.5, 2]$.
 @[95-100](We define a method to create a random covariance matrix, with the correlation factor 15 and the standard deviations ranging from 0.5 to 2.)
 @[108](As the last step we register the new object in the type system.)
 
++++
+
+Generating data randomly
+========================
+
+We can generate a sample for our likelihood using the resample method already 
+implemented in the NcmDataGaussCov object, in the script below we explain how
+to do it
+
++++?code=examples/pydata_simple/example_create_data.py&lang=python&title=SLine data generate
+
+@[9-22](Loads everything.)
+@[28](In a executable script using NumCosmo must call Ncm.cfg_init before any other NumCosmo functions.)
+@[33](Creates a new pseudo-random number generator with the default algorithm and seed 123.)
+@[39-41](Here we define our fiducial model that will be used to generate the data.)
+@[53-55](The data object is created with length = $50$, the covariance will be a $50\times50$ matrix. Our independent vector is just a uniform grid between $[0, 10]$.)
+@[61-64](We need a model set NcmMSet to transport our model.)
+@[73-76](Finally, we create a serialization object, use the resample method to create the data and save it to disk.)
+
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
