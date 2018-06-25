@@ -60,6 +60,8 @@
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "math/ncm_data.h"
+#include "math/ncm_stats_dist1d_epdf.h"
+#include "math/ncm_stats_dist1d_spline.h"
 #include "math/ncm_dataset.h"
 #include "math/ncm_fit.h"
 #include "math/ncm_fit_nlopt.h"
@@ -105,6 +107,9 @@
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
+#include "lss/nc_galaxy_acf.h"
+#include "lss/nc_galaxy_redshift_spec.h"
+#include "lss/nc_galaxy_redshift_spline.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -487,6 +492,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
 
+	ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
+	ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_SPLINE);
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
@@ -545,6 +553,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -574,6 +584,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
 
   ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
+
+	ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -615,6 +627,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 	ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
+  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);

@@ -174,8 +174,15 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 	                                 g_param_spec_double ("z-best",
 	                                                      NULL,
 	                                                      "Distributions mode",
-	                                                      0, G_MAXUINT, 0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	                                                      0.0, G_MAXDOUBLE, 0.0,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_DISTS,
+	                                 g_param_spec_boxed ("dists",
+	                                                     NULL,
+	                                                     "Distribution objects",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));	
 	
 	gz_class->has_dist        = &_nc_galaxy_redshift_spline_has_dist;
 	gz_class->mode            = &_nc_galaxy_redshift_spline_mode;
@@ -336,9 +343,9 @@ nc_galaxy_redshift_spline_clear (NcGalaxyRedshiftSpline **gzs)
 /**
  * nc_galaxy_redshift_spline_set_z_best:
  * @gzs: a #NcGalaxyRedshiftSpline
- * @z_best: the spectroscopic redshift $z_\mathrm{spec}$
+ * @z_best: the mode of the redshift distribution
  * 
- * Sets $z_\mathrm{spec}$ = @z_best.
+ * Sets the mode of the redshift distribution @z_best.
  *
  */
 void
@@ -353,9 +360,9 @@ nc_galaxy_redshift_spline_set_z_best (NcGalaxyRedshiftSpline *gzs, const gdouble
  * nc_galaxy_redshift_spline_get_z_best:
  * @gzs: a #NcGalaxyRedshiftSpline
  * 
- * Gets $z_\mathrm{spec}$.
+ * Gets $z_\mathrm{best}$, the mode of the redshift distribution.
  *
- * Returns: $z_\mathrm{spec}$.
+ * Returns: $z_\mathrm{best}$.
  */
 gdouble
 nc_galaxy_redshift_spline_get_z_best (NcGalaxyRedshiftSpline *gzs)
@@ -464,7 +471,7 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
 	if (first_nz != -1)
 	{
 		NcmStatsDist1dSpline *dist = NULL;
-		NcmSpline *s               = ncm_spline_cubic_notaknot_new ();
+		NcmSpline *s               = (z_a->len >= 6) ? NCM_SPLINE (ncm_spline_cubic_notaknot_new ()) : NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_polynomial));
 
 		ncm_spline_set_array (s, z_a, m2lnPz_a, TRUE);
 		dist = ncm_stats_dist1d_spline_new (s);

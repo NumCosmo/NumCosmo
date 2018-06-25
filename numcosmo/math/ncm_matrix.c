@@ -1181,22 +1181,19 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
 }
 
 /**
- * ncm_matrix_fill_rand_cov:
+ * ncm_matrix_fill_rand_cor:
  * @cm: a square #NcmMatrix
- * @sigma_min: mininum standard deviation
- * @sigma_max: maximum standard deviation
  * @cor_level: correlation level parameter
  * @rng: a #NcmRNG
  * 
- * Overwrite @cm with a random covariance matrix, the
+ * Overwrite @cm with a random correlation matrix, the
  * parameter @cor_level controls the correlation between
  * entries the lower @cor_level more correlated the entries
  * are.
  *
- * 
  */
 void 
-ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n   = ncm_matrix_nrows (cm);
   const guint nm1 = n - 1;
@@ -1234,16 +1231,87 @@ ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble 
       }
     }
 
-    for (k = 0; k < n; k++)
-    {
-      const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
-      ncm_matrix_mul_col (cm, k, sigma_k);
-      ncm_matrix_mul_row (cm, k, sigma_k);
-    }
-
     ncm_matrix_free (P);
   }
 
+  ncm_rng_unlock (rng);
+}
+
+/**
+ * ncm_matrix_fill_rand_cov:
+ * @cm: a square #NcmMatrix
+ * @sigma_min: mininum standard deviation
+ * @sigma_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ */
+void 
+ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+{
+	const guint n = ncm_matrix_nrows (cm);
+	gint k;
+
+	g_assert_cmpfloat (sigma_min, >, 0.0);
+	g_assert_cmpfloat (sigma_max, >, sigma_min);
+	
+	ncm_matrix_fill_rand_cor (cm, cor_level, rng);
+		
+  ncm_rng_lock (rng);
+
+	for (k = 0; k < n; k++)
+	{
+		const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
+		ncm_matrix_mul_col (cm, k, sigma_k);
+		ncm_matrix_mul_row (cm, k, sigma_k);
+	}
+	
+  ncm_rng_unlock (rng);
+}
+
+/**
+ * ncm_matrix_fill_rand_cov2:
+ * @cm: a square #NcmMatrix
+ * @mu: mean #NcmVector
+ * @reltol_min: mininum standard deviation
+ * @reltol_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ */
+void 
+ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_min, const gdouble reltol_max, const gdouble cor_level, NcmRNG *rng)
+{
+	const guint n = ncm_matrix_nrows (cm);
+	gint k;
+
+	g_assert_cmpfloat (reltol_min, >, 0.0);
+	g_assert_cmpfloat (reltol_max, >, reltol_min);
+	g_assert_cmpuint (n, ==, ncm_vector_len (mu));
+	
+	ncm_matrix_fill_rand_cor (cm, cor_level, rng);
+		
+  ncm_rng_lock (rng);
+
+	for (k = 0; k < n; k++)
+	{
+		const gdouble mu_k    = ncm_vector_get (mu, k);
+		const gdouble r_k     = exp (ncm_rng_uniform_gen (rng, log (reltol_min), log (reltol_max)));
+		const gdouble sigma_k = mu_k != 0.0 ? fabs (mu_k) * r_k : r_k;
+		ncm_matrix_mul_col (cm, k, sigma_k);
+		ncm_matrix_mul_row (cm, k, sigma_k);
+	}
+	
   ncm_rng_unlock (rng);
 }
 

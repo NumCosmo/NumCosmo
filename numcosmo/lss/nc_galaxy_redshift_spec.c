@@ -112,6 +112,7 @@ static gdouble _nc_galaxy_redshift_spec_interval_weight (NcGalaxyRedshift *gz, c
 static void _nc_galaxy_redshift_spec_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
 static gdouble _nc_galaxy_redshift_spec_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
 static gdouble _nc_galaxy_redshift_spec_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
+static gdouble _nc_galaxy_redshift_spec_quantile (NcGalaxyRedshift *gz, const gdouble q);
 
 static void
 nc_galaxy_redshift_spec_class_init (NcGalaxyRedshiftSpecClass *klass)
@@ -140,6 +141,7 @@ nc_galaxy_redshift_spec_class_init (NcGalaxyRedshiftSpecClass *klass)
 	gz_class->pdf_limits      = &_nc_galaxy_redshift_spec_pdf_limits;
   gz_class->pdf             = &_nc_galaxy_redshift_spec_pdf;
   gz_class->gen             = &_nc_galaxy_redshift_spec_gen;
+  gz_class->quantile        = &_nc_galaxy_redshift_spec_quantile;
 	
 }
 
@@ -191,6 +193,15 @@ _nc_galaxy_redshift_spec_pdf (NcGalaxyRedshift *gz, const guint di, const gdoubl
 
 static gdouble 
 _nc_galaxy_redshift_spec_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
+{
+	NcGalaxyRedshiftSpec *gzs = NC_GALAXY_REDSHIFT_SPEC (gz);
+	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
+
+	return self->z_spec;
+}
+
+static gdouble 
+_nc_galaxy_redshift_spec_quantile (NcGalaxyRedshift *gz, const gdouble q)
 {
 	NcGalaxyRedshiftSpec *gzs = NC_GALAXY_REDSHIFT_SPEC (gz);
 	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
