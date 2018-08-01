@@ -61,7 +61,7 @@ typedef enum _NcXcorLimberKernelImpl
 {
   NC_XCOR_LIMBER_KERNEL_IMPL_EVAL = 0,
   NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE,
-  NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE, 
+  NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE,
   /* < private > */
 } NcXcorLimberKernelImpl;
 
@@ -73,7 +73,7 @@ struct _NcXcorLimberKernelClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
+  gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
   void (*prepare) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
   void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
   guint (*obs_len) (NcXcorLimberKernel* xclk);
@@ -85,7 +85,7 @@ struct _NcXcorLimberKernel
   /*< private >*/
   NcmModel parent_instance;
   gdouble cons_factor;
-  gdouble zmin, zmax;
+  gdouble zmin, zmax, zmid;
 };
 
 GType nc_xcor_limber_kernel_get_type (void) G_GNUC_CONST;
@@ -96,17 +96,14 @@ NcXcorLimberKernel* nc_xcor_limber_kernel_new_from_name (gchar* xcor_name);
 NcXcorLimberKernel* nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk);
 void nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk);
 void nc_xcor_limber_kernel_clear (NcXcorLimberKernel** xclk);
-// void nc_xcor_limber_kernel_constructed (NcXcorLimberKernel** xclk);
 
 guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel* xclk);
 guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel* xclk);
 
-gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
+gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
 void nc_xcor_limber_kernel_prepare (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
-// gdouble nc_xcor_limber_kernel_noise_spec (NcXcorLimberKernel* xclk, guint l);
 void nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
-
 
 void nc_xcor_limber_kernel_log_all_models (void);
 
