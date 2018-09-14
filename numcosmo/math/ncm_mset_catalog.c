@@ -69,28 +69,6 @@
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
-
-enum
-{
-  PROP_0,
-  PROP_MSET,
-  PROP_NADD_VALS,
-  PROP_ADD_VAL_NAMES,
-  PROP_ADD_VAL_SYMBS,
-  PROP_M2LNP_VAR,
-  PROP_WEIGHTED,
-  PROP_NCHAINS,
-  PROP_BURNIN,
-  PROP_TAU_METHOD,
-  PROP_RNG,
-  PROP_FILE,
-  PROP_RUN_TYPE_STR,
-  PROP_SYNC_MODE,
-  PROP_SYNC_INTERVAL,
-  PROP_READONLY,
-};
-
 struct _NcmMSetCatalogPrivate
 {
   NcmMSet *mset;
@@ -148,6 +126,29 @@ struct _NcmMSetCatalogPrivate
   gsl_histogram_pdf *h_pdf;
   gboolean constructed;
 };
+
+G_DEFINE_TYPE_WITH_CODE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmMSetCatalog));
+
+enum
+{
+  PROP_0,
+  PROP_MSET,
+  PROP_NADD_VALS,
+  PROP_ADD_VAL_NAMES,
+  PROP_ADD_VAL_SYMBS,
+  PROP_M2LNP_VAR,
+  PROP_WEIGHTED,
+  PROP_NCHAINS,
+  PROP_BURNIN,
+  PROP_TAU_METHOD,
+  PROP_RNG,
+  PROP_FILE,
+  PROP_RUN_TYPE_STR,
+  PROP_SYNC_MODE,
+  PROP_SYNC_INTERVAL,
+  PROP_READONLY,
+};
+
 
 static gint
 _ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer data)
@@ -576,8 +577,6 @@ static void
 ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmMSetCatalogPrivate));
 
   object_class->constructed  = &_ncm_mset_catalog_constructed;
   object_class->set_property = &_ncm_mset_catalog_set_property;

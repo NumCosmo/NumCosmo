@@ -53,7 +53,7 @@ enum
 	PROP_Z_SPEC
 };
 
-G_DEFINE_TYPE (NcGalaxyRedshiftSpec, nc_galaxy_redshift_spec, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshiftSpec, nc_galaxy_redshift_spec, NC_TYPE_GALAXY_REDSHIFT, G_ADD_PRIVATE (NcGalaxyRedshiftSpec));
 
 static void
 nc_galaxy_redshift_spec_init (NcGalaxyRedshiftSpec *gzs)
@@ -119,8 +119,6 @@ nc_galaxy_redshift_spec_class_init (NcGalaxyRedshiftSpecClass *klass)
 {
 	GObjectClass* object_class      = G_OBJECT_CLASS (klass);
 	NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcGalaxyRedshiftSpecPrivate));
 
 	object_class->set_property = &_nc_galaxy_redshift_spec_set_property;
 	object_class->get_property = &_nc_galaxy_redshift_spec_get_property;

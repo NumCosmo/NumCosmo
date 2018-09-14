@@ -211,7 +211,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT, G_ADD_PRIVATE (NcCBEPrecision));
 
 static void
 nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
@@ -1207,8 +1207,6 @@ static void
 nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcCBEPrecisionPrivate));
 
   object_class->set_property = &nc_cbe_precision_set_property;
   object_class->get_property = &nc_cbe_precision_get_property;

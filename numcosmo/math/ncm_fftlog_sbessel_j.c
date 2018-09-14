@@ -73,7 +73,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_CODE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG, G_ADD_PRIVATE (NcmFftlogSBesselJ));
 
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
@@ -138,8 +138,6 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
 {
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmFftlogSBesselJPrivate));
   
   object_class->set_property = &_ncm_fftlog_sbessel_j_set_property;
   object_class->get_property = &_ncm_fftlog_sbessel_j_get_property;

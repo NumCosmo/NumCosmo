@@ -457,6 +457,30 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
   return 1.0 / sqrt (E2);
 }
 
+static gdouble
+_nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
+{
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+
+  switch (k)
+  {
+    case 0:
+      return r;
+      break;
+    case -1:
+      return sinh (sqrt_Omega_k0 * r) / r;
+      break;
+    case 1:
+      return fabs (sin (sqrt_Omega_k0 * r) / sqrt_Omega_k0);
+      break;
+    default:
+      g_assert_not_reached();
+      return 0.0;
+      break;
+  }
+}
+
 /**
  * nc_distance_transverse:
  * @dist: a #NcDistance
@@ -470,33 +494,13 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
 gdouble
 nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
-  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
-  const gint k = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-  gdouble Dt;
 
   if (gsl_isinf (comoving_dist))
     return comoving_dist;
 
-  switch (k)
-  {
-    case 0:
-      Dt = comoving_dist;
-      break;
-    case -1:
-      Dt = sinh (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0;
-      break;
-    case 1:
-      Dt = fabs (sin (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0);
-      break;
-    default:
-      g_assert_not_reached();
-      Dt = 0.0;
-      break;
-  }
-
-  return Dt;
+  return _nc_distance_sinn (comoving_dist, Omega_k0);
 }
 
 /**
@@ -780,7 +784,7 @@ static gdouble sound_horizon_integral_argument (gdouble z, gpointer p);
  *
  * Compute the sound horizon $r_s$,
  * \begin{equation}
- * r_s (z) = \int_{z}^\infty \frac{c_s(z^\prime)}{E(z^\prime)} dz^\prime,
+ * \theta_s (z) = \int_{z}^\infty \frac{c_s(z^\prime)}{E(z^\prime)} dz^\prime, \quad r_s (z) = \frac{\mathrm{sinn}\left(\sqrt{\Omega_{k0}}\theta_s\right)}{\sqrt{\Omega_{k0}}},
  * \end{equation}
  * where $c^{b\gamma}_s$ is the baryon-photon plasma speed of sound 
  * [nc_hicosmo_bgp_cs2()] and $E(z)$ is the normalized Hubble function 
@@ -791,6 +795,7 @@ static gdouble sound_horizon_integral_argument (gdouble z, gpointer p);
 gdouble
 nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
   gdouble result, error;
   gsl_function F;
 
@@ -803,8 +808,8 @@ nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
     ncm_integral_cached_x_inf (dist->sound_horizon_cache, &F, z, &result, &error);
   else
     ncm_integral_locked_a_inf (&F, z, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-
-  return result;
+  
+  return _nc_distance_sinn (result, Omega_k0);
 }
 
 static gdouble
@@ -1139,33 +1144,13 @@ nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble 
 gdouble
 nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
-  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving_z_to_infinity (dist, cosmo, z);
-  const gint k = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-  gdouble Dt;
 
   if (gsl_isinf (comoving_dist))
     return comoving_dist;
 
-  switch (k)
-  {
-    case 0:
-      Dt = comoving_dist;
-      break;
-    case -1:
-      Dt = sinh (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0;
-      break;
-    case 1:
-      Dt = fabs (sin (sqrt_Omega_k0 * comoving_dist) / sqrt_Omega_k0);
-      break;
-    default:
-      g_assert_not_reached();
-      Dt = 0.0;
-      break;
-  }
-
-  return Dt;
+  return _nc_distance_sinn (comoving_dist, Omega_k0);;
 }
 
 /***************************************************************************

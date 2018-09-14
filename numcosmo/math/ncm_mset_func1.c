@@ -45,7 +45,7 @@ struct _NcmMSetFunc1Private
 	gint placeholder;
 };
 
-G_DEFINE_TYPE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC);
+G_DEFINE_TYPE_WITH_CODE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC, G_ADD_PRIVATE (NcmMSetFunc1));
 
 static void
 ncm_mset_func1_init (NcmMSetFunc1 *f1)
@@ -70,8 +70,6 @@ ncm_mset_func1_class_init (NcmMSetFunc1Class *klass)
 	GObjectClass *object_class   = G_OBJECT_CLASS (klass);
 	NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
 	
-	g_type_class_add_private (klass, sizeof (NcmMSetFunc1Private));
-
 	object_class->finalize = &_ncm_mset_func1_finalize;
 
 	func_class->eval = _ncm_mset_func1_eval;

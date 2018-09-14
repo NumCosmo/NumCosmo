@@ -19,6 +19,10 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
 
+font = {'size'   : 20}
+
+matplotlib.rc('font', **font)
+
 def _blit_draw(self, artists, bg_cache):
     # Handles blitted drawing, which renders only the artists given instead
     # of the entire figure.
@@ -50,19 +54,19 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p                  = Nc.HIQG1D.new ()
-l1                 = 0.0
+l1                 = 4.0 / 3.0 * 0.0
 H0                 = -15.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-7
-p.props.nknots     = 200
+p.props.nknots     = 400
 p.props.noboundary = False
 p.set_property ("lambda", l1)
 offset = 5.0
 center = (10.0 + offset) * 0.0 + 0.0
 
-print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g" % (p.get_lambda (), p.get_basis_a (), p.get_acs_a (), p.get_nu ()))
+print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g mu = % 22.15g" % (p.get_lambda (), p.get_basis_a (), p.get_acs_a (), p.get_nu (), p.get_mu ()))
 
-psi0 = Nc.HIQG1DGauss.new (center, 1.0001, 1.0, H0)
+psi0 = Nc.HIQG1DGauss.new (center, 1.0, 1.0, H0)
 #psi0 = Nc.HIQG1DExp.new (p.get_acs_a (), 2.0, H0)
 #psi0 = Nc.HIQG1DExp.new (3.0, 2.0, H0)
 
@@ -70,9 +74,9 @@ psi0 = Nc.HIQG1DGauss.new (center, 1.0001, 1.0, H0)
 npp   = 1000
 sim   = True
 tstep = 5.0e-3
-tf    = 4.0
-xf    = center + 50.0
-xfp   = center + 50.0
+tf    = 4.5
+xf    = center + 100.0
+xfp   = center + 20.0
 xi    = (center - 7.0) * 0.0 + 0.0
 dSdiv = 10.0
 
@@ -91,17 +95,20 @@ yb         = max (max_Re_psi, max_Im_psi)
 fig, [ax, ax2] = plt.subplots (1, 2, figsize = (16, 12))
 
 ax.set_xlim (xi, xfp)
-ax.set_ylim (-0.8, 0.8)
+ax.set_ylim (-1.0, 1.0)
 ax.grid ()
 
-ax2.set_xlim (0.0, 10.0)
-ax2.set_ylim (1.0e-2, 1e2)
-ax2.set_xscale ('symlog', linthreshy=0.1)
-ax2.set_yscale ('log')
+#ax2.set_xlim (0.0, 10.0)
+#ax2.set_ylim (1.0e-2, 1e2)
+ax2.set_xlim (0.0, 12.0)
+ax2.set_ylim (-8.0, 8.0)
+#ax2.set_xscale ('symlog', linthreshy=0.1)
+#ax2.set_yscale ('log')
 
-ax.set_xlabel (r'$a(t)$')
-ax2.set_xlabel (r'$t$')
-ax2.set_ylabel (r'$a(t)$')
+ax.set_xlabel (r'$V$')
+ax2.set_xlabel (r'$V$')
+ax2.set_ylabel (r'$P_V$')
+ax2.grid ()
 
 N = 4
 ttl = ax.text (.1, 1.005, '', transform = ax.transAxes)
@@ -109,28 +116,45 @@ lines = []
 lines.append (ax.plot ([], [], label=r'$\sqrt{\psi^*\psi}$', animated=True)[0])
 lines.append (ax.plot ([], [], label=r'$\mathrm{Re}(\psi)$', animated=True)[0])
 lines.append (ax.plot ([], [], label=r'$\mathrm{Im}(\psi)$', animated=True)[0])
-lines.append (ax.plot ([], [], label=r'$\partial_aS$', animated=True)[0])
+lines.append (ax.plot ([], [], animated=True)[0])
+#lines.append (ax.plot ([], [], label=r'$\partial_aS$', animated=True)[0])
 ax.legend (loc='best')
 
 fig.tight_layout()
 lines.append (ttl)
 
 lines.append (ax2.plot ([], [], 'bo', label=r'Bohm', animated=True)[0])
-lines.append (ax2.plot ([], [], 'ro', label=r'$\langle a(t)\rangle$', animated=True)[0])
+#lines.append (ax2.plot ([], [], 'ro', label=r'$\langle a(t)\rangle$', animated=True)[0])
+lines.append (ax2.plot ([], [], 'ro', label=r'Semi-classical', animated=True)[0])
 ax2.legend (loc='best')
 
-ta   = [0.0]
-traj = []
-x_t  = []
-y_t  = []
+ta    = [0.0]
+traj  = []
+trajP = []
+x_t   = []
+y_t   = []
+
+Pini = H0
+Vini = 3.0
+Hini = ((Pini * Vini)**2 + l1) / Vini**2
+t0   = -0.5 * Pini * Vini / Hini 
+
+def a_sc(t):
+  return math.sqrt (4.0 * Hini * (t - t0)**2 + l1 / Hini)
+def p_sc(t):
+  return 2.0 * Hini * (t - t0) / a_sc (t)
 
 for i in range (n1):
   lines.append (ax2.plot ([], [])[0])
   qi = [p.Bohm (i)]
+  pi = [p.Bohm_p (i)]
   traj.append (qi)
+  trajP.append (pi)
 
 lines.append (ax2.plot ([], [])[0])
-traj.append ([p.int_xrho_0_inf ()])
+#traj.append ([p.int_xrho_0_inf ()])
+traj.append ([a_sc (0.0)])
+trajP.append ([p_sc (0.0)])
 
 def init():    
   lines[0].set_data ([], [])
@@ -209,19 +233,29 @@ def animate(i):
     
     #print (dS)
   
-    qm = p.int_xrho_0_inf ()
+#    qm = p.int_xrho_0_inf ()
   
     tfa = [tf] * n1
-    lines[5].set_data (tfa, [p.Bohm (i) for i in range (n1)])
-    lines[6].set_data ([tf], [qm])
+    lines[5].set_data ([p.Bohm (i) for i in range (n1)], [p.Bohm_p (i) for i in range (n1)])
+    lines[6].set_data ([a_sc (tf)], [p_sc (tf)])
+#    lines[5].set_data (tfa, [p.Bohm (i) for i in range (n1)])
+#    lines[6].set_data ([tf], [qm])
 
     ta.append (tf)
     for i in range (n1):
       traj[i].append (p.Bohm (i))
-      lines[i + 7].set_data (ta, traj[i])
+      trajP[i].append (p.Bohm_p (i))
+#      lines[i + 7].set_data (ta, traj[i])
+      lines[i + 7].set_data (traj[i], trajP[i])
     
-    traj[n1].append (qm)
-    lines[n1 + 7].set_data (ta, traj[n1])
+#    traj[n1].append (qm)
+#    lines[n1 + 7].set_data (ta, traj[n1])
+#    lines[n1 + 7].set_data (traj[n1], trajP[n1])
+
+    traj[n1].append (a_sc (tf))
+    trajP[n1].append (p_sc (tf))
+#    lines[n1 + 7].set_data (ta, traj[n1])
+    lines[n1 + 7].set_data (traj[n1], trajP[n1])
 
     ttl.set_text ("t = % .15f, norma = % .15f" % (tf, p.int_rho_0_inf ()))
   
@@ -244,10 +278,10 @@ def animate(i):
 
   return lines
 
-anim = animation.FuncAnimation (fig, animate, np.arange (0, int (tf / tstep)), init_func = init, interval = 1, blit = True, repeat = True)
+anim = animation.FuncAnimation (fig, animate, np.arange (0, int (tf / tstep)), init_func = init, interval = 1, blit = True, repeat = False)
 
 #mywriter = animation.FFMpegWriter(fps = 24)
-#anim.save ('qm3_evol_lambda_%f_H0_%f.mp4' % (l1, H0), writer = mywriter)
+#anim.save ('cmp1_lambda_%f_H0_%f.mp4' % (l1, H0), writer = mywriter)
 
 plt.show ()
 

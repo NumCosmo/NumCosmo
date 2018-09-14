@@ -62,7 +62,7 @@ enum
 	PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE (NcmMPIJobFit, ncm_mpi_job_fit, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_CODE (NcmMPIJobFit, ncm_mpi_job_fit, NCM_TYPE_MPI_JOB, G_ADD_PRIVATE (NcmMPIJobFit));
 
 static void
 ncm_mpi_job_fit_init (NcmMPIJobFit *mjfit)
@@ -184,8 +184,6 @@ ncm_mpi_job_fit_class_init (NcmMPIJobFitClass *klass)
 {
 	GObjectClass* object_class    = G_OBJECT_CLASS (klass);
 	NcmMPIJobClass *mpi_job_class = NCM_MPI_JOB_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcmMPIJobFitPrivate));
 
 	object_class->set_property = &_ncm_mpi_job_fit_set_property;
 	object_class->get_property = &_ncm_mpi_job_fit_get_property;

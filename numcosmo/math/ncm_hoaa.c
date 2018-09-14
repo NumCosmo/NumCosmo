@@ -173,7 +173,7 @@ enum
   PROP_OPT,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmHOAA));
 
 static void
 ncm_hoaa_init (NcmHOAA *hoaa)
@@ -321,14 +321,14 @@ _ncm_hoaa_dispose (GObject *object)
   ncm_spline_clear (&hoaa->priv->qbar_s);
   ncm_spline_clear (&hoaa->priv->pbar_s);
   
-  g_clear_pointer (&hoaa->priv->t,         (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->t_m_ts,    (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->sing_qbar, (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->sing_pbar, (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->upsilon,   (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->gamma,     (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->qbar,      (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->pbar,      (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->t,         g_array_unref);
+  g_clear_pointer (&hoaa->priv->t_m_ts,    g_array_unref);
+  g_clear_pointer (&hoaa->priv->sing_qbar, g_array_unref);
+  g_clear_pointer (&hoaa->priv->sing_pbar, g_array_unref);
+  g_clear_pointer (&hoaa->priv->upsilon,   g_array_unref);
+  g_clear_pointer (&hoaa->priv->gamma,     g_array_unref);
+  g_clear_pointer (&hoaa->priv->qbar,      g_array_unref);
+  g_clear_pointer (&hoaa->priv->pbar,      g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->dispose (object);
@@ -405,7 +405,7 @@ _ncm_hoaa_finalize (GObject *object)
   }
 #endif
 
-  g_clear_pointer (&hoaa->priv->s, (GDestroyNotify) gsl_root_fsolver_free);
+  g_clear_pointer (&hoaa->priv->s, gsl_root_fsolver_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->finalize (object);
@@ -417,8 +417,6 @@ static void
 ncm_hoaa_class_init (NcmHOAAClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmHOAAPrivate));
 
   object_class->set_property = &_ncm_hoaa_set_property;
   object_class->get_property = &_ncm_hoaa_get_property;

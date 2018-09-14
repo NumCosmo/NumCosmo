@@ -92,6 +92,7 @@ struct _NcHIQG1DPrivate
   gdouble acs_a;
   gdouble basis_a;
   gdouble nu;
+  gdouble mu;
   gdouble abstol;
   gdouble reltol;
   guint nknots;
@@ -156,7 +157,7 @@ enum
   PROP_NOBOUNDARY,
 };
 
-G_DEFINE_TYPE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT, G_ADD_PRIVATE (NcHIQG1D));
 G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
 G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
 
@@ -169,6 +170,7 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
   self->acs_a      = 0.0;
   self->basis_a    = 0.0;
   self->nu         = 0.0;
+  self->mu         = 0.0;
 
   self->abstol     = 0.0;
   self->reltol     = 0.0;
@@ -253,7 +255,8 @@ _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_LAMBDA:
       self->lambda  = g_value_get_double (value);
       self->acs_a   = 1.0 + 2.0 * self->lambda + 2.0 * sqrt (self->lambda * (self->lambda - 1.0));
-      self->basis_a = 0.5 * ncm_util_sqrt1px_m1 (4.0 * self->lambda);
+      self->mu      = 0.25 * (self->acs_a - 1.0);
+      self->basis_a = 0.5 * ncm_util_sqrt1px_m1 (4.0 * self->mu);
       self->nu      = sqrt (self->lambda + 0.25);
       break;
     case PROP_ABSTOL:
@@ -383,8 +386,6 @@ static void
 nc_hiqg_1d_class_init (NcHIQG1DClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIQG1DPrivate));
 
   object_class->set_property = &_nc_hiqg_1d_set_property;
   object_class->get_property = &_nc_hiqg_1d_get_property;
@@ -524,6 +525,7 @@ nc_hiqg_1d_gauss_eval (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
   const gdouble xmean2  = xmean * xmean;
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + 0.5 * xmean2 * I * qm_gauss->Hi);
+  //complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + xmean * I * qm_gauss->Hi);
   
   psi[0] = creal (psi0c);
   psi[1] = cimag (psi0c);
@@ -567,6 +569,7 @@ nc_hiqg_1d_gauss_eval_lnRS (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *l
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   const gdouble lnR     = - 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
   const gdouble S       = 0.5 * x * x * qm_gauss->Hi;
+  //const gdouble S       = x * qm_gauss->Hi;
 
   lnRS[0] = lnR;
   lnRS[1] = S;
@@ -1149,6 +1152,21 @@ nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
   return self->nu;
 }
 
+/**
+ * nc_hiqg_1d_get_mu:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_get_mu (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  return self->mu;
+}
+
 static gdouble
 _nc_hiqg_1d_If2 (const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
@@ -1210,7 +1228,7 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
   if (self->bohm != NULL)
     ARKodeFree (&self->bohm);
 
-  self->nBohm = 10;
+  self->nBohm = 1;
 
   g_clear_pointer (&self->yBohm, N_VDestroy);
   self->yBohm = N_VNew_Serial (self->nBohm);
@@ -1875,4 +1893,21 @@ nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
   return NV_Ith_S (self->yBohm, i);
+}
+
+/**
+ * nc_hiqg_1d_Bohm_p:
+ * @qg1d: a #NcHIQG1D
+ * @i: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  const gdouble a = NV_Ith_S (self->yBohm, i);
+  return nc_hiqg_1d_eval_dS (qg1d, a);
 }

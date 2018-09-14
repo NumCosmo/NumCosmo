@@ -116,7 +116,7 @@ enum
   PROP_FUNC_ARRAY,
 };
 
-G_DEFINE_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmFitESMCMC));
 
 static gpointer _ncm_fit_esmcmc_worker_dup (gpointer userdata);
 static void _ncm_fit_esmcmc_worker_free (gpointer p);
@@ -474,8 +474,6 @@ static void
 ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcmFitESMCMCPrivate));
 
   object_class->constructed  = &_ncm_fit_esmcmc_constructed;
   object_class->set_property = &_ncm_fit_esmcmc_set_property;

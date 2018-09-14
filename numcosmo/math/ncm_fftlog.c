@@ -274,9 +274,9 @@ _ncm_fftlog_finalize (GObject *object)
   NcmFftlog *fftlog = NCM_FFTLOG (object);
   _ncm_fftlog_free_all (fftlog);
 
-  g_clear_pointer (&fftlog->Gr_vec, (GDestroyNotify)g_ptr_array_unref);
-  g_clear_pointer (&fftlog->Gr_s, (GDestroyNotify)g_ptr_array_unref);
-  g_clear_pointer (&fftlog->Ym, (GDestroyNotify)g_ptr_array_unref);
+  g_clear_pointer (&fftlog->Gr_vec, g_ptr_array_unref);
+  g_clear_pointer (&fftlog->Gr_s,   g_ptr_array_unref);
+  g_clear_pointer (&fftlog->Ym,     g_ptr_array_unref);
   
 #endif /* NUMCOSMO_HAVE_FFTW3 */
   
