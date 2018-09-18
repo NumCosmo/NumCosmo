@@ -47,7 +47,7 @@ struct _NcGalaxyRedshiftPrivate
 	gint placeholder;
 };
 
-G_DEFINE_TYPE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT, G_ADD_PRIVATE (NcGalaxyRedshift));
 
 static void
 nc_galaxy_redshift_init (NcGalaxyRedshift *gz)
@@ -77,8 +77,6 @@ static void
 nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcGalaxyRedshiftPrivate));
 
 	object_class->finalize = &_nc_galaxy_redshift_finalize;
 

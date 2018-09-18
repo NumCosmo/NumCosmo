@@ -93,7 +93,7 @@ struct _NcCBEPrivate
 	struct output pop;
 };
 
-G_DEFINE_TYPE (NcCBE, nc_cbe, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcCBE, nc_cbe, G_TYPE_OBJECT, G_ADD_PRIVATE (NcCBE));
 
 static void
 nc_cbe_init (NcCBE *cbe)
@@ -549,8 +549,6 @@ static void
 nc_cbe_class_init (NcCBEClass* klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcCBEPrivate));
 
 	object_class->set_property = &_nc_cbe_set_property;
 	object_class->get_property = &_nc_cbe_get_property;

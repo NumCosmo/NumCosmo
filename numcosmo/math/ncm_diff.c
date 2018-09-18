@@ -70,7 +70,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmDiff, ncm_diff, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE (NcmDiff, ncm_diff, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmDiff));
 
 static void
 ncm_diff_init (NcmDiff *diff)
@@ -181,8 +181,6 @@ static void
 ncm_diff_class_init (NcmDiffClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmDiffPrivate));
 
   object_class->set_property = &_ncm_diff_set_property;
   object_class->get_property = &_ncm_diff_get_property;

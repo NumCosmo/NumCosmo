@@ -62,7 +62,7 @@ enum
 	PROP_VECTOR
 };
 
-G_DEFINE_TYPE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_CODE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB, G_ADD_PRIVATE (NcmMPIJobTest));
 
 static void
 ncm_mpi_job_test_init (NcmMPIJobTest *mjt)
@@ -163,8 +163,6 @@ ncm_mpi_job_test_class_init (NcmMPIJobTestClass *klass)
 {
 	GObjectClass* object_class    = G_OBJECT_CLASS (klass);
 	NcmMPIJobClass *mpi_job_class = NCM_MPI_JOB_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcmMPIJobTestPrivate));
 
 	object_class->set_property = &_ncm_mpi_job_test_set_property;
 	object_class->get_property = &_ncm_mpi_job_test_get_property;

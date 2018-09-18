@@ -56,7 +56,7 @@ enum
   PROP_USERFREE,
 };
 
-G_DEFINE_TYPE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEGRAL1D);
+G_DEFINE_TYPE_WITH_CODE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEGRAL1D, G_ADD_PRIVATE (NcmIntegral1dPtr));
 
 static void
 ncm_integral1d_ptr_init (NcmIntegral1dPtr *int1d_ptr)
@@ -128,8 +128,6 @@ ncm_integral1d_ptr_class_init (NcmIntegral1dPtrClass *klass)
 {
   GObjectClass* object_class      = G_OBJECT_CLASS (klass);
   NcmIntegral1dClass *int1d_class = NCM_INTEGRAL1D_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmIntegral1dPtrPrivate));
 
   object_class->set_property = &_ncm_integral1d_ptr_set_property;
   object_class->get_property = &_ncm_integral1d_ptr_get_property;

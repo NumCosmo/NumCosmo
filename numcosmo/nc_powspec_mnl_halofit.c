@@ -89,7 +89,7 @@ enum
   PROP_PKEQUAL,
 };
 
-G_DEFINE_TYPE (NcPowspecMNLHaloFit, nc_powspec_mnl_halofit, NC_TYPE_POWSPEC_MNL);
+G_DEFINE_TYPE_WITH_CODE (NcPowspecMNLHaloFit, nc_powspec_mnl_halofit, NC_TYPE_POWSPEC_MNL, G_ADD_PRIVATE (NcPowspecMNLHaloFit));
 
 static void
 nc_powspec_mnl_halofit_init (NcPowspecMNLHaloFit* pshf)
@@ -234,8 +234,6 @@ nc_powspec_mnl_halofit_class_init (NcPowspecMNLHaloFitClass* klass)
 	object_class->constructed = &_nc_powspec_mnl_halofit_constructed;
 	object_class->dispose = &_nc_powspec_mnl_halofit_dispose;
 	object_class->finalize = &_nc_powspec_mnl_halofit_finalize;
-
-	g_type_class_add_private (klass, sizeof (NcPowspecMNLHaloFitPrivate));
 
 	g_object_class_install_property (object_class,
 	                                 PROP_PSML,

@@ -66,13 +66,6 @@
 static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
 static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (NcHICosmoVexp, nc_hicosmo_Vexp, NC_TYPE_HICOSMO,
-                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
-                                                nc_hipert_iadiab_interface_init)
-                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
-                                                nc_hipert_igw_interface_init)
-                         );
-
 struct _NcHICosmoVexpPrivate
 {
   gpointer cvode_qt;
@@ -113,6 +106,14 @@ struct _NcHICosmoVexpPrivate
   NcmSpline *lnqe_tau;
   NcmSpline *phi_tau;
 };
+
+G_DEFINE_TYPE_WITH_CODE (NcHICosmoVexp, nc_hicosmo_Vexp, NC_TYPE_HICOSMO,
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
+                                                nc_hipert_iadiab_interface_init)
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
+                                                nc_hipert_igw_interface_init)
+                         G_ADD_PRIVATE (NcHICosmoVexp)
+                         );
 
 enum {
   PROP_0,
@@ -371,8 +372,6 @@ nc_hicosmo_Vexp_class_init (NcHICosmoVexpClass *klass)
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHICosmoVexpPrivate));
   
   object_class->dispose      = &_nc_hicosmo_Vexp_dispose;
   object_class->finalize     = &_nc_hicosmo_Vexp_finalize;
