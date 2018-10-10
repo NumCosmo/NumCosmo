@@ -108,6 +108,9 @@ main (gint argc, gchar *argv[])
   gchar **funcs_pvalue   = NULL;
   gchar **visual_hw      = NULL;
   gchar **dump_param     = NULL;
+  gchar **pprob_gt       = NULL;
+  gchar **pprob_lt       = NULL;
+  NcmRNG *rng;
   guint i;
   
   GError *error = NULL;
@@ -140,6 +143,8 @@ main (gint argc, gchar *argv[])
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
+    { "pprob-gt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_gt,       "Print the posterior probability of param > value.", NULL },
+    { "pprob-lt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_lt,       "Print the posterior probability of param < value.", NULL },
     { "dist-tab",       'W', 0, G_OPTION_ARG_STRING_ARRAY, &dist_tab,       "Print a table with functions values for reach catalog point.", NULL },
     { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,      "Print the points to the visual HW test.", NULL },
     { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved, if --dump-param not specified dump all columns.", NULL },
@@ -162,6 +167,8 @@ main (gint argc, gchar *argv[])
     g_print ("option parsing failed: %s\n", error->message);
     exit (1);
   }
+
+  rng = ncm_rng_new (NULL);
 
   if (list_hicosmo || list_all)
   {
@@ -275,6 +282,9 @@ main (gint argc, gchar *argv[])
       const gdouble be     = ncm_mset_catalog_get_post_lnnorm (mcat);
       const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (mcat, gsl_cdf_chisq_P (1.0, 1.0), &glnvol);
 
+      /*gdouble var_lnnorm;*/
+      /*ncm_mset_catalog_get_post_lnnorm_bootstrap (mcat, rng, &var_lnnorm);*/
+      
       ncm_cfg_msg_sepa ();
       g_message ("# Bayesian evidence:                                 % 22.15g\n", be);
       g_message ("# 1 sigma posterior volume:                          % 22.15g\n", lnevol);
@@ -860,7 +870,7 @@ main (gint argc, gchar *argv[])
             glong add_param = strtol (name, &end_ptr, 10);
             ncm_message ("# Parameter `%s'| best fit | 1l 1u | 2l 2u | 3l 3u\n", name);
 
-            if (pi == NULL && (bestfit_errors[i] == end_ptr))
+            if (pi == NULL && (name == end_ptr))
             {
               g_warning ("# Parameter `%s' not found, skipping...\n", name);
               continue;
@@ -986,6 +996,151 @@ main (gint argc, gchar *argv[])
       nc_distance_clear (&dist);
     }
 
+    /*********************************************************************************************************
+     * 
+     * Posterior probability
+     * 
+     *********************************************************************************************************/
+    if ((pprob_gt != NULL) || (pprob_lt != NULL))
+    {
+      const guint nparam_gt = (pprob_gt != NULL) ? g_strv_length (pprob_gt) : 0;
+      const guint nparam_lt = (pprob_lt != NULL) ? g_strv_length (pprob_lt) : 0;
+      GArray *gt_index      = g_array_new (FALSE, FALSE, sizeof (guint));
+      GArray *lt_index      = g_array_new (FALSE, FALSE, sizeof (guint));
+      GArray *gt_val        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      GArray *lt_val        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+      for (i = 0; i < nparam_gt; i++)
+      {
+        gchar **name_val = g_strsplit (pprob_gt[i], "=", 2);
+        guint n_name_val = g_strv_length (name_val);
+
+        if (n_name_val != 2)
+          g_error ("pprob: invalid string `%s'.", pprob_gt[i]);
+        else
+        {
+          gchar *name   = g_strstrip (name_val[0]);
+          gchar *val    = g_strstrip (name_val[1]);
+          gchar *endptr = NULL;
+          gdouble lb    = g_ascii_strtod (val, &endptr);
+
+          if (endptr == val)
+          {
+            g_error ("pprob: convertion to double failed for string `%s'", val);
+          }
+          else
+          {
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            gchar *end_ptr = NULL;
+            glong add_param = strtol (name, &end_ptr, 10);
+            glong pindex;
+
+            if (pi == NULL && (name == end_ptr))
+            {
+              g_warning ("# Parameter `%s' not found, skipping...\n", name);
+              continue;
+            }
+
+            if (pi != NULL)
+              pindex = ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + ncm_mset_catalog_nadd_vals (mcat);
+            else
+              pindex = add_param;
+
+            g_array_append_val (gt_index, pindex);
+            g_array_append_val (gt_val,   lb);
+          }
+        }
+      }
+      for (i = 0; i < nparam_lt; i++)
+      {
+        gchar **name_val = g_strsplit (pprob_lt[i], "=", 2);
+        guint n_name_val = g_strv_length (name_val);
+
+        if (n_name_val != 2)
+          g_error ("pprob: invalid string `%s'.", pprob_lt[i]);
+        else
+        {
+          gchar *name   = g_strstrip (name_val[0]);
+          gchar *val    = g_strstrip (name_val[1]);
+          gchar *endptr = NULL;
+          gdouble ub    = g_ascii_strtod (val, &endptr);
+
+          if (endptr == val)
+          {
+            g_error ("pprob: convertion to double failed for string `%s'", val);
+          }
+          else
+          {
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            gchar *end_ptr = NULL;
+            glong add_param = strtol (name, &end_ptr, 10);
+            glong pindex;
+
+            if (pi == NULL && (name == end_ptr))
+            {
+              g_warning ("# Parameter `%s' not found, skipping...\n", name);
+              continue;
+            }
+
+            if (pi != NULL)
+              pindex = ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + ncm_mset_catalog_nadd_vals (mcat);
+            else
+              pindex = add_param;
+
+            g_array_append_val (lt_index, pindex);
+            g_array_append_val (lt_val,   ub);
+          }
+        }
+      }
+      {
+        const guint cat_len = ncm_mset_catalog_len (mcat);
+        gulong Nin = 0;
+        guint i;
+        
+        for (i = 0; i < cat_len; i++)
+        {
+          NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+          gboolean is_in = TRUE;
+          guint j;
+
+          for (j = 0; j < lt_index->len; j++)
+          {
+            const guint pindex = g_array_index (lt_index, guint,   j);
+            const gdouble ub   = g_array_index (lt_val,   gdouble, j);
+            /*printf ("% 22.15g > % 22.15g\n", ncm_vector_get (row, pindex), ub);*/
+            
+            if (ncm_vector_get (row, pindex) > ub)
+            {
+              is_in = FALSE;
+              break;
+            }
+          }
+          if (is_in)
+          {
+            for (j = 0; j < gt_index->len; j++)
+            {
+              const guint pindex = g_array_index (gt_index, guint,   j);
+              const gdouble lb   = g_array_index (gt_val,   gdouble, j);
+              /*printf ("% 22.15g < % 22.15g\n", ncm_vector_get (row, pindex), lb);*/
+              if (ncm_vector_get (row, pindex) < lb)
+              {
+                is_in = FALSE;
+                break;
+              }
+            }
+          }
+          if (is_in)
+            Nin++;
+        }
+        {
+          const gdouble ratio = 1.0 * Nin / (1.0 * cat_len);
+          const gdouble rerr  = sqrt (ratio * (1.0 - ratio) / (1.0 * cat_len));
+          
+          g_message ("# Posterior probability: % 22.15g +/- % 12.5e.\n", ratio, rerr);
+        }
+      }
+    }
+    
     /*********************************************************************************************************
      * 
      * Visual HW test
@@ -1158,7 +1313,9 @@ main (gint argc, gchar *argv[])
     
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
-  } 
+  }
+
+  ncm_rng_clear (&rng);
 
   return 0;
 }

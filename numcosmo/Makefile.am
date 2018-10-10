@@ -115,6 +115,7 @@ ncm_sources = \
 	math/ncm_model.c                     \
 	math/ncm_model_ctrl.c                \
 	math/ncm_model_builder.c             \
+	math/ncm_model_mvnd.c                \
 	math/ncm_mset.c                      \
 	math/ncm_mset_func.c                 \
 	math/ncm_mset_func1.c                \
@@ -130,6 +131,7 @@ ncm_sources = \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
 	math/ncm_data_poisson.c              \
+	math/ncm_data_gauss_cov_mvnd.c       \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
 	math/ncm_prior.c                     \
@@ -232,6 +234,7 @@ ncm_headers =                                \
 	math/ncm_model.h                     \
 	math/ncm_model_ctrl.h                \
 	math/ncm_model_builder.h             \
+	math/ncm_model_mvnd.h                \
 	math/ncm_mset.h                      \
 	math/ncm_mset_func.h                 \
 	math/ncm_mset_func1.h                \
@@ -247,6 +250,7 @@ ncm_headers =                                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
 	math/ncm_data_poisson.h              \
+	math/ncm_data_gauss_cov_mvnd.h       \
 	math/ncm_dataset.h                   \
 	math/ncm_likelihood.h                \
 	math/ncm_mset_trans_kern.h           \

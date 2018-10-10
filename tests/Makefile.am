@@ -65,11 +65,7 @@ test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
 test_ncm_mset_catalog_SOURCES = \
-	test_ncm_mset_catalog.c   \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_mset_catalog.c
 
 test_ncm_obj_array_SOURCES = \
 	test_ncm_obj_array.c
@@ -83,18 +79,10 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.h
 
 test_ncm_fit_SOURCES = \
-	test_ncm_fit.c            \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit.c
 
 test_ncm_fit_esmcmc_SOURCES = \
-	test_ncm_fit_esmcmc.c     \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit_esmcmc.c
 
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c

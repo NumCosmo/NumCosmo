@@ -28,9 +28,6 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-#include "ncm_data_gauss_cov_mvnd.h"
-#include "ncm_model_mvnd.h"
-
 typedef struct _TestNcmMSetCatalog
 {
   gint dim;
@@ -47,6 +44,8 @@ void test_ncm_mset_catalog_free (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_mean (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata);
 
@@ -70,6 +69,16 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/catalog/norma", TestNcmMSetCatalog, NULL,
               &test_ncm_mset_catalog_new,
               &test_ncm_mset_catalog_norma,
+              &test_ncm_mset_catalog_free);
+  
+  g_test_add ("/ncm/mset/catalog/norma/bound", TestNcmMSetCatalog, NULL,
+              &test_ncm_mset_catalog_new,
+              &test_ncm_mset_catalog_norma_bound,
+              &test_ncm_mset_catalog_free);
+
+  g_test_add ("/ncm/mset/catalog/norma/unif", TestNcmMSetCatalog, NULL,
+              &test_ncm_mset_catalog_new,
+              &test_ncm_mset_catalog_norma_unif,
               &test_ncm_mset_catalog_free);
   
   g_test_add ("/ncm/mset/catalog/vol", TestNcmMSetCatalog, NULL,
@@ -232,19 +241,119 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (100000, 1000000);
+  gdouble ratio;
+  gulong N, Nin;
   gint i;
-
+  
+  N = Nin = 0;
+  ratio = 0.0;
   for (i = 0; i < nt; i++)
   {
     gdouble m2lnL = 0.0;
+    gulong Ni;
 
-    ncm_data_resample (data, mset, test->rng);
+    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
+    N += Ni;
+
     ncm_data_m2lnL_val (data, mset, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+  }
+  
+  while (TRUE)
+  {
+    gdouble err_rel;
+    gulong Ni;
+    
+    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
+    N += Ni;
+    i++;
+
+    ratio   = i * 1.0 / (1.0 * N);
+    err_rel = sqrt ((1.0 - ratio) / (N * ratio));
+
+    if (err_rel < 1.0e-3)
+      break;
+  }
+
+  /*printf ("<% 22.15g % 22.15g % 22.15e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (ratio), expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (ratio)), test->dim);*/
+  
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (ratio), 0.2, 1.0e-3);
+}
+
+void
+test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  NcmData *data        = NCM_DATA (test->data_mvnd);
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (100000, 1000000);
+  gdouble ratio;
+  gulong N, Nin;
+  gulong i;
+
+  for (i = 0; i < test->dim; i++)
+  {
+    ncm_model_param_set_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i, ncm_model_param_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i) * 1.05);
+  }
+  
+  N = Nin = 0;
+  ratio = 0.0;
+  for (i = 0; i < nt; i++)
+  {
+    gdouble m2lnL = 0.0;
+    gulong Ni;
+
+    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
+    N += Ni;
+
+    ncm_data_m2lnL_val (data, mset, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+  }
+
+  ratio = ncm_data_gauss_cov_mvnd_est_ratio (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, &N, &i, 1.0e-3, test->rng);
+
+  /*printf ("<% 22.15g % 22.15g % 12.5e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (ratio), fabs (expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (ratio))), test->dim);*/
+
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (ratio), 0.2, 1.0e-3);
+}
+
+void
+test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (100000, 1000000);
+  gdouble norma        = 1.0;
+  gulong i;
+
+  for (i = 0; i < test->dim; i++)
+  {
+    ncm_model_param_set_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i, ncm_model_param_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i) * 1.05);
+    {
+      const gdouble ub = ncm_model_param_get_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i);
+      const gdouble lb = ncm_model_param_get_lower_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i);
+      norma *= (ub - lb);
+    }
+  }
+  
+  for (i = 0; i < nt; i++)
+  {
+    gdouble m2lnL = 0.0;
+    guint j;
+
+    for (j = 0; j < test->dim; j++)
+    {
+      const gdouble ub = ncm_model_param_get_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), j);
+      const gdouble lb = ncm_model_param_get_lower_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), j);
+      ncm_vector_set (cov->y, j, ncm_rng_uniform_gen (test->rng, lb, ub));
+    }
 
     ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
   }
 
-  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (test->mcat) / test->dim), <, 0.5);
+  /*printf ("<% 22.15g % 22.15g % 12.5e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (norma), fabs (expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (norma))), test->dim);*/
+
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (norma), 0.2, 0.0);
 }
 
 void

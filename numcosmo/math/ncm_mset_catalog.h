@@ -87,6 +87,23 @@ typedef enum _NcmMSetCatalogTrimType
 } NcmMSetCatalogTrimType;
 
 /**
+ * NcmMSetCatalogPostNormMethod:
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in elipsoids.
+ * 
+ * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
+ * 
+ */
+typedef enum _NcmMSetCatalogPostNormMethod
+{
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX = 0,
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID,
+  /* < private > */
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_LEN, /*< skip >*/
+} NcmMSetCatalogPostNormMethod;
+
+/**
  * NcmMSetCatalogTauMethod:
  * @NCM_MSET_CATALOG_TAU_METHOD_ACOR: uses the autocorrelation to estimate $\tau$.
  * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an autoregressive model fitting to estimate $\tau$.
@@ -184,6 +201,7 @@ NcmVector *ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t);
 NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
 gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat);
+gdouble ncm_mset_catalog_get_post_lnnorm_bootstrap (NcmMSetCatalog *mcat, NcmRNG *rng, gdouble *var_lnnorm);
 gdouble ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
