@@ -61,6 +61,7 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
+  - cat config.log
   - make
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi

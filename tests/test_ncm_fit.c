@@ -28,9 +28,6 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-#include "ncm_data_gauss_cov_mvnd.h"
-#include "ncm_model_mvnd.h"
-
 typedef struct _TestNcmFit
 {
   NcmFit *fit;
