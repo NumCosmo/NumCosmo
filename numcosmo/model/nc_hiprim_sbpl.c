@@ -80,7 +80,7 @@ nc_hiprim_sbpl_class_init (NcHIPrimSBPLClass *klass)
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_LN10E10ASA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set N_SA param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_N_SA, "n_{SA}", "n_SA",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_N_SA, "n_{\\mathrm{SA}}", "n_SA",
                               0.5, 1.5, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_N_SA,
                               NCM_PARAM_TYPE_FIXED);
@@ -90,12 +90,12 @@ nc_hiprim_sbpl_class_init (NcHIPrimSBPLClass *klass)
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lambdac param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_RA, "R_A", "RA",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_RA, "R_\\mathrm{A}", "RA",
                               0.0, 4.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_RA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_LNKB, "\\ln(k_b)", "lnkb",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_LNKB, "\\ln(k_\\mathrm{b})", "lnkb",
                               -12.0, -3.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_LNKB,
                               NCM_PARAM_TYPE_FIXED);
@@ -105,12 +105,12 @@ nc_hiprim_sbpl_class_init (NcHIPrimSBPLClass *klass)
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_LAMBDA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set T_SA_ratio param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_T_SA_RATIO, "A_T/A_{\\mathrm{SA}}", "T_SA_ratio",
                               0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
   /* Set N_T param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_N_T, "n_{T}", "n_T",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_SBPL_N_T, "n_{\\mathrm{T}}", "n_T",
                               -0.5, 0.5, 1.0e-2,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_SBPL_DEFAULT_N_T,
                               NCM_PARAM_TYPE_FIXED);

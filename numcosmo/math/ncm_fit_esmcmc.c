@@ -1717,7 +1717,7 @@ void
 ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
-  gdouble lerror;
+  gdouble lerror, post_lnnorm_sd;
   const gdouble lre2 = lre * lre;
   const guint catlen = ncm_mset_catalog_len (self->mcat) / self->nwalkers;
 
@@ -1758,7 +1758,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
       gdouble glnvol;
       const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (self->mcat, 0.6827, &glnvol);
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
-      g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (self->mcat));
+      g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (self->mcat, &post_lnnorm_sd));
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
 

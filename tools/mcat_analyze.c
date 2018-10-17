@@ -278,15 +278,15 @@ main (gint argc, gchar *argv[])
 
     if (evidence)
     {
-      gdouble glnvol;
-      const gdouble be     = ncm_mset_catalog_get_post_lnnorm (mcat);
+      gdouble glnvol, post_lnnorm_sd;
+      const gdouble be     = ncm_mset_catalog_get_post_lnnorm (mcat, &post_lnnorm_sd);
       const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (mcat, gsl_cdf_chisq_P (1.0, 1.0), &glnvol);
 
       /*gdouble var_lnnorm;*/
       /*ncm_mset_catalog_get_post_lnnorm_bootstrap (mcat, rng, &var_lnnorm);*/
       
       ncm_cfg_msg_sepa ();
-      g_message ("# Bayesian evidence:                                 % 22.15g\n", be);
+      g_message ("# Bayesian evidence:                                 % 22.15g +/- % 22.15g\n", be, post_lnnorm_sd);
       g_message ("# 1 sigma posterior volume:                          % 22.15g\n", lnevol);
       g_message ("# 1 sigma posterior volume (Gaussian approximation): % 22.15g\n", glnvol);      
     }

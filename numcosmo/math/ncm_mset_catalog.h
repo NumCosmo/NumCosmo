@@ -200,8 +200,7 @@ NcmVector *ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t);
 NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
-gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat);
-gdouble ncm_mset_catalog_get_post_lnnorm_bootstrap (NcmMSetCatalog *mcat, NcmRNG *rng, gdouble *var_lnnorm);
+gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd);
 gdouble ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
@@ -228,6 +227,7 @@ void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmM
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
 void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc);
+guint ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file);
 void ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
