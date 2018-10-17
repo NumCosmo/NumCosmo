@@ -312,6 +312,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
 {
   const gint run = test->dim * g_test_rand_int_range (1500, 2000);
   gdouble prec   = 1.0e-2;
+  gdouble lnnorm_sd;
   
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
 
@@ -319,12 +320,12 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
-  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc)) / test->dim), <, 0.2);
+  g_assert_cmpfloat (fabs (ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &lnnorm_sd) / test->dim), <, 0.2);
 
   if (FALSE)
   {
     gdouble glnvol;
-    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc)));
+    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &lnnorm_sd));
     printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (ncm_fit_esmcmc_peek_catalog (test->esmcmc), 0.6827, &glnvol));
     printf ("% 22.15g\n", glnvol);  
   }

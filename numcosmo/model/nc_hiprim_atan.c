@@ -119,7 +119,7 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   
   /* Set N_T param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_N_T, "n_\{\mathrm{T}}", "n_T",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_N_T, "n_{\\mathrm{T}}", "n_T",
                               -0.5, 0.5, 1.0e-2,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_N_T,
                               NCM_PARAM_TYPE_FIXED);

@@ -241,7 +241,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (100000, 1000000);
-  gdouble ratio;
+  gdouble ratio, lnnorm_sd;
   gulong N, Nin;
   gint i;
   
@@ -277,7 +277,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
 
   /*printf ("<% 22.15g % 22.15g % 22.15e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (ratio), expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (ratio)), test->dim);*/
   
-  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (ratio), 0.2, 1.0e-3);
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
 }
 
 void
@@ -287,7 +287,7 @@ test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (100000, 1000000);
-  gdouble ratio;
+  gdouble ratio, lnnorm_sd;
   gulong N, Nin;
   gulong i;
 
@@ -314,7 +314,7 @@ test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata
 
   /*printf ("<% 22.15g % 22.15g % 12.5e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (ratio), fabs (expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (ratio))), test->dim);*/
 
-  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (ratio), 0.2, 1.0e-3);
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
 }
 
 void
@@ -324,6 +324,7 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (100000, 1000000);
   gdouble norma        = 1.0;
+  gdouble lnnorm_sd;
   gulong i;
 
   for (i = 0; i < test->dim; i++)
@@ -353,7 +354,7 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
 
   /*printf ("<% 22.15g % 22.15g % 12.5e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (norma), fabs (expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (norma))), test->dim);*/
 
-  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat), ==, log (norma), 0.2, 0.0);
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (norma), 0.2, 0.0);
 }
 
 void
@@ -363,7 +364,7 @@ test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (100000, 1000000);
-  gdouble glnvol;
+  gdouble glnvol, lnnorm_sd;
   gint i;
 
   for (i = 0; i < nt; i++)
@@ -383,7 +384,7 @@ test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
 
   if (FALSE)
   {
-    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->mcat));
+    printf ("# DIM %d LNNORMA = % 22.15g\n", test->dim, ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd));
     printf ("# DIM %d VOL1SIG = % 22.15g ", test->dim, ncm_mset_catalog_get_post_lnvol (test->mcat, 0.6827, &glnvol));
     printf ("% 22.15g\n", glnvol);  
   }
