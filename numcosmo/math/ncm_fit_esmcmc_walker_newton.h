@@ -1,12 +1,12 @@
 /***************************************************************************
- *            ncm_fit_esmcmc_walker_newton.h
+ *            ncm_fit_esmcmc_walker_aps.h
  *
  *  Sat October 27 13:08:34 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * ncm_fit_esmcmc_walker_newton.h
+ * ncm_fit_esmcmc_walker_aps.h
  * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -23,8 +23,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NCM_FIT_ESMCMC_WALKER_NEWTON_H_
-#define _NCM_FIT_ESMCMC_WALKER_NEWTON_H_
+#ifndef _NCM_FIT_ESMCMC_WALKER_APS_H_
+#define _NCM_FIT_ESMCMC_WALKER_APS_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -35,40 +35,40 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON             (ncm_fit_esmcmc_walker_newton_get_type ())
-#define NCM_FIT_ESMCMC_WALKER_NEWTON(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON, NcmFitESMCMCWalkerNewton))
-#define NCM_FIT_ESMCMC_WALKER_NEWTON_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON, NcmFitESMCMCWalkerNewtonClass))
-#define NCM_IS_FIT_ESMCMC_WALKER_NEWTON(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON))
-#define NCM_IS_FIT_ESMCMC_WALKER_NEWTON_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON))
-#define NCM_FIT_ESMCMC_WALKER_NEWTON_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON, NcmFitESMCMCWalkerNewtonClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER_APS             (ncm_fit_esmcmc_walker_aps_get_type ())
+#define NCM_FIT_ESMCMC_WALKER_APS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APS, NcmFitESMCMCWalkerAPS))
+#define NCM_FIT_ESMCMC_WALKER_APS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APS, NcmFitESMCMCWalkerAPSClass))
+#define NCM_IS_FIT_ESMCMC_WALKER_APS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APS))
+#define NCM_IS_FIT_ESMCMC_WALKER_APS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APS))
+#define NCM_FIT_ESMCMC_WALKER_APS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APS, NcmFitESMCMCWalkerAPSClass))
 
-typedef struct _NcmFitESMCMCWalkerNewtonClass NcmFitESMCMCWalkerNewtonClass;
-typedef struct _NcmFitESMCMCWalkerNewton NcmFitESMCMCWalkerNewton;
-typedef struct _NcmFitESMCMCWalkerNewtonPrivate NcmFitESMCMCWalkerNewtonPrivate;
+typedef struct _NcmFitESMCMCWalkerAPSClass NcmFitESMCMCWalkerAPSClass;
+typedef struct _NcmFitESMCMCWalkerAPS NcmFitESMCMCWalkerAPS;
+typedef struct _NcmFitESMCMCWalkerAPSPrivate NcmFitESMCMCWalkerAPSPrivate;
 
-struct _NcmFitESMCMCWalkerNewtonClass
+struct _NcmFitESMCMCWalkerAPSClass
 {
   /*< private >*/
   NcmFitESMCMCWalkerClass parent_class;
 };
 
-struct _NcmFitESMCMCWalkerNewton
+struct _NcmFitESMCMCWalkerAPS
 {
   /*< private >*/
   NcmFitESMCMCWalker parent_instance;
-  NcmFitESMCMCWalkerNewtonPrivate *priv;
+  NcmFitESMCMCWalkerAPSPrivate *priv;
 };
 
-GType ncm_fit_esmcmc_walker_newton_get_type (void) G_GNUC_CONST;
+GType ncm_fit_esmcmc_walker_aps_get_type (void) G_GNUC_CONST;
 
-NcmFitESMCMCWalkerNewton *ncm_fit_esmcmc_walker_newton_new (guint nwalkers, guint nparams);
+NcmFitESMCMCWalkerAPS *ncm_fit_esmcmc_walker_aps_new (guint nwalkers, guint nparams);
 
-void ncm_fit_esmcmc_walker_newton_set_G (NcmFitESMCMCWalkerNewton *newton, const gdouble G);
-gdouble ncm_fit_esmcmc_walker_newton_get_G (NcmFitESMCMCWalkerNewton *newton);
+void ncm_fit_esmcmc_walker_aps_set_G (NcmFitESMCMCWalkerAPS *aps, const gdouble G);
+gdouble ncm_fit_esmcmc_walker_aps_get_G (NcmFitESMCMCWalkerAPS *aps);
 
-void ncm_fit_esmcmc_walker_newton_set_box (NcmFitESMCMCWalkerNewton *newton, guint n, const gdouble lb, const gdouble ub);
-void ncm_fit_esmcmc_walker_newton_set_box_mset (NcmFitESMCMCWalkerNewton *newton, NcmMSet *mset);
+void ncm_fit_esmcmc_walker_aps_set_box (NcmFitESMCMCWalkerAPS *aps, guint n, const gdouble lb, const gdouble ub);
+void ncm_fit_esmcmc_walker_aps_set_box_mset (NcmFitESMCMCWalkerAPS *aps, NcmMSet *mset);
 
 G_END_DECLS
 
-#endif /* _NCM_FIT_ESMCMC_WALKER_NEWTON_H_ */
+#endif /* _NCM_FIT_ESMCMC_WALKER_APS_H_ */

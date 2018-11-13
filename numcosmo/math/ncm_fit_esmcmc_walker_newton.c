@@ -1,12 +1,12 @@
 /***************************************************************************
- *            ncm_fit_esmcmc_walker_newton.c
+ *            ncm_fit_esmcmc_walker_aps.c
  *
  *  Sat October 27 13:08:13 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * ncm_fit_esmcmc_walker_newton.c
+ * ncm_fit_esmcmc_walker_aps.c
  * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc_walker_newton
- * @title: NcmFitESMCMCWalkerNewton
- * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - newton move.
+ * SECTION:ncm_fit_esmcmc_walker_aps
+ * @title: NcmFitESMCMCWalkerAPS
+ * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - aps move.
  *
- * Implementing newton move walker for #NcmFitESMCMC (affine invariant).
+ * Implementing aps move walker for #NcmFitESMCMC (affine invariant).
  * 
  */
 
@@ -38,110 +38,51 @@
 #include "build_cfg.h"
 
 #include "math/ncm_fit_esmcmc_walker.h"
-#include "math/ncm_fit_esmcmc_walker_newton.h"
+#include "math/ncm_fit_esmcmc_walker_aps.h"
 
 #include "math/ncm_fit_esmcmc.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <cvodes/cvodes.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#include <cvodes/cvodes_band.h>
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h> 
-#endif
-#include <nvector/nvector_serial.h> 
-
-#if HAVE_SUNDIALS_MAJOR == 3
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
-#endif 
-
-#include <sundials/sundials_types.h> 
-
-#include <gsl/gsl_linalg.h>
-#endif /* NUMCOSMO_GIR_SCAN */
+#include "math/ncm_stats_dist_nd_gauss.h"
 
 enum
 {
   PROP_0,
-  PROP_GCONST,
 };
 
-struct _NcmFitESMCMCWalkerNewtonPrivate
+struct _NcmFitESMCMCWalkerAPSPrivate
 {
   guint size;
   guint size_2;
   guint nparams;
-  gdouble G;
-  NcmMatrix *box;
   NcmVector *norm_box;
-  GArray *use_box;
-  GArray *indices;
-  GArray *numbers;
   gchar *desc;
-  NcmVector *mass;
-  NcmMatrix *Xij;
-  NcmMatrix *vel_norm;
-  NcmStatsVec *walker_stats;
-  N_Vector y;
-  gpointer cvode;
-  gboolean cvode_init;
-#if HAVE_SUNDIALS_MAJOR == 3
-  SUNMatrix A;
-  SUNLinearSolver LS;
-#endif
+  NcmStatsDistNdKDEGauss dndg0;
+  NcmStatsDistNdKDEGauss dndg1;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmFitESMCMCWalkerNewton, ncm_fit_esmcmc_walker_newton, NCM_TYPE_FIT_ESMCMC_WALKER, G_ADD_PRIVATE (NcmFitESMCMCWalkerNewton));
-
-#define _G (1.0e2)
-#define _NF (1.0)
-#define _EPSILON (1.0e-2)
-#define MAX_TIME (1.0)
+G_DEFINE_TYPE_WITH_CODE (NcmFitESMCMCWalkerAPS, ncm_fit_esmcmc_walker_aps, NCM_TYPE_FIT_ESMCMC_WALKER, G_ADD_PRIVATE (NcmFitESMCMCWalkerAPS));
 
 static void
-ncm_fit_esmcmc_walker_newton_init (NcmFitESMCMCWalkerNewton *newton)
+ncm_fit_esmcmc_walker_aps_init (NcmFitESMCMCWalkerAPS *aps)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv = G_TYPE_INSTANCE_GET_PRIVATE (newton, NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON, NcmFitESMCMCWalkerNewtonPrivate);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv = G_TYPE_INSTANCE_GET_PRIVATE (aps, NCM_TYPE_FIT_ESMCMC_WALKER_APS, NcmFitESMCMCWalkerAPSPrivate);
 
-  self->size         = 0;
-  self->size_2       = 0;
-  self->nparams      = 0;
-  self->G            = 0.0;
-  self->box          = NULL;
-  self->norm_box     = NULL;
-  self->use_box      = g_array_new (TRUE, TRUE, sizeof (gboolean));
-  self->indices      = g_array_new (TRUE, TRUE, sizeof (guint));
-  self->numbers      = g_array_new (TRUE, TRUE, sizeof (guint));
-  self->desc         = "Newton-Move";
-  self->mass         = NULL;
-  self->Xij          = NULL;
-  self->vel_norm     = NULL;
-  self->walker_stats = NULL;
-  self->y            = NULL;
-  self->cvode        = NULL;
-  self->cvode_init   = FALSE;
-
-#if HAVE_SUNDIALS_MAJOR == 3
-  self->A            = NULL;
-  self->LS           = NULL;
-#endif  
+  self->size     = 0;
+  self->size_2   = 0;
+  self->nparams  = 0;
+  self->norm_box = NULL;
+  self->desc     = "APS-Move";
+  self->dndg0    = NULL:
+  self->dndg1    = NULL:
 }
 
 static void
-_ncm_fit_esmcmc_walker_newton_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_fit_esmcmc_walker_aps_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (object);
-  g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_NEWTON (object));
+  /*NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (object);*/
+  g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_APS (object));
 
   switch (prop_id)
   {
-    case PROP_GCONST:
-      ncm_fit_esmcmc_walker_newton_set_G (newton, g_value_get_double (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -149,16 +90,13 @@ _ncm_fit_esmcmc_walker_newton_set_property (GObject *object, guint prop_id, cons
 }
 
 static void
-_ncm_fit_esmcmc_walker_newton_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_fit_esmcmc_walker_aps_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (object);
-  g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_NEWTON (object));
+  /*NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (object);*/
+  g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_APS (object));
 
   switch (prop_id)
   {
-    case PROP_GCONST:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_newton_get_G (newton));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -166,109 +104,77 @@ _ncm_fit_esmcmc_walker_newton_get_property (GObject *object, guint prop_id, GVal
 }
 
 static void
-_ncm_fit_esmcmc_walker_newton_dispose (GObject *object)
+_ncm_fit_esmcmc_walker_aps_dispose (GObject *object)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (object);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (object);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
-  ncm_stats_vec_clear (&self->walker_stats);
-
   ncm_vector_clear (&self->norm_box);
-  ncm_vector_clear (&self->mass);
-  ncm_matrix_clear (&self->vel_norm);
-  ncm_matrix_clear (&self->Xij);
-  ncm_matrix_clear (&self->box);
-
-  g_clear_pointer (&self->use_box, g_array_unref);
-  g_clear_pointer (&self->indices, g_array_unref);
-  g_clear_pointer (&self->numbers, g_array_unref);
+  ncm_stats_dist_nd_kde_gauss_clear (self->dndg0);
+  ncm_stats_dist_nd_kde_gauss_clear (self->dndg1);
 
   /* Chain up : end */
-  G_OBJECT_CLASS (ncm_fit_esmcmc_walker_newton_parent_class)->dispose (object);
+  G_OBJECT_CLASS (ncm_fit_esmcmc_walker_aps_parent_class)->dispose (object);
 }
 
 static void
-_ncm_fit_esmcmc_walker_newton_finalize (GObject *object)
+_ncm_fit_esmcmc_walker_aps_finalize (GObject *object)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (object);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
-
-  if (self->cvode != NULL)
-  {
-    CVodeFree (&self->cvode);
-    self->cvode = NULL;
-  }
-  if (self->y != NULL)
-  {
-    N_VDestroy (self->y);
-    self->y = NULL;
-  }
-
-#if HAVE_SUNDIALS_MAJOR == 3
-  if (self->A != NULL)
-  {
-    SUNMatDestroy (self->A);
-    self->A = NULL;
-  }
-
-  if (self->LS != NULL)
-  {
-    SUNLinSolFree (self->LS);
-    self->LS = NULL;
-  }
-#endif
+  /*NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (object);*/
+  /*NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;*/
   
   /* Chain up : end */
-  G_OBJECT_CLASS (ncm_fit_esmcmc_walker_newton_parent_class)->finalize (object);
+  G_OBJECT_CLASS (ncm_fit_esmcmc_walker_aps_parent_class)->finalize (object);
 }
 
-static void _ncm_fit_esmcmc_walker_newton_set_size (NcmFitESMCMCWalker *walker, guint size);
-static guint _ncm_fit_esmcmc_walker_newton_get_size (NcmFitESMCMCWalker *walker);
-static void _ncm_fit_esmcmc_walker_newton_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
-static guint _ncm_fit_esmcmc_walker_newton_get_nparams (NcmFitESMCMCWalker *walker);
-static void _ncm_fit_esmcmc_walker_newton_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
-static void _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
-static gdouble _ncm_fit_esmcmc_walker_newton_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
-static gdouble _ncm_fit_esmcmc_walker_newton_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
-static void _ncm_fit_esmcmc_walker_newton_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
-static const gchar *_ncm_fit_esmcmc_walker_newton_desc (NcmFitESMCMCWalker *walker);
+static void _ncm_fit_esmcmc_walker_aps_set_size (NcmFitESMCMCWalker *walker, guint size);
+static guint _ncm_fit_esmcmc_walker_aps_get_size (NcmFitESMCMCWalker *walker);
+static void _ncm_fit_esmcmc_walker_aps_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
+static guint _ncm_fit_esmcmc_walker_aps_get_nparams (NcmFitESMCMCWalker *walker);
+static void _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
+static void _ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
+static gdouble _ncm_fit_esmcmc_walker_aps_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+static gdouble _ncm_fit_esmcmc_walker_aps_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
+static void _ncm_fit_esmcmc_walker_aps_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
+static const gchar *_ncm_fit_esmcmc_walker_aps_desc (NcmFitESMCMCWalker *walker);
 
 static void
-ncm_fit_esmcmc_walker_newton_class_init (NcmFitESMCMCWalkerNewtonClass *klass)
+ncm_fit_esmcmc_walker_aps_class_init (NcmFitESMCMCWalkerAPSClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmFitESMCMCWalkerClass *walker_class = NCM_FIT_ESMCMC_WALKER_CLASS (klass);
 
-  object_class->set_property = _ncm_fit_esmcmc_walker_newton_set_property;
-  object_class->get_property = _ncm_fit_esmcmc_walker_newton_get_property;
-  object_class->dispose      = _ncm_fit_esmcmc_walker_newton_dispose;
-  object_class->finalize     = _ncm_fit_esmcmc_walker_newton_finalize;
+  object_class->set_property = _ncm_fit_esmcmc_walker_aps_set_property;
+  object_class->get_property = _ncm_fit_esmcmc_walker_aps_get_property;
+  object_class->dispose      = _ncm_fit_esmcmc_walker_aps_dispose;
+  object_class->finalize     = _ncm_fit_esmcmc_walker_aps_finalize;
 
-  g_object_class_install_property (object_class,
+/*  
+   g_object_class_install_property (object_class,
                                    PROP_GCONST,
                                    g_param_spec_double ("G",
                                                         NULL,
                                                         "`Gravitation' constant G",
                                                         1.0e-15, G_MAXDOUBLE, _G,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  walker_class->set_size    = &_ncm_fit_esmcmc_walker_newton_set_size;
-  walker_class->get_size    = &_ncm_fit_esmcmc_walker_newton_get_size;
-  walker_class->set_nparams = &_ncm_fit_esmcmc_walker_newton_set_nparams;
-  walker_class->get_nparams = &_ncm_fit_esmcmc_walker_newton_get_nparams;
-  walker_class->setup       = &_ncm_fit_esmcmc_walker_newton_setup;
-  walker_class->step        = &_ncm_fit_esmcmc_walker_newton_step;
-  walker_class->prob        = &_ncm_fit_esmcmc_walker_newton_prob;
-  walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_newton_prob_norm;
-  walker_class->clean       = &_ncm_fit_esmcmc_walker_newton_clean;
-  walker_class->desc        = &_ncm_fit_esmcmc_walker_newton_desc;
+*/  
+  walker_class->set_size    = &_ncm_fit_esmcmc_walker_aps_set_size;
+  walker_class->get_size    = &_ncm_fit_esmcmc_walker_aps_get_size;
+  walker_class->set_nparams = &_ncm_fit_esmcmc_walker_aps_set_nparams;
+  walker_class->get_nparams = &_ncm_fit_esmcmc_walker_aps_get_nparams;
+  walker_class->setup       = &_ncm_fit_esmcmc_walker_aps_setup;
+  walker_class->step        = &_ncm_fit_esmcmc_walker_aps_step;
+  walker_class->prob        = &_ncm_fit_esmcmc_walker_aps_prob;
+  walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_aps_prob_norm;
+  walker_class->clean       = &_ncm_fit_esmcmc_walker_aps_clean;
+  walker_class->desc        = &_ncm_fit_esmcmc_walker_aps_desc;
 }
 
 static void 
-_ncm_fit_esmcmc_walker_newton_set_sys (NcmFitESMCMCWalker *walker, guint size, guint nparams)
+_ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guint nparams)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   g_assert_cmpuint (size, >, 0);
   g_assert_cmpuint (nparams, >, 0);
@@ -277,123 +183,72 @@ _ncm_fit_esmcmc_walker_newton_set_sys (NcmFitESMCMCWalker *walker, guint size, g
   {
     guint i;
     
-    ncm_stats_vec_clear (&self->walker_stats);
-
+    ncm_stats_dist_nd_kde_gauss_clear (&self->dndg0);
+    ncm_stats_dist_nd_kde_gauss_clear (&self->dndg1);
     ncm_vector_clear (&self->norm_box);
-    ncm_vector_clear (&self->mass);
-    
-    ncm_matrix_clear (&self->box);
-    ncm_matrix_clear (&self->Xij);
-    ncm_matrix_clear (&self->vel_norm);
-
-    if (self->cvode != NULL)
-    {
-      CVodeFree (&self->cvode);
-      self->cvode = NULL;
-    }
-
-    if (self->y != NULL)
-    {
-      N_VDestroy (self->y);
-      self->y = NULL;
-    }
     
     g_assert (size % 2 == 0);
     self->size    = size;
     self->size_2  = size / 2;
     self->nparams = nparams;
     
-    self->walker_stats = ncm_stats_vec_new (nparams, NCM_STATS_VEC_VAR, FALSE);
-    self->norm_box     = ncm_vector_new (self->size);
-    self->mass         = ncm_vector_new (self->size_2);
-    self->box          = ncm_matrix_new (self->nparams, 2);
-    self->vel_norm     = ncm_matrix_new (self->size,   self->nparams);
-    self->Xij          = ncm_matrix_new (self->size_2, self->nparams);
-
-    g_array_set_size (self->use_box, self->nparams);
-    g_array_set_size (self->indices, self->size * self->nparams);
-    g_array_set_size (self->numbers, self->size);
-
-    for (i = 0; i < size; i++)
-      g_array_index (self->numbers, guint, i) = i;
-
-    self->y          = N_VNew_Serial (self->nparams * 2);
-    self->cvode      = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);//CVodeCreate (CV_BDF, CV_NEWTON);
-    self->cvode_init = FALSE;
-
-#if HAVE_SUNDIALS_MAJOR == 3
-    if (self->A != NULL)
-    {
-      SUNMatDestroy (self->A);
-      self->A = NULL;
-    }
-
-    if (self->LS != NULL)
-    {
-      SUNLinSolFree (self->LS);
-      self->LS = NULL;
-    }
-        
-    self->A  = SUNDenseMatrix (self->nparams * 2, self->nparams * 2);
-    self->LS = SUNDenseLinearSolver (self->y, self->A);
-
-    NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
-    NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
-#endif
+    self->norm_box = ncm_vector_new (self->size);
+    self->dndg0    = ncm_stats_dist_nd_kde_gauss_new (self->nparams);
+    self->dndg1    = ncm_stats_dist_nd_kde_gauss_new (self->nparams);
   }
 }
 
 static void 
-_ncm_fit_esmcmc_walker_newton_set_size (NcmFitESMCMCWalker *walker, guint size)
+_ncm_fit_esmcmc_walker_aps_set_size (NcmFitESMCMCWalker *walker, guint size)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   g_assert_cmpuint (size, >, 0);
   
   if (self->nparams != 0)
-    _ncm_fit_esmcmc_walker_newton_set_sys (walker, size, self->nparams);
+    _ncm_fit_esmcmc_walker_aps_set_sys (walker, size, self->nparams);
   else
     self->size = size;  
 }
 
 static guint 
-_ncm_fit_esmcmc_walker_newton_get_size (NcmFitESMCMCWalker *walker)
+_ncm_fit_esmcmc_walker_aps_get_size (NcmFitESMCMCWalker *walker)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   return self->size;
 }
 
 static void 
-_ncm_fit_esmcmc_walker_newton_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
+_ncm_fit_esmcmc_walker_aps_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   g_assert_cmpuint (nparams, >, 0);
   
   if (self->size != 0)
-    _ncm_fit_esmcmc_walker_newton_set_sys (walker, self->size, nparams);
+    _ncm_fit_esmcmc_walker_aps_set_sys (walker, self->size, nparams);
   else
     self->nparams = nparams;
 }
 
 static guint 
-_ncm_fit_esmcmc_walker_newton_get_nparams (NcmFitESMCMCWalker *walker)
+_ncm_fit_esmcmc_walker_aps_get_nparams (NcmFitESMCMCWalker *walker)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   return self->nparams;
 }
 
 static void 
-_ncm_fit_esmcmc_walker_newton_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
+_ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   /*const gdouble nf = sqrt (1.0 * self->nparams);*/
   guint k;
 
@@ -410,9 +265,9 @@ _ncm_fit_esmcmc_walker_newton_setup (NcmFitESMCMCWalker *walker, GPtrArray *thet
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_newton_theta_to_x (NcmFitESMCMCWalkerNewton *newton, guint i, const gdouble theta_i)
+_ncm_fit_esmcmc_walker_aps_theta_to_x (NcmFitESMCMCWalkerAPS *aps, guint i, const gdouble theta_i)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   const gdouble lb      = ncm_matrix_get (self->box, i, 0);
   const gdouble ub      = ncm_matrix_get (self->box, i, 1);
@@ -429,9 +284,9 @@ _ncm_fit_esmcmc_walker_newton_theta_to_x (NcmFitESMCMCWalkerNewton *newton, guin
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_newton_x_to_theta (NcmFitESMCMCWalkerNewton *newton, guint i, const gdouble x_i)
+_ncm_fit_esmcmc_walker_aps_x_to_theta (NcmFitESMCMCWalkerAPS *aps, guint i, const gdouble x_i)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   const gdouble lb     = ncm_matrix_get (self->box, i, 0);
   const gdouble ub     = ncm_matrix_get (self->box, i, 1);
@@ -442,9 +297,9 @@ _ncm_fit_esmcmc_walker_newton_x_to_theta (NcmFitESMCMCWalkerNewton *newton, guin
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_newton_norm (NcmFitESMCMCWalkerNewton *newton, guint i, const gdouble thetastar_i, const gdouble theta_i)
+_ncm_fit_esmcmc_walker_aps_norm (NcmFitESMCMCWalkerAPS *aps, guint i, const gdouble thetastar_i, const gdouble theta_i)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   const gdouble lb    = ncm_matrix_get (self->box, i, 0);
   const gdouble ub    = ncm_matrix_get (self->box, i, 1);
   const gdouble tb    = theta_i - lb;
@@ -460,9 +315,9 @@ _ncm_fit_esmcmc_walker_newton_norm (NcmFitESMCMCWalkerNewton *newton, guint i, c
 #define _VEL(i) ((i) * 2 + 1) 
 
 static gint
-_ncm_fit_esmcmc_walker_newton_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_fit_esmcmc_walker_aps_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = (NcmFitESMCMCWalkerNewtonPrivate *) f_data;
+  NcmFitESMCMCWalkerAPSPrivate * const self = (NcmFitESMCMCWalkerAPSPrivate *) f_data;
   guint i, j;
 
   for (j = 0; j < self->nparams; j++)
@@ -504,10 +359,10 @@ _ncm_fit_esmcmc_walker_newton_f (realtype x, N_Vector y, N_Vector ydot, gpointer
 }
 
 static void
-_ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
+_ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   NcmVector *theta_k      = g_ptr_array_index (theta, k);
   const gdouble m2lnL_k   = ncm_vector_get (g_ptr_array_index (m2lnL, k), 0);
   const guint subensemble = (k < self->size_2) ? self->size_2 : 0;
@@ -536,7 +391,7 @@ _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta
     for (l = 0; l < self->nparams; l++)
     {
       const gdouble theta_j_l = ncm_vector_get (theta_j, l);
-      const gdouble x_l       = g_array_index (self->use_box, gboolean, l) ? _ncm_fit_esmcmc_walker_newton_theta_to_x (newton, l, theta_j_l) : theta_j_l;
+      const gdouble x_l       = g_array_index (self->use_box, gboolean, l) ? _ncm_fit_esmcmc_walker_aps_theta_to_x (aps, l, theta_j_l) : theta_j_l;
 
       ncm_stats_vec_set (self->walker_stats, l, x_l);
     }
@@ -567,7 +422,7 @@ _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta
       guint j                 = i + subensemble;
       NcmVector *theta_j      = g_ptr_array_index (theta, j);
       const gdouble theta_j_l = ncm_vector_get (theta_j, l);
-      const gdouble x_l       = g_array_index (self->use_box, gboolean, l) ? _ncm_fit_esmcmc_walker_newton_theta_to_x (newton, l, theta_j_l) : theta_j_l;
+      const gdouble x_l       = g_array_index (self->use_box, gboolean, l) ? _ncm_fit_esmcmc_walker_aps_theta_to_x (aps, l, theta_j_l) : theta_j_l;
 
       ncm_matrix_set (self->Xij, i, l, x_l / sd_l);
     }
@@ -587,7 +442,7 @@ _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta
 */  
   if (!self->cvode_init)
   {
-    flag = CVodeInit (self->cvode, &_ncm_fit_esmcmc_walker_newton_f, 0.0, self->y);
+    flag = CVodeInit (self->cvode, &_ncm_fit_esmcmc_walker_aps_f, 0.0, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
     
     self->cvode_init = TRUE;
@@ -648,10 +503,10 @@ _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta
     if (g_array_index (self->use_box, gboolean, i))
     {
       const gdouble theta_k_i = ncm_vector_get (theta_k, i);
-      thetastar_i = _ncm_fit_esmcmc_walker_newton_x_to_theta (newton, i, x_i);
+      thetastar_i = _ncm_fit_esmcmc_walker_aps_x_to_theta (aps, i, x_i);
 
       ncm_vector_addto (self->norm_box, k, 
-                        _ncm_fit_esmcmc_walker_newton_norm (newton, i, thetastar_i, theta_k_i));
+                        _ncm_fit_esmcmc_walker_aps_norm (aps, i, thetastar_i, theta_k_i));
     }
     else
       thetastar_i = x_i;
@@ -668,95 +523,95 @@ _ncm_fit_esmcmc_walker_newton_step (NcmFitESMCMCWalker *walker, GPtrArray *theta
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_newton_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
+_ncm_fit_esmcmc_walker_aps_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   return exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (self->norm_box, k));
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_newton_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
+_ncm_fit_esmcmc_walker_aps_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
 
   return ncm_vector_get (self->norm_box, k);
 }
 
 static void 
-_ncm_fit_esmcmc_walker_newton_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf)
+_ncm_fit_esmcmc_walker_aps_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf)
 {
   /* Nothing to do. */
 }
 
 const gchar *
-_ncm_fit_esmcmc_walker_newton_desc (NcmFitESMCMCWalker *walker)
+_ncm_fit_esmcmc_walker_aps_desc (NcmFitESMCMCWalker *walker)
 {
-  NcmFitESMCMCWalkerNewton *newton = NCM_FIT_ESMCMC_WALKER_NEWTON (walker);  
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);  
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   return self->desc;
 }
 
 /**
- * ncm_fit_esmcmc_walker_newton_new:
+ * ncm_fit_esmcmc_walker_aps_new:
  * @nwalkers: number of walkers
  * @nparams: number of parameters
  * 
- * Creates a new #NcmFitESMCMCWalkerNewton to be used
+ * Creates a new #NcmFitESMCMCWalkerAPS to be used
  * with @nwalkers.
  * 
- * Returns: (transfer full): a new #NcmFitESMCMCWalkerNewton.
+ * Returns: (transfer full): a new #NcmFitESMCMCWalkerAPS.
  */
-NcmFitESMCMCWalkerNewton *
-ncm_fit_esmcmc_walker_newton_new (guint nwalkers, guint nparams)
+NcmFitESMCMCWalkerAPS *
+ncm_fit_esmcmc_walker_aps_new (guint nwalkers, guint nparams)
 {
-  NcmFitESMCMCWalkerNewton *newton = g_object_new (NCM_TYPE_FIT_ESMCMC_WALKER_NEWTON,
+  NcmFitESMCMCWalkerAPS *aps = g_object_new (NCM_TYPE_FIT_ESMCMC_WALKER_APS,
                                                      "size", nwalkers,
                                                      "nparams", nparams,
                                                      NULL);
 
-  return newton;
+  return aps;
 }
 
 /**
- * ncm_fit_esmcmc_walker_newton_set_G:
- * @newton: a #NcmFitESMCMCWalkerNewton
+ * ncm_fit_esmcmc_walker_aps_set_G:
+ * @aps: a #NcmFitESMCMCWalkerAPS
  * @G: new `gravitation' constant $G > 10^{-15}$
  * 
  * Sets the value of the `gravitation' constant $G$.
  * 
  */
 void
-ncm_fit_esmcmc_walker_newton_set_G (NcmFitESMCMCWalkerNewton *newton, const gdouble G)
+ncm_fit_esmcmc_walker_aps_set_G (NcmFitESMCMCWalkerAPS *aps, const gdouble G)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   g_assert_cmpfloat (G, >, 1.0e-15);
   self->G = G;
 }
 
 /**
- * ncm_fit_esmcmc_walker_newton_get_G:
- * @newton: a #NcmFitESMCMCWalkerNewton
+ * ncm_fit_esmcmc_walker_aps_get_G:
+ * @aps: a #NcmFitESMCMCWalkerAPS
  * 
  * Gets the value of the `gravitation' constant $G$.
  * 
  * Returns: current value of $G$.
  */
 gdouble
-ncm_fit_esmcmc_walker_newton_get_G (NcmFitESMCMCWalkerNewton *newton)
+ncm_fit_esmcmc_walker_aps_get_G (NcmFitESMCMCWalkerAPS *aps)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   return self->G;
 }
 
 /**
- * ncm_fit_esmcmc_walker_newton_set_box:
- * @newton: a #NcmFitESMCMCWalkerNewton
+ * ncm_fit_esmcmc_walker_aps_set_box:
+ * @aps: a #NcmFitESMCMCWalkerAPS
  * @n: parameter index
  * @lb: lower bound
  * @ub: upper bound
@@ -766,9 +621,9 @@ ncm_fit_esmcmc_walker_newton_get_G (NcmFitESMCMCWalkerNewton *newton)
  * 
  */
 void 
-ncm_fit_esmcmc_walker_newton_set_box (NcmFitESMCMCWalkerNewton *newton, guint n, const gdouble lb, const gdouble ub)
+ncm_fit_esmcmc_walker_aps_set_box (NcmFitESMCMCWalkerAPS *aps, guint n, const gdouble lb, const gdouble ub)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   g_assert_cmpuint (n, <, self->nparams);
   g_assert_cmpfloat (lb, <, ub);
@@ -779,8 +634,8 @@ ncm_fit_esmcmc_walker_newton_set_box (NcmFitESMCMCWalkerNewton *newton, guint n,
 }
 
 /**
- * ncm_fit_esmcmc_walker_newton_set_box_mset:
- * @newton: a #NcmFitESMCMCWalkerNewton
+ * ncm_fit_esmcmc_walker_aps_set_box_mset:
+ * @aps: a #NcmFitESMCMCWalkerAPS
  * @mset: a #NcmMSet
  * 
  * Sets box sampling for the parameters using bounds from
@@ -788,16 +643,16 @@ ncm_fit_esmcmc_walker_newton_set_box (NcmFitESMCMCWalkerNewton *newton, guint n,
  * 
  */
 void 
-ncm_fit_esmcmc_walker_newton_set_box_mset (NcmFitESMCMCWalkerNewton *newton, NcmMSet *mset)
+ncm_fit_esmcmc_walker_aps_set_box_mset (NcmFitESMCMCWalkerAPS *aps, NcmMSet *mset)
 {
-  NcmFitESMCMCWalkerNewtonPrivate * const self = newton->priv;
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   const guint fparams_len = ncm_mset_fparams_len (mset);
   guint i;
   
   g_assert_cmpuint (self->nparams, ==, fparams_len);
   for (i = 0; i < fparams_len; i++)
   {
-    ncm_fit_esmcmc_walker_newton_set_box (newton, i, 
+    ncm_fit_esmcmc_walker_aps_set_box (aps, i, 
                                           ncm_mset_fparam_get_lower_bound (mset, i),
                                           ncm_mset_fparam_get_upper_bound (mset, i));
   }  
