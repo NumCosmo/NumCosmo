@@ -269,7 +269,7 @@ ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpoi
 {
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (data_mvnd);
   NcmData *data        = NCM_DATA (data_mvnd);
-  gulong maxiter = 100000000;
+  gulong maxiter       = 100000000;
 
   N[0] = 0;
   if (bound != NULL)
@@ -348,4 +348,20 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
     *Nin = NNin;
 
   return ratio;
+}
+
+/**
+ * ncm_data_gauss_cov_mvnd_log_info:
+ * @data_mvnd: a #NcmDataGaussCovMVND
+ * 
+ * Logs mean and covariance matrix.
+ * 
+ */ 
+void 
+ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd)
+{
+  NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+
+  ncm_vector_log_vals (gcov->y,   "# NcmDataGaussCovMVND data mean: ", "% 12.5g", TRUE);
+  ncm_matrix_log_vals (gcov->cov, "# NcmDataGaussCovMVND data cov: ", "% 12.5g");
 }

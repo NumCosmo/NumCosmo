@@ -62,22 +62,7 @@
 #  include <mkl_lapack.h>
 #elif HAVE_LAPACKE
 #elif HAVE_LAPACK
-void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
-void dpotrf_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gint *info);
-void dpotri_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gint *info);
-void dpotrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gint *info);
-void dposv_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gint *info);
-
-void dsytrf_ (const gchar *uplo, gint *n, gdouble *a, gint *lda, gint *ipiv, gdouble *work, gint *lwork, gint *info);
-void dsytrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, const gint *ipiv, gdouble *b, const gint *ldb, gint *info);
-void dsysvx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint *lwork, gint *iwork, gint *info);
-void dsysvxx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
-
-void dgeev_ (const gchar *jobvl, const gchar *jobvr, gint *n, gdouble *a, gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, gint *ldvl, gdouble *vr, gint *ldvr, gdouble *work, gint *lwork, gint *info);
-void dgeevx_ (const gchar *balanc, const gchar *jobvl, const gchar *jobvr, const gchar *sense, const gint *n, gdouble *a, const gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, const gint *ldvl, gdouble *vr, const gint *ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, const gint *lwork, gint *iwork, gint *info);
-
-void dggglm_ (const gint *N, const gint *M, const gint *P, gdouble *X, const gint *LDA, gdouble *L, const gint *LDB, 
-              gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
+#include "math/ncm_flapack.h"
 #endif /* HAVE_LAPACK */
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -734,6 +719,51 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
 }
 
 /**
+ * ncm_lapack_dsyevr:
+ * @jobz: FIXME
+ * @range: FIXME
+ * @uplo: FIXME
+ * @n: FIXME
+ * @a: FIXME
+ * @lda: FIXME
+ * @vl: FIXME
+ * @vu: FIXME
+ * @il: FIXME
+ * @iu: FIXME
+ * @abstol: FIXME
+ * @m: FIXME
+ * @w: FIXME
+ * @z: FIXME
+ * @ldz: FIXME
+ * @isuppz: FIXME
+ * @work: FIXME
+ * @lwork: FIXME
+ * @iwork: FIXME
+ * @liwork: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */ 
+gint 
+ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, gdouble *work, gint lwork, gint *iwork, gint liwork)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, work, lwork, iwork, liwork);
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVR_)
+  gint info = 0;
+  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+	dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, work, &lwork, iwork, &liwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
  * ncm_lapack_dsysvx:
  * @fact: FACT is CHARACTER*1
  * Specifies whether or not the factored form of the matrix A is
@@ -889,7 +919,7 @@ gint
 ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint lwork, gint *iwork)
 {
 #if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsysvx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, equed, s, b, ldb, x, ldx, rcond, rpvgrw, berr, n_err_bnds, err_bnds_norm, err_bnds_comp, nparams, params, work, iwork);
+  lapack_int info = LAPACKE_dsysvx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, b, ldb, x, ldx, rcond, ferr, berr, work, lwork, iwork);
   return info;
 #elif defined (HAVE_LAPACK) && defined (HAVE_DSYSVX_)
   gint info = 0;

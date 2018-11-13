@@ -52,6 +52,8 @@
 #include <numcosmo/math/ncm_stats_dist1d_epdf.h>
 #include <numcosmo/math/ncm_stats_dist2d.h>
 #include <numcosmo/math/ncm_stats_dist2d_spline.h>
+#include <numcosmo/math/ncm_stats_dist_nd.h>
+#include <numcosmo/math/ncm_stats_dist_nd_kde_gauss.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -138,6 +140,7 @@
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker_stretch.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker_walk.h>
+#include <numcosmo/math/ncm_fit_esmcmc_walker_newton.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
 #include <numcosmo/math/ncm_abc.h>

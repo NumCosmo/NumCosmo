@@ -41,6 +41,9 @@ test_ncm_stats_vec_SOURCES =  \
 test_ncm_stats_dist1d_epdf_SOURCES =  \
 	test_ncm_stats_dist1d_epdf.c
 	
+test_ncm_stats_dist_nd_SOURCES =  \
+	test_ncm_stats_dist_nd.c
+	
 test_ncm_spline_SOURCES =  \
         test_ncm_spline.c
 
@@ -137,6 +140,7 @@ check_PROGRAMS =  \
 	test_ncm_matrix                 \
 	test_ncm_stats_vec              \
 	test_ncm_stats_dist1d_epdf      \
+	test_ncm_stats_dist_nd          \
 	test_ncm_spline                 \
 	test_ncm_spline2d               \
 	test_ncm_integral1d             \
@@ -209,6 +213,12 @@ test_ncm_stats_vec_LDADD = \
 	$(COVLIBS)
 
 test_ncm_stats_dist1d_epdf_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_stats_dist_nd_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

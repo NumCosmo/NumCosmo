@@ -440,6 +440,20 @@ ncm_matrix_const_new_variant (GVariant *var)
 }
 
 /**
+ * ncm_matrix_ref:
+ * @cm: a #NcmMatrix
+ *
+ * Increase the reference count of @cm by one.
+ *
+ * Returns: (transfer full): @cm
+ */
+NcmMatrix *
+ncm_matrix_ref (NcmMatrix *cm)
+{
+  return g_object_ref (cm);
+}
+
+/**
  * ncm_matrix_get_submatrix:
  * @cm: a #NcmMatrix
  * @k1: row index of the original matrix @cm
@@ -1156,6 +1170,121 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
 }
 
 /**
+ * ncm_matrix_nearPD:
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix 
+ * @cholesky_decomp: if true substitue @cm for its Cholesky decomposition
+ * 
+ * Assuming that @cm is a symmetric matrix with data on @UL 
+ * side, computes the nearest positive definite matrix
+ * in the Frobenius norm. See [Higham (2002)][XHigham2002].
+ * The iterations stop when the Cholesky decomposition is valid.
+ * 
+ * 
+ */
+void 
+ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp)
+{
+  const guint n   = ncm_matrix_ncols (cm);
+  NcmVector *eva  = ncm_vector_new (n);
+  NcmVector *diag = ncm_vector_new (n);
+  NcmMatrix *eve  = ncm_matrix_new (n, n);
+  NcmMatrix *D_S  = ncm_matrix_new (n, n);
+  NcmMatrix *R    = ncm_matrix_new (n, n);
+  GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *iwork   = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *work    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gint neva       = 0;
+  gdouble work_size;
+  gint iwork_size, ret, i, iter;
+
+  g_array_set_size (isuppz, 2 * n);
+
+  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+
+  ret = ncm_lapack_dsyevr ('V', 'V', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+                           0.0, 1.0e300, 
+                           0, 0, 0.0, 
+                           &neva, ncm_vector_data (eva), 
+                           ncm_matrix_data (eve), ncm_matrix_tda (eve), 
+                           &g_array_index (isuppz, gint, 0), 
+                           &work_size, -1, &iwork_size, -1);
+  g_assert_cmpint (ret, ==, 0);
+
+  g_array_set_size (work, work_size);
+  g_array_set_size (iwork, iwork_size);
+
+  ncm_matrix_set_zero (D_S);
+  ncm_matrix_get_diag (cm, diag);
+
+  iter = 0;
+  while (TRUE)
+  {
+    gdouble min_pos_ev = GSL_POSINF;
+    ncm_matrix_sub (cm, D_S);
+
+    ncm_matrix_memcpy (R, cm);
+
+    ret = ncm_lapack_dsyevr ('V', 'V', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+                             -1.0e300, 1.0e300, 
+                             0, 0, 0.0, 
+                             &neva, ncm_vector_data (eva), 
+                             ncm_matrix_data (eve), ncm_matrix_tda (eve), 
+                             &g_array_index (isuppz, gint, 0), 
+                             &g_array_index (work, gdouble, 0), work->len, &g_array_index (iwork, gint, 0), iwork->len);
+    g_assert_cmpint (ret, ==, 0);
+
+    if (neva == 0)
+      g_error ("ncm_matrix_nearPD: matrix is negative semi-definite.");
+
+    for (i = 0; i < neva; i++)
+    {
+      if (ncm_vector_get (eva, i) > 0.0)
+        min_pos_ev = MIN (ncm_vector_get (eva, i), min_pos_ev);
+    }
+    
+    for (i = 0; i < neva; i++)
+    {
+      if (ncm_vector_get (eva, i) < 0.0)
+        ncm_vector_set (eva, i, min_pos_ev * GSL_DBL_EPSILON);
+      ncm_matrix_mul_row (eve, i, sqrt (ncm_vector_get (eva, i)));
+    }
+
+    /*ncm_vector_log_vals (eva, "EVA: ", "% 22.15g", TRUE);*/
+    /*ncm_matrix_log_vals (eve, "EVE: ", "% 22.15g");*/
+
+    cblas_dsyrk (CblasRowMajor, (UL == 'U') ? CblasUpper : CblasLower, 
+                 CblasTrans, n, neva,
+                 1.0, ncm_matrix_data (eve), ncm_matrix_tda (eve),
+                 0.0, ncm_matrix_data (cm), ncm_matrix_tda (cm));
+
+    ncm_matrix_memcpy (D_S, cm);
+    ncm_matrix_sub (D_S, R);
+
+    ncm_matrix_set_diag (cm, diag);
+
+    ncm_matrix_memcpy (R, cm);
+    if (ncm_matrix_cholesky_decomp (R, UL) == 0)
+      break;
+    if (iter > 10000)
+      g_error ("ncm_matrix_nearPD: does not converge within 10000 iterations.");
+    
+    /*printf ("CHOLESKY: %4d, ITER %6d\n", ncm_matrix_cholesky_decomp (R, UL), iter++);*/
+    /*ncm_matrix_log_vals (cm, "NewCM: ", "% 22.15g");*/
+  }
+
+  if (cholesky_decomp)
+    ncm_matrix_memcpy (cm, R);
+  
+  g_array_unref (isuppz);
+  ncm_vector_free (eva);
+  ncm_vector_free (diag);
+  ncm_matrix_free (eve);
+  ncm_matrix_free (R);
+  ncm_matrix_free (D_S);
+}
+
+/**
  * ncm_matrix_log_vals:
  * @cm: a #NcmMatrix
  * @prefix: the prefixed text
@@ -1348,14 +1477,7 @@ ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_mi
  *
  * Returns: A constant pointer to the (@i,@j)-th element of the matrix @cm.
  */
-/**
- * ncm_matrix_ref:
- * @cm: a #NcmMatrix
- *
- * Increase the reference count of @cm by one.
- *
- * Returns: (transfer full): @cm
- */
+
 /**
  * ncm_matrix_set:
  * @cm: a #NcmMatrix

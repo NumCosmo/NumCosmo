@@ -123,6 +123,8 @@
       <xi:include href="xml/ncm_stats_dist1d_epdf.xml"/>
       <xi:include href="xml/ncm_stats_dist2d.xml"/>
       <xi:include href="xml/ncm_stats_dist2d_spline.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd_kde_gauss.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_prior.xml"/>
@@ -152,6 +154,7 @@
       <xi:include href="xml/ncm_fit_esmcmc_walker.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_stretch.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_walk.xml"/>
+      <xi:include href="xml/ncm_fit_esmcmc_walker_newton.xml"/>
       <xi:include href="xml/ncm_lh_ratio1d.xml"/>
       <xi:include href="xml/ncm_lh_ratio2d.xml"/>
       <xi:include href="xml/ncm_abc.xml"/>

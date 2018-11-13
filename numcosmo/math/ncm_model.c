@@ -949,6 +949,20 @@ ncm_model_dup (NcmModel *model, NcmSerialize *ser)
 }
 
 /**
+ * ncm_model_ref:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmModel *
+ncm_model_ref (NcmModel *model)
+{
+  return g_object_ref (model);
+}
+
+/**
  * ncm_model_free:
  * @model: a #NcmModel
  *
@@ -1316,14 +1330,6 @@ ncm_model_params_valid_bounds (NcmModel *model)
   return TRUE;
 }
 
-/**
- * ncm_model_ref:
- * @model: a #NcmModel
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
 /**
  * ncm_model_id:
  * @model: a #NcmModel

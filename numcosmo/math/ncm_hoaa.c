@@ -81,6 +81,8 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #undef HAVE_SUNDIALS_ARKODE
 
+/*#define NCM_HOAA_DEBUG_EVOL 1*/
+
 #include <nvector/nvector_serial.h>
 
 #ifndef HAVE_SUNDIALS_ARKODE

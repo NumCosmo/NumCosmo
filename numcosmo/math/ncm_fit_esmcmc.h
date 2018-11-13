@@ -92,6 +92,8 @@ gboolean ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc);
 
 gdouble ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
+gdouble ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc);
+gdouble ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc);
 
 void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);

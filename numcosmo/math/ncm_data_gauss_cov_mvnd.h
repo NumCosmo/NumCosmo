@@ -75,6 +75,8 @@ NcmVector *ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd);
 NcmVector *ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, NcmRNG *rng, gulong *N);
 gdouble ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, gulong *N, gulong *Nin, const gdouble reltol, NcmRNG *rng);
 
+void ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd);
+
 G_END_DECLS
 
 #endif /* _NCM_DATA_GAUSS_COV_MVND_H_ */
