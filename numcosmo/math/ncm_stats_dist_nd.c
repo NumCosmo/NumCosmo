@@ -138,10 +138,15 @@ ncm_stats_dist_nd_class_init (NcmStatsDistNdClass *klass)
                                                       "PDF dimension",
                                                       2, G_MAXUINT, 2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  klass->prepare = NULL;
-  klass->set_dim = NULL;
-  
+  klass->prepare           = NULL;
+  klass->prepare_interp    = NULL;
+  klass->set_dim           = NULL;
+  klass->eval              = NULL;
+  klass->eval_m2lnp        = NULL;
+  klass->sample            = NULL;
+  klass->kernel_sample     = NULL;
+  klass->kernel_eval_m2lnp = NULL;
+  klass->reset             = NULL;
 }
 
 /**
@@ -217,19 +222,18 @@ ncm_stats_dist_nd_prepare (NcmStatsDistNd *dnd)
  * ncm_stats_dist_nd_prepare_interp: (virtual prepare_interp)
  * @dnd: a #NcmStatsDistNd
  * @m2lnp: a #NcmVector containing the distribution values
- * @normalized: whether @m2lnp contain values from a normalized distribution
  *
  * Prepares the object for calculations. Using the distribution values
  * at the sample points.
  * 
  */
 void 
-ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp, gboolean normalized)
+ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
 {
   NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd); 
 
   g_assert (dnd_class->prepare_interp != NULL);
-  dnd_class->prepare_interp (dnd, m2lnp, normalized);
+  dnd_class->prepare_interp (dnd, m2lnp);
 }
 
 /**
@@ -288,4 +292,53 @@ ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd); 
   dnd_class->sample (dnd, x, rng);
+}
+
+/**
+ * ncm_stats_dist_nd_kernel_sample: (virtual kernel_sample)
+ * @dnd: a #NcmStatsDistNd
+ * @x: a #NcmVector
+ * @rng: a #NcmRNG
+ * 
+ * Using the pseudo-random number generator @rng generates a 
+ * point from the distribution and copy it to @x.
+ * 
+ */
+void
+ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble scale, NcmRNG *rng)
+{
+  NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd); 
+  dnd_class->kernel_sample (dnd, x, mu, scale, rng);
+}
+
+/**
+ * ncm_stats_dist_nd_kernel_eval_m2lnp: (virtual kernel_eval_m2lnp)
+ * @dnd: a #NcmStatsDistNd
+ * @x: a #NcmVector
+ * @y: a #NcmVector
+ * @scale: covariance scale
+ * 
+ * Evaluates a single kernel at @x and @y and scale @s, i.e., $K_s(x,y)$.
+ * 
+ * Returns: $K_s(x,y)$.
+ */
+gdouble
+ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble scale)
+{
+  NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd); 
+  return dnd_class->kernel_eval_m2lnp (dnd, x, y, scale);
+}
+
+/**
+ * ncm_stats_dist_nd_reset: (virtual reset)
+ * @dnd: a #NcmStatsDistNd
+ * 
+ * Reset the object discarding all added points.
+ * 
+ */
+void 
+ncm_stats_dist_nd_reset (NcmStatsDistNd *dnd)
+{
+  NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd); 
+  dnd_class->reset (dnd);
 }

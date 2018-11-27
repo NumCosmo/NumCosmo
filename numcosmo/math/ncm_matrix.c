@@ -1174,16 +1174,17 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
  * @cholesky_decomp: if true substitue @cm for its Cholesky decomposition
+ * @maxiter: maximum number of iterations
  * 
  * Assuming that @cm is a symmetric matrix with data on @UL 
  * side, computes the nearest positive definite matrix
  * in the Frobenius norm. See [Higham (2002)][XHigham2002].
  * The iterations stop when the Cholesky decomposition is valid.
  * 
- * 
+ * Returns: the return value of the last Cholesky decomposition
  */
-void 
-ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp)
+gint
+ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter)
 {
   const guint n   = ncm_matrix_ncols (cm);
   NcmVector *eva  = ncm_vector_new (n);
@@ -1264,11 +1265,12 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp)
     ncm_matrix_set_diag (cm, diag);
 
     ncm_matrix_memcpy (R, cm);
-    if (ncm_matrix_cholesky_decomp (R, UL) == 0)
+    if ((ret = ncm_matrix_cholesky_decomp (R, UL)) == 0)
       break;
-    if (iter > 10000)
-      g_error ("ncm_matrix_nearPD: does not converge within 10000 iterations.");
-    
+    if (iter > maxiter)
+      break;
+
+    iter++;
     /*printf ("CHOLESKY: %4d, ITER %6d\n", ncm_matrix_cholesky_decomp (R, UL), iter++);*/
     /*ncm_matrix_log_vals (cm, "NewCM: ", "% 22.15g");*/
   }
@@ -1282,6 +1284,8 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp)
   ncm_matrix_free (eve);
   ncm_matrix_free (R);
   ncm_matrix_free (D_S);
+
+  return ret;
 }
 
 /**
@@ -1620,6 +1624,16 @@ ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_mi
  *
  * This function copies the elements of the vector @cv into the @n-th column of the matrix @cm.
  * The length of the vector must be the same as the length of the column.
+ *
+ */
+/**
+ * ncm_matrix_set_row:
+ * @cm: a #NcmMatrix
+ * @n: row index
+ * @cv: a constant #NcmVector
+ *
+ * This function copies the elements of the vector @cv into the @n-th row of the matrix @cm.
+ * The length of the vector must be the same as the length of the row.
  *
  */
 /**

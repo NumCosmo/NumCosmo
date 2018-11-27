@@ -161,7 +161,7 @@ ncm_sources = \
 	math/ncm_fit_esmcmc_walker.c         \
 	math/ncm_fit_esmcmc_walker_stretch.c \
 	math/ncm_fit_esmcmc_walker_walk.c    \
-	math/ncm_fit_esmcmc_walker_newton.c  \
+	math/ncm_fit_esmcmc_walker_aps.c     \
 	math/ncm_lh_ratio1d.c                \
 	math/ncm_lh_ratio2d.c                \
 	math/ncm_abc.c                       \
@@ -287,7 +287,7 @@ ncm_headers =                                \
 	math/ncm_fit_esmcmc_walker.h         \
 	math/ncm_fit_esmcmc_walker_stretch.h \
 	math/ncm_fit_esmcmc_walker_walk.h    \
-	math/ncm_fit_esmcmc_walker_newton.h  \
+	math/ncm_fit_esmcmc_walker_aps.h     \
 	math/ncm_lh_ratio1d.h                \
 	math/ncm_lh_ratio2d.h                \
 	math/ncm_abc.h                       \

@@ -63,11 +63,13 @@ GType ncm_fit_esmcmc_walker_aps_get_type (void) G_GNUC_CONST;
 
 NcmFitESMCMCWalkerAPS *ncm_fit_esmcmc_walker_aps_new (guint nwalkers, guint nparams);
 
-void ncm_fit_esmcmc_walker_aps_set_G (NcmFitESMCMCWalkerAPS *aps, const gdouble G);
-gdouble ncm_fit_esmcmc_walker_aps_get_G (NcmFitESMCMCWalkerAPS *aps);
+void ncm_fit_esmcmc_walker_aps_use_interp (NcmFitESMCMCWalkerAPS *aps, gboolean use_interp);
 
-void ncm_fit_esmcmc_walker_aps_set_box (NcmFitESMCMCWalkerAPS *aps, guint n, const gdouble lb, const gdouble ub);
-void ncm_fit_esmcmc_walker_aps_set_box_mset (NcmFitESMCMCWalkerAPS *aps, NcmMSet *mset);
+void ncm_fit_esmcmc_walker_aps_set_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps, const gdouble prob);
+void ncm_fit_esmcmc_walker_aps_set_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps, const gdouble scale);
+
+gdouble ncm_fit_esmcmc_walker_aps_get_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps);
+gdouble ncm_fit_esmcmc_walker_aps_get_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps);
 
 G_END_DECLS
 

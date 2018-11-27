@@ -62,6 +62,7 @@ struct _NcmFitESMCMCPrivate
   NcmFitESMCMCWalker *walker;
   gboolean auto_trim;
   guint auto_trim_div;
+  gdouble lre_step;
   NcmMSetCatalogTrimType trim_type;
   guint min_runs;
   gdouble max_runs_time;
@@ -107,6 +108,7 @@ enum
   PROP_NWALKERS,
   PROP_SAMPLER,
   PROP_WALKER,
+  PROP_LRE_STEP,
   PROP_AUTO_TRIM,
   PROP_AUTO_TRIM_DIV,
   PROP_TRIM_TYPE,
@@ -140,6 +142,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->nt              = ncm_timer_new ();
   self->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   self->walker          = NULL;
+  self->lre_step        = 0.0;
   self->auto_trim       = FALSE;
   self->auto_trim_div   = 0;
   self->trim_type       = 0;
@@ -309,6 +312,9 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_WALKER:
       self->walker = g_value_dup_object (value);
       break;
+    case PROP_LRE_STEP:
+      self->lre_step = g_value_get_double (value);
+      break;
     case PROP_AUTO_TRIM:
       self->auto_trim = g_value_get_boolean (value);
       break;
@@ -379,6 +385,9 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;      
     case PROP_WALKER:
       g_value_set_object (value, self->walker);
+      break;
+    case PROP_LRE_STEP:
+      g_value_set_double (value, self->lre_step);
       break;
     case PROP_AUTO_TRIM:
       g_value_set_boolean (value, self->auto_trim);
@@ -517,6 +526,13 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         "Walker object",
                                                         NCM_TYPE_FIT_ESMCMC_WALKER,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LRE_STEP,
+                                   g_param_spec_double ("lre-step",
+                                                         NULL,
+                                                         "Step size in the lre run",
+                                                         1.0e-2, 1.0, 0.1,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_AUTO_TRIM,
                                    g_param_spec_boolean ("auto-trim",
@@ -1069,12 +1085,17 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
     
       if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
       {
+        NcmVector *e_var = ncm_mset_catalog_peek_current_e_var (self->mcat);
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (self->mcat);
         ncm_mset_catalog_log_current_chain_stats (self->mcat);
         g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n", 
                    ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
                    ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n", 
+                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
+                   2 * self->fparam_len,
+                   ncm_mset_catalog_get_bestfit_m2lnL (self->mcat));
         /* ncm_timer_task_accumulate (self->nt, acc); */
         ncm_timer_task_log_elapsed (self->nt);
         ncm_timer_task_log_mean_time (self->nt);
@@ -1090,6 +1111,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
       if ((self->cur_sample_id + 1) % self->nwalkers == 0)
       {
         NcmVector *e_mean = ncm_mset_catalog_peek_current_e_mean (self->mcat);
+        NcmVector *e_var  = ncm_mset_catalog_peek_current_e_var (self->mcat);
         self->fit->mtype = self->mtype;
 
         if (e_mean != NULL)
@@ -1104,6 +1126,10 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n", 
                    ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
                    ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n", 
+                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
+                   2 * self->fparam_len,
+                   ncm_mset_catalog_get_bestfit_m2lnL (self->mcat));
         /* ncm_timer_task_increment (self->nt); */
         ncm_timer_task_log_elapsed (self->nt);
         ncm_timer_task_log_mean_time (self->nt);
@@ -1695,7 +1721,7 @@ _ncm_fit_esmcmc_get_jumps (NcmFitESMCMC *esmcmc, guint ki, guint kf)
   
   for (k = ki; k < kf; k++)
   {
-    const gdouble jump = gsl_rng_uniform (rng->r);; 
+    const gdouble jump = gsl_rng_uniform (rng->r);
     ncm_vector_set (self->jumps, k, jump);
   }
 }
@@ -1803,7 +1829,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     const gdouble lerror2 = lerror * lerror;
     gdouble n             = ncm_mset_catalog_len (self->mcat);
     gdouble m             = n * lerror2 / lre2;
-    guint runs            = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * 1.0e-1), 100000) : ceil (m - n);
+    guint runs            = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * self->lre_step), 100000) : ceil (m - n);
     guint ti              = (self->cur_sample_id + 1) / self->nwalkers;
 
     runs = GSL_MIN (ncm_timer_task_estimate_by_time (self->nt, self->max_runs_time), runs);

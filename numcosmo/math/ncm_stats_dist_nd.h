@@ -51,11 +51,14 @@ struct _NcmStatsDistNdClass
   /*< private >*/ 
   GObjectClass parent_class;
   void (*prepare) (NcmStatsDistNd *dnd);
-  void (*prepare_interp) (NcmStatsDistNd *dnd, NcmVector *m2lnp, gboolean normalized);
+  void (*prepare_interp) (NcmStatsDistNd *dnd, NcmVector *m2lnp);
   void (*set_dim) (NcmStatsDistNd *dnd, const guint dim);
   gdouble (*eval) (NcmStatsDistNd *dnd, NcmVector *x);
   gdouble (*eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *x);
   void (*sample) (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
+  void (*kernel_sample) (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble scale, NcmRNG *rng);
+  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble scale);
+  void (*reset) (NcmStatsDistNd *dnd);
 };
 
 struct _NcmStatsDistNd
@@ -74,10 +77,15 @@ void ncm_stats_dist_nd_clear (NcmStatsDistNd **dnd);
 guint ncm_stats_dist_nd_get_dim (NcmStatsDistNd *dnd);
 
 void ncm_stats_dist_nd_prepare (NcmStatsDistNd *dnd);
-void ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp, gboolean normalized);
+void ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp);
 gdouble ncm_stats_dist_nd_eval (NcmStatsDistNd *dnd, NcmVector *x);
 gdouble ncm_stats_dist_nd_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x);
 void ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
+
+void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble scale, NcmRNG *rng);
+gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble scale);
+
+void ncm_stats_dist_nd_reset (NcmStatsDistNd *dnd);
 
 G_END_DECLS
 

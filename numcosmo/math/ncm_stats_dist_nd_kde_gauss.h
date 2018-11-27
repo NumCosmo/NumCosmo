@@ -61,11 +61,17 @@ struct _NcmStatsDistNdKDEGauss
 
 GType ncm_stats_dist_nd_kde_gauss_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdKDEGauss *ncm_stats_dist_nd_kde_gauss_new (const guint dim);
+NcmStatsDistNdKDEGauss *ncm_stats_dist_nd_kde_gauss_new (const guint dim, const gboolean LOOCV);
 
 NcmStatsDistNdKDEGauss *ncm_stats_dist_nd_kde_gauss_ref (NcmStatsDistNdKDEGauss *dndg);
 void ncm_stats_dist_nd_kde_gauss_free (NcmStatsDistNdKDEGauss *dndg);
 void ncm_stats_dist_nd_kde_gauss_clear (NcmStatsDistNdKDEGauss **dndg);
+
+void ncm_stats_dist_nd_kde_gauss_set_over_smooth (NcmStatsDistNdKDEGauss *dndg, const gdouble over_smooth);
+gdouble ncm_stats_dist_nd_kde_gauss_get_over_smooth (NcmStatsDistNdKDEGauss *dndg);
+
+void ncm_stats_dist_nd_kde_gauss_set_LOOCV_bandwidth_adj (NcmStatsDistNdKDEGauss *dndg, gboolean LOOCV);
+gboolean ncm_stats_dist_nd_kde_gauss_get_LOOCV_bandwidth_adj (NcmStatsDistNdKDEGauss *dndg);
 
 void ncm_stats_dist_nd_kde_gauss_add_obs_weight (NcmStatsDistNdKDEGauss *dndg, NcmVector *y, const gdouble w);
 void ncm_stats_dist_nd_kde_gauss_add_obs (NcmStatsDistNdKDEGauss *dndg, NcmVector *y);

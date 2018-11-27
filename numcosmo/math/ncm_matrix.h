@@ -147,6 +147,7 @@ G_INLINE_FUNC void ncm_matrix_set_diag (NcmMatrix *cm, NcmVector *diag);
 
 G_INLINE_FUNC void ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2);
 G_INLINE_FUNC void ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv);
+G_INLINE_FUNC void ncm_matrix_set_row (NcmMatrix *cm, const guint n, const NcmVector *cv);
 G_INLINE_FUNC gdouble ncm_matrix_fast_get (NcmMatrix *cm, const guint ij);
 G_INLINE_FUNC void ncm_matrix_fast_set (NcmMatrix *cm, const guint ij, const gdouble val);
 
@@ -183,7 +184,7 @@ gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
 gdouble ncm_matrix_cholesky_lndet (NcmMatrix *cm);
 gint ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
-void ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp);
+gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
 
 void ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng);
@@ -384,7 +385,15 @@ ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
 G_INLINE_FUNC void
 ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv)
 {
-  gsl_matrix_set_col (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
+  gint ret = gsl_matrix_set_col (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
+  g_assert (ret == GSL_SUCCESS);
+}
+
+G_INLINE_FUNC void
+ncm_matrix_set_row (NcmMatrix *cm, const guint n, const NcmVector *cv)
+{
+  gint ret = gsl_matrix_set_row (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
+  g_assert (ret == GSL_SUCCESS);
 }
 
 G_INLINE_FUNC GArray *

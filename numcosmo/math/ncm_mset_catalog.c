@@ -3512,6 +3512,19 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
 }
 
 /**
+ * ncm_mset_catalog_get_bestfit_m2lnL:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: the current bestfit $-2\ln(L)$ value.
+ */
+gdouble 
+ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  return self->bestfit;
+}
+
+/**
  * ncm_mset_catalog_get_mean:
  * @mcat: a #NcmMSetCatalog
  * @mean: (inout) (allow-none) (transfer full): a #NcmVector
@@ -3849,8 +3862,8 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
         {
           lev = GSL_MAX (lev, GSL_VECTOR_REAL (self->chain_sM_ev, i));
 
-          if (GSL_VECTOR_IMAG (self->chain_sM_ev, i) != 0.0)
-            g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
+          //if (GSL_VECTOR_IMAG (self->chain_sM_ev, i) != 0.0)
+          //  g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
         }
         shrink_factor = sqrt ((n - 1.0) / (1.0 * n) + (self->nchains + 1.0) * lev / (self->nchains * 1.0));
       } while (FALSE);
@@ -4653,6 +4666,23 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc)
 		g_ptr_array_unref (rows);
 		g_free (file);
 	}
+}
+
+/**
+ * ncm_mset_catalog_trim_p:
+ * @mcat: a #NcmMSetCatalog
+ * @p: percentage of the trim
+ *
+ * Drops all points in the catalog such that the first @p percent of the catalog is dropped.
+ *
+ */
+void 
+ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p)
+{
+  g_assert_cmpfloat (p, >, 0.0);
+  g_assert_cmpfloat (p, <, 1.0);
+  
+  ncm_mset_catalog_trim (mcat, ncm_mset_catalog_max_time (mcat) * p);
 }
 
 /**

@@ -69,6 +69,80 @@
 #define _NCM_LAPACK_CONV_UPLO(uplo) (uplo == 'L' ? 'U' : 'L')
 #define _NCM_LAPACK_CONV_TRANS(trans) (trans == 'N' ? 'T' : 'N')
 
+G_DEFINE_BOXED_TYPE (NcmLapackWS, ncm_lapack_ws, ncm_lapack_ws_dup, ncm_lapack_ws_free);
+
+/**
+ * ncm_lapack_ws_new:
+ * 
+ * Creates a new Lapack workspace object.
+ * 
+ * Returns:(transfer full): a newly created #NcmLapackWS.
+ */ 
+NcmLapackWS *
+ncm_lapack_ws_new (void)
+{
+  NcmLapackWS *ws = g_new (NcmLapackWS, 1);
+
+  ws->work  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ws->iwork = g_array_new (FALSE, FALSE, sizeof (gint));
+  
+  return ws;
+}
+
+/**
+ * ncm_lapack_ws_dup:
+ * @ws: a #NcmLapackWS
+ * 
+ * Duplicates a Lapack workspace object.
+ * 
+ * Returns: (transfer full): a copy of @ws.
+ */ 
+NcmLapackWS *
+ncm_lapack_ws_dup (NcmLapackWS *ws)
+{
+  NcmLapackWS *ws_dup = ncm_lapack_ws_new ();
+
+  g_array_set_size (ws_dup->work,  ws->work->len);
+  g_array_set_size (ws_dup->iwork, ws->iwork->len);
+
+  return ws_dup;
+}
+
+/**
+ * ncm_lapack_ws_free:
+ * @ws: a #NcmLapackWS
+ * 
+ * Frees a Lapack workspace object.
+ * 
+ */ 
+void
+ncm_lapack_ws_free (NcmLapackWS *ws)
+{
+  g_array_unref (ws->work);
+  g_array_unref (ws->iwork);
+  g_free (ws);
+}
+
+/**
+ * ncm_lapack_ws_clear:
+ * @ws: a #NcmLapackWS
+ * 
+ * Clears a Lapack workspace object.
+ * 
+ */ 
+void
+ncm_lapack_ws_clear (NcmLapackWS **ws)
+{
+  g_assert (ws != NULL);
+  if (*ws != NULL)
+  {
+    g_array_unref (ws[0]->work);
+    g_array_unref (ws[0]->iwork);
+    g_free (ws[0]);
+    ws[0] = NULL;
+  }
+}
+
 /**
  * ncm_lapack_dptsv:
  * @d: array of doubles with dimension @n
@@ -318,13 +392,10 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
  * @a: array of doubles with dimension (@n, @lda)
  * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
  * @ipiv: Information about decomposition swaps and blocks
- * @work: work area, must have @lwork allocated doubles
- * @lwork: work area size
+ * @ws: a #NcmLapackWS
  *
  * This function computes the factorization of a real symmetric
  * matrix @a, using the Bunch-Kaufman diagonal pivoting method.
- * 
- * Calling this function with lwork == -1 computed the ideal @lwork in @work[0].
  * 
  * Returns: i = 0:  successful exit
  * 
@@ -334,16 +405,31 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
  *            or L is zero, and the inverse could not be computed.
  */
 gint 
-ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, gdouble *work, gint lwork)
+ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
 {
 #if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, work, lwork);
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, ws->work->data, ws->work->len);  
+
   return info;
 #elif defined HAVE_LAPACK
-  gint info = 0;
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
-  dsytrf_ (&uplo, &n, a, &lda, ipiv, work, &lwork, &info);  
+  dsytrf_ (&uplo, &n, a, &lda, ipiv, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+
+  lwork = ws->work->len;
+  dsytrf_ (&uplo, &n, a, &lda, ipiv, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
 
 	return info;
 #else /* No fall back. */
@@ -387,6 +473,51 @@ ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ip
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
   dsytrs_ (&uplo, &n, &nrhs, a, &lda, ipiv, b, &ldb, &info);  
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dsytri:
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
+ * @n: The order of the matrix @a, @n >= 0
+ * @a: array of doubles with dimension (@n, @lda)
+ * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
+ * @ipiv: Information about decomposition swaps and blocks
+ * @ws: a #NcmLapackWS
+ *
+ * This function compute the inverse of a real symmetric indefinite matrix @a using
+ * the factorization @a =	U*D*U**T or @a =	L*D*L**T computed by ncm_lapack_dsytrf().
+ *
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U
+ *            or L is zero, and the inverse could not be computed.
+ */
+gint 
+ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info;
+
+  if (ws->work->len < n)
+    g_array_set_size (ws->work, n);
+  
+  info = LAPACKE_dsytri (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, ipiv, &g_array_index (ws->work, gdouble, 0));
+  return info;
+#elif defined HAVE_LAPACK
+  gint info = 0;
+  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+  if (ws->work->len < n)
+    g_array_set_size (ws->work, n);
+
+  dsytri_ (&uplo, &n, a, &lda, ipiv, &g_array_index (ws->work, gdouble, 0), &info);  
 
 	return info;
 #else /* No fall back */

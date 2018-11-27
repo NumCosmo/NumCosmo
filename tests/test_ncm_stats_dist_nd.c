@@ -39,6 +39,7 @@
 typedef struct _TestNcmStatsDistNd
 {
   NcmStatsDistNd *dnd;
+  NcmMSet *mset;
   guint dim;
   guint nfail;
 } TestNcmStatsDistNd;
@@ -101,7 +102,7 @@ static void
 test_ncm_stats_dist_nd_new_kde_gauss (TestNcmStatsDistNd *test, gconstpointer pdata)
 {
   test->dim   = g_test_rand_int_range (2, 8);
-  test->dnd   = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (test->dim));
+  test->dnd   = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (test->dim, TRUE));
   test->nfail = 0;
 }
 
@@ -158,6 +159,7 @@ test_ncm_stats_dist_nd_gauss_dens_est (TestNcmStatsDistNd *test, gconstpointer p
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
+  ncm_mset_free (mset);
 }
 
 static void
@@ -168,8 +170,9 @@ test_ncm_stats_dist_nd_gauss_dens_interp (TestNcmStatsDistNd *test, gconstpointe
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
   const guint np                 = 100 * test->dim * g_test_rand_int_range (1, 5);
-  const guint ntests             = 100 * g_test_rand_int_range (1, 5);
+  const guint ntests             = 1000 * g_test_rand_int_range (1, 5);
   NcmVector *m2lnp_v             = ncm_vector_new (np);
+  gdouble dm2lnL_mean            = 0.0;
   gulong N = 0;
   guint ntests_fail;
   guint i;
@@ -180,18 +183,14 @@ test_ncm_stats_dist_nd_gauss_dens_interp (TestNcmStatsDistNd *test, gconstpointe
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnL;
-    /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE);*/
 
     ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
-
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
-  ncm_stats_dist_nd_prepare_interp (test->dnd, m2lnp_v, TRUE);
+  ncm_stats_dist_nd_prepare_interp (test->dnd, m2lnp_v);
 
-  ntests_fail = 0;
   for (i = 0; i < ntests; i++)
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
@@ -200,11 +199,21 @@ test_ncm_stats_dist_nd_gauss_dens_interp (TestNcmStatsDistNd *test, gconstpointe
 
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
 
-    if (fabs (p_s / exp (-0.5 * m2lnL) - 1.0) > 0.5)
-      ntests_fail++;
-    
-     /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE); */
-     /*printf ("# EVAL: % 22.15g % 22.15g % 22.15f\n", -2.0 * log (p_s),  m2lnL, -2.0 * log (p_s) - m2lnL); */
+    dm2lnL_mean += (-2.0 * log (p_s) - m2lnL);
+  }
+  dm2lnL_mean = dm2lnL_mean / ntests;
+  
+  ntests_fail = 0;
+  for (i = 0; i < ntests; i++)
+  {
+    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble p_s  = ncm_stats_dist_nd_eval (test->dnd, y);
+    gdouble m2lnL;
+
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+        
+    if (fabs (p_s / exp (-0.5 * (m2lnL + dm2lnL_mean)) - 1.0) > 0.5)
+      ntests_fail++;    
   }
 
   /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
@@ -215,6 +224,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp (TestNcmStatsDistNd *test, gconstpointe
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
+  ncm_mset_free (mset);
 }
 
 static void
@@ -227,7 +237,8 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
   const guint np                 = 100 * test->dim * g_test_rand_int_range (1, 5);
   const guint ntests             = 1000 * g_test_rand_int_range (1, 5);
   NcmVector *m2lnp_v             = ncm_vector_new (np);
-  gulong N = 0;
+  gdouble dm2lnL_mean            = 0.0;
+  gulong N                       = 0;
   guint ntests_fail;
   guint i;
 
@@ -238,17 +249,26 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnL;
-    /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE);*/
 
     ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
-
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
-  ncm_stats_dist_nd_prepare_interp (test->dnd, m2lnp_v, FALSE);
+  ncm_stats_dist_nd_prepare_interp (test->dnd, m2lnp_v);
 
+  for (i = 0; i < ntests; i++)
+  {
+    NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble m2lnp_s = ncm_stats_dist_nd_eval_m2lnp (test->dnd, y);
+    gdouble m2lnL;
+
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+
+    dm2lnL_mean += (m2lnp_s - m2lnL);
+  }
+  dm2lnL_mean = dm2lnL_mean / ntests;
+  
   ntests_fail = 0;
   for (i = 0; i < ntests; i++)
   {
@@ -259,13 +279,10 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
 
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
 
-    cmp = exp (-0.5 * (m2lnp_s - m2lnL)) - 1.0;
+    cmp = exp (-0.5 * (m2lnp_s - m2lnL - dm2lnL_mean)) - 1.0;
     
-    if (fabs (cmp) > 0.75)
+    if (fabs (cmp) > 0.50)
       ntests_fail++;
-    
-     /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE); */
-     /*printf ("# EVAL: % 22.15g % 22.15g % 22.15f % 22.15f\n", m2lnp_s, m2lnL, exp (-0.5 * (m2lnp_s - m2lnL)), cmp);*/
   }
 
   g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
@@ -274,6 +291,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
+  ncm_mset_free (mset);
 }
 
 static void
@@ -317,7 +335,7 @@ test_ncm_stats_dist_nd_gauss_sampling (TestNcmStatsDistNd *test, gconstpointer p
     gint ret;
 
     if ( 
-        (test->nfail < 3) && 
+        (test->nfail < 4) && 
          ((ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0) >= 0.5) || 
           (ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0) >= 0.5))
        )
@@ -370,6 +388,7 @@ test_ncm_stats_dist_nd_gauss_sampling (TestNcmStatsDistNd *test, gconstpointer p
   ncm_rng_free (rng);
   ncm_vector_free (y);
   ncm_stats_vec_free (test_stats);
+  ncm_mset_free (mset);
 }
 
 static void 
