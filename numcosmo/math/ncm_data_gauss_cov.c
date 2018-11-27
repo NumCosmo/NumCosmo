@@ -511,6 +511,7 @@ ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
 /**
  * ncm_data_gauss_cov_use_norma:
  * @gauss: a #NcmDataGaussCov
+ * @use_norma: a boolean
  *
  * Sets whether the value of $-2\ln(L)$ will be properly normalized.
  *

@@ -48,7 +48,14 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <nvector/nvector_serial.h>
+#if HAVE_SUNDIALS_MAJOR == 2
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#endif 
+
 #endif /* NUMCOSMO_GIR_SCAN */
+
 
 enum
 {

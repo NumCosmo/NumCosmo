@@ -298,6 +298,8 @@ ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng)
  * ncm_stats_dist_nd_kernel_sample: (virtual kernel_sample)
  * @dnd: a #NcmStatsDistNd
  * @x: a #NcmVector
+ * @mu: a #NcmVector
+ * @scale: a double
  * @rng: a #NcmRNG
  * 
  * Using the pseudo-random number generator @rng generates a 

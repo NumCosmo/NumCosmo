@@ -38,7 +38,6 @@
 #include <sundials/sundials_matrix.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
 #endif 
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */

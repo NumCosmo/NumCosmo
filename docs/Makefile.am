@@ -105,7 +105,10 @@ IGNORE_HFILES= \
               ncm_gsl_blas_types.h      \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \
+              ncm_flapack.h             \
               gsl_rstat.h               \
+              gsl_cqp.h                 \
+              initial_point.h           \
               rquantile.c               \
               $(ignore_nlopt)           \
               Faddeeva.h                \

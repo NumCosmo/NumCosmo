@@ -59,6 +59,13 @@ struct _NcmModelMVND
   NcmModelMVNDPrivate *priv;
 };
 
+/**
+ * NcmModelMVNDVParams:
+ * @NCM_MODEL_MVND_MEAN: Mean vector
+ * 
+ * MVND model parameters
+ * 
+ */
 typedef enum _NcmModelMVNDVParams
 {
   NCM_MODEL_MVND_MEAN,          

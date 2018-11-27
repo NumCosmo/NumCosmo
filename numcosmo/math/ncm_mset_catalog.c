@@ -3054,7 +3054,7 @@ ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
 /**
  * ncm_mset_catalog_peek_e_var_t:
  * @mcat: a #NcmMSetCatalog
- * @t: time
+ * @t: MCMC time
  *
  * Gets the variance of the @t-th ensemble.
  *

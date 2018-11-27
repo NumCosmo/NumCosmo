@@ -1,4 +1,6 @@
 
+#ifndef NUMCOSMO_GIR_SCAN
+
 extern double dasum_ (int *, double *, int *);
 extern int idamax_ (const int *n, const double *dx, const int *incx);
 extern void dscal_ (const int *n, const double *da, const double *dx, const int *incx);
@@ -28,3 +30,5 @@ extern void dgeev_ (const gchar *jobvl, const gchar *jobvr, gint *n, gdouble *a,
 extern void dgeevx_ (const gchar *balanc, const gchar *jobvl, const gchar *jobvr, const gchar *sense, const gint *n, gdouble *a, const gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, const gint *ldvl, gdouble *vr, const gint *ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, const gint *lwork, gint *iwork, gint *info);
 
 extern void dggglm_ (const gint *n, const gint *M, const gint *P, gdouble *X, const gint *lda, gdouble *L, const gint *ldb, gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
+
+#endif /* NUMCOSMO_GIR_SCAN */
