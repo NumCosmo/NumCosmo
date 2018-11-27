@@ -42,8 +42,6 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
-
 struct _NcHICosmoDEPrivate
 {
   NcmSpline2d *BBN_spline2d;
@@ -54,6 +52,8 @@ struct _NcHICosmoDEPrivate
   NcmSpline *nu_p_s[10];
   gdouble zmax;
 };
+
+G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO, G_ADD_PRIVATE (NcHICosmoDE));
 
 enum
 {
@@ -240,8 +240,6 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHICosmoDEPrivate));
 
   object_class->constructed = &_nc_hicosmo_de_constructed;
   object_class->dispose     = &_nc_hicosmo_de_dispose;

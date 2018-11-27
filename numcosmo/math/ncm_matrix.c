@@ -440,6 +440,20 @@ ncm_matrix_const_new_variant (GVariant *var)
 }
 
 /**
+ * ncm_matrix_ref:
+ * @cm: a #NcmMatrix
+ *
+ * Increase the reference count of @cm by one.
+ *
+ * Returns: (transfer full): @cm
+ */
+NcmMatrix *
+ncm_matrix_ref (NcmMatrix *cm)
+{
+  return g_object_ref (cm);
+}
+
+/**
  * ncm_matrix_get_submatrix:
  * @cm: a #NcmMatrix
  * @k1: row index of the original matrix @cm
@@ -1156,6 +1170,125 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
 }
 
 /**
+ * ncm_matrix_nearPD:
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix 
+ * @cholesky_decomp: if true substitue @cm for its Cholesky decomposition
+ * @maxiter: maximum number of iterations
+ * 
+ * Assuming that @cm is a symmetric matrix with data on @UL 
+ * side, computes the nearest positive definite matrix
+ * in the Frobenius norm. See [Higham (2002)][XHigham2002].
+ * The iterations stop when the Cholesky decomposition is valid.
+ * 
+ * Returns: the return value of the last Cholesky decomposition
+ */
+gint
+ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter)
+{
+  const guint n   = ncm_matrix_ncols (cm);
+  NcmVector *eva  = ncm_vector_new (n);
+  NcmVector *diag = ncm_vector_new (n);
+  NcmMatrix *eve  = ncm_matrix_new (n, n);
+  NcmMatrix *D_S  = ncm_matrix_new (n, n);
+  NcmMatrix *R    = ncm_matrix_new (n, n);
+  GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *iwork   = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *work    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gint neva       = 0;
+  gdouble work_size;
+  gint iwork_size, ret, i, iter;
+
+  g_array_set_size (isuppz, 2 * n);
+
+  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+
+  ret = ncm_lapack_dsyevr ('V', 'V', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+                           0.0, 1.0e300, 
+                           0, 0, 0.0, 
+                           &neva, ncm_vector_data (eva), 
+                           ncm_matrix_data (eve), ncm_matrix_tda (eve), 
+                           &g_array_index (isuppz, gint, 0), 
+                           &work_size, -1, &iwork_size, -1);
+  g_assert_cmpint (ret, ==, 0);
+
+  g_array_set_size (work, work_size);
+  g_array_set_size (iwork, iwork_size);
+
+  ncm_matrix_set_zero (D_S);
+  ncm_matrix_get_diag (cm, diag);
+
+  iter = 0;
+  while (TRUE)
+  {
+    gdouble min_pos_ev = GSL_POSINF;
+    ncm_matrix_sub (cm, D_S);
+
+    ncm_matrix_memcpy (R, cm);
+
+    ret = ncm_lapack_dsyevr ('V', 'V', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm), 
+                             -1.0e300, 1.0e300, 
+                             0, 0, 0.0, 
+                             &neva, ncm_vector_data (eva), 
+                             ncm_matrix_data (eve), ncm_matrix_tda (eve), 
+                             &g_array_index (isuppz, gint, 0), 
+                             &g_array_index (work, gdouble, 0), work->len, &g_array_index (iwork, gint, 0), iwork->len);
+    g_assert_cmpint (ret, ==, 0);
+
+    if (neva == 0)
+      g_error ("ncm_matrix_nearPD: matrix is negative semi-definite.");
+
+    for (i = 0; i < neva; i++)
+    {
+      if (ncm_vector_get (eva, i) > 0.0)
+        min_pos_ev = MIN (ncm_vector_get (eva, i), min_pos_ev);
+    }
+    
+    for (i = 0; i < neva; i++)
+    {
+      if (ncm_vector_get (eva, i) < 0.0)
+        ncm_vector_set (eva, i, min_pos_ev * GSL_DBL_EPSILON);
+      ncm_matrix_mul_row (eve, i, sqrt (ncm_vector_get (eva, i)));
+    }
+
+    /*ncm_vector_log_vals (eva, "EVA: ", "% 22.15g", TRUE);*/
+    /*ncm_matrix_log_vals (eve, "EVE: ", "% 22.15g");*/
+
+    cblas_dsyrk (CblasRowMajor, (UL == 'U') ? CblasUpper : CblasLower, 
+                 CblasTrans, n, neva,
+                 1.0, ncm_matrix_data (eve), ncm_matrix_tda (eve),
+                 0.0, ncm_matrix_data (cm), ncm_matrix_tda (cm));
+
+    ncm_matrix_memcpy (D_S, cm);
+    ncm_matrix_sub (D_S, R);
+
+    ncm_matrix_set_diag (cm, diag);
+
+    ncm_matrix_memcpy (R, cm);
+    if ((ret = ncm_matrix_cholesky_decomp (R, UL)) == 0)
+      break;
+    if (iter > maxiter)
+      break;
+
+    iter++;
+    /*printf ("CHOLESKY: %4d, ITER %6d\n", ncm_matrix_cholesky_decomp (R, UL), iter++);*/
+    /*ncm_matrix_log_vals (cm, "NewCM: ", "% 22.15g");*/
+  }
+
+  if (cholesky_decomp)
+    ncm_matrix_memcpy (cm, R);
+  
+  g_array_unref (isuppz);
+  ncm_vector_free (eva);
+  ncm_vector_free (diag);
+  ncm_matrix_free (eve);
+  ncm_matrix_free (R);
+  ncm_matrix_free (D_S);
+
+  return ret;
+}
+
+/**
  * ncm_matrix_log_vals:
  * @cm: a #NcmMatrix
  * @prefix: the prefixed text
@@ -1181,22 +1314,19 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
 }
 
 /**
- * ncm_matrix_fill_rand_cov:
+ * ncm_matrix_fill_rand_cor:
  * @cm: a square #NcmMatrix
- * @sigma_min: mininum standard deviation
- * @sigma_max: maximum standard deviation
  * @cor_level: correlation level parameter
  * @rng: a #NcmRNG
  * 
- * Overwrite @cm with a random covariance matrix, the
+ * Overwrite @cm with a random correlation matrix, the
  * parameter @cor_level controls the correlation between
  * entries the lower @cor_level more correlated the entries
  * are.
  *
- * 
  */
 void 
-ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n   = ncm_matrix_nrows (cm);
   const guint nm1 = n - 1;
@@ -1234,16 +1364,87 @@ ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble 
       }
     }
 
-    for (k = 0; k < n; k++)
-    {
-      const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
-      ncm_matrix_mul_col (cm, k, sigma_k);
-      ncm_matrix_mul_row (cm, k, sigma_k);
-    }
-
     ncm_matrix_free (P);
   }
 
+  ncm_rng_unlock (rng);
+}
+
+/**
+ * ncm_matrix_fill_rand_cov:
+ * @cm: a square #NcmMatrix
+ * @sigma_min: mininum standard deviation
+ * @sigma_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ */
+void 
+ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
+{
+	const guint n = ncm_matrix_nrows (cm);
+	gint k;
+
+	g_assert_cmpfloat (sigma_min, >, 0.0);
+	g_assert_cmpfloat (sigma_max, >, sigma_min);
+	
+	ncm_matrix_fill_rand_cor (cm, cor_level, rng);
+		
+  ncm_rng_lock (rng);
+
+	for (k = 0; k < n; k++)
+	{
+		const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
+		ncm_matrix_mul_col (cm, k, sigma_k);
+		ncm_matrix_mul_row (cm, k, sigma_k);
+	}
+	
+  ncm_rng_unlock (rng);
+}
+
+/**
+ * ncm_matrix_fill_rand_cov2:
+ * @cm: a square #NcmMatrix
+ * @mu: mean #NcmVector
+ * @reltol_min: mininum standard deviation
+ * @reltol_max: maximum standard deviation
+ * @cor_level: correlation level parameter
+ * @rng: a #NcmRNG
+ * 
+ * Overwrite @cm with a random covariance matrix, the
+ * parameter @cor_level controls the correlation between
+ * entries the lower @cor_level more correlated the entries
+ * are.
+ *
+ */
+void 
+ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_min, const gdouble reltol_max, const gdouble cor_level, NcmRNG *rng)
+{
+	const guint n = ncm_matrix_nrows (cm);
+	gint k;
+
+	g_assert_cmpfloat (reltol_min, >, 0.0);
+	g_assert_cmpfloat (reltol_max, >, reltol_min);
+	g_assert_cmpuint (n, ==, ncm_vector_len (mu));
+	
+	ncm_matrix_fill_rand_cor (cm, cor_level, rng);
+		
+  ncm_rng_lock (rng);
+
+	for (k = 0; k < n; k++)
+	{
+		const gdouble mu_k    = ncm_vector_get (mu, k);
+		const gdouble r_k     = exp (ncm_rng_uniform_gen (rng, log (reltol_min), log (reltol_max)));
+		const gdouble sigma_k = mu_k != 0.0 ? fabs (mu_k) * r_k : r_k;
+		ncm_matrix_mul_col (cm, k, sigma_k);
+		ncm_matrix_mul_row (cm, k, sigma_k);
+	}
+	
   ncm_rng_unlock (rng);
 }
 
@@ -1280,14 +1481,7 @@ ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble 
  *
  * Returns: A constant pointer to the (@i,@j)-th element of the matrix @cm.
  */
-/**
- * ncm_matrix_ref:
- * @cm: a #NcmMatrix
- *
- * Increase the reference count of @cm by one.
- *
- * Returns: (transfer full): @cm
- */
+
 /**
  * ncm_matrix_set:
  * @cm: a #NcmMatrix
@@ -1430,6 +1624,16 @@ ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble 
  *
  * This function copies the elements of the vector @cv into the @n-th column of the matrix @cm.
  * The length of the vector must be the same as the length of the column.
+ *
+ */
+/**
+ * ncm_matrix_set_row:
+ * @cm: a #NcmMatrix
+ * @n: row index
+ * @cv: a constant #NcmVector
+ *
+ * This function copies the elements of the vector @cv into the @n-th row of the matrix @cm.
+ * The length of the vector must be the same as the length of the row.
  *
  */
 /**

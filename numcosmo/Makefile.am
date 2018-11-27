@@ -84,6 +84,8 @@ ncm_sources = \
 	math/ncm_stats_dist1d_epdf.c         \
 	math/ncm_stats_dist2d.c              \
         math/ncm_stats_dist2d_spline.c       \
+	math/ncm_stats_dist_nd.c             \
+	math/ncm_stats_dist_nd_kde_gauss.c   \
 	math/ncm_bootstrap.c                 \
 	math/ncm_spline.c                    \
 	math/ncm_spline_gsl.c                \
@@ -115,6 +117,7 @@ ncm_sources = \
 	math/ncm_model.c                     \
 	math/ncm_model_ctrl.c                \
 	math/ncm_model_builder.c             \
+	math/ncm_model_mvnd.c                \
 	math/ncm_mset.c                      \
 	math/ncm_mset_func.c                 \
 	math/ncm_mset_func1.c                \
@@ -130,6 +133,7 @@ ncm_sources = \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
 	math/ncm_data_poisson.c              \
+	math/ncm_data_gauss_cov_mvnd.c       \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
 	math/ncm_prior.c                     \
@@ -157,6 +161,7 @@ ncm_sources = \
 	math/ncm_fit_esmcmc_walker.c         \
 	math/ncm_fit_esmcmc_walker_stretch.c \
 	math/ncm_fit_esmcmc_walker_walk.c    \
+	math/ncm_fit_esmcmc_walker_aps.c     \
 	math/ncm_lh_ratio1d.c                \
 	math/ncm_lh_ratio2d.c                \
 	math/ncm_abc.c                       \
@@ -175,7 +180,11 @@ ncm_sources = \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c
+	math/Faddeeva.c \
+	math/LowRankQP.c \
+	gslextras/cqp/cqpminimizer.c  \
+	gslextras/cqp/initial_point.c \
+	gslextras/cqp/mg_pdip.c
 
 ncm_headers =                                \
 	math/ncm_c.h                         \
@@ -201,6 +210,8 @@ ncm_headers =                                \
 	math/ncm_stats_dist1d_epdf.h         \
 	math/ncm_stats_dist2d.h              \
         math/ncm_stats_dist2d_spline.h       \
+	math/ncm_stats_dist_nd.h             \
+	math/ncm_stats_dist_nd_kde_gauss.h   \
 	math/ncm_bootstrap.h                 \
 	math/ncm_spline.h                    \
 	math/ncm_spline_gsl.h                \
@@ -232,6 +243,7 @@ ncm_headers =                                \
 	math/ncm_model.h                     \
 	math/ncm_model_ctrl.h                \
 	math/ncm_model_builder.h             \
+	math/ncm_model_mvnd.h                \
 	math/ncm_mset.h                      \
 	math/ncm_mset_func.h                 \
 	math/ncm_mset_func1.h                \
@@ -247,6 +259,7 @@ ncm_headers =                                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
 	math/ncm_data_poisson.h              \
+	math/ncm_data_gauss_cov_mvnd.h       \
 	math/ncm_dataset.h                   \
 	math/ncm_likelihood.h                \
 	math/ncm_mset_trans_kern.h           \
@@ -274,6 +287,7 @@ ncm_headers =                                \
 	math/ncm_fit_esmcmc_walker.h         \
 	math/ncm_fit_esmcmc_walker_stretch.h \
 	math/ncm_fit_esmcmc_walker_walk.h    \
+	math/ncm_fit_esmcmc_walker_aps.h     \
 	math/ncm_lh_ratio1d.h                \
 	math/ncm_lh_ratio2d.h                \
 	math/ncm_abc.h                       \
@@ -292,10 +306,13 @@ ncm_headers =                                \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h           \
+	math/Faddeeva.h               \
+	math/ncm_flapack.h            \
+	gslextras/cqp/gsl_cqp.h       \
+	gslextras/cqp/initial_point.h \
 	math/ncm_gsl_blas_types.h
 
-ncm_headers_internal =
+ncm_headers_internal = 
 
 nc_headers = \
 	nc_hicosmo.h                  \
@@ -650,6 +667,7 @@ libnumcosmo_la_SOURCES = \
 	$(ncm_headers)          \
 	$(ncm_sources_nogi)     \
 	$(ncm_headers_nogi)     \
+	$(ncm_headers_internal) \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -667,7 +685,6 @@ nodist_libnumcosmo_la_SOURCES = \
 nobase_cosmo_include_HEADERS = \
 	$(ncm_headers)                 \
 	$(ncm_headers_nogi)            \
-	$(ncm_headers_internal)        \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \
 	math/binsplit_eval.c           \

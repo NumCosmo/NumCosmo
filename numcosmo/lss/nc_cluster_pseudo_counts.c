@@ -672,12 +672,11 @@ _peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bound
   /* solve the system with a maximum of 20 iterations */
 #ifdef HAVE_GSL_2_2
   status = gsl_multifit_fdfsolver_driver (cpc->s, 2.0e4, xtol, gtol, ftol, &info);
+  if (status != GSL_SUCCESS)
+    g_error ("error: NcClusterPseudoCounts peakfinder function.\n");
 #else /* HAVE_GSL_2_2 */
   g_error ("_peakfinder: this model requires gsl >= 2.2.");
 #endif /* HAVE_GSL_2_2 */
-
-  if (status != GSL_SUCCESS)
-    g_error ("error: NcClusterPseudoCounts peakfinder function.\n");
 
   //printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]);
   //printf ("3d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (cpc->s->x, 0), gsl_vector_get (cpc->s->x, 1));

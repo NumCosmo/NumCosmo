@@ -1209,17 +1209,8 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
     gboolean restart;
     gdouble last_m2lnL = 0.0, m2lnL = 0.0;
     gint n = 0;
-    
-    ncm_fit_run (fit, mtype);
-    last_m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
 
-    if (save_progress)
-    {
-      if (fit->mset != mset_out)
-        ncm_mset_param_set_mset (mset_out, fit->mset);
-      ncm_mset_save (mset_out, ser, mset_file, TRUE);
-    }
-    
+    ncm_fit_m2lnL_val (fit, &last_m2lnL);    
     do
     {
       ncm_fit_run (fit, mtype);

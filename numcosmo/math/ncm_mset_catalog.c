@@ -52,6 +52,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mset_catalog.h"
+#include "math/ncm_data_gauss_cov_mvnd.h"
+#include "math/ncm_model_mvnd.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_func_eval.h"
 #include "math/ncm_c.h"
@@ -68,28 +70,6 @@
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
-
-G_DEFINE_TYPE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
-
-enum
-{
-  PROP_0,
-  PROP_MSET,
-  PROP_NADD_VALS,
-  PROP_ADD_VAL_NAMES,
-  PROP_ADD_VAL_SYMBS,
-  PROP_M2LNP_VAR,
-  PROP_WEIGHTED,
-  PROP_NCHAINS,
-  PROP_BURNIN,
-  PROP_TAU_METHOD,
-  PROP_RNG,
-  PROP_FILE,
-  PROP_RUN_TYPE_STR,
-  PROP_SYNC_MODE,
-  PROP_SYNC_INTERVAL,
-  PROP_READONLY,
-};
 
 struct _NcmMSetCatalogPrivate
 {
@@ -148,6 +128,29 @@ struct _NcmMSetCatalogPrivate
   gsl_histogram_pdf *h_pdf;
   gboolean constructed;
 };
+
+G_DEFINE_TYPE_WITH_CODE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmMSetCatalog));
+
+enum
+{
+  PROP_0,
+  PROP_MSET,
+  PROP_NADD_VALS,
+  PROP_ADD_VAL_NAMES,
+  PROP_ADD_VAL_SYMBS,
+  PROP_M2LNP_VAR,
+  PROP_WEIGHTED,
+  PROP_NCHAINS,
+  PROP_BURNIN,
+  PROP_TAU_METHOD,
+  PROP_RNG,
+  PROP_FILE,
+  PROP_RUN_TYPE_STR,
+  PROP_SYNC_MODE,
+  PROP_SYNC_INTERVAL,
+  PROP_READONLY,
+};
+
 
 static gint
 _ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer data)
@@ -576,8 +579,6 @@ static void
 ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmMSetCatalogPrivate));
 
   object_class->constructed  = &_ncm_mset_catalog_constructed;
   object_class->set_property = &_ncm_mset_catalog_set_property;
@@ -3053,7 +3054,7 @@ ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
 /**
  * ncm_mset_catalog_peek_e_var_t:
  * @mcat: a #NcmMSetCatalog
- * @t: time
+ * @t: MCMC time
  *
  * Gets the variance of the @t-th ensemble.
  *
@@ -3068,16 +3069,347 @@ ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t)
   return g_ptr_array_index (self->e_var_array, t);
 }
 
+#define NCM_MSET_CATALOG_RESCALE_COV (0.80)
+
+static gdouble 
+_ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  const guint fparams_len = ncm_mset_fparams_len (self->mset);
+  const guint cat_len     = ncm_mset_catalog_len (mcat);
+  NcmMatrix *cov          = NULL;
+  NcmVector *mean         = NULL;
+  NcmVector *v            = ncm_vector_new (fparams_len);
+  gdouble level           = 0.50;
+  gdouble R2_cut          = gsl_cdf_chisq_Pinv (level, fparams_len);
+  gdouble lnNorma         = 0.0;
+  gdouble s               = 0.0;
+  gdouble c               = 0.0;
+  gdouble R_max           = 1.0e300;
+  gdouble R2_max, post_lnnorm;
+  gint i, ret;
+
+  ncm_mset_catalog_get_covar (mcat, &cov);
+  ncm_mset_catalog_get_mean (mcat, &mean);
+  ncm_matrix_scale (cov, gsl_pow_2 (NCM_MSET_CATALOG_RESCALE_COV));
+
+  for (i = 0; i < fparams_len; i++)
+  {
+    const gdouble mu_i    = ncm_vector_get (mean, i);
+    const gdouble sigma_i = sqrt (ncm_matrix_get (cov, i, i));
+    const gdouble l_i     = ncm_mset_fparam_get_lower_bound (self->mset, i);
+    const gdouble u_i     = ncm_mset_fparam_get_upper_bound (self->mset, i);
+
+    R_max = MIN (R_max, +(mu_i - l_i) / sigma_i);
+    R_max = MIN (R_max, -(mu_i - u_i) / sigma_i);
+  }
+  R2_max = R_max * R_max;
+
+  if (R2_cut > R2_max)
+  {
+    R2_cut = R2_max;
+    level  = gsl_cdf_chisq_P (R2_cut, fparams_len);
+  }
+
+  ret = ncm_matrix_cholesky_decomp (cov, 'U');
+  if (ret != 0)
+  {
+    g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
+
+    ncm_vector_clear (&mean);
+    ncm_matrix_clear (&cov);
+    ncm_vector_free (v);
+    return 0.0;
+  }
+  
+  lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov)) + log (level);
+
+  for (i = 0; i < cat_len; i++)
+  {
+    NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i);
+    const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
+    gdouble m2lnp_i       = 0.0;
+    gdouble e_i, t;
+
+    ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
+    ncm_vector_sub (v, mean);
+
+    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+                          ncm_matrix_gsl (cov), ncm_vector_gsl (v));
+    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+    ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
+    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+    if (m2lnp_i > R2_cut)
+      continue;
+
+    e_i  = exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
+    t    = s + e_i;
+    c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+    s = t;
+  }
+
+  post_lnnorm       = - (log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit);
+  post_lnnorm_sd[0] = GSL_NAN;
+
+  ncm_vector_clear (&mean);
+  ncm_matrix_clear (&cov);
+  ncm_vector_free (v);
+
+  return post_lnnorm;
+}
+
+static gdouble
+_ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, gdouble *lnnorm_sd)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  const guint fparams_len = ncm_mset_fparams_len (self->mset);
+  const guint cat_len     = ncm_mset_catalog_len (mcat);
+  NcmVector *v            = ncm_vector_new (fparams_len);
+  NcmStatsVec *slnnorm    = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE); 
+  gdouble s               = 0.0;
+  gdouble c               = 0.0;
+  guint slice_min         = 1000;
+  guint slice_div         = 100000;
+  guint slice_size        = cat_len;
+  guint slice_res         = 0;
+  guint nslices           = 1;
+  gdouble mean_lnnorm;
+  gint i, j, w, ret;
+
+  while ((cat_len / slice_div) < slice_min)
+  {
+    slice_div = slice_div / 10;
+    if (slice_div == 0)
+    {
+      slice_size = cat_len;
+      slice_res  = 0;
+      nslices    = 1;
+      g_warning ("_ncm_mset_catalog_get_post_lnnorm_sum: catalog too small to estimate error on the posterior norm.");
+    }
+    else
+    {
+      slice_size = cat_len / slice_div;
+      slice_res  = cat_len % slice_div;
+      nslices    = slice_div;
+    }
+  }
+  
+  w = 0;
+  for (j = 0; j < nslices; j++)
+  {
+    const guint slice_size1 = (j == 0) ? (slice_size + slice_res) : slice_size;
+
+    s = 0.0;
+    c = 0.0;
+    for (i = 0; i < slice_size1; i++)
+    {
+      NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i + w);
+      const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
+      gdouble m2lnp_i       = 0.0;
+      gdouble e_i, t;
+
+      ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
+      ncm_vector_sub (v, mean);
+
+      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+                            ncm_matrix_gsl (cov), ncm_vector_gsl (v));
+      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+      ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
+      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+      
+      e_i  = exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
+      t    = s + e_i;
+      c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+      s    = t;
+    }
+    
+    ncm_stats_vec_set (slnnorm, 0, (s + c) / (slice_size1));
+    ncm_stats_vec_set (slnnorm, 1, - (log ((s + c) / (slice_size1)) - lnNorma + 0.5 * self->bestfit));
+    
+    ncm_stats_vec_update_weight (slnnorm, slice_size1);
+    
+    w += slice_size1;
+    /*
+    printf ("# SL LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+            - (log ((s + c) / slice_size1) - lnNorma + 0.5 * self->bestfit), 
+            - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
+            ncm_stats_vec_get_mean (slnnorm, 1),
+            ncm_stats_vec_get_sd (slnnorm, 1),
+            ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
+            );
+    */
+  }
+
+  lnnorm_sd[0] = ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (1.0 * nslices);
+  mean_lnnorm  = - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit);
+
+  ncm_vector_free (v);
+  ncm_stats_vec_clear (&slnnorm);
+
+  return mean_lnnorm;
+}
+
+static gdouble
+_ncm_mset_catalog_get_post_lnnorm_sum_bs (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, const gdouble reltol, gdouble *lnnorm_sd, NcmRNG *rng)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  const guint max_iter    = 1000000;
+  const guint fparams_len = ncm_mset_fparams_len (self->mset);
+  const guint cat_len     = ncm_mset_catalog_len (mcat);
+  NcmVector *v            = ncm_vector_new (fparams_len);
+  NcmVector *m2lnp_v      = ncm_vector_new (cat_len);
+  NcmBootstrap *bs        = ncm_bootstrap_sized_new (cat_len);
+  NcmStatsVec *slnnorm    = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE); 
+  gdouble s               = 0.0;
+  gdouble c               = 0.0;  
+  gdouble mean_lnnorm;
+  gint i, j, ret;
+
+  for (i = 0; i < cat_len; i++)
+  {
+    NcmVector *row_i = ncm_mset_catalog_peek_row (mcat, i);
+    gdouble m2lnp_i  = 0.0;
+
+    ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
+    ncm_vector_sub (v, mean);
+
+    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+                          ncm_matrix_gsl (cov), ncm_vector_gsl (v));
+    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+    ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
+    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+    ncm_vector_set (m2lnp_v, i, m2lnp_i);
+  }
+
+  for (j = 0; j < max_iter; j++)
+  {
+    GArray *bs_array;
+    guint bs_size;
+    
+    ncm_bootstrap_resample (bs, rng);
+
+    bs_array = ncm_bootstrap_get_sortncomp (bs);
+    s        = 0.0;
+    c        = 0.0;
+
+    bs_size  = bs_array->len / 2;
+
+    for (i = 0; i < bs_size; i++)
+    {
+      const guint c_i       = g_array_index (bs_array, guint, 2 * i + 0);
+      const gdouble f_i     = g_array_index (bs_array, guint, 2 * i + 1);
+      const gdouble m2lnL_i = ncm_vector_fast_get (ncm_mset_catalog_peek_row (mcat, c_i), self->m2lnp_var);
+      const gdouble m2lnp_i = ncm_vector_fast_get (m2lnp_v, c_i);
+      const gdouble e_i     = f_i * exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
+      const gdouble t       = s + e_i;
+      
+      c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+      s = t;
+    }
+
+    ncm_stats_vec_set (slnnorm, 0, (s + c) / cat_len);
+    ncm_stats_vec_set (slnnorm, 1, - (log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit));
+
+    ncm_stats_vec_update (slnnorm);
+    /*
+    printf ("# BS LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+            - (log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit), 
+            - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
+            ncm_stats_vec_get_mean (slnnorm, 1),
+            ncm_stats_vec_get_sd (slnnorm, 1),
+            ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
+            );
+    */
+    g_array_unref (bs_array);
+
+    if ((j > 10) && (ncm_stats_vec_get_sd (slnnorm, 0) / sqrt (j + 1.0) < reltol))
+      break;
+  }
+
+  lnnorm_sd[0] = ncm_stats_vec_get_sd (slnnorm, 1);
+  mean_lnnorm  = - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit);
+  
+  ncm_vector_free (v);
+  ncm_vector_free (m2lnp_v);
+  ncm_bootstrap_clear (&bs);
+  ncm_stats_vec_clear (&slnnorm);
+  
+  return mean_lnnorm;
+}
+
+static gdouble 
+_ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_bs, gdouble *post_lnnorm_sd)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  const guint fparams_len = ncm_mset_fparams_len (self->mset);
+  NcmMatrix *cov          = NULL;
+  NcmVector *mean         = NULL;
+  NcmRNG *rng             = ncm_rng_new (NULL);
+  gdouble lnNorma         = 0.0;
+  gdouble ratio, post_lnnorm;
+  gint ret;
+
+  ncm_mset_catalog_get_covar (mcat, &cov);
+  ncm_mset_catalog_get_mean (mcat, &mean);
+  ncm_matrix_scale (cov, gsl_pow_2 (NCM_MSET_CATALOG_RESCALE_COV));
+
+  {
+    NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new (fparams_len);
+    NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (fparams_len);
+    NcmMSet *mset_mvnd             = ncm_mset_new (model_mvnd, NULL);
+
+    ncm_data_gauss_cov_mvnd_set_cov_mean (data_mvnd, mean, cov);
+
+    ncm_mset_param_set_all_ftype (mset_mvnd, NCM_PARAM_TYPE_FREE);
+    ncm_mset_prepare_fparam_map (mset_mvnd);
+    ncm_mset_fparams_set_vector (mset_mvnd, mean);
+
+    ratio = ncm_data_gauss_cov_mvnd_est_ratio (data_mvnd, mset_mvnd, self->mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, NULL, NULL, 1.0e-3, rng);
+
+    ncm_mset_clear (&mset_mvnd);
+    ncm_model_mvnd_clear (&model_mvnd);
+    ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  }
+
+  ret = ncm_matrix_cholesky_decomp (cov, 'U');
+  if (ret != 0)
+  {
+    g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
+
+    ncm_vector_clear (&mean);
+    ncm_matrix_clear (&cov);
+    return 0.0;
+  }
+
+  lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov)) + log (ratio);
+  if (use_bs)
+    post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum_bs (mcat, mean, cov, lnNorma, 1.0e-2, post_lnnorm_sd, rng);
+  else
+    post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum (mcat, mean, cov, lnNorma, post_lnnorm_sd);
+
+  ncm_vector_clear (&mean);
+  ncm_matrix_clear (&cov);
+  ncm_rng_clear (&rng);
+
+  return post_lnnorm;
+}
+
 /**
  * ncm_mset_catalog_get_post_lnnorm:
  * @mcat: a #NcmMSetCatalog
+ * @post_lnnorm_sd: (out): error on the estimate of the posterior normalization
  *
  * Computes, if necessary, the posterior normalization.
  *
  * Returns: the current the posterior normalization logarithm.
  */
 gdouble 
-ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat)
+ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
@@ -3089,68 +3421,27 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat)
   
   if (!self->post_lnnorm_up)
   {
-    const guint fparams_len = ncm_mset_fparams_len (self->mset);
-    const guint cat_len     = ncm_mset_catalog_len (mcat);
-    NcmMatrix *cov          = NULL;
-    NcmVector *mean         = NULL;
-    NcmVector *v            = ncm_vector_new (fparams_len);
-    gdouble lnNorma         = 0.0;
-    gdouble s               = 0.0;
-    gint i, ret;
-
-    ncm_mset_catalog_get_covar (mcat, &cov);
-    ncm_mset_catalog_get_mean (mcat, &mean);
-
-    /*ncm_matrix_log_vals (cov, "# COV : ", "% 22.15g");*/
-    ncm_matrix_scale (cov, gsl_pow_2 (1.0 / 3.0));
-    /*ncm_matrix_log_vals (cov, "# RCOV: ", "% 22.15g");*/
-
-    ret = ncm_matrix_cholesky_decomp (cov, 'U');
-
-    if (ret != 0)
-    {
-      g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
-
-      ncm_vector_clear (&mean);
-      ncm_matrix_clear (&cov);
-      ncm_vector_free (v);
-      return 0.0;
-    }
-
-    lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov));
-
-    /*printf ("# lnNorma = % 22.15g, bestfit = % 22.15g\n", lnNorma, self->bestfit);*/
+    NcmMSetCatalogPostNormMethod method = NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX;
     
-    for (i = 0; i < cat_len; i++)
+    switch (method)
     {
-      NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i);
-      const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
-      gdouble m2lnp_i       = 0.0;
-
-      ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
-      ncm_vector_sub (v, mean);
-      
-      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                            ncm_matrix_gsl (cov), ncm_vector_gsl (v));
-      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
-
-      ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
-      NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
-
-      /*ncm_vector_log_vals (v, "# V   :", "% 22.15g", TRUE);*/
-      /*printf ("%d % 22.15g % 22.15g % 22.15g % 22.15e\n", i, s, m2lnL_i, m2lnp_i, 0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));*/
-      
-      s += exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
+      case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX:
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, FALSE, post_lnnorm_sd);
+        break;
+      case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS:
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, TRUE, post_lnnorm_sd);
+        break;
+      case NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID:
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_elipsoid (mcat, post_lnnorm_sd);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
-
-    self->post_lnnorm    = - (log (s / cat_len) - lnNorma + 0.5 * self->bestfit);
-    self->post_lnnorm_up = TRUE;
-
-    ncm_vector_clear (&mean);
-    ncm_matrix_clear (&cov);
-    ncm_vector_free (v);
+    
+    self->post_lnnorm_up = TRUE;    
   }
-  
+
   return self->post_lnnorm;
 }
 
@@ -3170,7 +3461,8 @@ gdouble
 ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const gdouble lnnorm       = ncm_mset_catalog_get_post_lnnorm (mcat);
+  gdouble post_lnnorm_sd;
+  const gdouble lnnorm       = ncm_mset_catalog_get_post_lnnorm (mcat, &post_lnnorm_sd);
   const guint cat_len        = ncm_mset_catalog_len (mcat);
   const gint nitens          = cat_len * level;
   gdouble s = 0.0;
@@ -3196,7 +3488,7 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
     const gdouble m2lnp_i = ncm_vector_get (g_ptr_array_index (self->order_cat, i), self->m2lnp_var);
     s += exp (0.5 * (m2lnp_i - self->bestfit));
   }
-
+  
   if (glnvol != NULL)
   {
     NcmMatrix *cov             = NULL;
@@ -3217,6 +3509,19 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
   }
 
   return lnnorm + 0.5 * self->bestfit + log (s / cat_len);
+}
+
+/**
+ * ncm_mset_catalog_get_bestfit_m2lnL:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: the current bestfit $-2\ln(L)$ value.
+ */
+gdouble 
+ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  return self->bestfit;
 }
 
 /**
@@ -3557,8 +3862,8 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
         {
           lev = GSL_MAX (lev, GSL_VECTOR_REAL (self->chain_sM_ev, i));
 
-          if (GSL_VECTOR_IMAG (self->chain_sM_ev, i) != 0.0)
-            g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
+          //if (GSL_VECTOR_IMAG (self->chain_sM_ev, i) != 0.0)
+          //  g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
         }
         shrink_factor = sqrt ((n - 1.0) / (1.0 * n) + (self->nchains + 1.0) * lev / (self->nchains * 1.0));
       } while (FALSE);
@@ -4361,6 +4666,68 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc)
 		g_ptr_array_unref (rows);
 		g_free (file);
 	}
+}
+
+/**
+ * ncm_mset_catalog_trim_p:
+ * @mcat: a #NcmMSetCatalog
+ * @p: percentage of the trim
+ *
+ * Drops all points in the catalog such that the first @p percent of the catalog is dropped.
+ *
+ */
+void 
+ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p)
+{
+  g_assert_cmpfloat (p, >, 0.0);
+  g_assert_cmpfloat (p, <, 1.0);
+  
+  ncm_mset_catalog_trim (mcat, ncm_mset_catalog_max_time (mcat) * p);
+}
+
+/**
+ * ncm_mset_catalog_trim_oob:
+ * @mcat: a #NcmMSetCatalog
+ * @out_file: output filename
+ * 
+ * Remove all points that are outside the bounds defined by
+ * the catalog mset file. The catalog will always have a
+ * single chain after the trimming. The result is saved to @out_file.
+ *
+ */
+guint
+ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
+  gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+  guint i, ndel;
+
+  if (file != NULL)
+    ncm_mset_catalog_set_file (mcat, NULL);
+
+  ncm_mset_catalog_reset (mcat);
+  self->nchains = 1;  
+  ncm_mset_catalog_set_first_id (mcat, self->first_id);
+
+  ndel = 0;
+  for (i = 0; i < rows->len; i++)
+  {
+    NcmVector *row_t = g_ptr_array_index (rows, i);
+
+    if (ncm_mset_fparam_valid_bounds_offset (self->mset, row_t, self->nadd_vals))
+      _ncm_mset_catalog_post_update (mcat, row_t);
+    else
+      ndel++;
+  }
+
+  ncm_mset_catalog_set_file (mcat, out_file);
+  ncm_mset_catalog_sync (mcat, TRUE);
+
+  g_ptr_array_unref (rows);
+  g_free (file);
+
+  return ndel;
 }
 
 /**

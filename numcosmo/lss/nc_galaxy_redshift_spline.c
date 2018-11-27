@@ -61,7 +61,7 @@ enum
 	PROP_DISTS,
 };
 
-G_DEFINE_TYPE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT, G_ADD_PRIVATE (NcGalaxyRedshiftSpline));
 
 static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)
@@ -162,8 +162,6 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcGalaxyRedshiftSplinePrivate));
 
 	object_class->set_property = &_nc_galaxy_redshift_spline_set_property;
 	object_class->get_property = &_nc_galaxy_redshift_spline_get_property;

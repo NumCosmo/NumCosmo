@@ -58,7 +58,7 @@ struct _NcPowspecMLFixSpline
 	NcmSerialize *ser;
 	NcmSpline *Pk;
 	NcGrowthFunc *gf;
-	const gchar *filename;
+	gchar *filename;
 };
 
 GType nc_powspec_ml_fix_spline_get_type (void) G_GNUC_CONST;

@@ -53,7 +53,7 @@ enum
 	PROP_Z_SPEC
 };
 
-G_DEFINE_TYPE (NcGalaxyRedshiftSpec, nc_galaxy_redshift_spec, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshiftSpec, nc_galaxy_redshift_spec, NC_TYPE_GALAXY_REDSHIFT, G_ADD_PRIVATE (NcGalaxyRedshiftSpec));
 
 static void
 nc_galaxy_redshift_spec_init (NcGalaxyRedshiftSpec *gzs)
@@ -112,14 +112,13 @@ static gdouble _nc_galaxy_redshift_spec_interval_weight (NcGalaxyRedshift *gz, c
 static void _nc_galaxy_redshift_spec_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
 static gdouble _nc_galaxy_redshift_spec_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
 static gdouble _nc_galaxy_redshift_spec_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
+static gdouble _nc_galaxy_redshift_spec_quantile (NcGalaxyRedshift *gz, const gdouble q);
 
 static void
 nc_galaxy_redshift_spec_class_init (NcGalaxyRedshiftSpecClass *klass)
 {
 	GObjectClass* object_class      = G_OBJECT_CLASS (klass);
 	NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcGalaxyRedshiftSpecPrivate));
 
 	object_class->set_property = &_nc_galaxy_redshift_spec_set_property;
 	object_class->get_property = &_nc_galaxy_redshift_spec_get_property;
@@ -140,6 +139,7 @@ nc_galaxy_redshift_spec_class_init (NcGalaxyRedshiftSpecClass *klass)
 	gz_class->pdf_limits      = &_nc_galaxy_redshift_spec_pdf_limits;
   gz_class->pdf             = &_nc_galaxy_redshift_spec_pdf;
   gz_class->gen             = &_nc_galaxy_redshift_spec_gen;
+  gz_class->quantile        = &_nc_galaxy_redshift_spec_quantile;
 	
 }
 
@@ -191,6 +191,15 @@ _nc_galaxy_redshift_spec_pdf (NcGalaxyRedshift *gz, const guint di, const gdoubl
 
 static gdouble 
 _nc_galaxy_redshift_spec_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
+{
+	NcGalaxyRedshiftSpec *gzs = NC_GALAXY_REDSHIFT_SPEC (gz);
+	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
+
+	return self->z_spec;
+}
+
+static gdouble 
+_nc_galaxy_redshift_spec_quantile (NcGalaxyRedshift *gz, const gdouble q)
 {
 	NcGalaxyRedshiftSpec *gzs = NC_GALAXY_REDSHIFT_SPEC (gz);
 	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;

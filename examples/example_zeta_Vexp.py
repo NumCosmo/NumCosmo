@@ -27,9 +27,9 @@ gw    = Nc.HIPertGW.new ()
 Vexp  = Nc.HICosmoVexp.new ()
 
 if True: # Boa!
-  Vexp.props.alphab   = +1.1007e-1
-  Vexp.props.sigmaphi = +6.8e0
-  Vexp.props.dphi     = -5.0e-2
+  Vexp.props.alphab   = +1.0e-1
+  Vexp.props.sigmaphi = +0.8
+  Vexp.props.dphi     = +0.5
 #  Vexp.props.xb       = 4.8e37
   Vexp.props.xb       = 1.0e37
   Vexp.props.OmegaL   = 1.0
@@ -38,7 +38,7 @@ if True: # Boa!
 else:
   Vexp.props.alphab   = +1.0e-20
   Vexp.props.sigmaphi = +8.0e-1
-  Vexp.props.dphi     = -5.0e-1
+  Vexp.props.dphi     = +5.0e-1
   Vexp.props.xb       = 2.0e38
   Vexp.props.OmegaL   = 1.0
   Vexp.props.Omegac   = 1.0
@@ -202,7 +202,7 @@ plt.grid (b=True, which='both', linestyle=':', color='0.75', linewidth=0.5)
 leg = plt.legend (loc="upper left")
 
 #plt.xscale('symlog', linthreshx=1.0e-5)
-plt.yscale('symlog', linthreshy=1.0e-120)
+plt.yscale('symlog', linthreshy=1.0e23)
 #plt.yscale('log', linthreshy=1.0e-20)
 
 plt.show ()

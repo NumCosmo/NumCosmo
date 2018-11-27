@@ -49,6 +49,14 @@ mcat_join_LDADD = \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS)
 
+mcat_trim_oob_SOURCES = \
+	mcat_trim_oob.c
+
+mcat_trim_oob_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la  \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS)
+
 mset_gen_SOURCES =  \
 	mset_gen.c
 
@@ -73,8 +81,9 @@ darkenergy_LDADD = \
 AM_CPPFLAGS = 
 
 bin_PROGRAMS = \
-	darkenergy   \
-	mcat_analyze \
-	mcat_join    \
+	darkenergy    \
+	mcat_analyze  \
+	mcat_join     \
+	mcat_trim_oob \
 	mset_gen
 

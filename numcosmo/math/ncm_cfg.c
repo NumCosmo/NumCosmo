@@ -55,8 +55,10 @@
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
+#include "math/ncm_model_mvnd.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_data.h"
+#include "math/ncm_data_gauss_cov_mvnd.h"
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "math/ncm_data.h"
@@ -473,6 +475,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
 
+  ncm_cfg_register_obj (NCM_TYPE_MODEL_MVND);
+
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
 
@@ -483,7 +487,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 	ncm_cfg_register_obj (NCM_TYPE_DATA);
 	ncm_cfg_register_obj (NCM_TYPE_DATASET);
-	
+
+  ncm_cfg_register_obj (NCM_TYPE_DATA_GAUSS_COV_MVND);
+  
 	ncm_cfg_register_obj (NCM_TYPE_FIT);
 	ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 

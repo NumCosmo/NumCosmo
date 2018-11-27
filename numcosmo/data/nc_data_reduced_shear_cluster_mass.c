@@ -78,7 +78,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataReducedShearClusterMass, nc_data_reduced_shear_cluster_mass, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_CODE (NcDataReducedShearClusterMass, nc_data_reduced_shear_cluster_mass, NCM_TYPE_DATA, G_ADD_PRIVATE (NcDataReducedShearClusterMass));
 
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)
@@ -212,8 +212,6 @@ nc_data_reduced_shear_cluster_mass_class_init (NcDataReducedShearClusterMassClas
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class = NCM_DATA_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcDataReducedShearClusterMassPrivate));
 	
   object_class->set_property = nc_data_reduced_shear_cluster_mass_set_property;
   object_class->get_property = nc_data_reduced_shear_cluster_mass_get_property;

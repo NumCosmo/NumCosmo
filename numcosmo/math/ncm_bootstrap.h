@@ -81,7 +81,10 @@ guint ncm_bootstrap_get_bsize (NcmBootstrap *bstrap);
 G_INLINE_FUNC void ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng);
 G_INLINE_FUNC void ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng);
 G_INLINE_FUNC guint ncm_bootstrap_get (NcmBootstrap *bstrap, guint i);
+G_INLINE_FUNC GArray *ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap);
 G_INLINE_FUNC gboolean ncm_bootstrap_is_init (NcmBootstrap *bstrap);
+
+gint _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b);
 
 G_END_DECLS
 
@@ -98,11 +101,12 @@ G_BEGIN_DECLS
 G_INLINE_FUNC void 
 ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
 {
-  gpointer bdata = bstrap->bootstrap_index->data;
-  gpointer idata = bstrap->increasing_index->data;
-  const gsize fsize = bstrap->fsize;
-  const gsize bsize = bstrap->bsize;
+  gpointer bdata           = bstrap->bootstrap_index->data;
+  gpointer idata           = bstrap->increasing_index->data;
+  const gsize fsize        = bstrap->fsize;
+  const gsize bsize        = bstrap->bsize;
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
+  
   ncm_rng_lock (rng);
   gsl_ran_sample (rng->r, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
@@ -112,11 +116,12 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
 G_INLINE_FUNC void 
 ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
 {
-  gpointer bdata = bstrap->bootstrap_index->data;
-  gpointer idata = bstrap->increasing_index->data;
-  const gsize fsize = bstrap->fsize;
-  const gsize bsize = bstrap->bsize;
+  gpointer bdata           = bstrap->bootstrap_index->data;
+  gpointer idata           = bstrap->increasing_index->data;
+  const gsize fsize        = bstrap->fsize;
+  const gsize bsize        = bstrap->bsize;
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
+  
   ncm_rng_lock (rng);
   gsl_ran_choose (rng->r, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
@@ -127,6 +132,40 @@ G_INLINE_FUNC guint
 ncm_bootstrap_get (NcmBootstrap *bstrap, guint i)
 {
   return g_array_index (bstrap->bootstrap_index, guint, i);
+}
+
+G_INLINE_FUNC GArray * 
+ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
+{
+  GArray *res = g_array_sized_new (FALSE, TRUE, sizeof (guint), bstrap->bsize);
+  const guint one = 1;
+  guint i, j, n_c;
+
+  g_array_sort (bstrap->bootstrap_index, &_ncm_bootstrap_get_sort);
+
+  n_c = g_array_index (bstrap->bootstrap_index, guint, 0);
+
+  j = 0;
+  g_array_append_val (res, n_c);
+  g_array_append_val (res, one);
+    
+  for (i = 1; i < bstrap->bsize; i++)
+  {
+    const guint n_i = g_array_index (bstrap->bootstrap_index, guint, i);
+    if (n_i == n_c)
+    {
+      g_array_index (res, guint, 2 * j + 1)++;
+    }
+    else
+    {
+      g_array_append_val (res, n_i);
+      g_array_append_val (res, one);
+      n_c = n_i;
+      j++;
+    }
+  }
+
+  return res;
 }
 
 G_INLINE_FUNC gboolean 

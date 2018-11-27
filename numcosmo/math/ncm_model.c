@@ -949,6 +949,20 @@ ncm_model_dup (NcmModel *model, NcmSerialize *ser)
 }
 
 /**
+ * ncm_model_ref:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmModel *
+ncm_model_ref (NcmModel *model)
+{
+  return g_object_ref (model);
+}
+
+/**
  * ncm_model_free:
  * @model: a #NcmModel
  *
@@ -1316,14 +1330,6 @@ ncm_model_params_valid_bounds (NcmModel *model)
   return TRUE;
 }
 
-/**
- * ncm_model_ref:
- * @model: a #NcmModel
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
 /**
  * ncm_model_id:
  * @model: a #NcmModel
@@ -1771,6 +1777,7 @@ void
 ncm_model_param_set_scale (NcmModel *model, guint n, const gdouble scale)
 {
   ncm_sparam_set_scale (ncm_model_param_peek_desc (model, n), scale);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1786,6 +1793,7 @@ void
 ncm_model_param_set_lower_bound (NcmModel *model, guint n, const gdouble lb)
 {
   ncm_sparam_set_lower_bound (ncm_model_param_peek_desc (model, n), lb);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1801,6 +1809,7 @@ void
 ncm_model_param_set_upper_bound (NcmModel *model, guint n, const gdouble ub)
 {
   ncm_sparam_set_upper_bound (ncm_model_param_peek_desc (model, n), ub);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1816,6 +1825,7 @@ void
 ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol)
 {
   ncm_sparam_set_absolute_tolerance (ncm_model_param_peek_desc (model, n), abstol);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**

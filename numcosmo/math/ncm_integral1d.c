@@ -49,8 +49,6 @@
 #include <gsl/gsl_errno.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);
-
 struct _NcmIntegral1dPrivate
 {
   guint partition;
@@ -60,6 +58,8 @@ struct _NcmIntegral1dPrivate
   gsl_integration_workspace *ws;
   gsl_integration_cquad_workspace *cquad_ws;
 };
+
+G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmIntegral1d));
 
 enum
 {
@@ -152,8 +152,6 @@ static void
 ncm_integral1d_class_init (NcmIntegral1dClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmIntegral1dPrivate));
 
   object_class->set_property = &ncm_integral1d_set_property;
   object_class->get_property = &ncm_integral1d_get_property;
