@@ -89,6 +89,7 @@ typedef enum _NcmMSetCatalogTrimType
 /**
  * NcmMSetCatalogPostNormMethod:
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: Uses a MVND limited in a hyperbox and bootstrap to estimate error.
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in elipsoids.
  * 
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().

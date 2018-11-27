@@ -46,6 +46,15 @@
 #include <cvodes/cvodes_bandpre.h>
 #include <cvodes/cvodes_spbcgs.h>
 #endif 
+
+#if HAVE_SUNDIALS_MAJOR == 2
+#define SUN_DENSE_ACCESS DENSE_ELEM
+#define SUN_BAND_ACCESS BAND_ELEM
+#elif HAVE_SUNDIALS_MAJOR == 3
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
+#define SUN_BAND_ACCESS SM_ELEMENT_D
+#endif 
+
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum

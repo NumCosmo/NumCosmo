@@ -42,9 +42,9 @@
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_c.h"
 #include "math/ncm_lapack.h"
-#include "gslextras/cqp/gsl_cqp.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
+#include "gslextras/cqp/gsl_cqp.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
 #include <nlopt.h>

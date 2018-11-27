@@ -37,7 +37,6 @@
 
 #if HAVE_SUNDIALS_MAJOR == 2
 #include <cvodes/cvodes_dense.h>
-#define SUN_DENSE_ACCESS DENSE_ELEM
 #elif HAVE_SUNDIALS_MAJOR == 3
 #include <cvodes/cvodes_direct.h> 
 #endif
@@ -46,7 +45,6 @@
 #include <sundials/sundials_matrix.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
 #endif 
 
 #endif /* NUMCOSMO_GIR_SCAN */
