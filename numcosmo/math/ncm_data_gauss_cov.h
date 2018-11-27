@@ -74,6 +74,8 @@ GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;
 void ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np);
 guint ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss);
 
+void ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma);
+
 G_END_DECLS
 
 #endif /* _NCM_DATA_GAUSS_COV_H_ */

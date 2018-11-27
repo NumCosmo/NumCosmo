@@ -797,7 +797,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsysvx_ dsysvxx_ dgeev_ dgeevx_ dggglm_],[],[])
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysvx_ dsysvxx_ dsyevr_ dgeev_ dgeevx_ dggglm_],[],[])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],
@@ -992,8 +992,10 @@ if test "xno" = "xyes"; then
   AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_3_1_1],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_3_1_2],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_2_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_3_2_1],[1],[SUNDIALS version])
 fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3], [3.1.1, HAVE_SUNDIALS_3_1_1, 3], [3.1.2, HAVE_SUNDIALS_3_1_2, 3]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3], [3.1.1, HAVE_SUNDIALS_3_1_1, 3], [3.1.2, HAVE_SUNDIALS_3_1_2, 3], [3.2.0, HAVE_SUNDIALS_3_2_0, 3], [3.2.1, HAVE_SUNDIALS_3_2_1, 3]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)

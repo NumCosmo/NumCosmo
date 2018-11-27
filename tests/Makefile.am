@@ -41,6 +41,9 @@ test_ncm_stats_vec_SOURCES =  \
 test_ncm_stats_dist1d_epdf_SOURCES =  \
 	test_ncm_stats_dist1d_epdf.c
 	
+test_ncm_stats_dist_nd_SOURCES =  \
+	test_ncm_stats_dist_nd.c
+	
 test_ncm_spline_SOURCES =  \
         test_ncm_spline.c
 
@@ -65,11 +68,7 @@ test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
 test_ncm_mset_catalog_SOURCES = \
-	test_ncm_mset_catalog.c   \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_mset_catalog.c
 
 test_ncm_obj_array_SOURCES = \
 	test_ncm_obj_array.c
@@ -83,18 +82,10 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.h
 
 test_ncm_fit_SOURCES = \
-	test_ncm_fit.c            \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit.c
 
 test_ncm_fit_esmcmc_SOURCES = \
-	test_ncm_fit_esmcmc.c     \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit_esmcmc.c
 
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
@@ -149,6 +140,7 @@ check_PROGRAMS =  \
 	test_ncm_matrix                 \
 	test_ncm_stats_vec              \
 	test_ncm_stats_dist1d_epdf      \
+	test_ncm_stats_dist_nd          \
 	test_ncm_spline                 \
 	test_ncm_spline2d               \
 	test_ncm_integral1d             \
@@ -221,6 +213,12 @@ test_ncm_stats_vec_LDADD = \
 	$(COVLIBS)
 
 test_ncm_stats_dist1d_epdf_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_stats_dist_nd_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

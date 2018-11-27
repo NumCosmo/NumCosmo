@@ -108,8 +108,8 @@ nc_powspec_mnl_halofit_init (NcPowspecMNLHaloFit* pshf)
 	pshf->priv->linear_scale_solver = gsl_root_fdfsolver_alloc (gsl_root_fdfsolver_steffenson);
 	pshf->priv->znl_solver          = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
 
-	pshf->priv->z           = HUGE_VAL;
-  pshf->priv->pkequal     = FALSE;
+	pshf->priv->z        = HUGE_VAL;
+  pshf->priv->pkequal  = FALSE;
   pshf->priv->cpl      = NULL;
   pshf->priv->cpl_dist = NULL;
 }
@@ -420,8 +420,8 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 		F.function = &_nc_powspec_mnl_halofit_varm1;
 		F.params = &vps;
 
-		gdouble lnRlo = -z / 2. - 10.;
-		gdouble lnRup = -z / 2. + 10.;
+		gdouble lnRlo = -z / 2.0 - 10.0;
+		gdouble lnRup = -z / 2.0 + 10.0;
 
 		gsl_root_fsolver_set (s, &F, lnRlo, lnRup);
 

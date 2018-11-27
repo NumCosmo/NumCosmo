@@ -62,27 +62,86 @@
 #  include <mkl_lapack.h>
 #elif HAVE_LAPACKE
 #elif HAVE_LAPACK
-void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
-void dpotrf_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gint *info);
-void dpotri_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gint *info);
-void dpotrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gint *info);
-void dposv_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gint *info);
-
-void dsytrf_ (const gchar *uplo, gint *n, gdouble *a, gint *lda, gint *ipiv, gdouble *work, gint *lwork, gint *info);
-void dsytrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, const gint *ipiv, gdouble *b, const gint *ldb, gint *info);
-void dsysvx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint *lwork, gint *iwork, gint *info);
-void dsysvxx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
-
-void dgeev_ (const gchar *jobvl, const gchar *jobvr, gint *n, gdouble *a, gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, gint *ldvl, gdouble *vr, gint *ldvr, gdouble *work, gint *lwork, gint *info);
-void dgeevx_ (const gchar *balanc, const gchar *jobvl, const gchar *jobvr, const gchar *sense, const gint *n, gdouble *a, const gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, const gint *ldvl, gdouble *vr, const gint *ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, const gint *lwork, gint *iwork, gint *info);
-
-void dggglm_ (const gint *N, const gint *M, const gint *P, gdouble *X, const gint *LDA, gdouble *L, const gint *LDB, 
-              gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
+#include "math/ncm_flapack.h"
 #endif /* HAVE_LAPACK */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #define _NCM_LAPACK_CONV_UPLO(uplo) (uplo == 'L' ? 'U' : 'L')
 #define _NCM_LAPACK_CONV_TRANS(trans) (trans == 'N' ? 'T' : 'N')
+
+G_DEFINE_BOXED_TYPE (NcmLapackWS, ncm_lapack_ws, ncm_lapack_ws_dup, ncm_lapack_ws_free);
+
+/**
+ * ncm_lapack_ws_new:
+ * 
+ * Creates a new Lapack workspace object.
+ * 
+ * Returns:(transfer full): a newly created #NcmLapackWS.
+ */ 
+NcmLapackWS *
+ncm_lapack_ws_new (void)
+{
+  NcmLapackWS *ws = g_new (NcmLapackWS, 1);
+
+  ws->work  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ws->iwork = g_array_new (FALSE, FALSE, sizeof (gint));
+  
+  return ws;
+}
+
+/**
+ * ncm_lapack_ws_dup:
+ * @ws: a #NcmLapackWS
+ * 
+ * Duplicates a Lapack workspace object.
+ * 
+ * Returns: (transfer full): a copy of @ws.
+ */ 
+NcmLapackWS *
+ncm_lapack_ws_dup (NcmLapackWS *ws)
+{
+  NcmLapackWS *ws_dup = ncm_lapack_ws_new ();
+
+  g_array_set_size (ws_dup->work,  ws->work->len);
+  g_array_set_size (ws_dup->iwork, ws->iwork->len);
+
+  return ws_dup;
+}
+
+/**
+ * ncm_lapack_ws_free:
+ * @ws: a #NcmLapackWS
+ * 
+ * Frees a Lapack workspace object.
+ * 
+ */ 
+void
+ncm_lapack_ws_free (NcmLapackWS *ws)
+{
+  g_array_unref (ws->work);
+  g_array_unref (ws->iwork);
+  g_free (ws);
+}
+
+/**
+ * ncm_lapack_ws_clear:
+ * @ws: a #NcmLapackWS
+ * 
+ * Clears a Lapack workspace object.
+ * 
+ */ 
+void
+ncm_lapack_ws_clear (NcmLapackWS **ws)
+{
+  g_assert (ws != NULL);
+  if (*ws != NULL)
+  {
+    g_array_unref (ws[0]->work);
+    g_array_unref (ws[0]->iwork);
+    g_free (ws[0]);
+    ws[0] = NULL;
+  }
+}
 
 /**
  * ncm_lapack_dptsv:
@@ -333,13 +392,10 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
  * @a: array of doubles with dimension (@n, @lda)
  * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
  * @ipiv: Information about decomposition swaps and blocks
- * @work: work area, must have @lwork allocated doubles
- * @lwork: work area size
+ * @ws: a #NcmLapackWS
  *
  * This function computes the factorization of a real symmetric
  * matrix @a, using the Bunch-Kaufman diagonal pivoting method.
- * 
- * Calling this function with lwork == -1 computed the ideal @lwork in @work[0].
  * 
  * Returns: i = 0:  successful exit
  * 
@@ -349,16 +405,31 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
  *            or L is zero, and the inverse could not be computed.
  */
 gint 
-ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, gdouble *work, gint lwork)
+ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
 {
 #if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, work, lwork);
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, ws->work->data, ws->work->len);  
+
   return info;
 #elif defined HAVE_LAPACK
-  gint info = 0;
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
-  dsytrf_ (&uplo, &n, a, &lda, ipiv, work, &lwork, &info);  
+  dsytrf_ (&uplo, &n, a, &lda, ipiv, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+
+  lwork = ws->work->len;
+  dsytrf_ (&uplo, &n, a, &lda, ipiv, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
 
 	return info;
 #else /* No fall back. */
@@ -402,6 +473,51 @@ ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ip
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
   dsytrs_ (&uplo, &n, &nrhs, a, &lda, ipiv, b, &ldb, &info);  
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dsytri:
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
+ * @n: The order of the matrix @a, @n >= 0
+ * @a: array of doubles with dimension (@n, @lda)
+ * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
+ * @ipiv: Information about decomposition swaps and blocks
+ * @ws: a #NcmLapackWS
+ *
+ * This function compute the inverse of a real symmetric indefinite matrix @a using
+ * the factorization @a =	U*D*U**T or @a =	L*D*L**T computed by ncm_lapack_dsytrf().
+ *
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U
+ *            or L is zero, and the inverse could not be computed.
+ */
+gint 
+ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info;
+
+  if (ws->work->len < n)
+    g_array_set_size (ws->work, n);
+  
+  info = LAPACKE_dsytri (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, ipiv, &g_array_index (ws->work, gdouble, 0));
+  return info;
+#elif defined HAVE_LAPACK
+  gint info = 0;
+  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+  if (ws->work->len < n)
+    g_array_set_size (ws->work, n);
+
+  dsytri_ (&uplo, &n, a, &lda, ipiv, &g_array_index (ws->work, gdouble, 0), &info);  
 
 	return info;
 #else /* No fall back */
@@ -734,6 +850,51 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
 }
 
 /**
+ * ncm_lapack_dsyevr:
+ * @jobz: FIXME
+ * @range: FIXME
+ * @uplo: FIXME
+ * @n: FIXME
+ * @a: FIXME
+ * @lda: FIXME
+ * @vl: FIXME
+ * @vu: FIXME
+ * @il: FIXME
+ * @iu: FIXME
+ * @abstol: FIXME
+ * @m: FIXME
+ * @w: FIXME
+ * @z: FIXME
+ * @ldz: FIXME
+ * @isuppz: FIXME
+ * @work: FIXME
+ * @lwork: FIXME
+ * @iwork: FIXME
+ * @liwork: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */ 
+gint 
+ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, gdouble *work, gint lwork, gint *iwork, gint liwork)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  lapack_int info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, work, lwork, iwork, liwork);
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVR_)
+  gint info = 0;
+  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+	dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, work, &lwork, iwork, &liwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
  * ncm_lapack_dsysvx:
  * @fact: FACT is CHARACTER*1
  * Specifies whether or not the factored form of the matrix A is
@@ -889,7 +1050,7 @@ gint
 ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint lwork, gint *iwork)
 {
 #if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsysvx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, equed, s, b, ldb, x, ldx, rcond, rpvgrw, berr, n_err_bnds, err_bnds_norm, err_bnds_comp, nparams, params, work, iwork);
+  lapack_int info = LAPACKE_dsysvx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, b, ldb, x, ldx, rcond, ferr, berr, work, lwork, iwork);
   return info;
 #elif defined (HAVE_LAPACK) && defined (HAVE_DSYSVX_)
   gint info = 0;

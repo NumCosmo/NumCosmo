@@ -30,7 +30,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/numcosmo-math.h>
+#include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_model.h>
 
 G_BEGIN_DECLS
 

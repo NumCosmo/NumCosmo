@@ -30,7 +30,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/numcosmo-math.h>
+#include <numcosmo/math/ncm_data_gauss_cov.h>
 
 G_BEGIN_DECLS
 
@@ -58,6 +58,8 @@ struct _NcmDataGaussCovMVND
   NcmDataGaussCovMVNDPrivate *priv;
 };
 
+typedef gboolean (*NcmDataGaussCovMVNDBound) (gpointer obj, NcmVector *y);
+
 GType ncm_data_gauss_cov_mvnd_get_type (void) G_GNUC_CONST;
 
 NcmDataGaussCovMVND *ncm_data_gauss_cov_mvnd_new (const guint dim);
@@ -67,7 +69,13 @@ void ncm_data_gauss_cov_mvnd_free (NcmDataGaussCovMVND *data_mvnd);
 void ncm_data_gauss_cov_mvnd_clear (NcmDataGaussCovMVND **data_mvnd);
 
 void ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, const gdouble mean_min, const gdouble mean_max, NcmRNG *rng);
+void ncm_data_gauss_cov_mvnd_set_cov_mean (NcmDataGaussCovMVND *data_mvnd, NcmVector *mean, NcmMatrix *cov);
 NcmVector *ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd);
+
+NcmVector *ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, NcmRNG *rng, gulong *N);
+gdouble ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, gulong *N, gulong *Nin, const gdouble reltol, NcmRNG *rng);
+
+void ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd);
 
 G_END_DECLS
 

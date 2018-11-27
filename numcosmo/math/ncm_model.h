@@ -128,12 +128,13 @@ void ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...);
 void ncm_model_class_add_impl_flag (NcmModelClass *model_class, guint64 flag);
 
 NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
+NcmModel *ncm_model_ref (NcmModel *model);
+
 void ncm_model_free (NcmModel *model);
 void ncm_model_clear (NcmModel **model);
 void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam);
 gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 
-G_INLINE_FUNC NcmModel *ncm_model_ref (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
 G_INLINE_FUNC gboolean ncm_model_check_impl_flag (NcmModel *model, guint64 impl);
@@ -306,12 +307,6 @@ G_END_DECLS
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
-
-G_INLINE_FUNC NcmModel *
-ncm_model_ref (NcmModel *model)
-{
-  return g_object_ref (model);
-}
 
 G_INLINE_FUNC NcmModelID
 ncm_model_id (NcmModel *model)
