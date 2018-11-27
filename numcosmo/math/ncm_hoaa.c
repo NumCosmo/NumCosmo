@@ -415,6 +415,19 @@ _ncm_hoaa_finalize (GObject *object)
 
 static gdouble _ncm_hoaa_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
 
+static gdouble _ncm_hoaa_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)    { g_error ("_ncm_hoaa_eval_mnu: not implemented."); return 0.0; }
+static gdouble _ncm_hoaa_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)     { g_error ("_ncm_hoaa_eval_nu: not implemented."); return 0.0; }
+static gdouble _ncm_hoaa_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k) { g_error ("_ncm_hoaa_eval_dlnmnu: not implemented."); return 0.0; }
+static gdouble _ncm_hoaa_eval_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)      { g_error ("_ncm_hoaa_eval_V: not implemented."); return 0.0; }
+static void _ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu) { g_error ("_ncm_hoaa_eval_system: not implemented."); }
+static guint _ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)                          { g_error ("_ncm_hoaa_nsing: not implemented."); return 0; }
+static void _ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st) { g_error ("_ncm_hoaa_get_sing_info: not implemented."); }
+static gdouble _ncm_hoaa_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)    { g_error ("_ncm_hoaa_eval_sing_mnu: not implemented."); return 0.0; }
+static gdouble _ncm_hoaa_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing) { g_error ("_ncm_hoaa_eval_sing_dlnmnu: not implemented."); return 0.0; }
+static gdouble _ncm_hoaa_eval_sing_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)      { g_error ("_ncm_hoaa_eval_sing_V: not implemented."); return 0.0; }
+static void _ncm_hoaa_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu) { { g_error ("_ncm_hoaa_eval_sing_system: not implemented."); } }
+static void _ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model) { g_error ("_ncm_hoaa_prepare: not implemented."); }
+
 static void
 ncm_hoaa_class_init (NcmHOAAClass *klass)
 {
@@ -475,19 +488,21 @@ ncm_hoaa_class_init (NcmHOAAClass *klass)
                                                       NCM_TYPE_HOAA_OPT, NCM_HOAA_OPT_INVALID,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  klass->eval_mnu         = NULL;
-  klass->eval_nu          = NULL;
-  klass->eval_V           = NULL;
-  klass->eval_system      = NULL;
+  klass->eval_mnu         = &_ncm_hoaa_eval_mnu;
+  klass->eval_nu          = &_ncm_hoaa_eval_nu;
+  klass->eval_dlnmnu      = &_ncm_hoaa_eval_dlnmnu;
+  klass->eval_V           = &_ncm_hoaa_eval_V;
+  klass->eval_system      = &_ncm_hoaa_eval_system;
 
-  klass->nsing            = NULL;
-  klass->get_sing_info    = NULL;
-  klass->eval_sing_mnu    = NULL;
-  klass->eval_sing_dlnmnu = NULL;
-  klass->eval_sing_V      = NULL;
+  klass->nsing            = &_ncm_hoaa_nsing;
+  klass->get_sing_info    = &_ncm_hoaa_get_sing_info;
+  klass->eval_sing_mnu    = &_ncm_hoaa_eval_sing_mnu;
+  klass->eval_sing_dlnmnu = &_ncm_hoaa_eval_sing_dlnmnu;
+  klass->eval_sing_V      = &_ncm_hoaa_eval_sing_V;
+  klass->eval_sing_system = &_ncm_hoaa_eval_sing_system;
 
-  klass->prepare          = NULL;
-
+  klass->prepare          = &_ncm_hoaa_prepare;
+  
 	klass->eval_powspec_factor = &_ncm_hoaa_eval_powspec_factor;
 }
 
