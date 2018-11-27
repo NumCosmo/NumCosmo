@@ -452,7 +452,8 @@ typedef struct _xcor_limber_suave
 } xcor_limber_suave;
 
 
-int _nc_xcor_limber_suave_integrand (const int *ndim, const double x[], const int *ncomp, double f[], void *userdata)
+gint 
+_nc_xcor_limber_suave_integrand (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
 	xcor_limber_suave* xcls = (xcor_limber_suave*)userdata;
 
@@ -695,10 +696,11 @@ void nc_xcor_limber (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 		case NC_XCOR_LIMBER_METHOD_GSL:
 			_nc_xcor_limber_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
 			break;
+#ifdef HAVE_LIBCUBA
 		case NC_XCOR_LIMBER_METHOD_SUAVE:
 			_nc_xcor_limber_suave (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
 			break;
-
+#endif /* HAVE_LIBCUBA */
 		default:
 			g_assert_not_reached ();
 			break;
