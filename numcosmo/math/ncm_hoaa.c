@@ -81,7 +81,10 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #undef HAVE_SUNDIALS_ARKODE
 
-/*#define NCM_HOAA_DEBUG_EVOL 1*/
+/*
+#undef NCM_HOAA_DEBUG_EVOL
+#define NCM_HOAA_DEBUG_EVOL TRUE
+*/
 
 #include <nvector/nvector_serial.h>
 
@@ -708,17 +711,21 @@ _ncm_hoaa_full_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
 
-  NV_Ith_S (ydot, NCM_HOAA_VAR_THETAB) = nu - sin2_theta * Vnu + 0.5 * dlnmnu * sin_2theta;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_UPSILON)   = nu - sin2_psi * Vnu   + 0.5 * dlnmnu * sin_2psi;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_THETAB)  = nu - sin2_theta * Vnu + 0.5 * dlnmnu * sin_2theta;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_UPSILON) = nu - sin2_psi * Vnu   + 0.5 * dlnmnu * sin_2psi;
 
   NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = Vnu * sin_2theta - dlnmnu * cos_2theta;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = Vnu * sin_2psi   - dlnmnu * cos_2psi;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)     = Vnu * sin_2psi   - dlnmnu * cos_2psi;
   
   return 0;
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 _ncm_hoaa_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_ncm_hoaa_full_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcmHOAAArg *arg  = (NcmHOAAArg *) jac_data;
 
@@ -783,7 +790,11 @@ _ncm_hoaa_V_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
+#if HAVE_SUNDIALS_MAJOR == 2
 _ncm_hoaa_V_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#elif HAVE_SUNDIALS_MAJOR == 3
+_ncm_hoaa_V_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+#endif
 {
   NcmHOAAArg *arg  = (NcmHOAAArg *) jac_data;
 
@@ -819,8 +830,7 @@ _ncm_hoaa_V_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector f
 /***************************************         dlnmnu           *************************************/
 /***************************************          START           *************************************/
 /******************************************************************************************************/
-#endif
-
+#endif /* 0 */
 static void
 _ncm_hoaa_dlnmnu_calc_u_v (const gdouble upsilon, const gdouble lnmnu, gdouble *u, gdouble *v, gdouble *epsilon)
 {
@@ -898,7 +908,6 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
   return 0;
 }
-
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
@@ -1169,12 +1178,14 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
   switch (hoaa->priv->opt)
   {
     case NCM_HOAA_OPT_FULL:
-//      f = _ncm_hoaa_full_f;
-//      J = _ncm_hoaa_full_J;
+      /*f = _ncm_hoaa_full_f;*/
+      /*J = _ncm_hoaa_full_J;*/
+      g_assert_not_reached ();
       break;
     case NCM_HOAA_OPT_V_ONLY:
-//      f = _ncm_hoaa_V_only_f;
-//      J = _ncm_hoaa_V_only_J;
+      /*f = _ncm_hoaa_V_only_f;*/
+      /*J = _ncm_hoaa_V_only_J;*/
+      g_assert_not_reached ();
       break;
     case NCM_HOAA_OPT_DLNMNU_ONLY:
       f = _ncm_hoaa_dlnmnu_only_f;
@@ -1487,6 +1498,8 @@ _ncm_hoaa_test_tol_Vnu (gdouble at, gpointer userdata)
 
   ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
 
+  /*printf ("t=% 22.15g k=% 22.15g nu=% 22.15g dlnmnu=% 22.15g Vnu=% 22.15g\n", t, arg->hoaa->k, nu, dlnmnu, Vnu);*/
+  
   test = Vnu / nu;
   
   return log (fabs (test / arg->prec));
@@ -1547,7 +1560,7 @@ _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble t
 
   if ((iter >= max_iter) || (status != GSL_SUCCESS))
   {
-    g_warning ("_ncm_hoaa_search_initial_time_by_func: cannot intial time with the required precision.");
+    g_warning ("_ncm_hoaa_search_initial_time_by_func: cannot find intial time with the required precision.");
   }
   
   return sinh (at0);  
