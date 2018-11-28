@@ -1,7 +1,11 @@
 os:
-  - os: linux
-  - os: osx
-    osx_image: xcode10.1
+  - linux
+  - osx
+
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode10.1
 
 dist: trusty
 sudo: required
