@@ -899,6 +899,7 @@ if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
   AC_MSG_RESULT([internal v4.2])
   AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+  AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
 else
   AC_MSG_RESULT([external])
   AC_MSG_CHECKING([libcuba version])
@@ -906,18 +907,21 @@ else
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1="<= 3.3"],
               [cuba_3_1="error"
   AC_COMPILE_IFELSE(
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1="<= 3.3"],
               [cuba_3_1="error"
   AC_COMPILE_IFELSE(
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1=">= 4.0"],
               [cuba_3_1="error"
               ])])])

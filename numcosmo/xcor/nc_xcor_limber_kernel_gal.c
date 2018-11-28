@@ -260,7 +260,6 @@ _nc_xcor_limber_kernel_gal_finalize (GObject* object)
 
 static gdouble _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
-/*static gdouble _nc_xcor_limber_kernel_gal_noise_spec (NcXcorLimberKernel* xclk, guint l);*/
 static void _nc_xcor_limber_kernel_gal_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 guint _nc_xcor_limber_kernel_gal_obs_len (NcXcorLimberKernel* xclk);
 guint _nc_xcor_limber_kernel_gal_obs_params_len (NcXcorLimberKernel* xclk);
@@ -281,28 +280,13 @@ nc_xcor_limber_kernel_gal_class_init (NcXcorLimberKernelGalClass* klass)
   ncm_model_class_set_name_nick (model_class, "Xcor limber galaxy distribution", "Xcor-gal");
   ncm_model_class_add_params (model_class, NC_XCOR_LIMBER_KERNEL_GAL_SPARAM_LEN, NC_XCOR_LIMBER_KERNEL_GAL_VPARAM_LEN, PROP_SIZE);
 
-  // g_object_class_install_property (object_class,
-  //                                  PROP_Z_MIN,
-  //                                  g_param_spec_double ("zmin",
-  //                                                       NULL,
-  //                                                       "Minimum redshift",
-  //                                                       0.0, 20.0, 0.0,
-  //                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  // g_object_class_install_property (object_class,
-  //                                  PROP_Z_MAX,
-  //                                  g_param_spec_double ("zmax",
-  //                                                       NULL,
-  //                                                       "Maximum redshift",
-  //                                                       0.0, 20.0, 10.0,
-  //                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   g_object_class_install_property (object_class,
                                    PROP_DN_DZ,
                                    g_param_spec_object ("dndz",
                                                         NULL,
                                                         "Galaxy redshift distribution",
                                                         NCM_TYPE_SPLINE,
-                                                        G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); //G_PARAM_CONSTRUCT_ONLY |
+                                                        G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_DIST,
@@ -363,7 +347,6 @@ nc_xcor_limber_kernel_gal_class_init (NcXcorLimberKernelGalClass* klass)
 
   parent_class->eval           = &_nc_xcor_limber_kernel_gal_eval;
   parent_class->prepare        = &_nc_xcor_limber_kernel_gal_prepare;
-  //parent_class->noise_spec     = &_nc_xcor_limber_kernel_gal_noise_spec;
   parent_class->add_noise      = &_nc_xcor_limber_kernel_gal_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_limber_kernel_gal_obs_len;
@@ -435,7 +418,6 @@ static gdouble _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
     return 0.0;
 
   gdouble result, error;
-  // static gsl_integration_workspace* w = NULL; //gsl_integration_workspace_alloc (INT_PARTITION);
   gsl_integration_workspace* w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   gsl_function F;
@@ -446,8 +428,6 @@ static gdouble _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
   int_ts.dist = xclkg->dist;
   int_ts.cosmo = cosmo;
   int_ts.dn_dz = xclkg->dn_dz;
-
-  // w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_xcor_limber_kernel_gal_g_func_integrand;
   F.params = &int_ts;
@@ -467,6 +447,9 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
   NcmModel *model              = NCM_MODEL (xclk);
 
   xclk->cons_factor = 1.0;
+  xclk->zmid = ncm_vector_get(ncm_spline_get_xv(xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv(xclkg->dn_dz)));
+  // printf("zmid = %g \n", xclk->zmid);
+
 
   nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 

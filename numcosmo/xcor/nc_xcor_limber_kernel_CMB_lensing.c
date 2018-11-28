@@ -260,6 +260,8 @@ _nc_xcor_limber_kernel_cmb_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo 
 
   xclk->zmax = 1090.0; //exp (-lamb) - 1.0;
   xclk->zmin = 0.0;
+  xclk->zmid = 2.0; /* appriximately where the kernel peaks */
+
 }
 
 static void

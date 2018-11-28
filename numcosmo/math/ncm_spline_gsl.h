@@ -12,12 +12,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -66,7 +66,7 @@ typedef enum _NcmSplineGslType
   NCM_SPLINE_GSL_CSPLINE,
   NCM_SPLINE_GSL_CSPLINE_PERIODIC,
   NCM_SPLINE_GSL_AKIMA,
-  NCM_SPLINE_GSL_AKIMA_PERIODIC, 
+  NCM_SPLINE_GSL_AKIMA_PERIODIC,
   /* < private > */
   NCM_SPLINE_GSL_TYPES_LEN, /*< skip >*/
 } NcmSplineGslType;
@@ -85,6 +85,8 @@ GType ncm_spline_gsl_get_type (void) G_GNUC_CONST;
 
 NcmSpline *ncm_spline_gsl_new (const gsl_interp_type *type);
 NcmSpline *ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSpline *ncm_spline_gsl_new_by_id (NcmSplineGslType type_id);
+NcmSpline *ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVector *yv, gboolean init);
 void ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type);
 void ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id);
 void ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name);
