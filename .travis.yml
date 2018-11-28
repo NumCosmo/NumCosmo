@@ -78,3 +78,4 @@ script:
 #  on:
 #    tags: true
 #    repo: NumCosmo/NumCosmo
+# removed deploy
