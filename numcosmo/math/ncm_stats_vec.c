@@ -89,9 +89,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_multifit_nlinear.h>
 #include <gsl/gsl_multifit.h>
-#include <gsl/gsl_randist.h>
 #include <gsl/gsl_cdf.h>
 
 #include "toeplitz/solvers/toeplitz.h"
