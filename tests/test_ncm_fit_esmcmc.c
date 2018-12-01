@@ -330,6 +330,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
   ncm_matrix_norma_diag (data_cor, data_cor);
   
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
+  /*ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);*/
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);

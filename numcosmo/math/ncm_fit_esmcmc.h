@@ -85,6 +85,7 @@ void ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
 void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
 void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
+void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
 

@@ -316,13 +316,13 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
       self->lre_step = g_value_get_double (value);
       break;
     case PROP_AUTO_TRIM:
-      self->auto_trim = g_value_get_boolean (value);
+      ncm_fit_esmcmc_set_auto_trim (esmcmc, g_value_get_boolean (value));
       break;
     case PROP_AUTO_TRIM_DIV:
-      self->auto_trim_div = g_value_get_uint (value);
+      ncm_fit_esmcmc_set_auto_trim_div (esmcmc, g_value_get_uint (value));
       break;
     case PROP_TRIM_TYPE:
-      self->trim_type = g_value_get_flags (value);
+      ncm_fit_esmcmc_set_auto_trim_type (esmcmc, g_value_get_flags (value));
       break;
     case PROP_MIN_RUNS:
       self->min_runs = g_value_get_uint (value);
@@ -911,6 +911,24 @@ ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
   self->auto_trim_div = div;
+}
+
+/**
+ * ncm_fit_esmcmc_set_auto_trim_type:
+ * @esmcmc: a #NcmFitESMCMC
+ * @ttype: a #NcmMSetCatalogTrimType
+ * 
+ * Sets the trim type.
+ *
+ */
+void 
+ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype)
+{
+  NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  
+  g_assert (ttype & (NCM_MSET_CATALOG_TRIM_TYPE_ALL));
+
+  self->trim_type = ttype;
 }
 
 /**
