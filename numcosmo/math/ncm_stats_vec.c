@@ -1278,8 +1278,7 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
   return svec->nitens * ncm_stats_vec_get_var (svec, p) / spec0[0];
 }
 
-static
-guint
+static guint
 _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
 {
   g_assert_cmpuint (pad, <, ncm_stats_vec_nitens (svec));

@@ -789,6 +789,20 @@ ncm_fit_get_params_reltol (NcmFit *fit)
 }
 
 /**
+ * ncm_fit_peek_mset:
+ * @fit: a #NcmFit
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmMSet *
+ncm_fit_peek_mset (NcmFit *fit)
+{
+  return fit->mset;
+}
+
+/**
  * ncm_fit_params_set_vector:
  * @fit: a #NcmFit
  * @x: a #NcmVector
