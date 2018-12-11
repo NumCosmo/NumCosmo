@@ -131,7 +131,7 @@ enum
 static gint H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
 
 #if HAVE_SUNDIALS_MAJOR == 2
-static gint H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint H_ion_full_J (glong N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #elif HAVE_SUNDIALS_MAJOR == 3
 static gint H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #endif
@@ -566,7 +566,7 @@ H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+H_ion_full_J (glong N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

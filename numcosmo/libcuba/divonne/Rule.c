@@ -582,19 +582,19 @@ static void Rule7Alloc(This *t)
 
 static inline void RuleAlloc(This *t)
 {
-  if( (t->ndim - 2) | (t->key1 - 13)*(t->key2 - 13)*(t->key3 - 13) )
+  if( (t->ndim != 2) || ((t->key1 - 13) && (t->key2 - 13) && (t->key3 - 13)) )
     t->rule13.first = NULL;
   else Rule13Alloc(t);
 
-  if( (t->ndim - 3) | (t->key1 - 11)*(t->key2 - 11)*(t->key3 - 11) )
+  if( (t->ndim != 3) || ((t->key1 - 11) && (t->key2 - 11) && (t->key3 - 11)) )
     t->rule11.first = NULL;
   else Rule11Alloc(t);
 
-  if( (t->key1 - 9) && (t->key2 - 9) && (t->key3 - 9) )
+  if( (t->key1 != 9) && (t->key2 != 9) && (t->key3 != 9) )
     t->rule9.first = NULL;
   else Rule9Alloc(t);
 
-  if( (t->key1 - 7) && (t->key2 - 7) && (t->key3 - 7) )
+  if( (t->key1 != 7) && (t->key2 != 7) && (t->key3 != 7) )
     t->rule7.first = NULL;
   else Rule7Alloc(t);
 }

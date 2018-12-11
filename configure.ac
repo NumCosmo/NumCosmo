@@ -986,72 +986,43 @@ AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<pa
 
 AC_MSG_CHECKING([SUNDIALS version])
 
-SUNDIALS_VERSION_FOUND=none
-if test "xno" = "xyes"; then
-  AC_DEFINE([HAVE_SUNDIALS],[1],[SUNDIALS presence])
-  AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_0_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_1_1],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_1_2],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_2_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_2_1],[1],[SUNDIALS version])
-fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3], [3.1.1, HAVE_SUNDIALS_3_1_1, 3], [3.1.2, HAVE_SUNDIALS_3_1_2, 3], [3.2.0, HAVE_SUNDIALS_3_2_0, 3], [3.2.1, HAVE_SUNDIALS_3_2_1, 3]],
+SUNDIALS_VERSION_FOUND=no
+m4_foreach([SUNDIALS_VERSION_V], [[2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
-    SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
     SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
-    AC_EGREP_CPP([\"$SUNDIALS_VERSION_REGEX\"],
+    AC_EGREP_CPP([[\"]?$SUNDIALS_VERSION_REGEX[\"]?],
       [
         #include <sundials/sundials_config.h>
         SUNDIALS_PACKAGE_VERSION;
         SUNDIALS_VERSION;
       ],
       [
-        if test "x$SUNDIALS_VERSION_FOUND" != "xnone"; then
+        if test "x$SUNDIALS_VERSION_FOUND" != "xno"; then
           AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
         fi
-        SUNDIALS_MAJOR=m4_argn([3],SUNDIALS_VERSION_V)
-        AC_MSG_RESULT([$SUNDIALS_VERSION])
-        AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
-        AC_DEFINE_UNQUOTED([$SUNDIALS_DEFINE], [1], [SUNDIALS version])
-        SUNDIALS_VERSION_FOUND=$SUNDIALS_VERSION
+        HAVE_SUNDIALS_MAJOR=m4_argn([2],SUNDIALS_VERSION_V)
+        HAVE_SUNDIALS_MINOR=m4_argn([3],SUNDIALS_VERSION_V)
+        HAVE_SUNDIALS_PATCH=m4_argn([4],SUNDIALS_VERSION_V)
+        SUNDIALS_VERSION_FOUND=yes
       ])
   ])dnl
 
-if test "x$SUNDIALS_VERSION_FOUND" = "xnone"; then
-  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) none found])
+if test "x$SUNDIALS_VERSION_FOUND" = "xno"; then
+  AC_COMPUTE_INT([HAVE_SUNDIALS_MAJOR],[SUNDIALS_VERSION_MAJOR],[[#include <sundials/sundials_config.h>]],
+    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MAJOR' value]))
+  AC_COMPUTE_INT([HAVE_SUNDIALS_MINOR],[SUNDIALS_VERSION_MINOR],[[#include <sundials/sundials_config.h>]],
+    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MINOR' value]))
+  AC_COMPUTE_INT([HAVE_SUNDIALS_PATCH],[SUNDIALS_VERSION_PATCH],[[#include <sundials/sundials_config.h>]],
+    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_PATCH' value]))
 fi
 
-AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$SUNDIALS_MAJOR],[SUNDIALS version])
+SUNDIALS_VERSION="$HAVE_SUNDIALS_MAJOR.$HAVE_SUNDIALS_MINOR.$HAVE_SUNDIALS_PATCH"
+AC_MSG_RESULT([$SUNDIALS_VERSION])
 
-if test "x$SUNDIALS_MAJOR" = "x2"; then 
-  AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
-  CFLAGS="$SAVED_CFLAGS"
-
-  AC_MSG_CHECKING([whenever sundials uses long int])
-  SAVED_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -Werror"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-  #include <cvodes/cvodes_direct.h>
-  int test_dense_jac (long int N, realtype t,
-                      N_Vector y, N_Vector fy,
-                      DlsMat Jac, void *user_data,
-                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-  { return 0; }
-  ]],[[
-  CVDlsDenseJacFn func = &test_dense_jac;
-  func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
-  ]])],
-  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
-   AC_MSG_RESULT([yes])],
-  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
-   AC_MSG_RESULT([no])])
-  CFLAGS="$SAVED_CFLAGS"
-fi
+AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$HAVE_SUNDIALS_MAJOR],[SUNDIALS version - major])
+AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MINOR],[$HAVE_SUNDIALS_MINOR],[SUNDIALS version - minor])
+AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_PATCH],[$HAVE_SUNDIALS_PATCH],[SUNDIALS version - patch])
 
 dnl ***************************************************************************
 dnl PLC

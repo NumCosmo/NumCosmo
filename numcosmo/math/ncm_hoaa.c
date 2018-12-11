@@ -722,7 +722,7 @@ _ncm_hoaa_full_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_hoaa_full_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_full_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -791,7 +791,7 @@ _ncm_hoaa_V_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_V_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_hoaa_V_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_V_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -911,7 +911,7 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_dlnmnu_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -1033,7 +1033,7 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_dlnmnu_only_sing_J (_NCM_SUNDIALS_INT_TYPE N, realtype t_m_ts, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_hoaa_dlnmnu_only_sing_J (glong N, realtype t_m_ts, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_dlnmnu_only_sing_J (realtype t_m_ts, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -1091,7 +1091,7 @@ _ncm_hoaa_dlnmnu_only_sing_J (realtype t_m_ts, N_Vector y, N_Vector fy, SUNMatri
 
 #if 0
 static gint
-_ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmHOAAArg *arg  = (NcmHOAAArg *) jac_data;
 

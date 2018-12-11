@@ -302,7 +302,6 @@ void nc_xcor_prepare (NcXcor* xc, NcHICosmo* cosmo)
 	xc->RH = nc_hicosmo_RH_Mpc (cosmo);
 }
 
-#ifdef HAVE_SUNDIALS
 typedef struct _xcor_limber_cvode
 {
 	gboolean isauto;
@@ -428,8 +427,6 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	ncm_vector_free (k);
 	ncm_vector_free (Pk);
 }
-
-#endif /* HAVE_SUNDIALS_2_5_0 */
 
 #ifdef HAVE_LIBCUBA
 

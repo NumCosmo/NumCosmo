@@ -285,7 +285,7 @@ static gint dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
 
 
 #if HAVE_SUNDIALS_MAJOR == 2
-static gint dz_deta_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint dz_deta_J (glong N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #elif HAVE_SUNDIALS_MAJOR == 3
 static gint dz_deta_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #endif
@@ -895,7 +895,7 @@ dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-dz_deta_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+dz_deta_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 dz_deta_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

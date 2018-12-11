@@ -266,7 +266,7 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 
 static gint _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
 #if HAVE_SUNDIALS_MAJOR == 2
-static gint _nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _nc_hipert_boltzmann_std_band_J (glong N, glong mupper, glong mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #elif HAVE_SUNDIALS_MAJOR == 3
 static gint _nc_hipert_boltzmann_std_band_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #endif
@@ -631,7 +631,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_boltzmann_std_band_J (glong N, glong mupper, glong mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_boltzmann_std_band_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
