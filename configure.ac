@@ -987,7 +987,7 @@ AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<pa
 AC_MSG_CHECKING([SUNDIALS version])
 
 SUNDIALS_VERSION_FOUND=no
-m4_foreach([SUNDIALS_VERSION_V], [[2.4.0, 2, 4, 0], [2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, 2, 5, 0], [2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
