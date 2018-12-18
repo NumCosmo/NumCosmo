@@ -416,7 +416,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_wkb_phase_J (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_wkb_phase_J (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

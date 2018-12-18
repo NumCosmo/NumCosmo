@@ -205,7 +205,7 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype a, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+growth_J (glong N, realtype a, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

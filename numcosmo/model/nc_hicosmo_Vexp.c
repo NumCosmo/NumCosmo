@@ -949,7 +949,7 @@ _nc_hicosmo_Vexp_qt_Ricci_scale (NcHICosmoVexp *Vexp, NcHICosmo *cosmo, const gd
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hicosmo_Vexp_qt_J (_NCM_SUNDIALS_INT_TYPE N, realtype tQ, N_Vector y_qt, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hicosmo_Vexp_qt_J (glong N, realtype tQ, N_Vector y_qt, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hicosmo_Vexp_qt_J (realtype tQ, N_Vector y_qt, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

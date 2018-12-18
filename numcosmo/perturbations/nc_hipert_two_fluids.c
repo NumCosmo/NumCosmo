@@ -777,7 +777,7 @@ _nc_hipert_two_fluids_f_zetaS_S (realtype alpha, N_Vector y, N_Vector ydot, gpoi
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_QP (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_QP (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -862,7 +862,7 @@ _nc_hipert_two_fluids_J_QP (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_QP_mode1 (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP_mode1 (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_QP_mode1 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -944,7 +944,7 @@ _nc_hipert_two_fluids_J_QP_mode1 (realtype alpha, N_Vector y, N_Vector fy, SUNMa
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_QP_mode2 (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP_mode2 (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_QP_mode2 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -1028,7 +1028,7 @@ _nc_hipert_two_fluids_J_QP_mode2 (realtype alpha, N_Vector y, N_Vector fy, SUNMa
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_zetaS (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_zetaS (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -1091,7 +1091,7 @@ _nc_hipert_two_fluids_J_zetaS (realtype alpha, N_Vector y, N_Vector fy, SUNMatri
 #ifdef HAVE_SUNDIALS_ARKODE
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_zetaS_zeta (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS_zeta (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_zetaS_zeta (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif
@@ -1153,7 +1153,7 @@ _nc_hipert_two_fluids_J_zetaS_zeta (realtype alpha, N_Vector y, N_Vector fy, SUN
 
 static gint
 #if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_two_fluids_J_zetaS_S (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS_S (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_two_fluids_J_zetaS_S (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 #endif

@@ -2882,6 +2882,7 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
   
   if (self->nchains > 1)
   {
+    NcmMSetCatalogPrivate *self = mcat->priv;
     const gdouble shrink_factor = ncm_mset_catalog_get_shrink_factor (mcat);
     guint i;
 
@@ -2893,7 +2894,9 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
     }
     g_message ("\n");
     
-    g_message ("# NcmMSetCatalog: Maximal Shrink factor =  % 20.15g\n", shrink_factor);
+    g_message ("# NcmMSetCatalog: Maximal Shrink factor = %-22.6g\n", shrink_factor);
+
+    ncm_mset_catalog_calc_const_break (mcat, self->m2lnp_var, NCM_FIT_RUN_MSGS_SIMPLE);
   }
 }
 
@@ -4928,6 +4931,45 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
 }
 
 /**
+ * ncm_mset_catalog_calc_const_break:
+ * @mcat: a #NcmMSetCatalog
+ * @p: param id
+ * @mtype: #NcmFitRunMsgs log level
+ * 
+ * Fits the model: 
+ * $$f(t) = c_0 + \theta_r(t-t_0)\left[c_1(t-t_0) + c_2\frac{(t-t_0)^2}{2}\right].$$
+ * to estimate the time $t_0$ where the chain stops evolving.
+ *
+ * Returns: $t_0$.
+ */
+guint 
+ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs mtype)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+  guint tc, n;
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    if (self->nchains > 1)
+      n  = ncm_stats_vec_nitens (self->e_mean_stats);
+    else
+      n  = ncm_stats_vec_nitens (self->pstats);
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# NcmMSetCatalog: Computing the constant break point for parameter `%d', sample size `%u':\n", p, n);
+  }
+
+  if (self->nchains > 1)
+    tc = ceil (ncm_stats_vec_estimate_const_break (self->e_mean_stats, p));
+  else
+    tc = ceil (ncm_stats_vec_estimate_const_break (self->pstats, p));
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_message ("# NcmMSetCatalog: Constant break point at `%d':\n", tc);
+
+  return tc;
+}
+
+/**
  * ncm_mset_catalog_trim_by_type:
  * @mcat: a #NcmMSetCatalog
  * @ntests: number of tests
@@ -4942,6 +4984,7 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
 void 
 ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, const guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype)
 {
+  NcmMSetCatalogPrivate *self = mcat->priv;
   guint t_c = 0;
 
   if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_ESS)
@@ -4955,6 +4998,12 @@ ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, const guint ntests, NcmMSet
   {
     const guint t_c_heidel = ncm_mset_catalog_calc_heidel_diag (mcat, ntests, 0.0, mtype);
     t_c = GSL_MAX (t_c, t_c_heidel);
+  }
+
+  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_CK)
+  {
+    guint t_c_cb = ncm_mset_catalog_calc_const_break (mcat, self->m2lnp_var, mtype);
+    t_c = GSL_MAX (t_c, t_c_cb);
   }
 
   if ((t_c > 0) && (mtype >= NCM_FIT_RUN_MSGS_SIMPLE))

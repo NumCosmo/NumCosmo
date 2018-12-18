@@ -85,6 +85,7 @@ void ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
 void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
 void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
+void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
 
@@ -100,11 +101,13 @@ void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);
 void ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre);
+void ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes);
 void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 
 NcmSerialize *ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc);
 NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
 NcmMSetCatalog *ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc);
+NcmFit *ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 

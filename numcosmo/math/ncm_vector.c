@@ -1316,9 +1316,9 @@ _ncm_vector_nvector_free (N_Vector nv)
 
 static struct _generic_N_Vector_Ops _ncm_ops =
 {
-#if defined (HAVE_SUNDIALS_2_7_0) || (HAVE_SUNDIALS_MAJOR == 3)
+#if ((HAVE_SUNDIALS_MAJOR == 2) && (HAVE_SUNDIALS_MINOR == 7)) || (HAVE_SUNDIALS_MAJOR >= 3)
   NULL,
-#endif /* HAVE_SUNDIALS_2_7_0 */
+#endif /* ((HAVE_SUNDIALS_MAJOR == 2) && (HAVE_SUNDIALS_MINOR == 7)) || (HAVE_SUNDIALS_MAJOR >= 3) */
   &_ncm_nvclone,
   &_ncm_nvcloneempty,
   &_ncm_vector_nvector_free,

@@ -43,10 +43,12 @@
 #include "math/ncm_timer.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_mpi_job_mcmc.h"
+#include "math/ncm_c.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_fit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFitESMCMCPrivate
@@ -316,13 +318,13 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
       self->lre_step = g_value_get_double (value);
       break;
     case PROP_AUTO_TRIM:
-      self->auto_trim = g_value_get_boolean (value);
+      ncm_fit_esmcmc_set_auto_trim (esmcmc, g_value_get_boolean (value));
       break;
     case PROP_AUTO_TRIM_DIV:
-      self->auto_trim_div = g_value_get_uint (value);
+      ncm_fit_esmcmc_set_auto_trim_div (esmcmc, g_value_get_uint (value));
       break;
     case PROP_TRIM_TYPE:
-      self->trim_type = g_value_get_flags (value);
+      ncm_fit_esmcmc_set_auto_trim_type (esmcmc, g_value_get_flags (value));
       break;
     case PROP_MIN_RUNS:
       self->min_runs = g_value_get_uint (value);
@@ -911,6 +913,24 @@ ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
   self->auto_trim_div = div;
+}
+
+/**
+ * ncm_fit_esmcmc_set_auto_trim_type:
+ * @esmcmc: a #NcmFitESMCMC
+ * @ttype: a #NcmMSetCatalogTrimType
+ * 
+ * Sets the trim type.
+ *
+ */
+void 
+ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype)
+{
+  NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  
+  g_assert (ttype & (NCM_MSET_CATALOG_TRIM_TYPE_ALL));
+
+  self->trim_type = ttype;
 }
 
 /**
@@ -1838,7 +1858,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
     {
       gdouble glnvol;
-      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (self->mcat, 0.6827, &glnvol);
+      const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (self->mcat, ncm_c_stats_1sigma (), &glnvol);
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
       g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (self->mcat, &post_lnnorm_sd));
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
@@ -1858,6 +1878,76 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   {
     ncm_cfg_msg_sepa ();
     g_message ("# NcmFitESMCMC: Largest relative error %e attained: %e\n", lre, lerror);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_run_burnin:
+ * @esmcmc: a #NcmFitESMCMC
+ * @prerun: FIXME
+ * @ntimes: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
+{
+	NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  const guint catlen = ncm_mset_catalog_len (self->mcat) / self->nwalkers;
+  NcmVector *var;
+  gdouble m2lnL_var;
+  guint cb;
+  guint ti;
+
+  prerun = GSL_MAX (prerun, 20);
+
+  if (catlen < prerun)
+  {
+    guint prerun_left = prerun - catlen;
+    
+    if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+      g_message ("# NcmFitESMCMC: Running first %u pre-runs...\n", prerun_left);
+
+    ncm_fit_esmcmc_run (esmcmc, prerun);
+    if (self->auto_trim)
+    {
+      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
+    }
+  }
+  ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
+  
+  var       = ncm_mset_catalog_peek_current_e_var (self->mcat);
+  m2lnL_var = ncm_vector_get (var, NCM_FIT_ESMCMC_M2LNL_ID);
+  cb        = ncm_mset_catalog_calc_const_break (self->mcat, NCM_FIT_ESMCMC_M2LNL_ID, self->mtype);
+  ti        = (self->cur_sample_id + 1) / self->nwalkers;
+
+  while (ntimes * cb > ti)
+  {
+    const guint truns = ntimes * cb;
+    const guint runs  = (truns > ti) ? truns : (ti + 10);
+
+    if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      g_message ("# NcmFitESMCMC: `%02d'-times the estimated constant break not attained: %6u %6u, var(m2lnL) = %22.15g.\n", ntimes, ti, runs, m2lnL_var);
+      g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs - ti);
+    }
+
+    ncm_fit_esmcmc_run (esmcmc, runs);
+    if (self->auto_trim)
+    {
+      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
+    }
+    ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
+
+    var       = ncm_mset_catalog_peek_current_e_var (self->mcat);
+    m2lnL_var = ncm_vector_get (var, NCM_FIT_ESMCMC_M2LNL_ID);
+    cb        = ncm_mset_catalog_calc_const_break (self->mcat, NCM_FIT_ESMCMC_M2LNL_ID, self->mtype);
+    ti        = (self->cur_sample_id + 1) / self->nwalkers;
+  }
+  if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+  {
+    g_message ("# NcmFitESMCMC: `%02d'-times the estimated constant break achieved, var(m2lnL) = %22.15g.\n", ntimes, m2lnL_var);
   }
 }
 
@@ -1923,6 +2013,21 @@ ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
   return self->mcat;
+}
+
+/**
+ * ncm_fit_esmcmc_peek_fit:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Gets the #NcmFit object used by the sampler.
+ * 
+ * Returns: (transfer none): the #NcmFit object.
+ */
+NcmFit *
+ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc)
+{
+	NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  return self->fit;
 }
 
 static void 
