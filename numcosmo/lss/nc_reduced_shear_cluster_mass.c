@@ -226,7 +226,7 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
    * Voigt profile parameter, $\Gamma$ is the width of the  Lorentzian profile. Range: $\Gamma \in [0.003, 0.1]$.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA, "\\Gamma", "Gamma",
-                              0.003,  0.1, 1.0e-2,
+                              0.0015,  0.05, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_VGAMMA,
                               NCM_PARAM_TYPE_FIXED);
 
