@@ -284,27 +284,26 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-typedef struct _NcmOdeSplineDydxData NcmOdeSplineDydxData;
-
-/**
- * NcFunctionParams:
- *
- * FIXME
- */
-struct _NcmOdeSplineDydxData
-{
-	NcmOdeSpline *os;
-  gpointer userdata;
-};
-
 static gint
 _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmOdeSplineDydxData *dydx_data = (NcmOdeSplineDydxData *) f_data;
   NV_Ith_S (ydot, 0) = dydx_data->os->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
-  /*printf ("% 20.15g % 20.15g % 20.15g\n", x, NV_Ith_S (y, 0), NV_Ith_S (ydot, 0));*/
   return 0;
 }
+
+gint 
+_ncm_ode_spline_eval_f (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df)
+{
+  NcmOdeSplineEval *ode_se        = NCM_ODE_SPLINE_EVAL (ode_eval);
+  NcmOdeSplineDydxData *dydx_data = ncm_ode_spline_eval_get_ls (ode_se);
+
+  df[0] = dydx_data->os->dydx (f[0], t, dydx_data->userdata);
+
+  return NCM_ODE_EVAL_RETURN_SUCCESS;
+}
+
+NCM_ODE_EVAL_DEFINE_IMPL (NcmOdeSplineEval, ncm_ode_spline_eval, NCM, ODE_SPLINE_EVAL, NcmOdeSplineDydxData, &_ncm_ode_spline_eval_f, NULL, NULL)
 
 /**
  * ncm_ode_spline_new:

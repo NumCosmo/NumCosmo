@@ -40,6 +40,11 @@
       <xi:include href="xml/ncm_mpi_job_test.xml"/>
       <xi:include href="xml/ncm_mpi_job_fit.xml"/>
       <xi:include href="xml/ncm_mpi_job_mcmc.xml"/>
+    </section>    
+    <section>
+      <title>ODE Solvers objects</title>
+      <xi:include href="xml/ncm_ode.xml"/>
+      <xi:include href="xml/ncm_ode_eval.xml"/>
     </section>
     <section>
       <title>FFTLog</title>

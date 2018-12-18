@@ -69,6 +69,8 @@ ncm_sources = \
 	math/ncm_mpi_job_mcmc.c              \
 	math/ncm_util.c                      \
 	math/ncm_diff.c                      \
+	math/ncm_ode.c                       \
+	math/ncm_ode_eval.c                  \
 	math/ncm_timer.c                     \
 	math/ncm_lapack.c                    \
 	math/ncm_vector.c                    \
@@ -195,6 +197,8 @@ ncm_headers =                                \
 	math/ncm_mpi_job_mcmc.h              \
 	math/ncm_util.h                      \
 	math/ncm_diff.h                      \
+	math/ncm_ode.h                       \
+	math/ncm_ode_eval.h                  \
 	math/ncm_timer.h                     \
 	math/ncm_lapack.h                    \
 	math/ncm_vector.h                    \

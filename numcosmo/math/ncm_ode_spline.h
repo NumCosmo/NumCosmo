@@ -30,6 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_ode_eval.h>
 
 G_BEGIN_DECLS
 
@@ -73,6 +74,14 @@ struct _NcmOdeSpline
   gboolean stop_hnil;
   NcmModelCtrl *ctrl;
 };
+
+typedef struct _NcmOdeSplineDydxData
+{
+	NcmOdeSpline *os;
+  gpointer userdata;
+} NcmOdeSplineDydxData;
+
+NCM_ODE_EVAL_DECLARE_IMPL (NcmOdeSplineEval, ncm_ode_spline_eval, NCM, ODE_SPLINE_EVAL, NcmOdeSplineDydxData)
 
 GType ncm_ode_spline_get_type (void) G_GNUC_CONST;
 

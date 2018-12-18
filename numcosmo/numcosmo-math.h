@@ -116,6 +116,8 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_diff.h>
+#include <numcosmo/math/ncm_ode.h>
+#include <numcosmo/math/ncm_ode_eval.h>
 #include <numcosmo/math/ncm_timer.h>
 
 /* Likelihood object */
