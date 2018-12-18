@@ -142,8 +142,22 @@ _nc_galaxy_redshift_spline_get_property (GObject *object, guint prop_id, GValue 
 }
 
 static void
+_nc_galaxy_redshift_spline_dispose (GObject *object)
+{
+	g_clear_pointer (&self->normas, (GDestroyNotify) g_array_unref);
+	ncm_obj_array_clear (&self->dists);
+
+	/* Chain up : end */
+	G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->dispose (object);
+}
+
+static void
 _nc_galaxy_redshift_spline_finalize (GObject *object)
 {
+	NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);
+	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
+
+		
 
 	/* Chain up : end */
 	G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->finalize (object);
@@ -165,6 +179,7 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 
 	object_class->set_property = &_nc_galaxy_redshift_spline_set_property;
 	object_class->get_property = &_nc_galaxy_redshift_spline_get_property;
+	object_class->dispose      = &_nc_galaxy_redshift_spline_dispose;
 	object_class->finalize     = &_nc_galaxy_redshift_spline_finalize;
 
 	g_object_class_install_property (object_class,
@@ -398,7 +413,7 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
 
 	for (i = 0; i < len; i++)
 	{
-		const gdouble z_i      = ncm_vector_get (zv, i);
+		const gdouble z_i  = ncm_vector_get (zv, i);
 		const gdouble Pz_i = ncm_vector_get (Pzv, i);
 		g_assert_cmpfloat (Pz_i, >=, 0.0);
 
@@ -475,7 +490,6 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
 		dist = ncm_stats_dist1d_spline_new (s);
 		ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
 
-		
 		ncm_obj_array_add (self->dists, G_OBJECT (dist));
 
 		ncm_stats_dist1d_free (NCM_STATS_DIST1D (dist));

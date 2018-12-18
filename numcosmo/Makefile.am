@@ -406,6 +406,8 @@ nc_headers = \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
         lss/nc_reduced_shear_cluster_mass.h    \
+        lss/nc_reduced_shear_calib.h           \
+        lss/nc_reduced_shear_calib_wtg.h       \
         lss/nc_galaxy_selfunc.h                \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
@@ -540,6 +542,8 @@ nc_sources = \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
 	lss/nc_reduced_shear_cluster_mass.c    \
+	lss/nc_reduced_shear_calib.c           \
+	lss/nc_reduced_shear_calib_wtg.c       \
         lss/nc_galaxy_selfunc.c                \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
