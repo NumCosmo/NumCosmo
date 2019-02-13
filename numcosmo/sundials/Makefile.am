@@ -81,40 +81,40 @@ sundials_cvode_sources = \
 	src/cvode/cvode_nls.c
 
 sundials_nvector_sources = \
-	include/nvector/nvector_openmp.h     \
-	include/nvector/nvector_pthreads.h   \
-	include/nvector/nvector_serial.h     \
-	src/nvec_openmp/nvector_openmp.c     \
-	src/nvec_pthreads/nvector_pthreads.c \
-	src/nvec_ser/nvector_serial.c
+	include/nvector/nvector_openmp.h        \
+	include/nvector/nvector_pthreads.h      \
+	include/nvector/nvector_serial.h        \
+	src/nvector/openmp/nvector_openmp.c     \
+	src/nvector/pthreads/nvector_pthreads.c \
+	src/nvector/serial/nvector_serial.c
 
 sundials_sunlinsol_sources = \
 	include/sunlinsol/sunlinsol_band.h                \
-	include/sunlinsol/sunlinsol_lapackband.h          \
-	include/sunlinsol/sunlinsol_pcg.h                 \
-	include/sunlinsol/sunlinsol_spfgmr.h              \
-	include/sunlinsol/sunlinsol_sptfqmr.h             \
 	include/sunlinsol/sunlinsol_dense.h               \
+	include/sunlinsol/sunlinsol_lapackband.h          \
 	include/sunlinsol/sunlinsol_lapackdense.h         \
+	include/sunlinsol/sunlinsol_pcg.h                 \
 	include/sunlinsol/sunlinsol_spbcgs.h              \
+	include/sunlinsol/sunlinsol_spfgmr.h              \
 	include/sunlinsol/sunlinsol_spgmr.h               \
-	src/sunlinsol_band/sunlinsol_band.c               \
-	src/sunlinsol_lapackband/sunlinsol_lapackband.c   \
-	src/sunlinsol_pcg/sunlinsol_pcg.c                 \
-	src/sunlinsol_spfgmr/sunlinsol_spfgmr.c           \
-	src/sunlinsol_sptfqmr/sunlinsol_sptfqmr.c         \
-	src/sunlinsol_dense/sunlinsol_dense.c             \
-	src/sunlinsol_lapackdense/sunlinsol_lapackdense.c \
-	src/sunlinsol_spbcgs/sunlinsol_spbcgs.c           \
-	src/sunlinsol_spgmr/sunlinsol_spgmr.c
+	include/sunlinsol/sunlinsol_sptfqmr.h             \
+	src/sunlinsol/band/sunlinsol_band.c               \
+	src/sunlinsol/dense/sunlinsol_dense.c             \
+	src/sunlinsol/lapackband/sunlinsol_lapackband.c   \
+	src/sunlinsol/lapackdense/sunlinsol_lapackdense.c \
+	src/sunlinsol/pcg/sunlinsol_pcg.c                 \
+	src/sunlinsol/spbcgs/sunlinsol_spbcgs.c           \
+	src/sunlinsol/spfgmr/sunlinsol_spfgmr.c           \
+	src/sunlinsol/spgmr/sunlinsol_spgmr.c             \
+	src/sunlinsol/sptfqmr/sunlinsol_sptfqmr.c
 
 sundials_sunmatrix_sources = \
-	include/sunmatrix/sunmatrix_band.h   \
-	include/sunmatrix/sunmatrix_dense.h  \
-	include/sunmatrix/sunmatrix_sparse.h \
-	src/sunmat_band/sunmatrix_band.c     \
-	src/sunmat_dense/sunmatrix_dense.c   \
-	src/sunmat_sparse/sunmatrix_sparse.c
+	include/sunmatrix/sunmatrix_band.h      \
+	include/sunmatrix/sunmatrix_dense.h     \
+	include/sunmatrix/sunmatrix_sparse.h    \
+	src/sunmatrix/band/sunmatrix_band.c     \
+	src/sunmatrix/dense/sunmatrix_dense.c   \
+	src/sunmatrix/sparse/sunmatrix_sparse.c
 
 sundials_sunnonlinsol_sources = \
 	include/sunnonlinsol/sunnonlinsol_fixedpoint.h        \
