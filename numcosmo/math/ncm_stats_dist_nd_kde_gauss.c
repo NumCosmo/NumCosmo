@@ -47,13 +47,14 @@
 #include "gslextras/cqp/gsl_cqp.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
-#include <nlopt.h>
+#include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmStatsDistNdKDEGaussPrivate
 {
   NcmStatsVec *sample;
   NcmMatrix *cov_decomp;
+  NcmMatrix *log_cov;
   NcmMatrix *sample_matrix;
   GPtrArray *smatrix_rows;
   NcmVector *weights;
@@ -92,7 +93,7 @@ enum
   PROP_LOOCV,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmStatsDistNdKDEGauss, ncm_stats_dist_nd_kde_gauss, NCM_TYPE_STATS_DIST_ND, G_ADD_PRIVATE (NcmStatsDistNdKDEGauss));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdKDEGauss, ncm_stats_dist_nd_kde_gauss, NCM_TYPE_STATS_DIST_ND);
 
 static void
 ncm_stats_dist_nd_kde_gauss_init (NcmStatsDistNdKDEGauss *dndg)
@@ -101,6 +102,7 @@ ncm_stats_dist_nd_kde_gauss_init (NcmStatsDistNdKDEGauss *dndg)
 
   self->sample           = NULL;
   self->cov_decomp       = NULL;
+  self->log_cov          = NULL;
   self->sample_matrix    = NULL;
   self->smatrix_rows     = g_ptr_array_new ();
   self->weights          = NULL;
@@ -196,6 +198,7 @@ _ncm_stats_dist_nd_kde_gauss_dispose (GObject *object)
 
   ncm_stats_vec_clear (&self->sample);
   ncm_matrix_clear (&self->cov_decomp);
+  ncm_matrix_clear (&self->log_cov);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_vector_clear (&self->weights);
   ncm_vector_clear (&self->v);
@@ -300,37 +303,20 @@ _ncm_stats_dist_nd_kde_gauss_set_dim (NcmStatsDistNd *dnd, const guint dim)
   ncm_stats_vec_clear (&self->sample);
 
   ncm_matrix_clear (&self->cov_decomp);
+  ncm_matrix_clear (&self->log_cov);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_vector_clear (&self->v);
 
   self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
   self->cov_decomp = ncm_matrix_new (dim, dim);
+  self->log_cov    = ncm_matrix_new (dim, dim);
   self->v          = ncm_vector_new (dim);
 }
 
 static void 
-_ncm_stats_dist_nd_kde_gauss_prepare (NcmStatsDistNd *dnd)
+_ncm_stats_dist_nd_kde_gauss_prepare_cov (NcmStatsDistNdKDEGaussPrivate * const self)
 {
-  NcmStatsDistNdKDEGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);
-  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv;
   gint i, ret;
-
-  self->n = ncm_stats_vec_nitens (self->sample);
-  self->d = ncm_stats_vec_len (self->sample);
-
-  g_assert_cmpuint (self->n, >, 1);
-  
-  ncm_matrix_memcpy (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0));
-
-  if (self->weights == NULL)
-  {
-    self->weights = ncm_vector_new (self->n);
-  }
-  else if (self->n != ncm_vector_len (self->weights))
-  {
-    ncm_vector_clear (&self->weights);
-    self->weights = ncm_vector_new (self->n);
-  }
 
   if (self->sample_matrix == NULL)
   {
@@ -354,7 +340,27 @@ _ncm_stats_dist_nd_kde_gauss_prepare (NcmStatsDistNd *dnd)
       g_ptr_array_add (self->smatrix_rows, row_i);
     }
   }
+
+  for (i = 0; i < self->n; i++)
+    ncm_matrix_set_row (self->sample_matrix, i, ncm_stats_vec_peek_row (self->sample, i));
+
+  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (self->cov_decomp), ncm_matrix_gsl (self->sample_matrix));
+  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_kde_gauss_prepare", ret);  
+}
+
+static void 
+_ncm_stats_dist_nd_kde_gauss_prepare (NcmStatsDistNd *dnd)
+{
+  NcmStatsDistNdKDEGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);
+  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv;
+  gint i;
+
+  self->n = ncm_stats_vec_nitens (self->sample);
+  self->d = ncm_stats_vec_len (self->sample);
+
+  g_assert_cmpuint (self->n, >, 1);
   
+  ncm_matrix_memcpy (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0));
   if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
   {
     if (ncm_matrix_nearPD (self->cov_decomp, 'U', TRUE, self->nearPD_maxiter) != 0)
@@ -376,17 +382,24 @@ _ncm_stats_dist_nd_kde_gauss_prepare (NcmStatsDistNd *dnd)
 
   self->min_m2lnp = 0.0;
   self->max_m2lnp = 0.0;
+
+  if (self->weights == NULL)
+  {
+    self->weights = ncm_vector_new (self->n);
+  }
+  else if (self->n != ncm_vector_len (self->weights))
+  {
+    ncm_vector_clear (&self->weights);
+    self->weights = ncm_vector_new (self->n);
+  }
   
   for (i = 0; i < self->n; i++)
   {
     const gdouble wn = 1.0 / (1.0 * self->n);
     ncm_vector_set (self->weights, i, wn);
-    ncm_matrix_set_row (self->sample_matrix, i, ncm_stats_vec_peek_row (self->sample, i));
   }
 
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (self->cov_decomp), ncm_matrix_gsl (self->sample_matrix));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_kde_gauss_prepare", ret);
-  
+  _ncm_stats_dist_nd_kde_gauss_prepare_cov (self);
 }
 
 void LowRankQP (gint *n, gint *m, gint *p, gint *method, gint *verbose, gint *niter, gdouble *Q, gdouble *c, gdouble *A, gdouble *b, gdouble *u, gdouble *alpha, gdouble *beta, gdouble *xi, gdouble *zeta);
@@ -428,8 +441,6 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (gdouble h, gpointer user_data)
 {
   NcmStatsDistNdKDEGaussPrivate * const self = user_data;
   gdouble err       = 0.0;
-  /*gdouble err_num   = 0.0;*/
-  /*gdouble err_denom = 0.0;*/
 	guint i;
 	gint ret;
 
@@ -477,39 +488,240 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (gdouble h, gpointer user_data)
   
 	for (i = 0; i < self->n; i++)
 	{
-		/*err += gsl_pow_2 (ncm_vector_get (self->coeff, i) / (ncm_matrix_get (self->interp_matrix, i, i) * ncm_vector_get (s->yv, i)));*/
 		err += gsl_pow_2 (ncm_vector_get (self->zeta, i) / (ncm_matrix_get (self->IM, i, i)));
-    /*printf ("%4d % 22.15g % 22.15g % 22.15g\n", i, h, err, gsl_pow_2 (ncm_vector_get (self->zeta, i) / (ncm_matrix_get (self->IM, i, i))));*/
-		/*err_num   += gsl_pow_2 (ncm_vector_get (self->zeta, i));*/
-		/*err_denom += gsl_pow_2 (ncm_matrix_get (self->IM, i, i));*/
 	}
 
-	/*printf ("h % 22.15g err % 22.15e\n", h, err);*/
-	/*printf ("h % 22.15g err % 22.15e % 22.15e % 22.15e\n", h, err_num, err_denom, err_num * self->n / err_denom);*/
-
   return log (err);
-  /*return err_num * self->n / err_denom;*/
 } 
 
 gdouble 
 _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_f (guint n, const gdouble *x, gdouble *grad, gpointer f_data)
 {
-  return _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (x[0], f_data);
+  const gdouble fx = _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (x[0], f_data);
+  printf ("# % 22.15g % 22.15g\n", x[0], fx);
+  return fx;
+}
+
+gdouble 
+_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_f (guint n, const gdouble *x, gdouble *grad, gpointer f_data)
+{
+  NcmStatsDistNdKDEGaussPrivate * const self = f_data;
+  gdouble err       = 0.0;
+	guint i, j, k;
+	gint ret;
+  gdouble tr_log_cov = 0.0;
+
+  k = 0;
+  for (i = 0; i < self->d; i++)
+  {
+    for (j = i; j < self->d; j++)
+    {
+      ncm_matrix_set (self->log_cov, i, j, x[k]);
+      if (i == j)
+        tr_log_cov += x[k];
+      k++;
+    }
+  }
+  ncm_matrix_sym_exp_cholesky (self->log_cov, 'U', self->cov_decomp);
+  _ncm_stats_dist_nd_kde_gauss_prepare_cov (self);
+  
+  self->href      = 1.0;
+  self->href2     = self->href * self->href;
+  self->us_lnnorm = 0.5 * (self->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (self->cov_decomp));
+  self->lnnorm    = self->us_lnnorm;
+  
+  _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
+	ret = ncm_matrix_cholesky_decomp (self->IM, 'U');	
+
+	if (ret != 0)
+	{
+    _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
+
+    g_array_set_size (self->ipiv, self->n);
+    
+    ret = ncm_lapack_dsytrf ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
+    if (ret != 0)
+    {
+      printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);
+      return 1.0e20;
+    }
+
+    ncm_vector_memcpy (self->zeta, self->weights);
+    ret = ncm_lapack_dsytrs ('U', self->n, 1, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), ncm_vector_data (self->zeta), ncm_vector_len (self->zeta));
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_lapack_dsytrs]: %d.", ret);
+    
+    ret = ncm_lapack_dsytri ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_lapack_dsytrs]: %d.", ret);
+	}
+  else
+  {
+    ncm_vector_memcpy (self->zeta, self->weights);
+    ret = ncm_matrix_cholesky_solve2 (self->IM, self->zeta, 'U');
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_matrix_cholesky_solve2]: %d.", ret);
+
+    ret = ncm_matrix_cholesky_inverse (self->IM, 'U');
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_matrix_cholesky_inverse]: %d.", ret);
+  }
+  
+	for (i = 0; i < self->n; i++)
+	{
+		err += gsl_pow_2 (ncm_vector_get (self->zeta, i) / (ncm_matrix_get (self->IM, i, i)));
+	}
+
+  {
+    NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
+    ncm_matrix_triang_to_sym (cov, 'U', TRUE);
+
+    k = 0;
+    for (i = 0; i < self->d; i++)
+    {
+      gint j;
+      for (j = 0; j < self->d; j++)
+      {
+        if (j >= i)
+        {
+          printf ("% 22.15g ", x[k]);
+          k++;
+        }
+        else
+          printf ("% 22.15g ", 0.0);
+      }
+      printf ("\n");
+    }
+    printf ("#--------------------------------------------------------------------------------------------------------------\n");
+    
+    for (i = 0; i < self->d; i++)
+    {
+      gint j;
+      for (j = 0; j < self->d; j++)
+      {
+        printf ("% 22.15g ", ncm_matrix_get (cov, i, j));
+      }
+      printf ("\n");
+    }
+    printf ("#--------------------------------------------------------------------------------------------------------------\n");
+    printf ("err: % 22.15g\n", err);
+    ncm_matrix_free (cov);
+  }
+  
+  return log (err);
+}
+
+void 
+_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f (gdouble *x, gdouble *hx, gint m, gint n, gpointer f_data)
+{
+  NcmStatsDistNdKDEGaussPrivate * const self = f_data;
+  gdouble err        = 0.0;
+  gdouble tr_log_cov = 0.0;
+	guint i, j, k;
+	gint ret;
+
+  k = 0;
+  for (i = 0; i < self->d; i++)
+  {
+    tr_log_cov += x[k];
+    for (j = i; j < self->d; j++)
+    {
+      ncm_matrix_set (self->log_cov, i, j, x[k]);
+      k++;
+    }
+  }
+  ncm_matrix_sym_exp_cholesky (self->log_cov, 'U', self->cov_decomp);
+  _ncm_stats_dist_nd_kde_gauss_prepare_cov (self);
+  
+  self->href      = 1.0;
+  self->href2     = self->href * self->href;
+  self->us_lnnorm = 0.5 * (self->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (self->cov_decomp));
+  self->lnnorm    = self->us_lnnorm;
+
+printf ("CMP DETS: % 22.15g % 22.15g\n", tr_log_cov, ncm_matrix_cholesky_lndet (self->cov_decomp));
+  
+  _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
+	ret = ncm_matrix_cholesky_decomp (self->IM, 'U');	
+
+	if (ret != 0)
+	{
+    _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
+
+    g_array_set_size (self->ipiv, self->n);
+    
+    ret = ncm_lapack_dsytrf ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
+    if (ret != 0)
+    {
+      printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);
+    }
+
+    ncm_vector_memcpy (self->zeta, self->weights);
+    ret = ncm_lapack_dsytrs ('U', self->n, 1, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), ncm_vector_data (self->zeta), ncm_vector_len (self->zeta));
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_lapack_dsytrs]: %d.", ret);
+    
+    ret = ncm_lapack_dsytri ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_lapack_dsytrs]: %d.", ret);
+	}
+  else
+  {
+    ncm_vector_memcpy (self->zeta, self->weights);
+    ret = ncm_matrix_cholesky_solve2 (self->IM, self->zeta, 'U');
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_matrix_cholesky_solve2]: %d.", ret);
+
+    ret = ncm_matrix_cholesky_inverse (self->IM, 'U');
+    if (ret != 0)
+      g_error ("_ncm_stats_dist_nd_kde_gauss_LOOCV_err2[ncm_matrix_cholesky_inverse]: %d.", ret);
+  }
+  
+	for (i = 0; i < self->n; i++)
+	{
+		hx[i] = ncm_vector_get (self->zeta, i) / ncm_matrix_get (self->IM, i, i);
+    err += gsl_pow_2 (hx[i]);
+	}
+
+  {
+    NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
+    ncm_matrix_triang_to_sym (cov, 'U', TRUE);
+
+    k = 0;
+    for (i = 0; i < self->d; i++)
+    {
+      gint j;
+      for (j = 0; j < self->d; j++)
+      {
+        if (j >= i)
+        {
+          printf ("% 22.15g ", x[k]);
+          k++;
+        }
+        else
+          printf ("% 22.15g ", 0.0);
+      }
+      printf ("\n");
+    }
+    printf ("#--------------------------------------------------------------------------------------------------------------\n");
+    
+    for (i = 0; i < self->d; i++)
+    {
+      gint j;
+      for (j = 0; j < self->d; j++)
+      {
+        printf ("% 22.15g ", ncm_matrix_get (cov, i, j));
+      }
+      printf ("\n");
+    }
+    printf ("#--------------------------------------------------------------------------------------------------------------\n");
+    printf ("err: % 22.15g lnnorm % 22.15g\n", err, self->lnnorm);
+    ncm_matrix_free (cov);
+  }
 }
 
 static void
 _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const self, NcmVector *m2lnp)
 {
-  gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  const gdouble hti = self->href;
-  gdouble ht        = self->href;
-  gdouble hi        = ht / 1000.0;
-  gdouble hf        = ht * 100.0;
-  gdouble last_hi   = hi;
-  gdouble last_hf   = hf;
-  guint iter        = 0;
-  gint status       = 0;
-  gsl_function F;
   gint i;
 
   for (i = 0; i < self->n; i++)
@@ -520,62 +732,94 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
 
   if (FALSE)
   {
-    /*nlopt_opt opt = nlopt_create (NLOPT_LN_BOBYQA, 1);*/
-    /*nlopt_opt opt = nlopt_create (NLOPT_LN_PRAXIS, 1);*/
-    /*nlopt_opt opt = nlopt_create (NLOPT_LN_SBPLX, 1);*/
-    nlopt_opt opt = nlopt_create (NLOPT_LN_NELDERMEAD, 1);  
-    gdouble zero    = 1.0e-5;
-    gdouble opt_f   = 0.0;
-    gdouble dht     = ht * 1.0;
+    const gint n    = (self->d * (self->d + 1)) / 2;
+    gdouble *dht    = g_new0 (gdouble, n);
+    gdouble *ht     = g_new0 (gdouble, n);
+    NcmMatrix *cov  = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+    NcmMatrix *ln_cm = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+    gint k = 0;
+    
+    ncm_matrix_scale (cov, gsl_pow_2 (self->over_smooth * pow (4.0 / (self->n * (self->d + 2.0)), 1.0 / (self->d + 4.0))));
+    printf ("\n");
+    ncm_matrix_log_vals (cov, "ORIG_COV: ", "% 22.15g");
 
-    nlopt_set_min_objective (opt, &_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_f, self);
-    nlopt_set_lower_bounds (opt, &zero);
-    nlopt_set_initial_step (opt, &dht);
+    ncm_matrix_sym_posdef_log (cov, 'U', ln_cm);
 
-    /*nlopt_set_xtol_rel (opt, 1.0e-2);*/
-    nlopt_set_ftol_rel (opt, 1.0e-2);
+    ncm_matrix_log_vals (ln_cm, "OLOG_COV: ", "% 22.15g");
 
-    nlopt_optimize (opt, &ht, &opt_f);
-
-    printf ("# NLOPT % 22.15g % 22.15g\n", ht, opt_f);
-
-    nlopt_destroy (opt);
-
-    ht = self->href = hti;
-  }
-
-  F.params   = self;
-  F.function = &_ncm_stats_dist_nd_kde_gauss_LOOCV_err2;
-
-  gsl_min_fminimizer_set (fmin, &F, ht, hi, hf);
-  /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
-  do {
-    iter++;
-    status = gsl_min_fminimizer_iterate (fmin);
-    if (status)
-      g_error ("_ncm_stats_dist_nd_kde_gauss_prepare: Cannot find minimum (%s)", gsl_strerror (status));
-
-    ht = gsl_min_fminimizer_x_minimum (fmin);
-    hi = gsl_min_fminimizer_x_lower (fmin);
-    hf = gsl_min_fminimizer_x_upper (fmin);
-
-    status = gsl_min_test_interval (hi, hf, 0.0, 1.0e-2);
-
-    if ((status == GSL_CONTINUE) && (hi == last_hi) && (hf == last_hf))
+    for (i = 0; i < self->d; i++)
     {
-      g_warning ("_ncm_stats_dist_nd_kde_gauss_prepare: minimization not improving, giving up...");
-      break;
+      gint j;
+      for (j = i; j < self->d; j++)
+      {
+        ht[k]  = ncm_matrix_get (ln_cm, i, j);
+        dht[k] = 1.0;
+        k++;
+      }
     }
+    
+    gdouble info[LM_INFO_SZ];
+    gdouble opts[LM_OPTS_SZ];
+    gint ret;
 
-    /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
+    opts[0] = LM_INIT_MU; 
+    opts[1] = 1.0e-15; 
+    opts[2] = 1.0e-15;
+    opts[3] = 1.0e-20;
 
-    last_hi = hi;
-    last_hf = hf;
+    ret = dlevmar_dif (&_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f,
+                       ht, NULL, n, self->n, 10000,   
+                       opts, info, NULL, NULL, self);
 
-  } while (status == GSL_CONTINUE && iter < 10000);
+    g_free (dht);
+    g_free (ht);
+  }
+  else
+  {
+    gdouble ht      = self->href;
+    gdouble hi      = ht / 1000.0;
+    gdouble hf      = ht * 100.0;
+    gdouble last_hi = hi;
+    gdouble last_hf = hf;
+    guint iter      = 0;
+    gint status     = 0;
+    gsl_function F;
+    
+    gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
 
-  self->href = gsl_min_fminimizer_x_minimum (fmin);
-  gsl_min_fminimizer_free (fmin);
+    F.params   = self;
+    F.function = &_ncm_stats_dist_nd_kde_gauss_LOOCV_err2;
+
+    gsl_min_fminimizer_set (fmin, &F, ht, hi, hf);
+    printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+    do {
+      iter++;
+      status = gsl_min_fminimizer_iterate (fmin);
+      if (status)
+        g_error ("_ncm_stats_dist_nd_kde_gauss_prepare: Cannot find minimum (%s)", gsl_strerror (status));
+
+      ht = gsl_min_fminimizer_x_minimum (fmin);
+      hi = gsl_min_fminimizer_x_lower (fmin);
+      hf = gsl_min_fminimizer_x_upper (fmin);
+
+      status = gsl_min_test_interval (hi, hf, 0.0, 1.0e-2);
+
+      if ((status == GSL_CONTINUE) && (hi == last_hi) && (hf == last_hf))
+      {
+        g_warning ("_ncm_stats_dist_nd_kde_gauss_prepare: minimization not improving, giving up...");
+        break;
+      }
+
+      printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+
+      last_hi = hi;
+      last_hf = hf;
+
+    } while (status == GSL_CONTINUE && iter < 10000);
+
+    self->href = gsl_min_fminimizer_x_minimum (fmin);
+    gsl_min_fminimizer_free (fmin);
+  }
 }
 
 static void 
@@ -764,6 +1008,7 @@ _ncm_stats_dist_nd_kde_gauss_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *y)
     t    = s + e_i;
     c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
     s    = t;
+    /*printf ("% 22.15g % 22.15g % 22.15g\n", e_i, s, self->lnnorm);*/
   }
 
   return -2.0 * (log (s) - self->lnnorm);

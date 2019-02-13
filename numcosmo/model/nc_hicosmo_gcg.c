@@ -52,7 +52,7 @@ struct _NcHICosmoGCGPrivate
   gdouble zmax;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO, G_ADD_PRIVATE (NcHICosmoGCG));
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO);
 
 enum
 {

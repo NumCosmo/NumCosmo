@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_recomb_seager.h
  *
@@ -31,24 +32,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_recomb.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-
-#include <nvector/nvector_serial.h>
-
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h> 
-#endif
-
-#if HAVE_SUNDIALS_MAJOR == 3
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#endif 
-
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NC_TYPE_RECOMB_SEAGER             (nc_recomb_seager_get_type ())
@@ -60,6 +43,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcRecombSeagerClass NcRecombSeagerClass;
 typedef struct _NcRecombSeager NcRecombSeager;
+typedef struct _NcRecombSeagerPrivate NcRecombSeagerPrivate;
 
 struct _NcRecombSeagerClass
 {
@@ -101,37 +85,7 @@ struct _NcRecombSeager
 {
   /*< private >*/
   NcRecomb parent_instance;
-  NcRecombSeagerOpt opts;
-  NcRecombSeagerKHI2p2Pmean K_HI_2p_2Pmean;
-  NcRecombSeagerKHeI2p KX_HeI_2p_1P1;
-  NcRecombSeagerKHeI2p KX_HeI_2p_3Pmean;
-  NcRecombSeagerKHeI2pGrad KX_HeI_2p_1P1_grad;
-  NcRecombSeagerKHeI2pGrad KX_HeI_2p_3Pmean_grad;
-  gdouble H_fudge;
-  gdouble AGauss1, AGauss2;
-  gdouble zGauss1, zGauss2;
-  gdouble wGauss1, wGauss2;
-  gdouble A2P_s;
-  gdouble A2P_t;
-  gdouble sigma_He_2P_s;
-  gdouble sigma_He_2P_t;
-  gdouble Pb, Pb_t;
-  gdouble Qb, Qb_t;
-  gpointer cvode;
-  gboolean init;
-  N_Vector y0;
-  N_Vector y;
-  N_Vector abstol;
-#if HAVE_SUNDIALS_MAJOR == 3
-  SUNMatrix A;
-  SUNLinearSolver LS;
-#endif
-  guint n;
-  NcmSpline *Xe_s;
-  NcmSpline *Xe_reion_s;
-  NcmSpline *Xe_recomb_s;
-  NcmSpline *XHII_s;
-  NcmSpline *XHeII_s;
+  NcRecombSeagerPrivate *priv;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;

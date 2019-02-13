@@ -54,7 +54,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cuba.h>
-#include <cvodes/cvodes.h>
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -368,7 +368,7 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	N_Vector yv = N_VNew_Serial (nell);
 	N_Vector yv0 = N_VNew_Serial (nell);
-	gpointer cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+	gpointer cvode = CVodeCreate (CV_ADAMS);
 	gpointer cvodefunc = &_xcor_limber_cvode_int;
 	NcmVector* Pk = ncm_vector_new (nell);
 	NcmVector* k = ncm_vector_new (nell);

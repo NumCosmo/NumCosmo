@@ -53,7 +53,7 @@ struct _NcHICosmoDEPrivate
   gdouble zmax;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO, G_ADD_PRIVATE (NcHICosmoDE));
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
 enum
 {
@@ -426,7 +426,6 @@ _nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
   if (!ncm_model_state_is_update (model))
   {
     const guint m_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
-
     if (m_len > 0)
     {
       gint n;

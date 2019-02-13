@@ -62,7 +62,7 @@ enum
 	PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmMPIJobFit, ncm_mpi_job_fit, NCM_TYPE_MPI_JOB, G_ADD_PRIVATE (NcmMPIJobFit));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFit, ncm_mpi_job_fit, NCM_TYPE_MPI_JOB);
 
 static void
 ncm_mpi_job_fit_init (NcmMPIJobFit *mjfit)

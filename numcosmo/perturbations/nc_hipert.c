@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_hipert.c
  *
@@ -43,16 +44,17 @@
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvodes/cvodes.h>
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#define SUN_BAND_ACCESS BAND_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
 #define SUN_BAND_ACCESS SM_ELEMENT_D
-#endif 
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "perturbations/nc_hipert_private.h"
 
 enum {
   PROP_0,
@@ -64,31 +66,31 @@ enum {
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
 
 static void
 nc_hipert_init (NcHIPert *pert)
 {
-  pert->alpha0      = 0.0;
-  pert->reltol      = 0.0;
-  pert->k           = 0.0;
-  pert->sys_size    = 0;
-  pert->y           = NULL;
-#if HAVE_SUNDIALS_MAJOR == 3
-  pert->A           = NULL;
-  pert->LS          = NULL;
-#endif
+  NcHIPertPrivate * const self = pert->priv = G_TYPE_INSTANCE_GET_PRIVATE (pert, NC_TYPE_HIPERT, NcHIPertPrivate);
+  self->alpha0      = 0.0;
+  self->reltol      = 0.0;
+  self->k           = 0.0;
+  self->sys_size    = 0;
+  self->y           = NULL;
+  self->A           = NULL;
+  self->LS          = NULL;
 
-  pert->vec_abstol  = NULL;
-  pert->cvode       = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-  pert->cvode_init  = FALSE;
-  pert->cvode_stiff = FALSE;
+  self->vec_abstol  = NULL;
+  self->cvode       = CVodeCreate (CV_ADAMS);
+  self->cvode_init  = FALSE;
+  self->cvode_stiff = FALSE;
 }
 
 static void
 nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPert *pert = NC_HIPERT (object);
+  NcHIPertPrivate * const self = pert->priv;
   g_return_if_fail (NC_IS_HIPERT (object));
 
   switch (prop_id)
@@ -106,7 +108,7 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       nc_hipert_set_abstol (pert, g_value_get_double (value));
       break;
     case PROP_ALPHAI:
-      pert->alpha0 = g_value_get_double (value);
+      self->alpha0 = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -118,15 +120,16 @@ static void
 nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPert *pert = NC_HIPERT (object);
+  NcHIPertPrivate * const self = pert->priv;
   g_return_if_fail (NC_IS_HIPERT (object));
 
   switch (prop_id)
   {
     case PROP_K:
-      g_value_set_double (value, pert->k);
+      g_value_set_double (value, self->k);
       break;
     case PROP_SYS_SIZE:
-      g_value_set_uint (value, pert->sys_size);
+      g_value_set_uint (value, self->sys_size);
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_hipert_get_reltol (pert));
@@ -135,7 +138,7 @@ nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       g_value_set_double (value, nc_hipert_get_abstol (pert));
       break;
     case PROP_ALPHAI:
-      g_value_set_double (value, pert->alpha0);
+      g_value_set_double (value, self->alpha0);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -147,32 +150,31 @@ static void
 nc_hipert_finalize (GObject *object)
 {
   NcHIPert *pert = NC_HIPERT (object);
+  NcHIPertPrivate * const self = pert->priv;
 
-  if (pert->cvode != NULL)
+  if (self->cvode != NULL)
   {
-    CVodeFree (&pert->cvode);
-    pert->cvode = NULL;
+    CVodeFree (&self->cvode);
+    self->cvode = NULL;
   }
 
-  if (pert->y != NULL)
+  if (self->y != NULL)
   {
-    N_VDestroy (pert->y);
-    pert->y = NULL;
+    N_VDestroy (self->y);
+    self->y = NULL;
   }
 
-#if HAVE_SUNDIALS_MAJOR == 3
-  if (pert->A != NULL)
+  if (self->A != NULL)
   {
-    SUNMatDestroy (pert->A);
-    pert->A = NULL;
+    SUNMatDestroy (self->A);
+    self->A = NULL;
   }
   
-  if (pert->LS != NULL)
+  if (self->LS != NULL)
   {
-    SUNLinSolFree (pert->LS);
-    pert->LS = NULL;
+    SUNLinSolFree (self->LS);
+    self->LS = NULL;
   }
-#endif
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
@@ -247,10 +249,11 @@ nc_hipert_class_init (NcHIPertClass *klass)
 static void
 _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
-  if (pert->k != k)
+  NcHIPertPrivate * const self = pert->priv;
+  if (self->k != k)
   {
-    pert->k        = k;
-    pert->prepared = FALSE;
+    self->k        = k;
+    self->prepared = FALSE;
   }
 }
 
@@ -265,10 +268,11 @@ _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 static void
 _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 {
-  if (pert->reltol != reltol)
+  NcHIPertPrivate * const self = pert->priv;
+  if (self->reltol != reltol)
   {
-    pert->reltol   = reltol;
-    pert->prepared = FALSE;
+    self->reltol   = reltol;
+    self->prepared = FALSE;
   }
 }
 
@@ -283,10 +287,11 @@ _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 static void
 _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
-  if (pert->abstol != abstol)
+  NcHIPertPrivate * const self = pert->priv;
+  if (self->abstol != abstol)
   {
-    pert->abstol   = abstol;
-    pert->prepared = FALSE;
+    self->abstol   = abstol;
+    self->prepared = FALSE;
   }
 }
 
@@ -298,13 +303,70 @@ _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
  *
  * Returns: reltol
  */
+gdouble 
+nc_hipert_get_reltol (NcHIPert *pert)
+{
+  NcHIPertPrivate * const self = pert->priv;
+  return self->reltol;
+}
+
 /**
  * nc_hipert_get_abstol:
  * @pert: a #NcHIPert.
  *
  * Gets the value of the relative tolerance.
- *
+ * 
+ * Returns: abstol
  */
+gdouble 
+nc_hipert_get_abstol (NcHIPert *pert)
+{
+  NcHIPertPrivate * const self = pert->priv;
+  return self->abstol;
+}
+
+/**
+ * nc_hipert_get_mode_k:
+ * @pert: a #NcHIPert.
+ *
+ * Gets the value of the mode $k$.
+ * 
+ * Returns: $k$
+ */
+gdouble 
+nc_hipert_get_mode_k (NcHIPert *pert)
+{
+  NcHIPertPrivate * const self = pert->priv;
+  return self->k;
+}
+
+/**
+ * nc_hipert_prepared:
+ * @pert: a #NcHIPert.
+ *
+ * Returns: Whether the object is prepared.
+ */
+gboolean 
+nc_hipert_prepared (NcHIPert *pert)
+{
+  NcHIPertPrivate * const self = pert->priv;
+  return self->prepared;
+}
+
+/**
+ * nc_hipert_set_prepared:
+ * @pert: a #NcHIPert
+ * @prepared: a boolean
+ * 
+ * Sets the object to @prepared.
+ * 
+ */
+void 
+nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared)
+{
+  NcHIPertPrivate * const self = pert->priv;
+  self->prepared = prepared;
+}
 
 /**
  * nc_hipert_set_sys_size:
@@ -317,48 +379,45 @@ _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 void
 nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 {
-  if (pert->sys_size != sys_size)
+  NcHIPertPrivate * const self = pert->priv;
+  if (self->sys_size != sys_size)
   {
-    if (pert->y != NULL)
+    if (self->y != NULL)
     {
-      N_VDestroy (pert->y);
-      pert->y = NULL;
+      N_VDestroy (self->y);
+      self->y = NULL;
     }
-#if HAVE_SUNDIALS_MAJOR == 3
-    if (pert->A != NULL)
+    if (self->A != NULL)
     {
-      SUNMatDestroy (pert->A);
-      pert->A = NULL;
+      SUNMatDestroy (self->A);
+      self->A = NULL;
     }
 
-    if (pert->LS != NULL)
+    if (self->LS != NULL)
     {
-      SUNLinSolFree (pert->LS);
-      pert->LS = NULL;
+      SUNLinSolFree (self->LS);
+      self->LS = NULL;
     }
-#endif
     
-    if (pert->vec_abstol != NULL)
+    if (self->vec_abstol != NULL)
     {
-      N_VDestroy (pert->vec_abstol);
-      pert->vec_abstol = NULL;
+      N_VDestroy (self->vec_abstol);
+      self->vec_abstol = NULL;
     }
 
-    pert->sys_size = sys_size;
-    if (pert->sys_size > 0)
+    self->sys_size = sys_size;
+    if (self->sys_size > 0)
     {
-      pert->y          = N_VNew_Serial (sys_size);
-      pert->vec_abstol = N_VNew_Serial (sys_size);
+      self->y          = N_VNew_Serial (sys_size);
+      self->vec_abstol = N_VNew_Serial (sys_size);
 
-#if HAVE_SUNDIALS_MAJOR == 3
-      pert->A          = SUNDenseMatrix (sys_size, sys_size);
-      pert->LS         = SUNDenseLinearSolver (pert->y, pert->A);
+      self->A          = SUNDenseMatrix (sys_size, sys_size);
+      self->LS         = SUNDenseLinearSolver (self->y, self->A);
 
-      NCM_CVODE_CHECK ((gpointer)pert->A, "SUNDenseMatrix", 0, );
-      NCM_CVODE_CHECK ((gpointer)pert->LS, "SUNDenseLinearSolver", 0, );
-#endif
+      NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
+      NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
     }
-    pert->prepared = FALSE;
+    self->prepared = FALSE;
 
     nc_hipert_reset_solver (pert);
   }
@@ -375,23 +434,24 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 void
 nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 {
+  NcHIPertPrivate * const self = pert->priv;
   guint a = stiff ? 1 : 0;
-  guint b = pert->cvode_stiff ? 1 : 0;
+  guint b = self->cvode_stiff ? 1 : 0;
   if (a != b)
   {
-    if (pert->cvode != NULL)
+    if (self->cvode != NULL)
     {
-      CVodeFree (&pert->cvode);
-      pert->cvode = NULL;
+      CVodeFree (&self->cvode);
+      self->cvode = NULL;
     }
-    pert->cvode_stiff = stiff;
+    self->cvode_stiff = stiff;
 
     if (stiff)
-      pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+      self->cvode = CVodeCreate (CV_BDF);
     else
-      pert->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+      self->cvode = CVodeCreate (CV_ADAMS);
 
-    pert->cvode_init = FALSE;
+    self->cvode_init = FALSE;
   }
 }
 
@@ -405,17 +465,18 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 void
 nc_hipert_reset_solver (NcHIPert *pert)
 {
-  if (pert->cvode != NULL)
+  NcHIPertPrivate * const self = pert->priv;
+  if (self->cvode != NULL)
   {
-    CVodeFree (&pert->cvode);
-    pert->cvode = NULL;
+    CVodeFree (&self->cvode);
+    self->cvode = NULL;
   }
 
-  if (pert->cvode_stiff)
-    pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+  if (self->cvode_stiff)
+    self->cvode = CVodeCreate (CV_BDF);
   else
-    pert->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+    self->cvode = CVodeCreate (CV_ADAMS);
 
-  pert->cvode_init = FALSE;
+  self->cvode_init = FALSE;
 }
 

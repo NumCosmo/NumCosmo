@@ -54,7 +54,7 @@ struct _NcReducedShearCalibPrivate
   gint a;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcReducedShearCalib, nc_reduced_shear_calib, NCM_TYPE_MODEL, G_ADD_PRIVATE (NcReducedShearCalib));
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcReducedShearCalib, nc_reduced_shear_calib, NCM_TYPE_MODEL);
 
 static void
 nc_reduced_shear_calib_init (NcReducedShearCalib *rs_calib)

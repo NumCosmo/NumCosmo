@@ -84,7 +84,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcDataReducedShearClusterMass, nc_data_reduced_shear_cluster_mass, NCM_TYPE_DATA, G_ADD_PRIVATE (NcDataReducedShearClusterMass));
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataReducedShearClusterMass, nc_data_reduced_shear_cluster_mass, NCM_TYPE_DATA);
 
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)

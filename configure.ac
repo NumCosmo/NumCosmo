@@ -797,7 +797,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysvx_ dsysvxx_ dsyevr_ dgeev_ dgeevx_ dggglm_],[],[])
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_],[],[])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],
@@ -960,69 +960,72 @@ dnl ***************************************************************************
 dnl Check for sundials
 dnl ***************************************************************************
 
-AC_ARG_VAR([SUNDIALS_LIBS], [C compiler flags for SUNDIALS])
-AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
-AC_SUBST(SUNDIALS_LIBS)
-AC_SUBST(SUNDIALS_CFLAGS)
+dnl AC_ARG_VAR([SUNDIALS_LIBS], [C compiler flags for SUNDIALS])
+dnl AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
+dnl AC_SUBST(SUNDIALS_LIBS)
+dnl AC_SUBST(SUNDIALS_CFLAGS)
 
-AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_sunmatrixdense],[SUNDenseMatrix],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunmatrixdense"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_sunlinsoldense],[SUNDenseLinearSolver],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunlinsoldense"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_sunmatrixdense],[SUNDenseMatrix],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunmatrixdense"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_sunlinsoldense],[SUNDenseLinearSolver],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunlinsoldense"],[],[$SUNDIALS_LIBS])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
-	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
-	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
-	],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
+dnl 	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
+dnl 	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
+dnl 	],[],[$SUNDIALS_LIBS])
 
-SAVED_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
+dnl SAVED_CFLAGS="$CFLAGS"
+dnl CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
 
-AC_CHECK_HEADER([sundials/sundials_config.h],[],[
-AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<path_to_SUNDIALS_headers>".])
-],[])
+dnl AC_CHECK_HEADER([sundials/sundials_config.h],[],[
+dnl AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<path_to_SUNDIALS_headers>".])
+dnl ],[])
+
+dnl AC_MSG_CHECKING([SUNDIALS version])
+
+dnl SUNDIALS_VERSION_FOUND=no
+dnl m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, 2, 5, 0], [2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
+dnl   [
+dnl     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
+dnl     SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
+dnl     AC_EGREP_CPP([[\"]?$SUNDIALS_VERSION_REGEX[\"]?],
+dnl       [
+dnl         #include <sundials/sundials_config.h>
+dnl         SUNDIALS_PACKAGE_VERSION;
+dnl         SUNDIALS_VERSION;
+dnl       ],
+dnl       [
+dnl         if test "x$SUNDIALS_VERSION_FOUND" != "xno"; then
+dnl           AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
+dnl         fi
+dnl         HAVE_SUNDIALS_MAJOR=m4_argn([2],SUNDIALS_VERSION_V)
+dnl         HAVE_SUNDIALS_MINOR=m4_argn([3],SUNDIALS_VERSION_V)
+dnl         HAVE_SUNDIALS_PATCH=m4_argn([4],SUNDIALS_VERSION_V)
+dnl         SUNDIALS_VERSION_FOUND=yes
+dnl       ])
+dnl   ])dnl
+
+dnl if test "x$SUNDIALS_VERSION_FOUND" = "xno"; then
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_MAJOR],[SUNDIALS_VERSION_MAJOR],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MAJOR' value]))
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_MINOR],[SUNDIALS_VERSION_MINOR],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MINOR' value]))
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_PATCH],[SUNDIALS_VERSION_PATCH],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_PATCH' value]))
+dnl fi
+
+dnl SUNDIALS_VERSION="$HAVE_SUNDIALS_MAJOR.$HAVE_SUNDIALS_MINOR.$HAVE_SUNDIALS_PATCH"
+dnl AC_MSG_RESULT([$SUNDIALS_VERSION])
+
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$HAVE_SUNDIALS_MAJOR],[SUNDIALS version - major])
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MINOR],[$HAVE_SUNDIALS_MINOR],[SUNDIALS version - minor])
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_PATCH],[$HAVE_SUNDIALS_PATCH],[SUNDIALS version - patch])
 
 AC_MSG_CHECKING([SUNDIALS version])
-
-SUNDIALS_VERSION_FOUND=no
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, 2, 5, 0], [2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
-  [
-    SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
-    SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
-    AC_EGREP_CPP([[\"]?$SUNDIALS_VERSION_REGEX[\"]?],
-      [
-        #include <sundials/sundials_config.h>
-        SUNDIALS_PACKAGE_VERSION;
-        SUNDIALS_VERSION;
-      ],
-      [
-        if test "x$SUNDIALS_VERSION_FOUND" != "xno"; then
-          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
-        fi
-        HAVE_SUNDIALS_MAJOR=m4_argn([2],SUNDIALS_VERSION_V)
-        HAVE_SUNDIALS_MINOR=m4_argn([3],SUNDIALS_VERSION_V)
-        HAVE_SUNDIALS_PATCH=m4_argn([4],SUNDIALS_VERSION_V)
-        SUNDIALS_VERSION_FOUND=yes
-      ])
-  ])dnl
-
-if test "x$SUNDIALS_VERSION_FOUND" = "xno"; then
-  AC_COMPUTE_INT([HAVE_SUNDIALS_MAJOR],[SUNDIALS_VERSION_MAJOR],[[#include <sundials/sundials_config.h>]],
-    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MAJOR' value]))
-  AC_COMPUTE_INT([HAVE_SUNDIALS_MINOR],[SUNDIALS_VERSION_MINOR],[[#include <sundials/sundials_config.h>]],
-    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MINOR' value]))
-  AC_COMPUTE_INT([HAVE_SUNDIALS_PATCH],[SUNDIALS_VERSION_PATCH],[[#include <sundials/sundials_config.h>]],
-    AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_PATCH' value]))
-fi
-
-SUNDIALS_VERSION="$HAVE_SUNDIALS_MAJOR.$HAVE_SUNDIALS_MINOR.$HAVE_SUNDIALS_PATCH"
-AC_MSG_RESULT([$SUNDIALS_VERSION])
-
-AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$HAVE_SUNDIALS_MAJOR],[SUNDIALS version - major])
-AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MINOR],[$HAVE_SUNDIALS_MINOR],[SUNDIALS version - minor])
-AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_PATCH],[$HAVE_SUNDIALS_PATCH],[SUNDIALS version - patch])
+AC_MSG_RESULT([using internal version])
 
 dnl ***************************************************************************
 dnl PLC
@@ -1085,6 +1088,7 @@ numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
 numcosmo/plc/Makefile
 numcosmo/class/Makefile
+numcosmo/sundials/Makefile
 numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile

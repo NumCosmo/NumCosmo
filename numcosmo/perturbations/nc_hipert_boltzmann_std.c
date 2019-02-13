@@ -40,22 +40,17 @@
 #include "nc_hipert_boltzmann_std.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_diag.h>
-#include <cvodes/cvodes_band.h>
-#include <cvodes/cvodes_bandpre.h>
-#include <cvodes/cvodes_spbcgs.h>
-#endif 
+#include <cvode/cvode.h>
+#include <nvector/nvector_serial.h>
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
 
-#if HAVE_SUNDIALS_MAJOR == 2
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#define SUN_BAND_ACCESS BAND_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
 #define SUN_BAND_ACCESS SM_ELEMENT_D
-#endif 
-
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "perturbations/nc_hipert_private.h"
 
 enum
 {
@@ -169,31 +164,31 @@ nc_hipert_boltzmann_std_class_init (NcHIPertBoltzmannStdClass *klass)
   pb_class->print_all     = &_nc_hipert_boltzmann_std_print_all;
 }
 
-#define _NC_PHI (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_PHI))
-#define _NC_C0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_C0))
+#define _NC_PHI (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_PHI))
+#define _NC_C0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_C0))
 
-#define _NC_B0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_B0))
-#define _NC_dB0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_dB0))
+#define _NC_B0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_B0))
+#define _NC_dB0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_dB0))
 
-#define _NC_THETA0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA0))
-#define _NC_dTHETA0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_dTHETA0))
+#define _NC_THETA0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA0))
+#define _NC_dTHETA0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_dTHETA0))
 
-#define _NC_C1 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_C1))
-#define _NC_V (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_V))
+#define _NC_C1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_C1))
+#define _NC_V (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_V))
 
-#define _NC_U (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_U))
-#define _NC_THETA1 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA1))
+#define _NC_U (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_U))
+#define _NC_THETA1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA1))
 
-#define _NC_T (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_T))
-#define _NC_B1 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_B1))
+#define _NC_T (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_T))
+#define _NC_B1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_B1))
 
-#define _NC_THETA2 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA2))
-#define _NC_THETA(n) (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA(n)))
+#define _NC_THETA2 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA2))
+#define _NC_THETA(n) (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA(n)))
 
-#define _NC_THETA_P0 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA_P0))
-#define _NC_THETA_P1 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA_P1))
-#define _NC_THETA_P2 (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA_P2))
-#define _NC_THETA_P(n) (NV_Ith_S (pert->y, NC_HIPERT_BOLTZMANN_THETA_P(n)))
+#define _NC_THETA_P0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P0))
+#define _NC_THETA_P1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P1))
+#define _NC_THETA_P2 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P2))
+#define _NC_THETA_P(n) (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P(n)))
 
 #define _NC_DPHI (NV_Ith_S (ydot, NC_HIPERT_BOLTZMANN_PHI))
 #define _NC_DC0 (NV_Ith_S (ydot, NC_HIPERT_BOLTZMANN_C0))
@@ -229,7 +224,7 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
   const gdouble z = x - 1.0;
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   const gdouble E = sqrt (E2);
-  const gdouble k_E = pert->k / E;
+  const gdouble k_E = nc_hipert_get_mode_k (pert) / E;
   const gdouble kx_E = x * k_E;
   const gdouble tauprime = nc_recomb_dtau_dlambda (pb->recomb, cosmo, pb->lambdai);
   const gdouble kx_Etauprime = kx_E / tauprime;
@@ -239,7 +234,7 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
   nc_hicosmo_clear (&pb->cosmo);
   pb->cosmo = nc_hicosmo_ref (cosmo);
 
-  N_VConst (0.0, pert->y);
+  N_VConst (0.0, pert->priv->y);
 
   _NC_PHI = 1.0;
   _NC_C0 = 3.0 * _NC_PHI / 2.0;
@@ -265,11 +260,7 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 }
 
 static gint _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
-#if HAVE_SUNDIALS_MAJOR == 2
-static gint _nc_hipert_boltzmann_std_band_J (glong N, glong mupper, glong mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-#elif HAVE_SUNDIALS_MAJOR == 3
 static gint _nc_hipert_boltzmann_std_band_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-#endif
 
 static void
 _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
@@ -277,34 +268,26 @@ _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
   NcHIPert *pert = NC_HIPERT (pb);
   gint flag, i;
 
-  N_VConst (pert->abstol, pert->vec_abstol);
+  N_VConst (pert->priv->abstol, pert->priv->vec_abstol);
   for (i = 0; i <= NC_HIPERT_BOLTZMANN_THETA_P2; i++)
-    NV_Ith_S (pert->vec_abstol, i) = 0.0;
+    NV_Ith_S (pert->priv->vec_abstol, i) = 0.0;
 
-  flag = CVodeSVtolerances (pert->cvode, pert->reltol, pert->vec_abstol);
+  flag = CVodeSVtolerances (pert->priv->cvode, pert->priv->reltol, pert->priv->vec_abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1,);
 
-  flag = CVodeSetMaxNumSteps (pert ->cvode, 1000000);
+  flag = CVodeSetMaxNumSteps (pert->priv->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1,);
 
-  flag = CVodeSetUserData (pert->cvode, pert);
+  flag = CVodeSetUserData (pert->priv->cvode, pert);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1,);
 
-#if HAVE_SUNDIALS_MAJOR == 2
-  flag = CVBand (pert->cvode, pert->sys_size, 4, 4);
-  NCM_CVODE_CHECK (&flag, "CVBand", 1,);
+  flag = CVodeSetLinearSolver (pert->priv->cvode, pert->priv->LS, pert->priv->A);
+  NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-  flag = CVDlsSetBandJacFn (pert->cvode, &_nc_hipert_boltzmann_std_band_J);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetBandJacFn", 1,);
-#elif HAVE_SUNDIALS_MAJOR == 3
-  flag = CVDlsSetLinearSolver (pert->cvode, pert->LS, pert->A);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+  flag = CVodeSetJacFn (pert->priv->cvode, &_nc_hipert_boltzmann_std_band_J);
+  NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
-  flag = CVDlsSetJacFn (pert->cvode, &_nc_hipert_boltzmann_std_band_J);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
-
-  flag = CVodeSetStopTime (pert->cvode, pb->lambdaf);
+  flag = CVodeSetStopTime (pert->priv->cvode, pb->lambdaf);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1,);
 
   return;
@@ -316,20 +299,16 @@ _nc_hipert_boltzmann_std_reset (NcHIPertBoltzmann *pb)
   gint flag;
   NcHIPert *pert = NC_HIPERT (pb);
 
-  if (!pert->cvode_init)
+  if (!pert->priv->cvode_init)
   {
-    flag = CVodeInit (pert->cvode, &_nc_hipert_boltzmann_std_step, pb->lambdai, pert->y);
+    flag = CVodeInit (pert->priv->cvode, &_nc_hipert_boltzmann_std_step, pb->lambdai, pert->priv->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1,);
-    pert->cvode_init = TRUE;
+    pert->priv->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->cvode, pb->lambdai, pert->y);
+    flag = CVodeReInit (pert->priv->cvode, pb->lambdai, pert->priv->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1,);
-#ifdef SIMUL_LOS_INT
-    CVodeQuadReInit (data->cvode, data->yQ);
-    NCM_CVODE_CHECK (&flag, "CVodeQuadReInit", 1,);
-#endif
   }
 
   _nc_hipert_boltzmann_std_set_opts (pb);
@@ -343,7 +322,7 @@ _nc_hipert_boltzmann_std_evol_step (NcHIPertBoltzmann *pb, gdouble lambda)
   gint flag;
   gdouble lambdai;
 
-  flag = CVode (pert->cvode, lambda, pert->y, &lambdai, CV_ONE_STEP);
+  flag = CVode (pert->priv->cvode, lambda, pert->priv->y, &lambdai, CV_ONE_STEP);
   NCM_CVODE_CHECK (&flag, "CVode", 1, );
 }
 
@@ -356,7 +335,7 @@ _nc_hipert_boltzmann_std_evol (NcHIPertBoltzmann *pb, gdouble lambda)
 
   while (lambdai < lambda)
   {
-    flag = CVode (pert->cvode, lambda, pert->y, &lambdai, CV_NORMAL);
+    flag = CVode (pert->priv->cvode, lambda, pert->priv->y, &lambdai, CV_NORMAL);
     NCM_CVODE_CHECK (&flag, "CVode", 1, );
   }
 }
@@ -476,7 +455,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
   const gdouble R = R0 * x;
   const gdouble x2 = x * x;
   const gdouble x3 = x2 * x;
-  const gdouble k = pert->k;
+  const gdouble k = nc_hipert_get_mode_k (pert);
   const gdouble k2 = k * k;
   const gdouble E2 = nc_hicosmo_E2 (cosmo, x - 1.0);
   const gdouble E = sqrt(E2);
@@ -549,7 +528,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 */      //printf ("# % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", R0x_onepR0x * Sigma, kx_3E * _NC_THETA0, - kx_3E * _NC_PHI, - kx_3E * 2.0 * _NC_THETA2, Delta);
 /*      printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n",
               -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),
-              _NC_THETA0, _NC_B0, _NC_C0, _NC_THETA1, _NC_B1, _NC_C1, kx_E, pert->k);
+              _NC_THETA0, _NC_B0, _NC_C0, _NC_THETA1, _NC_B1, _NC_C1, kx_E, nc_hipert_get_mode_k (pert));
 */    }
     else
       Delta = _NC_THETA1 - _NC_B1;
@@ -595,7 +574,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
   if (FALSE)
   {
     const gdouble eta = nc_scalefactor_eval_eta_x (pb->a, x);
-    const gdouble keta = pert->k * eta;
+    const gdouble keta = nc_hipert_get_mode_k (pert) * eta;
 
     guint n = 16;
     g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", lambda, k, eta, _NC_THETA(n + 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta - _NC_THETA(n - 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta, _NC_THETA(n - 1),
@@ -630,11 +609,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 #define _NC_BAND_ELEM(J,i,j) SUN_BAND_ACCESS ((J), (gint)(i), (gint)(j))
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_boltzmann_std_band_J (glong N, glong mupper, glong mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_boltzmann_std_band_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (jac_data);
   NcHIPert *pert = NC_HIPERT (pb);
@@ -649,7 +624,7 @@ _nc_hipert_boltzmann_std_band_J (realtype lambda, N_Vector y, N_Vector fy, SUNMa
   const gdouble x2 = x * x;
   const gdouble x3 = x2 * x;
   const gdouble x4 = x3 * x;
-  const gdouble k = pert->k;
+  const gdouble k = nc_hipert_get_mode_k (pert);
   const gdouble k2 = k * k;
   const gdouble E2 = nc_hicosmo_E2 (cosmo, x - 1.0);
   const gdouble E = sqrt(E2);

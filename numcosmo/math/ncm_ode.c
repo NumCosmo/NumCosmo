@@ -51,7 +51,7 @@ enum
   PROP_SYS_SIZE
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcmODE, ncm_ode, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmODE));
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmODE, ncm_ode, G_TYPE_OBJECT);
 
 static void
 ncm_ode_init (NcmODE *ode)

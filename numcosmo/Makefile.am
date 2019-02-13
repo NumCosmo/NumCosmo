@@ -11,6 +11,7 @@ else
 endif
 
 PLC_DIR = $(top_srcdir)/numcosmo/plc
+SUNDIALS_INCL = $(top_srcdir)/numcosmo/sundials/include
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
@@ -29,13 +30,14 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)      \
+	 -I$(SUNDIALS_INCL)   \
 	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS =    \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
@@ -57,6 +59,7 @@ libnumcosmo_la_LIBADD =         \
 	plc/libclik.la          \
 	levmar/liblevmar.la     \
 	class/libclass.la       \
+	sundials/libsundials.la \
 	toeplitz/libtoeplitz.la
 
 ncm_sources = \

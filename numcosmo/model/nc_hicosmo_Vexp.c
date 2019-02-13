@@ -45,19 +45,10 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <nvector/nvector_serial.h>
 #include <cvode/cvode.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h> 
-#endif
-
-#if HAVE_SUNDIALS_MAJOR == 3
 #include <sundials/sundials_matrix.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
-#endif 
 
 #include <sundials/sundials_types.h> 
 
@@ -79,10 +70,8 @@ struct _NcHICosmoVexpPrivate
   N_Vector y_qt;
   N_Vector ydot_qt;
   N_Vector y_cl;
-#if HAVE_SUNDIALS_MAJOR == 3
   SUNMatrix A;
   SUNLinearSolver LS;
-#endif
   gint cl_bc, cl_be;
   gdouble RH_lp;
   gdouble alpha_b;
@@ -132,9 +121,9 @@ static void
 nc_hicosmo_Vexp_init (NcHICosmoVexp *Vexp)
 {
   Vexp->priv             = G_TYPE_INSTANCE_GET_PRIVATE (Vexp, NC_TYPE_HICOSMO_VEXP, NcHICosmoVexpPrivate);
-  Vexp->priv->cvode_qt   = CVodeCreate (CV_BDF, CV_NEWTON);
-  Vexp->priv->cvode_clp  = CVodeCreate (CV_BDF, CV_NEWTON);
-  Vexp->priv->cvode_clm  = CVodeCreate (CV_BDF, CV_NEWTON);
+  Vexp->priv->cvode_qt   = CVodeCreate (CV_BDF);
+  Vexp->priv->cvode_clp  = CVodeCreate (CV_BDF);
+  Vexp->priv->cvode_clm  = CVodeCreate (CV_BDF);
   Vexp->priv->qt_init    = FALSE;
   Vexp->priv->clp_init   = FALSE;
   Vexp->priv->clm_init   = FALSE;
@@ -143,13 +132,12 @@ nc_hicosmo_Vexp_init (NcHICosmoVexp *Vexp)
   Vexp->priv->y_qt       = N_VNew_Serial (2);
   Vexp->priv->ydot_qt    = N_VNew_Serial (2);
   Vexp->priv->y_cl       = N_VNew_Serial (2);
-#if HAVE_SUNDIALS_MAJOR == 3
   Vexp->priv->A          = SUNDenseMatrix (2, 2);
   Vexp->priv->LS         = SUNDenseLinearSolver (Vexp->priv->y_qt, Vexp->priv->A);
   
   NCM_CVODE_CHECK ((gpointer)Vexp->priv->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer)Vexp->priv->LS, "SUNDenseLinearSolver", 0, );
-#endif
+
   Vexp->priv->RH_lp      = 0.0;
   Vexp->priv->alpha_b    = 0.0;
   Vexp->priv->a_0de      = 0.0;
@@ -338,7 +326,6 @@ _nc_hicosmo_Vexp_finalize (GObject *object)
     Vexp->priv->y_cl = NULL;
   }
 
-#if HAVE_SUNDIALS_MAJOR == 3
   if (Vexp->priv->A != NULL)
   {
     SUNMatDestroy (Vexp->priv->A);
@@ -350,7 +337,6 @@ _nc_hicosmo_Vexp_finalize (GObject *object)
     SUNLinSolFree (Vexp->priv->LS);
     Vexp->priv->LS = NULL;
   }
-#endif
 
   g_clear_pointer (&Vexp->priv->evol_c, g_array_unref);
   g_clear_pointer (&Vexp->priv->evol_e, g_array_unref);
@@ -948,11 +934,7 @@ _nc_hicosmo_Vexp_qt_Ricci_scale (NcHICosmoVexp *Vexp, NcHICosmo *cosmo, const gd
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_nc_hicosmo_Vexp_qt_J (glong N, realtype tQ, N_Vector y_qt, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hicosmo_Vexp_qt_J (realtype tQ, N_Vector y_qt, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
 	NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (jac_data);
   NcHICosmo *cosmo    = NC_HICOSMO (Vexp);
@@ -1088,19 +1070,11 @@ _nc_hicosmo_Vexp_init_qt (NcHICosmoVexp *Vexp, const gdouble direction)
     flag = CVodeSetUserData (Vexp->priv->cvode_qt, Vexp);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (Vexp->priv->cvode_qt, 2);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
+    flag = CVodeSetLinearSolver (Vexp->priv->cvode_qt, Vexp->priv->LS, Vexp->priv->A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-    flag = CVDlsSetDenseJacFn (Vexp->priv->cvode_qt, &_nc_hicosmo_Vexp_qt_J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );    
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (Vexp->priv->cvode_qt, Vexp->priv->LS, Vexp->priv->A);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
-
-    flag = CVDlsSetJacFn (Vexp->priv->cvode_qt, &_nc_hicosmo_Vexp_qt_J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
+    flag = CVodeSetJacFn (Vexp->priv->cvode_qt, &_nc_hicosmo_Vexp_qt_J);
+    NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
     
     flag = CVodeRootInit (Vexp->priv->cvode_qt, 4, &_nc_hicosmo_Vexp_qt_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
@@ -1146,13 +1120,8 @@ _nc_hicosmo_Vexp_init_clp (NcHICosmoVexp *Vexp, gdouble alpha_q, gdouble q0, gdo
     flag = CVodeSetUserData (Vexp->priv->cvode_clp, Vexp);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (Vexp->priv->cvode_clp, 2);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (Vexp->priv->cvode_clp, Vexp->priv->LS, Vexp->priv->A);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
-#endif    
+    flag = CVodeSetLinearSolver (Vexp->priv->cvode_clp, Vexp->priv->LS, Vexp->priv->A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
   }
   else
   {
@@ -1183,13 +1152,8 @@ _nc_hicosmo_Vexp_init_clm (NcHICosmoVexp *Vexp, gdouble alpha_q, gdouble q0, gdo
     flag = CVodeSetUserData (Vexp->priv->cvode_clm, Vexp);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (Vexp->priv->cvode_clm, 2);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (Vexp->priv->cvode_clm, Vexp->priv->LS, Vexp->priv->A);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
-#endif    
+    flag = CVodeSetLinearSolver (Vexp->priv->cvode_clm, Vexp->priv->LS, Vexp->priv->A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
     flag = CVodeRootInit (Vexp->priv->cvode_clm, 3, &_nc_hicosmo_Vexp_clm_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );

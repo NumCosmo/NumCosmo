@@ -61,7 +61,7 @@ enum
 	PROP_DISTS,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT, G_ADD_PRIVATE (NcGalaxyRedshiftSpline));
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT);
 
 static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)
@@ -144,7 +144,10 @@ _nc_galaxy_redshift_spline_get_property (GObject *object, guint prop_id, GValue 
 static void
 _nc_galaxy_redshift_spline_dispose (GObject *object)
 {
-	g_clear_pointer (&self->normas, (GDestroyNotify) g_array_unref);
+	NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);
+	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
+
+	g_clear_pointer (&self->normas, g_array_unref);
 	ncm_obj_array_clear (&self->dists);
 
 	/* Chain up : end */
@@ -154,10 +157,9 @@ _nc_galaxy_redshift_spline_dispose (GObject *object)
 static void
 _nc_galaxy_redshift_spline_finalize (GObject *object)
 {
-	NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);
-	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
+	/*NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);*/
+	/*NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;*/
 
-		
 
 	/* Chain up : end */
 	G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->finalize (object);

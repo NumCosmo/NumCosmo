@@ -67,7 +67,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT, G_ADD_PRIVATE (NcGalaxySelfunc));
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_selfunc_init (NcGalaxySelfunc *gsf)

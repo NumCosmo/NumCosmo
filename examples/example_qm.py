@@ -54,7 +54,7 @@ matplotlib.animation.Animation._blit_draw = _blit_draw
 Ncm.cfg_init ()
 
 p                  = Nc.HIQG1D.new ()
-l1                 = 4.0 / 3.0 * 0.0
+l1                 = 1.0
 H0                 = -15.0e-1
 p.props.abstol     = 0.0
 p.props.reltol     = 1.0e-7
@@ -66,22 +66,22 @@ center = (10.0 + offset) * 0.0 + 0.0
 
 print ("# lambda = % 22.15g, basis a = % 22.15g, acs a = % 22.15g nu = % 22.15g mu = % 22.15g" % (p.get_lambda (), p.get_basis_a (), p.get_acs_a (), p.get_nu (), p.get_mu ()))
 
-psi0 = Nc.HIQG1DGauss.new (center, 1.0, 1.0, H0)
-#psi0 = Nc.HIQG1DExp.new (p.get_acs_a (), 2.0, H0)
+#psi0 = Nc.HIQG1DGauss.new (center, 1.0, 1.0, H0)
+psi0 = Nc.HIQG1DExp.new (p.get_acs_a (), 2.0, H0)
 #psi0 = Nc.HIQG1DExp.new (3.0, 2.0, H0)
 
 #print (psi0.eval (1.0))
 npp   = 1000
 sim   = True
-tstep = 5.0e-3
+tstep = 1.0e-3
 tf    = 4.5
 xf    = center + 100.0
 xfp   = center + 20.0
 xi    = (center - 7.0) * 0.0 + 0.0
 dSdiv = 10.0
 
-p.set_init_cond_gauss (psi0, xi, xf)
-#p.set_init_cond_exp (psi0, xi, xf)
+#p.set_init_cond_gauss (psi0, xi, xf)
+p.set_init_cond_exp (psi0, xi, xf)
 p.prepare ()
 n1 = p.nBohm ()
 
@@ -100,7 +100,7 @@ ax.grid ()
 
 #ax2.set_xlim (0.0, 10.0)
 #ax2.set_ylim (1.0e-2, 1e2)
-ax2.set_xlim (0.0, 12.0)
+ax2.set_xlim (-0.1, 12.0)
 ax2.set_ylim (-8.0, 8.0)
 #ax2.set_xscale ('symlog', linthreshy=0.1)
 #ax2.set_yscale ('log')
@@ -234,7 +234,7 @@ def animate(i):
     #print (dS)
   
 #    qm = p.int_xrho_0_inf ()
-  
+    
     tfa = [tf] * n1
     lines[5].set_data ([p.Bohm (i) for i in range (n1)], [p.Bohm_p (i) for i in range (n1)])
     lines[6].set_data ([a_sc (tf)], [p_sc (tf)])

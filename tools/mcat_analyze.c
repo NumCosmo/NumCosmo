@@ -86,6 +86,7 @@ main (gint argc, gchar *argv[])
   gboolean list_all       = FALSE;
   gboolean list_hicosmo   = FALSE;
   gboolean list_hicosmo_z = FALSE;
+  gboolean list_hiprim    = FALSE;
   gboolean list_dist      = FALSE;
   gboolean list_dist_z    = FALSE;
   gboolean use_direct     = FALSE;
@@ -128,6 +129,7 @@ main (gint argc, gchar *argv[])
     { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,       "Print all available functions.", NULL },
     { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,   "Print available constant functions from NcHICosmo.", NULL },
     { "list-hicosmo-z",   0, 0, G_OPTION_ARG_NONE,         &list_hicosmo_z, "Print available redshift functions from NcHICosmo.", NULL },
+    { "list-hiprim",      0, 0, G_OPTION_ARG_NONE,         &list_hiprim,    "Print available k or lnk functions from NcHIPrim.", NULL },
     { "list-dist",        0, 0, G_OPTION_ARG_NONE,         &list_dist,      "Print available constant functions from NcDistance.", NULL },
     { "list-dist-z",      0, 0, G_OPTION_ARG_NONE,         &list_dist_z,    "Print available redshift functions from NcDistance.", NULL },
     { "use-direct",       0, 0, G_OPTION_ARG_NONE,         &use_direct,     "Whether to use the direct quantile algorithm (much more memory intensive but faster for small samples).", NULL },
@@ -135,7 +137,7 @@ main (gint argc, gchar *argv[])
     { "zi",               0, 0, G_OPTION_ARG_DOUBLE,       &zi,             "Initial redshift (default 0).", NULL },
     { "zf",               0, 0, G_OPTION_ARG_DOUBLE,       &zf,             "Final redshift (default 1).", NULL },
     { "nsteps",           0, 0, G_OPTION_ARG_INT,          &nsteps,         "Number of points in the functions grid (default 100).", NULL },
-    { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,          "Redshift functions to be analyzed.", NULL},
+    { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,          "R => R functions to be analyzed.", NULL},
     { "distribution",   'd', 0, G_OPTION_ARG_STRING_ARRAY, &distribs,       "Function distributions to be analyzed.", NULL},
     { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,         "Model parameters' to be analyzed.", NULL},
     { "parameter-evol", 'P', 0, G_OPTION_ARG_STRING_ARRAY, &params_evol,    "Calculate the time evolution of the parameter.", NULL},
@@ -193,6 +195,18 @@ main (gint argc, gchar *argv[])
       g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
     }
     g_array_unref (func_z_table);
+  }
+  if (list_hiprim || list_all)
+  {
+    GArray *func_table = ncm_mset_func_list_select ("NcHIPrim", 1, 1); 
+    ncm_cfg_msg_sepa ();
+    g_message ("# Available k or lnk functions from NcHIPrim models:\n");    
+    for (i = 0; i < func_table->len; i++)
+    {
+      NcmMSetFuncListStruct *fdata = &g_array_index (func_table, NcmMSetFuncListStruct, i);
+      g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
+    }
+    g_array_unref (func_table);
   }
   if (list_dist || list_all)
   {
@@ -392,6 +406,21 @@ main (gint argc, gchar *argv[])
             }
             ncm_cfg_msg_sepa ();
             g_message ("# Printing NcDistance z function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
+          }
+        }
+        if (mset_func == NULL)
+        {
+          if (ncm_mset_func_list_has_ns_name ("NcHIPrim", funcs[i]))
+          {
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHIPrim", funcs[i], NULL));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
+            {
+              g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
+              continue;
+            }
+            ncm_cfg_msg_sepa ();
+            g_message ("# Printing NcHIPrim function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
           }
         }
         if (mset_func == NULL)

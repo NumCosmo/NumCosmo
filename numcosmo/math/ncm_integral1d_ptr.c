@@ -56,7 +56,7 @@ enum
   PROP_USERFREE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEGRAL1D, G_ADD_PRIVATE (NcmIntegral1dPtr));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEGRAL1D);
 
 static void
 ncm_integral1d_ptr_init (NcmIntegral1dPtr *int1d_ptr)

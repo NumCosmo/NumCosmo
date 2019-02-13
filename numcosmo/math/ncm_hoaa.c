@@ -89,29 +89,17 @@
 #include <nvector/nvector_serial.h>
 
 #ifndef HAVE_SUNDIALS_ARKODE
-#include <cvodes/cvodes.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h> 
-#endif
+#include <cvode/cvode.h>
+#include <cvode/cvode_ls.h>
 #else /* HAVE_SUNDIALS_ARKODE */
 #include <arkode/arkode.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <arkode/arkode_dense.h>
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <arkode/arkode_direct.h> 
-#endif /* HAVE_SUNDIALS_MAJOR == 2 */
+#include <arkode/arkode_ls.h>
 #endif /* HAVE_SUNDIALS_ARKODE */
 
-#if HAVE_SUNDIALS_MAJOR == 3
 #include <sundials/sundials_matrix.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
-#endif 
 
 #include <sundials/sundials_types.h> 
 
@@ -142,10 +130,8 @@ struct _NcmHOAAPrivate
   N_Vector sigma;
   N_Vector y;
   N_Vector abstol_v;
-#if HAVE_SUNDIALS_MAJOR == 3
   SUNMatrix A;
   SUNLinearSolver LS;
-#endif
   gdouble reltol;
   gdouble abstol;
   gdouble ti;
@@ -178,73 +164,72 @@ enum
   PROP_OPT,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmHOAA));
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT);
 
 static void
 ncm_hoaa_init (NcmHOAA *hoaa)
 {
+  NcmHOAAPrivate * const self = hoaa->priv = G_TYPE_INSTANCE_GET_PRIVATE (hoaa, NCM_TYPE_HOAA, NcmHOAAPrivate);
   hoaa->k                      = 0.0;
   /* private properties */
-  hoaa->priv                   = G_TYPE_INSTANCE_GET_PRIVATE (hoaa, NCM_TYPE_HOAA, NcmHOAAPrivate);
 #ifndef HAVE_SUNDIALS_ARKODE
-  hoaa->priv->cvode            = CVodeCreate (CV_BDF, CV_NEWTON);       /*CVodeCreate (CV_BDF, CV_NEWTON);*/
-  hoaa->priv->cvode_sing       = CVodeCreate (CV_BDF, CV_NEWTON);       /*CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);*/
-  hoaa->priv->cvode_phase      = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
-  hoaa->priv->cvode_init       = FALSE;
-  hoaa->priv->cvode_sing_init  = FALSE;
+  self->cvode            = CVodeCreate (CV_BDF);   /*CVodeCreate (CV_BDF, CV_NEWTON);*/
+  self->cvode_sing       = CVodeCreate (CV_BDF);   /*CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);*/
+  self->cvode_phase      = CVodeCreate (CV_ADAMS); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
+  self->cvode_init       = FALSE;
+  self->cvode_sing_init  = FALSE;
 #else
-  hoaa->priv->arkode           = ARKodeCreate ();
-  hoaa->priv->arkode_sing      = ARKodeCreate ();
-  hoaa->priv->arkode_phase     = ARKodeCreate ();
-  hoaa->priv->arkode_sing_init = FALSE;
+  self->arkode           = ARKodeCreate ();
+  self->arkode_sing      = ARKodeCreate ();
+  self->arkode_phase     = ARKodeCreate ();
+  self->arkode_sing_init = FALSE;
 #endif /* HAVE_SUNDIALS_ARKODE */
-  hoaa->priv->opt       = NCM_HOAA_OPT_INVALID;
-  hoaa->priv->reltol    = 0.0;
-  hoaa->priv->abstol    = 0.0;
-  hoaa->priv->ti        = 0.0;
-  hoaa->priv->tf        = 0.0;
-  hoaa->priv->t_cur     = 0.0;
-  hoaa->priv->save_evol = FALSE;
-  hoaa->priv->sigma     = N_VNew_Serial (1);
-  hoaa->priv->y         = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
-  hoaa->priv->abstol_v  = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
-#if HAVE_SUNDIALS_MAJOR == 3
-  hoaa->priv->A         = SUNDenseMatrix (NCM_HOAA_VAR_SYS_SIZE, NCM_HOAA_VAR_SYS_SIZE);
-  hoaa->priv->LS        = SUNDenseLinearSolver (hoaa->priv->y, hoaa->priv->A);
+  self->opt       = NCM_HOAA_OPT_INVALID;
+  self->reltol    = 0.0;
+  self->abstol    = 0.0;
+  self->ti        = 0.0;
+  self->tf        = 0.0;
+  self->t_cur     = 0.0;
+  self->save_evol = FALSE;
+  self->sigma     = N_VNew_Serial (1);
+  self->y         = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
+  self->abstol_v  = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
+  self->A         = SUNDenseMatrix (NCM_HOAA_VAR_SYS_SIZE, NCM_HOAA_VAR_SYS_SIZE);
+  self->LS        = SUNDenseLinearSolver (self->y, self->A);
   
-  NCM_CVODE_CHECK ((gpointer)hoaa->priv->A, "SUNDenseMatrix", 0, );
-  NCM_CVODE_CHECK ((gpointer)hoaa->priv->LS, "SUNDenseLinearSolver", 0, );
-#endif
-  hoaa->priv->ctrl      = ncm_model_ctrl_new (NULL);
-  hoaa->priv->T         = gsl_root_fsolver_brent;
-  hoaa->priv->s         = gsl_root_fsolver_alloc (hoaa->priv->T);
-  hoaa->priv->rng       = ncm_rng_new (NULL);
+  NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
+  self->ctrl      = ncm_model_ctrl_new (NULL);
+  self->T         = gsl_root_fsolver_brent;
+  self->s         = gsl_root_fsolver_alloc (self->T);
+  self->rng       = ncm_rng_new (NULL);
 
-  hoaa->priv->t         = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->t_m_ts    = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->sing_qbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->sing_pbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->upsilon   = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->gamma     = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->qbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  hoaa->priv->pbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->t         = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->t_m_ts    = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->sing_qbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->sing_pbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->upsilon   = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->gamma     = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->qbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  self->pbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
 
-  hoaa->priv->upsilon_s = ncm_spline_cubic_notaknot_new ();
-  hoaa->priv->gamma_s   = ncm_spline_cubic_notaknot_new ();
-  hoaa->priv->qbar_s    = ncm_spline_cubic_notaknot_new ();
-  hoaa->priv->pbar_s    = ncm_spline_cubic_notaknot_new ();
+  self->upsilon_s = ncm_spline_cubic_notaknot_new ();
+  self->gamma_s   = ncm_spline_cubic_notaknot_new ();
+  self->qbar_s    = ncm_spline_cubic_notaknot_new ();
+  self->pbar_s    = ncm_spline_cubic_notaknot_new ();
 
-  hoaa->priv->sigma0    = 0.0;
+  self->sigma0    = 0.0;
 
-  hoaa->priv->diff      = ncm_diff_new ();
+  self->diff      = ncm_diff_new ();
   
-  ncm_rng_set_random_seed (hoaa->priv->rng, TRUE);
+  ncm_rng_set_random_seed (self->rng, TRUE);
 }
 
 static void
 _ncm_hoaa_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmHOAA *hoaa = NCM_HOAA (object);
+  NcmHOAAPrivate * const self = hoaa->priv;
   g_return_if_fail (NCM_IS_HOAA (object));
 
   switch (prop_id)
@@ -268,8 +253,8 @@ _ncm_hoaa_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       ncm_hoaa_save_evol (hoaa, g_value_get_boolean (value));
       break;
     case PROP_OPT:
-      hoaa->priv->opt = g_value_get_enum (value);
-      if (hoaa->priv->opt == NCM_HOAA_OPT_INVALID)
+      self->opt = g_value_get_enum (value);
+      if (self->opt == NCM_HOAA_OPT_INVALID)
         g_error ("_ncm_hoaa_set_property: `opt' property must be set.");
       break;
     default:
@@ -282,30 +267,31 @@ static void
 _ncm_hoaa_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmHOAA *hoaa = NCM_HOAA (object);
+  NcmHOAAPrivate * const self = hoaa->priv;
   g_return_if_fail (NCM_IS_HOAA (object));
 
   switch (prop_id)
   {
     case PROP_RELTOL:
-      g_value_set_double (value, hoaa->priv->reltol);
+      g_value_set_double (value, self->reltol);
       break;
     case PROP_ABSTOL:
-      g_value_set_double (value, hoaa->priv->abstol);
+      g_value_set_double (value, self->abstol);
       break;
     case PROP_K:
       g_value_set_double (value, hoaa->k);
       break;
     case PROP_TI:
-      g_value_set_double (value, hoaa->priv->ti);
+      g_value_set_double (value, self->ti);
       break;
     case PROP_TF:
-      g_value_set_double (value, hoaa->priv->tf);
+      g_value_set_double (value, self->tf);
       break;
     case PROP_SAVE_EVOL:
-      g_value_set_boolean (value, hoaa->priv->save_evol);
+      g_value_set_boolean (value, self->save_evol);
       break;
     case PROP_OPT:
-      g_value_set_enum (value, hoaa->priv->opt);
+      g_value_set_enum (value, self->opt);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -317,23 +303,24 @@ static void
 _ncm_hoaa_dispose (GObject *object)
 {
   NcmHOAA *hoaa = NCM_HOAA (object);
+  NcmHOAAPrivate * const self = hoaa->priv;
 
-  ncm_model_ctrl_clear (&hoaa->priv->ctrl);
-  ncm_rng_clear (&hoaa->priv->rng);
+  ncm_model_ctrl_clear (&self->ctrl);
+  ncm_rng_clear (&self->rng);
 
-  ncm_spline_clear (&hoaa->priv->upsilon_s);
-  ncm_spline_clear (&hoaa->priv->gamma_s);
-  ncm_spline_clear (&hoaa->priv->qbar_s);
-  ncm_spline_clear (&hoaa->priv->pbar_s);
+  ncm_spline_clear (&self->upsilon_s);
+  ncm_spline_clear (&self->gamma_s);
+  ncm_spline_clear (&self->qbar_s);
+  ncm_spline_clear (&self->pbar_s);
   
-  g_clear_pointer (&hoaa->priv->t,         g_array_unref);
-  g_clear_pointer (&hoaa->priv->t_m_ts,    g_array_unref);
-  g_clear_pointer (&hoaa->priv->sing_qbar, g_array_unref);
-  g_clear_pointer (&hoaa->priv->sing_pbar, g_array_unref);
-  g_clear_pointer (&hoaa->priv->upsilon,   g_array_unref);
-  g_clear_pointer (&hoaa->priv->gamma,     g_array_unref);
-  g_clear_pointer (&hoaa->priv->qbar,      g_array_unref);
-  g_clear_pointer (&hoaa->priv->pbar,      g_array_unref);
+  g_clear_pointer (&self->t,         g_array_unref);
+  g_clear_pointer (&self->t_m_ts,    g_array_unref);
+  g_clear_pointer (&self->sing_qbar, g_array_unref);
+  g_clear_pointer (&self->sing_pbar, g_array_unref);
+  g_clear_pointer (&self->upsilon,   g_array_unref);
+  g_clear_pointer (&self->gamma,     g_array_unref);
+  g_clear_pointer (&self->qbar,      g_array_unref);
+  g_clear_pointer (&self->pbar,      g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->dispose (object);
@@ -343,74 +330,73 @@ static void
 _ncm_hoaa_finalize (GObject *object)
 {
   NcmHOAA *hoaa = NCM_HOAA (object);
+  NcmHOAAPrivate * const self = hoaa->priv;
 
 #ifndef HAVE_SUNDIALS_ARKODE
-  if (hoaa->priv->cvode != NULL)
+  if (self->cvode != NULL)
   {
-    CVodeFree (&hoaa->priv->cvode);
-    hoaa->priv->cvode = NULL;
+    CVodeFree (&self->cvode);
+    self->cvode = NULL;
   }
-  if (hoaa->priv->cvode_sing != NULL)
+  if (self->cvode_sing != NULL)
   {
-    CVodeFree (&hoaa->priv->cvode_sing);
-    hoaa->priv->cvode_sing = NULL;
+    CVodeFree (&self->cvode_sing);
+    self->cvode_sing = NULL;
   }
-  if (hoaa->priv->cvode_phase != NULL)
+  if (self->cvode_phase != NULL)
   {
-    CVodeFree (&hoaa->priv->cvode_phase);
-    hoaa->priv->cvode_phase = NULL;
+    CVodeFree (&self->cvode_phase);
+    self->cvode_phase = NULL;
   }
 #else
-  if (hoaa->priv->arkode != NULL)
+  if (self->arkode != NULL)
   {
-    ARKodeFree (&hoaa->priv->arkode);
-    hoaa->priv->arkode = NULL;
+    ARKodeFree (&self->arkode);
+    self->arkode = NULL;
   }
-  if (hoaa->priv->arkode_sing != NULL)
+  if (self->arkode_sing != NULL)
   {
-    ARKodeFree (&hoaa->priv->arkode_sing);
-    hoaa->priv->arkode_sing = NULL;
+    ARKodeFree (&self->arkode_sing);
+    self->arkode_sing = NULL;
   }
-  if (hoaa->priv->arkode_phase != NULL)
+  if (self->arkode_phase != NULL)
   {
-    ARKodeFree (&hoaa->priv->arkode_phase);
-    hoaa->priv->arkode_phase = NULL;
+    ARKodeFree (&self->arkode_phase);
+    self->arkode_phase = NULL;
   }
 #endif /* HAVE_SUNDIALS_ARKODE */  
   
-  if (hoaa->priv->sigma != NULL)
+  if (self->sigma != NULL)
   {
-    N_VDestroy (hoaa->priv->sigma);
-    hoaa->priv->sigma = NULL;
+    N_VDestroy (self->sigma);
+    self->sigma = NULL;
   }
 
-  if (hoaa->priv->y != NULL)
+  if (self->y != NULL)
   {
-    N_VDestroy (hoaa->priv->y);
-    hoaa->priv->y = NULL;
+    N_VDestroy (self->y);
+    self->y = NULL;
   }
 
-  if (hoaa->priv->abstol_v != NULL)
+  if (self->abstol_v != NULL)
   {
-    N_VDestroy (hoaa->priv->abstol_v);
-    hoaa->priv->abstol_v = NULL;
+    N_VDestroy (self->abstol_v);
+    self->abstol_v = NULL;
   }
 
-#if HAVE_SUNDIALS_MAJOR == 3
-  if (hoaa->priv->A != NULL)
+  if (self->A != NULL)
   {
-    SUNMatDestroy (hoaa->priv->A);
-    hoaa->priv->A = NULL;
+    SUNMatDestroy (self->A);
+    self->A = NULL;
   }
   
-  if (hoaa->priv->LS != NULL)
+  if (self->LS != NULL)
   {
-    SUNLinSolFree (hoaa->priv->LS);
-    hoaa->priv->LS = NULL;
+    SUNLinSolFree (self->LS);
+    self->LS = NULL;
   }
-#endif
 
-  g_clear_pointer (&hoaa->priv->s, gsl_root_fsolver_free);
+  g_clear_pointer (&self->s, gsl_root_fsolver_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->finalize (object);
@@ -567,7 +553,8 @@ ncm_hoaa_clear (NcmHOAA **hoaa)
 void 
 ncm_hoaa_set_reltol (NcmHOAA *hoaa, const gdouble reltol)
 {
-  hoaa->priv->reltol = reltol;
+  NcmHOAAPrivate * const self = hoaa->priv;
+  self->reltol = reltol;
 }
 
 /**
@@ -581,7 +568,8 @@ ncm_hoaa_set_reltol (NcmHOAA *hoaa, const gdouble reltol)
 void 
 ncm_hoaa_set_abstol (NcmHOAA *hoaa, const gdouble abstol)
 {
-  hoaa->priv->abstol = abstol;
+  NcmHOAAPrivate * const self = hoaa->priv;
+  self->abstol = abstol;
 }
 
 /**
@@ -609,7 +597,8 @@ ncm_hoaa_set_k (NcmHOAA *hoaa, const gdouble k)
 void 
 ncm_hoaa_set_ti (NcmHOAA *hoaa, const gdouble ti)
 {
-  hoaa->priv->ti = ti;
+  NcmHOAAPrivate * const self = hoaa->priv;
+  self->ti = ti;
 }
 
 /**
@@ -623,7 +612,8 @@ ncm_hoaa_set_ti (NcmHOAA *hoaa, const gdouble ti)
 void 
 ncm_hoaa_set_tf (NcmHOAA *hoaa, const gdouble tf)
 {
-  hoaa->priv->tf = tf;
+  NcmHOAAPrivate * const self = hoaa->priv;
+  self->tf = tf;
 }
 
 /**
@@ -637,10 +627,11 @@ ncm_hoaa_set_tf (NcmHOAA *hoaa, const gdouble tf)
 void 
 ncm_hoaa_save_evol (NcmHOAA *hoaa, gboolean save_evol)
 {
-  if (hoaa->priv->save_evol != save_evol)
+  NcmHOAAPrivate * const self = hoaa->priv;
+  if (self->save_evol != save_evol)
   {
-    ncm_model_ctrl_force_update (hoaa->priv->ctrl);    
-    hoaa->priv->save_evol = save_evol;
+    ncm_model_ctrl_force_update (self->ctrl);    
+    self->save_evol = save_evol;
   }
 }
 
@@ -721,11 +712,7 @@ _ncm_hoaa_full_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_full_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_full_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcmHOAAArg *arg  = (NcmHOAAArg *) jac_data;
 
@@ -790,11 +777,7 @@ _ncm_hoaa_V_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_V_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_V_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcmHOAAArg *arg  = (NcmHOAAArg *) jac_data;
 
@@ -910,11 +893,7 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_dlnmnu_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcmHOAAArg *arg          = (NcmHOAAArg *) jac_data;
 
@@ -1032,11 +1011,7 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_ncm_hoaa_dlnmnu_only_sing_J (glong N, realtype t_m_ts, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _ncm_hoaa_dlnmnu_only_sing_J (realtype t_m_ts, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcmHOAAArg *arg   = (NcmHOAAArg *) jac_data;
 
@@ -1128,15 +1103,16 @@ _ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J,
 void 
 _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   const gdouble Rsigma_t0 = 0.125 * M_PI; /* pi / 8 */
   gdouble Athetab, Aupsilon, Agamma;
 
-  hoaa->priv->tc      = t0;
-  hoaa->priv->sigma_c = Rsigma_t0;
+  self->tc      = t0;
+  self->sigma_c = Rsigma_t0;
 
-  NV_Ith_S (hoaa->priv->sigma, 0) = Rsigma_t0;
+  NV_Ith_S (self->sigma, 0) = Rsigma_t0;
 
-  /* t0 must match hoaa->priv->tc at this point! */
+  /* t0 must match self->tc at this point! */
   ncm_hoaa_eval_adiabatic_approx (hoaa, model, t0, &Athetab, &Aupsilon, &Agamma);
 
 	{
@@ -1146,10 +1122,10 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     const gdouble pbar2_qbar2     = hypot (Aupsilon, 1.0 / ch_lnmnu);
     const gdouble hypot_pbar_qbar = sqrt (pbar2_qbar2);
 
-		NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_QBAR)    = hypot_pbar_qbar * sin (Athetab);
-		NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PBAR)    = hypot_pbar_qbar * cos (Athetab);
-		NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_UPSILON) = Aupsilon;
-		NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA)   = Agamma;
+		NV_Ith_S (self->y, NCM_HOAA_VAR_QBAR)    = hypot_pbar_qbar * sin (Athetab);
+		NV_Ith_S (self->y, NCM_HOAA_VAR_PBAR)    = hypot_pbar_qbar * cos (Athetab);
+		NV_Ith_S (self->y, NCM_HOAA_VAR_UPSILON) = Aupsilon;
+		NV_Ith_S (self->y, NCM_HOAA_VAR_GAMMA)   = Agamma;
 	}
 }
 
@@ -1158,24 +1134,17 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 void 
 _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   gint flag;
 #ifndef HAVE_SUNDIALS_ARKODE
   CVRhsFn f;
-#if HAVE_SUNDIALS_MAJOR == 2
-  CVDlsDenseJacFn J;  
-#elif HAVE_SUNDIALS_MAJOR == 3
-  CVDlsJacFn J;
-#endif
+  CVLsJacFn J;
 #else
   ARKRhsFn f;
-#if HAVE_SUNDIALS_MAJOR == 2
-  ARKDlsDenseJacFn J;    
-#elif HAVE_SUNDIALS_MAJOR == 3
-  ARKDlsJacFn J;
-#endif
+  ARKLsJacFn J;
 #endif /* HAVE_SUNDIALS_ARKODE */
   
-  switch (hoaa->priv->opt)
+  switch (self->opt)
   {
     case NCM_HOAA_OPT_FULL:
       /*f = _ncm_hoaa_full_f;*/
@@ -1198,136 +1167,120 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
       break;
   }
 
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_QBAR)    = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PBAR)    = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_UPSILON) = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_GAMMA)   = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_QBAR)    = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_PBAR)    = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_UPSILON) = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_GAMMA)   = 0.0;
 
 #ifndef HAVE_SUNDIALS_ARKODE
-  if (!hoaa->priv->cvode_init)
+  if (!self->cvode_init)
   {
-    flag = CVodeInit (hoaa->priv->cvode, f, t0, hoaa->priv->y);
+    flag = CVodeInit (self->cvode, f, t0, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-    hoaa->priv->t_cur = t0;
+    self->t_cur = t0;
 
-    flag = CVodeSVtolerances (hoaa->priv->cvode, hoaa->priv->reltol, hoaa->priv->abstol_v);
+    flag = CVodeSVtolerances (self->cvode, self->reltol, self->abstol_v);
     NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode, 0);
+    flag = CVodeSetMaxNumSteps (self->cvode, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (hoaa->priv->cvode, NCM_HOAA_VAR_SYS_SIZE);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
-
-    flag = CVDlsSetDenseJacFn (hoaa->priv->cvode, J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (hoaa->priv->cvode, hoaa->priv->LS, hoaa->priv->A);
+    flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
 
-    flag = CVDlsSetJacFn (hoaa->priv->cvode, J);
+    flag = CVodeSetJacFn (self->cvode, J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
 
-    flag = CVodeSetInitStep (hoaa->priv->cvode, fabs (t0) * hoaa->priv->reltol);
+    flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
 
     /* PHASE integrator */
-    flag = CVodeInit (hoaa->priv->cvode_phase, _ncm_hoaa_phase_f, t0, hoaa->priv->sigma);
+    flag = CVodeInit (self->cvode_phase, _ncm_hoaa_phase_f, t0, self->sigma);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-    flag = CVodeSStolerances (hoaa->priv->cvode_phase, hoaa->priv->reltol, 0.0);
+    flag = CVodeSStolerances (self->cvode_phase, self->reltol, 0.0);
     NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_phase, 0);
+    flag = CVodeSetMaxNumSteps (self->cvode_phase, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
     
-    hoaa->priv->cvode_init = TRUE;
+    self->cvode_init = TRUE;
   }
   else
   {    
-    flag = CVodeReInit (hoaa->priv->cvode, t0, hoaa->priv->y);
+    flag = CVodeReInit (self->cvode, t0, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-    hoaa->priv->t_cur = t0;
+    self->t_cur = t0;
 
-    flag = CVodeSetInitStep (hoaa->priv->cvode, fabs (t0) * hoaa->priv->reltol);
+    flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
 
     /* PHASE integrator */
-    flag = CVodeReInit (hoaa->priv->cvode_phase, t0, hoaa->priv->sigma);
+    flag = CVodeReInit (self->cvode_phase, t0, self->sigma);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
   }  
 #else
 #define INTTYPE f, NULL
-  if (!hoaa->priv->arkode_init)
+  if (!self->arkode_init)
   {
-    flag = ARKodeInit (hoaa->priv->arkode, INTTYPE, t0, hoaa->priv->y);
+    flag = ARKodeInit (self->arkode, INTTYPE, t0, self->y);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-    hoaa->priv->t_cur = t0;
+    self->t_cur = t0;
 
-    flag = ARKodeSVtolerances (hoaa->priv->arkode, hoaa->priv->reltol, hoaa->priv->abstol_v);
+    flag = ARKodeSVtolerances (self->arkode, self->reltol, self->abstol_v);
     NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode, 0);
+    flag = ARKodeSetMaxNumSteps (self->arkode, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = ARKDense (hoaa->priv->arkode, NCM_HOAA_VAR_SYS_SIZE);
-    NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
-
-    flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode, J);
-    NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = ARKDlsSetLinearSolver (hoaa->priv->arkode, hoaa->priv->LS, hoaa->priv->A);
+    flag = ARKDlsSetLinearSolver (self->arkode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetLinearSolver", 1, );
 
-    flag = ARKDlsSetJacFn (hoaa->priv->arkode, J);
+    flag = ARKDlsSetJacFn (self->arkode, J);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
-#endif
     
-    //flag = ARKodeSetLinear (hoaa->priv->arkode, 1);
+    //flag = ARKodeSetLinear (self->arkode, 1);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
     
-    flag = ARKodeSetOrder (hoaa->priv->arkode, 7);
+    flag = ARKodeSetOrder (self->arkode, 7);
     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
 
-    //flag = ARKodeSetERKTableNum (hoaa->priv->arkode, FEHLBERG_13_7_8);
+    //flag = ARKodeSetERKTableNum (self->arkode, FEHLBERG_13_7_8);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
     
-    flag = ARKodeSetInitStep (hoaa->priv->arkode, fabs (t0) * hoaa->priv->reltol);
+    flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
     NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
     /* PHASE integrator */
-    flag = ARKodeInit (hoaa->priv->arkode_phase, _ncm_hoaa_phase_f,  NULL, t0, hoaa->priv->sigma);
+    flag = ARKodeInit (self->arkode_phase, _ncm_hoaa_phase_f,  NULL, t0, self->sigma);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-    flag = ARKodeSStolerances (hoaa->priv->arkode_phase, hoaa->priv->reltol, 0.0);
+    flag = ARKodeSStolerances (self->arkode_phase, self->reltol, 0.0);
     NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
     
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_phase, 1.0e9);
+    flag = ARKodeSetMaxNumSteps (self->arkode_phase, 1.0e9);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-    //flag = ARKodeSetOrder (hoaa->priv->arkode_phase, 7);
+    //flag = ARKodeSetOrder (self->arkode_phase, 7);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
     
-    hoaa->priv->arkode_init = TRUE;
+    self->arkode_init = TRUE;
   }
   else
   {
-    flag = ARKodeReInit (hoaa->priv->arkode, INTTYPE, t0, hoaa->priv->y);
+    flag = ARKodeReInit (self->arkode, INTTYPE, t0, self->y);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-    hoaa->priv->t_cur = t0;
+    self->t_cur = t0;
 
-    flag = ARKodeSetInitStep (hoaa->priv->arkode, fabs (t0) * hoaa->priv->reltol);
+    flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
     NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
     /* PHASE integrator */
-    flag = ARKodeReInit (hoaa->priv->arkode_phase, _ncm_hoaa_phase_f,  NULL, t0, hoaa->priv->sigma);
+    flag = ARKodeReInit (self->arkode_phase, _ncm_hoaa_phase_f,  NULL, t0, self->sigma);
     NCM_CVODE_CHECK (&flag, "ARKodeReInit", 1, );
   }
 #endif /* HAVE_SUNDIALS_ARKODE */
@@ -1336,27 +1289,20 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 void 
 _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   gint flag;
 #ifndef HAVE_SUNDIALS_ARKODE
   CVRhsFn f;
-#if HAVE_SUNDIALS_MAJOR == 2
-  CVDlsDenseJacFn J;  
-#elif HAVE_SUNDIALS_MAJOR == 3
-  CVDlsJacFn J;
-#endif
+  CVLsJacFn J;
 #else
   ARKRhsFn f;
-#if HAVE_SUNDIALS_MAJOR == 2
-  ARKDlsDenseJacFn J;    
-#elif HAVE_SUNDIALS_MAJOR == 3
-  ARKDlsJacFn J;
-#endif
+  ARKLsJacFn J;
 #endif /* HAVE_SUNDIALS_ARKODE */
   
-  /*g_assert_cmpfloat (t_m_ts + ts, ==, hoaa->priv->t_cur);*/
+  /*g_assert_cmpfloat (t_m_ts + ts, ==, self->t_cur);*/
   g_assert_cmpuint (sing, <, ncm_hoaa_nsing (hoaa, model, hoaa->k));
 
-  switch (hoaa->priv->opt)
+  switch (self->opt)
   {
     case NCM_HOAA_OPT_FULL:
 //      f = _ncm_hoaa_full_sing_f;
@@ -1377,99 +1323,83 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
       break;
   }
 
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_QBAR)    = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PBAR)    = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_UPSILON) = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_GAMMA)   = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_QBAR)    = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_PBAR)    = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_UPSILON) = 0.0;
+  NV_Ith_S (self->abstol_v, NCM_HOAA_VAR_GAMMA)   = 0.0;
   
 #ifndef HAVE_SUNDIALS_ARKODE
-  if (!hoaa->priv->cvode_sing_init)
+  if (!self->cvode_sing_init)
   {
-    flag = CVodeInit (hoaa->priv->cvode_sing, f, t_m_ts, hoaa->priv->y);
+    flag = CVodeInit (self->cvode_sing, f, t_m_ts, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-    flag = CVodeSVtolerances (hoaa->priv->cvode_sing, hoaa->priv->reltol, hoaa->priv->abstol_v);
+    flag = CVodeSVtolerances (self->cvode_sing, self->reltol, self->abstol_v);
     NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_sing, 0);
+    flag = CVodeSetMaxNumSteps (self->cvode_sing, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (hoaa->priv->cvode_sing, NCM_HOAA_VAR_SYS_SIZE);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
-
-    flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (hoaa->priv->cvode_sing, hoaa->priv->LS, hoaa->priv->A);
+    flag = CVodeSetLinearSolver (self->cvode_sing, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
 
-    flag = CVDlsSetJacFn (hoaa->priv->cvode_sing, J);
+    flag = CVodeSetJacFn (self->cvode_sing, J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
 
-    flag = CVodeSetMaxErrTestFails (hoaa->priv->cvode_sing, 100);
+    flag = CVodeSetMaxErrTestFails (self->cvode_sing, 100);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
 
-    hoaa->priv->cvode_sing_init = TRUE;
+    self->cvode_sing_init = TRUE;
   }
   else
   {    
-    flag = CVodeReInit (hoaa->priv->cvode_sing, t_m_ts, hoaa->priv->y);
+    flag = CVodeReInit (self->cvode_sing, t_m_ts, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-    flag = CVodeSetInitStep (hoaa->priv->cvode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
+    flag = CVodeSetInitStep (self->cvode_sing, fabs (t_m_ts) * self->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
   }
 #else
-  if (!hoaa->priv->arkode_sing_init)
+  if (!self->arkode_sing_init)
   {
-    flag = ARKodeInit (hoaa->priv->arkode_sing, NULL, f, t_m_ts, hoaa->priv->y);
+    flag = ARKodeInit (self->arkode_sing, NULL, f, t_m_ts, self->y);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-    flag = ARKodeSVtolerances (hoaa->priv->arkode_sing, hoaa->priv->reltol, hoaa->priv->abstol_v);
+    flag = ARKodeSVtolerances (self->arkode_sing, self->reltol, self->abstol_v);
     NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_sing, 0);
+    flag = ARKodeSetMaxNumSteps (self->arkode_sing, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = ARKDense (hoaa->priv->arkode_sing, NCM_HOAA_VAR_SYS_SIZE);
-    NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
-
-    flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
-    NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = ARKDlsSetLinearSolver (hoaa->priv->arkode_sing, hoaa->priv->LS, hoaa->priv->A);
+    flag = ARKDlsSetLinearSolver (self->arkode_sing, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetLinearSolver", 1, );
 
-    flag = ARKDlsSetJacFn (hoaa->priv->arkode_sing, J);
+    flag = ARKDlsSetJacFn (self->arkode_sing, J);
     NCM_CVODE_CHECK (&flag, "ARKDlsSetJacFn", 1, );
-#endif
     
-    flag = ARKodeSetOrder (hoaa->priv->arkode_sing, 4);
+    flag = ARKodeSetOrder (self->arkode_sing, 4);
     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
 
-    //flag = ARKodeSetDiagnostics (hoaa->priv->arkode_sing, stdout);
+    //flag = ARKodeSetDiagnostics (self->arkode_sing, stdout);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetDiagnostics", 1, );
     
-    //flag = ARKodeSetIRKTableNum (hoaa->priv->arkode_sing, ARK548L2SA_DIRK_8_4_5);
+    //flag = ARKodeSetIRKTableNum (self->arkode_sing, ARK548L2SA_DIRK_8_4_5);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, );
 
-    //flag = ARKodeSetAdaptivityMethod (hoaa->priv->arkode_sing, 4, 1, 0, NULL);
+    //flag = ARKodeSetAdaptivityMethod (self->arkode_sing, 4, 1, 0, NULL);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptivityMethod", 1, );
     
-    flag = ARKodeSetInitStep (hoaa->priv->arkode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
+    flag = ARKodeSetInitStep (self->arkode_sing, fabs (t_m_ts) * self->reltol);
     NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
-    hoaa->priv->arkode_sing_init = TRUE;
+    self->arkode_sing_init = TRUE;
   }
   else
   {
-    flag = ARKodeReInit (hoaa->priv->arkode_sing, NULL, f, t_m_ts, hoaa->priv->y);
+    flag = ARKodeReInit (self->arkode_sing, NULL, f, t_m_ts, self->y);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-    flag = ARKodeSetInitStep (hoaa->priv->arkode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
+    flag = ARKodeSetInitStep (self->arkode_sing, fabs (t_m_ts) * self->reltol);
     NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
   }
 #endif /* HAVE_SUNDIALS_ARKODE */
@@ -1508,8 +1438,9 @@ _ncm_hoaa_test_tol_Vnu (gdouble at, gpointer userdata)
 static gdouble
 _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol, gdouble (*test_tol) (gdouble, gpointer))
 {
-  gdouble at_hi           = asinh (hoaa->priv->tf);
-  gdouble at_lo           = asinh (hoaa->priv->ti);
+  NcmHOAAPrivate * const self = hoaa->priv;
+  gdouble at_hi           = asinh (self->tf);
+  gdouble at_lo           = asinh (self->ti);
   gint iter               = 0;
   gint max_iter           = 100000;
   const gdouble pass_step = (at_hi - at_lo) * 1.0e-4;
@@ -1540,21 +1471,21 @@ _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble t
   if (iter >= max_iter)
   {
     g_warning ("_ncm_hoaa_search_initial_time_by_func: cannot find non-adiabtic regime, setting t0 to ti.");
-    return hoaa->priv->ti;
+    return self->ti;
   }
 
   iter = 0;
-  gsl_root_fsolver_set (hoaa->priv->s, &F, at_lo, at_hi);
+  gsl_root_fsolver_set (self->s, &F, at_lo, at_hi);
   
   do
   {
     iter++;
-    status = gsl_root_fsolver_iterate (hoaa->priv->s);
+    status = gsl_root_fsolver_iterate (self->s);
 
-    at0    = gsl_root_fsolver_root (hoaa->priv->s);
-    at_lo  = gsl_root_fsolver_x_lower (hoaa->priv->s);
-    at_hi  = gsl_root_fsolver_x_upper (hoaa->priv->s);
-    status = gsl_root_test_interval (at_lo, at_hi, 0.0, hoaa->priv->reltol);
+    at0    = gsl_root_fsolver_root (self->s);
+    at_lo  = gsl_root_fsolver_x_lower (self->s);
+    at_hi  = gsl_root_fsolver_x_upper (self->s);
+    status = gsl_root_test_interval (at_lo, at_hi, 0.0, self->reltol);
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -1569,7 +1500,8 @@ _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble t
 static gdouble
 _ncm_hoaa_search_initial_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 {
-  switch (hoaa->priv->opt)
+  NcmHOAAPrivate * const self = hoaa->priv;
+  switch (self->opt)
   {
     case NCM_HOAA_OPT_FULL:
     {
@@ -1597,8 +1529,9 @@ _ncm_hoaa_search_initial_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 static gdouble
 _ncm_hoaa_search_final_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol, gdouble (*test_tol) (gdouble, gpointer))
 {
-  gdouble at_hi           = asinh (hoaa->priv->tf);
-  gdouble at_lo           = asinh (hoaa->priv->ti);
+  NcmHOAAPrivate * const self = hoaa->priv;
+  gdouble at_hi           = asinh (self->tf);
+  gdouble at_lo           = asinh (self->ti);
   gint iter               = 0;
   gint max_iter           = 100000;
   const gdouble pass_step = (at_hi - at_lo) * 1.0e-4;
@@ -1626,21 +1559,21 @@ _ncm_hoaa_search_final_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol
   if (iter >= max_iter)
   {
     g_warning ("_ncm_hoaa_search_final_time_by_func: cannot find non-adiabtic regime, setting t1 to tf.");
-    return hoaa->priv->tf;
+    return self->tf;
   }
 
   iter = 0;
-  gsl_root_fsolver_set (hoaa->priv->s, &F, at_lo, at_hi);
+  gsl_root_fsolver_set (self->s, &F, at_lo, at_hi);
 
   do
   {
     iter++;
-    status = gsl_root_fsolver_iterate (hoaa->priv->s);
+    status = gsl_root_fsolver_iterate (self->s);
 
-    at0    = gsl_root_fsolver_root (hoaa->priv->s);
-    at_lo  = gsl_root_fsolver_x_lower (hoaa->priv->s);
-    at_hi  = gsl_root_fsolver_x_upper (hoaa->priv->s);
-    status = gsl_root_test_interval (at_lo, at_hi, 0.0, hoaa->priv->reltol);
+    at0    = gsl_root_fsolver_root (self->s);
+    at_lo  = gsl_root_fsolver_x_lower (self->s);
+    at_hi  = gsl_root_fsolver_x_upper (self->s);
+    status = gsl_root_test_interval (at_lo, at_hi, 0.0, self->reltol);
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -1655,7 +1588,8 @@ _ncm_hoaa_search_final_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol
 static gdouble
 _ncm_hoaa_search_final_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 {
-  switch (hoaa->priv->opt)
+  NcmHOAAPrivate * const self = hoaa->priv;
+  switch (self->opt)
   {
     case NCM_HOAA_OPT_FULL:
     {
@@ -1692,56 +1626,57 @@ _ncm_hoaa_arkode_resize (N_Vector y, N_Vector ytemplate, void *user_data)
 void
 _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   NcmHOAAArg arg = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
   gdouble last_t = -1.0e100;
   gint flag;
 
-  if (hoaa->priv->sigma0 == 0.0)
-    hoaa->priv->sigma0 = 0.125 * M_PI - hoaa->k * hoaa->priv->t_cur;
+  if (self->sigma0 == 0.0)
+    self->sigma0 = 0.125 * M_PI - hoaa->k * self->t_cur;
 
-  g_assert_cmpfloat (tf, >, hoaa->priv->t_cur);
+  g_assert_cmpfloat (tf, >, self->t_cur);
 
 #ifndef HAVE_SUNDIALS_ARKODE
-  flag = CVodeSetStopTime (hoaa->priv->cvode, tf);
+  flag = CVodeSetStopTime (self->cvode, tf);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-  flag = CVodeSetUserData (hoaa->priv->cvode, &arg);
+  flag = CVodeSetUserData (self->cvode, &arg);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 #else
-  flag = ARKodeSetStopTime (hoaa->priv->arkode, tf);
+  flag = ARKodeSetStopTime (self->arkode, tf);
   NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-  flag = ARKodeSetUserData (hoaa->priv->arkode, &arg);
+  flag = ARKodeSetUserData (self->arkode, &arg);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
   
   while (TRUE)
   {
 #ifndef HAVE_SUNDIALS_ARKODE
-    flag = CVode (hoaa->priv->cvode, tf, hoaa->priv->y, &hoaa->priv->t_cur, CV_ONE_STEP);
+    flag = CVode (self->cvode, tf, self->y, &self->t_cur, CV_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "CVode[_ncm_hoaa_evol_save]", 1, );
 #else
-    flag = ARKode (hoaa->priv->arkode, tf, hoaa->priv->y, &hoaa->priv->t_cur, ARK_ONE_STEP);
+    flag = ARKode (self->arkode, tf, self->y, &self->t_cur, ARK_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "ARKode[_ncm_hoaa_evol_save]", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
     {
-      const gdouble qbar    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_QBAR);
-      const gdouble pbar    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PBAR);
-      const gdouble upsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_UPSILON);
-      const gdouble gamma   = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
+      const gdouble qbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_QBAR);
+      const gdouble pbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_PBAR);
+      const gdouble upsilon = NV_Ith_S (self->y, NCM_HOAA_VAR_UPSILON);
+      const gdouble gamma   = NV_Ith_S (self->y, NCM_HOAA_VAR_GAMMA);
 
       if (NCM_HOAA_DEBUG_EVOL)
       {
-        const gdouble mnu         = ncm_hoaa_eval_mnu (hoaa, model, hoaa->priv->t_cur, hoaa->k);
+        const gdouble mnu         = ncm_hoaa_eval_mnu (hoaa, model, self->t_cur, hoaa->k);
         const gdouble lnmnu       = log (mnu);
         const gdouble ch_lnmnu    = cosh (lnmnu);
         const gdouble pbar2_qbar2 = hypot (upsilon, 1.0 / ch_lnmnu);
         gdouble q, v, Pq, Pv;
 
-        ncm_hoaa_eval_AA2QV (hoaa, model, hoaa->priv->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
+        ncm_hoaa_eval_AA2QV (hoaa, model, self->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
 
         printf ("% 22.15g % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n", 
-                hoaa->priv->t_cur, 
+                self->t_cur, 
                 upsilon, 
                 gamma,
                 qbar, 
@@ -1754,18 +1689,18 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
                 );
       }
       
-      if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
+      if (self->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
-        g_array_append_val (hoaa->priv->t,       hoaa->priv->t_cur);
-        g_array_append_val (hoaa->priv->upsilon, upsilon);
-        g_array_append_val (hoaa->priv->gamma,   gamma);
-        g_array_append_val (hoaa->priv->qbar,    qbar);
-        g_array_append_val (hoaa->priv->pbar,    pbar);
+        g_array_append_val (self->t,       self->t_cur);
+        g_array_append_val (self->upsilon, upsilon);
+        g_array_append_val (self->gamma,   gamma);
+        g_array_append_val (self->qbar,    qbar);
+        g_array_append_val (self->pbar,    pbar);
 
-        last_t = hoaa->priv->t_cur;
+        last_t = self->t_cur;
       }          
 
-      if (hoaa->priv->t_cur == tf)
+      if (self->t_cur == tf)
         break;
     }
   }
@@ -1851,73 +1786,74 @@ _ncm_hoaa_find_parabolic_cut_sigma (NcmVector *x_v, NcmVector *y_v, const gint n
 void
 _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   NcmHOAAArg arg         = {hoaa, model, 0.0, sing, st};
-  gdouble last_t         = hoaa->priv->t_cur;
+  gdouble last_t         = self->t_cur;
   gboolean check_turning = TRUE;
   gdouble tstep_m_ts;
   gint flag;
 
-  g_assert_cmpfloat (t_m_ts + ts, >, hoaa->priv->t_cur);
+  g_assert_cmpfloat (t_m_ts + ts, >, self->t_cur);
 
 #ifndef HAVE_SUNDIALS_ARKODE
-  flag = CVodeSetStopTime (hoaa->priv->cvode_sing, t_m_ts);
+  flag = CVodeSetStopTime (self->cvode_sing, t_m_ts);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );    
 
-  flag = CVodeSetUserData (hoaa->priv->cvode_sing, &arg);
+  flag = CVodeSetUserData (self->cvode_sing, &arg);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 #else
-  flag = ARKodeSetStopTime (hoaa->priv->arkode_sing, t_m_ts);
+  flag = ARKodeSetStopTime (self->arkode_sing, t_m_ts);
   NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-  flag = ARKodeSetUserData (hoaa->priv->arkode_sing, &arg);
+  flag = ARKodeSetUserData (self->arkode_sing, &arg);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
-  g_array_set_size (hoaa->priv->t_m_ts,    0);
-	g_array_set_size (hoaa->priv->sing_qbar, 0);
-  g_array_set_size (hoaa->priv->sing_pbar, 0);
+  g_array_set_size (self->t_m_ts,    0);
+	g_array_set_size (self->sing_qbar, 0);
+  g_array_set_size (self->sing_pbar, 0);
   
   while (TRUE)
   {
 #ifndef HAVE_SUNDIALS_ARKODE
-    flag = CVode (hoaa->priv->cvode_sing, t_m_ts, hoaa->priv->y, &tstep_m_ts, CV_ONE_STEP);
+    flag = CVode (self->cvode_sing, t_m_ts, self->y, &tstep_m_ts, CV_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "CVode[_ncm_hoaa_evol_sing_save]", 1, );
 #else
-    flag = ARKode (hoaa->priv->arkode_sing, t_m_ts, hoaa->priv->y, &tstep_m_ts, ARK_ONE_STEP);
+    flag = ARKode (self->arkode_sing, t_m_ts, self->y, &tstep_m_ts, ARK_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "ARKode[_ncm_hoaa_evol_sing_save]", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
-    hoaa->priv->t_cur = ts + tstep_m_ts;
+    self->t_cur = ts + tstep_m_ts;
 
     {
       const gdouble mnu     = ncm_hoaa_eval_sing_mnu (hoaa, model, tstep_m_ts, hoaa->k, sing);
       const gdouble lnmnu   = log (mnu);
-      const gdouble qbar    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_QBAR);
-      const gdouble pbar    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PBAR);
-      const gdouble upsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_UPSILON);
-      const gdouble gamma   = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
+      const gdouble qbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_QBAR);
+      const gdouble pbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_PBAR);
+      const gdouble upsilon = NV_Ith_S (self->y, NCM_HOAA_VAR_UPSILON);
+      const gdouble gamma   = NV_Ith_S (self->y, NCM_HOAA_VAR_GAMMA);
 
       if ((tstep_m_ts > 0.0) && check_turning)
       {
-        gint n = hoaa->priv->t_m_ts->len;
+        gint n = self->t_m_ts->len;
 
         if (n > NCM_HOAA_PARABOLIC_MIN_POINTS)
         {
           const gdouble hypot_qbar_pbar = hypot (qbar, pbar);
           const gdouble sin_thetab      = qbar / hypot_qbar_pbar;
           const gdouble cos_thetab      = pbar / hypot_qbar_pbar;
-          GArray *x                     = hoaa->priv->t_m_ts;
+          GArray *x                     = self->t_m_ts;
           GArray *y                     = NULL;
           gboolean cos_dom              = FALSE;
 
           if (fabs (cos_thetab) > NCM_HOAA_PARABOLIC_TRIG_ONE)
           {
-            y       = hoaa->priv->sing_qbar;
+            y       = self->sing_qbar;
             cos_dom = TRUE;
           }
           else if (fabs (sin_thetab) > NCM_HOAA_PARABOLIC_TRIG_ONE)
           {
-            y       = hoaa->priv->sing_pbar;
+            y       = self->sing_pbar;
             cos_dom = FALSE;
           }
 
@@ -1930,17 +1866,17 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
             
             ncm_vector_div (y_v, x_v);
 
-            if (_ncm_hoaa_find_parabolic_cut (x_v, y_v, hoaa->priv->reltol * 1.0e3, &best_i, &bc0, &bc1))
+            if (_ncm_hoaa_find_parabolic_cut (x_v, y_v, self->reltol * 1.0e3, &best_i, &bc0, &bc1))
             {
-              const gdouble tfp_m_ts = GSL_MIN (-g_array_index (hoaa->priv->t_m_ts, gdouble, best_i), t_m_ts);
+              const gdouble tfp_m_ts = GSL_MIN (-g_array_index (self->t_m_ts, gdouble, best_i), t_m_ts);
 
 							if (NCM_HOAA_DEBUG_SING)
 								printf ("# Skipping from % 22.15g to % 22.15g\n", tstep_m_ts, tfp_m_ts);
               
               if (cos_dom)
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_QBAR) = tfp_m_ts * (tfp_m_ts * bc1 + bc0);
+                NV_Ith_S (self->y, NCM_HOAA_VAR_QBAR) = tfp_m_ts * (tfp_m_ts * bc1 + bc0);
               else
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PBAR) = tfp_m_ts * (tfp_m_ts * bc1 + bc0);
+                NV_Ith_S (self->y, NCM_HOAA_VAR_PBAR) = tfp_m_ts * (tfp_m_ts * bc1 + bc0);
 
               _ncm_hoaa_prepare_integrator_sing (hoaa, model, tfp_m_ts, sing, ts, st);
 
@@ -1952,19 +1888,19 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         check_turning = FALSE;
       }
 
-			g_array_append_val (hoaa->priv->t_m_ts,    tstep_m_ts);
-			g_array_append_val (hoaa->priv->sing_qbar, qbar);
-			g_array_append_val (hoaa->priv->sing_pbar, pbar);
+			g_array_append_val (self->t_m_ts,    tstep_m_ts);
+			g_array_append_val (self->sing_qbar, qbar);
+			g_array_append_val (self->sing_pbar, pbar);
 
-      if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
+      if (self->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
-        g_array_append_val (hoaa->priv->t,       hoaa->priv->t_cur);
-        g_array_append_val (hoaa->priv->upsilon, upsilon);
-        g_array_append_val (hoaa->priv->gamma,   gamma);
-        g_array_append_val (hoaa->priv->qbar,    qbar);
-        g_array_append_val (hoaa->priv->pbar,    pbar);
+        g_array_append_val (self->t,       self->t_cur);
+        g_array_append_val (self->upsilon, upsilon);
+        g_array_append_val (self->gamma,   gamma);
+        g_array_append_val (self->qbar,    qbar);
+        g_array_append_val (self->pbar,    pbar);
         
-        last_t = hoaa->priv->t_cur;
+        last_t = self->t_cur;
       }          
 
 			if (NCM_HOAA_DEBUG_EVOL_SING)
@@ -1976,10 +1912,10 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         gdouble nu, dlnmnu, Vnu;
         ncm_hoaa_eval_sing_system (hoaa, model, t_m_ts, hoaa->k, sing, &nu, &dlnmnu, &Vnu);
 
-        ncm_hoaa_eval_AA2QV (hoaa, model, hoaa->priv->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
+        ncm_hoaa_eval_AA2QV (hoaa, model, self->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
 
         printf ("% 22.15g[% 22.15g] % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n", 
-                hoaa->priv->t_cur, 
+                self->t_cur, 
                 tstep_m_ts,
                 upsilon, 
                 gamma,
@@ -1998,9 +1934,9 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
     }
   }
 
-	g_array_set_size (hoaa->priv->t_m_ts,    0);
-	g_array_set_size (hoaa->priv->sing_qbar, 0);
-  g_array_set_size (hoaa->priv->sing_pbar, 0);
+	g_array_set_size (self->t_m_ts,    0);
+	g_array_set_size (self->sing_qbar, 0);
+  g_array_set_size (self->sing_pbar, 0);
 }
 
 gdouble 
@@ -2032,24 +1968,26 @@ _ncm_hoaa_phase_mnu2 (gdouble y, gdouble x, gpointer userdata)
 void 
 ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
+  
   if (NCM_HOAA_GET_CLASS (hoaa)->prepare != NULL)
   {
     NCM_HOAA_GET_CLASS (hoaa)->prepare (hoaa, model);
   }
 
-  g_assert_cmpfloat (hoaa->priv->tf, >, hoaa->priv->ti);
+  g_assert_cmpfloat (self->tf, >, self->ti);
 
   {
-    const gdouble tol     = GSL_MAX (hoaa->priv->reltol, 1.0e-4);
+    const gdouble tol     = GSL_MAX (self->reltol, 1.0e-4);
     const gdouble t_ad_0  = _ncm_hoaa_search_initial_time (hoaa, model, tol);
     const gdouble t_ad_1  = _ncm_hoaa_search_final_time (hoaa, model, tol);
     const gdouble t_na_0  = _ncm_hoaa_search_initial_time (hoaa, model, 1.0);
     const gdouble t_na_1  = _ncm_hoaa_search_final_time (hoaa, model, 1.0);
 
-    hoaa->priv->t_ad_0 = t_ad_0;
-    hoaa->priv->t_ad_1 = t_ad_1;
-    hoaa->priv->t_na_0 = t_na_0;
-    hoaa->priv->t_na_1 = t_na_1;
+    self->t_ad_0 = t_ad_0;
+    self->t_ad_1 = t_ad_1;
+    self->t_na_0 = t_na_0;
+    self->t_na_1 = t_na_1;
 
     if (FALSE)
     {
@@ -2072,7 +2010,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
       for (i = 0; i < 10000; i++)      
       {
         const gdouble t = -1.0 + 2.0 / (10000.0 - 1.0) * i;
-        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (nu_s->s, t));
+        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (ncm_ode_spline_peek_spline (nu_s), t));
       } 
       printf ("\n\n");
     }
@@ -2098,7 +2036,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
       for (i = 0; i < 10000; i++)      
       {
         const gdouble t = -1.0 + 2.0 / (10000.0 - 1.0) * i;
-        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (mnu2_s->s, t));
+        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (ncm_ode_spline_peek_spline (mnu2_s), t));
       } 
       printf ("\n\n");
     }
@@ -2107,7 +2045,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
     
     _ncm_hoaa_prepare_integrator (hoaa, model, t_ad_0);
 
-    if (hoaa->priv->save_evol)
+    if (self->save_evol)
     {
       const guint nsing = ncm_hoaa_nsing (hoaa, model, hoaa->k); 
       if (nsing == 0)
@@ -2137,7 +2075,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 
           ncm_hoaa_get_sing_info (hoaa, model, hoaa->k, sing_a[i], &ts, &dts_i, &dts_f, &st);
 
-          if (ts < hoaa->priv->t_cur)
+          if (ts < self->t_cur)
             continue;
 
 					if (ts > t_ad_1)
@@ -2156,10 +2094,10 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
         g_free (sing_a);
       }
 
-      ncm_spline_set_array (hoaa->priv->upsilon_s, hoaa->priv->t, hoaa->priv->upsilon, TRUE);
-      ncm_spline_set_array (hoaa->priv->gamma_s,   hoaa->priv->t, hoaa->priv->gamma,   TRUE);
-      ncm_spline_set_array (hoaa->priv->qbar_s,    hoaa->priv->t, hoaa->priv->qbar,    TRUE);
-      ncm_spline_set_array (hoaa->priv->pbar_s,    hoaa->priv->t, hoaa->priv->pbar,    TRUE);
+      ncm_spline_set_array (self->upsilon_s, self->t, self->upsilon, TRUE);
+      ncm_spline_set_array (self->gamma_s,   self->t, self->gamma,   TRUE);
+      ncm_spline_set_array (self->qbar_s,    self->t, self->qbar,    TRUE);
+      ncm_spline_set_array (self->pbar_s,    self->t, self->pbar,    TRUE);
     }
   }
 }
@@ -2177,8 +2115,9 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 void 
 ncm_hoaa_get_t0_t1 (NcmHOAA *hoaa, NcmModel *model, gdouble *t0, gdouble *t1)
 {
-  t0[0] = hoaa->priv->t_ad_0;
-  t1[0] = hoaa->priv->t_ad_1;
+  NcmHOAAPrivate * const self = hoaa->priv;
+  t0[0] = self->t_ad_0;
+  t1[0] = self->t_ad_1;
 }
 
 typedef struct _NcmHOAADAngle
@@ -2204,6 +2143,7 @@ _ncm_hoaa_dangle_f (gdouble dt, gpointer userdata)
 gdouble 
 _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble G, const gdouble dF, const gdouble dG, const gdouble nu)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   const gdouble sin_2R = sin (2.0 * R);
   const gdouble cos_2R = cos (2.0 * R);
   const gdouble sin_4R = sin (4.0 * R);
@@ -2234,17 +2174,17 @@ _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble
   gslF.params   = &da;
 
   iter = 0;
-  gsl_root_fsolver_set (hoaa->priv->s, &gslF, dt0, dt1);
+  gsl_root_fsolver_set (self->s, &gslF, dt0, dt1);
   
   do
   {
     iter++;
-    status = gsl_root_fsolver_iterate (hoaa->priv->s);
+    status = gsl_root_fsolver_iterate (self->s);
 
-    dt     = gsl_root_fsolver_root (hoaa->priv->s);
-    dt0    = gsl_root_fsolver_x_lower (hoaa->priv->s);
-    dt1    = gsl_root_fsolver_x_upper (hoaa->priv->s);
-    status = gsl_root_test_interval (dt0, dt1, 0.0, hoaa->priv->reltol);
+    dt     = gsl_root_fsolver_root (self->s);
+    dt0    = gsl_root_fsolver_x_lower (self->s);
+    dt1    = gsl_root_fsolver_x_upper (self->s);
+    status = gsl_root_test_interval (dt0, dt1, 0.0, self->reltol);
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -2271,7 +2211,8 @@ _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble
 void 
 ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *thetab, gdouble *upsilon, gdouble *gamma)
 {
-  if (ncm_cmp (t, hoaa->priv->tc, hoaa->priv->reltol, 0.0) != 0)
+  NcmHOAAPrivate * const self = hoaa->priv;
+  if (ncm_cmp (t, self->tc, self->reltol, 0.0) != 0)
   {
     gint flag;
     gdouble t_step;
@@ -2279,22 +2220,22 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
     NcmHOAAArg arg = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
 
 #ifndef HAVE_SUNDIALS_ARKODE
-    flag = CVodeSetStopTime (hoaa->priv->cvode_phase, t);
+    flag = CVodeSetStopTime (self->cvode_phase, t);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );    
 
-    flag = CVodeSetUserData (hoaa->priv->cvode_phase, &arg);
+    flag = CVodeSetUserData (self->cvode_phase, &arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
     while (TRUE) 
     {
-      flag = CVode (hoaa->priv->cvode_phase, t, hoaa->priv->sigma, &t_step, CV_ONE_STEP);
+      flag = CVode (self->cvode_phase, t, self->sigma, &t_step, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "CVode[phase]", 1, );
 
       if (flag == CV_ROOT_RETURN)
       {
-        NV_Ith_S (hoaa->priv->sigma, 0) = gsl_sf_angle_restrict_pos (NV_Ith_S (hoaa->priv->sigma, 0));
+        NV_Ith_S (self->sigma, 0) = gsl_sf_angle_restrict_pos (NV_Ith_S (self->sigma, 0));
 
-        flag = CVodeReInit (hoaa->priv->cvode_phase, t_step, hoaa->priv->sigma);
+        flag = CVodeReInit (self->cvode_phase, t_step, self->sigma);
         NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
         restarts++;
       }
@@ -2303,22 +2244,22 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
         break;
     }
 #else
-    flag = ARKodeSetStopTime (hoaa->priv->arkode_phase, t);
+    flag = ARKodeSetStopTime (self->arkode_phase, t);
     NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );    
 
-    flag = ARKodeSetUserData (hoaa->priv->arkode_phase, &arg);
+    flag = ARKodeSetUserData (self->arkode_phase, &arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
     while (TRUE) 
     {
-      flag = ARKode (hoaa->priv->arkode_phase, t, hoaa->priv->sigma, &t_step, ARK_ONE_STEP);
+      flag = ARKode (self->arkode_phase, t, self->sigma, &t_step, ARK_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "ARKode[phase]", 1, );
 
       if (flag == ARK_ROOT_RETURN)
       {
-        NV_Ith_S (hoaa->priv->sigma, 0) = gsl_sf_angle_restrict_symm (NV_Ith_S (hoaa->priv->sigma, 0));
+        NV_Ith_S (self->sigma, 0) = gsl_sf_angle_restrict_symm (NV_Ith_S (self->sigma, 0));
 
-        flag = ARKodeResize (hoaa->priv->arkode_phase, hoaa->priv->sigma, 1.0e-5, t_step, _ncm_hoaa_arkode_resize, NULL);
+        flag = ARKodeResize (self->arkode_phase, self->sigma, 1.0e-5, t_step, _ncm_hoaa_arkode_resize, NULL);
         NCM_CVODE_CHECK (&flag, "ARKodeResize", 1, );
         restarts++;
       }
@@ -2327,12 +2268,12 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
         break;
     }
 #endif /* HAVE_SUNDIALS_ARKODE */
-    hoaa->priv->sigma_c = gsl_sf_angle_restrict_symm (NV_Ith_S (hoaa->priv->sigma, 0));
+    self->sigma_c = gsl_sf_angle_restrict_symm (NV_Ith_S (self->sigma, 0));
   }
   
   {
-    const gdouble Rsigma_t0 = hoaa->priv->sigma_c;
-    const gdouble Isigma_t0 = hoaa->priv->sigma_c + 0.5 * M_PI;
+    const gdouble Rsigma_t0 = self->sigma_c;
+    const gdouble Isigma_t0 = self->sigma_c + 0.5 * M_PI;
     const gdouble mnu       = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
     const gdouble lnmnu     = log (mnu);
     gdouble nu, dlnmnu, Vnu;
@@ -2348,8 +2289,8 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
       gdouble err;
       const gdouble F  = 0.5 * Vnu / nu;
       const gdouble G  = 0.5 * dlnmnu / nu;
-      const gdouble dF = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_F, &arg, &err);
-      const gdouble dG = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_G, &arg, &err); 
+      const gdouble dF = ncm_diff_rf_d1_1_to_1 (self->diff, t, _ncm_hoaa_F, &arg, &err);
+      const gdouble dG = ncm_diff_rf_d1_1_to_1 (self->diff, t, _ncm_hoaa_G, &arg, &err); 
       const gdouble F2 = F * F;
       const gdouble G2 = G * G;
 
@@ -2424,6 +2365,7 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
 void 
 ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, gdouble *LnI, gdouble *LnJ)
 {
+  NcmHOAAPrivate * const self = hoaa->priv;
   gdouble nu, dlnmnu, Vnu;
   NcmHOAAArg arg;
 
@@ -2437,8 +2379,8 @@ ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdoubl
     gdouble err;
     const gdouble F  = 0.5 * Vnu / nu;
     const gdouble G  = 0.5 * dlnmnu / nu;
-    const gdouble dF = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_F, &arg, &err);
-    const gdouble dG = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_G, &arg, &err);  
+    const gdouble dF = ncm_diff_rf_d1_1_to_1 (self->diff, t, _ncm_hoaa_F, &arg, &err);
+    const gdouble dG = ncm_diff_rf_d1_1_to_1 (self->diff, t, _ncm_hoaa_G, &arg, &err);  
     const gdouble F2 = F * F;
     const gdouble G2 = G * G;
     gdouble sin_2theta, cos_2theta, sin_2psi, cos_2psi;
@@ -2472,11 +2414,12 @@ ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdoubl
 void 
 ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *upsilon, gdouble *gamma, gdouble *qbar, gdouble *pbar)
 {
-  if (!hoaa->priv->save_evol)
+  NcmHOAAPrivate * const self = hoaa->priv;
+  if (!self->save_evol)
   {
     g_error ("ncm_hoaa_eval_AA: save_evol must be enables.");
   }
-  else if (t < hoaa->priv->t_ad_0)
+  else if (t < self->t_ad_0)
   {
     gdouble Athetab, Aupsilon, Agamma;
 
@@ -2499,13 +2442,13 @@ ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *upsi
   }
   else
   {
-    if (t > hoaa->priv->t_ad_1)
-      g_warning ("ncm_hoaa_eval_AA: extrapolating solution, max time = % 22.15g, t = % 22.15g.", hoaa->priv->t_ad_1, t);
+    if (t > self->t_ad_1)
+      g_warning ("ncm_hoaa_eval_AA: extrapolating solution, max time = % 22.15g, t = % 22.15g.", self->t_ad_1, t);
     
-    upsilon[0] = ncm_spline_eval (hoaa->priv->upsilon_s, t);
-    gamma[0]   = ncm_spline_eval (hoaa->priv->gamma_s, t);
-    qbar[0]    = ncm_spline_eval (hoaa->priv->qbar_s, t);
-    pbar[0]    = ncm_spline_eval (hoaa->priv->pbar_s, t);
+    upsilon[0] = ncm_spline_eval (self->upsilon_s, t);
+    gamma[0]   = ncm_spline_eval (self->gamma_s, t);
+    qbar[0]    = ncm_spline_eval (self->qbar_s, t);
+    pbar[0]    = ncm_spline_eval (self->pbar_s, t);
   }
 }
 

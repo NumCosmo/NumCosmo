@@ -129,7 +129,7 @@ struct _NcmMSetCatalogPrivate
   gboolean constructed;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmMSetCatalog));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
 
 enum
 {

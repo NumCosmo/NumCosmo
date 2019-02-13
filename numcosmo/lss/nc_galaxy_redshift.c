@@ -47,7 +47,7 @@ struct _NcGalaxyRedshiftPrivate
 	gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT, G_ADD_PRIVATE (NcGalaxyRedshift));
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_redshift_init (NcGalaxyRedshift *gz)

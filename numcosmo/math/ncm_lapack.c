@@ -867,27 +867,98 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
  * @z: FIXME
  * @ldz: FIXME
  * @isuppz: FIXME
- * @work: FIXME
- * @lwork: FIXME
- * @iwork: FIXME
- * @liwork: FIXME
+ * @ws: a #NcmLapackWS
  * 
  * FIXME
  * 
  * Returns: FIXME
  */ 
 gint 
-ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, gdouble *work, gint lwork, gint *iwork, gint liwork)
+ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, NcmLapackWS *ws)
 {
 #if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, work, lwork, iwork, liwork);
+  gint liwork_size;
+  gdouble lwork_size;
+  
+  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, &lwork_size, -1, &liwork_size, -1);
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+  if (ws->iwork->len < liwork_size)
+    g_array_set_size (ws->iwork, liwork_size);
+  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, &g_array_index (ws->work, gdouble, 0), ws->work->len, &g_array_index (ws->iwork, gint, 0), ws->iwork->len);
+
   return info;
 #elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVR_)
-  gint info = 0;
-  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
-	
-	dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, work, &lwork, iwork, &liwork, &info);
+  gint lwork  = -1;
+  gint liwork = -1;
+  gint info   = 0;
+  gint liwork_size;
+  gdouble lwork_size;
 
+  uplo        = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+	dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, &lwork_size, &lwork, &liwork_size, &liwork, &info);
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+  if (ws->iwork->len < liwork_size)
+    g_array_set_size (ws->iwork, liwork_size);
+  lwork  = lwork_size;
+  liwork = liwork_size;
+  dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, &g_array_index (ws->work, gdouble, 0), &lwork, &g_array_index (ws->iwork, gint, 0), &liwork, &info);
+  
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dsyevd:
+ * @jobz: FIXME
+ * @uplo: FIXME
+ * @n: FIXME
+ * @a: FIXME
+ * @lda: FIXME
+ * @w: FIXME
+ * @ws: a #NcmLapackWS
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */ 
+gint 
+ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble *w, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  gint liwork_size;
+  gdouble lwork_size;
+  
+  info = LAPACKE_dsyevd_work (LAPACK_ROW_MAJOR, jobz, uplo, n, a, lda, w, &lwork_size, -1, &liwork_size, -1);
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+  if (ws->iwork->len < liwork_size)
+    g_array_set_size (ws->iwork, liwork_size);
+  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, uplo, n, a, lda, w, &g_array_index (ws->work, gdouble, 0), ws->work->len, &g_array_index (ws->iwork, gint, 0), ws->iwork->len);
+
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVD_)
+  gint lwork  = -1;
+  gint liwork = -1;
+  gint info   = 0;
+  gint liwork_size;
+  gdouble lwork_size;
+
+  uplo = _NCM_LAPACK_CONV_UPLO (uplo);
+	
+	dsyevd_ (&jobz, &uplo, &n, a, &lda, w, &lwork_size, &lwork, &liwork_size, &liwork, &info);
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+  if (ws->iwork->len < liwork_size)
+    g_array_set_size (ws->iwork, liwork_size);
+  lwork  = lwork_size;
+  liwork = liwork_size;
+  dsyevd_ (&jobz, &uplo, &n, a, &lda, w, &g_array_index (ws->work, gdouble, 0), &lwork, &g_array_index (ws->iwork, gint, 0), &liwork, &info);
+  
 	return info;
 #else /* No fall back */
 	g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
@@ -1162,6 +1233,234 @@ ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, 
 #else /* No fall back. */
 	g_error ("ncm_lapack_dgeev: no lapack support!");
 	return -1;
+#endif
+}
+
+/**
+ * ncm_lapack_dgeqrf:
+ * @m: M is INTEGER
+ * The number of rows of the matrix A.  M >= 0.
+ * @n: N is INTEGER
+ * The number of columns of the matrix A.  N >= 0.
+ * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
+ * On entry, the M-by-N matrix A.
+ * On exit, the elements on and above the diagonal of the array
+ * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
+ * upper triangular if m >= n); the elements below the diagonal,
+ * with the array TAU, represent the orthogonal matrix Q as a
+ * product of min(m,n) elementary reflectors (see Further
+ * Details).
+ * @lda: LDA is INTEGER
+ * The leading dimension of the array A.  LDA >= max(1,M).
+ * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
+ * The scalar factors of the elementary reflectors (see Further
+ * Details).
+ * @ws: a #NcmLapackWS
+ * 
+ * DGEQRF computes a QR factorization of a real M-by-N matrix A:
+ * A = Q * R.
+ * 
+ * Returns: = 0:  successful exit
+ * < 0:  if INFO = -i, the i-th argument had an illegal value
+ */ 
+gint 
+ncm_lapack_dgeqrf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dgeqrf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dgeqrf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
+
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DGELQF_) /* To account for row-major => col-major QR => LQ */
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+  
+	dgelqf_ (&m, &n, a, &lda, tau, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  lwork = ws->work->len;
+	dgelqf_ (&m, &n, a, &lda, tau, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dgerqf:
+ * @m: M is INTEGER
+ * The number of rows of the matrix A.  M >= 0.
+ * @n: N is INTEGER
+ * The number of columns of the matrix A.  N >= 0.
+ * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
+ * On entry, the M-by-N matrix A.
+ * On exit, the elements on and above the diagonal of the array
+ * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
+ * upper triangular if m >= n); the elements below the diagonal,
+ * with the array TAU, represent the orthogonal matrix Q as a
+ * product of min(m,n) elementary reflectors (see Further
+ * Details).
+ * @lda: LDA is INTEGER
+ * The leading dimension of the array A.  LDA >= max(1,M).
+ * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
+ * The scalar factors of the elementary reflectors (see Further
+ * Details).
+ * @ws: a #NcmLapackWS
+ * 
+ * DGERQF computes a RQ factorization of a real M-by-N matrix A:
+ * A = R * Q.
+ * 
+ * Returns: = 0:  successful exit
+ * < 0:  if INFO = -i, the i-th argument had an illegal value
+ */ 
+gint 
+ncm_lapack_dgerqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dgerqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dgerqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
+
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DGEQLF_) /* To account for row-major => col-major RQ => QL */
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+  
+	dgeqlf_ (&m, &n, a, &lda, tau, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  lwork = ws->work->len;
+	dgeqlf_ (&m, &n, a, &lda, tau, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dgeqlf:
+ * @m: M is INTEGER
+ * The number of rows of the matrix A.  M >= 0.
+ * @n: N is INTEGER
+ * The number of columns of the matrix A.  N >= 0.
+ * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
+ * On entry, the M-by-N matrix A.
+ * On exit, the elements on and above the diagonal of the array
+ * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
+ * upper triangular if m >= n); the elements below the diagonal,
+ * with the array TAU, represent the orthogonal matrix Q as a
+ * product of min(m,n) elementary reflectors (see Further
+ * Details).
+ * @lda: LDA is INTEGER
+ * The leading dimension of the array A.  LDA >= max(1,M).
+ * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
+ * The scalar factors of the elementary reflectors (see Further
+ * Details).
+ * @ws: a #NcmLapackWS
+ * 
+ * DGEQLF computes a QL factorization of a real M-by-N matrix A:
+ * A = Q * L.
+ * 
+ * Returns: = 0:  successful exit
+ * < 0:  if INFO = -i, the i-th argument had an illegal value
+ */ 
+gint 
+ncm_lapack_dgeqlf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dgeqlf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dgeqlf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
+
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DGERQF_) /* To account for row-major => col-major QL => RQ */
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+  
+	dgerqf_ (&m, &n, a, &lda, tau, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  lwork = ws->work->len;
+	dgerqf_ (&m, &n, a, &lda, tau, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+#endif
+}
+
+/**
+ * ncm_lapack_dgelqf:
+ * @m: M is INTEGER
+ * The number of rows of the matrix A.  M >= 0.
+ * @n: N is INTEGER
+ * The number of columns of the matrix A.  N >= 0.
+ * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
+ * On entry, the M-by-N matrix A.
+ * On exit, the elements on and above the diagonal of the array
+ * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
+ * upper triangular if m >= n); the elements below the diagonal,
+ * with the array TAU, represent the orthogonal matrix Q as a
+ * product of min(m,n) elementary reflectors (see Further
+ * Details).
+ * @lda: LDA is INTEGER
+ * The leading dimension of the array A.  LDA >= max(1,M).
+ * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
+ * The scalar factors of the elementary reflectors (see Further
+ * Details).
+ * @ws: a #NcmLapackWS
+ * 
+ * DGELQF computes a LQ factorization of a real M-by-N matrix A:
+ * A = L * Q.
+ * 
+ * Returns: = 0:  successful exit
+ * < 0:  if INFO = -i, the i-th argument had an illegal value
+ */ 
+gint 
+ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
+  gdouble lwork_size;
+  lapack_int info;
+
+  info = LAPACKE_dgelqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  info = LAPACKE_dgelqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
+
+  return info;
+#elif defined (HAVE_LAPACK) && defined (HAVE_DGEQRF_) /* To account for row-major => col-major LQ => QR */
+  gdouble lwork_size;
+  gint lwork = -1;
+  gint info  = 0;
+  
+	dgeqrf_ (&m, &n, a, &lda, tau, &lwork_size, &lwork, &info);
+  if (lwork_size > ws->work->len)
+    g_array_set_size (ws->work, lwork_size);
+  lwork = ws->work->len;
+	dgeqrf_ (&m, &n, a, &lda, tau, &g_array_index (ws->work, gdouble, 0), &lwork, &info);
+
+	return info;
+#else /* No fall back */
+	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
 #endif
 }
 

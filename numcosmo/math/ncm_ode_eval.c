@@ -52,7 +52,7 @@ enum
   PROP_SYS_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmODEEval, ncm_ode_eval, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmODEEval));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmODEEval, ncm_ode_eval, G_TYPE_OBJECT);
 
 static void
 ncm_ode_eval_init (NcmODEEval *ode_eval)
@@ -66,6 +66,8 @@ static void
 _ncm_ode_eval_finalize (GObject *object)
 {
 
+  
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_eval_parent_class)->finalize (object);
 }

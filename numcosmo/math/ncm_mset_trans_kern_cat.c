@@ -63,7 +63,7 @@ enum
   PROP_STYPE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN, G_ADD_PRIVATE (NcmMSetTransKernCat));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN);
 
 static void
 ncm_mset_trans_kern_cat_init (NcmMSetTransKernCat *tcat)

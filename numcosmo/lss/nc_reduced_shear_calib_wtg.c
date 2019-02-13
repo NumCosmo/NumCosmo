@@ -57,7 +57,7 @@ struct _NcReducedShearCalibWtgPrivate
   gdouble size_ratio;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, NC_TYPE_REDUCED_SHEAR_CALIB, G_ADD_PRIVATE (NcReducedShearCalibWtg));
+G_DEFINE_TYPE_WITH_PRIVATE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, NC_TYPE_REDUCED_SHEAR_CALIB);
 
 static void
 nc_reduced_shear_calib_wtg_init (NcReducedShearCalibWtg *rs_wtg)

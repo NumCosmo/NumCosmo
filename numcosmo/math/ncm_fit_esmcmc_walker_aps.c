@@ -69,7 +69,7 @@ struct _NcmFitESMCMCWalkerAPSPrivate
   gdouble rand_walk_scale;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmFitESMCMCWalkerAPS, ncm_fit_esmcmc_walker_aps, NCM_TYPE_FIT_ESMCMC_WALKER, G_ADD_PRIVATE (NcmFitESMCMCWalkerAPS));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPS, ncm_fit_esmcmc_walker_aps, NCM_TYPE_FIT_ESMCMC_WALKER);
 
 static void
 ncm_fit_esmcmc_walker_aps_init (NcmFitESMCMCWalkerAPS *aps)

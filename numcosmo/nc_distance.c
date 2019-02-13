@@ -373,6 +373,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     ncm_spline_free (s);
   }
 
+  ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
   ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
 
   if (dist->recomb != NULL)
@@ -424,7 +425,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
     return nc_hicosmo_Dc (cosmo, z);
 
   if (z <= dist->zf)
-    return ncm_spline_eval (dist->comoving_distance_spline->s, z);
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (dist->comoving_distance_spline), z);
 
   F.function = &comoving_distance_integral_argument;
   F.params = cosmo;

@@ -176,7 +176,7 @@ enum
   PROP_LMAX,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmSphereMap));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
 
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)

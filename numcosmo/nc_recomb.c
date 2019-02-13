@@ -950,7 +950,7 @@ gdouble
 nc_recomb_tau_drag (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (recomb->tau_drag_ode_s->s, -lambda);
+  return ncm_spline_eval (ncm_ode_spline_peek_spline (recomb->tau_drag_ode_s), -lambda);
 }
 
 /**
@@ -1360,14 +1360,16 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   ncm_spline_set_func (recomb->dtau_dlambda_s, NCM_SPLINE_FUNCTION_SPLINE,
                        &F, recomb->lambdai, recomb->lambdaf, 0, recomb->prec);
 
+  ncm_ode_spline_auto_abstol (recomb->tau_ode_s, TRUE);
   ncm_ode_spline_set_interval (recomb->tau_ode_s, 0.0, -recomb->lambdaf, -recomb->lambdai);
   ncm_ode_spline_prepare (recomb->tau_ode_s, &func);
 
+  ncm_ode_spline_auto_abstol (recomb->tau_drag_ode_s, TRUE);
   ncm_ode_spline_set_interval (recomb->tau_drag_ode_s, 0.0, -recomb->lambdaf, -recomb->lambdai);
   ncm_ode_spline_prepare (recomb->tau_drag_ode_s, &func);
   
   ncm_spline_clear (&recomb->tau_s);
-  recomb->tau_s = ncm_spline_ref (recomb->tau_ode_s->s);
+  recomb->tau_s = ncm_spline_ref (ncm_ode_spline_peek_spline (recomb->tau_ode_s));
 }
 
 static gdouble

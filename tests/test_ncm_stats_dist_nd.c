@@ -237,6 +237,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
   const guint np                 = 100 * test->dim * g_test_rand_int_range (1, 5);
   const guint ntests             = 1000 * g_test_rand_int_range (1, 5);
   NcmVector *m2lnp_v             = ncm_vector_new (np);
+  NcmStatsVec *cmp_stats         = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
   gdouble dm2lnL_mean            = 0.0;
   gulong N                       = 0;
   guint ntests_fail;
@@ -279,12 +280,19 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
 
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
 
-    cmp = exp (-0.5 * (m2lnp_s - m2lnL - dm2lnL_mean)) - 1.0;
+    cmp = fabs (expm1 (-0.5 * (m2lnp_s - m2lnL - dm2lnL_mean)));
+
+    ncm_stats_vec_set (cmp_stats, 0, cmp);
+    ncm_stats_vec_update (cmp_stats);
     
-    if (fabs (cmp) > 0.50)
+    printf ("# CMP % 22.15g % 22.15g % 22.15g % 22.15g\n", cmp, m2lnp_s, m2lnL, dm2lnL_mean);
+
+    if (cmp > 0.50)
       ntests_fail++;
   }
 
+  printf ("%u %u %u %f | % 22.15g % 22.15g\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests, 
+          ncm_stats_vec_get_mean (cmp_stats, 0), ncm_stats_vec_get_sd (cmp_stats, 0));
   g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
 
   ncm_model_mvnd_free (model_mvnd);
@@ -292,6 +300,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
   ncm_mset_free (mset);
+  ncm_stats_vec_clear (&cmp_stats);
 }
 
 static void

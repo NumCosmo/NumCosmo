@@ -50,7 +50,7 @@ struct _NcmDataGaussCovMVNDPrivate
   gint unused;
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV, G_ADD_PRIVATE (NcmDataGaussCovMVND));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV);
 
 static void
 ncm_data_gauss_cov_mvnd_init (NcmDataGaussCovMVND *gauss_mvnd)

@@ -25,10 +25,16 @@ extern void dsysvx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *
 extern void dsysvxx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
 
 extern void dsyevr_ (const gchar *jobz, const gchar *range, const gchar *uplo, const gint *n, gdouble *a, const gint *lda, const gdouble *vl, const gdouble *vu, const gint *il, const gint *iu, const gdouble *abstol, gint *m, gdouble *w, double *z, const gint *ldz, gint *isuppz, gdouble *work, const gint *lwork, gint *iwork, const gint *liwork, gint *info);
+extern void dsyevd_ (const gchar *jobz, const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gdouble *w, gdouble *work, const gint *lwork, gint *iwork, const gint *liwork, gint *info);
 
 extern void dgeev_ (const gchar *jobvl, const gchar *jobvr, gint *n, gdouble *a, gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, gint *ldvl, gdouble *vr, gint *ldvr, gdouble *work, gint *lwork, gint *info);
 extern void dgeevx_ (const gchar *balanc, const gchar *jobvl, const gchar *jobvr, const gchar *sense, const gint *n, gdouble *a, const gint *lda, gdouble *wr, gdouble *wi, gdouble *vl, const gint *ldvl, gdouble *vr, const gint *ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, const gint *lwork, gint *iwork, gint *info);
 
 extern void dggglm_ (const gint *n, const gint *M, const gint *P, gdouble *X, const gint *lda, gdouble *L, const gint *ldb, gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
+
+extern void dgeqrf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
+extern void dgerqf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
+extern void dgeqlf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
+extern void dgelqf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
 
 #endif /* NUMCOSMO_GIR_SCAN */

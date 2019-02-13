@@ -63,7 +63,7 @@
 #include "perturbations/nc_hipert_adiab.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvodes/cvodes.h>
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */

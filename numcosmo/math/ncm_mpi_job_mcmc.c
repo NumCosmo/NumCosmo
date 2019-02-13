@@ -63,7 +63,7 @@ enum
 	PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB, G_ADD_PRIVATE (NcmMPIJobMCMC));
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB);
 
 static void
 ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)

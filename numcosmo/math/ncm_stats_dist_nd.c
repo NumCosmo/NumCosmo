@@ -51,7 +51,7 @@ enum
   PROP_DIM
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (NcmStatsDistNd, ncm_stats_dist_nd, G_TYPE_OBJECT, G_ADD_PRIVATE (NcmStatsDistNd));
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistNd, ncm_stats_dist_nd, G_TYPE_OBJECT);
 
 static void
 ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)

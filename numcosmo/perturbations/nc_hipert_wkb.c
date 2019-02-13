@@ -42,17 +42,19 @@
 #include "nc_hipert_wkb.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvodes/cvodes.h>
-#include <nvector/nvector_serial.h> 
+#include <cvode/cvode.h>
+
+#include <nvector/nvector_serial.h>
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+
 #include <gsl/gsl_roots.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#define SUN_BAND_ACCESS BAND_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
 #define SUN_BAND_ACCESS SM_ELEMENT_D
-#endif 
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "perturbations/nc_hipert_private.h"
 
 enum
 {
@@ -190,10 +192,10 @@ _nc_hipert_wkb_set_mode_k (NcHIPert *pert, gdouble k)
   NC_HIPERT_CLASS (nc_hipert_wkb_parent_class)->set_mode_k (pert, k);
   /* Chain up : start */
 /*
-  if (!pert->prepared)
+  if (!nc_hipert_prepared (pert))
   {
     NcHIPertWKB *wkb = NC_HIPERT_WKB (pert);
-    pert->prepared    = TRUE;
+    nc_hipert_set_prepared (pert, TRUE);
   }
 */  
 }
@@ -204,10 +206,10 @@ _nc_hipert_wkb_set_abstol (NcHIPert *pert, gdouble abstol)
   NC_HIPERT_CLASS (nc_hipert_wkb_parent_class)->set_abstol (pert, abstol);
   /* Chain up : start */
 /*
-  if (!pert->prepared)
+  if (!nc_hipert_prepared (pert))
   {
     NcHIPertWKB *wkb = NC_HIPERT_WKB (pert);
-    pert->prepared    = TRUE;
+    nc_hipert_set_prepared (pert, TRUE);
   }
 */  
 }
@@ -218,10 +220,10 @@ _nc_hipert_wkb_set_reltol (NcHIPert *pert, gdouble reltol)
   NC_HIPERT_CLASS (nc_hipert_wkb_parent_class)->set_reltol (pert, reltol);
   /* Chain up : start */
 /*
-  if (!pert->prepared)
+  if (!nc_hipert_prepared (pert))
   {
     NcHIPertWKB *wkb = NC_HIPERT_WKB (pert);
-    pert->prepared    = TRUE;
+    nc_hipert_set_prepared (pert, TRUE);
   }
 */
 }
@@ -305,7 +307,7 @@ nc_hipert_wkb_set_interval (NcHIPertWKB *wkb, gdouble alpha_i, gdouble alpha_f)
     wkb->alpha_i = alpha_i;
     wkb->alpha_f = alpha_f;
 
-    NC_HIPERT (wkb)->prepared = FALSE;
+    nc_hipert_set_prepared (NC_HIPERT (wkb), FALSE);
   }
 }
 
@@ -373,7 +375,7 @@ _nc_hipert_wkb_phase (gdouble alpha, gpointer userdata)
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
   gdouble nu, V;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &V);
 
   return nu;
 }
@@ -390,7 +392,7 @@ _nc_hipert_wkb_prepare_approx (NcHIPertWKB *wkb, NcmModel *model)
   F.params = &arg;
   F.function = &_nc_hipert_wkb_phase;
 
-  ncm_spline_set_func (wkb->nuA, NCM_SPLINE_FUNCTION_SPLINE, &F, wkb->alpha_i, wkb->alpha_f, 1000000000, NC_HIPERT (wkb)->reltol);
+  ncm_spline_set_func (wkb->nuA, NCM_SPLINE_FUNCTION_SPLINE, &F, wkb->alpha_i, wkb->alpha_f, 1000000000, nc_hipert_get_reltol (NC_HIPERT (wkb)));
 }
 
 static gint
@@ -399,7 +401,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 //  NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
 //  gdouble nu = 0.0, V = 0.0;
 
-  //nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &dnu_nu, &V);
+  //nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &dnu_nu, &V);
   {
     //const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
@@ -415,16 +417,12 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-_nc_hipert_wkb_phase_J (glong N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 _nc_hipert_wkb_phase_J (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcHIPertWKBArg *arg  = (NcHIPertWKBArg *) jac_data;
   gdouble nu = 0.0, V = 0.0;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &V);
   {
     const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
@@ -499,50 +497,42 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
   {
     gdouble nu, nu2, V, dVnu2;
 
-    nc_hipert_wkb_get_nu_V (wkb, model, alpha, pert->k, &nu, &V);
+    nc_hipert_wkb_get_nu_V (wkb, model, alpha, nc_hipert_get_mode_k (pert), &nu, &V);
 
     nu2   = nu * nu;
-    dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, model, alpha, pert->k);
+    dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, model, alpha, nc_hipert_get_mode_k (pert));
       
-    NV_Ith_S (pert->y, 0) = 0.25 * log1p (V / nu2);
-    NV_Ith_S (pert->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
+    NV_Ith_S (pert->priv->y, 0) = 0.25 * log1p (V / nu2);
+    NV_Ith_S (pert->priv->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
   }
 
   g_array_append_val (alpha_a, wkb->alpha_i);
-  g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
-  g_array_append_val (dlnF, NV_Ith_S (pert->y, 1));
+  g_array_append_val (lnF, NV_Ith_S (pert->priv->y, 0));
+  g_array_append_val (dlnF, NV_Ith_S (pert->priv->y, 1));
 
-  if (!pert->cvode_init)
+  if (!pert->priv->cvode_init)
   {
-    flag = CVodeInit (pert->cvode, &_nc_hipert_wkb_phase_f, wkb->alpha_i, pert->y);
+    flag = CVodeInit (pert->priv->cvode, &_nc_hipert_wkb_phase_f, wkb->alpha_i, pert->priv->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    pert->cvode_init = TRUE;
+    pert->priv->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->cvode, wkb->alpha_i, pert->y);
+    flag = CVodeReInit (pert->priv->cvode, wkb->alpha_i, pert->priv->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
-  flag = CVodeSStolerances (pert->cvode, pert->reltol, pert->abstol);
+  flag = CVodeSStolerances (pert->priv->cvode, pert->priv->reltol, pert->priv->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1,);
 
-  flag = CVodeSetMaxNumSteps (pert->cvode, 1000000);
+  flag = CVodeSetMaxNumSteps (pert->priv->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-  flag = CVDense (pert->cvode, 2);
-  NCM_CVODE_CHECK (&flag, "CVDense", 1, );
+  flag = CVodeSetLinearSolver (pert->priv->cvode, pert->priv->LS, pert->priv->A);
+  NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-  flag = CVDlsSetDenseJacFn (pert->cvode, &_nc_hipert_wkb_phase_J);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
-#elif HAVE_SUNDIALS_MAJOR == 3
-  flag = CVDlsSetLinearSolver (pert->cvode, pert->LS, pert->A);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
-
-  flag = CVDlsSetJacFn (pert->cvode, &_nc_hipert_wkb_phase_J);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
+  flag = CVodeSetJacFn (pert->priv->cvode, &_nc_hipert_wkb_phase_J);
+  NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   
   {
     gdouble last = wkb->alpha_i;
@@ -550,28 +540,28 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
     arg.model = model;
     arg.wkb   = wkb;
 
-    flag = CVodeSetUserData (pert->cvode, &arg);
+    flag = CVodeSetUserData (pert->priv->cvode, &arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
     while (alpha < wkb->alpha_f)
     {
       gdouble mnu, dmnu;
-      flag = CVode (pert->cvode, wkb->alpha_f, pert->y, &alpha, CV_ONE_STEP);
+      flag = CVode (pert->priv->cvode, wkb->alpha_f, pert->priv->y, &alpha, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "CVode[_nc_hipert_wkb_prepare_exact]", 1, );
 
       if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
       {
-        const gdouble rnu   = NV_Ith_S (pert->y, 0);
-        const gdouble Unu   = NV_Ith_S (pert->y, 1);
+        const gdouble rnu   = NV_Ith_S (pert->priv->y, 0);
+        const gdouble Unu   = NV_Ith_S (pert->priv->y, 1);
         const gdouble Rnu   = exp (rnu);
-        const gdouble m_i   = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
-        const gdouble nu_i  = sqrt (nc_hipert_wkb_get_nu2 (wkb, model, alpha, pert->k));
+        const gdouble m_i   = nc_hipert_wkb_get_m (wkb, model, alpha, nc_hipert_get_mode_k (pert));
+        const gdouble nu_i  = sqrt (nc_hipert_wkb_get_nu2 (wkb, model, alpha, nc_hipert_get_mode_k (pert)));
         const gdouble nuA_i = Rnu * Rnu * nu_i;
 
         const gdouble lnF_i  = log (m_i * nuA_i);
         gdouble dlnF_i;
 
-        nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, pert->k, &mnu, &dmnu);
+        nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, nc_hipert_get_mode_k (pert), &mnu, &dmnu);
 
         dlnF_i = dmnu / mnu - 2.0 * Rnu * Unu / nu_i;
         
@@ -615,11 +605,11 @@ nc_hipert_wkb_prepare (NcHIPertWKB *wkb, NcmModel *model)
   const gdouble prec = nc_hipert_get_reltol (pert);
   gdouble nu_i, V_i, nu_f, V_f;
 
-  if (!pert->prepared)
+  if (!nc_hipert_prepared (pert))
   {
     gdouble nu2_i, nu2_f;
-    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_i, pert->k, &nu_i, &V_i);
-    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_f, pert->k, &nu_f, &V_f);
+    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_i, nc_hipert_get_mode_k (pert), &nu_i, &V_i);
+    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_f, nc_hipert_get_mode_k (pert), &nu_f, &V_f);
 
     nu2_i = nu_i * nu_i;
     nu2_f = nu_f * nu_f;
@@ -666,7 +656,7 @@ nc_hipert_wkb_prepare (NcHIPertWKB *wkb, NcmModel *model)
 
     wkb->alpha_phase = wkb->alpha_i;
     wkb->cur_phase   = M_PI * 0.25;
-    pert->prepared   = TRUE;
+    nc_hipert_set_prepared (pert, TRUE);
   }
 }
 
@@ -691,7 +681,7 @@ nc_hipert_wkb_q (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble *Re_q
   if (alpha < wkb->alpha_p)
   {
     const gdouble nuA = ncm_spline_eval (wkb->nuA, alpha); 
-    gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
+    gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, nc_hipert_get_mode_k (pert));
 
     q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);      
   }
@@ -732,16 +722,16 @@ nc_hipert_wkb_q_p (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble *Re
   {
     gdouble mnu, dmnu;
     const gdouble nuA = ncm_spline_eval (wkb->nuA, alpha); 
-    const gdouble m   = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
+    const gdouble m   = nc_hipert_wkb_get_m (wkb, model, alpha, nc_hipert_get_mode_k (pert));
 
-    nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, pert->k, &mnu, &dmnu);
+    nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, nc_hipert_get_mode_k (pert), &mnu, &dmnu);
     
     q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);
     p = -I * cexp (-I * int_nuA) * sqrt (0.5 * m * nuA) - 0.5 * m * (dmnu / mnu) * q;
   }
   else
   {
-    const gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
+    const gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, nc_hipert_get_mode_k (pert));
     const gdouble lnF       = ncm_spline_eval (wkb->lnF, alpha);;
     const gdouble dlnF      = ncm_spline_eval (wkb->dlnF, alpha);
     const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
@@ -763,7 +753,7 @@ _nc_hipert_wkb_prec (gdouble alpha, gpointer userdata)
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
   gdouble nu, V;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &V);
   {
     const gdouble test  = log (fabs (nu * nu * nc_hipert_get_reltol (NC_HIPERT (arg->wkb)) / V));
     return test;
@@ -776,7 +766,7 @@ _nc_hipert_wkb_prec_alpha2 (gdouble alpha, gpointer userdata)
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
   gdouble nu, V;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &V);
 
   {
     const gdouble nuA2 = nu * nu - V;
@@ -792,12 +782,12 @@ _nc_hipert_wkb_nuA2 (gdouble alpha, gpointer userdata)
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
   gdouble nu, V;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, nc_hipert_get_mode_k (NC_HIPERT (arg->wkb)), &nu, &V);
 
   {
     const gdouble nu2  = nu * nu;
     const gdouble nuA2 = nu2 - V;
-    return nuA2 / nu2 - NC_HIPERT (arg->wkb)->reltol;
+    return nuA2 / nu2 - nc_hipert_get_reltol (NC_HIPERT (arg->wkb));
   }
 }
 
@@ -809,7 +799,7 @@ _nc_hipert_wkb_nu2_root (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha0, gdou
   gint iter = 0, max_iter = 1000000;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
-  gdouble prec = pert->reltol, alpha1 = *alpha;
+  gdouble prec = pert->priv->reltol, alpha1 = *alpha;
 
   T = gsl_root_fsolver_brent;
   s = gsl_root_fsolver_alloc (T);
@@ -944,7 +934,7 @@ nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, NcmModel *model, NcHIPertWKBCmp cm
 gdouble 
 nc_hipert_wkb_nuA (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 {
-  g_assert (NC_HIPERT (wkb)->prepared);
+  g_assert (nc_hipert_prepared (NC_HIPERT (wkb)));
   return ncm_spline_eval (wkb->nuA, alpha);
 }
 
@@ -961,7 +951,7 @@ nc_hipert_wkb_nuA (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 gdouble 
 nc_hipert_wkb_phase (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 {
-  g_assert (NC_HIPERT (wkb)->prepared);
+  g_assert (nc_hipert_prepared (NC_HIPERT (wkb)));
   if (alpha == wkb->alpha_phase)
     return wkb->cur_phase;
   else

@@ -65,7 +65,7 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 #
 #  Printing the parameters used.
 #
-print ("# Model parameters: ", end=' ') 
+print ("# Model parameters: ", end='', flush = True) 
 cosmo.params_log_all ()
 
 #

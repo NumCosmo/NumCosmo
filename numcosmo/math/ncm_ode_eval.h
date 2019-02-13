@@ -106,7 +106,7 @@ G_INLINE_FUNC gint ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_s
     return G_TYPE_INSTANCE_GET_CLASS (ptr, module_obj_name##_get_type (), ModuleObjName##Class); }       \
   G_GNUC_END_IGNORE_DEPRECATIONS                                                                         \
   ModuleObjName *module_obj_name##_new (void);                                                           \
-  LocalStruct *module_obj_name##_get_ls (ModuleObjName *ode_eval1);
+  LocalStruct *_##module_obj_name##_peek_ls (ModuleObjName *ode_eval1);
 
 #define NCM_ODE_EVAL_DEFINE_IMPL(ModuleObjName, module_obj_name, MODULE, OBJ_NAME, LocalStruct, df0, J_dense0, clean_ls0) \
 struct _##ModuleObjName { NcmODEEval parent_instance; LocalStruct ls; };                                                  \
@@ -123,7 +123,7 @@ static void module_obj_name##_class_init (ModuleObjName##Class *klass) {        
 ModuleObjName *module_obj_name##_new (void) {                                                                             \
   return g_object_new (module_obj_name##_get_type (), NULL);                                                              \
 }                                                                                                                         \
-LocalStruct *module_obj_name##_get_ls (ModuleObjName *ode_eval1) {                                                        \
+LocalStruct *_##module_obj_name##_peek_ls (ModuleObjName *ode_eval1) {                                                    \
   return &ode_eval1->ls;                                                                                                  \
 }
 
