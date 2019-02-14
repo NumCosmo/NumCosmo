@@ -27,7 +27,6 @@ addons:
     - libmpfr-dev
     - libfftw3-dev
     - libcfitsio3-dev
-    - libsundials-serial-dev
     - libnlopt-dev
     - texlive
     - texlive-bibtex-extra
@@ -55,7 +54,6 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gobject-introspection              ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gsl gtk-doc gmp mpfr               ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install fftw cfitsio                       ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install sundials --without-suite-sparse    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then /usr/bin/yes | pip2 uninstall numpy             ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install numpy --without-python             ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install nlopt                              ; fi
