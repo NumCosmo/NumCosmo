@@ -313,13 +313,14 @@ ncm_headers =                                \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h               \
-	math/ncm_flapack.h            \
-	gslextras/cqp/gsl_cqp.h       \
-	gslextras/cqp/initial_point.h \
 	math/ncm_gsl_blas_types.h
 
-ncm_headers_internal = 
+ncm_headers_internal = \
+	gslextras/cqp/gsl_cqp.h           \
+	gslextras/cqp/initial_point.h     \
+	math/ncm_flapack.h                \
+	math/Faddeeva.h                   \
+	perturbations/nc_hipert_private.h
 
 nc_headers = \
 	nc_hicosmo.h                  \
