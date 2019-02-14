@@ -1,19 +1,28 @@
 /* ----------------------------------------------------------------- 
  * Programmer(s): Aaron Collier and Radu Serban @ LLNL
  * -----------------------------------------------------------------
- * Copyright (c) 2005, The Regents of the University of California.
- * Produced at the Lawrence Livermore National Laboratory.
+ * LLNS/SMU Copyright Start
+ * Copyright (c) 2002-2018, Southern Methodist University and
+ * Lawrence Livermore National Security
+ *
+ * This work was performed under the auspices of the U.S. Department
+ * of Energy by Southern Methodist University and Lawrence Livermore
+ * National Laboratory under Contract DE-AC52-07NA27344.
+ * Produced at Southern Methodist University and the Lawrence
+ * Livermore National Laboratory.
+ *
  * All rights reserved.
  * For details, see the LICENSE file.
+ * LLNS/SMU Copyright End
  * -----------------------------------------------------------------
  * SUNDIALS configuration header file
  * -----------------------------------------------------------------*/
 
 /* Define SUNDIALS version numbers */
-#define SUNDIALS_VERSION "4.0.1"
+#define SUNDIALS_VERSION "4.1.0"
 #define SUNDIALS_VERSION_MAJOR 4
-#define SUNDIALS_VERSION_MINOR 0
-#define SUNDIALS_VERSION_PATCH 1
+#define SUNDIALS_VERSION_MINOR 1
+#define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
 
 /* FCMIX: Define Fortran name-mangling macro for C identifiers.
@@ -88,11 +97,7 @@
 /* Set if SUNDIALS is built with MPI support.
  * 
  */
-/*
-#ifndef SUNDIALS_MPI_ENABLED
-#define SUNDIALS_MPI_ENABLED 1
-#endif
-*/
+
 
 /* FNVECTOR: Allow user to specify different MPI communicator
  * If it was found that the MPI implementation supports MPI_Comm_f2c, then
