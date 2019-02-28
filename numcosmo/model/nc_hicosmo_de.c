@@ -591,7 +591,7 @@ _nc_hicosmo_de_Omega_nu0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo)
 {
-  const gdouble conv        = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
+  const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
   
   return (1.0 + ENNU * conv) * _nc_hicosmo_de_Omega_g0 (cosmo);
 }

@@ -4,13 +4,13 @@
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS) \
+	 $(GLIB_CFLAGS)     \
 	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS) \
-	 $(FFTW3_CFLAGS) \
-	 $(CFITSIO_CFLAGS) \
-	 $(NLOPT_CFLAGS) \
-	 -I$(top_srcdir) \
+	 $(GSL_CFLAGS)      \
+	 $(FFTW3_CFLAGS)    \
+	 $(CFITSIO_CFLAGS)  \
+	 $(NLOPT_CFLAGS)    \
+	 -I$(top_srcdir)    \
 	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS = \
@@ -407,6 +407,26 @@ test_nc_distance_LDADD = \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
         $(COVLIBS)
+
+if NUMCOSMO_CHECK_CCL
+
+AM_CFLAGS += \
+	$(CCL_CFLAGS)
+
+test_nc_ccl_Pk_SOURCES =  \
+        test_nc_ccl_Pk.c
+
+check_PROGRAMS += \
+	test_nc_ccl_Pk
+
+test_nc_ccl_Pk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+endif
         
 TESTS = $(check_PROGRAMS)
 

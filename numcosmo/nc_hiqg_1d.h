@@ -155,6 +155,7 @@ void nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi);
 gdouble nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x);
 gdouble nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_expect_p (NcHIQG1D *qg1d);
 
 gint nc_hiqg_1d_nBohm (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i);

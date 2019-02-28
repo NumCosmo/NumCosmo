@@ -37,6 +37,11 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_de_cpl.h"
+#include "nc_hiprim_power_law.h"
+
+#ifdef HAVE_CCL
+#include <ccl.h>
+#endif /* HAVE_CCL */
 
 G_DEFINE_TYPE (NcHICosmoDECpl, nc_hicosmo_de_cpl, NC_TYPE_HICOSMO_DE);
 
@@ -50,6 +55,7 @@ _nc_hicosmo_de_cpl_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
+  
   return OMEGA_X * exp (-3.0 * OMEGA_1 * z / x + 3.0 * (1.0 + OMEGA_0 + OMEGA_1) * lnx);
 }
 
@@ -150,3 +156,47 @@ nc_hicosmo_de_cpl_class_init (NcHICosmoDECplClass *klass)
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_cpl_d2E2Omega_de_dz2);
   nc_hicosmo_de_set_w_de_impl (parent_class,             &_nc_hicosmo_de_cpl_w_de);
 }
+
+#ifdef HAVE_CCL
+/**
+ * nc_hicosmo_de_cpl_new_from_ccl: (skip)
+ * @ccl_params: a poiter to ccl_parameters
+ * 
+ * Creates a new CPL model from @ccl_params.
+ * 
+ * Returns: the newly created #NcHICosmoDECpl object.
+ */
+NcHICosmoDECpl *
+nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params)
+{
+  const guint nmnu    = ccl_params->N_nu_mass;
+  NcmVector *mnu_v    = (nmnu > 0) ? ncm_vector_new_data_static (ccl_params->mnu, nmnu, 1) : NULL;
+  NcHICosmoDECpl *cpl = g_object_new (NC_TYPE_HICOSMO_DE_CPL, 
+                                      "massnu-length", nmnu,
+                                      NULL);
+
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cpl));
+
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "H0",      ccl_params->H0);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegac",  ccl_params->Omega_c);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegak",  ccl_params->Omega_k);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "Tgamma0", ccl_params->T_CMB);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu",    ccl_params->Neff);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegab",  ccl_params->Omega_b);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "w0",      ccl_params->w0);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "w1",      ccl_params->wa);
+  
+  if (mnu_v != NULL)
+    g_object_set (cpl, "massnu", mnu_v, NULL);
+
+  {
+    NcHIPrim *prim = NC_HIPRIM (nc_hiprim_power_law_new ());
+    ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA", log (1.0e10 * ccl_params->A_s));
+    ncm_model_param_set_by_name (NCM_MODEL (prim), "n_SA",       ccl_params->n_s);
+    
+    ncm_model_add_submodel (NCM_MODEL (cpl), NCM_MODEL (prim));
+  }
+
+  return cpl;
+}
+#endif /* HAVE_CCL */

@@ -1182,6 +1182,7 @@ _nc_hiqg_1d_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
 }
 
 static void _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t);
+static void _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d);
 
 static gint
 _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
@@ -1193,6 +1194,7 @@ _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
   gint i;
 
   _nc_hiqg_1d_evol_C (qg1d, t);
+  /*_nc_hiqg_1d_prepare_splines (qg1d);*/
 
   for (i = 0; i < self->nBohm; i++)
   {
@@ -1206,7 +1208,8 @@ void
 _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  const gdouble t0 = 0.0;
+  const gdouble t0    = 0.0;
+  const gdouble ini_q = nc_hiqg_1d_int_xrho_0_inf (qg1d);
   gint flag;
   gint i;
 
@@ -1220,7 +1223,7 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 
   for (i = 0; i < self->nBohm; i++)
   {
-    NV_Ith_S (self->yBohm, i) = 3.0 / (1.0 * self->nBohm) * (i + 1.0);
+    NV_Ith_S (self->yBohm, i) = ini_q / (1.0 * self->nBohm) * (i + 1.0);
   }
 
   self->bohm = ARKStepCreate (&_nc_hiqg_1d_bohm_f, NULL, t0, self->yBohm);
@@ -1732,6 +1735,20 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
   }
   /*printf ("# BLA % 22.15g % 22.15g % 22.15g\n", x * x * x * dS_rho_x3, x * x * (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x), x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x));*/
 
+  if (FALSE)
+  {
+    const gdouble dS_rho   = 2.0 * x * x * x * dS_rho_x3;
+    const gdouble dS_rho_s = ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+    printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n", 
+            x, 
+            dS_rho, 
+            dS_rho_s, 
+            dS_rho_s / dS_rho, 
+            ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x), 
+            ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x)
+            );
+  }
+  
   return 2.0 * x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x);
 }
 
@@ -1789,6 +1806,12 @@ _nc_hiqg_1d_xrho (gdouble x, NcHIQG1DPrivate * const self)
   return x * ncm_spline_eval (self->rho_s, x);
 }
 
+static gdouble
+_nc_hiqg_1d_mean_p_int (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+}
+
 /**
  * nc_hiqg_1d_int_xrho_0_inf:
  * @qg1d: a #NcHIQG1D
@@ -1841,6 +1864,32 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
   }
 
   return int_xrho;
+}
+
+/**
+ * nc_hiqg_1d_expect_p:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble mean_p = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_mean_p_int;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_p, &abserr);
+
+  return mean_p;
 }
 
 /**

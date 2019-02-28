@@ -283,7 +283,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   dDa0 = 1.0e-20 / gsl_pow_3 (ai * nc_hicosmo_E (cosmo, 1.0 / ai - 1.0));
   
   NV_Ith_S (self->yv, 0) = 1.0;
-  NV_Ith_S (self->yv, 1) = (3.0 / 2.0) * Omega_m0 / Omega_r0;
+  NV_Ith_S (self->yv, 1) = (Omega_r0 > 0.0) ? ((3.0 / 2.0) * Omega_m0 / Omega_r0) : 1.0;
   NV_Ith_S (self->yv, 2) = dDa0;
 
   if (self->cvode == NULL)
@@ -303,6 +303,12 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   {
     flag = CVodeReInit (self->cvode, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+
+    flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
+
+    flag = CVodeSetJacFn (self->cvode, &growth_J);
+    NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
 
   flag = CVodeSStolerances (self->cvode, 1e-13, 0.0);
