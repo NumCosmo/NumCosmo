@@ -416,10 +416,21 @@ AM_CFLAGS += \
 test_nc_ccl_Pk_SOURCES =  \
         test_nc_ccl_Pk.c
 
+test_nc_ccl_dist_SOURCES =  \
+        test_nc_ccl_dist.c
+
 check_PROGRAMS += \
-	test_nc_ccl_Pk
+	test_nc_ccl_Pk \
+	test_nc_ccl_dist
 
 test_nc_ccl_Pk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_dist_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
 	$(CCL_LDFLAGS) \
 	$(GLIB_LIBS)   \

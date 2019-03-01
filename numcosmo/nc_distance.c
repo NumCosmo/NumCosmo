@@ -470,7 +470,7 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
       return r;
       break;
     case -1:
-      return sinh (sqrt_Omega_k0 * r) / r;
+      return sinh (sqrt_Omega_k0 * r) / sqrt_Omega_k0;
       break;
     case 1:
       return fabs (sin (sqrt_Omega_k0 * r) / sqrt_Omega_k0);

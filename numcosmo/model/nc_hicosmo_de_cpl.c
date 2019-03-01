@@ -177,6 +177,9 @@ nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params)
 
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cpl));
 
+	/* Setting using the original parametrization, must be called before setting the other parameters! */
+	ncm_model_orig_vparam_set_vector (NCM_MODEL (cpl), NC_HICOSMO_DE_MASSNU_M, mnu_v);
+	
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "H0",      ccl_params->H0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegac",  ccl_params->Omega_c);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegak",  ccl_params->Omega_k);
@@ -185,10 +188,7 @@ nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params)
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegab",  ccl_params->Omega_b);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w0",      ccl_params->w0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w1",      ccl_params->wa);
-  
-  if (mnu_v != NULL)
-    g_object_set (cpl, "massnu", mnu_v, NULL);
-
+	
   {
     NcHIPrim *prim = NC_HIPRIM (nc_hiprim_power_law_new ());
     ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA", log (1.0e10 * ccl_params->A_s));
