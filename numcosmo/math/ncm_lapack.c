@@ -29,7 +29,8 @@
  *
  * This object is dedicated to encapsulate functions from <ulink url="http://www.netlib.org/lapack/">LAPACK</ulink> choosing the most suitable backend.
  * 
- * Priority order: (1) LAPACKE, (2) CLAPACK, (3) LAPACK and (4) GSL.
+ * Priority order: (1) LAPACK and (2) GSL.
+ * It no longer tries to use clapack or lapacke, it is faster and simpler to stick to fortran's lapack.
  * 
  * The description of each function follows its respective LAPACK documentation.
  * 
@@ -49,6 +50,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_linalg.h>
 
 #ifdef HAVE_MKL_LAPACKE_H
 #  include <mkl_lapacke.h>
@@ -170,12 +172,7 @@ ncm_lapack_ws_clear (NcmLapackWS **ws)
 gint
 ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, gint n)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dptsv (LAPACK_ROW_MAJOR, n, 1, d, e, b, 1);
-  if (x != b)
-    memcpy (x, b, sizeof (gdouble) * n);
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DPTSV_)
 	gint NRHS = 1;
 	gint LDB  = n;
 	gint info;
@@ -225,15 +222,7 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, gint n)
 gint 
 ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dpotrf (LAPACK_ROW_MAJOR, uplo, n, a, lda);
-  return info;
-#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gint ret = clapack_dpotrf (CblasRowMajor, 
-                             uplo == 'U' ? CblasUpper : CblasLower, 
-                             n, a, lda);
-  return ret;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DPOTRF_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -270,15 +259,7 @@ ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda)
 gint 
 ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dpotri (LAPACK_ROW_MAJOR, uplo, n, a, lda);
-  return info;
-#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gint ret = clapack_dpotri (CblasRowMajor, 
-                             uplo == 'U' ? CblasUpper : CblasLower, 
-                             n, a, lda);
-  return ret;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DPOTRI_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -320,15 +301,7 @@ ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda)
 gint 
 ncm_lapack_dpotrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dpotrs (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, b, ldb);
-  return info;
-#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
-	gint ret = clapack_dpotrs (CblasRowMajor, 
-	                          uplo == 'U' ? CblasUpper : CblasLower, 
-	                          n, a, lda, b, ldb);
-  return ret;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DPOTRS_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -365,15 +338,7 @@ ncm_lapack_dpotrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble 
 gint 
 ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dposv (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, b, ldb);
-  return info;
-#elif defined (HAVE_CLAPACK) && defined (NUMCOSMO_PREFER_LAPACKE)
-	gint ret = clapack_dposv (CblasRowMajor, 
-	                          uplo == 'U' ? CblasUpper : CblasLower, 
-	                          n, a, lda, b, ldb);
-  return ret;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DPOSV_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -407,17 +372,7 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
 gint 
 ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gdouble lwork_size;
-  lapack_int info;
-
-  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, &lwork_size, -1);
-  if (lwork_size > ws->work->len)
-    g_array_set_size (ws->work, lwork_size);
-  info = LAPACKE_dsytrf_work (LAPACK_ROW_MAJOR, uplo, n, a, lda, ipiv, ws->work->data, ws->work->len);  
-
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYTRF_)
   gdouble lwork_size;
   gint lwork = -1;
   gint info  = 0;
@@ -465,10 +420,7 @@ ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
 gint 
 ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsytrs (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, ipiv, b, ldb);
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYTRS_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -502,15 +454,7 @@ ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ip
 gint 
 ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info;
-
-  if (ws->work->len < n)
-    g_array_set_size (ws->work, n);
-  
-  info = LAPACKE_dsytri (LAPACK_ROW_MAJOR, uplo, n, nrhs, a, lda, ipiv, &g_array_index (ws->work, gdouble, 0));
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYTRI_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -834,10 +778,7 @@ ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
 gint 
 ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint nparams, gdouble *params, gdouble *work, gint *iwork)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsysvxx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, equed, s, b, ldb, x, ldx, rcond, rpvgrw, berr, n_err_bnds, err_bnds_norm, err_bnds_comp, nparams, params, work, iwork);
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DSYSVXX_)
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYSVXX_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -876,19 +817,7 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
 gint 
 ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gint liwork_size;
-  gdouble lwork_size;
-  
-  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, &lwork_size, -1, &liwork_size, -1);
-  if (ws->work->len < lwork_size)
-    g_array_set_size (ws->work, lwork_size);
-  if (ws->iwork->len < liwork_size)
-    g_array_set_size (ws->iwork, liwork_size);
-  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z, ldz, isuppz, &g_array_index (ws->work, gdouble, 0), ws->work->len, &g_array_index (ws->iwork, gint, 0), ws->iwork->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVR_)
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYEVR_)
   gint lwork  = -1;
   gint liwork = -1;
   gint info   = 0;
@@ -929,19 +858,7 @@ ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint
 gint 
 ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble *w, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gint liwork_size;
-  gdouble lwork_size;
-  
-  info = LAPACKE_dsyevd_work (LAPACK_ROW_MAJOR, jobz, uplo, n, a, lda, w, &lwork_size, -1, &liwork_size, -1);
-  if (ws->work->len < lwork_size)
-    g_array_set_size (ws->work, lwork_size);
-  if (ws->iwork->len < liwork_size)
-    g_array_set_size (ws->iwork, liwork_size);
-  info = LAPACKE_dsyevr_work (LAPACK_ROW_MAJOR, jobz, uplo, n, a, lda, w, &g_array_index (ws->work, gdouble, 0), ws->work->len, &g_array_index (ws->iwork, gint, 0), ws->iwork->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DSYEVD_)
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYEVD_)
   gint lwork  = -1;
   gint liwork = -1;
   gint info   = 0;
@@ -1120,10 +1037,7 @@ ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble
 gint 
 ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint lwork, gint *iwork)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dsysvx_work (LAPACK_ROW_MAJOR, fact, uplo, n, nrhs, a, lda, af, ldaf, ipiv, b, ldb, x, ldx, rcond, ferr, berr, work, lwork, iwork);
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DSYSVX_)
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYSVX_)
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
@@ -1165,10 +1079,7 @@ ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint l
 gint 
 ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdouble *wr, gdouble *wi, gdouble *vl, gint ldvl, gdouble *vr, gint ldvr, gdouble *work, gint lwork)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dgeev_work (LAPACK_ROW_MAJOR, jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork);
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DGEEV_)
   gint info = 0;
 	
 	/* swap L <=> R : col-major <=> row-major */
@@ -1220,10 +1131,7 @@ ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdoubl
 gint 
 ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, gdouble *a, gint lda, gdouble *wr, gdouble *wi, gdouble *vl, gint ldvl, gdouble *vr, gint ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, gint lwork, gint *iwork)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  lapack_int info = LAPACKE_dgeevx_work (LAPACK_ROW_MAJOR, balanc, jobvl, jobvr, sense, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, ilo, ihi, scale, abnrm, rconde, rcondv, work, lwork, iwork);
-  return info;
-#elif defined HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DGEEVX_)
   gint info = 0;
 	
 	/* swap L <=> R : col-major <=> row-major */
@@ -1266,17 +1174,7 @@ ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, 
 gint 
 ncm_lapack_dgeqrf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gdouble lwork_size;
-  lapack_int info;
-
-  info = LAPACKE_dgeqrf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
-  if (lwork_size > ws->work->len)
-    g_array_set_size (ws->work, lwork_size);
-  info = LAPACKE_dgeqrf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DGELQF_) /* To account for row-major => col-major QR => LQ */
+#if defined (HAVE_LAPACK) && defined (HAVE_DGELQF_) /* To account for row-major => col-major QR => LQ */
   gdouble lwork_size;
   gint lwork = -1;
   gint info  = 0;
@@ -1323,17 +1221,7 @@ ncm_lapack_dgeqrf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 gint 
 ncm_lapack_dgerqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gdouble lwork_size;
-  lapack_int info;
-
-  info = LAPACKE_dgerqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
-  if (lwork_size > ws->work->len)
-    g_array_set_size (ws->work, lwork_size);
-  info = LAPACKE_dgerqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DGEQLF_) /* To account for row-major => col-major RQ => QL */
+#if defined (HAVE_LAPACK) && defined (HAVE_DGEQLF_) /* To account for row-major => col-major RQ => QL */
   gdouble lwork_size;
   gint lwork = -1;
   gint info  = 0;
@@ -1380,17 +1268,7 @@ ncm_lapack_dgerqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 gint 
 ncm_lapack_dgeqlf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gdouble lwork_size;
-  lapack_int info;
-
-  info = LAPACKE_dgeqlf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
-  if (lwork_size > ws->work->len)
-    g_array_set_size (ws->work, lwork_size);
-  info = LAPACKE_dgeqlf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DGERQF_) /* To account for row-major => col-major QL => RQ */
+#if defined (HAVE_LAPACK) && defined (HAVE_DGERQF_) /* To account for row-major => col-major QL => RQ */
   gdouble lwork_size;
   gint lwork = -1;
   gint info  = 0;
@@ -1437,17 +1315,7 @@ ncm_lapack_dgeqlf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 gint 
 ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
 {
-#if defined (HAVE_LAPACKE) && defined (NUMCOSMO_PREFER_LAPACKE)
-  gdouble lwork_size;
-  lapack_int info;
-
-  info = LAPACKE_dgelqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &lwork_size, -1);
-  if (lwork_size > ws->work->len)
-    g_array_set_size (ws->work, lwork_size);
-  info = LAPACKE_dgelqf_work (LAPACK_ROW_MAJOR, m, n, a, lda, tau, &g_array_index (ws->work, gdouble, 0), ws->work->len);
-
-  return info;
-#elif defined (HAVE_LAPACK) && defined (HAVE_DGEQRF_) /* To account for row-major => col-major LQ => QR */
+#if defined (HAVE_LAPACK) && defined (HAVE_DGEQRF_) /* To account for row-major => col-major LQ => QR */
   gdouble lwork_size;
   gint lwork = -1;
   gint info  = 0;
@@ -1482,7 +1350,7 @@ ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 GArray *
 ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y)
 {
-#ifdef HAVE_LAPACK
+#if defined (HAVE_LAPACK) && defined (HAVE_DGEQRF_)
   gint N   = ncm_matrix_nrows (L);
   gint M   = ncm_matrix_ncols (X);
   gint P   = ncm_matrix_ncols (L);
@@ -1575,9 +1443,6 @@ ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, Ncm
 #endif
 }
 
-void dtrsv_ (char *UL, char *T, char *D, gint *N, gdouble *A, gint *LDA,
-             gdouble *X, gint *INCX);
-
 /**
  * ncm_lapack_dtrsv:
  * @uplo: FIXME
@@ -1592,10 +1457,16 @@ void dtrsv_ (char *UL, char *T, char *D, gint *N, gdouble *A, gint *LDA,
 void
 ncm_lapack_dtrsv (gchar uplo, gchar trans, gchar diag, NcmMatrix *A, NcmVector *v)
 {
+#if defined (HAVE_LAPACK) && defined (HAVE_DTRSV_)
   gint N      = ncm_vector_len (v);
   gint stride = ncm_vector_stride (v);
   trans       = _NCM_LAPACK_CONV_TRANS (trans);
   uplo        = _NCM_LAPACK_CONV_UPLO (uplo);
   
   dtrsv_ (&uplo, &trans, &diag, &N, ncm_matrix_data (A), &N, ncm_vector_data (v), &stride);
+#else
+  g_error ("ncm_lapack_dtrsv: lapack[dtrsv] support is necessary.");
+  return -1;
+#endif
+
 }
