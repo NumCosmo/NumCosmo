@@ -43,18 +43,18 @@ typedef struct _TestNcCCLPk
   NcPowspecML *Pk; 
 } TestNcCCLPk;
 
-void test_nc_ccl_bbks_new_model1 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_bbks_new_model2 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_bbks_new_model3 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_eh_new_model1 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_eh_new_model2 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_eh_new_model3 (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_free (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model1_bbks (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model2_bbks (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model3_bbks (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model1_eh (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model2_eh (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new_model3_eh (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_cmp_pk (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_bbks_traps (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata);
 
 #define BBKS_TOLERANCE 1.0E-5
 #define CTEST_DATA(name) typedef struct _##name##_data name##_data; struct _##name##_data
@@ -113,46 +113,46 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
   
-  g_test_add ("/nc/ccl/model1/bbks/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_bbks_new_model1,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model1/bbks/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model1_bbks,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/model2/bbks/cmp/pk", TestNcCCLPk, NULL,
-              &test_nc_ccl_bbks_new_model2,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model2/bbks/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model2_bbks,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/model3/bbks/cmp/pk", TestNcCCLPk, NULL,
-              &test_nc_ccl_bbks_new_model3,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model3/bbks/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model3_bbks,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/model1/eh/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_eh_new_model1,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model1/eh/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model1_eh,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/model2/eh/cmp/pk", TestNcCCLPk, NULL,
-              &test_nc_ccl_eh_new_model2,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model2/eh/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model2_eh,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/model3/eh/cmp/pk", TestNcCCLPk, NULL,
-              &test_nc_ccl_eh_new_model3,
-              &test_nc_ccl_cmp_pk,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model3/eh/cmp", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model3_eh,
+              &test_nc_ccl_pk_cmp,
+              &test_nc_ccl_pk_free);
  
-  g_test_add ("/nc/ccl/model1/bbks/traps", TestNcCCLPk, NULL,
-              &test_nc_ccl_bbks_new_model1,
-              &test_nc_ccl_bbks_traps,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model1/bbks/traps", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model1_bbks,
+              &test_nc_ccl_pk_bbks_traps,
+              &test_nc_ccl_pk_free);
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_add ("/nc/ccl/model1/bbks/invalid/st/subprocess", TestNcCCLPk, NULL,
-              &test_nc_ccl_bbks_new_model1,
-              &test_nc_ccl_bbks_invalid_st,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", TestNcCCLPk, NULL,
+              &test_nc_ccl_pk_new_model1_bbks,
+              &test_nc_ccl_pk_bbks_invalid_st,
+              &test_nc_ccl_pk_free);
 #endif
   g_test_run ();
 }
@@ -187,7 +187,7 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
 }
 
 void 
-test_nc_ccl_bbks_create_Pk_BBKS (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_bbks_create_pk_BBKS (TestNcCCLPk *test, gconstpointer pdata)
 {
   NcTransferFunc *tf = nc_transfer_func_bbks_new ();
 
@@ -224,7 +224,7 @@ test_nc_ccl_bbks_create_Pk_BBKS (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void 
-test_nc_ccl_bbks_create_Pk_EH (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_bbks_create_pk_EH (TestNcCCLPk *test, gconstpointer pdata)
 {
   NcTransferFunc *tf = nc_transfer_func_eh_new ();
 
@@ -262,85 +262,85 @@ test_nc_ccl_bbks_create_Pk_EH (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_bbks_new_model1 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model1_bbks (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (1, ccl_bbks);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_BBKS (test, pdata);
+  test_nc_ccl_bbks_create_pk_BBKS (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_bbks_new_model2 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model2_bbks (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (2, ccl_bbks);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_BBKS (test, pdata);
+  test_nc_ccl_bbks_create_pk_BBKS (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_bbks_new_model3 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model3_bbks (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (3, ccl_bbks);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_BBKS (test, pdata);
+  test_nc_ccl_bbks_create_pk_BBKS (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_eh_new_model1 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model1_eh (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (1, ccl_eisenstein_hu);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_EH (test, pdata);
+  test_nc_ccl_bbks_create_pk_EH (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_eh_new_model2 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model2_eh (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (2, ccl_eisenstein_hu);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_EH (test, pdata);
+  test_nc_ccl_bbks_create_pk_EH (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_eh_new_model3 (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new_model3_eh (TestNcCCLPk *test, gconstpointer pdata)
 {
   test->ccl_cosmo = test_nc_create_ccl_cosmo (3, ccl_eisenstein_hu);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
   /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
 
-  test_nc_ccl_bbks_create_Pk_EH (test, pdata);
+  test_nc_ccl_bbks_create_pk_EH (test, pdata);
   
   g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
-test_nc_ccl_free (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
   NCM_TEST_FREE (nc_powspec_ml_free, test->Pk);
@@ -350,7 +350,7 @@ test_nc_ccl_free (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata)
 {
   const gint ntests       = 200;
   const gdouble z_max     = 6.0;
@@ -375,6 +375,16 @@ test_nc_ccl_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
       ncm_assert_cmpdouble_e (E2Omega_x, ==, cclE2Omega_x, tol, 0.0);
       
       /*printf ("(% 22.15g, % 22.15g) | OMEGA_X: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_x, cclE2Omega_x, E2Omega_x / cclE2Omega_x - 1.0);*/ 
+    }
+
+    if (TRUE)
+    {
+      const gdouble E2Omega_mnu    = nc_hicosmo_E2Omega_mnu (NC_HICOSMO (test->cosmo), z);
+      const gdouble cclE2Omega_mnu = ccl_omega_x (test->ccl_cosmo, a, ccl_species_nu_label, &status) * cclE2;
+
+      ncm_assert_cmpdouble_e (E2Omega_mnu, ==, cclE2Omega_mnu, tol, 0.0);
+      
+      /*printf ("(% 22.15g, % 22.15g) | OMEGA_MNU: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_mnu, cclE2Omega_mnu, E2Omega_mnu / cclE2Omega_mnu - 1.0);*/ 
     }
 
     if (TRUE)
@@ -444,16 +454,16 @@ test_nc_ccl_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_bbks_traps (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION(2,38,0)
-  g_test_trap_subprocess ("/nc/ccl/model1/bbks/invalid/st/subprocess", 0, 0);
+  g_test_trap_subprocess ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }
 
 void
-test_nc_ccl_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
 }

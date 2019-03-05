@@ -165,26 +165,6 @@ main (gint argc, gchar *argv[])
               &test_nc_ccl_dist_cmp,
               &test_nc_ccl_dist_free);
 
-  g_test_add ("/nc/ccl/model1/noNeff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model1_noNeff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model2/noNeff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model2_noNeff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model3/noNeff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model3_noNeff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model4/noNeff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model4_noNeff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model5/noNeff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model5_noNeff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
   g_test_add ("/nc/ccl/model1/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
               &test_nc_ccl_dist_new_model1_Neff_mnu ,
               &test_nc_ccl_dist_cmp,
@@ -533,16 +513,26 @@ test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata)
 
       ncm_assert_cmpdouble_e (E2Omega_x, ==, cclE2Omega_x, tol, 0.0);
       
-      /* printf ("(% 22.15g, % 22.15g) | OMEGA_X: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_x, cclE2Omega_x, E2Omega_x / cclE2Omega_x - 1.0); */
+      /*printf ("(% 22.15g, % 22.15g) | OMEGA_X: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_x, cclE2Omega_x, E2Omega_x / cclE2Omega_x - 1.0);*/ 
     }
-		
+
     if (TRUE)
     {
-      const gdouble E2Omega_m    = nc_hicosmo_E2Omega_m (test->cosmo, z);
+      const gdouble E2Omega_mnu    = nc_hicosmo_E2Omega_mnu (NC_HICOSMO (test->cosmo), z);
+      const gdouble cclE2Omega_mnu = ccl_omega_x (test->ccl_cosmo, a, ccl_species_nu_label, &status) * cclE2;
+
+      ncm_assert_cmpdouble_e (E2Omega_mnu, ==, cclE2Omega_mnu, tol, 0.0);
+      
+      /*printf ("(% 22.15g, % 22.15g) | OMEGA_MNU: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_mnu, cclE2Omega_mnu, E2Omega_mnu / cclE2Omega_mnu - 1.0);*/
+    }
+
+    if (TRUE)
+    {
+      const gdouble E2Omega_m    = nc_hicosmo_E2Omega_m (test->cosmo, z) - nc_hicosmo_E2Omega_mnu (NC_HICOSMO (test->cosmo), z) + 3.0 * nc_hicosmo_E2Press_mnu (NC_HICOSMO (test->cosmo), z);
       const gdouble cclE2Omega_m = ccl_omega_x (test->ccl_cosmo, a, ccl_species_m_label, &status) * cclE2;
 
       ncm_assert_cmpdouble_e (E2Omega_m, ==, cclE2Omega_m, tol, 0.0);
-      printf ("(% 22.15g, % 22.15g) | OMEGA_M: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_m, cclE2Omega_m, E2Omega_m / cclE2Omega_m - 1.0);
+      /*printf ("(% 22.15g, % 22.15g) | OMEGA_M: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_m, cclE2Omega_m, E2Omega_m / cclE2Omega_m - 1.0);*/
     }
 
     if (TRUE)
@@ -560,7 +550,7 @@ test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata)
       const gdouble cclE2Omega_nu = ccl_omega_x (test->ccl_cosmo, a, ccl_species_ur_label, &status) * cclE2;
 
       ncm_assert_cmpdouble_e (E2Omega_nu, ==, cclE2Omega_nu, tol, 0.0);
-      /*printf ("(% 22.15g, % 22.15g) | OMEGA_NU: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_nu, cclE2Omega_nu, E2Omega_nu / cclE2Omega_nu - 1.0);*/    
+      /*printf ("(% 22.15g, % 22.15g) | OMEGA_NU: % 22.15g % 22.15g %17.10e;\n", z, a, E2Omega_nu, cclE2Omega_nu, E2Omega_nu / cclE2Omega_nu - 1.0);*/   
     }
     
     if (TRUE)

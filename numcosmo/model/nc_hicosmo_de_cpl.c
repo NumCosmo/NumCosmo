@@ -178,17 +178,28 @@ nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params)
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cpl));
 
 	/* Setting using the original parametrization, must be called before setting the other parameters! */
-	ncm_model_orig_vparam_set_vector (NCM_MODEL (cpl), NC_HICOSMO_DE_MASSNU_M, mnu_v);
+  if (mnu_v != NULL)
+    ncm_model_orig_vparam_set_vector (NCM_MODEL (cpl), NC_HICOSMO_DE_MASSNU_M, mnu_v);
 	
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "H0",      ccl_params->H0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegac",  ccl_params->Omega_c);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegak",  ccl_params->Omega_k);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Tgamma0", ccl_params->T_CMB);
-  ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu",    ccl_params->Neff);
+  ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu",    0.0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "Omegab",  ccl_params->Omega_b);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w0",      ccl_params->w0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w1",      ccl_params->wa);
-	
+
+
+  {
+    const gdouble cNeff = nc_hicosmo_Neff (NC_HICOSMO (cpl));
+    const gdouble dNeff = ccl_params->Neff - cNeff;
+    if (dNeff < 0.0)
+      g_error ("# nc_hicosmo_de_cpl_new_from_ccl: inconsistent neutrino Neff [% 22.15g], number of relativistic neutrinos will be negative [% 22.15g].", 
+               ccl_params->Neff, dNeff);
+    ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu", dNeff);
+  }
+
   {
     NcHIPrim *prim = NC_HIPRIM (nc_hiprim_power_law_new ());
     ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA", log (1.0e10 * ccl_params->A_s));

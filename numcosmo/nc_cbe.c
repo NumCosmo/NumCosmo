@@ -151,12 +151,20 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->pba.sgnK                = 0;
 	cbe->priv->pba.Omega0_lambda       = 0.0;
 	cbe->priv->pba.Omega0_fld          = 0.0;
+  cbe->priv->pba.fluid_equation_of_state = 0;
 	cbe->priv->pba.a_today             = 0.0;
 	cbe->priv->pba.w0_fld              = 0.0;
 	cbe->priv->pba.wa_fld              = 0.0;
+  cbe->priv->pba.Omega_EDE           = 0.0;
 	cbe->priv->pba.cs2_fld             = 0.0;
+  cbe->priv->pba.use_ppf             = FALSE;
+  cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
   cbe->priv->pba.shooting_failed     = _FALSE_;
 
+  cbe->priv->pba.ncdm_quadrature_strategy = NULL;
+  cbe->priv->pba.ncdm_input_q_size        = NULL;
+  cbe->priv->pba.ncdm_qmax                = NULL;
+  
 	/* thermodynamics structure */
   
 	cbe->priv->pth.YHe                        = 0;
@@ -201,7 +209,8 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->ppt.has_pk_matter                       = _FALSE_;
 	cbe->priv->ppt.has_density_transfers               = _FALSE_;
 	cbe->priv->ppt.has_velocity_transfers              = _FALSE_;
-  
+  cbe->priv->ppt.has_metricpotential_transfers       = _FALSE_;
+
 	cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
 
 	cbe->priv->ppt.has_nc_density                      = _FALSE_;
@@ -371,7 +380,8 @@ nc_cbe_init (NcCBE *cbe)
 
 	/* nonlinear structure */
 
-	cbe->priv->pnl.method = nl_none;
+	cbe->priv->pnl.method    = nl_none;
+  cbe->priv->pnl.has_pk_eq = _FALSE_;
 
 	/* all verbose parameters */
 
@@ -630,7 +640,7 @@ nc_cbe_class_init (NcCBEClass* klass)
 	                                 g_param_spec_double ("matter-pk-maxk",
 	                                                      NULL,
 	                                                      "Maximum mode k for matter Pk",
-	                                                      0.0, G_MAXDOUBLE, 0.1,
+	                                                      0.0, G_MAXDOUBLE, 1.0,
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 	g_object_class_install_property (object_class,
 	                                 PROP_VERBOSE,
@@ -1099,14 +1109,18 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 
       cbe->priv->pba.N_ncdm = N_ncdm;
 
-      pba->T_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->ksi_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->deg_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->Omega0_ncdm  = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->M_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->m_ncdm_in_eV = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
+      pba->T_ncdm                   = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->ksi_ncdm                 = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->deg_ncdm                 = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->Omega0_ncdm              = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->M_ncdm                   = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->m_ncdm_in_eV             = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->got_files                = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
+      pba->ncdm_quadrature_strategy = (gint *)malloc (sizeof (gint) * N_ncdm);
+      pba->ncdm_input_q_size        = (gint *)malloc (sizeof (gint) * N_ncdm);
+      pba->ncdm_qmax                = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+        
       pba->Omega0_ncdm_tot = 0.0;
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
@@ -1117,6 +1131,10 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
         pba->Omega0_ncdm[nu_i] = nc_hicosmo_Omega_mnu0_n (cosmo, nu_i);
 
         pba->Omega0_ncdm_tot  += pba->Omega0_ncdm[nu_i];
+
+        pba->ncdm_quadrature_strategy[nu_i] = 0;
+        pba->ncdm_input_q_size[nu_i]        = -1;
+        pba->ncdm_qmax[nu_i]                = 15.0;
       }
 
       /* From CLASS input.c */
@@ -1198,23 +1216,25 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
   {
     const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
     const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+
     if (w0 != -1.0)
     {
-      cbe->priv->pba.Omega0_lambda   = 0.0;
+      cbe->priv->pba.fluid_equation_of_state = CLP;
+      cbe->priv->pba.Omega0_lambda           = 0.0;      /* Disable cosmological constant in CLASS */
 
-      cbe->priv->pba.Omega0_fld      = Omega_X0;
-      cbe->priv->pba.w0_fld          = w0;
-      cbe->priv->pba.wa_fld          = 0.0;
-      cbe->priv->pba.cs2_fld         = 1.0;      
+      cbe->priv->pba.Omega0_fld              = Omega_X0; /* Enable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld                  = w0;
+      cbe->priv->pba.wa_fld                  = 0.0;
+      cbe->priv->pba.cs2_fld                 = 1.0;      
     }
     else
     {
-      cbe->priv->pba.Omega0_lambda   = Omega_X0;
+      cbe->priv->pba.Omega0_lambda           = Omega_X0; /* Enable cosmological constant in CLASS */
 
-      cbe->priv->pba.Omega0_fld      = 0.0;
-      cbe->priv->pba.w0_fld          = -1.0;
-      cbe->priv->pba.wa_fld          = 0.0;
-      cbe->priv->pba.cs2_fld         = 1.0;
+      cbe->priv->pba.Omega0_fld              = 0.0;      /* Disable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld                  = -1.0;
+      cbe->priv->pba.wa_fld                  = 0.0;
+      cbe->priv->pba.cs2_fld                 = 1.0;
     }
   }
   else if (NC_IS_HICOSMO_DE_CPL (cosmo))
@@ -1223,12 +1243,13 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
     const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
     const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
 
-    cbe->priv->pba.Omega0_lambda   = 0.0;
+    cbe->priv->pba.fluid_equation_of_state = CLP;
+    cbe->priv->pba.Omega0_lambda           = 0.0;      /* Disable cosmological constant in CLASS */
 
-    cbe->priv->pba.Omega0_fld      = Omega_X0;
-    cbe->priv->pba.w0_fld          = w0;
-    cbe->priv->pba.wa_fld          = w1;
-    cbe->priv->pba.cs2_fld         = 1.0;
+    cbe->priv->pba.Omega0_fld              = Omega_X0; /* Enable DE fluid in CLASS */
+    cbe->priv->pba.w0_fld                  = w0;
+    cbe->priv->pba.wa_fld                  = w1;
+    cbe->priv->pba.cs2_fld                 = 1.0;
   }
   else
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
@@ -1318,6 +1339,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.has_pk_matter                       = cbe->calc_transfer ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_density_transfers               = _FALSE_;
 	cbe->priv->ppt.has_velocity_transfers              = _FALSE_;
+  cbe->priv->ppt.has_metricpotential_transfers       = _FALSE_;
 
 	cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
 
@@ -1502,7 +1524,7 @@ _nc_cbe_set_transfer (NcCBE* cbe, NcHICosmo* cosmo)
 {
 
   cbe->priv->ptr.selection_bias[0]               = 1.0;
-  cbe->priv->ptr.selection_magnification_bias[0] = 1.0;
+  cbe->priv->ptr.selection_magnification_bias[0] = 0.0;
   
 	cbe->priv->ptr.lcmb_rescale                    = 1.0;
 	cbe->priv->ptr.lcmb_pivot                      = 0.1;
@@ -1535,7 +1557,8 @@ _nc_cbe_set_lensing (NcCBE* cbe, NcHICosmo* cosmo)
 static void
 _nc_cbe_set_nonlin (NcCBE* cbe, NcHICosmo* cosmo)
 {
-	cbe->priv->pnl.method = nl_none;
+	cbe->priv->pnl.method    = nl_none;
+  cbe->priv->pnl.has_pk_eq = _FALSE_;
 	cbe->priv->pnl.nonlinear_verbose = cbe->nonlin_verbose;
 }
 
@@ -2065,10 +2088,11 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 	const gint partz   = 4;
 	const gint z_tsize = (z_size - 1) * partz + 1;
 
-	NcmVector* lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
-	NcmVector* z_v = ncm_vector_new (z_tsize);
-	NcmMatrix* lnPk = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+	NcmVector* lnk_v  = ncm_vector_new (cbe->priv->psp.ln_k_size);
+	NcmVector* z_v    = ncm_vector_new (z_tsize);
+	NcmMatrix* lnPk   = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
 	gdouble* pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
+  gdouble *temp     = g_new (gdouble, cbe->priv->psp.ln_k_size);
 	gdouble z_i_a, z_i_b = 0.0;
 	guint i, m;
 
@@ -2100,7 +2124,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
 			ncm_vector_set (z_v, m, z_i);
-			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
       
 			m++;
 		}
@@ -2135,7 +2159,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
 			ncm_vector_set (z_v, m, z_i);
-			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
 
 			m++;
 		}
@@ -2145,11 +2169,12 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 		const gdouble z_i = (z_i_b * 0.99 + ncm_vector_get (z_v, m - 1) * 0.01); /* Safeguard against interpolation error on CLASS near the end */
 
 		ncm_vector_set (z_v, m, z_i);
-		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
 
 		m++;
 	}
 
+  g_free (temp);
 	g_free (pvecback);
 
 	{

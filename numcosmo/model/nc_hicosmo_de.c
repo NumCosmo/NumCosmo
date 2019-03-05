@@ -28,6 +28,7 @@
  * @short_description: Abstract class for implementing dark energy models
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

@@ -54,7 +54,9 @@ data_observationaldir = \
 	$(pkgdatadir)-$(VERSION)/data
 
 class_data_bbn_DATA = \
-	class_data/bbn/sBBN.dat
+	class_data/bbn/sBBN.dat               \
+	class_data/bbn/sBBN_2017_marcucci.dat \
+	class_data/bbn/sBBN_2017.dat
 
 class_data_bbndir = \
 	$(pkgdatadir)-$(VERSION)/data/class_data/bbn

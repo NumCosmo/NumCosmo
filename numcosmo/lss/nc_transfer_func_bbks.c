@@ -28,7 +28,9 @@
  * @title: NcTransferFuncBBKS
  * @short_description: Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
  * 
- * FIXME
+ * Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function, see [Sugiyama (1995)][XSugiyama1995].
+ * 
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
