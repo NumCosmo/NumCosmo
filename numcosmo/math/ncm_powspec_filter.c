@@ -70,6 +70,7 @@ enum
   PROP_ZI,
   PROP_ZF,
   PROP_RELTOL,
+  PROP_RELTOL_Z,
   PROP_POWERSPECTRUM,
 	PROP_SIZE,
 };
@@ -118,6 +119,9 @@ _ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_RELTOL:
       psf->reltol = g_value_get_double (value);
       break;
+    case PROP_RELTOL_Z:
+      psf->reltol_z = g_value_get_double (value);
+      break;
     case PROP_POWERSPECTRUM:
       psf->ps = g_value_dup_object (value);
       psf->zi = ncm_powspec_get_zi (psf->ps);
@@ -151,6 +155,9 @@ _ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_RELTOL:
       g_value_set_double (value, psf->reltol);
+      break;
+    case PROP_RELTOL_Z:
+      g_value_set_double (value, psf->reltol_z);
       break;
     case PROP_POWERSPECTRUM:
       g_value_set_object (value, psf->ps);
@@ -240,6 +247,13 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         NULL,
                                                         "Relative tolerance for calibration",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RELTOL_Z,
+                                   g_param_spec_double ("reltol-z",
+                                                        NULL,
+                                                        "Relative tolerance for calibration in the redshift direction",
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_TYPE,
@@ -457,7 +471,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
       Fdummy_z.params   = &arg;
 
-      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol);
+      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol_z);
 
       z_vec = ncm_spline_get_xv (dummy_z);
       N_z = ncm_vector_len (z_vec);
