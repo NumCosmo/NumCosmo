@@ -42,27 +42,7 @@ typedef struct _TestNcCCLDist
   NcDistance *dist;
 } TestNcCCLDist;
 
-void test_nc_ccl_dist_new_model1_noNeff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model2_noNeff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model3_noNeff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model4_noNeff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model5_noNeff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model1_Neff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model2_Neff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model3_Neff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model4_Neff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model5_Neff_nomnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model1_noNeff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model2_noNeff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model3_noNeff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model4_noNeff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model5_noNeff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model1_Neff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model2_Neff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model3_Neff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model4_Neff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-void test_nc_ccl_dist_new_model5_Neff_mnu  (TestNcCCLDist *test, gconstpointer pdata);
-
+void test_nc_ccl_dist_new (TestNcCCLDist *test, gconstpointer pdata);
 void test_nc_ccl_dist_free (TestNcCCLDist *test, gconstpointer pdata);
 
 void test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata);
@@ -70,205 +50,119 @@ void test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata);
 void test_nc_ccl_dist_traps (TestNcCCLDist *test, gconstpointer pdata);
 void test_nc_ccl_dist_invalid_st (TestNcCCLDist *test, gconstpointer pdata);
 
-typedef struct _ccl_params_data 
+typedef struct _ccl_params_test_data
 {
+  const gchar *name; 
+  gboolean use_Omega_k;
+  gboolean use_Neff_func;
   gdouble Omega_c;
   gdouble Omega_b;
   gdouble h;
   gdouble A_s;
   gdouble n_s;
-  gdouble sigma8;
-  gdouble Neff[2];
-  gdouble mnu[5][3];
-  gdouble Omega_v[5];
-  gdouble Omega_k[5];
-  gdouble w_0[5];
-  gdouble w_a[5];
-} ccl_params_data;
+  gdouble Neff;
+  gdouble N_ur;
+  gdouble N_ncdm;
+  gdouble mnu[3];
+  gdouble Omega_k;
+  gdouble Omega_v;
+  gdouble w_0;
+  gdouble w_a;
+} ccl_params_test_data;
 
-static void
-ccl_params_data_init (ccl_params_data *data)
-{
-  gdouble mnu[5][3]  = {{0.04, 0.0, 0.0}, {0.05, 0.01, 0.0}, {0.03, 0.02, 0.04}, {0.05, 0.0, 0.0}, {0.03, 0.02, 0.0}};
-  gdouble Omega_v[5] = { 0.7,  0.7,  0.7,  0.65, 0.75};
-  gdouble w_0[5]     = {-1.0, -0.9, -0.9, -0.9, -0.9};
-  gdouble w_a[5]     = { 0.0,  0.0,  0.1,  0.1,  0.1};
-	gint i;
+ccl_params_test_data test_data[29] = {
+/* Name           use_Ok  use_f  Oc    Ob    h    As      ns    Neff Nur   Ncdm   m1    m2    m3      Ok    Ode   w0    wa */
+  {"model_0",          FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.70, -1.0, 0.0},
+  {"model_1",          FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.70, -0.9, 0.0},
+  {"model_2",          FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.70, -0.9, 0.1},
+  {"model_3",          FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.65, -0.9, 0.1},
+  {"model_4",          FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.75, -0.9, 0.1},
+  {"mnu/model_0",      FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.04, 0.0,  0.0 },  0.0,  0.70, -1.0, 0.0},
+  {"mnu/model_1",      FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.05, 0.01, 0.0 },  0.0,  0.70, -0.9, 0.0},
+  {"mnu/model_2",      FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.03, 0.02, 0.04},  0.0,  0.70, -0.9, 0.1},
+  {"mnu/model_3",      FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.05, 0.0,  0.0 },  0.0,  0.65, -0.9, 0.1},
+  {"mnu/model_4",      FALSE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.03, 0.02, 0.0 },  0.0,  0.75, -0.9, 0.1},
 
-	data->Omega_c  = 0.25;
-  data->Omega_b  = 0.05;
-  data->h        = 0.7;
-  data->A_s      = 2.1e-9;
-  data->n_s      = 0.96;
-  data->sigma8   = 0.8;
-	data->Neff[0]  = 0.0;
-	data->Neff[1]  = 3.0;
+  {"flat/nonu",         TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.0,  0.0 , 0.0 },  0.0,  0.00, -1.0, 0.0},
+  {"pos_curv/nonu",     TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.0,  0.0 , 0.0 },  0.01, 0.00, -1.0, 0.0},
+  {"neg_curv/nonu",     TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.0,   0.0, 0.0, {0.0,  0.0 , 0.0 }, -0.01, 0.00, -1.0, 0.0},
+  {"flat/massnu1",      TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   2.0, 1.0, {0.0,  0.0 , 0.1 },  0.0,  0.00, -1.0, 0.0},
+  {"flat/massnu2",      TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 3.0, {0.03, 0.03, 0.1 },  0.0,  0.00, -1.0, 0.0},
+  {"flat/massnu3",      TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 3.0, {0.03, 0.05, 0.1 },  0.0,  0.00, -1.0, 0.0},
+  {"flat_manynu1",      TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 6.0,   0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.00, -1.0, 0.0},
+  {"neg_curv/massnu1",  TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   4.0, 2.0, {0.0,  0.03, 0.1 }, -0.01, 0.00, -1.0, 0.0},
+  {"pos_curv/manynu1",  TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   3.0, 3.0, {0.03, 0.05, 0.1 },  0.01, 0.00, -1.0, 0.0},
 
-	memcpy (data->Omega_v, Omega_v, sizeof (gdouble) * 5);
-	memcpy (data->w_0,     w_0,     sizeof (gdouble) * 5);
-	memcpy (data->w_a,     w_a,     sizeof (gdouble) * 5);
-	memcpy (data->mnu,     mnu,     sizeof (gdouble) * 5 * 3);
-
-	for (i = 0; i < 5; i++) 
-  {
-    data->Omega_k[i] = 1.0 - data->Omega_c - data->Omega_b - data->Omega_v[i];
-  }
-}
+  {"CCL1",              TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.00, -1.0, 0.0},
+  {"CCL2",              TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.00, -0.9, 0.0},
+  {"CCL3",              TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.0,  0.0,  0.0 },  0.0,  0.00, -0.9, 0.1},
+  {"CCL4",              TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.0,  0.0,  0.0 },  0.05, 0.00, -0.9, 0.1},
+  {"CCL5",              TRUE, FALSE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 3.046, 0.0, 0.0, {0.0,  0.0,  0.0 }, -0.05, 0.00, -0.9, 0.1},
+  {"CCL7",              TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   2.0, 1.0, {0.04, 0.0,  0.0 },  0.0,  0.00, -1.0, 0.0},
+  {"CCL8",              TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   1.0, 2.0, {0.05, 0.01, 0.0 },  0.0,  0.00, -0.9, 0.0},
+  {"CCL9",              TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   0.0, 3.0, {0.03, 0.02, 0.04},  0.0,  0.00, -0.9, 0.1},
+  {"CCL10",             TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   2.0, 1.0, {0.05, 0.0,  0.0 },  0.05, 0.00, -0.9, 0.1},
+  {"CCL11",             TRUE,  TRUE, 0.25, 0.05, 0.7, 2.1e-9, 0.96, 0.0,   1.0, 2.0, {0.03, 0.02, 0.0 }, -0.05, 0.00, -0.9, 0.1},
+};
 
 gint
 main (gint argc, gchar *argv[])
 {
+  gint i;
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_set_nonfatal_assertions ();
-  
-  g_test_add ("/nc/ccl/model1/noNeff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model1_noNeff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model2/noNeff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model2_noNeff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model3/noNeff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model3_noNeff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model4/noNeff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model4_noNeff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model5/noNeff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model5_noNeff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model1/Neff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model1_Neff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model2/Neff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model2_Neff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model3/Neff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model3_Neff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model4/Neff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model4_Neff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model5/Neff/nomnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model5_Neff_nomnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
 
-  g_test_add ("/nc/ccl/model1/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model1_Neff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model2/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model2_Neff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model3/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model3_Neff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model4/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model4_Neff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
-  g_test_add ("/nc/ccl/model5/Neff/mnu/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_new_model5_Neff_mnu ,
-              &test_nc_ccl_dist_cmp,
-              &test_nc_ccl_dist_free);
+  for (i = 0; i < sizeof (test_data) / sizeof (test_data[0]); i++)
+  {
+    gchar *name = g_strdup_printf ("/nc/ccl/%s/dist/cmp", test_data[i].name);
+    g_test_add (name, TestNcCCLDist, &test_data[i],
+                &test_nc_ccl_dist_new,
+                &test_nc_ccl_dist_cmp,
+                &test_nc_ccl_dist_free);
+    g_free (name);
+  }
 
-/*
-  g_test_add ("/nc/ccl/model2/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_comoving_new_model2,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
-              
-  g_test_add ("/nc/ccl/model3/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_comoving_new_model3,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
-              
-  g_test_add ("/nc/ccl/model4/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_comoving_new_model4,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
-              
-  g_test_add ("/nc/ccl/model5/dist/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_comoving_new_model5,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
-
-  g_test_add ("/nc/ccl/model1/dist_modulus/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_modulus_new_model1,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
-
-  g_test_add ("/nc/ccl/model5/dist_modulus/cmp", TestNcCCLDist, NULL,
-              &test_nc_ccl_dist_modulus_new_model5,
-              &test_nc_ccl_cmp_dist,
-              &test_nc_ccl_free);
- 
-  g_test_add ("/nc/ccl/model1/bbks/traps", TestNcCCLDist, NULL,
-              &test_nc_ccl_bbks_new_model1,
-              &test_nc_ccl_bbks_traps,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/dist/traps", TestNcCCLDist, &test_data[0],
+              &test_nc_ccl_dist_new,
+              &test_nc_ccl_dist_traps,
+              &test_nc_ccl_dist_free);
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_add ("/nc/ccl/model1/bbks/invalid/st/subprocess", TestNcCCLDist, NULL,
-              &test_nc_ccl_bbks_new_model1,
-              &test_nc_ccl_bbks_invalid_st,
-              &test_nc_ccl_free);
+  g_test_add ("/nc/ccl/dist/invalid/st/subprocess", TestNcCCLDist, &test_data[0],
+              &test_nc_ccl_dist_new,
+              &test_nc_ccl_dist_invalid_st,
+              &test_nc_ccl_dist_free);
 #endif
-*/
+
   g_test_run ();
 }
 
 static gdouble 
 neff_from_n_ur_n_ncdm (gdouble N_ur, gdouble N_ncdm)
 {
-  gdouble Neff = N_ur + N_ncdm * pow (ccl_constants.TNCDM, 4.0) / pow (4.0/11.0, 4.0/3.0);
+  gdouble Neff = N_ur + N_ncdm * pow (ccl_constants.TNCDM, 4.0) / pow (4.0 / 11.0, 4.0 / 3.0);
   return Neff;
 }
 
 static ccl_cosmology *
-test_nc_create_ccl_cosmo (gint i_model, gint i_Neff, gboolean has_mnu)
+test_nc_create_ccl_cosmo (const ccl_params_test_data *test_data)
 {
-  ccl_params_data *data    = g_new0 (ccl_params_data, 1);
   ccl_configuration config = default_config;
   gint status              = 0;
   ccl_parameters params;
   ccl_cosmology *cosmo;
-
-  ccl_params_data_init (data);
-
-	if (!has_mnu)
-	{
-		gdouble mnu = 0.0;
-    params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model], 
-                                    data->Neff[i_Neff], &mnu, ccl_mnu_sum, data->w_0[i_model], 
-                                    data->w_a[i_model], data->h, data->A_s, data->n_s, 
-                                    -1, -1, -1, -1, NULL, NULL, &status);
-	}
-	else
-	{
-		params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model], 
-		                                data->Neff[i_Neff], data->mnu[i_model * 3], 
-		                                ccl_mnu_list, data->w_0[i_model], data->w_a[i_model], 
-		                                data->h, data->A_s, data->n_s, -1, -1, -1, -1, NULL, NULL, &status);
-	}
+  const gdouble Omega_k = test_data->use_Omega_k ? test_data->Omega_k : (1.0 - test_data->Omega_c - test_data->Omega_b - test_data->Omega_v);
+  const gdouble Neff    = test_data->use_Neff_func ? neff_from_n_ur_n_ncdm (test_data->N_ur, test_data->N_ncdm) : test_data->Neff;
+  
+  params = ccl_parameters_create (test_data->Omega_c, test_data->Omega_b, Omega_k, 
+                                  Neff, (gdouble *)test_data->mnu, ccl_mnu_list, test_data->w_0, 
+                                  test_data->w_a, test_data->h, test_data->A_s, test_data->n_s, 
+                                  -1, -1, -1, -1, NULL, NULL, &status);
 
 	cosmo = ccl_cosmology_create (params, config);
-
-  g_free (data);
 
   return cosmo;
 }
@@ -278,201 +172,9 @@ test_nc_create_ccl_cosmo (gint i_model, gint i_Neff, gboolean has_mnu)
 /* NOMNU */
 
 void
-test_nc_ccl_dist_new_model1_noNeff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
+test_nc_ccl_dist_new (TestNcCCLDist *test, gconstpointer pdata)
 {
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (0, 0, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model2_noNeff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, 0, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model3_noNeff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, 0, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model4_noNeff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, 0, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model5_noNeff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (4, 0, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model1_Neff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (0, 1, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model2_Neff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, 1, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model3_Neff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, 1, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model4_Neff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, 1, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model5_Neff_nomnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (4, 1, FALSE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-/* MNU */
-
-void
-test_nc_ccl_dist_new_model1_noNeff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (0, 0, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model2_noNeff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, 0, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model3_noNeff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, 0, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model4_noNeff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, 0, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model5_noNeff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (4, 0, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model1_Neff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (0, 1, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model2_Neff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, 1, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model3_Neff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, 1, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model4_Neff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, 1, TRUE);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-	test->dist      = nc_distance_new (MAX_Z);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_dist_new_model5_Neff_mnu (TestNcCCLDist *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (4, 1, TRUE);
+  test->ccl_cosmo = test_nc_create_ccl_cosmo (pdata);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 	test->dist      = nc_distance_new (MAX_Z);
   
@@ -607,16 +309,16 @@ test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_bbks_traps (TestNcCCLDist *test, gconstpointer pdata)
+test_nc_ccl_dist_traps (TestNcCCLDist *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION(2,38,0)
-  g_test_trap_subprocess ("/nc/ccl/model1/bbks/invalid/st/subprocess", 0, 0);
+  g_test_trap_subprocess ("/nc/ccl/dist/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }
 
 void
-test_nc_ccl_bbks_invalid_st (TestNcCCLDist *test, gconstpointer pdata)
+test_nc_ccl_dist_invalid_st (TestNcCCLDist *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
 }

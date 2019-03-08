@@ -66,6 +66,10 @@ libnumcosmo_la_LIBADD =         \
 	sundials/libsundials.la \
 	toeplitz/libtoeplitz.la
 
+if NUMCOSMO_CHECK_CCL
+  libnumcosmo_la_LIBADD += $(CCL_LDFLAGS)
+endif
+
 ncm_sources = \
 	ncm_build_inline.c                   \
 	math/ncm_c.c                         \

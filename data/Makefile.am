@@ -4,6 +4,8 @@ SUBDIRS =
 
 data_observational_DATA = \
 	BBN_spline2d.obj                        \
+	BBN_2017_spline2d.obj                   \
+	BBN_2017_marcucci_spline2d.obj          \
 	nc_data_bao_a_eisenstein2005.obj        \
 	nc_data_bao_dhr_dar_sdss_dr11_2015.obj  \
 	nc_data_bao_dhr_dar_sdss_dr11_2015_LyaF_auto_cross.obj \

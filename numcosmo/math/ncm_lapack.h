@@ -74,7 +74,6 @@ gint ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmL
 
 GArray *ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
 gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
-void ncm_lapack_dtrsv (gchar uplo, gchar trans, gchar diag, NcmMatrix *A, NcmVector *v);
 
 #define NCM_LAPACK_CHECK_INFO(func,info) G_STMT_START { if ((info) != 0) g_error ("# NcmLapack[%s] error %4d", func, (info)); } G_STMT_END 
 

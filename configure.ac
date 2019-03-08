@@ -255,6 +255,12 @@ if test x$enable_simd_ext_flags = "xyes"; then
   AC_SUBST(CPUEXT_FLAGS)
   CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
 fi
+
+dnl checking if -fvisibility=hidden is available
+VISIBILITY_HIDDEN_FLAG=""
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],[VISIBILITY_HIDDEN_FLAG="-fvisibility=hidden"])
+AC_SUBST(VISIBILITY_HIDDEN_FLAG)
+
 ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 dnl ***************************************************************************

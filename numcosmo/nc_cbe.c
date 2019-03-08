@@ -77,6 +77,7 @@ enum
 	PROP_TENSOR_LMAX,
 	PROP_MATTER_PK_MAXZ,
 	PROP_MATTER_PK_MAXK,
+  PROP_USE_PPF,
   PROP_VERBOSE
 };
 
@@ -157,16 +158,18 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->pba.wa_fld              = 0.0;
   cbe->priv->pba.Omega_EDE           = 0.0;
 	cbe->priv->pba.cs2_fld             = 0.0;
-  cbe->priv->pba.use_ppf             = FALSE;
+  cbe->priv->pba.use_ppf             = _FALSE_;
   cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
   cbe->priv->pba.shooting_failed     = _FALSE_;
 
+  cbe->priv->pba.got_files                = NULL;
+  cbe->priv->pba.m_ncdm_in_eV             = NULL;
   cbe->priv->pba.ncdm_quadrature_strategy = NULL;
   cbe->priv->pba.ncdm_input_q_size        = NULL;
   cbe->priv->pba.ncdm_qmax                = NULL;
-  
+
 	/* thermodynamics structure */
-  
+
 	cbe->priv->pth.YHe                        = 0;
 	cbe->priv->pth.recombination              = 0;
 	cbe->priv->pth.reio_parametrization       = 0;
@@ -182,6 +185,15 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->pth.binned_reio_z              = NULL;
 	cbe->priv->pth.binned_reio_xe             = NULL;
 	cbe->priv->pth.binned_reio_step_sharpness = 0.0;
+
+	cbe->priv->pth.many_tanh_num              = 0;
+	cbe->priv->pth.many_tanh_z                = NULL;
+	cbe->priv->pth.many_tanh_xe               = NULL;
+	cbe->priv->pth.many_tanh_width            = 0.0;
+
+	cbe->priv->pth.reio_inter_num             = 0;
+	cbe->priv->pth.reio_inter_z               = NULL;
+	cbe->priv->pth.reio_inter_xe              = NULL;
 
 	cbe->priv->pth.annihilation               = 0.0;
 	cbe->priv->pth.decay                      = 0.0;
@@ -448,6 +460,9 @@ _nc_cbe_set_property (GObject* object, guint prop_id, const GValue* value, GPara
 	case PROP_MATTER_PK_MAXK:
 		nc_cbe_set_max_matter_pk_k (cbe, g_value_get_double (value));
 		break;
+	case PROP_USE_PPF:
+		nc_cbe_use_ppf (cbe, g_value_get_boolean (value));
+		break;
 	case PROP_VERBOSE:
   {
     const guint verbosity = g_value_get_uint (value);
@@ -507,6 +522,9 @@ _nc_cbe_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec*
 		break;
 	case PROP_MATTER_PK_MAXK:
 		g_value_set_double (value, nc_cbe_get_max_matter_pk_k (cbe));
+		break;
+	case PROP_USE_PPF:
+		g_value_set_boolean (value, cbe->priv->pba.use_ppf);
 		break;
 	case PROP_VERBOSE:
 		g_value_set_uint (value, cbe->bg_verbose);
@@ -642,7 +660,14 @@ nc_cbe_class_init (NcCBEClass* klass)
 	                                                      "Maximum mode k for matter Pk",
 	                                                      0.0, G_MAXDOUBLE, 1.0,
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
+  g_object_class_install_property (object_class,
+                                   PROP_USE_PPF,
+                                   g_param_spec_boolean ("use-ppf",
+                                                         NULL,
+                                                         "Whether to use PPF",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
 	                                 PROP_VERBOSE,
                                    g_param_spec_uint ("verbosity",
                                                       NULL,
@@ -1073,6 +1098,20 @@ guint nc_cbe_get_tensor_lmax (NcCBE* cbe)
 	return cbe->tensor_lmax;
 }
 
+/**
+ * nc_cbe_use_ppf:
+ * @cbe: a #NcCBE
+ * @use_ppf: whether to use PPF
+ * 
+ * Sets if PPF should be used.
+ * 
+ */
+void
+nc_cbe_use_ppf (NcCBE *cbe, gboolean use_ppf)
+{
+  cbe->priv->pba.use_ppf = use_ppf ? _TRUE_ : _FALSE_;
+}
+
 static void
 _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 {
@@ -1132,7 +1171,7 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 
         pba->Omega0_ncdm_tot  += pba->Omega0_ncdm[nu_i];
 
-        pba->ncdm_quadrature_strategy[nu_i] = 0;
+        pba->ncdm_quadrature_strategy[nu_i] = qm_auto;
         pba->ncdm_input_q_size[nu_i]        = -1;
         pba->ncdm_qmax[nu_i]                = 15.0;
       }
@@ -1207,9 +1246,9 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	else
 	{
 		cbe->priv->pba.Omega0_k = 0.0;
+		cbe->priv->pba.a_today  = 1.0;
 		cbe->priv->pba.K        = 0.0;
 		cbe->priv->pba.sgnK     = 0;
-		cbe->priv->pba.a_today  = 1.0;
 	}
 
   if (NC_IS_HICOSMO_DE_XCDM (cosmo))
@@ -1253,8 +1292,12 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
   }
   else
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
+
+  cbe->priv->pba.Omega_EDE          = 0.0;
+  cbe->priv->pba.c_gamma_over_c_fld = 0.4;
+  cbe->priv->pba.Omega_ini_dcdm     = 0.0;
   
-  cbe->priv->pba.shooting_failed = _FALSE_;
+  cbe->priv->pba.shooting_failed    = _FALSE_;
 	cbe->priv->pba.background_verbose = cbe->bg_verbose;
 }
 
@@ -1264,34 +1307,26 @@ _nc_cbe_set_thermo (NcCBE* cbe, NcHICosmo* cosmo)
 	NcHIReion* reion = nc_hicosmo_peek_reion (cosmo);
 	struct precision* ppr = (struct precision*)cbe->prec->priv;
 
-	g_assert (reion != NULL);
-
 	cbe->priv->pth.YHe                  = nc_hicosmo_Yp_4He (cosmo);
 	cbe->priv->pth.recombination        = recfast;
-	cbe->priv->pth.reio_parametrization = reio_camb;
-  
-	if (NC_IS_HIREION_CAMB (reion))
-	{
-		cbe->priv->pth.reio_z_or_tau = reio_z;
-		cbe->priv->pth.z_reio        = ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z);
-		cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
-	}
-	else
-	{
-		cbe->priv->pth.reio_z_or_tau = reio_tau;
-		cbe->priv->pth.z_reio        = 13.0;
-		cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
-	}
-  
+	cbe->priv->pth.reio_parametrization = (reion == NULL) ? reio_none : reio_camb;
+
+  g_assert (NC_IS_HIREION_CAMB (reion));
+
+  cbe->priv->pth.reio_z_or_tau = reio_z;
+  cbe->priv->pth.z_reio        = ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z);
+  cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
+
 	cbe->priv->pth.reionization_exponent      = 1.5;
 	cbe->priv->pth.reionization_width         = 0.5;
 	cbe->priv->pth.helium_fullreio_redshift   = 3.5;
 	cbe->priv->pth.helium_fullreio_width      = 0.5;
-	cbe->priv->pth.binned_reio_num            = 0;
+
+  cbe->priv->pth.binned_reio_num            = 0;
 	cbe->priv->pth.binned_reio_z              = NULL;
 	cbe->priv->pth.binned_reio_xe             = NULL;
 	cbe->priv->pth.binned_reio_step_sharpness = 0.3;
-
+  
 	cbe->priv->pth.annihilation               = 0.0;
 	cbe->priv->pth.decay                      = 0.0;
 	cbe->priv->pth.annihilation_variation     = 0.0;
@@ -1353,7 +1388,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.switch_lisw                         = 1;
 	cbe->priv->ppt.switch_dop                          = 1;
 	cbe->priv->ppt.switch_pol                          = 1;
-	cbe->priv->ppt.eisw_lisw_split_z                   = 120;
+	cbe->priv->ppt.eisw_lisw_split_z                   = 120.0;
 
 	cbe->priv->ppt.has_ad                              = _TRUE_;
 	cbe->priv->ppt.has_bi                              = _FALSE_;
@@ -1379,6 +1414,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.gauge                               = synchronous;
 
 	cbe->priv->ppt.k_output_values_num                 = 0;
+  /*cbe->priv->ppt.k_output_values[0]                  = NULL;*/
 	cbe->priv->ppt.store_perturbations                 = _FALSE_;
 	cbe->priv->ppt.number_of_scalar_titles             = 0;
 	cbe->priv->ppt.number_of_vector_titles             = 0;
@@ -1575,9 +1611,8 @@ static void
 _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
 {
 	struct precision* ppr = (struct precision*)cbe->prec->priv;
-
 	_nc_cbe_set_bg (cbe, cosmo);
-	if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
+  if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
 		g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
 }
 
@@ -1589,6 +1624,21 @@ _nc_cbe_call_thermo (NcCBE* cbe, NcHICosmo* cosmo)
 	_nc_cbe_call_bg (cbe, cosmo);
 
 	_nc_cbe_set_thermo (cbe, cosmo);
+
+  if (FALSE)
+  {
+    struct background *pba = &cbe->priv->pba;
+    struct thermo *pth     = &cbe->priv->pth;
+
+    printf ("#NC:  % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g\n", 
+            pba->h, pba->T_cmb, pba->Omega0_g, pba->Omega0_ur, 
+            pba->Omega0_b, pba->Omega0_cdm, pba->Omega0_dcdmdr, pba->Omega0_dcdm, 
+            pba->Gamma_dcdm, pba->N_ncdm, pba->Omega0_ncdm_tot, pba->Omega0_scf, 
+            pba->Omega0_k, pba->Omega0_lambda, pba->Omega0_fld, pba->a_today, 
+            pba->w0_fld, pba->wa_fld, pba->cs2_fld, pba->use_ppf, pba->c_gamma_over_c_fld, 
+            pth->z_reio);
+  }
+
 	if (thermodynamics_init (ppr, &cbe->priv->pba, &cbe->priv->pth) == _FAILURE_)
 		g_error ("_nc_cbe_call_thermo: Error running thermodynamics_init `%s'\n", cbe->priv->pth.error_message);
 }
@@ -2187,6 +2237,21 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 
 		return lnPk_s;
 	}
+}
+
+/**
+ * nc_cbe_get_sigma8:
+ * @cbe: a #NcCBE
+ * 
+ * Computes the value of $\sigma_8$ as computed by CLASS, usually with errors $\propto 10^{-4}$.
+ * For better precision use: nc_powspec_ml_sigma_R() or #NcmPowspecFilter. 
+ * 
+ * Returns: the value of $\sigma_8$ as computed by CLASS.
+ */
+gdouble 
+nc_cbe_get_sigma8 (NcCBE *cbe)
+{
+  return cbe->priv->psp.sigma8;
 }
 
 /**

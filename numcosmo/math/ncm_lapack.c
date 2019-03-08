@@ -1442,31 +1442,3 @@ ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, Ncm
   return -1;
 #endif
 }
-
-/**
- * ncm_lapack_dtrsv:
- * @uplo: FIXME
- * @trans: FIXME
- * @diag: FIXME
- * @A: FIXME
- * @v: FIXME
- * 
- * Runs the dtrsv function.
- * 
- */
-void
-ncm_lapack_dtrsv (gchar uplo, gchar trans, gchar diag, NcmMatrix *A, NcmVector *v)
-{
-#if defined (HAVE_LAPACK) && defined (HAVE_DTRSV_)
-  gint N      = ncm_vector_len (v);
-  gint stride = ncm_vector_stride (v);
-  trans       = _NCM_LAPACK_CONV_TRANS (trans);
-  uplo        = _NCM_LAPACK_CONV_UPLO (uplo);
-  
-  dtrsv_ (&uplo, &trans, &diag, &N, ncm_matrix_data (A), &N, ncm_vector_data (v), &stride);
-#else
-  g_error ("ncm_lapack_dtrsv: lapack[dtrsv] support is necessary.");
-  return -1;
-#endif
-
-}

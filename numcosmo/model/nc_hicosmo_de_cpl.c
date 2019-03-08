@@ -38,10 +38,14 @@
 
 #include "model/nc_hicosmo_de_cpl.h"
 #include "nc_hiprim_power_law.h"
+#include "nc_hireion_camb.h"
+#include "nc_powspec_ml_cbe.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_CCL
 #include <ccl.h>
 #endif /* HAVE_CCL */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHICosmoDECpl, nc_hicosmo_de_cpl, NC_TYPE_HICOSMO_DE);
 
@@ -162,7 +166,9 @@ nc_hicosmo_de_cpl_class_init (NcHICosmoDECplClass *klass)
  * nc_hicosmo_de_cpl_new_from_ccl: (skip)
  * @ccl_params: a poiter to ccl_parameters
  * 
- * Creates a new CPL model from @ccl_params.
+ * Creates a new CPL model from @ccl_params. If $\sigma_8$ is used instead
+ * of $A_s$, then CLASS is used to compute the actual spectrum amplitude $A_s$.
+ * This is done to mimic the way CCL computes $A_s$.
  * 
  * Returns: the newly created #NcHICosmoDECpl object.
  */
@@ -190,22 +196,47 @@ nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params)
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w0",      ccl_params->w0);
   ncm_model_param_set_by_name (NCM_MODEL (cpl), "w1",      ccl_params->wa);
 
+  {
+    const gdouble N_ur = ccl_params->Neff - nmnu * pow (ccl_constants.TNCDM, 4.0) / pow (4.0 / 11.0, 4.0 / 3.0);
+    if (N_ur < 0.0)
+      g_error ("# nc_hicosmo_de_cpl_new_from_ccl: inconsistent neutrino Neff [% 22.15g], number of relativistic neutrinos will be negative [% 22.15g].", 
+               ccl_params->Neff, N_ur);
+    ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu", N_ur);
+  }
 
   {
-    const gdouble cNeff = nc_hicosmo_Neff (NC_HICOSMO (cpl));
-    const gdouble dNeff = ccl_params->Neff - cNeff;
-    if (dNeff < 0.0)
-      g_error ("# nc_hicosmo_de_cpl_new_from_ccl: inconsistent neutrino Neff [% 22.15g], number of relativistic neutrinos will be negative [% 22.15g].", 
-               ccl_params->Neff, dNeff);
-    ncm_model_param_set_by_name (NCM_MODEL (cpl), "ENnu", dNeff);
+    NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+    ncm_model_add_submodel (NCM_MODEL (cpl), NCM_MODEL (reion));
+    ncm_model_param_set_by_name (NCM_MODEL (reion), "z_re", 11.357); /* default CLASS value */
   }
 
   {
     NcHIPrim *prim = NC_HIPRIM (nc_hiprim_power_law_new ());
-    ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA", log (1.0e10 * ccl_params->A_s));
+
     ncm_model_param_set_by_name (NCM_MODEL (prim), "n_SA",       ccl_params->n_s);
-    
     ncm_model_add_submodel (NCM_MODEL (cpl), NCM_MODEL (prim));
+        
+    if (gsl_finite (ccl_params->A_s))
+      ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA", log (1.0e10 * ccl_params->A_s));
+    else
+    {
+      NcPowspecMLCBE *ps_cbe = nc_powspec_ml_cbe_new ();
+      NcCBE *cbe             = nc_powspec_ml_cbe_peek_cbe (NC_POWSPEC_ML_CBE (ps_cbe));
+
+      nc_cbe_use_ppf (cbe, TRUE);
+
+      ncm_powspec_require_zi (NCM_POWSPEC (ps_cbe), 0.0);
+      ncm_powspec_require_zf (NCM_POWSPEC (ps_cbe), 0.1);
+      ncm_powspec_require_kmin (NCM_POWSPEC (ps_cbe), 1.0e-5);
+      ncm_powspec_require_kmax (NCM_POWSPEC (ps_cbe), 1.0e+1);
+        
+      ncm_powspec_prepare (NCM_POWSPEC (ps_cbe), NCM_MODEL (cpl));
+
+      ncm_model_param_set_by_name (NCM_MODEL (prim), "ln10e10ASA",
+                                   ncm_model_param_get_by_name (NCM_MODEL (prim), "ln10e10ASA") + 2.0 * log (ccl_params->sigma8 / nc_cbe_get_sigma8 (cbe)));
+        
+      nc_powspec_ml_free (NC_POWSPEC_ML (ps_cbe));
+    }
   }
 
   return cpl;

@@ -66,7 +66,7 @@ static void
 nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *filename   = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
+  gchar *filename   = ncm_cfg_get_data_filename ("BBN_2017_spline2d.obj", TRUE);
   gint i;
 
   cosmo_de->priv               = G_TYPE_INSTANCE_GET_PRIVATE (cosmo_de, NC_TYPE_HICOSMO_DE, NcHICosmoDEPrivate);
@@ -566,7 +566,7 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
                                               wb, DNeff);
         ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
         cosmo_de->priv->HE4_Yp_key = model->pkey;
-        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp); */
+        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp);*/
       }
     }
   }

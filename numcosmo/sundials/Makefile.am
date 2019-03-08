@@ -6,11 +6,14 @@ MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 -I$(SUNDIALS_DIR)/include   \
 	 $(SUNDIALS_DEFINES)         \
-	 $(OPENMP_CFLAGS)
+	 $(OPENMP_CFLAGS)            \
+	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
+
+AM_LDFLAGS = $(VISIBILITY_HIDDEN_FLAG)
 
 SUBDIRS = .
 

@@ -498,7 +498,7 @@ gdouble
 _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_f (guint n, const gdouble *x, gdouble *grad, gpointer f_data)
 {
   const gdouble fx = _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (x[0], f_data);
-  printf ("# % 22.15g % 22.15g\n", x[0], fx);
+  /*printf ("# % 22.15g % 22.15g\n", x[0], fx);*/
   return fx;
 }
 
@@ -542,7 +542,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_f (guint n, const gdouble *x, gdoub
     ret = ncm_lapack_dsytrf ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
     if (ret != 0)
     {
-      printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);
+      /*printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);*/
       return 1.0e20;
     }
 
@@ -572,6 +572,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_f (guint n, const gdouble *x, gdoub
 		err += gsl_pow_2 (ncm_vector_get (self->zeta, i) / (ncm_matrix_get (self->IM, i, i)));
 	}
 
+  if (FALSE)
   {
     NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
     ncm_matrix_triang_to_sym (cov, 'U', TRUE);
@@ -605,6 +606,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_f (guint n, const gdouble *x, gdoub
     }
     printf ("#--------------------------------------------------------------------------------------------------------------\n");
     printf ("err: % 22.15g\n", err);
+    
     ncm_matrix_free (cov);
   }
   
@@ -638,7 +640,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f (gdouble *x, gdouble *hx, 
   self->us_lnnorm = 0.5 * (self->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (self->cov_decomp));
   self->lnnorm    = self->us_lnnorm;
 
-printf ("CMP DETS: % 22.15g % 22.15g\n", tr_log_cov, ncm_matrix_cholesky_lndet (self->cov_decomp));
+  /*printf ("CMP DETS: % 22.15g % 22.15g\n", tr_log_cov, ncm_matrix_cholesky_lndet (self->cov_decomp));*/
   
   _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
 	ret = ncm_matrix_cholesky_decomp (self->IM, 'U');	
@@ -652,7 +654,7 @@ printf ("CMP DETS: % 22.15g % 22.15g\n", tr_log_cov, ncm_matrix_cholesky_lndet (
     ret = ncm_lapack_dsytrf ('U', self->n, ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM), &g_array_index (self->ipiv, gint, 0), self->lapack_ws);
     if (ret != 0)
     {
-      printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);
+      /*printf ("ERR DEC2 h % 22.15g err % 22.15e %d\n", 0.0, 1.0e20, ret);*/
     }
 
     ncm_vector_memcpy (self->zeta, self->weights);
@@ -682,6 +684,7 @@ printf ("CMP DETS: % 22.15g % 22.15g\n", tr_log_cov, ncm_matrix_cholesky_lndet (
     err += gsl_pow_2 (hx[i]);
 	}
 
+  if (FALSE)
   {
     NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
     ncm_matrix_triang_to_sym (cov, 'U', TRUE);
@@ -757,22 +760,26 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
         k++;
       }
     }
-    
-    gdouble info[LM_INFO_SZ];
-    gdouble opts[LM_OPTS_SZ];
-    gint ret;
 
-    opts[0] = LM_INIT_MU; 
-    opts[1] = 1.0e-15; 
-    opts[2] = 1.0e-15;
-    opts[3] = 1.0e-20;
+    {
+      gdouble info[LM_INFO_SZ];
+      gdouble opts[LM_OPTS_SZ];
+      gint ret;
 
-    ret = dlevmar_dif (&_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f,
-                       ht, NULL, n, self->n, 10000,   
-                       opts, info, NULL, NULL, self);
+      opts[0] = LM_INIT_MU; 
+      opts[1] = 1.0e-15; 
+      opts[2] = 1.0e-15;
+      opts[3] = 1.0e-20;
 
-    g_free (dht);
-    g_free (ht);
+      ret = dlevmar_dif (&_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f,
+                         ht, NULL, n, self->n, 10000,   
+                         opts, info, NULL, NULL, self);
+      if (ret < 0)
+        g_error ("_ncm_stats_dist_nd_kde_gauss_calib_href: could not find the bestfit covariance matrix.");
+
+      g_free (dht);
+      g_free (ht);
+    }
   }
   else
   {
