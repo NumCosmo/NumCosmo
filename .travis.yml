@@ -29,6 +29,8 @@ addons:
     - libcfitsio3-dev
     - libnlopt-dev
     - libgsl-dev
+    - libopenblas-dev
+    - liblapack3
     - texlive
     - texlive-bibtex-extra
     - texlive-science
