@@ -1369,7 +1369,7 @@ ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
   {
     const gdouble e_val = ncm_vector_get (eva, i);
     if (e_val <= 0.0)
-      g_error ("ncm_matrix_sym_posdef_log: cannot compute the logarithm, matrix not positive definite.");
+      g_error ("ncm_matrix_sym_posdef_log: cannot compute the logarithm, matrix not positive definite [%d, % 22.15g].", i, e_val);
     cblas_dscal (n, log (e_val), ncm_matrix_ptr (eve, i, 0), 1);
   }
 

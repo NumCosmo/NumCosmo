@@ -358,6 +358,8 @@
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
+      <xi:include href="xml/nc_reduced_shear_calib.xml"/>
+      <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
     </section>
     <section>
       <title>Galaxy ACF</title>
