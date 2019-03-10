@@ -3,7 +3,399 @@ CHANGELOG
 
 [Current]
 
+[v0.14.2]
+ * Minor version update 0.14.1 => 0.14.2.
+
+     Minor improvements in ncm_ode_spline.
+
+ * Added missing header (in some contexts).
+
+ * Fixed aliasing problem in ncm_matrix_triang_to_sym. Removed log info from
+     travis-ci.
+
+ * Fixing doc issues, added missing docs. Better debug message for
+     ncm_matrix_sym_posdef_log. Fixing travis-ci.
+
+ * Added debug to travis-ci. Included sundials at the ignore list for
+     documentation.
+
+ * Removed no python option in numpy.
+
+ * Lapack now is required, added openblas and lapack to travis-ci. Added
+     no-undefined (when available) to libnumcosmo.
+
+ * Added redshift direction tolerance for NcmPowspecFilter. New unit test
+     CCLxNumCosmo test_nc_ccl_massfunc.
+
+ * Finished upgrade to CLASS 2.7.1. Added option to hide symbols of dependencies.
+     Finished CCL tests for background, distances and Pk (BBKS, EH, CLASS).
+     Minor tweaks.
+
+ * Updated CLASS to version 2.7.1.
+
+ * Fixed a typo in the transverse distance. Test distances: Nc and CCL.
+
+ * Missing unit test file.
+
+ * Added warning for initial point in minimization not being finite.
+
+ * Added support for CCL, first unit test for NumCosmo and CCL comparison. Minor
+     improvements in NcHIQG1D.
+
+ * Missing file.
+
+ * Moved to xenial in travis ci.
+
+ * Removed backports repository in travis-ci (it no longer exists...), waiting for
+     something to break.
+
+ * Removed sundials as dependence in travis-ci.
+
+ * Updated to new sundials version -- 4.1.0.
+
+ * Updated directory structure to match that of the new version (4.1.0).
+
+ * Encapsulating sundials version 4.0.2. Many additions and improvements.
+
+     Reorganized all ode interfaces to match last sundials release. Testing a
+     new abstract ODE framework (NcmODE*). New lapack functions added and old
+     functions migrated to use NcmLapackWS. New matrix tests (also migrated to
+     the newer unit test interface). New matrix log and exp functions added. 
+     Testing the fit of the whole covariance matrix in NcmStatsDistNdKDEGauss. 
+     Several minor improvements.
+
+ * Added calibration objects for the reduced shear.
+
+ * Working on the new ODE interface.
+
+ * Fixed version mismatch.
+
+ * Added back support for sundials 2.5.0 (as used by Ubuntu trusty).
+
+ * Better support for Sundials versions, now it detects the version automatically.
+     Minimum Sundials version is 2.6.0, minor updates to codes using Sundials.
+
+ * New sampling options for NcmMSetTransKernCat object, testing new sampling
+     options in test_ncm_fit_esmcmc.
+
+ * Removed non-unsed typedef.
+
+ * Removing unecessary headers.
+
+ * New test to determine the burnin phase (better fitted for low self-correlation
+     samplers).
+
+ * Travis OK, removing log.
+
+ * Travis...
+
+ * Still testing travis.
+
+ * Testing travis builds.
+
+ * Fixing travis syntax.
+
+ * Triggering travis.
+
+ * Cleaning and updating NcmHOAA, fixing travis ci bug in mac os.
+
+ * Fixed mac os image.
+
+ * Testing travis ci, mac os config.
+
+ * Debugging travis glitch in mac os.
+
+ * Updated travis.yml to match new environment (again...)
+
+ * Fixed minor documentation bugs.
+
+ * Added new header for fortran lapack functions prototypes.
+
+ * Added conditional macro compilation of the new suave support in Xcor.
+
+ * New walker `Approximate Posterior Sampling' APS based on RBF interpolation
+     using (NcmStatsDistNdKDEGauss).
+
+ * Trying a different approach for the new walker.
+
+ * Tests for the multidimensional kernel interpolation/density estimation object.
+
+ * Added two codes for quadratic programming gsl_qp (gsl extras) and LowRankQP
+     (borrowed from R). New ESMCMC walker Newton (does not work as expected,
+     transforming in another sampler in the next commit). New multidimensional
+     kernel interpolation/density estimation for arbitrary distribution
+     (abstract interface and gaussian kernel implementation).
+
+ * Removed an exit() in example_diff.py. Added support for new version for
+     sundials.
+
+ * Support for the new Sundials version.
+
+ * Updated tests for the new interface for lnnorm computation (including error).
+
+ * New tool for trimming catalogs, fixed typos in parameters names in NcHIPrim*.
+     Fixed error estimation in the posterior normalization.
+
+ * Fixed minor issues from codacy.
+
+ * Fixing macos+travis issue.
+
+ * Removed old includes in tests. Added debug in travis.
+
+ * Moved MVND objects to main library code. Improved estimates of the Bayes
+     factor, included new unit tests.
+
+ * Change tau range. My tau definition is different from root (CERN) code. Voigt
+     profile.
+
+ * Fixed: updated deprecated glib functions. Included new Sundials version in
+     configure.
+
+ * Fixed and tested (against CCL) the galaxy weak lensing module inside XCOR.
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * Testing PITCHME.md
+
+ * New PITCHME.md presentation. Tweaks on pydata_simple example. Minor bug fixes.
+
+ * Included missing property "dists" (Photo-z distributions) in class_init.
+
+     Included NcDataReducedShear... and NcGalaxyRedshift... in ncm_cfg.c
+
+ * Included other variable types to be read from hdf5 catalog.
+
+ * Added a fix to avoid setting null sparam-array.
+
+ * Proper serialization of model with modified parameter properties and no
+     reparametrization.
+
+ * Fixed stupid bug.
+
+ * Turned backport function static to avoid double definition.
+
+ * Add option to choose parameter by name in mcat_analize.
+
+ * New options on mcat_analize to control dump. Updated parameters range in
+     nc_hicosmo_de and nc_hicosmo_lcdm.
+
+ * Fixed missing doc.
+
+ * Finished ESMCMC MPI support.
+
+ * New bindable ncm_mset_func1 abstract class. Included function array in
+     example_esmcmc.py. Fixed bug in function array + ncm_fit_esmcmc + MPI.
+
+ * Fixed flags search when using ifort/icc. Added missing objects registry.
+
+ * Added guard to avoid parsing blas header during g-ir-scanner.
+
+ * Moved HDF5 LDFLAGS to LIBS.
+
+ * Re-included gslblas inclusion/removal in configure.ac.
+
+ * Included additional sundials library to LIBS.
+
+ * Inverted header order to avoid clash with CLASS headers. Added backport from
+     glib 2.54.
+
+ * Better serialization of constraint tolerance arrays.
+
+ * Safeguards in NcmVector constructors.
+
+ * Fixing minor leaks.
+
+ * Fixed initializer (to remove harmless warning).
+
+ * Added conditional compiling of _nc_hiqg_1d_bohm_f.
+
+ * Fixed MPIJob crash when MPI is not supported.
+
+ * Fixed leaks in ncm_fit_esmcmc.c, ncm_mpi_job_fit.c and ncm_mpi_job_mcmc.c.
+
+ * Updated tests and removed debug info from travis-ci.
+
+ * Fixed blas detection (ax_check_typedef is broken! Now using AC_CHECK_TYPES).
+
+ * Debugging travis-ci build.
+
+ * Debugging travis-ci macos build.
+
+ * Typo in blas enum detection.
+
+ * Detecting lapack xblas functions availability. Fixing cblas headers in
+     different scenarios.
+
+ * Fixing BLAS headers compatibility.
+
+ * Included new functions on NcWLSurfaceMassDensity: critical surface mass
+     density, shear and convergence new functions are computed when the source
+     plane is at infinite redshift.
+
+     Bug fixed in nc_data_reduced_shear_cluster_mass.c: the probability function
+     of the reduced convergence is computed using the reduced shear at infinite
+     redshift.
+
+ * First working version of ncm_fit_esmcmc + MPI. Example pysimple updated.
+
+ * First working version of nc_hiqg_1d.h (some speed-ups are still necessary).
+
+ * Missing object files.
+
+ * Renaming quantum gravity object.
+
+ * Added a front-end for other lapack functions. Reorganized the blas header
+     inclusion. Working in progress in ncm_qm_prop, last commit before removing
+     different approaches code.
+
+ * New examples and working in progress for NcmFitESMCMC and NcmMPIJobMCMC.
+
+ * Finished support for complex messages in NcmMPIJob. Two implementations tested
+     NcmMPIJobTest and NcmMPIJobFit. Working on NcmFitESMCMC parallelization
+     using MPI.
+
+ * Documentation.
+
+ * Finished the first version of MPI support, including the helper objects
+     NcmMPIJob*.
+
+ * Trying different interpolation methods in ncm_qm_prop.c.
+
+ * Workaround travis-ci problem.
+
+ * Fixed test test_nc_wl_surface_mass_density.c.
+
+ * Removed leftover headers in ncm_spline_rbf.c.
+
+ * Updated example example_wl_surface_mass_density.py.
+
+ * First working version of nc_data_reduced_shear_cluster_mass. Improvements in
+     all related objects.
+
+ * Added support (optional) to HDF5. New objects NcGalaxyRedshift,
+     NcGalaxyRedshiftSpec and NcGalaxyRedshiftSpline to describe galaxy redshift
+     distributions. Included support for loading hdf5 catalog in
+     nc_data_reduced_shear_cluster_mass.
+
+ * Fixed bug: ncm_util_position_angle was returning -(Pi/2 - theta). Corrected to
+     return theta.
+
+ * Removed printf in great_circle_distance function.
+
+ * Implemented the position_angle and great_circle_distances functions.
+
+ * Included new lapack encapsulation functions. Trying different methods in
+     NcmQMProp. New 1D interpolation object NcmSplineRBF.
+
+ * Removed unnecessary range check in gobject parameter properties. Working on
+     ncm_qm_prop.
+
+ * Added function eval_full to nc_xcor_limber_kernel.
+
+ * Added missing conditional compilation of MPI support.
+
+ * First tests of MPI slaves.
+
+ * Testing different autoconf mpi detections.
+
+
 [v0.14.1]
+ * Removed deploy and less verbosity on make.
+
+ * Removed extra header.
+
  * New version 0.14.1.
 
  * Included link for parallel linear solvers in sundials. Fixed bug in nc_cbe

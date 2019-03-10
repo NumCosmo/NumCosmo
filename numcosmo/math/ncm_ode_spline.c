@@ -65,6 +65,7 @@ struct _NcmOdeSplinePrivate
   gboolean hnil;
   gboolean stop_hnil;
   gboolean auto_abstol;
+  gdouble ini_step;
   NcmModelCtrl *ctrl;
 };
 
@@ -81,6 +82,7 @@ enum
   PROP_SPLINE,
   PROP_STOP_HNIL,
   PROP_AUTO_ABSTOL,
+  PROP_INI_STEP,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT);
@@ -114,6 +116,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->hnil        = FALSE;
   self->stop_hnil   = FALSE;
   self->auto_abstol = FALSE;
+  self->ini_step    = 0.0;
   self->ctrl        = ncm_model_ctrl_new (NULL);
 
   self->NLS = SUNNonlinSol_FixedPoint (self->y, 0);
@@ -160,6 +163,9 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_AUTO_ABSTOL:
       ncm_ode_spline_auto_abstol (os, g_value_get_boolean (value));
       break;
+    case PROP_INI_STEP:
+      ncm_ode_spline_set_ini_step (os, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -204,6 +210,9 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_AUTO_ABSTOL:
       g_value_set_boolean (value, self->auto_abstol);
+      break;
+    case PROP_INI_STEP:
+      g_value_set_boolean (value, ncm_ode_spline_get_ini_step (os));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -337,6 +346,13 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          "Automatic abstol",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INI_STEP,
+                                   g_param_spec_double ("ini-step",
+                                                        NULL,
+                                                        "Integration initial step size",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static gint
@@ -346,6 +362,8 @@ _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
   NcmOdeSplinePrivate * const self = dydx_data->os->priv;
   NV_Ith_S (ydot, 0) = self->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
 
+  printf ("### % 22.15g % 22.15g % 22.15g\n", x, NV_Ith_S (y, 0), NV_Ith_S (ydot, 0));
+  
   return 0;
 }
 
@@ -423,7 +441,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
   if (self->auto_abstol)
   {
-    self->abstol = fabs (self->dydx (NV_Ith_S (self->y, 0), x, userdata) * self->reltol * NCM_ODE_SPLINE_MIN_STEP);
+    self->abstol = fabs (self->dydx (NV_Ith_S (self->y, 0), self->xi, userdata) * self->reltol * NCM_ODE_SPLINE_MIN_STEP);
   }
   else if ((self->yi == 0.0) && (self->abstol == 0.0))
     g_error ("ncm_ode_spline_prepare: cannot integrate system where y_ini == 0.0 and abstol == 0.0.");
@@ -461,7 +479,13 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   
   flag = CVodeSetUserData (self->cvode, &f_data);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-  
+
+  if (self->ini_step > 0.0)
+  {
+    flag = CVodeSetInitStep (self->cvode, self->ini_step);
+    NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );  
+  }
+
   x0 = self->xi;
   if (!gsl_finite (self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata)))
     g_error ("ncm_ode_spline_prepare: not finite integrand.");
@@ -706,6 +730,38 @@ ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on)
 {
   NcmOdeSplinePrivate * const self = os->priv;
   self->auto_abstol = on;
+}
+
+/**
+ * ncm_ode_spline_set_ini_step:
+ * @os: a #NcmOdeSpline
+ * @ini_step: the initial step
+ * 
+ * Sets a guess for the initial step size. If @ini_step is
+ * zero it uses the automatic determination based on the
+ * tolerances.
+ * 
+ */
+void 
+ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step)
+{
+  NcmOdeSplinePrivate * const self = os->priv;
+  self->ini_step = ini_step;
+}
+
+/**
+ * ncm_ode_spline_get_ini_step:
+ * @os: a #NcmOdeSpline
+ * 
+ * Gets the current guess for the initial step size. 
+ * 
+ * Returns: the current value of the initial guess (zero means disabled).
+ */
+gdouble
+ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
+{
+  NcmOdeSplinePrivate * const self = os->priv;
+  return self->ini_step;
 }
 
 /**

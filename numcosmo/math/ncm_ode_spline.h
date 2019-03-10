@@ -77,6 +77,9 @@ void ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi);
 void ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf);
 void ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on);
 
+void ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step);
+gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
+
 G_INLINE_FUNC NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
