@@ -575,7 +575,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_f (guint n, const gdouble *x, gdoub
   if (FALSE)
   {
     NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
-    ncm_matrix_triang_to_sym (cov, 'U', TRUE);
+    ncm_matrix_triang_to_sym (self->cov_decomp, 'U', TRUE, cov);
 
     k = 0;
     for (i = 0; i < self->d; i++)
@@ -687,7 +687,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f (gdouble *x, gdouble *hx, 
   if (FALSE)
   {
     NcmMatrix *cov = ncm_matrix_dup (self->cov_decomp);
-    ncm_matrix_triang_to_sym (cov, 'U', TRUE);
+    ncm_matrix_triang_to_sym (self->cov_decomp, 'U', TRUE, cov);
 
     k = 0;
     for (i = 0; i < self->d; i++)

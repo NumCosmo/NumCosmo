@@ -72,8 +72,6 @@ gdouble nc_hipert_get_mode_k (NcHIPert *pert);
 gboolean nc_hipert_prepared (NcHIPert *pert);
 void nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared);
 
-gpointer nc_hipert_peek_y (NcHIPert *pert);
-
 void nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size);
 void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
 void nc_hipert_reset_solver (NcHIPert *pert);

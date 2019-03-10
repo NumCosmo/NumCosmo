@@ -1390,7 +1390,8 @@ ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
  * ncm_matrix_triang_to_sym:
  * @cm: $M$ a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix
- * @zero: whether it should first set to zero the other side of the matrix 
+ * @zero: whether it should first set to zero the other side of the matrix
+ * @sym: a #NcmMatrix to store the result
  * 
  * Assuming that @cm is a triangular square matrix with data on @UL 
  * side, computes the symmetric matrix $M^\textsc{T}\times M$ if 
@@ -1403,12 +1404,14 @@ ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
  * 
  */
 void 
-ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero)
+ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym)
 {
   const guint n = ncm_matrix_ncols (cm);
   gint i;
 
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
+  g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (cm));
+  g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (sym));
 
   if (zero)
   {
@@ -1438,19 +1441,21 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero)
       g_assert_not_reached ();
   }
 
+  ncm_matrix_memcpy (sym, cm);
+  
   if (UL == 'U')
   {
     cblas_dtrmm (CblasRowMajor, 
                  CblasLeft, CblasUpper, CblasTrans, CblasNonUnit, n, n,
                  1.0, ncm_matrix_data (cm), ncm_matrix_tda (cm),
-                 ncm_matrix_data (cm), ncm_matrix_tda (cm));
+                 ncm_matrix_data (sym), ncm_matrix_tda (sym));
   }
   else if (UL == 'L')
   {
     cblas_dtrmm (CblasRowMajor,
                  CblasRight, CblasLower, CblasTrans, CblasNonUnit, n, n,
                  1.0, ncm_matrix_data (cm), ncm_matrix_tda (cm),
-                 ncm_matrix_data (cm), ncm_matrix_tda (cm));
+                 ncm_matrix_data (sym), ncm_matrix_tda (sym));
   }
   else
     g_assert_not_reached ();

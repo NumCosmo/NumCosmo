@@ -187,7 +187,7 @@ gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter);
 void ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec);
 void ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm);
-void ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero);
+void ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym);
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
 
 void ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng);

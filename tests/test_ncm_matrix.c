@@ -603,6 +603,7 @@ test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata)
   NcmMatrix *sm    = ncm_matrix_get_submatrix (test->m, nrows, ncols, test->nrows - nrows, test->ncols - ncols);
   NcmMatrix *dup   = ncm_matrix_dup (sm);
   NcmMatrix *exp_m = ncm_matrix_dup (sm);
+  NcmMatrix *exp_c = ncm_matrix_dup (sm);
   NcmMatrix *log_m = ncm_matrix_dup (sm);
 
   ncm_matrix_transpose (dup);
@@ -612,8 +613,15 @@ test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata)
 
   ncm_matrix_memcpy (dup, sm);
 
-  ncm_matrix_sym_exp_cholesky (sm, 'U', exp_m);
-  ncm_matrix_triang_to_sym (exp_m, 'U', TRUE);
+  /*printf ("\n"); ncm_matrix_log_vals (sm, "LOGM: ", "% 22.15g");*/
+  
+  ncm_matrix_sym_exp_cholesky (sm, 'U', exp_c);
+
+  /*printf ("\n"); ncm_matrix_log_vals (exp_c, "EXPC: ", "% 22.15g");*/
+
+  ncm_matrix_triang_to_sym (exp_c, 'U', TRUE, exp_m);
+
+  /*printf ("\n"); ncm_matrix_log_vals (exp_m, "EXPM: ", "% 22.15g");*/
 
   ncm_matrix_sym_posdef_log (exp_m, 'U', log_m);
   ncm_matrix_copy_triangle (log_m, 'U');
@@ -623,6 +631,7 @@ test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, sm);
   NCM_TEST_FREE (ncm_matrix_free, dup);
   NCM_TEST_FREE (ncm_matrix_free, exp_m);
+  NCM_TEST_FREE (ncm_matrix_free, exp_c);
   NCM_TEST_FREE (ncm_matrix_free, log_m);
 }
 
