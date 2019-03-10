@@ -57,6 +57,7 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFftlogSBesselJPrivate
