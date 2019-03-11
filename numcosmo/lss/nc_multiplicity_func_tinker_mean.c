@@ -167,7 +167,8 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
     const gdouble f_Tinker_mean = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
 
     //printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, mulf_tinker_mean->Delta, Delta_z, E2, Omega_m0, gsl_pow_3 (1.0 + z));
-
+    //printf ("NC: A = %22.15g a = %22.15g b = %22.15g c = %22.15g sigma = %22.15g\n", A, a, b, c, sigma);
+		
     return f_Tinker_mean;
   }
 }

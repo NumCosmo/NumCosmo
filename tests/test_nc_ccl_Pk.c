@@ -194,9 +194,10 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
 
   cosmo = ccl_cosmology_create (params, config);
 
-  cosmo->spline_params.A_SPLINE_NLOG_PK = 200;
-  cosmo->spline_params.A_SPLINE_NA_PK   = 200;
-  /*cosmo->spline_params.N_K              = 600;*/
+  /*cosmo->spline_params.A_SPLINE_NLOG_PK = 200;*/
+  /*cosmo->spline_params.A_SPLINE_NA_PK   = 200;*/
+  /*cosmo->spline_params.N_K              = 100;*/
+	/*cosmo->spline_params.K_MAX_SPLINE     = 1.0e3;*/
 
   g_free (data);
 
@@ -211,7 +212,7 @@ test_nc_ccl_pk_create_BBKS (TestNcCCLPk *test, gconstpointer pdata)
   test->Pk = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   test->gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (test->Pk));
 
-  nc_transfer_func_bbks_set_type (NC_TRANSFER_FUNC_BBKS (tf), NC_TRANSFER_FUNC_BBKS_TYPE_CCL);
+  nc_transfer_func_bbks_set_type (NC_TRANSFER_FUNC_BBKS (tf), NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS);
 
   ncm_powspec_require_zi (NCM_POWSPEC (test->Pk), 0.0);
   ncm_powspec_require_zf (NCM_POWSPEC (test->Pk), 6.0);
@@ -267,6 +268,8 @@ test_nc_ccl_pk_create_cbe (TestNcCCLPk *test, gconstpointer pdata)
   test->Pk = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
   cbe      = nc_powspec_ml_cbe_peek_cbe (NC_POWSPEC_ML_CBE (test->Pk));
 
+	nc_powspec_ml_cbe_set_intern_k_min (NC_POWSPEC_ML_CBE (test->Pk), test->ccl_cosmo->spline_params.K_MIN);
+	nc_powspec_ml_cbe_set_intern_k_max (NC_POWSPEC_ML_CBE (test->Pk), test->ccl_cosmo->spline_params.K_MAX_SPLINE);
   nc_cbe_use_ppf (cbe, TRUE);
   /*g_object_set (cbe, "verbosity", 1, NULL);*/
 
@@ -517,7 +520,7 @@ test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata)
         const gdouble cclPkz = ccl_linear_matter_power (test->ccl_cosmo, k, 1.0 / (1.0 + z), &status);
 
         ncm_assert_cmpdouble_e (Pkz, ==, cclPkz, tol_Pk, 0.0);
-        /*printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, Pkz, cclPkz, Pkz / cclPkz, Pkz / cclPkz - 1.0);*/
+        printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, Pkz, cclPkz, Pkz / cclPkz, Pkz / cclPkz - 1.0);
       }
     }
   }

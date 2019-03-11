@@ -43,6 +43,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcPowspecMLCBEClass NcPowspecMLCBEClass;
 typedef struct _NcPowspecMLCBE NcPowspecMLCBE;
+typedef struct _NcPowspecMLCBEPrivate NcPowspecMLCBEPrivate;
 
 struct _NcPowspecMLCBEClass
 {
@@ -54,9 +55,7 @@ struct _NcPowspecMLCBE
 {
   /*< private > */
   NcPowspecML parent_instance;
-  NcCBE *cbe;
-  NcmSpline2d *lnPk;
-  NcPowspecML *eh;
+	NcPowspecMLCBEPrivate *priv;
 };
 
 GType nc_powspec_ml_cbe_get_type (void) G_GNUC_CONST;
@@ -67,6 +66,11 @@ NcPowspecMLCBE *nc_powspec_ml_cbe_new_full (NcCBE *cbe);
 void nc_powspec_ml_cbe_set_cbe (NcPowspecMLCBE *ps_cbe, NcCBE *cbe);
 
 NcCBE *nc_powspec_ml_cbe_peek_cbe (NcPowspecMLCBE *ps_cbe);
+
+void nc_powspec_ml_cbe_set_intern_k_min (NcPowspecMLCBE *ps_cbe, const gdouble k_min);
+void nc_powspec_ml_cbe_set_intern_k_max (NcPowspecMLCBE *ps_cbe, const gdouble k_max);
+gdouble nc_powspec_ml_cbe_get_intern_k_min (NcPowspecMLCBE *ps_cbe);
+gdouble nc_powspec_ml_cbe_get_intern_k_max (NcPowspecMLCBE *ps_cbe);
 
 #define NC_POWSPEC_ML_CBE_INTERN_KMIN (1.0e-5)
 #define NC_POWSPEC_ML_CBE_INTERN_KMAX (1.0e1)
