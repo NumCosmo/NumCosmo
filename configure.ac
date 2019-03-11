@@ -261,6 +261,11 @@ VISIBILITY_HIDDEN_FLAG=""
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],[VISIBILITY_HIDDEN_FLAG="-fvisibility=hidden"])
 AC_SUBST(VISIBILITY_HIDDEN_FLAG)
 
+dnl checking if -no-undefined is available
+NOUNDEFINED_FLAG=""
+AX_CHECK_LINK_FLAG([-Wl,-no-undefined],[NOUNDEFINED_FLAG="-no-undefined"])
+AC_SUBST(NOUNDEFINED_FLAG)
+
 ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 dnl ***************************************************************************
@@ -840,6 +845,7 @@ if test "x$have_lapack" != "xno"; then
 
 else
   AC_MSG_RESULT([no])
+  AC_MSG_ERROR([Lapack not found.])
 fi
 
 dnl ***************************************************************************

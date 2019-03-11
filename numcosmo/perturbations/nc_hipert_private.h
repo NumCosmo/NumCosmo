@@ -33,6 +33,7 @@ G_BEGIN_DECLS
 
 struct _NcHIPertPrivate
 {
+  /*< private >*/
   gdouble alpha0;
   N_Vector y;
   SUNMatrix A;

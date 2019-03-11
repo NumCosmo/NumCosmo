@@ -106,6 +106,7 @@ IGNORE_HFILES= \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \
               ncm_flapack.h             \
+              nc_hipert_private.h       \
               gsl_rstat.h               \
               gsl_cqp.h                 \
               initial_point.h           \
@@ -119,7 +120,8 @@ IGNORE_HFILES= \
               class/source		\
               class/hyrec		\
               class/include             \
-              toeplitz
+              toeplitz                  \
+              sundials
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

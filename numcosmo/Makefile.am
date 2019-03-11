@@ -46,7 +46,7 @@ SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 lib_LTLIBRARIES = libnumcosmo.la
 
 libnumcosmo_la_LDFLAGS = \
-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) $(NOUNDEFINED_FLAG)
 
 libnumcosmo_la_LIBADD =         \
 	$(SUNDIALS_LIBS)        \
