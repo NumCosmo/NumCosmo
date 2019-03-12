@@ -520,7 +520,7 @@ test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata)
         const gdouble cclPkz = ccl_linear_matter_power (test->ccl_cosmo, k, 1.0 / (1.0 + z), &status);
 
         ncm_assert_cmpdouble_e (Pkz, ==, cclPkz, tol_Pk, 0.0);
-        printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, Pkz, cclPkz, Pkz / cclPkz, Pkz / cclPkz - 1.0);
+        /*printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, Pkz, cclPkz, Pkz / cclPkz, Pkz / cclPkz - 1.0);*/
       }
     }
   }

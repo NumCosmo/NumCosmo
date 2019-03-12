@@ -362,8 +362,6 @@ _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
   NcmOdeSplinePrivate * const self = dydx_data->os->priv;
   NV_Ith_S (ydot, 0) = self->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
 
-  printf ("### % 22.15g % 22.15g % 22.15g\n", x, NV_Ith_S (y, 0), NV_Ith_S (ydot, 0));
-  
   return 0;
 }
 

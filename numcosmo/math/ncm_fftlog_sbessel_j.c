@@ -179,11 +179,11 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   {
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + 0.5;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + 0.5;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
@@ -200,12 +200,12 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     const gdouble q = fftlog_jl->priv->q;
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + q;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex xdw            = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + q;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double xdw      = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;

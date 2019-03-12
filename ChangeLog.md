@@ -1,9 +1,11 @@
 CHANGELOG
 ----------------------
 
-[Current]
-
 [v0.14.2]
+ * Final tweaks for the v0.14.2 release.
+
+ * Working on ccl vs numcosmo unit tests. Minor improvements.
+
  * Minor version update 0.14.1 => 0.14.2.
 
      Minor improvements in ncm_ode_spline.
