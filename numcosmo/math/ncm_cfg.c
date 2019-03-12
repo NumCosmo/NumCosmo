@@ -55,11 +55,15 @@
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
+#include "math/ncm_model_mvnd.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_data.h"
+#include "math/ncm_data_gauss_cov_mvnd.h"
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "math/ncm_data.h"
+#include "math/ncm_stats_dist1d_epdf.h"
+#include "math/ncm_stats_dist1d_spline.h"
 #include "math/ncm_dataset.h"
 #include "math/ncm_fit.h"
 #include "math/ncm_fit_nlopt.h"
@@ -106,6 +110,9 @@
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
+#include "lss/nc_galaxy_redshift_spec.h"
+#include "lss/nc_galaxy_redshift_spline.h"
+#include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
 #include "lss/nc_cluster_mass_lnnormal.h"
@@ -128,6 +135,8 @@
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
 #include "lss/nc_wl_surface_mass_density.h"
 #include "lss/nc_reduced_shear_cluster_mass.h"
+#include "lss/nc_reduced_shear_calib.h"
+#include "lss/nc_reduced_shear_calib_wtg.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -258,6 +267,7 @@ void clencurt_gen (int M);
 
 void _nc_hicosmo_register_functions (void);
 void _nc_hicosmo_de_register_functions (void);
+void _nc_hiprim_register_functions (void);
 void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
@@ -468,6 +478,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
 
+  ncm_cfg_register_obj (NCM_TYPE_MODEL_MVND);
+
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
 
@@ -478,7 +490,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 	ncm_cfg_register_obj (NCM_TYPE_DATA);
 	ncm_cfg_register_obj (NCM_TYPE_DATASET);
-	
+
+  ncm_cfg_register_obj (NCM_TYPE_DATA_GAUSS_COV_MVND);
+  
 	ncm_cfg_register_obj (NCM_TYPE_FIT);
 	ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 
@@ -486,6 +500,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 	ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
+
+	ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
+	ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_SPLINE);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
@@ -545,6 +562,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -574,6 +593,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
 
   ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
+
+  ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS);
+  
+  ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
+  ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -615,6 +639,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 	ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
+  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
@@ -632,6 +657,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
+  _nc_hiprim_register_functions ();
   _nc_hireion_register_functions ();
   _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();

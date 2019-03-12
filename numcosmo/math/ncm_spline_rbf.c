@@ -43,6 +43,7 @@
 #include "ncm_enum_types.h"
 
 #include <gsl/gsl_min.h>
+#include <nvector/nvector_serial.h>
 
 struct _NcmSplineRBFPrivate
 {
@@ -59,7 +60,7 @@ struct _NcmSplineRBFPrivate
 	gdouble (*integ) (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x0, const gdouble x1);
 };
 
-G_DEFINE_TYPE (NcmSplineRBF, ncm_spline_rbf, NCM_TYPE_SPLINE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSplineRBF, ncm_spline_rbf, NCM_TYPE_SPLINE);
 
 enum
 {
@@ -179,8 +180,6 @@ ncm_spline_rbf_class_init (NcmSplineRBFClass *klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	NcmSplineClass* s_class = NCM_SPLINE_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcmSplineRBFPrivate));
 
 	object_class->set_property = &_ncm_spline_rbf_set_property;
   object_class->get_property = &_ncm_spline_rbf_get_property;

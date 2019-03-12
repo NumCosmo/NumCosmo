@@ -54,7 +54,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cuba.h>
-#include <cvodes/cvodes.h>
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -302,7 +302,6 @@ void nc_xcor_prepare (NcXcor* xc, NcHICosmo* cosmo)
 	xc->RH = nc_hicosmo_RH_Mpc (cosmo);
 }
 
-#ifdef HAVE_SUNDIALS
 typedef struct _xcor_limber_cvode
 {
 	gboolean isauto;
@@ -366,10 +365,10 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 {
 	const guint nell = lmax - lmin + 1;
 	const gdouble dz = (zmax - zmin) * NCM_DEFAULT_PRECISION;
-	const gdouble zmid = expm1 ((log1p (zmin) + log1p (zmax)) / 2.0);
+
 	N_Vector yv = N_VNew_Serial (nell);
 	N_Vector yv0 = N_VNew_Serial (nell);
-	gpointer cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+	gpointer cvode = CVodeCreate (CV_ADAMS);
 	gpointer cvodefunc = &_xcor_limber_cvode_int;
 	NcmVector* Pk = ncm_vector_new (nell);
 	NcmVector* k = ncm_vector_new (nell);
@@ -383,11 +382,12 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo };
 
 	/* Find initial value = y'(zmid) * dz */
+	const gdouble zmid = expm1 ((log1p (xclk1->zmid) + log1p (xclk2->zmid)) / 2.0);
 	_xcor_limber_cvode_int (zmid, yv, yv0, &xclc);
 	N_VScale (dz, yv0, yv0);
 
-	/* First integrate from zmid to zmin*/
-	flag = CVodeInit (cvode, cvodefunc, zmax, yv0);
+	/* Init and set flags */
+	flag = CVodeInit (cvode, cvodefunc, zmid, yv0);
 	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
@@ -396,16 +396,29 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 	flag = CVodeSetUserData (cvode, &xclc);
 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-	flag = CVodeSetStopTime (cvode, zmin);
-	NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
+	/* First integrate from zmid to zmin */
 	flag = CVode (cvode, zmin, yv, &z, CV_NORMAL);
 	NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
+	/* Put int[zmin->zmid] in yv */
 	for (i = 0; i < nell; i++)
 	{
-		ncm_vector_set (vp, i, NV_Ith_S (yv0, i) - NV_Ith_S (yv, i));
+		NV_Ith_S (yv, i) = - (NV_Ith_S (yv, i) - NV_Ith_S (yv0, i));
 	}
+
+	/* Then integrate from zmid to zmax */
+	flag = CVodeInit (cvode, cvodefunc, zmid, yv);
+	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+	flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
+	NCM_CVODE_CHECK (&flag, "CVode", 1, );
+
+	/* Finally put the result in vp */
+	for (i = 0; i < nell; i++)
+	{
+		ncm_vector_set (vp, i, NV_Ith_S (yv, i));
+	}
+
 
 	CVodeFree (&cvode);
 	N_VDestroy (yv);
@@ -415,7 +428,137 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	ncm_vector_free (Pk);
 }
 
-#endif /* HAVE_SUNDIALS_2_5_0 */
+#ifdef HAVE_LIBCUBA
+
+// typedef int (*integrand_t)(const int *ndim, const double x[], const int *ncomp, double f[], void *userdata);
+
+typedef struct _xcor_limber_suave
+{
+	gboolean isauto;
+	guint lmin, lmax;
+	guint nell;
+	NcmVector* k;
+	NcmVector* Pk;
+	NcXcor* xc;
+	NcXcorLimberKernel* xclk1;
+	NcXcorLimberKernel* xclk2;
+	NcHICosmo* cosmo;
+	gdouble zmin;
+	gdouble zmax_zmin;
+	guint counter;
+} xcor_limber_suave;
+
+
+gint 
+_nc_xcor_limber_suave_integrand (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
+{
+	xcor_limber_suave* xcls = (xcor_limber_suave*)userdata;
+
+	const gdouble z = xcls->zmin + x[0]*xcls->zmax_zmin; // x goes from 0 to 1
+
+	// printf("counter = %15i, z = %g\n", xcls->counter, z);
+
+	const gdouble xi_z = nc_distance_comoving (xcls->xc->dist, xcls->cosmo, z); // in units of Hubble radius
+	const gdouble xi_z_phys = xi_z * xcls->xc->RH; // in Mpc
+	const gdouble E_z = nc_hicosmo_E (xcls->cosmo, z);
+	const NcXcorKinetic xck = { xi_z, E_z };
+	const gdouble k1z = nc_xcor_limber_kernel_eval (xcls->xclk1, xcls->cosmo, z, &xck, 0);
+
+	gdouble geoW1W2;
+	guint i, l;
+
+	if (G_UNLIKELY (z == 0.0))
+	{
+		for (i = 0; i < xcls->nell; i++)
+		{
+			f[i] = 0.0;
+		}
+		return 0; //supposes f is initialized to zero
+	}
+
+	if (xcls->isauto)
+	{
+		geoW1W2 = E_z * gsl_pow_2 (k1z / xi_z);
+	}
+	else
+	{
+		const gdouble k2z = nc_xcor_limber_kernel_eval (xcls->xclk2, xcls->cosmo, z, &xck, 0);
+		geoW1W2 = E_z * k1z * k2z / (xi_z * xi_z);
+	}
+
+	for (i = 0; i < xcls->nell; i++)
+	{
+		l = i + xcls->lmin;
+		ncm_vector_fast_set (xcls->k, i, ((gdouble)l + 0.5) / xi_z_phys); // in Mpc-1
+	}
+
+	ncm_powspec_eval_vec (xcls->xc->ps, NCM_MODEL (xcls->cosmo), z, xcls->k, xcls->Pk);
+
+	for (i = 0; i < xcls->nell; i++)
+	{
+		f[i] = ncm_vector_fast_get (xcls->Pk, i) * geoW1W2;
+	}
+
+	xcls->counter += 1;
+
+	return 0;
+}
+
+static void
+_nc_xcor_limber_suave (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector* vp)
+{
+	const guint nell = lmax - lmin + 1;
+	NcmVector* Pk = ncm_vector_new (nell);
+	NcmVector* k = ncm_vector_new (nell);
+
+	ncm_vector_set_zero (k);
+	ncm_vector_set_zero (Pk);
+
+	guint counter = 0;
+
+	xcor_limber_suave xcls = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo, zmin, zmax-zmin, counter };
+
+	//  in
+	const gdouble flatness = 100.0;
+	const guint mineval = 1;
+	const guint maxeval = 1000000;
+	const guint nnew = 1000;
+	const guint nmin = 500;
+	const gint flags = 0;
+
+	// out
+	gint nregions, neval, fail;
+
+	gdouble integral[nell];
+	gdouble error[nell];
+	gdouble prob[nell];
+
+	Suave(1, nell,
+		&_nc_xcor_limber_suave_integrand, &xcls, 1,
+		NCM_DEFAULT_PRECISION, 0.0,
+		flags, 0,
+		mineval, maxeval,
+		nnew, nmin,
+		flatness, "", NULL,
+		&nregions, &neval, &fail,
+		integral, error, prob);
+
+	// printf("nregions = %i, neval = %i, fail = %i \n", nregions, neval, fail );
+
+	guint i;
+	for (i = 0; i < nell; i++)
+	{
+		ncm_vector_set(vp, i, integral[i]);
+		// printf("%i, integral = %14.10g, error = %14.10g, prob = %14.10g \n", i, integral[i], error[i], prob[i]);
+	}
+
+	// suave integrates over the hypercube, so scaling is necessary
+	ncm_vector_scale(vp, zmax-zmin);
+
+}
+
+#endif /* HAVE_LIBCUBA */
+
 
 typedef struct _xcor_limber_gsl
 {
@@ -550,6 +693,11 @@ void nc_xcor_limber (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 		case NC_XCOR_LIMBER_METHOD_GSL:
 			_nc_xcor_limber_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
 			break;
+#ifdef HAVE_LIBCUBA
+		case NC_XCOR_LIMBER_METHOD_SUAVE:
+			_nc_xcor_limber_suave (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+			break;
+#endif /* HAVE_LIBCUBA */
 		default:
 			g_assert_not_reached ();
 			break;

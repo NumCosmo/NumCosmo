@@ -39,6 +39,7 @@ typedef struct _TestNcmModel
 } TestNcmModel;
 
 void test_ncm_model_new (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_new_modify (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_child_new (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_child_child_new (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata);
@@ -55,7 +56,7 @@ void test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata);
 
-#define TEST_NCM_MODEL_NTYPES 4
+#define TEST_NCM_MODEL_NTYPES 5
 
 gint
 main (gint argc, gchar *argv[])
@@ -67,6 +68,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
   gpointer ccc[TEST_NCM_MODEL_NTYPES][3] = {
     {"model",            &test_ncm_model_new,             &test_ncm_model_free},
+    {"model/modified",   &test_ncm_model_new_modify,      &test_ncm_model_free},
     {"model/child",      &test_ncm_model_child_new,       &test_ncm_model_free},
     {"model/grandchild", &test_ncm_model_child_child_new, &test_ncm_model_free},
     {"model/reparam",    &test_ncm_model_reparam_new,     &test_ncm_model_free},
@@ -131,6 +133,41 @@ test_ncm_model_new (TestNcmModel *test, gconstpointer pdata)
   test->nick       = nick_tot[0];
   test->reparam    = NULL;
 
+  g_assert (test->type != 0);
+}
+
+void
+test_ncm_model_new_modify (TestNcmModel *test, gconstpointer pdata)
+{
+  test->type       = NCM_TYPE_MODEL_TEST;
+  test->tm         = g_object_new (test->type, NULL);
+  test->sparam_len = SPARAM_LEN1;
+  test->vparam_len = VPARAM_LEN1;
+  test->name       = name_tot[0];
+  test->nick       = nick_tot[0];
+  test->reparam    = NULL;
+
+	{
+		NcmModel *model = NCM_MODEL (test->tm);
+		guint model_len = ncm_model_len (model);
+		guint i;
+
+		for (i = 0; i < model_len; i++)
+		{
+			const gdouble curval      = ncm_model_param_get (model, i);
+			const gdouble s_lb        = g_test_rand_double_range (curval - fabs (curval) * 1.5, curval + fabs (curval) * 1.5);
+			const gdouble s_ub        = g_test_rand_double_range (                        s_lb, curval + fabs (curval) * 1.5);
+			const gdouble s_scale     = fabs (((s_ub + s_lb) != 0 ? (s_ub + s_lb) : 1.0) * pow (10.0, -g_test_rand_double_range (1.0,  2.0)));
+			const gdouble s_abstol    = s_scale * pow (10.0, -g_test_rand_double_range (1.0, 11.0));
+
+			ncm_model_param_set_upper_bound (model, i, GSL_POSINF);
+			ncm_model_param_set_lower_bound (model, i, s_lb);
+			ncm_model_param_set_upper_bound (model, i, s_ub);
+			ncm_model_param_set_scale (model, i, s_scale);
+			ncm_model_param_set_abstol (model, i, s_abstol);
+		}
+	}
+	
   g_assert (test->type != 0);
 }
 
@@ -630,11 +667,11 @@ test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata)
 void
 test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_global ();
-  NcmModelTest *tm = test->tm;
-  NcmModel *model = NCM_MODEL (tm);
+  NcmSerialize *ser   = ncm_serialize_global ();
+  NcmModelTest *tm    = test->tm;
+  NcmModel *model     = NCM_MODEL (tm);
   NcmModel *model_dup = ncm_model_dup (model, ser);
-  guint model_len = ncm_model_len (model);
+  guint model_len     = ncm_model_len (model);
   guint i;
 
   ncm_serialize_free (ser);
@@ -642,6 +679,10 @@ test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
 
   for (i = 0; i < model_len; i++)
   {
-    ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, ncm_model_param_get (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i),             ==, ncm_model_param_get (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_param_get_scale (model, i),       ==, ncm_model_param_get_scale (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_param_get_lower_bound (model, i), ==, ncm_model_param_get_lower_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_param_get_upper_bound (model, i), ==, ncm_model_param_get_upper_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_param_get_abstol (model, i),      ==, ncm_model_param_get_abstol (model_dup, i));
   }
 }

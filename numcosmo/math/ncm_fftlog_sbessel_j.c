@@ -57,6 +57,7 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFftlogSBesselJPrivate
@@ -73,7 +74,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
 
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
@@ -138,8 +139,6 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
 {
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcmFftlogSBesselJPrivate));
   
   object_class->set_property = &_ncm_fftlog_sbessel_j_set_property;
   object_class->get_property = &_ncm_fftlog_sbessel_j_get_property;
@@ -180,11 +179,11 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   {
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + 0.5;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + 0.5;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
@@ -201,12 +200,12 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     const gdouble q = fftlog_jl->priv->q;
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + q;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex xdw            = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + q;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double xdw      = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;

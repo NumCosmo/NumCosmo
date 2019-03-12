@@ -70,7 +70,7 @@ enum
 
 extern NcmMPIJobCtrl _mpi_ctrl;
 
-G_DEFINE_ABSTRACT_TYPE (NcmMPIJob, ncm_mpi_job, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMPIJob, ncm_mpi_job, G_TYPE_OBJECT);
 
 static gpointer _ncm_mpi_job_create_input_buffer (gpointer userdata);
 static gpointer _ncm_mpi_job_create_return_buffer (gpointer userdata);
@@ -224,8 +224,6 @@ static void
 ncm_mpi_job_class_init (NcmMPIJobClass *klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcmMPIJobPrivate));
 
 	object_class->set_property = &_ncm_mpi_job_set_property;
 	object_class->get_property = &_ncm_mpi_job_get_property;

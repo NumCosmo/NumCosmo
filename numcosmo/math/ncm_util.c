@@ -51,12 +51,6 @@
 #include <gsl/gsl_sf_hyperg.h>
 
 #include <cvode/cvode.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvode/cvode_dense.h>
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h>
-#endif
-
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
@@ -827,7 +821,7 @@ ncm_util_sinhx_m_xcoshx_x3 (const gdouble x)
 gint
 ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol)
 {
-  if (G_UNLIKELY (x == 0.0 && y == 0.0))
+  if (G_UNLIKELY ((x == 0.0) && (y == 0.0)))
     return 0;
   else
   {
@@ -1090,11 +1084,11 @@ ncm_util_cvode_print_stats (gpointer cvode)
   flag = CVodeGetNumNonlinSolvConvFails(cvode, &nconvfail);
   ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvConvFails", 1);
 
-  flag = CVDlsGetNumJacEvals (cvode, &njaceval);
-  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
+  flag = CVodeGetNumJacEvals (cvode, &njaceval);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumJacEvals", 1);
 
-  flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
-  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);
+  flag = CVodeGetNumRhsEvals (cvode, &ndiffjaceval);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumRhsEvals", 1);
 
   flag = CVodeGetNumGEvals(cvode, &nrooteval);
   ncm_util_cvode_check_flag (&flag, "CVodeGetNumGEvals", 1);

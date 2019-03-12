@@ -57,6 +57,7 @@ struct _NcGalaxyRedshiftClass
 	void (*pdf_limits) (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
 	gdouble (*pdf) (NcGalaxyRedshift *gz, const guint di, const gdouble z);
 	gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng);
+	gdouble (*quantile) (NcGalaxyRedshift *gz, const gdouble q);
 };
 
 struct _NcGalaxyRedshift
@@ -80,6 +81,7 @@ G_INLINE_FUNC gdouble nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, 
 G_INLINE_FUNC void nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
 G_INLINE_FUNC gdouble nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
 G_INLINE_FUNC gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
+G_INLINE_FUNC gdouble nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q);
 
 G_END_DECLS
 
@@ -131,6 +133,12 @@ G_INLINE_FUNC gdouble
 nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->gen (gz, rng);
+}
+
+G_INLINE_FUNC gdouble 
+nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q)
+{
+	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->quantile (gz, q);
 }
 
 G_END_DECLS

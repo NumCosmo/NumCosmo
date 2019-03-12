@@ -113,10 +113,10 @@ static void _ncm_fit_esmcmc_walker_set_size (NcmFitESMCMCWalker *walker, guint s
 static guint _ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker) { g_error ("_ncm_fit_esmcmc_walker_get_size: method not implemented."); return 0; }
 static void _ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams) { g_error ("_ncm_fit_esmcmc_walker_set_nparams: method not implemented."); }
 static guint _ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker) { g_error ("_ncm_fit_esmcmc_walker_get_nparams: method not implemented."); return 0; }
-static void _ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng) { g_error ("_ncm_fit_esmcmc_walker_setup: method not implemented."); }
-static void _ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k) { g_error ("_ncm_fit_esmcmc_walker_step: method not implemented."); }
-static gdouble _ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star) { g_error ("_ncm_fit_esmcmc_walker_prob: method not implemented."); return 0.0; }
-static gdouble _ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k) { g_error ("_ncm_fit_esmcmc_walker_prob_norm: method not implemented."); return 0.0; }
+static void _ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng) { g_error ("_ncm_fit_esmcmc_walker_setup: method not implemented."); }
+static void _ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k) { g_error ("_ncm_fit_esmcmc_walker_step: method not implemented."); }
+static gdouble _ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star) { g_error ("_ncm_fit_esmcmc_walker_prob: method not implemented."); return 0.0; }
+static gdouble _ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k) { g_error ("_ncm_fit_esmcmc_walker_prob_norm: method not implemented."); return 0.0; }
 static void _ncm_fit_esmcmc_walker_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf) { g_error ("_ncm_fit_esmcmc_walker_clean: method not implemented."); }
 static const gchar *_ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker) { g_error ("_ncm_fit_esmcmc_walker_desc: method not implemented."); return NULL; }
 
@@ -309,6 +309,7 @@ ncm_fit_esmcmc_walker_get_temperature (NcmFitESMCMCWalker *walker)
  * ncm_fit_esmcmc_walker_setup: (virtual setup)
  * @walker: a #NcmMSetCatalog
  * @theta: (element-type NcmVector): array of walkers positions
+ * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @ki: first walker index
  * @kf: last walker index
  * @rng: a #NcmRNG
@@ -317,15 +318,16 @@ ncm_fit_esmcmc_walker_get_temperature (NcmFitESMCMCWalker *walker)
  *
  */
 void 
-ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng)
+ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
-  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->setup (walker, theta, ki, kf, rng);
+  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->setup (walker, theta, m2lnL, ki, kf, rng);
 }
 
 /**
  * ncm_fit_esmcmc_walker_step: (virtual step)
  * @walker: a #NcmMSetCatalog
  * @theta: (element-type NcmVector): array of walkers positions
+ * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector 
  * @k: index of the walker to move
  * 
@@ -333,15 +335,16 @@ ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint
  * 
  */
 void 
-ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->step (walker, theta, thetastar, k);
+  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->step (walker, theta, m2lnL, thetastar, k);
 }
 
 /**
  * ncm_fit_esmcmc_walker_prob: (virtual prob)
  * @walker: a #NcmMSetCatalog
  * @theta: (element-type NcmVector): array of walkers positions
+ * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector 
  * @k: index of the walker to move
  * @m2lnL_cur: current value of $-2\ln(L)$
@@ -352,15 +355,16 @@ ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVec
  * Returns: the transition probability.
  */
 gdouble
-ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
+ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
-  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->prob (walker, theta, thetastar, k, m2lnL_cur, m2lnL_star);
+  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->prob (walker, theta, m2lnL, thetastar, k, m2lnL_cur, m2lnL_star);
 }
 
 /**
  * ncm_fit_esmcmc_walker_prob_norm: (virtual prob_norm)
  * @walker: a #NcmMSetCatalog
  * @theta: (element-type NcmVector): array of walkers positions
+ * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector 
  * @k: index of the walker to move
  * 
@@ -369,9 +373,9 @@ ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVec
  * Returns: the transition probability log-norm.
  */
 gdouble
-ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->prob_norm (walker, theta, thetastar, k);
+  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->prob_norm (walker, theta, m2lnL, thetastar, k);
 }
 
 /**

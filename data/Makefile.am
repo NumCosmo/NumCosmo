@@ -4,6 +4,8 @@ SUBDIRS =
 
 data_observational_DATA = \
 	BBN_spline2d.obj                        \
+	BBN_2017_spline2d.obj                   \
+	BBN_2017_marcucci_spline2d.obj          \
 	nc_data_bao_a_eisenstein2005.obj        \
 	nc_data_bao_dhr_dar_sdss_dr11_2015.obj  \
 	nc_data_bao_dhr_dar_sdss_dr11_2015_LyaF_auto_cross.obj \
@@ -54,7 +56,9 @@ data_observationaldir = \
 	$(pkgdatadir)-$(VERSION)/data
 
 class_data_bbn_DATA = \
-	class_data/bbn/sBBN.dat
+	class_data/bbn/sBBN.dat               \
+	class_data/bbn/sBBN_2017_marcucci.dat \
+	class_data/bbn/sBBN_2017.dat
 
 class_data_bbndir = \
 	$(pkgdatadir)-$(VERSION)/data/class_data/bbn

@@ -17,11 +17,14 @@ MY_CFLAGS = \
 	 $(CLASS_DEFINES)       \
 	 $(OPENMP_CFLAGS)       \
 	 -DHYREC                \
-	 -D__CLASSDIR__=\"$(PACKAGE_DATA_DIR)\/class_data\"
+	 -D__CLASSDIR__=\"$(PACKAGE_DATA_DIR)\/class_data\" \
+	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
+	 
+AM_LDFLAGS = $(VISIBILITY_HIDDEN_FLAG)
 
 SUBDIRS = .
 

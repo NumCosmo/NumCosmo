@@ -143,6 +143,7 @@ gdouble nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_get_nu (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_get_mu (NcHIQG1D *qg1d);
 
 void nc_hiqg_1d_prepare (NcHIQG1D *qg1d);
 
@@ -154,9 +155,11 @@ void nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi);
 gdouble nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x);
 gdouble nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_expect_p (NcHIQG1D *qg1d);
 
 gint nc_hiqg_1d_nBohm (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i);
+gdouble nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i);
 
 G_END_DECLS
 

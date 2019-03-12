@@ -187,6 +187,8 @@ gdouble ncm_fit_get_m2lnL_reltol (NcmFit *fit);
 gdouble ncm_fit_get_m2lnL_abstol (NcmFit *fit);
 gdouble ncm_fit_get_params_reltol (NcmFit *fit);
 
+NcmMSet *ncm_fit_peek_mset (NcmFit *fit);
+
 G_INLINE_FUNC void ncm_fit_params_set (NcmFit *fit, guint i, const gdouble x);
 G_INLINE_FUNC void ncm_fit_params_set_vector (NcmFit *fit, NcmVector *x);
 G_INLINE_FUNC void ncm_fit_params_set_vector_offset (NcmFit *fit, NcmVector *x, guint offset);

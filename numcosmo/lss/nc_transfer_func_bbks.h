@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcTransferFuncBBKSClass NcTransferFuncBBKSClass;
 typedef struct _NcTransferFuncBBKS NcTransferFuncBBKS;
+typedef struct _NcTransferFuncBBKSPrivate NcTransferFuncBBKSPrivate;
 
 struct _NcTransferFuncBBKSClass
 {
@@ -53,17 +54,30 @@ struct _NcTransferFuncBBKS
 {
   /*< private >*/
   NcTransferFunc parent_instance;
-  gdouble c1;
-  gdouble c2;
-  gdouble c3;
-  gdouble c4;
-  gdouble c5_wm; /* c5_wm = c5/wm */
-  gdouble h;  
+  NcTransferFuncBBKSPrivate *priv;
 };
+
+/**
+ * NcTransferFuncBBKSType:
+ * @NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS: BBKS without Baryions correction.
+ * @NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS: BBKS with Baryions correction.
+ * @NC_TRANSFER_FUNC_BBKS_TYPE_CCL: BBKS with Baryions correction without T_gamma term (as implemented in CCL). Check why they modify it like this, is it an typo?
+ * 
+ * BBKS transfer function variant.
+ * 
+ */ 
+typedef enum _NcTransferFuncBBKSType
+{
+  NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS,
+  NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS,
+  NC_TRANSFER_FUNC_BBKS_TYPE_CCL,
+} NcTransferFuncBBKSType;
 
 GType nc_transfer_func_bbks_get_type (void) G_GNUC_CONST;
 
 NcTransferFunc *nc_transfer_func_bbks_new (void);
+
+void nc_transfer_func_bbks_set_type (NcTransferFuncBBKS *tf_bbks, NcTransferFuncBBKSType bbks_type);
 
 G_END_DECLS
 

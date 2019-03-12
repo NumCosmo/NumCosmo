@@ -311,6 +311,8 @@ int transfer_init(
 
     /* allocate workspace */
 
+    ptw = NULL;
+
     class_call_parallel(transfer_workspace_init(ptr,
                                                 ppr,
                                                 &ptw,
@@ -643,7 +645,9 @@ int transfer_perturbation_copy_sources_and_nl_corrections(
 
         if ((pnl->method != nl_none) && (_scalars_) &&
             (((ppt->has_source_delta_m == _TRUE_) && (index_tp == ppt->index_tp_delta_m)) ||
+             ((ppt->has_source_delta_cb == _TRUE_) && (index_tp == ppt->index_tp_delta_cb)) ||
              ((ppt->has_source_theta_m == _TRUE_) && (index_tp == ppt->index_tp_theta_m)) ||
+             ((ppt->has_source_theta_cb == _TRUE_) && (index_tp == ppt->index_tp_theta_cb)) ||
              ((ppt->has_source_phi == _TRUE_) && (index_tp == ppt->index_tp_phi)) ||
              ((ppt->has_source_phi_prime == _TRUE_) && (index_tp == ppt->index_tp_phi_prime)) ||
              ((ppt->has_source_phi_plus_psi == _TRUE_) && (index_tp == ppt->index_tp_phi_plus_psi)) ||
@@ -655,13 +659,25 @@ int transfer_perturbation_copy_sources_and_nl_corrections(
 
           for (index_tau=0; index_tau<ppt->tau_size; index_tau++) {
             for (index_k=0; index_k<ppt->k_size[index_md]; index_k++) {
+             if (((ppt->has_source_delta_cb == _TRUE_) && (index_tp == ppt->index_tp_delta_cb)) ||
+                 ((ppt->has_source_theta_cb == _TRUE_) && (index_tp == ppt->index_tp_theta_cb))){
               sources[index_md]
                 [index_ic * ppt->tp_size[index_md] + index_tp]
                 [index_tau * ppt->k_size[index_md] + index_k] =
                 ppt->sources[index_md]
                 [index_ic * ppt->tp_size[index_md] + index_tp]
                 [index_tau * ppt->k_size[index_md] + index_k]
-                * pnl->nl_corr_density[index_tau * ppt->k_size[index_md] + index_k];
+                * pnl->nl_corr_density[pnl->index_pk_cb][index_tau * ppt->k_size[index_md] + index_k];
+             }
+             else{
+              sources[index_md]
+                [index_ic * ppt->tp_size[index_md] + index_tp]
+                [index_tau * ppt->k_size[index_md] + index_k] =
+                ppt->sources[index_md]
+                [index_ic * ppt->tp_size[index_md] + index_tp]
+                [index_tau * ppt->k_size[index_md] + index_k]
+                * pnl->nl_corr_density[pnl->index_pk_m][index_tau * ppt->k_size[index_md] + index_k];
+             }
             }
           }
         }
@@ -736,6 +752,8 @@ int transfer_perturbation_sources_free(
         if ((pnl->method != nl_none) && (_scalars_) &&
             (((ppt->has_source_delta_m == _TRUE_) && (index_tp == ppt->index_tp_delta_m)) ||
              ((ppt->has_source_theta_m == _TRUE_) && (index_tp == ppt->index_tp_theta_m)) ||
+             ((ppt->has_source_delta_cb == _TRUE_) && (index_tp == ppt->index_tp_delta_cb)) ||
+             ((ppt->has_source_theta_cb == _TRUE_) && (index_tp == ppt->index_tp_theta_cb)) ||
              ((ppt->has_source_phi == _TRUE_) && (index_tp == ppt->index_tp_phi)) ||
              ((ppt->has_source_phi_prime == _TRUE_) && (index_tp == ppt->index_tp_phi_prime)) ||
              ((ppt->has_source_phi_plus_psi == _TRUE_) && (index_tp == ppt->index_tp_phi_plus_psi)) ||
@@ -1329,6 +1347,8 @@ int transfer_get_source_correspondence(
           tp_of_tt[index_md][index_tt]=ppt->index_tp_phi_plus_psi;
 
         if (_index_tt_in_range_(ptr->index_tt_density, ppt->selection_num, ppt->has_nc_density))
+          /* use here delta_cb rather than delta_m if density number counts calculated only for cold dark matter + baryon */
+          /* (this important comment is referenced in a WARNING message in perturbations.c) */
           tp_of_tt[index_md][index_tt]=ppt->index_tp_delta_m;
 
         if (_index_tt_in_range_(ptr->index_tt_rsd,     ppt->selection_num, ppt->has_nc_rsd))
@@ -3014,7 +3034,8 @@ int transfer_dNdz_analytic(
 
   double z0,alpha,beta;
 
-  z0 = 0.55;
+//Euclid IST dNdz, do not change this!
+  z0 = 0.9/pow(2.,1./2.);
   alpha = 2.0;
   beta = 1.5;
 

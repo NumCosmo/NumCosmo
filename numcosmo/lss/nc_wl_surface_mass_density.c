@@ -551,7 +551,7 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
   gdouble Dinf, betainf, beta_s;
-	gdouble convergence_inf, shear_inf;
+	gdouble convergence_inf, shear_inf, g;
 	gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, zs);
 	gdouble Dls             = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl))/ (1.0 + zs);
   gdouble beta            = Dls / Ds;
@@ -564,5 +564,7 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence_infinity (smd, dp, cosmo, R, zl, zc);
 	shear_inf       = beta_s * nc_wl_surface_mass_density_shear_infinity (smd, dp, cosmo, R, zl, zc);
 	
-	return shear_inf / (1.0 - convergence_inf);
+	g = shear_inf / (1.0 - convergence_inf);
+	
+	return g;
 }

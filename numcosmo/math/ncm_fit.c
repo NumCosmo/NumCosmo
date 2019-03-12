@@ -789,6 +789,20 @@ ncm_fit_get_params_reltol (NcmFit *fit)
 }
 
 /**
+ * ncm_fit_peek_mset:
+ * @fit: a #NcmFit
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmMSet *
+ncm_fit_peek_mset (NcmFit *fit)
+{
+  return fit->mset;
+}
+
+/**
  * ncm_fit_params_set_vector:
  * @fit: a #NcmFit
  * @x: a #NcmVector
@@ -1139,14 +1153,15 @@ ncm_fit_reset (NcmFit *fit)
  * @fit: a #NcmFit
  * @mtype: a #NcmFitRunMsgs
  *
- * FIXME
+ * Computes the minimization.
  *
- * Returns: FIXME
+ * Returns: TRUE if the minimization went through.
  */
 gboolean
 ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   gboolean run;
+  gdouble m2lnL_i;
 
   fit->mtype = mtype;
 
@@ -1154,10 +1169,19 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_log_start (fit);
   g_timer_start (fit->timer);
 
-  if (ncm_mset_fparam_len (fit->mset) == 0)
-    run = _ncm_fit_run_empty (fit, mtype);
+  ncm_fit_m2lnL_val (fit, &m2lnL_i);
+  if (gsl_finite (m2lnL_i))
+  {      
+    if (ncm_mset_fparam_len (fit->mset) == 0)
+      run = _ncm_fit_run_empty (fit, mtype);
+    else
+      run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+  }
   else
-    run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+  {
+    g_warning ("ncm_fit_run: initial point provides m2lnL = % 22.15g, giving up.", m2lnL_i);
+    run = FALSE;
+  }
 
   fit->fstate->elapsed_time = g_timer_elapsed (fit->timer, NULL);
   fit->fstate->is_best_fit = run;
@@ -1209,17 +1233,8 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
     gboolean restart;
     gdouble last_m2lnL = 0.0, m2lnL = 0.0;
     gint n = 0;
-    
-    ncm_fit_run (fit, mtype);
-    last_m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
 
-    if (save_progress)
-    {
-      if (fit->mset != mset_out)
-        ncm_mset_param_set_mset (mset_out, fit->mset);
-      ncm_mset_save (mset_out, ser, mset_file, TRUE);
-    }
-    
+    ncm_fit_m2lnL_val (fit, &last_m2lnL);    
     do
     {
       ncm_fit_run (fit, mtype);

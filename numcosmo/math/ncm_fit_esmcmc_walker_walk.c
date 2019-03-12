@@ -27,6 +27,7 @@
  * SECTION:ncm_fit_esmcmc_walker_walk
  * @title: NcmFitESMCMCWalkerWalk
  * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - walk move.
+ * @stability: Unstable
  *
  * Implementing walk move walker for #NcmFitESMCMC (affine invariant).
  * 
@@ -131,10 +132,10 @@ static void _ncm_fit_esmcmc_walker_walk_set_size (NcmFitESMCMCWalker *walker, gu
 static guint _ncm_fit_esmcmc_walker_walk_get_size (NcmFitESMCMCWalker *walker);
 static void _ncm_fit_esmcmc_walker_walk_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
 static guint _ncm_fit_esmcmc_walker_walk_get_nparams (NcmFitESMCMCWalker *walker);
-static void _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng);
-static void _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
-static gdouble _ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
-static gdouble _ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k);
+static void _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
+static void _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
+static gdouble _ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
+static gdouble _ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_walk_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_walk_desc (NcmFitESMCMCWalker *walker);
 
@@ -251,7 +252,7 @@ _ncm_fit_esmcmc_walker_walk_get_nparams (NcmFitESMCMCWalker *walker)
 }
 
 static void 
-_ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng)
+_ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
   guint k;
@@ -287,7 +288,7 @@ _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta,
 }
 
 static void 
-_ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+_ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
   NcmVector *theta_k           = g_ptr_array_index (theta, k);
@@ -324,13 +325,13 @@ _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
+_ncm_fit_esmcmc_walker_walk_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
   return exp ((m2lnL_cur - m2lnL_star) * 0.5 / walker->temperature);
 }
 
 static gdouble 
-_ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
+_ncm_fit_esmcmc_walker_walk_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
   return 0.0;
 }

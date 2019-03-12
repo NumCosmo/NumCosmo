@@ -26,7 +26,7 @@ dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [14])
-m4_define([numcosmo_micro_version], [1])
+m4_define([numcosmo_micro_version], [2])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -255,6 +255,17 @@ if test x$enable_simd_ext_flags = "xyes"; then
   AC_SUBST(CPUEXT_FLAGS)
   CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
 fi
+
+dnl checking if -fvisibility=hidden is available
+VISIBILITY_HIDDEN_FLAG=""
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],[VISIBILITY_HIDDEN_FLAG="-fvisibility=hidden"])
+AC_SUBST(VISIBILITY_HIDDEN_FLAG)
+
+dnl checking if -no-undefined is available
+NOUNDEFINED_FLAG=""
+AX_CHECK_LINK_FLAG([-Wl,-no-undefined],[NOUNDEFINED_FLAG="-no-undefined"])
+AC_SUBST(NOUNDEFINED_FLAG)
+
 ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 dnl ***************************************************************************
@@ -797,7 +808,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsysvx_ dsysvxx_ dgeev_ dgeevx_ dggglm_],[],[])
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dtrsv_],[],[])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],
@@ -834,6 +845,7 @@ if test "x$have_lapack" != "xno"; then
 
 else
   AC_MSG_RESULT([no])
+  AC_MSG_ERROR([Lapack not found.])
 fi
 
 dnl ***************************************************************************
@@ -899,6 +911,7 @@ if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
   AC_MSG_RESULT([internal v4.2])
   AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+  AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
 else
   AC_MSG_RESULT([external])
   AC_MSG_CHECKING([libcuba version])
@@ -906,18 +919,21 @@ else
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1="<= 3.3"],
               [cuba_3_1="error"
   AC_COMPILE_IFELSE(
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1="<= 3.3"],
               [cuba_3_1="error"
   AC_COMPILE_IFELSE(
               [AC_LANG_PROGRAM([[#include <cuba.h>]],
                  [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
               [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+               AC_DEFINE([HAVE_LIBCUBA],[1], [Have any version of libcuba])
                cuba_3_1=">= 4.0"],
               [cuba_3_1="error"
               ])])])
@@ -956,95 +972,72 @@ dnl ***************************************************************************
 dnl Check for sundials
 dnl ***************************************************************************
 
-AC_ARG_VAR([SUNDIALS_LIBS], [C compiler flags for SUNDIALS])
-AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
-AC_SUBST(SUNDIALS_LIBS)
-AC_SUBST(SUNDIALS_CFLAGS)
+dnl AC_ARG_VAR([SUNDIALS_LIBS], [C compiler flags for SUNDIALS])
+dnl AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
+dnl AC_SUBST(SUNDIALS_LIBS)
+dnl AC_SUBST(SUNDIALS_CFLAGS)
 
-AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_sunmatrixdense],[SUNDenseMatrix],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunmatrixdense"],[],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_sunlinsoldense],[SUNDenseLinearSolver],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunlinsoldense"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecpthreads],[N_VNew_Pthreads],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecpthreads"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_nvecopenmp],[N_VNew_OpenMP],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecopenmp"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_sunmatrixdense],[SUNDenseMatrix],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunmatrixdense"],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_sunlinsoldense],[SUNDenseLinearSolver],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_sunlinsoldense"],[],[$SUNDIALS_LIBS])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
-AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
-	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
-	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
-	],[],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
+dnl 	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
+dnl 	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
+dnl 	],[],[$SUNDIALS_LIBS])
 
-SAVED_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
+dnl SAVED_CFLAGS="$CFLAGS"
+dnl CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
 
-AC_CHECK_HEADER([sundials/sundials_config.h],[],[
-AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<path_to_SUNDIALS_headers>".])
-],[])
+dnl AC_CHECK_HEADER([sundials/sundials_config.h],[],[
+dnl AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<path_to_SUNDIALS_headers>".])
+dnl ],[])
+
+dnl AC_MSG_CHECKING([SUNDIALS version])
+
+dnl SUNDIALS_VERSION_FOUND=no
+dnl m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, 2, 5, 0], [2.6.0, 2, 6, 0], [2.6.1, 2, 6 ,1], [2.6.2, 2, 6 ,2], [2.7.0, 2, 7, 0]],
+dnl   [
+dnl     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
+dnl     SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
+dnl     AC_EGREP_CPP([[\"]?$SUNDIALS_VERSION_REGEX[\"]?],
+dnl       [
+dnl         #include <sundials/sundials_config.h>
+dnl         SUNDIALS_PACKAGE_VERSION;
+dnl         SUNDIALS_VERSION;
+dnl       ],
+dnl       [
+dnl         if test "x$SUNDIALS_VERSION_FOUND" != "xno"; then
+dnl           AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
+dnl         fi
+dnl         HAVE_SUNDIALS_MAJOR=m4_argn([2],SUNDIALS_VERSION_V)
+dnl         HAVE_SUNDIALS_MINOR=m4_argn([3],SUNDIALS_VERSION_V)
+dnl         HAVE_SUNDIALS_PATCH=m4_argn([4],SUNDIALS_VERSION_V)
+dnl         SUNDIALS_VERSION_FOUND=yes
+dnl       ])
+dnl   ])dnl
+
+dnl if test "x$SUNDIALS_VERSION_FOUND" = "xno"; then
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_MAJOR],[SUNDIALS_VERSION_MAJOR],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MAJOR' value]))
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_MINOR],[SUNDIALS_VERSION_MINOR],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_MINOR' value]))
+dnl   AC_COMPUTE_INT([HAVE_SUNDIALS_PATCH],[SUNDIALS_VERSION_PATCH],[[#include <sundials/sundials_config.h>]],
+dnl     AC_MSG_FAILURE([sundials/sundials_config.h: could not determine 'SUNDIALS_VERSION_PATCH' value]))
+dnl fi
+
+dnl SUNDIALS_VERSION="$HAVE_SUNDIALS_MAJOR.$HAVE_SUNDIALS_MINOR.$HAVE_SUNDIALS_PATCH"
+dnl AC_MSG_RESULT([$SUNDIALS_VERSION])
+
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$HAVE_SUNDIALS_MAJOR],[SUNDIALS version - major])
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MINOR],[$HAVE_SUNDIALS_MINOR],[SUNDIALS version - minor])
+dnl AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_PATCH],[$HAVE_SUNDIALS_PATCH],[SUNDIALS version - patch])
 
 AC_MSG_CHECKING([SUNDIALS version])
-
-SUNDIALS_VERSION_FOUND=none
-if test "xno" = "xyes"; then
-  AC_DEFINE([HAVE_SUNDIALS],[1],[SUNDIALS presence])
-  AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_0_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_1_0],[1],[SUNDIALS version])
-  AC_DEFINE([HAVE_SUNDIALS_3_1_1],[1],[SUNDIALS version])
-fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0, 2], [2.6.0, HAVE_SUNDIALS_2_6_0, 2], [2.6.1, HAVE_SUNDIALS_2_6_0, 2], [2.6.2, HAVE_SUNDIALS_2_6_0, 2], [2.7.0, HAVE_SUNDIALS_2_7_0, 2], [3.0.0, HAVE_SUNDIALS_3_0_0, 3], [3.1.0, HAVE_SUNDIALS_3_1_0, 3], [3.1.1, HAVE_SUNDIALS_3_1_1, 3]],
-  [
-    SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
-    SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
-    SUNDIALS_VERSION_REGEX=$(echo $SUNDIALS_VERSION | $SED 's/\./\\./g')
-    AC_EGREP_CPP([\"$SUNDIALS_VERSION_REGEX\"],
-      [
-        #include <sundials/sundials_config.h>
-        SUNDIALS_PACKAGE_VERSION;
-        SUNDIALS_VERSION;
-      ],
-      [
-        if test "x$SUNDIALS_VERSION_FOUND" != "xnone"; then
-          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) double match])
-        fi
-        SUNDIALS_MAJOR=m4_argn([3],SUNDIALS_VERSION_V)
-        AC_MSG_RESULT([$SUNDIALS_VERSION])
-        AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
-        AC_DEFINE_UNQUOTED([$SUNDIALS_DEFINE], [1], [SUNDIALS version])
-        SUNDIALS_VERSION_FOUND=$SUNDIALS_VERSION
-      ])
-  ])dnl
-
-if test "x$SUNDIALS_VERSION_FOUND" = "xnone"; then
-  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x|3.0.x|3.1.x) none found])
-fi
-
-AC_DEFINE_UNQUOTED([HAVE_SUNDIALS_MAJOR],[$SUNDIALS_MAJOR],[SUNDIALS version])
-
-if test "x$SUNDIALS_MAJOR" = "x2"; then 
-  AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
-  CFLAGS="$SAVED_CFLAGS"
-
-  AC_MSG_CHECKING([whenever sundials uses long int])
-  SAVED_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -Werror"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-  #include <cvodes/cvodes_direct.h>
-  int test_dense_jac (long int N, realtype t,
-                      N_Vector y, N_Vector fy,
-                      DlsMat Jac, void *user_data,
-                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-  { return 0; }
-  ]],[[
-  CVDlsDenseJacFn func = &test_dense_jac;
-  func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
-  ]])],
-  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
-   AC_MSG_RESULT([yes])],
-  [AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
-   AC_MSG_RESULT([no])])
-  CFLAGS="$SAVED_CFLAGS"
-fi
+AC_MSG_RESULT([using internal version])
 
 dnl ***************************************************************************
 dnl PLC
@@ -1068,6 +1061,40 @@ if test "x$has_RTLD_DEFAULT" = "xyes"; then
 fi
 
 AC_SUBST(PLC_DEFINES)
+
+dnl ***************************************************************************
+dnl CCL
+dnl ***************************************************************************
+
+AC_ARG_VAR([CCL_LDFLAGS], [C linker flags for CCL])
+AC_ARG_VAR([CCL_CFLAGS], [C compiler flags for CCL])
+AC_SUBST(CCL_LDFLAGS)
+AC_SUBST(CCL_CFLAGS)
+
+AC_CHECK_LIB([ccl],[ccl_cosmology_create],[ccl_found=yes],[ccl_found=no],[$CCL_LDFLAGS])
+
+SAVED_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $CCL_CFLAGS"
+AC_CHECK_HEADERS([ccl.h],[ccl_header_found=yes],[ccl_header_found=no])
+CPPFLAGS="$SAVED_CPPFLAGS"
+
+numcosmo_check_ccl=no
+AC_MSG_CHECKING([CCL usability])
+if test "x$ccl_found" = "xyes"; then
+  CCL_LDFLAGS="$CCL_LDFLAGS -lccl"
+  if test "x$ccl_header_found" = "xyes"; then
+    CCL_LDFLAGS="$CCL_LDFLAGS -lccl"
+    numcosmo_check_ccl=yes
+    AC_DEFINE(HAVE_CCL,1,[Define if you have the CCL library.])
+    AC_MSG_RESULT([yes])    
+  else
+    AC_MSG_RESULT([no])
+  fi
+else
+  AC_MSG_RESULT([no])
+fi
+
+AM_CONDITIONAL([NUMCOSMO_CHECK_CCL], [test "x$numcosmo_check_ccl" != "xno"])
 
 dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
@@ -1107,6 +1134,7 @@ numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
 numcosmo/plc/Makefile
 numcosmo/class/Makefile
+numcosmo/sundials/Makefile
 numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile

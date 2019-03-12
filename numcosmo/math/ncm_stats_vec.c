@@ -87,7 +87,12 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_blas.h>
 #include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_multifit.h>
+#include <gsl/gsl_cdf.h>
+
+#include <math.h>
 
 #include "toeplitz/solvers/toeplitz.h"
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -1273,6 +1278,99 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
   ncm_vector_clear (&pacf);
 
   return svec->nitens * ncm_stats_vec_get_var (svec, p) / spec0[0];
+}
+
+static guint
+_ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
+{
+  g_assert_cmpuint (pad, <, ncm_stats_vec_nitens (svec));
+  {
+    const guint n                     = ncm_stats_vec_nitens (svec) - pad;
+    const gsl_multifit_robust_type *T = gsl_multifit_robust_default;
+    gsl_multifit_robust_workspace *w  = gsl_multifit_robust_alloc (T, n, 1);
+    NcmMatrix *X                      = ncm_matrix_new (n, 1);
+    NcmMatrix *cov                    = ncm_matrix_new (1, 1);
+    NcmVector *y                      = ncm_vector_new (n);
+    NcmVector *c                      = ncm_vector_new (1);
+    gsl_multifit_robust_stats stats;
+    gint status, i;
+    gdouble t0, cutoff;
+
+    for (i = 0; i < n; i++)
+    {
+      NcmVector *row_i = ncm_stats_vec_peek_row (svec, i + pad);
+      ncm_vector_set (y, i, ncm_vector_get (row_i, p));
+    }
+
+    ncm_vector_set (c, 0, ncm_stats_vec_get_mean (svec, p));
+    ncm_matrix_set_all (X, 1.0);
+    
+    gsl_multifit_robust_maxiter (100000, w);
+    status = gsl_multifit_robust (ncm_matrix_gsl (X), ncm_vector_gsl (y), ncm_vector_gsl (c), ncm_matrix_gsl (cov), w);
+    g_assert (status == GSL_SUCCESS);
+
+    stats = gsl_multifit_robust_statistics (w);
+
+    t0 = ncm_vector_get (c, 0);
+
+    cutoff  = ceil (sqrt (gsl_cdf_chisq_Qinv (1.0 / n, 1.0)));
+
+    /*printf ("# c0[%5u] % 22.15g % 22.15g % 22.15g\n", pad, t0, sqrt (gsl_cdf_chisq_Qinv (1.0 / n, 1.0)), sqrt (gsl_cdf_chisq_Pinv (1.0 / n, 1.0)));*/
+    for (i = 0; i < n; i++)
+    {
+      NcmVector *row_i = ncm_stats_vec_peek_row (svec, i + pad);
+/*      
+      printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g | % 22.15f\n", 
+              ncm_vector_get (row_i, p), t0, ncm_vector_get (row_i, p) - t0, sqrt (ncm_matrix_get (cov, 0, 0)), 
+              stats.sigma_ols, stats.sigma_mad, stats.sigma_rob, stats.sigma,
+              (ncm_vector_get (row_i, p) - t0) / stats.sigma_rob
+              );
+*/
+      if (fabs ((ncm_vector_get (row_i, p) - t0) / stats.sigma_rob) < cutoff)
+        break;
+    }
+
+    gsl_multifit_robust_free (w);
+    ncm_matrix_free (X);
+    ncm_matrix_free (cov);
+    ncm_vector_free (y);
+    ncm_vector_free (c);
+
+    return i;
+  }
+}
+
+/**
+ * ncm_stats_vec_estimate_const_break:
+ * @svec: a #NcmStatsVec
+ * @p: parameter id
+ *
+ * Estimate mean $\mu$ and standard deviation $\sigma$ fitting the paramater @p 
+ * using robust regression. Computes the time $t_0$ where the parameter @p falls 
+ * within the $\alpha\sigma$ from $\mu$, where $\alpha$ is implicitly defined by
+ * $$ \int_\alpha^\infty\chi_1(X)\mathrm{d}X = 1/N,$$ 
+ * and $N$ is the size of the sample.
+ * 
+ * Returns: $t_0$
+ */
+gdouble 
+ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p)
+{
+  guint n  = ncm_stats_vec_nitens (svec);
+  guint t0 = 0;
+  guint t1 = 0;
+
+  do {
+    t1  = _ncm_stats_vec_estimate_const_break_int (svec, p, t0);
+    t0 += t1;
+    if (t0 >= n)
+    {
+      t0 = n - 1;
+      break;
+    }
+  } while (t1 > 0);
+
+  return t0;
 }
 
 static gdouble

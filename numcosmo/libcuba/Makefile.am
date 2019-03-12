@@ -8,11 +8,14 @@ MY_CFLAGS = \
 	 $(FFTW3_CFLAGS) \
 	 $(CFITSIO_CFLAGS) \
 	 $(NLOPT_CFLAGS) \
-	 -I$(top_srcdir)
+	 -I$(top_srcdir) \
+	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
+
+AM_LDFLAGS = $(VISIBILITY_HIDDEN_FLAG)
 
 SUBDIRS = cuhre divonne suave vegas
 

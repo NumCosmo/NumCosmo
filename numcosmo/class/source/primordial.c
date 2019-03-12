@@ -434,7 +434,7 @@ int primordial_init(
   /** - derive spectral parameters from numerically computed spectra
       (not used by the rest of the code, but useful to keep in memory for several types of investigation) */
 
-  if (ppm->primordial_spec_type != analytic_Pk && _FALSE_ /* Turned off! */) {
+  if ((ppm->primordial_spec_type != analytic_Pk) && _FALSE_) {
 
     dlnk = log(10.)/ppr->k_per_decade_primordial;
 

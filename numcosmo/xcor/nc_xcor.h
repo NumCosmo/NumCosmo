@@ -49,6 +49,7 @@ G_BEGIN_DECLS
  * NcXcorLimberMethod:
  * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
  * @NC_XCOR_LIMBER_METHOD_CVODE: FIXME
+ * @NC_XCOR_LIMBER_METHOD_SUAVE: FIXME
  *
  * FIXME
  *
@@ -58,6 +59,7 @@ typedef enum _NcXcorLimberMethod
 {
 	NC_XCOR_LIMBER_METHOD_GSL = 0,
 	NC_XCOR_LIMBER_METHOD_CVODE,
+	NC_XCOR_LIMBER_METHOD_SUAVE,
 } NcXcorLimberMethod;
 
 
@@ -100,16 +102,7 @@ void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
-// gdouble nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint l);
-// void nc_xcor_limber_cross_cl_range (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp);
-// gdouble nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimberKernel* xclk, NcHICosmo* cosmo, guint l, gboolean withnoise);
-// void nc_xcor_limber_auto_cl_range (NcXcor* xc, NcXcorLimberKernel* xclk, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, gboolean withnoise);
-// void nc_xcor_limber_auto_cl_clnl (NcXcor* xc, NcXcorLimberKernel* xclk, NcHICosmo* cosmo, guint lmax, NcmVector* vcl, NcmVector* vclnl);
-// void nc_xcor_limber_cuhre (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp);
-// void nc_xcor_limber_cubature (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp );
-// void nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp );
-
-void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);//, NcXcorLimberMethod meth);
+void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
 
 G_END_DECLS
 

@@ -9,11 +9,14 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS) \
 	 $(NLOPT_CFLAGS) \
 	 -I$(top_srcdir) \
-	 -I$(srcdir)/../common
+	 -I$(srcdir)/../common \
+	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
+
+AM_LDFLAGS = $(VISIBILITY_HIDDEN_FLAG)
 
 SUBDIRS = .
 

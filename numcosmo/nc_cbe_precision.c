@@ -53,7 +53,6 @@
 
 #include "nc_cbe_precision.h"
 #include "math/ncm_cfg.h"
-#include "nc_cbe_precision.h"
 
 struct _NcCBEPrecisionPrivate
 {
@@ -73,6 +72,8 @@ enum
   PROP_NCDM_NEWTONIAN_TOL,
   PROP_NCDM_BG_TOL,
   PROP_NCDM_INITIAL_W_TOL,
+  PROP_SAFE_PHI_SCF,
+  PROP_TAU_EQ_TOL,
   PROP_SBBN_FILE,
   PROP_RECFAST_Z_INI,
   PROP_RECFAST_NZ0,
@@ -198,20 +199,24 @@ enum
   PROP_SELECTION_CUT_AT_SIGMA,
   PROP_SELECTION_SAMPLING,
   PROP_SELECTION_SAMPLING_BESSEL,
+  PROP_SELECTION_SAMPLING_BESSEL_LOS,
   PROP_SELECTION_TOPHAT_EDGE,
-  PROP_HALOFIT_DZ,
   PROP_HALOFIT_MIN_K_NONLINEAR,
-  PROP_HALOFIT_SIGMA_PRECISION,
   PROP_HALOFIT_MIN_K_MAX,
+  PROP_HALOFIT_K_PER_DECADE,
+  PROP_HALOFIT_SIGMA_PRECISION,
+  PROP_HALOFIT_SIGMA_TOL,
+  PROP_PK_EQ_Z_MAX,
+  PROP_PK_EQ_TOL,
   PROP_ACCURATE_LENSING,
   PROP_NUM_MU_MINUS_LMAX,
   PROP_DELTA_L_MAX,
-  PROP_SMALLEST_ALLOWED_VARIATION,
   PROP_TOL_GAUSS_LEGENDRE,
+  PROP_SMALLEST_ALLOWED_VARIATION,
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
 
 static void
 nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
@@ -256,6 +261,12 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       break;
     case PROP_NCDM_INITIAL_W_TOL:
       cbe_prec->priv->ppr.tol_ncdm_initial_w         = g_value_get_double (value);
+      break;
+    case PROP_SAFE_PHI_SCF:
+      cbe_prec->priv->ppr.safe_phi_scf               = g_value_get_double (value);
+      break;
+    case PROP_TAU_EQ_TOL:
+      cbe_prec->priv->ppr.tol_tau_eq                 = g_value_get_double (value);
       break;
     case PROP_SBBN_FILE:
     {
@@ -710,20 +721,32 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
     case PROP_SELECTION_SAMPLING_BESSEL:
       cbe_prec->priv->ppr.selection_sampling_bessel  = g_value_get_double (value);
       break;
+    case PROP_SELECTION_SAMPLING_BESSEL_LOS:
+      cbe_prec->priv->ppr.selection_sampling_bessel_los = g_value_get_double (value);
+      break;
     case PROP_SELECTION_TOPHAT_EDGE:
       cbe_prec->priv->ppr.selection_tophat_edge      = g_value_get_double (value);
-      break;
-    case PROP_HALOFIT_DZ:
-      cbe_prec->priv->ppr.halofit_dz                 = g_value_get_double (value);
       break;
     case PROP_HALOFIT_MIN_K_NONLINEAR:
       cbe_prec->priv->ppr.halofit_min_k_nonlinear    = g_value_get_double (value);
       break;
+    case PROP_HALOFIT_MIN_K_MAX:
+      cbe_prec->priv->ppr.halofit_min_k_max          = g_value_get_double (value);
+      break;
+    case PROP_HALOFIT_K_PER_DECADE:
+      cbe_prec->priv->ppr.halofit_k_per_decade       = g_value_get_double (value);
+      break;
     case PROP_HALOFIT_SIGMA_PRECISION:
       cbe_prec->priv->ppr.halofit_sigma_precision    = g_value_get_double (value);
       break;
-    case PROP_HALOFIT_MIN_K_MAX:
-      cbe_prec->priv->ppr.halofit_min_k_max          = g_value_get_double (value);
+    case PROP_HALOFIT_SIGMA_TOL:
+      cbe_prec->priv->ppr.halofit_tol_sigma          = g_value_get_double (value);
+      break;
+    case PROP_PK_EQ_Z_MAX:
+      cbe_prec->priv->ppr.pk_eq_z_max                = g_value_get_double (value);
+      break;
+    case PROP_PK_EQ_TOL:
+      cbe_prec->priv->ppr.pk_eq_tol                  = g_value_get_double (value);
       break;
     case PROP_ACCURATE_LENSING:
       cbe_prec->priv->ppr.accurate_lensing           = g_value_get_int (value);
@@ -783,6 +806,12 @@ nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GP
       break;
     case PROP_NCDM_INITIAL_W_TOL:
       g_value_set_double (value, cbe_prec->priv->ppr.tol_ncdm_initial_w);
+      break;
+    case PROP_SAFE_PHI_SCF:
+      g_value_set_double (value, cbe_prec->priv->ppr.safe_phi_scf);
+      break;
+    case PROP_TAU_EQ_TOL:
+      g_value_set_double (value, cbe_prec->priv->ppr.tol_tau_eq);
       break;
     case PROP_SBBN_FILE:
       g_value_set_string (value, cbe_prec->priv->ppr.sBBN_file);
@@ -1159,20 +1188,32 @@ nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GP
     case PROP_SELECTION_SAMPLING_BESSEL:
       g_value_set_double (value, cbe_prec->priv->ppr.selection_sampling_bessel);
       break;
+    case PROP_SELECTION_SAMPLING_BESSEL_LOS:
+      g_value_set_double (value, cbe_prec->priv->ppr.selection_sampling_bessel_los);
+      break;
     case PROP_SELECTION_TOPHAT_EDGE:
       g_value_set_double (value, cbe_prec->priv->ppr.selection_tophat_edge);
-      break;
-    case PROP_HALOFIT_DZ:
-      g_value_set_double (value, cbe_prec->priv->ppr.halofit_dz);
       break;
     case PROP_HALOFIT_MIN_K_NONLINEAR:
       g_value_set_double (value, cbe_prec->priv->ppr.halofit_min_k_nonlinear);
       break;
+    case PROP_HALOFIT_MIN_K_MAX:
+      g_value_set_double (value, cbe_prec->priv->ppr.halofit_min_k_max);
+      break;
+    case PROP_HALOFIT_K_PER_DECADE:
+      g_value_set_double (value, cbe_prec->priv->ppr.halofit_k_per_decade);
+      break;
     case PROP_HALOFIT_SIGMA_PRECISION:
       g_value_set_double (value, cbe_prec->priv->ppr.halofit_sigma_precision);
       break;
-    case PROP_HALOFIT_MIN_K_MAX:
-      g_value_set_double (value, cbe_prec->priv->ppr.halofit_min_k_max);
+    case PROP_HALOFIT_SIGMA_TOL:
+      g_value_set_double (value, cbe_prec->priv->ppr.halofit_tol_sigma);
+      break;
+    case PROP_PK_EQ_Z_MAX:
+      g_value_set_double (value, cbe_prec->priv->ppr.pk_eq_z_max);
+      break;
+    case PROP_PK_EQ_TOL:
+      g_value_set_double (value, cbe_prec->priv->ppr.pk_eq_tol);
       break;
     case PROP_ACCURATE_LENSING:
       g_value_set_int (value, cbe_prec->priv->ppr.accurate_lensing);
@@ -1207,8 +1248,6 @@ static void
 nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcCBEPrecisionPrivate));
 
   object_class->set_property = &nc_cbe_precision_set_property;
   object_class->get_property = &nc_cbe_precision_get_property;
@@ -1287,11 +1326,25 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "parameter controlling how relativistic must non-cold relics be at initial time",
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SAFE_PHI_SCF,
+                                   g_param_spec_double ("safe-phi-scf",
+                                                        NULL,
+                                                        "parameter controlling the initial scalar field in background functions",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0, /* Undefined in CLASS: FIXME */
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TAU_EQ_TOL,
+                                   g_param_spec_double ("tol-tau-eq",
+                                                        NULL,
+                                                        "parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)",
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
    * Thermodynamics related parameters
    */
   {
-    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
+    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
     g_object_class_install_property (object_class,
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
@@ -1994,7 +2047,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                    g_param_spec_double ("hyper-sampling-curved-low-nu",
                                                         NULL,
                                                         "hyper sampling_curved_low_nu",
-                                                        0.0, G_MAXDOUBLE, 6.0,
+                                                        0.0, G_MAXDOUBLE, 7.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_HYPER_SAMPLING_CURVED_HIGH_NU,
@@ -2193,6 +2246,13 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         0.0, G_MAXDOUBLE, 20.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
+                                   PROP_SELECTION_SAMPLING_BESSEL_LOS,
+                                   g_param_spec_double ("selection-sampling-bessel-los",
+                                                        NULL,
+                                                        "controls sampling of integral over time when selection functions vary slower than Bessel functions. This parameter is specific to number counts contributions to Cl integrated along the line of sight. Increase for better sampling",
+                                                        0.0, G_MAXDOUBLE, 20.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
                                    PROP_SELECTION_TOPHAT_EDGE,
                                    g_param_spec_double ("selection-tophat-edge",
                                                         NULL,
@@ -2203,18 +2263,25 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
    * Nonlinear module parameters
    */
   g_object_class_install_property (object_class,
-                                   PROP_HALOFIT_DZ,
-                                   g_param_spec_double ("halofit-dz",
-                                                        NULL,
-                                                        "spacing in redshift space defining values of z at which HALOFIT will be used. Intermediate values will be obtained by interpolation. Decrease for more precise interpolations, at the expense of increasing time spent in nonlinear_init()",
-                                                        0.0, G_MAXDOUBLE, 0.1,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_HALOFIT_MIN_K_NONLINEAR,
                                    g_param_spec_double ("halofit-min-k-nonlinear",
                                                         NULL,
                                                         "value of k in 1/Mpc above which non-linear corrections will be computed",
-                                                        0.0, G_MAXDOUBLE, 0.0035,
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_MIN_K_MAX,
+                                   g_param_spec_double ("halofit-min-k-max",
+                                                        NULL,
+                                                        "when halofit is used, k_max must be at least equal to this value (otherwise halofit could not find the scale of non-linearity)",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_K_PER_DECADE,
+                                   g_param_spec_double ("halofit-k-per-decade",
+                                                        NULL,
+                                                        "halofit needs to evalute integrals (linear power spectrum times some kernels). They are sampled using this logarithmic step size.",
+                                                        0.0, G_MAXDOUBLE, 80.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_HALOFIT_SIGMA_PRECISION,
@@ -2224,11 +2291,25 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         0.0, G_MAXDOUBLE, 0.05,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_HALOFIT_MIN_K_MAX,
-                                   g_param_spec_double ("halofit-min-k-max",
+                                   PROP_HALOFIT_SIGMA_TOL,
+                                   g_param_spec_double ("halofit-tol-sigma",
                                                         NULL,
-                                                        "when halofit is used, k_max must be at least equal to this value (otherwise halofit could not find the scale of non-linearity)",
+                                                        "tolerance required on sigma(R) when matching the condition sigma(R_nl)=1, whcih defines the wavenumber of non-linearity, k_nl=1./R_nl",
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PK_EQ_Z_MAX,
+                                   g_param_spec_double ("pk-eq-z-max",
+                                                        NULL,
+                                                        "Maximum z until which the Pk_equal method of 0810.0190 and 1601.07230 is used",
                                                         0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PK_EQ_TOL,
+                                   g_param_spec_double ("pk-eq-tol",
+                                                        NULL,
+                                                        "tolerance for finding the equivalent models of the pk_equal method",
+                                                        0.0, G_MAXDOUBLE, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
    * parameter related to lensing
@@ -2335,7 +2416,8 @@ void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
  * Check agaist CLASS default values.
  *
  */
-void nc_cbe_precision_assert_default (NcCBEPrecision* cbe_prec)
+void 
+nc_cbe_precision_assert_default (NcCBEPrecision* cbe_prec)
 {
   struct precision ppr;
   input_default_precision (&ppr);
@@ -2368,6 +2450,8 @@ G_STMT_END
   _CMP_DBL (tol_ncdm_newtonian);
   _CMP_DBL (tol_ncdm_bg);
   _CMP_DBL (tol_ncdm_initial_w);
+  _CMP_DBL (safe_phi_scf); /* CHECK: FIXME */
+  _CMP_DBL (tol_tau_eq);
   _CMP_DBL (recfast_z_initial);
   _CMP_DBL (recfast_Nz0);
   _CMP_DBL (tol_thermo_integration);
@@ -2489,11 +2573,15 @@ G_STMT_END
   _CMP_DBL (selection_cut_at_sigma);
   _CMP_DBL (selection_sampling);
   _CMP_DBL (selection_sampling_bessel);
+  _CMP_DBL (selection_sampling_bessel_los);
   _CMP_DBL (selection_tophat_edge);
-  _CMP_DBL (halofit_dz);
   _CMP_DBL (halofit_min_k_nonlinear);
-  _CMP_DBL (halofit_sigma_precision);
   _CMP_DBL (halofit_min_k_max);
+  _CMP_DBL (halofit_k_per_decade);
+  _CMP_DBL (halofit_sigma_precision);
+  _CMP_DBL (halofit_tol_sigma);
+  _CMP_DBL (pk_eq_z_max);
+  _CMP_DBL (pk_eq_tol);
   _CMP_DBL (accurate_lensing);
   _CMP_DBL (num_mu_minus_lmax);
   _CMP_DBL (delta_l_max);

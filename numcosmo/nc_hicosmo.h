@@ -394,6 +394,7 @@ gdouble nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf);
 
 #define NC_HICOSMO_DEFAULT_PARAMS_RELTOL (1e-7)
 #define NC_HICOSMO_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_HICOSMO_OMEGA_K0_LIMIT (1.0e-13)
 
 G_END_DECLS
 
@@ -471,7 +472,8 @@ nc_hicosmo_RH_planck (NcHICosmo *cosmo)
 G_INLINE_FUNC gdouble
 nc_hicosmo_Omega_k0 (NcHICosmo *cosmo)
 {
-  return (1.0 - nc_hicosmo_Omega_t0 (cosmo));
+  const gdouble Omega_k0 = (1.0 - nc_hicosmo_Omega_t0 (cosmo));
+  return fabs (Omega_k0) < NC_HICOSMO_OMEGA_K0_LIMIT ? 0.0 : Omega_k0;
 }
 
 G_INLINE_FUNC gdouble

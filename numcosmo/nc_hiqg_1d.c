@@ -72,17 +72,14 @@
 
 #include <nvector/nvector_serial.h>
 
-#if HAVE_SUNDIALS_MAJOR == 3
+#include <arkode/arkode_arkstep.h>
 #include <arkode/arkode.h>
 #include <sunlinsol/sunlinsol_band.h>
 #include <sunlinsol/sunlinsol_pcg.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
-#include <arkode/arkode_direct.h>
-#include <arkode/arkode_spils.h>
 #include <arkode/arkode_bandpre.h>
 #include <sundials/sundials_types.h>
 #include <sundials/sundials_math.h>
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -92,6 +89,7 @@ struct _NcHIQG1DPrivate
   gdouble acs_a;
   gdouble basis_a;
   gdouble nu;
+  gdouble mu;
   gdouble abstol;
   gdouble reltol;
   guint nknots;
@@ -116,10 +114,8 @@ struct _NcHIQG1DPrivate
   NcmVector *ImC;
   gboolean up_splines;
   gboolean noboundary;
-#if HAVE_SUNDIALS_MAJOR == 3
   SUNLinearSolver LS;
   SUNMatrix A;
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
   gdouble h;
   gdouble ti;
   gdouble xi;
@@ -156,7 +152,7 @@ enum
   PROP_NOBOUNDARY,
 };
 
-G_DEFINE_TYPE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
 G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
 
@@ -169,6 +165,7 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
   self->acs_a      = 0.0;
   self->basis_a    = 0.0;
   self->nu         = 0.0;
+  self->mu         = 0.0;
 
   self->abstol     = 0.0;
   self->reltol     = 0.0;
@@ -198,10 +195,8 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
 
   self->up_splines = FALSE;
   self->noboundary = FALSE;
-#if HAVE_SUNDIALS_MAJOR == 3
   self->LS         = NULL;
   self->A          = NULL;
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
   self->h          = 0.0;
   self->ti         = 0.0;
   self->xi         = 0.0;
@@ -240,7 +235,6 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
 #define _LNRI_STRIDE (2)
 #define _SI_STRIDE   (2)
 
-
 static void
 _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -253,6 +247,7 @@ _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_LAMBDA:
       self->lambda  = g_value_get_double (value);
       self->acs_a   = 1.0 + 2.0 * self->lambda + 2.0 * sqrt (self->lambda * (self->lambda - 1.0));
+      self->mu      = 0.25 * (self->acs_a - 1.0);
       self->basis_a = 0.5 * ncm_util_sqrt1px_m1 (4.0 * self->lambda);
       self->nu      = sqrt (self->lambda + 0.25);
       break;
@@ -310,10 +305,8 @@ _nc_hiqg_1d_dispose (GObject *object)
   NcHIQG1D *qg1d = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
 
-#if HAVE_SUNDIALS_MAJOR == 3
   g_clear_pointer (&self->LS, SUNLinSolFree);
   g_clear_pointer (&self->A, SUNMatDestroy);
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
   ncm_vector_clear (&self->fknots);
   ncm_vector_clear (&self->knots);
@@ -364,16 +357,14 @@ _nc_hiqg_1d_dispose (GObject *object)
 static void
 _nc_hiqg_1d_finalize (GObject *object)
 {
-#if HAVE_SUNDIALS_MAJOR == 3
   NcHIQG1D *qg1d = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
 
   if (self->bohm != NULL)
   {
-    ARKodeFree (&self->bohm);
+    ARKStepFree (&self->bohm);
     self->bohm = NULL;
   }
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiqg_1d_parent_class)->finalize (object);
@@ -383,8 +374,6 @@ static void
 nc_hiqg_1d_class_init (NcHIQG1DClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIQG1DPrivate));
 
   object_class->set_property = &_nc_hiqg_1d_set_property;
   object_class->get_property = &_nc_hiqg_1d_get_property;
@@ -524,6 +513,7 @@ nc_hiqg_1d_gauss_eval (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
   const gdouble xmean2  = xmean * xmean;
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + 0.5 * xmean2 * I * qm_gauss->Hi);
+  //complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + xmean * I * qm_gauss->Hi);
   
   psi[0] = creal (psi0c);
   psi[1] = cimag (psi0c);
@@ -567,6 +557,7 @@ nc_hiqg_1d_gauss_eval_lnRS (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *l
   const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
   const gdouble lnR     = - 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
   const gdouble S       = 0.5 * x * x * qm_gauss->Hi;
+  //const gdouble S       = x * qm_gauss->Hi;
 
   lnRS[0] = lnR;
   lnRS[1] = S;
@@ -1149,6 +1140,21 @@ nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
   return self->nu;
 }
 
+/**
+ * nc_hiqg_1d_get_mu:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_get_mu (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  return self->mu;
+}
+
 static gdouble
 _nc_hiqg_1d_If2 (const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
@@ -1176,8 +1182,8 @@ _nc_hiqg_1d_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
 }
 
 static void _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t);
+static void _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d);
 
-#if HAVE_SUNDIALS_MAJOR == 3
 static gint
 _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
@@ -1188,6 +1194,7 @@ _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
   gint i;
 
   _nc_hiqg_1d_evol_C (qg1d, t);
+  /*_nc_hiqg_1d_prepare_splines (qg1d);*/
 
   for (i = 0; i < self->nBohm; i++)
   {
@@ -1196,46 +1203,40 @@ _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 
   return 0;
 }
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
 void
 _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 {
-#if HAVE_SUNDIALS_MAJOR == 3
   NcHIQG1DPrivate * const self = qg1d->priv;
-  const gdouble t0 = 0.0;
+  const gdouble t0    = 0.0;
+  const gdouble ini_q = nc_hiqg_1d_int_xrho_0_inf (qg1d);
   gint flag;
   gint i;
 
   if (self->bohm != NULL)
-    ARKodeFree (&self->bohm);
+    ARKStepFree (&self->bohm);
 
-  self->nBohm = 10;
+  self->nBohm = 1;
 
   g_clear_pointer (&self->yBohm, N_VDestroy);
   self->yBohm = N_VNew_Serial (self->nBohm);
 
   for (i = 0; i < self->nBohm; i++)
   {
-    NV_Ith_S (self->yBohm, i) = 3.0 / (1.0 * self->nBohm) * (i + 1.0);
+    NV_Ith_S (self->yBohm, i) = ini_q / (1.0 * self->nBohm) * (i + 1.0);
   }
 
-  self->bohm = ARKodeCreate ();
+  self->bohm = ARKStepCreate (&_nc_hiqg_1d_bohm_f, NULL, t0, self->yBohm);
   NCM_CVODE_CHECK (&self->bohm, "ARKodeCreate", 0, );
 
-  flag = ARKodeInit (self->bohm, &_nc_hiqg_1d_bohm_f, NULL, t0, self->yBohm);
-  NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
-
-  flag = ARKodeSetUserData (self->bohm, (void *) qg1d);
+  flag = ARKStepSetUserData (self->bohm, (void *) qg1d);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
-  flag = ARKodeSetMaxNumSteps (self->bohm, 10000);
+  flag = ARKStepSetMaxNumSteps (self->bohm, 10000);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-  flag = ARKodeSStolerances (self->bohm, self->reltol, self->abstol);
+  flag = ARKStepSStolerances (self->bohm, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
-
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 }
 
 /**
@@ -1276,6 +1277,8 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
 			const gdouble Ixixj = _nc_hiqg_1d_basis (xi, xj, self->h, self->basis_a);
 			const gdouble Kxixj = /*Ixixj;//*/_nc_hiqg_1d_Hbasis (xi, xj, self->h, self->basis_a);
 			const gdouble Kxjxi = /*Ixixj;//*/_nc_hiqg_1d_Hbasis (xj, xi, self->h, self->basis_a);
+
+      /*printf ("% 22.15g % 22.15g\n", Kxixj, Kxjxi);*/
 
 			ncm_matrix_set (self->IM, j, i, Ixixj);
       ncm_matrix_set (self->KM, i, j, Kxjxi);
@@ -1633,7 +1636,6 @@ _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d)
 void
 nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 {
-#if HAVE_SUNDIALS_MAJOR == 3
   NcHIQG1DPrivate * const self = qg1d->priv;
   /*gdouble *psi = N_VGetArrayPointer (self->yBohm);*/
   gdouble ts = 0.0;
@@ -1641,13 +1643,12 @@ nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 
   if (t > 0.0)
   {
-    flag = ARKodeSetStopTime (self->bohm, t);
+    flag = ARKStepSetStopTime (self->bohm, t);
     NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-    flag = ARKode (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
+    flag = ARKStepEvolve (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "ARKode", 1, );
   }
-#endif /* HAVE_SUNDIALS_MAJOR == 3 */
 
   _nc_hiqg_1d_evol_C (qg1d, t);
   _nc_hiqg_1d_prepare_splines (qg1d);
@@ -1734,6 +1735,20 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
   }
   /*printf ("# BLA % 22.15g % 22.15g % 22.15g\n", x * x * x * dS_rho_x3, x * x * (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x), x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x));*/
 
+  if (FALSE)
+  {
+    const gdouble dS_rho   = 2.0 * x * x * x * dS_rho_x3;
+    const gdouble dS_rho_s = ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+    printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n", 
+            x, 
+            dS_rho, 
+            dS_rho_s, 
+            dS_rho_s / dS_rho, 
+            ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x), 
+            ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x)
+            );
+  }
+  
   return 2.0 * x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x);
 }
 
@@ -1791,6 +1806,12 @@ _nc_hiqg_1d_xrho (gdouble x, NcHIQG1DPrivate * const self)
   return x * ncm_spline_eval (self->rho_s, x);
 }
 
+static gdouble
+_nc_hiqg_1d_mean_p_int (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+}
+
 /**
  * nc_hiqg_1d_int_xrho_0_inf:
  * @qg1d: a #NcHIQG1D
@@ -1846,6 +1867,32 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
 }
 
 /**
+ * nc_hiqg_1d_expect_p:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble mean_p = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_mean_p_int;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_p, &abserr);
+
+  return mean_p;
+}
+
+/**
  * nc_hiqg_1d_nBohm:
  * @qg1d: a #NcHIQG1D
  *
@@ -1875,4 +1922,21 @@ nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
   return NV_Ith_S (self->yBohm, i);
+}
+
+/**
+ * nc_hiqg_1d_Bohm_p:
+ * @qg1d: a #NcHIQG1D
+ * @i: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  const gdouble a = NV_Ith_S (self->yBohm, i);
+  return nc_hiqg_1d_eval_dS (qg1d, a);
 }

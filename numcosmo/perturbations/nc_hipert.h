@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_hipert.h
  *
@@ -30,28 +31,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-
-#include <nvector/nvector_serial.h>
-
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#define SUN_DENSE_ACCESS DENSE_ELEM
-#define SUN_BAND_ACCESS BAND_ELEM
-#elif HAVE_SUNDIALS_MAJOR == 3
-#include <cvodes/cvodes_direct.h> 
-#endif
-
-#if HAVE_SUNDIALS_MAJOR == 3
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
-#define SUN_BAND_ACCESS SM_ELEMENT_D
-#endif 
-
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NC_TYPE_HIPERT             (nc_hipert_get_type ())
@@ -63,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHIPertClass NcHIPertClass;
 typedef struct _NcHIPert NcHIPert;
+typedef struct _NcHIPertPrivate NcHIPertPrivate;
 
 struct _NcHIPertClass
 {
@@ -77,21 +57,7 @@ struct _NcHIPert
 {
   /*< private >*/
   GObject parent_instance;
-  gdouble alpha0;
-  N_Vector y;
-#if HAVE_SUNDIALS_MAJOR == 3
-  SUNMatrix A;
-  SUNLinearSolver LS;
-#endif
-  guint sys_size;
-  gpointer cvode;
-  gboolean cvode_init;
-  gboolean cvode_stiff;
-  gdouble reltol;
-  gdouble abstol;
-  N_Vector vec_abstol;
-  gdouble k;
-  gboolean prepared;
+  NcHIPertPrivate *priv;
 };
 
 GType nc_hipert_get_type (void) G_GNUC_CONST;
@@ -100,8 +66,11 @@ G_INLINE_FUNC void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
 G_INLINE_FUNC void nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
 G_INLINE_FUNC void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
 
-G_INLINE_FUNC gdouble nc_hipert_get_reltol (NcHIPert *pert);
-G_INLINE_FUNC gdouble nc_hipert_get_abstol (NcHIPert *pert);
+gdouble nc_hipert_get_reltol (NcHIPert *pert);
+gdouble nc_hipert_get_abstol (NcHIPert *pert);
+gdouble nc_hipert_get_mode_k (NcHIPert *pert);
+gboolean nc_hipert_prepared (NcHIPert *pert);
+void nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared);
 
 void nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size);
 void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
@@ -133,18 +102,6 @@ G_INLINE_FUNC void
 nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   NC_HIPERT_GET_CLASS (pert)->set_abstol (pert, abstol);
-}
-
-G_INLINE_FUNC gdouble 
-nc_hipert_get_reltol (NcHIPert *pert)
-{
-  return pert->reltol;
-}
-
-G_INLINE_FUNC gdouble 
-nc_hipert_get_abstol (NcHIPert *pert)
-{
-  return pert->abstol;
 }
 
 G_END_DECLS

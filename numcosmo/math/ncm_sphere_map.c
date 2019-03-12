@@ -176,7 +176,7 @@ enum
   PROP_LMAX,
 };
 
-G_DEFINE_TYPE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
 
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)
@@ -282,7 +282,7 @@ _ncm_sphere_map_dispose (GObject *object)
   NcmSphereMapPrivate * const self = smap->priv;
 
   /*ncm_vector_clear (&self->alm);*/
-  g_clear_pointer (&self->alm,  g_array_unref);
+  g_clear_pointer (&self->alm,  _fft_vec_free);
   ncm_vector_clear (&self->Cl);
 
 	ncm_timer_clear (&self->t);
@@ -303,7 +303,7 @@ _ncm_sphere_map_finalize (GObject *object)
   g_ptr_array_unref (self->fft_plan_c2r);
 
   /*ncm_vector_clear (&self->alm);*/
-  g_clear_pointer (&self->alm,  g_array_unref);
+  g_clear_pointer (&self->alm,  _fft_vec_free);
   ncm_vector_clear (&self->Cl);
 
   g_clear_pointer (&self->sphaY_array,  g_ptr_array_unref);
@@ -318,8 +318,6 @@ ncm_sphere_map_class_init (NcmSphereMapClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (NcmSphereMapPrivate));
-  
   object_class->set_property = &_ncm_sphere_map_set_property;
   object_class->get_property = &_ncm_sphere_map_get_property;
   object_class->dispose      = &_ncm_sphere_map_dispose;

@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -30,8 +33,8 @@ Ncm.cfg_init ()
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.9
-slm.props.b = 0.1
+slm.props.alpha = 0.9
+slm.props.a     = 0.2
 
 #
 # New Model set object including slm with parameters
@@ -103,7 +106,7 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-nwalkers = 150
+nwalkers = 20
 stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 #
@@ -111,7 +114,7 @@ stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 # step done between two walkers and circumscribe the walkers inside
 # the box defined by the parameters inside the mset object.
 #
-stretch.set_scale (2.5)
+stretch.set_scale (3.0)
 stretch.set_box_mset (mset)
 
 #

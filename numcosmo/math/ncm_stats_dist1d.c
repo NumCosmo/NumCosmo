@@ -298,8 +298,6 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
     ncm_ode_spline_set_abstol (sd1->inv_cdf, sd1->abstol);
     ncm_ode_spline_set_abstol (sd1->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
 
-    /*ncm_ode_spline_set_interval (sd1->inv_P, sd1->xi, 0.0, 0.5);*/
-
 		ncm_ode_spline_set_xi (sd1->inv_cdf, 0.0);
 		ncm_ode_spline_set_yi (sd1->inv_cdf, sd1->xi);
 		ncm_ode_spline_set_yf (sd1->inv_cdf, sd1->xf);
@@ -308,7 +306,7 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
     sd1->norma = 1.0;
     ncm_ode_spline_prepare (sd1->pdf, sd1);
-    sd1->norma = ncm_spline_eval (sd1->pdf->s, sd1->xf);
+    sd1->norma = ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), sd1->xf);
 
     ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
 	}
@@ -388,7 +386,7 @@ ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi <= x ? 1.0 : 0.0;
-  return ncm_spline_eval (sd1->pdf->s, x) / sd1->norma;
+  return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), x) / sd1->norma;
 }
 
 /**
@@ -428,7 +426,7 @@ ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
   else if (G_UNLIKELY (u >= 1.0))
     return sd1->xf;
   else
-    return ncm_spline_eval (sd1->inv_cdf->s, atanh (u));
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->inv_cdf), atanh (u));
 }
 
 /**
@@ -453,7 +451,7 @@ ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
   else
   {
     const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (- 0.5 * v) - log (v));
-    return ncm_spline_eval (sd1->inv_cdf->s, atan_1mv);
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->inv_cdf), atan_1mv);
   }
 }
 

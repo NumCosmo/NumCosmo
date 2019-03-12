@@ -52,6 +52,8 @@
 #include <numcosmo/math/ncm_stats_dist1d_epdf.h>
 #include <numcosmo/math/ncm_stats_dist2d.h>
 #include <numcosmo/math/ncm_stats_dist2d_spline.h>
+#include <numcosmo/math/ncm_stats_dist_nd.h>
+#include <numcosmo/math/ncm_stats_dist_nd_kde_gauss.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -86,6 +88,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_model_builder.h>
+#include <numcosmo/math/ncm_model_mvnd.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_mset_func1.h>
@@ -99,6 +102,7 @@
 #include <numcosmo/math/ncm_data_gauss_cov.h>
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/math/ncm_data_poisson.h>
+#include <numcosmo/math/ncm_data_gauss_cov_mvnd.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_prior.h>
@@ -112,6 +116,8 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_diff.h>
+#include <numcosmo/math/ncm_ode.h>
+#include <numcosmo/math/ncm_ode_eval.h>
 #include <numcosmo/math/ncm_timer.h>
 
 /* Likelihood object */
@@ -136,6 +142,7 @@
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker_stretch.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker_walk.h>
+#include <numcosmo/math/ncm_fit_esmcmc_walker_aps.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
 #include <numcosmo/math/ncm_abc.h>

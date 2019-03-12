@@ -33,7 +33,6 @@
 #include <string.h>
 #include <math.h>
 #include <gsl/gsl_vector.h>
-#include <sundials/sundials_nvector.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
@@ -177,8 +176,6 @@ void ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size);
 void ncm_vector_free (NcmVector *cv);
 void ncm_vector_clear (NcmVector **cv);
 void ncm_vector_const_free (const NcmVector *cv);
-
-N_Vector ncm_vector_nvector (NcmVector *cv);
 
 G_END_DECLS
 

@@ -61,7 +61,7 @@ enum
 	PROP_DISTS,
 };
 
-G_DEFINE_TYPE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT);
 
 static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)
@@ -142,8 +142,24 @@ _nc_galaxy_redshift_spline_get_property (GObject *object, guint prop_id, GValue 
 }
 
 static void
+_nc_galaxy_redshift_spline_dispose (GObject *object)
+{
+	NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);
+	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
+
+	g_clear_pointer (&self->normas, g_array_unref);
+	ncm_obj_array_clear (&self->dists);
+
+	/* Chain up : end */
+	G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->dispose (object);
+}
+
+static void
 _nc_galaxy_redshift_spline_finalize (GObject *object)
 {
+	/*NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);*/
+	/*NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;*/
+
 
 	/* Chain up : end */
 	G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->finalize (object);
@@ -163,10 +179,9 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
 
-	g_type_class_add_private (klass, sizeof (NcGalaxyRedshiftSplinePrivate));
-
 	object_class->set_property = &_nc_galaxy_redshift_spline_set_property;
 	object_class->get_property = &_nc_galaxy_redshift_spline_get_property;
+	object_class->dispose      = &_nc_galaxy_redshift_spline_dispose;
 	object_class->finalize     = &_nc_galaxy_redshift_spline_finalize;
 
 	g_object_class_install_property (object_class,
@@ -174,8 +189,15 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 	                                 g_param_spec_double ("z-best",
 	                                                      NULL,
 	                                                      "Distributions mode",
-	                                                      0, G_MAXUINT, 0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	                                                      0.0, G_MAXDOUBLE, 0.0,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_DISTS,
+	                                 g_param_spec_boxed ("dists",
+	                                                     NULL,
+	                                                     "Distribution objects",
+	                                                     NCM_TYPE_OBJ_ARRAY,
+	                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));	
 	
 	gz_class->has_dist        = &_nc_galaxy_redshift_spline_has_dist;
 	gz_class->mode            = &_nc_galaxy_redshift_spline_mode;
@@ -336,9 +358,9 @@ nc_galaxy_redshift_spline_clear (NcGalaxyRedshiftSpline **gzs)
 /**
  * nc_galaxy_redshift_spline_set_z_best:
  * @gzs: a #NcGalaxyRedshiftSpline
- * @z_best: the spectroscopic redshift $z_\mathrm{spec}$
+ * @z_best: the mode of the redshift distribution
  * 
- * Sets $z_\mathrm{spec}$ = @z_best.
+ * Sets the mode of the redshift distribution @z_best.
  *
  */
 void
@@ -353,9 +375,9 @@ nc_galaxy_redshift_spline_set_z_best (NcGalaxyRedshiftSpline *gzs, const gdouble
  * nc_galaxy_redshift_spline_get_z_best:
  * @gzs: a #NcGalaxyRedshiftSpline
  * 
- * Gets $z_\mathrm{spec}$.
+ * Gets $z_\mathrm{best}$, the mode of the redshift distribution.
  *
- * Returns: $z_\mathrm{spec}$.
+ * Returns: $z_\mathrm{best}$.
  */
 gdouble
 nc_galaxy_redshift_spline_get_z_best (NcGalaxyRedshiftSpline *gzs)
@@ -393,7 +415,7 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
 
 	for (i = 0; i < len; i++)
 	{
-		const gdouble z_i      = ncm_vector_get (zv, i);
+		const gdouble z_i  = ncm_vector_get (zv, i);
 		const gdouble Pz_i = ncm_vector_get (Pzv, i);
 		g_assert_cmpfloat (Pz_i, >=, 0.0);
 
@@ -464,13 +486,12 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
 	if (first_nz != -1)
 	{
 		NcmStatsDist1dSpline *dist = NULL;
-		NcmSpline *s               = ncm_spline_cubic_notaknot_new ();
+		NcmSpline *s               = (z_a->len >= 6) ? NCM_SPLINE (ncm_spline_cubic_notaknot_new ()) : NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_polynomial));
 
 		ncm_spline_set_array (s, z_a, m2lnPz_a, TRUE);
 		dist = ncm_stats_dist1d_spline_new (s);
 		ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
 
-		
 		ncm_obj_array_add (self->dists, G_OBJECT (dist));
 
 		ncm_stats_dist1d_free (NCM_STATS_DIST1D (dist));

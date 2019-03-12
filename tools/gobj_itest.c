@@ -142,7 +142,7 @@ main (gint argc, gchar *argv[])
       {
         gdouble zi = 10.0 / (1000 - 1.0) * i;
         gdouble cdi = nc_distance_comoving (dist, NC_HICOSMO (lcdm), zi);
-        ncm_spline_prepare (dist->comoving_distance_spline->s);
+        ncm_spline_prepare (ncm_ode_spline_peek_spline (dist->comoving_distance_spline));
         //printf ("% 20.15g % 20.15g\n", zi, cdi);
         sum += cdi;
       }

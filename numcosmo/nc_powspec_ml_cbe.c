@@ -46,18 +46,33 @@ enum
 {
   PROP_0,
   PROP_CBE,
+	PROP_CBE_K_MIN,
+	PROP_CBE_K_MAX,
 	PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML);
+struct _NcPowspecMLCBEPrivate
+{
+  NcCBE *cbe;
+  NcmSpline2d *lnPk;
+  NcPowspecML *eh;
+	gdouble intern_k_min;
+	gdouble intern_k_max;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML);
 
 static void
 nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)
 {
-  NcTransferFunc *tf = nc_transfer_func_eh_new ();
-  ps_cbe->cbe  = NULL;
-  ps_cbe->lnPk = NULL;
-  ps_cbe->eh   = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcPowspecMLCBEPrivate * const self = ps_cbe->priv = G_TYPE_INSTANCE_GET_PRIVATE (ps_cbe, NC_TYPE_POWSPEC_ML_CBE, NcPowspecMLCBEPrivate);
+	NcTransferFunc *tf = nc_transfer_func_eh_new ();
+
+	self->cbe          = NULL;
+  self->lnPk         = NULL;
+  self->eh           = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+	self->intern_k_min = 0.0;
+	self->intern_k_max = 0.0;
 
   nc_transfer_func_free (tf);
 }
@@ -72,6 +87,12 @@ _nc_powspec_ml_cbe_set_property (GObject *object, guint prop_id, const GValue *v
   {
     case PROP_CBE:
       nc_powspec_ml_cbe_set_cbe (ps_cbe, g_value_get_object (value));
+      break;
+    case PROP_CBE_K_MIN:
+      nc_powspec_ml_cbe_set_intern_k_min (ps_cbe, g_value_get_double (value));
+      break;
+    case PROP_CBE_K_MAX:
+      nc_powspec_ml_cbe_set_intern_k_max (ps_cbe, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -90,6 +111,12 @@ _nc_powspec_ml_cbe_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_CBE:
       g_value_set_object (value, nc_powspec_ml_cbe_peek_cbe (ps_cbe));
       break;
+    case PROP_CBE_K_MIN:
+      g_value_set_double (value, nc_powspec_ml_cbe_get_intern_k_min (ps_cbe));
+      break;
+    case PROP_CBE_K_MAX:
+      g_value_set_double (value, nc_powspec_ml_cbe_get_intern_k_max (ps_cbe));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -103,10 +130,13 @@ _nc_powspec_ml_cbe_constructed (GObject *object)
   G_OBJECT_CLASS (nc_powspec_ml_cbe_parent_class)->constructed (object);
   {
     NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (object);
-    if (ps_cbe->cbe == NULL)
+		NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+			
+    if (self->cbe == NULL)
     {
-      ps_cbe->cbe = nc_cbe_new ();
+      self->cbe = nc_cbe_new ();
     }
+		g_assert_cmpfloat (self->intern_k_min, <, self->intern_k_max);
   }
 }
 
@@ -114,10 +144,11 @@ static void
 _nc_powspec_ml_cbe_dispose (GObject *object)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (object);
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
 
-  nc_cbe_clear (&ps_cbe->cbe);
-  ncm_spline2d_clear (&ps_cbe->lnPk);
-  nc_powspec_ml_clear (&ps_cbe->eh);
+  nc_cbe_clear (&self->cbe);
+  ncm_spline2d_clear (&self->lnPk);
+  nc_powspec_ml_clear (&self->eh);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_cbe_parent_class)->dispose (object);
@@ -155,6 +186,20 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
                                                         "Class backend object",
                                                         NC_TYPE_CBE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CBE_K_MIN,
+                                   g_param_spec_double ("intern-k-min",
+                                                        NULL,
+                                                        "Class minimum mode k",
+                                                        G_MINDOUBLE, G_MAXDOUBLE, NC_POWSPEC_ML_CBE_INTERN_KMIN,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CBE_K_MAX,
+                                   g_param_spec_double ("intern-k-max",
+                                                        NULL,
+                                                        "Class maximum mode k",
+                                                        G_MINDOUBLE, G_MAXDOUBLE, NC_POWSPEC_ML_CBE_INTERN_KMAX,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   powspec_class->prepare    = &_nc_powspec_ml_cbe_prepare;
   powspec_class->eval       = &_nc_powspec_ml_cbe_eval;
@@ -166,44 +211,47 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 {
   NcHICosmo *cosmo       = NC_HICOSMO (model);
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
 
   g_assert (NC_IS_HICOSMO (model));
   g_assert (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()) != NULL);
 
-  nc_cbe_set_calc_transfer (ps_cbe->cbe, TRUE);
-  nc_cbe_set_max_matter_pk_z (ps_cbe->cbe, powspec->zf);
-  nc_cbe_set_max_matter_pk_k (ps_cbe->cbe, NC_POWSPEC_ML_CBE_INTERN_KMAX);
+  nc_cbe_set_calc_transfer (self->cbe, TRUE);
+  nc_cbe_set_max_matter_pk_z (self->cbe, powspec->zf);
+  nc_cbe_set_max_matter_pk_k (self->cbe, self->intern_k_max);
 
-  nc_cbe_prepare_if_needed (ps_cbe->cbe, cosmo);
+  nc_cbe_prepare_if_needed (self->cbe, cosmo);
 
-  ncm_spline2d_clear (&ps_cbe->lnPk);
+  ncm_spline2d_clear (&self->lnPk);
 
-  ps_cbe->lnPk = nc_cbe_get_matter_ps (ps_cbe->cbe);
+  self->lnPk = nc_cbe_get_matter_ps (self->cbe);
 
-  ncm_powspec_prepare_if_needed (NCM_POWSPEC (ps_cbe->eh), model);
+  ncm_powspec_prepare_if_needed (NCM_POWSPEC (self->eh), model);
 }
 
 static gdouble 
 _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
-  if (k < NC_POWSPEC_ML_CBE_INTERN_KMIN)
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+	
+  if (k < self->intern_k_min)
   {
-    const gdouble lnkmin = log (NC_POWSPEC_ML_CBE_INTERN_KMIN);
-    const gdouble match = exp (ncm_spline2d_eval (ps_cbe->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, NC_POWSPEC_ML_CBE_INTERN_KMIN);
+    const gdouble lnkmin = log (self->intern_k_min);
+    const gdouble match = exp (ncm_spline2d_eval (self->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_min);
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, k);
+    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k);
   }
-  else if (k > NC_POWSPEC_ML_CBE_INTERN_KMAX)
+  else if (k > self->intern_k_max)
   {
-    const gdouble lnkmax = log (NC_POWSPEC_ML_CBE_INTERN_KMAX);
-    const gdouble match = exp (ncm_spline2d_eval (ps_cbe->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, NC_POWSPEC_ML_CBE_INTERN_KMAX);
+    const gdouble lnkmax = log (self->intern_k_max);
+    const gdouble match = exp (ncm_spline2d_eval (self->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_max);
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, k);
+    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k);
   }
   else
   {
-    return exp (ncm_spline2d_eval (ps_cbe->lnPk, log (k), z));
+    return exp (ncm_spline2d_eval (self->lnPk, log (k), z));
   }
 }
 
@@ -211,9 +259,10 @@ static void
 _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
 
-  Nz[0] = ncm_vector_len (ps_cbe->lnPk->yv);
-  Nk[0] = ncm_vector_len (ps_cbe->lnPk->xv);
+  Nz[0] = ncm_vector_len (self->lnPk->yv);
+  Nk[0] = ncm_vector_len (self->lnPk->xv);
 }
 
 /**
@@ -262,8 +311,10 @@ nc_powspec_ml_cbe_new_full (NcCBE *cbe)
 void 
 nc_powspec_ml_cbe_set_cbe (NcPowspecMLCBE *ps_cbe, NcCBE *cbe)
 {
-  g_clear_object (&ps_cbe->cbe);
-  ps_cbe->cbe = nc_cbe_ref (cbe);
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+	
+  g_clear_object (&self->cbe);
+  self->cbe = nc_cbe_ref (cbe);
 }
 
 /**
@@ -277,6 +328,78 @@ nc_powspec_ml_cbe_set_cbe (NcPowspecMLCBE *ps_cbe, NcCBE *cbe)
 NcCBE *
 nc_powspec_ml_cbe_peek_cbe (NcPowspecMLCBE *ps_cbe)
 {
-  return ps_cbe->cbe;
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+  return self->cbe;
 }
 
+/**
+ * nc_powspec_ml_cbe_set_intern_k_min :
+ * @ps_cbe: a #NcPowspecMLCBE
+ * @k_min: the minimum $k$ computed by CLASS
+ * 
+ * Sets the minimum mode value $k$ computed by CLASS.
+ * Values outside of these value will be extrapolated using EH.
+ * 
+ */
+void 
+nc_powspec_ml_cbe_set_intern_k_min (NcPowspecMLCBE *ps_cbe, const gdouble k_min)
+{
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+
+	self->intern_k_min = k_min;
+
+	if (self->intern_k_max > 0.0)
+	{
+	  g_assert_cmpfloat (self->intern_k_min, <, self->intern_k_max);
+	}
+}
+
+/**
+ * nc_powspec_ml_cbe_set_intern_k_max :
+ * @ps_cbe: a #NcPowspecMLCBE
+ * @k_max: the maximum $k$ computed by CLASS
+ * 
+ * Sets the maximum mode value $k$ computed by CLASS.
+ * Values outside of these value will be extrapolated using EH.
+ * 
+ */
+void 
+nc_powspec_ml_cbe_set_intern_k_max (NcPowspecMLCBE *ps_cbe, const gdouble k_max)
+{
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+
+	self->intern_k_max = k_max;
+
+	if (self->intern_k_min > 0.0)
+	{
+	  g_assert_cmpfloat (self->intern_k_min, <, self->intern_k_max);
+	}
+}
+
+/**
+ * nc_powspec_ml_cbe_get_intern_k_min:
+ * @ps_cbe: a #NcPowspecMLCBE
+ * 
+ * Returns: the current value of the minimum mode $k$ computed by CLASS.
+ */
+gdouble 
+nc_powspec_ml_cbe_get_intern_k_min (NcPowspecMLCBE *ps_cbe)
+{
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+
+	return self->intern_k_min;
+}
+
+/**
+ * nc_powspec_ml_cbe_get_intern_k_max :
+ * @ps_cbe: a #NcPowspecMLCBE
+ * 
+ * Returns: the current value of the maximum mode $k$ computed by CLASS.
+ */
+gdouble 
+nc_powspec_ml_cbe_get_intern_k_max (NcPowspecMLCBE *ps_cbe)
+{
+	NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+
+	return self->intern_k_max;
+}

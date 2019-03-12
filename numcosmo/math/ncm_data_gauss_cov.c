@@ -93,7 +93,7 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
       ncm_data_gauss_cov_set_size (gauss, g_value_get_uint (value));
       break;
     case PROP_USE_NORMA:
-      gauss->use_norma = g_value_get_boolean (value);
+      ncm_data_gauss_cov_use_norma (gauss, g_value_get_boolean (value));
       break;
     case PROP_MEAN:
     {
@@ -487,7 +487,8 @@ _ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
  * Sets the data size to @np.
  *
  */
-void ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
+void 
+ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NCM_DATA_GAUSS_COV_GET_CLASS (gauss)->set_size (gauss, np);
 }
@@ -501,7 +502,22 @@ void ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
  * Returns: Data size.
  *
  */
-guint ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
+guint 
+ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
 {
   return NCM_DATA_GAUSS_COV_GET_CLASS (gauss)->get_size (gauss);
+}
+
+/**
+ * ncm_data_gauss_cov_use_norma:
+ * @gauss: a #NcmDataGaussCov
+ * @use_norma: a boolean
+ *
+ * Sets whether the value of $-2\ln(L)$ will be properly normalized.
+ *
+ */
+void 
+ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma)
+{
+  gauss->use_norma = use_norma;
 }

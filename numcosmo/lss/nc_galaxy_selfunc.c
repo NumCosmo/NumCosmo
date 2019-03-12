@@ -67,7 +67,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_selfunc_init (NcGalaxySelfunc *gsf)
@@ -152,8 +152,6 @@ static void
 nc_galaxy_selfunc_class_init (NcGalaxySelfuncClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcGalaxySelfuncPrivate));
 
   object_class->set_property = &_nc_galaxy_selfunc_set_property;
   object_class->get_property = &_nc_galaxy_selfunc_get_property;
