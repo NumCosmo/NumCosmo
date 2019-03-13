@@ -1,24 +1,21 @@
 #!/usr/bin/env python
 
-import gi
 import math
 from scipy.stats import norm
 import numpy as np
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
 from py_sline_model import PySLineModel
-
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
 
 #
 # Creating a new class implementing our object Ncm.Data
@@ -34,7 +31,7 @@ class PySLineGauss (Ncm.DataGaussCov):
   # 
   def __init__ (self, len = 600):
     Ncm.DataGaussCov.__init__ (self, n_points = len)
-    self.dof = self.np
+
     if self.np > 0:
       self.xv = Ncm.Vector.new (self.np)
     else:
@@ -59,7 +56,7 @@ class PySLineGauss (Ncm.DataGaussCov):
   # Implements the virtual method get_dof.
   #
   def do_get_dof (self):
-    return self.dof
+    return self.np
     
   #
   # Implements the virtual method `begin'.
@@ -77,7 +74,6 @@ class PySLineGauss (Ncm.DataGaussCov):
   # to be able to calculate the likelihood afterwards.
   #
   def do_prepare (self, mset):
-    self.dof = self.np - mset.fparams_len ()
     return
 
   #
@@ -88,60 +84,21 @@ class PySLineGauss (Ncm.DataGaussCov):
   def do_mean_func (self, mset, vp):
     mid = mset.get_id_by_ns ("NcPySLineModel")
     slm = mset.peek (mid)
-
-    #print self.np, slm.props.b, slm.props.m, vp.len ()
     
     for i in range (self.np):
       x = self.xv.get (i)
-      #print slm.props.m, slm.props.b, x, slm.props.m * x + slm.props.b
-      vp.set (i, slm.props.m * x + slm.props.b)
+      vp.set (i, slm.f_x (x))
 
     return
 
-  #
-  # Implements the virtual method `cov_func'.
-  # This method should compute the covariance matrix for the gaussian
-  # distribution.
-  # 
-  # It has an internal flag to assert if the covariance matrix was 
-  # already initialized.
-  #
-  def do_cov_func (self, mset, cov):
-    if not self.cov_init:
-      f = 0.9
-      d = 1.0e-1
-      
-      cov.set_zero ()
-    
-      for i in range (self.np):
-        x       = self.xv.get (i)
-        sigma_i = math.fabs (x * f) + d
-        
-        cov.set (i, i, + sigma_i)
-        
-        if i + 1 < self.np:
-          xp1       = self.xv.get (i + 1)
-          sigma_ip1 = math.fabs (xp1 * f) + d
-          
-          cov.set (i,     i + 1, + i * math.sqrt (sigma_i * sigma_ip1) / self.np)
-          cov.set (i + 1, i,     + i * math.sqrt (sigma_i * sigma_ip1) / self.np)
-      
-      #
-      # sets cov = cov * cov
-      # to guarantee that it is posdef 
-      #
-      tmp1 = cov.dup ()
-      cov.dsymm (ord ('U'), 1.0, tmp1, tmp1, 0.0);
-
-      # Remove to print the covariance matrix
-      # cov.log_vals ("# COV: ", "% 15.8g")
-      
-      self.cov_init = True      
-      
-      return True
-    else:
-      return False
-
+  def create_random_cov (self, slm, rng):    
+    ya = [slm.f_x (x) for x in self.xv.dup_array ()]
+    yv = Ncm.Vector.new_array (ya)
+			
+    self.cov.fill_rand_cov2 (yv, 0.5, 2.0, 15.0, rng)
+	
+    # Remove comment to print the covariance matrix
+    # self.cov.log_vals ("# COV: ", "% 10.3g")
 #
 # Register our new Python class PySLineGauss
 #

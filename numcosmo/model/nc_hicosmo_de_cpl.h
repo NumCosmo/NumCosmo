@@ -78,6 +78,11 @@ GType nc_hicosmo_de_cpl_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDECpl *nc_hicosmo_de_cpl_new (void);
 
+#ifdef HAVE_CCL
+typedef struct ccl_parameters ccl_parameters;
+NcHICosmoDECpl *nc_hicosmo_de_cpl_new_from_ccl (ccl_parameters *ccl_params);
+#endif /* HAVE_CCL */
+
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_DE_CPL_H_ */

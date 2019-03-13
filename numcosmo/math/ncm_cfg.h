@@ -31,6 +31,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/math/ncm_mpi_job.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
@@ -40,8 +41,11 @@
 G_BEGIN_DECLS
 
 void ncm_cfg_init (void);
+void ncm_cfg_init_full_ptr (gint *argc, gchar ***argv);
+gchar **ncm_cfg_init_full (gint argc, gchar **argv);
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);
+guint ncm_cfg_mpi_nslaves (void);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);

@@ -1,24 +1,21 @@
 #!/usr/bin/env python
 
-import gi
 import math
 from scipy.stats import norm
 import numpy as np
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
 from py_sline_model import PySLineModel
-
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
 
 #
 # Creating a new class implementing our object Ncm.Data
@@ -88,7 +85,7 @@ class PySLineData (Ncm.Data):
     for i in range (self.len):
       x = rng.uniform_gen (0.0, 10.0)
       s = x * rng.uniform_gen (0.4, 0.5)
-      v = rng.gaussian_gen (slm.props.m * x + slm.props.b, s)
+      v = rng.gaussian_gen (slm.f_x (x), s)
 
       my_data.append ([x, v, s])
 
@@ -110,7 +107,7 @@ class PySLineData (Ncm.Data):
       x = self.data.get (i, 0)
       v = self.data.get (i, 1)
       s = self.data.get (i, 2)
-      m2lnL += ((slm.props.m * x + slm.props.b - v) / s)**2
+      m2lnL += ((slm.f_x (x) - v) / s)**2
     return m2lnL
   
 #

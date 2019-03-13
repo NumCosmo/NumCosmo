@@ -11,6 +11,7 @@ else
 endif
 
 PLC_DIR = $(top_srcdir)/numcosmo/plc
+SUNDIALS_INCL = $(top_srcdir)/numcosmo/sundials/include
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
@@ -29,19 +30,23 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)      \
+	 -I$(SUNDIALS_INCL)   \
 	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS =    \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
+if NUMCOSMO_CHECK_CCL
+  AM_CFLAGS += $(CCL_CFLAGS)
+endif
+
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
 libnumcosmo_la_LDFLAGS = \
-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
-	$(HDF5_LDFLAGS)
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) $(NOUNDEFINED_FLAG)
 
 libnumcosmo_la_LIBADD =         \
 	$(SUNDIALS_LIBS)        \
@@ -52,19 +57,31 @@ libnumcosmo_la_LIBADD =         \
 	$(GSL_LIBS)             \
 	$(CFITSIO_LIBS)         \
 	$(LIBCUBA_PLACE)        \
+	$(HDF5_LDFLAGS)         \
 	$(HDF5_LIBS)            \
 	$(CODE_COVERAGE_LIBS)   \
 	plc/libclik.la          \
 	levmar/liblevmar.la     \
 	class/libclass.la       \
+	sundials/libsundials.la \
 	toeplitz/libtoeplitz.la
+
+if NUMCOSMO_CHECK_CCL
+  libnumcosmo_la_LIBADD += $(CCL_LDFLAGS)
+endif
 
 ncm_sources = \
 	ncm_build_inline.c                   \
 	math/ncm_c.c                         \
 	math/ncm_cfg.c                       \
+	math/ncm_mpi_job.c                   \
+	math/ncm_mpi_job_test.c              \
+	math/ncm_mpi_job_fit.c               \
+	math/ncm_mpi_job_mcmc.c              \
 	math/ncm_util.c                      \
 	math/ncm_diff.c                      \
+	math/ncm_ode.c                       \
+	math/ncm_ode_eval.c                  \
 	math/ncm_timer.c                     \
 	math/ncm_lapack.c                    \
 	math/ncm_vector.c                    \
@@ -74,13 +91,14 @@ ncm_sources = \
 	math/ncm_integral1d.c                \
 	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
-	math/ncm_qm_prop.c                   \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
 	math/ncm_stats_dist1d_spline.c       \
 	math/ncm_stats_dist1d_epdf.c         \
 	math/ncm_stats_dist2d.c              \
         math/ncm_stats_dist2d_spline.c       \
+	math/ncm_stats_dist_nd.c             \
+	math/ncm_stats_dist_nd_kde_gauss.c   \
 	math/ncm_bootstrap.c                 \
 	math/ncm_spline.c                    \
 	math/ncm_spline_gsl.c                \
@@ -112,8 +130,10 @@ ncm_sources = \
 	math/ncm_model.c                     \
 	math/ncm_model_ctrl.c                \
 	math/ncm_model_builder.c             \
+	math/ncm_model_mvnd.c                \
 	math/ncm_mset.c                      \
 	math/ncm_mset_func.c                 \
+	math/ncm_mset_func1.c                \
 	math/ncm_mset_func_list.c            \
 	math/ncm_calc.c                      \
 	math/ncm_ode_spline.c                \
@@ -126,6 +146,7 @@ ncm_sources = \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
 	math/ncm_data_poisson.c              \
+	math/ncm_data_gauss_cov_mvnd.c       \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
 	math/ncm_prior.c                     \
@@ -153,6 +174,7 @@ ncm_sources = \
 	math/ncm_fit_esmcmc_walker.c         \
 	math/ncm_fit_esmcmc_walker_stretch.c \
 	math/ncm_fit_esmcmc_walker_walk.c    \
+	math/ncm_fit_esmcmc_walker_aps.c     \
 	math/ncm_lh_ratio1d.c                \
 	math/ncm_lh_ratio2d.c                \
 	math/ncm_abc.c                       \
@@ -168,17 +190,27 @@ ncm_sources = \
 	math/mpq_tree.c           \
 	math/grid_one.c           \
 	math/dividedifference.c   \
-	math/memory_pool.c
+	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c \
-	math/rcm.c
+	math/Faddeeva.c  \
+	math/rcm.c       \
+	math/LowRankQP.c \
+	gslextras/cqp/cqpminimizer.c  \
+	gslextras/cqp/initial_point.c \
+	gslextras/cqp/mg_pdip.c
 
 ncm_headers =                                \
 	math/ncm_c.h                         \
 	math/ncm_cfg.h                       \
+	math/ncm_mpi_job.h                   \
+	math/ncm_mpi_job_test.h              \
+	math/ncm_mpi_job_fit.h               \
+	math/ncm_mpi_job_mcmc.h              \
 	math/ncm_util.h                      \
 	math/ncm_diff.h                      \
+	math/ncm_ode.h                       \
+	math/ncm_ode_eval.h                  \
 	math/ncm_timer.h                     \
 	math/ncm_lapack.h                    \
 	math/ncm_vector.h                    \
@@ -188,13 +220,14 @@ ncm_headers =                                \
 	math/ncm_integral1d.h                \
 	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
-	math/ncm_qm_prop.h                   \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \
 	math/ncm_stats_dist1d_spline.h       \
 	math/ncm_stats_dist1d_epdf.h         \
 	math/ncm_stats_dist2d.h              \
         math/ncm_stats_dist2d_spline.h       \
+	math/ncm_stats_dist_nd.h             \
+	math/ncm_stats_dist_nd_kde_gauss.h   \
 	math/ncm_bootstrap.h                 \
 	math/ncm_spline.h                    \
 	math/ncm_spline_gsl.h                \
@@ -226,8 +259,10 @@ ncm_headers =                                \
 	math/ncm_model.h                     \
 	math/ncm_model_ctrl.h                \
 	math/ncm_model_builder.h             \
+	math/ncm_model_mvnd.h                \
 	math/ncm_mset.h                      \
 	math/ncm_mset_func.h                 \
+	math/ncm_mset_func1.h                \
 	math/ncm_mset_func_list.h            \
 	math/ncm_calc.h                      \
 	math/ncm_ode_spline.h                \
@@ -240,6 +275,7 @@ ncm_headers =                                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
 	math/ncm_data_poisson.h              \
+	math/ncm_data_gauss_cov_mvnd.h       \
 	math/ncm_dataset.h                   \
 	math/ncm_likelihood.h                \
 	math/ncm_mset_trans_kern.h           \
@@ -267,6 +303,7 @@ ncm_headers =                                \
 	math/ncm_fit_esmcmc_walker.h         \
 	math/ncm_fit_esmcmc_walker_stretch.h \
 	math/ncm_fit_esmcmc_walker_walk.h    \
+	math/ncm_fit_esmcmc_walker_aps.h     \
 	math/ncm_lh_ratio1d.h                \
 	math/ncm_lh_ratio2d.h                \
 	math/ncm_abc.h                       \
@@ -282,13 +319,18 @@ ncm_headers =                                \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
 	math/dividedifference.h   \
-	math/memory_pool.h
+	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h \
-	math/rcm.h
+	math/ncm_gsl_blas_types.h
 
-ncm_headers_internal =
+ncm_headers_internal = \
+	gslextras/cqp/gsl_cqp.h           \
+	gslextras/cqp/initial_point.h     \
+	math/rcm.h                        \
+	math/ncm_flapack.h                \
+	math/Faddeeva.h                   \
+	perturbations/nc_hipert_private.h
 
 nc_headers = \
 	nc_hicosmo.h                  \
@@ -314,6 +356,7 @@ nc_headers = \
 	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
+	nc_hiqg_1d.h                  \
 	model/nc_hicosmo_idem2.h      \
 	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
@@ -381,6 +424,8 @@ nc_headers = \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
         lss/nc_reduced_shear_cluster_mass.h    \
+        lss/nc_reduced_shear_calib.h           \
+        lss/nc_reduced_shear_calib_wtg.h       \
         lss/nc_galaxy_selfunc.h                \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
@@ -453,6 +498,7 @@ nc_sources = \
 	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
+	nc_hiqg_1d.c                  \
 	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
@@ -520,6 +566,8 @@ nc_sources = \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
 	lss/nc_reduced_shear_cluster_mass.c    \
+	lss/nc_reduced_shear_calib.c           \
+	lss/nc_reduced_shear_calib_wtg.c       \
         lss/nc_galaxy_selfunc.c                \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
@@ -653,6 +701,7 @@ libnumcosmo_la_SOURCES = \
 	$(ncm_headers)          \
 	$(ncm_sources_nogi)     \
 	$(ncm_headers_nogi)     \
+	$(ncm_headers_internal) \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -670,7 +719,6 @@ nodist_libnumcosmo_la_SOURCES = \
 nobase_cosmo_include_HEADERS = \
 	$(ncm_headers)                 \
 	$(ncm_headers_nogi)            \
-	$(ncm_headers_internal)        \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \
 	math/binsplit_eval.c           \

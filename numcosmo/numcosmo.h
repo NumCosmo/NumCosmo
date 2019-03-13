@@ -48,6 +48,8 @@
 #include <numcosmo/nc_planck_fi_cor_ttteee.h>
 #include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
+#include <numcosmo/nc_hiqg_1d.h>
+
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>
@@ -141,6 +143,8 @@
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 #include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>
+#include <numcosmo/lss/nc_reduced_shear_calib.h>
+#include <numcosmo/lss/nc_reduced_shear_calib_wtg.h>
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Observable data */

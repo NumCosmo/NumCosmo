@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_recomb_seager.c
  *
@@ -108,10 +109,48 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_hyperg.h>
+
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#define SUN_DENSE_ACCESS SM_ELEMENT_D
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
+struct _NcRecombSeagerPrivate
+{
+  NcRecombSeagerOpt opts;
+  NcRecombSeagerKHI2p2Pmean K_HI_2p_2Pmean;
+  NcRecombSeagerKHeI2p KX_HeI_2p_1P1;
+  NcRecombSeagerKHeI2p KX_HeI_2p_3Pmean;
+  NcRecombSeagerKHeI2pGrad KX_HeI_2p_1P1_grad;
+  NcRecombSeagerKHeI2pGrad KX_HeI_2p_3Pmean_grad;
+  gdouble H_fudge;
+  gdouble AGauss1, AGauss2;
+  gdouble zGauss1, zGauss2;
+  gdouble wGauss1, wGauss2;
+  gdouble A2P_s;
+  gdouble A2P_t;
+  gdouble sigma_He_2P_s;
+  gdouble sigma_He_2P_t;
+  gdouble Pb, Pb_t;
+  gdouble Qb, Qb_t;
+  gpointer cvode;
+  gboolean init;
+  N_Vector y0;
+  N_Vector y;
+  N_Vector abstol;
+  SUNMatrix A;
+  SUNLinearSolver LS;
+  guint n;
+  NcmSpline *Xe_s;
+  NcmSpline *Xe_reion_s;
+  NcmSpline *Xe_recomb_s;
+  NcmSpline *XHII_s;
+  NcmSpline *XHeII_s;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
 
 enum
 {
@@ -122,11 +161,7 @@ enum
 
 static gint H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
 
-#if HAVE_SUNDIALS_MAJOR == 2
-static gint H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-#elif HAVE_SUNDIALS_MAJOR == 3
 static gint H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-#endif
 
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean_gcor (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
@@ -148,56 +183,55 @@ static void _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad (NcRecombSeager
 static void
 nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
-  recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
-  NCM_CVODE_CHECK ((void*)recomb_seager->cvode, "CVodeCreate", 0, );
+  NcRecombSeagerPrivate * const self = recomb_seager->priv = G_TYPE_INSTANCE_GET_PRIVATE (recomb_seager, NC_TYPE_RECOMB_SEAGER, NcRecombSeagerPrivate);
 
-  recomb_seager->init                  = FALSE;
-  recomb_seager->opts                  = 0;
-  recomb_seager->H_fudge               = 0.0;
-  recomb_seager->AGauss1               = -0.140;
-  recomb_seager->AGauss2               = 0.079;
-  recomb_seager->zGauss1               = 7.280;
-  recomb_seager->zGauss2               = 6.730;
-  recomb_seager->wGauss1               = 0.180;
-  recomb_seager->wGauss2               = 0.330;
+  self->cvode = CVodeCreate (CV_BDF);
+  NCM_CVODE_CHECK ((void*)self->cvode, "CVodeCreate", 0, );
 
-  recomb_seager->A2P_s                 = 1.798287e9; /* [s^-1] from recfast.for 1.5.2 (Morton, Wu & Drake (2006)) */
-  recomb_seager->A2P_t                 = 177.58; /* [s^-1] from recfast.for 1.5.2 (Lach & Pachuski (2001)) */
-  recomb_seager->sigma_He_2P_s         = 1.436289e-22; /* [m^2]  from recfast.for 1.5.2 (Hummer & Storey (1998)) */
-  recomb_seager->sigma_He_2P_t         = 1.484872e-22; /* [m^2]  from recfast.for 1.5.2 (Hummer & Storey (1998)) */
-  recomb_seager->Pb                    = 0.36; /* value from KIV (2007) */
-  recomb_seager->Qb                    = 0.86; /* b_He fudge factor     */
-  recomb_seager->Pb_t                  = 0.66; /* value from KIV (2007) */
-  recomb_seager->Qb_t                  = 0.90; /* value from KIV (2007) */
+  self->init                  = FALSE;
+  self->opts                  = 0;
+  self->H_fudge               = 0.0;
+  self->AGauss1               = -0.140;
+  self->AGauss2               = 0.079;
+  self->zGauss1               = 7.280;
+  self->zGauss2               = 6.730;
+  self->wGauss1               = 0.180;
+  self->wGauss2               = 0.330;
 
-  recomb_seager->K_HI_2p_2Pmean        = &_nc_recomb_seager_K_HI_2p_2Pmean;
-  recomb_seager->KX_HeI_2p_1P1         = &_nc_recomb_seager_KX_HeI_2p_1P1;
+  self->A2P_s                 = 1.798287e9; /* [s^-1] from recfast.for 1.5.2 (Morton, Wu & Drake (2006)) */
+  self->A2P_t                 = 177.58; /* [s^-1] from recfast.for 1.5.2 (Lach & Pachuski (2001)) */
+  self->sigma_He_2P_s         = 1.436289e-22; /* [m^2]  from recfast.for 1.5.2 (Hummer & Storey (1998)) */
+  self->sigma_He_2P_t         = 1.484872e-22; /* [m^2]  from recfast.for 1.5.2 (Hummer & Storey (1998)) */
+  self->Pb                    = 0.36; /* value from KIV (2007) */
+  self->Qb                    = 0.86; /* b_He fudge factor     */
+  self->Pb_t                  = 0.66; /* value from KIV (2007) */
+  self->Qb_t                  = 0.90; /* value from KIV (2007) */
 
-  recomb_seager->KX_HeI_2p_1P1_grad    = &_nc_recomb_seager_KX_HeI_2p_1P1_grad;
+  self->K_HI_2p_2Pmean        = &_nc_recomb_seager_K_HI_2p_2Pmean;
+  self->KX_HeI_2p_1P1         = &_nc_recomb_seager_KX_HeI_2p_1P1;
 
-  recomb_seager->KX_HeI_2p_3Pmean      = NULL;
-  recomb_seager->KX_HeI_2p_3Pmean_grad = NULL;
+  self->KX_HeI_2p_1P1_grad    = &_nc_recomb_seager_KX_HeI_2p_1P1_grad;
 
-  recomb_seager->n                     = 3;
+  self->KX_HeI_2p_3Pmean      = NULL;
+  self->KX_HeI_2p_3Pmean_grad = NULL;
 
-  recomb_seager->y0                    = N_VNew_Serial (recomb_seager->n);
-  recomb_seager->y                     = N_VNew_Serial (recomb_seager->n);
-  recomb_seager->abstol                = N_VNew_Serial (recomb_seager->n);
+  self->n                     = 3;
 
-#if HAVE_SUNDIALS_MAJOR == 3
-  recomb_seager->A                     = SUNDenseMatrix (recomb_seager->n, recomb_seager->n);
-  recomb_seager->LS                    = SUNDenseLinearSolver (recomb_seager->y, recomb_seager->A);
+  self->y0                    = N_VNew_Serial (self->n);
+  self->y                     = N_VNew_Serial (self->n);
+  self->abstol                = N_VNew_Serial (self->n);
+
+  self->A                     = SUNDenseMatrix (self->n, self->n);
+  self->LS                    = SUNDenseLinearSolver (self->y, self->A);
   
-  NCM_CVODE_CHECK ((gpointer)recomb_seager->A, "SUNDenseMatrix", 0, );
-  NCM_CVODE_CHECK ((gpointer)recomb_seager->LS, "SUNDenseLinearSolver", 0, );
-#endif
-
+  NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
   
-  recomb_seager->Xe_s                  = ncm_spline_cubic_notaknot_new ();
-  recomb_seager->Xe_reion_s            = ncm_spline_cubic_notaknot_new ();
-  recomb_seager->Xe_recomb_s           = ncm_spline_cubic_notaknot_new ();
-  recomb_seager->XHII_s                = ncm_spline_cubic_notaknot_new ();
-  recomb_seager->XHeII_s               = ncm_spline_cubic_notaknot_new ();
+  self->Xe_s                  = ncm_spline_cubic_notaknot_new ();
+  self->Xe_reion_s            = ncm_spline_cubic_notaknot_new ();
+  self->Xe_recomb_s           = ncm_spline_cubic_notaknot_new ();
+  self->XHII_s                = ncm_spline_cubic_notaknot_new ();
+  self->XHeII_s               = ncm_spline_cubic_notaknot_new ();
 }
 
 static void
@@ -247,12 +281,13 @@ static void
 _nc_recomb_seager_dispose (GObject* object)
 {
   NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
 
-  ncm_spline_clear (&recomb_seager->Xe_s);
-  ncm_spline_clear (&recomb_seager->Xe_reion_s);
-  ncm_spline_clear (&recomb_seager->Xe_recomb_s);
-  ncm_spline_clear (&recomb_seager->XHII_s);
-  ncm_spline_clear (&recomb_seager->XHeII_s);
+  ncm_spline_clear (&self->Xe_s);
+  ncm_spline_clear (&self->Xe_reion_s);
+  ncm_spline_clear (&self->Xe_recomb_s);
+  ncm_spline_clear (&self->XHII_s);
+  ncm_spline_clear (&self->XHeII_s);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->dispose (object);
@@ -262,26 +297,25 @@ static void
 _nc_recomb_seager_finalize (GObject* object)
 {
   NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
 
-  N_VDestroy (recomb_seager->y);
-  N_VDestroy (recomb_seager->y0);
-  N_VDestroy (recomb_seager->abstol);
+  N_VDestroy (self->y);
+  N_VDestroy (self->y0);
+  N_VDestroy (self->abstol);
 
-#if HAVE_SUNDIALS_MAJOR == 3
-  if (recomb_seager->A != NULL)
+  if (self->A != NULL)
   {
-    SUNMatDestroy (recomb_seager->A);
-    recomb_seager->A = NULL;
+    SUNMatDestroy (self->A);
+    self->A = NULL;
   }
   
-  if (recomb_seager->LS != NULL)
+  if (self->LS != NULL)
   {
-    SUNLinSolFree (recomb_seager->LS);
-    recomb_seager->LS = NULL;
+    SUNLinSolFree (self->LS);
+    self->LS = NULL;
   }
-#endif
 
-  CVodeFree (&recomb_seager->cvode);
+  CVodeFree (&self->cvode);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
@@ -327,22 +361,28 @@ nc_recomb_seager_class_init (NcRecombSeagerClass *klass)
 static gdouble
 _nc_recomb_seager_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (recomb);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (NC_RECOMB_SEAGER (recomb)->Xe_s, lambda);
+  return ncm_spline_eval (self->Xe_s, lambda);
 }
 
 static gdouble
 _nc_recomb_seager_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (recomb);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (NC_RECOMB_SEAGER (recomb)->XHII_s, lambda);
+  return ncm_spline_eval (self->XHII_s, lambda);
 }
 
 static gdouble
 _nc_recomb_seager_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (recomb);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (NC_RECOMB_SEAGER (recomb)->XHeII_s, lambda);
+  return ncm_spline_eval (self->XHeII_s, lambda);
 }
 
 static gdouble nc_recomb_seager_HII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble XHI, const gdouble XHII, const gdouble Tm, const gdouble XHeI, const gdouble XHeII, const gdouble x);
@@ -364,10 +404,12 @@ _nc_recomb_seager_K_HI_2p_2Pmean (NcRecombSeager *recomb_seager, NcHICosmo *cosm
 static gdouble
 _nc_recomb_seager_K_HI_2p_2Pmean_gcor (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  
   const gdouble lnx = log (x);
   const gdouble K_gcor = 1.0 +
-    recomb_seager->AGauss1 * exp (-gsl_pow_2 ((lnx - recomb_seager->zGauss1) / recomb_seager->wGauss1)) +
-    recomb_seager->AGauss2 * exp (-gsl_pow_2 ((lnx - recomb_seager->zGauss2) / recomb_seager->wGauss2));
+    self->AGauss1 * exp (-gsl_pow_2 ((lnx - self->zGauss1) / self->wGauss1)) +
+    self->AGauss2 * exp (-gsl_pow_2 ((lnx - self->zGauss2) / self->wGauss2));
   const gdouble K_HI_2p_2Pmean = ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean () * K_gcor / H;
 
   return K_HI_2p_2Pmean;
@@ -394,8 +436,9 @@ _nc_recomb_seager_KX_HeI_2p_1P1_grad (NcRecombSeager *recomb_seager, NcHICosmo *
 static gdouble
 _nc_recomb_seager_KX_HeI_2p_1P1_sobolev (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI    = ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 () / H;
-  const gdouble tau_XHeI = K_HeI * 3.0 * recomb_seager->A2P_s * n_H;
+  const gdouble tau_XHeI = K_HeI * 3.0 * self->A2P_s * n_H;
   const gdouble tau      = tau_XHeI * XHeI;
   const gdouble P        = gsl_sf_exprel (-tau);
 
@@ -405,8 +448,9 @@ _nc_recomb_seager_KX_HeI_2p_1P1_sobolev (NcRecombSeager *recomb_seager, NcHICosm
 static void
 _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3])
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI    = ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 () / H;
-  const gdouble tau_XHeI = K_HeI * 3.0 * recomb_seager->A2P_s * n_H;
+  const gdouble tau_XHeI = K_HeI * 3.0 * self->A2P_s * n_H;
   const gdouble tau      = tau_XHeI * XHeI;
   const gdouble P        = gsl_sf_exprel (-tau);
   const gdouble dP_dtau  = -0.5 * gsl_sf_hyperg_1F1_int (2, 3, -tau);
@@ -421,14 +465,15 @@ _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_grad (NcRecombSeager *recomb_seager, NcH
 static gdouble
 _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI     = ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 () / H;
-  const gdouble tau_XHeI  = K_HeI * 3.0 * recomb_seager->A2P_s * n_H;
+  const gdouble tau_XHeI  = K_HeI * 3.0 * self->A2P_s * n_H;
   const gdouble tau       = tau_XHeI * XHeI;
   const gdouble P         = gsl_sf_exprel (-tau);
 
   const gdouble Doppler   = sqrt (2.0 * ncm_c_pi () * ncm_c_kb () * Tm / ncm_c_rest_energy_4He ());
-  const gdouble gamma2P_s = H * tau / (n_H * ncm_c_c () * Doppler * recomb_seager->sigma_He_2P_s * fabs (XHI));
-  const gdouble A_Hcon    = 1.0 / (1.0 + recomb_seager->Pb * pow (gamma2P_s, recomb_seager->Qb));
+  const gdouble gamma2P_s = H * tau / (n_H * ncm_c_c () * Doppler * self->sigma_He_2P_s * fabs (XHI));
+  const gdouble A_Hcon    = 1.0 / (1.0 + self->Pb * pow (gamma2P_s, self->Qb));
 
   return K_HeI / ((P + A_Hcon) * tau_XHeI);
 }
@@ -436,20 +481,21 @@ _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont (NcRecombSeager *recomb_seager, NcH
 static void
 _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3])
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI           = ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 () / H;
-  const gdouble tau_XHeI        = K_HeI * 3.0 * recomb_seager->A2P_s * n_H;
+  const gdouble tau_XHeI        = K_HeI * 3.0 * self->A2P_s * n_H;
   const gdouble tau             = tau_XHeI * XHeI;
   const gdouble P               = gsl_sf_exprel (-tau);
   const gdouble dP_dtau         = -0.5 * gsl_sf_hyperg_1F1_int (2, 3, -tau);
 
   const gdouble Doppler         = sqrt (2.0 * ncm_c_pi () * ncm_c_kb () * Tm / ncm_c_rest_energy_4He ());
-  const gdouble gamma2P_s_XHeI  = H * tau_XHeI / (n_H * ncm_c_c () * Doppler * recomb_seager->sigma_He_2P_s * fabs (XHI));
+  const gdouble gamma2P_s_XHeI  = H * tau_XHeI / (n_H * ncm_c_c () * Doppler * self->sigma_He_2P_s * fabs (XHI));
   const gdouble gamma2P_s       = gamma2P_s_XHeI * XHeI;
   const gdouble dgamma2P_s_dTm  = -0.5 * gamma2P_s / Tm;
   const gdouble dgamma2P_s_dXHI = -gamma2P_s / XHI;
-  const gdouble A_Hcon_f        = recomb_seager->Pb * pow (gamma2P_s, recomb_seager->Qb);
+  const gdouble A_Hcon_f        = self->Pb * pow (gamma2P_s, self->Qb);
   const gdouble A_Hcon          = 1.0 / (1.0 + A_Hcon_f);
-  const gdouble dA_Hcon_dgamma  = -A_Hcon * A_Hcon * recomb_seager->Qb * A_Hcon_f / gamma2P_s;
+  const gdouble dA_Hcon_dgamma  = -A_Hcon * A_Hcon * self->Qb * A_Hcon_f / gamma2P_s;
 
   const gdouble denom           = gsl_pow_2 (P + A_Hcon) * tau_XHeI;
 
@@ -463,8 +509,9 @@ _nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont_grad (NcRecombSeager *recomb_seager
 static gdouble
 _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI    = ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean () / H;
-  const gdouble tau_XHeI = K_HeI * 3.0 * recomb_seager->A2P_t * n_H;
+  const gdouble tau_XHeI = K_HeI * 3.0 * self->A2P_t * n_H;
   const gdouble tau      = tau_XHeI * XHeI;
   const gdouble P        = gsl_sf_exprel (-tau);
 
@@ -474,8 +521,9 @@ _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev (NcRecombSeager *recomb_seager, NcHIC
 static void
 _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3])
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI    = ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean () / H;
-  const gdouble tau_XHeI = K_HeI * 3.0 * recomb_seager->A2P_t * n_H;
+  const gdouble tau_XHeI = K_HeI * 3.0 * self->A2P_t * n_H;
   const gdouble tau      = tau_XHeI * XHeI;
   const gdouble P        = gsl_sf_exprel (-tau);
   const gdouble dP_dtau  = -0.5 * gsl_sf_hyperg_1F1_int (2, 3, -tau);
@@ -490,15 +538,16 @@ _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_grad (NcRecombSeager *recomb_seager, 
 static gdouble
 _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI     = ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean () / H;
-  const gdouble tau_XHeI  = K_HeI * 3.0 * recomb_seager->A2P_t * n_H;
+  const gdouble tau_XHeI  = K_HeI * 3.0 * self->A2P_t * n_H;
   const gdouble tau       = tau_XHeI * XHeI;
   const gdouble P         = gsl_sf_exprel (-tau);
   const gdouble one_3     = 1.0 / 3.0;
 
   const gdouble Doppler   = sqrt (2.0 * ncm_c_pi () * ncm_c_kb () * Tm / ncm_c_rest_energy_4He ());
-  const gdouble gamma2P_t = H * tau / (n_H * ncm_c_c () * Doppler * recomb_seager->sigma_He_2P_t * fabs (XHI));
-  const gdouble A_Hcon_t  = one_3 / (1.0 + recomb_seager->Pb_t * pow (gamma2P_t, recomb_seager->Qb_t));
+  const gdouble gamma2P_t = H * tau / (n_H * ncm_c_c () * Doppler * self->sigma_He_2P_t * fabs (XHI));
+  const gdouble A_Hcon_t  = one_3 / (1.0 + self->Pb_t * pow (gamma2P_t, self->Qb_t));
 
   return K_HeI / ((P + A_Hcon_t) * tau_XHeI);
 }
@@ -506,21 +555,22 @@ _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont (NcRecombSeager *recomb_seager, 
 static void
 _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble Tm, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3])
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble K_HeI           = ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean () / H;
-  const gdouble tau_XHeI        = K_HeI * 3.0 * recomb_seager->A2P_t * n_H;
+  const gdouble tau_XHeI        = K_HeI * 3.0 * self->A2P_t * n_H;
   const gdouble tau             = tau_XHeI * XHeI;
   const gdouble P               = gsl_sf_exprel (-tau);
   const gdouble one_3           = 1.0 / 3.0;
   const gdouble dP_dtau         = -0.5 * gsl_sf_hyperg_1F1_int (2, 3, -tau);
 
   const gdouble Doppler         = sqrt (2.0 * ncm_c_pi () * ncm_c_kb () * Tm / ncm_c_rest_energy_4He ());
-  const gdouble gamma2P_t_XHeI  = H * tau_XHeI / (n_H * ncm_c_c () * Doppler * recomb_seager->sigma_He_2P_t * fabs (XHI));
+  const gdouble gamma2P_t_XHeI  = H * tau_XHeI / (n_H * ncm_c_c () * Doppler * self->sigma_He_2P_t * fabs (XHI));
   const gdouble gamma2P_t       = gamma2P_t_XHeI * XHeI;
   const gdouble dgamma2P_t_dTm  = -0.5 * gamma2P_t / Tm;
   const gdouble dgamma2P_t_dXHI = -gamma2P_t / XHI;
-  const gdouble A_Hcon_f        = recomb_seager->Pb_t * pow (gamma2P_t, recomb_seager->Qb_t);
+  const gdouble A_Hcon_f        = self->Pb_t * pow (gamma2P_t, self->Qb_t);
   const gdouble A_Hcon          = one_3 / (1.0 + A_Hcon_f);
-  const gdouble dA_Hcon_dgamma  = -3.0 * A_Hcon * A_Hcon * recomb_seager->Qb_t * A_Hcon_f / gamma2P_t;
+  const gdouble dA_Hcon_dgamma  = -3.0 * A_Hcon * A_Hcon * self->Qb_t * A_Hcon_f / gamma2P_t;
 
   const gdouble denom           = gsl_pow_2 (P + A_Hcon) * tau_XHeI;
 
@@ -557,11 +607,7 @@ H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-#if HAVE_SUNDIALS_MAJOR == 2
-H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#elif HAVE_SUNDIALS_MAJOR == 3
 H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-#endif
 {
   NcRecombSeagerParams* rsp = (NcRecombSeagerParams*)jac_data;
   const gdouble x     = exp (-lambda);
@@ -608,10 +654,11 @@ _nc_recomb_Xe_reion (gdouble lambda, gpointer p)
 {
   gpointer *m = (gpointer *) p;
   NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (m[0]);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   NcHICosmo *cosmo              = NC_HICOSMO (m[1]);
   NcHIReion *reion              = NC_HIREION (m[2]);
   
-  const gdouble Xe_recomb = ncm_spline_eval (recomb_seager->Xe_recomb_s, lambda);
+  const gdouble Xe_recomb = ncm_spline_eval (self->Xe_recomb_s, lambda);
   const gdouble Xe_reion  = nc_hireion_get_Xe (reion, cosmo, lambda, Xe_recomb);
 
   return Xe_reion;
@@ -621,6 +668,8 @@ static void
 _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (recomb);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  
   const gdouble XHe          = nc_hicosmo_XHe (cosmo);
   const gdouble x_HeIII      = nc_recomb_HeII_ion_saha_x_by_HeIII_He (cosmo, recomb->init_frac);
   const gdouble lambdai      = recomb->lambdai;
@@ -633,7 +682,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
   F.function = &_nc_recomb_He_fully_ionized_Xe;
   F.params   = cosmo;
 
-  ncm_spline_set_func (recomb_seager->Xe_recomb_s, NCM_SPLINE_FUNCTION_SPLINE,
+  ncm_spline_set_func (self->Xe_recomb_s, NCM_SPLINE_FUNCTION_SPLINE,
                        &F, lambdai, lambda_HeIII, 0, recomb->prec);
 
   /*****************************************************************************
@@ -649,20 +698,20 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     XeXHeII_XHeI = nc_recomb_HeI_ion_saha (cosmo, x_HeIII);
     XHeII        = (XeXHeII_XHeI + 1.0) * ncm_util_sqrt1px_m1 (4.0 * XHe * XeXHeII_XHeI / gsl_pow_2 (XeXHeII_XHeI + 1.0)) / 2.0;
 
-    NV_Ith_S (recomb_seager->y0, 0) = XHII;
-    NV_Ith_S (recomb_seager->y0, 1) = Tm;
-    NV_Ith_S (recomb_seager->y0, 2) = XHeII;
+    NV_Ith_S (self->y0, 0) = XHII;
+    NV_Ith_S (self->y0, 1) = Tm;
+    NV_Ith_S (self->y0, 2) = XHeII;
   }
 
-  if (!recomb_seager->init)
+  if (!self->init)
   {
-    gint flag = CVodeInit (recomb_seager->cvode, &H_ion_full_f, lambda_HeIII, recomb_seager->y0);
+    gint flag = CVodeInit (self->cvode, &H_ion_full_f, lambda_HeIII, self->y0);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    recomb_seager->init = TRUE;
+    self->init = TRUE;
   }
   else
   {
-    gint flag = CVodeReInit (recomb_seager->cvode, lambda_HeIII, recomb_seager->y0);
+    gint flag = CVodeReInit (self->cvode, lambda_HeIII, self->y0);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
@@ -670,44 +719,35 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     const gdouble reltol = GSL_MIN (recomb->prec, 1e-11);
     gint flag;
 
-    NV_Ith_S (recomb_seager->abstol, 0) = GSL_MIN (reltol, recomb->prec * 1e-5);
-    NV_Ith_S (recomb_seager->abstol, 2) = GSL_MIN (reltol, recomb->prec * 1e-5);
-    NV_Ith_S (recomb_seager->abstol, 1) = 0.0;
+    NV_Ith_S (self->abstol, 0) = GSL_MIN (reltol, recomb->prec * 1e-5);
+    NV_Ith_S (self->abstol, 2) = GSL_MIN (reltol, recomb->prec * 1e-5);
+    NV_Ith_S (self->abstol, 1) = 0.0;
 
-    flag = CVodeSVtolerances (recomb_seager->cvode, reltol, recomb_seager->abstol);
+    flag = CVodeSVtolerances (self->cvode, reltol, self->abstol);
     NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-    flag = CVodeSetUserData (recomb_seager->cvode, &pparams);
+    flag = CVodeSetUserData (self->cvode, &pparams);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-    flag = CVodeSetMaxNumSteps (recomb_seager->cvode, 100000);
+    flag = CVodeSetMaxNumSteps (self->cvode, 100000);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+    flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-#if HAVE_SUNDIALS_MAJOR == 2
-    flag = CVDense (recomb_seager->cvode, recomb_seager->n);
-    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
+    flag = CVodeSetJacFn (self->cvode, &H_ion_full_J);
+    NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
-    flag = CVDlsSetDenseJacFn (recomb_seager->cvode, &H_ion_full_J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
-#elif HAVE_SUNDIALS_MAJOR == 3
-    flag = CVDlsSetLinearSolver (recomb_seager->cvode, recomb_seager->LS, recomb_seager->A);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
-
-    flag = CVDlsSetJacFn (recomb_seager->cvode, &H_ion_full_J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetJacFn", 1, );
-#endif
-
-    flag = CVodeSetStopTime (recomb_seager->cvode, lambdaf);
+    flag = CVodeSetStopTime (self->cvode, lambdaf);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-    flag = CVodeSetMaxErrTestFails (recomb_seager->cvode, 14);
+    flag = CVodeSetMaxErrTestFails (self->cvode, 14);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
   }
 
   {
-    NcmVector *lambda_v = ncm_spline_get_xv (recomb_seager->Xe_recomb_s);
-    NcmVector *Xe_v     = ncm_spline_get_yv (recomb_seager->Xe_recomb_s);
+    NcmVector *lambda_v = ncm_spline_get_xv (self->Xe_recomb_s);
+    NcmVector *Xe_v     = ncm_spline_get_yv (self->Xe_recomb_s);
     GArray *lambda_a    = ncm_vector_get_array (lambda_v);
     GArray *Xe_a        = ncm_vector_get_array (Xe_v);
     gdouble lambda_last = lambda_HeIII;
@@ -716,13 +756,13 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     ncm_vector_free (lambda_v);
     ncm_vector_free (Xe_v);
     
-    if (ncm_spline_is_empty (recomb_seager->XHII_s))
+    if (ncm_spline_is_empty (self->XHII_s))
     {
       XHII_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
     }
     else
     {
-      NcmVector *XHII_v = ncm_spline_get_yv (recomb_seager->XHII_s);
+      NcmVector *XHII_v = ncm_spline_get_yv (self->XHII_s);
 
       XHII_a = ncm_vector_get_array (XHII_v);
       g_array_set_size (XHII_a, 0);
@@ -730,13 +770,13 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       ncm_vector_free (XHII_v);
     }
 
-    if (ncm_spline_is_empty (recomb_seager->XHeII_s))
+    if (ncm_spline_is_empty (self->XHeII_s))
     {
       XHeII_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
     }
     else
     {
-      NcmVector *XHeII_v = ncm_spline_get_yv (recomb_seager->XHeII_s);
+      NcmVector *XHeII_v = ncm_spline_get_yv (self->XHeII_s);
       
       XHeII_a = ncm_vector_get_array (XHeII_v);
       g_array_set_size (XHeII_a, 0);
@@ -745,7 +785,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     }
     
     {
-      const guint lenXe = ncm_spline_get_len (recomb_seager->Xe_recomb_s);
+      const guint lenXe = ncm_spline_get_len (self->Xe_recomb_s);
       guint i;
 
       for (i = 0; i < lenXe; i++)
@@ -764,14 +804,15 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     while (TRUE)
     {
       gdouble lambda_i;
-      gint flag = CVode (recomb_seager->cvode, lambdaf, recomb_seager->y, &lambda_i, CV_ONE_STEP);
-      NCM_CVODE_CHECK (&flag, "CVode", 1, );
+      gint flag = CVode (self->cvode, lambdaf, self->y, &lambda_i, CV_ONE_STEP);
+      NCM_CVODE_CHECK (&flag, "CVode111", 1, );
+      
       {
-        const gdouble XHII  = NV_Ith_S (recomb_seager->y, 0);
-        const gdouble XHeII = NV_Ith_S (recomb_seager->y, 2);
+        const gdouble XHII  = NV_Ith_S (self->y, 0);
+        const gdouble XHeII = NV_Ith_S (self->y, 2);
         const gdouble Xe    = XHII + XHeII;
 
-        if (fabs ((lambda_last - lambda_i) / lambda_last) > 1e-7)
+        if (fabs ((lambda_last - lambda_i) / lambda_last) > 1.0e-7)
         {
           g_array_append_val (lambda_a, lambda_i);
           g_array_append_val (Xe_a, Xe);
@@ -787,9 +828,9 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       }
     }
 
-    ncm_spline_set_array (recomb_seager->Xe_recomb_s, lambda_a, Xe_a, TRUE);
-    ncm_spline_set_array (recomb_seager->XHII_s,      lambda_a, XHII_a, TRUE);
-    ncm_spline_set_array (recomb_seager->XHeII_s,     lambda_a, XHeII_a, TRUE);
+    ncm_spline_set_array (self->Xe_recomb_s, lambda_a, Xe_a, TRUE);
+    ncm_spline_set_array (self->XHII_s,      lambda_a, XHII_a, TRUE);
+    ncm_spline_set_array (self->XHeII_s,     lambda_a, XHeII_a, TRUE);
 
     if (reion != NULL)
     {
@@ -798,16 +839,16 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       F.function = &_nc_recomb_Xe_reion;
       F.params   = m;
             
-      ncm_spline_set_func (recomb_seager->Xe_reion_s, NCM_SPLINE_FUNCTION_SPLINE,
+      ncm_spline_set_func (self->Xe_reion_s, NCM_SPLINE_FUNCTION_SPLINE,
                            &F, lambdai, lambdaf, 0, recomb->prec);
 
-      ncm_spline_clear (&recomb_seager->Xe_s);
-      recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_reion_s);
+      ncm_spline_clear (&self->Xe_s);
+      self->Xe_s = ncm_spline_ref (self->Xe_reion_s);
     }
     else
     {
-      ncm_spline_clear (&recomb_seager->Xe_s);
-      recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_recomb_s);
+      ncm_spline_clear (&self->Xe_s);
+      self->Xe_s = ncm_spline_ref (self->Xe_recomb_s);
     }  
     
     g_array_unref (lambda_a);
@@ -816,8 +857,8 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     g_array_unref (XHeII_a);
   }
 
-  recomb->tau_s          = ncm_spline_copy_empty (recomb_seager->Xe_s);
-  recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb_seager->Xe_s);
+  recomb->tau_s          = ncm_spline_copy_empty (self->Xe_s);
+  recomb->dtau_dlambda_s = ncm_spline_copy_empty (self->Xe_s);
 
   _nc_recomb_prepare_tau_splines (recomb, cosmo);
   _nc_recomb_prepare_redshifts (recomb, cosmo);
@@ -826,6 +867,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 static gdouble
 nc_recomb_seager_HII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble XHI, const gdouble XHII, const gdouble Tm, const gdouble XHeI, const gdouble XHeII, const gdouble x)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
   const gdouble Xe            = XHII + XHeII;
   const gdouble x2            = x * x;
   const gdouble x3            = x2 * x;
@@ -835,7 +877,7 @@ nc_recomb_seager_HII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, 
   const gdouble n_H           = n_H0 * x3;
   const gdouble H             = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
   const gdouble Tm3_2         = sqrt (gsl_pow_3 (Tm));
-  const gdouble K_HI          = recomb_seager->K_HI_2p_2Pmean (recomb_seager, cosmo, x, H);
+  const gdouble K_HI          = self->K_HI_2p_2Pmean (recomb_seager, cosmo, x, H);
   const gdouble Lambda_H      = ncm_c_decay_H_rate_2s_1s ();
   const gdouble nKX           = n_H * K_HI * XHI;
   const gdouble B_HI_1s_2S0_5 = ncm_c_boltzmann_factor_HI_1s_2S0_5 (Tm) * Tm3_2;
@@ -854,6 +896,8 @@ nc_recomb_seager_HII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, 
 static void
 nc_recomb_seager_HII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble XHI, const gdouble XHII, const gdouble Tm, const gdouble XHeI, const gdouble XHeII, const gdouble x, gdouble* grad)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  
   const gdouble Xe                  = XHII + XHeII;
   const gdouble x2                  = x * x;
   const gdouble x3                  = x2 * x;
@@ -863,7 +907,7 @@ nc_recomb_seager_HII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *co
   const gdouble n_H                 = n_H0 * x3;
   const gdouble H                   = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
   const gdouble Tm3_2               = sqrt (gsl_pow_3 (Tm));
-  const gdouble K_HI                = recomb_seager->K_HI_2p_2Pmean (recomb_seager, cosmo, x, H);
+  const gdouble K_HI                = self->K_HI_2p_2Pmean (recomb_seager, cosmo, x, H);
   const gdouble Lambda_H            = ncm_c_decay_H_rate_2s_1s ();
   const gdouble nKX                 = n_H * K_HI * XHI;
   const gdouble B_HI_1s_2S0_5       = ncm_c_boltzmann_factor_HI_1s_2S0_5 (Tm) * Tm3_2;
@@ -901,6 +945,8 @@ nc_recomb_seager_HII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *co
 static gdouble
 nc_recomb_seager_HeII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble XHI, const gdouble XHII, const gdouble Tm, const gdouble XHeI, const gdouble XHeII, const gdouble x)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  
   const gdouble Xe              = XHII + XHeII;
   const gdouble x2              = x * x;
   const gdouble x3              = x2 * x;
@@ -910,7 +956,7 @@ nc_recomb_seager_HeII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo,
   const gdouble n_H             = n_H0 * x3;
   const gdouble H               = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
   const gdouble Tm3_2           = sqrt (gsl_pow_3 (Tm));
-  const gdouble KX_HeI          = recomb_seager->KX_HeI_2p_1P1 (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
+  const gdouble KX_HeI          = self->KX_HeI_2p_1P1 (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
   const gdouble Lambda_He       = ncm_c_decay_He_rate_2s_1s ();
   const gdouble nKX             = n_H * KX_HeI;
   const gdouble exp_E_HeI_2s_2p = exp (-ncm_c_HeI_Balmer_E_kb_2p_1P1_2s_1S0 () / Tm);
@@ -924,14 +970,14 @@ nc_recomb_seager_HeII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo,
 
   const gdouble R_sd            = R_sd_n / R_sd_d;
 
-  if (recomb_seager->KX_HeI_2p_3Pmean == NULL)
+  if (self->KX_HeI_2p_3Pmean == NULL)
   {
     return saha_factor * R_sd;
   }
   else
   {
     const gdouble alpha_t         = nc_recomb_seager_hummer_HeI_case_B_trip (recomb_seager, cosmo, Tm);
-    const gdouble KX_HeI_t        = recomb_seager->KX_HeI_2p_3Pmean (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
+    const gdouble KX_HeI_t        = self->KX_HeI_2p_3Pmean (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
     const gdouble nKX_t           = n_H * KX_HeI_t;
     const gdouble B_HeI_2p_3Pmean = 4.0 * ncm_c_boltzmann_factor_HeI_2p_3Pmean (Tm) * Tm3_2;
 
@@ -947,6 +993,8 @@ nc_recomb_seager_HeII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo,
 static void
 nc_recomb_seager_HeII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble XHI, const gdouble XHII, const gdouble Tm, const gdouble XHeI, const gdouble XHeII, const gdouble x, gdouble* grad)
 {
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  
   const gdouble Xe                  = XHII + XHeII;
   const gdouble x2                  = x * x;
   const gdouble x3                  = x2 * x;
@@ -956,7 +1004,7 @@ nc_recomb_seager_HeII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *c
   const gdouble n_H                 = n_H0 * x3;
   const gdouble H                   = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
   const gdouble Tm3_2               = sqrt (gsl_pow_3 (Tm));
-  const gdouble KX_HeI              = recomb_seager->KX_HeI_2p_1P1 (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
+  const gdouble KX_HeI              = self->KX_HeI_2p_1P1 (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
   const gdouble Lambda_He           = ncm_c_decay_He_rate_2s_1s ();
   const gdouble nKX                 = n_H * KX_HeI;
   const gdouble exp_E_HeI_2s_2p     = exp (-ncm_c_HeI_Balmer_E_kb_2p_1P1_2s_1S0 () / Tm);
@@ -990,13 +1038,13 @@ nc_recomb_seager_HeII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *c
 
   gdouble grad_temp[3];
 
-  recomb_seager->KX_HeI_2p_1P1_grad (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H, grad_temp);
+  self->KX_HeI_2p_1P1_grad (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H, grad_temp);
   {
     const gdouble dR_sd_dXHII  = dR_sd_dKX * grad_temp[0];
     const gdouble dR_sd_dTm    = dR_sd_dKX * grad_temp[1] + dR_sd_dexp_E_HeI_2s_2p * dexp_E_HeI_2s_2p_dTm + dR_sd_dBalpha * dBalpha_Tm + R_sd * dalpha_dTm / alpha;
     const gdouble dR_sd_dXHeII = dR_sd_dKX * grad_temp[2];
 
-    if (recomb_seager->KX_HeI_2p_3Pmean == NULL)
+    if (self->KX_HeI_2p_3Pmean == NULL)
     {
       grad[0] = R_sd * dsaha_factor_dXHII + saha_factor * dR_sd_dXHII;
       grad[1] = R_sd * dsaha_factor_dTm + saha_factor * dR_sd_dTm;
@@ -1005,7 +1053,7 @@ nc_recomb_seager_HeII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *c
     else
     {
       const gdouble alpha_t         = nc_recomb_seager_hummer_HeI_case_B_trip (recomb_seager, cosmo, Tm);
-      const gdouble KX_HeI_t        = recomb_seager->KX_HeI_2p_3Pmean (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
+      const gdouble KX_HeI_t        = self->KX_HeI_2p_3Pmean (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H);
       const gdouble nKX_t           = n_H * KX_HeI_t;
       const gdouble B_HeI_2p_3Pmean = 4.0 * ncm_c_boltzmann_factor_HeI_2p_3Pmean (Tm) * Tm3_2;
 
@@ -1021,7 +1069,7 @@ nc_recomb_seager_HeII_ion_rate_grad (NcRecombSeager *recomb_seager, NcHICosmo *c
       const gdouble dR_t_dBalpha_t  = -R_t * nKX_t / R_t_d;
       const gdouble dBalpha_t_Tm    = B_HeI_2p_3Pmean * alpha_t * (ncm_c_HeI_ion_E_2p_3Pmean () / (ncm_c_kb () * Tm_pow_2) + 1.5 / Tm + dalpha_t_dTm / alpha_t);
 
-      recomb_seager->KX_HeI_2p_3Pmean_grad (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H, grad_temp);
+      self->KX_HeI_2p_3Pmean_grad (recomb_seager, cosmo, x, XHI, Tm, XHeI, H, n_H, grad_temp);
       {
         const gdouble dR_t_dXHII  = dR_t_dKX_t * grad_temp[0];
         const gdouble dR_t_dTm    = dR_t_dKX_t * grad_temp[1] + dR_t_dBalpha_t * dBalpha_t_Tm + R_t * dalpha_t_dTm / alpha_t;
@@ -1165,66 +1213,67 @@ void nc_recomb_seager_clear (NcRecombSeager** recomb_seager)
  */
 void nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt opts)
 {
-  if (recomb_seager->opts != opts)
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  if (self->opts != opts)
   {
     NcRecomb *recomb = NC_RECOMB (recomb_seager);
 
     if (opts & NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR)
     {
-      recomb_seager->H_fudge = 1.125;
-      recomb_seager->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean_gcor;
+      self->H_fudge = 1.125;
+      self->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean_gcor;
     }
     else if (opts & NC_RECOM_SEAGER_OPT_HII_FUDGE)
     {
-      recomb_seager->H_fudge = 1.14;
-      recomb_seager->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean;
+      self->H_fudge = 1.14;
+      self->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean;
     }
     else
     {
-      recomb_seager->H_fudge = 1.0;
-      recomb_seager->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean;
+      self->H_fudge = 1.0;
+      self->K_HI_2p_2Pmean = _nc_recomb_seager_K_HI_2p_2Pmean;
     }
 
     if (opts & NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1)
     {
       if (opts & NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO)
       {
-        recomb_seager->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont;
-        recomb_seager->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont_grad;
+        self->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont;
+        self->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_cont_grad;
       }
       else
       {
-        recomb_seager->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev;
-        recomb_seager->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_grad;
+        self->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev;
+        self->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_sobolev_grad;
       }
     }
     else
     {
-      recomb_seager->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1;
-      recomb_seager->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_grad;
+      self->KX_HeI_2p_1P1 = &_nc_recomb_seager_KX_HeI_2p_1P1;
+      self->KX_HeI_2p_1P1_grad = &_nc_recomb_seager_KX_HeI_2p_1P1_grad;
     }
 
     if (opts & NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012)
     {
       if (opts & NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO)
       {
-        recomb_seager->KX_HeI_2p_3Pmean = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont;
-        recomb_seager->KX_HeI_2p_3Pmean_grad = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad;
+        self->KX_HeI_2p_3Pmean = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont;
+        self->KX_HeI_2p_3Pmean_grad = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad;
       }
       else
       {
-        recomb_seager->KX_HeI_2p_3Pmean = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev;
-        recomb_seager->KX_HeI_2p_3Pmean_grad = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_grad;
+        self->KX_HeI_2p_3Pmean = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev;
+        self->KX_HeI_2p_3Pmean_grad = &_nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_grad;
       }
     }
     else
     {
-      recomb_seager->KX_HeI_2p_3Pmean = NULL;
-      recomb_seager->KX_HeI_2p_3Pmean_grad = NULL;
+      self->KX_HeI_2p_3Pmean = NULL;
+      self->KX_HeI_2p_3Pmean_grad = NULL;
     }
 
     ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
-    recomb_seager->opts = opts;
+    self->opts = opts;
   }
 }
 
@@ -1303,7 +1352,8 @@ void nc_recomb_seager_set_switch (NcRecombSeager *recomb_seager, guint H_switch,
 NcRecombSeagerOpt
 nc_recomb_seager_get_options (NcRecombSeager *recomb_seager)
 {
-  return recomb_seager->opts;
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  return self->opts;
 }
 
 
@@ -1324,7 +1374,8 @@ nc_recomb_seager_get_options (NcRecombSeager *recomb_seager)
 gdouble
 nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, gdouble Tm)
 {
-  const gdouble F   = recomb_seager->H_fudge; /* fudge factor */
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  const gdouble F   = self->H_fudge; /* fudge factor */
   const gdouble G   = 1e-19;
   const gdouble a   = 4.309;
   const gdouble b   = -0.6166;
@@ -1352,7 +1403,8 @@ nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *
 gdouble
 nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, gdouble Tm)
 {
-  const gdouble F   = recomb_seager->H_fudge; /* fudge factor */
+  NcRecombSeagerPrivate * const self = recomb_seager->priv;
+  const gdouble F   = self->H_fudge; /* fudge factor */
   const gdouble G   = 1e-19;
   const gdouble a   = 4.309;
   const gdouble b   = -0.6166;

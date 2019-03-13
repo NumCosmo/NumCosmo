@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -19,6 +22,25 @@ from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
 #
+#  Initializing the library objects, this must be called before
+#  any other library function.
+#
+Ncm.cfg_init ()
+
+#
+# Creating a new NcmRNG object with seed 123 and default algorithm
+#
+rng = Ncm.RNG.seeded_new (None, 123)
+
+#
+# Instantiating a new SLine model object and setting
+# some values for its parameters.
+#
+slm = PySLineModel ()
+slm.props.alpha = 1.0
+slm.props.a     = 0.5
+
+#
 # Instantiating a new empty SLine data object.
 #
 sld = None
@@ -26,18 +48,11 @@ if (len (sys.argv) != 2) or (sys.argv[1] != '--plain' and sys.argv[1] != '--gaus
   print ("usage: example_create_data.py --plain or --gauss")
   sys.exit (-1)
 elif sys.argv[1] == '--plain':
-  sld = PySLineData (len = 5000)
+  sld = PySLineData (len = 50)
 else: 
-  sld = PySLineGauss (len = 5000)
+  sld = PySLineGauss (len = 50)
   sld.xv.set_array (np.linspace (0.0, 10.0, sld.get_size ()))
-  
-#
-# Instantiating a new SLine model object and setting
-# some values for its parameters.
-#
-slm = PySLineModel ()
-slm.props.m = 0.987
-slm.props.b = 0.123
+  sld.create_random_cov (slm, rng)
 
 #
 # New Model set object including slm with parameters
@@ -57,8 +72,5 @@ mset.prepare_fparam_map ()
 #
 ser = Ncm.Serialize.new (0)
 data_file = "example_data.obj"
-rng = Ncm.RNG.new ()
-rng.set_random_seed (False)
 sld.resample (mset, rng)
 ser.to_binfile (sld, data_file)
-

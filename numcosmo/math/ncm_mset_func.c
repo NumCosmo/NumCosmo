@@ -26,7 +26,7 @@
 /**
  * SECTION:ncm_mset_func
  * @title: NcmMSetFunc
- * @short_description: A function of NcmMSet.
+ * @short_description: Abstract class for arbitrary MSet functions.
  *
  * FIXME
  * 
@@ -48,13 +48,13 @@ enum
   PROP_EVAL_X,
 };
 
-G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 
 static void
 ncm_mset_func_init (NcmMSetFunc *func)
 {
-  func->nvar    = 0;
-  func->dim     = 0;
+  func->nvar    = -1;
+  func->dim     = -1;
   func->eval_x  = NULL;
   func->name    = NULL;
   func->symbol  = NULL;
@@ -73,9 +73,32 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
 
   switch (prop_id)
   {
-    case PROP_DIM:
-      func->dim = g_value_get_uint (value);
+    case PROP_NVAR:
+		{
+		  guint nvar = g_value_get_uint (value);
+		  if (func->nvar == -1)
+			{
+				func->nvar = nvar;
+			}
+			else
+			{
+				g_assert_cmpuint (func->nvar, ==, nvar);
+			}
       break;
+		}
+    case PROP_DIM:
+		{
+			guint dim = g_value_get_uint (value);
+		  if (func->dim == -1)
+			{			
+				func->dim = dim;
+			}
+			else
+			{
+				g_assert_cmpuint (func->dim, ==, dim);
+			}
+      break;
+		}
     case PROP_EVAL_X:
       ncm_vector_clear (&func->eval_x);
       func->eval_x = g_value_dup_object (value);
@@ -156,7 +179,7 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
                                                       NULL,
                                                       "Number of variables",
                                                       0, G_MAXUINT32, 0,
-                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_DIM,
                                    g_param_spec_uint ("dimension",
@@ -178,30 +201,7 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
 static void 
 _ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  g_error ("_ncm_mset_func_eval: no eval function.");
-}
-
-/**
- * ncm_mset_func_new:
- * @func: FIXME
- * @nvar: FIXME
- * @dim: FIXME
- * @obj: FIXME
- * @free: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmMSetFunc *
-ncm_mset_func_new (NcmMSetFuncN func, guint nvar, guint dim, gpointer obj, GDestroyNotify free)
-{
-  NcmMSetFunc *gfunc = g_object_new (NCM_TYPE_MSET_FUNC, NULL);
-
-  gfunc->nvar = nvar;
-  gfunc->dim  = dim;
-
-  return gfunc;
+  g_error ("_ncm_mset_func_eval: no eval function implemented.");
 }
 
 /**
@@ -259,18 +259,18 @@ ncm_mset_func_array_new (void)
 
 /**
  * ncm_mset_func_eval: (virtual eval)
- * @func: FIXME
- * @mset: FIXME
- * @x: (in) (array) (element-type double): FIXME
- * @res: (out caller-allocates) (array) (element-type double): FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
+ * @x: (array) (element-type double): FIXME
+ * @res: (array) (element-type double): FIXME
  * 
- * FIXME
+ * Evaluate the function.
  * 
  */
 /**
  * ncm_mset_func_eval_nvar:
- * @func: FIXME
- * @mset: FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
  * @x: FIXME
  *
  * FIXME
@@ -279,8 +279,8 @@ ncm_mset_func_array_new (void)
  */
 /**
  * ncm_mset_func_eval0:
- * @func: FIXME
- * @mset: FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -288,8 +288,8 @@ ncm_mset_func_array_new (void)
  */
 /**
  * ncm_mset_func_eval1:
- * @func: FIXME
- * @mset: FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
  * @x: FIXME
  *
  * FIXME
@@ -298,8 +298,8 @@ ncm_mset_func_array_new (void)
  */
 /**
  * ncm_mset_func_eval_vector:
- * @func: FIXME
- * @mset: FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
  * @x_v: FIXME
  * @res_v: FIXME
  *
@@ -309,7 +309,7 @@ ncm_mset_func_array_new (void)
 
 /**
  * ncm_mset_func_set_eval_x:
- * @func: FIXME
+ * @func: a #NcmMSetFunc
  * @x: (in) (array length=len): FIXME
  * @len: FIXME
  *
@@ -361,7 +361,7 @@ ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
 
 /**
  * ncm_mset_func_is_scalar:
- * @func: FIXME
+ * @func: a #NcmMSetFunc
  *
  * FIXME
  *
@@ -375,7 +375,7 @@ ncm_mset_func_is_scalar (NcmMSetFunc *func)
 
 /**
  * ncm_mset_func_is_vector:
- * @func: FIXME
+ * @func: a #NcmMSetFunc
  * @dim: FIXME
  *
  * FIXME
@@ -390,7 +390,7 @@ ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim)
 
 /**
  * ncm_mset_func_is_const:
- * @func: FIXME
+ * @func: a #NcmMSetFunc
  *
  * FIXME
  *
@@ -404,7 +404,7 @@ ncm_mset_func_is_const (NcmMSetFunc *func)
 
 /**
  * ncm_mset_func_has_nvar:
- * @func: FIXME
+ * @func: a #NcmMSetFunc
  * @nvar: FIXME
  *
  * FIXME
@@ -436,8 +436,8 @@ _mset_func_numdiff_fparams_1_val (NcmVector *x_v, gpointer userdata)
 
 /**
  * ncm_mset_func_numdiff_fparams:
- * @func: FIXME
- * @mset: FIXME
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
  * @x: FIXME
  * @out: (out) (transfer full): FIXME
  *

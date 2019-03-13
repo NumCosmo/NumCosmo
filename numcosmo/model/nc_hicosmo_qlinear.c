@@ -42,7 +42,7 @@
 
 #include "model/nc_hicosmo_qlinear.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_result.h>

@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -19,12 +22,18 @@ from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
 #
+#  Initializing the library objects, this must be called before
+#  any other library function.
+#
+Ncm.cfg_init ()
+
+#
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.9
-slm.props.b = 0.1
+slm.props.alpha = 0.9
+slm.props.a     = 0.2
 
 #
 # New Model set object including slm with parameters
@@ -49,14 +58,10 @@ else:
   sld = ser.from_binfile (data_file)
 
 #
-# New data set object with sld added.
+# New data set object with sld added and the likelihood using it.
 #
 dset = Ncm.Dataset.new ()
 dset.append_data (sld)
-
-#
-# New likelihood object using dset.
-#
 lh = Ncm.Likelihood.new (dset)
 
 #
@@ -64,12 +69,14 @@ lh = Ncm.Likelihood.new (dset)
 #  fit the model set mset using the Likelihood lh and using a numerical differentiation
 #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
 #
-fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
+fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, 
+                   Ncm.FitGradType.NUMDIFF_FORWARD)
 
 #
 #  Running the fitter printing messages.
 #
-fit.run (Ncm.FitRunMsgs.SIMPLE)
+if not (len (sys.argv) > 1 and sys.argv[1] == "n"):
+  fit.run (Ncm.FitRunMsgs.SIMPLE)
 
 #
 #  Printing fitting informations.
@@ -77,11 +84,14 @@ fit.run (Ncm.FitRunMsgs.SIMPLE)
 fit.log_info ()
 
 #
-#  Calculating the parameters covariance using numerical differentiation.
+#  Calculating the parameters covariance using numerical differentiation (observed Fisher matrix).
 #
-fit.numdiff_m2lnL_covar ()
+fit.obs_fisher ()
+fit.log_covar ()
 
 #
-#  Printing the covariance matrix.
-# 
+#  Calculating the parameters covariance using numerical differentiation (expected Fisher matrix).
+#
+fit.fisher ()
 fit.log_covar ()
+

@@ -49,6 +49,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHIPertTwoFluidsClass NcHIPertTwoFluidsClass;
 typedef struct _NcHIPertTwoFluids NcHIPertTwoFluids;
+typedef struct _NcHIPertTwoFluidsPrivate NcHIPertTwoFluidsPrivate;
 
 struct _NcHIPertTwoFluidsClass
 {
@@ -60,13 +61,7 @@ struct _NcHIPertTwoFluids
 {
   /*< private >*/
   NcHIPert parent_instance;
-  NcHIPertWKB *wkb_zeta;
-  NcHIPertWKB *wkb_S;
-  N_Vector abstol;
-  gboolean useQP;
-  NcmVector *state;
-  gpointer arg;
-  gpointer arkode;
+  NcHIPertTwoFluidsPrivate *priv;
 };
 
 /**

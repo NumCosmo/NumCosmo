@@ -70,7 +70,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   /* Default vector allocation */
@@ -223,6 +223,7 @@ test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
+  ncm_rng_free (rng);
   NCM_TEST_FAIL (ncm_stats_vec_get_var (test->svec, 0));  
 }
 
@@ -270,6 +271,7 @@ test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
+  ncm_rng_free (rng);
   NCM_TEST_FAIL (ncm_stats_vec_get_cov (test->svec, 0, 1));  
 }
 
@@ -331,6 +333,7 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
       }
     }
   }  
+  ncm_rng_free (rng);
 }
 
 void
@@ -391,6 +394,7 @@ test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
   }
   
   ncm_vector_free (last);
+  ncm_rng_free (rng);
 }
 
 void
@@ -453,6 +457,7 @@ test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer
   }
   
   ncm_matrix_free (last);
+  ncm_rng_free (rng);
 }
 
 void

@@ -44,10 +44,11 @@
 #include "build_cfg.h"
 
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
 #include "xcor/nc_xcor_limber_kernel.h"
+#include "xcor/nc_xcor.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL);
 
@@ -266,6 +267,30 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
 {
   if ((xclk->zmin <= z) && (xclk->zmax >= z))
     return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
+  else
+    return 0.0;
+}
+
+/**
+ * nc_xcor_limber_kernel_eval_full:
+ * @xclk: a #NcXcorLimberKernel
+ * @cosmo: a #NcHICosmo
+ * @z: a #gdouble
+ * @dist: a #NcDistance
+ * @l: a #gint
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
+{
+  const gdouble xi_z = nc_distance_comoving (dist, cosmo, z); // in units of Hubble radius
+  const gdouble E_z = nc_hicosmo_E (cosmo, z);
+  const NcXcorKinetic xck = { xi_z, E_z };
+  if ((xclk->zmin <= z) && (xclk->zmax >= z))
+    return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * xclk->cons_factor;
   else
     return 0.0;
 }

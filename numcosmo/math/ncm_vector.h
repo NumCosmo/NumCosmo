@@ -33,7 +33,6 @@
 #include <string.h>
 #include <math.h>
 #include <gsl/gsl_vector.h>
-#include <sundials/sundials_nvector.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
@@ -156,6 +155,7 @@ G_INLINE_FUNC gdouble *ncm_vector_data (NcmVector *cv);
 G_INLINE_FUNC const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 G_INLINE_FUNC gsl_vector *ncm_vector_gsl (NcmVector *cv);
+G_INLINE_FUNC gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
@@ -176,8 +176,6 @@ void ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size);
 void ncm_vector_free (NcmVector *cv);
 void ncm_vector_clear (NcmVector **cv);
 void ncm_vector_const_free (const NcmVector *cv);
-
-N_Vector ncm_vector_nvector (NcmVector *cv);
 
 G_END_DECLS
 
@@ -416,6 +414,12 @@ G_INLINE_FUNC gsl_vector *
 ncm_vector_gsl (NcmVector *cv)
 {
   return &(cv->vv.vector);
+}
+
+G_INLINE_FUNC gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
 }
 
 G_INLINE_FUNC const gsl_vector *

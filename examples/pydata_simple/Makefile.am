@@ -10,6 +10,7 @@ examples_DATA = \
 	py_sline_model.py      \
 	py_sline_data.py       \
 	py_sline_gauss.py      \
+	py_sline_mfunc.py      \
 	example_create_data.py \
 	example_fit.py         \
 	example_mcmc.py        \

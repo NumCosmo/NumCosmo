@@ -40,6 +40,8 @@
 #include "math/ncm_serialize.h"
 #include "nc_hicosmo.h"
 #include "nc_hiprim.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_mset_func_list.h"
 
 enum
 {
@@ -357,3 +359,25 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnSA_powspec_
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnT_powspec_lnk)
+
+#define _NC_HIPRIM_FUNC1_TO_FLIST(fname) \
+static void _nc_hiprim_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
+{ \
+ NcHIPrim *prim = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ())); \
+ g_assert (prim != NULL); \
+ res[0] = nc_hiprim_##fname (prim, x[0]); \
+}
+
+_NC_HIPRIM_FUNC1_TO_FLIST (lnSA_powspec_lnk)
+_NC_HIPRIM_FUNC1_TO_FLIST (lnT_powspec_lnk)
+_NC_HIPRIM_FUNC1_TO_FLIST (SA_powspec_k)
+_NC_HIPRIM_FUNC1_TO_FLIST (T_powspec_k)
+
+void
+_nc_hiprim_register_functions (void)
+{
+  ncm_mset_func_list_register ("lnSA_powspec_lnk", "\\ln(P_\\mathrm{SA})", "NcHIPrim", "Logarithm of the SA power spectrum", G_TYPE_NONE, _nc_hiprim_flist_lnSA_powspec_lnk, 1, 1);
+  ncm_mset_func_list_register ("lnT_powspec_lnk",  "\\ln(P_\\mathrm{T})",  "NcHIPrim", "Logarithm of the T power spectrum",  G_TYPE_NONE, _nc_hiprim_flist_lnT_powspec_lnk,  1, 1);
+  ncm_mset_func_list_register ("SA_powspec_k",     "P_\\mathrm{SA}",       "NcHIPrim", "SA power spectrum",                  G_TYPE_NONE, _nc_hiprim_flist_SA_powspec_k,     1, 1);
+  ncm_mset_func_list_register ("T_powspec_k",      "P_\\mathrm{T}",        "NcHIPrim", "T power spectrum",                   G_TYPE_NONE, _nc_hiprim_flist_T_powspec_k,      1, 1);
+}

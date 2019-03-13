@@ -30,18 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hicosmo.h>
-
-#ifndef NUMCOSMO_GIR_SCAN
-#if HAVE_SUNDIALS_MAJOR == 3
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
-#endif 
-#include <nvector/nvector_serial.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -54,6 +43,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcGrowthFuncClass NcGrowthFuncClass;
 typedef struct _NcGrowthFunc NcGrowthFunc;
+typedef struct _NcGrowthFuncPrivate NcGrowthFuncPrivate;
 
 struct _NcGrowthFuncClass
 {
@@ -65,17 +55,9 @@ struct _NcGrowthFunc
 {
   /*< private >*/
   GObject parent_instance;
+  NcGrowthFuncPrivate *priv;
   NcmSpline *s;
-  gpointer cvode;
-  N_Vector yv;
-  N_Vector yQ;
-#if HAVE_SUNDIALS_MAJOR == 3
-  SUNMatrix A;
-  SUNLinearSolver LS;
-#endif
-  gdouble zf;
   gdouble Da0;
-  NcmModelCtrl *ctrl_cosmo;
 };
 
 GType nc_growth_func_get_type (void) G_GNUC_CONST;

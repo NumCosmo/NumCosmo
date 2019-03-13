@@ -31,7 +31,7 @@
  * 
  * The projected surface mass density is [nc_wl_surface_mass_density_sigma()]  
  * \begin{equation}\label{eq:sigma}
- * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt(R^2 + \chi^2) \right), 
+ * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt{R^2 + \chi^2} \right), 
  * \end{equation} 
  * where $\rho(r)$ is the three-dimensional mass density profile (#NcDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a 
  * two-dimensional vector from the halo center. In particular, we consider a projection $\Sigma (R)$ onto the lens plane. 
@@ -322,6 +322,37 @@ nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosm
 }
 
 /**
+ * nc_wl_surface_mass_density_sigma_critical_infinity:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the critical surface density, 
+ * \begin{equation}\label{eq:def:SigmaC}
+ * \Sigma_c = \frac{c^2}{4\pi G} \frac{D_\infty}{D_l D_{l\infty}},
+ * \end{equation}
+ * where $c^2$ is the speed of light squared [ncm_c_c2 ()], $G$ is the gravitational constant in units of $m^3/s^2 M_\odot^{-1}$ [ncm_c_G_mass_solar()],
+ * $D_\infty$ ($D_l$) is the angular diameter distance from the observer to the source at infinite redshift (lens), and $D_{l\infty}$ is the angular diameter distance between 
+ * the lens and the source.
+ *
+ * Returns: the critical surface density $\Sigma_c$ in units of $M_\odot / Mpc^2$
+ */
+gdouble 
+nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc)
+{
+	//g_assert_cmpfloat (nc_hicosmo_Omega_k0 (cosmo), >=, 0.0);
+	const gdouble a      = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
+	const gdouble Dinf     = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
+	const gdouble Dl     = nc_distance_angular_diameter (smd->dist, cosmo, zl);
+	const gdouble Dlinf = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl);
+	
+	const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+  
+  return a * Dinf / (Dl * Dlinf * RH_Mpc);
+}
+
+/**
  * nc_wl_surface_mass_density_sigma:
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
@@ -400,6 +431,28 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
 }
 
 /**
+ * nc_wl_surface_mass_density_convergence_infinity:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcDensityProfile  
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the convergence $\kappa_\infty(R)$ at @R, see Eq $\eqref{eq:convergence}$, and sources at infinite redshift.
+ *
+ * Returns: $\kappa_\infty(R)$
+ */
+gdouble 
+nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+{
+  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+	gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
+
+	return sigma / sigma_crit_inf;
+}
+
+/**
  * nc_wl_surface_mass_density_shear:
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcDensityProfile  
@@ -421,6 +474,29 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
 	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
 
 	return (mean_sigma - sigma) / sigma_crit;
+}
+
+/**
+ * nc_wl_surface_mass_density_shear_infinity:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcDensityProfile  
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo 
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the shear $\gamma_\infty (R)$ at @R, see Eq $\eqref{eq:shear}$, and source at infinite redshift. 
+ *
+ * Returns: $\gamma_\infty (R)$ 
+ */
+gdouble 
+nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+{
+  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
+	gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
+
+	return (mean_sigma - sigma) / sigma_crit_inf;
 }
 
 /**
@@ -475,7 +551,7 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
   gdouble Dinf, betainf, beta_s;
-	gdouble convergence_inf, shear_inf;
+	gdouble convergence_inf, shear_inf, g;
 	gdouble Ds              = nc_distance_angular_diameter (smd->dist, cosmo, zs);
 	gdouble Dls             = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl))/ (1.0 + zs);
   gdouble beta            = Dls / Ds;
@@ -485,8 +561,10 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 	betainf         = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl) / Dinf;
 	beta_s          = beta / betainf;
 
-	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
-	shear_inf       = beta_s * nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
+	convergence_inf = beta_s * nc_wl_surface_mass_density_convergence_infinity (smd, dp, cosmo, R, zl, zc);
+	shear_inf       = beta_s * nc_wl_surface_mass_density_shear_infinity (smd, dp, cosmo, R, zl, zc);
 	
-	return shear_inf / (1.0 - convergence_inf);
+	g = shear_inf / (1.0 - convergence_inf);
+	
+	return g;
 }

@@ -28,6 +28,7 @@
  * @short_description: Abstract class for implementing dark energy models
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,8 +43,6 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
-
 struct _NcHICosmoDEPrivate
 {
   NcmSpline2d *BBN_spline2d;
@@ -55,6 +54,8 @@ struct _NcHICosmoDEPrivate
   gdouble zmax;
 };
 
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
+
 enum
 {
   PROP_0,
@@ -65,7 +66,7 @@ static void
 nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *filename   = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
+  gchar *filename   = ncm_cfg_get_data_filename ("BBN_2017_spline2d.obj", TRUE);
   gint i;
 
   cosmo_de->priv               = G_TYPE_INSTANCE_GET_PRIVATE (cosmo_de, NC_TYPE_HICOSMO_DE, NcHICosmoDEPrivate);
@@ -241,8 +242,6 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (NcHICosmoDEPrivate));
-
   object_class->constructed = &_nc_hicosmo_de_constructed;
   object_class->dispose     = &_nc_hicosmo_de_dispose;
   object_class->finalize    = &_nc_hicosmo_de_finalize;
@@ -254,18 +253,18 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
-                              40.0, 120.0, 1.0,
+                              31.0, 99.0, 1.0,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0, NCM_PARAM_TYPE_FIXED);
 
   /* Set Omega_c0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_{c0}", "Omegac",
-                              1e-8, 0.9, 1.0e-2,
+                              0.01, 0.9, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
                               NCM_PARAM_TYPE_FREE);
 
   /* Set Omega_x0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_{x0}", "Omegax",
-                              1e-8, 1.4, 1.0e-2,
+                              0.01, 1.4, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
                               NCM_PARAM_TYPE_FREE);
 
@@ -428,7 +427,6 @@ _nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
   if (!ncm_model_state_is_update (model))
   {
     const guint m_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
-
     if (m_len > 0)
     {
       gint n;
@@ -568,7 +566,7 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
                                               wb, DNeff);
         ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
         cosmo_de->priv->HE4_Yp_key = model->pkey;
-        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp); */
+        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp);*/
       }
     }
   }
@@ -594,7 +592,7 @@ _nc_hicosmo_de_Omega_nu0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo)
 {
-  const gdouble conv        = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
+  const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
   
   return (1.0 + ENNU * conv) * _nc_hicosmo_de_Omega_g0 (cosmo);
 }

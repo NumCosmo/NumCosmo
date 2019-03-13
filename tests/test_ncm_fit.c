@@ -28,9 +28,6 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-#include "ncm_data_gauss_cov_mvnd.h"
-#include "ncm_model_mvnd.h"
-
 typedef struct _TestNcmFit
 {
   NcmFit *fit;
@@ -133,7 +130,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
+  ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
 #ifdef NUMCOSMO_HAVE_NLOPT

@@ -47,7 +47,7 @@ main (gint argc, gchar *argv[])
     memset (time_elap, 0, sizeof (gdouble) * NTOT);
 
     g_test_init (&argc, &argv, NULL);
-    ncm_cfg_init ();
+    ncm_cfg_init_full_ptr (&argc, &argv);
     //cfg_enable_gsl_err_handler ();
 
     for (j = 430; j <= L; j++)

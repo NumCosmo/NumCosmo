@@ -1271,7 +1271,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
         const gdouble cov_ji = ncm_matrix_get (snia_cov->cov_full, j, i);
         if (((i / mu_len) == (j / mu_len)) && ncm_cmp (cov_ij, cov_ji, NC_DATA_SNIA_COV_SYMM_TOL, 0.0) != 0)
         {
-          g_error ("nc_data_snia_cov_load_txt: full covariance matrix is not symmetric in %ld %ld [% 20.15g != % 20.15g]\n", 
+          g_error ("nc_data_snia_cov_load_txt: full covariance matrix is not symmetric in %ld %ld [% 22.15g != % 22.15g]\n", 
                    i, j, cov_ij, cov_ji);
         }
         ncm_matrix_set (snia_cov->cov_full, j, i, cov_ij);
@@ -1327,21 +1327,27 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
         {
           guint pad_end = 0;
           n = g_strv_length (itens);
+
           if (*itens[n-1] == '\0')
             pad_end++;
           if (n - 1 - pad_end == NC_DATA_SNIA_COV_LENGTH)
             has_dataset = FALSE;
-          else if (n - 2 - pad_end == NC_DATA_SNIA_COV_LENGTH)
+          else if (n - 2 - pad_end >= NC_DATA_SNIA_COV_LENGTH)
+          {
             has_dataset = TRUE;
+            if (n - 2 - pad_end > NC_DATA_SNIA_COV_LENGTH)
+              g_warning ("_nc_data_snia_cov_load_snia_data: data file [%s] must have %d or %d columns, it has %u, ignoring the extra columns!", 
+                         filename, NC_DATA_SNIA_COV_LENGTH + 1, NC_DATA_SNIA_COV_LENGTH + 2, n - pad_end);
+          }
           else
-            g_error ("_nc_data_snia_cov_load_snia_data: data file [%s] must have %d or %d columns, it has %u", 
+            g_error ("_nc_data_snia_cov_load_snia_data: data file [%s] must have %d or %d columns, it has %u!", 
                      filename, NC_DATA_SNIA_COV_LENGTH + 1, NC_DATA_SNIA_COV_LENGTH + 2, n - pad_end);
         }
         else if (n != g_strv_length (itens))
-          g_error ("_nc_data_snia_cov_load_snia_data: data file [%s] has different number of columns in different rows [%u]", filename, nrow);
+          g_error ("_nc_data_snia_cov_load_snia_data: data file [%s] has different number of columns in different rows [%u]!", filename, nrow);
         
         if (nrow >= snia_cov->mu_len)
-          g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained >%u", 
+          g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained >%u!", 
                    filename, snia_cov->mu_len, nrow);
 
         {

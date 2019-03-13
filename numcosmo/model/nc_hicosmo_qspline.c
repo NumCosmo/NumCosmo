@@ -332,10 +332,10 @@ _nc_hicosmo_qspline_E2 (NcHICosmo *cosmo, gdouble z)
   if (z > qs->z_f)
   {
     gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) * pow ((1.0 + z) / (1.0 + qs->z_f), 2.0 * (q + 1.0));
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (qs->E2_z), qs->z_f) * pow ((1.0 + z) / (1.0 + qs->z_f), 2.0 * (q + 1.0));
   }
   else
-    return ncm_spline_eval (qs->E2_z->s, z);
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (qs->E2_z), z);
 }
 
 static gdouble
@@ -364,12 +364,12 @@ _nc_hicosmo_qspline_dE2_dz (NcHICosmo *cosmo, gdouble z)
     const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
     const gdouble x = 1.0 + z;
     
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (qs->E2_z), qs->z_f) *
       pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
       2.0 * (q + 1.0) / x;
   }
   else
-    return ncm_spline_eval_deriv (qs->E2_z->s, z);
+    return ncm_spline_eval_deriv (ncm_ode_spline_peek_spline (qs->E2_z), z);
 }
 
 static gdouble
@@ -383,12 +383,12 @@ _nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
     const gdouble x = 1.0 + z;
     const gdouble x2 = x * x;
     
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (qs->E2_z), qs->z_f) *
       pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
       2.0 * (q + 1.0) * (2.0 * q + 1.0) / x2;
   }
   else
-    return ncm_spline_eval_deriv2 (qs->E2_z->s, z);
+    return ncm_spline_eval_deriv2 (ncm_ode_spline_peek_spline (qs->E2_z), z);
 }
 
 static gdouble _nc_hicosmo_qspline_H0 (NcHICosmo *cosmo) { return QSPLINE_H0; }

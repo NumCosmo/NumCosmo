@@ -79,25 +79,25 @@ nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
   ncm_model_class_add_params (model_class, NC_HIPRIM_POWER_LAW_SPARAM_LEN, 0, PROP_SIZE);
 
   /* Set ln10e10ASA param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_LN10E10ASA, "\\log(10^{10}A_{SA})", "ln10e10ASA",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_LN10E10ASA, "\\log(10^{10}A_{\\mathrm{SA}})", "ln10e10ASA",
                               0.0, 5.0, 1.0e0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_LN10E10ASA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set T_SA_ratio param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_T_SA_RATIO, "A_T/A_{\\mathrm{SA}}", "T_SA_ratio",
                               0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set N_SA param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_N_SA, "n_{SA}", "n_SA",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_N_SA, "n_{\\mathrm{SA}}", "n_SA",
                               0.5, 1.5, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_N_SA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set N_T param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_N_T, "n_{T}", "n_T",
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_N_T, "n_{\\mathrm{T}}", "n_T",
                               -0.5, 0.5, 1.0e-2,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_N_T,
                               NCM_PARAM_TYPE_FIXED);

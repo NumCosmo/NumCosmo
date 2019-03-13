@@ -43,6 +43,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmMSetTransKernCatClass NcmMSetTransKernCatClass;
 typedef struct _NcmMSetTransKernCat NcmMSetTransKernCat;
+typedef struct _NcmMSetTransKernCatPrivate NcmMSetTransKernCatPrivate;
 
 struct _NcmMSetTransKernCatClass
 {
@@ -54,12 +55,33 @@ struct _NcmMSetTransKernCat
 {
   /*< private >*/
   NcmMSetTransKern parent_instance;
-  NcmMSetCatalog *mcat;
+  NcmMSetTransKernCatPrivate *priv;
 };
+
+/**
+ * NcmMSetTransKernCatSampling:
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE: sampling by choosing radomly points from the catalog
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP: sampling from the RBF interpolation built using the last ensemble from the catalog 
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE: sampling from the KDE estimate built using the last ensemble from the catalog 
+ * 
+ * Sampling methods.
+ * 
+ */ 
+typedef enum _NcmMSetTransKernCatSampling
+{
+  NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE = 0,
+  NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP,
+  NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE,
+  /* < private > */
+  NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN, /*< skip >*/
+} NcmMSetTransKernCatSampling;
 
 GType ncm_mset_trans_kern_cat_get_type (void) G_GNUC_CONST;
 
 NcmMSetTransKernCat *ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat);
+
+void ncm_mset_trans_kern_cat_set_sampling (NcmMSetTransKernCat *tcat, NcmMSetTransKernCatSampling sampling);
+NcmMSetTransKernCatSampling ncm_mset_trans_kern_cat_get_sampling (NcmMSetTransKernCat *tcat);
 
 G_END_DECLS
 

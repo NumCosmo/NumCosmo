@@ -40,7 +40,7 @@
 
 #include "lss/nc_cluster_mass_plcl.h"
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -698,12 +698,11 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
   /* solve the system with a maximum of 20 iterations */
 #ifdef HAVE_GSL_2_2
   status = gsl_multifit_fdfsolver_driver (mszl->s, 20000, xtol, gtol, ftol, &info);
+  if (status != GSL_SUCCESS)
+    g_error ("_peakfinder: NcClusterMassPlCL peakfinder function.\n");
 #else /* HAVE_GSL_2_2 */
   g_error ("_peakfinder: this model requires gsl >= 2.2.");
 #endif /* HAVE_GSL_2_2 */
-
-  if (status != GSL_SUCCESS)
-    g_error ("_peakfinder: NcClusterMassPlCL peakfinder function.\n");
 
   //printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]);
   //printf ("2d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (mszl->s->x, 0), gsl_vector_get (mszl->s->x, 1));

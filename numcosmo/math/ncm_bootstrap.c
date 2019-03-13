@@ -396,6 +396,15 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
  * Returns: the @i-th resampled index.
  */
 /**
+ * ncm_bootstrap_get_sortncomp:
+ * @bstrap: a #NcmBootstrap.
+ * 
+ * Fills an array with the sorted indexes followed by the number of 
+ * times they appear.
+ * 
+ * Returns: (array) (element-type guint) (transfer full): the sorted array of indexes and frequences.
+ */
+/**
  * ncm_bootstrap_is_init:
  * @bstrap: a #NcmBootstrap.
  * 
@@ -403,3 +412,9 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
  * 
  * Returns: whether @bstrap is initialized.
  */
+
+gint
+_ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b)
+{
+  return (*((guint *)a) < *((guint *)b)) ? -1 : ((*((guint *)a) > *((guint *)b)) ? 1 : 0);
+}

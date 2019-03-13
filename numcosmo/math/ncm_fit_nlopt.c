@@ -70,12 +70,12 @@ static void
 ncm_fit_nlopt_init (NcmFitNLOpt *fit_nlopt)
 {
 #ifdef HAVE_NLOPT_2_2
-  fit_nlopt->nlopt = NULL;
-  fit_nlopt->local_nlopt = NULL;
+  fit_nlopt->nlopt            = NULL;
+  fit_nlopt->local_nlopt      = NULL;
 #endif /* HAVE_NLOPT_2_2 */
-  fit_nlopt->nlopt_algo = 0;
+  fit_nlopt->nlopt_algo       = 0;
   fit_nlopt->local_nlopt_algo = 0;
-  fit_nlopt->desc = NULL;
+  fit_nlopt->desc             = NULL;
 }
 
 static void
@@ -86,13 +86,13 @@ _ncm_fit_nlopt_constructed (GObject *object)
   {
     NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (object);
     NcmFit *fit = NCM_FIT (fit_nlopt);
-    
+
     fit_nlopt->fparam_len = fit->fstate->fparam_len;
 
-    fit_nlopt->lb = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->ub = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->pabs = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
+    fit_nlopt->lb         = ncm_vector_new (fit_nlopt->fparam_len);
+    fit_nlopt->ub         = ncm_vector_new (fit_nlopt->fparam_len);
+    fit_nlopt->pabs       = ncm_vector_new (fit_nlopt->fparam_len);
+    fit_nlopt->pscale     = ncm_vector_new (fit_nlopt->fparam_len);
         
     ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->nlopt_algo);
   }
@@ -267,6 +267,12 @@ static gdouble _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gp
 static gdouble _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata);
 #endif /* HAVE_NLOPT_2_2 */
 
+typedef struct _NcmFitNLOptConst
+{
+	NcmMSetFunc *func;
+	NcmFit *fit;
+} NcmFitNLOptConst;
+
 static gboolean
 _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
@@ -281,6 +287,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
 #ifdef HAVE_NLOPT_2_2
   {
+		GArray *ca = g_array_new (FALSE, FALSE, sizeof (NcmFitNLOptConst));
     nlopt_result ret;
     guint i;
 
@@ -297,16 +304,27 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     for (i = 0; i < ncm_fit_has_inequality_constraints (fit); i++)
     {
-      NcmFitConstraint *fitc = g_ptr_array_index (fit->inequality_constraints, i);
-      ret = nlopt_add_inequality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, fitc, fitc->tot);
+      NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fit->inequality_constraints, i));
+      const gdouble tot = g_array_index (fit->inequality_constraints_tot, gdouble, i);
+			NcmFitNLOptConst fc = {func, fit};
+
+			g_array_append_val (ca, fc);
+
+			ret = nlopt_add_inequality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, &g_array_index (ca, NcmFitNLOptConst, ca->len - 1), tot);
+			
       if (ret < 0)
         g_error ("_ncm_fit_nlopt_run: cannot add inequality constrain: (%d)", ret);
     }
 
     for (i = 0; i < ncm_fit_has_equality_constraints (fit); i++)
     {
-      NcmFitConstraint *fitc = g_ptr_array_index (fit->equality_constraints, i);
-      ret = nlopt_add_equality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, fitc, fitc->tot);
+      NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fit->equality_constraints, i));
+      const gdouble tot = g_array_index (fit->equality_constraints_tot, gdouble, i);
+			NcmFitNLOptConst fc = {func, fit};
+
+			g_array_append_val (ca, fc);
+			
+      ret = nlopt_add_equality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, &g_array_index (ca, NcmFitNLOptConst, ca->len - 1), tot);
       if (ret < 0)
         g_error ("_ncm_fit_nlopt_run: cannot add equality constrain: (%d)", ret);
     }
@@ -355,6 +373,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
       }
       
     }
+		g_array_unref (ca);
   }
 #else
   {
@@ -436,8 +455,8 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
 static gdouble
 _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata)
 {
-  NcmFitConstraint *fitc = NCM_FIT_CONSTRAINT (userdata);
-  NcmFit *fit = fitc->fit;
+  NcmFitNLOptConst *fc = (NcmFitNLOptConst *) userdata;
+  NcmFit *fit = fc->fit;
   gdouble constraint;
 
   fit->fstate->func_eval++;
@@ -446,12 +465,12 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_NAN;
 
-  constraint = ncm_mset_func_eval0 (fitc->func, fit->mset);
+  constraint = ncm_mset_func_eval0 (fc->func, fit->mset);
   
   if (grad != NULL)
   {
     NcmVector *gradv = ncm_vector_new_data_static (grad, n, 1);
-    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, &gradv);
+    ncm_mset_func_numdiff_fparams (fc->func, fit->mset, NULL, &gradv);
     ncm_vector_scale (gradv, 2.0 * constraint);
     ncm_vector_free (gradv);
   }

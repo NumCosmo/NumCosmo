@@ -42,7 +42,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
 /*
  * It must be include before anything else, several symbols clash
@@ -51,6 +50,8 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include "class/include/class.h"
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "build_cfg.h"
 
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
@@ -76,6 +77,7 @@ enum
 	PROP_TENSOR_LMAX,
 	PROP_MATTER_PK_MAXZ,
 	PROP_MATTER_PK_MAXK,
+  PROP_USE_PPF,
   PROP_VERBOSE
 };
 
@@ -92,7 +94,7 @@ struct _NcCBEPrivate
 	struct output pop;
 };
 
-G_DEFINE_TYPE (NcCBE, nc_cbe, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT);
 
 static void
 nc_cbe_init (NcCBE *cbe)
@@ -150,14 +152,24 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->pba.sgnK                = 0;
 	cbe->priv->pba.Omega0_lambda       = 0.0;
 	cbe->priv->pba.Omega0_fld          = 0.0;
+  cbe->priv->pba.fluid_equation_of_state = 0;
 	cbe->priv->pba.a_today             = 0.0;
 	cbe->priv->pba.w0_fld              = 0.0;
 	cbe->priv->pba.wa_fld              = 0.0;
+  cbe->priv->pba.Omega_EDE           = 0.0;
 	cbe->priv->pba.cs2_fld             = 0.0;
+  cbe->priv->pba.use_ppf             = _FALSE_;
+  cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
   cbe->priv->pba.shooting_failed     = _FALSE_;
 
+  cbe->priv->pba.got_files                = NULL;
+  cbe->priv->pba.m_ncdm_in_eV             = NULL;
+  cbe->priv->pba.ncdm_quadrature_strategy = NULL;
+  cbe->priv->pba.ncdm_input_q_size        = NULL;
+  cbe->priv->pba.ncdm_qmax                = NULL;
+
 	/* thermodynamics structure */
-  
+
 	cbe->priv->pth.YHe                        = 0;
 	cbe->priv->pth.recombination              = 0;
 	cbe->priv->pth.reio_parametrization       = 0;
@@ -173,6 +185,15 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->pth.binned_reio_z              = NULL;
 	cbe->priv->pth.binned_reio_xe             = NULL;
 	cbe->priv->pth.binned_reio_step_sharpness = 0.0;
+
+	cbe->priv->pth.many_tanh_num              = 0;
+	cbe->priv->pth.many_tanh_z                = NULL;
+	cbe->priv->pth.many_tanh_xe               = NULL;
+	cbe->priv->pth.many_tanh_width            = 0.0;
+
+	cbe->priv->pth.reio_inter_num             = 0;
+	cbe->priv->pth.reio_inter_z               = NULL;
+	cbe->priv->pth.reio_inter_xe              = NULL;
 
 	cbe->priv->pth.annihilation               = 0.0;
 	cbe->priv->pth.decay                      = 0.0;
@@ -200,7 +221,8 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->ppt.has_pk_matter                       = _FALSE_;
 	cbe->priv->ppt.has_density_transfers               = _FALSE_;
 	cbe->priv->ppt.has_velocity_transfers              = _FALSE_;
-  
+  cbe->priv->ppt.has_metricpotential_transfers       = _FALSE_;
+
 	cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
 
 	cbe->priv->ppt.has_nc_density                      = _FALSE_;
@@ -370,7 +392,8 @@ nc_cbe_init (NcCBE *cbe)
 
 	/* nonlinear structure */
 
-	cbe->priv->pnl.method = nl_none;
+	cbe->priv->pnl.method    = nl_none;
+  cbe->priv->pnl.has_pk_eq = _FALSE_;
 
 	/* all verbose parameters */
 
@@ -437,6 +460,9 @@ _nc_cbe_set_property (GObject* object, guint prop_id, const GValue* value, GPara
 	case PROP_MATTER_PK_MAXK:
 		nc_cbe_set_max_matter_pk_k (cbe, g_value_get_double (value));
 		break;
+	case PROP_USE_PPF:
+		nc_cbe_use_ppf (cbe, g_value_get_boolean (value));
+		break;
 	case PROP_VERBOSE:
   {
     const guint verbosity = g_value_get_uint (value);
@@ -497,6 +523,9 @@ _nc_cbe_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec*
 	case PROP_MATTER_PK_MAXK:
 		g_value_set_double (value, nc_cbe_get_max_matter_pk_k (cbe));
 		break;
+	case PROP_USE_PPF:
+		g_value_set_boolean (value, cbe->priv->pba.use_ppf);
+		break;
 	case PROP_VERBOSE:
 		g_value_set_uint (value, cbe->bg_verbose);
 		break;
@@ -548,8 +577,6 @@ static void
 nc_cbe_class_init (NcCBEClass* klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-	g_type_class_add_private (klass, sizeof (NcCBEPrivate));
 
 	object_class->set_property = &_nc_cbe_set_property;
 	object_class->get_property = &_nc_cbe_get_property;
@@ -631,9 +658,16 @@ nc_cbe_class_init (NcCBEClass* klass)
 	                                 g_param_spec_double ("matter-pk-maxk",
 	                                                      NULL,
 	                                                      "Maximum mode k for matter Pk",
-	                                                      0.0, G_MAXDOUBLE, 0.1,
+	                                                      0.0, G_MAXDOUBLE, 1.0,
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
+  g_object_class_install_property (object_class,
+                                   PROP_USE_PPF,
+                                   g_param_spec_boolean ("use-ppf",
+                                                         NULL,
+                                                         "Whether to use PPF",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
 	                                 PROP_VERBOSE,
                                    g_param_spec_uint ("verbosity",
                                                       NULL,
@@ -1064,6 +1098,20 @@ guint nc_cbe_get_tensor_lmax (NcCBE* cbe)
 	return cbe->tensor_lmax;
 }
 
+/**
+ * nc_cbe_use_ppf:
+ * @cbe: a #NcCBE
+ * @use_ppf: whether to use PPF
+ * 
+ * Sets if PPF should be used.
+ * 
+ */
+void
+nc_cbe_use_ppf (NcCBE *cbe, gboolean use_ppf)
+{
+  cbe->priv->pba.use_ppf = use_ppf ? _TRUE_ : _FALSE_;
+}
+
 static void
 _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 {
@@ -1100,14 +1148,18 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 
       cbe->priv->pba.N_ncdm = N_ncdm;
 
-      pba->T_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->ksi_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->deg_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->Omega0_ncdm  = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->M_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->m_ncdm_in_eV = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
-      pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
+      pba->T_ncdm                   = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->ksi_ncdm                 = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->deg_ncdm                 = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->Omega0_ncdm              = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->M_ncdm                   = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->m_ncdm_in_eV             = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->got_files                = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
+      pba->ncdm_quadrature_strategy = (gint *)malloc (sizeof (gint) * N_ncdm);
+      pba->ncdm_input_q_size        = (gint *)malloc (sizeof (gint) * N_ncdm);
+      pba->ncdm_qmax                = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+        
       pba->Omega0_ncdm_tot = 0.0;
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
@@ -1118,6 +1170,10 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
         pba->Omega0_ncdm[nu_i] = nc_hicosmo_Omega_mnu0_n (cosmo, nu_i);
 
         pba->Omega0_ncdm_tot  += pba->Omega0_ncdm[nu_i];
+
+        pba->ncdm_quadrature_strategy[nu_i] = qm_auto;
+        pba->ncdm_input_q_size[nu_i]        = -1;
+        pba->ncdm_qmax[nu_i]                = 15.0;
       }
 
       /* From CLASS input.c */
@@ -1181,7 +1237,7 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->pba.phi_prime_ini_scf   = 1;
 
 	cbe->priv->pba.Omega0_k = nc_hicosmo_Omega_k0 (cosmo);
-	if (fabs (cbe->priv->pba.Omega0_k) > 1.0e-13)
+	if (fabs (cbe->priv->pba.Omega0_k) > NC_HICOSMO_OMEGA_K0_LIMIT)
 	{
 		cbe->priv->pba.a_today = 1.0;
 		cbe->priv->pba.K       = -cbe->priv->pba.Omega0_k * gsl_pow_2 (cbe->priv->pba.a_today * cbe->priv->pba.H0);
@@ -1190,32 +1246,34 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	else
 	{
 		cbe->priv->pba.Omega0_k = 0.0;
+		cbe->priv->pba.a_today  = 1.0;
 		cbe->priv->pba.K        = 0.0;
 		cbe->priv->pba.sgnK     = 0;
-		cbe->priv->pba.a_today  = 1.0;
 	}
 
   if (NC_IS_HICOSMO_DE_XCDM (cosmo))
   {
     const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
     const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+
     if (w0 != -1.0)
     {
-      cbe->priv->pba.Omega0_lambda   = 0.0;
+      cbe->priv->pba.fluid_equation_of_state = CLP;
+      cbe->priv->pba.Omega0_lambda           = 0.0;      /* Disable cosmological constant in CLASS */
 
-      cbe->priv->pba.Omega0_fld      = Omega_X0;
-      cbe->priv->pba.w0_fld          = w0;
-      cbe->priv->pba.wa_fld          = 0.0;
-      cbe->priv->pba.cs2_fld         = 1.0;      
+      cbe->priv->pba.Omega0_fld              = Omega_X0; /* Enable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld                  = w0;
+      cbe->priv->pba.wa_fld                  = 0.0;
+      cbe->priv->pba.cs2_fld                 = 1.0;      
     }
     else
     {
-      cbe->priv->pba.Omega0_lambda   = Omega_X0;
+      cbe->priv->pba.Omega0_lambda           = Omega_X0; /* Enable cosmological constant in CLASS */
 
-      cbe->priv->pba.Omega0_fld      = 0.0;
-      cbe->priv->pba.w0_fld          = -1.0;
-      cbe->priv->pba.wa_fld          = 0.0;
-      cbe->priv->pba.cs2_fld         = 1.0;
+      cbe->priv->pba.Omega0_fld              = 0.0;      /* Disable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld                  = -1.0;
+      cbe->priv->pba.wa_fld                  = 0.0;
+      cbe->priv->pba.cs2_fld                 = 1.0;
     }
   }
   else if (NC_IS_HICOSMO_DE_CPL (cosmo))
@@ -1224,17 +1282,22 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
     const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
     const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
 
-    cbe->priv->pba.Omega0_lambda   = 0.0;
+    cbe->priv->pba.fluid_equation_of_state = CLP;
+    cbe->priv->pba.Omega0_lambda           = 0.0;      /* Disable cosmological constant in CLASS */
 
-    cbe->priv->pba.Omega0_fld      = Omega_X0;
-    cbe->priv->pba.w0_fld          = w0;
-    cbe->priv->pba.wa_fld          = w1;
-    cbe->priv->pba.cs2_fld         = 1.0;
+    cbe->priv->pba.Omega0_fld              = Omega_X0; /* Enable DE fluid in CLASS */
+    cbe->priv->pba.w0_fld                  = w0;
+    cbe->priv->pba.wa_fld                  = w1;
+    cbe->priv->pba.cs2_fld                 = 1.0;
   }
   else
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
+
+  cbe->priv->pba.Omega_EDE          = 0.0;
+  cbe->priv->pba.c_gamma_over_c_fld = 0.4;
+  cbe->priv->pba.Omega_ini_dcdm     = 0.0;
   
-  cbe->priv->pba.shooting_failed = _FALSE_;
+  cbe->priv->pba.shooting_failed    = _FALSE_;
 	cbe->priv->pba.background_verbose = cbe->bg_verbose;
 }
 
@@ -1244,34 +1307,26 @@ _nc_cbe_set_thermo (NcCBE* cbe, NcHICosmo* cosmo)
 	NcHIReion* reion = nc_hicosmo_peek_reion (cosmo);
 	struct precision* ppr = (struct precision*)cbe->prec->priv;
 
-	g_assert (reion != NULL);
-
 	cbe->priv->pth.YHe                  = nc_hicosmo_Yp_4He (cosmo);
 	cbe->priv->pth.recombination        = recfast;
-	cbe->priv->pth.reio_parametrization = reio_camb;
-  
-	if (NC_IS_HIREION_CAMB (reion))
-	{
-		cbe->priv->pth.reio_z_or_tau = reio_z;
-		cbe->priv->pth.z_reio        = ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z);
-		cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
-	}
-	else
-	{
-		cbe->priv->pth.reio_z_or_tau = reio_tau;
-		cbe->priv->pth.z_reio        = 13.0;
-		cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
-	}
-  
+	cbe->priv->pth.reio_parametrization = (reion == NULL) ? reio_none : reio_camb;
+
+  g_assert (NC_IS_HIREION_CAMB (reion));
+
+  cbe->priv->pth.reio_z_or_tau = reio_z;
+  cbe->priv->pth.z_reio        = ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z);
+  cbe->priv->pth.tau_reio      = nc_hireion_get_tau (reion, cosmo);
+
 	cbe->priv->pth.reionization_exponent      = 1.5;
 	cbe->priv->pth.reionization_width         = 0.5;
 	cbe->priv->pth.helium_fullreio_redshift   = 3.5;
 	cbe->priv->pth.helium_fullreio_width      = 0.5;
-	cbe->priv->pth.binned_reio_num            = 0;
+
+  cbe->priv->pth.binned_reio_num            = 0;
 	cbe->priv->pth.binned_reio_z              = NULL;
 	cbe->priv->pth.binned_reio_xe             = NULL;
 	cbe->priv->pth.binned_reio_step_sharpness = 0.3;
-
+  
 	cbe->priv->pth.annihilation               = 0.0;
 	cbe->priv->pth.decay                      = 0.0;
 	cbe->priv->pth.annihilation_variation     = 0.0;
@@ -1319,6 +1374,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.has_pk_matter                       = cbe->calc_transfer ? _TRUE_ : _FALSE_;
 	cbe->priv->ppt.has_density_transfers               = _FALSE_;
 	cbe->priv->ppt.has_velocity_transfers              = _FALSE_;
+  cbe->priv->ppt.has_metricpotential_transfers       = _FALSE_;
 
 	cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
 
@@ -1332,7 +1388,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.switch_lisw                         = 1;
 	cbe->priv->ppt.switch_dop                          = 1;
 	cbe->priv->ppt.switch_pol                          = 1;
-	cbe->priv->ppt.eisw_lisw_split_z                   = 120;
+	cbe->priv->ppt.eisw_lisw_split_z                   = 120.0;
 
 	cbe->priv->ppt.has_ad                              = _TRUE_;
 	cbe->priv->ppt.has_bi                              = _FALSE_;
@@ -1358,6 +1414,7 @@ _nc_cbe_set_pert (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppt.gauge                               = synchronous;
 
 	cbe->priv->ppt.k_output_values_num                 = 0;
+  /*cbe->priv->ppt.k_output_values[0]                  = NULL;*/
 	cbe->priv->ppt.store_perturbations                 = _FALSE_;
 	cbe->priv->ppt.number_of_scalar_titles             = 0;
 	cbe->priv->ppt.number_of_vector_titles             = 0;
@@ -1503,7 +1560,7 @@ _nc_cbe_set_transfer (NcCBE* cbe, NcHICosmo* cosmo)
 {
 
   cbe->priv->ptr.selection_bias[0]               = 1.0;
-  cbe->priv->ptr.selection_magnification_bias[0] = 1.0;
+  cbe->priv->ptr.selection_magnification_bias[0] = 0.0;
   
 	cbe->priv->ptr.lcmb_rescale                    = 1.0;
 	cbe->priv->ptr.lcmb_pivot                      = 0.1;
@@ -1536,7 +1593,8 @@ _nc_cbe_set_lensing (NcCBE* cbe, NcHICosmo* cosmo)
 static void
 _nc_cbe_set_nonlin (NcCBE* cbe, NcHICosmo* cosmo)
 {
-	cbe->priv->pnl.method = nl_none;
+	cbe->priv->pnl.method    = nl_none;
+  cbe->priv->pnl.has_pk_eq = _FALSE_;
 	cbe->priv->pnl.nonlinear_verbose = cbe->nonlin_verbose;
 }
 
@@ -1553,9 +1611,8 @@ static void
 _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
 {
 	struct precision* ppr = (struct precision*)cbe->prec->priv;
-
 	_nc_cbe_set_bg (cbe, cosmo);
-	if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
+  if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
 		g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
 }
 
@@ -1567,6 +1624,21 @@ _nc_cbe_call_thermo (NcCBE* cbe, NcHICosmo* cosmo)
 	_nc_cbe_call_bg (cbe, cosmo);
 
 	_nc_cbe_set_thermo (cbe, cosmo);
+
+  if (FALSE)
+  {
+    struct background *pba = &cbe->priv->pba;
+    struct thermo *pth     = &cbe->priv->pth;
+
+    printf ("#NC:  % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g\n", 
+            pba->h, pba->T_cmb, pba->Omega0_g, pba->Omega0_ur, 
+            pba->Omega0_b, pba->Omega0_cdm, pba->Omega0_dcdmdr, pba->Omega0_dcdm, 
+            pba->Gamma_dcdm, pba->N_ncdm, pba->Omega0_ncdm_tot, pba->Omega0_scf, 
+            pba->Omega0_k, pba->Omega0_lambda, pba->Omega0_fld, pba->a_today, 
+            pba->w0_fld, pba->wa_fld, pba->cs2_fld, pba->use_ppf, pba->c_gamma_over_c_fld, 
+            pth->z_reio);
+  }
+
 	if (thermodynamics_init (ppr, &cbe->priv->pba, &cbe->priv->pth) == _FAILURE_)
 		g_error ("_nc_cbe_call_thermo: Error running thermodynamics_init `%s'\n", cbe->priv->pth.error_message);
 }
@@ -1874,113 +1946,118 @@ void nc_cbe_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
 gdouble
 nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
 {
-  struct precision *ppr  = (struct precision *)cbe->prec->priv;
-  struct background *pba = &cbe->priv->pba;
-  const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble zf = 1.0 / ppr->a_ini_over_a_today_default;
-
-  gdouble pvecback[pba->bg_size];
-  gdouble err = 0.0;
-  gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
-  gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
-  guint i;
-
-  if (cbe->a == NULL)
-    cbe->a = nc_scalefactor_new (NC_SCALEFACTOR_TIME_TYPE_COSMIC, zf, NULL);
-  else
-    nc_scalefactor_set_zf (cbe->a, zf);
-
-  nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
-
-  for (i = 0; i < pba->bt_size; i++)
+  nc_cbe_prepare (cbe, cosmo);
   {
-    gint last_index = 0;
-    background_at_tau (pba,
-                       pba->tau_table[i],
-                       pba->long_info,
-                       pba->inter_normal,
-                       &last_index,
-                       pvecback);
+    struct precision *ppr  = (struct precision *)cbe->prec->priv;
+    struct background *pba = &cbe->priv->pba;
+    const gdouble RH       = nc_hicosmo_RH_Mpc (cosmo);
+    const gdouble zf       = 1.0 / ppr->a_ini_over_a_today_default;
+
+    gdouble pvecback[pba->bg_size];
+    gdouble err = 0.0;
+    gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
+    gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
+    guint i;
+
+    if (cbe->a == NULL)
+      cbe->a = nc_scalefactor_new (zf, NULL);
+    else
+      nc_scalefactor_set_zf (cbe->a, zf);
+
+    nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
+
+    for (i = 0; i < pba->bt_size; i++)
     {
-      const gdouble eta        = pba->tau_table[i] / RH;
-      const gdouble a          = pvecback[pba->index_bg_a];
-      const gdouble z          = pba->a_today / a - 1.0;    /* nc_scalefactor_z_eta (cbe->a, eta); */
-      const gdouble E2         = nc_hicosmo_E2 (cosmo, z);
-      const gdouble E          = sqrt (E2);
-      const gdouble H          = E / RH;
-      const gdouble RH_pow_m2  = 1.0 / (RH * RH);
-      const gdouble H_prime    = -0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
-
-      const gdouble rho_g      = nc_hicosmo_E2Omega_g  (cosmo, z) * RH_pow_m2;
-      const gdouble rho_ur     = nc_hicosmo_E2Omega_nu (cosmo, z) * RH_pow_m2;
-      const gdouble rho_ncdm1  = hasNcdm ? nc_hicosmo_E2Omega_mnu_n (cosmo, 0, z) * RH_pow_m2 : 0.0;
-      const gdouble rho_b      = nc_hicosmo_E2Omega_b  (cosmo, z) * RH_pow_m2;
-      const gdouble rho_cdm    = nc_hicosmo_E2Omega_c  (cosmo, z) * RH_pow_m2;
-      const gdouble rho_Lambda = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) * RH_pow_m2;
-      const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2;
-
-      /* CLASS defines Omega_X = rho_X / rho_total */
-      const gdouble E2Omega_t  = nc_hicosmo_E2Omega_t (cosmo, z);
-      const gdouble Omega_r    = nc_hicosmo_E2Omega_r (cosmo, z) / E2Omega_t;
-      const gdouble Omega_m    = nc_hicosmo_E2Omega_m (cosmo, z) / E2Omega_t;
-
-      const gdouble rho_crit   = E2 * RH_pow_m2;
-
+      gint last_index = 0;
+      background_at_tau (pba,
+                         pba->tau_table[i],
+                         pba->long_info,
+                         pba->inter_normal,
+                         &last_index,
+                         pvecback);
       {
-        const gdouble a_diff          = fabs (nc_scalefactor_eval_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
-        const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
-        const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
+        const gdouble eta        = pba->tau_table[i] / RH;
+        const gdouble a          = pvecback[pba->index_bg_a];
+        const gdouble z          = pba->a_today / a - 1.0;    /* nc_scalefactor_z_eta (cbe->a, eta); */
+        const gdouble E2         = nc_hicosmo_E2 (cosmo, z);
+        const gdouble E          = sqrt (E2);
+        const gdouble H          = E / RH;
+        const gdouble RH_pow_m2  = 1.0 / (RH * RH);
+        const gdouble H_prime    = -0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
 
-        const gdouble rho_g_diff      = fabs (rho_g / pvecback[pba->index_bg_rho_g] - 1.0);
-        const gdouble rho_ur_diff     = fabs (rho_ur / pvecback[pba->index_bg_rho_ur] - 1.0);
-        const gdouble rho_ncdm_diff   = hasNcdm ? fabs (rho_ncdm1 / pvecback[pba->index_bg_rho_ncdm1] - 1.0) : 0.0;
-        const gdouble rho_b_diff      = fabs (rho_b / pvecback[pba->index_bg_rho_b] - 1.0);
-        const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
+        const gdouble rho_g      = nc_hicosmo_E2Omega_g  (cosmo, z) * RH_pow_m2;
+        const gdouble rho_ur     = nc_hicosmo_E2Omega_nu (cosmo, z) * RH_pow_m2;
+        const gdouble rho_ncdm1  = hasNcdm ? nc_hicosmo_E2Omega_mnu_n (cosmo, 0, z) * RH_pow_m2 : 0.0;
+        const gdouble rho_b      = nc_hicosmo_E2Omega_b  (cosmo, z) * RH_pow_m2;
+        const gdouble rho_cdm    = nc_hicosmo_E2Omega_c  (cosmo, z) * RH_pow_m2;
+        const gdouble rho_Lambda = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) * RH_pow_m2;
+        const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2;
 
-        const gdouble rho_Lambda_diff = isLambda ? fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0) : fabs (rho_Lambda / pvecback[pba->index_bg_rho_fld] - 1.0);
+        /* CLASS defines Omega_X = rho_X / rho_total */
+        const gdouble E2Omega_t  = nc_hicosmo_E2Omega_t (cosmo, z);
+        const gdouble Omega_r    = nc_hicosmo_E2Omega_r (cosmo, z) / E2Omega_t;
+        const gdouble Omega_m    = nc_hicosmo_E2Omega_m (cosmo, z) / E2Omega_t;
 
-        const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
-        const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
+        const gdouble rho_crit   = E2 * RH_pow_m2;
 
-        const gdouble Omega_k_diff    = fabs (rho_k / (-pba->K/a/a) - 1.0);
-        const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
+        {
+          const gdouble a_diff          = fabs (nc_scalefactor_eval_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
+          const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
+          const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
 
-        err = GSL_MAX (err, a_diff);
-        err = GSL_MAX (err, H_diff);
-        err = GSL_MAX (err, Hprime_diff);
-        err = GSL_MAX (err, rho_g_diff);
-        err = GSL_MAX (err, rho_ur_diff);
-        err = GSL_MAX (err, rho_ncdm_diff);
-        err = GSL_MAX (err, rho_b_diff);
-        err = GSL_MAX (err, rho_cdm_diff);
-        err = GSL_MAX (err, rho_Lambda_diff);
-        err = GSL_MAX (err, Omega_r0_diff);
-        err = GSL_MAX (err, rho_crit_diff);
+          const gdouble rho_g_diff      = fabs (rho_g / pvecback[pba->index_bg_rho_g] - 1.0);
+          const gdouble rho_ur_diff     = fabs (rho_ur / pvecback[pba->index_bg_rho_ur] - 1.0);
+          const gdouble rho_ncdm_diff   = hasNcdm ? fabs (rho_ncdm1 / pvecback[pba->index_bg_rho_ncdm1] - 1.0) : 0.0;
+          const gdouble rho_b_diff      = fabs (rho_b / pvecback[pba->index_bg_rho_b] - 1.0);
+          const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
 
-        if (log_cmp)
-          printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n", 
-                  eta, pvecback[pba->index_bg_a], 
-                  a_diff,          /* 01 */
-                  H_diff,          /* 02 */
-                  Hprime_diff,     /* 03 */
-                  rho_g_diff,      /* 04 */
-                  rho_ur_diff,     /* 05 */
-                  rho_ncdm_diff,   /* 06 */
-                  rho_b_diff,      /* 07 */
-                  rho_cdm_diff,    /* 08 */
-                  rho_Lambda_diff, /* 09 */
-                  Omega_r0_diff,   /* 10 */
-                  Omega_m0_diff,   /* 11 */
-                  Omega_k_diff,    /* 12 */
-                  rho_crit_diff,   /* 13 */
-                  err);
+          const gdouble rho_Lambda_diff = isLambda ? fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0) : fabs (rho_Lambda / pvecback[pba->index_bg_rho_fld] - 1.0);
+
+          const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
+          const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
+
+          const gdouble Omega_k_diff    = (rho_k == -pba->K/a/a) ? 0.0 : fabs ((rho_k - (-pba->K/a/a)) / (-pba->K/a/a + 1.0-2));
+          const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
+
+          err = GSL_MAX (err, a_diff);
+          err = GSL_MAX (err, H_diff);
+          err = GSL_MAX (err, Hprime_diff);
+          err = GSL_MAX (err, rho_g_diff);
+          err = GSL_MAX (err, rho_ur_diff);
+          err = GSL_MAX (err, rho_ncdm_diff);
+          err = GSL_MAX (err, rho_b_diff);
+          err = GSL_MAX (err, rho_cdm_diff);
+          err = GSL_MAX (err, rho_Lambda_diff);
+          err = GSL_MAX (err, Omega_r0_diff);
+          err = GSL_MAX (err, Omega_m0_diff);
+          err = GSL_MAX (err, Omega_k_diff);
+          err = GSL_MAX (err, rho_crit_diff);
+
+          if (log_cmp)
+            printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n", 
+                    eta, pvecback[pba->index_bg_a], 
+                    a_diff,          /* 01 */
+                    H_diff,          /* 02 */
+                    Hprime_diff,     /* 03 */
+                    rho_g_diff,      /* 04 */
+                    rho_ur_diff,     /* 05 */
+                    rho_ncdm_diff,   /* 06 */
+                    rho_b_diff,      /* 07 */
+                    rho_cdm_diff,    /* 08 */
+                    rho_Lambda_diff, /* 09 */
+                    Omega_r0_diff,   /* 10 */
+                    Omega_m0_diff,   /* 11 */
+                    Omega_k_diff,    /* 12 */
+                    rho_crit_diff,   /* 13 */
+                    err);
+        }
       }
     }
-  }
-  if (log_cmp)
-    printf ("# worst error: % 10.5e\n", err);
+    if (log_cmp)
+      printf ("# worst error: % 10.5e\n", err);
 
-  return err;
+    return err;
+  }
 }
 
 
@@ -2061,10 +2138,11 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 	const gint partz   = 4;
 	const gint z_tsize = (z_size - 1) * partz + 1;
 
-	NcmVector* lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
-	NcmVector* z_v = ncm_vector_new (z_tsize);
-	NcmMatrix* lnPk = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+	NcmVector* lnk_v  = ncm_vector_new (cbe->priv->psp.ln_k_size);
+	NcmVector* z_v    = ncm_vector_new (z_tsize);
+	NcmMatrix* lnPk   = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
 	gdouble* pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
+  gdouble *temp     = g_new (gdouble, cbe->priv->psp.ln_k_size);
 	gdouble z_i_a, z_i_b = 0.0;
 	guint i, m;
 
@@ -2096,7 +2174,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
 			ncm_vector_set (z_v, m, z_i);
-			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
       
 			m++;
 		}
@@ -2131,7 +2209,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
 			ncm_vector_set (z_v, m, z_i);
-			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
 
 			m++;
 		}
@@ -2141,11 +2219,12 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 		const gdouble z_i = (z_i_b * 0.99 + ncm_vector_get (z_v, m - 1) * 0.01); /* Safeguard against interpolation error on CLASS near the end */
 
 		ncm_vector_set (z_v, m, z_i);
-		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), temp, temp, temp);
 
 		m++;
 	}
 
+  g_free (temp);
 	g_free (pvecback);
 
 	{
@@ -2158,6 +2237,21 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
 
 		return lnPk_s;
 	}
+}
+
+/**
+ * nc_cbe_get_sigma8:
+ * @cbe: a #NcCBE
+ * 
+ * Computes the value of $\sigma_8$ as computed by CLASS, usually with errors $\propto 10^{-4}$.
+ * For better precision use: nc_powspec_ml_sigma_R() or #NcmPowspecFilter. 
+ * 
+ * Returns: the value of $\sigma_8$ as computed by CLASS.
+ */
+gdouble 
+nc_cbe_get_sigma8 (NcCBE *cbe)
+{
+  return cbe->priv->psp.sigma8;
 }
 
 /**

@@ -496,6 +496,8 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
   const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
   const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
   const gdouble dn_dlnR     = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
+
+	//printf ("Nc: f = %22.15g dlnsig_dlnm = %22.15g\n", f,  - 0.5 * dlnvar_dlnR * log(10.0) / 3.0);
   
   return dn_dlnR;
 }

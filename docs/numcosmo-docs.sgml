@@ -32,8 +32,19 @@
       <xi:include href="xml/ncm_func_eval.xml"/>
       <xi:include href="xml/ncm_timer.xml"/>
       <xi:include href="xml/ncm_rng.xml"/>
-      <xi:include href="xml/ncm_qm_prop.xml"/>
       <xi:include href="xml/ncm_quaternion.xml"/>
+    </section>
+    <section>
+      <title>MPI Objects</title>
+      <xi:include href="xml/ncm_mpi_job.xml"/>      
+      <xi:include href="xml/ncm_mpi_job_test.xml"/>
+      <xi:include href="xml/ncm_mpi_job_fit.xml"/>
+      <xi:include href="xml/ncm_mpi_job_mcmc.xml"/>
+    </section>    
+    <section>
+      <title>ODE Solvers objects</title>
+      <xi:include href="xml/ncm_ode.xml"/>
+      <xi:include href="xml/ncm_ode_eval.xml"/>
     </section>
     <section>
       <title>FFTLog</title>
@@ -85,8 +96,10 @@
       <xi:include href="xml/ncm_vparam.xml"/>
       <xi:include href="xml/ncm_model_ctrl.xml"/>
       <xi:include href="xml/ncm_model_builder.xml"/>
+      <xi:include href="xml/ncm_model_mvnd.xml"/>
       <xi:include href="xml/ncm_mset.xml"/>
       <xi:include href="xml/ncm_mset_func.xml"/>
+      <xi:include href="xml/ncm_mset_func1.xml"/>
       <xi:include href="xml/ncm_mset_func_list.xml"/>
       <xi:include href="xml/ncm_calc.xml"/>
     </section>
@@ -105,6 +118,7 @@
       <xi:include href="xml/ncm_data_poisson.xml"/>    
       <xi:include href="xml/ncm_data_dist1d.xml"/>
       <xi:include href="xml/ncm_data_dist2d.xml"/>
+      <xi:include href="xml/ncm_data_gauss_cov_mvnd.xml"/>
     </section>
     <section>
     <title>Statistical Analysis</title>
@@ -114,6 +128,8 @@
       <xi:include href="xml/ncm_stats_dist1d_epdf.xml"/>
       <xi:include href="xml/ncm_stats_dist2d.xml"/>
       <xi:include href="xml/ncm_stats_dist2d_spline.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd_kde_gauss.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_prior.xml"/>
@@ -143,6 +159,7 @@
       <xi:include href="xml/ncm_fit_esmcmc_walker.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_stretch.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_walk.xml"/>
+      <xi:include href="xml/ncm_fit_esmcmc_walker_aps.xml"/>
       <xi:include href="xml/ncm_lh_ratio1d.xml"/>
       <xi:include href="xml/ncm_lh_ratio2d.xml"/>
       <xi:include href="xml/ncm_abc.xml"/>
@@ -223,6 +240,7 @@
     <xi:include href="xml/nc_hireion.xml"/>
     <xi:include href="xml/nc_hireion_camb.xml"/>
     <xi:include href="xml/nc_hireion_camb_reparam_tau.xml"/>
+    <xi:include href="xml/nc_hiqg_1d.xml"/>
   </chapter>
 
   <chapter>
@@ -352,6 +370,8 @@
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
+      <xi:include href="xml/nc_reduced_shear_calib.xml"/>
+      <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
     </section>
     <section>
       <title>Galaxy ACF</title>
@@ -402,7 +422,7 @@
     <xi:include href="xml/grid_one.xml"/>
     <xi:include href="xml/quadrature.xml"/>
     <xi:include href="xml/function_cache.xml"/>
-    <xi:include href="xml/memory_pool.xml"/>
+    <xi:include href="xml/ncm_memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>
   </chapter>
 

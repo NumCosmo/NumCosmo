@@ -138,11 +138,7 @@ static gdouble
 _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
 {
   NcmPriorGaussFunc *pgf = NCM_PRIOR_GAUSS_FUNC (pg);
-  gdouble res = 0.0;
-  
-  ncm_mset_func_eval (pgf->mean_func, mset, &pg->var, &res);
-  
-  return res;
+  return ncm_mset_func_eval1 (pgf->mean_func, mset, pg->var);
 }
 
 /**

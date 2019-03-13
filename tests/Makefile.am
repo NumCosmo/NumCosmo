@@ -4,13 +4,13 @@
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS) \
+	 $(GLIB_CFLAGS)     \
 	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS) \
-	 $(FFTW3_CFLAGS) \
-	 $(CFITSIO_CFLAGS) \
-	 $(NLOPT_CFLAGS) \
-	 -I$(top_srcdir) \
+	 $(GSL_CFLAGS)      \
+	 $(FFTW3_CFLAGS)    \
+	 $(CFITSIO_CFLAGS)  \
+	 $(NLOPT_CFLAGS)    \
+	 -I$(top_srcdir)    \
 	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS = \
@@ -26,6 +26,9 @@ test_ncm_sparam_SOURCES =  \
 test_ncm_diff_SOURCES =  \
 	test_ncm_diff.c
 
+test_ncm_ode_SOURCES =  \
+	test_ncm_ode.c
+
 test_ncm_fftlog_SOURCES =  \
 	test_ncm_fftlog.c
 
@@ -40,6 +43,9 @@ test_ncm_stats_vec_SOURCES =  \
 	
 test_ncm_stats_dist1d_epdf_SOURCES =  \
 	test_ncm_stats_dist1d_epdf.c
+	
+test_ncm_stats_dist_nd_SOURCES =  \
+	test_ncm_stats_dist_nd.c
 	
 test_ncm_spline_SOURCES =  \
         test_ncm_spline.c
@@ -65,11 +71,7 @@ test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
 test_ncm_mset_catalog_SOURCES = \
-	test_ncm_mset_catalog.c   \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_mset_catalog.c
 
 test_ncm_obj_array_SOURCES = \
 	test_ncm_obj_array.c
@@ -83,18 +85,10 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.h
 
 test_ncm_fit_SOURCES = \
-	test_ncm_fit.c            \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit.c
 
 test_ncm_fit_esmcmc_SOURCES = \
-	test_ncm_fit_esmcmc.c     \
-	ncm_data_gauss_cov_mvnd.c \
-	ncm_data_gauss_cov_mvnd.h \
-	ncm_model_mvnd.c          \
-	ncm_model_mvnd.h
+	test_ncm_fit_esmcmc.c
 
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
@@ -123,6 +117,9 @@ test_nc_recomb_SOURCES =  \
 test_nc_cbe_SOURCES =  \
 	test_nc_cbe.c
 
+test_nc_hiqg_1d_SOURCES =  \
+	test_nc_hiqg_1d.c
+
 test_nc_data_bao_rdv_SOURCES =  \
         test_nc_data_bao_rdv.c
 
@@ -146,6 +143,7 @@ check_PROGRAMS =  \
 	test_ncm_matrix                 \
 	test_ncm_stats_vec              \
 	test_ncm_stats_dist1d_epdf      \
+	test_ncm_stats_dist_nd          \
 	test_ncm_spline                 \
 	test_ncm_spline2d               \
 	test_ncm_integral1d             \
@@ -153,6 +151,7 @@ check_PROGRAMS =  \
 	test_ncm_func_eval              \
 	test_ncm_sparam                 \
 	test_ncm_diff                   \
+	test_ncm_ode                    \
 	test_ncm_fftlog                 \
 	test_ncm_model                  \
 	test_ncm_model_ctrl             \
@@ -165,6 +164,7 @@ check_PROGRAMS =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
+	test_nc_hiqg_1d                \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
 	test_nc_transfer_func           \
@@ -187,6 +187,12 @@ test_ncm_sparam_LDADD = \
 	$(COVLIBS)
 
 test_ncm_diff_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_ode_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
@@ -217,6 +223,12 @@ test_ncm_stats_vec_LDADD = \
 	$(COVLIBS)
 
 test_ncm_stats_dist1d_epdf_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_stats_dist_nd_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
@@ -354,6 +366,12 @@ test_nc_cbe_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_nc_hiqg_1d_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_nc_data_bao_rdv_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
@@ -389,6 +407,48 @@ test_nc_distance_LDADD = \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
         $(COVLIBS)
+
+if NUMCOSMO_CHECK_CCL
+
+AM_CFLAGS += \
+	$(CCL_CFLAGS)
+
+test_nc_ccl_Pk_SOURCES =  \
+        test_nc_ccl_Pk.c
+
+test_nc_ccl_dist_SOURCES =  \
+        test_nc_ccl_dist.c
+
+test_nc_ccl_massfunc_SOURCES =  \
+        test_nc_ccl_massfunc.c
+
+check_PROGRAMS += \
+	test_nc_ccl_Pk   \
+	test_nc_ccl_dist \
+	test_nc_ccl_massfunc
+
+test_nc_ccl_Pk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_dist_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_massfunc_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+endif
         
 TESTS = $(check_PROGRAMS)
 

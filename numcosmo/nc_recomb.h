@@ -40,11 +40,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
-#include <cvodes/cvodes.h>
-#if HAVE_SUNDIALS_MAJOR == 2
-#include <cvodes/cvodes_dense.h>
-#elif HAVE_SUNDIALS_MAJOR == 3
-#endif
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS

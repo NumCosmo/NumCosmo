@@ -33,7 +33,7 @@
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_mset_catalog.h>
-#include <numcosmo/math/memory_pool.h>
+#include <numcosmo/math/ncm_memory_pool.h>
 
 G_BEGIN_DECLS
 

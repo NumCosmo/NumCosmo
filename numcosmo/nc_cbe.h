@@ -126,6 +126,8 @@ guint nc_cbe_get_scalar_lmax (NcCBE *cbe);
 guint nc_cbe_get_vector_lmax (NcCBE *cbe);
 guint nc_cbe_get_tensor_lmax (NcCBE *cbe);
 
+void nc_cbe_use_ppf (NcCBE *cbe, gboolean use_ppf);
+
 void nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo);
 void nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
 void nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo);
@@ -138,6 +140,8 @@ gdouble nc_cbe_thermodyn_v_tau_max_z (NcCBE *cbe);
 gdouble nc_cbe_thermodyn_z_d (NcCBE *cbe);
 
 NcmSpline2d *nc_cbe_get_matter_ps (NcCBE *cbe);
+
+gdouble nc_cbe_get_sigma8 (NcCBE *cbe);
 
 void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *PHIPHI_Cls, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
 void nc_cbe_debug_test (NcCBE* cbe);

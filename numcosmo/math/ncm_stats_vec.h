@@ -160,6 +160,7 @@ gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, gu
 
 gboolean ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order);
 gdouble ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0, guint *c_order);
+gdouble ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p);
 
 NcmVector *ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess);
 NcmVector *ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue);

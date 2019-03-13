@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import sys
-import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
 
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -17,14 +20,21 @@ from gi.repository import NumCosmoMath as Ncm
 from py_sline_model import PySLineModel
 from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
+from py_sline_mfunc import PyTestFunc
+
+#
+#  Initializing the library objects, this must be called before
+#  any other library function.
+#
+Ncm.cfg_init ()
 
 #
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.9
-slm.props.b = 0.1
+slm.props.alpha = 0.9
+slm.props.a     = 0.2
 
 #
 # New Model set object including slm with parameters
@@ -74,7 +84,7 @@ fit.log_info ()
 #
 # Setting single thread calculation.
 #
-Ncm.func_eval_set_max_threads (1)
+Ncm.func_eval_set_max_threads (0)
 Ncm.func_eval_log_pool_stats ()
 
 #
@@ -96,7 +106,7 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-nwalkers = 50
+nwalkers = 20
 stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 #
@@ -104,8 +114,17 @@ stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 # step done between two walkers and circumscribe the walkers inside
 # the box defined by the parameters inside the mset object.
 #
-stretch.set_scale (2.5)
+stretch.set_scale (3.0)
 stretch.set_box_mset (mset)
+
+#
+# Additional functions of mset to be computed during the sampling 
+# process.
+#
+mfunc_oa = Ncm.ObjArray.new ()
+
+tf = PyTestFunc ()
+mfunc_oa.add (tf)
 
 #
 # Initialize the ESMCMC object using the objects above. It will
@@ -114,7 +133,7 @@ stretch.set_box_mset (mset)
 # in the chain (the last 50 parametric points) to calculate the
 # proposal points.
 #
-esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsgs.SIMPLE)
+esmcmc  = Ncm.FitESMCMC.new_funcs_array (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsgs.SIMPLE, mfunc_oa)
 
 #
 # These methods enable the auto-trim options on ESMCMC. This option 
@@ -126,6 +145,7 @@ esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsg
 esmcmc.set_auto_trim (True)
 esmcmc.set_auto_trim_div (100)
 esmcmc.set_max_runs_time (2.0 * 60.0)
+esmcmc.set_nthreads (2)
 
 #
 # Using `example_esmcmc_out.fits' as the catalog file, if there

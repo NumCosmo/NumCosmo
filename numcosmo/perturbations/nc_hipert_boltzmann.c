@@ -41,10 +41,16 @@
 #include "perturbations/nc_hipert_boltzmann.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvodes/cvodes.h>
+#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#include "perturbations/nc_hipert_private.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT);
 
@@ -766,7 +772,7 @@ nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
   {
     nc_recomb_clear (&pb->recomb);
     pb->recomb = nc_recomb_ref (recomb);
-    NC_HIPERT (pb)->prepared = FALSE;
+    NC_HIPERT (pb)->priv->prepared = FALSE;
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }

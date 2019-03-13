@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmOdeSplineClass NcmOdeSplineClass;
 typedef struct _NcmOdeSpline NcmOdeSpline;
+typedef struct _NcmOdeSplinePrivate NcmOdeSplinePrivate;
 
 typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
 
@@ -55,23 +56,8 @@ struct _NcmOdeSpline
 {
   /*< private >*/
   GObject parent_instance;
-  gpointer cvode;
-  N_Vector y;
-  GArray *y_array;
-  GArray *x_array;
-  gdouble xi;
-  gdouble xf;
-  gdouble yi;
-	gdouble yf;
-  gdouble reltol;
-  gdouble abstol;
-  NcmOdeSplineDydx dydx;
-  NcmSpline *s;
-  gboolean s_init;
-  gboolean cvode_init;
-  gboolean hnil;
-  gboolean stop_hnil;
-  NcmModelCtrl *ctrl;
+  NcmOdeSplinePrivate *priv;
+  NcmSpline *spline;
 };
 
 GType ncm_ode_spline_get_type (void) G_GNUC_CONST;
@@ -89,11 +75,34 @@ void ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi);
 void ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf);
 void ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi);
 void ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf);
+void ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on);
+
+void ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step);
+gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
+
+G_INLINE_FUNC NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
-#define NCM_ODE_SPLINE_DEFAULT_ABSTOL (1.0e-80)
+#define NCM_ODE_SPLINE_DEFAULT_ABSTOL (0.0)
 #define NCM_ODE_SPLINE_MIN_STEP (1.0e-10)
 
 G_END_DECLS
 
 #endif /* _NCM_ODE_SPLINE_H_ */
+
+#ifndef _NCM_ODE_SPLINE_INLINE_H_
+#define _NCM_ODE_SPLINE_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC NcmSpline *
+ncm_ode_spline_peek_spline (NcmOdeSpline *os)
+{
+  return os->spline;
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NCM_ODE_SPLINE_INLINE_H_ */

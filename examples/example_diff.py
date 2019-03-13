@@ -96,8 +96,6 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 jac = nd.Jacobian (ftest_py)
 cmp_array (flatten (np.transpose (jac (x0_a, L))), dfE_a, err_a)
 
-exit ()
-
 # 
 # First derivative: Central method + Richardson extrapolation
 #

@@ -83,6 +83,7 @@ struct _NcmPowspecFilter
   gdouble zf;
   gboolean calibrated;
   gdouble reltol;
+  gdouble reltol_z;
   NcmSpline2d *var;
   NcmSpline2d *dvar;
   NcmModelCtrl *ctrl;

@@ -41,8 +41,6 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "model/nc_hicosmo_gcg.h"
 
-G_DEFINE_TYPE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO);
-
 struct _NcHICosmoGCGPrivate
 {
   NcmSpline2d *BBN_spline2d;
@@ -53,6 +51,8 @@ struct _NcHICosmoGCGPrivate
   NcmSpline *nu_p_s[10];
   gdouble zmax;
 };
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO);
 
 enum
 {
@@ -234,8 +234,6 @@ nc_hicosmo_gcg_class_init (NcHICosmoGCGClass *klass)
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHICosmoGCGPrivate));
 
   object_class->constructed = &_nc_hicosmo_gcg_constructed;
   object_class->dispose     = &_nc_hicosmo_gcg_dispose;

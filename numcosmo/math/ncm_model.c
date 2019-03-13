@@ -55,6 +55,7 @@ enum
   PROP_SPARAMS_LEN,
   PROP_VPARAMS_LEN,
   PROP_IMPLEMENTATION,
+	PROP_SPARAM_ARRAY,
   PROP_PTYPES,
   PROP_REPARAM,
   PROP_SUBMODEL_ARRAY,
@@ -122,6 +123,29 @@ _ncm_model_set_sparams (NcmModel *model)
 
     ncm_vparam_free (vp);
   }
+}
+
+static void
+_ncm_model_set_sparams_from_array (NcmModel *model, GPtrArray *sparams)
+{
+	if (sparams != NULL && sparams->len > 0)
+	{
+		guint i;
+
+		g_hash_table_remove_all (model->sparams_name_id);
+		g_ptr_array_set_size (model->sparams, 0);
+		g_ptr_array_set_size (model->sparams, model->total_len);
+
+		g_assert_cmpuint (sparams->len, ==, model->total_len);
+
+		for (i = 0; i < sparams->len; i++)
+		{
+			NcmSParam *sp = NCM_SPARAM (ncm_obj_array_peek (sparams, i));
+
+			g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
+			g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
+		}
+	}
 }
 
 static void
@@ -198,6 +222,9 @@ _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GP
 
   switch (prop_id)
   {
+		case PROP_SPARAM_ARRAY:
+			_ncm_model_set_sparams_from_array (model, g_value_get_boxed (value));
+			break;
     case PROP_REPARAM:
       ncm_model_set_reparam (model, g_value_get_object (value));
       break;
@@ -249,6 +276,9 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_IMPLEMENTATION:
       g_value_set_uint64 (value, model_class->impl_flag);
       break;
+		case PROP_SPARAM_ARRAY:
+			g_value_set_boxed (value, model->sparams);
+			break;
     case PROP_REPARAM:
       g_value_set_object (value, model->reparam);
       break;
@@ -357,6 +387,13 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
+                                   PROP_SPARAM_ARRAY,
+                                   g_param_spec_boxed ("sparam-array",
+                                                       NULL,
+                                                       "NcmModel array of NcmSParam",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
                                    PROP_REPARAM,
                                    g_param_spec_object  ("reparam",
                                                          NULL,
@@ -390,11 +427,11 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 {
   NcmModel *model = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_peek_static (pspec->owner_type));
-  const guint sparam_id = prop_id - model_class->nonparam_prop_len + model_class->parent_sparam_len;
-  const guint vparam_id = sparam_id	- model_class->sparam_len + model_class->parent_vparam_len;
-  const guint vparam_len_id = vparam_id	- model_class->vparam_len + model_class->parent_vparam_len;
-  const guint sparam_fit_id = vparam_len_id	- model_class->vparam_len + model_class->parent_sparam_len;
-  const guint vparam_fit_id = sparam_fit_id	- model_class->sparam_len + model_class->parent_vparam_len;
+  const guint sparam_id      = prop_id       - model_class->nonparam_prop_len + model_class->parent_sparam_len;
+  const guint vparam_id      = sparam_id	   - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint vparam_len_id  = vparam_id	   - model_class->vparam_len        + model_class->parent_vparam_len;
+  const guint sparam_fit_id  = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
+  const guint vparam_fit_id  = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
 
   if (prop_id < model_class->nonparam_prop_len && model_class->get_property)
   {
@@ -456,11 +493,11 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
 {
   NcmModel *model = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_peek_static (pspec->owner_type));
-  const guint sparam_id = prop_id - model_class->nonparam_prop_len + model_class->parent_sparam_len;
-  const guint vparam_id = sparam_id	- model_class->sparam_len + model_class->parent_vparam_len;
-  const guint vparam_len_id = vparam_id	- model_class->vparam_len + model_class->parent_vparam_len;
-  const guint sparam_fit_id = vparam_len_id	- model_class->vparam_len + model_class->parent_sparam_len;
-  const guint vparam_fit_id = sparam_fit_id	- model_class->sparam_len + model_class->parent_vparam_len;
+  const guint sparam_id      = prop_id       - model_class->nonparam_prop_len + model_class->parent_sparam_len;
+  const guint vparam_id      = sparam_id	   - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint vparam_len_id  = vparam_id	   - model_class->vparam_len        + model_class->parent_vparam_len;
+  const guint sparam_fit_id  = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
+  const guint vparam_fit_id  = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
 
   /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
 
@@ -912,6 +949,20 @@ ncm_model_dup (NcmModel *model, NcmSerialize *ser)
 }
 
 /**
+ * ncm_model_ref:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmModel *
+ncm_model_ref (NcmModel *model)
+{
+  return g_object_ref (model);
+}
+
+/**
  * ncm_model_free:
  * @model: a #NcmModel
  *
@@ -1279,14 +1330,6 @@ ncm_model_params_valid_bounds (NcmModel *model)
   return TRUE;
 }
 
-/**
- * ncm_model_ref:
- * @model: a #NcmModel
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
 /**
  * ncm_model_id:
  * @model: a #NcmModel
@@ -1734,6 +1777,7 @@ void
 ncm_model_param_set_scale (NcmModel *model, guint n, const gdouble scale)
 {
   ncm_sparam_set_scale (ncm_model_param_peek_desc (model, n), scale);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1749,6 +1793,7 @@ void
 ncm_model_param_set_lower_bound (NcmModel *model, guint n, const gdouble lb)
 {
   ncm_sparam_set_lower_bound (ncm_model_param_peek_desc (model, n), lb);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1764,6 +1809,7 @@ void
 ncm_model_param_set_upper_bound (NcmModel *model, guint n, const gdouble ub)
 {
   ncm_sparam_set_upper_bound (ncm_model_param_peek_desc (model, n), ub);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**
@@ -1779,6 +1825,7 @@ void
 ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol)
 {
   ncm_sparam_set_absolute_tolerance (ncm_model_param_peek_desc (model, n), abstol);
+  ncm_model_state_mark_outdated (model);
 }
 
 /**

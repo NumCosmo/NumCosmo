@@ -40,7 +40,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm_reparam_linear.h"
+#include "math/ncm_reparam_linear.h"
+#include "math/ncm_vector.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_linalg.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmReparamLinear, ncm_reparam_linear, NCM_TYPE_REPARAM);
 

@@ -74,6 +74,7 @@ typedef enum _NcmMSetCatalogSync
  * NcmMSetCatalogTrimType:
  * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterium.
  * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
  * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
  * 
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
@@ -83,8 +84,27 @@ typedef enum _NcmMSetCatalogTrimType
 {
   NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 2) - 1,
+  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
+  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
 } NcmMSetCatalogTrimType;
+
+/**
+ * NcmMSetCatalogPostNormMethod:
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: Uses a MVND limited in a hyperbox and bootstrap to estimate error.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in elipsoids.
+ * 
+ * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
+ * 
+ */
+typedef enum _NcmMSetCatalogPostNormMethod
+{
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX = 0,
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID,
+  /* < private > */
+  NCM_MSET_CATALOG_POST_LNNORM_METHOD_LEN, /*< skip >*/
+} NcmMSetCatalogPostNormMethod;
 
 /**
  * NcmMSetCatalogTauMethod:
@@ -150,6 +170,12 @@ guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
 gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
 gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
+guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i);
+const gchar *ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i);
+
+gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index);
+
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
 
@@ -177,8 +203,9 @@ NcmVector *ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t);
 NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
-gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat);
+gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd);
 gdouble ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol);
+gdouble ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
@@ -204,10 +231,13 @@ void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmM
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
 void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc);
+void ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p);
+guint ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file);
 void ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype);
+guint ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs mtype);
 
 void ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype);
 

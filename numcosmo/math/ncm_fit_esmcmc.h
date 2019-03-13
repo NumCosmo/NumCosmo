@@ -33,8 +33,6 @@
 #include <numcosmo/math/ncm_mset_catalog.h>
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
-#include <numcosmo/math/ncm_timer.h>
-#include <numcosmo/math/memory_pool.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
@@ -54,6 +52,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmFitESMCMCClass NcmFitESMCMCClass;
 typedef struct _NcmFitESMCMC NcmFitESMCMC;
+typedef struct _NcmFitESMCMCPrivate NcmFitESMCMCPrivate;
 
 struct _NcmFitESMCMCClass
 {
@@ -65,42 +64,7 @@ struct _NcmFitESMCMC
 {
   /*< private >*/
   GObject parent_instance;
-  NcmFit *fit;
-  NcmMemoryPool *walker_pool;
-  NcmMSetTransKern *sampler;
-  NcmMSetCatalog *mcat;
-  NcmFitRunMsgs mtype;
-  NcmTimer *nt;
-  NcmSerialize *ser;
-  NcmFitESMCMCWalker *walker;
-  gboolean auto_trim;
-  guint auto_trim_div;
-  NcmMSetCatalogTrimType trim_type;
-  guint min_runs;
-  gdouble max_runs_time;
-  GPtrArray *full_theta;
-  GPtrArray *full_thetastar;
-  GPtrArray *theta;
-  GPtrArray *thetastar;
-  NcmVector *jumps;
-  GArray *accepted;
-  GArray *offboard;
-  NcmObjArray *funcs_oa;
-  gchar *funcs_oa_file;
-  guint nadd_vals;
-  guint fparam_len;
-  guint nthreads;
-  guint n;
-  gint nwalkers;
-  gint cur_sample_id;
-  guint ntotal;
-  guint naccepted;
-  guint noffboard;
-  gboolean started;
-  GMutex dup_fit;
-  GMutex resample_lock;
-  GMutex update_lock;
-  GCond write_cond;
+	NcmFitESMCMCPrivate *priv;
 };
 
 GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
@@ -117,9 +81,11 @@ void ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename);
 void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler);
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
 void ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads);
+void ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
 void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
 void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
+void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
 
@@ -127,21 +93,28 @@ gboolean ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc);
 
 gdouble ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
+gdouble ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc);
+gdouble ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc);
 
 void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);
 void ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre);
+void ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes);
 void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 
 NcmSerialize *ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc);
 NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
+NcmMSetCatalog *ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc);
+NcmFit *ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 
 #define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
+#define NCM_FIT_ESMCMC_MPI_IN_LEN (3)
+#define NCM_FIT_ESMCMC_MPI_OUT_LEN (1)
 
 G_END_DECLS
 

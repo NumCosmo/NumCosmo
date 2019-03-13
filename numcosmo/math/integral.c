@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/integral.h"
-#include "math/memory_pool.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -418,19 +418,19 @@ ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi,
 gboolean
 ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint nvec = 1;
-  const gint seed = 0;
-	const gint mineval = 1;
-	const gint maxeval = 10000000;
-	const gint key1 = 13; // 13 points rule 
-  const gint key2 = 13;
-  const gint key3 = 1;
-  const int maxpass = 10;
-  const double border = 0.0;
-  const double maxchisq = 0.10;
-  const double mindeviation = 0.25;
-  const int nextra = 0;
+  gboolean ret               = FALSE;
+  const gint nvec            = 1;
+  const gint seed            = 0;
+	const gint mineval         = 1;
+	const gint maxeval         = 10000000;
+	const gint key1            = 13; // 13 points rule 
+  const gint key2            = 13;
+  const gint key3            = 1;
+  const gint maxpass         = 10;
+  const gdouble border       = 0.0;
+  const gdouble maxchisq     = 0.10;
+  const gdouble mindeviation = 0.25;
+  const gint nextra = 0;
   peakfinder_t peakfinder = NULL;
   guint i;
   
@@ -450,18 +450,17 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
 	Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
            maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail, 
            result, error, &prob);  
-#else
-  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0  
-
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-    
 	*result *= (xf - xi) * (yf - yi);
 	*error *= (xf - xi) * (yf - yi);
 
 	ret = (fail == 0);
 	return ret;
+#else
+  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
+  return FALSE;
+#endif //HAVE_LIBCUBA_4_0      
 }
 
 /**
