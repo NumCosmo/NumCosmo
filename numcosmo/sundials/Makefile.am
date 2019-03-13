@@ -84,12 +84,16 @@ sundials_cvode_sources = \
 	src/cvode/cvode_nls.c
 
 sundials_nvector_sources = \
-	include/nvector/nvector_openmp.h        \
 	include/nvector/nvector_pthreads.h      \
 	include/nvector/nvector_serial.h        \
-	src/nvector/openmp/nvector_openmp.c     \
 	src/nvector/pthreads/nvector_pthreads.c \
 	src/nvector/serial/nvector_serial.c
+
+if COMPILE_WITH_MP
+sundials_nvector_sources += \
+	include/nvector/nvector_openmp.h    \
+	src/nvector/openmp/nvector_openmp.c
+endif
 
 sundials_sunlinsol_sources = \
 	include/sunlinsol/sunlinsol_band.h                \
