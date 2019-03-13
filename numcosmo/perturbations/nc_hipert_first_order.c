@@ -49,6 +49,7 @@
 #include <cvode/cvode.h>
 #include <cvode/cvode_ls.h>
 #include <arkode/arkode.h>
+#include <arkode/arkode_arkstep.h>
 #include <arkode/arkode_ls.h>
 
 #include <sundials/sundials_matrix.h>
@@ -300,7 +301,7 @@ _nc_hipert_first_order_finalize (GObject *object)
   }
   if (self->arkode != NULL)
   {
-    ARKodeStepFree (&self->arkode);
+    ARKStepFree (&self->arkode);
     self->arkode      = NULL;
     self->arkode_init = FALSE;
   }
@@ -1128,7 +1129,7 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
     }
     if (self->arkode != NULL)
     {
-      ARKodeFree (&self->arkode);
+      ARKStepFree (&self->arkode);
       self->arkode      = NULL;
       self->arkode_init = FALSE;
     }
@@ -1187,16 +1188,14 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
 #define INTTYPE _nc_hipert_first_order_f, NULL
       if (!self->arkode_init)
       {
-        self->arkode = ARKodeCreate ();
-        
-        flag = ARKodeInit (self->arkode, INTTYPE, t0, self->y);
-        NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
+        self->arkode = ARKStepCreate (INTTYPE, t0, self->y);
+        NCM_CVODE_CHECK (&self->arkode, "ARKStepCreate", 0, );
 
-        flag = ARKodeSVtolerances (self->arkode, self->reltol, self->abstol_v);
-        NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
+        flag = ARKStepSVtolerances (self->arkode, self->reltol, self->abstol_v);
+        NCM_CVODE_CHECK (&flag, "ARKStepSVtolerances", 1, );
 
-        flag = ARKodeSetMaxNumSteps (self->arkode, 0);
-        NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
+        flag = ARKStepSetMaxNumSteps (self->arkode, 0);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetMaxNumSteps", 1, );
 
         flag = ARKBand (self->arkode, self->cur_sys_size, self->mupper, self->mlower);
         NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
@@ -1204,27 +1203,27 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
         flag = ARKDlsSetDenseJacFn (self->arkode, /*J*/ NULL);
         NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
 
-        flag = ARKodeSetLinear (self->arkode, 1);
-        NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
+        flag = ARKStepSetLinear (self->arkode, 1);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetLinear", 1, );
 
-        flag = ARKodeSetOrder (self->arkode, 7);
-        NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
+        flag = ARKStepSetOrder (self->arkode, 7);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetOrder", 1, );
 
-        //flag = ARKodeSetERKTableNum (self->arkode, FEHLBERG_13_7_8);
-        //NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
+        //flag = ARKStepSetERKTableNum (self->arkode, FEHLBERG_13_7_8);
+        //NCM_CVODE_CHECK (&flag, "ARKStepSetERKTableNum", 1, );
 
-        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
-        NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
+        flag = ARKStepSetInitStep (self->arkode, fabs (t0) * self->reltol);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetInitStep", 1, );
 
         self->arkode_init = TRUE;
       }
       else
       {
-        flag = ARKodeReInit (self->arkode, INTTYPE, t0, self->y);
-        NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
+        flag = ARKStepReInit (self->arkode, INTTYPE, t0, self->y);
+        NCM_CVODE_CHECK (&flag, "ARKStepInit", 1, );
 
-        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
-        NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
+        flag = ARKStepSetInitStep (self->arkode, fabs (t0) * self->reltol);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetInitStep", 1, );
       }
       break;
     }
