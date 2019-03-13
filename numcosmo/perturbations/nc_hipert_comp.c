@@ -53,7 +53,7 @@ enum
   PROP_LEN
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
 
 static void
 nc_hipert_comp_init (NcHIPertComp *comp)
@@ -131,8 +131,6 @@ static void
 nc_hipert_comp_class_init (NcHIPertCompClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertCompPrivate));
 
   object_class->set_property = &_nc_hipert_comp_set_property;
   object_class->get_property = &_nc_hipert_comp_get_property;

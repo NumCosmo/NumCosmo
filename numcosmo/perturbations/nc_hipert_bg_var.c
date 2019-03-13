@@ -56,7 +56,7 @@ enum
 };
 
 G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free);
-G_DEFINE_TYPE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
 
 static void
 nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)
@@ -128,7 +128,7 @@ _nc_hipert_bg_var_dispose (GObject *object)
 {
   NcHIPertBGVar *bg_var = NC_HIPERT_BG_VAR (object);
   
-  g_clear_pointer (&bg_var->cstructs, (GDestroyNotify) g_ptr_array_unref);
+  g_clear_pointer (&bg_var->cstructs, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_bg_var_parent_class)->dispose (object);
@@ -146,8 +146,6 @@ static void
 nc_hipert_bg_var_class_init (NcHIPertBGVarClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertBGVarPrivate));
 
   object_class->set_property = &_nc_hipert_bg_var_set_property;
   object_class->get_property = &_nc_hipert_bg_var_get_property;

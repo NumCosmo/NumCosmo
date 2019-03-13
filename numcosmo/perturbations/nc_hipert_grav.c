@@ -64,7 +64,7 @@ G_DEFINE_BOXED_TYPE (NcHIPertGravTTensor, nc_hipert_grav_T_tensor, nc_hipert_gra
 G_DEFINE_BOXED_TYPE (NcHIPertGravInfo,        nc_hipert_grav_info,          nc_hipert_grav_info_dup,          nc_hipert_grav_info_free);
 G_DEFINE_BOXED_TYPE (NcHIPertGravTScalarInfo, nc_hipert_grav_T_scalar_info, nc_hipert_grav_T_scalar_info_dup, nc_hipert_grav_T_scalar_info_free);
 
-G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
 
 static void
 nc_hipert_grav_init (NcHIPertGrav *grav)
@@ -137,8 +137,6 @@ static void
 nc_hipert_grav_class_init (NcHIPertGravClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertGravPrivate));
 
   object_class->set_property = &_nc_hipert_grav_set_property;
   object_class->get_property = &_nc_hipert_grav_get_property;

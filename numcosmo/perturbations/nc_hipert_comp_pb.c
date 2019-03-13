@@ -51,7 +51,7 @@ enum
   PROP_LMAX
 };
 
-G_DEFINE_TYPE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP);
 
 static void
 nc_hipert_comp_pb_init (NcHIPertCompPB *pb)
@@ -122,8 +122,6 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
 {
   GObjectClass *object_class    = G_OBJECT_CLASS (klass);
   NcHIPertCompClass *comp_class = NC_HIPERT_COMP_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertCompPBPrivate));
 
   object_class->set_property = &_nc_hipert_comp_pb_set_property;
   object_class->get_property = &_nc_hipert_comp_pb_get_property;

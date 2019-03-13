@@ -51,7 +51,7 @@ enum
   PROP_NHOC
 };
 
-G_DEFINE_TYPE (NcHIPertGravEinstein, nc_hipert_grav_einstein, NC_TYPE_HIPERT_GRAV);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGravEinstein, nc_hipert_grav_einstein, NC_TYPE_HIPERT_GRAV);
 
 static void
 nc_hipert_grav_einstein_init (NcHIPertGravEinstein *gr)
@@ -117,8 +117,6 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
 {
   GObjectClass *object_class    = G_OBJECT_CLASS (klass);
   NcHIPertGravClass *grav_class = NC_HIPERT_GRAV_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertGravEinsteinPrivate));
 
   object_class->set_property = &_nc_hipert_grav_einstein_set_property;
   object_class->get_property = &_nc_hipert_grav_einstein_get_property;

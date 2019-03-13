@@ -44,13 +44,20 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include "math/rcm.h"
 
-#include <cvodes/cvodes.h>
-#include <cvodes/cvodes_band.h>
-
-#include <arkode/arkode.h>
-#include <arkode/arkode_band.h>
-
 #include <nvector/nvector_serial.h>
+
+#include <cvode/cvode.h>
+#include <cvode/cvode_ls.h>
+#include <arkode/arkode.h>
+#include <arkode/arkode_ls.h>
+
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
+#include <sunmatrix/sunmatrix_band.h>
+#include <sunlinsol/sunlinsol_band.h>
+
+#include <sundials/sundials_types.h> 
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcHIPertFirstOrderVar
@@ -70,10 +77,8 @@ struct _NcHIPertFirstOrderPrivate
   NcHIPertGravGauge gauge;
   gpointer cvode;
   gboolean cvode_init;
-#ifdef HAVE_SUNDIALS_ARKODE
   gpointer arkode;
   gboolean arkode_init;
-#endif /* HAVE_SUNDIALS_ARKODE */
   guint cur_sys_size;
   N_Vector y;
   N_Vector abstol_v;
@@ -102,53 +107,55 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE (NcHIPertFirstOrder, nc_hipert_first_order, NC_TYPE_HIPERT_BOLTZMANN);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertFirstOrder, nc_hipert_first_order, NC_TYPE_HIPERT_BOLTZMANN);
 
 void 
 _nc_hipert_first_order_clear_var (NcHIPertFirstOrderVar *var)
 {
-  g_clear_pointer (&var->deps, (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&var->deps, g_array_unref);
 }
 
 static void
 nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
 {
-  fo->priv               = G_TYPE_INSTANCE_GET_PRIVATE (fo, NC_TYPE_HIPERT_FIRST_ORDER, NcHIPertFirstOrderPrivate);
-  fo->priv->grav         = NULL;
-  fo->priv->comps        = g_ptr_array_new ();
-  fo->priv->active_comps = g_ptr_array_new ();
-  fo->priv->vars         = g_array_new (TRUE, TRUE, sizeof (NcHIPertFirstOrderVar));
-  fo->priv->bg_var       = nc_hipert_bg_var_new ();
-  fo->priv->gauge        = NC_HIPERT_GRAV_GAUGE_LEN;
+  NcHIPertFirstOrderPrivate * const self = fo->priv = G_TYPE_INSTANCE_GET_PRIVATE (fo, NC_TYPE_HIPERT_FIRST_ORDER, NcHIPertFirstOrderPrivate); 
+  
+  self->grav         = NULL;
+  self->comps        = g_ptr_array_new ();
+  self->active_comps = g_ptr_array_new ();
+  self->vars         = g_array_new (TRUE, TRUE, sizeof (NcHIPertFirstOrderVar));
+  self->bg_var       = nc_hipert_bg_var_new ();
+  self->gauge        = NC_HIPERT_GRAV_GAUGE_LEN;
 
-  fo->priv->cvode        = NULL;
-  fo->priv->cvode_init   = FALSE;
-  fo->priv->arkode       = NULL;
-  fo->priv->arkode_init  = FALSE;
+  self->cvode        = NULL;
+  self->cvode_init   = FALSE;
+  self->arkode       = NULL;
+  self->arkode_init  = FALSE;
 
-  fo->priv->reltol       = 0.0;
-  fo->priv->abstol       = 0.0;
+  self->reltol       = 0.0;
+  self->abstol       = 0.0;
 
-  fo->priv->mupper       = 0;
-  fo->priv->mlower       = 0;
+  self->mupper       = 0;
+  self->mlower       = 0;
 
-  fo->priv->integ        = NC_HIPERT_FIRST_ORDER_INTEG_LEN;
-  fo->priv->cur_sys_size = 0;
-  fo->priv->y            = NULL;
-  fo->priv->abstol_v     = NULL;
+  self->integ        = NC_HIPERT_FIRST_ORDER_INTEG_LEN;
+  self->cur_sys_size = 0;
+  self->y            = NULL;
+  self->abstol_v     = NULL;
 
-  fo->priv->T_scalar_i   = nc_hipert_grav_T_scalar_new ();
-  fo->priv->T_scalar_tot = nc_hipert_grav_T_scalar_new ();
-  fo->priv->G_scalar     = nc_hipert_grav_scalar_new ();
+  self->T_scalar_i   = nc_hipert_grav_T_scalar_new ();
+  self->T_scalar_tot = nc_hipert_grav_T_scalar_new ();
+  self->G_scalar     = nc_hipert_grav_scalar_new ();
 
-  g_array_set_clear_func (fo->priv->vars, (GDestroyNotify)_nc_hipert_first_order_clear_var);  
-  g_ptr_array_set_free_func (fo->priv->active_comps, (GDestroyNotify)nc_hipert_comp_free);
+  g_array_set_clear_func (self->vars, (GDestroyNotify)_nc_hipert_first_order_clear_var);  
+  g_ptr_array_set_free_func (self->active_comps, (GDestroyNotify)nc_hipert_comp_free);
 }
 
 static void
 _nc_hipert_first_order_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertFirstOrder *fo = NC_HIPERT_FIRST_ORDER (object);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   g_return_if_fail (NC_IS_HIPERT_FIRST_ORDER (object));
 
   switch (prop_id)
@@ -174,13 +181,13 @@ _nc_hipert_first_order_set_property (GObject *object, guint prop_id, const GValu
       break;
     }
     case PROP_DIST:
-      nc_hipert_bg_var_set_dist (fo->priv->bg_var, g_value_get_object (value));
+      nc_hipert_bg_var_set_dist (self->bg_var, g_value_get_object (value));
       break;    
     case PROP_RECOMB:
-      nc_hipert_bg_var_set_recomb (fo->priv->bg_var, g_value_get_object (value));
+      nc_hipert_bg_var_set_recomb (self->bg_var, g_value_get_object (value));
       break;    
     case PROP_SCALEFACTOR:
-      nc_hipert_bg_var_set_scalefactor (fo->priv->bg_var, g_value_get_object (value));
+      nc_hipert_bg_var_set_scalefactor (self->bg_var, g_value_get_object (value));
       break;
     case PROP_RELTOL:
       nc_hipert_first_order_set_reltol (fo, g_value_get_double (value));
@@ -201,6 +208,7 @@ static void
 _nc_hipert_first_order_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertFirstOrder *fo = NC_HIPERT_FIRST_ORDER (object);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   g_return_if_fail (NC_IS_HIPERT_FIRST_ORDER (object));
 
   switch (prop_id)
@@ -216,9 +224,9 @@ _nc_hipert_first_order_get_property (GObject *object, guint prop_id, GValue *val
       NcmObjArray *oa = ncm_obj_array_new ();
       guint i;
 
-      for (i = 0; i < fo->priv->comps->len; i++)
+      for (i = 0; i < self->comps->len; i++)
       {
-        NcHIPertComp *comp = g_ptr_array_index (fo->priv->comps, i);
+        NcHIPertComp *comp = g_ptr_array_index (self->comps, i);
         if (comp != NULL)
           ncm_obj_array_add (oa, G_OBJECT (comp));
       }
@@ -227,13 +235,13 @@ _nc_hipert_first_order_get_property (GObject *object, guint prop_id, GValue *val
       break;
     }    
     case PROP_DIST:
-      g_value_take_object (value, nc_hipert_bg_var_get_dist (fo->priv->bg_var));
+      g_value_take_object (value, nc_hipert_bg_var_get_dist (self->bg_var));
       break;    
     case PROP_RECOMB:
-      g_value_take_object (value, nc_hipert_bg_var_get_recomb (fo->priv->bg_var));
+      g_value_take_object (value, nc_hipert_bg_var_get_recomb (self->bg_var));
       break;    
     case PROP_SCALEFACTOR:
-      g_value_take_object (value, nc_hipert_bg_var_get_scalefactor (fo->priv->bg_var));
+      g_value_take_object (value, nc_hipert_bg_var_get_scalefactor (self->bg_var));
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_hipert_first_order_get_reltol (fo));
@@ -254,25 +262,25 @@ static void
 _nc_hipert_first_order_dispose (GObject *object)
 {
   NcHIPertFirstOrder *fo = NC_HIPERT_FIRST_ORDER (object);
-
-  nc_hipert_grav_clear (&fo->priv->grav);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  nc_hipert_grav_clear (&self->grav);
   
-  if (fo->priv->comps != NULL)
+  if (self->comps != NULL)
   {
     guint i;
-    for (i = 0; i < fo->priv->comps->len; i++)
+    for (i = 0; i < self->comps->len; i++)
     {
-      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (fo->priv->comps, i));
+      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (self->comps, i));
 
       nc_hipert_comp_clear (&comp);
-      g_ptr_array_index (fo->priv->comps, i) = comp; 
+      g_ptr_array_index (self->comps, i) = comp; 
     }
   }
 
-  g_clear_pointer (&fo->priv->comps,        (GDestroyNotify) g_ptr_array_unref);
-  g_clear_pointer (&fo->priv->active_comps, (GDestroyNotify) g_ptr_array_unref);
+  g_clear_pointer (&self->comps,        g_ptr_array_unref);
+  g_clear_pointer (&self->active_comps, g_ptr_array_unref);
 
-  nc_hipert_bg_var_clear (&fo->priv->bg_var);
+  nc_hipert_bg_var_clear (&self->bg_var);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_first_order_parent_class)->dispose (object);
@@ -282,31 +290,30 @@ static void
 _nc_hipert_first_order_finalize (GObject *object)
 {
   NcHIPertFirstOrder *fo = NC_HIPERT_FIRST_ORDER (object);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
 
-  if (fo->priv->cvode != NULL)
+  if (self->cvode != NULL)
   {
-    CVodeFree (&fo->priv->cvode);
-    fo->priv->cvode      = NULL;
-    fo->priv->cvode_init = FALSE;
+    CVodeFree (&self->cvode);
+    self->cvode      = NULL;
+    self->cvode_init = FALSE;
   }
-#ifdef HAVE_SUNDIALS_ARKODE
-  if (fo->priv->arkode != NULL)
+  if (self->arkode != NULL)
   {
-    ARKodeFree (&fo->priv->arkode);
-    fo->priv->arkode      = NULL;
-    fo->priv->arkode_init = FALSE;
+    ARKodeStepFree (&self->arkode);
+    self->arkode      = NULL;
+    self->arkode_init = FALSE;
   }
-#endif /* HAVE_SUNDIALS_ARKODE */  
 
-  g_clear_pointer (&fo->priv->y, N_VDestroy);
-  g_clear_pointer (&fo->priv->abstol_v, N_VDestroy);
+  g_clear_pointer (&self->y, N_VDestroy);
+  g_clear_pointer (&self->abstol_v, N_VDestroy);
 
-  fo->priv->cur_sys_size = 0;
+  self->cur_sys_size = 0;
 
-  g_clear_pointer (&fo->priv->T_scalar_i,   nc_hipert_grav_T_scalar_free);
-  g_clear_pointer (&fo->priv->T_scalar_tot, nc_hipert_grav_T_scalar_free);
+  g_clear_pointer (&self->T_scalar_i,   nc_hipert_grav_T_scalar_free);
+  g_clear_pointer (&self->T_scalar_tot, nc_hipert_grav_T_scalar_free);
 
-  g_clear_pointer (&fo->priv->G_scalar,     nc_hipert_grav_scalar_free);
+  g_clear_pointer (&self->G_scalar,     nc_hipert_grav_scalar_free);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_first_order_parent_class)->finalize (object);
@@ -316,8 +323,6 @@ static void
 nc_hipert_first_order_class_init (NcHIPertFirstOrderClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (NcHIPertFirstOrderPrivate));
 
   object_class->set_property = &_nc_hipert_first_order_set_property;
   object_class->get_property = &_nc_hipert_first_order_get_property;
@@ -386,11 +391,7 @@ nc_hipert_first_order_class_init (NcHIPertFirstOrderClass *klass)
                                                         NULL,
                                                         "ODE integrator",
                                                         NC_TYPE_HIPERT_FIRST_ORDER_INTEG,
-#ifdef HAVE_SUNDIALS_ARKODE
                                                         NC_HIPERT_FIRST_ORDER_INTEG_ARKODE,
-#else
-                                                        NC_HIPERT_FIRST_ORDER_INTEG_CVODE,
-#endif /* HAVE_SUNDIALS_ARKODE */                                                      
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 }
@@ -407,7 +408,7 @@ nc_hipert_first_order_new (void)
 {
   NcDistance *dist = nc_distance_new (1.0);
   NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
-  NcScalefactor *a = nc_scalefactor_new (0, 1.0, dist);
+  NcScalefactor *a = nc_scalefactor_new (1.0, dist);
 
   NcHIPertFirstOrder *fo = nc_hipert_first_order_new_full (dist, recomb, a);
 
@@ -591,8 +592,9 @@ _nc_hipert_first_order_solve_deps (NcHIPertFirstOrder *fo, NcHIPertGravInfo *gin
 static void
 _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
 {
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   gint *adj;
-  gint node_num = fo->priv->vars->len;
+  gint node_num = self->vars->len;
   gint adj_max  = node_num * (node_num - 1); 
   gint adj_num  = 0;
   gint *adj_row;
@@ -608,8 +610,8 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
 
   if (FALSE)
   {
-    gint lll = fo->priv->vars->len - 1;
-    g_array_append_val (g_array_index (fo->priv->vars, NcHIPertFirstOrderVar, 0).deps, lll);
+    gint lll = self->vars->len - 1;
+    g_array_append_val (g_array_index (self->vars, NcHIPertFirstOrderVar, 0).deps, lll);
   }
   
   adj_set (node_num, adj_max, &adj_num, adj_row, adj, -1, -1 );
@@ -617,7 +619,7 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   ncm_message ("#\n# Original jacobian:\n#\n");
   for (i = 0; i < node_num; i++)
   {
-    NcHIPertFirstOrderVar var = g_array_index (fo->priv->vars, NcHIPertFirstOrderVar, i);
+    NcHIPertFirstOrderVar var = g_array_index (self->vars, NcHIPertFirstOrderVar, i);
     gint j;
 
     for (j = 0; j < node_num; j++)
@@ -656,7 +658,7 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
 
   for ( i = 0; i < node_num; i++ )
   {
-    NcHIPertFirstOrderVar *var = &g_array_index (fo->priv->vars, NcHIPertFirstOrderVar, i);
+    NcHIPertFirstOrderVar *var = &g_array_index (self->vars, NcHIPertFirstOrderVar, i);
     var->index = perm[i] - 1;
     /*g_message ("#    %8d  %8d  %8d | %8d  %8d\n", i + 1, perm[i], perm_inv[i], perm[perm_inv[i]-1], perm_inv[perm[i]-1]);*/
   }
@@ -667,13 +669,13 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   adj_perm_show ( node_num, adj_num, adj_row, adj, perm, perm_inv );
 */
   
-  fo->priv->mupper = 0;
-  fo->priv->mlower = 0;
+  self->mupper = 0;
+  self->mlower = 0;
     
   ncm_message ("#\n# Reordered jacobian:\n#\n");
   for (i = 0; i < node_num; i++)
   {
-    NcHIPertFirstOrderVar var = g_array_index (fo->priv->vars, NcHIPertFirstOrderVar, perm[i] - 1);
+    NcHIPertFirstOrderVar var = g_array_index (self->vars, NcHIPertFirstOrderVar, perm[i] - 1);
     gint j;
 
     for (j = 0; j < node_num; j++)
@@ -689,8 +691,8 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
     {
       gint dep = perm_inv[g_array_index (var.deps, gint, j)] - 1;
 
-      fo->priv->mupper = MAX (fo->priv->mupper, dep - i);
-      fo->priv->mlower = MAX (fo->priv->mlower, i - dep);
+      self->mupper = MAX (self->mupper, dep - i);
+      self->mlower = MAX (self->mlower, i - dep);
 
       if (i != dep)
         Jrow[dep] = 'X';
@@ -699,7 +701,7 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   }
 
   g_free (Jrow);
-  g_message ("#\n#  ADJ (permuted) bandwidth = (%d, %d)\n", fo->priv->mupper, fo->priv->mlower);
+  g_message ("#\n#  ADJ (permuted) bandwidth = (%d, %d)\n", self->mupper, self->mlower);
 
   g_free (adj);
   g_free (adj_row);
@@ -710,31 +712,32 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
 static void
 _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
 {
-  if (fo->priv->grav != NULL)
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  if (self->grav != NULL)
   {
-    NcHIPertGravInfo *ginfo         = nc_hipert_grav_get_G_scalar_info (fo->priv->grav);
+    NcHIPertGravInfo *ginfo         = nc_hipert_grav_get_G_scalar_info (self->grav);
     NcHIPertGravTScalarInfo *Tsinfo = nc_hipert_grav_T_scalar_info_new ();
-    const guint grav_ndyn           = nc_hipert_grav_ndyn_var (fo->priv->grav);
+    const guint grav_ndyn           = nc_hipert_grav_ndyn_var (self->grav);
 
     guint i, pad = 0;
 
-    g_array_set_size (fo->priv->vars, 0);
+    g_array_set_size (self->vars, 0);
       
     /* Adding gravitation potentials to the variables list */
     for (i = 0; i < grav_ndyn; i++)
     {
-      GArray *grav_dyn_var_i_deps = nc_hipert_grav_get_deps (fo->priv->grav, i);
-      NcHIPertFirstOrderVar var = {-1, fo->priv->vars->len, grav_dyn_var_i_deps};
+      GArray *grav_dyn_var_i_deps = nc_hipert_grav_get_deps (self->grav, i);
+      NcHIPertFirstOrderVar var = {-1, self->vars->len, grav_dyn_var_i_deps};
 
       _nc_hipert_first_order_add_pad (grav_dyn_var_i_deps, pad);
 
-      g_array_append_val (fo->priv->vars, var);
+      g_array_append_val (self->vars, var);
     }
-    pad = fo->priv->vars->len;
+    pad = self->vars->len;
 
-    for (i = 0; i < fo->priv->comps->len; i++)
+    for (i = 0; i < self->comps->len; i++)
     {
-      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (fo->priv->comps, i));
+      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (self->comps, i));
       if (comp != NULL)
       {
         NcHIPertGravTScalarInfo *Tsinfo_i = nc_hipert_comp_get_T_scalar_info (comp);
@@ -748,13 +751,13 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
         for (j = 0; j < ndyn; j++)
         {
           GArray *comp_j_deps       = nc_hipert_comp_get_deps (comp, j);
-          NcHIPertFirstOrderVar var = {i, fo->priv->vars->len, comp_j_deps};
+          NcHIPertFirstOrderVar var = {i, self->vars->len, comp_j_deps};
 
           _nc_hipert_first_order_add_pad (comp_j_deps, pad);
           
-          g_array_append_val (fo->priv->vars, var);
+          g_array_append_val (self->vars, var);
         }
-        pad = fo->priv->vars->len;
+        pad = self->vars->len;
       }
     }
 
@@ -817,9 +820,9 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
     
     {
       guint i;
-      for (i = 0; i < fo->priv->vars->len; i++)
+      for (i = 0; i < self->vars->len; i++)
       {
-        NcHIPertFirstOrderVar var = g_array_index (fo->priv->vars, NcHIPertFirstOrderVar, i);
+        NcHIPertFirstOrderVar var = g_array_index (self->vars, NcHIPertFirstOrderVar, i);
         _nc_hipert_first_order_solve_deps (fo, ginfo, Tsinfo, var.deps, 0);
       }      
     }
@@ -842,20 +845,21 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
 void 
 nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertGravGauge gauge)
 {
-  if (gauge != fo->priv->gauge)
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  if (gauge != self->gauge)
   {
     guint i;
-    if (fo->priv->grav != NULL)
-      nc_hipert_grav_set_gauge (fo->priv->grav, gauge);
+    if (self->grav != NULL)
+      nc_hipert_grav_set_gauge (self->grav, gauge);
 
-    for (i = 0; i < fo->priv->comps->len; i++)
+    for (i = 0; i < self->comps->len; i++)
     {
-      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (fo->priv->comps, i));
+      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (self->comps, i));
       if (comp != NULL)
         nc_hipert_comp_set_gauge (comp, gauge);
     }
 
-    fo->priv->gauge = gauge;
+    self->gauge = gauge;
     _nc_hipert_first_order_prepare_internal (fo);
   }
 }
@@ -871,7 +875,8 @@ nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertGravGauge gauge
 NcHIPertGravGauge 
 nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo)
 {
-  return fo->priv->gauge;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return self->gauge;
 }
 
 /**
@@ -885,7 +890,8 @@ nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo)
 void 
 nc_hipert_first_order_set_reltol (NcHIPertFirstOrder *fo, const gdouble reltol)
 {
-  fo->priv->reltol = reltol;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  self->reltol = reltol;
 }
 
 /**
@@ -899,7 +905,8 @@ nc_hipert_first_order_set_reltol (NcHIPertFirstOrder *fo, const gdouble reltol)
 void 
 nc_hipert_first_order_set_abstol (NcHIPertFirstOrder *fo, const gdouble abstol)
 {
-  fo->priv->abstol = abstol;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  self->abstol = abstol;
 }
 
 /**
@@ -913,7 +920,8 @@ nc_hipert_first_order_set_abstol (NcHIPertFirstOrder *fo, const gdouble abstol)
 gdouble 
 nc_hipert_first_order_get_reltol (NcHIPertFirstOrder *fo)
 {
-  return fo->priv->reltol;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return self->reltol;
 }
 
 /**
@@ -927,7 +935,8 @@ nc_hipert_first_order_get_reltol (NcHIPertFirstOrder *fo)
 gdouble 
 nc_hipert_first_order_get_abstol (NcHIPertFirstOrder *fo)
 {
-  return fo->priv->abstol;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return self->abstol;
 }
 
 /**
@@ -940,9 +949,10 @@ nc_hipert_first_order_get_abstol (NcHIPertFirstOrder *fo)
 void
 nc_hipert_first_order_set_integ (NcHIPertFirstOrder *fo, NcHIPertFirstOrderInteg integ)
 {
-  if (fo->priv->integ != integ)
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  if (self->integ != integ)
   {
-    fo->priv->integ = integ;
+    self->integ = integ;
   }
 }
 
@@ -956,7 +966,8 @@ nc_hipert_first_order_set_integ (NcHIPertFirstOrder *fo, NcHIPertFirstOrderInteg
 NcHIPertFirstOrderInteg 
 nc_hipert_first_order_get_integ (NcHIPertFirstOrder *fo)
 {
-  return fo->priv->integ;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return self->integ;
 }
 
 /**
@@ -970,11 +981,12 @@ nc_hipert_first_order_get_integ (NcHIPertFirstOrder *fo)
 void 
 nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav)
 {
-  nc_hipert_grav_clear (&fo->priv->grav);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  nc_hipert_grav_clear (&self->grav);
   if (grav != NULL)
   {
-    fo->priv->grav = nc_hipert_grav_ref (grav);
-    nc_hipert_grav_set_gauge (fo->priv->grav, fo->priv->gauge);
+    self->grav = nc_hipert_grav_ref (grav);
+    nc_hipert_grav_set_gauge (self->grav, self->gauge);
     _nc_hipert_first_order_prepare_internal (fo);
   }
 }
@@ -990,7 +1002,8 @@ nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav)
 NcHIPertGrav *
 nc_hipert_first_order_get_grav (NcHIPertFirstOrder *fo)
 {
-  return (fo->priv->grav != NULL) ? nc_hipert_grav_ref (fo->priv->grav) : fo->priv->grav;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return (self->grav != NULL) ? nc_hipert_grav_ref (self->grav) : self->grav;
 }
 
 /**
@@ -1004,7 +1017,8 @@ nc_hipert_first_order_get_grav (NcHIPertFirstOrder *fo)
 NcHIPertGrav *
 nc_hipert_first_order_peek_grav (NcHIPertFirstOrder *fo)
 {
-  return fo->priv->grav;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  return self->grav;
 }
 
 /**
@@ -1018,7 +1032,8 @@ nc_hipert_first_order_peek_grav (NcHIPertFirstOrder *fo)
 void 
 nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp)
 {
-  const guint len    = nc_hipert_bg_var_len (fo->priv->bg_var);
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  const guint len    = nc_hipert_bg_var_len (self->bg_var);
   NcHIPertBGVarID id = nc_hipert_comp_get_id (comp);
 
   if (NC_IS_HIPERT_GRAV (comp))
@@ -1026,17 +1041,17 @@ nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp)
 
   g_assert_cmpint (id, >=, 0);
   g_assert_cmpint (id, <, len);
-  g_ptr_array_set_size (fo->priv->comps, len);
+  g_ptr_array_set_size (self->comps, len);
 
-  if (g_ptr_array_index (fo->priv->comps, id) != NULL)
+  if (g_ptr_array_index (self->comps, id) != NULL)
     g_warning ("nc_hipert_first_order_add_comp: component with `%d' (%s) already included, ignoring...", id, G_OBJECT_TYPE_NAME (comp));
   else
   {
-    g_ptr_array_index (fo->priv->comps, id) = nc_hipert_comp_ref (comp);
+    g_ptr_array_index (self->comps, id) = nc_hipert_comp_ref (comp);
 
-    g_ptr_array_add (fo->priv->active_comps, nc_hipert_comp_ref (comp));
+    g_ptr_array_add (self->active_comps, nc_hipert_comp_ref (comp));
       
-    nc_hipert_comp_set_gauge (comp, fo->priv->gauge);
+    nc_hipert_comp_set_gauge (comp, self->gauge);
     _nc_hipert_first_order_prepare_internal (fo);
   }
 }
@@ -1053,37 +1068,38 @@ _nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data
 {
   NcHIPertFirstOrderWS *ws = (NcHIPertFirstOrderWS *) f_data;
   NcHIPertFirstOrder *fo = ws->fo;
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   NcHICosmo *cosmo       = ws->cosmo;
   NcHIPertBGVarYDY *ydy  = ws->ydy;
-  NcHIPertBGVar *bg_var  = fo->priv->bg_var;
-  const guint ncomps     = fo->priv->active_comps->len;
+  NcHIPertBGVar *bg_var  = self->bg_var;
+  const guint ncomps     = self->active_comps->len;
   guint i;
 
   nc_hicosmo_get_bg_var (cosmo, t, bg_var);
   ydy->y  = y;
   ydy->dy = ydot;
   
-  nc_hipert_grav_T_scalar_set_zero (fo->priv->T_scalar_tot);
+  nc_hipert_grav_T_scalar_set_zero (self->T_scalar_tot);
   
   for (i = 0; i < ncomps; i++)
   {
-    NcHIPertComp *comp = g_ptr_array_index (fo->priv->active_comps, i);
+    NcHIPertComp *comp = g_ptr_array_index (self->active_comps, i);
 
-    nc_hipert_grav_T_scalar_set_zero (fo->priv->T_scalar_i);
-    nc_hipert_comp_get_T_scalar (comp, bg_var, ydy, fo->priv->T_scalar_i);
-    nc_hipert_grav_T_scalar_add (fo->priv->T_scalar_tot, fo->priv->T_scalar_tot, fo->priv->T_scalar_i);
+    nc_hipert_grav_T_scalar_set_zero (self->T_scalar_i);
+    nc_hipert_comp_get_T_scalar (comp, bg_var, ydy, self->T_scalar_i);
+    nc_hipert_grav_T_scalar_add (self->T_scalar_tot, self->T_scalar_tot, self->T_scalar_i);
   }
 
-  nc_hipert_grav_scalar_set_zero (fo->priv->G_scalar);
-  nc_hipert_grav_get_G_scalar (fo->priv->grav, bg_var, ydy, fo->priv->T_scalar_tot, fo->priv->G_scalar);
+  nc_hipert_grav_scalar_set_zero (self->G_scalar);
+  nc_hipert_grav_get_G_scalar (self->grav, bg_var, ydy, self->T_scalar_tot, self->G_scalar);
 
-  nc_hipert_grav_get_dy_scalar (fo->priv->grav, bg_var, ydy, fo->priv->T_scalar_tot, fo->priv->G_scalar);
+  nc_hipert_grav_get_dy_scalar (self->grav, bg_var, ydy, self->T_scalar_tot, self->G_scalar);
   
   for (i = 0; i < ncomps; i++)
   {
-    NcHIPertComp *comp = g_ptr_array_index (fo->priv->active_comps, i);
+    NcHIPertComp *comp = g_ptr_array_index (self->active_comps, i);
 
-    nc_hipert_comp_get_dy_scalar (comp, bg_var, ydy, fo->priv->T_scalar_tot, fo->priv->G_scalar);
+    nc_hipert_comp_get_dy_scalar (comp, bg_var, ydy, self->T_scalar_tot, self->G_scalar);
   }
   
   return 0;
@@ -1099,124 +1115,121 @@ _nc_hipert_first_order_set_init_cond (NcHIPertFirstOrder *fo, const gdouble k)
 static void
 _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble t0)
 {
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   gint flag;
 
-  if (fo->priv->cur_sys_size != fo->priv->vars->len)
+  if (self->cur_sys_size != self->vars->len)
   {
-    if (fo->priv->cvode != NULL)
+    if (self->cvode != NULL)
     {
-      CVodeFree (&fo->priv->cvode);
-      fo->priv->cvode      = NULL;
-      fo->priv->cvode_init = FALSE;
+      CVodeFree (&self->cvode);
+      self->cvode      = NULL;
+      self->cvode_init = FALSE;
     }
-#ifdef HAVE_SUNDIALS_ARKODE
-    if (fo->priv->arkode != NULL)
+    if (self->arkode != NULL)
     {
-      ARKodeFree (&fo->priv->arkode);
-      fo->priv->arkode      = NULL;
-      fo->priv->arkode_init = FALSE;
+      ARKodeFree (&self->arkode);
+      self->arkode      = NULL;
+      self->arkode_init = FALSE;
     }
-#endif /* HAVE_SUNDIALS_ARKODE */  
 
-    g_clear_pointer (&fo->priv->y, N_VDestroy);
-    g_clear_pointer (&fo->priv->abstol_v, N_VDestroy);
+    g_clear_pointer (&self->y, N_VDestroy);
+    g_clear_pointer (&self->abstol_v, N_VDestroy);
 
-    fo->priv->cur_sys_size = fo->priv->vars->len;
+    self->cur_sys_size = self->vars->len;
 
-    fo->priv->y        = N_VNew_Serial (fo->priv->cur_sys_size);
-    fo->priv->abstol_v = N_VNew_Serial (fo->priv->cur_sys_size);    
+    self->y        = N_VNew_Serial (self->cur_sys_size);
+    self->abstol_v = N_VNew_Serial (self->cur_sys_size);    
   }
 
-  N_VConst (fo->priv->abstol, fo->priv->abstol_v);
+  N_VConst (self->abstol, self->abstol_v);
 
-  switch (fo->priv->integ)
+  switch (self->integ)
   {
     case NC_HIPERT_FIRST_ORDER_INTEG_CVODE:
     {
-      if (fo->priv->cvode_init)
+      if (self->cvode_init)
       {
-        fo->priv->cvode = CVodeCreate (CV_BDF, CV_NEWTON); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
+        self->cvode = CVodeCreate (CV_BDF); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
       
-        flag = CVodeInit (fo->priv->cvode, &_nc_hipert_first_order_f, t0, fo->priv->y);
+        flag = CVodeInit (self->cvode, &_nc_hipert_first_order_f, t0, self->y);
         NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-        flag = CVodeSVtolerances (fo->priv->cvode, fo->priv->reltol, fo->priv->abstol_v);
+        flag = CVodeSVtolerances (self->cvode, self->reltol, self->abstol_v);
         NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
 
-        flag = CVodeSetMaxNumSteps (fo->priv->cvode, 0);
+        flag = CVodeSetMaxNumSteps (self->cvode, 0);
         NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-        flag = CVBand (fo->priv->cvode, fo->priv->cur_sys_size, fo->priv->mupper, fo->priv->mlower);
+        flag = CVBand (self->cvode, self->cur_sys_size, self->mupper, self->mlower);
         NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
-        flag = CVDlsSetDenseJacFn (fo->priv->cvode, NULL /*J*/);
+        flag = CVDlsSetDenseJacFn (self->cvode, NULL /*J*/);
         NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
-        flag = CVodeSetInitStep (fo->priv->cvode, fabs (t0) * fo->priv->reltol);
+        flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
 
-        fo->priv->cvode_init = TRUE;
+        self->cvode_init = TRUE;
       }
       else
       {    
-        flag = CVodeReInit (fo->priv->cvode, t0, fo->priv->y);
+        flag = CVodeReInit (self->cvode, t0, self->y);
         NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-        flag = CVodeSetInitStep (fo->priv->cvode, fabs (t0) * fo->priv->reltol);
+        flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
       }  
       break;
     }
-#ifdef HAVE_SUNDIALS_ARKODE      
     case NC_HIPERT_FIRST_ORDER_INTEG_ARKODE:
     {
 #define INTTYPE _nc_hipert_first_order_f, NULL
-      if (!fo->priv->arkode_init)
+      if (!self->arkode_init)
       {
-        fo->priv->arkode = ARKodeCreate ();
+        self->arkode = ARKodeCreate ();
         
-        flag = ARKodeInit (fo->priv->arkode, INTTYPE, t0, fo->priv->y);
+        flag = ARKodeInit (self->arkode, INTTYPE, t0, self->y);
         NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-        flag = ARKodeSVtolerances (fo->priv->arkode, fo->priv->reltol, fo->priv->abstol_v);
+        flag = ARKodeSVtolerances (self->arkode, self->reltol, self->abstol_v);
         NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-        flag = ARKodeSetMaxNumSteps (fo->priv->arkode, 0);
+        flag = ARKodeSetMaxNumSteps (self->arkode, 0);
         NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-        flag = ARKBand (fo->priv->arkode, fo->priv->cur_sys_size, fo->priv->mupper, fo->priv->mlower);
+        flag = ARKBand (self->arkode, self->cur_sys_size, self->mupper, self->mlower);
         NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
-        flag = ARKDlsSetDenseJacFn (fo->priv->arkode, /*J*/ NULL);
+        flag = ARKDlsSetDenseJacFn (self->arkode, /*J*/ NULL);
         NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
 
-        flag = ARKodeSetLinear (fo->priv->arkode, 1);
+        flag = ARKodeSetLinear (self->arkode, 1);
         NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
 
-        flag = ARKodeSetOrder (fo->priv->arkode, 7);
+        flag = ARKodeSetOrder (self->arkode, 7);
         NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
 
-        //flag = ARKodeSetERKTableNum (fo->priv->arkode, FEHLBERG_13_7_8);
+        //flag = ARKodeSetERKTableNum (self->arkode, FEHLBERG_13_7_8);
         //NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
 
-        flag = ARKodeSetInitStep (fo->priv->arkode, fabs (t0) * fo->priv->reltol);
+        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
-        fo->priv->arkode_init = TRUE;
+        self->arkode_init = TRUE;
       }
       else
       {
-        flag = ARKodeReInit (fo->priv->arkode, INTTYPE, t0, fo->priv->y);
+        flag = ARKodeReInit (self->arkode, INTTYPE, t0, self->y);
         NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-        flag = ARKodeSetInitStep (fo->priv->arkode, fabs (t0) * fo->priv->reltol);
+        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
       }
       break;
     }
-#endif /* HAVE_SUNDIALS_ARKODE */
     default:
-      g_error ("_nc_hipert_first_order_prepare_integrator: integrator %d not supported.", fo->priv->integ);
+      g_error ("_nc_hipert_first_order_prepare_integrator: integrator %d not supported.", self->integ);
       break;
   }
 }
@@ -1232,8 +1245,9 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
 void 
 nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo)
 {
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
   gdouble t0;
-  nc_hipert_bg_var_prepare_if_needed (fo->priv->bg_var, cosmo);
+  nc_hipert_bg_var_prepare_if_needed (self->bg_var, cosmo);
 
 
   t0 = _nc_hipert_first_order_set_init_cond (fo, 1.0);
