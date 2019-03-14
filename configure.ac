@@ -331,6 +331,7 @@ dnl ***************************************************************************
 
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
+  
   ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 AC_LANG_POP([Fortran])
@@ -516,6 +517,12 @@ fi
 
 AC_OPENMP()
 AC_SUBST(OPENMP_CFLAGS)
+
+AM_CONDITIONAL(COMPILE_WITH_MP, [test "x$ac_cv_prog_c_openmp" != "xunsupported"])
+
+if test "x$ac_cv_prog_c_openmp" = "xunsupported"; then
+  OPENMP_FCFLAGS=""
+fi
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
