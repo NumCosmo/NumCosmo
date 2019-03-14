@@ -62,6 +62,7 @@ typedef enum _NcXcorLimberMethod
 	NC_XCOR_LIMBER_METHOD_SUAVE,
 } NcXcorLimberMethod;
 
+#define NC_XCOR_PRECISION (1e-5)
 
 typedef struct _NcXcorClass NcXcorClass;
 typedef struct _NcXcor NcXcor;

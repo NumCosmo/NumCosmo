@@ -45,3 +45,12 @@ docs/references.out
 docs/references.xml
 scripts/*.pyc
 *~
+*.la
+*.lo
+*.o
+*.gir
+*.typelib
+*.mod
+*.deps*
+*.dirstamp*
+*.libs*
