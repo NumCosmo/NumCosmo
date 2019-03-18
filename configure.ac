@@ -1150,6 +1150,7 @@ docs/manual_head.xml
 examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
+notebooks/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])
