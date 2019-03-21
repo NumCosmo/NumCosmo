@@ -262,7 +262,7 @@ test_nc_ccl_massfunc_create_BBKS (TestNcCCLMassFunc *test, gconstpointer pdata)
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", 
                                  ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
 
   ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
@@ -303,7 +303,7 @@ test_nc_ccl_massfunc_create_EH (TestNcCCLMassFunc *test, gconstpointer pdata)
   {
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
   
   ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
@@ -423,7 +423,7 @@ test_nc_ccl_massfunc_cmp_sigma_R (TestNcCCLMassFunc *test, gconstpointer pdata)
     for (j = 0; j < ntests; j++)
     {
       const gdouble R          = exp (log (Rmin) + log (Rmax / Rmin) * j / (ntests - 1.0));
-      /*const gdouble sigmaR_int = nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-5, z, R);*/
+      /*const gdouble sigmaR_int = ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-5, z, R);*/
       const gdouble sigmaR_fft = ncm_powspec_filter_eval_sigma (test->psf, z, R);
       const gdouble cclsigmaR  = ccl_sigmaR (test->ccl_cosmo, R, a, &status);
 
@@ -459,7 +459,7 @@ test_nc_ccl_massfunc_cmp_sigma_M (TestNcCCLMassFunc *test, gconstpointer pdata)
 			  const gdouble M          = pow (10.0, log10M);
 			  const gdouble R          = ccl_massfunc_m2r (test->ccl_cosmo, M, &status);
 		  	const gdouble sigmaR_fft = ncm_powspec_filter_eval_sigma (test->psf, z, R);
-			  /*const gdouble sigmaR_int = nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-5, z, R);*/
+			  /*const gdouble sigmaR_int = ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-5, z, R);*/
 		  	const gdouble cclsigmaM  = ccl_sigmaM (test->ccl_cosmo, M, a, &status);
 
         if (R >= 0.1)

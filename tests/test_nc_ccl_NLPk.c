@@ -232,8 +232,8 @@ test_nc_ccl_nl_pk_create_BBKS (TestNcCCLNLPk *test, gconstpointer pdata)
 
   ncm_powspec_require_zi (NCM_POWSPEC (ps_ml), 0.0);
   ncm_powspec_require_zf (NCM_POWSPEC (ps_ml), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+1);
+  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+3);
 
   ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
 
@@ -241,12 +241,14 @@ test_nc_ccl_nl_pk_create_BBKS (TestNcCCLNLPk *test, gconstpointer pdata)
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", 
                                  ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (ps_ml, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
 
-  ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
-
   test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-5));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
   ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
 
   nc_powspec_ml_free (ps_ml);
@@ -265,20 +267,22 @@ test_nc_ccl_nl_pk_create_EH (TestNcCCLNLPk *test, gconstpointer pdata)
 
   ncm_powspec_require_zi (NCM_POWSPEC (ps_ml), 0.0);
   ncm_powspec_require_zf (NCM_POWSPEC (ps_ml), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+1);
+  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+3);
 
   ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
   
   {
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (ps_ml, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
   
-  ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
-
   test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-5));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
   ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
   
   nc_transfer_func_free (tf);
@@ -295,14 +299,11 @@ test_nc_ccl_nl_pk_create_CBE (TestNcCCLNLPk *test, gconstpointer pdata)
   nc_cbe_use_ppf (cbe, TRUE);
   /*g_object_set (cbe, "verbosity", 1, NULL);*/
 
-  ncm_powspec_require_zi (NCM_POWSPEC (ps_ml), 0.0);
-  ncm_powspec_require_zf (NCM_POWSPEC (ps_ml), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+1);
-
-  ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
-
   test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-9));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
   ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
 
   nc_powspec_ml_free (ps_ml);
@@ -425,7 +426,7 @@ test_nc_ccl_nl_pk_cmp_nl_pk (TestNcCCLNLPk *test, gconstpointer pdata)
     {    
       for (j = 0; j < ntests; j++)
       {
-        const gdouble k        = exp (log (1.0e-3) + log (5.0e4) * j / (ntests - 1.0));
+        const gdouble k        = exp (log (1.0e-3) + log (1.0e4) * j / (ntests - 1.0));
         const gdouble NLPkz    = ncm_powspec_eval (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo), z, k);
         const gdouble cclNLPkz = ccl_nonlin_matter_power (test->ccl_cosmo, k, 1.0 / (1.0 + z), &status);
 

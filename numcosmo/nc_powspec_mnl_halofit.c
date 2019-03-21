@@ -496,13 +496,7 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
 	guint i;
 
 	self->z = HUGE_VAL;
-
-	ncm_powspec_require_zi (NCM_POWSPEC (self->psml), ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
-	ncm_powspec_require_zf (NCM_POWSPEC (self->psml), ncm_powspec_get_zf (NCM_POWSPEC (pshf)));
-
-	ncm_powspec_require_kmin (NCM_POWSPEC (self->psml), ncm_powspec_get_kmin (NCM_POWSPEC (pshf)));
-	ncm_powspec_require_kmax (NCM_POWSPEC (self->psml), ncm_powspec_get_kmax (NCM_POWSPEC (pshf)));
-
+  
 	ncm_powspec_filter_set_zi (self->psml_gauss, ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
 	ncm_powspec_filter_set_zf (self->psml_gauss, self->zmaxnl);
 
@@ -631,6 +625,12 @@ _nc_powspec_mnl_halofit_prepare (NcmPowspec* powspec, NcmModel *model)
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
 
 	g_assert (NC_IS_HICOSMO (model));
+
+	ncm_powspec_require_zi (NCM_POWSPEC (self->psml), ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
+	ncm_powspec_require_zf (NCM_POWSPEC (self->psml), ncm_powspec_get_zf (NCM_POWSPEC (pshf)));
+
+	ncm_powspec_require_kmin (NCM_POWSPEC (self->psml), ncm_powspec_get_kmin (NCM_POWSPEC (pshf)));
+	ncm_powspec_require_kmax (NCM_POWSPEC (self->psml), ncm_powspec_get_kmax (NCM_POWSPEC (pshf)));
 
 	ncm_powspec_prepare (NCM_POWSPEC (self->psml), model);
 
@@ -896,7 +896,8 @@ nc_powspec_mnl_halofit_new (NcPowspecML *psml, gdouble zmaxnl, gdouble reltol)
  * Sets mode $k$ boundaries from the linear matter power spectrum.
  *
  */
-void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf)
+void 
+nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf)
 {
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
   

@@ -419,6 +419,9 @@ test_nc_ccl_Pk_SOURCES =  \
 test_nc_ccl_NLPk_SOURCES =  \
         test_nc_ccl_NLPk.c
 
+test_nc_ccl_corr3D_SOURCES =  \
+        test_nc_ccl_corr3D.c
+
 test_nc_ccl_dist_SOURCES =  \
         test_nc_ccl_dist.c
 
@@ -426,9 +429,10 @@ test_nc_ccl_massfunc_SOURCES =  \
         test_nc_ccl_massfunc.c
 
 check_PROGRAMS += \
-	test_nc_ccl_Pk   \
-	test_nc_ccl_NLPk \
-	test_nc_ccl_dist \
+	test_nc_ccl_Pk     \
+	test_nc_ccl_NLPk   \
+	test_nc_ccl_corr3D \
+	test_nc_ccl_dist   \
 	test_nc_ccl_massfunc
 
 test_nc_ccl_Pk_LDADD = \
@@ -439,6 +443,13 @@ test_nc_ccl_Pk_LDADD = \
 	$(COVLIBS)
 
 test_nc_ccl_NLPk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_corr3D_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
 	$(CCL_LDFLAGS) \
 	$(GLIB_LIBS)   \

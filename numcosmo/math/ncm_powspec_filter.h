@@ -30,8 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_powspec.h>
-#include <numcosmo/math/ncm_fftlog_tophatwin2.h>
-#include <numcosmo/math/ncm_fftlog_gausswin2.h>
+#include <numcosmo/math/ncm_fftlog.h>
 #include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
@@ -54,8 +53,8 @@ struct _NcmPowspecFilterClass
 
 /**
  * NcmPowspecFilterType:
- * @NCM_POWSPEC_FILTER_TYPE_TOPHAT: Apply the top-hat filter
- * @NCM_POWSPEC_FILTER_TYPE_GAUSS: Apply the Gaussian filter
+ * @NCM_POWSPEC_FILTER_TYPE_TOPHAT: Apply the top-hat filter.
+ * @NCM_POWSPEC_FILTER_TYPE_GAUSS: Apply the Gaussian filter.
  *
  * Filter type to apply to the power spectrum. 
  * See also #NcmFftlogTophatwin2 and #NcmFftlogGausswin2, for the top-hat and Gaussian filters, respectively. 
@@ -64,7 +63,7 @@ struct _NcmPowspecFilterClass
 typedef enum _NcmPowspecFilterType
 {
   NCM_POWSPEC_FILTER_TYPE_TOPHAT = 0,
-  NCM_POWSPEC_FILTER_TYPE_GAUSS, 
+  NCM_POWSPEC_FILTER_TYPE_GAUSS,
   /* < private > */
   NCM_POWSPEC_FILTER_TYPE_LEN,   /*< skip >*/
 } NcmPowspecFilterType;
