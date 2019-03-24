@@ -50,6 +50,7 @@
       <title>FFTLog</title>
       <xi:include href="xml/ncm_fftlog.xml"/>
       <xi:include href="xml/ncm_fftlog_sbessel_j.xml"/>
+      <xi:include href="xml/ncm_fftlog_sbessel_jljm.xml"/>
       <xi:include href="xml/ncm_fftlog_tophatwin2.xml"/>
       <xi:include href="xml/ncm_fftlog_gausswin2.xml"/>
     </section>
