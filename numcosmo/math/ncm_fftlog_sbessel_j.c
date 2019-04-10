@@ -57,6 +57,11 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_math.h>
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -79,9 +84,10 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FF
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
-  fftlog_jl->priv      = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jl, NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJPrivate);
-  fftlog_jl->priv->ell = 0;
-  fftlog_jl->priv->q   = 0.0;
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jl, NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJPrivate);
+
+  self->ell = 0;
+  self->q   = 0.0;
 }
 
 static void
@@ -167,6 +173,8 @@ static void
 _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   NcmFftlogSBesselJ *fftlog_jl = NCM_FFTLOG_SBESSEL_J (fftlog);
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  
   const gdouble pi_sqrt        = sqrt (M_PI);
   const gdouble twopi_Lt       = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf                = ncm_fftlog_get_full_size (fftlog);
@@ -175,14 +183,14 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
 
-  if (fftlog_jl->priv->q == 0.5)
+  if (self->q == 0.5)
   {
     for (i = 0; i < Nf; i++)
     {
       const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
       const complex double a        = twopi_Lt * phys_i * I;
       const complex double A        = a + 0.5;
-      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double xup      = 0.5 * (1.0 + 1.0 * self->ell + A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
@@ -197,14 +205,14 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   }
   else
   {
-    const gdouble q = fftlog_jl->priv->q;
+    const gdouble q = self->q;
     for (i = 0; i < Nf; i++)
     {
       const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
       const complex double a        = twopi_Lt * phys_i * I;
       const complex double A        = a + q;
-      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex double xdw      = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
+      const complex double xup      = 0.5 * (1.0 + 1.0 * self->ell + A);
+      const complex double xdw      = 0.5 * (2.0 + 1.0 * self->ell - A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
@@ -251,7 +259,7 @@ ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, gui
 }
 
 /**
- * ncm_fftlog_set_ell:
+ * ncm_fftlog_sbessel_j_set_ell:
  * @fftlog_jl: a #NcmFftlogSBesselJ
  * @ell: Spherical Bessel integer order $\ell$
  * 
@@ -261,13 +269,13 @@ ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, gui
 void 
 ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell)
 {
-  if (fftlog_jl->priv->ell != ell)
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  if (self->ell != ell)
   {
     NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
 
-    fftlog_jl->priv->ell = ell;
-    fftlog->prepared     = FALSE;
-    fftlog->evaluated    = FALSE;
+    self->ell = ell;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -280,13 +288,15 @@ ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell)
 guint
 ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 {
-  return fftlog_jl->priv->ell;
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  
+  return self->ell;
 }
 
 /**
- * ncm_fftlog_set_q:
+ * ncm_fftlog_sbessel_j_set_q:
  * @fftlog_jl: a #NcmFftlogSBesselJ
- * @ell: Spherical Bessel integer order $\ell$
+ * @q: Spherical Bessel power factor $q$
  * 
  * Sets @q as the Spherical Bessel power $q$.
  * 
@@ -294,13 +304,14 @@ ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 void 
 ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
 {
-  if (fftlog_jl->priv->q != q)
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  
+  if (self->q != q)
   {
     NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
 
-    fftlog_jl->priv->q = q;
-    fftlog->prepared   = FALSE;
-    fftlog->evaluated  = FALSE;
+    self->q = q;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -313,7 +324,8 @@ ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
 gdouble 
 ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
 {
-  return fftlog_jl->priv->q;
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  return self->q;
 }
 
 /**
@@ -329,13 +341,14 @@ ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
 void 
 ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
 {
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
   NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
 
   gint signp = 0;
   
   const gdouble lnk0      = ncm_fftlog_get_lnk0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
-  const gdouble ell       = fftlog_jl->priv->ell;
+  const gdouble ell       = self->ell;
   const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnr0 = - lnk0 + lnc0;
 
@@ -355,13 +368,14 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
 void 
 ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl)
 {
+  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
   NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
 
   gint signp = 0;
   
   const gdouble lnr0      = ncm_fftlog_get_lnr0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
-  const gdouble ell       = fftlog_jl->priv->ell;
+  const gdouble ell       = self->ell;
   const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnk0 = - lnr0 + lnc0;
 

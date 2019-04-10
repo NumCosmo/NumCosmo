@@ -75,6 +75,7 @@
       <title>Power spectrum functions</title>
       <xi:include href="xml/ncm_powspec.xml"/>
       <xi:include href="xml/ncm_powspec_filter.xml"/>
+      <xi:include href="xml/ncm_powspec_sphere_proj.xml"/>
       <xi:include href="xml/ncm_powspec_corr3d.xml"/>
     </section>
     <section>

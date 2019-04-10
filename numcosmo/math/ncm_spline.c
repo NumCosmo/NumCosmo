@@ -330,30 +330,30 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 	{
 		if (s->xv != xv)
 		{
+			ncm_vector_ref (xv);
 			ncm_vector_free (s->xv);
 			s->xv = xv;
-			ncm_vector_ref (xv);
 		}
 	}
 	else
 	{
-		s->xv = xv;
 		ncm_vector_ref (xv);
+		s->xv = xv;
 	}
 
 	if (s->yv != NULL)
 	{
 		if (s->yv != yv)
 		{
+			ncm_vector_ref (yv);
 			ncm_vector_free (s->yv);
 			s->yv = yv;
-			ncm_vector_ref (yv);
 		}
 	}
 	else
 	{
-		s->yv = yv;
 		ncm_vector_ref (yv);
+		s->yv = yv;
 	}
 
 	s->len = ncm_vector_len (xv);

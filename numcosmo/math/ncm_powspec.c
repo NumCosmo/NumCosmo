@@ -51,6 +51,7 @@
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
 #include "math/ncm_memory_pool.h"
+#include "math/ncm_sf_sbessel.h"
 #include "math/ncm_c.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -504,6 +505,10 @@ typedef struct _NcmPowspecInt
   const gdouble R;
   NcmPowspec *ps;
   NcmModel *model;
+  const gdouble z2;
+  const gdouble xi1;
+  const gdouble xi2;
+  const gint ell;
 } NcmPowspecInt;
 
 static gdouble
@@ -573,7 +578,7 @@ ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble relto
 }
 
 static gdouble
-_ncm_powspec_var_corr3D_integ (gdouble lnk, gpointer user_data)
+_ncm_powspec_corr3D_integ (gdouble lnk, gpointer user_data)
 {
   NcmPowspecInt *data = (NcmPowspecInt *) user_data;
   const gdouble k  = exp (lnk);
@@ -610,7 +615,7 @@ ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const
   
   ncm_powspec_prepare_if_needed (ps, model);
 
-  F.function = &_ncm_powspec_var_corr3D_integ;
+  F.function = &_ncm_powspec_corr3D_integ;
   F.params   = &data;
   
   gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &xi_2pi2, &error);
@@ -618,4 +623,56 @@ ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const
   ncm_memory_pool_return (w);  
 
   return xi_2pi2 * one_2pi2;
+}
+
+static gdouble
+_ncm_powspec_sproj_integ (gdouble lnk, gpointer user_data)
+{
+  NcmPowspecInt *data = (NcmPowspecInt *) user_data;
+  const gdouble k  = exp (lnk);
+  const gdouble x1 = k * data->xi1;
+  const gdouble x2 = k * data->xi2;
+  const gdouble Pk = sqrt (ncm_powspec_eval (data->ps, data->model, data->z, k) * ncm_powspec_eval (data->ps, data->model, data->z2, k));
+  const gdouble W  = ncm_sf_sbessel (data->ell, x1) * ncm_sf_sbessel (data->ell, x2);
+
+  return gsl_pow_3 (k) * Pk * W;
+}
+
+/**
+ * ncm_powspec_sproj:
+ * @ps: a #NcmPowspec
+ * @model: a #NcmModel
+ * @reltol: relative tolerance for integration
+ * @ell: the value of $\ell$
+ * @z1: the value of $z_1$
+ * @z2: the value of $z_2$
+ * @xi1: the value of $\xi_1$
+ * @xi2: the value of $\xi_2$
+ * 
+ * Computes $C_\ell (z_1, z_2) = \int\dots$. FIXME
+ * 
+ */
+gdouble 
+ncm_powspec_sproj (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)
+{
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcmPowspecInt data            = {z1, 0.0, ps, model, z2, xi1, xi2, ell};
+  const gdouble kmin            = ncm_powspec_get_kmin (ps);
+  const gdouble kmax            = ncm_powspec_get_kmax (ps);  
+  const gdouble lnkmin          = log (kmin);
+  const gdouble lnkmax          = log (kmax);
+  const gdouble two_pi          = 2.0 / ncm_c_pi ();
+  gdouble error, xi_two_pi;
+  gsl_function F;
+  
+  ncm_powspec_prepare_if_needed (ps, model);
+
+  F.function = &_ncm_powspec_sproj_integ;
+  F.params   = &data;
+  
+  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &xi_two_pi, &error);
+
+  ncm_memory_pool_return (w);  
+
+  return xi_two_pi * two_pi;
 }

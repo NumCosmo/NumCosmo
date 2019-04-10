@@ -58,6 +58,12 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_math.h>
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG);

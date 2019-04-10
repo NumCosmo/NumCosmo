@@ -98,6 +98,8 @@ gdouble ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdoub
 
 gdouble ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r);
 
+gdouble ncm_powspec_sproj (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2);
+
 G_END_DECLS
 
 #endif /* _NCM_POWSPEC_H_ */

@@ -52,6 +52,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
+#include "math/ncm_powspec_sphere_proj.h"
 #include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
@@ -476,6 +477,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
@@ -1127,7 +1129,7 @@ ncm_cfg_msg_sepa (void)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)

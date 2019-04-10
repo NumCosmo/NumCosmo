@@ -90,6 +90,7 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
   psf->zi          = 0.0;
   psf->zf          = 0.0;
   psf->reltol      = 0.0;
+  psf->reltol_z    = 0.0;
   psf->type        = NCM_POWSPEC_FILTER_TYPE_LEN;
   psf->fftlog      = NULL;
   psf->calibrated  = FALSE;

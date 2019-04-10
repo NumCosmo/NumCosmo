@@ -61,6 +61,11 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_math.h>
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 #ifdef HAVE_ACB_H
 #include <acb.h>

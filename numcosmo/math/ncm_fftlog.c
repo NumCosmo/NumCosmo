@@ -106,7 +106,10 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef NUMCOSMO_HAVE_FFTW3 
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_poly.h>
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -115,6 +118,42 @@
 #define fftw_alloc_real(n) (double *) fftw_malloc (sizeof (double) * (n))
 #define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (n))
 #endif /* HAVE_FFTW3_ALLOC */
+
+struct _NcmFftlogPrivate
+{
+  gint Nr;
+  gint N;
+  gint N_2;
+  gint Nf;
+  gint Nf_2;
+  guint nderivs;
+  guint pad;
+  gdouble lnk0;
+  gdouble lnr0;
+  gdouble eval_r_min;
+  gdouble eval_r_max;
+  gdouble Lk;
+  gdouble Lk_N;
+  gdouble pad_p;
+  gdouble smooth_padding_scale;
+  gboolean smooth_padding;
+  gboolean use_eval_int;
+  gboolean noring;
+  gboolean prepared;
+  gboolean evaluated;
+  NcmVector *lnr_vec;
+  GPtrArray *Gr_vec;
+  GPtrArray *Gr_s;
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_complex *Fk;
+  fftw_complex *Cm;
+  fftw_complex *Gr;
+  fftw_complex *CmYm;
+  GPtrArray *Ym;
+  fftw_plan p_Fk2Cm;
+  fftw_plan p_CmYm2Gr;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+};
 
 enum
 {
@@ -127,44 +166,56 @@ enum
   PROP_PAD,
   PROP_NORING,
   PROP_NAME,
+  PROP_USE_EVAL_INT,
+  PROP_SMOOTH_PADDING,
+  PROP_SMOOTH_PADDING_SCALE,
+  PROP_EVAL_R_MIN,
+  PROP_EVAL_R_MAX,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT);
 
 static void
 ncm_fftlog_init (NcmFftlog *fftlog)
 {
-  fftlog->lnr0  = 0.0;
-  fftlog->lnk0  = 0.0;
-  fftlog->Lk    = 0.0;
-  fftlog->Lk_N  = 0.0;
-  fftlog->pad_p = 0.0;
-  fftlog->Nr    = 0;
-  fftlog->N     = 0;
-  fftlog->N_2   = 0;
-  fftlog->Nf    = 0;
-  fftlog->Nf_2  = 0;
-  fftlog->pad   = 0;
-  fftlog->noring    = FALSE;
-  fftlog->prepared  = FALSE;
-  fftlog->evaluated = FALSE;
+  NcmFftlogPrivate * const self = fftlog->priv = G_TYPE_INSTANCE_GET_PRIVATE (fftlog, NCM_TYPE_FFTLOG, NcmFftlogPrivate);
 
-  fftlog->lnr_vec = NULL;
-  fftlog->Gr_vec  = g_ptr_array_new ();
-  fftlog->Gr_s    = g_ptr_array_new ();
+  self->lnr0                 = 0.0;
+  self->use_eval_int         = FALSE;
+  self->smooth_padding       = FALSE;
+  self->smooth_padding_scale = 0.0;
+  self->eval_r_min           = 0.0;
+  self->eval_r_max           = 0.0;
+  self->lnk0                 = 0.0;
+  self->Lk                   = 0.0;
+  self->Lk_N                 = 0.0;
+  self->pad_p                = 0.0;
+  self->Nr                   = 0;
+  self->N                    = 0;
+  self->N_2                  = 0;
+  self->Nf                   = 0;
+  self->Nf_2                 = 0;
+  self->pad                  = 0;
+  self->noring               = FALSE;
+  self->prepared             = FALSE;
+  self->evaluated            = FALSE;
 
-  g_ptr_array_set_free_func (fftlog->Gr_vec, (GDestroyNotify)ncm_vector_free);
-  g_ptr_array_set_free_func (fftlog->Gr_s, (GDestroyNotify)ncm_spline_free);
+  self->lnr_vec              = NULL;
+  self->Gr_vec               = g_ptr_array_new ();
+  self->Gr_s                 = g_ptr_array_new ();
+
+  g_ptr_array_set_free_func (self->Gr_vec, (GDestroyNotify)ncm_vector_free);
+  g_ptr_array_set_free_func (self->Gr_s, (GDestroyNotify)ncm_spline_free);
     
 #ifdef NUMCOSMO_HAVE_FFTW3
-  fftlog->Fk        = NULL;
-  fftlog->Cm        = NULL;
-  fftlog->Gr        = NULL;
-  fftlog->Ym        = g_ptr_array_new ();
-  fftlog->CmYm      = NULL;
-  fftlog->p_Fk2Cm   = NULL;
-  fftlog->p_CmYm2Gr = NULL;
-  g_ptr_array_set_free_func (fftlog->Ym, (GDestroyNotify)fftw_free);
+  self->Fk        = NULL;
+  self->Cm        = NULL;
+  self->Gr        = NULL;
+  self->Ym        = g_ptr_array_new ();
+  self->CmYm      = NULL;
+  self->p_Fk2Cm   = NULL;
+  self->p_CmYm2Gr = NULL;
+  g_ptr_array_set_free_func (self->Ym, (GDestroyNotify)fftw_free);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
@@ -202,6 +253,21 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_NAME:
       g_assert_not_reached ();
       break;
+    case PROP_USE_EVAL_INT:
+      ncm_fftlog_use_eval_interval (fftlog, g_value_get_boolean (value));
+      break;
+    case PROP_SMOOTH_PADDING:
+      ncm_fftlog_use_smooth_padding (fftlog, g_value_get_boolean (value));
+      break;
+    case PROP_SMOOTH_PADDING_SCALE:
+      ncm_fftlog_set_smooth_padding_scale (fftlog, g_value_get_double (value));
+      break;
+    case PROP_EVAL_R_MIN:
+      ncm_fftlog_set_eval_r_min (fftlog, g_value_get_double (value));
+      break;
+    case PROP_EVAL_R_MAX:
+      ncm_fftlog_set_eval_r_max (fftlog, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -212,7 +278,7 @@ static void
 _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFftlog *fftlog = NCM_FFTLOG (object);
-
+  NcmFftlogPrivate * const self = fftlog->priv;
   g_return_if_fail (NCM_IS_FFTLOG (object));
 
   switch (prop_id)
@@ -241,6 +307,21 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_NAME:
       g_value_set_string (value, NCM_FFTLOG_GET_CLASS (fftlog)->name);
       break;
+    case PROP_USE_EVAL_INT:
+      g_value_set_boolean (value, self->use_eval_int);
+      break;
+    case PROP_SMOOTH_PADDING:
+      g_value_set_boolean (value, self->smooth_padding);
+      break;
+    case PROP_SMOOTH_PADDING_SCALE:
+      g_value_set_double (value, ncm_fftlog_get_smooth_padding_scale (fftlog));
+      break;
+    case PROP_EVAL_R_MIN:
+      g_value_set_double (value, ncm_fftlog_get_eval_r_min (fftlog));
+      break;
+    case PROP_EVAL_R_MAX:
+      g_value_set_double (value, ncm_fftlog_get_eval_r_max (fftlog));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -251,19 +332,21 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 static void
 _ncm_fftlog_free_all (NcmFftlog *fftlog)
 {
-  g_clear_pointer (&fftlog->Fk, fftw_free);
-  g_clear_pointer (&fftlog->Cm, fftw_free);
-  g_clear_pointer (&fftlog->CmYm, fftw_free);
-  g_clear_pointer (&fftlog->Gr, fftw_free);
+  NcmFftlogPrivate * const self = fftlog->priv;
   
-  g_clear_pointer (&fftlog->p_Fk2Cm, fftw_destroy_plan);
-  g_clear_pointer (&fftlog->p_CmYm2Gr, fftw_destroy_plan);
+  g_clear_pointer (&self->Fk, fftw_free);
+  g_clear_pointer (&self->Cm, fftw_free);
+  g_clear_pointer (&self->CmYm, fftw_free);
+  g_clear_pointer (&self->Gr, fftw_free);
+  
+  g_clear_pointer (&self->p_Fk2Cm, fftw_destroy_plan);
+  g_clear_pointer (&self->p_CmYm2Gr, fftw_destroy_plan);
 
-  ncm_vector_clear (&fftlog->lnr_vec);
+  ncm_vector_clear (&self->lnr_vec);
 
-  g_ptr_array_set_size (fftlog->Gr_vec, 0);
-  g_ptr_array_set_size (fftlog->Gr_s, 0);
-  g_ptr_array_set_size (fftlog->Ym, 0);  
+  g_ptr_array_set_size (self->Gr_vec, 0);
+  g_ptr_array_set_size (self->Gr_s, 0);
+  g_ptr_array_set_size (self->Ym, 0);  
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
@@ -272,11 +355,13 @@ _ncm_fftlog_finalize (GObject *object)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlog *fftlog = NCM_FFTLOG (object);
+  NcmFftlogPrivate * const self = fftlog->priv;
+  
   _ncm_fftlog_free_all (fftlog);
 
-  g_clear_pointer (&fftlog->Gr_vec, g_ptr_array_unref);
-  g_clear_pointer (&fftlog->Gr_s,   g_ptr_array_unref);
-  g_clear_pointer (&fftlog->Ym,     g_ptr_array_unref);
+  g_clear_pointer (&self->Gr_vec, g_ptr_array_unref);
+  g_clear_pointer (&self->Gr_s,   g_ptr_array_unref);
+  g_clear_pointer (&self->Ym,     g_ptr_array_unref);
   
 #endif /* NUMCOSMO_HAVE_FFTW3 */
   
@@ -349,8 +434,42 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       "FFTW Plan wisdown name",
                                                       "fftlog_default_wisdown",
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_EVAL_INT,
+                                   g_param_spec_boolean ("use-eval-int",
+                                                         NULL,
+                                                         "Whether to use evaluation interval",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SMOOTH_PADDING,
+                                   g_param_spec_boolean ("use-smooth-padding",
+                                                         NULL,
+                                                         "Whether to use a smooth padding",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SMOOTH_PADDING_SCALE,
+                                   g_param_spec_double ("smooth-padding-scale",
+                                                        NULL,
+                                                        "Log10 of the smoothing scale",
+                                                        -G_MAXDOUBLE, +G_MAXDOUBLE, -200.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_EVAL_R_MIN,
+                                   g_param_spec_double ("eval-r-min",
+                                                        NULL,
+                                                        "Evaluation r_min",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_EVAL_R_MAX,
+                                   g_param_spec_double ("eval-r-max",
+                                                        NULL,
+                                                        "Evaluation r_max",
+                                                        0.0, G_MAXDOUBLE, G_MAXDOUBLE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
-
 
 /**
  * ncm_fftlog_ref:
@@ -407,6 +526,23 @@ ncm_fftlog_peek_name (NcmFftlog *fftlog)
 }
 
 /**
+ * ncm_fftlog_reset:
+ * @fftlog: a #NcmFftlog
+ * 
+ * Reset the evaluation and internal coefficients forcing
+ * their recomputation.
+ * 
+ */
+void 
+ncm_fftlog_reset (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  
+  self->prepared  = FALSE;
+  self->evaluated = FALSE;
+}
+
+/**
  * ncm_fftlog_set_nderivs:
  * @fftlog: a #NcmFftlog
  * @nderivs: the number of derivatives
@@ -417,36 +553,37 @@ ncm_fftlog_peek_name (NcmFftlog *fftlog)
 void 
 ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
 {
-  if (fftlog->nderivs != nderivs)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  
+  if (self->nderivs != nderivs)
   {
-    if (nderivs < fftlog->nderivs)
+    if (nderivs < self->nderivs)
     {
-      g_ptr_array_set_size (fftlog->Gr_vec, nderivs + 1);
-      g_ptr_array_set_size (fftlog->Gr_s, nderivs + 1);
-      g_ptr_array_set_size (fftlog->Ym, nderivs + 1);
+      g_ptr_array_set_size (self->Gr_vec, nderivs + 1);
+      g_ptr_array_set_size (self->Gr_s, nderivs + 1);
+      g_ptr_array_set_size (self->Ym, nderivs + 1);
     }
     else
     {
-      if (fftlog->N != 0)
+      if (self->N != 0)
       {
         guint i;
-        for (i = fftlog->nderivs + 1; i <= nderivs; i++)
+        for (i = self->nderivs + 1; i <= nderivs; i++)
         {
-          NcmVector *Gr_vec_i = ncm_vector_new (fftlog->N);
-          NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (fftlog->lnr_vec, Gr_vec_i, FALSE);
-          fftw_complex *Ym_i  = fftw_alloc_complex (fftlog->Nf);
+          NcmVector *Gr_vec_i = ncm_vector_new (self->N);
+          NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE);
+          fftw_complex *Ym_i  = fftw_alloc_complex (self->Nf);
 
-          g_ptr_array_add (fftlog->Gr_vec, Gr_vec_i);
-          g_ptr_array_add (fftlog->Gr_s, Gr_s_i);
-          g_ptr_array_add (fftlog->Ym, Ym_i);
+          g_ptr_array_add (self->Gr_vec, Gr_vec_i);
+          g_ptr_array_add (self->Gr_s, Gr_s_i);
+          g_ptr_array_add (self->Ym, Ym_i);
         }
       }
 
-      fftlog->prepared  = FALSE;
-      fftlog->evaluated = FALSE;
+      ncm_fftlog_reset (fftlog);
     }
 
-    fftlog->nderivs = nderivs;
+    self->nderivs = nderivs;
   }
 }
 
@@ -462,7 +599,8 @@ ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
 guint 
 ncm_fftlog_get_nderivs (NcmFftlog *fftlog)
 {
-  return fftlog->nderivs;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->nderivs;
 }
 
 /**
@@ -476,11 +614,11 @@ ncm_fftlog_get_nderivs (NcmFftlog *fftlog)
 void 
 ncm_fftlog_set_lnr0 (NcmFftlog *fftlog, const gdouble lnr0)
 {
-  if (lnr0 != fftlog->lnr0)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (lnr0 != self->lnr0)
   {
-    fftlog->lnr0      = lnr0;
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    self->lnr0 = lnr0;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -495,7 +633,8 @@ ncm_fftlog_set_lnr0 (NcmFftlog *fftlog, const gdouble lnr0)
 gdouble 
 ncm_fftlog_get_lnr0 (NcmFftlog *fftlog)
 {
-  return fftlog->lnr0;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->lnr0;
 }
 
 /**
@@ -509,11 +648,11 @@ ncm_fftlog_get_lnr0 (NcmFftlog *fftlog)
 void 
 ncm_fftlog_set_lnk0 (NcmFftlog *fftlog, const gdouble lnk0)
 {
-  if (lnk0 != fftlog->lnk0)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (lnk0 != self->lnk0)
   {
-    fftlog->lnk0      = lnk0;
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    self->lnk0 = lnk0;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -528,7 +667,8 @@ ncm_fftlog_set_lnk0 (NcmFftlog *fftlog, const gdouble lnk0)
 gdouble 
 ncm_fftlog_get_lnk0 (NcmFftlog *fftlog)
 {
-  return fftlog->lnk0;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->lnk0;
 }
 
 /**
@@ -544,58 +684,58 @@ void
 ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
-  guint nt = n * (1.0 + fftlog->pad_p);
+  NcmFftlogPrivate * const self = fftlog->priv;
+  guint nt = n * (1.0 + self->pad_p);
 
-  fftlog->Nr = n;
+  self->Nr = n;
 
   nt = ncm_util_fact_size (nt);
-  fftlog->pad = nt * fftlog->pad_p * 0.5 / (1.0 + fftlog->pad_p);
-  n = nt - 2 * fftlog->pad;
+  self->pad = nt * self->pad_p * 0.5 / (1.0 + self->pad_p);
+  n = nt - 2 * self->pad;
   
-  if ((n != fftlog->N) || (n + 2 * fftlog->pad != fftlog->Nf))
+  if ((n != self->N) || (n + 2 * self->pad != self->Nf))
   {
     guint i;
     
-    fftlog->N    = n;
-    fftlog->N_2  = fftlog->N / 2;
-    fftlog->Lk_N = fftlog->Lk / (1.0 * fftlog->N);
+    self->N    = n;
+    self->N_2  = self->N / 2;
+    self->Lk_N = self->Lk / (1.0 * self->N);
 
-    fftlog->Nf   = fftlog->N + 2 * fftlog->pad;
-    fftlog->Nf_2 = fftlog->N_2 + fftlog->pad;
+    self->Nf   = self->N + 2 * self->pad;
+    self->Nf_2 = self->N_2 + self->pad;
 
     _ncm_fftlog_free_all (fftlog);
 
-    fftlog->Fk      = fftw_alloc_complex (fftlog->Nf);
-    fftlog->Cm      = fftw_alloc_complex (fftlog->Nf);
-    fftlog->CmYm    = fftw_alloc_complex (fftlog->Nf);
-    fftlog->Gr      = fftw_alloc_complex (fftlog->Nf);
+    self->Fk      = fftw_alloc_complex (self->Nf);
+    self->Cm      = fftw_alloc_complex (self->Nf);
+    self->CmYm    = fftw_alloc_complex (self->Nf);
+    self->Gr      = fftw_alloc_complex (self->Nf);
 
-    fftlog->lnr_vec = ncm_vector_new (fftlog->N);
+    self->lnr_vec = ncm_vector_new (self->N);
 
     ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
 
     ncm_cfg_lock_plan_fftw ();
 
-    fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk,   fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
-    fftlog->p_CmYm2Gr = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm, fftlog->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    self->p_Fk2Cm   = fftw_plan_dft_1d (self->Nf, self->Fk,   self->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    self->p_CmYm2Gr = fftw_plan_dft_1d (self->Nf, self->CmYm, self->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
-    for (i = 0; i <= fftlog->nderivs; i++)
+    for (i = 0; i <= self->nderivs; i++)
     {
-      NcmVector *Gr_vec_i = ncm_vector_new (fftlog->N);
-      NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (fftlog->lnr_vec, Gr_vec_i, FALSE);
-      fftw_complex *Ym_i  = fftw_alloc_complex (fftlog->Nf);
+      NcmVector *Gr_vec_i = ncm_vector_new (self->N);
+      NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE);
+      fftw_complex *Ym_i  = fftw_alloc_complex (self->Nf);
 
-      g_ptr_array_add (fftlog->Gr_vec, Gr_vec_i);
-      g_ptr_array_add (fftlog->Gr_s, Gr_s_i);
-      g_ptr_array_add (fftlog->Ym, Ym_i);
+      g_ptr_array_add (self->Gr_vec, Gr_vec_i);
+      g_ptr_array_add (self->Gr_s, Gr_s_i);
+      g_ptr_array_add (self->Ym, Ym_i);
     }
 
     ncm_cfg_unlock_plan_fftw ();
 
     ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
 
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    ncm_fftlog_reset (fftlog);
   }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
@@ -611,15 +751,15 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 void
 ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p)
 {
-  if (fftlog->pad_p != pad_p)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (self->pad_p != pad_p)
   {
-    fftlog->pad_p = pad_p;
+    self->pad_p = pad_p;
 
-    if (fftlog->Nr != 0)
-      ncm_fftlog_set_size (fftlog, fftlog->Nr);
+    if (self->Nr != 0)
+      ncm_fftlog_set_size (fftlog, self->Nr);
 
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -634,7 +774,8 @@ ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p)
 gdouble
 ncm_fftlog_get_padding (NcmFftlog *fftlog)
 {
-  return fftlog->pad_p;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->pad_p;
 }
 
 /**
@@ -648,11 +789,11 @@ ncm_fftlog_get_padding (NcmFftlog *fftlog)
 void 
 ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active)
 {
-  if ((!fftlog->noring && active) || (fftlog->noring && !active))
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if ((!self->noring && active) || (self->noring && !active))
   {
-    fftlog->noring    = active;
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    self->noring = active;
+    ncm_fftlog_reset (fftlog);
   }
 }
 
@@ -666,7 +807,8 @@ ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active)
 gboolean 
 ncm_fftlog_get_noring (NcmFftlog *fftlog)
 {
-  return fftlog->noring;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->noring;
 }
 
 /**
@@ -680,51 +822,196 @@ ncm_fftlog_get_noring (NcmFftlog *fftlog)
 void
 ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 {
-  if (fftlog->Lk != Lk)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (self->Lk != Lk)
   {
-    fftlog->Lk        = Lk;
-    fftlog->Lk_N      = fftlog->Lk / (1.0 * fftlog->N);
-    fftlog->prepared  = FALSE;
-    fftlog->evaluated = FALSE;
+    self->Lk   = Lk;
+    self->Lk_N = self->Lk / (1.0 * self->N);
+    ncm_fftlog_reset (fftlog);
   }
+}
+
+/**
+ * ncm_fftlog_use_eval_interval:
+ * @fftlog: a #NcmFftlog
+ * @use_eval_interal: a gboolean
+ * 
+ * Sets whether to use a restricted evaluation interval $[r_\mathrm{min}, r_\mathrm{max}]$.  
+ * See ncm_fftlog_set_eval_r_min() and ncm_fftlog_set_eval_r_max().
+ * 
+ */
+void 
+ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interal)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (use_eval_interal)
+  {
+    self->use_eval_int = TRUE;
+  }
+  else
+  {
+    if (self->use_eval_int)
+    {
+      gint nd;      
+      for (nd = 0; nd <= self->nderivs; nd++)
+      {
+        NcmVector *Gr_vec_nd = g_ptr_array_index (self->Gr_vec, nd);
+        ncm_spline_set (g_ptr_array_index (self->Gr_s, nd), self->lnr_vec, Gr_vec_nd, FALSE);
+      }
+    }
+    self->use_eval_int = FALSE;
+  }
+}
+
+/**
+ * ncm_fftlog_use_smooth_padding:
+ * @fftlog: a #NcmFftlog
+ * @use_smooth_padding: a gboolean
+ * 
+ * Sets whether to use pad the fft using a power-law continuation of the
+ * input function which is continuous at the border and drops to a scale
+ * determined by ncm_fftlog_set_smooth_padding_scale().
+ * 
+ */
+void 
+ncm_fftlog_use_smooth_padding (NcmFftlog *fftlog, gboolean use_smooth_padding)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  self->smooth_padding = use_smooth_padding;
+  self->evaluated      = FALSE;
+}
+
+/**
+ * ncm_fftlog_set_smooth_padding_scale:
+ * @fftlog: a #NcmFftlog
+ * @log10sc: a gdouble containing the $\log_{10}(s)$ of the smoothing scale $s$
+ * 
+ * Sets the value of the smoothing scale $s$ which is used if ncm_fftlog_use_smooth_padding()
+ * is turned on.
+ * 
+ */
+void 
+ncm_fftlog_set_smooth_padding_scale (NcmFftlog *fftlog, gdouble log10sc)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  self->smooth_padding_scale = log10sc;
+  self->evaluated            = FALSE;
+}
+
+/**
+ * ncm_fftlog_get_smooth_padding_scale:
+ * @fftlog: a #NcmFftlog
+ * 
+ * Gets the log10 of the current value of the smoothing scale $s$.
+ * 
+ * Returns: $\log_{10}(s)$.
+ */
+gdouble 
+ncm_fftlog_get_smooth_padding_scale (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->smooth_padding_scale;
+}
+
+/**
+ * ncm_fftlog_set_eval_r_min:
+ * @fftlog: a #NcmFftlog
+ * @eval_r_min: the value of $r_\mathrm{min}$
+ * 
+ * Sets $r_\mathrm{min}$ to @r_min.  
+ * 
+ */
+void 
+ncm_fftlog_set_eval_r_min (NcmFftlog *fftlog, const gdouble eval_r_min)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (self->eval_r_min != eval_r_min)
+  {
+    self->eval_r_min = eval_r_min;
+  }
+}
+
+/**
+ * ncm_fftlog_set_eval_r_max:
+ * @fftlog: a #NcmFftlog
+ * @eval_r_max: the value of $r_\mathrm{max}$
+ * 
+ * Sets $r_\mathrm{max}$ to @r_max.  
+ * 
+ */
+void 
+ncm_fftlog_set_eval_r_max (NcmFftlog *fftlog, const gdouble eval_r_max)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (self->eval_r_max != eval_r_max)
+  {
+    self->eval_r_max = eval_r_max;
+  }
+}
+
+/**
+ * ncm_fftlog_get_eval_r_min:
+ * @fftlog: a #NcmFftlog
+ * 
+ * Returns: the value of $r_\mathrm{min}$
+ */
+gdouble 
+ncm_fftlog_get_eval_r_min (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->eval_r_min;
+}
+
+/**
+ * ncm_fftlog_get_eval_r_max:
+ * @fftlog: a #NcmFftlog
+ * 
+ * Returns: the value of $r_\mathrm{max}$
+ */
+gdouble
+ncm_fftlog_get_eval_r_max (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->eval_r_max;
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
+  NcmFftlogPrivate * const self = fftlog->priv;
   guint nd;
   gint i;
 
-  fftw_execute (fftlog->p_Fk2Cm);
+  fftw_execute (self->p_Fk2Cm);
   
-  if (!fftlog->prepared)
+  if (!self->prepared)
   {
     const gdouble Lt       = ncm_fftlog_get_full_length (fftlog);
     const gdouble twopi_Lt = 2.0 * M_PI / Lt;
-    fftw_complex *Ym_0     = g_ptr_array_index (fftlog->Ym, 0);
-    gdouble lnr0k0         = fftlog->lnk0 + fftlog->lnr0;
+    fftw_complex *Ym_0     = g_ptr_array_index (self->Ym, 0);
+    gdouble lnr0k0         = self->lnk0 + self->lnr0;
     fftw_complex *Ym_ndm1;
     
     NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
 
-    if (fftlog->noring)
+    if (self->noring)
     {
       gint i;
       for (i = 0; i < 5; i++)
       {
-        fftw_complex YNf_2_0 = Ym_0[fftlog->Nf / 2];
+        fftw_complex YNf_2_0 = Ym_0[self->Nf / 2];
         const gdouble theta  = carg (YNf_2_0);
-        const gdouble M      = (fftlog->Nf / Lt) * lnr0k0 - theta / M_PI;
+        const gdouble M      = (self->Nf / Lt) * lnr0k0 - theta / M_PI;
         const glong M_round  = M;
         const gdouble dM     = M - M_round;
 
-        lnr0k0       -= (Lt / fftlog->Nf) * dM;
-        fftlog->lnr0 -= (Lt / fftlog->Nf) * dM;
+        lnr0k0     -= (Lt / self->Nf) * dM;
+        self->lnr0 -= (Lt / self->Nf) * dM;
       }
     }
 
-    for (i = 0; i < fftlog->Nf; i++)
+    for (i = 0; i < self->Nf; i++)
     {
       const gint phys_i      = ncm_fftlog_get_mode_index (fftlog, i);
       const complex double a = twopi_Lt * phys_i * I;
@@ -732,70 +1019,70 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
       Ym_0[i] *= cexp (- a * lnr0k0);
 
       Ym_ndm1 = Ym_0;
-      for (nd = 1; nd <= fftlog->nderivs; nd++)
+      for (nd = 1; nd <= self->nderivs; nd++)
       {
-        fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+        fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
         Ym_nd[i] = -(1.0 + a) * Ym_ndm1[i];
         Ym_ndm1  = Ym_nd;
       }
     }
 
-    if ((fftlog->Nf % 2) == 0)
+    if ((self->Nf % 2) == 0)
     {
-      const gint Nf_2_index = ncm_fftlog_get_array_index (fftlog, +fftlog->Nf / 2);
+      const gint Nf_2_index = ncm_fftlog_get_array_index (fftlog, +self->Nf / 2);
       
-      for (nd = 0; nd <= fftlog->nderivs; nd++)
+      for (nd = 0; nd <= self->nderivs; nd++)
       {
-        fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+        fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
         Ym_nd[Nf_2_index] = creal (Ym_nd[Nf_2_index]);
       }
     }
     
-    fftlog->prepared = TRUE;
+    self->prepared = TRUE;
   }
 
-  for (i = 0; i < fftlog->N; i++)
+  for (i = 0; i < self->N; i++)
   {
-    const gint phys_i      = i - fftlog->N_2;
-    const gdouble lnr      = fftlog->lnr0 + phys_i * fftlog->Lk_N;
-    
-    ncm_vector_set (fftlog->lnr_vec, i, lnr);
+    const gint phys_i = i - self->N_2;
+    const gdouble lnr = self->lnr0 + phys_i * self->Lk_N;
+
+    ncm_vector_set (self->lnr_vec, i, lnr);
   }
   
-  for (nd = 0; nd <= fftlog->nderivs; nd++)
+  for (nd = 0; nd <= self->nderivs; nd++)
   {
     const gdouble norma = ncm_fftlog_get_norma (fftlog);
-    NcmVector *Gr_nd    = g_ptr_array_index (fftlog->Gr_vec, nd);
-    fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+    NcmVector *Gr_nd    = g_ptr_array_index (self->Gr_vec, nd);
+    fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
     
-    for (i = 0; i < fftlog->Nf; i++)
+    for (i = 0; i < self->Nf; i++)
     {
-      fftlog->CmYm[i] = fftlog->Cm[i] * Ym_nd[i]; 
+      self->CmYm[i] = self->Cm[i] * Ym_nd[i]; 
     }
 /*    
     printf ("% 20.15g % 20.15g | % 20.15g % 20.15g\n", 
-            creal (fftlog->CmYm[fftlog->Nf_2]),
-            cimag (fftlog->CmYm[fftlog->Nf_2]),
-            creal (fftlog->CmYm[fftlog->Nf_2 + 1]),
-            cimag (fftlog->CmYm[fftlog->Nf_2 + 1])
+            creal (self->CmYm[self->Nf_2]),
+            cimag (self->CmYm[self->Nf_2]),
+            creal (self->CmYm[self->Nf_2 + 1]),
+            cimag (self->CmYm[self->Nf_2 + 1])
             );
 */
-    fftlog->CmYm[fftlog->Nf_2]     = creal (fftlog->CmYm[fftlog->Nf_2]);
-    fftlog->CmYm[fftlog->Nf_2 + 1] = creal (fftlog->CmYm[fftlog->Nf_2 + 1]);
+    self->CmYm[self->Nf_2]     = creal (self->CmYm[self->Nf_2]);
+    self->CmYm[self->Nf_2 + 1] = creal (self->CmYm[self->Nf_2 + 1]);
 
-    fftw_execute (fftlog->p_CmYm2Gr);
+    fftw_execute (self->p_CmYm2Gr);
 
-    for (i = 0; i < fftlog->N; i++)
+    for (i = 0; i < self->N; i++)
     {
-      const gdouble lnr      = ncm_vector_get (fftlog->lnr_vec, i);
+      const gdouble lnr      = ncm_vector_get (self->lnr_vec, i);
       const gdouble rm1      = exp (-lnr);
-      const gdouble Gr_nd_i  = creal (fftlog->Gr[i + fftlog->pad]) * rm1 / norma;
+      const gdouble Gr_nd_i  = creal (self->Gr[i + self->pad]) * rm1 / norma;
 
       ncm_vector_set (Gr_nd, i, Gr_nd_i);
     }
   }
 
-  fftlog->evaluated = TRUE;
+  self->evaluated = TRUE;
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
@@ -810,16 +1097,55 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 void 
 ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk)
 {
+  NcmFftlogPrivate * const self = fftlog->priv;
   gint i;
-  g_assert_cmpuint (fftlog->N, ==, ncm_vector_len (lnk));
   
-  for (i = 0; i < fftlog->N; i++)
+  g_assert_cmpuint (self->N, ==, ncm_vector_len (lnk));
+  
+  for (i = 0; i < self->N; i++)
   {
-    const gint phys_i   = i - fftlog->N_2;
-    const gdouble lnk_i = fftlog->lnk0 + fftlog->Lk_N * phys_i;
+    const gint phys_i   = i - self->N_2;
+    const gdouble lnk_i = self->lnk0 + self->Lk_N * phys_i;
 
     ncm_vector_set (lnk, i, lnk_i);
   }
+}
+
+static void 
+_ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  NcmFftlogPrivate * const self = fftlog->priv;  
+  gint size = 3;
+  gdouble dd1[3], xa1[3], ya1[3];
+  gdouble dd2[3], xa2[3], ya2[3];  
+  gint i;
+
+  for (i = 0; i < size; i++)
+  {
+    xa1[i] = log1p (self->pad + 1.0 * i);
+    ya1[i] = log (creal (self->Fk[self->pad + i]));
+
+    xa2[i] = log1p (self->pad + self->N + 1.0 * i - size);
+    ya2[i] = log (creal (self->Fk[self->pad + self->N - size + i]));    
+  }
+
+  xa1[2] = 0.0;
+  ya1[2] = self->smooth_padding_scale * M_LN10;
+
+  xa2[0] = log1p (2.0 * self->pad + self->N - 1.0);
+  ya2[0] = self->smooth_padding_scale * M_LN10;
+
+  gsl_poly_dd_init (dd1, xa1, ya1, size);
+  gsl_poly_dd_init (dd2, xa2, ya2, size);
+  for (i = 0; i < self->pad; i++)
+  {
+    self->Fk[i]                       = exp (gsl_poly_dd_eval (dd1, xa1, size, log1p (1.0 * i)));
+    self->Fk[self->pad + self->N + i] = exp (gsl_poly_dd_eval (dd2, xa2, size, log1p (self->pad + self->N + i)));
+
+    printf ("%8d % 22.15g %8d % 22.15g\n", i, creal (self->Fk[i]), self->pad + self->N + i, creal (self->Fk[self->pad + self->N + i]));
+  }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
@@ -834,17 +1160,21 @@ void
 ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
+  NcmFftlogPrivate * const self = fftlog->priv;
   gint i;
 
-  g_assert_cmpuint (fftlog->N, ==, ncm_vector_len (Fk));
+  g_assert_cmpuint (self->N, ==, ncm_vector_len (Fk));
 
-  memset (fftlog->Fk, 0, sizeof (complex double) * fftlog->Nf);
+  memset (self->Fk, 0, sizeof (complex double) * self->Nf);
   
-  for (i = 0; i < fftlog->N; i++)
+  for (i = 0; i < self->N; i++)
   {
-    fftlog->Fk[fftlog->pad + i] = ncm_vector_get (Fk, i);
+    self->Fk[self->pad + i] = ncm_vector_get (Fk, i);
   }
 
+  if (self->smooth_padding)
+    _ncm_fftlog_add_smooth_padding (fftlog);
+ 
   _ncm_fftlog_eval (fftlog);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
@@ -861,20 +1191,24 @@ void
 ncm_fftlog_eval_by_gsl_function (NcmFftlog *fftlog, gsl_function *Fk)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
+  NcmFftlogPrivate * const self = fftlog->priv;
   gint i;
   
-  memset (fftlog->Fk, 0, sizeof (complex double) * (fftlog->Nf));
+  memset (self->Fk, 0, sizeof (complex double) * (self->Nf));
 
-  for (i = 0; i < fftlog->N; i++)
+  for (i = 0; i < self->N; i++)
   {
-    const gint phys_i   = i - fftlog->N_2;
-    const gdouble lnk_i = fftlog->lnk0 + fftlog->Lk_N * phys_i;
+    const gint phys_i   = i - self->N_2;
+    const gdouble lnk_i = self->lnk0 + self->Lk_N * phys_i;
     const gdouble k_i   = exp (lnk_i);
     const gdouble Fk_i  = GSL_FN_EVAL (Fk, k_i);
 
-    fftlog->Fk[fftlog->pad + i] = Fk_i;
+    self->Fk[self->pad + i] = Fk_i;
   }
-  
+
+  if (self->smooth_padding)
+    _ncm_fftlog_add_smooth_padding (fftlog);
+
   _ncm_fftlog_eval (fftlog);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
@@ -910,12 +1244,38 @@ ncm_fftlog_eval_by_function (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_
 void 
 ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
 {
+  NcmFftlogPrivate * const self = fftlog->priv;
   guint nd;
 
-  g_assert (fftlog->evaluated);
-  
-  for (nd = 0; nd <= fftlog->nderivs; nd++)
-    ncm_spline_prepare (g_ptr_array_index (fftlog->Gr_s, nd));
+  g_assert (self->evaluated);
+
+  if (self->use_eval_int)
+  {
+    g_assert_cmpfloat (self->eval_r_min, <, self->eval_r_max);
+    {
+      const gint i0   = ncm_vector_find_closest_index (self->lnr_vec, log (self->eval_r_min));
+      const gint i1   = ncm_vector_find_closest_index (self->lnr_vec, log (self->eval_r_max)) + 1;
+      const gint size = i1 - i0 + 1;
+      NcmVector *eval_lnr_vec = ncm_vector_get_subvector (self->lnr_vec, i0, size);
+
+      for (nd = 0; nd <= self->nderivs; nd++)
+      {
+        NcmVector *Gr_vec_nd      = g_ptr_array_index (self->Gr_vec, nd);
+        NcmVector *eval_Gr_vec_nd = ncm_vector_get_subvector (Gr_vec_nd, i0, size);
+        
+        ncm_spline_set (g_ptr_array_index (self->Gr_s, nd), eval_lnr_vec, eval_Gr_vec_nd, TRUE);
+
+        ncm_vector_free (eval_Gr_vec_nd);
+      }
+
+      ncm_vector_free (eval_lnr_vec);
+    }
+  }
+  else
+  {
+    for (nd = 0; nd <= self->nderivs; nd++)
+      ncm_spline_prepare (g_ptr_array_index (self->Gr_s, nd));
+  }
 }
 
 /**
@@ -929,9 +1289,10 @@ ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
 NcmVector *
 ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
 {
-  if (!fftlog->prepared)
+  NcmFftlogPrivate * const self = fftlog->priv;
+  if (!self->prepared)
     g_warning ("ncm_fftlog_get_vector_lnr: returning the lnr vector without preparing evaluating, the vector may change after evaluation.");
-  return (fftlog->lnr_vec != NULL) ? ncm_vector_ref (fftlog->lnr_vec) : NULL;
+  return (self->lnr_vec != NULL) ? ncm_vector_ref (self->lnr_vec) : NULL;
 }
 
 /**
@@ -947,8 +1308,9 @@ ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
 NcmVector *
 ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint nderiv)
 {
-  g_assert (fftlog->evaluated);
-  return ncm_vector_ref (g_ptr_array_index (fftlog->Gr_vec, nderiv));
+  NcmFftlogPrivate * const self = fftlog->priv;
+  g_assert (self->evaluated);
+  return ncm_vector_ref (g_ptr_array_index (self->Gr_vec, nderiv));
 }
 
 /**
@@ -965,8 +1327,9 @@ ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint nderiv)
 NcmSpline *
 ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint nderiv)
 {
-  g_assert (fftlog->evaluated);
-  return g_ptr_array_index (fftlog->Gr_s, nderiv);
+  NcmFftlogPrivate * const self = fftlog->priv;
+  g_assert (self->evaluated);
+  return g_ptr_array_index (self->Gr_s, nderiv);
 }
 
 /**
@@ -999,49 +1362,58 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
 void 
 ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdouble reltol)
 {
-  NcmSpline **s = g_new0 (NcmSpline *, fftlog->nderivs + 1);
-  guint nd, size;
+  NcmFftlogPrivate * const self = fftlog->priv;
+  NcmSpline **s   = g_new0 (NcmSpline *, self->nderivs + 1);
   gdouble lreltol = 0.0;
+  NcmVector *eval_lnr_vec;
+  guint nd, size;
 
   ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
   ncm_fftlog_prepare_splines (fftlog);
-
-  for (nd = 0; nd <= fftlog->nderivs; nd++)
+  for (nd = 0; nd <= self->nderivs; nd++)
   {
-    s[nd] = ncm_spline_ref (g_ptr_array_index (fftlog->Gr_s, nd));
+    s[nd] = ncm_spline_ref (g_ptr_array_index (self->Gr_s, nd));
   }
 
-  /*printf ("# Initial size %u [%u].\n", fftlog->N, fftlog->pad);*/
-  ncm_fftlog_set_size (fftlog, fftlog->N * 1.2);
-  /*printf ("# Trying size %u [%u].\n", fftlog->N, fftlog->pad);*/
+  /*printf ("# Initial size %u [%u].\n", self->N, self->pad);*/
+  ncm_fftlog_set_size (fftlog, self->N * 1.2);
+  /*printf ("# Trying size %u [%u].\n", self->N, self->pad);*/
   ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
   ncm_fftlog_prepare_splines (fftlog);
 
-  size = ncm_spline_get_len (g_ptr_array_index (fftlog->Gr_s, 0));
-  for (nd = 0; nd <= fftlog->nderivs; nd++)
+  eval_lnr_vec = ncm_spline_get_xv (g_ptr_array_index (self->Gr_s, 0));
+  size         = ncm_spline_get_len (g_ptr_array_index (self->Gr_s, 0));
+  
+  for (nd = 0; nd <= self->nderivs; nd++)
   {
-    guint i;
+    NcmVector *eval_Gr_vec_nd = ncm_spline_get_yv (g_ptr_array_index (self->Gr_s, nd));
     gdouble absmin, absmax;
-    NcmVector *Gr_vec_nd = g_ptr_array_index (fftlog->Gr_vec, nd);
-    ncm_vector_get_absminmax (Gr_vec_nd, &absmin, &absmax);
+    guint i/*, i_max = 0*/;
+
+    ncm_vector_get_absminmax (eval_Gr_vec_nd, &absmin, &absmax);
     
     /*printf ("# Testing component %u [% 20.15g, % 20.15g].\n", nd, absmin, absmax);*/
     for (i = 0; i < size; i++)
     {
-      const gdouble lnr_i = ncm_vector_get (fftlog->lnr_vec, i);
-      const gdouble lnG_i = ncm_vector_get (Gr_vec_nd, i);
-      const gdouble lnS_i = ncm_spline_eval (s[nd], lnr_i);
+      const gdouble lnr_i     = ncm_vector_get (eval_lnr_vec, i);
+      const gdouble lnG_i     = ncm_vector_get (eval_Gr_vec_nd, i);
+      const gdouble lnS_i     = ncm_spline_eval (s[nd], lnr_i);
       const gdouble lreltol_i = fabs ((lnG_i - lnS_i) / (fabs (lnG_i) + absmax));
       
-      /*printf ("% 20.15g% 20.15e % 20.15g % 20.15g | % 20.15e\n", lnr_i, exp (lnr_i), lnG_i, lnS_i, lreltol_i);*/
-      lreltol = GSL_MAX (lreltol_i, lreltol);
+      /*printf ("% 20.15g % 20.15e % 20.15g % 20.15g | % 20.15e % 20.15e\n", lnr_i, exp (lnr_i), lnG_i, lnS_i, lreltol_i, fabs ((lnG_i - lnS_i) / fabs (lnG_i)));*/
+      if (lreltol_i > lreltol)
+      {
+        lreltol = lreltol_i;
+        /*i_max   = i;*/
+      }
     }
 
     ncm_spline_clear (&s[nd]);
-    /*printf ("# Largest error up to component %u is %e.\n", nd, lreltol);*/
-    /*fflush (stdout);*/
+    ncm_vector_free (eval_Gr_vec_nd);
+    /*printf ("# Largest error up to component %u is [%u] %e.\n", nd, i_max, lreltol); fflush (stdout);*/
   }
 
+  ncm_vector_free (eval_lnr_vec);
   g_clear_pointer (&s, g_free);
 
   if (lreltol > reltol)
@@ -1078,6 +1450,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the number of knots $N^\prime$.
  */
+guint
+ncm_fftlog_get_size (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->N;
+}
+
 /**
  * ncm_fftlog_get_full_size:
  * @fftlog: a #NcmFftlog
@@ -1087,6 +1466,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the total number of knots $N_f^\prime$.
  */
+gint
+ncm_fftlog_get_full_size (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->Nf;
+}
+
 /**
  * ncm_fftlog_get_norma:
  * @fftlog: a #NcmFftlog
@@ -1096,6 +1482,12 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the total number of knots $N_f^\prime$ (double).
  */
+gdouble
+ncm_fftlog_get_norma (NcmFftlog *fftlog)
+{
+  return ncm_fftlog_get_full_size (fftlog);
+}
+
 /**
  * ncm_fftlog_get_length:
  * @fftlog: a #NcmFftlog
@@ -1104,6 +1496,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the period $L$.
  */
+gdouble
+ncm_fftlog_get_length (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->Lk;
+}
+
 /**
  * ncm_fftlog_get_full_length:
  * @fftlog: a #NcmFftlog
@@ -1112,6 +1511,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the total period $L_T$.
  */
+gdouble 
+ncm_fftlog_get_full_length (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return self->Lk + 2.0 * self->Lk_N * self->pad;
+}
+
 /**
  * ncm_fftlog_get_mode_index:
  * @fftlog: a #NcmFftlog
@@ -1122,6 +1528,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the index of the mode
  */
+gint 
+ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return (i > self->Nf_2) ? i - self->Nf : i;
+}
+
 /**
  * ncm_fftlog_get_array_index:
  * @fftlog: a #NcmFftlog
@@ -1132,6 +1545,13 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: the array index corresponding to @phys_i 
  */
+gint 
+ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return (phys_i < 0) ? phys_i + self->Nf : phys_i;
+}
+
 /**
  * ncm_fftlog_peek_output_vector:
  * @fftlog: a #NcmFftlog
@@ -1142,3 +1562,9 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * 
  * Returns: (transfer none): the output vector $G(r)$ or its @comp-th derivative.  
  */
+NcmVector *
+ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv)
+{
+  NcmFftlogPrivate * const self = fftlog->priv;
+  return g_ptr_array_index (self->Gr_vec, nderiv);
+}

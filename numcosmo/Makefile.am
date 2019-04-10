@@ -112,6 +112,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c          \
 	math/ncm_powspec.c                   \
 	math/ncm_powspec_filter.c            \
+	math/ncm_powspec_sphere_proj.c       \
 	math/ncm_powspec_corr3d.c            \
 	math/ncm_hoaa.c                      \
 	math/ncm_func_eval.c                 \
@@ -242,6 +243,7 @@ ncm_headers =                                \
 	math/ncm_spline2d_bicubic.h          \
 	math/ncm_powspec.h                   \
 	math/ncm_powspec_filter.h            \
+	math/ncm_powspec_sphere_proj.h       \
 	math/ncm_powspec_corr3d.h            \
 	math/ncm_hoaa.h                      \
 	math/ncm_func_eval.h                 \
