@@ -68,6 +68,7 @@ gdouble ncm_trivec_dot (const NcmTriVec *v1, const NcmTriVec *v2);
 void ncm_trivec_normalize (NcmTriVec *v);
 
 gdouble ncm_trivec_get_phi (NcmTriVec *v);
+void ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble phi);
 void ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *theta, gdouble *phi);
 
 /* Quaternions */
