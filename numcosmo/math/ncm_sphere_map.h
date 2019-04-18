@@ -152,6 +152,8 @@ void ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fit
 void ncm_sphere_map_prepare_alm (NcmSphereMap *smap);
 
 void ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
+void ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm);
+
 gdouble ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l);
 gdouble ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i);
 

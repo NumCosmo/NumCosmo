@@ -2117,6 +2117,26 @@ ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, g
 }
 
 /**
+ * ncm_sphere_map_set_alm:
+ * @smap: a #NcmSphereMap
+ * @l: value of $l < \ell_\mathrm{max}$
+ * @m: value of $m \leq l$.
+ * @Re_alm: real part of $a_{lm}$
+ * @Im_alm: imaginary part of $a_{lm}$
+ *
+ * Sets the value of $a_{lm}$. 
+ * 
+ */
+void
+ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm)
+{
+  NcmSphereMapPrivate * const self = smap->priv;
+  gint lm_index = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m); 
+
+  self->alm[lm_index] = Re_alm + I * Im_alm;
+}
+
+/**
  * ncm_sphere_map_get_Cl:
  * @smap: a #NcmSphereMap
  * @l: value of $l < \ell_\mathrm{max}$
