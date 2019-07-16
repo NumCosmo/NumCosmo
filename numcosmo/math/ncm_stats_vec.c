@@ -92,6 +92,8 @@
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_cdf.h>
 
+#include <math.h>
+
 #include "toeplitz/solvers/toeplitz.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 

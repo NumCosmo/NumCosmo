@@ -228,6 +228,23 @@ ncm_trivec_get_phi (NcmTriVec *v)
 }
 
 /**
+ * ncm_trivec_set_spherical_coord:
+ * @v: a #NcmTriVec
+ * @theta: FIXME
+ * @phi: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble phi)
+{
+  v->c[0] = r * sin (theta) * cos (phi);
+  v->c[1] = r * sin (theta) * sin (phi);
+  v->c[2] = r * cos (theta);
+}
+
+/**
  * ncm_trivec_get_spherical_coord:
  * @v: a #NcmTriVec
  * @theta: (out): FIXME
@@ -298,7 +315,7 @@ ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
 
   ncm_trivec_normalize (&q->v);
   ncm_trivec_scale (&q->v, sin (theta));
-  q->s = cos(theta);
+  q->s = cos (theta);
   
   return q;
 }

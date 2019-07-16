@@ -1,12 +1,12 @@
 /***************************************************************************
- *            test_nc_ccl_Pk.c
+ *            test_nc_ccl_NLPk.c
  *
- *  Mon February 25 16:43:00 2019
+ *  Thu March 14 09:47:56 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * test_nc_ccl_Pk.c
+ * test_nc_ccl_NLPk.c
  *
  * Copyright (C) 2019 - Sandro Dias Pinto Vitenti
  *
@@ -35,25 +35,25 @@
 #include <glib-object.h>
 #include <ccl.h>
 
-typedef struct _TestNcCCLPk
+typedef struct _TestNcCCLNLPk
 {
   ccl_cosmology * ccl_cosmo;
   NcHICosmo *cosmo;
   NcGrowthFunc *gf;
-  NcPowspecML *Pk; 
-} TestNcCCLPk;
+  NcPowspecMNL *NLPk; 
+} TestNcCCLNLPk;
 
-void test_nc_ccl_pk_new (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_new (TestNcCCLNLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_free (TestNcCCLNLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_pk_create_BBKS (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_create_EH (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_create_CBE (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_create_BBKS (TestNcCCLNLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_create_EH (TestNcCCLNLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_create_CBE (TestNcCCLNLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_pk_cmp_pk (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_cmp_nl_pk (TestNcCCLNLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_bbks_traps (TestNcCCLNLPk *test, gconstpointer pdata);
+void test_nc_ccl_nl_pk_bbks_invalid_st (TestNcCCLNLPk *test, gconstpointer pdata);
 
 typedef struct _ccl_params_data 
 {
@@ -99,59 +99,57 @@ ccl_params_data_init (ccl_params_data *data)
   }
 }
 
-typedef struct _TestNcCCLPkPk
+typedef struct _TestNcCCLNLPkPk
 {
   const gchar *path;
-  void (*create_pk) (TestNcCCLPk *test, gconstpointer pdata);
+  void (*create_pk) (TestNcCCLNLPk *test, gconstpointer pdata);
   transfer_function_t pk_t;
-} TestNcCCLPkPk;
+} TestNcCCLNLPkPk;
 
-typedef struct _TestNcCCLPkModel
+typedef struct _TestNcCCLNLPkModel
 {
   const gchar *path;
   gint model_i;
-} TestNcCCLPkModel;
+} TestNcCCLNLPkModel;
 
-typedef struct _TestNcCCLPkCMP
+typedef struct _TestNcCCLNLPkCMP
 {
   const gchar *path;
-  void (*cmp) (TestNcCCLPk *test, gconstpointer pdata);
-} TestNcCCLPkCMP;
+  void (*cmp) (TestNcCCLNLPk *test, gconstpointer pdata);
+} TestNcCCLNLPkCMP;
 
-typedef struct _TestNcCCLPkData
+typedef struct _TestNcCCLNLPkData
 {
-  TestNcCCLPkPk pk;
-  TestNcCCLPkModel model;
-  TestNcCCLPkCMP cmp;
-} TestNcCCLPkData;
+  TestNcCCLNLPkPk pk;
+  TestNcCCLNLPkModel model;
+  TestNcCCLNLPkCMP cmp;
+} TestNcCCLNLPkData;
 
-#define TEST_NC_CCL_PK_NPKS 3
-TestNcCCLPkPk pks[3] = {
-  {"bbks", &test_nc_ccl_pk_create_BBKS, ccl_bbks},
-  {"eh",   &test_nc_ccl_pk_create_EH,   ccl_eisenstein_hu},
-  {"cbe",  &test_nc_ccl_pk_create_CBE,  ccl_boltzmann_class},
+#define TEST_NC_CCL_NLPK_NPKS 1
+TestNcCCLNLPkPk pks[1] = {
+  {"cbe+Halofit", &test_nc_ccl_nl_pk_create_CBE, ccl_boltzmann_class},
 };
 
-#define TEST_NC_CCL_PK_NMODELS 5
-TestNcCCLPkModel models[5] = {
+#define TEST_NC_CCL_NLPK_NMODELS 1
+TestNcCCLNLPkModel models[1] = {
   {"model1", 1},
-  {"model2", 2},
-  {"model3", 3},
-  {"model4", 4},
-  {"model5", 5},
+/*  {"model2", 2},*/
+/*  {"model3", 3},*/
+/*  {"model4", 4},*/
+/*  {"model5", 5},*/
 };
 
-#define TEST_NC_CCL_PK_NCMPS 1
-TestNcCCLPkCMP cmps[1] = {
-  {"Pk", &test_nc_ccl_pk_cmp_pk},
+#define TEST_NC_CCL_NLPK_NCMPS 1
+TestNcCCLNLPkCMP cmps[1] = {
+  {"NLPk", &test_nc_ccl_nl_pk_cmp_nl_pk},
 };
 
-#define NTESTS ((TEST_NC_CCL_PK_NPKS)*(TEST_NC_CCL_PK_NMODELS)*(TEST_NC_CCL_PK_NCMPS))
+#define NTESTS ((TEST_NC_CCL_NLPK_NPKS)*(TEST_NC_CCL_NLPK_NMODELS)*(TEST_NC_CCL_NLPK_NCMPS))
 
 gint
 main (gint argc, gchar *argv[])
 {
-  TestNcCCLPkData data[NTESTS];
+  TestNcCCLNLPkData data[NTESTS];
   gint i, m;
  
   g_test_init (&argc, &argv, NULL);
@@ -161,20 +159,20 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   m = 0;
-  for (i = 0; i < TEST_NC_CCL_PK_NPKS; i++)
+  for (i = 0; i < TEST_NC_CCL_NLPK_NPKS; i++)
   {
     gint j;
-    for (j = 0; j < TEST_NC_CCL_PK_NMODELS; j++)
+    for (j = 0; j < TEST_NC_CCL_NLPK_NMODELS; j++)
     {
       gint k;
-      for (k = 0; k < TEST_NC_CCL_PK_NCMPS; k++)
+      for (k = 0; k < TEST_NC_CCL_NLPK_NCMPS; k++)
       {
-        gchar *path   = g_strdup_printf ("/nc/ccl/Pk/%s/%s/%s", pks[i].path, models[j].path, cmps[k].path);
+        gchar *path   = g_strdup_printf ("/nc/ccl/NLPk/%s/%s/%s", pks[i].path, models[j].path, cmps[k].path);
         data[m].pk    = pks[i];
         data[m].model = models[j];
         data[m].cmp   = cmps[k];
 
-        g_test_add (path, TestNcCCLPk, &data[m], &test_nc_ccl_pk_new, cmps[k].cmp, &test_nc_ccl_pk_free);
+        g_test_add (path, TestNcCCLNLPk, &data[m], &test_nc_ccl_nl_pk_new, cmps[k].cmp, &test_nc_ccl_nl_pk_free);
 
         g_free (path);
         m++;
@@ -182,16 +180,16 @@ main (gint argc, gchar *argv[])
     }
   }
 
-  g_test_add ("/nc/ccl/Pk/bbks/model1/traps", TestNcCCLPk, &data[0],
-              &test_nc_ccl_pk_new,
-              &test_nc_ccl_pk_bbks_traps,
-              &test_nc_ccl_pk_free);
+  g_test_add ("/nc/ccl/Pk/bbks/model1/traps", TestNcCCLNLPk, &data[0],
+              &test_nc_ccl_nl_pk_new,
+              &test_nc_ccl_nl_pk_bbks_traps,
+              &test_nc_ccl_nl_pk_free);
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_add ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", TestNcCCLPk, &data[0],
-              &test_nc_ccl_pk_new,
-              &test_nc_ccl_pk_bbks_invalid_st,
-              &test_nc_ccl_pk_free);
+  g_test_add ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", TestNcCCLNLPk, &data[0],
+              &test_nc_ccl_nl_pk_new,
+              &test_nc_ccl_nl_pk_bbks_invalid_st,
+              &test_nc_ccl_nl_pk_free);
 #endif
   g_test_run ();
 }
@@ -206,7 +204,8 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
   ccl_cosmology *cosmo;
 
   ccl_params_data_init (data);
-  config.transfer_function_method = pk_t;
+  config.transfer_function_method     = pk_t;
+  config.matter_power_spectrum_method = ccl_halofit;
 
   params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, -1, NULL, NULL, &status);
   cosmo = ccl_cosmology_create (params, config);
@@ -222,86 +221,98 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
 }
 
 void 
-test_nc_ccl_pk_create_BBKS (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_create_BBKS (TestNcCCLNLPk *test, gconstpointer pdata)
 {
   NcTransferFunc *tf = nc_transfer_func_bbks_new ();
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf)); 
 
-  test->Pk = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-  test->gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (test->Pk));
+  test->gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (ps_ml));
 
   nc_transfer_func_bbks_set_type (NC_TRANSFER_FUNC_BBKS (tf), NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS);
 
-  ncm_powspec_require_zi (NCM_POWSPEC (test->Pk), 0.0);
-  ncm_powspec_require_zf (NCM_POWSPEC (test->Pk), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (test->Pk), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (test->Pk), 1.0e+1);
+  ncm_powspec_require_zi (NCM_POWSPEC (ps_ml), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (ps_ml), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+3);
 
-  ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
+  ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
 
   {
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", 
                                  ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
 
-  ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
+  test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-5));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
+  ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
+
+  nc_powspec_ml_free (ps_ml);
   nc_transfer_func_free (tf);
 }
 
 void 
-test_nc_ccl_pk_create_EH (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_create_EH (TestNcCCLNLPk *test, gconstpointer pdata)
 {
   NcTransferFunc *tf = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf)); 
 
   nc_transfer_func_eh_set_CCL_comp (NC_TRANSFER_FUNC_EH (tf), TRUE);
   
-  test->Pk = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-  test->gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (test->Pk));
+  test->gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (ps_ml));
 
-  ncm_powspec_require_zi (NCM_POWSPEC (test->Pk), 0.0);
-  ncm_powspec_require_zf (NCM_POWSPEC (test->Pk), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (test->Pk), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (test->Pk), 1.0e+1);
+  ncm_powspec_require_zi (NCM_POWSPEC (ps_ml), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (ps_ml), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (ps_ml), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (ps_ml), 1.0e+3);
 
-  ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
+  ncm_powspec_prepare (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo));
   
   {
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (ps_ml), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
   
-  ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
+  test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-5));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
+  ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
   
   nc_transfer_func_free (tf);
 }
 
 void 
-test_nc_ccl_pk_create_CBE (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_create_CBE (TestNcCCLNLPk *test, gconstpointer pdata)
 {
-  NcCBE *cbe;
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
+  NcCBE *cbe         = nc_powspec_ml_cbe_peek_cbe (NC_POWSPEC_ML_CBE (ps_ml));
 
-  test->Pk = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
-  cbe      = nc_powspec_ml_cbe_peek_cbe (NC_POWSPEC_ML_CBE (test->Pk));
-
-	nc_powspec_ml_cbe_set_intern_k_min (NC_POWSPEC_ML_CBE (test->Pk), test->ccl_cosmo->spline_params.K_MIN);
-	nc_powspec_ml_cbe_set_intern_k_max (NC_POWSPEC_ML_CBE (test->Pk), test->ccl_cosmo->spline_params.K_MAX_SPLINE);
+	nc_powspec_ml_cbe_set_intern_k_min (NC_POWSPEC_ML_CBE (ps_ml), test->ccl_cosmo->spline_params.K_MIN);
+	nc_powspec_ml_cbe_set_intern_k_max (NC_POWSPEC_ML_CBE (ps_ml), test->ccl_cosmo->spline_params.K_MAX_SPLINE);
   nc_cbe_use_ppf (cbe, TRUE);
   /*g_object_set (cbe, "verbosity", 1, NULL);*/
 
-  ncm_powspec_require_zi (NCM_POWSPEC (test->Pk), 0.0);
-  ncm_powspec_require_zf (NCM_POWSPEC (test->Pk), 6.0);
-  ncm_powspec_require_kmin (NCM_POWSPEC (test->Pk), 1.0e-3);
-  ncm_powspec_require_kmax (NCM_POWSPEC (test->Pk), 1.0e+1);
+  test->NLPk = NC_POWSPEC_MNL (nc_powspec_mnl_halofit_new (ps_ml, 6.0, 1.0e-9));
+  ncm_powspec_require_zi (NCM_POWSPEC (test->NLPk), 0.0);
+  ncm_powspec_require_zf (NCM_POWSPEC (test->NLPk), 6.0);
+  ncm_powspec_require_kmin (NCM_POWSPEC (test->NLPk), 1.0e-6);
+  ncm_powspec_require_kmax (NCM_POWSPEC (test->NLPk), 1.0e+3);
+  ncm_powspec_prepare (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo));
 
-  ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
+  nc_powspec_ml_free (ps_ml);
 }
 
 void
-test_nc_ccl_pk_new (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_new (TestNcCCLNLPk *test, gconstpointer pdata)
 {
-  const TestNcCCLPkData *data = pdata;
+  const TestNcCCLNLPkData *data = pdata;
 
   test->ccl_cosmo = test_nc_create_ccl_cosmo (data->model.model_i, data->pk.pk_t);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
@@ -312,22 +323,22 @@ test_nc_ccl_pk_new (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_free (TestNcCCLNLPk *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
-  NCM_TEST_FREE (nc_powspec_ml_free, test->Pk);
+  NCM_TEST_FREE (nc_powspec_mnl_free, test->NLPk);
 
   ccl_parameters_free (&test->ccl_cosmo->params);
   ccl_cosmology_free (test->ccl_cosmo);  
 }
 
 void
-test_nc_ccl_pk_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_cmp_nl_pk (TestNcCCLNLPk *test, gconstpointer pdata)
 {
-  const gint ntests       = 200;
-  const gdouble z_max     = 6.0;
-  const gdouble tol       = 5.0e-5;
-  const gdouble tol_Pk    = 6.0e-5;
+  const gint ntests      = 200;
+  const gdouble z_max    = 2.0;
+  const gdouble tol      = 5.0e-5;
+  const gdouble tol_NLPk = 5.0e-4;
   gint status = 0;
   gint i;
 
@@ -415,19 +426,19 @@ test_nc_ccl_pk_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
     {    
       for (j = 0; j < ntests; j++)
       {
-        const gdouble k      = exp (log (1.0e-3) + log (1.0e4) * j / (ntests - 1.0));
-        const gdouble Pkz    = ncm_powspec_eval (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), z, k);
-        const gdouble cclPkz = ccl_linear_matter_power (test->ccl_cosmo, k, 1.0 / (1.0 + z), &status);
+        const gdouble k        = exp (log (1.0e-3) + log (1.0e4) * j / (ntests - 1.0));
+        const gdouble NLPkz    = ncm_powspec_eval (NCM_POWSPEC (test->NLPk), NCM_MODEL (test->cosmo), z, k);
+        const gdouble cclNLPkz = ccl_nonlin_matter_power (test->ccl_cosmo, k, 1.0 / (1.0 + z), &status);
 
-        ncm_assert_cmpdouble_e (Pkz, ==, cclPkz, tol_Pk, 0.0);
-        /*printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, Pkz, cclPkz, Pkz / cclPkz, Pkz / cclPkz - 1.0);*/
+        ncm_assert_cmpdouble_e (NLPkz, ==, cclNLPkz, tol_NLPk, 0.0);
+        /*printf ("% 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g %17.10e\n", k, z, NLPkz, cclNLPkz, NLPkz / cclNLPkz, fabs (NLPkz / cclNLPkz - 1.0));*/
       }
     }
   }
 }
 
 void
-test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_bbks_traps (TestNcCCLNLPk *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", 0, 0);
@@ -436,7 +447,7 @@ test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_pk_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_nl_pk_bbks_invalid_st (TestNcCCLNLPk *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
 }

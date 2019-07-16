@@ -66,6 +66,7 @@
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_vector_complex.h>
 #include <gsl/gsl_cdf.h>
+#include <math.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */

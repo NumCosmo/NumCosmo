@@ -1005,7 +1005,7 @@ ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, Nc
                ncm_matrix_data (cm), ncm_matrix_tda (cm));
 }
 
-CBLAS_ORDER
+CBLAS_TRANSPOSE
 _ncm_matrix_check_trans (const gchar *func_name, gchar T)
 {
   switch (T)

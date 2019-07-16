@@ -49,6 +49,13 @@
 #include "math/ncm_powspec.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/integral.h"
+#include "math/ncm_memory_pool.h"
+#include "math/ncm_c.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_sf_bessel.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -490,3 +497,125 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * contained in @k and puts the result in @Pk.
  * 
  */
+
+typedef struct _NcmPowspecInt
+{
+  const gdouble z;
+  const gdouble R;
+  NcmPowspec *ps;
+  NcmModel *model;
+} NcmPowspecInt;
+
+static gdouble
+_ncm_powspec_var_tophat_R_integ (gdouble lnk, gpointer user_data)
+{
+  NcmPowspecInt *data = (NcmPowspecInt *) user_data;
+  const gdouble k  = exp (lnk);
+  const gdouble x  = k * data->R;
+  const gdouble Pk = ncm_powspec_eval (data->ps, data->model, data->z, k);
+  const gdouble W  = 3.0 * gsl_sf_bessel_j1 (x) / x;
+  const gdouble W2 = W * W;
+  
+  return gsl_pow_3 (k) * Pk * W2;
+}
+
+/**
+ * ncm_powspec_var_tophat_R:
+ * @ps: a #NcmPowspec
+ * @model: a #NcmModel
+ * @reltol: relative tolerance for integration
+ * @z: the value of $z$
+ * @R: the value of $R$
+ * 
+ * Computes $\mathrm{Var}^\mathrm{tophat}_R = \int\dots$. FIXME
+ * 
+ */
+gdouble 
+ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
+{
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcmPowspecInt data            = {z, R, ps, model};
+  const gdouble kmin            = ncm_powspec_get_kmin (ps);
+  const gdouble kmax            = ncm_powspec_get_kmax (ps);  
+  const gdouble lnkmin          = log (kmin);
+  const gdouble lnkmax          = log (kmax);
+  const gdouble one_2pi2        = 1.0 / ncm_c_2_pi_2 ();
+  gdouble error, sigma2_2pi2;
+  gsl_function F;
+  
+  ncm_powspec_prepare_if_needed (ps, model);
+
+  F.function = &_ncm_powspec_var_tophat_R_integ;
+  F.params   = &data;
+  
+  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &sigma2_2pi2, &error);
+
+  ncm_memory_pool_return (w);  
+
+  return sigma2_2pi2 * one_2pi2;
+}
+
+/**
+ * ncm_powspec_sigma_tophat_R:
+ * @ps: a #NcmPowspec
+ * @model: a #NcmModel
+ * @reltol: relative tolerance for integration
+ * @z: the value of $z$
+ * @R: the value of $R$
+ * 
+ * Computes $\sigma^\mathrm{tophat}_R = \sqrt{\int\dots}$. FIXME
+ * 
+ */
+gdouble 
+ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
+{
+  return sqrt (ncm_powspec_var_tophat_R (ps, model, reltol, z, R));
+}
+
+static gdouble
+_ncm_powspec_var_corr3D_integ (gdouble lnk, gpointer user_data)
+{
+  NcmPowspecInt *data = (NcmPowspecInt *) user_data;
+  const gdouble k  = exp (lnk);
+  const gdouble x  = k * data->R;
+  const gdouble Pk = ncm_powspec_eval (data->ps, data->model, data->z, k);
+  const gdouble W  = gsl_sf_bessel_j0 (x);
+
+  return gsl_pow_3 (k) * Pk * W;
+}
+
+/**
+ * ncm_powspec_corr3d:
+ * @ps: a #NcmPowspec
+ * @model: a #NcmModel
+ * @reltol: relative tolerance for integration
+ * @z: the value of $z$
+ * @r: the value of $r$
+ * 
+ * Computes $\xi(r) = \int\dots$. FIXME
+ * 
+ */
+gdouble 
+ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)
+{
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcmPowspecInt data            = {z, r, ps, model};
+  const gdouble kmin            = ncm_powspec_get_kmin (ps);
+  const gdouble kmax            = ncm_powspec_get_kmax (ps);  
+  const gdouble lnkmin          = log (kmin);
+  const gdouble lnkmax          = log (kmax);
+  const gdouble one_2pi2        = 1.0 / ncm_c_2_pi_2 ();
+  gdouble error, xi_2pi2;
+  gsl_function F;
+  
+  ncm_powspec_prepare_if_needed (ps, model);
+
+  F.function = &_ncm_powspec_var_corr3D_integ;
+  F.params   = &data;
+  
+  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &xi_2pi2, &error);
+
+  ncm_memory_pool_return (w);  
+
+  return xi_2pi2 * one_2pi2;
+}

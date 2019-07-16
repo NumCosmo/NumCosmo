@@ -52,6 +52,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -261,9 +262,9 @@ void clencurt_gen (int M);
   void MKL_Set_Num_Threads (gint);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
 
-#ifdef HAVE_OPENMP
+#ifdef _OPENMP
 #include <omp.h>
-#endif /* HAVE_OPENMP */
+#endif /* _OPENMP */
 
 void _nc_hicosmo_register_functions (void);
 void _nc_hicosmo_de_register_functions (void);
@@ -419,9 +420,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   MKL_Set_Num_Threads (1);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
 
-#ifdef HAVE_OPENMP
+#ifdef _OPENMP
   omp_set_num_threads (1);
-#endif /* HAVE_OPENMP */
+#endif /* _OPENMP */
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -473,6 +474,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);

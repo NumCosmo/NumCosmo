@@ -57,6 +57,7 @@
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFftlogSBesselJPrivate
@@ -178,11 +179,11 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   {
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + 0.5;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + 0.5;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
@@ -199,12 +200,12 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     const gdouble q = fftlog_jl->priv->q;
     for (i = 0; i < Nf; i++)
     {
-      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a       = twopi_Lt * phys_i * I;
-      const complex double A       = a + q;
-      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-      const complex xdw            = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
-      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a        = twopi_Lt * phys_i * I;
+      const complex double A        = a + q;
+      const complex double xup      = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex double xdw      = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
+      const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
 
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
@@ -321,7 +322,7 @@ ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
  * 
  * Sets the value of $\ln(r_0)$ which gives the best results for
  * the transformation based on the current value of $\ln(k_0)$, 
- * this is based in the rule of thumb $\mathrm{max}_x^*(j_l)$ 
+ * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$ 
  * where $ x^* \approx l + 1$.
  * 
  */
@@ -347,8 +348,8 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
  * 
  * Sets the value of $\ln(k_0)$ which gives the best results for
  * the transformation based on the current value of $\ln(r_0)$, 
- * this is based in the rule of thumb $\mathrm{max}_x^*(j_l)$ 
- * where $ x^* \approx l+1$.
+ * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$ 
+ * where $ x^* \approx l + 1$.
  * 
  */
 void 

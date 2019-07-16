@@ -26,7 +26,7 @@ dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [14])
-m4_define([numcosmo_micro_version], [1])
+m4_define([numcosmo_micro_version], [2])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -331,6 +331,7 @@ dnl ***************************************************************************
 
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
+  
   ac_[]_AC_LANG_ABBREV[]_werror_flag=; dnl Pop AC_LANG_WERROR
 
 AC_LANG_POP([Fortran])
@@ -516,6 +517,12 @@ fi
 
 AC_OPENMP()
 AC_SUBST(OPENMP_CFLAGS)
+
+AM_CONDITIONAL(COMPILE_WITH_MP, [test "x$ac_cv_prog_c_openmp" != "xunsupported"])
+
+if test "x$ac_cv_prog_c_openmp" = "xunsupported"; then
+  OPENMP_FCFLAGS=""
+fi
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
@@ -1143,6 +1150,7 @@ docs/manual_head.xml
 examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
+notebooks/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])
