@@ -93,6 +93,11 @@ G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel 
 G_INLINE_FUNC gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 G_INLINE_FUNC void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
 
+gdouble ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
+gdouble ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
+
+gdouble ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r);
+
 G_END_DECLS
 
 #endif /* _NCM_POWSPEC_H_ */

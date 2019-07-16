@@ -2,7 +2,7 @@
 
 @CODE_COVERAGE_RULES@
 
-SUBDIRS = numcosmo tools data docs tests examples
+SUBDIRS = numcosmo tools data docs tests examples notebooks
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = numcosmo.pc

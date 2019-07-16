@@ -44,13 +44,6 @@
 #include "build_cfg.h"
 
 #include "nc_powspec_ml.h"
-#include "math/ncm_c.h"
-#include "math/integral.h"
-#include "math/ncm_memory_pool.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_sf_bessel.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC);
 
@@ -134,56 +127,3 @@ nc_powspec_ml_clear (NcPowspecML **ps_ml)
   g_clear_object (ps_ml);
 }
 
-typedef struct _NcPowspecMLSigmaInt
-{
-  const gdouble z;
-  const gdouble R;
-  NcPowspecML *ps_ml;
-  NcmModel *model;
-} NcPowspecMLSigmaInt;
-
-static gdouble
-_nc_powspec_ml_sigma_R_integ (gdouble k, gpointer user_data)
-{
-  NcPowspecMLSigmaInt *data = (NcPowspecMLSigmaInt *) user_data;
-  const gdouble x  = k * data->R;
-  const gdouble Pk = ncm_powspec_eval (NCM_POWSPEC (data->ps_ml), data->model, data->z, k);
-  const gdouble W  = 3.0 * gsl_sf_bessel_j1 (x) / x;
-  const gdouble W2 = W * W;
-  
-  return k * k * Pk * W2;
-}
-
-/**
- * nc_powspec_ml_sigma_R:
- * @ps_ml: a #NcPowspecML
- * @model: a #NcmModel
- * @reltol: relative tolerance for integration
- * @z: the value of $z$
- * @R: the value of $R$
- * 
- * Computes $\sigma_R = \sqrt{}$. FIXME
- * 
- */
-gdouble 
-nc_powspec_ml_sigma_R (NcPowspecML *ps_ml, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
-{
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  NcPowspecMLSigmaInt data      = {z, R, ps_ml, model};
-  const gdouble kmin            = ncm_powspec_get_kmin (NCM_POWSPEC (ps_ml));
-  const gdouble kmax            = ncm_powspec_get_kmax (NCM_POWSPEC (ps_ml));
-  const gdouble one_2pi2        = 1.0 / ncm_c_2_pi_2 ();
-  gdouble error, sigma2_2pi2;
-  gsl_function F;
-  
-  ncm_powspec_prepare_if_needed (NCM_POWSPEC (ps_ml), model);
-
-  F.function = &_nc_powspec_ml_sigma_R_integ;
-  F.params   = &data;
-  
-  gsl_integration_qag (&F, kmin, kmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &sigma2_2pi2, &error);
-
-  ncm_memory_pool_return (w);  
-
-  return sqrt (sigma2_2pi2 * one_2pi2);
-}
