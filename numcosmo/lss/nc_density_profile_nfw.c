@@ -224,7 +224,7 @@ _nc_density_profile_nfw_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, 
   const gdouble rho_mz = nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   const gdouble v = 4.0 * M_PI / 3.0;
   gdouble rs_mnfw = cbrt (M / (rho_mz * v * Delta ));
-  //printf("Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), Omega_m0, M);
+  //printf("z = % 22.15g Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", z, Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), nc_hicosmo_E2Omega_m (cosmo, z), M);
   //printf ("M = %.5g\n", 969.6 * Omega_m0 * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ());
   return rs_mnfw;
 }
@@ -275,10 +275,12 @@ _rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_density_profile_nfw_r_delta (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, gdouble z)
 {
-  gdouble rho_c = _rho_crit_solar_mass_Mpc3 (cosmo, z);
-  gdouble rD3 = 3.0 * M_DELTA / (4.0 * M_PI * dpnfw->Delta * rho_c);
-  gdouble r_Delta = cbrt (rD3);
+  const gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
+  const gdouble rD3     = 3.0 * M_DELTA / (4.0 * M_PI * dpnfw->Delta * rho_c);
+  const gdouble r_Delta = cbrt (rD3);
 
+	printf ("# M_DELTA % 22.15g rho_c % 22.15g rD3 % 22.15g Delta % 22.15g r_Delta % 22.15g ", M_DELTA, rho_c, rD3, dpnfw->Delta, r_Delta);
+	
   return r_Delta; 
 }
 
@@ -288,6 +290,7 @@ _nc_density_profile_nfw_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gd
 	NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
   gdouble r_Delta = _nc_density_profile_nfw_r_delta (dpnfw, cosmo, z);
 
+	printf ("C_DELTA % 22.15g rs % 22.15g\n", C_DELTA, r_Delta / C_DELTA);
 	return r_Delta / C_DELTA;
 }
 
@@ -298,10 +301,44 @@ _nc_density_profile_nfw_deltac (NcDensityProfileNFW *dpnfw)
   gdouble c2    = C_DELTA * C_DELTA;
   gdouble c3    = c2 * C_DELTA;
 
-  gdouble delta_c = (dpnfw->Delta / 3.0) * c3 / (log(onepc) - C_DELTA /onepc); 
+  gdouble delta_c = (dpnfw->Delta / 3.0) * c3 / (log (onepc) - C_DELTA / onepc); 
 
   return delta_c;
 }
+
+////////////////////////////////// Cluster toolkit ///////////////////////////////
+#define rhomconst 2.77533742639e+11
+
+int calc_xi_nfw(double*r, int Nr, double Mass, double conc, int delta, double om, double*xi_nfw){
+  int i;
+  double rhom = om * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //om*rhomconst;//SM h^2/Mpc^3
+  //double rho0_rhom = delta/(3.*(log(1.+conc)-conc/(1.+conc)));
+  double rdelta = pow(Mass/(1.33333333333*M_PI*rhom*delta), 0.33333333333);
+  double rscale = rdelta/conc;
+  double fc = log(1.+conc)-conc/(1.+conc);
+  double r_rs;
+  for(i = 0; i < Nr; i++){
+    r_rs = r[i]/rscale;
+    //xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.;
+    xi_nfw[i] = Mass/(4.*M_PI*rscale*rscale*rscale*fc)/(r_rs*(1+r_rs)*(1+r_rs))/rhom - 1.0;
+
+  }
+	printf ("factor dele % 22.15g\n", Mass/(4.*M_PI*rscale*rscale*rscale*fc)/(r_rs*(1+r_rs)*(1+r_rs)));
+	//printf ("rscale dele % 22.15g | % 22.15g % 22.15g % 22.15g %d % 22.15g\n", rscale, rdelta, conc, rhom, delta, Mass);
+  return 0;
+}
+
+int calc_rho_nfw(double*r, int Nr, double Mass, double conc, int delta, double Omega_m, double*rho_nfw){
+  int i;
+  double rhom = Omega_m * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //Omega_m*rhomconst;//Msun h^2/Mpc^3
+  calc_xi_nfw(r, Nr, Mass, conc, delta, Omega_m, rho_nfw); //rho_nfw actually holds xi_nfw here
+  for(i = 0; i < Nr; i++){
+    rho_nfw[i] = rhom*(1+rho_nfw[i]);
+  }
+  return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 static gdouble
 _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
@@ -315,6 +352,21 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
   gdouble onepx   = 1.0 + x;
   gdouble onepx2  = onepx * onepx; 
 
+	{
+		const gdouble Omega_m0 = 1.0;//nc_hicosmo_Omega_m0 (cosmo);
+		gdouble ret = 0.0;
+		gdouble rrr = r;
+
+		calc_rho_nfw (&rrr, 1, M_DELTA, C_DELTA, dpnfw->Delta, Omega_m0, &ret);
+		//printf ("rho_c % 22.15g rho % 22.15g\n", rho_c / nc_hicosmo_h2 (cosmo), ncm_c_crit_mass_density_h2_solar_mass_Mpc3());
+		printf ("z = % 22.15g rscale meu % 22.15g\n", z, rs);
+		{
+			const gdouble ret_nc = delta_c * rho_c/(x * onepx2);
+			printf ("factor NC % 22.15g\n", delta_c * rho_c / (x * onepx2));
+	    printf ("MEU % 22.15g DELE % 22.15g diff %22.15g\n", ret_nc, ret, ret / ret_nc - 1.0);	
+		}
+	}
+	
 	return delta_c * rho_c/(x * onepx2);
 }
 
