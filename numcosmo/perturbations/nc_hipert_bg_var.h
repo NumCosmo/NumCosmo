@@ -30,13 +30,10 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_scalefactor.h>
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <nvector/nvector_serial.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -91,8 +88,8 @@ struct _NcHIPertBGVar
 
 typedef struct _NcHIPertBGVarYDY
 {
-  N_Vector y;
-  N_Vector dy;
+  NcmVector *y;
+  NcmVector *dy;
   guint start_index;
   gint *perm;
   gint *perm_inv;
@@ -220,19 +217,19 @@ nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy)
 G_INLINE_FUNC 
 gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
 {
-  return NV_Ith_S (ydy->y, ydy->perm_inv[ydy->start_index + i]);
+  return ncm_vector_fast_get (ydy->y, ydy->perm_inv[ydy->start_index + i]);
 }
 
 G_INLINE_FUNC void 
 nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i)
 {
-  NV_Ith_S (ydy->dy, ydy->perm_inv[ydy->start_index + i]) = dy_i;
+  ncm_vector_fast_set (ydy->dy, ydy->perm_inv[ydy->start_index + i], dy_i);
 }
 
 G_INLINE_FUNC gdouble 
 nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i)
 {
-  return NV_Ith_S (ydy->dy, ydy->perm_inv[ydy->start_index + i]);
+  return ncm_vector_fast_get (ydy->dy, ydy->perm_inv[ydy->start_index + i]);
 }
 
 G_INLINE_FUNC void 

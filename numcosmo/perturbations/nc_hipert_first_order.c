@@ -1082,8 +1082,12 @@ _nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data
   guint i;
 
   nc_hicosmo_get_bg_var (cosmo, t, bg_var);
-  ydy->y  = y;
-  ydy->dy = ydot;
+
+  ncm_vector_clear (&ydy->y);
+  ncm_vector_clear (&ydy->dy);
+
+  ydy->y  = ncm_vector_new_data_static (N_VGetArrayPointer (y),    self->cur_sys_size, 1);
+  ydy->dy = ncm_vector_new_data_static (N_VGetArrayPointer (ydot), self->cur_sys_size, 1);
   
   nc_hipert_grav_T_scalar_set_zero (self->T_scalar_tot);
   
@@ -1185,8 +1189,8 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
         flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
         NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
         
-        flag = CVodeSetJacFn (self->cvode, NULL /*J*/);
-        NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
+        //flag = CVodeSetJacFn (self->cvode, NULL /*J*/);
+        //NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
         flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
@@ -1223,8 +1227,8 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
         flag = ARKStepSetLinear (self->arkode, 1);
         NCM_CVODE_CHECK (&flag, "ARKStepSetLinear", 1, );
 
-        flag = ARKStepSetJacFn (self->cvode, NULL /*J*/);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetJacFn", 1, );
+        //flag = ARKStepSetJacFn (self->cvode, NULL /*J*/);
+        //NCM_CVODE_CHECK (&flag, "ARKStepSetJacFn", 1, );
 
         //flag = ARKStepSetOrder (self->arkode, 7);
         //NCM_CVODE_CHECK (&flag, "ARKStepSetOrder", 1, );
@@ -1266,12 +1270,10 @@ nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo)
 {
   NcHIPertFirstOrderPrivate * const self = fo->priv;
   gdouble t0;
-  nc_hipert_bg_var_prepare_if_needed (self->bg_var, cosmo);
 
+  nc_hipert_bg_var_prepare_if_needed (self->bg_var, cosmo);
 
   t0 = _nc_hipert_first_order_set_init_cond (fo, 1.0);
   _nc_hipert_first_order_prepare_integrator (fo, t0);
-
-
   
 }
