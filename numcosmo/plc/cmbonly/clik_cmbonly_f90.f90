@@ -20,7 +20,8 @@ END SUBROUTINE 	plik_cmbonly_EXTRA_only_ONE
 
 SUBROUTINE plik_cmbonly_extra_FREE()
 	USE plik_cmbonly_EXTRA
-	BOK =0
+        !BOK =0
+        ! forbid double init. Need more work in the fortran main code to allow that.
 	deallocate(cltt)
 	deallocate(clte)
 	deallocate(clee)
@@ -67,18 +68,19 @@ END SUBROUTINE 	plik_cmbonly_extra_LKL
 
 
 
-SUBROUTINE plik_cmbonly_extra_INIT(datadir,l_datadir,iuse_tt, iuse_ee, iuse_te)
-	use Plik_CMBonly
+SUBROUTINE plik_cmbonly_extra_INIT(datadir,l_datadir,iuse_tt, iuse_ee, iuse_te,rbin_min_tt,rbin_max_tt,rbin_min_te,rbin_max_te,rbin_min_ee,rbin_max_ee,vvv)
+  use Plik_CMBonly
 	use plik_cmbonly_extra
-
-	INTEGER,INTENT(IN)::l_datadir
+	integer,INTENT(IN) ::rbin_min_tt,rbin_max_tt,rbin_min_te,rbin_max_te,rbin_min_ee,rbin_max_ee,vvv
+	INTEGER,INTENT(IN)::l_datadir,iuse_tt, iuse_ee, iuse_te
 	character(len=l_datadir)::datadir
 	
 	data_dir = TRIM(datadir)
+
 	!write(*,*),data_dir
 	clik_lmin = plmin
 	clik_lmax = plmax
-	tt_lmax = plmax !dans ton cul
+	tt_lmax = plmax !dtc
 
 	allocate( cltt(2:clik_lmax) )
 	allocate( clee(2:clik_lmax) )
@@ -89,7 +91,8 @@ SUBROUTINE plik_cmbonly_extra_INIT(datadir,l_datadir,iuse_tt, iuse_ee, iuse_te)
 	use_te = iuse_te.NE.0
 	use_ee = iuse_ee.NE.0
 	
-	call like_init_cmbonly
+	version = vvv
+	call like_init_cmbonly(rbin_min_tt,rbin_max_tt,rbin_min_te,rbin_max_te,rbin_min_ee,rbin_max_ee)
 	
 	
 END SUBROUTINE 	plik_cmbonly_extra_INIT

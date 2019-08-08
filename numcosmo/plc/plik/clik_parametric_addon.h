@@ -16,7 +16,7 @@ SmicaComp * clik_smica_comp_##NAME##_init(cldf * df,int nb, int mT,int mP, int n
   char **defkeys,**defvalues,**varkeys;                                                                  \
   double *template;                                                                                      \
   int dz,ndet;                                                                                           \
-  int m;                                                                                                 \
+  int m,hk;                                                                                              \
                                                                                                          \
   m = mtot(mT,mP,has_cl);                                                                                \
                                                                                                          \
@@ -27,9 +27,14 @@ SmicaComp * clik_smica_comp_##NAME##_init(cldf * df,int nb, int mT,int mP, int n
   ndet = base_parametric_cldf_init(df,m, &detlist,&ndef, &defkeys, &defvalues, &nvar, &varkeys, err);    \
   forwardError(*err,__LINE__,NULL);                                                                      \
                                                                                                          \
-  dz = -1;                                                                                               \
-  template = cldf_readfloatarray(df,"template",&dz, err);                                                \
-  forwardError(*err,__LINE__,NULL);                                                                          \
+  template = NULL;                                                                                       \
+  hk = cldf_haskey(df,"template",err);                                                                   \
+  forwardError(*err,__LINE__,NULL);                                                                      \
+  if (hk==1) {                                                                                           \
+    dz = -1;                                                                                             \
+    template = cldf_readfloatarray(df,"template",&dz, err);                                              \
+    forwardError(*err,__LINE__,NULL);                                                                    \
+  }                                                                                                      \
   p_model = INIT_FUNC(ndet, detlist, ndef, defkeys, defvalues, nvar, varkeys, lmin, lmax,template, err); \
   forwardError(*err,__LINE__,NULL);                                                                      \
                                                                                                          \
@@ -149,7 +154,7 @@ SmicaComp * clik_smica_comp_##NAME##_init(cldf * df,int nb, int mT,int mP, int n
   char **defkeys,**defvalues,**varkeys;                                                                  \
   double *template;                                                                                      \
   int dz,ndet,ndet_T,ndet_P;                                                                             \
-  int m;                                                                                                 \
+  int m,hk;                                                                                              \
   int *hasTEB;                                                                                           \
                                                                                                          \
   m = mtot(mT,mP,has_cl);                                                                                \
@@ -161,9 +166,14 @@ SmicaComp * clik_smica_comp_##NAME##_init(cldf * df,int nb, int mT,int mP, int n
   ndet = base_parametric_cldf_init(df,m, &detlist,&ndef, &defkeys, &defvalues, &nvar, &varkeys, err);    \
   forwardError(*err,__LINE__,NULL);                                                                      \
                                                                                                          \
-  dz = -1;                                                                                               \
-  template = cldf_readfloatarray(df,"template",&dz, err);                                                \
-  forwardError(*err,__LINE__,NULL);                                                                          \
+  template = NULL;                                                                                       \
+  hk = cldf_haskey(df,"template",err);                                                                   \
+  forwardError(*err,__LINE__,NULL);                                                                      \
+  if (hk==1) {                                                                                           \
+    dz = -1;                                                                                             \
+    template = cldf_readfloatarray(df,"template",&dz, err);                                              \
+    forwardError(*err,__LINE__,NULL);                                                                    \
+  }                                                                                                      \
   p_model = INIT_FUNC(mT, mP, has_cl, detlist, ndef, defkeys,defvalues, nvar, varkeys, lmin, lmax,template, err); \
   forwardError(*err,__LINE__,NULL);                                                                      \
                                                                                                          \

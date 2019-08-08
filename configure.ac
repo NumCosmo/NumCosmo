@@ -1057,11 +1057,11 @@ dnl ***************************************************************************
 dnl if test "x$lapack_mkl" = "xyes"; then
 dnl   PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
 dnl elif test "x$have_clapack" != "xyes"; then
-  PLC_DEFINES="$PLC_DEFINES -DLAPACK_CLIK"
+  PLC_DEFINES="$PLC_DEFINES -DHAS_LAPACK -DLAPACK_CLIK"
 dnl fi
 
 PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
-PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"6dc2a8cf3965\"'"
+PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"0031e3604f0c\"'"
 
 if test "x$has_RTLD_DEFAULT" = "xyes"; then
   PLC_DEFINES="$PLC_DEFINES -DHAS_RTLD_DEFAULT"

@@ -97,6 +97,9 @@ void cnoise_compute(parametric *egl, double *Rq, error **err) {
   int rm1,rm2;
   int f1,f2;
   int abso;
+  int *m1list,*m2list,*offlist;
+  double*Alist;
+  int listsz;
 
   dreq[0] = 100;
   dreq[1] = 143;
@@ -112,29 +115,31 @@ void cnoise_compute(parametric *egl, double *Rq, error **err) {
 
   template = egl->payload;
   l_pivot = parametric_get_value(egl,"cnoise_l_pivot",err);
-  forwardError(*err,__LINE__,);;
+  forwardError(*err,__LINE__,);
   abso = parametric_get_value(egl,"cnoise_abs",err);
-  forwardError(*err,__LINE__,);;
+  forwardError(*err,__LINE__,);
 
   if (abso!=0) {
     abso = 1;
   }
 
+  #pragma omp parallel
+  #pragma omp for private(m1,m2,f1,f2,name,v,rm1,rm2) 
   for(m1=0;m1<4;m1++) {
     for(m2=m1;m2<4;m2++) {
       for(f1=0;f1<3;f1++) {
         for(f2=f1;f2<3;f2++) {
           sprintf(name,"A_cnoise_%d_%d_%c%c",(int)dreq[m1],(int)dreq[m2],teb[f1],teb[f2]);
           v = parametric_get_value(egl,name,err);
-          forwardError(*err,__LINE__,);
+          //forwardError(*err,__LINE__,);
           rm1 = m1 + f1*4;
           rm2 = m2 + f2*4;
-          A[rm1*12+rm2] = v/(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]/l_pivot/(l_pivot+1)*2*M_PI);  
+          A[rm1*12+rm2] = v/(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]*l_pivot*(l_pivot+1)/2./M_PI);  
           A[rm2*12+rm1] = A[rm1*12+rm2];
           //_DEBUGHERE_("%s %g %g %d %d %g",name,v,(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]/l_pivot/(l_pivot+1)*2*M_PI),rm1,rm2,A[rm1*12+rm2]);
           rm1 = m1 + f2*4;
           rm2 = m2 + f1*4;
-          A[rm1*12+rm2] = v/(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]/l_pivot/(l_pivot+1)*2*M_PI);  
+          A[rm1*12+rm2] = v/(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]*l_pivot*(l_pivot+1)/2./M_PI);  
           A[rm2*12+rm1] = A[rm1*12+rm2];
           //_DEBUGHERE_("%s %g %g %d %d %g",name,v,(1-abso+abso*template[((int) l_pivot)*12*12+rm1*12+rm2]/l_pivot/(l_pivot+1)*2*M_PI),rm1,rm2,A[rm1*12+rm2]);
                 
@@ -142,19 +147,60 @@ void cnoise_compute(parametric *egl, double *Rq, error **err) {
       }
     }
   }  
-  
-  for(ell=egl->lmin;ell<=egl->lmax;ell++) {
-    for(m1=0;m1<egl->nfreq;m1++) {
-      for(m2=m1;m2<egl->nfreq;m2++) {
-        if(ell==egl->lmin) {
-          //_DEBUGHERE_("%d %d %d %g",ell,mv[m1],mv[m2],template[ell*12*12+mv[m1]*12+mv[m2]]);  
-        }
-        
-        Rq[IDX_R(egl,ell,m1,m2)] = template[ell*12*12+mv[m1]*12+mv[m2]] * A[mv[m1]*12+mv[m2]];
-        Rq[IDX_R(egl,ell,m2,m1)] = Rq[IDX_R(egl,ell,m1,m2)];
-      }  
+  m1list = malloc_err(sizeof(int)*egl->nfreq*egl->nfreq,err);
+  forwardError(*err,__LINE__,);
+  m2list = malloc_err(sizeof(int)*egl->nfreq*egl->nfreq,err);
+  forwardError(*err,__LINE__,);
+  offlist = malloc_err(sizeof(int)*egl->nfreq*egl->nfreq,err);
+  forwardError(*err,__LINE__,);
+  Alist = malloc_err(sizeof(double)*egl->nfreq*egl->nfreq,err);
+  forwardError(*err,__LINE__,);
+  listsz=0;
+  double AA;
+  for(m1=0;m1<egl->nfreq;m1++) {
+    for(m2=m1;m2<egl->nfreq;m2++) {
+      AA = A[mv[m1]*12+mv[m2]];
+      if (AA!=0) {
+        Alist[listsz] = AA;
+        m1list[listsz] = m1;
+        m2list[listsz] = m2;
+        offlist[listsz] = mv[m1]*12+mv[m2];
+        listsz++;
+      }
     }
+  }         
+    
+  int ilist,off;
+
+  #pragma omp for private(ell,ilist,m1,m2,AA,off) 
+  for(ell=egl->lmin;ell<=egl->lmax;ell++) {
+    for(ilist=0;ilist<listsz;ilist++) {      
+      m1 = m1list[ilist];
+      m2 = m2list[ilist];
+      AA = Alist[ilist];
+      off = offlist[ilist];
+      Rq[IDX_R(egl,ell,m1,m2)] = template[ell*12*12+off] * AA;
+        //Rq[IDX_R(egl,ell,m2,m1)] = Rq[IDX_R(egl,ell,m1,m2)];
+    }  
   }
+  free(m1list);
+  free(m2list);
+  free(offlist);
+  free(Alist);
+
+  //  for(ell=egl->lmin;ell<=egl->lmax;ell++) {
+  //  for(m1=0;m1<egl->nfreq;m1++) {
+  //    for(m2=m1;m2<egl->nfreq;m2++) {
+  //      if(ell==egl->lmin) {
+  //        //_DEBUGHERE_("%d %d %d %g",ell,mv[m1],mv[m2],template[ell*12*12+mv[m1]*12+mv[m2]]);  
+  //      }
+  //      
+  //      Rq[IDX_R(egl,ell,m1,m2)] = template[ell*12*12+mv[m1]*12+mv[m2]] * A[mv[m1]*12+mv[m2]];
+  //      Rq[IDX_R(egl,ell,m2,m1)] = Rq[IDX_R(egl,ell,m1,m2)];
+  //    }  
+  //  }
+  //}
 }
+
 
 CREATE_PARAMETRIC_POL_TEMPLATE_FILE_INIT(cnoise,cnoise_init);
