@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include "errorlist.h"
+#include "io.h"
 
 #define _pn_size 256
 typedef char parname[_pn_size];
@@ -46,6 +47,7 @@ void clik_get_check_param (clik_object *target, char *hdffilepath, double **chkp
 // retrieve the number of extra parameters and their names
 // names is allocated by the function. It has to be cleaned after.
 int clik_get_extra_parameter_names(clik_object* clikid, parname **names, error **err);
+int clik_get_extra_parameter_names_by_lkl(clik_object* clikid, int ilkl,parname **names, error **_err);
 
 // retrieve the lmax for each power spectrum
 // -1 --> no cl

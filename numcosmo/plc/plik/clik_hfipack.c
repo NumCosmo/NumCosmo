@@ -591,3 +591,66 @@ SmicaComp * clik_smica_comp_totcalP_init(cldf *df,int nb, int mT,int mP, int nel
   return SC;
 }
 
+SmicaComp * clik_smica_comp_totcalTP_init(cldf *df,int nb, int mT,int mP, int nell, int* ell, int* has_cl, double unit,double* wl, double *bins, int nbins,error **err) {
+  SmicaComp *SC; 
+  int npar,i;
+  int *im,*jm;
+  double *tpl;
+  int tot_tpl;
+  char *calname;
+  int m;
+  int dsz;
+  double *w;
+  int *other;
+  int hk,im1,im2;
+  int neigen;
+  double *modes;
+
+  m = mtot(mT,mP,has_cl);
+  
+  dsz = -1;
+  calname = cldf_readstr(df,"calnameTP",&dsz, err);
+  forwardError(*err,__LINE__,NULL);  
+
+  SC = comp_totcalTP_init(nb, mT,mP,has_cl,err);
+  forwardError(*err,__LINE__,NULL);    
+
+  SC_setnames(SC, &calname, err);
+  forwardError(*err,__LINE__,NULL);
+  
+  free(calname); 
+
+  return SC;
+}
+
+SmicaComp * clik_smica_comp_totcalPP_init(cldf *df,int nb, int mT,int mP, int nell, int* ell, int* has_cl, double unit,double* wl, double *bins, int nbins,error **err) {
+  SmicaComp *SC; 
+  int npar,i;
+  int *im,*jm;
+  double *tpl;
+  int tot_tpl;
+  char *calname;
+  int m;
+  int dsz;
+  double *w;
+  int *other;
+  int hk,im1,im2;
+  int neigen;
+  double *modes;
+
+  m = mtot(mT,mP,has_cl);
+  
+  dsz = -1;
+  calname = cldf_readstr(df,"calnamePP",&dsz, err);
+  forwardError(*err,__LINE__,NULL);  
+
+  SC = comp_totcalPP_init(nb, mT,mP,has_cl,err);
+  forwardError(*err,__LINE__,NULL);    
+
+  SC_setnames(SC, &calname, err);
+  forwardError(*err,__LINE__,NULL);
+  
+  free(calname); 
+
+  return SC;
+}

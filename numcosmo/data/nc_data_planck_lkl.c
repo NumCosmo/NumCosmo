@@ -306,7 +306,7 @@ _nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 */
 
 /*
- * Some parameters have differet upper/lower case combination in different
+ * Some parameters have different upper/lower case combination in different
  * likelihood, so we make a case insensitive search, if it is found
  * update the name to mach the model's.
  */
