@@ -83,6 +83,8 @@ struct _NcHIPertFirstOrderPrivate
   guint cur_sys_size;
   N_Vector y;
   N_Vector abstol_v;
+  SUNMatrix A;
+  SUNLinearSolver LS;
   gdouble reltol;
   gdouble abstol;
   gint mupper;
@@ -143,6 +145,9 @@ nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
   self->cur_sys_size = 0;
   self->y            = NULL;
   self->abstol_v     = NULL;
+
+  self->A            = NULL;
+  self->LS           = NULL;
 
   self->T_scalar_i   = nc_hipert_grav_T_scalar_new ();
   self->T_scalar_tot = nc_hipert_grav_T_scalar_new ();
@@ -1140,7 +1145,22 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
     self->cur_sys_size = self->vars->len;
 
     self->y        = N_VNew_Serial (self->cur_sys_size);
-    self->abstol_v = N_VNew_Serial (self->cur_sys_size);    
+    self->abstol_v = N_VNew_Serial (self->cur_sys_size);
+
+    if (self->A != NULL)
+      SUNMatDestroy (self->A);
+
+    if (self->LS != NULL)
+    {
+      flag = SUNLinSolFree (self->LS);
+      NCM_CVODE_CHECK (&flag, "SUNLinSolFree", 1, );
+    }
+
+    self->A = SUNBandMatrix (self->cur_sys_size, self->mupper, self->mlower);
+    NCM_CVODE_CHECK ((gpointer)self->A, "SUNBandMatrix", 0, );
+
+    self->LS = SUNBandLinearSolver (self->y, self->A);
+    NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
   }
 
   N_VConst (self->abstol, self->abstol_v);
@@ -1162,11 +1182,11 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
         flag = CVodeSetMaxNumSteps (self->cvode, 0);
         NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-        flag = CVBand (self->cvode, self->cur_sys_size, self->mupper, self->mlower);
-        NCM_CVODE_CHECK (&flag, "CVDense", 1, );
-
-        flag = CVDlsSetDenseJacFn (self->cvode, NULL /*J*/);
-        NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+        flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
+        NCM_CVODE_CHECK (&flag, "CVDlsSetLinearSolver", 1, );
+        
+        flag = CVodeSetJacFn (self->cvode, NULL /*J*/);
+        NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
         flag = CVodeSetInitStep (self->cvode, fabs (t0) * self->reltol);
         NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
@@ -1197,17 +1217,17 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
         flag = ARKStepSetMaxNumSteps (self->arkode, 0);
         NCM_CVODE_CHECK (&flag, "ARKStepSetMaxNumSteps", 1, );
 
-        flag = ARKBand (self->arkode, self->cur_sys_size, self->mupper, self->mlower);
-        NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
-
-        flag = ARKDlsSetDenseJacFn (self->arkode, /*J*/ NULL);
-        NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
-
+        flag = ARKStepSetLinearSolver (self->arkode, self->LS, self->A);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetLinearSolver", 1, );
+        
         flag = ARKStepSetLinear (self->arkode, 1);
         NCM_CVODE_CHECK (&flag, "ARKStepSetLinear", 1, );
 
-        flag = ARKStepSetOrder (self->arkode, 7);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetOrder", 1, );
+        flag = ARKStepSetJacFn (self->cvode, NULL /*J*/);
+        NCM_CVODE_CHECK (&flag, "ARKStepSetJacFn", 1, );
+
+        //flag = ARKStepSetOrder (self->arkode, 7);
+        //NCM_CVODE_CHECK (&flag, "ARKStepSetOrder", 1, );
 
         //flag = ARKStepSetERKTableNum (self->arkode, FEHLBERG_13_7_8);
         //NCM_CVODE_CHECK (&flag, "ARKStepSetERKTableNum", 1, );
