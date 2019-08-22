@@ -111,6 +111,8 @@ static guint _nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav);
 static GArray *_nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex);
 
 static NcHIPertGravInfo *_nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav);
+static void _nc_hipert_grav_einstein_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
+static void _nc_hipert_grav_einstein_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 static void
 nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
@@ -128,9 +130,7 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
                                    g_param_spec_int ("nhoc",
                                                      NULL,
                                                      "nhoc",
-                                                     G_MININT,
-                                                     G_MAXINT,
-                                                     0,
+                                                     G_MININT, G_MAXINT, 0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   nc_hipert_bg_var_class_register_id ("NcHIPertGravEinstein", 
@@ -142,6 +142,8 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
   grav_class->ndyn_var          = &_nc_hipert_grav_einstein_ndyn_var;
   grav_class->get_deps          = &_nc_hipert_grav_einstein_get_deps;
   grav_class->get_G_scalar_info = &_nc_hipert_grav_einstein_get_G_scalar_info;
+  grav_class->get_G_scalar      = &_nc_hipert_grav_einstein_get_G_scalar;
+  grav_class->get_dy_scalar     = &_nc_hipert_grav_einstein_get_dy_scalar;
 }
 
 #define LEN(a) (sizeof (a) / sizeof (*(a)))
@@ -158,6 +160,7 @@ _nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav)
       ndyn_var = 1;
       break;
     case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+    case NC_HIPERT_GRAV_GAUGE_CONST_EXP:
       ndyn_var = 0;
       break;
     default:
@@ -211,6 +214,10 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
     {
       break;
     }
+    case NC_HIPERT_GRAV_GAUGE_CONST_EXP:
+    {
+      break;
+    }
     default:
       g_assert_not_reached ();
       break;
@@ -240,7 +247,7 @@ _nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav)
     }
     case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
     {
-      NcHIPertGravSElem phi_deps_a[] = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DPI};
+      NcHIPertGravSElem phi_deps_a[]    = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DPI};
       NcHIPertGravSElem psi_deps_a[]    = {NC_HIPERT_GRAV_DYN_VAR (0)};
       NcHIPertGravSElem dotpsi_deps_a[] = {NC_HIPERT_GRAV_SELEM_PHI, NC_HIPERT_GRAV_SELEM_RHOPPV};
 
@@ -258,6 +265,18 @@ _nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav)
   }
 
   return ginfo;
+}
+
+static void 
+_nc_hipert_grav_einstein_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
+{ 
+ 
+}
+
+static void 
+_nc_hipert_grav_einstein_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
+{
+  
 }
 
 /**

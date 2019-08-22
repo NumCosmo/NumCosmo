@@ -122,6 +122,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM >*/
  * @NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS: Synchronous gauge
  * @NC_HIPERT_GRAV_GAUGE_NEWTONIAN: Newtonian gauge
  * @NC_HIPERT_GRAV_GAUGE_CONST_CURV: Constant curvature gauge
+ * @NC_HIPERT_GRAV_GAUGE_CONST_EXP: Constant expansion gauge
  * 
  * Gravitation gauges.
  * 
@@ -131,6 +132,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
   NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
   NC_HIPERT_GRAV_GAUGE_NEWTONIAN,
   NC_HIPERT_GRAV_GAUGE_CONST_CURV,
+  NC_HIPERT_GRAV_GAUGE_CONST_EXP,
   /* < private > */
   NC_HIPERT_GRAV_GAUGE_LEN, /*< skip >*/
 } NcHIPertGravGauge;

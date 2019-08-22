@@ -69,6 +69,15 @@ nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)
   
   g_ptr_array_set_size (bg_var->cstructs, nc_hipert_bg_var_len (bg_var));
   g_ptr_array_set_free_func (bg_var->cstructs, g_free);
+
+  bg_var->recomb = NULL;
+  bg_var->dist   = NULL;
+  bg_var->a      = NULL;
+  bg_var->t      = 0.0;
+  bg_var->eta    = 0.0;
+  bg_var->k      = 0.0;
+  bg_var->x      = 0.0;
+  bg_var->E      = 0.0;
 }
 
 static void
@@ -130,6 +139,10 @@ _nc_hipert_bg_var_dispose (GObject *object)
   
   g_clear_pointer (&bg_var->cstructs, g_ptr_array_unref);
 
+  nc_distance_clear (&bg_var->dist);
+  nc_scalefactor_clear (&bg_var->a);
+  nc_recomb_clear (&bg_var->recomb);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_bg_var_parent_class)->dispose (object);
 }
@@ -188,11 +201,11 @@ nc_hipert_bg_var_class_init (NcHIPertBGVarClass *klass)
 G_LOCK_DEFINE_STATIC (last_bg_var_id);
 
 /**
- * nc_hipert_comp_register_bg_var_id: (skip)
- * @cstruct_size: component struct size
+ * nc_hipert_bg_var_class_register_id: (skip)
  * @ns: object namespace
  * @desc: short description
  * @long_desc: long description
+ * @cstruct_size: component struct size
  *
  * FIXME
  *
@@ -582,7 +595,7 @@ nc_hipert_bg_var_len (NcHIPertBGVar *bg_var)
 guint 
 nc_hipert_bg_var_cstruct_len (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 {
-  const guint len =  nc_hipert_bg_var_len (bg_var);
+  const guint len = nc_hipert_bg_var_len (bg_var);
   g_assert_cmpuint (id, <, len);
 
   {
@@ -596,7 +609,7 @@ nc_hipert_bg_var_cstruct_len (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 static void
 _nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 {
-  const guint len =  nc_hipert_bg_var_len (bg_var);
+  const guint len = nc_hipert_bg_var_len (bg_var);
 
   g_assert_cmpuint (id, <, len);
 

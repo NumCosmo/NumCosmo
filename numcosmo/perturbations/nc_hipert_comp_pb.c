@@ -116,6 +116,8 @@ NC_HIPERT_BG_VAR_ID_FUNC_IMPL (nc_hipert_comp_pb, NcHIPertCompPB);
 static guint _nc_hipert_comp_pb_ndyn_var (NcHIPertComp *comp);
 static GArray *_nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex);
 static NcHIPertGravTScalarInfo *_nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp);
+static void _nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
+static void _nc_hipert_comp_pb_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 static void
 nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
@@ -144,6 +146,8 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
   comp_class->ndyn_var          = &_nc_hipert_comp_pb_ndyn_var;
   comp_class->get_deps          = &_nc_hipert_comp_pb_get_deps;
   comp_class->get_T_scalar_info = &_nc_hipert_comp_pb_get_T_scalar_info;
+  comp_class->get_T_scalar      = &_nc_hipert_comp_pb_get_T_scalar;
+  comp_class->get_dy_scalar     = &_nc_hipert_comp_pb_get_dy_scalar;
 }
 
 static guint 
@@ -258,6 +262,18 @@ _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
   APPEND (Tsinfo->dPi_deps,    dPi_deps_a);
 
   return Tsinfo;
+}
+
+static void 
+_nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
+{ 
+
+}
+
+static void 
+_nc_hipert_comp_pb_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
+{ 
+
 }
 
 #undef APPEND

@@ -74,6 +74,8 @@ struct _NcHIPertFirstOrderPrivate
   GPtrArray *comps;
   GPtrArray *active_comps;
   GArray *vars;
+  GArray *perm;
+  GArray *perm_inv;
   NcHIPertBGVar *bg_var;
   NcHIPertGravGauge gauge;
   gpointer cvode;
@@ -127,6 +129,8 @@ nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
   self->comps        = g_ptr_array_new ();
   self->active_comps = g_ptr_array_new ();
   self->vars         = g_array_new (TRUE, TRUE, sizeof (NcHIPertFirstOrderVar));
+  self->perm         = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->perm_inv     = g_array_new (FALSE, FALSE, sizeof (gint));
   self->bg_var       = nc_hipert_bg_var_new ();
   self->gauge        = NC_HIPERT_GRAV_GAUGE_LEN;
 
@@ -269,6 +273,7 @@ _nc_hipert_first_order_dispose (GObject *object)
 {
   NcHIPertFirstOrder *fo = NC_HIPERT_FIRST_ORDER (object);
   NcHIPertFirstOrderPrivate * const self = fo->priv;
+  
   nc_hipert_grav_clear (&self->grav);
   
   if (self->comps != NULL)
@@ -285,6 +290,10 @@ _nc_hipert_first_order_dispose (GObject *object)
 
   g_clear_pointer (&self->comps,        g_ptr_array_unref);
   g_clear_pointer (&self->active_comps, g_ptr_array_unref);
+
+  g_clear_pointer (&self->vars,         g_array_unref);
+  g_clear_pointer (&self->perm,         g_array_unref);
+  g_clear_pointer (&self->perm_inv,     g_array_unref);
 
   nc_hipert_bg_var_clear (&self->bg_var);
   
@@ -309,6 +318,15 @@ _nc_hipert_first_order_finalize (GObject *object)
     ARKStepFree (&self->arkode);
     self->arkode      = NULL;
     self->arkode_init = FALSE;
+  }
+
+  if (self->A != NULL)
+    SUNMatDestroy (self->A);
+
+  if (self->LS != NULL)
+  {
+    gint flag = SUNLinSolFree (self->LS);
+    NCM_CVODE_CHECK (&flag, "SUNLinSolFree", 1, );
   }
 
   g_clear_pointer (&self->y, N_VDestroy);
@@ -601,23 +619,32 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   NcHIPertFirstOrderPrivate * const self = fo->priv;
   gint *adj;
   gint node_num = self->vars->len;
+  gchar *Jrow   = g_new0 (gchar, node_num + 1);
   gint adj_max  = node_num * (node_num - 1); 
   gint adj_num  = 0;
   gint *adj_row;
   gint *perm;
   gint *perm_inv;
+  gint orig_mupper;
+  gint orig_mlower;
   gint i;
-  gchar *Jrow = g_new0 (gchar, node_num + 1);
 
   adj_row  = g_new0 (gint, node_num + 1);
   adj      = g_new0 (gint, adj_max);
-  perm     = g_new0 (gint, node_num);
-  perm_inv = g_new0 (gint, node_num);
+
+  g_array_set_size (self->perm,     node_num);
+  g_array_set_size (self->perm_inv, node_num);
+  
+  perm     = &g_array_index (self->perm,     gint, 0);
+  perm_inv = &g_array_index (self->perm_inv, gint, 0);
 
   if (FALSE)
   {
     gint lll = self->vars->len - 1;
     g_array_append_val (g_array_index (self->vars, NcHIPertFirstOrderVar, 0).deps, lll);
+    lll--;
+    if (lll >= 0)
+      g_array_append_val (g_array_index (self->vars, NcHIPertFirstOrderVar, 1).deps, lll);
   }
   
   adj_set (node_num, adj_max, &adj_num, adj_row, adj, -1, -1 );
@@ -657,18 +684,35 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
 
   g_message ("#    ADJ bandwidth = %d\n#\n", bandwidth);
 */
-  genrcm ( node_num, adj_num, adj_row, adj, perm );
-
-  perm_inverse3 ( node_num, perm, perm_inv );
+  genrcm ( node_num, adj_num, adj_row, adj, perm ); /* REMEMBER: perm[new_index]     == old_index !!!! */
+  perm_inverse3 ( node_num, perm, perm_inv );       /* REMEMBER: perm_inv[old_index] == new_index !!!! */
+  
   /*g_message ("#\n#    The RCM permutation and inverse:\n#\n");*/
 
-  for ( i = 0; i < node_num; i++ )
+  orig_mupper = 0;
+  orig_mlower = 0;
+
+  for (i = 0; i < node_num; i++)
   {
     NcHIPertFirstOrderVar *var = &g_array_index (self->vars, NcHIPertFirstOrderVar, i);
     var->index = perm[i] - 1;
+    g_assert_cmpint (perm[perm_inv[i]-1], ==, i + 1);
+    g_assert_cmpint (perm_inv[perm[i]-1], ==, i + 1);
     /*g_message ("#    %8d  %8d  %8d | %8d  %8d\n", i + 1, perm[i], perm_inv[i], perm[perm_inv[i]-1], perm_inv[perm[i]-1]);*/
-  }
+    {
+      NcHIPertFirstOrderVar var = g_array_index (self->vars, NcHIPertFirstOrderVar, i);
+      gint j;
+      for (j = 0; j < var.deps->len; j++)
+      {
+        gint dep = g_array_index (var.deps, gint, j);
 
+        orig_mupper = MAX (orig_mupper, dep - i);
+        orig_mlower = MAX (orig_mlower, i - dep);
+      }    
+    }
+  }
+  g_message ("#\n#  ADJ (non-permuted) bandwidth = (%d, %d)\n", orig_mupper, orig_mlower);
+  
 /*
   g_message ("#\n#    Permuted adjacency matrix:\n#\n");
 
@@ -709,10 +753,17 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   g_free (Jrow);
   g_message ("#\n#  ADJ (permuted) bandwidth = (%d, %d)\n", self->mupper, self->mlower);
 
+  if ((orig_mupper + orig_mlower) <= (self->mupper + self->mlower))
+  {
+    for (i = 0; i < node_num; i++)
+    {
+      g_array_index (self->perm,     gint, i) = i;
+      g_array_index (self->perm_inv, gint, i) = i;
+    }    
+  }
+
   g_free (adj);
   g_free (adj_row);
-  g_free (perm);
-  g_free (perm_inv);
 }
 
 static void
@@ -767,7 +818,7 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
       }
     }
 
-    if (FALSE)
+    if (TRUE)
     {
       guint i;
 
@@ -832,7 +883,7 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
         _nc_hipert_first_order_solve_deps (fo, ginfo, Tsinfo, var.deps, 0);
       }      
     }
-
+    
     _nc_hipert_first_order_arrange_vars (fo);
       
     nc_hipert_grav_T_scalar_info_free (Tsinfo);
@@ -1081,14 +1132,14 @@ _nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data
   const guint ncomps     = self->active_comps->len;
   guint i;
 
+  /*printf ("Getting background variables at % 22.15g | %p %p %p\n", t, ydy, y, ydot);fflush (stdout);*/
   nc_hicosmo_get_bg_var (cosmo, t, bg_var);
 
-  ncm_vector_clear (&ydy->y);
-  ncm_vector_clear (&ydy->dy);
+  ydy->y  = N_VGetArrayPointer (y);
+  ydy->dy = N_VGetArrayPointer (ydot);
 
-  ydy->y  = ncm_vector_new_data_static (N_VGetArrayPointer (y),    self->cur_sys_size, 1);
-  ydy->dy = ncm_vector_new_data_static (N_VGetArrayPointer (ydot), self->cur_sys_size, 1);
-  
+  N_VConst (0.0, ydot);
+
   nc_hipert_grav_T_scalar_set_zero (self->T_scalar_tot);
   
   for (i = 0; i < ncomps; i++)
@@ -1096,6 +1147,8 @@ _nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data
     NcHIPertComp *comp = g_ptr_array_index (self->active_comps, i);
 
     nc_hipert_grav_T_scalar_set_zero (self->T_scalar_i);
+
+    /*printf ("Getting T_scalar at % 22.15g for comp %d\n", t, i);fflush (stdout);*/
     nc_hipert_comp_get_T_scalar (comp, bg_var, ydy, self->T_scalar_i);
     nc_hipert_grav_T_scalar_add (self->T_scalar_tot, self->T_scalar_tot, self->T_scalar_i);
   }
@@ -1111,19 +1164,26 @@ _nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data
 
     nc_hipert_comp_get_dy_scalar (comp, bg_var, ydy, self->T_scalar_tot, self->G_scalar);
   }
-  
+
   return 0;
 }
 
 static gdouble
-_nc_hipert_first_order_set_init_cond (NcHIPertFirstOrder *fo, const gdouble k)
+_nc_hipert_first_order_set_init_cond (NcHIPertFirstOrder *fo, NcHICosmo *cosmo, const gdouble k)
 {
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  gint i;
+
+  for (i = 0; i < self->cur_sys_size; i++)
+  {
+    NV_Ith_S (self->y, i) = 1.0;
+  }
 
   return 0.0;
 }
 
 static void
-_nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble t0)
+_nc_hipert_first_order_alloc_integrator (NcHIPertFirstOrder *fo)
 {
   NcHIPertFirstOrderPrivate * const self = fo->priv;
   gint flag;
@@ -1166,6 +1226,13 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
     self->LS = SUNBandLinearSolver (self->y, self->A);
     NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
   }
+}
+
+static void
+_nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble t0)
+{
+  NcHIPertFirstOrderPrivate * const self = fo->priv;
+  gint flag;
 
   N_VConst (self->abstol, self->abstol_v);
 
@@ -1269,11 +1336,82 @@ void
 nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo)
 {
   NcHIPertFirstOrderPrivate * const self = fo->priv;
+  NcHIPertBGVarYDY *ydy = nc_hipert_bg_var_ydy_new ();
+  NcHIPertFirstOrderWS userdata = {fo, ydy, cosmo};
+  gdouble tf = 1.0;
   gdouble t0;
+  gint flag;
 
+  if (self->vars->len == 0)
+  {
+    g_warning ("nc_hipert_first_order_prepare: empty system, nothing to do.");
+    return;
+  }
+  
   nc_hipert_bg_var_prepare_if_needed (self->bg_var, cosmo);
 
-  t0 = _nc_hipert_first_order_set_init_cond (fo, 1.0);
+  _nc_hipert_first_order_alloc_integrator (fo);
+  t0 = _nc_hipert_first_order_set_init_cond (fo, cosmo, 1.0);
   _nc_hipert_first_order_prepare_integrator (fo, t0);
-  
+
+  switch (self->integ)
+  {
+    case NC_HIPERT_FIRST_ORDER_INTEG_CVODE:
+    {
+      flag = CVodeSetStopTime (self->cvode, tf);
+      NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+    
+      flag = CVodeSetUserData (self->cvode, &userdata);
+      NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+
+      while (TRUE)
+      {
+        gdouble t;
+        
+        flag = CVode (self->cvode, tf, self->y, &t, CV_ONE_STEP);
+        NCM_CVODE_CHECK (&flag, "CVode", 1, );
+
+        if (t == tf)
+          break;
+      }
+    
+      break;
+    }
+    case NC_HIPERT_FIRST_ORDER_INTEG_ARKODE:
+    {
+      flag = ARKStepSetStopTime (self->arkode, tf);
+      NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+
+      flag = ARKStepSetUserData (self->arkode, &userdata);
+      NCM_CVODE_CHECK (&flag, "ARKStepSetUserData", 1, );
+
+      while (TRUE)
+      {
+        gdouble t;
+        gint i;
+        
+        flag = ARKStepEvolve (self->arkode, tf, self->y, &t, ARK_ONE_STEP);
+        NCM_CVODE_CHECK (&flag, "ARKStepEvolve", 1, );
+
+        printf ("% 22.15g ", t);
+        for (i = 0; i < self->cur_sys_size; i++)
+        {
+          printf ("% 22.15g ", NV_Ith_S (self->y, i));
+        }
+        printf ("\n");
+
+        if (t == tf)
+          break;
+      }
+      
+      break;
+    }      
+    default:
+      g_error ("_nc_hipert_first_order_prepare_integrator: integrator %d not supported.", self->integ);
+      break;
+  }
+
+  nc_hipert_bg_var_ydy_free (ydy);
 }
+
+

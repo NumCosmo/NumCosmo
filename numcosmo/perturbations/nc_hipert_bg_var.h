@@ -88,8 +88,8 @@ struct _NcHIPertBGVar
 
 typedef struct _NcHIPertBGVarYDY
 {
-  NcmVector *y;
-  NcmVector *dy;
+  gdouble *y;
+  gdouble *dy;
   guint start_index;
   gint *perm;
   gint *perm_inv;
@@ -194,7 +194,7 @@ G_BEGIN_DECLS
 G_INLINE_FUNC NcHIPertBGVarYDY *
 nc_hipert_bg_var_ydy_new (void)
 {
-  NcHIPertBGVarYDY *ydy = g_new0 (NcHIPertBGVarYDY, 0);
+  NcHIPertBGVarYDY *ydy = g_new0 (NcHIPertBGVarYDY, 1);
   return ydy;
 }
 
@@ -217,19 +217,19 @@ nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy)
 G_INLINE_FUNC 
 gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
 {
-  return ncm_vector_fast_get (ydy->y, ydy->perm_inv[ydy->start_index + i]);
+  return ydy->y[ydy->perm_inv[ydy->start_index + i]];
 }
 
 G_INLINE_FUNC void 
 nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i)
 {
-  ncm_vector_fast_set (ydy->dy, ydy->perm_inv[ydy->start_index + i], dy_i);
+  ydy->dy[ydy->perm_inv[ydy->start_index + i]] = dy_i;
 }
 
 G_INLINE_FUNC gdouble 
 nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i)
 {
-  return ncm_vector_fast_get (ydy->dy, ydy->perm_inv[ydy->start_index + i]);
+  return ydy->dy[ydy->perm_inv[ydy->start_index + i]];
 }
 
 G_INLINE_FUNC void 
