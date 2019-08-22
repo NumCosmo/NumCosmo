@@ -202,7 +202,7 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     {
       gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_DELTA_G, 
-        NC_HIPERT_COMP_PB_VAR_SIGMA_G, 
+        NC_HIPERT_COMP_PB_VAR_THETA_G, 
         NC_HIPERT_COMP_PB_VAR_V_B, 
         NC_HIPERT_GRAV_SELEM_PHI};
       
@@ -212,7 +212,7 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     case NC_HIPERT_COMP_PB_VAR_F_G3:
     {
       gint deps_a[] = { 
-        NC_HIPERT_COMP_PB_VAR_SIGMA_G,
+        NC_HIPERT_COMP_PB_VAR_THETA_G,
         NC_HIPERT_COMP_PB_VAR_F_G (4)
         };
       
@@ -255,7 +255,7 @@ _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
   
   gint drho_deps_a[]   = {NC_HIPERT_COMP_PB_VAR_DELTA_B, NC_HIPERT_COMP_PB_VAR_DELTA_G};
   gint rhoppv_deps_a[] = {NC_HIPERT_COMP_PB_VAR_V_B, NC_HIPERT_COMP_PB_VAR_V_G};
-  gint dPi_deps_a[]    = {NC_HIPERT_COMP_PB_VAR_SIGMA_G};
+  gint dPi_deps_a[]    = {NC_HIPERT_COMP_PB_VAR_THETA_G};
 
   APPEND (Tsinfo->drho_deps,   drho_deps_a);
   APPEND (Tsinfo->rhoppv_deps, rhoppv_deps_a);
@@ -267,7 +267,9 @@ _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
 static void 
 _nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
 { 
-
+  const gdouble delta_b = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_B);
+  const gdouble delta_g = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_G);
+  
 }
 
 static void 

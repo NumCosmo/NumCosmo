@@ -60,10 +60,12 @@ struct _NcHIPertCompPB
 
 /**
  * NcHIPertCompPBVar:
- * @NC_HIPERT_COMP_PB_VAR_DB: $\delta_b+3\psi$
- * @NC_HIPERT_COMP_PB_VAR_VB: $\mathcal{V}_b$
- * @NC_HIPERT_COMP_PB_VAR_DG: $\delta_\gamma+3\psi$
- * @NC_HIPERT_COMP_PB_VAR_VG: $\mathcal{V}_\gamma$
+ * @NC_HIPERT_COMP_PB_VAR_DELTA_B: $\delta_b+3\psi$
+ * @NC_HIPERT_COMP_PB_VAR_V_B: $\mathcal{V}_b$
+ * @NC_HIPERT_COMP_PB_VAR_DELTA_G: $\delta_\gamma+3\psi$
+ * @NC_HIPERT_COMP_PB_VAR_V_G: $\mathcal{V}_\gamma$
+ * @NC_HIPERT_COMP_PB_VAR_THETA_G: $\theta_\gamma$
+ * @NC_HIPERT_COMP_PB_VAR_F_G3: $\mathcal{F}_{\gamma3}$
  * 
  * Photon-baryon component variables
  * 
@@ -74,7 +76,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_COMP_PB_VAR >*/
   NC_HIPERT_COMP_PB_VAR_V_B,
   NC_HIPERT_COMP_PB_VAR_DELTA_G,
   NC_HIPERT_COMP_PB_VAR_V_G,
-  NC_HIPERT_COMP_PB_VAR_SIGMA_G,
+  NC_HIPERT_COMP_PB_VAR_THETA_G,
   NC_HIPERT_COMP_PB_VAR_F_G3,
   /* < private > */
   NC_HIPERT_COMP_PB_VAR_LEN, /*< skip >*/
