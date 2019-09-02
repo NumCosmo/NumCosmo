@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/data/nc_data_snia.h>
 #include <numcosmo/data/nc_data_snia_cov.h>
 #include <numcosmo/nc_distance.h>
 
@@ -98,6 +99,11 @@ struct _NcSNIADistCov
   NcDistance *dist;
   GArray *var_int;
   gboolean empty_fac;
+  gpointer cov_cpu;
+  gdouble alpha_cpu;
+  gdouble beta_cpu;
+  gdouble lnsigma_pecz_cpu;
+  gdouble lnsigma_lens_cpu;
 };
 
 GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
@@ -115,7 +121,7 @@ void nc_snia_dist_cov_set_dist (NcSNIADistCov *dcov, NcDistance *dist);
 void nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset);
 void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);
 
-void nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov);
+gboolean nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov);
 void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y);
 
 gdouble nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, guint i, gdouble width_th, gdouble colour_th);
@@ -123,6 +129,8 @@ void nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo
 gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i);
 
 void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta);
+
+void nc_snia_dist_cov_set_default_params_by_id (NcSNIADistCov *dcov, NcDataSNIAId snia_id);
 
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (0.145)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)

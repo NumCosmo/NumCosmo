@@ -54,6 +54,22 @@ struct _NcDistanceClass
   GObjectClass parent_class;
 };
 
+/**
+ * NcDistanceComovingMethod:
+ * @NC_DISTANCE_COMOVING_METHOD_INT_E: FIXME
+ * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: FIXME
+ *
+ * FIXME
+ * 
+ */
+typedef enum _NcDistanceComovingMethod
+{
+  NC_DISTANCE_COMOVING_METHOD_INT_E = 0,
+  NC_DISTANCE_COMOVING_METHOD_FROM_MODEL,
+  /* < private > */
+  NC_DISTANCE_COMOVING_METHOD_LEN,   /*< skip >*/  
+} NcDistanceComovingMethod;
+
 struct _NcDistance
 {
   /*< private >*/
@@ -69,6 +85,7 @@ struct _NcDistance
   gdouble zf;
   gboolean use_cache;
   NcRecomb *recomb;
+  NcDistanceComovingMethod cmethod;
 };
 
 typedef struct _NcDistanceFunc

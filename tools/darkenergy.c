@@ -374,7 +374,7 @@ main (gint argc, gchar *argv[])
       NcmData *data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
       guint sigma_int_len;
       
-      nc_data_snia_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
+      nc_data_snia_cov_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
 
       sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
 
@@ -382,7 +382,10 @@ main (gint argc, gchar *argv[])
       {
         NcSNIADistCov *dcov;
         if (de_data_simple.snia_objser == NULL)
+        {
           dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
+          nc_snia_dist_cov_set_default_params_by_id (dcov, snia_id->value);
+        }
         else
           dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
 
@@ -906,6 +909,19 @@ main (gint argc, gchar *argv[])
                                                funcs_oa);
       
       ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (walk));
+    }
+    else if (de_fit.esmcmc_aps)
+    {
+      NcmFitESMCMCWalkerAPS *aps = ncm_fit_esmcmc_walker_aps_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
+      
+      esmcmc = ncm_fit_esmcmc_new_funcs_array (fit, 
+                                               de_fit.mc_nwalkers, 
+                                               NCM_MSET_TRANS_KERN (init_sampler), 
+                                               NCM_FIT_ESMCMC_WALKER (aps),
+                                               de_fit.msg_level,
+                                               funcs_oa);
+      
+      ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (aps));
     }
     else
     {

@@ -245,6 +245,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "mcmc",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcmc,             "Run a Markov Chain Monte Carlo analysis", NULL},
     { "esmcmc",           0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc,           "Run a Ensemble Sampler Markov Chain Monte Carlo analysis", NULL},
     { "esmcmc-walk",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_walk,      "Uses walk move instead of stretch move in ESMCMC", NULL},
+    { "esmcmc-aps",       0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_aps,       "Uses APS instead of stretch move in ESMCMC", NULL},
     { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box", NULL},
     { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step", NULL},
     { "fisher",           0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_fisher_type, "Calculated the Fisher matrix, where T=E or T=O uses the expected or observed Fisher matrix", "=T"},

@@ -267,8 +267,8 @@ _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
 static void 
 _nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
 { 
-  const gdouble delta_b = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_B);
-  const gdouble delta_g = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_G);
+//  const gdouble delta_b = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_B);
+//  const gdouble delta_g = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_G);
   
 }
 
