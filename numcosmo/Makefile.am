@@ -196,7 +196,8 @@ ncm_sources = \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c \
+	math/Faddeeva.c  \
+	math/rcm.c       \
 	math/LowRankQP.c \
 	gslextras/cqp/cqpminimizer.c  \
 	gslextras/cqp/initial_point.c \
@@ -332,6 +333,7 @@ ncm_headers_nogi = \
 ncm_headers_internal = \
 	gslextras/cqp/gsl_cqp.h           \
 	gslextras/cqp/initial_point.h     \
+	math/rcm.h                        \
 	math/ncm_flapack.h                \
 	math/Faddeeva.h                   \
 	perturbations/nc_hipert_private.h
@@ -457,6 +459,7 @@ nc_headers = \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
 	perturbations/nc_hipert.h                 \
+	perturbations/nc_hipert_bg_var.h          \
 	perturbations/nc_hipert_wkb.h             \
 	perturbations/nc_hipert_itwo_fluids.h     \
 	perturbations/nc_hipert_adiab.h           \
@@ -465,6 +468,11 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann.h       \
 	perturbations/nc_hipert_boltzmann_std.h   \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
+	perturbations/nc_hipert_first_order.h     \
+	perturbations/nc_hipert_grav.h            \
+	perturbations/nc_hipert_grav_einstein.h   \
+	perturbations/nc_hipert_comp.h            \
+	perturbations/nc_hipert_comp_pb.h         \
 	xcor/nc_xcor.h                            \
 	xcor/nc_xcor_AB.h                         \
 	xcor/nc_xcor_limber_kernel.h              \
@@ -593,6 +601,7 @@ nc_sources = \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
 	perturbations/nc_hipert.c                 \
+	perturbations/nc_hipert_bg_var.c          \
 	perturbations/nc_hipert_wkb.c             \
 	perturbations/nc_hipert_itwo_fluids.c     \
 	perturbations/nc_hipert_adiab.c           \
@@ -601,6 +610,11 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann.c       \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
+	perturbations/nc_hipert_first_order.c     \
+	perturbations/nc_hipert_grav.c            \
+	perturbations/nc_hipert_grav_einstein.c   \
+	perturbations/nc_hipert_comp.c            \
+	perturbations/nc_hipert_comp_pb.c         \
 	xcor/nc_xcor.c                            \
 	xcor/nc_xcor_AB.c                         \
 	xcor/nc_xcor_limber_kernel.c              \

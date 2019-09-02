@@ -58,6 +58,7 @@
 
 /* Perturbations */
 #include <numcosmo/perturbations/nc_hipert.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
@@ -66,6 +67,11 @@
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_comp_pb.h>
 
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_idem2.h>

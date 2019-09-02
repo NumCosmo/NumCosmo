@@ -57,7 +57,7 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
  * @NC_HICOSMO_QSPLINE_AS_DRAG: FIXME
  *
  */
-typedef enum _NcHICosmoQSplineSParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
 {
   NC_HICOSMO_QSPLINE_H0 = 0,
   NC_HICOSMO_QSPLINE_OMEGA_T,    
@@ -71,7 +71,7 @@ typedef enum _NcHICosmoQSplineSParams
  * @NC_HICOSMO_QSPLINE_Q: FIXME
  *
  */
-typedef enum _NcHICosmoQSplineVParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
 {
   NC_HICOSMO_QSPLINE_Q,          
   /* < private > */

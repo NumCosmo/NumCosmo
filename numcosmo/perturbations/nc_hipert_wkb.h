@@ -70,7 +70,7 @@ struct _NcHIPertWKBClass
  * Perturbation variables enumerator.
  * 
  */
-typedef enum _NcHIPertWKBVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_WKB_VARS >*/
 {
   NC_HIPERT_WKB_RE_Q = 0,
   NC_HIPERT_WKB_IM_Q,

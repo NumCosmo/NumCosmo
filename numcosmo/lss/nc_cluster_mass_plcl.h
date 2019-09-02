@@ -48,7 +48,7 @@ typedef struct _NcClusterMassPlCLClass NcClusterMassPlCLClass;
 typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
 
 /**
- * NcClusterMassPlCLParams:
+ * NcClusterMassPlCLSParams:
  * @NC_CLUSTER_MASS_PLCL_A_SZ: slope of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_B_SZ: FIXME
  * @NC_CLUSTER_MASS_PLCL_SD_SZ: standard deviation of the mass-SZ relation
@@ -59,7 +59,7 @@ typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
  *
  * FIXME
  */
-typedef enum _NcClusterMassPlCLParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_PLCL_SPARAMS >*/
 {
   NC_CLUSTER_MASS_PLCL_A_SZ = 0,
   NC_CLUSTER_MASS_PLCL_B_SZ,
@@ -70,7 +70,7 @@ typedef enum _NcClusterMassPlCLParams
   NC_CLUSTER_MASS_PLCL_COR, 
   /* < private > */
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
-} NcClusterMassPlCLParams;
+} NcClusterMassPlCLSParams;
 
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ  (1.0)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ  (0.2)

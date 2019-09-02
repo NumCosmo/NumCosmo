@@ -49,7 +49,7 @@ typedef struct _NcHICosmoIDEM2Private NcHICosmoIDEM2Private;
 typedef gdouble (*NcHICosmoIDEM2Func1) (NcHICosmoIDEM2 *cosmo_idem2, gdouble z);
 
 /**
- * NcHICosmoIDEM2Params:
+ * NcHICosmoIDEM2SParams:
  * @NC_HICOSMO_IDEM2_H0: FIXME
  * @NC_HICOSMO_IDEM2_OMEGA_C: FIXME
  * @NC_HICOSMO_IDEM2_OMEGA_X: FIXME
@@ -62,7 +62,7 @@ typedef gdouble (*NcHICosmoIDEM2Func1) (NcHICosmoIDEM2 *cosmo_idem2, gdouble z);
  * FIXME
  *
  */
-typedef enum _NcHICosmoIDEM2Params
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
 {
   NC_HICOSMO_IDEM2_H0 = 0,
   NC_HICOSMO_IDEM2_OMEGA_C,
@@ -74,7 +74,7 @@ typedef enum _NcHICosmoIDEM2Params
   NC_HICOSMO_IDEM2_GAMMA,    
   /* < private > */
   NC_HICOSMO_IDEM2_SPARAM_LEN, /*< skip >*/
-} NcHICosmoIDEM2Params;
+} NcHICosmoIDEM2SParams;
 
 /**
  * NcHICosmoIDEM2VParams:
@@ -86,7 +86,7 @@ typedef enum _NcHICosmoIDEM2Params
  * FIXME
  *
  */
-typedef enum _NcHICosmoIDEM2VParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_VPARAMS >*/
 {
   NC_HICOSMO_IDEM2_MASSNU_M = 0,
   NC_HICOSMO_IDEM2_MASSNU_T,

@@ -85,7 +85,7 @@ struct _NcHIPertGWClass
  * Perturbation variables enumerator.
  * 
  */
-typedef enum _NcHIPertGWVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_GW_VARS  >*/
 {
   NC_HIPERT_GW_RE_ZETA = 0,
   NC_HIPERT_GW_IM_ZETA,

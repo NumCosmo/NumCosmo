@@ -48,7 +48,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmModelClass NcmModelClass;
 typedef struct _NcmModel NcmModel;
-typedef gint NcmModelID;
+typedef gint32 NcmModelID;
 
 typedef void (*NcmModelAddSubmodel) (NcmModel *model, NcmModel *submodel);
 

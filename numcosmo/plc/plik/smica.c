@@ -322,7 +322,7 @@ double Smica_lkl(void* vsmic, double* pars, error **err) {
   // update rq matrix according to each component
   for(isc=0;isc<smic->nc;isc++) {
     char nn[40];
-    //_DEBUGHERE_("comp %d update (off %d)",isc,smic->offset_nc[isc]);
+    //_DEBUGHERE_("comp %d update (off %d) %d %d %d",isc,smic->offset_nc[isc],smic->nq,smic->m,smic->nq*smic->m*smic->m);
     //printMat(smic->rq, smic->m, smic->m);
     //_DEBUGHERE_("%g",*(pars+smic->offset_nc[isc]));
     smic->SC[isc]->update(smic->SC[isc],pars+smic->offset_nc[isc], smic->rq, err);
@@ -480,6 +480,8 @@ void smica_set_crit_gauss(Smica *smic, double *crit_cor, int *mask,int *ordering
   smic->gvec = malloc_err(sizeof(double)*nv*2,err);
   forwardError(*err,__LINE__,);
   smic->quad_sn = nv;
+
+  //write_bin_vector(smic->quad_mask, "quad_mask.dat", sizeof(int)*(smic->quad_sn), err);
 
   smic->crit_cor = malloc_err(sizeof(double)*nv*nv,err);
   forwardError(*err,__LINE__,);
@@ -1205,7 +1207,9 @@ void comp_icalTP_update(void* data,double* locpars, double* rq, error **err) {
         //  _DEBUGHERE_("%d | %d %d -> %g %g %g %g, %d %d -> %g %g %g %g,",mpos,im1,im2,w,gc->calvec[im1],gc->calvec[im2],w*gc->calvec[im1]*gc->calvec[im2],im1_prime,im2_prime,w_prime,gc->calvec[im1_prime],gc->calvec[im2_prime],w_prime*gc->calvec[im1_prime]*gc->calvec[im2_prime]);  
         //  _DEBUGHERE_("%g %g",w*gc->calvec[im1]*gc->calvec[im2]+w_prime*gc->calvec[im1_prime]*gc->calvec[im2_prime],gc->calvec[im1]*gc->calvec[im2]);
         // }
-        rq[imo+im2] *= w*gc->calvec[im1]*gc->calvec[im2]+w_prime*gc->calvec[im1_prime]*gc->calvec[im2_prime];
+        if (w+w_prime!=0) {
+          rq[imo+im2] *= w*gc->calvec[im1]*gc->calvec[im2]+w_prime*gc->calvec[im1_prime]*gc->calvec[im2_prime];
+        }
         //rq[imo+im2] *= gc->calvec[im1]*gc->calvec[im2];
       } 
     }
@@ -1428,6 +1432,125 @@ SmicaComp* comp_totcalP_init(int q, int mT, int mP, int *TEB,error **err ) {
 
 }
 
+void comp_totcalTP_update(void* data,double* locpars, double* rq, error **err) {
+  SmicaComp *SC;
+  int t,iq,im1,im2,m,m2,neigen,offm,offq,im0;
+  double cal,scal;
+  int *mz;
+
+  SC = data;
+  mz = SC->data;
+
+  cal = 1./(locpars[0]*locpars[0]);
+  scal = 1./(locpars[0]);
+
+  m = SC->m;
+  m2 = m*m;
+  
+  for(iq=0;iq<SC->nq;iq++) {
+    // TP
+    for(im1=0;im1<mz[0];im1++) {
+      im0 = im1;
+      if (im0<mz[0]) {
+        im0 = mz[0];
+      }
+      for(im2=im0;im2<m;im2++) {
+        rq[iq*m2 + im1*m + im2] *= scal;
+        rq[iq*m2 + im2*m + im1] = rq[iq*m2 + im1*m + im2];        
+      }
+    }
+    //PP
+    //for(im1=mz[0];im1<m;im1++) {
+    //  for(im2=im1;im2<m;im2++) {
+    //    rq[iq*m2 + im1*m + im2] *= cal;
+    //    rq[iq*m2 + im2*m + im1] = rq[iq*m2 + im1*m + im2];
+    //  }
+    //}
+  }
+}
+
+SmicaComp* comp_totcalTP_init(int q, int mT, int mP, int *TEB,error **err ) {
+  SC_beamTP *gc;
+  SmicaComp *SC;
+  int m;
+  int i;
+  int *mz;
+
+  m = mT*TEB[0] + mP *TEB[1] + mP*TEB[2];
+  
+  mz = malloc_err(sizeof(int)*3,err);
+  forwardError(*err,__LINE__,NULL);
+  
+  mz[0] = mT*TEB[0];
+  mz[1] = mT*TEB[1];
+  mz[2] = mT*TEB[2];
+
+  SC = alloc_SC(1,q,m,mz, &comp_totcalTP_update, &comp_totcalP_free,err);
+  forwardError(*err,__LINE__,NULL);
+  SC_ismul(SC);
+  return SC;
+
+}
+
+void comp_totcalPP_update(void* data,double* locpars, double* rq, error **err) {
+  SmicaComp *SC;
+  int t,iq,im1,im2,m,m2,neigen,offm,offq,im0;
+  double cal,scal;
+  int *mz;
+
+  SC = data;
+  mz = SC->data;
+
+  cal = 1./(locpars[0]*locpars[0]);
+  scal = 1./(locpars[0]);
+
+  m = SC->m;
+  m2 = m*m;
+  
+  for(iq=0;iq<SC->nq;iq++) {
+    // TP
+    //for(im1=0;im1<mz[0];im1++) {
+    //  im0 = im1;
+    //  if (im0<mz[0]) {
+    //    im0 = mz[0];
+    //  }
+    //  for(im2=im0;im2<m;im2++) {
+    //    rq[iq*m2 + im1*m + im2] *= scal;
+    //    rq[iq*m2 + im2*m + im1] = rq[iq*m2 + im1*m + im2];        
+    //  }
+    //}
+    //PP
+    for(im1=mz[0];im1<m;im1++) {
+      for(im2=im1;im2<m;im2++) {
+        rq[iq*m2 + im1*m + im2] *= cal;
+        rq[iq*m2 + im2*m + im1] = rq[iq*m2 + im1*m + im2];
+      }
+    }
+  }
+}
+
+SmicaComp* comp_totcalPP_init(int q, int mT, int mP, int *TEB,error **err ) {
+  SC_beamTP *gc;
+  SmicaComp *SC;
+  int m;
+  int i;
+  int *mz;
+
+  m = mT*TEB[0] + mP *TEB[1] + mP*TEB[2];
+  
+  mz = malloc_err(sizeof(int)*3,err);
+  forwardError(*err,__LINE__,NULL);
+  
+  mz[0] = mT*TEB[0];
+  mz[1] = mT*TEB[1];
+  mz[2] = mT*TEB[2];
+
+  SC = alloc_SC(1,q,m,mz, &comp_totcalPP_update, &comp_totcalP_free,err);
+  forwardError(*err,__LINE__,NULL);
+  SC_ismul(SC);
+  return SC;
+
+}
 
 /* OLD */
 double smica_crit_classic(void *vsmic,error **err) {

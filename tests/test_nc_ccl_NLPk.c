@@ -207,7 +207,7 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
   config.transfer_function_method     = pk_t;
   config.matter_power_spectrum_method = ccl_halofit;
 
-  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, -1, NULL, NULL, &status);
+  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, 0.0, 0.0, -1, NULL, NULL, &status);
   cosmo = ccl_cosmology_create (params, config);
 
   /*cosmo->spline_params.A_SPLINE_NLOG_PK = 200;*/

@@ -322,6 +322,7 @@ nc_scalefactor_new (gdouble zf, NcDistance *dist)
                     NULL);
 
   nc_distance_free (dist);
+
   return a;
 }
 
@@ -420,6 +421,29 @@ nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf)
   {
     self->zf = zf;
     ncm_model_ctrl_force_update (self->ctrl);
+    if (self->dist != NULL)
+      nc_distance_require_zf (self->dist, zf);
+  }
+}
+
+/**
+ * nc_scalefactor_require_zf:
+ * @a: a #NcScalefactor
+ * @zf: maximum redshift required
+ *
+ * Requires the final redshift of at least $z_f$ = @zf.
+ *
+ */
+void 
+nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf)
+{
+  NcScalefactorPrivate * const self = a->priv;
+  if (zf > self->zf)
+  {
+    self->zf = zf;
+    ncm_model_ctrl_force_update (self->ctrl);
+    if (self->dist != NULL)
+      nc_distance_require_zf (self->dist, zf);
   }
 }
 

@@ -49,12 +49,12 @@ recomb = Nc.Recomb.new_from_name ("NcRecombSeager{'prec':<1.0e-7>, 'zi':<1e9>}")
 #
 # C-like
 #
-cosmo.orig_param_set (Nc.HICosmoDEParams.H0,        70.0)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_C,   0.25)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_X,   0.70)
-cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
-cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.00)
+cosmo.orig_param_set (Nc.HICosmoDESParams.H0,        70.0)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_C,   0.25)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_X,   0.70)
+cosmo.orig_param_set (Nc.HICosmoDESParams.T_GAMMA0,  2.72)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_B,   0.05)
+cosmo.orig_param_set (Nc.HICosmoDEXCDMSParams.W,    -1.00)
 
 #
 # OO-like

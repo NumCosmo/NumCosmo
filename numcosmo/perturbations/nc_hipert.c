@@ -164,6 +164,12 @@ nc_hipert_finalize (GObject *object)
     self->y = NULL;
   }
 
+  if (self->vec_abstol != NULL)
+  {
+    N_VDestroy (self->vec_abstol);
+    self->vec_abstol = NULL;
+  }
+  
   if (self->A != NULL)
   {
     SUNMatDestroy (self->A);

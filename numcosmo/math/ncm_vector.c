@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -880,7 +880,7 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
 /**
  * ncm_vector_set_array:
  * @cv: a #NcmVector.
- * @array: (element-type double): a pointer to a double #GArray
+ * @array: (array) (element-type double): a pointer to a double #GArray
  * 
  * This function sets all the components of the vector @cv using the data array @array,
  * @array->len must match the vector size.

@@ -74,7 +74,7 @@ struct _NcHIPertTwoFluids
  * FIXME
  * 
  */
-typedef enum _NcHIPertTwoFluidsCross
+typedef enum /*< enum,underscore_name=NC_HIPERT_TWO_FLUIDS_CROSS  >*/
 {
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN = 0,
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN ,

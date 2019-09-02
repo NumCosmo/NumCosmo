@@ -235,6 +235,8 @@ static gdouble _nc_hicosmo_de_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z);
 
+static void _nc_hicosmo_de_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var);
+
 static void
 nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 {
@@ -352,6 +354,8 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
   nc_hicosmo_set_E2Omega_m_impl   (parent_class, &_nc_hicosmo_de_E2Omega_m);
   nc_hicosmo_set_E2Omega_r_impl   (parent_class, &_nc_hicosmo_de_E2Omega_r);
+
+  nc_hicosmo_set_get_bg_var_impl (parent_class, &_nc_hicosmo_de_get_bg_var);
   
   klass->E2Omega_de       = &_nc_hicosmo_de_E2Omega_de;
   klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;
@@ -840,6 +844,11 @@ _nc_hicosmo_de_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
     Press_mnu0 += Press_mnu0_n;
   }
   return Press_mnu0;
+}
+
+static void 
+_nc_hicosmo_de_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var)
+{
 }
 
 void

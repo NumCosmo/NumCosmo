@@ -53,7 +53,7 @@ typedef struct _NcHIPrimClass NcHIPrimClass;
  *
  * Methods to be implementd by every primordial model.
  */
-typedef enum _NcHIPrimImpl
+typedef enum /*< flags,underscore_name=NC_HIPRIM_IMPL >*/
 {
   NC_HIPRIM_IMPL_lnSA_powspec_lnk = 1 << 0,
   NC_HIPRIM_IMPL_lnT_powspec_lnk  = 1 << 1, 

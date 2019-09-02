@@ -160,7 +160,7 @@ test_nc_create_ccl_cosmo (const ccl_params_test_data *test_data)
   params = ccl_parameters_create (test_data->Omega_c, test_data->Omega_b, Omega_k, 
                                   Neff, (gdouble *)test_data->mnu, ccl_mnu_list, test_data->w_0, 
                                   test_data->w_a, test_data->h, test_data->A_s, test_data->n_s, 
-                                  -1, -1, -1, -1, NULL, NULL, &status);
+                                  -1, -1, -1, 0.0, 0.0, -1, NULL, NULL, &status);
 
 	cosmo = ccl_cosmology_create (params, config);
 

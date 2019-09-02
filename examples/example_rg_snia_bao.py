@@ -115,8 +115,8 @@ fit.log_covar ()
 #  First we create two PIndex indicating which parameter
 #    we are going to study.
 # 
-p1 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEParams.OMEGA_C)
-p2 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMParams.W)
+p1 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDESParams.OMEGA_C)
+p2 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMSParams.W)
 
 lhr2d = Ncm.LHRatio2d.new (fit, p1, p2, 1.0e-3)
 

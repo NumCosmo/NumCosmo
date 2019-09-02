@@ -803,15 +803,13 @@ ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax)
   NcmSphereMapPrivate * const self = smap->priv;
   if (self->lmax != lmax)
   {
-    /*ncm_vector_clear (&self->alm);*/
+    g_clear_pointer (&self->alm,  _fft_vec_free);
     ncm_vector_clear (&self->Cl);
     self->lmax = lmax;
 
     if (self->lmax > 0)
     {
-      /*self->alm = ncm_vector_new (2 * NCM_SPHERE_MAP_ALM_SIZE (self->lmax));*/
-      self->Cl  = ncm_vector_new (self->lmax + 1);
-
+      self->Cl      = ncm_vector_new (self->lmax + 1);
       self->alm_len = NCM_SPHERE_MAP_ALM_SIZE (self->lmax);
       self->alm     = _fft_vec_alloc_complex (self->alm_len);
       memset (self->alm, 0, sizeof (_fft_complex) * self->alm_len);      
@@ -2093,6 +2091,19 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 }
 
 /**
+ * ncm_sphere_map_update_Cl:
+ * @smap: a #NcmSphereMap
+ *
+ * Updates the values of $C_\ell$ based on the current $a_{lm}$.
+ * 
+ */
+void
+ncm_sphere_map_update_Cl (NcmSphereMap *smap)
+{
+	_ncm_sphere_map_map2alm_calc_Cl (smap);
+}
+
+/**
  * ncm_sphere_map_get_alm:
  * @smap: a #NcmSphereMap
  * @l: value of $l < \ell_\mathrm{max}$
@@ -2331,7 +2342,6 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
 	return Ctheta / (4.0 * ncm_c_pi ());
 }
 
-
 /**
  * ncm_sphere_map_calc_Ctheta:
  * @smap: a #NcmSphereMap
@@ -2364,9 +2374,3 @@ ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 		return s;
 	}
 }
-
-
-
-
-
-

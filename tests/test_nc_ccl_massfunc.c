@@ -220,7 +220,7 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
   config.transfer_function_method = pk_t;
 	config.mass_function_method     = 1;
 
-  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, -1, NULL, NULL, &status);
+  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, 0.0, 0.0, -1, NULL, NULL, &status);
   /*params.Omega_g = 0;*/
   /*printf ("# Setting % 22.15g % 22.15g\n", params.Omega_l, data->Omega_v[i_model - 1]);*/
   /*params.Omega_l = data->Omega_v[i_model - 1];*/

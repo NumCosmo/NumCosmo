@@ -444,8 +444,8 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (gdouble h, gpointer user_data)
 	guint i;
 	gint ret;
 
-  self->href   = h;
-  self->href2  = self->href * self->href;
+  self->href      = h;
+  self->href2     = self->href * self->href;
   self->us_lnnorm = 0.5 * (self->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (self->cov_decomp));
   self->lnnorm    = self->us_lnnorm + self->d * log (self->href);
   
@@ -733,22 +733,22 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
     ncm_vector_set (self->weights, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
   }
 
-  if (FALSE)
+  if (TRUE)
   {
-    const gint n    = (self->d * (self->d + 1)) / 2;
-    gdouble *dht    = g_new0 (gdouble, n);
-    gdouble *ht     = g_new0 (gdouble, n);
-    NcmMatrix *cov  = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+    const gint n     = (self->d * (self->d + 1)) / 2;
+    gdouble *dht     = g_new0 (gdouble, n);
+    gdouble *ht      = g_new0 (gdouble, n);
+    NcmMatrix *cov   = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
     NcmMatrix *ln_cm = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
     gint k = 0;
     
     ncm_matrix_scale (cov, gsl_pow_2 (self->over_smooth * pow (4.0 / (self->n * (self->d + 2.0)), 1.0 / (self->d + 4.0))));
-    printf ("\n");
-    ncm_matrix_log_vals (cov, "ORIG_COV: ", "% 22.15g");
+    /*printf ("\n");*/
+    /*ncm_matrix_log_vals (cov, "ORIG_COV: ", "% 22.15g");*/
 
     ncm_matrix_sym_posdef_log (cov, 'U', ln_cm);
 
-    ncm_matrix_log_vals (ln_cm, "OLOG_COV: ", "% 22.15g");
+    /*ncm_matrix_log_vals (ln_cm, "OLOG_COV: ", "% 22.15g");*/
 
     for (i = 0; i < self->d; i++)
     {

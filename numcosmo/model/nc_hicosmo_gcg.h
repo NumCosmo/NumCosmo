@@ -49,7 +49,7 @@ typedef struct _NcHICosmoGCGPrivate NcHICosmoGCGPrivate;
 typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
 
 /**
- * NcHICosmoGCGParams:
+ * NcHICosmoGCGSParams:
  * @NC_HICOSMO_GCG_H0: FIXME
  * @NC_HICOSMO_GCG_OMEGA_C: FIXME
  * @NC_HICOSMO_GCG_OMEGA_X: FIXME
@@ -62,7 +62,7 @@ typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
  * FIXME
  *
  */
-typedef enum _NcHICosmoGCGParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
 {
   NC_HICOSMO_GCG_H0 = 0,
   NC_HICOSMO_GCG_OMEGA_C,
@@ -74,7 +74,7 @@ typedef enum _NcHICosmoGCGParams
   NC_HICOSMO_GCG_GAMMA,   
   /* < private > */
   NC_HICOSMO_GCG_SPARAM_LEN, /*< skip >*/
-} NcHICosmoGCGParams;
+} NcHICosmoGCGSParams;
 
 /**
  * NcHICosmoGCGVParams:
@@ -86,7 +86,7 @@ typedef enum _NcHICosmoGCGParams
  * FIXME
  *
  */
-typedef enum _NcHICosmoGCGVParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_VPARAMS >*/
 {
   NC_HICOSMO_GCG_MASSNU_M = 0,
   NC_HICOSMO_GCG_MASSNU_T,

@@ -8,6 +8,7 @@ void gibbs_extra_free_(int*);
 void gibbs_extra_lkl_(double*,int*,double*);
 void   gibbs_extra_parameter_init_(int*, char*,int*,int*,int*,int*,int*,int*,int*,int*,int*);
 void gibbs_gauss_extra_free_(int*);
+void gibbs_gauss_extra_v3_free_(int*);
 void gibbs_gauss_extra_lkl_(double*,int*,double*);
 void gibbs_gauss_extra_parameter_init_(int*,int*,int*,int*);
 void comm_lowl_extra_free_(int*);
@@ -156,6 +157,27 @@ double gibbs_gauss_lkl(void* none, double* pars, error **err) {
 }
 
 
+void free_gauss_gibbs_v3(void **none) {
+  gibbs *gb;
+
+
+  gb = *none;
+  gibbs_gauss_extra_v3_free_(&(gb->handle));
+  free(gb);
+}
+
+void gibbs_gauss_extra_v3_lkl_(double*,int*,double*);
+double gibbs_gauss_v3_lkl(void* none, double* pars, error **err) {
+  double lkl;
+  gibbs *gb;
+
+  gb = none;
+  gibbs_gauss_extra_v3_lkl_(&lkl,&gb->handle,pars);
+
+  return lkl;
+}
+
+void gibbs_gauss_extra_parameter_v3_init_(int*,int*,int*,int*);
 cmblkl* clik_gibbs_gauss_init(cldf *df, int nell, int* ell, int* has_cl, double unit,double* wl, double *bins, int nbins, error **err) {
   char directory_name[4096],pwd[4096],pwd2[4096];
   int status;
@@ -166,19 +188,22 @@ cmblkl* clik_gibbs_gauss_init(cldf *df, int nell, int* ell, int* has_cl, double 
   int ldd;
   int lmin,lmax;
   int delta_l;
-  int hk;
+  int hk,v;
   gibbs *gb;
 
   lmin = ell[0];
   lmax = ell[nell-1];
-  
-  // get data and change dir
-  cldf_external(df,directory_name,pwd,err);
-  forwardError(*err,__LINE__,NULL);
-  
+    
   delta_l = cldf_readint(df,"delta_l",err);
   forwardError(*err,__LINE__,NULL);
   
+  v = cldf_readint_default(df,"version",2,err);
+  forwardError(*err,__LINE__,NULL);
+
+  // get data and change dir
+  cldf_external(df,directory_name,pwd,err);
+  forwardError(*err,__LINE__,NULL);
+
   
   gb = malloc_err(sizeof(gibbs),err);
   forwardError(*err,__LINE__,NULL);
@@ -186,23 +211,35 @@ cmblkl* clik_gibbs_gauss_init(cldf *df, int nell, int* ell, int* has_cl, double 
   gb->handle = 0;
   
   //call
-  gibbs_gauss_extra_parameter_init_(&(gb->handle),&lmin,&lmax,&delta_l);
-  testErrorRetVA(gb->handle<=0,-43255432,"handle return is negative (got %d)",*err,__LINE__,NULL,gb->handle);
+  if (v==2) {
+    gibbs_gauss_extra_parameter_init_(&(gb->handle),&lmin,&lmax,&delta_l);
+    testErrorRetVA(gb->handle<=0,-43255432,"handle return is negative (got %d)",*err,__LINE__,NULL,gb->handle);
+
+
+    cing = init_cmblkl(gb, &gibbs_gauss_lkl, 
+                       &free_gauss_gibbs,
+                       nell,ell,
+                       has_cl,ell[nell-1],unit,wl,0,bins,nbins,0,err);
+    forwardError(*err,__LINE__,NULL);
+  } else  if (v==3) {
+    gibbs_gauss_extra_parameter_v3_init_(&(gb->handle),&lmin,&lmax,&delta_l);
+    testErrorRetVA(gb->handle<=0,-43255432,"handle return is negative (got %d)",*err,__LINE__,NULL,gb->handle);
+
+
+    cing = init_cmblkl(gb, &gibbs_gauss_v3_lkl, 
+                       &free_gauss_gibbs_v3,
+                       nell,ell,
+                       has_cl,ell[nell-1],unit,wl,0,bins,nbins,0,err);
+    forwardError(*err,__LINE__,NULL);
+  } else {
+    testErrorRetVA(0==0,-43255432,"Version must be 2 or 3 (got %d)",*err,__LINE__,NULL,v);
+  }
 
   cldf_external_cleanup(directory_name,pwd,err);
-  forwardError(*err,__LINE__,NULL);
-  
-  cing = init_cmblkl(gb, &gibbs_gauss_lkl, 
-                     &free_gauss_gibbs,
-                     nell,ell,
-                     has_cl,ell[nell-1],unit,wl,0,bins,nbins,0,err);
   forwardError(*err,__LINE__,NULL);
 
   return cing;
 }
-
-
-
 
 void free_comm_lowl(void **phandle) {
   

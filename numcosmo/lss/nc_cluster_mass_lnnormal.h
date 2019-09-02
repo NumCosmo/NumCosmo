@@ -44,19 +44,19 @@ typedef struct _NcClusterMassLnnormalClass NcClusterMassLnnormalClass;
 typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
 
 /**
- * NcClusterMassLnnormalParams:
+ * NcClusterMassLnnormalSParams:
  * @NC_CLUSTER_MASS_LNNORMAL_BIAS: FIXME
  * @NC_CLUSTER_MASS_LNNORMAL_SIGMA: standard deviation of the log-normal distribution
  *
  * FIXME
  */
-typedef enum _NcClusterMassLnnormalParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS >*/
 {
   NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
   NC_CLUSTER_MASS_LNNORMAL_SIGMA,  
   /* < private > */
   NC_CLUSTER_MASS_LNNORMAL_SPARAM_LEN, /*< skip >*/
-} NcClusterMassLnnormalParams;
+} NcClusterMassLnnormalSParams;
 
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS  (0.0)
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA  (0.04)

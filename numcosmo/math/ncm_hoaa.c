@@ -852,7 +852,6 @@ _ncm_hoaa_dlnmnu_calc_u_v (const gdouble upsilon, const gdouble lnmnu, gdouble *
   }
 }
 
-
 static gint
 _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {

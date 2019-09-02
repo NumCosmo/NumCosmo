@@ -139,12 +139,19 @@ typedef struct {
   int *m1,*m2;
   double *nrm;
   char **nrm_names;
+  int off1,off2;
 } pw_XX_payload;
 
-#define TE_KIND 1
-#define EE_KIND 2
 
-pw_XX_payload*  init_pw_XX_payload(int kind,int nT,int nP,error **err) {
+
+#define EE_KIND 1
+#define BB_KIND 2
+#define TE_KIND 3
+#define TB_KIND 4
+#define EB_KIND 5
+
+
+pw_XX_payload*  init_pw_XX_payload(int kind,int nT,int nP,int* has_TEB,error **err) {
   pw_XX_payload* payload;
   int mx,i,j;
   int lim1,lim2,off1,off2,mul1;
@@ -152,24 +159,48 @@ pw_XX_payload*  init_pw_XX_payload(int kind,int nT,int nP,error **err) {
   payload  = malloc_err(sizeof(pw_XX_payload),err);  
   forwardError(*err,__LINE__,NULL);
   
-  
-  if (kind==TE_KIND) {
-    lim1 = nT;
-    lim2 = nP;
-    off1 = 0;
-    off2 = nT;
-    mul1 = 0;
-    payload->n = nT * nP;
-   } else {
+  if (kind==EE_KIND) {
     lim1 = nP;
     lim2 = nP;
     off1 = nT;
     off2 = nT;
     mul1 = 1;
     payload->n = (nP*(nP+1))/2;
-   }
-  
-  
+  } else if (kind==BB_KIND) {
+    lim1 = nP;
+    lim2 = nP;
+    off1 = nT+nP*has_TEB[1];
+    off2 = nT+nP*has_TEB[1];
+    mul1 = 1;
+    payload->n = (nP*(nP+1))/2;
+  } else if (kind==TE_KIND) {
+    lim1 = nT;
+    lim2 = nP;
+    off1 = 0;
+    off2 = nT;
+    mul1 = 0;
+    payload->n = nT * nP;
+   } else if (kind==TB_KIND) {
+    lim1 = nT;
+    lim2 = nP;
+    off1 = 0;
+    off2 = nT+nP*has_TEB[1];
+    mul1 = 0;
+    payload->n = nT * nP;
+  } else if (kind==EB_KIND) {
+    lim1 = nP;
+    lim2 = nP;
+    off1 = nT;
+    off2 = nT+nP*has_TEB[1];
+    mul1 = 0;
+    payload->n = nP * nP;
+  } else {
+    testErrorRetVA(1==1,-130,"invalid kind (%d)",*err,__LINE__,NULL,kind)
+  }
+    
+  payload->off1 = off1;
+  payload->off2 = off2;
+
   payload->m1 = malloc_err(sizeof(int)*payload->n,err);
   forwardError(*err,__LINE__,NULL);
   payload->m2 = malloc_err(sizeof(int)*payload->n,err);
@@ -193,11 +224,12 @@ pw_XX_payload*  init_pw_XX_payload(int kind,int nT,int nP,error **err) {
   //  mx = payload->n;
   //} 
 
-  payload->nrm = malloc_err(sizeof(double)*(nT+nP)*(nT+nP),err);
+  payload->nrm = malloc_err(sizeof(double)*(nT+nP*2)*(nT+nP*2),err);
   forwardError(*err,__LINE__,NULL);
   
   return payload;
 }
+
 
 void pw_XX_free(void **PP) {
   pw_XX_payload *P;
@@ -212,6 +244,7 @@ void pw_XX_free(void **PP) {
   free(P);
   *PP = NULL;
 }
+
 
 void powerlaw_free_emissivity_TE_compute(parametric* egl, double *Rq,  error **err);
 
@@ -228,7 +261,7 @@ parametric *powerlaw_free_emissivity_TE_init(int ndet_T, int ndet_P, int *has_TE
   egl->eg_compute = &powerlaw_free_emissivity_TE_compute;
   egl->eg_free = &pw_XX_free;
 
-  egl->payload  = init_pw_XX_payload(TE_KIND,egl->nfreq_T,egl->nfreq_P,err);
+  egl->payload  = init_pw_XX_payload(TE_KIND,egl->nfreq_T,egl->nfreq_P,has_TEB,err);
   forwardError(*err,__LINE__,NULL);
   payload = egl->payload;
 
@@ -338,7 +371,7 @@ parametric *powerlaw_free_emissivity_EE_init(int ndet_T, int ndet_P, int *has_TE
   egl->eg_compute = &powerlaw_free_emissivity_EE_compute;
   egl->eg_free = &pw_XX_free;
 
-  egl->payload  = init_pw_XX_payload(EE_KIND,egl->nfreq_T,egl->nfreq_P,err);
+  egl->payload  = init_pw_XX_payload(EE_KIND,egl->nfreq_T,egl->nfreq_P,has_TEB,err);
   forwardError(*err,__LINE__,NULL);
   payload = egl->payload;
 
@@ -449,6 +482,7 @@ void powerlaw_free_emissivity_EE_compute(parametric* egl, double *Rq,  error **e
 
 CREATE_PARAMETRIC_POL_FILE_INIT(powerlaw_free_emissivity_EE,powerlaw_free_emissivity_EE_init);
 CREATE_PARAMETRIC_POL_FILE_INIT(powerlaw_free_emissivity_TE,powerlaw_free_emissivity_TE_init);
+
 
 void pointsource_compute(parametric* egl, double *Rq,  error **err) {
   int ell,m1,m2,mell,nfreq,iv,mv;
@@ -1024,3 +1058,120 @@ CREATE_PARAMETRIC_TEMPLATE_FILE_INIT(sz,sz_init);
 CREATE_PARAMETRIC_TEMPLATE_FILE_INIT(ksz,ksz_init);
 
 
+void powerlaw_free_emissivity_XX_compute(parametric* egl, double *Rq,  error **err);
+
+parametric *powerlaw_free_emissivity_XX_init(int ndet_T, int ndet_P, int *has_TEB, double *detlist, int ndef, char** defkey, char **defvalue, int nvar, char **varkey, int lmin, int lmax, error **err) {
+  parametric *egl;
+  int mx,i,j,kind;
+  pw_XX_payload *payload;
+  int tl, mm, lbf,l,delta,m1,m2;
+  pfchar name;
+  
+  egl = parametric_pol_init(ndet_T, ndet_P, has_TEB, detlist, ndef, defkey, defvalue, nvar, varkey, lmin, lmax, err);
+  forwardError(*err,__LINE__,NULL);
+  
+  egl->eg_compute = &powerlaw_free_emissivity_XX_compute;
+  egl->eg_free = &pw_XX_free;
+
+  kind = parametric_get_value(egl,"pwfe_XX_kind",err);
+  forwardError(*err,__LINE__,NULL);
+  
+  egl->payload  = init_pw_XX_payload(kind,egl->nfreq_T,egl->nfreq_P,has_TEB,err);
+  forwardError(*err,__LINE__,NULL);
+  
+  payload = egl->payload;
+
+  parametric_set_default(egl,"pwfe_XX_l_pivot",500,err);
+  forwardError(*err,__LINE__,NULL);
+
+  parametric_set_default(egl,"pwfe_XX_l2_norm",1,err);
+  forwardError(*err,__LINE__,NULL);
+
+  parametric_set_default(egl,"pwfe_XX_index",0,err);
+  forwardError(*err,__LINE__,NULL);
+  
+  for(i=0;i<payload->n;i++) {
+    m1 = payload->m1[i];
+    m2 = payload->m2[i];
+    if (m1-payload->off1 > m2-payload->off2) {
+      continue;
+    }
+    if (m1-payload->off1==m2-payload->off2) {
+      sprintf(name,"pwfe_XX_A_%d",(int)egl->freqlist[m1]);
+    } else {
+      sprintf(name,"pwfe_XX_A_%d_%d",(int)egl->freqlist[m1],(int)egl->freqlist[m2]);
+    }
+    parametric_set_default(egl,name,0,err);
+    forwardError(*err,__LINE__,NULL);
+  }
+
+  return egl;
+}
+
+void powerlaw_free_emissivity_XX_compute(parametric* egl, double *Rq,  error **err) {
+  int ell,m1,m2,mell,nfreq,iv,mv,i;
+  double l_pivot,index,v,lA;
+  double *A;
+  pfchar name;
+  int stop;
+  pw_XX_payload *payload;
+  double nrmit;
+  int l2norm;
+
+  l_pivot = parametric_get_value(egl,"pwfe_XX_l_pivot",err);
+  forwardError(*err,__LINE__,);
+  egl->l_pivot = l_pivot;
+
+  l2norm = parametric_get_value(egl,"pwfe_XX_l2_norm",err);
+  forwardError(*err,__LINE__,);
+
+  nrmit = 1;
+  if (l2norm==1) {
+    nrmit = l_pivot*(l_pivot+1.)/2./M_PI;
+  }
+  
+  index = parametric_get_value(egl,"pwfe_XX_index",err);
+  forwardError(*err,__LINE__,);
+
+  payload = egl->payload;
+
+  A = payload->nrm;
+  nfreq = egl->nfreq;
+
+  for(i=0;i<payload->n;i++) {
+    m1 = payload->m1[i];
+    m2 = payload->m2[i];
+    if (m1-payload->off1 > m2-payload->off2) {
+      int mtmp;
+      mtmp = m2-payload->off2+payload->off1;
+      m2 = m1-payload->off1+payload->off2;
+      m1 = mtmp;
+    }
+    if (m1-payload->off1==m2-payload->off2) {
+      sprintf(name,"pwfe_XX_A_%d",(int)egl->freqlist[m1]);
+    } else {
+      sprintf(name,"pwfe_XX_A_%d_%d",(int)egl->freqlist[m1],(int)egl->freqlist[m2]);
+    }
+    v = 1;
+    v = parametric_get_value(egl,name,err);
+    A[i] = v/nrmit;
+  }
+
+  #pragma omp parallel for private(ell,v, mell,i,m1,m2,lA)
+  for(ell=egl->lmin;ell<=egl->lmax;ell++) {
+    v = pow(ell/l_pivot,index);
+    mell = (ell-egl->lmin)*nfreq*nfreq;
+    for(i=0;i<payload->n;i++) {
+      m1 = payload->m1[i];
+      m2 = payload->m2[i];
+      lA = A[i];
+      Rq[IDX_R(egl,ell,m1,m2)] = lA*v;
+      Rq[IDX_R(egl,ell,m2,m1)] = lA*v;
+    }  
+  }
+
+  return;
+}
+
+
+CREATE_PARAMETRIC_POL_FILE_INIT(powerlaw_free_emissivity_XX,powerlaw_free_emissivity_XX_init);

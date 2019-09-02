@@ -13,6 +13,7 @@ typedef struct {
   int *bi,*bo;
   int bn;
   double *A;
+  int ismul;
   } parametric_smica;
 
 void comp_parametric_update(void* data,double* locpars, double* rq, error **err) {
@@ -43,115 +44,133 @@ void comp_parametric_update(void* data,double* locpars, double* rq, error **err)
 
   // apply wl and binning
   one=1;
+  int rn =0;
   if (p_pay->wl==NULL) {
     wl0 = &one;
     inc = 0;
   } else {
     wl0 = p_pay->wl;
     inc = 1;
+    rn = 1;
   }
   
-  //_DEBUGHERE_("","");
-  wl=wl0;
-  for(il=0;il<p_pay->nell;il++) {
-    int ip;
-    int im1,im2;
-    ip = il * ndet * ndet;
+  if ((rn==0) && (fabs((p_pay->unit-1))>1e-7)) {
+    rn = 1;
+  }
 
-    for(im1=0;im1<ndet;im1++) {
-      for(im2=0;im2<ndet;im2++) {
-        p_pay->rq[il*ndet*ndet+im1*ndet+im2] = p_pay->rq[il*ndet*ndet+im1*ndet+im2] * *wl * p_pay->unit * p_pay->A[im1]*p_pay->A[im2];  
+  if (rn==0) {
+    for(im=0;im<ndet;im++) {
+      if (fabs(p_pay->A[im]-1)>1e-7) {
+        rn=1;
       }
     }
-    wl+=inc;
+  }
+  //_DEBUGHERE_("%d",rn);
+  if (rn==1) {
+    //#pragma omp parallel for private(il,ndet)
+    for(il=0;il<p_pay->nell;il++) {
+      int ip;
+      int im1,im2;
+      ip = il * ndet * ndet;
+
+      for(im1=0;im1<ndet;im1++) {
+        for(im2=0;im2<ndet;im2++) {
+          p_pay->rq[il*ndet*ndet+im1*ndet+im2] = p_pay->rq[il*ndet*ndet+im1*ndet+im2] * *wl * p_pay->unit * p_pay->A[im1]*p_pay->A[im2];  
+        }
+      }
+      wl+=inc;
+    }
   }
   //_DEBUGHERE_("%g %g %g %g",egfs_pay->A[0],egfs_pay->A[1],egfs_pay->A[2],egfs_pay->A[3])
-  //_DEBUGHERE_("%g %g %g",egfs_pay->rq[0],egfs_pay->rq[2],egfs_pay->unit);
-  
+  //_DEBUGHERE_("%g %g %g",egfs_pay->rq[0],egfs_pay->rq[2],egfs_pay->unit);  
+
   // apply binning if needed
   //sprintf(nm,"rq_before_%s.dat",SC->comp_name);
   //write_bin_vector(rq, nm, sizeof(double)*(p_pay->nbins*p_pay->p_model->ndet*p_pay->p_model->ndet), err);   
-  //forwardError(*err,__LINE__,);
-  
-  if (p_pay->bins!=NULL) {
-    char transa,transb;
-    int npar;
-    double done,dzero;
-    int one,nbns,nell;
-    int ndim;
-  //  int ii;
-  //  double rq0,rq2;
-  //  double poc;
+  //forwardError(*err,__LINE__,);  
+  if (p_pay->ismul==0) {  
 
-    transa='N';
-    transb='N';
-    ndim = m*m;
-    one = 1;
-    done = 1.;
-    dzero = 0;
-    nbns = p_pay->nbins;
-    nell = p_pay->nell;
-    
-    /*rq0=rq[0];
-    rq2=rq[2];
-    _DEBUGHERE_("%g %g",rq[0],rq[2]);
-    _DEBUGHERE_("%g %g",rq[0]-rq0,rq[2]-rq2);
-    _DEBUGHERE_("m %d n %d k %d",ndim, nbns,nell);*/  
-    //_DEBUGHERE_("avant egfs","");
-    //memset(r10,0,sizeof(double)*16);
+    if (p_pay->bins!=NULL) {
+      int npar;
+      int one,nbns,nell;
+      int ndim;
 
-    //printMat(&rq[10*ndim], egfs_pay->m,egfs_pay->m);
-    //printMat(r10, egfs_pay->m,egfs_pay->m);
-    //{
-    //  int il,iq,if1,if2;
-    //  for(il=0;il<nell;il++) {
-    //    for(iq=0;iq<nbns;iq++) {
-    //      for(if1=0;if1<p_pay->m;if1++) {
-    //        for(if2=0;if2<p_pay->m;if2++) {
-    //          rq[iq*ndim+if1*p_pay->m+if2] += p_pay->bins[iq*nell+il] * p_pay->rq[il*p_pay->m*p_pay->m+if1*p_pay->m+if2];
-    //          /*if (iq==10)
-    //            r10[if1*egfs_pay->m+if2] += egfs_pay->bins[iq*nell+il] * egfs_pay->rq[il+if1*egfs_pay->m*egfs_pay->nell+if2*egfs_pay->nell];*/
-    //        }  
-    //      }
-    //    }
-    //  }
-    //}
-    {
-     int il,iq,if1,if2,bb;
-     double w;
-      bb=0;
-      for(iq=0;iq<nbns;iq++) {
-        for(il=p_pay->bi[iq];il<p_pay->bo[iq];il++) {
-          w = p_pay->wbins[bb];
-          bb++;
-          for(if1=0;if1<ndet;if1++) {
-            for(if2=0;if2<ndet;if2++) {
-              //_DEBUGHERE_("%d %d %g %d,%d %g %g",il,iq,w,if1,if2,rq[iq*ndim+if1*m+if2],p_pay->rq[il*ndet*ndet+if1*ndet+if2]);
-              rq[iq*ndim+if1*m+if2] += w * p_pay->rq[il*ndet*ndet+if1*ndet+if2];
-              /*if (iq==10)
-                  r10[if1*egfs_pay->m+if2] += egfs_pay->bins[iq*nell+il] * egfs_pay->rq[il+if1*egfs_pay->m*egfs_pay->nell+if2*egfs_pay->nell];*/
-            }  
+      ndim = m*m;
+      nbns = p_pay->nbins;
+      nell = p_pay->nell;
+
+      {
+        int il,iq,if1,if2,bb;
+        double w;
+        bb=0;
+        //#pragma omp parallel for private(iq,il,if1,if2,w,bb,ndet,m)
+        for(iq=0;iq<nbns;iq++) {
+          for(il=p_pay->bi[iq];il<p_pay->bo[iq];il++) {
+            w = p_pay->wbins[bb];
+            bb++;
+            for(if1=0;if1<ndet;if1++) {
+              for(if2=0;if2<ndet;if2++) {
+                //_DEBUGHERE_("%d %d %g %d,%d %g %g",il,iq,w,if1,if2,rq[iq*ndim+if1*m+if2],p_pay->rq[il*ndet*ndet+if1*ndet+if2]);
+                rq[iq*ndim+if1*m+if2] += w * p_pay->rq[il*ndet*ndet+if1*ndet+if2];
+              }  
+            }
+          }
+        }
+      }
+    } else {
+      int if1,if2;
+      //#pragma omp parallel for private(il,if1,if2,m)
+      for(il=0;il<p_pay->nell;il++) {
+        for(if1=0;if1<ndet;if1++) {
+          for(if2=0;if2<ndet;if2++) {
+            rq[il*m*m+if1*m+if2] += p_pay->rq[il*ndet*ndet+if1*ndet+if2];
           }
         }
       }
     }
-    //dgemm(&transa, &transb, &ndim, &nbns,&nell, &done, egfs_pay->rq, &ndim, egfs_pay->bins, &nell, &done, rq, &ndim);
-    /*_DEBUGHERE_("apres egfs","");
-    printMat(&rq[10*ndim], egfs_pay->m,egfs_pay->m);
-    printMat(r10, egfs_pay->m,egfs_pay->m);*/
-    /*_DEBUGHERE_("","");
-    poc = 0;
-    for(ii=0;ii<10;ii++) {
-      _DEBUGHERE_("%g %g %g",egfs_pay->rq[ii*ndim],egfs_pay->rq[ii*ndim+2],egfs_pay->bins[ii]);
-      poc += egfs_pay->rq[ii*ndim] * egfs_pay->bins[ii];
-    }
-    _DEBUGHERE_("%g %g %g",rq[0]-rq0,rq[2]-rq2,poc);*/
   } else {
-    int if1,if2;
-    for(il=0;il<p_pay->nell;il++) {
-      for(if1=0;if1<ndet;if1++) {
-        for(if2=0;if2<ndet;if2++) {
-          rq[il*m*m+if1*m+if2] += p_pay->rq[il*ndet*ndet+if1*ndet+if2];
+    //_DEBUGHERE_("MUL","");
+    if (p_pay->bins!=NULL) {
+      int npar;
+      int one,nbns,nell;
+      int ndim;
+
+      ndim = m*m;
+      nbns = p_pay->nbins;
+      nell = p_pay->nell;
+
+      {
+        int il,iq,if1,if2,bb,b0;
+        double w,acc;
+        b0=0;
+        //#pragma omp parallel for private(il,iq,if1,if2,b0,bb,acc,w,m,ndet)
+        for(iq=0;iq<nbns;iq++) {
+          for(if1=0;if1<ndet;if1++) {
+            for(if2=0;if2<ndet;if2++) {
+              bb=b0;
+              acc = 0;
+              for(il=p_pay->bi[iq];il<p_pay->bo[iq];il++) {
+                w = p_pay->wbins[bb];
+                bb++; 
+                //_DEBUGHERE_("%d %d %g %d,%d %g %g",il,iq,w,if1,if2,rq[iq*ndim+if1*m+if2],p_pay->rq[il*ndet*ndet+if1*ndet+if2]);
+                acc += w * p_pay->rq[il*ndet*ndet+if1*ndet+if2];
+                //_DEBUGHERE_("%d %d %d %g %g %g",il,if1,if2,w,p_pay->rq[il*ndet*ndet+if1*ndet+if2],acc)
+              }
+              //_DEBUGHERE_("%d %d %d %g %g ",iq,if1,if2,rq[iq*ndim+if1*m+if2],acc);
+              rq[iq*ndim+if1*m+if2] *= acc;
+            }
+          }
+          b0=bb;
+        }
+      }
+    } else {
+      int if1,if2;
+      //#pragma omp parallel for private(il,if1,if2,m,ndet)
+      for(il=0;il<p_pay->nell;il++) {
+        for(if1=0;if1<ndet;if1++) {
+          for(if2=0;if2<ndet;if2++) {
+            rq[il*m*m+if1*m+if2] *= p_pay->rq[il*ndet*ndet+if1*ndet+if2];
+          }
         }
       }
     }
@@ -159,7 +178,7 @@ void comp_parametric_update(void* data,double* locpars, double* rq, error **err)
  //sprintf(nm,"rq_after_%s.dat",SC->comp_name);
  //write_bin_vector(rq, nm, sizeof(double)*(p_pay->nbins*p_pay->p_model->ndet*p_pay->p_model->ndet), err);   
  //forwardError(*err,__LINE__,);
-    
+
 }
 void free_comp_parametric(void** data) {
   SmicaComp *SC;
@@ -466,8 +485,19 @@ SmicaComp * finalize_parametric_cldf_init(parametric* p_model,cldf *df,int nb, i
   SC = alloc_SC(p_model->nvar,nb,m,p_pay,&comp_parametric_update,&free_comp_parametric,err);
   forwardError(*err,__LINE__,NULL);
   
-  SC_isfg(SC);  
-  
+  p_pay->ismul =0;
+
+  hk = cldf_haskey(df,"is_multiplicative",err);
+  forwardError(*err,__LINE__,NULL);  
+  if (hk ==1) {
+    p_pay->ismul = cldf_readint(df,"is_multiplicative",err);
+    forwardError(*err,__LINE__,NULL);   
+  }
+  if (p_pay->ismul==0) {
+    SC_isfg(SC);  
+  }
+
+  //_DEBUGHERE_("ismul %d",p_pay->ismul);
 
   if (p_model->nvar!=0) {
     xnames = malloc_err(sizeof(char*)*(p_model->nvar),err);
@@ -487,15 +517,15 @@ SmicaComp * finalize_parametric_cldf_init(parametric* p_model,cldf *df,int nb, i
     }
     xnames[i] = kp;
   }
-  
+
   SC_setnames(SC, xnames, err);
   forwardError(*err,__LINE__,NULL);
-  
+
   free(xnames);
   free(rename_from);
   free(rename_to);
-  
-  return SC;    
+
+  return SC;
 }
 
 //CREATE_PARAMETRIC_FILE_INIT(powerlaw_free_emissivity,powerlaw_free_emissivity_init);
