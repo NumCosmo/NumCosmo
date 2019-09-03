@@ -1322,9 +1322,9 @@ ncm_model_params_valid_bounds (NcmModel *model)
   for (i = 0; i < model->total_len; i++)
   {
     const gdouble lb  = ncm_model_param_get_lower_bound (model, i);
-    const gdouble ub  = ncm_model_param_get_lower_bound (model, i);
-    const gdouble val = ncm_model_param_get (model, i);
-    if (val < lb || val > ub)
+    const gdouble ub  = ncm_model_param_get_upper_bound (model, i);
+    const gdouble val = ncm_model_param_get (model, i);    
+    if ((val < lb) || (val > ub))
       return FALSE;
   }
   return TRUE;

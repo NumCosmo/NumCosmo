@@ -235,18 +235,18 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_PECZ, "\\ln(\\sigma_{\\mathrm{pecz}})", "lnsigma_pecz",
-                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
+                              -20.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_LENS, "\\ln(\\sigma_{\\mathrm{lens}})", "lnsigma_lens",
-                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
+                              -20.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_LENS,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_INT, NC_SNIA_DIST_COV_LNSIGMA_INT_DEFAULT_LEN,
                               "\\ln(\\sigma_{\\mathrm{int}})", "lnsigma_int",
-                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
+                              -20.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_INT,
                               NCM_PARAM_TYPE_FIXED);
 

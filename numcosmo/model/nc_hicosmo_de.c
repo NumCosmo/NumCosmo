@@ -237,6 +237,8 @@ static gdouble _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z);
 
 static void _nc_hicosmo_de_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var);
 
+static gboolean _nc_hicosmo_de_valid (NcmModel *model);
+
 static void
 nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 {
@@ -361,6 +363,8 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;
   klass->d2E2Omega_de_dz2 = &_nc_hicosmo_de_d2E2Omega_de_dz2;
   klass->w_de             = &_nc_hicosmo_de_w_de;
+
+  model_class->valid = _nc_hicosmo_de_valid;
 }
 
 static gdouble _nc_hicosmo_de_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
@@ -849,6 +853,20 @@ _nc_hicosmo_de_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
 static void 
 _nc_hicosmo_de_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var)
 {
+}
+
+static gboolean 
+_nc_hicosmo_de_valid (NcmModel *model)
+{
+  gint i;
+  for (i = 0 ; i < 21; i++)
+    printf ("===> %f % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 0.1 * i, _nc_hicosmo_de_E2 (NC_HICOSMO (model), 0.1 * i), 
+            _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model)),
+            nc_hicosmo_Omega_k0 (NC_HICOSMO (model)),
+            fabs (nc_hicosmo_Omega_k0 (NC_HICOSMO (model)) / _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model))),
+            nc_hicosmo_Omega_k0 (NC_HICOSMO (model)) * gsl_pow_2 (1.0 + 0.1 * i) + _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model)) * gsl_pow_3 (1.0 + 0.1 * i)
+            );
+  return (_nc_hicosmo_de_E2 (NC_HICOSMO (model), 0.0) > 0.0);
 }
 
 void
