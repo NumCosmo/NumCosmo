@@ -45,7 +45,7 @@ be draw from a uniform distribution between $[0.5, 2]$.
 @[68-69, 76-77](In our simple likelihood it is not necessary to have a begin or a prepare function, usually needed when precalculations are necessary.)
 @[84-92](Here we inform the *NcmDataGaussCov* object how to compute $f(x_i)$.)
 @[94-99](We define a method to create a random covariance matrix, with the correlation factor 15 and the standard deviations ranging from 0.5 to 2.)
-@[107](As the last step we register the new object in the type system.)
+@[105](As the last step we register the new object in the type system.)
 
 +++
 
