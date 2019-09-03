@@ -43,6 +43,10 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_min.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 struct _NcHICosmoDEPrivate
 {
   NcmSpline2d *BBN_spline2d;
@@ -52,6 +56,7 @@ struct _NcHICosmoDEPrivate
   NcmSpline *nu_rho_s[10];
   NcmSpline *nu_p_s[10];
   gdouble zmax;
+  gsl_min_fminimizer *min;
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
@@ -88,6 +93,8 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   cosmo_de->priv->zmax = 1.0e12;
 
   g_free (filename);
+
+  cosmo_de->priv->min = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
 }
 
 static gdouble _nc_hicosmo_de_neutrino_rho_integrand (gpointer userdata, const gdouble v, const gdouble w);
@@ -193,6 +200,9 @@ _nc_hicosmo_de_dispose (GObject *object)
 static void
 _nc_hicosmo_de_finalize (GObject *object)
 {
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (object);
+
+  g_clear_pointer (&cosmo_de->priv->min, gsl_min_fminimizer_free);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->finalize (object);
@@ -855,18 +865,76 @@ _nc_hicosmo_de_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_
 {
 }
 
+static gdouble
+min_E2 (gdouble z, gpointer params)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (params);
+  return _nc_hicosmo_de_E2 (cosmo, z);
+}
+
 static gboolean 
 _nc_hicosmo_de_valid (NcmModel *model)
 {
-  gint i;
-  for (i = 0 ; i < 21; i++)
-    printf ("===> %f % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 0.1 * i, _nc_hicosmo_de_E2 (NC_HICOSMO (model), 0.1 * i), 
-            _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model)),
-            nc_hicosmo_Omega_k0 (NC_HICOSMO (model)),
-            fabs (nc_hicosmo_Omega_k0 (NC_HICOSMO (model)) / _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model))),
-            nc_hicosmo_Omega_k0 (NC_HICOSMO (model)) * gsl_pow_2 (1.0 + 0.1 * i) + _nc_hicosmo_de_Omega_m0 (NC_HICOSMO (model)) * gsl_pow_3 (1.0 + 0.1 * i)
-            );
-  return (_nc_hicosmo_de_E2 (NC_HICOSMO (model), 0.0) > 0.0);
+  if (nc_hicosmo_Omega_k0 (NC_HICOSMO (model)) < 0.0)
+  {
+    NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (model);
+    gdouble E2_min = 1.0e300;
+    gdouble z_min  = 0.0;
+    gdouble z_max  = 4.0;
+    gint i;
+
+    for (i = 0 ; i <= 40; i++)
+    {
+      const gdouble z  = 0.05 * i;
+      const gdouble E2 = _nc_hicosmo_de_E2 (NC_HICOSMO (model), z);
+
+      if (E2 < E2_min)
+      {
+        E2_min = E2;
+        z_min  = z;
+      }
+    }
+
+    if (E2_min <= 0.0)
+      return FALSE;
+
+    z_max = 1.0e4;
+    
+    {
+      gsl_function F;
+      gint max_iter = 10000;
+      gint iter = 0;
+      gint status;
+      gdouble a, b;
+
+      F.function = &min_E2;
+      F.params   = model;
+
+      gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
+
+      do
+      {
+        iter++;
+        status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
+        z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
+        a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
+        b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+
+        status = gsl_min_test_interval (a, b, 0.01, 0.0);        
+      }
+      while (status == GSL_CONTINUE && iter < max_iter);
+/*
+      if (_nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min) <= 0.0)
+        printf ("FOUND % 22.15g % 22.15g % 22.15g\n", 
+                z_min, 
+                nc_hicosmo_Omega_k0 (NC_HICOSMO (model)), 
+                _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min));
+*/      
+      return _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min) > 0.0;
+    }
+  }
+  else
+    return TRUE;
 }
 
 void

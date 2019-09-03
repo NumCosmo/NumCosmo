@@ -317,18 +317,21 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *the
 static gdouble 
 _ncm_fit_esmcmc_walker_stretch_theta_to_x (NcmFitESMCMCWalkerStretch *stretch, guint i, const gdouble theta_i)
 {
-  const gdouble lb      = ncm_matrix_get (stretch->box, i, 0);
-  const gdouble ub      = ncm_matrix_get (stretch->box, i, 1);
-  const gdouble bsize   = ub - lb;
-  const gdouble tb      = theta_i - lb;
-  const gdouble maxatan = - 0.5 * log (GSL_DBL_EPSILON * 0.5);
+  const gdouble lb          = ncm_matrix_get (stretch->box, i, 0);
+  const gdouble ub          = ncm_matrix_get (stretch->box, i, 1);
+  const gdouble bsize       = ub - lb;
+  const gdouble tb          = theta_i - lb;
+  const gdouble maxatan     = - 0.5 * log (GSL_DBL_EPSILON * 0.5);
+  const gdouble twotb_bsize = 2.0 * tb / bsize;
 
-  if (tb == 0.0)             
+  /*printf ("[% 22.15g % 22.15g]<% 22.15g> % 22.15g % 22.15g % 22.15g % 22.15g\n", lb, ub, theta_i, tb, maxatan, bsize, atanh (twotb_bsize - 1.0));*/
+  
+  if (twotb_bsize < GSL_DBL_EPSILON)             
     return -maxatan;
-  else if (tb == bsize)        
+  else if (tb >= bsize)
     return maxatan;
   else
-    return atanh (2.0 * tb / bsize - 1.0);
+    return atanh (twotb_bsize - 1.0);
 }
 
 static gdouble 
@@ -406,17 +409,16 @@ _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *thet
     NcmVector *theta_c = theta_k;
     guint si;
 
-
-/*ncm_vector_log_vals (theta_c, "before = ", "% 20.15g");*/
+    /*ncm_vector_log_vals (theta_c, "before = ", "% 20.15g", TRUE);*/
     for (si = 0; si < stretch->nparams; si++)
     {
       const guint j      = g_array_index (stretch->indices, guint, k * stretch->nparams + si);
       const gdouble z    = ncm_matrix_get (stretch->z, k, si);
       NcmVector *theta_j = g_ptr_array_index (theta, j);
-/*printf ("Stretching k %u using j %u and z % 20.15g\n", k, j, z);*/
+      /*printf ("Stretching k %u using j %u and z % 20.15g\n", k, j, z);*/
       _ncm_fit_esmcmc_walker_stretch_one_step (stretch, theta_c, theta_j, z, thetastar);
       theta_c = thetastar;
-/*ncm_vector_log_vals (theta_c, "during = ", "% 20.15g");*/
+      /*ncm_vector_log_vals (theta_c, "during = ", "% 20.15g", TRUE);*/
     }
   }
 

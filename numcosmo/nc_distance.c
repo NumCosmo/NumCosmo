@@ -380,6 +380,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 
       ncm_spline_free (s);
     }
+
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
@@ -475,7 +476,6 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   NCM_UNUSED (cd);
-
   return 1.0 / sqrt (E2);
 }
 

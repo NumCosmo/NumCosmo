@@ -486,7 +486,10 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
   x0 = self->xi;
   if (!gsl_finite (self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata)))
-    g_error ("ncm_ode_spline_prepare: not finite integrand.");
+    g_error ("ncm_ode_spline_prepare: not finite integrand at (% 22.15g, % 22.15g; % 22.15g).", 
+             x0, 
+             NV_Ith_S (self->y, 0), 
+             self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata));
 
 	if (!gsl_finite (self->yf))
 	{
