@@ -265,6 +265,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
+  opts[4] = LM_DIFF_DELTA;
   
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   
@@ -305,6 +306,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
+  opts[4] = LM_DIFF_DELTA;
   
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
@@ -345,6 +347,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
+  opts[4] = LM_DIFF_DELTA;
   
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   
@@ -386,6 +389,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
+  opts[4] = LM_DIFF_DELTA;
   
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
