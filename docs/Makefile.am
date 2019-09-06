@@ -121,7 +121,9 @@ IGNORE_HFILES= \
               class/hyrec		\
               class/include             \
               toeplitz                  \
-              sundials
+              sundials                  \
+              rcm.h                     \
+              rcm.c
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
