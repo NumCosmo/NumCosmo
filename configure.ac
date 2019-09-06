@@ -644,8 +644,16 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([arb.h acb.h])
 AC_CHECK_LIB([arb],[arb_set])
+if test "x$ac_cv_lib_arb_arb_set" = "x"; then
+  AC_CHECK_LIB([flint-arb],[arb_set])
+  if test "x$ac_cv_lib_flint_arb_arb_set" != "x"; then
+    HAVE_ARB=yes
+  fi
+else
+  HAVE_ARB=yes  
+fi
 
-if test "x$ac_cv_lib_arb_arb_set" != "x"; then
+if test "x$HAVE_ARB" = "xyes"; then
   AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])
 fi
 
@@ -653,6 +661,7 @@ dnl ***************************************************************************
 dnl Check for hdf5 support
 dnl ***************************************************************************
 AX_LIB_HDF5()
+AC_SUBST(HDF5_CPPFLAGS)
 AC_SUBST(HDF5_CFLAGS)
 AC_SUBST(HDF5_LDFLAGS)
 AC_SUBST(HDF5_LIBS)
@@ -1191,7 +1200,7 @@ if [ test "x$with_hdf5" = xyes ]; then
 else
        echo "Building with HDF5 support: ......................................NO"
 fi
-if [ test "x$ac_cv_lib_arb_arb_set" = xyes ]; then
+if [ test "x$HAVE_ARB" = xyes ]; then
        echo "Building with ARB support: ......................................YES"
 else
        echo "Building with ARB support: .......................................NO"
@@ -1206,3 +1215,10 @@ echo "LIBS = $LIBS"
 echo "PLC_DEFINES = $PLC_DEFINES"
 echo "PLC_NOWARN_FLAGS = $PLC_NOWARN_FLAGS"
 echo "PLC_FC_NOWARN_FLAGS = $PLC_FC_NOWARN_FLAGS"
+
+if [ test "x$HAVE_ARB" = xyes ]; then
+  echo "HDF5_CPPFLAGS = $HDF5_CPPFLAGS"
+  echo "HDF5_CFLAGS = $HDF5_CFLAGS"
+  echo "HDF5_LDFLAGS = $HDF5_LDFLAGS"
+  echo "HDF5_LIBS = $HDF5_LIBS"
+fi
