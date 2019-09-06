@@ -230,6 +230,7 @@ ncm_trivec_get_phi (NcmTriVec *v)
 /**
  * ncm_trivec_set_spherical_coord:
  * @v: a #NcmTriVec
+ * @r: FIXME
  * @theta: FIXME
  * @phi: FIXME
  * 
