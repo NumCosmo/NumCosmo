@@ -24,6 +24,7 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
 	 $(OPENMP_CFLAGS)     \
+	 $(HDF5_CPPFLAGS)     \
 	 $(HDF5_CFLAGS)       \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
