@@ -1034,7 +1034,10 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
 
   ncm_vector_clear (&mset->temp_fparams);
-  mset->temp_fparams = ncm_vector_new (mset->fparam_len);
+  if (mset->fparam_len > 0)
+  {
+    mset->temp_fparams = ncm_vector_new (mset->fparam_len);
+  }
     
   mset->valid_map = TRUE;
 }

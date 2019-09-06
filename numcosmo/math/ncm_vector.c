@@ -177,7 +177,7 @@ ncm_vector_class_init (NcmVectorClass *klass)
 NcmVector *
 ncm_vector_new (gsize n)
 {
-  gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
+  gdouble *d = g_slice_alloc (sizeof (gdouble) * n);  
   return ncm_vector_new_data_slice (d, n, 1);
 }
 
