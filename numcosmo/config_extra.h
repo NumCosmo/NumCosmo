@@ -34,6 +34,8 @@
 #endif /* HAVE_EXP10 */
 
 #ifndef HAVE_SINCOS
+#include <math.h>
+
 static inline void 
 sincos (double x, double *s, double *c)
 {
