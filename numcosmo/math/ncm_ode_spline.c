@@ -96,7 +96,7 @@ typedef struct _NcmOdeSplineDydxData
 static void
 ncm_ode_spline_init (NcmOdeSpline *os)
 {
-  NcmOdeSplinePrivate * const self = os->priv = G_TYPE_INSTANCE_GET_PRIVATE (os, NCM_TYPE_ODE_SPLINE, NcmOdeSplinePrivate);
+  NcmOdeSplinePrivate * const self = os->priv = ncm_ode_spline_get_instance_private (os);
 
   os->spline        = NULL;
   self->cvode       = CVodeCreate (CV_ADAMS);

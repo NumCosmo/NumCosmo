@@ -78,11 +78,11 @@ void ncm_mset_func_clear (NcmMSetFunc **func);
 
 GPtrArray *ncm_mset_func_array_new (void);
 
-G_INLINE_FUNC void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
-G_INLINE_FUNC gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
-G_INLINE_FUNC gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
-G_INLINE_FUNC gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
-G_INLINE_FUNC void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
+NCM_INLINE void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
+NCM_INLINE gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
+NCM_INLINE gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
+NCM_INLINE gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
+NCM_INLINE void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
 
 void ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len);
 
@@ -114,7 +114,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
 {
   if (func->eval_x != NULL)
@@ -129,7 +129,7 @@ ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
   }
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
 {
   gdouble res;
@@ -138,7 +138,7 @@ ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
   return res;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
 {
   gdouble res;
@@ -153,7 +153,7 @@ ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
   return res;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
 {
   gdouble res;
@@ -166,7 +166,7 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
   return res;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
 {
   guint i;

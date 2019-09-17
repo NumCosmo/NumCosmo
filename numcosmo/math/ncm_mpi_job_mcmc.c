@@ -68,7 +68,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB);
 static void
 ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
 {
-	NcmMPIJobMCMCPrivate * const self = mjmcmc->priv = G_TYPE_INSTANCE_GET_PRIVATE (mjmcmc, NCM_TYPE_MPI_JOB_MCMC, NcmMPIJobMCMCPrivate);
+	NcmMPIJobMCMCPrivate * const self = mjmcmc->priv = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
 	self->fit        = NULL;
 	self->func_oa    = NULL;

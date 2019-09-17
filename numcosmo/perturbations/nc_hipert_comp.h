@@ -90,7 +90,7 @@ NcHIPertComp *nc_hipert_comp_ref (NcHIPertComp *comp);
 void nc_hipert_comp_free (NcHIPertComp *comp);
 void nc_hipert_comp_clear (NcHIPertComp **comp);
 
-G_INLINE_FUNC NcHIPertBGVarID nc_hipert_comp_get_id (NcHIPertComp *comp);
+NCM_INLINE NcHIPertBGVarID nc_hipert_comp_get_id (NcHIPertComp *comp);
 
 guint nc_hipert_comp_ndyn_var (NcHIPertComp *comp);
 GArray *nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex);
@@ -100,8 +100,8 @@ NcHIPertGravGauge nc_hipert_comp_get_gauge (NcHIPertComp *comp);
 
 NcHIPertGravTScalarInfo *nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp);
 
-G_INLINE_FUNC void nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
-G_INLINE_FUNC void nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
+NCM_INLINE void nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
+NCM_INLINE void nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 G_END_DECLS
 
@@ -113,7 +113,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertBGVarID 
+NCM_INLINE NcHIPertBGVarID 
 nc_hipert_comp_get_id (NcHIPertComp *comp)
 {
   const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (comp));
@@ -121,13 +121,13 @@ nc_hipert_comp_get_id (NcHIPertComp *comp)
   return id;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
 {
   return NC_HIPERT_COMP_GET_CLASS (comp)->get_T_scalar (comp, bg_var, ydy, T_scalar);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
   return NC_HIPERT_COMP_GET_CLASS (comp)->get_dy_scalar (comp, bg_var, ydy, T_scalar, G_scalar);

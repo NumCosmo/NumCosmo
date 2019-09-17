@@ -98,7 +98,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdKDEGauss, ncm_stats_dist_nd_kde_gauss,
 static void
 ncm_stats_dist_nd_kde_gauss_init (NcmStatsDistNdKDEGauss *dndg)
 {
-  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = G_TYPE_INSTANCE_GET_PRIVATE (dndg, NCM_TYPE_STATS_DIST_ND_KDE_GAUSS, NcmStatsDistNdKDEGaussPrivate);
+  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_kde_gauss_get_instance_private (dndg);
 
   self->sample           = NULL;
   self->cov_decomp       = NULL;

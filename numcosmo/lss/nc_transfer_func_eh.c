@@ -65,7 +65,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANS
 static void
 nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)
 {
-  NcTransferFuncEHPrivate * const self = tf_eh->priv = G_TYPE_INSTANCE_GET_PRIVATE (tf_eh, NC_TYPE_TRANSFER_FUNC_EH, NcTransferFuncEHPrivate);
+  NcTransferFuncEHPrivate * const self = tf_eh->priv = nc_transfer_func_eh_get_instance_private (tf_eh);
   
   self->h        = 0.0;
   self->s        = 0.0;

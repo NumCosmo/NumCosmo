@@ -79,7 +79,7 @@ static void _ncm_mpi_job_destroy_buffer (gpointer p);
 static void
 ncm_mpi_job_init (NcmMPIJob *mpi_job)
 {
-	NcmMPIJobPrivate * const self = mpi_job->priv = G_TYPE_INSTANCE_GET_PRIVATE (mpi_job, NCM_TYPE_MPI_JOB, NcmMPIJobPrivate);
+	NcmMPIJobPrivate * const self = mpi_job->priv = ncm_mpi_job_get_instance_private (mpi_job);
 
 	self->placeholder      = 0;
 	self->input_dtype      = MPI_DATATYPE_NULL;

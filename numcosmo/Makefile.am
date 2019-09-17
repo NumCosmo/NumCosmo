@@ -115,6 +115,7 @@ ncm_sources = \
 	math/ncm_powspec_filter.c            \
 	math/ncm_powspec_corr3d.c            \
 	math/ncm_hoaa.c                      \
+	math/ncm_csq1d.c                     \
 	math/ncm_func_eval.c                 \
 	math/ncm_mpsf_trig_int.c             \
 	math/ncm_mpsf_sbessel.c              \
@@ -182,9 +183,9 @@ ncm_sources = \
 	math/ncm_abc.c                       \
 	math/ncm_quaternion.c                \
 	math/ncm_sphere_map.c                \
+	math/ncm_function_cache.c            \
 	math/poly.c               \
 	math/integral.c           \
-	math/function_cache.c     \
 	math/quadrature.c         \
 	math/matrix_exp.c         \
 	math/magnus_iserles_ode.c \
@@ -245,6 +246,7 @@ ncm_headers =                                \
 	math/ncm_powspec_filter.h            \
 	math/ncm_powspec_corr3d.h            \
 	math/ncm_hoaa.h                      \
+	math/ncm_csq1d.h                     \
 	math/ncm_func_eval.h                 \
 	math/ncm_mpsf_trig_int.h             \
 	math/ncm_mpsf_sbessel.h              \
@@ -312,7 +314,7 @@ ncm_headers =                                \
 	math/ncm_abc.h                       \
 	math/ncm_quaternion.h                \
 	math/ncm_sphere_map.h                \
-	math/function_cache.h     \
+	math/ncm_function_cache.h            \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
 	math/matrix_exp.h         \
@@ -619,7 +621,7 @@ nc_sources = \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.c
 
-cosmo_includedir = \
+libnumcosmo_la_includedir = \
 	$(pkgincludedir)
 
 ncm_enum_types_built_headers =
@@ -709,6 +711,7 @@ libnumcosmo_la_SOURCES = \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
 	$(ncm_cond_headers)     \
+	config_extra.h          \
 	numcosmo-math.h         \
 	numcosmo.h
 
@@ -719,22 +722,22 @@ nodist_libnumcosmo_la_SOURCES = \
 	$(nc_enum_types_headers)  \
 	$(nc_enum_types_sources)
 
-nobase_cosmo_include_HEADERS = \
-	$(ncm_headers)                 \
-	$(ncm_headers_nogi)            \
-	$(nc_headers)                  \
-	$(ncm_cond_headers)            \
-	math/binsplit_eval.c           \
-	numcosmo-math.h                \
+nobase_libnumcosmo_la_include_HEADERS = \
+	$(ncm_headers)            \
+	$(ncm_headers_nogi)       \
+	$(nc_headers)             \
+	$(ncm_cond_headers)       \
+	math/binsplit_eval.c      \
+	numcosmo-math.h           \
 	numcosmo.h
 
-nodist_cosmo_include_HEADERS = \
+nodist_libnumcosmo_la_include_HEADERS = \
 	build_cfg.h               \
 	$(ncm_enum_types_headers) \
 	$(nc_enum_types_headers)
 
 EXTRA_DIST = \
-	$(nobase_cosmo_include_HEADERS) \
+	$(nobase_libnumcosmo_la_include_HEADERS) \
 	build_cfg.h.in                  \
 	ncm_enum_types.h.template       \
 	ncm_enum_types.c.template       \

@@ -161,20 +161,19 @@ gint
 ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
-//  gdouble p_result = 0.0;
-  gsl_vector *p_result;
+  NcmVector *p_result;
   gint error_code = GSL_SUCCESS;
 
 //printf ("[%p]SEARCH! -> %g\n", g_thread_self (), x);
-  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
+  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
   {
-//printf ("[%p]Found out %g %g [%p]\n", g_thread_self (), x_found, gsl_vector_get (p_result, 0), p_result);
+//printf ("[%p]Found out %g %g [%p]\n", g_thread_self (), x_found, ncm_vector_get (p_result, 0), p_result);
     if (x == x_found)
-      *result = gsl_vector_get (p_result, 0);
+      *result = ncm_vector_get (p_result, 0);
     else
     {
       error_code = ncm_integral_locked_a_b (F, x_found, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
-      *result += gsl_vector_get (p_result, 0);
+      *result += ncm_vector_get (p_result, 0);
       ncm_function_cache_insert (cache, x, *result);
     }
   }
@@ -204,27 +203,26 @@ gint
 ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
-//  gdouble p_result = 0.0;
-  gsl_vector *p_result;
+  NcmVector *p_result;
   gint error_code = GSL_SUCCESS;
 
-  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
+  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
   {
     if (x == x_found)
     {
-      *result = gsl_vector_get (p_result, 0);
+      *result = ncm_vector_get (p_result, 0);
     }
     else
     {
-      error_code = ncm_integral_locked_a_b (F, x, x_found, cache->abstol, cache->reltol, result, error);
-      *result += gsl_vector_get(p_result, 0);
+      error_code = ncm_integral_locked_a_b (F, x, x_found, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
+      *result += ncm_vector_get(p_result, 0);
 
       ncm_function_cache_insert (cache, x, *result);
     }
   }
   else
   {
-    error_code = ncm_integral_locked_a_inf (F, x, cache->abstol, cache->reltol, result, error);
+    error_code = ncm_integral_locked_a_inf (F, x, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
     ncm_function_cache_insert (cache, x, *result);
   }
   return error_code;

@@ -131,7 +131,7 @@ static void _ncm_fit_esmcmc_worker_free (gpointer p);
 static void
 ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 {
-	NcmFitESMCMCPrivate * const self = esmcmc->priv = G_TYPE_INSTANCE_GET_PRIVATE (esmcmc, NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCPrivate);
+	NcmFitESMCMCPrivate * const self = esmcmc->priv = ncm_fit_esmcmc_get_instance_private (esmcmc);
 	
   self->fit             = NULL;
 	self->mj              = NULL;

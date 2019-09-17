@@ -56,7 +56,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGravEinstein, nc_hipert_grav_einstein, NC_TY
 static void
 nc_hipert_grav_einstein_init (NcHIPertGravEinstein *gr)
 {
-  gr->priv = G_TYPE_INSTANCE_GET_PRIVATE (gr, NC_TYPE_HIPERT_GRAV_EINSTEIN, NcHIPertGravEinsteinPrivate);
+  gr->priv = nc_hipert_grav_einstein_get_instance_private (gr);
 }
 
 static void

@@ -62,9 +62,9 @@ struct _NcHIPert
 
 GType nc_hipert_get_type (void) G_GNUC_CONST;
 
-G_INLINE_FUNC void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
-G_INLINE_FUNC void nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
-G_INLINE_FUNC void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
+NCM_INLINE void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
+NCM_INLINE void nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
+NCM_INLINE void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
 
 gdouble nc_hipert_get_reltol (NcHIPert *pert);
 gdouble nc_hipert_get_abstol (NcHIPert *pert);
@@ -86,19 +86,19 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
   NC_HIPERT_GET_CLASS (pert)->set_mode_k (pert, k);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 {
   NC_HIPERT_GET_CLASS (pert)->set_reltol (pert, reltol);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   NC_HIPERT_GET_CLASS (pert)->set_abstol (pert, abstol);

@@ -141,13 +141,13 @@ NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) (void) \
   return id; \
 }
 
-G_INLINE_FUNC NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_new (void);
-G_INLINE_FUNC NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy);
-G_INLINE_FUNC void nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy);
+NCM_INLINE NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_new (void);
+NCM_INLINE NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy);
+NCM_INLINE void nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy);
 
-G_INLINE_FUNC gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i);
-G_INLINE_FUNC void nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i);
-G_INLINE_FUNC gdouble nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i);
+NCM_INLINE gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i);
+NCM_INLINE void nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i);
+NCM_INLINE gdouble nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i);
 
 NcHIPertBGVar *nc_hipert_bg_var_new (void);
 NcHIPertBGVar *nc_hipert_bg_var_new_full (NcDistance *dist, NcRecomb *recomb, NcScalefactor *a);
@@ -159,17 +159,17 @@ void nc_hipert_bg_var_clear (NcHIPertBGVar **bg_var);
 void nc_hipert_bg_var_prepare (NcHIPertBGVar *bg_var, NcHICosmo *cosmo);
 void nc_hipert_bg_var_prepare_if_needed (NcHIPertBGVar *bg_var, NcHICosmo *cosmo);
 
-G_INLINE_FUNC void nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist);
-G_INLINE_FUNC void nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb);
-G_INLINE_FUNC void nc_hipert_bg_var_set_scalefactor (NcHIPertBGVar *bg_var, NcScalefactor *a);
+NCM_INLINE void nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist);
+NCM_INLINE void nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb);
+NCM_INLINE void nc_hipert_bg_var_set_scalefactor (NcHIPertBGVar *bg_var, NcScalefactor *a);
 
-G_INLINE_FUNC NcDistance *nc_hipert_bg_var_get_dist (NcHIPertBGVar *bg_var);
-G_INLINE_FUNC NcRecomb *nc_hipert_bg_var_get_recomb (NcHIPertBGVar *bg_var);
-G_INLINE_FUNC NcScalefactor *nc_hipert_bg_var_get_scalefactor (NcHIPertBGVar *bg_var);
+NCM_INLINE NcDistance *nc_hipert_bg_var_get_dist (NcHIPertBGVar *bg_var);
+NCM_INLINE NcRecomb *nc_hipert_bg_var_get_recomb (NcHIPertBGVar *bg_var);
+NCM_INLINE NcScalefactor *nc_hipert_bg_var_get_scalefactor (NcHIPertBGVar *bg_var);
 
-G_INLINE_FUNC NcDistance *nc_hipert_bg_var_peek_dist (NcHIPertBGVar *bg_var);
-G_INLINE_FUNC NcRecomb *nc_hipert_bg_var_peek_recomb (NcHIPertBGVar *bg_var);
-G_INLINE_FUNC NcScalefactor *nc_hipert_bg_var_peek_scalefactor (NcHIPertBGVar *bg_var);
+NCM_INLINE NcDistance *nc_hipert_bg_var_peek_dist (NcHIPertBGVar *bg_var);
+NCM_INLINE NcRecomb *nc_hipert_bg_var_peek_recomb (NcHIPertBGVar *bg_var);
+NCM_INLINE NcScalefactor *nc_hipert_bg_var_peek_scalefactor (NcHIPertBGVar *bg_var);
 
 void nc_hipert_bg_var_set_zf (NcHIPertBGVar *bg_var, const gdouble zf);
 gdouble nc_hipert_bg_var_get_zf (NcHIPertBGVar *bg_var);
@@ -191,14 +191,14 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertBGVarYDY *
+NCM_INLINE NcHIPertBGVarYDY *
 nc_hipert_bg_var_ydy_new (void)
 {
   NcHIPertBGVarYDY *ydy = g_new0 (NcHIPertBGVarYDY, 1);
   return ydy;
 }
 
-G_INLINE_FUNC NcHIPertBGVarYDY *
+NCM_INLINE NcHIPertBGVarYDY *
 nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy)
 {
   NcHIPertBGVarYDY *ydy_dup = nc_hipert_bg_var_ydy_new ();
@@ -208,31 +208,31 @@ nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy)
   return ydy_dup;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy)
 {
   g_free (ydy);
 }
 
-G_INLINE_FUNC 
+NCM_INLINE 
 gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
 {
   return ydy->y[ydy->perm_inv[ydy->start_index + i]];
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i)
 {
   ydy->dy[ydy->perm_inv[ydy->start_index + i]] = dy_i;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i)
 {
   return ydy->dy[ydy->perm_inv[ydy->start_index + i]];
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist)
 {
   nc_distance_clear (&bg_var->dist);
@@ -244,7 +244,7 @@ nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist)
   }
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb)
 {
   nc_recomb_clear (&bg_var->recomb);
@@ -256,7 +256,7 @@ nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb)
   }
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_bg_var_set_scalefactor (NcHIPertBGVar *bg_var, NcScalefactor *a)
 {
   nc_scalefactor_clear (&bg_var->a);
@@ -268,37 +268,37 @@ nc_hipert_bg_var_set_scalefactor (NcHIPertBGVar *bg_var, NcScalefactor *a)
   }
 }
 
-G_INLINE_FUNC NcDistance *
+NCM_INLINE NcDistance *
 nc_hipert_bg_var_get_dist (NcHIPertBGVar *bg_var)
 {
   return (bg_var->dist != NULL) ? nc_distance_ref (bg_var->dist) : bg_var->dist;
 }
 
-G_INLINE_FUNC NcRecomb *
+NCM_INLINE NcRecomb *
 nc_hipert_bg_var_get_recomb (NcHIPertBGVar *bg_var)
 {
   return (bg_var->recomb != NULL) ? nc_recomb_ref (bg_var->recomb) : bg_var->recomb;  
 }
 
-G_INLINE_FUNC NcScalefactor *
+NCM_INLINE NcScalefactor *
 nc_hipert_bg_var_get_scalefactor (NcHIPertBGVar *bg_var)
 {
   return (bg_var->a != NULL) ? nc_scalefactor_ref (bg_var->a) : bg_var->a;
 }
 
-G_INLINE_FUNC 
+NCM_INLINE 
 NcDistance *nc_hipert_bg_var_peek_dist (NcHIPertBGVar *bg_var)
 {
   return bg_var->dist;
 }
 
-G_INLINE_FUNC NcRecomb *
+NCM_INLINE NcRecomb *
 nc_hipert_bg_var_peek_recomb (NcHIPertBGVar *bg_var)
 {
   return bg_var->recomb;
 }
 
-G_INLINE_FUNC NcScalefactor *
+NCM_INLINE NcScalefactor *
 nc_hipert_bg_var_peek_scalefactor (NcHIPertBGVar *bg_var)
 {
   return bg_var->a;

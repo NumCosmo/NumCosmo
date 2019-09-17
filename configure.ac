@@ -93,6 +93,7 @@ AC_SUBST(LT_AGE)
 AC_SUBST(LT_CURRENT_MINUS_AGE)
 
 AC_CONFIG_HEADERS([config.h])
+AH_BOTTOM([#include <numcosmo/config_extra.h>])
 
 AM_MAINTAINER_MODE
 
@@ -433,7 +434,9 @@ if test "x$enable_inline" = "xyes"; then
     AC_DEFINE([HAVE_INLINE], [1], [use inline functions in GSL])
     AC_SUBST(HAVE_INLINE)
     have_inline_support="#define NUMCOSMO_HAVE_INLINE 1"
+    have_inline_macro="#define NCM_INLINE static inline"
     AC_SUBST(have_inline_support)
+    AC_SUBST(have_inline_macro)
   fi
 else
   AC_DEFINE([G_IMPLEMENT_INLINES], [1], [force glib to disable inline])

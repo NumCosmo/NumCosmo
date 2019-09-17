@@ -25,11 +25,8 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
 
-#ifndef G_IMPLEMENT_INLINES
-#  define G_IMPLEMENT_INLINES
-#else
-#  define NUMCOSMO_HAVE_INLINE
-#endif /* G_IMPLEMENT_INLINES */
-
+#undef NCM_INLINE
+#define NCM_INLINE
 #include <numcosmo/numcosmo.h>

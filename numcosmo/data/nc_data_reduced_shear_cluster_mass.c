@@ -89,7 +89,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcDataReducedShearClusterMass, nc_data_reduced_shear
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)
 {
-	NcDataReducedShearClusterMassPrivate * const self = drs->priv = G_TYPE_INSTANCE_GET_PRIVATE (drs, NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS, NcDataReducedShearClusterMassPrivate);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv = nc_data_reduced_shear_cluster_mass_get_instance_private (drs);
 	self->dist         = NULL;
   self->photoz_array = ncm_obj_array_new ();
   self->gal_obs      = NULL;

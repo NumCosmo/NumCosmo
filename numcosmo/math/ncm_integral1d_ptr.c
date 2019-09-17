@@ -61,9 +61,9 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEG
 static void
 ncm_integral1d_ptr_init (NcmIntegral1dPtr *int1d_ptr)
 {
-  int1d_ptr->priv            = G_TYPE_INSTANCE_GET_PRIVATE (int1d_ptr, NCM_TYPE_INTEGRAL1D_PTR, NcmIntegral1dPtrPrivate);
-  int1d_ptr->priv->F         = NULL;
-  int1d_ptr->priv->userdata  = NULL;
+  int1d_ptr->priv           = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
+  int1d_ptr->priv->F        = NULL;
+  int1d_ptr->priv->userdata = NULL;
   int1d_ptr->priv->userfree = NULL;
 }
 

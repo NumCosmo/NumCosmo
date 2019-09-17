@@ -67,7 +67,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB);
 static void
 ncm_mpi_job_test_init (NcmMPIJobTest *mjt)
 {
-	NcmMPIJobTestPrivate * const self = mjt->priv = G_TYPE_INSTANCE_GET_PRIVATE (mjt, NCM_TYPE_MPI_JOB_TEST, NcmMPIJobTestPrivate);
+	NcmMPIJobTestPrivate * const self = mjt->priv = ncm_mpi_job_test_get_instance_private (mjt);
 
 	self->vec = NULL;
 	self->ret = NULL;

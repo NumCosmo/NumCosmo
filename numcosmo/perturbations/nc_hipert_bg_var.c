@@ -61,7 +61,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
 static void
 nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)
 {
-  bg_var->priv = G_TYPE_INSTANCE_GET_PRIVATE (bg_var, NC_TYPE_HIPERT_BG_VAR, NcHIPertBGVarPrivate);
+  bg_var->priv = nc_hipert_bg_var_get_instance_private (bg_var);
 
   bg_var->cstructs = g_ptr_array_new ();
 

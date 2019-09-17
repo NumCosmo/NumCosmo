@@ -143,8 +143,8 @@ void nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom);
 NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_dup (NcHIPertITwoFluidsTV *tf_tv);
 void nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv);
 
-G_INLINE_FUNC NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
-G_INLINE_FUNC NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+NCM_INLINE NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+NCM_INLINE NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 G_END_DECLS
 
@@ -156,13 +156,13 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertITwoFluidsEOM *
+NCM_INLINE NcHIPertITwoFluidsEOM *
 nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->eom (itf, alpha, k);
 }
 
-G_INLINE_FUNC NcHIPertITwoFluidsTV *
+NCM_INLINE NcHIPertITwoFluidsTV *
 nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->tv (itf, alpha, k);

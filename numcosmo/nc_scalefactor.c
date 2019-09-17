@@ -96,7 +96,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcScalefactor, nc_scalefactor, G_TYPE_OBJECT);
 static void
 nc_scalefactor_init (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv = G_TYPE_INSTANCE_GET_PRIVATE (a, NC_TYPE_SCALEFACTOR, NcScalefactorPrivate);
+  NcScalefactorPrivate * const self = a->priv = nc_scalefactor_get_instance_private (a);
 
 	self->a_eta       = ncm_spline_cubic_notaknot_new ();
 	self->eta_a       = ncm_spline_cubic_notaknot_new ();

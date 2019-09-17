@@ -358,13 +358,12 @@ static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
-  dist->comoving_distance_cache->clear = TRUE;
-	dist->comoving_infinity->clear       = TRUE;
-  dist->time_cache->clear              = TRUE;
-  dist->lookback_time_cache->clear     = TRUE;
-  dist->conformal_time_cache->clear    = TRUE;
-
-  dist->sound_horizon_cache->clear = TRUE;
+  ncm_function_cache_empty_cache (dist->comoving_distance_cache);
+	ncm_function_cache_empty_cache (dist->comoving_infinity);
+  ncm_function_cache_empty_cache (dist->time_cache);
+  ncm_function_cache_empty_cache (dist->lookback_time_cache);
+  ncm_function_cache_empty_cache (dist->conformal_time_cache);
+  ncm_function_cache_empty_cache (dist->sound_horizon_cache);
 
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
   {

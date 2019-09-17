@@ -74,14 +74,14 @@ NcGalaxyRedshift *nc_galaxy_redshift_ref (NcGalaxyRedshift *gz);
 void nc_galaxy_redshift_free (NcGalaxyRedshift *gz);
 void nc_galaxy_redshift_clear (NcGalaxyRedshift **gz);
 
-G_INLINE_FUNC gboolean nc_galaxy_redshift_has_dist (NcGalaxyRedshift *gz);
-G_INLINE_FUNC gdouble nc_galaxy_redshift_mode (NcGalaxyRedshift *gz);
-G_INLINE_FUNC guint nc_galaxy_redshift_nintervals (NcGalaxyRedshift *gz);
-G_INLINE_FUNC gdouble nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const guint di);
-G_INLINE_FUNC void nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
-G_INLINE_FUNC gdouble nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
-G_INLINE_FUNC gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
-G_INLINE_FUNC gdouble nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q);
+NCM_INLINE gboolean nc_galaxy_redshift_has_dist (NcGalaxyRedshift *gz);
+NCM_INLINE gdouble nc_galaxy_redshift_mode (NcGalaxyRedshift *gz);
+NCM_INLINE guint nc_galaxy_redshift_nintervals (NcGalaxyRedshift *gz);
+NCM_INLINE gdouble nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const guint di);
+NCM_INLINE void nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
+NCM_INLINE gdouble nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
+NCM_INLINE gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
+NCM_INLINE gdouble nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q);
 
 G_END_DECLS
 
@@ -93,49 +93,49 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gboolean 
+NCM_INLINE gboolean 
 nc_galaxy_redshift_has_dist (NcGalaxyRedshift *gz)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->has_dist (gz);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_galaxy_redshift_mode (NcGalaxyRedshift *gz)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->mode (gz);
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 nc_galaxy_redshift_nintervals (NcGalaxyRedshift *gz)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->nintervals (gz);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const guint di)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->interval_weight (gz, di);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf_limits (gz, di, zmin, zmax);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf (gz, di, z);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->gen (gz, rng);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q)
 {
 	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->quantile (gz, q);

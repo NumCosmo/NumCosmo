@@ -79,7 +79,7 @@ static gdouble _ncm_spline_rbf_type_deriv2 (NcmSplineRBFPrivate * const self, Nc
 static void
 ncm_spline_rbf_init (NcmSplineRBF *rbf)
 {
-	NcmSplineRBFPrivate * const self = rbf->priv = G_TYPE_INSTANCE_GET_PRIVATE (rbf, NCM_TYPE_SPLINE_RBF, NcmSplineRBFPrivate);
+	NcmSplineRBFPrivate * const self = rbf->priv = ncm_spline_rbf_get_instance_private (rbf);
 
 	self->type_id        = NCM_SPLINE_RBF_TYPE_LEN;
 	self->name           = NULL;

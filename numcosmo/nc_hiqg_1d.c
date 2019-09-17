@@ -159,7 +159,7 @@ G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_h
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv = G_TYPE_INSTANCE_GET_PRIVATE (qg1d, NC_TYPE_HIQG_1D, NcHIQG1DPrivate);
+  NcHIQG1DPrivate * const self = qg1d->priv = nc_hiqg_1d_get_instance_private (qg1d);
 
   self->lambda     = 0.0;
   self->acs_a      = 0.0;

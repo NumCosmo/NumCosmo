@@ -169,7 +169,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT);
 static void
 ncm_hoaa_init (NcmHOAA *hoaa)
 {
-  NcmHOAAPrivate * const self = hoaa->priv = G_TYPE_INSTANCE_GET_PRIVATE (hoaa, NCM_TYPE_HOAA, NcmHOAAPrivate);
+  NcmHOAAPrivate * const self = hoaa->priv = ncm_hoaa_get_instance_private (hoaa);
   hoaa->k                      = 0.0;
   /* private properties */
 #ifndef HAVE_SUNDIALS_ARKODE

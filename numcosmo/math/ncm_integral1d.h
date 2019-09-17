@@ -76,7 +76,7 @@ guint ncm_integral1d_get_rule (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_reltol (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_abstol (NcmIntegral1d *int1d);
 
-G_INLINE_FUNC gdouble ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
+NCM_INLINE gdouble ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
 gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err);
@@ -105,7 +105,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w)
 {
   return NCM_INTEGRAL1D_GET_CLASS (int1d)->integrand (int1d, x, w);  

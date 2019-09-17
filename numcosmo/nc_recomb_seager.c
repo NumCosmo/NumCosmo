@@ -183,7 +183,7 @@ static void _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad (NcRecombSeager
 static void
 nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
-  NcRecombSeagerPrivate * const self = recomb_seager->priv = G_TYPE_INSTANCE_GET_PRIVATE (recomb_seager, NC_TYPE_RECOMB_SEAGER, NcRecombSeagerPrivate);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv = nc_recomb_seager_get_instance_private (recomb_seager);
 
   self->cvode = CVodeCreate (CV_BDF);
   NCM_CVODE_CHECK ((void*)self->cvode, "CVodeCreate", 0, );
