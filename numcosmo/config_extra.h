@@ -35,7 +35,7 @@
 
 #ifndef HAVE_SINCOS
 static inline void 
-sincos (gdouble x, gdouble *s, gdouble *c)
+sincos (double x, double *s, double *c)
 {
   s[0] = sin (x);
   c[0] = cos (x);
