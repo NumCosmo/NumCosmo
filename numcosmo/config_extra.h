@@ -34,7 +34,7 @@
 #endif /* HAVE_EXP10 */
 
 #ifndef HAVE_SINCOS
-NCM_INLINE void 
+static inline void 
 sincos (gdouble x, gdouble *s, gdouble *c)
 {
   s[0] = sin (x);
