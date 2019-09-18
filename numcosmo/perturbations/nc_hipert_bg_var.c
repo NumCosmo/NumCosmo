@@ -412,6 +412,7 @@ nc_hipert_bg_var_clear (NcHIPertBGVar **bg_var)
 /**
  * nc_hipert_bg_var_prepare:
  * @bg_var: a #NcHIPertBGVar
+ * @cosmo: a #NcHICosmo
  *
  * Prepares all computation objects inside @bg_var.
  *
@@ -436,6 +437,7 @@ nc_hipert_bg_var_prepare (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
 /**
  * nc_hipert_bg_var_prepare_if_needed:
  * @bg_var: a #NcHIPertBGVar
+ * @cosmo: a #NcHICosmo
  *
  * Prepares all computation objects inside @bg_var if necessary.
  *

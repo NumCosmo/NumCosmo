@@ -214,8 +214,8 @@ nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy)
   g_free (ydy);
 }
 
-NCM_INLINE 
-gdouble nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
+NCM_INLINE gdouble 
+nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
 {
   return ydy->y[ydy->perm_inv[ydy->start_index + i]];
 }

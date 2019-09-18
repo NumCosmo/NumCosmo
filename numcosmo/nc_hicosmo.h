@@ -85,6 +85,7 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_Dc: Comoving distance
  * @NC_HICOSMO_IMPL_NMassNu: Number of massive neutrinos
  * @NC_HICOSMO_IMPL_MassNuInfo: Massive neutrino info
+ * @NC_HICOSMO_IMPL_get_bg_var: Background variables interface for perturbations
  *
  * Flags defining the implementation options of the NcHICosmo abstract object. 
  * 
