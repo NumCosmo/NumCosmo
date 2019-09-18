@@ -48,6 +48,7 @@ typedef struct _NcHIPertBGVarClass NcHIPertBGVarClass;
 typedef struct _NcHIPertBGVar NcHIPertBGVar;
 typedef struct _NcHIPertBGVarPrivate NcHIPertBGVarPrivate;
 typedef struct _NcHIPertBGVarDesc NcHIPertBGVarDesc;
+typedef struct _NcHIPertBGVarYDY NcHIPertBGVarYDY;
 
 typedef gint32 NcHIPertBGVarID;
 
@@ -86,14 +87,20 @@ struct _NcHIPertBGVar
   gdouble E;
 };
 
-typedef struct _NcHIPertBGVarYDY
+/**
+ * NcHIPertBGVarYDY:
+ * 
+ * Boxed object containing the current status of the ode system.
+ */
+struct _NcHIPertBGVarYDY
 {
+  /*< private >*/
   gdouble *y;
   gdouble *dy;
   guint start_index;
   gint *perm;
   gint *perm_inv;
-} NcHIPertBGVarYDY;
+};
 
 GType nc_hipert_bg_var_ydy_get_type (void) G_GNUC_CONST;
 GType nc_hipert_bg_var_get_type (void) G_GNUC_CONST;
@@ -188,6 +195,7 @@ G_END_DECLS
 #ifndef _NC_HIPERT_BG_VAR_INLINE_H_
 #define _NC_HIPERT_BG_VAR_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -306,5 +314,6 @@ nc_hipert_bg_var_peek_scalefactor (NcHIPertBGVar *bg_var)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_BG_VAR_INLINE_H_ */

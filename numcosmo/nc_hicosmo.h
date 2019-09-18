@@ -1,4 +1,4 @@
-  /***************************************************************************
+/***************************************************************************
  *            nc_hicosmo.h
  *
  *  Mon Jul 16 18:03:42 2007
@@ -413,6 +413,7 @@ G_END_DECLS
 #ifndef _NC_HICOSMO_INLINE_H_
 #define _NC_HICOSMO_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -745,5 +746,6 @@ nc_hicosmo_peek_reion (NcHICosmo *cosmo)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HICOSMO_INLINE_H_ */

@@ -123,8 +123,7 @@ G_END_DECLS
 #ifndef _NCM_SPLINE2D_INLINE_H_
 #define _NCM_SPLINE2D_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -187,5 +186,6 @@ ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE2D_INLINE_H_ */

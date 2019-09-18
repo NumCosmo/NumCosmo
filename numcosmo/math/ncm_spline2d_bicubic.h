@@ -118,8 +118,7 @@ G_END_DECLS
 #ifndef _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #define _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -329,5 +328,6 @@ ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble 
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE2D_BICUBIC_INLINE_H_ */

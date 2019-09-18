@@ -197,6 +197,7 @@ G_END_DECLS
 #ifndef _NCM_STATS_VEC_INLINE_H_
 #define _NCM_STATS_VEC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -363,6 +364,7 @@ ncm_stats_vec_get_param_at (NcmStatsVec *svec, guint i, guint p)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_STATS_VEC_INLINE_H_ */
 

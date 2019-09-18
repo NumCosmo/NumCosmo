@@ -44,50 +44,96 @@ G_BEGIN_DECLS
 typedef struct _NcHIPertGravClass NcHIPertGravClass;
 typedef struct _NcHIPertGrav NcHIPertGrav;
 typedef struct _NcHIPertGravPrivate NcHIPertGravPrivate;
+typedef struct _NcHIPertGravScalar NcHIPertGravScalar;
+typedef struct _NcHIPertGravVector NcHIPertGravVector;
+typedef struct _NcHIPertGravTensor NcHIPertGravTensor;
+typedef struct _NcHIPertGravTScalar NcHIPertGravTScalar;
+typedef struct _NcHIPertGravTVector NcHIPertGravTVector;
+typedef struct _NcHIPertGravTTensor NcHIPertGravTTensor;
+typedef struct _NcHIPertGravTScalarInfo NcHIPertGravTScalarInfo;
+typedef struct _NcHIPertGravInfo NcHIPertGravInfo;
 
-typedef struct _NcHIPertGravScalar
+/**
+ * NcHIPertGravScalar:
+ * 
+ * Boxed object describing scalar modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravScalar
 {
+  /*< private >*/
   gdouble phi;
   gdouble dsigma;
   gdouble psi;
-} NcHIPertGravScalar;
+};
 
-typedef struct _NcHIPertGravVector
+/**
+ * NcHIPertGravVector:
+ * 
+ * Boxed object describing vector modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravVector
 {
+  /*< private >*/
   gdouble dsigma[2];
-} NcHIPertGravVector;
+};
 
-typedef struct _NcHIPertGravTensor
+/**
+ * NcHIPertGravTensor:
+ * 
+ * Boxed object describing tensor modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravTensor
 {
+  /*< private >*/
   gdouble h[2];
-} NcHIPertGravTensor;
+};
 
-typedef struct _NcHIPertGravTScalar
+/**
+ * NcHIPertGravTScalar:
+ * 
+ * Boxed object describing scalar modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTScalar
 {
   gdouble drho_m_Aphi;
   gdouble A;
   gdouble rhopp_v;
   gdouble dp;
   gdouble Pi;
-} NcHIPertGravTScalar;
+};
 
-typedef struct _NcHIPertGravTVector
+/**
+ * NcHIPertGravTVector:
+ * 
+ * Boxed object describing vector modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTVector
 {
   gdouble a;
-} NcHIPertGravTVector;
+};
 
-typedef struct _NcHIPertGravTTensor
+/**
+ * NcHIPertGravTTensor:
+ * 
+ * Boxed object describing tensor modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTTensor
 {
   gdouble a;
-} NcHIPertGravTTensor;
+};
 
-typedef struct _NcHIPertGravTScalarInfo
+/**
+ * NcHIPertGravTScalarInfo:
+ * 
+ * Boxed object describing the dependencies of the scalar modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravTScalarInfo
 {
   GArray *drho_deps;
   GArray *rhoppv_deps;
   GArray *dp_deps;
   GArray *dPi_deps;
-} NcHIPertGravTScalarInfo;
+};
 
 /**
  * NcHIPertGravSElem:
@@ -141,9 +187,6 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
 
 /**
  * NcHIPertGravInfo:
- * @phi_dtype: determination type for $\phi$
- * @dsigma_dtype: determination type for $\delta\sigma$
- * @psi_dtype: determination type for $\psi$
  * @phi_deps: (array) (element-type gint): $\phi$ dependencies
  * @dsigma_deps: (array) (element-type gint): $\delta\sigma$ dependencies
  * @psi_deps: (array) (element-type gint): $\psi$ dependencies
@@ -152,13 +195,13 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
  * Gravitation section info
  * 
  */
-typedef struct _NcHIPertGravInfo
+struct _NcHIPertGravInfo
 {
   GArray *phi_deps;
   GArray *dsigma_deps;
   GArray *psi_deps;
   GArray *dotpsi_deps; 
-} NcHIPertGravInfo;
+};
 
 typedef guint (*NcHIPertGravNDynVar) (NcHIPertGrav *grav);
 typedef GArray *(*NcHIPertGravDeps) (NcHIPertGrav *grav, guint vindex);
@@ -282,6 +325,7 @@ G_END_DECLS
 #ifndef _NC_HIPERT_GRAV_INLINE_H_
 #define _NC_HIPERT_GRAV_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -712,5 +756,6 @@ nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPer
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_GRAV_INLINE_H_ */

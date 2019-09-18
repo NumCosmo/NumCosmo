@@ -154,6 +154,7 @@ G_END_DECLS
 #ifndef _NC_CLUSTER_ABUNDANCE_INLINE_H_
 #define _NC_CLUSTER_ABUNDANCE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 #include <glib-object.h>
 #include <glib.h>
@@ -173,5 +174,6 @@ nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosm
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_CLUSTER_ABUNDANCE_INLINE_H_ */

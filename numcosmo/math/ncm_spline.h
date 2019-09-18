@@ -124,6 +124,7 @@ G_END_DECLS
 #ifndef _NCM_SPLINE_INLINE_H_
 #define _NCM_SPLINE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -183,8 +184,7 @@ ncm_spline_min_size (const NcmSpline *s)
 	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
-#ifndef __GTK_DOC_IGNORE__
-static gsize
+NCM_INLINE gsize
 _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const gdouble x, gsize index_lo, gsize index_hi)
 {
   gsize ilo = index_lo;
@@ -202,7 +202,7 @@ _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const g
   return ilo;
 }
 
-static gsize
+NCM_INLINE gsize
 _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint stride, gsize len, gdouble x)
 {
   gsize x_index = a->cache;
@@ -224,7 +224,6 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
   
   return a->cache;
 }
-#endif
 
 NCM_INLINE guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
@@ -262,5 +261,6 @@ _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble c
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE_INLINE_H_ */

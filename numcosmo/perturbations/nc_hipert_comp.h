@@ -110,6 +110,7 @@ G_END_DECLS
 #ifndef _NC_HIPERT_COMP_INLINE_H_
 #define _NC_HIPERT_COMP_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -135,5 +136,6 @@ nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPer
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_COMP_INLINE_H_ */

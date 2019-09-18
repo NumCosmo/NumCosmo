@@ -262,6 +262,7 @@ G_END_DECLS
 #ifndef _NCM_UTIL_INLINE_H_
 #define _NCM_UTIL_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -454,15 +455,15 @@ ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_UTIL_INLINE_H_ */
 
 #ifndef KOLMOGOROVSMIRNOVDIST_H
 #define KOLMOGOROVSMIRNOVDIST_H
+#ifndef __GTK_DOC_IGNORE__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /********************************************************************
  *
@@ -538,8 +539,7 @@ double ncm_util_KSfbar (int n, double x);
 
 void ncm_util_swilk (double *x, int n, double *w, double *pw, int *ifault);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif
+#endif /* __GTK_DOC_IGNORE__ */
+#endif /* KOLMOGOROVSMIRNOVDIST_H */

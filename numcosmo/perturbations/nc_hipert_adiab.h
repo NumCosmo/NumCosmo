@@ -127,6 +127,7 @@ G_END_DECLS
 #ifndef _NC_HIPERT_ADIAB_INLINE_H_
 #define _NC_HIPERT_ADIAB_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
@@ -192,5 +193,6 @@ nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_ADIAB_INLINE_H_ */

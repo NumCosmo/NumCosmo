@@ -82,13 +82,11 @@ G_END_DECLS
 #ifndef _NC_GROWTH_FUNC_INLINE_H_
 #define _NC_GROWTH_FUNC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
-#include <gsl/gsl_spline.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-NCM_INLINE gdouble
+NCM_INLINE gdouble 
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
@@ -118,5 +116,6 @@ nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_GROWTH_FUNC_INLINE_H_ */
