@@ -72,7 +72,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_ring,
               &test_ncm_sphere_map_free);
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/ncm/sphere_map/pix2alm", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_pix2alm,
@@ -82,7 +81,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_pix2alm2pix,
               &test_ncm_sphere_map_free);
-#endif /* HAVE_GSL_2_2 */
   
   g_test_add ("/ncm/sphere_map/traps", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
