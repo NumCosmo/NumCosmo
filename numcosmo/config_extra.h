@@ -44,9 +44,9 @@ sincos (double x, double *s, double *c)
 }
 #endif /* HAVE_SINCOS */
 
-#ifndef HAVE_DECL_LGAMMA_R
+#if HAVE_DECL_LGAMMA_R == 0
 double lgamma_r(double x, int *signp);
-#endif
+#endif /* HAVE_DECL_LGAMMA_R == 0 */
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
