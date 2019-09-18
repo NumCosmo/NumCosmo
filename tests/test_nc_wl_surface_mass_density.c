@@ -134,6 +134,8 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
 	test->zs = 1.5;
 
   nc_distance_free (dist);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
 }
 
 void
