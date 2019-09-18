@@ -540,8 +540,8 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([math.h],, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma finite])
-AC_CHECK_DECLS([isfinite],[],[],[[#include <math.h>]])
+AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma finite lgamma_r])
+AC_CHECK_DECLS([isfinite, lgamma_r],[],[],[[#include <math.h>]])
 
 dnl ***************************************************************************
 dnl Check for dlfcn.h

@@ -44,6 +44,10 @@ sincos (double x, double *s, double *c)
 }
 #endif /* HAVE_SINCOS */
 
+#ifndef HAVE_DECL_LGAMMA_R
+double lgamma_r(double x, int *signp);
+#endif
+
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #endif /* _CONFIG_EXTRA_H_ */
