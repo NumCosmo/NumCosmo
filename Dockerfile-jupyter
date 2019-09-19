@@ -61,6 +61,8 @@ RUN make install DESTDIR=/root
 
 FROM $BASE_CONTAINER AS runtime-image
 
+USER root
+
 # Install python
 RUN apt-get update && apt-get install -y \
     python3-gi         \
@@ -87,5 +89,3 @@ COPY --from=compile-image /root/usr /usr
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
-
-
