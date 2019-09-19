@@ -56,6 +56,6 @@ ENV OMP_NUM_THREADS=1
 ENV OMP_THREAD_LIMIT=1
 
 RUN cd && cd NumCosmo; NOCONFIGURE=yes ./autogen.sh
-RUN cd && cd NumCosmo; CC=gcc-8 FC=gfortran-8 F90=gfortran-8 CFLAGS="-O3 -g -Wall" FCFLAGS="-O3 -g -Wall" ./configure --prefix=/usr --enable-opt-cflags 
+RUN cd && cd NumCosmo; CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" FCFLAGS="-O3 -g -Wall" ./configure --prefix=/usr --enable-opt-cflags 
 RUN cd && cd NumCosmo; make -j12
 RUN cd && cd NumCosmo; make install
