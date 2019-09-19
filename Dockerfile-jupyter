@@ -63,12 +63,13 @@ FROM $BASE_CONTAINER AS runtime-image
 
 USER root
 
-# Install python
-RUN apt-get update && apt-get install -y \
-    python3-gi         \
-    python3-numpy      \
-    python3-matplotlib \
-    python3-scipy
+# Install python gobject support
+RUN conda install --quiet --yes    \
+    pygobject &&                   \
+    conda clean --all -f -y &&     \
+    npm cache clean --force &&     \
+    fix-permissions $CONDA_DIR &&  \
+    fix-permissions /home/$NB_USER
 
 # Install dependencies (runtime only)
 RUN apt-get update && apt-get install -y \
