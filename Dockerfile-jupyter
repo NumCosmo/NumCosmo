@@ -60,7 +60,7 @@ USER root
 
 # Install python gobject support
 RUN conda install --quiet --yes    \
-    pygobject &&                   \
+    pygobject numpy matplotlib &&  \
     conda clean --all -f -y &&     \
     npm cache clean --force &&     \
     fix-permissions $CONDA_DIR &&  \
