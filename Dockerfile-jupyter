@@ -1,6 +1,8 @@
 ARG BASE_CONTAINER=jupyter/base-notebook
 FROM $BASE_CONTAINER AS compile-image
 
+USER root
+
 # Install basic stuff
 RUN apt-get update && apt-get install -y \
     nano       \
@@ -82,3 +84,8 @@ RUN apt-get update && apt-get install -y \
     libflint-arb2 
 
 COPY --from=compile-image /root/usr /usr
+
+# Switch back to jovyan to avoid accidental container runs as root
+USER $NB_UID
+
+
