@@ -60,8 +60,10 @@ FROM ubuntu:latest AS runtime-image
 
 # Install python
 RUN apt-get update && apt-get install -y \
-    python3-gi    \
-    python3-numpy
+    python3-gi         \
+    python3-numpy      \
+    python3-matplotlib \
+    python3-scipy
 
 # Install dependencies (runtime only)
 RUN apt-get update && apt-get install -y \
