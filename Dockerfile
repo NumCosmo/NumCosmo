@@ -20,12 +20,6 @@ RUN apt-get update && apt-get install -y \
     libgirepository1.0-dev \
     libglib2.0-dev
 
-# Install python
-RUN apt-get update && apt-get install -y \
-    python-numpy    \
-    python-gobject  \
-    python-gi-cairo
-
 # Install package building tools
 RUN apt-get update && apt-get install -y \
     autoconf      \
@@ -66,9 +60,8 @@ FROM ubuntu:latest AS runtime-image
 
 # Install python
 RUN apt-get update && apt-get install -y \
-    python-numpy    \
-    python-gobject  \
-    python-gi-cairo
+    python3-gi    \
+    python3-numpy
 
 # Install dependencies (runtime only)
 RUN apt-get update && apt-get install -y \
