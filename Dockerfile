@@ -60,7 +60,7 @@ WORKDIR /root/NumCosmo
 RUN NOCONFIGURE=yes ./autogen.sh
 RUN CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" FCFLAGS="-O3 -g -Wall" ./configure --prefix=/usr --enable-opt-cflags 
 RUN make -j12
-RUN make install DESTDIR=/root/usr
+RUN make install DESTDIR=/root
 
 FROM ubuntu:latest AS runtime-image
 
@@ -72,15 +72,17 @@ RUN apt-get update && apt-get install -y \
 
 # Install dependencies (runtime only)
 RUN apt-get update && apt-get install -y \
-    libgsl-dev       \
-    libgmp-dev       \
-    libmpfr-dev      \
-    libcfitsio-dev   \
-    libfftw3-dev     \
-    libnlopt-dev     \
-    liblapack-dev    \
-    libopenblas-dev  \
-    libhdf5-dev      \
-    libflint-arb-dev
+    libgfortran5     \
+    libgsl23         \
+    libgmp10         \
+    libmpfr6         \
+    libcfitsio5      \
+    libfftw3-double3 \
+    libfftw3-single3 \
+    libnlopt0        \
+    liblapack3       \
+    libopenblas-base \
+    libhdf5-100      \
+    libflint-arb2 
 
-COPY --from=compile-image /root/usr/* /usr
+COPY --from=compile-image /root/usr /usr
