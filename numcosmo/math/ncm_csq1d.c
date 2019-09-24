@@ -77,7 +77,7 @@
 #include <sundials/sundials_types.h> 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define PRINT_EVOL TRUE
+#define PRINT_EVOL FALSE
 
 typedef enum _NcmCSQ1DEvolStop
 {
@@ -348,11 +348,14 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
   }
 }
 
-static gdouble _ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_xi  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_nu  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_m   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_dm  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_F1  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_F2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_FN  (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
 
 static void
@@ -417,6 +420,9 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
 
   klass->eval_xi             = &_ncm_csq1d_eval_xi;
   klass->eval_nu             = &_ncm_csq1d_eval_nu;
+  klass->eval_nu2            = &_ncm_csq1d_eval_nu2;
+  klass->eval_m              = &_ncm_csq1d_eval_m;
+  klass->eval_dm             = &_ncm_csq1d_eval_dm;
   klass->eval_F1             = &_ncm_csq1d_eval_F1;
   klass->eval_F2             = &_ncm_csq1d_eval_F2;
   klass->eval_FN             = &_ncm_csq1d_eval_FN;
@@ -434,6 +440,25 @@ static gdouble
 _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   g_error ("_ncm_csq1d_eval_nu: not implemented."); 
+  return 0.0;
+}
+
+static gdouble 
+_ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return gsl_pow_2 (NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k));
+}
+
+static gdouble 
+_ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return exp (NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k)) / NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k);
+}
+
+static gdouble 
+_ncm_csq1d_eval_dm (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_dm: not implemented."); 
   return 0.0;
 }
 
@@ -904,15 +929,15 @@ _ncm_csq1d_f_Up (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble chi   = NV_Ith_S (y, 0);
   const gdouble Up    = NV_Ith_S (y, 1);
 
-  const gdouble xi      = ncm_csq1d_eval_xi (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu      = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t, self->k);
-  const gdouble twonu   = 2.0 * nu;
-  const gdouble DUp     = Up - xi;
-  const gdouble exp_DUp = exp (DUp);
+  const gdouble nu2    = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble m      = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Up = exp (Up);
+  
+  NV_Ith_S (ydot, 0) = + m * nu2 * (1.0 + chi * chi) / exp_Up - exp_Up / m;
+  NV_Ith_S (ydot, 1) = + 2.0 * m * nu2 * chi / exp_Up;
 
-  NV_Ith_S (ydot, 0) = + nu * ((1.0 + chi * chi) / exp_DUp - exp_DUp);
-  NV_Ith_S (ydot, 1) = + twonu * chi / exp_DUp;
-
+  /*printf ("# % 22.15g % 22.15e % 22.15e\n", t, gsl_pow_2 (NV_Ith_S (ydot, 0)), 4.0 * nu2 * (1.0 + chi * chi));*/
+  
   return 0;
 }
 
@@ -925,14 +950,12 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble chi   = NV_Ith_S (y, 0);
   const gdouble Um    = NV_Ith_S (y, 1);
 
-  const gdouble xi      = ncm_csq1d_eval_xi (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu      = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t, self->k);
-  const gdouble twonu   = 2.0 * nu;
-  const gdouble DUm     = Um + xi;
-  const gdouble exp_DUm = exp (DUm);
+  const gdouble m      = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble nu2    = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Um = exp (Um);
 
-  NV_Ith_S (ydot, 0) = + nu * (exp_DUm - (1.0 + chi * chi) / exp_DUm);
-  NV_Ith_S (ydot, 1) = - twonu * chi / exp_DUm;
+  NV_Ith_S (ydot, 0) = + (m * nu2 * exp_Um - (1.0 + chi * chi) / (m * exp_Um));
+  NV_Ith_S (ydot, 1) = - 2.0 * chi / (m * exp_Um);
 
   return 0;
 }
@@ -967,22 +990,20 @@ _ncm_csq1d_J_Up (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) jac_data;
   NcmCSQ1DPrivate * const self = ws->csq1d->priv;
 
-  const gdouble chi     = NV_Ith_S (y, 0);
-  const gdouble Up      = NV_Ith_S (y, 1);
+  const gdouble chi    = NV_Ith_S (y, 0);
+  const gdouble Up     = NV_Ith_S (y, 1);
 
-  const gdouble xi      = ncm_csq1d_eval_xi (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu      = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t, self->k);
-  const gdouble twonu   = 2.0 * nu;
-  const gdouble DUp     = Up - xi;
-  const gdouble exp_DUp = exp (DUp);
+  const gdouble nu2    = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble m      = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Up = exp (Up);
 
-  /* nu * ((1.0 + chi * chi) / exp_DUp - exp_DUp); */
-  SM_ELEMENT_D (J, 0, 0) = + twonu * chi / exp_DUp;
-  SM_ELEMENT_D (J, 0, 1) = - nu * ((1.0 + chi * chi) / exp_DUp + exp_DUp);
+  /* + m * nu2 * (1.0 + chi * chi) / exp_Up - exp_Up / m; */
+  SM_ELEMENT_D (J, 0, 0) = 2.0 * m * nu2 * chi / exp_Up;
+  SM_ELEMENT_D (J, 0, 1) = - m * nu2 * (1.0 + chi * chi) / exp_Up - exp_Up / m;
 
-  /* + twonu * chi / exp_DUp; */
-  SM_ELEMENT_D (J, 1, 0) = + twonu / exp_DUp;
-  SM_ELEMENT_D (J, 1, 1) = - twonu * chi / exp_DUp;
+  /* + 2.0 * m * nu2 * chi / exp_Up; */
+  SM_ELEMENT_D (J, 1, 0) = + 2.0 * m * nu2 / exp_Up;
+  SM_ELEMENT_D (J, 1, 1) = - 2.0 * m * nu2 * chi / exp_Up;
 
   return 0;
 }
@@ -996,19 +1017,17 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
   const gdouble chi     = NV_Ith_S (y, 0);
   const gdouble Um      = NV_Ith_S (y, 1);
 
-  const gdouble xi      = ncm_csq1d_eval_xi (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu      = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t, self->k);
-  const gdouble twonu   = 2.0 * nu;
-  const gdouble DUm     = Um + xi;
-  const gdouble exp_DUm = exp (DUm);
+  const gdouble m      = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble nu2    = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Um = exp (Um);
 
-  /* nu * (exp_DUm - (1.0 + chi * chi) / exp_DUm); */
-  SM_ELEMENT_D (J, 0, 0) = - twonu * chi / exp_DUm;
-  SM_ELEMENT_D (J, 0, 1) = + nu * (exp_DUm + (1.0 + chi * chi) / exp_DUm);
+  /* + m * nu2 * exp_Um - (1.0 + chi * chi) / (m * exp_Um); */
+  SM_ELEMENT_D (J, 0, 0) = - 2.0 * chi / (m * exp_Um);
+  SM_ELEMENT_D (J, 0, 1) = + m * nu2 * exp_Um + (1.0 + chi * chi) / (m * exp_Um);
 
-  /* - twonu * chi / exp_DUm; */
-  SM_ELEMENT_D (J, 1, 0) = - twonu / exp_DUm;
-  SM_ELEMENT_D (J, 1, 1) = + twonu * chi / exp_DUm;
+  /* - 2.0 * chi / (m * exp_Um); */
+  SM_ELEMENT_D (J, 1, 0) = - 2.0 / (m * exp_Um);
+  SM_ELEMENT_D (J, 1, 1) = + 2.0 * chi / (m * exp_Um);
 
   return 0;
 }
@@ -1030,6 +1049,15 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @k: mode $k$
  *
  * Returns: $\nu$ 
+ */
+/**
+ * ncm_csq1d_eval_dm: (virtual eval_dm)
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @k: mode $k$
+ *
+ * Returns: $\mathrm{d}m/\mathrm{d}t$ 
  */
 /**
  * ncm_csq1d_eval_F1: (virtual eval_F1)
@@ -1166,7 +1194,7 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
     {
       const gdouble log1pchi2 = log1p (chi * chi);
       const gdouble Um        = - Up + log1pchi2;
-      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n", self->t, chi, dgamma, Up, Um);
+      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g\n", self->t, chi, dgamma, Up, Um, chi * ncm_csq1d_eval_m (csq1d, model, self->t, self->k) / self->t / exp (Up) * 18.0 / 5.0 - 1.0);
     }
 
     is_finished = (self->t == self->tf);
@@ -1211,7 +1239,8 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
   gint flag;
 
   g_assert (self->state == NCM_CSQ1D_EVOL_STATE_UM);
-  printf ("# ENTER EVOL UM: TIME % 22.15g\n", self->t);
+  if (PRINT_EVOL)
+    printf ("# ENTER EVOL UM: TIME % 22.15g\n", self->t);
 
   while (TRUE)
   {
@@ -1356,9 +1385,9 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
         }
         case NCM_CSQ1D_EVOL_STATE_UP:
         {
-          const gdouble chi = NV_Ith_S (self->y_Up, 0);
-          const gdouble Up  = NV_Ith_S (self->y_Up, 1);
-          const gdouble Um  = -Up + log1p (chi * chi);
+          const gdouble chi  = NV_Ith_S (self->y_Up, 0);
+          const gdouble Up   = NV_Ith_S (self->y_Up, 1);
+          const gdouble Um   = -Up + log1p (chi * chi);
 
           NV_Ith_S (self->y_Um, 0) = chi;
           NV_Ith_S (self->y_Um, 1) = Um;
@@ -1399,6 +1428,7 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
 
           NV_Ith_S (self->y, 0) = chi;
           NV_Ith_S (self->y, 1) = dgamma;
+          break;
         }
         default:
           g_assert_not_reached ();
@@ -1545,7 +1575,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   
   if ((adiab0 && adiab1) || (!adiab0 && !adiab1))
   {
-    /*printf ("t0 % 22.15g % 22.15g % 22.15g t1 % 22.15g % 22.15g % 22.15g\n", t0, alpha0, dgamma0, t1, alpha1, dgamma1);*/
+    printf ("t0 % 22.15g % 22.15g % 22.15g t1 % 22.15g % 22.15g % 22.15g\n", t0, alpha0, dgamma0, t1, alpha1, dgamma1);
     return FALSE;
   }
   else
