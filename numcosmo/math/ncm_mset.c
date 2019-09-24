@@ -209,6 +209,8 @@ _ncm_mset_dispose (GObject *object)
   g_clear_pointer (&mset->fullname_parray, g_ptr_array_unref);
   g_clear_pointer (&mset->pi_array, g_array_unref);
 
+  ncm_vector_clear (&mset->temp_fparams);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->dispose (object);
 }
@@ -234,9 +236,6 @@ ncm_mset_class_init (NcmMSetClass *klass)
   object_class->dispose      = &_ncm_mset_dispose;
   object_class->finalize     = &_ncm_mset_finalize;
 
-  klass->ns_table = g_hash_table_new (g_str_hash, g_str_equal);
-  klass->model_desc_array = g_array_new (FALSE, TRUE, sizeof (NcmMSetModelDesc));
-
   g_object_class_install_property (object_class,
                                    PROP_VALID_MAP,
                                    g_param_spec_boolean ("valid-map", NULL, "Valid properties map",
@@ -257,6 +256,9 @@ ncm_mset_class_init (NcmMSetClass *klass)
                                                        "Free params map",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->ns_table         = g_hash_table_new (g_str_hash, g_str_equal);
+  klass->model_desc_array = g_array_new (FALSE, TRUE, sizeof (NcmMSetModelDesc));
 }
 
 
@@ -327,8 +329,10 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   if (model_class->model_id < 0)
   {
     static NcmModelID last_model_id = 0;
+    NcmMSetClass *mset_class        = g_type_class_ref (NCM_TYPE_MSET);
+    NcmMSetModelDesc *model_desc    = NULL;
     guint id;
-    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+    
     G_LOCK (last_model_id);
 
     model_class->can_stack = can_stack;
@@ -340,31 +344,31 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     }
 
     model_class->model_id = last_model_id * NCM_MSET_MAX_STACKSIZE;
-    id = last_model_id;
+    id                    = last_model_id;
+    
     last_model_id++;
     g_array_set_size (mset_class->model_desc_array, last_model_id);
 
-    g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).init = TRUE;
+    model_desc       = &g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id);
+    model_desc->init = TRUE;
 
     if (ns == NULL)
       g_error ("Cannot register model without a namespace.");
     if (desc == NULL)
       g_error ("Cannot register model without a description.");
 
-    g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).ns = g_strdup (ns);
-    g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).desc = g_strdup (desc);
+    model_desc->ns   = g_strdup (ns);
+    model_desc->desc = g_strdup (desc);
 
     if (long_desc != NULL)
-      g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).long_desc = g_strdup (long_desc);
+      model_desc->long_desc = g_strdup (long_desc);
     else
-      g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).long_desc = NULL;
+      model_desc->long_desc = NULL;
 
     if (g_hash_table_lookup (mset_class->ns_table, ns) != NULL)
       g_error ("Model namespace <%s> already registered.", ns);
 
-    g_hash_table_insert (mset_class->ns_table,
-                         g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id).ns,
-                         GINT_TO_POINTER (model_class->model_id));
+    g_hash_table_insert (mset_class->ns_table, model_desc->ns, GINT_TO_POINTER (model_class->model_id));
 
     G_UNLOCK (last_model_id);
     g_type_class_unref (mset_class);
@@ -897,7 +901,7 @@ ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
  *
  * Returns: FIXME
  */
-gint
+NcmModelID
 ncm_mset_get_id_by_type (GType model_type)
 {
   g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
@@ -924,12 +928,12 @@ ncm_mset_get_id_by_type (GType model_type)
  *
  * Returns: FIXME
  */
-gint
+NcmModelID
 ncm_mset_get_id_by_ns (const gchar *ns)
 {
-  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
   gpointer model_id;
-  gboolean has = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
+  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+  gboolean has             = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
 
   g_type_class_unref (mset_class);
 
@@ -946,10 +950,10 @@ ncm_mset_get_id_by_ns (const gchar *ns)
  * Returns: (transfer none): namespace for @id
  */
 const gchar *
-ncm_mset_get_ns_by_id (gint id)
+ncm_mset_get_ns_by_id (NcmModelID id)
 {
   NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-  guint base_mid = id / NCM_MSET_MAX_STACKSIZE;
+  guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
 
   g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
   {
@@ -966,10 +970,10 @@ ncm_mset_get_ns_by_id (gint id)
  * Returns: GType of model @id
  */
 GType
-ncm_mset_get_type_by_id (gint id)
+ncm_mset_get_type_by_id (NcmModelID id)
 {
   NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-  guint base_mid = id / NCM_MSET_MAX_STACKSIZE;
+  guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
 
   g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
   {
@@ -1028,6 +1032,13 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   }
 
   g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
+
+  ncm_vector_clear (&mset->temp_fparams);
+  if (mset->fparam_len > 0)
+  {
+    mset->temp_fparams = ncm_vector_new (mset->fparam_len);
+  }
+    
   mset->valid_map = TRUE;
 }
 
@@ -2384,7 +2395,7 @@ ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i);
-      if (val < lb || val > ub)
+      if ((val < lb) || (val > ub))
         return FALSE;
     }
     return TRUE;
@@ -2413,11 +2424,36 @@ ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offs
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i + offset);
-      if (val < lb || val > ub)
+      if ((val < lb) || (val > ub))
         return FALSE;
     }
     return TRUE;
   }
+}
+
+/**
+ * ncm_mset_fparam_validate_all:
+ * @mset: a #NcmMSet
+ * @theta: free parameters vector
+ *
+ * FIXME
+ *
+ * Returns: whether @theta contain values respecting all requirements.
+ */
+gboolean
+ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
+{
+  gboolean valid;
+  g_assert (mset->valid_map);
+  g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len);
+
+  ncm_mset_fparams_get_vector (mset, mset->temp_fparams);
+  ncm_mset_fparams_set_vector (mset, theta);
+
+  valid = ncm_mset_params_valid (mset) && ncm_mset_params_valid_bounds (mset);
+  ncm_mset_fparams_set_vector (mset, mset->temp_fparams);
+  
+  return valid;
 }
 
 /**

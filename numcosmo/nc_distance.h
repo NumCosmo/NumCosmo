@@ -32,7 +32,7 @@
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
-#include <numcosmo/math/function_cache.h>
+#include <numcosmo/math/ncm_function_cache.h>
 
 G_BEGIN_DECLS
 
@@ -54,6 +54,22 @@ struct _NcDistanceClass
   GObjectClass parent_class;
 };
 
+/**
+ * NcDistanceComovingMethod:
+ * @NC_DISTANCE_COMOVING_METHOD_INT_E: FIXME
+ * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: FIXME
+ *
+ * FIXME
+ * 
+ */
+typedef enum _NcDistanceComovingMethod
+{
+  NC_DISTANCE_COMOVING_METHOD_INT_E = 0,
+  NC_DISTANCE_COMOVING_METHOD_FROM_MODEL,
+  /* < private > */
+  NC_DISTANCE_COMOVING_METHOD_LEN,   /*< skip >*/  
+} NcDistanceComovingMethod;
+
 struct _NcDistance
 {
   /*< private >*/
@@ -69,6 +85,7 @@ struct _NcDistance
   gdouble zf;
   gboolean use_cache;
   NcRecomb *recomb;
+  NcDistanceComovingMethod cmethod;
 };
 
 typedef struct _NcDistanceFunc
@@ -96,7 +113,7 @@ void nc_distance_require_zf (NcDistance *dist, const gdouble zf);
 void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
+NCM_INLINE void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
 
 void nc_distance_free (NcDistance *dist);
 void nc_distance_clear (NcDistance **dist);
@@ -160,10 +177,11 @@ G_END_DECLS
 #ifndef _NC_DISTANCE_INLINE_H_
 #define _NC_DISTANCE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo)))
@@ -172,5 +190,6 @@ nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_DISTANCE_INLINE_H_ */

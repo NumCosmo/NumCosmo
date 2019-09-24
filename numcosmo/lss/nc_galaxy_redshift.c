@@ -52,7 +52,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT)
 static void
 nc_galaxy_redshift_init (NcGalaxyRedshift *gz)
 {
-	gz->priv = G_TYPE_INSTANCE_GET_PRIVATE (gz, NC_TYPE_GALAXY_REDSHIFT, NcGalaxyRedshiftPrivate);
+	gz->priv = nc_galaxy_redshift_get_instance_private (gz);
 	
 }
 

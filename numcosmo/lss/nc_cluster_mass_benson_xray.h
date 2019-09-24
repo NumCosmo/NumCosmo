@@ -44,7 +44,7 @@ typedef struct _NcClusterMassBensonXRayClass NcClusterMassBensonXRayClass;
 typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
 
 /**
- * NcClusterMassBensonXRayParams:
+ * NcClusterMassBensonXRaySParams:
  * @NC_CLUSTER_MASS_BENSON_XRAY_A_X: normalization of the X-ray mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_XRAY_B_X: FIXME
  * @NC_CLUSTER_MASS_BENSON_XRAY_C_X: FIXME
@@ -52,7 +52,7 @@ typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
  *
  * FIXME
  */
-typedef enum _NcClusterMassBensonXRayParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_XRAY_SPARAMS >*/
 {
   NC_CLUSTER_MASS_BENSON_XRAY_A_X = NC_CLUSTER_MASS_BENSON_SPARAM_LEN,
   NC_CLUSTER_MASS_BENSON_XRAY_B_X,
@@ -60,7 +60,7 @@ typedef enum _NcClusterMassBensonXRayParams
   NC_CLUSTER_MASS_BENSON_XRAY_D_X, 
   /* < private > */
   NC_CLUSTER_MASS_BENSON_XRAY_SPARAM_LEN, /*< skip >*/
-} NcClusterMassBensonXRayParams;
+} NcClusterMassBensonXRaySParams;
 
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_X  (5.77)
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X  (0.57)

@@ -170,6 +170,8 @@ void comp_totcal_update(void* data,double* locpars, double* rq, error **err);
 SmicaComp* comp_totcal_init(int q, int mT, int mP, int *TEB,error **err );
 void comp_totcalP_update(void* data,double* locpars, double* rq, error **err);
 SmicaComp* comp_totcalP_init(int q, int mT, int mP, int *TEB,error **err );
+SmicaComp* comp_totcalTP_init(int q, int mT, int mP, int *TEB,error **err );
+SmicaComp* comp_totcalPP_init(int q, int mT, int mP, int *TEB,error **err );
 
 void Smica_data(void* vsmic, double* fgvec, error **err);
 void Smica_fg(void* vsmic, double* pars, double* fgvec, error **err);

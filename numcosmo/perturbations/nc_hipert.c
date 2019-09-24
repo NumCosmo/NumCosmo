@@ -71,7 +71,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
 static void
 nc_hipert_init (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv = G_TYPE_INSTANCE_GET_PRIVATE (pert, NC_TYPE_HIPERT, NcHIPertPrivate);
+  NcHIPertPrivate * const self = pert->priv = nc_hipert_get_instance_private (pert);
   self->alpha0      = 0.0;
   self->reltol      = 0.0;
   self->k           = 0.0;
@@ -164,6 +164,12 @@ nc_hipert_finalize (GObject *object)
     self->y = NULL;
   }
 
+  if (self->vec_abstol != NULL)
+  {
+    N_VDestroy (self->vec_abstol);
+    self->vec_abstol = NULL;
+  }
+  
   if (self->A != NULL)
   {
     SUNMatDestroy (self->A);

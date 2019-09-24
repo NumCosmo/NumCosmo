@@ -103,13 +103,13 @@ NcmSpline2d *ncm_spline2d_bicubic_notaknot_new (void);
 
 /* Utilities -- internal use */
 
-G_INLINE_FUNC gdouble ncm_spline2d_bicubic_eval_poly (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y);
-G_INLINE_FUNC void ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx, const gdouble dy, NcmSpline2dBicubicCoeffs *sa);
-G_INLINE_FUNC gdouble ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i);
-G_INLINE_FUNC void ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i, gdouble *b_i, gdouble *b_ip1);
-G_INLINE_FUNC void ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy, gdouble *coeffs);
-G_INLINE_FUNC void ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx, gdouble *coeffs);
-G_INLINE_FUNC gdouble ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble x0, const gdouble xl, const gdouble xu, const gdouble y0, const gdouble yl, const gdouble yu);
+NCM_INLINE gdouble ncm_spline2d_bicubic_eval_poly (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y);
+NCM_INLINE void ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx, const gdouble dy, NcmSpline2dBicubicCoeffs *sa);
+NCM_INLINE gdouble ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i);
+NCM_INLINE void ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i, gdouble *b_i, gdouble *b_ip1);
+NCM_INLINE void ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy, gdouble *coeffs);
+NCM_INLINE void ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx, gdouble *coeffs);
+NCM_INLINE gdouble ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble x0, const gdouble xl, const gdouble xu, const gdouble y0, const gdouble yl, const gdouble yu);
 
 G_END_DECLS
 
@@ -118,12 +118,11 @@ G_END_DECLS
 #ifndef _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #define _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a0 = (sa->ij[0][0] + x * (sa->ij[1][0] + x * (sa->ij[2][0] + x * sa->ij[3][0])));
@@ -133,7 +132,7 @@ ncm_spline2d_bicubic_eval_poly (const NcmSpline2dBicubicCoeffs *sa, const gdoubl
   return a0 + y * (a1 + y * (a2 + y * a3));
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly_dzdx (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a0 = (sa->ij[1][0] + x * (2.0 * sa->ij[2][0] + x * 3.0 * sa->ij[3][0]));
@@ -143,7 +142,7 @@ ncm_spline2d_bicubic_eval_poly_dzdx (const NcmSpline2dBicubicCoeffs *sa, const g
   return a0 + y * (a1 + y * (a2 + y * a3));
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly_dzdy (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a1 = (sa->ij[0][1] + x * (sa->ij[1][1] + x * (sa->ij[2][1] + x * sa->ij[3][1])));
@@ -152,7 +151,7 @@ ncm_spline2d_bicubic_eval_poly_dzdy (const NcmSpline2dBicubicCoeffs *sa, const g
   return a1 + y * (2.0 * a2 + y * 3.0 * a3);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly_d2zdxy (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a1 = (sa->ij[1][1] + x * (2.0 * sa->ij[2][1] + x * 3.0 * sa->ij[3][1]));
@@ -161,7 +160,7 @@ ncm_spline2d_bicubic_eval_poly_d2zdxy (const NcmSpline2dBicubicCoeffs *sa, const
   return a1 + y * (2.0 * a2 + y * 3.0 * a3);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly_d2zdx2 (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a0 = (2.0 * sa->ij[2][0] + x * 6.0 * sa->ij[3][0]);
@@ -171,7 +170,7 @@ ncm_spline2d_bicubic_eval_poly_d2zdx2 (const NcmSpline2dBicubicCoeffs *sa, const
   return a0 + y * (a1 + y * (a2 + y * a3));
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_eval_poly_d2zdy2 (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
   const gdouble a2 = (sa->ij[0][2] + x * (sa->ij[1][2] + x * (sa->ij[2][2] + x * sa->ij[3][2])));
@@ -179,7 +178,7 @@ ncm_spline2d_bicubic_eval_poly_d2zdy2 (const NcmSpline2dBicubicCoeffs *sa, const
   return 2.0 * a2 + y * 6.0 * a3;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx, const gdouble dy, NcmSpline2dBicubicCoeffs *sa)
 {
   gdouble (*a)[4] = sa->ij;
@@ -243,7 +242,7 @@ ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx,
              (fxy_00 + fxy_x0 + fxy_0y + fxy_xy) * dx * dy) / (dx3 * dy3);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i)
 {
   const gdouble dx = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
@@ -255,7 +254,7 @@ ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize
   return b_i;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i, gdouble *b_i, gdouble *b_ip1)
 {
   const gdouble dx = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
@@ -267,7 +266,7 @@ ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, 
   *b_ip1 = 3.0 * dy_dx - 2.0 * (*b_i) - c_i * dx;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy, gdouble *coeffs)
 {
   gdouble dy2 = dy * dy;
@@ -279,7 +278,7 @@ ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy,
   coeffs[3] = aij->ij[3][0] + aij->ij[3][1] * dy + aij->ij[3][2] * dy2 + aij->ij[3][3] * dy3;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx, gdouble *coeffs)
 {
   gdouble dx2 = dx * dx;
@@ -291,7 +290,7 @@ ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx,
   coeffs[3] = aij->ij[0][3] + aij->ij[1][3] * dx + aij->ij[2][3] * dx2 + aij->ij[3][3] * dx3;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble x0, const gdouble xl, const gdouble xu, const gdouble y0, const gdouble yl, const gdouble yu)
 {
   const gdouble dxl  = xl- x0;
@@ -329,5 +328,6 @@ ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble 
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE2D_BICUBIC_INLINE_H_ */

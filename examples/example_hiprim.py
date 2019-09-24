@@ -45,6 +45,7 @@ print ("# (a, b, c) = ( ", prim.props.a, ", ", prim.props.b, ", ", prim.props.c,
 #
 cbe_prec = Nc.CBEPrecision.new ()
 cbe_prec.props.k_per_decade_primordial = 50.0
+cbe_prec.props.tight_coupling_approximation = 0
 
 #
 #  New CLASS backend object

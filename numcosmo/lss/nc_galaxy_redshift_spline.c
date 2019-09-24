@@ -66,7 +66,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, N
 static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)
 {
-	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv = G_TYPE_INSTANCE_GET_PRIVATE (gzs, NC_TYPE_GALAXY_REDSHIFT_SPLINE, NcGalaxyRedshiftSplinePrivate);
+	NcGalaxyRedshiftSplinePrivate * const self = gzs->priv = nc_galaxy_redshift_spline_get_instance_private (gzs);
 
 	self->z_best = 0.0;
 	self->normas = g_array_new (TRUE, TRUE, sizeof (gdouble));

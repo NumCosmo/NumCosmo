@@ -88,10 +88,10 @@ gdouble ncm_powspec_get_kmax (NcmPowspec *powspec);
 
 void ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
-G_INLINE_FUNC void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
-G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
-G_INLINE_FUNC gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
-G_INLINE_FUNC void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
+NCM_INLINE void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
+NCM_INLINE void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
+NCM_INLINE gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+NCM_INLINE void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
 
 gdouble ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
 gdouble ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
@@ -105,16 +105,17 @@ G_END_DECLS
 #ifndef _NCM_POWSPEC_INLINE_H_
 #define _NCM_POWSPEC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
   NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
 {
   gboolean model_up = ncm_model_ctrl_update (powspec->ctrl, NCM_MODEL (model));
@@ -123,13 +124,13 @@ ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
     ncm_powspec_prepare (powspec, model);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, model, z, k);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
@@ -137,5 +138,6 @@ ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Ncm
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_POWSPEC_INLINE_H_ */

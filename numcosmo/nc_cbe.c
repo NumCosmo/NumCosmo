@@ -99,7 +99,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT);
 static void
 nc_cbe_init (NcCBE *cbe)
 {
-	cbe->priv               = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_CBE, NcCBEPrivate);
+	cbe->priv               = nc_cbe_get_instance_private (cbe);
 	cbe->prec               = NULL;
 	cbe->ctrl_cosmo         = ncm_model_ctrl_new (NULL);
 	cbe->ctrl_prim          = ncm_model_ctrl_new (NULL);
@@ -2244,7 +2244,7 @@ nc_cbe_get_matter_ps (NcCBE* cbe)
  * @cbe: a #NcCBE
  * 
  * Computes the value of $\sigma_8$ as computed by CLASS, usually with errors $\propto 10^{-4}$.
- * For better precision use: nc_powspec_ml_sigma_R() or #NcmPowspecFilter. 
+ * For better precision use: ncm_powspec_sigma_tophat_R() or #NcmPowspecFilter. 
  * 
  * Returns: the value of $\sigma_8$ as computed by CLASS.
  */

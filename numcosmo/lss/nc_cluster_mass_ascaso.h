@@ -44,7 +44,7 @@ typedef struct _NcClusterMassAscasoClass NcClusterMassAscasoClass;
 typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
 
 /**
- * NcClusterMassAscasoParams:
+ * NcClusterMassAscasoSParams:
  * @NC_CLUSTER_MASS_ASCASO_P0: bias 
  * @NC_CLUSTER_MASS_ASCASO_P1: slope 
  * @NC_CLUSTER_MASS_ASCASO_P2: redshift dependency
@@ -52,7 +52,7 @@ typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
  *
  * FIXME
  */
-typedef enum _NcClusterMassAscasoParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 {
   NC_CLUSTER_MASS_ASCASO_P0 = 0,
   NC_CLUSTER_MASS_ASCASO_P1,
@@ -60,7 +60,7 @@ typedef enum _NcClusterMassAscasoParams
   NC_CLUSTER_MASS_ASCASO_SIGMA,  
   /* < private > */
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
-} NcClusterMassAscasoParams;
+} NcClusterMassAscasoSParams;
 
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_P0  (0.0)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_P1  (1.0)

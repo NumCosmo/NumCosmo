@@ -46,7 +46,7 @@ typedef struct _NcHICosmoQGRWClass NcHICosmoQGRWClass;
 typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
 
 /**
- * NcHICosmoQGRWParams:
+ * NcHICosmoQGRWSParams:
  * @NC_HICOSMO_QGRW_H0: Hubble constant.
  * @NC_HICOSMO_QGRW_OMEGA_R: Radiation density at $a_0$.
  * @NC_HICOSMO_QGRW_OMEGA_W: $w$-fluid density at $a_0$.
@@ -56,7 +56,7 @@ typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
  * Parameter of the Quantum Gravity Radiation W model.
  * 
  */
-typedef enum _NcHICosmoQGRWParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QGRW_SPARAMS >*/
 {
   NC_HICOSMO_QGRW_H0 = 0,
   NC_HICOSMO_QGRW_OMEGA_R,
@@ -65,7 +65,7 @@ typedef enum _NcHICosmoQGRWParams
   NC_HICOSMO_QGRW_X_B,    
   /* < private > */
   NC_HICOSMO_QGRW_SPARAM_LEN, /*< skip >*/
-} NcHICosmoQGRWParams;
+} NcHICosmoQGRWSParams;
 
 /**
  * NC_HICOSMO_QGRW_DEFAULT_H0: (value 73.0)

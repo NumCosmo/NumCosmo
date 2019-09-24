@@ -7,7 +7,7 @@
 void plik_cmbonly_extra_free_();
 void plik_cmbonly_extra_lkl_(double*,double*);
 void plik_cmbonly_extra_only_one_(int*);
-void plik_cmbonly_extra_init_(char*,int*,int*,int*,int*);
+void plik_cmbonly_extra_init_(char*,int*,int*,int*,int*,int*,int*,int*,int*,int*,int*,int*);
 
 typedef struct {
   char tmpdir[800];
@@ -33,9 +33,9 @@ cmblkl* clik_plik_cmbonly_init(cldf *df, int nell, int* ell, int* has_cl, double
   int mlmax;
   char dir_data[2048];
   int ldd,hk;
-  char *xnames_def[] = {"A_Planck"};
+  char *xnames_def[] = {"A_planck"};
   int use_tt, use_te, use_ee;
-  int version;
+  int version, bin_min_tt, bin_max_tt, bin_min_te, bin_max_te, bin_min_ee, bin_max_ee;
 
   hk = cldf_haskey(df,"cmbonly_version",err);
   forwardError(*err,__LINE__,NULL);
@@ -43,7 +43,7 @@ cmblkl* clik_plik_cmbonly_init(cldf *df, int nell, int* ell, int* has_cl, double
   version = cldf_readint(df,"cmbonly_version",err);
   
   forwardError(*err,__LINE__,NULL);
-  testErrorRet(version!=18,-132,"cmbonly plik <v17 not supported anymore",*err, __LINE__,NULL);
+  testErrorRet(version<18,-132,"cmbonly plik <v17 not supported anymore",*err, __LINE__,NULL);
   plik_cmbonly_extra_only_one_(&bok);
   testErrorRet(bok!=0,-100,"plik_cmbonly already initialized",*err,__LINE__,NULL);
   // get data and change dir
@@ -58,9 +58,33 @@ cmblkl* clik_plik_cmbonly_init(cldf *df, int nell, int* ell, int* has_cl, double
   use_tt = has_cl[0];
   use_ee = has_cl[1];
   use_te = has_cl[3];
-  
-  plik_cmbonly_extra_init_(dir_data,&ldd,&use_tt, &use_ee, &use_te);
 
+  bin_min_tt = 1;
+  bin_max_tt = 215;  
+  bin_min_te = 1;
+  bin_max_te = 199;  
+  bin_min_ee = 1;
+  bin_max_ee = 199;
+
+  hk = cldf_haskey(df,"bin_min_tt",err);
+  forwardError(*err,__LINE__,NULL);
+  if (hk==1) {
+    bin_min_tt = cldf_readint(df,"bin_min_tt",err);
+    forwardError(*err,__LINE__,NULL);
+    bin_max_tt = cldf_readint(df,"bin_max_tt",err);
+    forwardError(*err,__LINE__,NULL);
+    bin_min_te = cldf_readint(df,"bin_min_te",err);
+    forwardError(*err,__LINE__,NULL);
+    bin_max_te = cldf_readint(df,"bin_max_te",err);
+    forwardError(*err,__LINE__,NULL);
+    bin_min_ee = cldf_readint(df,"bin_min_ee",err);
+    forwardError(*err,__LINE__,NULL);
+    bin_max_ee = cldf_readint(df,"bin_max_ee",err);
+    forwardError(*err,__LINE__,NULL);
+  }
+
+  plik_cmbonly_extra_init_(dir_data,&ldd,&use_tt, &use_ee, &use_te,&bin_min_tt,&bin_max_tt,&bin_min_te,&bin_max_te,&bin_min_ee,&bin_max_ee,&version);
+  
   cldf_external_cleanup(directory_name,pwd,err);  
   forwardError(*err,__LINE__,NULL);
   

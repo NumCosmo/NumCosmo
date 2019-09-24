@@ -85,7 +85,7 @@ struct _NcHIPertGWClass
  * Perturbation variables enumerator.
  * 
  */
-typedef enum _NcHIPertGWVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_GW_VARS  >*/
 {
   NC_HIPERT_GW_RE_ZETA = 0,
   NC_HIPERT_GW_IM_ZETA,
@@ -102,18 +102,18 @@ struct _NcHIPertGW
 GType nc_hipert_igw_get_type (void) G_GNUC_CONST;
 GType nc_hipert_gw_get_type (void) G_GNUC_CONST;
 
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-G_INLINE_FUNC void nc_hipert_igw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+NCM_INLINE gdouble nc_hipert_igw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+NCM_INLINE gdouble nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+NCM_INLINE gdouble nc_hipert_igw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+NCM_INLINE void nc_hipert_igw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
-G_INLINE_FUNC guint nc_hipert_igw_nsing (NcHIPertIGW *igw, const gdouble k);
-G_INLINE_FUNC void nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
-G_INLINE_FUNC void nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+NCM_INLINE guint nc_hipert_igw_nsing (NcHIPertIGW *igw, const gdouble k);
+NCM_INLINE void nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
+NCM_INLINE gdouble nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
+NCM_INLINE gdouble nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
+NCM_INLINE void nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
 
-G_INLINE_FUNC gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
+NCM_INLINE gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
 
 NcHIPertGW *nc_hipert_gw_new (void);
 NcHIPertGW *nc_hipert_gw_ref (NcHIPertGW *pa);
@@ -127,64 +127,65 @@ G_END_DECLS
 #ifndef _NC_HIPERT_GW_INLINE_H_
 #define _NC_HIPERT_GW_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hipert_igw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_mnu (igw, tau, k);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_nu (igw, tau, k);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hipert_igw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_dlnmnu (igw, tau, k);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_igw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
 {
   NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_system (igw, tau, k, nu, dlnmnu);
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 nc_hipert_igw_nsing (NcHIPertIGW *igw, const gdouble k)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->nsing (igw, k);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
 {
   NC_HIPERT_IGW_GET_INTERFACE (igw)->get_sing_info (igw, k, sing, ts, dts_i, dts_f, st);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_sing_mnu (igw, tau_m_taus, k, sing);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_sing_dlnmnu (igw, tau_m_taus, k, sing);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu)
 {
   NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_sing_system (igw, tau_m_taus, k, sing, nu, dlnmnu);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw)
 {
   return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_powspec_factor (igw);
@@ -192,5 +193,6 @@ nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_GW_INLINE_H_ */

@@ -121,7 +121,7 @@ typedef struct _NcHIPertTwoFluidsArg
 static void
 nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
 {
-  NcHIPertTwoFluidsPrivate * const self = ptf->priv = G_TYPE_INSTANCE_GET_PRIVATE (ptf, NC_TYPE_HIPERT_TWO_FLUIDS, NcHIPertTwoFluidsPrivate);
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv = nc_hipert_two_fluids_get_instance_private (ptf);
   self->wkb_zeta = NULL;
   self->wkb_S    = NULL;
   self->abstol   = NULL;

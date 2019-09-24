@@ -290,6 +290,35 @@ nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd)
 }
 
 /**
+ * nc_wl_surface_mass_density_prepare:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * 
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation.
+ *
+ */
+void 
+nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+{
+  nc_distance_prepare_if_needed (smd->dist, cosmo);
+}
+
+/**
+ * nc_wl_surface_mass_density_prepare_if_needed:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * 
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary.
+ *
+ */
+void 
+nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+{
+  if (ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo)))
+    nc_wl_surface_mass_density_prepare (smd, cosmo);
+}
+
+/**
  * nc_wl_surface_mass_density_sigma_critical:
  * @smd: a #NcWLSurfaceMassDensity
  * @cosmo: a #NcHICosmo

@@ -292,10 +292,10 @@ int calc_xi_nfw(double*r, int Nr, double Mass, double conc, int delta, double om
   int i;
   double rhom = om * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //om*rhomconst;//SM h^2/Mpc^3
   //double rho0_rhom = delta/(3.*(log(1.+conc)-conc/(1.+conc)));
-  double rdelta = pow(Mass/(1.33333333333*M_PI*rhom*delta), 0.33333333333);
-  double rscale = rdelta/conc;
-  double fc = log(1.+conc)-conc/(1.+conc);
-  double r_rs;
+  double rdelta = pow (Mass / (1.33333333333 * M_PI * rhom * delta), 0.33333333333);
+  double rscale = rdelta / conc;
+  double fc     = log (1.0 + conc) - conc / (1.0 + conc);
+  double r_rs   = 0.0;
   for(i = 0; i < Nr; i++){
     r_rs = r[i]/rscale;
     //xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.;

@@ -70,7 +70,7 @@ struct _NcHIPertWKBClass
  * Perturbation variables enumerator.
  * 
  */
-typedef enum _NcHIPertWKBVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_WKB_VARS >*/
 {
   NC_HIPERT_WKB_RE_Q = 0,
   NC_HIPERT_WKB_IM_Q,
@@ -115,11 +115,11 @@ void nc_hipert_wkb_clear (NcHIPertWKB **wkb);
 
 void nc_hipert_wkb_set_interval (NcHIPertWKB *wkb, gdouble alpha_i, gdouble alpha_f);
 
-G_INLINE_FUNC void nc_hipert_wkb_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V);
-G_INLINE_FUNC void nc_hipert_wkb_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu);
-G_INLINE_FUNC gdouble nc_hipert_wkb_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
-G_INLINE_FUNC gdouble nc_hipert_wkb_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
-G_INLINE_FUNC gdouble nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+NCM_INLINE void nc_hipert_wkb_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V);
+NCM_INLINE void nc_hipert_wkb_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu);
+NCM_INLINE gdouble nc_hipert_wkb_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+NCM_INLINE gdouble nc_hipert_wkb_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+NCM_INLINE gdouble nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
 
 void nc_hipert_wkb_prepare (NcHIPertWKB *wkb, NcmModel *model);
 
@@ -139,34 +139,35 @@ G_END_DECLS
 #ifndef _NC_HIPERT_WKB_INLINE_H_
 #define _NC_HIPERT_WKB_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_wkb_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V)
 {
   NC_HIPERT_WKB_GET_CLASS (wkb)->get_nu_V (wkb, model, alpha, k, nu, V);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_wkb_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu)
 {
   NC_HIPERT_WKB_GET_CLASS (wkb)->get_mnu_dmnu (wkb, model, alpha, k, mnu, dmnu);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_wkb_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_WKB_GET_CLASS (wkb)->get_m (wkb, model, alpha, k);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_wkb_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_WKB_GET_CLASS (wkb)->get_nu2 (wkb, model, alpha, k);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_WKB_GET_CLASS (wkb)->get_dVnu2 (wkb, model, alpha, k);
@@ -174,5 +175,6 @@ nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdoub
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_WKB_INLINE_H_ */

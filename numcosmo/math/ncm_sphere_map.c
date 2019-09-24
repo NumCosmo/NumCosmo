@@ -181,7 +181,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv = G_TYPE_INSTANCE_GET_PRIVATE (smap, NCM_TYPE_SPHERE_MAP, NcmSphereMapPrivate);
+  NcmSphereMapPrivate * const self = smap->priv = ncm_sphere_map_get_instance_private (smap);
   self->nside             = 0;
   self->npix              = 0;
   self->face_size         = 0;

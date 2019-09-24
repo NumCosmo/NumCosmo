@@ -89,7 +89,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcDataReducedShearClusterMass, nc_data_reduced_shear
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)
 {
-	NcDataReducedShearClusterMassPrivate * const self = drs->priv = G_TYPE_INSTANCE_GET_PRIVATE (drs, NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS, NcDataReducedShearClusterMassPrivate);
+	NcDataReducedShearClusterMassPrivate * const self = drs->priv = nc_data_reduced_shear_cluster_mass_get_instance_private (drs);
 	self->dist         = NULL;
   self->photoz_array = ncm_obj_array_new ();
   self->gal_obs      = NULL;
@@ -788,7 +788,7 @@ ncm_hdf5_table_read_col_as_longarray (NcmHDF5Table *h5tb, const gchar *col, GArr
 
 		//printf ("name '%s', nrecords %llu\n", h5tb->name, h5tb->nrecords);
 		field_sizes_sd[0] = sizeof (gint);
-		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gfloat), field_offset, field_sizes_sd, tmp->data);
+		ret = H5TBread_fields_index (h5tb->h5f, h5tb->name, 1, &cindex, 0, h5tb->nrecords, sizeof (gint), field_offset, field_sizes_sd, tmp->data);
 		g_assert_cmpint (ret, !=, -1);
 
 		for (i = 0; i < h5tb->nrecords; i++)
@@ -938,6 +938,18 @@ ncm_hdf5_table_read_col_as_fixstr (NcmHDF5Table *h5tb, const gchar *col, GArray 
 
 #endif /* HAVE_HDF5 */
 
+static gboolean
+_g_long_equal (gconstpointer v1, gconstpointer v2)
+{
+  return *((const glong*) v1) == *((const glong*) v2);
+}
+
+static guint
+_g_long_hash (gconstpointer v)
+{
+  return (guint) *(const glong*) v;
+}
+
 /**
  * nc_data_reduced_shear_cluster_mass_load_hdf5:
  * @drs: a #NcDataReducedShearClusterMass
@@ -956,7 +968,7 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 {
 #ifdef HAVE_HDF5
 	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
-	GHashTable *fdata     = g_hash_table_new_full (g_int64_hash, g_int64_equal, NULL, NULL); 
+	GHashTable *fdata     = g_hash_table_new_full (_g_long_hash, _g_long_equal, NULL, NULL); 
 	NcmVector *vecs[5]    = {NULL, NULL, NULL, NULL, NULL};
 	NcmMatrix *mats[2]    = {NULL, NULL};
 	NcmVector *rh_vec     = NULL;
@@ -997,8 +1009,8 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 			{
 				if (g_array_index (filter, gchar, i) == ftype)
 				{
-					gint64 *key_ptr = &g_array_index (gal_id, glong, i);
-					gint64 key      = g_array_index (gal_id, glong, i);
+					glong *key_ptr = &g_array_index (gal_id, glong, i);
+					glong key      = g_array_index (gal_id, glong, i);
 
 					if (g_hash_table_contains (fdata, &key))
 					{
@@ -1015,8 +1027,8 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 		{
 			for (i = 0; i < gal_table->nrecords; i++)
 			{
-				gint64 *key_ptr = &g_array_index (gal_id, glong, i);
-				gint64 key      = g_array_index (gal_id, glong, i);
+				glong *key_ptr = &g_array_index (gal_id, glong, i);
+				glong key      = g_array_index (gal_id, glong, i);
 
 				if (g_hash_table_contains (fdata, &key))
 				{
@@ -1071,7 +1083,7 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
 
 	for (i = 0; i < photz_table->nrecords; i++)
 	{
-		gint64 photz_id_i = g_array_index (photz_id, glong, i);
+		glong photz_id_i = g_array_index (photz_id, glong, i);
 		if (!g_hash_table_contains (fdata, &photz_id_i))
 			continue;
 		else

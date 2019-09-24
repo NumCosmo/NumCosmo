@@ -53,6 +53,7 @@ camspec_extra.mod:            camspec/clik_CAMspec_f90.lo
 clik.mod:                     clik.lo
 comm_br_mod.mod:              gibbs/comm_br_mod.lo
 comm_gauss_br_mod.mod:        gibbs/comm_gauss_br_mod.lo
+comm_gauss_br_mod_v3.mod:     gibbs/comm_gauss_br_mod_v3.lo
 comm_lowl_extra.mod:          gibbs/clik_gibbs_f90.lo
 comm_lowl_mod_dist.mod:       gibbs/comm_lowl_mod_dist.lo
 fiducial_cls_mod_smw.mod:     bflike/bflike_smw.lo
@@ -73,6 +74,8 @@ plik_cmbonly_extra.mod:       cmbonly/clik_cmbonly_f90.lo
 spt_keisler_likelihood.mod:   actspt/SPT_keisler_likelihood.lo
 spt_reichardt_likelihood.mod: actspt/SPT_reichardt_likelihood.lo
 temp_like.mod:                camspec/CAMspec.lo
+temp_like_camspec.mod:        camspec/temp_like.lo
+temp_like_camspec3.mod:       camspec/temp_like_v3.lo
 
 ## Fortran dependencies
 
@@ -140,15 +143,18 @@ bflike/fitstools_smw.lo: \
 bflike/long_intrinsic_smw.lo: \
 	healpix_types.mod
 
-camspec/clik_CAMspec_f90.lo: \
-	temp_like.mod
+camspec/clik_CAMspec_f90.lo:   \
+	temp_like.mod          \
+	temp_like_camspec.mod  \
+	temp_like_camspec3.mod
 
 cmbonly/clik_cmbonly_f90.lo: \
 	plik_cmbonly.mod
 
 gibbs/clik_gibbs_f90.lo: \
-	comm_br_mod.mod        \
-	comm_gauss_br_mod.mod  \
+	comm_br_mod.mod          \
+	comm_gauss_br_mod.mod    \
+	comm_gauss_br_mod_v3.mod \
 	comm_lowl_mod_dist.mod
 
 gibbs/validate_comm_lowl_mod.lo: \
@@ -211,13 +217,16 @@ clik_act_spt_lkl_sources = \
 clik_camspec_lkl_sources =   \
 	camspec/clik_CAMspec_f90.F90 \
 	camspec/CAMspec.f90          \
+	camspec/temp_like.f90        \
+	camspec/temp_like_v3.f90     \
 	camspec/clik_CAMspec.c
 
 clik_gibbs_lkl_sources = \
-	gibbs/comm_br_mod.f90        \
-	gibbs/comm_gauss_br_mod.f90  \
-	gibbs/comm_lowl_mod_dist.f90 \
-	gibbs/clik_gibbs_f90.f90     \
+	gibbs/comm_br_mod.f90          \
+	gibbs/comm_gauss_br_mod.f90    \
+	gibbs/comm_gauss_br_mod_v3.f90 \
+	gibbs/comm_lowl_mod_dist.f90   \
+	gibbs/clik_gibbs_f90.f90       \
 	gibbs/clik_gibbs.c
 
 clik_lowlike_lkl_sources = \
@@ -267,6 +276,9 @@ clik_lens_lkl_sources = \
 	lenslike/plenslike/wignerd.c            \
 	clik_lensing.c
 
+clik_simall_sources = \
+	simall/clik_simall.c
+
 libclik_la_SOURCES = \
 	$(clik_tool_sources)         \
 	$(clik_main_sources)         \
@@ -277,7 +289,8 @@ libclik_la_SOURCES = \
 	$(clik_bflike_lkl_sources)   \
 	$(clik_pliklite_lkl_sources) \
 	$(clik_plik_lkl_sources)     \
-	$(clik_lens_lkl_sources)
+	$(clik_lens_lkl_sources)     \
+	$(clik_simall_sources)
 
 EXTRA_DIST = \
 	lowlike/read_archive_map.fh \
@@ -289,12 +302,12 @@ CLEANFILES = \
 	bflike.mod bflike_extra.mod bflike_qu.mod bflike_qu_extra.mod      \
 	bflike_smw.mod bflike_smw_extra.mod bflike_utils_smw.mod           \
 	br_mod_dist.mod camspec_extra.mod clik.mod comm_br_mod.mod         \
-	comm_gauss_br_mod.mod comm_lowl_extra.mod comm_lowl_mod_dist.mod   \
-	fiducial_cls_mod_smw.mod fitstools_smw.mod foregrounds_loading.mod \
-	gibbs_extra.mod healpix_types.mod highell_likelihood.mod           \
-	highell_options.mod highell_subroutines.mod long_intrinsic_smw.mod \
-	lowlike_extra.mod planck_likelihood.mod planck_options.mod         \
-	planck_teeebb_lowl.mod plik_cmbonly.mod plik_cmbonly_extra.mod     \
-	spt_keisler_likelihood.mod spt_reichardt_likelihood.mod temp_like.mod
-	
-
+	comm_gauss_br_mod.mod comm_gauss_br_mod_v3.mod comm_lowl_extra.mod \
+	comm_lowl_mod_dist.mod fiducial_cls_mod_smw.mod fitstools_smw.mod  \
+	foregrounds_loading.mod gibbs_extra.mod healpix_types.mod          \
+	highell_likelihood.mod highell_options.mod highell_subroutines.mod \
+	long_intrinsic_smw.mod lowlike_extra.mod planck_likelihood.mod     \
+	planck_options.mod planck_teeebb_lowl.mod plik_cmbonly.mod         \
+	plik_cmbonly_extra.mod spt_keisler_likelihood.mod                  \
+	spt_reichardt_likelihood.mod temp_like.mod temp_like_camspec.mod   \
+	temp_like_camspec3.mod

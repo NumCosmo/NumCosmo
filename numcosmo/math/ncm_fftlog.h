@@ -140,16 +140,16 @@ gdouble ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble l
 void ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data, const gdouble reltol);
 void ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdouble reltol);
 
-G_INLINE_FUNC guint ncm_fftlog_get_size (NcmFftlog *fftlog);
-G_INLINE_FUNC gint ncm_fftlog_get_full_size (NcmFftlog *fftlog);
-G_INLINE_FUNC gdouble ncm_fftlog_get_norma (NcmFftlog *fftlog);
-G_INLINE_FUNC gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
-G_INLINE_FUNC gdouble ncm_fftlog_get_full_length (NcmFftlog *fftlog);
+NCM_INLINE guint ncm_fftlog_get_size (NcmFftlog *fftlog);
+NCM_INLINE gint ncm_fftlog_get_full_size (NcmFftlog *fftlog);
+NCM_INLINE gdouble ncm_fftlog_get_norma (NcmFftlog *fftlog);
+NCM_INLINE gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
+NCM_INLINE gdouble ncm_fftlog_get_full_length (NcmFftlog *fftlog);
 
-G_INLINE_FUNC gint ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i);
-G_INLINE_FUNC gint ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i);
+NCM_INLINE gint ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i);
+NCM_INLINE gint ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i);
 
-G_INLINE_FUNC NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv);
+NCM_INLINE NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv);
 
 G_END_DECLS
 
@@ -158,52 +158,53 @@ G_END_DECLS
 #ifndef _NCM_FFTLOG_INLINE_H_
 #define _NCM_FFTLOG_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC guint
+NCM_INLINE guint
 ncm_fftlog_get_size (NcmFftlog *fftlog)
 {
   return fftlog->N;
 }
 
-G_INLINE_FUNC gint
+NCM_INLINE gint
 ncm_fftlog_get_full_size (NcmFftlog *fftlog)
 {
   return fftlog->Nf;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_fftlog_get_norma (NcmFftlog *fftlog)
 {
   return ncm_fftlog_get_full_size (fftlog);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_fftlog_get_length (NcmFftlog *fftlog)
 {
   return fftlog->Lk;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_fftlog_get_full_length (NcmFftlog *fftlog)
 {
   return fftlog->Lk + 2.0 * fftlog->Lk_N * fftlog->pad;
 }
 
-G_INLINE_FUNC gint 
+NCM_INLINE gint 
 ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
 {
   return (i > fftlog->Nf_2) ? i - fftlog->Nf : i;
 }
 
-G_INLINE_FUNC gint 
+NCM_INLINE gint 
 ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i)
 {
   return (phys_i < 0) ? phys_i + fftlog->Nf : phys_i;
 }
 
-G_INLINE_FUNC NcmVector *
+NCM_INLINE NcmVector *
 ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv)
 {
   return g_ptr_array_index (fftlog->Gr_vec, nderiv);
@@ -211,5 +212,6 @@ ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_FFTLOG_INLINE_H_ */

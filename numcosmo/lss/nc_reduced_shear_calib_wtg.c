@@ -62,7 +62,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, 
 static void
 nc_reduced_shear_calib_wtg_init (NcReducedShearCalibWtg *rs_wtg)
 {
-  NcReducedShearCalibWtgPrivate * const self = rs_wtg->priv = G_TYPE_INSTANCE_GET_PRIVATE (rs_wtg, NC_TYPE_REDUCED_SHEAR_CALIB_WTG, NcReducedShearCalibWtgPrivate);
+  NcReducedShearCalibWtgPrivate * const self = rs_wtg->priv = nc_reduced_shear_calib_wtg_get_instance_private (rs_wtg);
 
   self->m_slope    = 0.0;
   self->m_b        = 0.0;

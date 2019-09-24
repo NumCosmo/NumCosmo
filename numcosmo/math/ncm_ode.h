@@ -77,9 +77,11 @@ G_END_DECLS
 #ifndef _NCM_ODE_INLINE_H_
 #define _NCM_ODE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_ODE_INLINE_H_ */

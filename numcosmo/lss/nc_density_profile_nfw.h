@@ -50,19 +50,19 @@ struct _NcDensityProfileNFWClass
 };
 
 /**
- * NcDensityProfileNFWParams:
+ * NcDensityProfileNFWSParams:
  * @NC_DENSITY_PROFILE_NFW_C_DELTA: concentration parameter
  * @NC_DENSITY_PROFILE_NFW_M_DELTA: halo mass
  *
  * FIXME
  */
-typedef enum _NcDensityProfileNFWParams
+typedef enum /*< enum,underscore_name=NC_DENSITY_PROFILE_NFW_SPARAMS >*/
 {
   NC_DENSITY_PROFILE_NFW_C_DELTA = 0,
   NC_DENSITY_PROFILE_NFW_M_DELTA, 
   /* < private > */
   NC_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
-} NcDensityProfileNFWParams;
+} NcDensityProfileNFWSParams;
 
 struct _NcDensityProfileNFW
 {

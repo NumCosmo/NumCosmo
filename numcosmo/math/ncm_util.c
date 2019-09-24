@@ -1214,7 +1214,7 @@ ncm_util_print_bits (guint64 num)
   gint bit;
   for(bit = 0; bit < (sizeof (guint64) * 8); bit++)
   {
-    printf("%lu ", num & 0x01);
+    printf("%lu ", (glong)(num & 0x01));
     num = num >> 1;
   }
 }

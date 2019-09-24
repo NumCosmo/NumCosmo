@@ -140,6 +140,8 @@ nc_distance_init (NcDistance *dist)
   dist->comoving_distance_spline = NULL;
 
   dist->recomb                   = NULL;
+
+  dist->cmethod                  = NC_DISTANCE_COMOVING_METHOD_LEN;
   
   dist->ctrl = ncm_model_ctrl_new (NULL);
 }
@@ -356,25 +358,32 @@ static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
-  dist->comoving_distance_cache->clear = TRUE;
-	dist->comoving_infinity->clear       = TRUE;
-  dist->time_cache->clear              = TRUE;
-  dist->lookback_time_cache->clear     = TRUE;
-  dist->conformal_time_cache->clear    = TRUE;
+  ncm_function_cache_empty_cache (dist->comoving_distance_cache);
+	ncm_function_cache_empty_cache (dist->comoving_infinity);
+  ncm_function_cache_empty_cache (dist->time_cache);
+  ncm_function_cache_empty_cache (dist->lookback_time_cache);
+  ncm_function_cache_empty_cache (dist->conformal_time_cache);
+  ncm_function_cache_empty_cache (dist->sound_horizon_cache);
 
-  dist->sound_horizon_cache->clear = TRUE;
-
-  if (dist->comoving_distance_spline == NULL)
+  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
   {
-    NcmSpline *s = ncm_spline_cubic_notaknot_new ();
-    dist->comoving_distance_spline =
-      ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->zf);
-
-    ncm_spline_free (s);
+    dist->cmethod = NC_DISTANCE_COMOVING_METHOD_FROM_MODEL;
   }
+  else
+  {
+    if (dist->comoving_distance_spline == NULL)
+    {
+      NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+      dist->comoving_distance_spline =
+        ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->zf);
 
-  ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
-  ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
+      ncm_spline_free (s);
+    }
+
+    ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
+    ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
+    dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
+  }
 
   if (dist->recomb != NULL)
     nc_recomb_prepare_if_needed (dist->recomb, cosmo);
@@ -416,26 +425,38 @@ static gdouble comoving_distance_integral_argument(gdouble z, gpointer p);
 gdouble
 nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
-  gdouble result, error;
-  gsl_function F;
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+      return nc_hicosmo_Dc (cosmo, z);
+      break;
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      if (z <= dist->zf)
+        return ncm_spline_eval (ncm_ode_spline_peek_spline (dist->comoving_distance_spline), z);
+      else
+      {
+        gdouble result, error;
+        gsl_function F;
+          
+        F.function = &comoving_distance_integral_argument;
+        F.params = cosmo;
 
-  nc_distance_prepare_if_needed (dist, cosmo);
+        if (dist->use_cache)
+          ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
+        else
+          ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
-  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
-    return nc_hicosmo_Dc (cosmo, z);
+        return result;
+      }
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 
-  if (z <= dist->zf)
-    return ncm_spline_eval (ncm_ode_spline_peek_spline (dist->comoving_distance_spline), z);
-
-  F.function = &comoving_distance_integral_argument;
-  F.params = cosmo;
-
-  if (dist->use_cache)
-    ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
-  else
-    ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
-
-  return result;
+  return GSL_NAN;
 }
 
 static gdouble
@@ -454,7 +475,6 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   NCM_UNUSED (cd);
-
   return 1.0 / sqrt (E2);
 }
 

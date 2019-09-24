@@ -46,13 +46,13 @@ gdouble ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigm
 gdouble ncm_sphPlm_x (gint l, gint m, gint order);
 gdouble ncm_sum (gdouble *d, gulong n);
 
-G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_sqrt1px_m1 (const gdouble x) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_ln1pexpx (const gdouble x) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx) G_GNUC_CONST;
 
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y) G_GNUC_CONST;
 gdouble ncm_exprel (const gdouble x) G_GNUC_CONST;
@@ -103,35 +103,25 @@ NcmComplex *ncm_complex_dup (NcmComplex *c);
 void ncm_complex_free (NcmComplex *c);
 void ncm_complex_clear (NcmComplex **c);
 
-G_INLINE_FUNC void ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b);
-G_INLINE_FUNC void ncm_complex_set_zero (NcmComplex *c);
+NCM_INLINE void ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b);
+NCM_INLINE void ncm_complex_set_zero (NcmComplex *c);
 
-G_INLINE_FUNC gdouble ncm_complex_Re (NcmComplex *c);
-G_INLINE_FUNC gdouble ncm_complex_Im (NcmComplex *c);
+NCM_INLINE gdouble ncm_complex_Re (NcmComplex *c);
+NCM_INLINE gdouble ncm_complex_Im (NcmComplex *c);
 
-G_INLINE_FUNC void ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v);
-G_INLINE_FUNC void ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3);
+NCM_INLINE void ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v);
+NCM_INLINE void ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3);
 
-G_INLINE_FUNC void ncm_complex_mul_real (NcmComplex *c, const gdouble v);
-G_INLINE_FUNC void ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2);
+NCM_INLINE void ncm_complex_mul_real (NcmComplex *c, const gdouble v);
+NCM_INLINE void ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2);
 
-G_INLINE_FUNC gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
-G_INLINE_FUNC void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
+NCM_INLINE gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
+NCM_INLINE void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
 
-G_INLINE_FUNC gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
-G_INLINE_FUNC gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+NCM_INLINE gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+NCM_INLINE gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
 
 /* Macros */
-
-#ifndef HAVE_EXP10
-#define exp10(x) (exp ((x) * M_LN10))
-#endif /* HAVE_EXP10 */
-
-#ifndef NUMCOSMO_GIR_SCAN
-#ifndef HAVE_SINCOS
-G_INLINE_FUNC void sincos (gdouble x, gdouble *s, gdouble *c);
-#endif
-#endif
 
 #define ncm_acb_get_complex(z) (arf_get_d (arb_midref (acb_realref (z)), ARF_RND_NEAR) + I * arf_get_d (arb_midref (acb_imagref (z)), ARF_RND_NEAR))
 
@@ -272,16 +262,17 @@ G_END_DECLS
 #ifndef _NCM_UTIL_INLINE_H_
 #define _NCM_UTIL_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_util_sqrt1px_m1 (const gdouble x)
 {
   return x / (sqrt (1.0 + x) + 1.0);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_ln1pexpx (const gdouble x)
 {
 	if (x > - GSL_LOG_DBL_EPSILON)
@@ -295,7 +286,7 @@ ncm_util_ln1pexpx (const gdouble x)
 	}
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_1pcosx (const gdouble sinx, const gdouble cosx)
 {
   if (cosx > -0.9)
@@ -304,7 +295,7 @@ ncm_util_1pcosx (const gdouble sinx, const gdouble cosx)
     return sinx * sinx / (1.0 - cosx);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_1mcosx (const gdouble sinx, const gdouble cosx)
 {
   if (cosx < 0.9)
@@ -313,7 +304,7 @@ ncm_util_1mcosx (const gdouble sinx, const gdouble cosx)
     return sinx * sinx / (1.0 + cosx);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_1psinx (const gdouble sinx, const gdouble cosx)
 {
   if (sinx > -0.9)
@@ -322,7 +313,7 @@ ncm_util_1psinx (const gdouble sinx, const gdouble cosx)
     return cosx * cosx / (1.0 - sinx);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
 {
   if (sinx < 0.9)
@@ -331,13 +322,13 @@ ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
     return cosx * cosx / (1.0 + sinx);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_cos2x (const gdouble sinx, const gdouble cosx)
 {
   return (cosx - sinx) * (cosx + sinx);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z)
 {
   const gdouble C0      = 18.0;
@@ -351,7 +342,7 @@ ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z
   return f;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1)
 {
   const gdouble C0      = 18.0;
@@ -364,7 +355,7 @@ ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *the
   theta1[0] = 1.0 / (1.0 + exp_mgz);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
 {
   const gdouble deg2rad  = M_PI / 180.0; 
@@ -378,7 +369,7 @@ ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
 	return theta;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2)
 {
 	const gdouble deg2rad  = M_PI / 180.0;
@@ -406,66 +397,55 @@ ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble 
 	return atan2(num, denom) / deg2rad; 
 }
 
-#ifndef NUMCOSMO_GIR_SCAN
-#ifndef HAVE_SINCOS
-G_INLINE_FUNC void 
-sincos (gdouble x, gdouble *s, gdouble *c)
-{
-  s[0] = sin (x);
-  c[0] = cos (x);
-}
-#endif
-#endif
-
 /* NcmComplex methods */
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b)
 {
   c->z[0] = a;
   c->z[1] = b;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_complex_set_zero (NcmComplex *c)
 {
   c->z[0] = c->z[1] = 0.0;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_complex_Re (NcmComplex *c)
 {
   return c->z[0];
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_complex_Im (NcmComplex *c)
 {
   return c->z[1];
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v)
 {
   c1->z[0] += c2->z[0] * v;
   c1->z[1] += c2->z[1] * v;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3)
 {
   c1->z[0] += c2->z[0] * c3->z[0] - c2->z[1] * c3->z[1];
   c1->z[1] += c2->z[0] * c3->z[1] + c2->z[1] * c3->z[0];
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_complex_mul_real (NcmComplex *c, const gdouble v)
 {
   c->z[0] *= v;
   c->z[1] *= v;  
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
 {
   const gdouble Re_c1 = c1->z[0] * c2->z[0] - c1->z[1] * c1->z[1];
@@ -475,15 +455,15 @@ ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_UTIL_INLINE_H_ */
 
 #ifndef KOLMOGOROVSMIRNOVDIST_H
 #define KOLMOGOROVSMIRNOVDIST_H
+#ifndef __GTK_DOC_IGNORE__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /********************************************************************
  *
@@ -559,8 +539,7 @@ double ncm_util_KSfbar (int n, double x);
 
 void ncm_util_swilk (double *x, int n, double *w, double *pw, int *ifault);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif
+#endif /* __GTK_DOC_IGNORE__ */
+#endif /* KOLMOGOROVSMIRNOVDIST_H */

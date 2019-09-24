@@ -54,7 +54,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/density_profile_nfw/eval_density", TestNcDensityProfileNFW, NULL,
               &test_nc_density_profile_nfw_new,
               &test_nc_density_profile_nfw_eval_density,
@@ -71,7 +70,6 @@ main (gint argc, gchar *argv[])
               &test_nc_density_profile_nfw_new,
               &test_nc_density_profile_nfw_scale_radius,
               &test_nc_density_profile_nfw_free);
-#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }

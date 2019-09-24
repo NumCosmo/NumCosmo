@@ -43,7 +43,7 @@ typedef struct _NcHICosmoQConstClass NcHICosmoQConstClass;
 typedef struct _NcHICosmoQConst NcHICosmoQConst;
 
 /**
- * NcHICosmoQConstParams:
+ * NcHICosmoQConstSParams:
  * @NC_HICOSMO_QCONST_H0: Hubble constant
  * @NC_HICOSMO_QCONST_OMEGA_T: total energy density of the universe
  * @NC_HICOSMO_QCONST_CD: comoving distance in units of the Hubble radius today
@@ -52,7 +52,7 @@ typedef struct _NcHICosmoQConst NcHICosmoQConst;
  * @NC_HICOSMO_QCONST_Z1: initial redshift
  *
  */
-typedef enum _NcHICosmoQConstParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QCONST_SPARAMS >*/
 {
   NC_HICOSMO_QCONST_H0 = 0,
   NC_HICOSMO_QCONST_OMEGA_T,
@@ -62,7 +62,7 @@ typedef enum _NcHICosmoQConstParams
   NC_HICOSMO_QCONST_Z1,         
   /* < private > */
   NC_HICOSMO_QCONST_SPARAM_LEN, /*< skip >*/
-} NcHICosmoQConstParams;
+} NcHICosmoQConstSParams;
 
 #define NC_HICOSMO_QCONST_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QCONST_DEFAULT_OMEGA_T ( 1.0)

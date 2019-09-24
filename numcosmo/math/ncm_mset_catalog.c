@@ -167,7 +167,7 @@ _ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer dat
 static void
 ncm_mset_catalog_init (NcmMSetCatalog *mcat)
 {
-  NcmMSetCatalogPrivate *self = mcat->priv = G_TYPE_INSTANCE_GET_PRIVATE (mcat, NCM_TYPE_MSET_CATALOG, NcmMSetCatalogPrivate);
+  NcmMSetCatalogPrivate *self = mcat->priv = ncm_mset_catalog_get_instance_private (mcat);
   
   self->mset           = NULL;
   self->nadd_vals      = 0;

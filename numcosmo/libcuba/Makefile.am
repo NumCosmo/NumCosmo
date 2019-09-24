@@ -2,13 +2,13 @@
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS) \
-	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS) \
-	 $(FFTW3_CFLAGS) \
-	 $(CFITSIO_CFLAGS) \
-	 $(NLOPT_CFLAGS) \
-	 -I$(top_srcdir) \
+	 $(GLIB_CFLAGS)              \
+	 $(SUNDIALS_CFLAGS)          \
+	 $(GSL_CFLAGS)               \
+	 $(FFTW3_CFLAGS)             \
+	 $(CFITSIO_CFLAGS)           \
+	 $(NLOPT_CFLAGS)             \
+	 -I$(top_srcdir)             \
 	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \

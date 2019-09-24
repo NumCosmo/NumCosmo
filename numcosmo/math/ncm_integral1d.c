@@ -75,7 +75,7 @@ enum
 static void
 ncm_integral1d_init (NcmIntegral1d *int1d)
 {
-  int1d->priv            = G_TYPE_INSTANCE_GET_PRIVATE (int1d, NCM_TYPE_INTEGRAL1D, NcmIntegral1dPrivate);
+  int1d->priv            = ncm_integral1d_get_instance_private (int1d);
   int1d->priv->partition = 0;
   int1d->priv->rule      = 0;
   int1d->priv->reltol    = 0.0;

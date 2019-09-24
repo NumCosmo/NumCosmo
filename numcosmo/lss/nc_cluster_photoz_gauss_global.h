@@ -43,19 +43,19 @@ typedef struct _NcClusterPhotozGaussGlobalClass NcClusterPhotozGaussGlobalClass;
 typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 
 /**
- * NcClusterPhotozGaussGlobalParams:
+ * NcClusterPhotozGaussGlobalSParams:
  * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS: FIXME
  * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0: standard deviation of the gaussian distribution
  *
  * FIXME
  */
-typedef enum _NcClusterPhotozGaussGlobalParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS >*/
 {
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS = 0,
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,  
   /* < private > */
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAM_LEN, /*< skip >*/
-} NcClusterPhotozGaussGlobalParams;
+} NcClusterPhotozGaussGlobalSParams;
 
 struct _NcClusterPhotozGaussGlobalClass
 {

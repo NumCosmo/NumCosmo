@@ -92,7 +92,7 @@ struct _NcHIPertITwoFluidsEOM
  * FIXME
  * 
  */
-typedef enum _NcHIPertITwoFluidsVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 {
   NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R = 0,
   NC_HIPERT_ITWO_FLUIDS_VARS_S_R,
@@ -143,8 +143,8 @@ void nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom);
 NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_dup (NcHIPertITwoFluidsTV *tf_tv);
 void nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv);
 
-G_INLINE_FUNC NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
-G_INLINE_FUNC NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+NCM_INLINE NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+NCM_INLINE NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 G_END_DECLS
 
@@ -153,16 +153,17 @@ G_END_DECLS
 #ifndef _NC_HIPERT_ITWO_FLUIDS_INLINE_H_
 #define _NC_HIPERT_ITWO_FLUIDS_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertITwoFluidsEOM *
+NCM_INLINE NcHIPertITwoFluidsEOM *
 nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->eom (itf, alpha, k);
 }
 
-G_INLINE_FUNC NcHIPertITwoFluidsTV *
+NCM_INLINE NcHIPertITwoFluidsTV *
 nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->tv (itf, alpha, k);
@@ -170,5 +171,6 @@ nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_ITWO_FLUIDS_INLINE_H_ */

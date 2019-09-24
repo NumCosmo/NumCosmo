@@ -79,7 +79,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FF
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
-  fftlog_jl->priv      = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jl, NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJPrivate);
+  fftlog_jl->priv      = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   fftlog_jl->priv->ell = 0;
   fftlog_jl->priv->q   = 0.0;
 }

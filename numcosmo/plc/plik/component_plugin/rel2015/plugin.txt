@@ -1,3 +1,3 @@
 source : fg2015.c, corrnoise.c, leakage.c
 python : rel2015.pyx
-data   : tsz_143_eps0.50.dat, sz_x_cib_template.dat, ksz_fromcamspec.dat, cib_1h_2h_100_353_Jsr-1_PS_2014_09.dat,sky_template_v15_F100_143_217_353.dat,cnoise_F100_143_217_353_v17.dat
+data   : tsz_143_eps0.50.dat, sz_x_cib_template.dat, ksz_fromcamspec.dat, cib_1h_2h_100_353_Jsr-1_PS_2014_09.dat,sky_template_v15_F100_143_217_353.dat,cnoise_F100_143_217_353_v17.dat,cleak_eh_rd12rc3_v1.dat,cnoise_e2e_v2.dat,sbpx_tmpl_v4_hm.dat,

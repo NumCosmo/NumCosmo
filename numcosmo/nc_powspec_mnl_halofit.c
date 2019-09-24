@@ -102,7 +102,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMNLHaloFit, nc_powspec_mnl_halofit, NC_TYPE
 static void
 nc_powspec_mnl_halofit_init (NcPowspecMNLHaloFit *pshf)
 {
-	NcPowspecMNLHaloFitPrivate * const self = pshf->priv = G_TYPE_INSTANCE_GET_PRIVATE (pshf, NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFitPrivate);
+	NcPowspecMNLHaloFitPrivate * const self = pshf->priv = nc_powspec_mnl_halofit_get_instance_private (pshf);
 
   self->psml       = NULL;
 	self->zmaxnl     = 0.0;

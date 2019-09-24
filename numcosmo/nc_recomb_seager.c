@@ -183,7 +183,7 @@ static void _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad (NcRecombSeager
 static void
 nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
-  NcRecombSeagerPrivate * const self = recomb_seager->priv = G_TYPE_INSTANCE_GET_PRIVATE (recomb_seager, NC_TYPE_RECOMB_SEAGER, NcRecombSeagerPrivate);
+  NcRecombSeagerPrivate * const self = recomb_seager->priv = nc_recomb_seager_get_instance_private (recomb_seager);
 
   self->cvode = CVodeCreate (CV_BDF);
   NCM_CVODE_CHECK ((void*)self->cvode, "CVodeCreate", 0, );
@@ -1135,7 +1135,7 @@ nc_recomb_seager_Tm_dx_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, co
  * Creates a new #NcRecombSeager using default properties.
  *
  * Returns: (transfer full): a new #NcRecombSeager.
-   */
+ */
 NcRecombSeager*
 nc_recomb_seager_new (void)
 {
@@ -1146,13 +1146,13 @@ nc_recomb_seager_new (void)
 /**
  * nc_recomb_seager_new_full:
  * @init_frac: inital fraction of $X_{\HeIII}/X_{\He}$ where to start numerical integration
-   * @zi: inital redshift
+ * @zi: inital redshift
  * @prec: integration precision
  *
  * Creates a new #NcRecombSeager using @init_frac, @zi and @prec.
  *
  * Returns: (transfer full): a new #NcRecombSeager.
-   */
+ */
 NcRecombSeager*
 nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
 {
@@ -1170,7 +1170,7 @@ nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
  * Increases the reference count of @recomb_seager.
  *
  * Returns: (transfer full): @recomb_seager.
-   */
+ */
 NcRecombSeager*
 nc_recomb_seager_ref (NcRecombSeager *recomb_seager)
 {
@@ -1209,7 +1209,7 @@ void nc_recomb_seager_clear (NcRecombSeager** recomb_seager)
  *
  * Sets integration options #NcRecombSeagerOpt. To set the integration
  * options using the recfast compatible flags use nc_recomb_seager_set_switch().
-   *
+ *
  */
 void nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt opts)
 {
@@ -1362,12 +1362,12 @@ nc_recomb_seager_get_options (NcRecombSeager *recomb_seager)
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B $\HyII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HyII$ as
  * in [Pequignot (1991)][XPequignot1991].
-   *
+ *
  * Returns: the value of the case B recombination coefficient for
  * $\HyII$, $\alpha_H$ .
  */
@@ -1392,12 +1392,12 @@ nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B $\HyII$ recombination coefficient derivative with respect to $T_m$.
  *
  * The derivative of the fitting formula of the case B recombination coefficient for $\HyII$
  * nc_recomb_seager_pequignot_HI_case_B ().
-   *
+ *
  * Returns: the value of the case B recombination coefficient for $\HyII$, $d\alpha_H/dT_m$.
  */
 gdouble
@@ -1423,12 +1423,12 @@ nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICos
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B $\HeII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HeII$ as
  * in [Hummer (1998)][XHummer1998].
-   *
+ *
  * Returns: the value of the case B recombination coefficient for $\HeII$, $\alpha_H$ .
  */
 gdouble
@@ -1455,12 +1455,12 @@ nc_recomb_seager_hummer_HeI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *co
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B $\HeII$ recombination coefficient derivative with respect to Tm.
  *
  * The derivative of the fitting formula of the case B recombination coefficient for $\HeII$
  * nc_recomb_seager_hummer_HeI_case_B ().
-   *
+ *
  * Returns: the value of the case B recombination coefficient for $\HeII$, $d\alpha_H/dT_m$.
  */
 gdouble
@@ -1494,12 +1494,12 @@ nc_recomb_seager_hummer_HeI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B via triplets $\HeII$ recombination coefficient.
  *
  * The fitting formula of the case B via triplets recombination coefficient for $\HeII$ as
  * in [Hummer (1998)][XHummer1998].
-   *
+ *
  * Returns: the value of the case B via triplets recombination coefficient for $\HeII$, $\alpha_H$ .
  */
 gdouble
@@ -1526,12 +1526,12 @@ nc_recomb_seager_hummer_HeI_case_B_trip (NcRecombSeager *recomb_seager, NcHICosm
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
  * @Tm: the matter (baryons) temperature $T_m$
-   *
+ *
  * The case B via triplets $\HeII$ recombination coefficient derivative with respect to Tm.
  *
  * The derivative of the fitting formula of the case B via triplets recombination coefficient for $\HeII$
  * nc_recomb_seager_hummer_HeI_case_B_trip().
-   *
+ *
  * Returns: the value of the case B via triplets recombination coefficient for $\HeII$, $d\alpha_H/dT_m$.
  */
 gdouble

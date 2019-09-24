@@ -53,7 +53,7 @@ typedef struct _NcHIPrimClass NcHIPrimClass;
  *
  * Methods to be implementd by every primordial model.
  */
-typedef enum _NcHIPrimImpl
+typedef enum /*< flags,underscore_name=NC_HIPRIM_IMPL >*/
 {
   NC_HIPRIM_IMPL_lnSA_powspec_lnk = 1 << 0,
   NC_HIPRIM_IMPL_lnT_powspec_lnk  = 1 << 1, 
@@ -95,15 +95,15 @@ void nc_hiprim_set_k_pivot (NcHIPrim *prim, gdouble k_pivot);
 gdouble nc_hiprim_get_k_pivot (NcHIPrim *prim);
 gdouble nc_hiprim_get_lnk_pivot (NcHIPrim *prim);
 
-G_INLINE_FUNC gdouble nc_hiprim_lnSA_powspec_lnk (NcHIPrim *prim, const gdouble lnk);
-G_INLINE_FUNC gdouble nc_hiprim_lnT_powspec_lnk (NcHIPrim *prim, const gdouble lnk);
+NCM_INLINE gdouble nc_hiprim_lnSA_powspec_lnk (NcHIPrim *prim, const gdouble lnk);
+NCM_INLINE gdouble nc_hiprim_lnT_powspec_lnk (NcHIPrim *prim, const gdouble lnk);
 
-G_INLINE_FUNC gdouble nc_hiprim_SA_powspec_k (NcHIPrim *prim, const gdouble k);
-G_INLINE_FUNC gdouble nc_hiprim_T_powspec_k (NcHIPrim *prim, const gdouble k);
+NCM_INLINE gdouble nc_hiprim_SA_powspec_k (NcHIPrim *prim, const gdouble k);
+NCM_INLINE gdouble nc_hiprim_T_powspec_k (NcHIPrim *prim, const gdouble k);
 
-G_INLINE_FUNC gdouble nc_hiprim_SA_Ampl (NcHIPrim *prim);
-G_INLINE_FUNC gdouble nc_hiprim_T_Ampl (NcHIPrim *prim);
-G_INLINE_FUNC gdouble nc_hiprim_T_SA_ratio (NcHIPrim *prim);
+NCM_INLINE gdouble nc_hiprim_SA_Ampl (NcHIPrim *prim);
+NCM_INLINE gdouble nc_hiprim_T_Ampl (NcHIPrim *prim);
+NCM_INLINE gdouble nc_hiprim_T_SA_ratio (NcHIPrim *prim);
 
 void nc_hiprim_set_lnSA_powspec_lnk_impl (NcHIPrimClass *model_class, NcHIPrimFunc1 f);
 void nc_hiprim_set_lnT_powspec_lnk_impl (NcHIPrimClass *model_class, NcHIPrimFunc1 f);
@@ -119,36 +119,37 @@ G_END_DECLS
 #ifndef _NC_HIPRIM_INLINE_H_
 #define _NC_HIPRIM_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
 NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnSA_powspec_lnk,lnk)
 NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnT_powspec_lnk,lnk)
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hiprim_SA_powspec_k (NcHIPrim *prim, const gdouble k)
 {
   return exp (nc_hiprim_lnSA_powspec_lnk (prim, log (k)));
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hiprim_T_powspec_k (NcHIPrim *prim, const gdouble k)
 {
   return exp (nc_hiprim_lnT_powspec_lnk (prim, log (k)));
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hiprim_SA_Ampl (NcHIPrim *prim)
 {
   return nc_hiprim_SA_powspec_k (prim, prim->k_pivot);
 }
 
-G_INLINE_FUNC gdouble nc_hiprim_T_Ampl (NcHIPrim *prim)
+NCM_INLINE gdouble nc_hiprim_T_Ampl (NcHIPrim *prim)
 {
   return nc_hiprim_T_powspec_k (prim, prim->k_pivot);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_hiprim_T_SA_ratio (NcHIPrim *prim)
 {
   return exp (nc_hiprim_lnT_powspec_lnk (prim, prim->lnk_pivot) - nc_hiprim_lnSA_powspec_lnk (prim, prim->lnk_pivot));
@@ -156,5 +157,6 @@ nc_hiprim_T_SA_ratio (NcHIPrim *prim)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPRIM_INLINE_H_ */

@@ -93,6 +93,7 @@ AC_SUBST(LT_AGE)
 AC_SUBST(LT_CURRENT_MINUS_AGE)
 
 AC_CONFIG_HEADERS([config.h])
+AH_BOTTOM([#include <numcosmo/config_extra.h>])
 
 AM_MAINTAINER_MODE
 
@@ -433,7 +434,9 @@ if test "x$enable_inline" = "xyes"; then
     AC_DEFINE([HAVE_INLINE], [1], [use inline functions in GSL])
     AC_SUBST(HAVE_INLINE)
     have_inline_support="#define NUMCOSMO_HAVE_INLINE 1"
+    have_inline_macro="#define NCM_INLINE static inline"
     AC_SUBST(have_inline_support)
+    AC_SUBST(have_inline_macro)
   fi
 else
   AC_DEFINE([G_IMPLEMENT_INLINES], [1], [force glib to disable inline])
@@ -537,8 +540,8 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([math.h],, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma finite])
-AC_CHECK_DECLS([isfinite],[],[],[[#include <math.h>]])
+AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma finite lgamma_r])
+AC_CHECK_DECLS([isfinite, lgamma_r],[],[],[[#include <math.h>]])
 
 dnl ***************************************************************************
 dnl Check for dlfcn.h
@@ -644,8 +647,16 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([arb.h acb.h])
 AC_CHECK_LIB([arb],[arb_set])
+if test "x$ac_cv_lib_arb_arb_set" = "x"; then
+  AC_CHECK_LIB([flint-arb],[arb_set])
+  if test "x$ac_cv_lib_flint_arb_arb_set" != "x"; then
+    HAVE_ARB=yes
+  fi
+else
+  HAVE_ARB=yes  
+fi
 
-if test "x$ac_cv_lib_arb_arb_set" != "x"; then
+if test "x$HAVE_ARB" = "xyes"; then
   AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])
 fi
 
@@ -653,6 +664,7 @@ dnl ***************************************************************************
 dnl Check for hdf5 support
 dnl ***************************************************************************
 AX_LIB_HDF5()
+AC_SUBST(HDF5_CPPFLAGS)
 AC_SUBST(HDF5_CFLAGS)
 AC_SUBST(HDF5_LDFLAGS)
 AC_SUBST(HDF5_LIBS)
@@ -1057,11 +1069,11 @@ dnl ***************************************************************************
 dnl if test "x$lapack_mkl" = "xyes"; then
 dnl   PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
 dnl elif test "x$have_clapack" != "xyes"; then
-  PLC_DEFINES="$PLC_DEFINES -DLAPACK_CLIK"
+  PLC_DEFINES="$PLC_DEFINES -DHAS_LAPACK -DLAPACK_CLIK"
 dnl fi
 
 PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
-PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"6dc2a8cf3965\"'"
+PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"0031e3604f0c\"'"
 
 if test "x$has_RTLD_DEFAULT" = "xyes"; then
   PLC_DEFINES="$PLC_DEFINES -DHAS_RTLD_DEFAULT"
@@ -1191,7 +1203,7 @@ if [ test "x$with_hdf5" = xyes ]; then
 else
        echo "Building with HDF5 support: ......................................NO"
 fi
-if [ test "x$ac_cv_lib_arb_arb_set" = xyes ]; then
+if [ test "x$HAVE_ARB" = xyes ]; then
        echo "Building with ARB support: ......................................YES"
 else
        echo "Building with ARB support: .......................................NO"
@@ -1206,3 +1218,10 @@ echo "LIBS = $LIBS"
 echo "PLC_DEFINES = $PLC_DEFINES"
 echo "PLC_NOWARN_FLAGS = $PLC_NOWARN_FLAGS"
 echo "PLC_FC_NOWARN_FLAGS = $PLC_FC_NOWARN_FLAGS"
+
+if [ test "x$HAVE_ARB" = xyes ]; then
+  echo "HDF5_CPPFLAGS = $HDF5_CPPFLAGS"
+  echo "HDF5_CFLAGS = $HDF5_CFLAGS"
+  echo "HDF5_LDFLAGS = $HDF5_LDFLAGS"
+  echo "HDF5_LIBS = $HDF5_LIBS"
+fi

@@ -57,7 +57,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmODEEval, ncm_ode_eval, G_TYPE_OBJECT);
 static void
 ncm_ode_eval_init (NcmODEEval *ode_eval)
 {
-  NcmODEEvalPrivate * const self = ode_eval->priv = G_TYPE_INSTANCE_GET_PRIVATE (ode_eval, NCM_TYPE_ODE_EVAL, NcmODEEvalPrivate);
+  NcmODEEvalPrivate * const self = ode_eval->priv = ncm_ode_eval_get_instance_private (ode_eval);
 
   self->sys_size = 0;
 }

@@ -131,7 +131,7 @@ static void _ncm_fit_esmcmc_worker_free (gpointer p);
 static void
 ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 {
-	NcmFitESMCMCPrivate * const self = esmcmc->priv = G_TYPE_INSTANCE_GET_PRIVATE (esmcmc, NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCPrivate);
+	NcmFitESMCMCPrivate * const self = esmcmc->priv = ncm_fit_esmcmc_get_instance_private (esmcmc);
 	
   self->fit             = NULL;
 	self->mj              = NULL;
@@ -1637,7 +1637,8 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
 
 		/*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "#  FULL IN: ", "% 22.15g", TRUE);*/
 
-		if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))
+		/*if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))*/
+    if (ncm_mset_fparam_validate_all (self->fit->mset, thetastar)) /* TEST! */
 		{
 			g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
 			g_ptr_array_add (thetastar_out_a, thetastar_out_k);
@@ -1693,7 +1694,8 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 
     ncm_fit_esmcmc_walker_step (self->walker, self->theta, self->m2lnL, thetastar, k);
 
-    if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+		/*if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))*/
+    if (ncm_mset_fparam_validate_all (fit_k->mset, thetastar)) /* TEST! */
     {
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
       ncm_fit_m2lnL_val (fit_k, m2lnL_star);

@@ -42,20 +42,20 @@ typedef struct _NcHICosmoDEJbpClass NcHICosmoDEJbpClass;
 typedef struct _NcHICosmoDEJbp NcHICosmoDEJbp;
 
 /**
- * NcHICosmoDEJbpParams:
+ * NcHICosmoDEJbpSParams:
  * @NC_HICOSMO_DE_JBP_W0: constant parameter
  * @NC_HICOSMO_DE_JBP_W1: constant parameter which multiplies the redshift term
  *
  * Dark Energy equation of state: $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$ 
  * 
  */
-typedef enum _NcHICosmoDEJbpParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_JBP_SPARAMS >*/
 {
   NC_HICOSMO_DE_JBP_W0 = NC_HICOSMO_DE_SPARAM_LEN,
   NC_HICOSMO_DE_JBP_W1,         
   /* < private > */
   NC_HICOSMO_DE_JBP_SPARAM_LEN, /*< skip >*/
-} NcHICosmoDEJbpParams;
+} NcHICosmoDEJbpSParams;
 
 #define NC_HICOSMO_DE_JBP_DEFAULT_W0 (-1.0)
 #define NC_HICOSMO_DE_JBP_DEFAULT_W1 ( 0.0)

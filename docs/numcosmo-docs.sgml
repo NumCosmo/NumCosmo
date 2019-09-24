@@ -79,6 +79,7 @@
     <section>
       <title>Harmonic Oscillator</title>
       <xi:include href="xml/ncm_hoaa.xml"/>
+      <xi:include href="xml/ncm_csq1d.xml"/>
     </section>
     <section>
       <title>Special Functions</title>
@@ -247,18 +248,30 @@
   <chapter>
     <title>Perturbations</title>
     <xi:include href="xml/nc_hipert.xml"/>
+    <xi:include href="xml/nc_hipert_bg_var.xml"/>
     <xi:include href="xml/nc_hipert_wkb.xml"/>
     <xi:include href="xml/nc_hipert_adiab.xml"/>
     <xi:include href="xml/nc_hipert_gw.xml"/>
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>
+    <xi:include href="xml/nc_hipert_first_order.xml"/>
+    <section>
+      <title>Gravitational theories</title>
+      <xi:include href="xml/nc_hipert_grav.xml"/>
+      <xi:include href="xml/nc_hipert_grav_einstein.xml"/>
+    </section>
+    <section>
+      <title>Perturbation components</title>
+      <xi:include href="xml/nc_hipert_comp.xml"/>
+      <xi:include href="xml/nc_hipert_comp_pb.xml"/>
+    </section>
     <section>
       <title>CLASS Backend</title>
         <xi:include href="xml/nc_cbe_precision.xml"/>
         <xi:include href="xml/nc_cbe.xml"/>
         <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
-     </section>
+    </section>
     <section>
       <title>Perturbation Interfaces</title>
       <xi:include href="xml/nc_hipert_itwo_fluids.xml"/>
@@ -412,7 +425,7 @@
     <xi:include href="xml/magnus_iserles_ode.xml"/>
     <xi:include href="xml/grid_one.xml"/>
     <xi:include href="xml/quadrature.xml"/>
-    <xi:include href="xml/function_cache.xml"/>
+    <xi:include href="xml/ncm_function_cache.xml"/>
     <xi:include href="xml/ncm_memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>
   </chapter>

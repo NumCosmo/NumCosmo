@@ -58,7 +58,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/wl_surface_mass_density/nfw/sigma", TestNcWLSurfaceMassDensity, NULL,
               &test_nc_wl_surface_mass_density_new,
               &test_nc_wl_surface_mass_density_sigma,
@@ -87,7 +86,6 @@ main (gint argc, gchar *argv[])
               &test_nc_wl_surface_mass_density_new,
               &test_nc_wl_surface_mass_density_reduced_shear_infinity,
               &test_nc_wl_surface_mass_density_free);                                                         
-#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }
@@ -134,6 +132,8 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
 	test->zs = 1.5;
 
   nc_distance_free (dist);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
 }
 
 void

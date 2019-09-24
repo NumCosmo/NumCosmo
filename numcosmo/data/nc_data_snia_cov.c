@@ -39,10 +39,12 @@
 
 #include "data/nc_data_snia_cov.h"
 #include "nc_snia_dist_cov.h"
+#include "nc_enum_types.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_lapack.h"
 #include "math/ncm_cfg.h"
 
+#include <gio/gio.h>
 #include <glib/gstdio.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -57,6 +59,7 @@
 enum
 {
   PROP_0,
+  PROP_MAG_CUT,
   PROP_ZCMB,
   PROP_ZHE,
   PROP_SIGMA_Z,
@@ -84,6 +87,8 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
 {
   snia_cov->mu_len            = 0;
   snia_cov->uppertri_len      = 0;
+
+  snia_cov->mag_cut           = 0.0;
   
   snia_cov->z_cmb             = NULL;
   snia_cov->z_he              = NULL;
@@ -130,6 +135,9 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
 
   switch (prop_id)
   {
+    case PROP_MAG_CUT:
+      nc_data_snia_cov_set_mag_cut (snia_cov, g_value_get_double (value));
+      break;
     case PROP_ZCMB:
       nc_data_snia_cov_set_z_cmb (snia_cov, g_value_get_object (value));
       break;
@@ -184,6 +192,9 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
 
   switch (prop_id)
   {
+    case PROP_MAG_CUT:
+      g_value_set_double (value, nc_data_snia_cov_get_mag_cut (snia_cov));
+      break;
     case PROP_ZCMB:
       g_value_set_object (value, snia_cov->z_cmb);
       break;
@@ -281,6 +292,13 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   object_class->dispose      = &nc_data_snia_cov_dispose;
   object_class->finalize     = &nc_data_snia_cov_finalize;
 
+  g_object_class_install_property (object_class,
+                                   PROP_MAG_CUT,
+                                   g_param_spec_double ("magnitude-cut",
+                                                        NULL,
+                                                        "Threshold where to change absolute magnitude",
+                                                        0.0, G_MAXDOUBLE, NC_DATA_SNIA_COV_MAG_CUT_DEFAULT,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ZCMB,
                                    g_param_spec_object ("z-cmb",
@@ -394,9 +412,8 @@ _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
   NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
-  nc_snia_dist_cov_calc (dcov, snia_cov, cov);
-  
-  return TRUE;
+
+  return nc_snia_dist_cov_calc (dcov, snia_cov, cov);
 }
 
 /* EXPERIMENTAL CODE : NOT USED! */
@@ -546,7 +563,7 @@ nc_data_snia_cov_new_full (gchar *filename, gboolean use_norma)
 
 /**
  * nc_data_snia_cov_sigma_int_len:
- * @snia_cov: a #NcDataSNIACov.
+ * @snia_cov: a #NcDataSNIACov
  * 
  * Gets the number of different intrinsic sigma parameters in the
  * catalog.
@@ -774,6 +791,32 @@ GArray *
 nc_data_snia_cov_peek_abs_mag_set (NcDataSNIACov *snia_cov)
 {
   return snia_cov->dataset;
+}
+
+/**
+ * nc_data_snia_cov_set_mag_cut:
+ * @snia_cov: a #NcDataSNIACov
+ * @mag_cut: a double
+ * 
+ * Sets the absolute magnitude cut value.
+ * 
+ */
+void 
+nc_data_snia_cov_set_mag_cut (NcDataSNIACov *snia_cov, const gdouble mag_cut)
+{
+  snia_cov->mag_cut = mag_cut;
+}
+
+/**
+ * nc_data_snia_cov_get_mag_cut:
+ * @snia_cov: a #NcDataSNIACov
+ * 
+ * Returns: the current absolute magnitude cut value.
+ */
+gdouble 
+nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov)
+{
+  return snia_cov->mag_cut;
 }
 
 /**
@@ -1154,6 +1197,21 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
     ncm_data_set_desc (NCM_DATA (snia_cov), desc);    
     g_free (desc);
   }
+
+  /* Get magnitude-cut */
+  if (g_key_file_has_key (snia_keyfile, 
+                          NC_DATA_SNIA_COV_DATA_GROUP,
+                          NC_DATA_SNIA_COV_MAG_CUT,
+                          &error))
+  {
+    const gdouble mag_cut = g_key_file_get_double (snia_keyfile, 
+                                                   NC_DATA_SNIA_COV_DATA_GROUP,
+                                                   NC_DATA_SNIA_COV_MAG_CUT,
+                                                   &error);
+    nc_data_snia_cov_set_mag_cut (snia_cov, mag_cut);
+  }  
+  else
+    nc_data_snia_cov_set_mag_cut (snia_cov, NC_DATA_SNIA_COV_MAG_CUT_DEFAULT); /* Sets the default value */
   
   /* Get magnitude cov matrix */
   
@@ -1520,7 +1578,7 @@ _nc_data_snia_cov_matrix_to_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov, g
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 
-void 
+static void 
 nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
 {
   NcmVector *sigma_mag         = ncm_vector_new (snia_cov->mu_len);
@@ -1628,6 +1686,7 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
   gchar comment[FLEN_COMMENT];
   glong nrows, cat_version;
   gint hdutype;
+  gdouble mag_cut = NC_DATA_SNIA_COV_MAG_CUT_DEFAULT;
   gint status = 0;
   
   if (filename == NULL)
@@ -1651,7 +1710,7 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
     status = 0;
   }
 
-  fits_read_key_log (fptr, NC_DATA_SNIA_COV_CAT_VERSION, &snia_cov->has_complete_cov, NULL, &status);
+  fits_read_key_log (fptr, NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV, &snia_cov->has_complete_cov, NULL, &status);
   if (status)
   {
     snia_cov->has_complete_cov = FALSE;
@@ -1670,6 +1729,18 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
   else
     status = 0;
 
+  fits_read_key_dbl (fptr, NC_DATA_SNIA_COV_MAG_CUT, &mag_cut, comment, &status);
+  if (!status)
+  {
+    NCM_FITS_ERROR (status);
+    nc_data_snia_cov_set_mag_cut (snia_cov, mag_cut);
+  }
+  else
+  {
+    nc_data_snia_cov_set_mag_cut (snia_cov, NC_DATA_SNIA_COV_MAG_CUT_DEFAULT);
+    status = 0;
+  }
+  
   fits_get_num_rows (fptr, &nrows, &status);
   NCM_FITS_ERROR (status);
   ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), nrows);
@@ -1869,6 +1940,12 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
     NCM_FITS_ERROR (status);
   }
 
+  {
+    const gdouble mag_cut = nc_data_snia_cov_get_mag_cut (snia_cov);
+    fits_write_key_dbl (fptr, NC_DATA_SNIA_COV_MAG_CUT, mag_cut, -5, NC_DATA_SNIA_COV_MAG_CUT_COMMENT, &status);
+    NCM_FITS_ERROR (status);
+  }
+  
   {
     /* Always create catalogs of latest version */
     fits_write_key_lng (fptr, NC_DATA_SNIA_COV_CAT_VERSION, NC_DATA_SNIA_COV_CAT_LAST_VERSION, NC_DATA_SNIA_COV_CAT_VERSION_COMMENT, &status);
@@ -2320,3 +2397,144 @@ nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
   return ncm_vector_dup (snia_cov->colour_true);
 }
 
+static const gchar *_nc_data_snia_cats[] = {
+  "snls3_conley_2011_sys_stat.fits",
+  "snls3_conley_2011_stat_only.fits",
+  "jla_snls3_sdss_sys_stat.fits",
+  "jla_snls3_sdss_sys_stat_cmpl.fits",
+  "snia_pantheon.fits",
+};
+
+/**
+ * nc_data_snia_cov_get_catalog:
+ * @id: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar * 
+nc_data_snia_cov_get_catalog (gchar *id)
+{
+  const GEnumValue *snia_id = 
+    ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_ID, id);
+  if (snia_id == NULL)
+    g_error ("nc_data_snia_cov_get_catalog: Cannot find id ``%s'' in catalogs.", id);
+  return nc_data_snia_cov_get_catalog_by_id (snia_id->value);
+}
+
+/**
+ * nc_data_snia_cov_get_catalog_by_id:
+ * @id: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar * 
+nc_data_snia_cov_get_catalog_by_id (NcDataSNIAId id)
+{
+  g_assert ((id <= NC_DATA_SNIA_COV_END) && (id >= NC_DATA_SNIA_COV_START));
+  {
+    gint i = id - NC_DATA_SNIA_COV_START;
+    gchar *full_filename = nc_data_snia_cov_get_fits (_nc_data_snia_cats[i], FALSE);
+    return full_filename;
+  }
+}
+
+/**
+ * nc_data_snia_cov_load_cat:
+ * @snia_cov: a #NcDataSNIACov
+ * @id: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+nc_data_snia_cov_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id)
+{
+  gchar *full_filename = nc_data_snia_cov_get_catalog_by_id (id);
+  
+#ifdef NUMCOSMO_HAVE_CFITSIO
+  nc_data_snia_cov_load (snia_cov, full_filename);
+#else
+  g_error ("nc_data_snia_cov_load_cat: catalog load not available, recompile "PACKAGE_NAME" with cfitsio support.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
+  g_free (full_filename);
+}
+
+void 
+_nc_data_snia_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
+{
+  gint *old_prog = (gint *) user_data;
+  gint prog = (100 * current_num_bytes) / total_num_bytes;
+  if (prog > *old_prog)
+  {
+    ncm_message ("# % 3d%%\r", prog);
+    *old_prog = prog;
+  }
+}
+
+/**
+ * nc_data_snia_cov_get_fits:
+ * @filename: FIXME
+ * @check_size: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar *
+nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
+{
+  gchar *full_filename = ncm_cfg_get_fullpath (filename);
+  gchar *url_str       = g_strdup_printf ("http://download.savannah.gnu.org/releases/numcosmo/%s", filename);
+  GFile *local         = g_file_new_for_path (full_filename);
+  GFile *remote        = g_file_new_for_uri (url_str);
+  GError *error        = NULL;
+  gint prog            = 0;
+  gboolean download    = FALSE;
+
+  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  {
+    if (check_size)
+    {
+      GFileInfo *local_info, *remote_info;
+      local_info = g_file_query_info (local, G_FILE_ATTRIBUTE_STANDARD_SIZE, 
+                                      G_FILE_QUERY_INFO_NONE, 
+                                      NULL, &error);
+      if (local_info == NULL)
+        g_error ("nc_data_snia_cov_get_fits: cannot get info for %s: %s.", full_filename, error->message);
+
+      remote_info = g_file_query_info (remote, G_FILE_ATTRIBUTE_STANDARD_SIZE, 
+                                       G_FILE_QUERY_INFO_NONE, 
+                                       NULL, &error);
+      if (remote_info == NULL)
+        g_error ("nc_data_snia_cov_get_fits: cannot get info for %s: %s."
+                 " To use this catalog, download the file from the url and copy "
+                 "to ~/.numcosmo directory.", url_str, error->message);
+
+      if (g_file_info_get_size (local_info) != g_file_info_get_size (remote_info))
+        download = TRUE;
+    }
+  }
+  else
+    download = TRUE;
+
+  if (download)
+  {
+    ncm_message ("# Downloading file [%s]...\n", url_str);
+    if (!g_file_copy (remote, local, G_FILE_COPY_OVERWRITE, NULL, 
+                      &_nc_data_snia_copy_prog, &prog, &error))
+      g_error ("nc_data_snia_cov_get_fits: cannot get fits file from %s: %s."
+               " To use this catalog, download the file from the url and copy "
+               "to ~/.numcosmo directory.", 
+               url_str, error->message);
+  }
+  g_free (url_str);
+  
+  g_object_unref (local);
+  g_object_unref (remote);
+  
+  return full_filename;
+}

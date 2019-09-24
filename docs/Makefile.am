@@ -51,7 +51,7 @@ SCANGOBJ_OPTIONS=
 
 # Extra options to supply to gtkdoc-scan.
 # e.g. SCAN_OPTIONS=--deprecated-guards="GTK_DISABLE_DEPRECATED"
-SCAN_OPTIONS=--rebuild-types --rebuild-sections
+SCAN_OPTIONS=--rebuild-types --rebuild-sections --ignore-decorators="NCM_INLINE"
 
 # Extra options to supply to gtkdoc-mkdb.
 # e.g. MKDB_OPTIONS=--xml-mode --output-format=xml
@@ -102,6 +102,7 @@ endif
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
 IGNORE_HFILES= \
               config.h                  \
+              config_extra.h            \
               ncm_gsl_blas_types.h      \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \
@@ -121,7 +122,9 @@ IGNORE_HFILES= \
               class/hyrec		\
               class/include             \
               toeplitz                  \
-              sundials
+              sundials                  \
+              rcm.h                     \
+              rcm.c
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

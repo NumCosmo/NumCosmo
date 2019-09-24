@@ -79,7 +79,7 @@ static void _ncm_mpi_job_destroy_buffer (gpointer p);
 static void
 ncm_mpi_job_init (NcmMPIJob *mpi_job)
 {
-	NcmMPIJobPrivate * const self = mpi_job->priv = G_TYPE_INSTANCE_GET_PRIVATE (mpi_job, NCM_TYPE_MPI_JOB, NcmMPIJobPrivate);
+	NcmMPIJobPrivate * const self = mpi_job->priv = ncm_mpi_job_get_instance_private (mpi_job);
 
 	self->placeholder      = 0;
 	self->input_dtype      = MPI_DATATYPE_NULL;
@@ -394,7 +394,7 @@ ncm_mpi_job_work_clear (NcmMPIJob *mpi_job)
  * 
  * Computes the size and datatype of the input buffer.
  * 
- * Returns: the input datatype.
+ * Returns: (transfer none): the input datatype.
  */ 
 MPI_Datatype
 ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
@@ -410,7 +410,7 @@ ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
  * 
  * Computes the size and datatype of the return buffer.
  * 
- * Returns: the return datatype.
+ * Returns: (transfer none): the return datatype.
  */ 
 MPI_Datatype
 ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
@@ -424,7 +424,7 @@ ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
  * 
  * Creates a new input object.
  * 
- * Returns: the newly input object.
+ * Returns: (transfer none): the newly input object.
  */ 
 gpointer 
 ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
@@ -438,7 +438,7 @@ ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
  * 
  * Creates a new return object.
  * 
- * Returns: the newly return object.
+ * Returns: (transfer none): the newly return object.
  */ 
 gpointer 
 ncm_mpi_job_create_return (NcmMPIJob *mpi_job)
@@ -481,7 +481,7 @@ ncm_mpi_job_destroy_return (NcmMPIJob *mpi_job, gpointer ret)
  * 
  * Creates a buffer from @input compatible with ncm_mpi_job_input_datatype().
  * 
- * Returns: the created buffer.
+ * Returns: (transfer none): the created buffer.
  */ 
 gpointer 
 ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
@@ -496,7 +496,7 @@ ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
  * 
  * Creates a buffer from @ret compatible with ncm_mpi_job_return_datatype().
  * 
- * Returns: the created buffer.
+ * Returns: (transfer none): the created buffer.
  */ 
 gpointer 
 ncm_mpi_job_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
@@ -543,7 +543,7 @@ ncm_mpi_job_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer bu
  * 
  * Packs (when necessary) the input into the input buffer.
  * 
- * Returns: the packed buffer.
+ * Returns: (transfer none): the packed buffer.
  */ 
 gpointer
 ncm_mpi_job_pack_input (NcmMPIJob *mpi_job, gpointer input)
@@ -558,7 +558,7 @@ ncm_mpi_job_pack_input (NcmMPIJob *mpi_job, gpointer input)
  * 
  * Packs (when necessary) the return into the return buffer @buf.
  * 
- * Returns: the packed buffer. 
+ * Returns: (transfer none): the packed buffer. 
  */ 
 gpointer 
 ncm_mpi_job_pack_return (NcmMPIJob *mpi_job, gpointer ret)
