@@ -68,6 +68,13 @@ _nc_density_profile_finalize (GObject *object)
 
 NCM_MSET_MODEL_REGISTER_ID (nc_density_profile, NC_TYPE_DENSITY_PROFILE);
 
+static gdouble _nc_density_profile_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z) { g_error ("Method eval_density not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp)); return 0.0; }
+static gdouble _nc_density_profile_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z) { g_error ("Method integral_density_los not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp)); return 0.0; }
+static gdouble _nc_density_profile_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z) { g_error ("Method integral_density_2d not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp)); return 0.0; }
+static gdouble _nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z) { g_error ("Method eval_fourier not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp)); return 0.0; }
+static gdouble _nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+
 static void
 nc_density_profile_class_init (NcDensityProfileClass *klass)
 {
@@ -90,7 +97,12 @@ nc_density_profile_class_init (NcDensityProfileClass *klass)
   ncm_model_class_set_name_nick (model_class, "Matter Density Profile", "DensityProfile");
   //ncm_model_class_add_params (model_class, NC_DENSITY_PROFILE_SPARAM_LEN, 0, PROP_SIZE);
   
-  klass->eval_fourier = NULL;
+	klass->eval_density         = &_nc_density_profile_eval_density; 
+  klass->integral_density_los = &_nc_density_profile_integral_density_los; 
+	klass->integral_density_2d  = &_nc_density_profile_integral_density_2d;
+  klass->eval_fourier         = &_nc_density_profile_eval_fourier;
+	klass->scale_radius         = &_nc_density_profile_scale_radius;
+	klass->central_density      = &_nc_density_profile_central_density;
 }
 
 /**
@@ -224,18 +236,97 @@ nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const g
   return NC_DENSITY_PROFILE_GET_CLASS (dp)->eval_fourier (dp, cosmo, k, M, z);
 }
 
+static gdouble 
+_rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
+{
+	/* Critical density in M_solar / Mpc^3 units */
+  return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
+}
+
+/*
+ * The virial overdensity in units of the critical density.
+ * Following Colossus code (Diemer 2018) INCLUIR REF!
+ * This function uses the fitting formula of Bryan & Norman 1998 INCLUIR REF!
+ * 
+ */ 
+static gdouble 
+_Delta_vir (NcHICosmo *cosmo, gdouble z)
+{
+	gdouble onepz3 = (1.0 + z) * (1.0 + z) * (1.0 + z);
+	gdouble x =  nc_hicosmo_Omega_m0 (cosmo) * onepz3 - 1.0;
+	return 18.0 * M_PI * M_PI + 82.0 * x - 39.0 * x * x;
+}
+
+static gdouble 
+_threshold_density_mass_def (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
+{
+	gdouble rho_t;
+
+	switch (dp->mdef)
+	{
+		case NC_DENSITY_PROFILE_MASS_DEF_MEAN:
+			return rho_t = dp->Delta * nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo); /* Delta * rho_m(z) in Msolar/Mpc^3 */
+			break;
+    case NC_DENSITY_PROFILE_MASS_DEF_CRITICAL:
+			return rho_t = dp->Delta * _rho_crit_solar_mass_Mpc3 (cosmo, z);
+			break;
+		case NC_DENSITY_PROFILE_MASS_DEF_VIRIAL:
+			return rho_t = _Delta_vir (cosmo, z) * _rho_crit_solar_mass_Mpc3 (cosmo, z);
+			break;
+		default:
+			g_assert_not_reached ();
+			break;
+	}
+		
+}
+
+static gdouble _nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
+{ 
+	gdouble rho = _threshold_density_mass_def (dp, cosmo, z);
+	gdouble R3 = (3.0 * dp->M) / (4.0 * M_PI * rho);
+	gdouble R = cbrt (R3);
+	return R / dp->c;                          
+}
+
 /**
  * nc_density_profile_scale_radius:
  * @dp: a #NcDensityProfile
  * @cosmo: a #NcHICosmo
  * @z: redshift
  *  
- * This function computes the scale radius $r_s$. 
+ * This function computes the scale radius $r_s$ in Mpc. 
  *
  * Returns: The value of the scale radius $r_s$.
  */
 gdouble
 nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z) 
 { 
-  return NC_DENSITY_PROFILE_GET_CLASS (dp)->scale_radius (dp, cosmo, z);
+	return NC_DENSITY_PROFILE_GET_CLASS (dp)->scale_radius (dp, cosmo, z);
+}
+
+static gdouble _nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
+{
+	gdouble rs   = nc_density_profile_scale_radius (dp, cosmo, z);
+	gdouble rs3  = rs * rs * rs;
+	gdouble x    = r/rs;
+	gdouble mu   = log (1.0 + x) - x / (1.0 + x);  
+	gdouble rhos = dp->M / (4.0 * M_PI * rs3 * mu); /* as defined in Colossus */
+	return rhos;
+}
+
+/**
+ * nc_density_profile_central_density:
+ * @dp: a #NcDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: FIXME  
+ * @z: redshift
+ *  
+ * This function computes the central density $\rho_s$ in $M_\odot / Mpc^3$ . 
+ *
+ * Returns: The value of the central density $\rho_s$.
+ */
+gdouble
+nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z) 
+{ 
+	return NC_DENSITY_PROFILE_GET_CLASS (dp)->central_density (dp, cosmo, R, z);
 }
