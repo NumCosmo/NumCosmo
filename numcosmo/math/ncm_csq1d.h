@@ -50,6 +50,7 @@ struct _NcmCSQ1DClass
   /*< private >*/
   GObjectClass parent_class;
   gdouble (*eval_xi)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+  gdouble (*eval_dxi) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu2) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_m)   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -91,6 +92,7 @@ gdouble ncm_csq1d_get_adiab_threshold (NcmCSQ1D *csq1d);
 gboolean ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d);
 
 NCM_INLINE gdouble ncm_csq1d_eval_xi  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+NCM_INLINE gdouble ncm_csq1d_eval_dxi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_nu  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_m   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -126,6 +128,12 @@ NCM_INLINE gdouble
 ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k);
+}
+
+NCM_INLINE gdouble 
+ncm_csq1d_eval_dxi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_dxi (csq1d, model, t, k);
 }
 
 NCM_INLINE gdouble 
