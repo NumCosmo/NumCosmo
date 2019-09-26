@@ -1,2 +1,1 @@
-FROM vitenti/numcosmo@sha256:5a802ffa4663895e6cf624067fdbbf922805a0a3d8cfff4cf6c3bc824ecca7b3
-
+FROM vitenti/numcosmo@sha256:fe622cdb335eb172038a38efb953896651a0a0d2c6c0f1edd9debafcca30ded0
