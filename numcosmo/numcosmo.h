@@ -105,6 +105,8 @@
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_density_profile.h>
 #include <numcosmo/lss/nc_density_profile_nfw.h>
+#include <numcosmo/lss/nc_density_profile_einasto.h>
+#include <numcosmo/lss/nc_density_profile_dk14.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>

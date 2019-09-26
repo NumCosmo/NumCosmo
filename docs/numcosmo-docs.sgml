@@ -307,6 +307,8 @@
       <title> Density Profile</title>
       <xi:include href="xml/nc_density_profile.xml"/>
       <xi:include href="xml/nc_density_profile_nfw.xml"/>
+      <xi:include href="xml/nc_density_profile_einasto.xml"/>
+      <xi:include href="xml/nc_density_profile_dk14.xml"/>
     </section>
     <section>
       <title>Multiplicity Function</title>
