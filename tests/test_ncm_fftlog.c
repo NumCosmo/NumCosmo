@@ -123,6 +123,8 @@ main (gint argc, gchar *argv[])
 #endif
 }
 
+#define NTESTS 20
+
 typedef struct _TestNcmFftlogPlaw
 {
   gdouble lnA;
@@ -185,7 +187,7 @@ test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 1000;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);
@@ -221,7 +223,7 @@ test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 1000;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);
@@ -258,7 +260,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 100;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);

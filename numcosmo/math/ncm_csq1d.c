@@ -1558,7 +1558,7 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
       const gdouble lnch_alpha = gsl_sf_lncosh (alpha);
       const gdouble Up         = + gamma + lnch_alpha;
       const gdouble Um         = - gamma + lnch_alpha;
-      printf ("# E[AD] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g\n", self->t, alpha, dgamma, chi, Up, Um);
+      printf ("# E[AD] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, alpha, dgamma, chi, Up, Um, xi);
     }
 
     is_finished = (self->t == self->tf);
@@ -1628,7 +1628,7 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
     if (PRINT_EVOL)
     {
       const gdouble Um = - Up + 2.0 * gsl_sf_lncosh (alpha);
-      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g", self->t, alpha, dgamma, chi, Up, Um, xi);
+      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, alpha, dgamma, chi, Up, Um, xi);
     }
 
     is_finished = (self->t == self->tf);
@@ -1915,7 +1915,7 @@ _ncm_csq1d_sing_detect (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, gdoubl
   gsl_root_fsolver_set (s, &F, ti, tf);
 
   if (PRINT_EVOL)
-    printf ("# Searching for singularities:");
+    printf ("# Searching for singularities:\n");
   
   do
   {
@@ -2098,7 +2098,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
       status = gsl_root_test_interval (t0, t1, 0.0, root_reltol);
 
       if (PRINT_EVOL)
-        printf ("#  %5d [%.7f, %.7f] %.7f %+.7f\n", iter, t0, t1, ti[0], t1 - t0);
+        printf ("#  %5d [%.7e, %.7e] %.7e %+.7e\n", iter, t0, t1, ti[0], t1 - t0);
     }
     while (status == GSL_CONTINUE && iter < max_iter);
 
