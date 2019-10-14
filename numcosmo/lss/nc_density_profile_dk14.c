@@ -312,7 +312,7 @@ int calc_xi_dk14(double*r, int Nr, double Mass, double conc, int delta, double o
   double rdelta = pow(Mass/(1.33333333333*M_PI*rhom*delta), 0.33333333333);
   double rscale = rdelta/conc;
   double fc = log(1.+conc)-conc/(1.+conc);
-  double r_rs;
+  double r_rs = 0.0;
   for(i = 0; i < Nr; i++){
     r_rs = r[i]/rscale;
     //xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.;

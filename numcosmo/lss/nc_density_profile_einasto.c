@@ -296,7 +296,7 @@ _nc_density_profile_einasto_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo
 static gdouble 
 _nc_density_profile_einasto_deltac (NcDensityProfileEinasto *dpnfw)
 {
-  gdouble onepc = 1.0;
+  /*gdouble onepc = 1.0;*/
   gdouble delta_c = (dpnfw->Delta / 3.0); 
 	/* IMPLEMENT if it is the case! */
 
@@ -313,7 +313,7 @@ int calc_xi_einasto(double*r, int Nr, double Mass, double conc, int delta, doubl
   double rdelta = pow(Mass/(1.33333333333*M_PI*rhom*delta), 0.33333333333);
   double rscale = rdelta/conc;
   double fc = log(1.+conc)-conc/(1.+conc);
-  double r_rs;
+  double r_rs = 0.0;
   for(i = 0; i < Nr; i++){
     r_rs = r[i]/rscale;
     //xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.;
