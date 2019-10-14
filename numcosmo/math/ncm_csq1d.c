@@ -80,7 +80,7 @@
 #include <sundials/sundials_types.h> 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define PRINT_EVOL TRUE
+#define PRINT_EVOL FALSE
 
 typedef enum _NcmCSQ1DEvolStop
 {
