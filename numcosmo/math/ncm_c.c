@@ -35,7 +35,7 @@
  * 
  * - High precision mathematical constants obtained from [MPFR](http://www.mpfr.org/). 
  * 
- * - Fundamental constants: 2014 [CODATA](http://physics.nist.gov/cuu/Constants/index.html)
+ * - Fundamental constants: 2018 [CODATA](http://physics.nist.gov/cuu/Constants/index.html)
  * recommended values, see constants.txt distributed with NumCosmo sources. 
  * 
  * - The atomic weights: Commission on Isotopic Abundances and Atomic Weights 
@@ -48,7 +48,7 @@
  * See also [Luzum 2011][XLuzum2011].
  *
  * - Atomic Specra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
- * database - Version 5 (January 2016).
+ * Standard Reference Database 78 - Version 5.7 (October 2018).
  * 
  */
 
@@ -188,7 +188,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * START: 2014 CODATA recommended values (see constants.txt)
+ * START: 2018 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 /**
@@ -196,7 +196,7 @@ ncm_c_class_init (NcmCClass *klass)
  * 
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Speed of light $c = 299792458 \,\left[\mathrm{m}\mathrm{s}^{-1}\right]$.
+ * Returns: Speed of light $c = 299792458.0 \,\left[\mathrm{m}\mathrm{s}^{-1}\right]$.
  *
  */
 /**
@@ -204,117 +204,117 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant $h = 6.626070040 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
+ * Returns: Planck constant $h = 6.62607015 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
  */
 /**
  * ncm_c_hbar:
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571800 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
+ * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571817 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
  */
 /**
  * ncm_c_fine_struct:
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Fine structure constant $\alpha = 7.2973525664 \times 10^{-3} $.
+ * Returns: Fine structure constant $\alpha = 7.2973525693 \times 10^{-3} $.
  */
 /**
  * ncm_c_kb:
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Boltzmann constant $k_\mathrm{B} = 1.38064852 \times 10^{-23} \,\left[\mathrm{J}\,\mathrm{K}^{-1}\right]$.
+ * Returns: Boltzmann constant $k_\mathrm{B} = 1.380649 \times 10^{-23} \,\left[\mathrm{J}\,\mathrm{K}^{-1}\right]$.
  */
 /**
  * ncm_c_G:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Newton's (or gravitational) constant $\mathrm{G} = 6.67408 \times 10^{-11} \,\left[\mathrm{m}^3\,\mathrm{kg}^{-1}\,\mathrm{s}^{-2}\right]$.
+ * Returns: Newton's (or gravitational) constant $\mathrm{G} = 6.67430 \times 10^{-11} \,\left[\mathrm{m}^3\,\mathrm{kg}^{-1}\,\mathrm{s}^{-2}\right]$.
  */
 /**
  * ncm_c_planck_length:
  *
- * Returns: Planck length $l_\mathrm{P} = 1.616229 \times 10^{-35} \,\left[\mathrm{m}\right]$.
+ * Returns: Planck length $l_\mathrm{P} = 1.616255 \times 10^{-35} \,\left[\mathrm{m}\right]$.
  */
 /**
  * ncm_c_thomson_cs:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Thomson cross section $\sigma_\mathrm{T} = 0.66524587158 \times 10^{-28} \,\left[\mathrm{m}^2\right]$.
+ * Returns: Thomson cross section $\sigma_\mathrm{T} = 0.66524587321 \times 10^{-28} \,\left[\mathrm{m}^2\right]$.
  */
 /**
  * ncm_c_stefan_boltzmann:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670367 \times 10^{-8} \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
+ * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670374419 \times 10^{-8} \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
  */
 /**
  * ncm_c_mass_atomic:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Atomic mass constant $m_\mathrm{A} = 1.660539040 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Atomic mass constant $m_\mathrm{A} = 1.66053906660 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_e:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Electron mass $m_\mathrm{e} = 9.10938356 \times 10^{-31} \,\left[\mathrm{kg}\right]$.
+ * Returns: Electron mass $m_\mathrm{e} = 9.1093837015 \times 10^{-31} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_p:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Proton mass $m_\mathrm{p} = 1.672621898 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Proton mass $m_\mathrm{p} = 1.67262192369 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_n:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Neuton mass $m_\mathrm{n} = 1.674927471 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Neuton mass $m_\mathrm{n} = 1.67492749804 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_ratio_alpha_p:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: The proton and alpha particle (Helium-4 III) mass ratio $m_\alpha / m_\mathrm{p} = 3.97259968907$.
+ * Returns: The proton and alpha particle (Helium-4 III) mass ratio $m_\alpha / m_\mathrm{p} = 3.97259969009$.
  */
 /**
  * ncm_c_mass_ratio_e_p:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: The electron and proton mass ratio $m_\mathrm{e} / m_\mathrm{p} = 5.44617021352 \times 10^{-4}$.
+ * Returns: The electron and proton mass ratio $m_\mathrm{e} / m_\mathrm{p} = 5.44617021487 \times 10^{-4}$.
  */
 /**
  * ncm_c_Rinf:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: The Rydberg constant $\mathrm{R}_\infty = 1.0973731568508 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
+ * Returns: The Rydberg constant $\mathrm{R}_\infty = 10973731.568160 \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
  * ncm_c_Ry:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: The Rydberg unity of energy $\mathrm{Ry} = hc\mathrm{R}_\infty = 2.179872325 \times 10^{-18} \,\left[\mathrm{J}\right]$.
+ * Returns: The Rydberg unity of energy $\mathrm{Ry} = hc\mathrm{R}_\infty = 2.1798723611035 \times 10^{-18} \,\left[\mathrm{J}\right]$.
  */
 /**
  * ncm_c_eV:
  *
  * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: The value of one electron volt $\mathrm{eV} = 1.6021766208 \times 10^{-19} \,\left[\mathrm{J}\right]$.
+ * Returns: The value of one electron volt $\mathrm{eV} = 1.602176634 \times 10^{-19} \,\left[\mathrm{J}\right]$.
  */
 
 /*******************************************************************************
@@ -506,7 +506,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * END: 2014 CODATA recommended values
+ * END: 2018 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************

@@ -68,18 +68,13 @@ struct _NcDensityProfileNFW
 {
   /*< private > */
   NcDensityProfile parent_instance;
-  gdouble Delta;
-  gdouble r_Delta;
 };
 
 GType nc_density_profile_nfw_get_type (void) G_GNUC_CONST;
 
-NcDensityProfile *nc_density_profile_nfw_new (void);
+NcDensityProfile *nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble c, const gdouble Delta);
 
-#define NC_DENSITY_PROFILE_NFW_DEFAULT_C_DELTA  (4.0)
-#define NC_DENSITY_PROFILE_NFW_DEFAULT_M_DELTA  (2.0e14)
-
-#define NC_DENSITY_PROFILE_NFW_DEFAULT_PARAMS_ABSTOL (0.0)
+gdouble nc_density_profile_nfw_deltac (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, const gdouble z);
 
 G_END_DECLS
 

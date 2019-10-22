@@ -75,15 +75,28 @@ typedef enum _NcDensityProfileMassDef
   NC_DENSITY_PROFILE_MASS_DEF_LEN, /*< skip >*/	
 } NcDensityProfileMassDef; 
 
+/**
+ * NcDensityProfileParams:
+ * @NC_DENSITY_PROFILE_C: concentration parameter
+ * @NC_DENSITY_PROFILE_M_DELTA: halo mass
+ *
+ * FIXME
+ */
+typedef enum /*< enum,underscore_name=NC_DENSITY_PROFILE_SPARAMS >*/
+{
+  NC_DENSITY_PROFILE_C = 0,
+  NC_DENSITY_PROFILE_M_DELTA, 
+  /* < private > */
+  NC_DENSITY_PROFILE_SPARAM_LEN, /*< skip >*/
+} NcDensityProfileSParams;
+
 struct _NcDensityProfile
 {
   /*< private >*/
   NcmModel parent_instance;
 	NcDensityProfileMassDef mdef; /* mass definition*/
-	gdouble c;                    /* concentration in FIXME */
 	gdouble z;                    /* redshift */
-  gdouble M;                    /* halo/cluster mass in Msolar */
-	gdouble Delta;                /* overdensity constant */
+	gdouble oDelta;               /* overdensity constant */
 };
 
 GType nc_density_profile_get_type (void) G_GNUC_CONST;
@@ -100,7 +113,14 @@ gdouble nc_density_profile_integral_density_los (NcDensityProfile *dp, NcHICosmo
 gdouble nc_density_profile_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
 gdouble nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
 gdouble nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_density_profile_Delta (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_density_profile_mass_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_density_profile_mass_density_threshold (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z); 
+
+#define NC_DENSITY_PROFILE_DEFAULT_C        (4.0)
+#define NC_DENSITY_PROFILE_DEFAULT_M_DELTA  (2.0e14)
+#define NC_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 

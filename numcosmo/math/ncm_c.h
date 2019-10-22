@@ -86,7 +86,7 @@ NCM_INLINE gdouble ncm_c_radian_0_2pi (const gdouble r) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_sign_sin (const gdouble r) G_GNUC_CONST;
 
 /*******************************************************************************
- * START: 2014 CODATA recommended values (see end of file)
+ * START: 2018 CODATA recommended values (see end of file)
  *******************************************************************************/
 
 NCM_INLINE gdouble ncm_c_c (void) G_GNUC_CONST;
@@ -136,7 +136,7 @@ NCM_INLINE gdouble ncm_c_H_reduced_energy (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_H_bind (const gdouble n, const gdouble j) G_GNUC_CONST;
 
 /*******************************************************************************
- * END: 2014 CODATA recommended values
+ * END: 2018 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************
@@ -458,62 +458,62 @@ NCM_INLINE gdouble ncm_c_sign_sin (const gdouble r)
 { return ncm_c_radian_0_2pi (r) < ncm_c_pi () ? 1.0 : -1.0; }
 
 /*******************************************************************************
- * START: 2014 CODATA recommended values (see constants.txt)
+ * START: 2018 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 NCM_INLINE gdouble ncm_c_c (void)
 { return 299792458.0; }
 
 NCM_INLINE gdouble ncm_c_h (void)
-{ return 6.626070040e-34; }
-         
+{ return 6.62607015e-34; }
+          
 NCM_INLINE gdouble ncm_c_hbar (void)
-{ return 1.054571800e-34; }
-         
+{ return 1.054571817e-34; }
+
 NCM_INLINE gdouble ncm_c_fine_struct (void)
-{ return 7.2973525664e-3; }
+{ return 7.2973525693e-3; }
 
 NCM_INLINE gdouble ncm_c_kb (void)
-{ return 1.38064852e-23; }
+{ return 1.380649e-23; }
 
 NCM_INLINE gdouble ncm_c_G (void)
-{ return 6.67408e-11; }
+{ return 6.67430e-11; }
 
 NCM_INLINE gdouble ncm_c_planck_length (void)
-{ return 1.616229e-35; }
+{ return 1.616255e-35; }
 
 NCM_INLINE gdouble ncm_c_thomson_cs (void)
-{ return 0.66524587158e-28; }
+{ return 0.66524587321e-28; }
 
 NCM_INLINE gdouble ncm_c_stefan_boltzmann (void)
-{ return 5.670367e-8; }
+{ return 5.670374419e-8; }
 
 NCM_INLINE gdouble ncm_c_mass_atomic (void)
-{ return 1.660539040e-27; }
+{ return 1.66053906660e-27; }
 
 NCM_INLINE gdouble ncm_c_mass_e (void)
-{ return 9.10938356e-31; }
+{ return 9.1093837015e-31; }
          
 NCM_INLINE gdouble ncm_c_mass_p (void)
-{ return 1.672621898e-27; }
+{ return 1.67262192369e-27; }
 
 NCM_INLINE gdouble ncm_c_mass_n (void)
-{ return 1.674927471e-27; }
+{ return 1.67492749804e-27; }
 
 NCM_INLINE gdouble ncm_c_mass_ratio_alpha_p (void)
-{ return 3.97259968907; }
+{ return 3.97259969009; }
 
 NCM_INLINE gdouble ncm_c_mass_ratio_e_p (void)
-{ return 5.44617021352e-4; }
+{ return 5.44617021487e-4; }
 
 NCM_INLINE gdouble ncm_c_Rinf (void)
-{ return 10973731.568508; }
+{ return 10973731.568160; }
 
 NCM_INLINE gdouble ncm_c_Ry (void)
-{ return 2.179872325e-18; }
+{ return 2.1798723611035e-18; }
 
 NCM_INLINE gdouble ncm_c_eV (void)
-{ return 1.6021766208e-19; }
+{ return 1.602176634e-19; }
 
 /*******************************************************************************
  * Derived constants
@@ -599,7 +599,7 @@ NCM_INLINE gdouble ncm_c_H_bind (const gdouble n, const gdouble j)
 }
 
 /*******************************************************************************
- * END: 2014 CODATA recommended values
+ * END: 2018 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************

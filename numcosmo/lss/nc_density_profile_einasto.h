@@ -59,7 +59,7 @@ struct _NcDensityProfileEinastoClass
  */
 typedef enum _NcDensityProfileEinastoParams
 {
-  NC_DENSITY_PROFILE_EINASTO_RHOS = 0,
+  NC_DENSITY_PROFILE_EINASTO_RHOS = NC_DENSITY_PROFILE_SPARAM_LEN,
   NC_DENSITY_PROFILE_EINASTO_RS,
 	NC_DENSITY_PROFILE_EINASTO_ALPHA,
   /* < private > */
