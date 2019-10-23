@@ -43,6 +43,14 @@ RUN apt-get update && apt-get install -y \
     libhdf5-dev      \
     libflint-arb-dev
 
+WORKDIR /root
+
+RUN git clone https://github.com/tmcclintock/cluster_toolkit.git
+RUN cd cluster_toolkit && python build.py install --root=/root
+
+RUN git clone https://github.com/LSSTDESC/CLMM.git
+RUN cd CLMM && python build.py install --root=/root
+
 # NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
 RUN cd && mkdir NumCosmo usr
 COPY . /root/NumCosmo/
@@ -54,13 +62,6 @@ RUN CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" F
 RUN make -j12
 RUN make install DESTDIR=/root
 
-WORKDIR /root
-
-RUN git clone https://github.com/tmcclintock/cluster_toolkit.git
-RUN cd cluster_toolkit && python build.py install --root=/root
-
-RUN git clone https://github.com/LSSTDESC/CLMM.git
-RUN cd CLMM && python build.py install --root=/root
 
 FROM $BASE_CONTAINER AS runtime-image
 
