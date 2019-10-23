@@ -46,10 +46,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /root
 
 RUN git clone https://github.com/tmcclintock/cluster_toolkit.git
-RUN cd cluster_toolkit && python build.py install --root=/root
+RUN cd cluster_toolkit && python setup.py install --root=/root
 
 RUN git clone https://github.com/LSSTDESC/CLMM.git
-RUN cd CLMM && python build.py install --root=/root
+RUN cd CLMM && python setup.py install --root=/root
 
 # NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
 RUN cd && mkdir NumCosmo usr
