@@ -275,8 +275,6 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
   const gdouble onepx   = 1.0 + x;
   const gdouble onepx2  = onepx * onepx; 
 
-	printf ("eval nfw\n");
-	printf ("# r % 22.15g rs % 22.15g x % 22.15g delta_c % 22.15g\n", r, rs, x, delta_c);
 	{
 		/*const gdouble Omega_m0 = 1.0;//nc_hicosmo_Omega_m0 (cosmo);*/
 		/*gdouble ret = 0.0;*/
