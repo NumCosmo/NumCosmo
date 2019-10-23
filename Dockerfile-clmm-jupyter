@@ -54,6 +54,8 @@ RUN CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" F
 RUN make -j12
 RUN make install DESTDIR=/root
 
+WORKDIR /root
+
 RUN git clone https://github.com/tmcclintock/cluster_toolkit.git
 RUN cd cluster_toolkit && python build.py install --root=/root
 
