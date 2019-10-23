@@ -346,9 +346,6 @@ _nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const 
 	const gdouble R3  = (3.0 * M) / (4.0 * M_PI * rho);
 	const gdouble R   = cbrt (R3);
 
-	printf ("scale radius static\n");
-	printf ("rho = %.5g R = %.5g c = %.5g\n", rho, R, c);
-
 	return R / c;                          
 }
 
@@ -365,7 +362,6 @@ _nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const 
 gdouble
 nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z) 
 { 
-	printf ("scale radius\n");
 	return NC_DENSITY_PROFILE_GET_CLASS (dp)->scale_radius (dp, cosmo, z);
 }
 

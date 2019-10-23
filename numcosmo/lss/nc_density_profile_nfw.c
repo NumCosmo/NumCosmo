@@ -159,7 +159,6 @@ nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
 /**
  * nc_density_profile_nfw_new:
  * @mdef: a #NcDensityProfileMassDef
- * @c: concentration $c$
  * @Delta: cluster threshold mass definition $\Delta$ 
  *
  * This function returns a #NcDensityProfile with a #NcDensityProfileNFW implementation.
