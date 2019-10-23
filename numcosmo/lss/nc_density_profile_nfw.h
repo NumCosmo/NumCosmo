@@ -72,7 +72,7 @@ struct _NcDensityProfileNFW
 
 GType nc_density_profile_nfw_get_type (void) G_GNUC_CONST;
 
-NcDensityProfile *nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble c, const gdouble Delta);
+NcDensityProfile *nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble Delta);
 
 gdouble nc_density_profile_nfw_deltac (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, const gdouble z);
 

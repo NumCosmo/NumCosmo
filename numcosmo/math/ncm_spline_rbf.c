@@ -277,7 +277,7 @@ gint PSetup (gpointer Data) { return 0; }
 static void
 _ncm_spline_rbf_calc_coeff (NcmSplineRBFPrivate * const self, NcmVector *xv, NcmVector *yv, const guint len)
 {
-	if (FALSE)
+	if (TRUE)
 	{
 		gint ret;
 

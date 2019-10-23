@@ -167,11 +167,10 @@ nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
  * Returns: A new #NcDensityProfile.
  */
 NcDensityProfile *
-nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble c, const gdouble Delta)
+nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble Delta)
 {
   return g_object_new (NC_TYPE_DENSITY_PROFILE_NFW, 
                        "mass-def", mdef,
-                       "c",        c,	
                        "Delta",    Delta,
                        NULL);
 }
@@ -216,13 +215,6 @@ _nc_density_profile_nfw_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, co
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static gdouble 
-_rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
-{
-	/* Critical density in M_solar / Mpc^3 units */
-  return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
-}
-
 /*
 static gdouble
 _nc_density_profile_nfw_r_delta (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, gdouble z)
@@ -239,8 +231,9 @@ _nc_density_profile_nfw_r_delta (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, g
 
 ////////////////////////////////// Cluster toolkit ///////////////////////////////
 #define rhomconst 2.77533742639e+11
-
-int calc_xi_nfw(double*r, int Nr, double Mass, double conc, int delta, double om, double*xi_nfw){
+#if 0
+static int 
+calc_xi_nfw(double*r, int Nr, double Mass, double conc, int delta, double om, double*xi_nfw){
   int i;
   double rhom = om * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //om*rhomconst;//SM h^2/Mpc^3
   //double rho0_rhom = delta/(3.*(log(1.+conc)-conc/(1.+conc)));
@@ -259,7 +252,7 @@ int calc_xi_nfw(double*r, int Nr, double Mass, double conc, int delta, double om
   return 0;
 }
 
-int 
+static int 
 calc_rho_nfw(double*r, int Nr, double Mass, double conc, int delta, double Omega_m, double*rho_nfw){
   int i;
   double rhom = Omega_m * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //Omega_m*rhomconst;//Msun h^2/Mpc^3
@@ -269,7 +262,7 @@ calc_rho_nfw(double*r, int Nr, double Mass, double conc, int delta, double Omega
   }
   return 0;
 }
-
+#endif
 ////////////////////////////////////////////////////////////////////////////////
 
 static gdouble
@@ -279,7 +272,7 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
   const gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z);
   const gdouble x       = r / rs;
   const gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
-  const gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
+  const gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z);
   const gdouble onepx   = 1.0 + x;
   const gdouble onepx2  = onepx * onepx; 
 
@@ -300,7 +293,7 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
 		}
 	}
 	
-	return delta_c * rho_c / (x * onepx2);
+	return delta_c * rho / (x * onepx2);
 }
 
 /* los = line of sight */
@@ -309,14 +302,14 @@ _nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *c
 {
   NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
 
-  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
-  gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
-  gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z); 
-  gdouble A       = rs * delta_c * rho_c;
-  gdouble x       = R / rs;
-	gdouble xm1     = x - 1.0;
-	gdouble xp1     = x + 1.0;
-	gdouble x2m1    = xm1 * xp1;
+  const gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z); 
+  const gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
+  const gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z); 
+  const gdouble A       = rs * delta_c * rho;
+  const gdouble x       = R / rs;
+	const gdouble xm1     = x - 1.0;
+	const gdouble xp1     = x + 1.0;
+	const gdouble x2m1    = xm1 * xp1;
 
 	if (fabs (xm1) < 1.0e-6)
     return A * (1.0 / 3.0 + (- 2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * xm1) * xm1) * xm1);	
@@ -332,10 +325,10 @@ _nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *co
 {
   NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
 
-  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
+  gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z); 
   gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
   gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z); 
-  gdouble A       = rs * delta_c * rho_c;
+  gdouble A       = rs * delta_c * rho;
   gdouble x       = R / rs;
 	gdouble xm1     = x - 1.0;
 	gdouble xp1     = x + 1.0;
