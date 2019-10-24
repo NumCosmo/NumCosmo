@@ -1,1 +1,2 @@
-FROM vitenti/numcosmo@sha256:b7ba8b1cdfd149e231c18015972ced8927b3f8c688cdb49de925577ddcab20bf
+FROM vitenti/numcosmo:clmm-notebook
+
