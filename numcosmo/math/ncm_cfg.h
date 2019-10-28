@@ -40,6 +40,8 @@
 
 G_BEGIN_DECLS
 
+typedef void (*NcmCfgLoggerFunc) (const gchar *msg);
+
 void ncm_cfg_init (void);
 void ncm_cfg_init_full_ptr (gint *argc, gchar ***argv);
 gchar **ncm_cfg_init_full (gint argc, gchar **argv);
@@ -61,6 +63,10 @@ gboolean ncm_cfg_save_fftw_wisdom (const gchar *filename, ...);
 gboolean ncm_cfg_exists (const gchar *filename, ...);
 
 void ncm_cfg_set_logfile (gchar *filename);
+void ncm_cfg_set_logstream (FILE *stream);
+void ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger);
+void ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger);
+
 void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 void ncm_cfg_logfile_flush_now (void);

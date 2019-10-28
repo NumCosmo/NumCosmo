@@ -977,9 +977,9 @@ ncm_cfg_mpi_nslaves (void)
 
 /**
  * ncm_cfg_set_logfile:
- * @filename: FIXME
+ * @filename: name of the log-file
  *
- * FIXME
+ * Sets all log information to @filename.
  */
 void
 ncm_cfg_set_logfile (gchar *filename)
@@ -993,13 +993,66 @@ ncm_cfg_set_logfile (gchar *filename)
 }
 
 /**
+ * ncm_cfg_set_logstream:
+ * @stream: a stream
+ *
+ * Sets all log information to @stream.
+ */
+void
+ncm_cfg_set_logstream (FILE *stream)
+{
+  g_assert (stream != NULL);
+  _log_stream = stream;
+}
+
+static void
+_ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  NCM_UNUSED (log_domain);
+  NCM_UNUSED (log_level);
+  NCM_UNUSED (user_data);
+  if (_enable_msg && _log_stream)
+  {
+    void (*logger) (const gchar *msg) = user_data;
+    logger (message);
+  }
+}
+
+/**
+ * ncm_cfg_set_log_handler:
+ * @logger: (scope notified): a logger function
+ *
+ * Sets all log information to @stream.
+ */
+void
+ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
+{
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, logger);
+}
+
+/**
+ * ncm_cfg_set_error_log_handler:
+ * @logger: (scope notified): a logger function
+ *
+ * Sets all log information to @stream.
+ */
+void
+ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
+{
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+}
+
+/**
  * ncm_cfg_logfile:
  * @on: FIXME
  *
  * FIXME
  */
 void
-ncm_cfg_logfile (gboolean on) { _enable_msg = on; }
+ncm_cfg_logfile (gboolean on) 
+{ 
+  _enable_msg = on; 
+}
 
 /**
  * ncm_cfg_logfile_flush:
@@ -1008,7 +1061,10 @@ ncm_cfg_logfile (gboolean on) { _enable_msg = on; }
  * FIXME
  */
 void
-ncm_cfg_logfile_flush (gboolean on) { _enable_msg_flush = on; }
+ncm_cfg_logfile_flush (gboolean on) 
+{ 
+  _enable_msg_flush = on; 
+}
 
 /**
  * ncm_cfg_logfile_flush_now:
@@ -1016,10 +1072,13 @@ ncm_cfg_logfile_flush (gboolean on) { _enable_msg_flush = on; }
  * FIXME
  */
 void
-ncm_cfg_logfile_flush_now (void) { fflush (_log_stream); }
+ncm_cfg_logfile_flush_now (void) 
+{
+  fflush (_log_stream); 
+}
 
 /**
- * nc_message:
+ * ncm_message:
  * @msg: FIXME
  * @...: FIXME
  *
