@@ -202,6 +202,7 @@
       <xi:include href="xml/nc_hicosmo_qconst.xml"/>
       <xi:include href="xml/nc_hicosmo_qlinear.xml"/>
       <xi:include href="xml/nc_hicosmo_qspline.xml"/>
+      <xi:include href="xml/nc_hicosmo_qrbf.xml"/>
     </section>
   </chapter>
 
