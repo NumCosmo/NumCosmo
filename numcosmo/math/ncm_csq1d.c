@@ -80,7 +80,7 @@
 #include <sundials/sundials_types.h> 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define PRINT_EVOL TRUE
+#define PRINT_EVOL FALSE
 
 typedef enum _NcmCSQ1DEvolStop
 {
@@ -614,7 +614,7 @@ ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel
     gint ret;
     gint i;
 
-    printf ("Fitting chi * m / t.\n");
+    /*printf ("Fitting chi * m / t.\n");*/
     for (i = 0; i < len; i++)
     {
       const gdouble t_i = ncm_vector_get (t, i);
@@ -638,10 +638,10 @@ ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel
     ret = gsl_multifit_linear (ncm_matrix_gsl (X), ncm_vector_gsl (chim_t), ncm_vector_gsl (sing_up->chi_c), ncm_matrix_gsl (cov), &chisq, work);
     g_assert_cmpint (ret, ==, 0);
 
-    printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));
+    /*printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));*/
 
-    ncm_vector_log_vals (sing_up->chi_c, "COEFS: ", "% 22.15g", TRUE);
-    ncm_matrix_log_vals (cov,            "COV:  ", "% 22.15g");
+    /*ncm_vector_log_vals (sing_up->chi_c, "COEFS: ", "% 22.15g", TRUE);*/
+    /*ncm_matrix_log_vals (cov,            "COV:  ", "% 22.15g");*/
 
     ncm_matrix_free (cov);
     ncm_matrix_free (X);
@@ -681,10 +681,10 @@ ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel
     ret = gsl_multifit_linear (ncm_matrix_gsl (X), ncm_vector_gsl (exp_Up), ncm_vector_gsl (sing_up->Up_c), ncm_matrix_gsl (cov), &chisq, work);
     g_assert_cmpint (ret, ==, 0);
 
-    printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));
+    /*printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));*/
 
-    ncm_vector_log_vals (sing_up->Up_c, "COEFS: ", "% 22.15g", TRUE);
-    ncm_matrix_log_vals (cov,           "COV:  ",  "% 22.15g");
+    /*ncm_vector_log_vals (sing_up->Up_c, "COEFS: ", "% 22.15g", TRUE);*/
+    /*ncm_matrix_log_vals (cov,           "COV:  ",  "% 22.15g");*/
 
     ncm_matrix_free (cov);
     ncm_matrix_free (X);
@@ -839,7 +839,6 @@ ncm_csq1d_sing_fit_up_eval_dexp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d,
 
   return res;
 }
-
 
 /**
  * ncm_csq1d_ref:
@@ -2056,7 +2055,16 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
 
   ncm_csq1d_eval_adiab_at (csq1d, model, t0, &alpha0, &dgamma0, &alpha_reltol0, &dgamma_reltol0);
   ncm_csq1d_eval_adiab_at (csq1d, model, t1, &alpha1, &dgamma1, &alpha_reltol1, &dgamma_reltol1);
-
+  
+  g_assert (gsl_finite (alpha0));
+  g_assert (gsl_finite (alpha1));
+  g_assert (gsl_finite (dgamma0));
+  g_assert (gsl_finite (dgamma1));
+  g_assert (gsl_finite (alpha_reltol0));
+  g_assert (gsl_finite (alpha_reltol1));
+  g_assert (gsl_finite (dgamma_reltol0));
+  g_assert (gsl_finite (dgamma_reltol1));
+  
   adiab0 = ((fabs (alpha_reltol0) < reltol) && (fabs (dgamma_reltol0) < reltol));
   adiab1 = ((fabs (alpha_reltol1) < reltol) && (fabs (dgamma_reltol1) < reltol));
   
@@ -2162,6 +2170,8 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
   dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
 
+  /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, F1, F2, F3, F4);*/
+  
   alpha[0]  = + F1 + F1_3 / 3.0 - F3;
   dgamma[0] = - (1.0 + F1_2) * F2 + F4;
 
