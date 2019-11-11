@@ -1315,18 +1315,15 @@ _ncm_csq1d_f_Up (realtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
   NcmCSQ1DPrivate * const self = ws->csq1d->priv;
 
-  const gdouble alpha    = NV_Ith_S (y_Up, 0);
+  const gdouble chi      = NV_Ith_S (y_Up, 0);
   const gdouble Up       = NV_Ith_S (y_Up, 1);
 
-  const gdouble m        = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu2      = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
-  const gdouble exp_Up   = exp (Up);
-  const gdouble chi      = sinh (alpha);
-  const gdouble ch_alpha = cosh (alpha);
-
-  /*printf ("### % 22.15g % 22.15g % 22.15g % 22.15g\n", t, + m * nu2 * ch_alpha / exp_Up, - exp_Up / (m * ch_alpha), + 2.0 * m * nu2 * chi / exp_Up);*/
+  const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Up    = exp (Up);
+  const gdouble ch2_alpha = 1.0 + chi * chi;
   
-  NV_Ith_S (ydot, 0) = + m * nu2 * ch_alpha / exp_Up - exp_Up / (m * ch_alpha);
+  NV_Ith_S (ydot, 0) = + m * nu2 * ch2_alpha / exp_Up - exp_Up / m;
   NV_Ith_S (ydot, 1) = + 2.0 * m * nu2 * chi / exp_Up;
   
   return 0;
@@ -1338,20 +1335,15 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
   NcmCSQ1DPrivate * const self = ws->csq1d->priv;
 
-  const gdouble alpha = NV_Ith_S (y, 0);
+  const gdouble chi   = NV_Ith_S (y, 0);
   const gdouble Um    = NV_Ith_S (y, 1);
 
-  const gdouble m        = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu2      = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
-  const gdouble exp_Um   = exp (Um);
-  const gdouble chi      = sinh (alpha);
-  const gdouble ch_alpha = cosh (alpha);
-/*
-  printf ("### % 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g\n", 
-          t, + m * nu2 * exp_Um / ch_alpha, - ch_alpha / (m * exp_Um), - 2.0 * chi / (m * exp_Um),
-          alpha, Um, m);
-*/  
-  NV_Ith_S (ydot, 0) = + m * nu2 * exp_Um / ch_alpha - ch_alpha / (m * exp_Um);
+  const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Um    = exp (Um);
+  const gdouble ch2_alpha = 1.0 + chi * chi;
+
+  NV_Ith_S (ydot, 0) = + m * nu2 * exp_Um - ch2_alpha / (m * exp_Um);
   NV_Ith_S (ydot, 1) = - 2.0 * chi / (m * exp_Um);
 
   return 0;
@@ -1386,22 +1378,21 @@ _ncm_csq1d_J_Up (realtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer j
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) jac_data;
   NcmCSQ1DPrivate * const self = ws->csq1d->priv;
 
-  const gdouble alpha  = NV_Ith_S (y_Up, 0);
+  const gdouble chi    = NV_Ith_S (y_Up, 0);
   const gdouble Up     = NV_Ith_S (y_Up, 1);
   
-  const gdouble nu2      = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
-  const gdouble m        = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
-  const gdouble exp_Up   = exp (Up);
-  const gdouble chi      = sinh (alpha);
-  const gdouble ch_alpha = cosh (alpha);
+  const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Up    = exp (Up);
+  const gdouble ch2_alpha = 1.0 + chi * chi;
 
-  /* + m * nu2 * ch_alpha / exp_Up - exp_Up / (m * ch_alpha); */
-  SM_ELEMENT_D (J, 0, 0) = + m * nu2 * chi / exp_Up + exp_Up * tanh (alpha) / (m * ch_alpha);
-  SM_ELEMENT_D (J, 0, 1) = - m * nu2 * ch_alpha / exp_Up - exp_Up / (m * ch_alpha);
+  /* + m * nu2 * ch2_alpha / exp_Up - exp_Up / m; */
+  SM_ELEMENT_D (J, 0, 0) = + 2.0 * m * nu2 * chi / exp_Up;
+  SM_ELEMENT_D (J, 0, 1) = - m * nu2 * ch2_alpha / exp_Up - exp_Up / m;
 
   /* + 2.0 * m * nu2 * chi / exp_Up; */
-  SM_ELEMENT_D (J, 1, 0) = + 2.0 * m * nu2 * ch_alpha / exp_Up;
-  SM_ELEMENT_D (J, 1, 1) = - 2.0 * m * nu2 * chi   / exp_Up;
+  SM_ELEMENT_D (J, 1, 0) = + 2.0 * m * nu2       / exp_Up;
+  SM_ELEMENT_D (J, 1, 1) = - 2.0 * m * nu2 * chi / exp_Up;
 
   return 0;
 }
@@ -1412,22 +1403,21 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) jac_data;
   NcmCSQ1DPrivate * const self = ws->csq1d->priv;
 
-  const gdouble alpha   = NV_Ith_S (y, 0);
+  const gdouble chi     = NV_Ith_S (y, 0);
   const gdouble Um      = NV_Ith_S (y, 1);
 
-  const gdouble m        = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
-  const gdouble nu2      = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
-  const gdouble exp_Um   = exp (Um);
-  const gdouble chi      = sinh (alpha);
-  const gdouble ch_alpha = cosh (alpha);
+  const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
+  const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
+  const gdouble exp_Um    = exp (Um);
+  const gdouble ch2_alpha = 1.0 + chi * chi;
 
-  /* + m * nu2 * exp_Um / ch_alpha - ch_alpha / (m * exp_Um); */
-  SM_ELEMENT_D (J, 0, 0) = + m * nu2 * exp_Um * tanh (alpha) / ch_alpha - chi / (m * exp_Um);
-  SM_ELEMENT_D (J, 0, 1) = + m * nu2 * exp_Um / ch_alpha + ch_alpha / (m * exp_Um);
+  /* + m * nu2 * exp_Um - ch2_alpha / (m * exp_Um); */
+  SM_ELEMENT_D (J, 0, 0) = - 2.0 * chi / (m * exp_Um);
+  SM_ELEMENT_D (J, 0, 1) = + m * nu2 * exp_Um + ch2_alpha / (m * exp_Um);
 
   /* - 2.0 * chi / (m * exp_Um); */
-  SM_ELEMENT_D (J, 1, 0) = - 2.0 * ch_alpha / (m * exp_Um);
-  SM_ELEMENT_D (J, 1, 1) = + 2.0 * chi      / (m * exp_Um);
+  SM_ELEMENT_D (J, 1, 0) = - 2.0       / (m * exp_Um);
+  SM_ELEMENT_D (J, 1, 1) = + 2.0 * chi / (m * exp_Um);
 
   return 0;
 }
@@ -1534,7 +1524,7 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
   g_assert (self->state == NCM_CSQ1D_EVOL_STATE_ADIABATIC);
 
   if (PRINT_EVOL)
-    printf ("# ENTER EVOL ADIABATIC: TIME % 22.15g\n", self->t);
+    printf ("# ENTER EVOL ADIABATIC: TIME % 22.15g % 22.15g\n", self->t, self->tf);
 
   while (TRUE)
   {
@@ -1569,6 +1559,12 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
       g_array_append_val (dgamma_a,  dgamma);
       last_asinh_t = asinh_t;
     }
+
+    if (is_finished)
+    {
+      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
+      break;
+    }
     
     if ((fabs (dgamma) > self->adiab_threshold) || (fabs (alpha) > self->adiab_threshold))
     {
@@ -1576,12 +1572,6 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
         reason = NCM_CSQ1D_EVOL_STOP_UP_START;
       else
         reason = NCM_CSQ1D_EVOL_STOP_UM_START;
-      break;
-    }
-
-    if (is_finished)
-    {
-      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
       break;
     }
   }
@@ -1601,12 +1591,12 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
 
   g_assert (self->state == NCM_CSQ1D_EVOL_STATE_UP);
   if (PRINT_EVOL)
-    printf ("# ENTER EVOL UP: TIME % 22.15g\n", self->t);
+    printf ("# ENTER EVOL UP: TIME % 22.15g => % 22.15g\n", self->t, self->tf);
 
   while (TRUE)
   {
     gdouble asinh_t;
-    gdouble alpha, chim, chi, dgamma, gamma, Up, xi, m, exp_Up, chim_t;
+    gdouble chim, chi, dgamma, gamma, Up, xi, m, exp_Up, chim_t;
     gboolean is_finished = FALSE;
 
     flag = CVode (self->cvode_Up, self->tf, self->y_Up, &self->t, CV_ONE_STEP);
@@ -1615,25 +1605,25 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
     asinh_t = asinh (self->t);
     xi      = ncm_csq1d_eval_xi (csq1d, model, self->t, self->k);
     m       = ncm_csq1d_eval_m (csq1d, model, self->t, self->k);
-    alpha   = NV_Ith_S (self->y_Up, 0);
+    chi     = NV_Ith_S (self->y_Up, 0);
     Up      = NV_Ith_S (self->y_Up, 1);
-    chi     = sinh (alpha);
     chim    = m * chi;
-    gamma   = Up - gsl_sf_lncosh (alpha);
+    gamma   = Up - 0.5 * log1p (chi * chi);
     dgamma  = gamma - xi;
     exp_Up  = exp (Up);
     chim_t  = chim / self->t;
 
     if (PRINT_EVOL)
     {
-      const gdouble Um = - Up + 2.0 * gsl_sf_lncosh (alpha);
-      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, alpha, dgamma, chi, Up, Um, xi);
+      const gdouble Um = - Up + log1p (chi * chi);
+      printf ("# E[UP] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, asinh (chi), dgamma, chi, Up, Um, xi);
     }
 
     is_finished = (self->t == self->tf);
     
     if ((fabs ((asinh_t - last_asinh_t) / last_asinh_t) > 1.0e-5) || is_finished)
     {
+      const gdouble alpha = asinh (chi);
       g_array_append_val (asinh_t_a, asinh_t);
       g_array_append_val (alpha_a,   alpha);
       g_array_append_val (dgamma_a,  dgamma);
@@ -1643,6 +1633,12 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
     g_array_append_val (t_a,      self->t);
     g_array_append_val (exp_Up_a, exp_Up);
     g_array_append_val (chim_t_a, chim_t);
+
+    if (is_finished)
+    {
+      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
+      break;
+    }
     
     if ((fabs (dgamma) < self->adiab_threshold) && (fabs (chi) < self->adiab_threshold))
     {
@@ -1653,12 +1649,6 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
     if (dgamma < 0.0)
     {
       reason = NCM_CSQ1D_EVOL_STOP_UM_START;
-      break;
-    }
-
-    if (is_finished)
-    {
-      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
       break;
     }
   }
@@ -1680,12 +1670,12 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
 
   g_assert (self->state == NCM_CSQ1D_EVOL_STATE_UM);
   if (PRINT_EVOL)
-    printf ("# ENTER EVOL UM: TIME % 22.15g\n", self->t);
+    printf ("# ENTER EVOL UM: TIME % 22.15g => % 22.15g\n", self->t, self->tf);
 
   while (TRUE)
   {
     gdouble asinh_t;
-    gdouble alpha, chi, dgamma, gamma, Um, xi;
+    gdouble chi, dgamma, gamma, Um, xi;
     gboolean is_finished = FALSE;
 
     flag = CVode (self->cvode_Um, self->tf, self->y_Um, &self->t, CV_ONE_STEP);
@@ -1693,26 +1683,32 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
 
     asinh_t = asinh (self->t);
     xi      = ncm_csq1d_eval_xi (csq1d, model, self->t, self->k);
-    alpha   = NV_Ith_S (self->y_Um, 0);
+    chi     = NV_Ith_S (self->y_Um, 0);
     Um      = NV_Ith_S (self->y_Um, 1);
-    chi     = sinh (alpha);
-    gamma   = -Um + gsl_sf_lncosh (alpha);
+    gamma   = -Um + 0.5 * log1p (chi * chi);
     dgamma  = gamma - xi;
 
     if (PRINT_EVOL)
     {
-      const gdouble Up        = - Um + 2.0 * gsl_sf_lncosh (alpha);
-      printf ("# E[UM] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, alpha, dgamma, chi, Up, Um, xi);
+      const gdouble Up = - Um + log1p (chi * chi);
+      printf ("# E[UM] % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g | % 22.15g\n", self->t, asinh (chi), dgamma, chi, Up, Um, xi);
     }
 
     is_finished = (self->t == self->tf);
     
     if ((fabs ((asinh_t - last_asinh_t) / last_asinh_t) > 1.0e-5) || is_finished)
     {
+      const gdouble alpha = asinh (chi);
       g_array_append_val (asinh_t_a, asinh_t);
       g_array_append_val (alpha_a,   alpha);
       g_array_append_val (dgamma_a,  dgamma);
       last_asinh_t = asinh_t;
+    }
+
+    if (is_finished)
+    {
+      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
+      break;
     }
     
     if ((fabs (dgamma) < self->adiab_threshold) && (fabs (chi) < self->adiab_threshold))
@@ -1723,11 +1719,6 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
     if (dgamma > 0.0)
     {
       reason = NCM_CSQ1D_EVOL_STOP_UP_START;
-      break;
-    }
-    if (is_finished)
-    {
-      reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
       break;
     }
   }
@@ -1742,7 +1733,7 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
   NcmCSQ1DEvolStop stop;
 
   if (PRINT_EVOL)
-    printf ("# ENTERING EVOL SAVE: STATE %d, TIME % 22.15g\n", self->state, self->t);
+    printf ("# ENTERING EVOL SAVE: STATE %d, TIME % 22.15g => % 22.15g\n", self->state, self->t, self->tf);
   
   switch (self->state)
   {
@@ -1783,17 +1774,17 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
           const gdouble gamma  = xi + dgamma;
           const gdouble Up     = + gamma + gsl_sf_lncosh (alpha);
 
-          NV_Ith_S (self->y_Up, 0) = alpha;
+          NV_Ith_S (self->y_Up, 0) = sinh (alpha);
           NV_Ith_S (self->y_Up, 1) = Up;
           break;
         }
         case NCM_CSQ1D_EVOL_STATE_UM:
         {
-          const gdouble alpha = NV_Ith_S (self->y_Um, 0);
-          const gdouble Um    = NV_Ith_S (self->y_Um, 1);
-          const gdouble Up    = -Um + 2.0 * gsl_sf_lncosh (alpha);
+          const gdouble chi = NV_Ith_S (self->y_Um, 0);
+          const gdouble Um  = NV_Ith_S (self->y_Um, 1);
+          const gdouble Up  = -Um + log1p (chi * chi);
 
-          NV_Ith_S (self->y_Up, 0) = alpha;
+          NV_Ith_S (self->y_Up, 0) = chi;
           NV_Ith_S (self->y_Up, 1) = Up;
           break;
         }
@@ -1817,17 +1808,17 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
           const gdouble gamma  = xi + dgamma;
           const gdouble Um     = - gamma + gsl_sf_lncosh (alpha);
 
-          NV_Ith_S (self->y_Um, 0) = alpha;
+          NV_Ith_S (self->y_Um, 0) = sinh (alpha);
           NV_Ith_S (self->y_Um, 1) = Um;
           break;
         }
         case NCM_CSQ1D_EVOL_STATE_UP:
         {
-          const gdouble alpha = NV_Ith_S (self->y_Up, 0);
-          const gdouble Up    = NV_Ith_S (self->y_Up, 1);
-          const gdouble Um    = -Up + 2.0 * gsl_sf_lncosh (alpha);
+          const gdouble chi = NV_Ith_S (self->y_Up, 0);
+          const gdouble Up  = NV_Ith_S (self->y_Up, 1);
+          const gdouble Um  = -Up + log1p (chi * chi);
 
-          NV_Ith_S (self->y_Um, 0) = alpha;
+          NV_Ith_S (self->y_Um, 0) = chi;
           NV_Ith_S (self->y_Um, 1) = Um;
           break;
         }
@@ -1846,25 +1837,25 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
       {
         case NCM_CSQ1D_EVOL_STATE_UP:
         {
-          const gdouble alpha  = NV_Ith_S (self->y_Up, 0);
+          const gdouble chi    = NV_Ith_S (self->y_Up, 0);
           const gdouble Up     = NV_Ith_S (self->y_Up, 1);
           const gdouble xi     = ncm_csq1d_eval_xi (csq1d, model, self->t, self->k);
-          const gdouble gamma  = Up - gsl_sf_lncosh (alpha);
+          const gdouble gamma  = Up - 0.5 * log1p (chi * chi);
           const gdouble dgamma = gamma - xi;
 
-          NV_Ith_S (self->y, 0) = alpha;
+          NV_Ith_S (self->y, 0) = asinh (chi);
           NV_Ith_S (self->y, 1) = dgamma;
           break;
         }
         case NCM_CSQ1D_EVOL_STATE_UM:
         {
-          const gdouble alpha  = NV_Ith_S (self->y_Um, 0);
+          const gdouble chi    = NV_Ith_S (self->y_Um, 0);
           const gdouble Um     = NV_Ith_S (self->y_Um, 1);
           const gdouble xi     = ncm_csq1d_eval_xi (csq1d, model, self->t, self->k);
-          const gdouble gamma  = - Um + gsl_sf_lncosh (alpha);
+          const gdouble gamma  = - Um + 0.5 * log1p (chi * chi);
           const gdouble dgamma = gamma - xi;
 
-          NV_Ith_S (self->y, 0) = alpha;
+          NV_Ith_S (self->y, 0) = asinh (chi);
           NV_Ith_S (self->y, 1) = dgamma;
           break;
         }

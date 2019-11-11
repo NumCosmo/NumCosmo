@@ -1726,14 +1726,14 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_hubble_radius_hm1:
+ * ncm_c_hubble_radius_hm1_Mpc:
  *
  * FIXME
  *
  * Returns: Hubble radius $R_H h^{-1} \left[\text{Mpc}\right]$.
  */
 /**
- * ncm_c_hubble_radius_planck:
+ * ncm_c_hubble_radius_hm1_planck:
  *
  * FIXME
  *
