@@ -1967,9 +1967,9 @@ ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_set_pi:
  * @mset: a #NcmMSet
- * @pi: a #NcmMSetPIndex
- * @x: FIXME
- * @n: FIXME
+ * @pi: (array length=n) (element-type NcmMSetPIndex): a #NcmMSetPIndex
+ * @x: (array length=n) (element-type double): values to be set
+ * @n: number of parameters to set
  *
  * FIXME
  *

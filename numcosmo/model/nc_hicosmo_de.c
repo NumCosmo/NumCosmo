@@ -923,6 +923,8 @@ _nc_hicosmo_de_valid (NcmModel *model)
         status = gsl_min_test_interval (a, b, 0.01, 0.0);        
       }
       while (status == GSL_CONTINUE && iter < max_iter);
+
+      /*printf ("### % 22.15g % 22.15g\n", z_min, _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min));*/
 /*
       if (_nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min) <= 0.0)
         printf ("FOUND % 22.15g % 22.15g % 22.15g\n", 
