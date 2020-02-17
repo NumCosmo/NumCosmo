@@ -57,9 +57,9 @@ struct _NcDensityProfileClass
 
 /**
  * NcDensityProfileMassDef:
- * @NC_DENSITY_PROFILE_MEAN: halo mass defined in terms of the mean density
- * @NC_DENSITY_PROFILE_CRITICAL: halo mass defined in terms of the critical density
- * @NC_DENSITY_PROFILE_VIRIAL: halo mass defined in terms of virial overdensity times the critical density 
+ * @NC_DENSITY_PROFILE_MASS_DEF_MEAN: halo mass defined in terms of the mean density
+ * @NC_DENSITY_PROFILE_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density
+ * @NC_DENSITY_PROFILE_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density 
  * 
  * Spherical overdensity halo mass: $$M = \frac{4\pi}{3} \Delta \rho R^3,$$ 
  * where $\rho$ is the mean density of the universe at redshift z, $\rho_m (z)$, or the critical density at z, 
