@@ -64,7 +64,7 @@ script:
   - "./configure $CONFDOCS"
 #  - cat config.log
   - make
-  - make check
+  - make check -j4
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
 
 #deploy:

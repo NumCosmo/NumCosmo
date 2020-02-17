@@ -91,8 +91,8 @@ test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
   NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcDistance *dist            = nc_distance_new (6.0);
 	
-  g_assert (dist != NULL);
-  g_assert (NC_IS_DISTANCE (dist));
+  g_assert_true (dist != NULL);
+  g_assert_true (NC_IS_DISTANCE (dist));
 	
   test->cosmo = cosmo;
 	test->dist  = dist;

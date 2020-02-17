@@ -104,8 +104,8 @@ test_ncm_sphere_map_new (TestNcmSphereMap *test, gconstpointer pdata)
   test->pix   = ncm_sphere_map_new (test->nside);
   test->try   = FALSE;
 
-  g_assert (test->pix != NULL);
-  g_assert (NCM_IS_SPHERE_MAP (test->pix));
+  g_assert_true (test->pix != NULL);
+  g_assert_true (NCM_IS_SPHERE_MAP (test->pix));
 
   g_assert_cmpint (ncm_sphere_map_get_nside (test->pix), ==, test->nside);
 }
@@ -119,7 +119,7 @@ test_ncm_sphere_map_free (TestNcmSphereMap *test, gconstpointer pdata)
 void
 test_ncm_sphere_map_sanity (TestNcmSphereMap *test, gconstpointer pdata)
 {
-  g_assert (test->pix != NULL);
+  g_assert_true (test->pix != NULL);
 
   g_assert_cmpint (ncm_sphere_map_get_middle_size (test->pix) + 
                    2.0 * ncm_sphere_map_get_cap_size (test->pix),
@@ -165,7 +165,7 @@ test_ncm_sphere_map_angles (TestNcmSphereMap *test, gconstpointer pdata)
   const gint64 n_j = g_test_rand_int_range (200, 1000);
   gint64 i;
 
-  g_assert (test->pix != NULL);
+  g_assert_true (test->pix != NULL);
 
   for (i = 0; i < n_i; i++)
   {
@@ -200,7 +200,7 @@ test_ncm_sphere_map_ring (TestNcmSphereMap *test, gconstpointer pdata)
 {
   gint64 r_i;
   
-  g_assert (test->pix != NULL);
+  g_assert_true (test->pix != NULL);
 
   for (r_i = 0; r_i < ncm_sphere_map_get_nrings (test->pix); r_i++)
   {
@@ -236,7 +236,7 @@ test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata)
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint lmax = 1024;
   
-  g_assert (test->pix != NULL);
+  g_assert_true (test->pix != NULL);
 
   ncm_sphere_map_add_noise (test->pix, 1.0, rng);
 
@@ -274,7 +274,7 @@ test_ncm_sphere_map_pix2alm2pix (TestNcmSphereMap *test, gconstpointer pdata)
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint lmax = 1024;
   
-  g_assert (test->pix != NULL);
+  g_assert_true (test->pix != NULL);
 
   ncm_sphere_map_add_noise (test->pix, 1.0, rng);
  

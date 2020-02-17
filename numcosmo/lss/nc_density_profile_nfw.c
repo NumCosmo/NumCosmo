@@ -163,9 +163,9 @@ nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
  *
  * This function returns a #NcDensityProfile with a #NcDensityProfileNFW implementation.
  *
- * Returns: A new #NcDensityProfile.
+ * Returns: A new #NcDensityProfileNFW.
  */
-NcDensityProfile *
+NcDensityProfileNFW *
 nc_density_profile_nfw_new (const NcDensityProfileMassDef mdef, const gdouble Delta)
 {
   return g_object_new (NC_TYPE_DENSITY_PROFILE_NFW, 

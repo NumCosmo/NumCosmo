@@ -272,8 +272,8 @@ test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata)
 
   test->diff = diff;
   
-  g_assert (diff != NULL);
-  g_assert (NCM_IS_DIFF (diff));
+  g_assert_true (diff != NULL);
+  g_assert_true (NCM_IS_DIFF (diff));
 }
 
 void

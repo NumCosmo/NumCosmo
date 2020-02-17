@@ -180,7 +180,7 @@ test_nc_ccl_dist_new (TestNcCCLDist *test, gconstpointer pdata)
 
   nc_distance_prepare (test->dist, test->cosmo);  
   
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
+  g_assert_true (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
@@ -198,7 +198,7 @@ test_nc_ccl_dist_cmp (TestNcCCLDist *test, gconstpointer pdata)
 {
   const gint ntests       = 10000;
   const gdouble z_max     = 1000.0;
-  const gdouble tol       = 5.0e-5;
+  const gdouble tol       = 1.0e-4;
 	const gdouble RH_Mpc    = nc_hicosmo_RH_Mpc (test->cosmo);
   gint status = 0;
   gint i;

@@ -199,9 +199,9 @@ test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
   ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
   ncm_fftlog_set_length (fftlog, Lk);
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
 }
 
 void
@@ -235,9 +235,9 @@ test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
   ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
   ncm_fftlog_set_length (fftlog, Lk);
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
 }
 
 void
@@ -274,9 +274,9 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 
   ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
 }
 
 void

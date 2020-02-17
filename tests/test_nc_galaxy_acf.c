@@ -29,35 +29,61 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+typedef struct _TestNcGalaxyAcf
+{
+  NcGalaxyAcf *acf;
+} TestNcGalaxyAcf;
+
+void test_nc_galaxy_acf_new (TestNcGalaxyAcf *test, gconstpointer pdata);
+void test_nc_galaxy_acf_free (TestNcGalaxyAcf *test, gconstpointer pdata);
+
+void test_nc_galaxy_acf_traps (TestNcGalaxyAcf *test, gconstpointer pdata);
+void test_nc_galaxy_acf_invalid_st (TestNcGalaxyAcf *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
-  //ncm_cfg_enable_gsl_err_handler ();
+  ncm_cfg_enable_gsl_err_handler ();
 
-  if (FALSE)
-  {
-    NcHICosmo *xcdm = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-    NcDistance *dist = nc_distance_new (1.2);
-    NcGrowthFunc *gf = nc_growth_func_new ();
-    NcTransferFunc *tf = nc_transfer_func_eh_new ();
-    NcGalaxyAcf *acf = nc_galaxy_acf_new (gf, dist, tf);
-    //guint l = 1;
-    gint i;
+  g_test_set_nonfatal_assertions ();
+  
+  g_test_add ("/nc/galaxy/acf/traps", TestNcGalaxyAcf, NULL,
+              &test_nc_galaxy_acf_new,
+              &test_nc_galaxy_acf_traps,
+              &test_nc_galaxy_acf_free);
+#if GLIB_CHECK_VERSION (2, 38, 0)
+  g_test_add ("/nc/galaxy/acf/invalid/st/subprocess", TestNcGalaxyAcf, NULL,
+              &test_nc_galaxy_acf_new,
+              &test_nc_galaxy_acf_invalid_st,
+              &test_nc_galaxy_acf_free);
+#endif
+  g_test_run ();
 
-    nc_distance_prepare (dist, xcdm);
-    nc_growth_func_prepare (gf, NC_HICOSMO (xcdm));
-    nc_transfer_func_prepare (tf, NC_HICOSMO (xcdm));
-    //ncm_model_params_log_all (NCM_MODEL (xcdm));
+}
 
-    //	printf ("%u\n", ncm_vector_len (acf->s->xv));
+void
+test_nc_galaxy_acf_new (TestNcGalaxyAcf *test, gconstpointer pdata)
+{
+}
 
-    for (i = 0; i < 100; i++)
-    {
-      nc_galaxy_acf_prepare_psi (acf, xcdm, i);
-    }
-  }
+void
+test_nc_galaxy_acf_free (TestNcGalaxyAcf *test, gconstpointer pdata)
+{
+}
 
-  return 0;
+void
+test_nc_galaxy_acf_traps (TestNcGalaxyAcf *test, gconstpointer pdata)
+{
+#if GLIB_CHECK_VERSION(2,38,0)
+  g_test_trap_subprocess ("/nc/galaxy/acf/invalid/st/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+#endif
+}
+
+void
+test_nc_galaxy_acf_invalid_st (TestNcGalaxyAcf *test, gconstpointer pdata)
+{
+  g_assert_not_reached ();
 }

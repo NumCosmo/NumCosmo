@@ -100,21 +100,18 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#define NTESTS_MIN 100
-#define NTESTS_MAX 200
+#define NTESTS_MIN 5000
+#define NTESTS_MAX 10000
 
 void
 test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  const gint dim                 = test->dim = g_test_rand_int_range (2, 20);
+  const gint dim                 = test->dim = g_test_rand_int_range (2, 5);
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e-1, 1.0, 1.0, 2.0, rng);
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
   NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
   NcmMSetCatalog *mcat;
-
-  /*g_object_set (data_mvnd,  "use-norma", FALSE, NULL);*/
-  /*ncm_matrix_set_identity (NCM_DATA_GAUSS_COV (data_mvnd)->cov);*/
   
   ncm_mset_param_set_vector (mset, NCM_DATA_GAUSS_COV (data_mvnd)->y);
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
@@ -130,7 +127,7 @@ test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
   test->mcat      = ncm_mset_catalog_ref (mcat);
   test->rng       = rng;
 
-  g_assert (NCM_IS_MSET_CATALOG (test->mcat));
+  g_assert_true (NCM_IS_MSET_CATALOG (test->mcat));
 
   ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
   ncm_model_mvnd_clear (&model_mvnd);
@@ -181,8 +178,7 @@ test_ncm_mset_catalog_mean (TestNcmMSetCatalog *test, gconstpointer pdata)
 
     ncm_vector_cmp (p, mean);
 
-    g_assert_cmpfloat (ncm_vector_get_max (p), <, 1.0e-3);
-    /*printf ("MAX % 22.15e\n", ncm_vector_get_max (p));*/
+    g_assert_cmpfloat (ncm_vector_get_max (p), <, 1.0e-2);
       
     ncm_vector_clear (&mean);
     ncm_vector_clear (&p);
@@ -213,10 +209,10 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
     NcmMatrix *cat_cov = NULL;
     ncm_mset_catalog_get_covar (test->mcat, &cat_cov);
 
-    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 1.0e-1);
+    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, 5.0e-1);
 
-    ncm_matrix_norma_diag (data_cov, data_cov);
-    ncm_matrix_norma_diag (cat_cov, cat_cov);
+    ncm_matrix_cov2cor (data_cov, data_cov);
+    ncm_matrix_cov2cor (cat_cov, cat_cov);
 
     g_assert_cmpfloat (ncm_matrix_cmp (cat_cov, data_cov, 1.0), <, 1.0e-1);
 

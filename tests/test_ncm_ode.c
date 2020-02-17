@@ -118,8 +118,8 @@ test_ncm_ode_new (TestNcmODE *test, gconstpointer pdata)
 
   /*test->ode = ode;*/
   
-  /*g_assert (ode != NULL);*/
-  /*g_assert (NCM_IS_DIFF (ode));*/
+  /*g_assert_true (ode != NULL);*/
+  /*g_assert_true (NCM_IS_DIFF (ode));*/
 }
 
 void
@@ -138,8 +138,8 @@ test_ncm_ode_eval_test_new (TestNcmODE *test, gconstpointer pdata)
   test->ode_eval = NCM_ODE_EVAL (etest);
   data->w        = g_test_rand_double_range (-M_PI, +M_PI);
 
-  g_assert (etest != NULL);
-  g_assert (NCM_IS_ODE_EVAL_TEST (etest));
+  g_assert_true (etest != NULL);
+  g_assert_true (NCM_IS_ODE_EVAL_TEST (etest));
 }
 
 void

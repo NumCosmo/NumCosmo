@@ -79,7 +79,7 @@ test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata) \
   test->fit       = ncm_fit_ref (fit); \
   test->rng       = rng; \
    \
-  g_assert (NCM_IS_FIT (fit)); \
+  g_assert_true (NCM_IS_FIT (fit)); \
  \
   ncm_data_gauss_cov_mvnd_clear (&data_mvnd); \
   ncm_model_mvnd_clear (&model_mvnd); \

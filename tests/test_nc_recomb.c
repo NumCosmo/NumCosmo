@@ -50,14 +50,14 @@ void
 test_nc_recomb_seager_new ()
 {
   NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
-  g_assert (NC_IS_RECOMB (recomb));
-  g_assert (NC_IS_RECOMB_SEAGER (recomb));
+  g_assert_true (NC_IS_RECOMB (recomb));
+  g_assert_true (NC_IS_RECOMB_SEAGER (recomb));
 
   NCM_TEST_FREE (nc_recomb_free, recomb);
 
   recomb = NC_RECOMB (nc_recomb_seager_new_full (1e-10, 2.2e9, 1e-5));
-  g_assert (NC_IS_RECOMB (recomb));
-  g_assert (NC_IS_RECOMB_SEAGER (recomb));
+  g_assert_true (NC_IS_RECOMB (recomb));
+  g_assert_true (NC_IS_RECOMB_SEAGER (recomb));
 
   ncm_assert_cmpdouble (recomb->init_frac, ==, 1e-10);
   ncm_assert_cmpdouble (recomb->zi, ==, 2.2e9);
@@ -71,8 +71,8 @@ test_nc_recomb_seager_new ()
   recomb = nc_recomb_seager_new_full (1.0e-11, NC_PERTURBATION_START_X, 2e-7);
 #endif
 
-  g_assert (NC_IS_RECOMB (recomb));
-  g_assert (NC_IS_RECOMB_SEAGER (recomb));
+  g_assert_true (NC_IS_RECOMB (recomb));
+  g_assert_true (NC_IS_RECOMB_SEAGER (recomb));
 
   ncm_assert_cmpdouble (recomb->prec, ==, 2e-7);
 

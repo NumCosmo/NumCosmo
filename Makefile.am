@@ -22,9 +22,11 @@ numcosmodoc_DATA = \
 #DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 EXTRA_DIST = \
-	INSTALL                   \
-	$(numcosmodoc_DATA)       \
-	numcosmo.pc.in
+	INSTALL             \
+	$(numcosmodoc_DATA) \
+	numcosmo.pc.in      \
+        tap-driver.sh       \
+        tap-test
 
 AM_CFLAGS = 
 

@@ -291,7 +291,7 @@ test_ncm_vector_array_new (TestNcmVector *test, gconstpointer pdata)
 
   g_assert_cmpuint (ncm_vector_len (v), ==, ga->len);
 
-  g_assert (ga == ncm_vector_get_array (v));
+  g_assert_true (ga == ncm_vector_get_array (v));
   g_array_unref (ga);
   _random_fill (test->v);
 }
@@ -383,7 +383,7 @@ test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v = test->v;
   guint i;
 
-  g_assert (NCM_IS_VECTOR (v));
+  g_assert_true (NCM_IS_VECTOR (v));
 
   for (i = 0; i < 10 * v_size; i++)
   {
@@ -397,7 +397,7 @@ test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata)
 void
 test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata)
 {
-  g_assert (NCM_IS_VECTOR (test->cv));
+  g_assert_true (NCM_IS_VECTOR (test->cv));
 }
 
 void
@@ -559,10 +559,10 @@ test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_vector_get (sv, i), ==, ncm_vector_get (v, i + 1));
   }
 
-  g_assert (NCM_IS_VECTOR (sv));
+  g_assert_true (NCM_IS_VECTOR (sv));
 
   ncm_vector_free (v);
-  g_assert (G_IS_OBJECT (v));
+  g_assert_true (G_IS_OBJECT (v));
   ncm_vector_ref (v);
 
   NCM_TEST_FREE (ncm_vector_free, sv);
@@ -573,8 +573,8 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   GVariant *var = ncm_vector_get_variant (v);
-  g_assert (!g_variant_is_floating (var));
-  g_assert (g_variant_is_container (var));
+  g_assert_true (!g_variant_is_floating (var));
+  g_assert_true (g_variant_is_container (var));
   g_assert_cmpuint (ncm_vector_len (v), ==, g_variant_n_children (var));
 
   {
