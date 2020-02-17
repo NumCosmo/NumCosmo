@@ -76,7 +76,7 @@ typedef enum _NcDensityProfileMassDef
 } NcDensityProfileMassDef; 
 
 /**
- * NcDensityProfileParams:
+ * NcDensityProfileSParams:
  * @NC_DENSITY_PROFILE_C: concentration parameter
  * @NC_DENSITY_PROFILE_M_DELTA: halo mass
  *
