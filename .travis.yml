@@ -50,9 +50,9 @@ compiler:
 before_install: |
   if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     hash -r
-    brew update
-    brew upgrade python3
-    brew link --overwrite python3
+    #brew update
+    #brew upgrade python3
+    #brew link --overwrite python3
     brew install gobject-introspection gsl gtk-doc gmp mpfr fftw cfitsio nlopt
     export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH}"
   elif [ "$TRAVIS_OS_NAME" == "linux" ]; then
