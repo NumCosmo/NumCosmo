@@ -43,6 +43,16 @@ addons:
     - tex4ht
     - perl
     - libxml-libxml-perl
+  homebrew:
+    packages:
+    - gobject-introspection
+    - gsl
+    - gtk-doc
+    - gmp
+    - mpfr
+    - fftw
+    - cfitsio
+    - nlopt
 
 compiler:
   - gcc
@@ -53,7 +63,7 @@ before_install: |
     #brew update
     #brew upgrade python3
     #brew link --overwrite python3
-    brew install gobject-introspection gsl gtk-doc gmp mpfr fftw cfitsio nlopt
+    #brew install gobject-introspection gsl gtk-doc gmp mpfr fftw cfitsio nlopt
     export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH}"
   elif [ "$TRAVIS_OS_NAME" == "linux" ]; then
     export CONFDOCS="--enable-man --enable-gtk-doc"
