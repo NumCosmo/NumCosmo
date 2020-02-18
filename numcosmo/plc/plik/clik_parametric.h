@@ -16,7 +16,7 @@
 #define m_isnan(v) (isnan(v))
 #endif
 
-#define pfcharsize 256
+#define pfcharsize 512
 
 typedef char pfchar[pfcharsize];
 

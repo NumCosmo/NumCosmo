@@ -50,7 +50,7 @@ struct _NcDensityProfileDK14Class
 };
 
 /**
- * NcDensityProfileDK14MethodParams:
+ * NcDensityProfileDK14Params:
  * @NC_DENSITY_PROFILE_DK14_RT: the truncation radius, the radius where the profile steepens beyond the Einasto profile, in $kpc/h$
  * @NC_DENSITY_PROFILE_DK14_BETA: sharpness of the steepening 
  * @NC_DENSITY_PROFILE_DK14_GAMMA: asymptotic negative slope of the steepening term 
@@ -73,6 +73,14 @@ typedef enum _NcDensityProfileDK14Params
   NC_DENSITY_PROFILE_DK14_SPARAM_LEN, /*< skip >*/
 } NcDensityProfileDK14Params;
 
+/**
+ * NcDensityProfileDK14MethodParams:
+ * @NC_DENSITY_PROFILE_DK14_MC2RHOSRS: FIXME
+ * @NC_DENSITY_PROFILE_DK14_DIRECT_RHOSRS: FIXME
+ * 
+ * FIXME
+ * 
+ */
 typedef enum _NcDensityProfileDK14MethodParams
 {
 	NC_DENSITY_PROFILE_DK14_MC2RHOSRS = 0,

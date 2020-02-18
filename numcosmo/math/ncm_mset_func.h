@@ -143,14 +143,7 @@ NCM_INLINE gdouble
 ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
 {
   gdouble res;
-
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert ((func->nvar == 0) || (func->eval_x != NULL));
-#endif
-  
-	NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);
-	
+	NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);	
   return res;
 }
 
@@ -159,10 +152,6 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
 {
   gdouble res;
 	
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert_cmpint (func->nvar, ==, 1);  
-#endif
   NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, &x, &res);
   return res;
 }
@@ -171,11 +160,6 @@ NCM_INLINE void
 ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
 {
   guint i;
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert_cmpint (func->nvar, ==, 1);
-  g_assert_cmpuint (ncm_vector_len (x_v), <=, ncm_vector_len (res_v));
-#endif
   for (i = 0; i < ncm_vector_len (x_v); i++)
   {		
     NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_ptr (x_v, i), ncm_vector_ptr (res_v, i));
