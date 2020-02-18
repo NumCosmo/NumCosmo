@@ -214,14 +214,14 @@ numcosmo-docs-clean: clean
 $(top_srcdir)/docs/%.xml: %.tex $(top_srcdir)/docs/references.bib
 	$(AM_V_at)echo "  DOC   Building XML $@ from $< "
 	$(AM_V_at)rm -f $*.aux $*.bbl
-	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); fi
+	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)" -ef "$(<D)"; then cp $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); fi
 	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >  $(@F).htlatex.log 2>&1
 	$(AM_V_at)bibtex8 $(*F)                                                           >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR)" >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
-	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then echo "  DOC   Moving $(@F) to $(<D) "; mv $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); rm $(DOC_TARGET_DIR)/references.bib; fi
+	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)" -ef "$(<D)"; then echo "  DOC   Moving $(@F) to $(<D) "; mv $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); rm $(DOC_TARGET_DIR)/references.bib; fi
 
 
 if ENABLE_GTK_DOC
