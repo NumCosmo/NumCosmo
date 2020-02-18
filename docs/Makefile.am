@@ -202,8 +202,19 @@ MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
 BUILT_EXTRA_DIST = $(man_MANS)
 
 CLEANFILES += \
-	addmathjax.stamp                                   \
-	$(addsuffix .*, $(basename $(XML_GEN_FILES)))      \
+	addmathjax.stamp                                    \
+	$(addsuffix .log,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .4ct,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .4tc,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .aux,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .bbl,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .blg,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .dvi,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .idv,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .lg,   $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .out,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .tmp,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .xref, $(basename $(XML_GEN_FILES)))    \
 	$(addprefix $(top_srcdir)/docs/, $(XML_GEN_FILES))
 
 dist-hook-local: dist-local-check-mans-enabled all-local
