@@ -234,6 +234,7 @@ $(top_srcdir)/docs/%.xml: %.tex $(top_srcdir)/docs/references.bib
 	$(AM_V_at)$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
 	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)" -ef "$(<D)"; then echo "  DOC   Moving $(@F) to $(<D) "; mv $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); rm $(DOC_TARGET_DIR)/references.bib; fi
 
+$(XML_GEN_FILES): $(addprefix $(top_srcdir)/docs/, $(XML_GEN_FILES))
 
 if ENABLE_GTK_DOC
 HTML_BUILD_STAMP += addmathjax.stamp
