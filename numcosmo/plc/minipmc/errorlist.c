@@ -87,11 +87,11 @@ void stringError(char* str, error *err) {
 	
    for(nerr=err;nerr!=NULL;nerr=nerr->next) {
     if (nerr->errValue==forwardErr) {
-      sprintf(str,"%s%s%s::ForwardError\n",str,spc,nerr->errWhere);
+      sprintf(str+strlen(str),"%s%s::ForwardError\n",spc,nerr->errWhere);
     } else {
-      sprintf(str,"%s%s%s::Error %d (%s)\n",str,spc,nerr->errWhere,nerr->errValue,nerr->errText);
+      sprintf(str+strlen(str),"%s%s::Error %d (%s)\n",spc,nerr->errWhere,nerr->errValue,nerr->errText);
     }
-      sprintf(spc,"%s  ",spc);
+      sprintf(spc+strlen(spc),"  ");
    }
 }
 	

@@ -2,7 +2,7 @@
 
 
 void _read_meta(cldf *df,error **err) {
-  char cuf[4096];
+  char cuf[4096+5];
   char li[8192];
   char *li2,*li3;
   int ls;
@@ -13,7 +13,7 @@ void _read_meta(cldf *df,error **err) {
   if (df->root[0]=='\0') {
     sprintf(cuf,"%s/%s",df->name,MDB);  
   } else {
-    sprintf(cuf,"%s/%s/%s",df->root,df->name,MDB);  
+    sprintf(cuf,"%s/%s/%s",df->root,df->name,MDB);
   }
   
   ff = fopen_err(cuf,"r",err);
@@ -84,7 +84,7 @@ cldf * cldf_open_sub(char *path, char* sub,error **err) {
   struct dirent *dc;
   char *mpath;
   char mmpath[8192];
-  char lpath[8192];
+  char lpath[8192+256];
   int maxchild,maxdata;
   struct stat m;
 
