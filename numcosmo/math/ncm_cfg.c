@@ -415,17 +415,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
 
-#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
-  openblas_set_num_threads (1);
-#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
-
-#ifdef HAVE_MKL_SET_NUM_THREADS
-  MKL_Set_Num_Threads (1);
-#endif /* HAVE_MKL_SET_NUM_THREADS */
-
-#ifdef _OPENMP
-  omp_set_num_threads (1);
-#endif /* _OPENMP */
+  ncm_cfg_set_openmp_nthreads (1);
+  ncm_cfg_set_openblas_nthreads (1);
+  ncm_cfg_set_mkl_nthreads (1);
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -1042,6 +1034,51 @@ void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 {
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+}
+
+/**
+ * ncm_cfg_set_openmp_nthreads:
+ * @n: number of threads
+ *
+ * Sets OpenMP number of threads to @n when available.
+ * 
+ */
+void 
+ncm_cfg_set_openmp_nthreads (gint n)
+{
+#ifdef _OPENMP
+  omp_set_num_threads (n);
+#endif /* _OPENMP */
+}
+
+/**
+ * ncm_cfg_set_openblas_nthreads:
+ * @n: number of threads
+ *
+ * Sets OpenBLAS number of threads to @n when available.
+ * 
+ */
+void 
+ncm_cfg_set_openblas_nthreads (gint n)
+{
+#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+  openblas_set_num_threads (n);
+#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */  
+}
+
+/**
+ * ncm_cfg_set_mkl_nthreads:
+ * @n: number of threads
+ *
+ * Sets OpenBLAS number of threads to @n when available.
+ * 
+ */
+void 
+ncm_cfg_set_mkl_nthreads (gint n)
+{
+#ifdef HAVE_MKL_SET_NUM_THREADS
+  MKL_Set_Num_Threads (n);
+#endif /* HAVE_MKL_SET_NUM_THREADS */
 }
 
 /**
