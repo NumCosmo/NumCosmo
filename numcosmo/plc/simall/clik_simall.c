@@ -85,7 +85,7 @@ cmblkl* clik_simall_init(cldf * df, int nell, int* ell, int* has_cl, double unit
   simall_data *ft;
   int idata,ndat;
 
-  printf("Initializing SimAll\n");
+  /* printf("Initializing SimAll\n"); */
   
   ft = malloc_err(sizeof(simall_data),err);
   forwardError(*err,__LINE__,NULL);
@@ -152,6 +152,6 @@ cmblkl* clik_simall_init(cldf * df, int nell, int* ell, int* has_cl, double unit
   forwardError(*err,__LINE__,NULL);  
   return cing;  
   
-  printf("SimAll initialized\n");
+  /* printf("SimAll initialized\n"); */
 }
 

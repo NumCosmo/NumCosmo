@@ -30,8 +30,8 @@
  *
  * FIXME
  *
- * If you use this object, cite [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]
- * and related papers.
+ * If you use this object, cite [Planck 2015 results XI (2015)][XPlanckCollaboration2015a],
+ * [Planck 2018 results V (2019)][XPlanckCollaboration2019] and related papers.
  *
  */
 
@@ -142,6 +142,26 @@ nc_planck_fi_cor_tt_class_init (NcPlanckFICorTTClass *klass)
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_217,
                               NCM_PARAM_TYPE_FIXED);
 
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_A_sbpx_100_100_TT, "A^{\\mathrm{sbpx}TT}_{100 \\times 100}", "A_sbpx_100_100_TT",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_100_100_TT,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_A_sbpx_143_143_TT, "A^{\\mathrm{sbpx}TT}_{143 \\times 143}", "A_sbpx_143_143_TT",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_143_143_TT,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_A_sbpx_143_217_TT, "A^{\\mathrm{sbpx}TT}_{143 \\times 217}", "A_sbpx_143_217_TT",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_143_217_TT,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT, "A^{\\mathrm{sbpx}TT}_{217 \\times 217}", "A_sbpx_217_217_TT",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_217_217_TT,
+                              NCM_PARAM_TYPE_FIXED);
+
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_calib_100T, "c_{100}", "calib_100T",
                               0.0, 3.0, 0.001,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TT_DEFAULT_calib_100T,
@@ -167,7 +187,7 @@ nc_planck_fi_cor_tt_class_init (NcPlanckFICorTTClass *klass)
  * @mean: a vector containing the means
  * @sigma: a vector containing the standard deviations
  *
- * Add the galaxy dust priors as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the galaxy dust Gaussian priors using @mean and @sigma as mean and standard deviation.
  *
  */
 void
@@ -193,10 +213,32 @@ nc_planck_fi_cor_tt_add_gal_priors (NcmLikelihood *lh, NcmVector *mean, NcmVecto
 void
 nc_planck_fi_cor_tt_add_default_gal_priors (NcmLikelihood *lh)
 {
-  gdouble mean[4]  = {7.0, 9.0, 21.0, 80.0};
-  gdouble sigma[4] = {2.0, 2.0,  8.5, 20.0};
-  NcmVector *mean_vec = ncm_vector_new_data_static (mean, 4, 1);
-  NcmVector *sigma_vec = ncm_vector_new_data_static (sigma, 4, 1);
+  gdouble mean[4]        = {7.0, 9.0, 21.0, 80.0};
+  gdouble sigma[4]       = {2.0, 2.0,  8.5, 20.0};
+  NcmVector *mean_vec    = ncm_vector_new_data_static (mean, 4, 1);
+  NcmVector *sigma_vec   = ncm_vector_new_data_static (sigma, 4, 1);
+
+  nc_planck_fi_cor_tt_add_gal_priors (lh, mean_vec, sigma_vec);
+
+  ncm_vector_free (mean_vec);
+  ncm_vector_free (sigma_vec);
+}
+
+/**
+ * nc_planck_fi_cor_tt_add_default18_gal_priors:
+ * @lh: a #NcmLikelihood
+ *
+ * Add the galaxy dust priors as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * It uses the default values.
+ *
+ */
+void
+nc_planck_fi_cor_tt_add_default18_gal_priors (NcmLikelihood *lh)
+{
+  gdouble mean[4]        = {8.6, 10.6, 23.5, 91.9};
+  gdouble sigma[4]       = {2.0,  2.0,  8.5, 20.0};
+  NcmVector *mean_vec    = ncm_vector_new_data_static (mean, 4, 1);
+  NcmVector *sigma_vec   = ncm_vector_new_data_static (sigma, 4, 1);
 
   nc_planck_fi_cor_tt_add_gal_priors (lh, mean_vec, sigma_vec);
 
@@ -210,7 +252,7 @@ nc_planck_fi_cor_tt_add_default_gal_priors (NcmLikelihood *lh)
  * @mean: a vector containing the means
  * @sigma: a vector containing the standard deviations
  *
- * Add the calibration priors as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the calibration Gaussian priors using @mean and @sigma as mean and standard deviation.
  *
  */
 void
@@ -246,6 +288,28 @@ nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh)
   ncm_vector_free (sigma_vec);
 }
 
+/**
+ * nc_planck_fi_cor_tt_add_default18_calib_priors:
+ * @lh: a #NcmLikelihood
+ *
+ * Add the calibration priors as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * It uses the default values.
+ *
+ */
+void
+nc_planck_fi_cor_tt_add_default18_calib_priors (NcmLikelihood *lh)
+{
+  gdouble mean[3]  = {1.0002, 0.99805, 1.0000};
+  gdouble sigma[3] = {0.0007, 0.00065, 0.0025};
+  NcmVector *mean_vec  = ncm_vector_new_data_static (mean, 3, 1);
+  NcmVector *sigma_vec = ncm_vector_new_data_static (sigma, 3, 1);
+
+  nc_planck_fi_cor_tt_add_calib_priors (lh, mean_vec, sigma_vec);
+
+  ncm_vector_free (mean_vec);
+  ncm_vector_free (sigma_vec);
+}
+
 static void
 _nc_planck_fi_cor_tt_sz_prior_f (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {
@@ -265,7 +329,8 @@ _nc_planck_fi_cor_tt_sz_prior_f (NcmMSetFuncList *flist, NcmMSet *mset, const gd
  * @mean: the mean $\mu$
  * @sigma: the standard deviation
  *
- * Add the SZ prior as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the SZ prior as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a],
+ * see also [Planck 2018 results V (2019)][XPlanckCollaboration2019] Eq. (23),
  * The prior is given by a $\chi^2$ factor in the form $$\frac{(A^{\\mathrm{kSZ}} + f_\\mathrm{tSZ} A^{\\mathrm{tSZ}} - \\mu)^2}{\sigma^2}.$$
  *
  */
@@ -297,6 +362,19 @@ nc_planck_fi_cor_tt_add_default_sz_prior (NcmLikelihood *lh)
 }
 
 /**
+ * nc_planck_fi_cor_tt_add_default18_sz_prior:
+ * @lh: a #NcmLikelihood
+ *
+ * Add the SZ prior as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ *
+ */
+void
+nc_planck_fi_cor_tt_add_default18_sz_prior (NcmLikelihood *lh)
+{
+  nc_planck_fi_cor_tt_add_sz_prior (lh, 1.6, 9.5, 3.0);
+}
+
+/**
  * nc_planck_fi_cor_tt_add_all_default_priors:
  * @lh: a #NcmLikelihood
  *
@@ -312,6 +390,24 @@ nc_planck_fi_cor_tt_add_all_default_priors (NcmLikelihood *lh)
   nc_planck_fi_cor_tt_add_default_gal_priors (lh);
   nc_planck_fi_cor_tt_add_default_calib_priors (lh);
   nc_planck_fi_cor_tt_add_default_sz_prior (lh);
+}
+
+/**
+ * nc_planck_fi_cor_tt_add_all_default18_priors:
+ * @lh: a #NcmLikelihood
+ *
+ * Adds all default priors above:
+ * - nc_planck_fi_cor_tt_add_default18_gal_priors()
+ * - nc_planck_fi_cor_tt_add_default18_calib_priors()
+ * - nc_planck_fi_cor_tt_add_default18_sz_prior()
+ *
+ */
+void
+nc_planck_fi_cor_tt_add_all_default18_priors (NcmLikelihood *lh)
+{
+  nc_planck_fi_cor_tt_add_default18_gal_priors (lh);
+  nc_planck_fi_cor_tt_add_default18_calib_priors (lh);
+  nc_planck_fi_cor_tt_add_default18_sz_prior (lh);
 }
 
 void

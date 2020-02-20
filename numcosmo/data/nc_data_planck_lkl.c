@@ -336,8 +336,8 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
   gdouble *cl_and_pars  = ncm_vector_ptr (clik->data_params, 0);
   error *err            = initError ();
-  NcPlanckFI *pfi  = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcPlanckFI *pfi       = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
+  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gboolean pfi_model_up = FALSE;
   gboolean pfi_up       = FALSE;
   gboolean cosmo_up     = FALSE;
@@ -376,7 +376,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     }
   }
 
-  pfi_up    = ncm_model_ctrl_update (clik->pfi_ctrl, NCM_MODEL (pfi));
+  pfi_up   = ncm_model_ctrl_update (clik->pfi_ctrl, NCM_MODEL (pfi));
   cosmo_up = ncm_model_ctrl_update (clik->cosmo_ctrl, NCM_MODEL (cosmo));
 
   if (pfi_up && clik->nparams == 1 && g_array_index (clik->param_map, guint, 0) == NC_PLANCK_FI_COR_TT_A_planck)
