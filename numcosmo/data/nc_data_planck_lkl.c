@@ -71,7 +71,6 @@ G_STMT_START { \
       gchar error_msg[4096]; \
       stringError (error_msg, (err)); \
       g_warning ("%s: %s.", (str), error_msg); \
-      g_free (error_msg); \
     } \
 } G_STMT_END
 
