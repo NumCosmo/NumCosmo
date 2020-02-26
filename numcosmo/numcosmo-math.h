@@ -37,6 +37,7 @@
 #include <numcosmo/math/ncm_mpi_job_test.h>
 #include <numcosmo/math/ncm_mpi_job_fit.h>
 #include <numcosmo/math/ncm_mpi_job_mcmc.h>
+#include <numcosmo/math/ncm_mpi_job_feval.h>
 
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>

@@ -43,6 +43,7 @@
 #include "math/ncm_mpi_job_test.h"
 #include "math/ncm_mpi_job_fit.h"
 #include "math/ncm_mpi_job_mcmc.h"
+#include "math/ncm_mpi_job_feval.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
@@ -456,6 +457,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_TEST);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FIT);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_MCMC);
+  ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FEVAL);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);

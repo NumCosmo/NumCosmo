@@ -45,8 +45,8 @@ double simall_lkl(void* ot, double *pars, error **err) {
       ell=il+2;
       dl=pars[il+offset]*ell*(ell+1)/2/M_PI;
       position = (int) (dl/ft->stepEE);
-      testErrorRetVA(position>ft->nstepsEE,-1233,"multipole EE %d too large (got %g expected <%g)",*err,__LINE__,-1e10,ell,dl,ft->stepEE*ft->nstepsEE);
-      res+=ft->probEE[position+il*ft->nstepsEE];
+      testErrorRetVA (position > ft->nstepsEE, -1233, "multipole EE %d too large (got %g expected <%g)", *err, __LINE__, -1e10, ell, dl, ft->stepEE * ft->nstepsEE);
+      res += ft->probEE[position + il * ft->nstepsEE];
 //      printf("%i %e %i %e\n",ell,pars[il],position,ft->probEE[position+ft->nell*ft->nstepsEE]);
     }
     offset+=ft->nell;

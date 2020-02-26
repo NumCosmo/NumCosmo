@@ -27,7 +27,7 @@
 /**
  * SECTION:ncm_mpi_job_mcmc
  * @title: NcmMPIJobMCMC
- * @short_description: MPI job object for running #NcmFit
+ * @short_description: MPI job object for running MCMC steps
  *
  * FIXME
  *
