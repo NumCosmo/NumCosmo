@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
-
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la

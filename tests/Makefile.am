@@ -2,8 +2,6 @@
 
 include $(top_srcdir)/glib-tap.mk
 
-@CODE_COVERAGE_RULES@
-
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS)     \

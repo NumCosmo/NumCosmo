@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
-
 SUBDIRS = numcosmo tools data docs tests examples notebooks
 
 pkgconfigdir = $(libdir)/pkgconfig
