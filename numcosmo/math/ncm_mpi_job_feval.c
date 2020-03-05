@@ -169,8 +169,8 @@ _ncm_mpi_job_feval_finalize (GObject *object)
 	G_OBJECT_CLASS (ncm_mpi_job_feval_parent_class)->finalize (object);
 }
 
-static MPI_Datatype _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
-static MPI_Datatype _ncm_mpi_job_feval_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static NcmMPIDatatype _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static NcmMPIDatatype _ncm_mpi_job_feval_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
 
 static gpointer _ncm_mpi_job_feval_create_input (NcmMPIJob *mpi_job);
 static gpointer _ncm_mpi_job_feval_create_return (NcmMPIJob *mpi_job);
@@ -243,7 +243,7 @@ ncm_mpi_job_feval_class_init (NcmMPIJobFEvalClass *klass)
 	mpi_job_class->run                   = &_ncm_mpi_job_feval_run;
 }
 
-static MPI_Datatype 
+static NcmMPIDatatype 
 _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	NcmMPIJobFEval *mjfeval = NCM_MPI_JOB_FEVAL (mpi_job);
@@ -255,7 +255,7 @@ _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 	return MPI_DOUBLE;
 }
 
-static MPI_Datatype 
+static NcmMPIDatatype 
 _ncm_mpi_job_feval_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	NcmMPIJobFEval *mjfeval = NCM_MPI_JOB_FEVAL (mpi_job);

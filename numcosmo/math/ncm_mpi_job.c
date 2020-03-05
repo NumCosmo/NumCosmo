@@ -49,8 +49,8 @@
 struct _NcmMPIJobPrivate
 {
 	guint placeholder;
-	MPI_Datatype input_dtype;
-	MPI_Datatype return_dtype;
+	NcmMPIDatatype input_dtype;
+	NcmMPIDatatype return_dtype;
 	gint input_size;
 	gint return_size;
 	gint input_len;
@@ -197,8 +197,8 @@ _ncm_mpi_job_finalize (GObject *object)
 	G_OBJECT_CLASS (ncm_mpi_job_parent_class)->finalize (object);
 }
 
-static MPI_Datatype _ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)  { g_error ("_ncm_mpi_job_input_datatype: method not implemented.");  return MPI_DATATYPE_NULL; }
-static MPI_Datatype _ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size) { g_error ("_ncm_mpi_job_return_datatype: method not implemented."); return MPI_DATATYPE_NULL; }
+static NcmMPIDatatype _ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)  { g_error ("_ncm_mpi_job_input_datatype: method not implemented.");  return MPI_DATATYPE_NULL; }
+static NcmMPIDatatype _ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size) { g_error ("_ncm_mpi_job_return_datatype: method not implemented."); return MPI_DATATYPE_NULL; }
 
 static gpointer _ncm_mpi_job_create_input (NcmMPIJob *mpi_job)  { g_error ("_ncm_mpi_job_create_input: method not implemented."); return NULL; }
 static gpointer _ncm_mpi_job_create_return (NcmMPIJob *mpi_job) { g_error ("_ncm_mpi_job_create_return: method not implemented."); return NULL; }
@@ -396,7 +396,7 @@ ncm_mpi_job_work_clear (NcmMPIJob *mpi_job)
  * 
  * Returns: (transfer none): the input datatype.
  */ 
-MPI_Datatype
+NcmMPIDatatype
 ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	return NCM_MPI_JOB_GET_CLASS (mpi_job)->input_datatype (mpi_job, len, size);
@@ -412,7 +412,7 @@ ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
  * 
  * Returns: (transfer none): the return datatype.
  */ 
-MPI_Datatype
+NcmMPIDatatype
 ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	return NCM_MPI_JOB_GET_CLASS (mpi_job)->return_datatype (mpi_job, len, size);

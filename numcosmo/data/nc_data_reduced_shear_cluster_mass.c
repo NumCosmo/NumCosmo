@@ -59,8 +59,8 @@
 
 struct _NcDataReducedShearClusterMassPrivate
 {
-	NcDistance *dist;
-	NcmObjArray *photoz_array;
+  NcDistance *dist;
+  NcmObjArray *photoz_array;
 	NcmMatrix *gal_obs;
 	NcmVector *rh_vec;
 	gboolean has_rh;
@@ -73,11 +73,11 @@ struct _NcDataReducedShearClusterMassPrivate
 enum
 {
   PROP_0,
-	PROP_DIST,
+  PROP_DIST,
   PROP_PHOTOZ_ARRAY,
   PROP_GAL_OBS,
-	PROP_HAS_RH,
-	PROP_PSF_SIZE,
+  PROP_HAS_RH,
+  PROP_PSF_SIZE,
   PROP_Z_CLUSTER, 
   PROP_RA_CLUSTER, 
   PROP_DEC_CLUSTER, 
@@ -89,15 +89,15 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcDataReducedShearClusterMass, nc_data_reduced_shear
 static void
 nc_data_reduced_shear_cluster_mass_init (NcDataReducedShearClusterMass *drs)
 {
-	NcDataReducedShearClusterMassPrivate * const self = drs->priv = nc_data_reduced_shear_cluster_mass_get_instance_private (drs);
-	self->dist         = NULL;
+  NcDataReducedShearClusterMassPrivate * const self = drs->priv = nc_data_reduced_shear_cluster_mass_get_instance_private (drs);
+  self->dist         = NULL;
   self->photoz_array = ncm_obj_array_new ();
   self->gal_obs      = NULL;
   self->z_cluster    = 0.0;
   self->ra_cluster   = 0.0;
   self->dec_cluster  = 0.0;
-	self->has_rh       = FALSE;
-	self->psf_size     = 0.0;
+  self->has_rh       = FALSE;
+  self->psf_size     = 0.0;
 }
 
 static void

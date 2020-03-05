@@ -171,8 +171,8 @@ _ncm_mpi_job_mcmc_finalize (GObject *object)
 	G_OBJECT_CLASS (ncm_mpi_job_mcmc_parent_class)->finalize (object);
 }
 
-static MPI_Datatype _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
-static MPI_Datatype _ncm_mpi_job_mcmc_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static NcmMPIDatatype _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
+static NcmMPIDatatype _ncm_mpi_job_mcmc_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size);
 
 static gpointer _ncm_mpi_job_mcmc_create_input (NcmMPIJob *mpi_job);
 static gpointer _ncm_mpi_job_mcmc_create_return (NcmMPIJob *mpi_job);
@@ -245,7 +245,7 @@ ncm_mpi_job_mcmc_class_init (NcmMPIJobMCMCClass *klass)
 	mpi_job_class->run                   = &_ncm_mpi_job_mcmc_run;
 }
 
-static MPI_Datatype 
+static NcmMPIDatatype 
 _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	NcmMPIJobMCMC *mjmcmc = NCM_MPI_JOB_MCMC (mpi_job);
@@ -257,7 +257,7 @@ _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 	return MPI_DOUBLE;
 }
 
-static MPI_Datatype 
+static NcmMPIDatatype 
 _ncm_mpi_job_mcmc_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
 	NcmMPIJobMCMC *mjmcmc = NCM_MPI_JOB_MCMC (mpi_job);
