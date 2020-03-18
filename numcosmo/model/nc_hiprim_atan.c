@@ -163,14 +163,11 @@ nc_hiprim_atan_new (void)
 static gdouble 
 _Datan_xpd (const gdouble x, const gdouble d)
 {
-  const gdouble d2       = d * d;
-  const gdouble d3       = d2 * d;
-  const gdouble x2       = x * x;
-  const gdouble onepx2_1 = 1.0 + x2;
-  const gdouble onepx2_2 = onepx2_1 * onepx2_1;
-  const gdouble onepx2_3 = onepx2_2 * onepx2_1;
+  const gdouble x2     = x * x;
+  const gdouble onepx2 = 1.0 + x2;
+  const gdouble Y      = d / onepx2;
 
-  return d / onepx2_1 - x * d2 / onepx2_2 - (1.0 - 3.0 * x2) * d3 / (3.0 * onepx2_3);
+  return Y * (1.0 + Y * (- x + Y * ((x2 - 1.0 / 3.0) + Y * x * (1.0 - x2))));
 }
 
 static gdouble
