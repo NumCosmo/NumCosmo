@@ -1028,9 +1028,9 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * ncm_vector_len:
  * @cv: a #NcmVector
  *
- * FIXME
+ * Compute the number of components in the #NcmVector @cv.  
  *
- * Returns: FIXME
+ * Returns: the number of components in @cv.
  */
 /**
  * ncm_vector_stride:
