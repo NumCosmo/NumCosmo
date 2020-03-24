@@ -1674,13 +1674,13 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_wmap5_coadded_I_K:
  *
- * Returns: FIXME
+ * Returns: WMAP-5 differencing assembly (DA) properties $\text{K1}$: $\sigma_0(I) = 1.436 \left[ \text{mK} \right]$. See [Hinshaw (2009)][X2009ApJS..180..225H]. 
  *
  */
 /**
  * ncm_c_wmap5_coadded_I_Ka:
  *
- * Returns: FIXME
+ * Returns: WMAP-5 differencing assembly (DA) properties $\text{Ka1}$: $\sigma_0(I) = 1.470 \left[ \text{mK} \right]$. See [Hinshaw (2009)][X2009ApJS..180..225H]. 
  *
  */
 /**
@@ -1712,9 +1712,7 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_hubble_cte_hst:
  *
- * FIXME
- *
- * Returns: FIXME
+ * Returns: HST Hubble constant: $H_0 = 72 \left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right]$. See [Freedman (2001)][X2001ApJ...553...47F].  
  *
  */
 /**
@@ -1731,6 +1729,7 @@ ncm_c_class_init (NcmCClass *klass)
  * FIXME
  *
  * Returns: Hubble radius $R_H h^{-1} \left[\text{Mpc}\right]$.
+ *
  */
 /**
  * ncm_c_hubble_radius_hm1_planck:
