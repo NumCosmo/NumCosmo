@@ -1712,11 +1712,11 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_hubble_cte_wmap:
+ * ncm_c_hubble_cte_planck_base_2018:
  *
- * FIXME
+ * Planck 2018 Hubble constant base-$\Lambda$CDM model TT,TE,EE$+$lowE$+$lensing. See [Planck Collaboration (2018)][X2018arXiv180706209P] [[arXiv](https://arxiv.org/abs/1807.06209)].  
  *
- * Returns: FIXME
+ * Returns: $H_0 = 67.36 \left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right]$. 
  *
  */
 /**
@@ -1728,27 +1728,24 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_hubble_cte_msa:
- *
- * FIXME
- *
- * Returns: FIXME
- *
- */
-/**
  * ncm_c_hubble_radius_hm1_Mpc:
  *
- * FIXME
+ * Hubble radius in units of $\mathsf{h}^{-1} \, \text{Mpc}$ defined as 
+ * \begin{equation}
+ *   R_H  h^{-1} = \frac{c}{100 \mathsf{h} \, \text{km} \, \text{sec}^{-1} \, \text{Mpc}^{-1}} \, ,
+ * \end{equation}
+ *where $c$ is the speed of light (#ncm_c_c()). Calculated using ncm_c_c() $/$ $10^{5}$. 
  *
- * Returns: Hubble radius $R_H h^{-1} \left[\text{Mpc}\right]$.
+ * Returns: Hubble radius $R_H \mathsf{h}^{-1} \left[\text{Mpc}\right]$.
  *
  */
 /**
  * ncm_c_hubble_radius_hm1_planck:
  *
- * FIXME
+ * Hubble radius in units of $\mathsf{h}^{-1} \, l_{\text{p}}$. Calculated using ncm_c_hubble_radius_hm1_Mpc () $\times$ ncm_c_Mpc () $/$ ncm_c_planck_length (). 
  *
- * Returns: Hubble radius $R_H h^{-1} \left[l_\text{p}\right]$.
+ * Returns: Hubble radius $R_H \mathsf{h}^{-1} \left[l_\text{p}\right]$.
+ *
  */
 /**
  * ncm_c_crit_density_h2:
@@ -1764,17 +1761,12 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Critical density over $\mathsf{h}^2$, $$\frac{\rho_{\mathrm{crit}0}}{\mathsf{h}^2} \left[\frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}\right].$$
  */
 /**
- * ncm_c_crit_mass_density:
+ * ncm_c_crit_mass_density_h2:
  *
- * The critical mass density is defined as
- * \begin{equation}
- * \rho_{\mathrm{crit}0} = \frac{3 H_0^2}{8\pi G},
- * \end{equation}
- * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
- * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
- * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
+ * This function computes the critical mass density over $\mathsf{h}^2 \times c^2$.   
  *
- * Returns: Critical mass density over $\mathsf{h}^2$, $$\frac{\rho_{\mathrm{crit}0}}{c^2\mathsf{h}^2} \,\left[\frac{\text{kg}}{\text{m}^3}\right].$$
+ * Returns: Critical mass density over $\mathsf{h}^2 \times c^2$, $$\frac{\rho_{\mathrm{crit}0}}{c^2\mathsf{h}^2} \,\left[\frac{\text{kg}}{\text{m}^3}\right].$$
+ *
  */
 /**
  * ncm_c_crit_mass_density_h2_solar_mass_Mpc3:
@@ -1786,17 +1778,17 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_crit_number_density_p:
  *
- * FIXME
+ * This function computes the proton number density in units of its rest energy. Calculated using ncm_c_crit_density_h2 () $/$ ncm_c_rest_energy_p (). 
  *
- * Returns: Critical proton number density in ... units.
+ * Returns: Critical proton number density in units of its rest mass.
  *
  */
 /**
  * ncm_c_crit_number_density_n:
  *
- * FIXME
+ * This function computes the neutron number density in units of its rest energy. Calculated using ncm_c_crit_density_h2 () $/$ ncm_c_rest_energy_n (). 
  *
- * Returns: Critical neutron number density in ... units.
+ * Returns: Critical neutron number density in units of its rest mass.
  *
  */
 /**

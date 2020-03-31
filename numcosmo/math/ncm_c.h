@@ -369,9 +369,8 @@ NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Ka (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Q (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_V (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_W (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_hubble_cte_wmap (void) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_c_hubble_cte_planck_base_2018 (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_Mpc (void) ;
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_planck (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_crit_density_h2 (void) G_GNUC_CONST;
@@ -1045,14 +1044,11 @@ NCM_INLINE gdouble ncm_c_wmap5_coadded_I_V (void)
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_W (void)
 { return 6.538; }
 
-NCM_INLINE gdouble ncm_c_hubble_cte_wmap (void)
-{ return 73.0; }
+NCM_INLINE gdouble ncm_c_hubble_cte_planck_base_2018 (void)
+{ return 67.36; }
 
 NCM_INLINE gdouble ncm_c_hubble_cte_hst (void)
 { return 72.0; }
-
-NCM_INLINE gdouble ncm_c_hubble_cte_msa (void)
-{ return 68.0; }
 
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_Mpc (void)
 { return ncm_c_c () / (100.0e3); }

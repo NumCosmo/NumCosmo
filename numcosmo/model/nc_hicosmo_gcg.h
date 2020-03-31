@@ -96,7 +96,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_VPARAMS >*/
   NC_HICOSMO_GCG_VPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGVParams;
 
-#define NC_HICOSMO_GCG_DEFAULT_H0        ncm_c_hubble_cte_wmap ()
+#define NC_HICOSMO_GCG_DEFAULT_H0        ncm_c_hubble_cte_planck_base_2018 ()
 #define NC_HICOSMO_GCG_DEFAULT_OMEGA_C   (0.2568)
 #define NC_HICOSMO_GCG_DEFAULT_OMEGA_X   (0.70)
 #define NC_HICOSMO_GCG_DEFAULT_OMEGA_B   (0.0432)
