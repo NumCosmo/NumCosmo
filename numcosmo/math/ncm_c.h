@@ -1057,10 +1057,10 @@ NCM_INLINE gdouble ncm_c_hubble_radius_hm1_planck (void)
 { return ncm_c_hubble_radius_hm1_Mpc () * ncm_c_Mpc () / ncm_c_planck_length (); }
 
 NCM_INLINE gdouble ncm_c_crit_density_h2 (void)
-{ return 3.0 * pow (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
+{ return 3.0 * gsl_pow_2 (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
 
 NCM_INLINE gdouble ncm_c_crit_mass_density_h2 (void)
-{ return 3.0 * pow (1.0 / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
+{ return 3.0 * gsl_pow_2 (1.0 / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
 
 NCM_INLINE gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void)
 { return ncm_c_crit_mass_density_h2 () / ncm_c_mass_solar () * gsl_pow_3 (ncm_c_Mpc ()); }
