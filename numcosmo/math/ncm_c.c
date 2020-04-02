@@ -701,7 +701,7 @@ ncm_c_class_init (NcmCClass *klass)
  * Using IAU 2015 recommendation see [description][NcmC.description].
  * 
  * As in the recomendation above $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G}$.
- * Here we use the CODATA 2014 value for $G$, see ncm_c_G().
+ * Here we use the CODATA 2018 value for $G$, see ncm_c_G().
  *
  * Returns: One solar mass $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G} \,\left[\mathrm{kg}\right]$.
  */

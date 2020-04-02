@@ -603,7 +603,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       plik->params = ncm_vector_get_subvector (plik->data_params, vec_pos, plik->nparams);
     }
 
-    {
+    do {
       gint npar_out       = 0;
       gdouble check_value = 0.0;
       gdouble *chkp       = NULL;
@@ -612,6 +612,13 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
         clik_lensing_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
       else
         clik_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
+
+      if (npar_out == 0)
+      {
+        g_warning ("_nc_data_planck_lkl_set_filename: likelihood `%s' does not provide `check_param' data.", filename);
+        g_free (chkp);
+        break;
+      }
 
       ncm_vector_set_data (plik->data_params, chkp, npar_out);
       ncm_vector_clear (&plik->check_data_params);
@@ -635,7 +642,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       }
 
       g_free (chkp);
-    }
+    } while (FALSE);
 
     if (plik->nparams > 0)
     {
