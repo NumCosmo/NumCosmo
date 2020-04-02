@@ -78,7 +78,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
   NC_HICOSMO_QSPLINE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineVParams;
 
-#define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_planck_base_2018 ()
+#define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
 #define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T ( 1.0)
 #define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG ( 0.035)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)

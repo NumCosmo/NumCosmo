@@ -369,7 +369,7 @@ NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Ka (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Q (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_V (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_W (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_hubble_cte_planck_base_2018 (void) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_c_hubble_cte_planck6_base (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_Mpc (void) ;
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_planck (void) G_GNUC_CONST;
@@ -380,8 +380,6 @@ NCM_INLINE gdouble ncm_c_crit_number_density_p (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_crit_number_density_n (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_blackbody_energy_density (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_blackbody_per_crit_density_h2 (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_radiation_h2Omega_r0_to_temp (const gdouble omr) G_GNUC_CONST;
 
 /*******************************************************************************
  * END: Observational data
@@ -1044,7 +1042,7 @@ NCM_INLINE gdouble ncm_c_wmap5_coadded_I_V (void)
 NCM_INLINE gdouble ncm_c_wmap5_coadded_I_W (void)
 { return 6.538; }
 
-NCM_INLINE gdouble ncm_c_hubble_cte_planck_base_2018 (void)
+NCM_INLINE gdouble ncm_c_hubble_cte_planck6_base (void)
 { return 67.36; }
 
 NCM_INLINE gdouble ncm_c_hubble_cte_hst (void)
@@ -1079,9 +1077,6 @@ NCM_INLINE gdouble ncm_c_blackbody_per_crit_density_h2 (void)
 
 NCM_INLINE gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T)
 { return ncm_c_blackbody_per_crit_density_h2 () * gsl_pow_4 (T); }
-
-NCM_INLINE gdouble ncm_c_radiation_h2Omega_r0_to_temp (const gdouble omr)
-{ return pow (omr / ncm_c_blackbody_per_crit_density_h2 (), 0.25); }
 
 /*******************************************************************************
  * END: Observational data

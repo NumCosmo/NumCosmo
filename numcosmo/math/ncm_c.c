@@ -204,14 +204,14 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant $h = 6.62607015 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
+ * Returns: Planck constant $h = 6.62607015 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}\right]$.
  */
 /**
  * ncm_c_hbar:
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571817 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
+ * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571817 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}\right]$.
  */
 /**
  * ncm_c_fine_struct:
@@ -1712,9 +1712,9 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_hubble_cte_planck_base_2018:
+ * ncm_c_hubble_cte_planck6_base:
  *
- * Planck 2018 Hubble constant base-$\Lambda$CDM model TT,TE,EE$+$lowE$+$lensing. See [Planck Collaboration (2018)][X2018arXiv180706209P] [[arXiv](https://arxiv.org/abs/1807.06209)].  
+ * Planck VI Hubble constant base-$\Lambda$CDM model TT,TE,EE$+$lowE$+$lensing final result. See [Planck Collaboration (2018)][X2018arXiv180706209P] [[arXiv](https://arxiv.org/abs/1807.06209)].  
  *
  * Returns: $H_0 = 67.36 \left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right]$. 
  *
@@ -1794,36 +1794,29 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_blackbody_energy_density:
  *
- * FIXME
+ * This functions returns the black body energy density divided by $T^4$. Defined as
+ * \begin{equation}
+ *   \frac{\rho_{\text{BL}}}{T^4} = \frac{8\pi^2k_{\text{b}}^4}{15 \left( hc \right)^3}, 
+ * \end{equation}
+ * where $\rho_{\text{BL}}$ is the black body energy density, $T$ is the temperature, $k_{\text{b}}$ is the Boltzmann constant (#ncm_c_kb()), $h$ is the Planck constant (#ncm_c_h()) and $c$ is the speed of light (#ncm_c_c()). 
  *
- * Returns: Blackbody energy density in ... units.
+ * Returns: Blackbody energy density in $\left[ \text{J} \, \text{m}^{-3} \, \text{K}^{-4}  \right]$units.
+ *
  */
 /**
  * ncm_c_blackbody_per_crit_density_h2:
  *
- * FIXME
+ * This functions returns ncm_c_blackbody_energy_density () $/$ ncm_c_crit_density_h2 ().
  *
- * Returns: Blackbody energy density over critical density times $h^2$.
+ * Returns: Blackbody energy density over critical density times $\mathsf{h}^2$.
  */
 /**
  * ncm_c_radiation_temp_to_h2Omega_r0:
- * @T: FIXME
+ * @T: temperature $T$
  *
- * FIXME
- *
- * Returns: .
+ * Returns: ncm_c_blackbody_per_crit_density_h2 () $\times$ $T^4$.
  *
  */
-/**
- * ncm_c_radiation_h2Omega_r0_to_temp:
- * @omr: FIXME
- *
- * FIXME
- *
- * Returns: .
- *
- */
-
 /*******************************************************************************
  * END: Observational data
  *******************************************************************************/

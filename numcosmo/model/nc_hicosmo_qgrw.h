@@ -72,7 +72,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QGRW_SPARAMS >*/
  * 
  * Default value for $H_0$.
  */ 
-#define NC_HICOSMO_QGRW_DEFAULT_H0      ncm_c_hubble_cte_planck_base_2018 ()
+#define NC_HICOSMO_QGRW_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
 
 /**
  * NC_HICOSMO_QGRW_DEFAULT_OMEGA_R: (value 1.0e-5)
