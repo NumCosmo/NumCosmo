@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_density_profile_einasto.c
+ *            nc_halo_density_profile_einasto.c
  *
  *  Wed July 17 12:33:27 2019
  *  Copyright  2014
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
- * nc_density_profile_einasto.c
+ * nc_halo_density_profile_einasto.c
  * Copyright (C) 2014 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 
 /**
- * SECTION:nc_density_profile_einasto
- * @title: NcDensityProfileEinasto
+ * SECTION:nc_halo_density_profile_einasto
+ * @title: NcHaloDensityProfileEinasto
  * @short_description: Density profile of Einasto type.
  *
- * This object implements the #NcDensityProfile class for the Einasto density profile.
+ * This object implements the #NcHaloDensityProfile class for the Einasto density profile.
  *
  * The NFW profile is defined as
  * \begin{equation}
@@ -67,7 +67,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_density_profile_einasto.h"
+#include "lss/nc_halo_density_profile_einasto.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/integral.h"
@@ -76,12 +76,12 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcDensityProfileEinasto, nc_density_profile_einasto, NC_TYPE_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einasto, NC_TYPE_HALO_DENSITY_PROFILE);
 
 #define VECTOR (NCM_MODEL (dpe)->params)
-#define RHOS  (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_EINASTO_RHOS))
-#define RS    (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_EINASTO_RS))
-#define ALPHA (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_EINASTO_ALPHA))
+#define RHOS  (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_RHOS))
+#define RS    (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_RS))
+#define ALPHA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA))
 
 enum
 {
@@ -92,17 +92,17 @@ enum
 
 
 static void
-nc_density_profile_einasto_init (NcDensityProfileEinasto *dpe)
+nc_halo_density_profile_einasto_init (NcHaloDensityProfileEinasto *dpe)
 {
   dpe->Delta = 200.0;
   dpe->r_Delta = 0.0;
 }
 
 static void
-_nc_density_profile_einasto_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_halo_density_profile_einasto_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcDensityProfileEinasto *dpnfw = NC_DENSITY_PROFILE_EINASTO (object);
-  g_return_if_fail (NC_IS_DENSITY_PROFILE_EINASTO (object));
+  NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (object);
+  g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
 
   switch (prop_id)
   {
@@ -116,10 +116,10 @@ _nc_density_profile_einasto_set_property (GObject * object, guint prop_id, const
 }
 
 static void
-_nc_density_profile_einasto_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_halo_density_profile_einasto_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDensityProfileEinasto *dpnfw = NC_DENSITY_PROFILE_EINASTO (object);
-  g_return_if_fail (NC_IS_DENSITY_PROFILE_EINASTO (object));
+  NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (object);
+  g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
 
   switch (prop_id)
   {
@@ -133,35 +133,35 @@ _nc_density_profile_einasto_get_property (GObject *object, guint prop_id, GValue
 }
 
 static void
-nc_density_profile_einasto_finalize (GObject *object)
+nc_halo_density_profile_einasto_finalize (GObject *object)
 {
   /* TODO: Add deinitalization code here */
 
-  G_OBJECT_CLASS (nc_density_profile_einasto_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_halo_density_profile_einasto_parent_class)->finalize (object);
 }
 
-static gdouble _nc_density_profile_einasto_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-static gdouble _nc_density_profile_einasto_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-static gdouble _nc_density_profile_einasto_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-static gdouble _nc_density_profile_einasto_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
-static gdouble _nc_density_profile_einasto_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_halo_density_profile_einasto_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_halo_density_profile_einasto_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+static gdouble _nc_halo_density_profile_einasto_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_halo_density_profile_einasto_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
+static gdouble _nc_halo_density_profile_einasto_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 
 static void
-nc_density_profile_einasto_class_init (NcDensityProfileEinastoClass *klass)
+nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *klass)
 {
   GObjectClass* object_class          = G_OBJECT_CLASS (klass);
-  NcDensityProfileClass *parent_class = NC_DENSITY_PROFILE_CLASS (klass);
+  NcHaloDensityProfileClass *parent_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
   NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_density_profile_einasto_set_property;
-  model_class->get_property = &_nc_density_profile_einasto_get_property;
-  object_class->finalize    = &nc_density_profile_einasto_finalize;
+  model_class->set_property = &_nc_halo_density_profile_einasto_set_property;
+  model_class->get_property = &_nc_halo_density_profile_einasto_get_property;
+  object_class->finalize    = &nc_halo_density_profile_einasto_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Einasto Density Profile", "Einasto");
-  ncm_model_class_add_params (model_class, NC_DENSITY_PROFILE_EINASTO_SPARAM_LEN, 0, PROP_SIZE);
+  ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_SPARAM_LEN, 0, PROP_SIZE);
 
   /**
-   * NcDensityProfileEinasto:Delta:
+   * NcHaloDensityProfileEinasto:Delta:
    *
    * Constant that indicates the overdensity with respect to the critical density. 
    * FIXME Set correct values (limits)
@@ -175,52 +175,52 @@ nc_density_profile_einasto_class_init (NcDensityProfileEinastoClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDensityProfileEinasto:rhos:
+   * NcHaloDensityProfileEinasto:rhos:
    * 
    * Central density.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_EINASTO_RHOS, "\rho_{s}", "rhos",
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_RHOS, "\rho_{s}", "rhos",
                               0.5,  10.0, 1.0e-1,
-                              NC_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_EINASTO_DEFAULT_RHOS,
+                              NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RHOS,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcDensityProfileEinasto:rs:
+   * NcHaloDensityProfileEinasto:rs:
    * 
    * Scale radius $r_s$.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_EINASTO_RS, "r_{s}", "rs",
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_RS, "r_{s}", "rs",
                               1.0e13,  1.0e16, 1.0e13,
-                              NC_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_EINASTO_DEFAULT_RS,
+                              NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RS,
                               NCM_PARAM_TYPE_FIXED);
   
-  parent_class->eval_density         = &_nc_density_profile_einasto_eval_density;
-  parent_class->integral_density_los = &_nc_density_profile_einasto_integral_density_los;
-  parent_class->integral_density_2d  = &_nc_density_profile_einasto_integral_density_2d;
-  parent_class->eval_fourier         = &_nc_density_profile_einasto_eval_fourier;
-	parent_class->scale_radius         = &_nc_density_profile_einasto_scale_radius;
+  parent_class->eval_density         = &_nc_halo_density_profile_einasto_eval_density;
+  parent_class->integral_density_los = &_nc_halo_density_profile_einasto_integral_density_los;
+  parent_class->integral_density_2d  = &_nc_halo_density_profile_einasto_integral_density_2d;
+  parent_class->eval_fourier         = &_nc_halo_density_profile_einasto_eval_fourier;
+	parent_class->scale_radius         = &_nc_halo_density_profile_einasto_scale_radius;
   
 }
 
 /**
- * nc_density_profile_einasto_new:
+ * nc_halo_density_profile_einasto_new:
  *
- * This function returns a #NcDensityProfile with a #NcDensityProfileEinasto implementation.
+ * This function returns a #NcHaloDensityProfile with a #NcHaloDensityProfileEinasto implementation.
  *
- * Returns: A new #NcDensityProfile.
+ * Returns: A new #NcHaloDensityProfile.
  */
-NcDensityProfile *
-nc_density_profile_einasto_new ()
+NcHaloDensityProfile *
+nc_halo_density_profile_einasto_new ()
 {
-  return g_object_new (NC_TYPE_DENSITY_PROFILE_EINASTO, NULL);
+  return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO, NULL);
 }
 
 /// Old code: review it! //////////////////////////////
 
 static gdouble
-_nc_density_profile_einasto_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
+_nc_halo_density_profile_einasto_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
 {
   const gdouble rho_mz = nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   const gdouble v = 4.0 * M_PI / 3.0;
@@ -233,7 +233,7 @@ _nc_density_profile_einasto_scale_radius_matter (NcHICosmo *cosmo, const gdouble
 // trying to reproduce fig. 9 page 26 Cooray 2002
 
 static gdouble
-_nc_density_profile_einasto_concentration_parameter (const gdouble M, const gdouble z)
+_nc_halo_density_profile_einasto_concentration_parameter (const gdouble M, const gdouble z)
 {
   const gdouble M_star = 7.6 * 1.0e13; /* M value where sigma(M, z=0) = 1 */
   const gdouble c = 9.0 / (1.0 + z) * pow(M / M_star, -0.2);
@@ -244,14 +244,14 @@ _nc_density_profile_einasto_concentration_parameter (const gdouble M, const gdou
 //end Cooray comparison
 
 static gdouble
-_nc_density_profile_einasto_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
+_nc_halo_density_profile_einasto_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
 {
-  NcDensityProfileEinasto *dpnfw = NC_DENSITY_PROFILE_EINASTO (dp);
-  gdouble c = _nc_density_profile_einasto_concentration_parameter (M, z);
+  NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
+  gdouble c = _nc_halo_density_profile_einasto_concentration_parameter (M, z);
   gdouble onepc = (1.0 + c);
   gdouble m_nfw = log(onepc) - c / onepc;
   gdouble factor_rs = 1.0 / c;
-  gdouble rs = _nc_density_profile_einasto_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
+  gdouble rs = _nc_halo_density_profile_einasto_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
   gdouble x = (1.0 + z) * k * rs;
   gdouble onepcx = onepc * x;
   gdouble u = 1.0 / m_nfw * (sin(x) * (gsl_sf_Si (onepcx) -  gsl_sf_Si (x)) +
@@ -274,7 +274,7 @@ _rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
 }
 
 static gdouble
-_nc_density_profile_einasto_r_delta (NcDensityProfileEinasto *dpnfw, NcHICosmo *cosmo, gdouble z)
+_nc_halo_density_profile_einasto_r_delta (NcHaloDensityProfileEinasto *dpnfw, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   const gdouble rD3     = 3.0 / (4.0 * M_PI * dpnfw->Delta * rho_c);
@@ -284,17 +284,17 @@ _nc_density_profile_einasto_r_delta (NcDensityProfileEinasto *dpnfw, NcHICosmo *
 }
 
 static gdouble
-_nc_density_profile_einasto_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
+_nc_halo_density_profile_einasto_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
 {
-	NcDensityProfileEinasto *dpnfw = NC_DENSITY_PROFILE_EINASTO (dp);
-  gdouble r_Delta = _nc_density_profile_einasto_r_delta (dpnfw, cosmo, z);
+	NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
+  gdouble r_Delta = _nc_halo_density_profile_einasto_r_delta (dpnfw, cosmo, z);
 
 	/* IMPLEMENT if it is the case!!! */
 	return r_Delta;
 }
 
 static gdouble 
-_nc_density_profile_einasto_deltac (NcDensityProfileEinasto *dpnfw)
+_nc_halo_density_profile_einasto_deltac (NcHaloDensityProfileEinasto *dpnfw)
 {
   /*gdouble onepc = 1.0;*/
   gdouble delta_c = (dpnfw->Delta / 3.0); 
@@ -338,13 +338,13 @@ int calc_rho_einasto(double*r, int Nr, double Mass, double conc, int delta, doub
 ////////////////////////////////////////////////////////////////////////////////
 
 static gdouble
-_nc_density_profile_einasto_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
+_nc_halo_density_profile_einasto_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
 {
-  NcDensityProfileEinasto *dpe = NC_DENSITY_PROFILE_EINASTO (dp);
+  NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
 
-  gdouble rs      = _nc_density_profile_einasto_scale_radius (dp, cosmo, z);
+  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z);
   gdouble x       = r / rs;
-  gdouble delta_c = _nc_density_profile_einasto_deltac (dpe);
+  gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   gdouble onepx   = 1.0 + x;
   gdouble onepx2  = onepx * onepx; 
@@ -370,13 +370,13 @@ _nc_density_profile_einasto_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo
 
 /* los = line of sight */
 static gdouble 
-_nc_density_profile_einasto_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+_nc_halo_density_profile_einasto_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileEinasto *dpe = NC_DENSITY_PROFILE_EINASTO (dp);
+  NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
 
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
-  gdouble delta_c = _nc_density_profile_einasto_deltac (dpe);
-  gdouble rs      = _nc_density_profile_einasto_scale_radius (dp, cosmo, z); 
+  gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
+  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
 	gdouble xm1     = x - 1.0;
@@ -393,13 +393,13 @@ _nc_density_profile_einasto_integral_density_los (NcDensityProfile *dp, NcHICosm
 }
 
 static gdouble 
-_nc_density_profile_einasto_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+_nc_halo_density_profile_einasto_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileEinasto *dpe = NC_DENSITY_PROFILE_EINASTO (dp);
+  NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
 
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
-  gdouble delta_c = _nc_density_profile_einasto_deltac (dpe);
-  gdouble rs      = _nc_density_profile_einasto_scale_radius (dp, cosmo, z); 
+  gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
+  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
 	gdouble xm1     = x - 1.0;

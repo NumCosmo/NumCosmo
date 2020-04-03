@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_density_profile_dk14.c
+ *            nc_halo_density_profile_dk14.c
  *
  *  Tue July 16 15:20:15 2019
  *  Copyright  2014
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
- * nc_density_profile_dk14.c
+ * nc_halo_density_profile_dk14.c
  * Copyright (C) 2014 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 
 /**
- * SECTION:nc_density_profile_dk14
- * @title: NcDensityProfileDK14
+ * SECTION:nc_halo_density_profile_dk14
+ * @title: NcHaloDensityProfileDK14
  * @short_description: Density profile of Diemer \& Kravtsov type.
  *
- * This object implements the #NcDensityProfile class for a Diemer \& Kravtsov (DK14) density profile.
+ * This object implements the #NcHaloDensityProfile class for a Diemer \& Kravtsov (DK14) density profile.
  *
  * The NFW profile is defined as
  * \begin{equation}
@@ -67,7 +67,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_density_profile_dk14.h"
+#include "lss/nc_halo_density_profile_dk14.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/integral.h"
@@ -76,11 +76,11 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcDensityProfileDK14, nc_density_profile_dk14, NC_TYPE_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileDK14, nc_halo_density_profile_dk14, NC_TYPE_HALO_DENSITY_PROFILE);
 
 #define VECTOR (NCM_MODEL (dpdk)->params)
-#define RT   (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_DK14_RT))
-#define BETA (ncm_vector_get (VECTOR, NC_DENSITY_PROFILE_DK14_BETA))
+#define RT   (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_RT))
+#define BETA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_BETA))
 
 enum
 {
@@ -91,17 +91,17 @@ enum
 
 
 static void
-nc_density_profile_dk14_init (NcDensityProfileDK14 *dpdk)
+nc_halo_density_profile_dk14_init (NcHaloDensityProfileDK14 *dpdk)
 {
   dpdk->Delta = 200.0;
   dpdk->r_Delta = 0.0;
 }
 
 static void
-_nc_density_profile_dk14_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_halo_density_profile_dk14_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcDensityProfileDK14 *dpdk = NC_DENSITY_PROFILE_DK14 (object);
-  g_return_if_fail (NC_IS_DENSITY_PROFILE_DK14 (object));
+  NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (object);
+  g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_DK14 (object));
 
   switch (prop_id)
   {
@@ -115,10 +115,10 @@ _nc_density_profile_dk14_set_property (GObject * object, guint prop_id, const GV
 }
 
 static void
-_nc_density_profile_dk14_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_halo_density_profile_dk14_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDensityProfileDK14 *dpdk = NC_DENSITY_PROFILE_DK14 (object);
-  g_return_if_fail (NC_IS_DENSITY_PROFILE_DK14 (object));
+  NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (object);
+  g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_DK14 (object));
 
   switch (prop_id)
   {
@@ -132,35 +132,35 @@ _nc_density_profile_dk14_get_property (GObject *object, guint prop_id, GValue *v
 }
 
 static void
-nc_density_profile_dk14_finalize (GObject *object)
+nc_halo_density_profile_dk14_finalize (GObject *object)
 {
   /* TODO: Add deinitalization code here */
 
-  G_OBJECT_CLASS (nc_density_profile_dk14_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_halo_density_profile_dk14_parent_class)->finalize (object);
 }
 
-static gdouble _nc_density_profile_dk14_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-static gdouble _nc_density_profile_dk14_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-static gdouble _nc_density_profile_dk14_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-static gdouble _nc_density_profile_dk14_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
-static gdouble _nc_density_profile_dk14_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_halo_density_profile_dk14_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_halo_density_profile_dk14_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+static gdouble _nc_halo_density_profile_dk14_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+static gdouble _nc_halo_density_profile_dk14_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
+static gdouble _nc_halo_density_profile_dk14_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 
 static void
-nc_density_profile_dk14_class_init (NcDensityProfileDK14Class *klass)
+nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
 {
   GObjectClass* object_class          = G_OBJECT_CLASS (klass);
-  NcDensityProfileClass *parent_class = NC_DENSITY_PROFILE_CLASS (klass);
+  NcHaloDensityProfileClass *parent_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
   NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_density_profile_dk14_set_property;
-  model_class->get_property = &_nc_density_profile_dk14_get_property;
-  object_class->finalize    = &nc_density_profile_dk14_finalize;
+  model_class->set_property = &_nc_halo_density_profile_dk14_set_property;
+  model_class->get_property = &_nc_halo_density_profile_dk14_get_property;
+  object_class->finalize    = &nc_halo_density_profile_dk14_finalize;
 
   ncm_model_class_set_name_nick (model_class, "NFW Density Profile", "NFW");
-  ncm_model_class_add_params (model_class, NC_DENSITY_PROFILE_DK14_SPARAM_LEN, 0, PROP_SIZE);
+  ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_DK14_SPARAM_LEN, 0, PROP_SIZE);
 
   /**
-   * NcDensityProfileDK14:Delta:
+   * NcHaloDensityProfileDK14:Delta:
    *
    * Constant that indicates the overdensity with respect to the critical density. 
    * FIXME Set correct values (limits)
@@ -174,52 +174,52 @@ nc_density_profile_dk14_class_init (NcDensityProfileDK14Class *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDensityProfileDK14:rt:
+   * NcHaloDensityProfileDK14:rt:
    * 
    * Truncation radius.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_DK14_RT, "r_{t}", "rt",
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_DK14_RT, "r_{t}", "rt",
                               0.5,  10.0, 1.0e-1,
-                              NC_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_DK14_DEFAULT_RT,
+                              NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_RT,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcDensityProfileDK14:beta:
+   * NcHaloDensityProfileDK14:beta:
    * 
    * Sharpness of the steepening.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_DK14_BETA, "\\beta", "beta",
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_DK14_BETA, "\\beta", "beta",
                               1.0,  10.0, 4.0,
-                              NC_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_DK14_DEFAULT_BETA,
+                              NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
   
-  parent_class->eval_density         = &_nc_density_profile_dk14_eval_density;
-  parent_class->integral_density_los = &_nc_density_profile_dk14_integral_density_los;
-  parent_class->integral_density_2d  = &_nc_density_profile_dk14_integral_density_2d;
-  parent_class->eval_fourier         = &_nc_density_profile_dk14_eval_fourier;
-	parent_class->scale_radius         = &_nc_density_profile_dk14_scale_radius;
+  parent_class->eval_density         = &_nc_halo_density_profile_dk14_eval_density;
+  parent_class->integral_density_los = &_nc_halo_density_profile_dk14_integral_density_los;
+  parent_class->integral_density_2d  = &_nc_halo_density_profile_dk14_integral_density_2d;
+  parent_class->eval_fourier         = &_nc_halo_density_profile_dk14_eval_fourier;
+	parent_class->scale_radius         = &_nc_halo_density_profile_dk14_scale_radius;
   
 }
 
 /**
- * nc_density_profile_dk14_new:
+ * nc_halo_density_profile_dk14_new:
  *
- * This function returns a #NcDensityProfile with a #NcDensityProfileDK14 implementation.
+ * This function returns a #NcHaloDensityProfile with a #NcHaloDensityProfileDK14 implementation.
  *
- * Returns: A new #NcDensityProfile.
+ * Returns: A new #NcHaloDensityProfile.
  */
-NcDensityProfile *
-nc_density_profile_dk14_new ()
+NcHaloDensityProfile *
+nc_halo_density_profile_dk14_new ()
 {
-  return g_object_new (NC_TYPE_DENSITY_PROFILE_DK14, NULL);
+  return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_DK14, NULL);
 }
 
 /// Old code: review it! //////////////////////////////
 
 static gdouble
-_nc_density_profile_dk14_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
+_nc_halo_density_profile_dk14_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
 {
   const gdouble rho_mz = nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   const gdouble v = 4.0 * M_PI / 3.0;
@@ -232,7 +232,7 @@ _nc_density_profile_dk14_scale_radius_matter (NcHICosmo *cosmo, const gdouble M,
 // trying to reproduce fig. 9 page 26 Cooray 2002
 
 static gdouble
-_nc_density_profile_dk14_concentration_parameter (const gdouble M, const gdouble z)
+_nc_halo_density_profile_dk14_concentration_parameter (const gdouble M, const gdouble z)
 {
   const gdouble M_star = 7.6 * 1.0e13; /* M value where sigma(M, z=0) = 1 */
   const gdouble c = 9.0 / (1.0 + z) * pow(M / M_star, -0.2);
@@ -243,14 +243,14 @@ _nc_density_profile_dk14_concentration_parameter (const gdouble M, const gdouble
 //end Cooray comparison
 
 static gdouble
-_nc_density_profile_dk14_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
+_nc_halo_density_profile_dk14_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
 {
-  NcDensityProfileDK14 *dpnfw = NC_DENSITY_PROFILE_DK14 (dp);
-  gdouble c = _nc_density_profile_dk14_concentration_parameter (M, z);
+  NcHaloDensityProfileDK14 *dpnfw = NC_HALO_DENSITY_PROFILE_DK14 (dp);
+  gdouble c = _nc_halo_density_profile_dk14_concentration_parameter (M, z);
   gdouble onepc = (1.0 + c);
   gdouble m_nfw = log(onepc) - c / onepc;
   gdouble factor_rs = 1.0 / c;
-  gdouble rs = _nc_density_profile_dk14_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
+  gdouble rs = _nc_halo_density_profile_dk14_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
   gdouble x = (1.0 + z) * k * rs;
   gdouble onepcx = onepc * x;
   gdouble u = 1.0 / m_nfw * (sin(x) * (gsl_sf_Si (onepcx) -  gsl_sf_Si (x)) +
@@ -273,7 +273,7 @@ _rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
 }
 
 static gdouble
-_nc_density_profile_dk14_r_delta (NcDensityProfileDK14 *dpnfw, NcHICosmo *cosmo, gdouble z)
+_nc_halo_density_profile_dk14_r_delta (NcHaloDensityProfileDK14 *dpnfw, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   const gdouble rD3     = 3.0 / (4.0 * M_PI * dpnfw->Delta * rho_c);
@@ -284,17 +284,17 @@ _nc_density_profile_dk14_r_delta (NcDensityProfileDK14 *dpnfw, NcHICosmo *cosmo,
 }
 
 static gdouble
-_nc_density_profile_dk14_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
+_nc_halo_density_profile_dk14_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
 {
-	NcDensityProfileDK14 *dpdk = NC_DENSITY_PROFILE_DK14 (dp);
-  gdouble r_Delta = _nc_density_profile_dk14_r_delta (dpdk, cosmo, z);
+	NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (dp);
+  gdouble r_Delta = _nc_halo_density_profile_dk14_r_delta (dpdk, cosmo, z);
 
 	/* FIX copied from NFW */
 	return r_Delta;
 }
 
 static gdouble 
-_nc_density_profile_dk14_deltac (NcDensityProfileDK14 *dpnfw)
+_nc_halo_density_profile_dk14_deltac (NcHaloDensityProfileDK14 *dpnfw)
 {
   gdouble delta_c = (dpnfw->Delta / 3.0); 
 
@@ -337,13 +337,13 @@ int calc_rho_dk14(double*r, int Nr, double Mass, double conc, int delta, double 
 ////////////////////////////////////////////////////////////////////////////////
 
 static gdouble
-_nc_density_profile_dk14_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
+_nc_halo_density_profile_dk14_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
 {
-  NcDensityProfileDK14 *dpdk = NC_DENSITY_PROFILE_DK14 (dp);
+  NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (dp);
 
-  gdouble rs      = _nc_density_profile_dk14_scale_radius (dp, cosmo, z);
+  gdouble rs      = _nc_halo_density_profile_dk14_scale_radius (dp, cosmo, z);
   gdouble x       = r / rs;
-  gdouble delta_c = _nc_density_profile_dk14_deltac (dpdk);
+  gdouble delta_c = _nc_halo_density_profile_dk14_deltac (dpdk);
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   gdouble onepx   = 1.0 + x;
   gdouble onepx2  = onepx * onepx; 
@@ -369,13 +369,13 @@ _nc_density_profile_dk14_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, c
 
 /* los = line of sight */
 static gdouble 
-_nc_density_profile_dk14_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+_nc_halo_density_profile_dk14_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileDK14 *dpnfw = NC_DENSITY_PROFILE_DK14 (dp);
+  NcHaloDensityProfileDK14 *dpnfw = NC_HALO_DENSITY_PROFILE_DK14 (dp);
 
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
-  gdouble delta_c = _nc_density_profile_dk14_deltac (dpnfw);
-  gdouble rs      = _nc_density_profile_dk14_scale_radius (dp, cosmo, z); 
+  gdouble delta_c = _nc_halo_density_profile_dk14_deltac (dpnfw);
+  gdouble rs      = _nc_halo_density_profile_dk14_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
 	gdouble xm1     = x - 1.0;
@@ -392,13 +392,13 @@ _nc_density_profile_dk14_integral_density_los (NcDensityProfile *dp, NcHICosmo *
 }
 
 static gdouble 
-_nc_density_profile_dk14_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+_nc_halo_density_profile_dk14_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileDK14 *dpnfw = NC_DENSITY_PROFILE_DK14 (dp);
+  NcHaloDensityProfileDK14 *dpnfw = NC_HALO_DENSITY_PROFILE_DK14 (dp);
 
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
-  gdouble delta_c = _nc_density_profile_dk14_deltac (dpnfw);
-  gdouble rs      = _nc_density_profile_dk14_scale_radius (dp, cosmo, z); 
+  gdouble delta_c = _nc_halo_density_profile_dk14_deltac (dpnfw);
+  gdouble rs      = _nc_halo_density_profile_dk14_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
 	gdouble xm1     = x - 1.0;

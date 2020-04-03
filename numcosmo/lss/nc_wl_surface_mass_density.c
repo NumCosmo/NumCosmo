@@ -33,7 +33,7 @@
  * \begin{equation}\label{eq:sigma}
  * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt{R^2 + \chi^2} \right), 
  * \end{equation} 
- * where $\rho(r)$ is the three-dimensional mass density profile (#NcDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a 
+ * where $\rho(r)$ is the three-dimensional mass density profile (#NcHaloDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a 
  * two-dimensional vector from the halo center. In particular, we consider a projection $\Sigma (R)$ onto the lens plane. 
  * $\chi$ is the distance along the line of sight. 
  * 
@@ -72,7 +72,7 @@
 
 #include "lss/nc_wl_surface_mass_density.h"
 #include "nc_distance.h"
-#include "lss/nc_density_profile.h"
+#include "lss/nc_halo_density_profile.h"
 #include "math/integral.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
@@ -384,7 +384,7 @@ nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd,
 /**
  * nc_wl_surface_mass_density_sigma:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zc: cluster redshift $z_\mathrm{cluster}$
@@ -394,9 +394,9 @@ nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd,
  * Returns: $\Sigma (R)$
  */
 gdouble
-nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	gdouble sigma_2 = nc_density_profile_integral_density_los (dp, cosmo, R, zc);
+	gdouble sigma_2 = nc_halo_density_profile_integral_density_los (dp, cosmo, R, zc);
 		
 	return 2.0 * sigma_2;
 }
@@ -404,7 +404,7 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile 
 /**
  * nc_wl_surface_mass_density_sigma_mean:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile 
+ * @dp: a #NcHaloDensityProfile 
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zc: cluster redshift $z_\mathrm{cluster}$
@@ -414,12 +414,12 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * Returns: $\overline{\Sigma} (<R)$
  */
 gdouble 
-nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	const gdouble rs             = nc_density_profile_scale_radius (dp, cosmo, zc);
+	const gdouble rs             = nc_halo_density_profile_scale_radius (dp, cosmo, zc);
 	const gdouble x              = R / rs;
   const gdouble x2             = x * x;
-	const gdouble mean_sigma_2x2 = nc_density_profile_integral_density_2d (dp, cosmo, R, zc);
+	const gdouble mean_sigma_2x2 = nc_halo_density_profile_integral_density_2d (dp, cosmo, R, zc);
 
 	return (2.0 / x2) * mean_sigma_2x2;
 }
@@ -439,7 +439,7 @@ _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, const g
 /**
  * nc_wl_surface_mass_density_convergence:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$  
@@ -451,7 +451,7 @@ _nc_wl_surface_mass_density_cg (NcWLSurfaceMassDensity *smd, gdouble M0, const g
  * Returns: $\kappa(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
@@ -462,7 +462,7 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
 /**
  * nc_wl_surface_mass_density_convergence_infinity:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zl: lens redshift $z_\mathrm{lens}$
@@ -473,7 +473,7 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityPr
  * Returns: $\kappa_\infty(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
 {
   gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
@@ -484,7 +484,7 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
 /**
  * nc_wl_surface_mass_density_shear:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$  
@@ -496,7 +496,7 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
  * Returns: $\gamma(R)$ 
  */
 gdouble 
-nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   const gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	const gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
@@ -508,7 +508,7 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
 /**
  * nc_wl_surface_mass_density_shear_infinity:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo 
  * @zl: lens redshift $z_\mathrm{lens}$
@@ -519,7 +519,7 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile 
  * Returns: $\gamma_\infty (R)$ 
  */
 gdouble 
-nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
 {
   gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
@@ -531,7 +531,7 @@ nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensit
 /**
  * nc_wl_surface_mass_density_reduced_shear:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$  
@@ -546,7 +546,7 @@ nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensit
  * Returns: $g(R)$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once*/
   gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
@@ -559,7 +559,7 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
 /**
  * nc_wl_surface_mass_density_reduced_shear_infinity:
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcDensityProfile  
+ * @dp: a #NcHaloDensityProfile  
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$  
@@ -576,7 +576,7 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensity
  * Returns: $g(R)$, source at $z = \infty$
  */
 gdouble 
-nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
 	/* Optimize it to compute sigma and sigma_c just once, and distances at inf */
   gdouble Dinf, betainf, beta_s;

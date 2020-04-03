@@ -89,7 +89,7 @@ typedef struct _integrand_data_1h_m
   NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
-  NcDensityProfile *dp;
+  NcHaloDensityProfile *dp;
   NcClusterMass *clusterm;
   gdouble z;
   gdouble lnM;
@@ -106,7 +106,7 @@ _integrand_mass_1h (gdouble lnM, gpointer userdata)
   gdouble M = exp(lnM);
   gdouble dn_dlnM = nc_halo_mass_function_dn_dlnM (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   //printf("integrando mass, k = %.5g M = %.5e dndM = %.5g \n", int_data->k, M, dn_dlnM);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble u = nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   //printf("integrando mass, u = %.15g\n", u);
   gdouble integrand_mass_1h = M * dn_dlnM * u * nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
   //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z));
@@ -121,7 +121,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
   gdouble dn_dlnM = nc_halo_mass_function_dn_dlnM (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble u = nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble rho_mz = nc_hicosmo_E2Omega_m (int_data->cosmo, int_data->z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
   gdouble integrand_powspec_1h = (M / rho_mz) * (M / rho_mz) * dn_dlnM * u * u;
@@ -138,7 +138,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
  * @cad: a #NcClusterAbundance
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @dp: a #NcDensityProfile
+ * @dp: a #NcHaloDensityProfile
  * @k: mode
  * @z: redshift
  * @lnM_obs: (in) (array) (element-type double): FIXME
@@ -149,7 +149,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   integrand_data_1h_m int_data;
   gdouble int_mass_1h, err, lnMl, lnMu;
@@ -188,7 +188,7 @@ typedef struct _integrand_data_1h_z
   NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
-  NcDensityProfile *dp;
+  NcHaloDensityProfile *dp;
   gint l;
   gdouble z;
   gdouble lnM;
@@ -223,7 +223,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * @cad: a #NcClusterAbundance
  * @cosmo: a #NcHICosmo
  * @dist: a #NcDistance
- * @dp: a #NcDensityProfile
+ * @dp: a #NcHaloDensityProfile
  * @l: spherical harmonis index
  * @lnM_obs: (in) (array) (element-type double): FIXME
  * @lnM_obs_params: (in) (array) (element-type double): FIXME
@@ -241,7 +241,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * Returns: $\left(C_l^{cl \psi} \right)_{1h}$
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
+nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcHaloDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble cor_1h, ll, cons_factor, zl, zu, err;
   integrand_data_1h_z int_data;
@@ -351,7 +351,7 @@ typedef struct _integrand_data_2h_mass2
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
   NcHaloBiasFunc *hbf;
-  NcDensityProfile *dp;
+  NcHaloDensityProfile *dp;
   gdouble z;
   gdouble k;
 } integrand_data_2h_mass2;
@@ -375,7 +375,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
  * @cosmo: a #NcHICosmo
- * @dp: a #NcDensityProfile
+ * @dp: a #NcHaloDensityProfile
  * @k: mode
  * @z: redshift
  *
@@ -384,7 +384,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z)
 {
   integrand_data_2h_mass2 int_data;
   gdouble ps_2h_mm, err;
@@ -443,7 +443,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   gdouble M = exp(lnM);
   gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble u = nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble integrand_mass_2h_second = M * dn_dlnM_times_b * u;
 
   return integrand_mass_2h_second;
@@ -455,7 +455,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
  * @cad: a #NcClusterAbundance
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @dp: a #NcDensityProfile
+ * @dp: a #NcHaloDensityProfile
  * @k: mode
  * @z: redshift
  *
@@ -465,7 +465,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z)
 {
   integrand_data_2h_mass2 int_data;
   gdouble int_mass_2h_second, err, lnMl, lnMu;
@@ -502,7 +502,7 @@ typedef struct _integrand_data_2hz
   NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
-  NcDensityProfile *dp;
+  NcHaloDensityProfile *dp;
   gint l;
   gdouble dc_zdec; /* comoving distance at z decoupling */
 } integrand_data_2hz;
@@ -533,7 +533,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * @cad: a #NcClusterAbundance
  * @cosmo: a #NcHICosmo
  * @dist: a #NcDistance
- * @dp: a #NcDensityProfile
+ * @dp: a #NcHaloDensityProfile
  * @l: spherical harmonis index
  * @z_obs: (in) (array) (element-type double): FIXME
  * @z_obs_params: (in) (array) (element-type double): FIXME
@@ -549,7 +549,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * Returns: $\left(C_l^{cl \psi} \right)_{2h}$
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
+nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcHaloDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble cor_2h, ll, cons_factor, zl, zu, err;
   integrand_data_2hz int_data;

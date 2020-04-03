@@ -129,8 +129,8 @@ test_nc_data_bao_dvdv_SOURCES =  \
 test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
 
-test_nc_density_profile_nfw_SOURCES =  \
-        test_nc_density_profile_nfw.c
+test_nc_halo_density_profile_nfw_SOURCES =  \
+        test_nc_halo_density_profile_nfw.c
 
 test_nc_wl_surface_mass_density_SOURCES =  \
         test_nc_wl_surface_mass_density.c
@@ -174,7 +174,7 @@ test_programs =  \
 	test_nc_data_bao_rdv            \
         test_nc_data_bao_dvdv           \
         test_nc_cluster_pseudo_counts   \
-        test_nc_density_profile_nfw     \
+        test_nc_halo_density_profile_nfw     \
         test_nc_wl_surface_mass_density \
         test_nc_distance
 
@@ -390,7 +390,7 @@ test_nc_cluster_pseudo_counts_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
-test_nc_density_profile_nfw_LDADD = \
+test_nc_halo_density_profile_nfw_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \

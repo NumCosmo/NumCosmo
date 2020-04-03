@@ -25,17 +25,16 @@ cosmo.props.Omegac = 0.255
 cosmo.props.Omegax = 0.7
 cosmo.param_set_by_name ("Omegak", 0.0)
 
-
-nfw = Nc.DensityProfile.new_from_name ("NcDensityProfileNFW{'Delta':<200.0>}") 
-nfw.param_set_by_name ('cDelta', 5.0) # 4 as Douglas. In LCDM c = 5 corresponds to cluster masses. (see Lokas and G. Mamon, astro-ph/0002395) 
+nfw = Nc.HaloDensityProfile.new_from_name ("NcHaloDensityProfileNFW{'Delta':<200.0>}") 
+nfw.param_set_by_name ('c', 5.0)         # 4 as Douglas. In LCDM c = 5 corresponds to cluster masses. (see Lokas and G. Mamon, astro-ph/0002395) 
 nfw.param_set_by_name ('MDelta', 1.0e15)
 
 smd = Nc.WLSurfaceMassDensity.new (dist)
 rs  = Nc.ReducedShearClusterMass.new ()
 
 mset = Ncm.MSet.new_array ([cosmo, nfw, smd, rs])
-mset.param_set_ftype (Nc.DensityProfile.id (), Nc.DensityProfileNFWParams.M_DELTA, Ncm.ParamType.FREE)
-mset.param_set_ftype (Nc.DensityProfile.id (), Nc.DensityProfileNFWParams.C_DELTA, Ncm.ParamType.FREE)
+mset.param_set_ftype (Nc.HaloDensityProfile.id (), Nc.HaloDensityProfileNFWSParams.M_DELTA, Ncm.ParamType.FREE)
+mset.param_set_ftype (Nc.HaloDensityProfile.id (), Nc.HaloDensityProfileNFWSParams.C_DELTA, Ncm.ParamType.FREE)
 
 d1 = Nc.DataReducedShearClusterMass.new (dist) 
 d1.load_hdf5 ("cat07_sim_leftra.hdf5", ord ('i'), 0.3, 0.1, 0.1)
@@ -63,7 +62,7 @@ init_sampler.set_prior_from_mset ()
 init_sampler.set_cov_from_rescale (1.0)
 
 nwalkers = 50
-stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
+stretch  = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 stretch.set_scale (2.5)
 stretch.set_box_mset (mset)
@@ -82,6 +81,3 @@ esmcmc.end_run ()
 
 esmcmc.mean_covar ()
 fit.log_covar ()
-
-
-

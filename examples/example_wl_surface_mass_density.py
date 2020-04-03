@@ -32,8 +32,8 @@ dist = Nc.Distance.new (1.0)
 #
 # New matter density profile 
 #
-nfw = Nc.DensityProfile.new_from_name ("NcDensityProfileNFW{'Delta':<200.0>}") 
-nfw.param_set_by_name ('cDelta', 4.0) # 4 as Douglas. In LCDM c = 5 corresponds to cluster masses. (see Lokas and G. Mamon, astro-ph/0002395) 
+nfw = Nc.HaloDensityProfile.new_from_name ("NcHaloDensityProfileNFW{'Delta':<200.0>}") 
+nfw.param_set_by_name ('c', 4.0)        # 4 as Douglas. In LCDM c = 5 corresponds to cluster masses. (see Lokas and G. Mamon, astro-ph/0002395) 
 nfw.param_set_by_name ('MDelta', 1.e15)
 mdelta = 1.e15
 cdelta = 4.0
