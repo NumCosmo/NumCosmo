@@ -155,8 +155,8 @@ NCM_INLINE gdouble *ncm_vector_data (NcmVector *cv);
 NCM_INLINE const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 NCM_INLINE gsl_vector *ncm_vector_gsl (NcmVector *cv);
-NCM_INLINE gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
+NCM_INLINE gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE guint ncm_vector_len (const NcmVector *cv);
 NCM_INLINE guint ncm_vector_stride (const NcmVector *cv);
 
@@ -417,16 +417,16 @@ ncm_vector_gsl (NcmVector *cv)
   return &(cv->vv.vector);
 }
 
-NCM_INLINE gdouble
-ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
-{
-  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
-}
-
 NCM_INLINE const gsl_vector *
 ncm_vector_const_gsl (const NcmVector *cv)
 {
   return &(cv->vv.vector);
+}
+
+NCM_INLINE gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
 }
 
 NCM_INLINE guint

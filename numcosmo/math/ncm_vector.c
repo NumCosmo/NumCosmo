@@ -734,7 +734,7 @@ ncm_vector_log_vals_avpb (const NcmVector *v, const gchar *prestr, const gchar *
  * @f: (scope notified): a #NcmVectorCompFunc
  * @user_data: user data used in @f
  *
- * Log the vector values (f(\vec{v}_i)$) using @prestr and @format.
+ * Log the vector values ($f(\vec{v}_i)$) using @prestr and @format.
  *
  */
 void
@@ -788,6 +788,13 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * @i: component index
  *
  * Returns: A pointer to the @i-th component of the vector @cv assuming stride == 1.
+ */
+/**
+ * ncm_vector_const_ptr:
+ * @cv: a constant #NcmVector
+ * @i: component index
+ *
+ * Returns: A constant pointer to the @i-th component of the vector @cv assuming stride == 1.
  */
 /**
  * ncm_vector_set:
@@ -971,58 +978,58 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * ncm_vector_get_array:
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns the array of @cv. It is only applied if @cv was created with ncm_vector_new_array (). 
  *
- * Returns: (transfer container) (element-type double): FIXME
+ * Returns: (transfer container) (element-type double): A pointer to a double GArray. 
  */
 /**
  * ncm_vector_dup_array:
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function allocates a new array and copy the contents of @cv into it. The array must not be freed. 
  *
- * Returns: (transfer full) (element-type double): FIXME
+ * Returns: (transfer full) (element-type double): A new pointer to a double GArray.
  */
 /**
  * ncm_vector_data:
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns a pointer to the @cv data. 
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): A pointer to @cv data. 
  */
 /**
  * ncm_vector_const_data:
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns a constant pointer to the @cv data.
  *
- * Returns: (transfer none): FIXME
- */
-/**
- * ncm_vector_ddot:
- * @a: a #NcmVector
- * @b: a #NcmVector
- *
- * FIXME
- *
- * Returns: FIXME
+ * Returns: (transfer none): A constant pointer to @cv data. 
  */
 /**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns a pointer to the #gsl_vector associated to @cv. 
  *
- * Returns: FIXME
+ * Returns: A pointer to a #gsl_vector.
  */
 /**
  * ncm_vector_const_gsl: (skip)
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns a constant pointer to the #gsl_vector associated to @cv. 
  *
- * Returns: FIXME
+ * Returns: A constant pointer to a #gsl_vector.
+ */
+/**
+ * ncm_vector_dot:
+ * @cv1: a #NcmVector
+ * @cv2: a #NcmVector
+ *
+ * This function returns the dot product of the #NcmVector @cv1 and @cv2. 
+ *
+ * Returns: $\text{cv1} \cdot \text{cv2}$. 
  */
 /**
  * ncm_vector_len:
@@ -1036,9 +1043,9 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * ncm_vector_stride:
  * @cv: a #NcmVector
  *
- * FIXME
+ * This function returns the stride of #NcmVector @cv. 
  *
- * Returns: FIXME
+ * Returns: The stride of @cv.
  */
 /**
  * ncm_vector_get_max: 
