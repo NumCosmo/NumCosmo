@@ -34,7 +34,7 @@
  * \begin{equation}
  * \rho(r) = \frac{\delta_c \rho_{crit}}{(r/r_s)(1 + r/r_s)^2},
  * \end{equation}
- * where $\rho_{crit} (z) = \frac{3 H^2(z)}{8\pi G} [M_\odot / Mpc^3]$, 
+ * where $\rho_{crit} (z) = \frac{3 H^2(z)}{8\pi G} [M_\odot / Mpc^3]$,
  * \begin{equation}
  * \delta_c = \frac{\Delta}{3} \frac{c^3}{\ln (1 + c) - \frac{c}{1 + c}},
  * \end{equation}
@@ -44,7 +44,7 @@
  * \end{equation}
  * where $M$ is the halo mass $[M_\odot]$, $\Delta$ is the overdensity parameter (as defined in #NcMultiplicityFunc).
  *
- * FIXME 
+ * FIXME
  * The normalized NFW density profile ($u_M(r) = \rho(r) / M$) in the Fourier space is given by
  * \begin{equation}
  * \tilde{u}_M(k) = \frac{1}{m_{nfw}(c)} \left[ \sin(x) \left[\text{Si}((1+c)x) - \text{Si}(x) \right] + \cos(x) \left[\text{Ci}((1+c)x) - \text{Ci}(x) \right] - \frac{\sin(cx)}{(1+c)x} \right],
@@ -90,20 +90,20 @@ enum
   PROP_SIZE,
 };
 
-
 static void
 nc_halo_density_profile_einasto_init (NcHaloDensityProfileEinasto *dpe)
 {
-  dpe->Delta = 200.0;
+  dpe->Delta   = 200.0;
   dpe->r_Delta = 0.0;
 }
 
 static void
-_nc_halo_density_profile_einasto_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_halo_density_profile_einasto_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (object);
+  
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
-
+  
   switch (prop_id)
   {
     case PROP_DELTA:
@@ -119,8 +119,9 @@ static void
 _nc_halo_density_profile_einasto_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (object);
+  
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
-
+  
   switch (prop_id)
   {
     case PROP_DELTA:
@@ -136,7 +137,7 @@ static void
 nc_halo_density_profile_einasto_finalize (GObject *object)
 {
   /* TODO: Add deinitalization code here */
-
+  
   G_OBJECT_CLASS (nc_halo_density_profile_einasto_parent_class)->finalize (object);
 }
 
@@ -149,21 +150,21 @@ static gdouble _nc_halo_density_profile_einasto_scale_radius (NcHaloDensityProfi
 static void
 nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *klass)
 {
-  GObjectClass* object_class          = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
   NcHaloDensityProfileClass *parent_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
-  NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
-
+  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_nc_halo_density_profile_einasto_set_property;
   model_class->get_property = &_nc_halo_density_profile_einasto_get_property;
   object_class->finalize    = &nc_halo_density_profile_einasto_finalize;
-
+  
   ncm_model_class_set_name_nick (model_class, "Einasto Density Profile", "Einasto");
   ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_SPARAM_LEN, 0, PROP_SIZE);
-
+  
   /**
    * NcHaloDensityProfileEinasto:Delta:
    *
-   * Constant that indicates the overdensity with respect to the critical density. 
+   * Constant that indicates the overdensity with respect to the critical density.
    * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
@@ -172,11 +173,11 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
                                                         NULL,
                                                         "Overdensity constant",
                                                         200, 1500, 200,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcHaloDensityProfileEinasto:rhos:
-   * 
+   *
    * Central density.
    * FIXME Set correct values (limits)
    */
@@ -184,10 +185,10 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
                               0.5,  10.0, 1.0e-1,
                               NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RHOS,
                               NCM_PARAM_TYPE_FIXED);
-
+  
   /**
    * NcHaloDensityProfileEinasto:rs:
-   * 
+   *
    * Scale radius $r_s$.
    * FIXME Set correct values (limits)
    */
@@ -200,8 +201,7 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   parent_class->integral_density_los = &_nc_halo_density_profile_einasto_integral_density_los;
   parent_class->integral_density_2d  = &_nc_halo_density_profile_einasto_integral_density_2d;
   parent_class->eval_fourier         = &_nc_halo_density_profile_einasto_eval_fourier;
-	parent_class->scale_radius         = &_nc_halo_density_profile_einasto_scale_radius;
-  
+  parent_class->scale_radius         = &_nc_halo_density_profile_einasto_scale_radius;
 }
 
 /**
@@ -217,59 +217,61 @@ nc_halo_density_profile_einasto_new ()
   return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO, NULL);
 }
 
-/// Old code: review it! //////////////////////////////
+/*/ Old code: review it! ////////////////////////////// */
 
 static gdouble
 _nc_halo_density_profile_einasto_scale_radius_matter (NcHICosmo *cosmo, const gdouble M, const gdouble z, const gdouble Delta)
 {
   const gdouble rho_mz = nc_hicosmo_E2Omega_m (cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  const gdouble v = 4.0 * M_PI / 3.0;
-  gdouble rs_mnfw = cbrt (M / (rho_mz * v * Delta ));
-  //printf("z = % 22.15g Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", z, Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), nc_hicosmo_E2Omega_m (cosmo, z), M);
-  //printf ("M = %.5g\n", 969.6 * Omega_m0 * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ());
+  const gdouble v      = 4.0 * M_PI / 3.0;
+  gdouble rs_mnfw      = cbrt (M / (rho_mz * v * Delta));
+  
+  /*printf("z = % 22.15g Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", z, Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), nc_hicosmo_E2Omega_m (cosmo, z), M); */
+  
+  /*printf ("M = %.5g\n", 969.6 * Omega_m0 * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()); */
   return rs_mnfw;
 }
 
-// trying to reproduce fig. 9 page 26 Cooray 2002
+/* trying to reproduce fig. 9 page 26 Cooray 2002 */
 
 static gdouble
 _nc_halo_density_profile_einasto_concentration_parameter (const gdouble M, const gdouble z)
 {
   const gdouble M_star = 7.6 * 1.0e13; /* M value where sigma(M, z=0) = 1 */
-  const gdouble c = 9.0 / (1.0 + z) * pow(M / M_star, -0.2);
-
+  const gdouble c      = 9.0 / (1.0 + z) * pow (M / M_star, -0.2);
+  
   return c;
 }
 
-//end Cooray comparison
+/*end Cooray comparison */
 
 static gdouble
 _nc_halo_density_profile_einasto_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z)
 {
   NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-  gdouble c = _nc_halo_density_profile_einasto_concentration_parameter (M, z);
-  gdouble onepc = (1.0 + c);
-  gdouble m_nfw = log(onepc) - c / onepc;
-  gdouble factor_rs = 1.0 / c;
-  gdouble rs = _nc_halo_density_profile_einasto_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
-  gdouble x = (1.0 + z) * k * rs;
-  gdouble onepcx = onepc * x;
-  gdouble u = 1.0 / m_nfw * (sin(x) * (gsl_sf_Si (onepcx) -  gsl_sf_Si (x)) +
-                             cos(x) * (gsl_sf_Ci (onepcx) -  gsl_sf_Ci (x)) -
-                             sin(c * x) / onepcx);
-
+  gdouble c                          = _nc_halo_density_profile_einasto_concentration_parameter (M, z);
+  gdouble onepc                      = (1.0 + c);
+  gdouble m_nfw                      = log (onepc) - c / onepc;
+  gdouble factor_rs                  = 1.0 / c;
+  gdouble rs                         = _nc_halo_density_profile_einasto_scale_radius_matter (cosmo, M, z, dpnfw->Delta) * factor_rs;
+  gdouble x                          = (1.0 + z) * k * rs;
+  gdouble onepcx                     = onepc * x;
+  gdouble u                          = 1.0 / m_nfw * (sin (x) * (gsl_sf_Si (onepcx) -  gsl_sf_Si (x)) +
+                                                      cos (x) * (gsl_sf_Ci (onepcx) -  gsl_sf_Ci (x)) -
+                                                      sin (c * x) / onepcx);
+  
   if (x == 0.0)
     return u = 1.0;
-
+  
   return u;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+/*///////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-static gdouble 
+static gdouble
 _rho_crit_solar_mass_Mpc3 (NcHICosmo *cosmo, gdouble z)
 {
-	/* Critical density in M_solar / Mpc^3 units */
+  /* Critical density in M_solar / Mpc^3 units */
   return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
 }
 
@@ -279,140 +281,152 @@ _nc_halo_density_profile_einasto_r_delta (NcHaloDensityProfileEinasto *dpnfw, Nc
   const gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   const gdouble rD3     = 3.0 / (4.0 * M_PI * dpnfw->Delta * rho_c);
   const gdouble r_Delta = cbrt (rD3);
-
-  return r_Delta; 
+  
+  return r_Delta;
 }
 
 static gdouble
 _nc_halo_density_profile_einasto_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble z)
 {
-	NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-  gdouble r_Delta = _nc_halo_density_profile_einasto_r_delta (dpnfw, cosmo, z);
-
-	/* IMPLEMENT if it is the case!!! */
-	return r_Delta;
+  NcHaloDensityProfileEinasto *dpnfw = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
+  gdouble r_Delta                    = _nc_halo_density_profile_einasto_r_delta (dpnfw, cosmo, z);
+  
+  /* IMPLEMENT if it is the case!!! */
+  return r_Delta;
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_einasto_deltac (NcHaloDensityProfileEinasto *dpnfw)
 {
   /*gdouble onepc = 1.0;*/
-  gdouble delta_c = (dpnfw->Delta / 3.0); 
-	/* IMPLEMENT if it is the case! */
-
+  gdouble delta_c = (dpnfw->Delta / 3.0);
+  
+  /* IMPLEMENT if it is the case! */
+  
   return delta_c;
 }
 
-////////////////////////////////// Cluster toolkit ///////////////////////////////
+/*//////////////////////////////// Cluster toolkit /////////////////////////////// */
 #define rhomconst 2.77533742639e+11
 
-int calc_xi_einasto(double*r, int Nr, double Mass, double conc, int delta, double om, double*xi_nfw){
+int
+calc_xi_einasto (double *r, int Nr, double Mass, double conc, int delta, double om, double *xi_nfw)
+{
   int i;
-  double rhom = om * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //om*rhomconst;//SM h^2/Mpc^3
-  //double rho0_rhom = delta/(3.*(log(1.+conc)-conc/(1.+conc)));
-  double rdelta = pow(Mass/(1.33333333333*M_PI*rhom*delta), 0.33333333333);
-  double rscale = rdelta/conc;
-  double fc = log(1.+conc)-conc/(1.+conc);
-  double r_rs = 0.0;
-  for(i = 0; i < Nr; i++){
-    r_rs = r[i]/rscale;
-    //xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.;
-    xi_nfw[i] = Mass/(4.*M_PI*rscale*rscale*rscale*fc)/(r_rs*(1+r_rs)*(1+r_rs))/rhom - 1.0;
-
+  double rhom = om * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * 0.7 * 0.7; /*om*rhomconst;//SM h^2/Mpc^3 */
+  /*double rho0_rhom = delta/(3.*(log(1.+conc)-conc/(1.+conc))); */
+  double rdelta = pow (Mass / (1.33333333333 * M_PI * rhom * delta), 0.33333333333);
+  double rscale = rdelta / conc;
+  double fc     = log (1. + conc) - conc / (1. + conc);
+  double r_rs   = 0.0;
+  
+  for (i = 0; i < Nr; i++)
+  {
+    r_rs = r[i] / rscale;
+    /*xi_nfw[i] = rho0_rhom/(r_rs*(1+r_rs)*(1+r_rs)) - 1.; */
+    xi_nfw[i] = Mass / (4. * M_PI * rscale * rscale * rscale * fc) / (r_rs * (1 + r_rs) * (1 + r_rs)) / rhom - 1.0;
   }
-	printf ("factor dele % 22.15g\n", Mass/(4.*M_PI*rscale*rscale*rscale*fc)/(r_rs*(1+r_rs)*(1+r_rs)));
-	//printf ("rscale dele % 22.15g | % 22.15g % 22.15g % 22.15g %d % 22.15g\n", rscale, rdelta, conc, rhom, delta, Mass);
+  
+  printf ("factor dele % 22.15g\n", Mass / (4. * M_PI * rscale * rscale * rscale * fc) / (r_rs * (1 + r_rs) * (1 + r_rs)));
+  
+  /*printf ("rscale dele % 22.15g | % 22.15g % 22.15g % 22.15g %d % 22.15g\n", rscale, rdelta, conc, rhom, delta, Mass); */
   return 0;
 }
 
-int calc_rho_einasto(double*r, int Nr, double Mass, double conc, int delta, double Omega_m, double*rho_nfw){
+int
+calc_rho_einasto (double *r, int Nr, double Mass, double conc, int delta, double Omega_m, double *rho_nfw)
+{
   int i;
-  double rhom = Omega_m * ncm_c_crit_mass_density_h2_solar_mass_Mpc3() * 0.7 * 0.7; //Omega_m*rhomconst;//Msun h^2/Mpc^3
-  calc_xi_einasto(r, Nr, Mass, conc, delta, Omega_m, rho_nfw); //rho_nfw actually holds xi_nfw here
-  for(i = 0; i < Nr; i++){
-    rho_nfw[i] = rhom*(1+rho_nfw[i]);
+  double rhom = Omega_m * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * 0.7 * 0.7; /*Omega_m*rhomconst;//Msun h^2/Mpc^3 */
+  
+  calc_xi_einasto (r, Nr, Mass, conc, delta, Omega_m, rho_nfw); /*rho_nfw actually holds xi_nfw here */
+  
+  for (i = 0; i < Nr; i++)
+  {
+    rho_nfw[i] = rhom * (1 + rho_nfw[i]);
   }
+  
   return 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+/*////////////////////////////////////////////////////////////////////////////// */
 
 static gdouble
 _nc_halo_density_profile_einasto_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
 {
   NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-
+  
   gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z);
   gdouble x       = r / rs;
   gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
   gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   gdouble onepx   = 1.0 + x;
-  gdouble onepx2  = onepx * onepx; 
-
-	{
-		const gdouble Omega_m0 = 1.0;//nc_hicosmo_Omega_m0 (cosmo);
-		gdouble ret = 0.0;
-		gdouble rrr = r;
-
-		/* FIX this function!!! Copy from NFW */
-		calc_rho_einasto (&rrr, 1, RHOS, RS, dpe->Delta, Omega_m0, &ret);
-		//printf ("rho_c % 22.15g rho % 22.15g\n", rho_c / nc_hicosmo_h2 (cosmo), ncm_c_crit_mass_density_h2_solar_mass_Mpc3());
-		printf ("z = % 22.15g rscale meu % 22.15g\n", z, rs);
-		{
-			const gdouble ret_nc = delta_c * rho_c/(x * onepx2);
-			printf ("factor NC % 22.15g\n", delta_c * rho_c / (x * onepx2));
-	    printf ("MEU % 22.15g DELE % 22.15g diff %22.15g\n", ret_nc, ret, ret / ret_nc - 1.0);	
-		}
-	}
-	
-	return delta_c * rho_c/(x * onepx2);
+  gdouble onepx2  = onepx * onepx;
+  
+  {
+    const gdouble Omega_m0 = 1.0; /*nc_hicosmo_Omega_m0 (cosmo); */
+    gdouble ret            = 0.0;
+    gdouble rrr            = r;
+    
+    /* FIX this function!!! Copy from NFW */
+    calc_rho_einasto (&rrr, 1, RHOS, RS, dpe->Delta, Omega_m0, &ret);
+    /*printf ("rho_c % 22.15g rho % 22.15g\n", rho_c / nc_hicosmo_h2 (cosmo), ncm_c_crit_mass_density_h2_solar_mass_Mpc3()); */
+    printf ("z = % 22.15g rscale meu % 22.15g\n", z, rs);
+    {
+      const gdouble ret_nc = delta_c * rho_c / (x * onepx2);
+      
+      printf ("factor NC % 22.15g\n", delta_c * rho_c / (x * onepx2));
+      printf ("MEU % 22.15g DELE % 22.15g diff %22.15g\n", ret_nc, ret, ret / ret_nc - 1.0);
+    }
+  }
+  
+  return delta_c * rho_c / (x * onepx2);
 }
 
 /* los = line of sight */
-static gdouble 
+static gdouble
 _nc_halo_density_profile_einasto_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
   NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-
-  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
+  
+  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
-  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z); 
+  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z);
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
-	gdouble xm1     = x - 1.0;
-	gdouble xp1     = x + 1.0;
-	gdouble x2m1    = xm1 * xp1;
-
-	if (fabs (xm1) < 1.0e-6)
-    return A * (1.0 / 3.0 + (- 2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * xm1) * xm1) * xm1);	
+  gdouble xm1     = x - 1.0;
+  gdouble xp1     = x + 1.0;
+  gdouble x2m1    = xm1 * xp1;
+  
+  if (fabs (xm1) < 1.0e-6)
+    return A * (1.0 / 3.0 + (-2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * xm1) * xm1) * xm1);
   else if (xm1 < 0.0)
     return A / x2m1 * (1.0 - 2.0 / sqrt (-x2m1) * atanh (sqrt (-xm1 / xp1)));
   else
     return A / x2m1 * (1.0 - 2.0 / sqrt (x2m1) * atan (sqrt (xm1 / xp1)));
-  
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_einasto_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
   NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-
-  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z); 
+  
+  gdouble rho_c   = _rho_crit_solar_mass_Mpc3 (cosmo, z);
   gdouble delta_c = _nc_halo_density_profile_einasto_deltac (dpe);
-  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z); 
+  gdouble rs      = _nc_halo_density_profile_einasto_scale_radius (dp, cosmo, z);
   gdouble A       = rs * delta_c * rho_c;
   gdouble x       = R / rs;
-	gdouble xm1     = x - 1.0;
-	gdouble xp1     = x + 1.0;
-	gdouble x2m1    = xm1 * xp1;
-
-  if (fabs (xm1) < 1.0e-6)
-    return A * (2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (- 1.0 / 15.0 - 2.0 / 105.0 * xm1) * xm1) * xm1);	
-	
-  else if (xm1 < 0.0)
-    return 2.0 * A * (2.0/sqrt(- x2m1) * atanh(sqrt(-xm1 / xp1)) + log(x) - M_LN2);
-
-  else
-    return 2.0 * A * (2.0/sqrt(x2m1) * atan(sqrt(xm1 / xp1)) + log(x) - M_LN2);
+  gdouble xm1     = x - 1.0;
+  gdouble xp1     = x + 1.0;
+  gdouble x2m1    = xm1 * xp1;
   
+  if (fabs (xm1) < 1.0e-6)
+    return A * (2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (-1.0 / 15.0 - 2.0 / 105.0 * xm1) * xm1) * xm1);
+  
+  else if (xm1 < 0.0)
+    return 2.0 * A * (2.0 / sqrt (-x2m1) * atanh (sqrt (-xm1 / xp1)) + log (x) - M_LN2);
+  
+  else
+    return 2.0 * A * (2.0 / sqrt (x2m1) * atan (sqrt (xm1 / xp1)) + log (x) - M_LN2);
 }
+

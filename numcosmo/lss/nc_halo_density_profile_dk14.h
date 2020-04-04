@@ -2,7 +2,7 @@
  *            nc_halo_density_profile_dk14.h
  *
  *  Tue July 16 15:20:15 2019
- *  Copyright  2014  
+ *  Copyright  2014
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -52,23 +52,23 @@ struct _NcHaloDensityProfileDK14Class
 /**
  * NcHaloDensityProfileDK14Params:
  * @NC_HALO_DENSITY_PROFILE_DK14_RT: the truncation radius, the radius where the profile steepens beyond the Einasto profile, in $kpc/h$
- * @NC_HALO_DENSITY_PROFILE_DK14_BETA: sharpness of the steepening 
- * @NC_HALO_DENSITY_PROFILE_DK14_GAMMA: asymptotic negative slope of the steepening term 
+ * @NC_HALO_DENSITY_PROFILE_DK14_BETA: sharpness of the steepening
+ * @NC_HALO_DENSITY_PROFILE_DK14_GAMMA: asymptotic negative slope of the steepening term
  * @NC_HALO_DENSITY_PROFILE_DK14_BE: amplitude of one factor of the outer profile.
  * @NC_HALO_DENSITY_PROFILE_DK14_SE: slope of the outer profile.
- * 
- * The first three parameters, $\pho_s$, $r_s$ and $\alpha$, are the Einasto profile's parameters. 
- * The transition term $f_{trans}$ is a function parametrized by $r_t$, $beta$ and $\gamma$. These two functions determine the inner 
- * profile, whereas the outer profile is parametrized br $b_e$ and $s_e$. 
+ *
+ * The first three parameters, $\pho_s$, $r_s$ and $\alpha$, are the Einasto profile's parameters.
+ * The transition term $f_{trans}$ is a function parametrized by $r_t$, $beta$ and $\gamma$. These two functions determine the inner
+ * profile, whereas the outer profile is parametrized br $b_e$ and $s_e$.
  *
  */
 typedef enum _NcHaloDensityProfileDK14Params
 {
   NC_HALO_DENSITY_PROFILE_DK14_RT = NC_HALO_DENSITY_PROFILE_SPARAM_LEN,
-	NC_HALO_DENSITY_PROFILE_DK14_BETA,
-	NC_HALO_DENSITY_PROFILE_DK14_GAMMA,
-	NC_HALO_DENSITY_PROFILE_DK14_BE,
-	NC_HALO_DENSITY_PROFILE_DK14_SE,
+  NC_HALO_DENSITY_PROFILE_DK14_BETA,
+  NC_HALO_DENSITY_PROFILE_DK14_GAMMA,
+  NC_HALO_DENSITY_PROFILE_DK14_BE,
+  NC_HALO_DENSITY_PROFILE_DK14_SE,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_DK14_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileDK14Params;
@@ -77,15 +77,15 @@ typedef enum _NcHaloDensityProfileDK14Params
  * NcHaloDensityProfileDK14MethodParams:
  * @NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS: FIXME
  * @NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcHaloDensityProfileDK14MethodParams
 {
-	NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS = 0,
-	NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS,
-  /* < private > */	
+  NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS = 0,
+  NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS,
+  /* < private > */
 } NcHaloDensityProfileDK14MethodParams;
 
 struct _NcHaloDensityProfileDK14

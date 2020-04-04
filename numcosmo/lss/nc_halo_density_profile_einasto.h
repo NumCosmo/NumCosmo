@@ -2,7 +2,7 @@
  *            nc_halo_density_profile_einasto.h
  *
  *  Wed July 17 12:33:27 2019
- *  Copyright  2014  
+ *  Copyright  2014
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -53,7 +53,7 @@ struct _NcHaloDensityProfileEinastoClass
  * NcHaloDensityProfileEinastoParams:
  * @NC_HALO_DENSITY_PROFILE_EINASTO_RHOS: the central scale density in $M_\odot h^{2}/kpc^3$.
  * @NC_HALO_DENSITY_PROFILE_EINASTO_RS: the scale radius in physical $kpc/h$
- * @NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA: determines how quickly the slope of the inner Einasto profile steepens 
+ * @NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA: determines how quickly the slope of the inner Einasto profile steepens
  *
  * FIXME
  */
@@ -61,7 +61,7 @@ typedef enum _NcHaloDensityProfileEinastoParams
 {
   NC_HALO_DENSITY_PROFILE_EINASTO_RHOS = NC_HALO_DENSITY_PROFILE_SPARAM_LEN,
   NC_HALO_DENSITY_PROFILE_EINASTO_RS,
-	NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA,
+  NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_EINASTO_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileEinastoParams;
@@ -80,7 +80,7 @@ NcHaloDensityProfile *nc_halo_density_profile_einasto_new (void);
 
 #define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RHOS  (0.0)
 #define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RS    (0.0)
-#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA (0.0) 
+#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA (0.0)
 
 #define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL (0.0)
 

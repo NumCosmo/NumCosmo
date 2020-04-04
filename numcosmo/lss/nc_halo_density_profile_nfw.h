@@ -2,7 +2,7 @@
  *            nc_halo_density_profile_nfw.h
  *
  *  Tue June 10 16:40:06 2014
- *  Copyright  2014  
+ *  Copyright  2014
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -59,7 +59,7 @@ struct _NcHaloDensityProfileNFWClass
 typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_NFW_SPARAMS >*/
 {
   NC_HALO_DENSITY_PROFILE_NFW_C_DELTA = 0,
-  NC_HALO_DENSITY_PROFILE_NFW_M_DELTA, 
+  NC_HALO_DENSITY_PROFILE_NFW_M_DELTA,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileNFWSParams;
