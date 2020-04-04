@@ -55,13 +55,13 @@ struct _NcmVectorClass
 
 /**
  * NcmVectorInternal:
- * @NCM_VECTOR_SLICE: FIXME
- * @NCM_VECTOR_GSL_VECTOR: FIXME
- * @NCM_VECTOR_MALLOC: FIXME
- * @NCM_VECTOR_ARRAY: FIXME
- * @NCM_VECTOR_DERIVED: FIXME
+ * @NCM_VECTOR_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments. 
+ * @NCM_VECTOR_GSL_VECTOR: Uses [gsl_vector](https://www.gnu.org/software/gsl/doc/html/vectors.html#vectors) from [GSL](https://www.gnu.org/software/gsl/) as the base object.
+ * @NCM_VECTOR_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions.
+ * @NCM_VECTOR_ARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
+ * @NCM_VECTOR_DERIVED: Uses another #NcmVector (for example, if it is getting a subvector from a #NcmVector).
  *
- * FIXME
+ * This enumerator is only used internally. Only by developers.
  *
  */
 typedef enum _NcmVectorInternal
@@ -107,23 +107,23 @@ const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, 
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
 NcmVector *ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride);
-GVariant *ncm_vector_get_variant (const NcmVector *v);
-GVariant *ncm_vector_peek_variant (const NcmVector *v);
+GVariant *ncm_vector_get_variant (const NcmVector *cv);
+GVariant *ncm_vector_peek_variant (const NcmVector *cv);
 
-void ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format, gboolean cr);
-void ncm_vector_log_vals_avpb (const NcmVector *v, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b);
-void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data);
+void ncm_vector_log_vals (const NcmVector *cv, const gchar *prestr, const gchar *format, gboolean cr);
+void ncm_vector_log_vals_avpb (const NcmVector *cv, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b);
+void ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data);
 
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
-void ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
+void ncm_vector_axpy (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
 void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
 
 NCM_INLINE gdouble ncm_vector_sum_cpts (const NcmVector *cv);
-NCM_INLINE const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
+NCM_INLINE const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *gv);
 NCM_INLINE gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 NCM_INLINE gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
 NCM_INLINE gdouble *ncm_vector_ptr (NcmVector *cv, const guint i);
@@ -172,7 +172,7 @@ NCM_INLINE gboolean ncm_vector_is_finite (const NcmVector *cv);
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
 NcmVector *ncm_vector_dup (const NcmVector *cv);
-void ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size);
+void ncm_vector_substitute (NcmVector **cv1, NcmVector *cv2, gboolean check_size);
 void ncm_vector_free (NcmVector *cv);
 void ncm_vector_clear (NcmVector **cv);
 void ncm_vector_const_free (const NcmVector *cv);
@@ -199,9 +199,9 @@ ncm_vector_sum_cpts (const NcmVector *cv)
 }
 
 NCM_INLINE const NcmVector *
-ncm_vector_const_new_gsl (const gsl_vector *v)
+ncm_vector_const_new_gsl (const gsl_vector *gv)
 {
-  return ncm_vector_new_data_static ((v)->data, (v)->size, (v)->stride);
+  return ncm_vector_new_data_static ((gv)->data, (gv)->size, (gv)->stride);
 }
 
 NCM_INLINE gdouble
