@@ -51,13 +51,13 @@ typedef struct _NcmMatrix NcmMatrix;
 
 /**
  * NcmMatrixInternal:
- * @NCM_MATRIX_SLICE: FIXME
- * @NCM_MATRIX_GSL_MATRIX: FIXME
- * @NCM_MATRIX_MALLOC: FIXME
- * @NCM_MATRIX_GARRAY: FIXME
- * @NCM_MATRIX_DERIVED: FIXME
+ * @NCM_MATRIX_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments. 
+ * @NCM_MATRIX_GSL_MATRIX: Uses [gsl_matrix](https://www.gnu.org/software/gsl/doc/html/vectors.html#matrices) from [GSL](https://www.gnu.org/software/gsl/) as the base object. 
+ * @NCM_MATRIX_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions. 
+ * @NCM_MATRIX_GARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
+ * @NCM_MATRIX_DERIVED: Uses another #NcmMatrix (for example, if it is getting a submatrix from a #NcmMatrix).
  *
- * FIXME
+ * This enumerator is only used internally. Only by developers.
  *
  */
 typedef enum _NcmMatrixInternal
@@ -75,11 +75,6 @@ struct _NcmMatrixClass
   GObjectClass parent_class;
 };
 
-/**
- * NcmMatrix:
- *
- * FIXME
- */
 struct _NcmMatrix
 {
   /*< private >*/
@@ -164,7 +159,7 @@ NCM_INLINE const gdouble *ncm_matrix_const_data (const NcmMatrix *cm);
 
 NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
 void ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size);
-void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
+void ncm_matrix_add_mul (NcmMatrix *cm1, const gdouble a, NcmMatrix *cm2);
 
 gdouble ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
 gdouble ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
