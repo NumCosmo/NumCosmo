@@ -116,7 +116,7 @@ GVariant *ncm_matrix_peek_variant (NcmMatrix *cm);
 void ncm_matrix_set_from_data (NcmMatrix *cm, gdouble *data);
 void ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a);
 
-NCM_INLINE const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *m);
+NCM_INLINE const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *gm);
 NCM_INLINE gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE const gdouble *ncm_matrix_const_ptr (const NcmMatrix *cm, const guint i, const guint j);
@@ -203,9 +203,9 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE const NcmMatrix *
-ncm_matrix_new_gsl_const (gsl_matrix *m)
+ncm_matrix_new_gsl_const (gsl_matrix *gm)
 {
-  return ncm_matrix_new_data_static_tda ((m)->data, (m)->size1, (m)->size2, (m)->tda);
+  return ncm_matrix_new_data_static_tda ((gm)->data, (gm)->size1, (gm)->size2, (gm)->tda);
 }
 
 NCM_INLINE gdouble

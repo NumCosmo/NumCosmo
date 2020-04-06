@@ -404,7 +404,7 @@ ncm_matrix_new_data_static_tda (gdouble *d, guint nrows, guint ncols, guint tda)
  *
  * Creates a new matrix using the values from @var.
  *
- * Returns: (transfer full) :a #NcmMatrix with the values from @var.
+ * Returns: (transfer full): a #NcmMatrix with the values from @var.
  */
 NcmMatrix *
 ncm_matrix_new_variant (GVariant *var)
@@ -445,7 +445,7 @@ ncm_matrix_const_new_data (const gdouble *d, guint nrows, guint ncols)
  *
  * Creates a new constant matrix using the same memory of @var.
  *
- * Returns: (transfer full) :a #NcmMatrix with the values from @var.
+ * Returns: (transfer full): a #NcmMatrix with the values from @var.
  */
 const NcmMatrix *
 ncm_matrix_const_new_variant (GVariant *var)
@@ -1718,9 +1718,9 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
 
 /**
  * ncm_matrix_new_gsl_const: (skip)
- * @m: matrix from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
+ * @gm: matrix from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
  *
- * This function converts @m into a constant #NcmMatrix.
+ * This function converts @gm into a constant #NcmMatrix.
  *
  * Returns: A new constant #NcmMatrix.
  */
@@ -1771,7 +1771,7 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * @j: column index.
  * @val: a double.
  *
- * This function fills the matrix @cm considering it being in the colmajor format.
+ * This function sets the value of the (@i,@j)-th element of the matrix @cm to @val considering it being in the [column-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
  *
  */
 
@@ -1997,7 +1997,7 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * ncm_matrix_const_gsl: (skip)
  * @cm: a #NcmMatrix.
  *
- * This function returns a constant pointer to the @gsl_matrix associated to the matrix @cm.
+ * This function returns a constant pointer to the #gsl_matrix associated to the matrix @cm.
  *
  * Returns: A constant pointer to a #gsl_matrix.
  */
@@ -2050,6 +2050,8 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
 /**
  * ncm_matrix_tda:
  * @cm: a #NcmMatrix.
+ *
+ * This functions returns the matrix @cm @tda value.
  *
  * Returns: The matrix tda.
  */
