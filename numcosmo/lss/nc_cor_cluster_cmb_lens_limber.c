@@ -121,7 +121,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
   gdouble dn_dlnM = nc_halo_mass_function_dn_dlnM (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
-  gdouble u = nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble u = 1.0;//nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble rho_mz = nc_hicosmo_E2Omega_m (int_data->cosmo, int_data->z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
   gdouble integrand_powspec_1h = (M / rho_mz) * (M / rho_mz) * dn_dlnM * u * u;
@@ -129,6 +129,8 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
   //printf("M = %.5e\n", M);
   //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z));
 
+  g_assert_not_reached (); /* FIXME: nc_halo_density_profile_eval_fourier */
+  
   return integrand_powspec_1h;
 }
 
@@ -443,9 +445,11 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   gdouble M = exp(lnM);
   gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
-  gdouble u = nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble u = 1.0; //nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble integrand_mass_2h_second = M * dn_dlnM_times_b * u;
 
+  g_assert_not_reached (); /* FIXME: nc_halo_density_profile_eval_fourier */
+  
   return integrand_mass_2h_second;
 }
 

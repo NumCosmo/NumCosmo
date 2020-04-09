@@ -396,9 +396,9 @@ nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd,
 gdouble
 nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	gdouble sigma_2 = nc_halo_density_profile_integral_density_los (dp, cosmo, R, zc);
+	const gdouble Sigma = nc_halo_density_profile_eval_2d_density (dp, cosmo, R, zc);
 		
-	return 2.0 * sigma_2;
+	return Sigma;
 }
 
 /**
@@ -416,12 +416,9 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProf
 gdouble 
 nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	const gdouble rs             = nc_halo_density_profile_scale_radius (dp, cosmo, zc);
-	const gdouble x              = R / rs;
-  const gdouble x2             = x * x;
-	const gdouble mean_sigma_2x2 = nc_halo_density_profile_integral_density_2d (dp, cosmo, R, zc);
+	const gdouble mean_sigma_2x2 = nc_halo_density_profile_eval_cyl_mass (dp, cosmo, R, zc) / (ncm_c_pi () * R * R);
 
-	return (2.0 / x2) * mean_sigma_2x2;
+	return mean_sigma_2x2;
 }
 
 /* Correction term: Central point mass */

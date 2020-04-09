@@ -196,11 +196,6 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
                               NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
   
-  parent_class->eval_density         = &_nc_halo_density_profile_dk14_eval_density;
-  parent_class->integral_density_los = &_nc_halo_density_profile_dk14_integral_density_los;
-  parent_class->integral_density_2d  = &_nc_halo_density_profile_dk14_integral_density_2d;
-  parent_class->eval_fourier         = &_nc_halo_density_profile_dk14_eval_fourier;
-  parent_class->scale_radius         = &_nc_halo_density_profile_dk14_scale_radius;
 }
 
 /**

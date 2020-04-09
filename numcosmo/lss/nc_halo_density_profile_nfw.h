@@ -49,21 +49,6 @@ struct _NcHaloDensityProfileNFWClass
   NcHaloDensityProfileClass parent_class;
 };
 
-/**
- * NcHaloDensityProfileNFWSParams:
- * @NC_HALO_DENSITY_PROFILE_NFW_C_DELTA: concentration parameter
- * @NC_HALO_DENSITY_PROFILE_NFW_M_DELTA: halo mass
- *
- * FIXME
- */
-typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_NFW_SPARAMS >*/
-{
-  NC_HALO_DENSITY_PROFILE_NFW_C_DELTA = 0,
-  NC_HALO_DENSITY_PROFILE_NFW_M_DELTA,
-  /* < private > */
-  NC_HALO_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
-} NcHaloDensityProfileNFWSParams;
-
 struct _NcHaloDensityProfileNFW
 {
   /*< private > */
@@ -73,8 +58,6 @@ struct _NcHaloDensityProfileNFW
 GType nc_halo_density_profile_nfw_get_type (void) G_GNUC_CONST;
 
 NcHaloDensityProfileNFW *nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta);
-
-gdouble nc_halo_density_profile_nfw_deltac (NcHaloDensityProfileNFW *dpnfw, NcHICosmo *cosmo, const gdouble z);
 
 G_END_DECLS
 

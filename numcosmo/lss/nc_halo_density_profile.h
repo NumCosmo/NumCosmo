@@ -42,29 +42,31 @@ G_BEGIN_DECLS
 
 typedef struct _NcHaloDensityProfileClass NcHaloDensityProfileClass;
 typedef struct _NcHaloDensityProfile NcHaloDensityProfile;
+typedef struct _NcHaloDensityProfilePrivate NcHaloDensityProfilePrivate;
 
 struct _NcHaloDensityProfileClass
 {
   /*< private >*/
   NcmModelClass parent_class;
   
-  gdouble (*eval_density) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-  gdouble (*integral_density_los) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-  gdouble (*integral_density_2d) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-  gdouble (*eval_fourier) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
-  gdouble (*scale_radius) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-  gdouble (*central_density) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+  gdouble (*eval_dl_density) (NcHaloDensityProfile *dp, const gdouble x);
+  gdouble (*eval_dl_spher_mass) (NcHaloDensityProfile *dp, const gdouble x);
+  gdouble (*eval_dl_2d_density) (NcHaloDensityProfile *dp, const gdouble X);
+  gdouble (*eval_dl_cyl_mass) (NcHaloDensityProfile *dp, const gdouble X);
 };
 
 /**
  * NcHaloDensityProfileMassDef:
- * @NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN: halo mass defined in terms of the mean density
- * @NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density
- * @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density
+ * @NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN: halo mass defined in terms of the mean density $\rho_\mathrm{bg} = \rho_m(z)$
+ * @NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
+ * @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
  *
- * Spherical overdensity halo mass: $$M = \frac{4\pi}{3} \Delta \rho R^3,$$
- * where $\rho$ is the mean density of the universe at redshift z, $\rho_m (z)$, or the critical density at z,
- * $\rho_c (z)$, or $\Delta_{\text{vir}}$ times $\rho_c (z)$.
+ * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
+ * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:MDelta is ignored and 
+ * \begin{equation}\label{def:DVir}
+ * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
+ * \end{equation}
  *
  */
 typedef enum _NcHaloDensityProfileMassDef
@@ -78,14 +80,17 @@ typedef enum _NcHaloDensityProfileMassDef
 
 /**
  * NcHaloDensityProfileSParams:
- * @NC_HALO_DENSITY_PROFILE_C: concentration parameter
- * @NC_HALO_DENSITY_PROFILE_M_DELTA: halo mass
+ * @NC_HALO_DENSITY_PROFILE_C_DELTA: concentration parameter $r_\Delta$
+ * @NC_HALO_DENSITY_PROFILE_M_DELTA: halo mass $M_\Delta$
  *
- * FIXME
+ * Fundamental parametrization of the profile $\rho(r)$,
+ * any additional parameter must be included in the implementation
+ * of this class.
+ * 
  */
 typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_SPARAMS >*/
 {
-  NC_HALO_DENSITY_PROFILE_C = 0,
+  NC_HALO_DENSITY_PROFILE_C_DELTA = 0,
   NC_HALO_DENSITY_PROFILE_M_DELTA,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_SPARAM_LEN, /*< skip >*/
@@ -95,9 +100,7 @@ struct _NcHaloDensityProfile
 {
   /*< private >*/
   NcmModel parent_instance;
-  NcHaloDensityProfileMassDef mdef; /* mass definition*/
-  gdouble z;                        /* redshift */
-  gdouble oDelta;                   /* overdensity constant */
+  NcHaloDensityProfilePrivate *priv;
 };
 
 GType nc_halo_density_profile_get_type (void) G_GNUC_CONST;
@@ -110,21 +113,39 @@ NcHaloDensityProfile *nc_halo_density_profile_ref (NcHaloDensityProfile *dp);
 void nc_halo_density_profile_free (NcHaloDensityProfile *dp);
 void nc_halo_density_profile_clear (NcHaloDensityProfile **dp);
 
-gdouble nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
-gdouble nc_halo_density_profile_integral_density_los (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-gdouble nc_halo_density_profile_integral_density_2d (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-gdouble nc_halo_density_profile_eval_fourier (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
-gdouble nc_halo_density_profile_scale_radius (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-gdouble nc_halo_density_profile_Delta (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-gdouble nc_halo_density_profile_mass_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-gdouble nc_halo_density_profile_mass_density_threshold (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-gdouble nc_halo_density_profile_central_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+void nc_halo_density_profile_set_reltol (NcHaloDensityProfile *dp, const gdouble reltol);
+void nc_halo_density_profile_set_lnXi (NcHaloDensityProfile *dp, const gdouble lnXi);
+void nc_halo_density_profile_set_lnXf (NcHaloDensityProfile *dp, const gdouble lnXf);
 
-#define NC_HALO_DENSITY_PROFILE_DEFAULT_C        (4.0)
-#define NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA  (2.0e14)
+gdouble nc_halo_density_profile_get_reltol (NcHaloDensityProfile *dp);
+gdouble nc_halo_density_profile_get_lnXi (NcHaloDensityProfile *dp);
+gdouble nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp);
+
+void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
+
+gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp);
+gdouble nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+gdouble nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
+
+gdouble nc_halo_density_profile_Delta (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_halo_density_profile_rho_bg (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_halo_density_profile_Delta_rho_bg (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+
+gdouble nc_halo_density_profile_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_halo_density_profile_r_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+void nc_halo_density_profile_r_s_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *r_s, gdouble *rho_s);
+
+gdouble nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+gdouble nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_halo_density_profile_eval_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+gdouble nc_halo_density_profile_eval_cyl_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+
+#define NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA (4.0   )
+#define NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA (2.0e14)
+
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 
 #endif /* _NC_HALO_DENSITY_PROFILE_H_ */
-

@@ -197,11 +197,6 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
                               NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RS,
                               NCM_PARAM_TYPE_FIXED);
   
-  parent_class->eval_density         = &_nc_halo_density_profile_einasto_eval_density;
-  parent_class->integral_density_los = &_nc_halo_density_profile_einasto_integral_density_los;
-  parent_class->integral_density_2d  = &_nc_halo_density_profile_einasto_integral_density_2d;
-  parent_class->eval_fourier         = &_nc_halo_density_profile_einasto_eval_fourier;
-  parent_class->scale_radius         = &_nc_halo_density_profile_einasto_scale_radius;
 }
 
 /**
