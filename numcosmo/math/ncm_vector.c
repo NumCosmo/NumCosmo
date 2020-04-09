@@ -165,6 +165,12 @@ ncm_vector_class_init (NcmVectorClass *klass)
   object_class->dispose      = &_ncm_vector_dispose;
   object_class->finalize     = &_ncm_vector_finalize;
   
+  /**
+   * NcmVector:values:
+   *
+   * GVariant representation of the vector used to serialize the object.
+   * 
+   */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
                                                          G_VARIANT_TYPE_ARRAY, NULL,

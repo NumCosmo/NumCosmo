@@ -159,7 +159,13 @@ ncm_matrix_class_init (NcmMatrixClass *klass)
   object_class->get_property = &_ncm_matrix_get_property;
   object_class->dispose      = &_ncm_matrix_dispose;
   object_class->finalize     = &_ncm_matrix_finalize;
-  
+
+  /**   
+   * NcmMatrix:values:
+   *
+   * GVariant representation of the matrix used to serialize the object.
+   * 
+   */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
                                                          G_VARIANT_TYPE_ARRAY, NULL,
