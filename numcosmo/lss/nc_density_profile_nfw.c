@@ -30,7 +30,7 @@
  *
  * This object implements the #NcDensityProfile class for a Navarro-Frenk-White (NFW) density profile.
  *
- * The NFW profile is defined as
+ * The NFW profile is defined as (FIXME - density depends on the mass definition!)
  * \begin{equation}
  * \rho(r) = \frac{\delta_c \rho_{crit}}{(r/r_s)(1 + r/r_s)^2},
  * \end{equation}
@@ -267,10 +267,10 @@ calc_rho_nfw(double*r, int Nr, double Mass, double conc, int delta, double Omega
 static gdouble
 _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
 {
-  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+  //NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
   const gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z);
   const gdouble x       = r / rs;
-  const gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
+  const gdouble delta_c = nc_density_profile_deltac (dp, cosmo, z);
   const gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z);
   const gdouble onepx   = 1.0 + x;
   const gdouble onepx2  = onepx * onepx; 
@@ -297,10 +297,10 @@ _nc_density_profile_nfw_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, co
 static gdouble 
 _nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+  //NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
 
   const gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z); 
-  const gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
+  const gdouble delta_c = nc_density_profile_deltac (dp, cosmo, z);
   const gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z); 
   const gdouble A       = rs * delta_c * rho;
   const gdouble x       = R / rs;
@@ -320,10 +320,10 @@ _nc_density_profile_nfw_integral_density_los (NcDensityProfile *dp, NcHICosmo *c
 static gdouble 
 _nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
-  NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
+  //NcDensityProfileNFW *dpnfw = NC_DENSITY_PROFILE_NFW (dp);
 
   gdouble rho     = nc_density_profile_mass_density (dp, cosmo, z); 
-  gdouble delta_c = nc_density_profile_nfw_deltac (dpnfw, cosmo, z);
+  gdouble delta_c = nc_density_profile_deltac (dp, cosmo, z);
   gdouble rs      = nc_density_profile_scale_radius (dp, cosmo, z); 
   gdouble A       = rs * delta_c * rho;
   gdouble x       = R / rs;
@@ -340,26 +340,4 @@ _nc_density_profile_nfw_integral_density_2d (NcDensityProfile *dp, NcHICosmo *co
   else
     return 2.0 * A * (2.0/sqrt(x2m1) * atan(sqrt(xm1 / xp1)) + log(x) - M_LN2);
   
-}
-
-/**
- * nc_density_profile_nfw_deltac:
- * @dpnfw: a #NcDensityProfileNFW
- * @cosmo: a #NcHICosmo
- * @z: redshift $z$
- * 
- * Returns: $\delta_c$
- */ 
-gdouble 
-nc_density_profile_nfw_deltac (NcDensityProfileNFW *dpnfw, NcHICosmo *cosmo, const gdouble z)
-{
-	NcDensityProfile *dp  = NC_DENSITY_PROFILE (dpnfw);
-	const gdouble c       = C_DELTA;
-  const gdouble onepc   = 1.0 + c;
-  const gdouble c2      = c * c;
-  const gdouble c3      = c2 * c;
-	const gdouble Delta   = nc_density_profile_Delta (dp, cosmo, z);
-  const gdouble delta_c = (Delta / 3.0) * c3 / (log (onepc) - c / onepc); 
-
-  return delta_c;
 }

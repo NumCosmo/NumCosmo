@@ -53,6 +53,7 @@ struct _NcDensityProfileClass
   gdouble (*eval_fourier) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
 	gdouble (*scale_radius) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 	gdouble (*central_density) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+	gdouble (*deltac) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 };
 
 /**
@@ -117,6 +118,7 @@ gdouble nc_density_profile_Delta (NcDensityProfile *dp, NcHICosmo *cosmo, const 
 gdouble nc_density_profile_mass_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_density_profile_mass_density_threshold (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z); 
+gdouble nc_density_profile_deltac (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 
 #define NC_DENSITY_PROFILE_DEFAULT_C        (4.0)
 #define NC_DENSITY_PROFILE_DEFAULT_M_DELTA  (2.0e14)

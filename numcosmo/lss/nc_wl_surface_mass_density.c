@@ -424,6 +424,30 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityPro
 	return (2.0 / x2) * mean_sigma_2x2;
 }
 
+/**
+ * nc_wl_surface_mass_density_sigma_excess:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcDensityProfile 
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes difference between the mean surface mass density inside the circle with radius @R (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @R (Eq. $\eqref{eq:sigma}$).
+ *
+ * Returns: $\overline{\Sigma} (<R) - \Sigma (R)$
+ */
+gdouble 
+nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+{
+	const gdouble rs             = nc_density_profile_scale_radius (dp, cosmo, zc);
+	const gdouble x              = R / rs;
+  const gdouble x2             = x * x;
+	const gdouble mean_sigma_2x2 = nc_density_profile_integral_density_2d (dp, cosmo, R, zc);
+	const gdouble sigma          = 2.0 * nc_density_profile_integral_density_los (dp, cosmo, R, zc);
+
+	return (2.0 / x2) * mean_sigma_2x2 - sigma;
+}
+
 /* Correction term: Central point mass */
 
 /*
@@ -596,4 +620,35 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 	g = shear_inf / (1.0 - convergence_inf);
 	
 	return g;
+}
+
+
+/**
+ * nc_wl_surface_mass_density_magnification:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcDensityProfile  
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zs: source redshift $z_\mathrm{source}$  
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the reduced shear:
+ * $$ \mu(R) = \frac{1}{(1 - \kappa(R))^2 - \vert\gamma^2(R) \vert},$$ 
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].	 
+ * 
+ * Returns: $\mu(R)$
+ */
+gdouble 
+nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+{
+	/* Optimize it to compute sigma and sigma_c just once*/
+  gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
+	gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
+	gdouble one_m_conv    = 1.0 - convergence;
+	gdouble shear2        = shear * shear;
+	gdouble magnification = 1.0 / (one_m_conv * one_m_conv - shear2); 
+
+	return magnification;
 }

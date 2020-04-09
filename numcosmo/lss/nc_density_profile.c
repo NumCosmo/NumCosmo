@@ -129,6 +129,7 @@ static gdouble _nc_density_profile_integral_density_2d (NcDensityProfile *dp, Nc
 static gdouble _nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z) { g_error ("Method eval_fourier not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp)); return 0.0; }
 static gdouble _nc_density_profile_scale_radius (NcDensityProfile *dp, NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+static gdouble _nc_density_profile_deltac (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 
 static void
 nc_density_profile_class_init (NcDensityProfileClass *klass)
@@ -204,6 +205,7 @@ nc_density_profile_class_init (NcDensityProfileClass *klass)
   klass->eval_fourier         = &_nc_density_profile_eval_fourier;
 	klass->scale_radius         = &_nc_density_profile_scale_radius;
 	klass->central_density      = &_nc_density_profile_central_density;
+  klass->deltac               = &_nc_density_profile_deltac;
 }
 
 /**
@@ -475,4 +477,31 @@ gdouble
 nc_density_profile_central_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z) 
 { 
 	return NC_DENSITY_PROFILE_GET_CLASS (dp)->central_density (dp, cosmo, R, z);
+}
+
+static gdouble 
+_nc_density_profile_deltac (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
+{
+	const gdouble c       = C_DELTA;
+  const gdouble onepc   = 1.0 + c;
+  const gdouble c2      = c * c;
+  const gdouble c3      = c2 * c;
+	const gdouble Delta   = nc_density_profile_Delta (dp, cosmo, z);
+  const gdouble delta_c = (Delta / 3.0) * c3 / (log (onepc) - c / onepc); 
+
+  return delta_c;
+}
+
+/**
+ * nc_density_profile_deltac:
+ * @dp: a #NcDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ * 
+ * Returns: $\delta_c$
+ */ 
+gdouble 
+nc_density_profile_deltac (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
+{
+	return NC_DENSITY_PROFILE_GET_CLASS (dp)->deltac (dp, cosmo, z);
 }
