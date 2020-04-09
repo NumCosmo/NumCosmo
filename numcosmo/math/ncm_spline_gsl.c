@@ -26,9 +26,11 @@
  * SECTION:ncm_spline_gsl
  * @title: NcmSplineGsl
  * @short_description: GSL spline object wrapper.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline_gsl.h
  *
- * This object comprises the proper functions to use the GNU Scientific
- * Library (GSL) spline functions and interpolation methods.
+ * This object comprises the proper functions to use the [GNU Scientific
+ * Library (GSL)](https://www.gnu.org/software/gsl/) spline functions and interpolation methods.
  *
  */
 
@@ -130,6 +132,12 @@ ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
   object_class->get_property = &_ncm_spline_gsl_get_property;
   object_class->finalize     = &ncm_spline_gsl_finalize;
 
+  /**
+   * NcmSplineGsl:type-name:
+   *
+   * The name of the interpolation method from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_TYPE_NAME,
                                    g_param_spec_string ("type-name",

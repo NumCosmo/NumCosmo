@@ -50,14 +50,14 @@ struct _NcmSplineGslClass
 
 /**
  * NcmSplineGslType:
- * @NCM_SPLINE_GSL_LINEAR: FIXME
- * @NCM_SPLINE_GSL_POLYNOMIAL: FIXME
- * @NCM_SPLINE_GSL_CSPLINE: FIXME
- * @NCM_SPLINE_GSL_CSPLINE_PERIODIC: FIXME
- * @NCM_SPLINE_GSL_AKIMA: FIXME
- * @NCM_SPLINE_GSL_AKIMA_PERIODIC: FIXME
+ * @NCM_SPLINE_GSL_LINEAR: Uses [gsl_interp_linear](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_linear) interpolation method. 
+ * @NCM_SPLINE_GSL_POLYNOMIAL: Uses [gsl_interp_polynomial](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_polynomial) interpolation method. 
+ * @NCM_SPLINE_GSL_CSPLINE: Uses [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline) interpolation method. 
+ * @NCM_SPLINE_GSL_CSPLINE_PERIODIC: Uses [gsl_interp_cspline_periodic](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline_periodic) interpolation method.
+ * @NCM_SPLINE_GSL_AKIMA: Uses [gsl_interp_akima](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima) interpolation method. 
+ * @NCM_SPLINE_GSL_AKIMA_PERIODIC: Uses [gsl_interp_akima_periodic](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima_periodic) interpolation method. 
  *
- * FIXME
+ * Enumeration to choose which [GSL interpolation method](https://www.gnu.org/software/gsl/doc/html/interp.html#interpolation) as backend to be used by the object. It can be used with the function ncm_spline_gsl_new_by_id() when a new #NcmSplineGsl is created.  
  */
 typedef enum _NcmSplineGslType
 {
