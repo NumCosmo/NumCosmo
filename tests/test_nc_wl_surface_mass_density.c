@@ -35,10 +35,10 @@
 typedef struct _TestNcWLSurfaceMassDensity
 {
   NcWLSurfaceMassDensity *smd;
-  NcDensityProfile *dp;
+  NcHaloDensityProfile *dp;
   NcHICosmo *cosmo;
   gdouble R1, R2, R3;
-	gdouble zs, zl, zc;
+  gdouble zs, zl, zc;
 } TestNcWLSurfaceMassDensity;
 
 void test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
@@ -93,9 +93,9 @@ main (gint argc, gchar *argv[])
 void
 test_nc_wl_surface_mass_density_free (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
-  NCM_TEST_FREE (nc_density_profile_free, test->dp);
+  NCM_TEST_FREE (nc_halo_density_profile_free, test->dp);
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
-	NCM_TEST_FREE (nc_wl_surface_mass_density_free, test->smd);
+  NCM_TEST_FREE (nc_wl_surface_mass_density_free, test->smd);
 }
 
 void
@@ -103,17 +103,17 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
 {
   NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcDistance *dist            = nc_distance_new (3.0);
-  NcDensityProfile *dp        = NC_DENSITY_PROFILE (nc_density_profile_nfw_new (NC_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
-	
+  
   g_assert_true (smd != NULL);
 
   test->cosmo = cosmo;
   test->dp    = dp;
-	test->smd   = smd;
+  test->smd   = smd;
   test->R1    = 0.3; /* Mpc */
   test->R3    = 10.0;
-  g_assert_true (NC_IS_DENSITY_PROFILE_NFW (dp));
+  g_assert_true (NC_IS_HALO_DENSITY_PROFILE_NFW (dp));
 
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       70.0);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
@@ -122,14 +122,14 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
-	ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
 
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "c",       4.0);
 
   test->zc = 1.0;
-	test->zl = 1.0;
-	test->zs = 1.5;
+  test->zl = 1.0;
+  test->zs = 1.5;
 
   nc_distance_free (dist);
 
@@ -140,10 +140,10 @@ void
 test_nc_wl_surface_mass_density_sigma (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+    
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble sig1 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R1, test->zc);
   gdouble sig2 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R2, test->zc);
@@ -158,10 +158,10 @@ void
 test_nc_wl_surface_mass_density_sigma_mean (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+    
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble sig1 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R1, test->zc);
   gdouble sig2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R2, test->zc);
@@ -178,7 +178,7 @@ test_nc_wl_surface_mass_density_sigma_critical (TestNcWLSurfaceMassDensity *test
 {
   NcHICosmo *cosmo            = test->cosmo;
   NcWLSurfaceMassDensity *smd = test->smd;
-		
+    
   gdouble sig_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, test->zs, test->zl, test->zc);
   
   ncm_assert_cmpdouble_e (sig_crit, ==, 4.145043e+15, 1.0e-5, 0.0);
@@ -189,10 +189,10 @@ void
 test_nc_wl_surface_mass_density_convergence (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+    
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -207,10 +207,10 @@ void
 test_nc_wl_surface_mass_density_shear (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+    
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -225,10 +225,10 @@ void
 test_nc_wl_surface_mass_density_reduced_shear (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+    
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -243,10 +243,10 @@ void
 test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcDensityProfile *dp        = test->dp;
-	NcWLSurfaceMassDensity *smd = test->smd;
-		
-  test->R2 = nc_density_profile_scale_radius (dp, cosmo, test->zc);
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+
+  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);

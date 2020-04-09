@@ -30,7 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_distance.h>
-#include <numcosmo/lss/nc_density_profile.h>
+#include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
@@ -95,19 +95,19 @@ void nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd);
 void nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 void nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 
-gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
-gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
-gdouble nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
 gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc);
 gdouble nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc);
 
-gdouble nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
 
 G_END_DECLS
 

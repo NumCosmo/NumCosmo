@@ -76,6 +76,8 @@ struct _NcmModelClass
   GPtrArray *vparam;
 };
 
+#define NCM_MODEL_MAX_STATES (10)
+
 /**
  * NcmModel:
  *
@@ -98,6 +100,7 @@ struct _NcmModel
   guint total_len;
   guint64 pkey;
   guint64 skey;
+  guint64 slkey[NCM_MODEL_MAX_STATES];
 };
 
 typedef gdouble (*NcmModelFunc0) (NcmModel *model);
@@ -143,6 +146,8 @@ gboolean ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...);
 NCM_INLINE guint ncm_model_len (NcmModel *model);
 NCM_INLINE gboolean ncm_model_state_is_update (NcmModel *model);
 NCM_INLINE void ncm_model_state_set_update (NcmModel *model);
+NCM_INLINE gboolean ncm_model_lstate_is_update (NcmModel *model, guint i);
+NCM_INLINE void ncm_model_lstate_set_update (NcmModel *model, guint i);
 NCM_INLINE void ncm_model_state_mark_outdated (NcmModel *model);
 
 NCM_INLINE guint ncm_model_sparam_len (NcmModel *model);
@@ -365,6 +370,18 @@ NCM_INLINE void
 ncm_model_state_set_update (NcmModel *model)
 {
   model->skey = model->pkey;
+}
+
+NCM_INLINE gboolean
+ncm_model_lstate_is_update (NcmModel *model, guint i)
+{
+  return model->pkey == model->slkey[i];
+}
+
+NCM_INLINE void
+ncm_model_lstate_set_update (NcmModel *model, guint i)
+{
+  model->slkey[i] = model->pkey;
 }
 
 NCM_INLINE void 

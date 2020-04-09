@@ -66,6 +66,8 @@ G_DEFINE_ABSTRACT_TYPE (NcmModel, ncm_model, G_TYPE_OBJECT);
 static void
 ncm_model_init (NcmModel *model)
 {
+  gint i;
+
   model->sparams         = g_ptr_array_new_with_free_func ((GDestroyNotify)&ncm_sparam_free);
   model->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
   model->params          = NULL;
@@ -76,6 +78,10 @@ ncm_model_init (NcmModel *model)
 
   model->pkey    = 1;
   model->skey    = 0;
+  
+  for (i = 0; i < NCM_MODEL_MAX_STATES; i++)
+    model->slkey[i] = 0;
+  
   model->reparam = NULL;
   model->ptypes  = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
 
@@ -1416,6 +1422,27 @@ ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
 /**
  * ncm_model_state_set_update:
  * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ */
+/**
+ * ncm_model_lstate_is_update:
+ * @model: a #NcmModel
+ * @i: lstate index
+ * 
+ * @i must be smaller than #NCM_MODEL_MAX_STATES.
+ * 
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_model_lstate_set_update:
+ * @model: a #NcmModel
+ * @i: lstate index
+ * 
+ * @i must be smaller than #NCM_MODEL_MAX_STATES.
  *
  * FIXME
  *
