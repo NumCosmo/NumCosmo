@@ -45,15 +45,18 @@ typedef void (*NcmCfgLoggerFunc) (const gchar *msg);
 void ncm_cfg_init (void);
 void ncm_cfg_init_full_ptr (gint *argc, gchar ***argv);
 gchar **ncm_cfg_init_full (gint argc, gchar **argv);
+
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);
 guint ncm_cfg_mpi_nslaves (void);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
+
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);
 gchar *ncm_cfg_string_to_comment (const gchar *str);
 const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
 const GEnumValue *ncm_cfg_enum_get_value (GType enum_type, guint n);
+
 void ncm_cfg_enum_print_all (GType enum_type, const gchar *header);
 
 void ncm_cfg_lock_plan_fftw (void);
@@ -77,6 +80,7 @@ void ncm_cfg_logfile_flush_now (void);
 
 void ncm_message (const gchar *msg, ...) G_GNUC_PRINTF (1, 2);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
+
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
 
@@ -97,6 +101,7 @@ typedef union _NcmDoubleInt64
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 
 GArray *ncm_cfg_variant_to_array (GVariant *var, gsize esize);
+
 void ncm_cfg_array_set_variant (GArray *a, GVariant *var);
 GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 
@@ -109,13 +114,13 @@ extern guint fftw_default_flags;
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
 #ifdef NUMCOSMO_CHECK_PREPARE
-#define NCM_CHECK_PREPARED(obj,name) \
-G_STMT_START { \
-  if (!obj->prepared) \
+#define NCM_CHECK_PREPARED(obj, name) \
+  G_STMT_START{ \
+    if (!obj->prepared) \
     g_error ("calling method %s on an unprepared instance.", #name); \
-} G_STMT_END
+  } G_STMT_END
 #else /* NUMCOSMO_CHECK_PREPARE */
-#define NCM_CHECK_PREPARED(obj,name)
+#define NCM_CHECK_PREPARED(obj, name)
 #endif /* NUMCOSMO_CHECK_PREPARE */
 
 #define NCM_ZERO_LIMIT 1e-13
@@ -135,16 +140,17 @@ G_STMT_START { \
 
 #ifndef NUMCOSMO_GIR_SCAN
 #define NCM_FITS_ERROR(status) \
-G_STMT_START { \
-  if (status) \
-  { \
-    gchar errormsg[30]; \
-    fits_get_errstatus (status, errormsg); \
-    g_error ("FITS: %s", errormsg); \
-  } \
-} G_STMT_END
+  G_STMT_START{ \
+    if (status) \
+    { \
+      gchar errormsg[30]; \
+      fits_get_errstatus (status, errormsg); \
+      g_error ("FITS: %s", errormsg); \
+    } \
+  } G_STMT_END
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_END_DECLS
 
 #endif /* _NCM_CFG_H */
+
