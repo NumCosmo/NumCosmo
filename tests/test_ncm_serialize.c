@@ -170,7 +170,7 @@ test_ncm_serialize_global_from_string_plain (TestNcmSerialize *test, gconstpoint
   GObject *obj_new   = ncm_serialize_global_from_string (obj_ser);
   gchar *obj_new_ser = ncm_serialize_global_to_string (obj_new, TRUE);
 
-  g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
   g_free (obj_ser);
   g_free (obj_new_ser);
@@ -212,7 +212,7 @@ test_ncm_serialize_global_from_string_nest (TestNcmSerialize *test, gconstpointe
   GObject *obj_new   = ncm_serialize_global_from_string (obj_ser);
   gchar *obj_new_ser = ncm_serialize_global_to_string (obj_new, TRUE);
 
-  g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
 
   g_free (obj_ser);
@@ -225,7 +225,7 @@ test_ncm_serialize_global_from_string_nest (TestNcmSerialize *test, gconstpointe
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  g_assert (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
 
   NCM_TEST_FREE (nc_powspec_ml_free, ps_ml);
 }
@@ -239,7 +239,7 @@ test_ncm_serialize_from_string_plain_named (TestNcmSerialize *test, gconstpointe
   GObject *obj_new   = ncm_serialize_from_string (test->ser, obj_ser);
   gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
-  g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
   g_free (obj_ser);
   g_free (obj_new_ser);
@@ -278,8 +278,8 @@ test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pd
     GObject *obj1_ref2 = ncm_serialize_from_string (test->ser, obj_ser1);
     GObject *obj2_ref2 = ncm_serialize_from_string (test->ser, obj_ser2);
 
-    g_assert (obj1_ref2 == obj1);
-    g_assert (obj2_ref2 != obj2);
+    g_assert_true (obj1_ref2 == obj1);
+    g_assert_true (obj2_ref2 != obj2);
 
     g_object_unref (obj1_ref2);
     g_object_unref (obj2_ref2);
@@ -334,7 +334,7 @@ test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer
   GObject *obj_new   = ncm_serialize_from_string (test->ser, obj_ser);
   gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
-  g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
 
   g_free (obj_ser);
@@ -347,7 +347,7 @@ test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  g_assert (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
 
   g_assert_cmphex (GPOINTER_TO_SIZE (ncm_serialize_peek_by_name (test->ser, "T0")), ==, GPOINTER_TO_SIZE (ps_ml));
   g_assert_cmphex (GPOINTER_TO_SIZE (ncm_serialize_peek_by_name (test->ser, "T1")), ==, GPOINTER_TO_SIZE (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
@@ -380,7 +380,7 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 
   obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
-  g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
 
   g_free (obj_ser);
@@ -414,7 +414,7 @@ test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdat
     GObject *obj_new   = ncm_serialize_from_file (test->ser, "test-serialize-file.obj");
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
-    g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+    g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
     g_assert_cmpstr (obj_ser, ==, obj_new_ser);
     g_free (obj_ser);
     g_free (obj_new_ser);
@@ -447,7 +447,7 @@ test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointe
     GObject *obj_new   = ncm_serialize_from_binfile (test->ser, "test-serialize-binfile.obj");
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
-    g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+    g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
     g_assert_cmpstr (obj_ser, ==, obj_new_ser);
     g_free (obj_ser);
     g_free (obj_new_ser);

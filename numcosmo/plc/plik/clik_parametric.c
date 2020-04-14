@@ -630,7 +630,7 @@ void parametric_norm_derivative(parametric * egl, int iv, double *Rq, double *dR
 
 void parametric_triangle_fill(parametric *egl, double *A, error **err) {
   int m1,m2,p;
-  pfchar Ac;
+  pflchar Ac;
   double *Abuf;
 
   Abuf = A + egl->nfreq*egl->nfreq;
@@ -673,7 +673,7 @@ void parametric_triangle_fill_derivative(parametric * egl, int iv, double *A, er
   memset(A,0,sizeof(double)*egl->nfreq*egl->nfreq);
 
   for(p=0;p<=ic2;p++) {
-    pfchar Ac;
+    pflchar Ac;
     sprintf(Ac,"%s%d_%d",egl->tensor_norm_template,p,ic2);    
     A[ic1*egl->nfreq+p] += parametric_get_value(egl,Ac,err);
     forwardError(*err,__LINE__,); 
@@ -684,7 +684,7 @@ void parametric_triangle_fill_derivative(parametric * egl, int iv, double *A, er
 
 void parametric_tanh_fill(parametric *egl, double *A, error **err) {
   int m1,m2,p;
-  pfchar Ac;
+  pflchar Ac;
   double *Abuf;
   double theta;
 
@@ -713,7 +713,7 @@ void parametric_tanh_fill_derivative(parametric * egl, int iv, double *A, error 
   int ic1,ic2,p;
   double *mRq;
   double A1,A2,theta,dm;
-  pfchar Ac;
+  pflchar Ac;
     
 
   key = egl->varkey[iv];
@@ -766,7 +766,7 @@ void parametric_tanh_fill_derivative(parametric * egl, int iv, double *A, error 
 
 void parametric_tensor_fill(parametric *egl,double *A,error **err) {
   int ic;
-  pfchar Ac;
+  pflchar Ac;
 
   for(ic=0;ic<egl->nfreq;ic++) {
     sprintf(Ac,"%s%d",egl->tensor_norm_template,ic);    

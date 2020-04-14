@@ -134,11 +134,11 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   test->ntests = 1000;
   p = test->p = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_val, ftype);
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
-  g_assert (p->name != name);
-  g_assert (p->symbol != symbol);
+  g_assert_true (p->name != name);
+  g_assert_true (p->symbol != symbol);
 
   g_assert_cmpstr (p->name, ==, name);
   g_assert_cmpstr (p->symbol, ==, symbol);
@@ -162,8 +162,8 @@ test_ncm_sparam_setget_lower_bound (TestNcmSparam *test, gconstpointer pdata)
   NcmSParam *p = test->p;
   guint ntests = test->ntests;
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
   while (ntests--)
   {
@@ -190,8 +190,8 @@ test_ncm_sparam_setget_upper_bound (TestNcmSparam *test, gconstpointer pdata)
   NcmSParam *p = test->p;
   guint ntests = test->ntests;
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
   while (ntests--)
   {
@@ -217,8 +217,8 @@ test_ncm_sparam_setget_scale (TestNcmSparam *test, gconstpointer pdata)
   NcmSParam *p = test->p;
   guint ntests = test->ntests;
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
   while (ntests--)
   {
@@ -244,8 +244,8 @@ test_ncm_sparam_setget_abstol (TestNcmSparam *test, gconstpointer pdata)
   NcmSParam *p = test->p;
   guint ntests = test->ntests;
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
   while (ntests--)
   {
@@ -271,8 +271,8 @@ test_ncm_sparam_setget_default_value (TestNcmSparam *test, gconstpointer pdata)
   NcmSParam *p = test->p;
   guint ntests = test->ntests;
 
-  g_assert (p != NULL);
-  g_assert (NCM_IS_SPARAM (p));
+  g_assert_true (p != NULL);
+  g_assert_true (NCM_IS_SPARAM (p));
 
   while (ntests--)
   {

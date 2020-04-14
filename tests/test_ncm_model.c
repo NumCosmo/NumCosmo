@@ -133,7 +133,7 @@ test_ncm_model_new (TestNcmModel *test, gconstpointer pdata)
   test->nick       = nick_tot[0];
   test->reparam    = NULL;
 
-  g_assert (test->type != 0);
+  g_assert_true (test->type != 0);
 }
 
 void
@@ -168,7 +168,7 @@ test_ncm_model_new_modify (TestNcmModel *test, gconstpointer pdata)
 		}
 	}
 	
-  g_assert (test->type != 0);
+  g_assert_true (test->type != 0);
 }
 
 void
@@ -182,7 +182,7 @@ test_ncm_model_child_new (TestNcmModel *test, gconstpointer pdata)
   test->nick       = nick_tot[1];
   test->reparam    = NULL;
 
-  g_assert (test->type != 0);
+  g_assert_true (test->type != 0);
 }
 
 void
@@ -196,7 +196,7 @@ test_ncm_model_child_child_new (TestNcmModel *test, gconstpointer pdata)
   test->nick       = nick_tot[2];
   test->reparam    = NULL;
 
-  g_assert (test->type != 0);
+  g_assert_true (test->type != 0);
 }
 
 NcmReparam *
@@ -268,7 +268,7 @@ test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata)
   test->nick       = nick_tot[0];
   test->reparam    = _test_ncm_model_create_reparam (test);
 
-  g_assert (test->type != 0);
+  g_assert_true (test->type != 0);
 }
 
 void
@@ -282,17 +282,17 @@ test_ncm_model_test_new (TestNcmModel *test, gconstpointer pdata)
 {
   NcmModelTest *tm = test->tm;
   NcmModel *model;
-  g_assert (NCM_IS_MODEL (tm));
-  g_assert (NCM_IS_MODEL_TEST (tm));
+  g_assert_true (NCM_IS_MODEL (tm));
+  g_assert_true (NCM_IS_MODEL_TEST (tm));
   model = NCM_MODEL (tm);
 
-  g_assert (ncm_model_name (model) != test->name);
-  g_assert (ncm_model_nick (model) != test->nick);
+  g_assert_true (ncm_model_name (model) != test->name);
+  g_assert_true (ncm_model_nick (model) != test->nick);
 
   g_assert_cmpstr (ncm_model_name (model), ==, test->name);
   g_assert_cmpstr (ncm_model_nick (model), ==, test->nick);
 
-  g_assert (ncm_model_peek_reparam (model) == test->reparam);
+  g_assert_true (ncm_model_peek_reparam (model) == test->reparam);
 }
 
 void
@@ -350,8 +350,8 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
   {
     const gchar *pname = ncm_model_orig_param_name (model, i);
     const gchar *psymbol = ncm_model_orig_param_symbol (model, i);
-    g_assert (pname != s_name_tot[i]);
-    g_assert (psymbol != s_symbol_tot[i]);
+    g_assert_true (pname != s_name_tot[i]);
+    g_assert_true (psymbol != s_symbol_tot[i]);
     g_assert_cmpstr (pname, ==, s_name_tot[i]);
     g_assert_cmpstr (psymbol, ==, s_symbol_tot[i]);
   }
@@ -366,8 +366,8 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
       const gchar *pname = ncm_model_orig_param_name (model, ncm_model_vparam_index (model, i, j));
       const gchar *psymbol = ncm_model_orig_param_symbol (model, ncm_model_vparam_index (model, i, j));
 
-      g_assert (pname != vp_name);
-      g_assert (psymbol != vp_symbol);
+      g_assert_true (pname != vp_name);
+      g_assert_true (psymbol != vp_symbol);
       g_assert_cmpstr (pname, ==, vp_name);
       g_assert_cmpstr (psymbol, ==, vp_symbol);
 
@@ -387,29 +387,29 @@ test_ncm_model_test_finite (TestNcmModel *test, gconstpointer pdata)
 
   for (i = 0; i < model_len; i++)
   {
-    g_assert (ncm_model_param_finite (model, i));
-    g_assert (ncm_model_params_finite (model));
+    g_assert_true (ncm_model_param_finite (model, i));
+    g_assert_true (ncm_model_params_finite (model));
 
     ncm_model_param_set (model, i, GSL_NAN);
-    g_assert (!ncm_model_param_finite (model, i));
-    g_assert (!ncm_model_params_finite (model));
+    g_assert_true (!ncm_model_param_finite (model, i));
+    g_assert_true (!ncm_model_params_finite (model));
     ncm_model_param_set_default (model, i);
-    g_assert (ncm_model_param_finite (model, i));
-    g_assert (ncm_model_params_finite (model));
+    g_assert_true (ncm_model_param_finite (model, i));
+    g_assert_true (ncm_model_params_finite (model));
 
     ncm_model_param_set (model, i, GSL_POSINF);
-    g_assert (!ncm_model_param_finite (model, i));
-    g_assert (!ncm_model_params_finite (model));
+    g_assert_true (!ncm_model_param_finite (model, i));
+    g_assert_true (!ncm_model_params_finite (model));
     ncm_model_param_set_default (model, i);
-    g_assert (ncm_model_param_finite (model, i));
-    g_assert (ncm_model_params_finite (model));
+    g_assert_true (ncm_model_param_finite (model, i));
+    g_assert_true (ncm_model_params_finite (model));
 
     ncm_model_param_set (model, i, GSL_NEGINF);
-    g_assert (!ncm_model_param_finite (model, i));
-    g_assert (!ncm_model_params_finite (model));
+    g_assert_true (!ncm_model_param_finite (model, i));
+    g_assert_true (!ncm_model_params_finite (model));
     ncm_model_param_set_default (model, i);
-    g_assert (ncm_model_param_finite (model, i));
-    g_assert (ncm_model_params_finite (model));
+    g_assert_true (ncm_model_param_finite (model, i));
+    g_assert_true (ncm_model_params_finite (model));
   }
 }
 
@@ -590,8 +590,8 @@ test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata)
 
   ncm_serialize_free (ser);
 
-  g_assert (ncm_model_is_equal (model1, model2));
-  g_assert (!ncm_model_is_equal (model1, model3));
+  g_assert_true (ncm_model_is_equal (model1, model2));
+  g_assert_true (!ncm_model_is_equal (model1, model3));
 
   for (i = 0; i < model_len; i++)
   {
@@ -614,8 +614,8 @@ test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
   }
 
-  g_assert (!ncm_model_is_equal (model1, model3));
-  g_assert (!ncm_model_is_equal (model3, model1));
+  g_assert_true (!ncm_model_is_equal (model1, model3));
+  g_assert_true (!ncm_model_is_equal (model3, model1));
 
   NCM_TEST_FREE (ncm_model_free, model2);
   NCM_TEST_FREE (ncm_model_free, model3);
@@ -635,7 +635,7 @@ test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata)
     const gchar *s_name_n = ncm_model_orig_param_name (model, n);
     const gchar *s_symbol_n = ncm_model_orig_param_symbol (model, n);
 
-    g_assert (found);
+    g_assert_true (found);
     g_assert_cmpuint (n, ==, i);
     g_assert_cmpstr (s_name_n, ==, s_name_tot[n]);
     g_assert_cmpstr (s_symbol_n, ==, s_symbol_tot[n]);
@@ -654,7 +654,7 @@ test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata)
       const gchar *v_name_n = ncm_model_orig_param_name (model, n);
       const gchar *v_symbol_n = ncm_model_orig_param_symbol (model, n);
 
-      g_assert (found);
+      g_assert_true (found);
       g_assert_cmpstr (v_name_n, ==, v_name_ij);
       g_assert_cmpstr (v_symbol_n, ==, v_symbol_ij);
 
@@ -675,7 +675,7 @@ test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
   guint i;
 
   ncm_serialize_free (ser);
-  g_assert (ncm_model_is_equal (model, model_dup));
+  g_assert_true (ncm_model_is_equal (model, model_dup));
 
   for (i = 0; i < model_len; i++)
   {

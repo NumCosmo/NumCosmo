@@ -39,13 +39,13 @@ be draw from a uniform distribution between $[0.5, 2]$.
 @[7-16](Importing NumCosmo and NumCosmoMath using GI.)
 @[18](Imports our model.)
 @[23](Define a new data class, child of *NcmDataGaussCov*.)
-@[28](Our distribution have an one dimensional vector of independent variables $x$ which we define here.)
-@[33-41](In the initialization process, we first chain-up to the father's initialization.)
-@[53-54, 59-60](Here we implement the necessary virtual functions of *NcmDataGaussCov*.)
-@[69-70, 77-78](In our simple likelihood it is not necessary to have a begin or a prepare function, usually needed when precalculations are necessary.)
-@[85-93](Here we inform the *NcmDataGaussCov* object how to compute $f(x_i)$.)
-@[95-100](We define a method to create a random covariance matrix, with the correlation factor 15 and the standard deviations ranging from 0.5 to 2.)
-@[108](As the last step we register the new object in the type system.)
+@[27](Our distribution have an one dimensional vector of independent variables $x$ which we define here.)
+@[32-40](In the initialization process, we first chain-up to the father's initialization.)
+@[52-53, 58-59](Here we implement the necessary virtual functions of *NcmDataGaussCov*.)
+@[68-69, 76-77](In our simple likelihood it is not necessary to have a begin or a prepare function, usually needed when precalculations are necessary.)
+@[84-92](Here we inform the *NcmDataGaussCov* object how to compute $f(x_i)$.)
+@[94-99](We define a method to create a random covariance matrix, with the correlation factor 15 and the standard deviations ranging from 0.5 to 2.)
+@[105](As the last step we register the new object in the type system.)
 
 +++
 

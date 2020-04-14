@@ -666,13 +666,13 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
   gsl_multifit_function_fdf f;
-  gint status;
 
   gdouble p0[] = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL]/mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL]/mszl->M0)};
   gdouble lb[] = {bounds[0], bounds[2]};
   gdouble ub[] = {bounds[1], bounds[3]};
 
 #ifdef HAVE_GSL_2_2
+  gint status;
   gint info;
   const gdouble xtol = 1e-11;
   const gdouble gtol = 1e-11;

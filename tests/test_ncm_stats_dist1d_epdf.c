@@ -280,8 +280,8 @@ test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdat
 {
   test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
   
-  g_assert (NCM_IS_STATS_DIST1D (test->sd1));
-  g_assert (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
+  g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
+  g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
 }
 
 static void

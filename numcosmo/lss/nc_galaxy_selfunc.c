@@ -72,7 +72,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT);
 static void
 nc_galaxy_selfunc_init (NcGalaxySelfunc *gsf)
 {
-	NcGalaxySelfuncPrivate * const self = gsf->priv = G_TYPE_INSTANCE_GET_PRIVATE (gsf, NC_TYPE_GALAXY_SELFUNC, NcGalaxySelfuncPrivate);
+	NcGalaxySelfuncPrivate * const self = gsf->priv = nc_galaxy_selfunc_get_instance_private (gsf);
 	
   self->nshells  = 0;
   self->zmin_all = 0;

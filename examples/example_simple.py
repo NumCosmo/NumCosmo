@@ -67,6 +67,8 @@ cosmo.props.massnu  = massnu_v
 print ("# Model parameters: ")
 cosmo.params_log_all ()
 
+dist.prepare (cosmo)
+
 #
 #  Printing some distances up to redshift 1.0.
 #

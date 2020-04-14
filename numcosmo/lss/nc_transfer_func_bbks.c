@@ -63,7 +63,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_T
 static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
 {
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv = G_TYPE_INSTANCE_GET_PRIVATE (tf_bbks, NC_TYPE_TRANSFER_FUNC_BBKS, NcTransferFuncBBKSPrivate);
+  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv = nc_transfer_func_bbks_get_instance_private (tf_bbks);
 
   self->c1    = 0.0;
   self->c2    = 0.0;

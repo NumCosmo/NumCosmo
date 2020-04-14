@@ -232,11 +232,11 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
   ncm_model_class_set_name_nick (model_class, name, nick);
   ncm_model_class_add_params (model_class, ci_sparam_len, ci_vparam_len, PROP_SIZE);
 
-  g_assert (model_class->sparam_len == model_class->parent_sparam_len + ci_sparam_len);
-  g_assert (model_class->vparam_len == model_class->parent_vparam_len + ci_vparam_len);
+  g_assert_true (model_class->sparam_len == model_class->parent_sparam_len + ci_sparam_len);
+  g_assert_true (model_class->vparam_len == model_class->parent_vparam_len + ci_vparam_len);
 
-  g_assert (model_class->name != name);
-  g_assert (model_class->nick != nick);
+  g_assert_true (model_class->name != name);
+  g_assert_true (model_class->nick != nick);
   g_assert_cmpstr (model_class->name, ==, name);
   g_assert_cmpstr (model_class->nick, ==, nick);
 
@@ -261,8 +261,8 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
   for (i = 0; i < ci_sparam_len; i++)
   {
     NcmSParam *sp = g_ptr_array_index (model_class->sparam, model_class->parent_sparam_len + i);
-    g_assert (sp->name   != s_name[i]);
-    g_assert (sp->symbol != s_symbol[i]);
+    g_assert_true (sp->name   != s_name[i]);
+    g_assert_true (sp->symbol != s_symbol[i]);
     g_assert_cmpstr (sp->name,   ==, s_name[i]);
     g_assert_cmpstr (sp->symbol, ==, s_symbol[i]);
 
@@ -277,8 +277,8 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
   for (i = 0; i < ci_vparam_len; i++)
   {
     NcmVParam *vp = g_ptr_array_index (model_class->vparam, model_class->parent_vparam_len + i);
-    g_assert (vp->default_sparam->name   != v_name[i]);
-    g_assert (vp->default_sparam->symbol != v_symbol[i]);
+    g_assert_true (vp->default_sparam->name   != v_name[i]);
+    g_assert_true (vp->default_sparam->symbol != v_symbol[i]);
     g_assert_cmpstr (vp->default_sparam->name,   ==, v_name[i]);
     g_assert_cmpstr (vp->default_sparam->symbol, ==, v_symbol[i]);
 

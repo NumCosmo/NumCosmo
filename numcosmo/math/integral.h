@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@lapsandro>, <pennalima@gmail.com>
+ * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@isoftware.com.br>, <pennalima@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -28,7 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/function_cache.h>
+#include <numcosmo/math/ncm_function_cache.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>

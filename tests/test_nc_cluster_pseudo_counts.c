@@ -137,9 +137,9 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   test->Mobs_params[0] = 0.09 * test->Mobs[0];
   test->Mobs_params[1] = 0.12 * test->Mobs[1];
 
-  g_assert (cpc != NULL);
-  g_assert (clusterm != NULL);
-  g_assert (clusterz != NULL);
+  g_assert_true (cpc != NULL);
+  g_assert_true (clusterm != NULL);
+  g_assert_true (clusterz != NULL);
 
   nc_halo_mass_function_set_area (mfp, 1.0);
   
@@ -153,7 +153,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   test->clusterm  = clusterm;
   test->clusterz  = clusterz;
   test->z         = z;
-  g_assert (NC_IS_CLUSTER_PSEUDO_COUNTS (cpc));
+  g_assert_true (NC_IS_CLUSTER_PSEUDO_COUNTS (cpc));
 
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       67.8);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.258);
@@ -251,7 +251,7 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
   ncm_fit_set_params_reltol (test->fit, 1.0e-5);
   ncm_fit_m2lnL_val (test->fit, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 
 /*  
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_FULL);

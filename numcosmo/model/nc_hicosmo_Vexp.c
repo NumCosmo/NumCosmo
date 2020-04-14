@@ -120,7 +120,7 @@ typedef struct _NcHICosmoVexpState
 static void
 nc_hicosmo_Vexp_init (NcHICosmoVexp *Vexp)
 {
-  Vexp->priv             = G_TYPE_INSTANCE_GET_PRIVATE (Vexp, NC_TYPE_HICOSMO_VEXP, NcHICosmoVexpPrivate);
+  Vexp->priv             = nc_hicosmo_Vexp_get_instance_private (Vexp);
   Vexp->priv->cvode_qt   = CVodeCreate (CV_BDF);
   Vexp->priv->cvode_clp  = CVodeCreate (CV_BDF);
   Vexp->priv->cvode_clm  = CVodeCreate (CV_BDF);

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
+include $(top_srcdir)/glib-tap.mk
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
@@ -138,7 +138,7 @@ test_nc_wl_surface_mass_density_SOURCES =  \
 test_nc_distance_SOURCES =  \
         test_nc_distance.c
         
-check_PROGRAMS =  \
+test_programs =  \
 	test_ncm_vector                 \
 	test_ncm_matrix                 \
 	test_ncm_stats_vec              \
@@ -178,7 +178,7 @@ check_PROGRAMS =  \
         test_nc_wl_surface_mass_density \
         test_nc_distance
 
-# TEST_PROGS += $(check_PROGRAMS)
+# TEST_PROGS += $(check_programs)
 
 test_ncm_sparam_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -428,7 +428,7 @@ test_nc_ccl_dist_SOURCES =  \
 test_nc_ccl_massfunc_SOURCES =  \
         test_nc_ccl_massfunc.c
 
-check_PROGRAMS += \
+test_programs += \
 	test_nc_ccl_Pk     \
 	test_nc_ccl_NLPk   \
 	test_nc_ccl_corr3D \
@@ -472,6 +472,6 @@ test_nc_ccl_massfunc_LDADD = \
 
 endif
         
-TESTS = $(check_PROGRAMS)
+#TESTS = $(check_programs)
+#export VERBOSE = 1
 
-export VERBOSE = 1

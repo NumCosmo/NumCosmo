@@ -78,11 +78,11 @@ guint ncm_bootstrap_get_fsize (NcmBootstrap *bstrap);
 void ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize);
 guint ncm_bootstrap_get_bsize (NcmBootstrap *bstrap);
 
-G_INLINE_FUNC void ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng);
-G_INLINE_FUNC void ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng);
-G_INLINE_FUNC guint ncm_bootstrap_get (NcmBootstrap *bstrap, guint i);
-G_INLINE_FUNC GArray *ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap);
-G_INLINE_FUNC gboolean ncm_bootstrap_is_init (NcmBootstrap *bstrap);
+NCM_INLINE void ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng);
+NCM_INLINE void ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng);
+NCM_INLINE guint ncm_bootstrap_get (NcmBootstrap *bstrap, guint i);
+NCM_INLINE GArray *ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap);
+NCM_INLINE gboolean ncm_bootstrap_is_init (NcmBootstrap *bstrap);
 
 gint _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b);
 
@@ -93,12 +93,13 @@ G_END_DECLS
 #ifndef _NCM_BOOTSTRAP_INLINE_H_
 #define _NCM_BOOTSTRAP_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
 #define NCM_BOOTSTRAP_RNG_NAME "bootstrap"
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
 {
   gpointer bdata           = bstrap->bootstrap_index->data;
@@ -113,7 +114,7 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
   bstrap->init = TRUE;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
 {
   gpointer bdata           = bstrap->bootstrap_index->data;
@@ -128,13 +129,13 @@ ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
   bstrap->init = TRUE;
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 ncm_bootstrap_get (NcmBootstrap *bstrap, guint i)
 {
   return g_array_index (bstrap->bootstrap_index, guint, i);
 }
 
-G_INLINE_FUNC GArray * 
+NCM_INLINE GArray * 
 ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
 {
   GArray *res = g_array_sized_new (FALSE, TRUE, sizeof (guint), bstrap->bsize);
@@ -168,7 +169,7 @@ ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
   return res;
 }
 
-G_INLINE_FUNC gboolean 
+NCM_INLINE gboolean 
 ncm_bootstrap_is_init (NcmBootstrap *bstrap)
 {
   return bstrap->init;
@@ -176,5 +177,6 @@ ncm_bootstrap_is_init (NcmBootstrap *bstrap)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_BOOTSTRAP_INLINE_H_ */

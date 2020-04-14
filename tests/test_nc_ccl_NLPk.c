@@ -319,7 +319,7 @@ test_nc_ccl_nl_pk_new (TestNcCCLNLPk *test, gconstpointer pdata)
 
   data->pk.create_pk (test, pdata);
   
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
+  g_assert_true (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void

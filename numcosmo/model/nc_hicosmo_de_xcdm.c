@@ -48,8 +48,7 @@ G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE);
 static gdouble
 _nc_hicosmo_de_xcdm_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
-  const gdouble x = 1.0 + z;
-
+  const gdouble x = 1.0 + z;  
   return OMEGA_X * pow (x, 3.0 * ( 1.0 + W ) );
 }
 

@@ -30,8 +30,8 @@
  *
  * FIXME
  *
- * If you use this object, cite [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]
- * and related papers.
+ * If you use this object, cite [Planck 2015 results XI (2015)][XPlanckCollaboration2015a],
+ * [Planck 2018 results V (2019)][XPlanckCollaboration2019] and related papers.
  *
  */
 
@@ -130,6 +130,18 @@ nc_planck_fi_cor_ttteee_class_init (NcPlanckFICorTTTEEEClass *klass)
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_index, "n^{\\mathrm{dust}TE}", "galf_TE_index",
                               -10.0, 10.0, 0.1,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_index,
+                              NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE, "A^{\\mathrm{cnoise}EE}_{100 \\times 100}", "A_cnoise_e2e_100_100_EE",
+                              0.0, 1.0e2, 0.1,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_100_100_EE,
+                              NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_143_143_EE, "A^{\\mathrm{cnoise}EE}_{143 \\times 143}", "A_cnoise_e2e_143_143_EE",
+                              0.0, 1.0e2, 0.1,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_143_143_EE,
+                              NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_217_217_EE, "A^{\\mathrm{cnoise}EE}_{217 \\times 217}", "A_cnoise_e2e_217_217_EE",
+                              0.0, 1.0e2, 0.1,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_217_217_EE,
                               NCM_PARAM_TYPE_FIXED);
   /*******************************************************************************************************************************************************/
   /* GAL DUST EPSILON TE 100 */
@@ -410,6 +422,36 @@ nc_planck_fi_cor_ttteee_class_init (NcPlanckFICorTTTEEEClass *klass)
   /*******************************************************************************************************************************************************/
   /* Amplitude and calibration */
   /*******************************************************************************************************************************************************/
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_100_EE, "A^{\\mathrm{sbpx}EE}_{100 \\times 100}", "A_sbpx_100_100_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_100_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_143_EE, "A^{\\mathrm{sbpx}EE}_{100 \\times 143}", "A_sbpx_100_143_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_143_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_217_EE, "A^{\\mathrm{sbpx}EE}_{100 \\times 217}", "A_sbpx_100_217_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_217_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_143_EE, "A^{\\mathrm{sbpx}EE}_{143 \\times 143}", "A_sbpx_143_143_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_143_143_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_217_EE, "A^{\\mathrm{sbpx}EE}_{143 \\times 217}", "A_sbpx_143_217_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_143_217_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_A_sbpx_217_217_EE, "A^{\\mathrm{sbpx}EE}_{217 \\times 217}", "A_sbpx_217_217_EE",
+                              0.0, 1.0e2, 1.0e-2,
+                              NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_217_217_EE,
+                              NCM_PARAM_TYPE_FIXED);
+
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_calib_100P, "c_{100P}", "calib_100P",
                               0.5, 1.5, 1.0e-1,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_100P,
@@ -437,13 +479,13 @@ nc_planck_fi_cor_ttteee_class_init (NcPlanckFICorTTTEEEClass *klass)
  * @mean: a vector containing the means
  * @sigma: a vector containing the standard deviations
  *
- * Add the galaxy dust priors (on polarization data) as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the galaxy dust Gaussian priors (on polarization data) using @mean and @sigma as mean and standard deviation.
  *
  */
 void
 nc_planck_fi_cor_ttteee_add_galf_priors (NcmLikelihood *lh, NcmVector *mean, NcmVector *sigma)
 {
-  g_assert_cmpuint (ncm_vector_len (mean), ==, 12);
+  g_assert_cmpuint (ncm_vector_len (mean),  ==, 12);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 12);
 
   ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100,     ncm_vector_get (mean, 0),  ncm_vector_get (sigma, 0));
@@ -483,13 +525,34 @@ nc_planck_fi_cor_ttteee_add_default_galf_priors (NcmLikelihood *lh)
 }
 
 /**
+ * nc_planck_fi_cor_ttteee_add_default18_galf_priors:
+ * @lh: a #NcmLikelihood
+ *
+ * Add the galaxy dust priors (on polarization data) as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * It uses the default values.
+ *
+ */
+void
+nc_planck_fi_cor_ttteee_add_default18_galf_priors (NcmLikelihood *lh)
+{
+  gdouble mean[12]  = {0.055, 0.040, 0.094, 0.086, 0.210, 0.70, 0.130, 0.130, 0.46, 0.207, 0.690, 1.938};
+  gdouble sigma[12] = {0.014, 0.010, 0.023, 0.022, 0.051, 0.18, 0.042, 0.036, 0.09, 0.072, 0.090, 0.540};
+  NcmVector *mean_vec = ncm_vector_new_data_static (mean, 12, 1);
+  NcmVector *sigma_vec = ncm_vector_new_data_static (sigma, 12, 1);
+
+  nc_planck_fi_cor_ttteee_add_galf_priors (lh, mean_vec, sigma_vec);
+
+  ncm_vector_free (mean_vec);
+  ncm_vector_free (sigma_vec);
+}
+
+/**
  * nc_planck_fi_cor_ttteee_add_all_default_priors:
  * @lh: a #NcmLikelihood
  *
- * Adds all default priors above:
+ * Adds all default priors:
+ * - nc_planck_fi_cor_tt_add_all_default_priors()
  * - nc_planck_fi_cor_ttteee_add_default_gal_priors()
- * - nc_planck_fi_cor_ttteee_add_default_calib_priors()
- * - nc_planck_fi_cor_ttteee_add_default_sz_prior()
  *
  */
 void
@@ -497,4 +560,20 @@ nc_planck_fi_cor_ttteee_add_all_default_priors (NcmLikelihood *lh)
 {
   nc_planck_fi_cor_tt_add_all_default_priors (lh);
   nc_planck_fi_cor_ttteee_add_default_galf_priors (lh);
+}
+
+/**
+ * nc_planck_fi_cor_ttteee_add_all_default18_priors:
+ * @lh: a #NcmLikelihood
+ *
+ * Adds all default priors:
+ * - nc_planck_fi_cor_tt_add_all_default18_priors()
+ * - nc_planck_fi_cor_ttteee_add_default18_gal_priors()
+ *
+ */
+void
+nc_planck_fi_cor_ttteee_add_all_default18_priors (NcmLikelihood *lh)
+{
+  nc_planck_fi_cor_tt_add_all_default18_priors (lh);
+  nc_planck_fi_cor_ttteee_add_default18_galf_priors (lh);
 }

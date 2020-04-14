@@ -896,42 +896,6 @@ ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble s
 }
 
 /**
- * ncm_matrix_norma_diag:
- * @cm1: FIXME
- * @cm2: FIXME
- *
- * FIXME
- *
- * Returns: (transfer none): FIXME
- */
-NcmMatrix *
-ncm_matrix_norma_diag (const NcmMatrix *cm1, NcmMatrix *cm2)
-{
-  const guint nrows = ncm_matrix_nrows (cm1);
-  const guint ncols = ncm_matrix_ncols (cm1);
-  gint i;
-
-  g_assert_cmpuint (nrows, ==, ncols);
-
-  if (cm2 != cm1)
-    ncm_matrix_memcpy (cm2, cm1);
-
-  for (i = 0; i < nrows; i++)
-  {
-    const gdouble var_i = ncm_matrix_get (cm1, i, i);
-    gdouble sigma_i;
-    
-    g_assert_cmpfloat (var_i, >, 0.0);
-    sigma_i = sqrt (var_i);
-
-    ncm_matrix_mul_col (cm2, i, 1.0 / sigma_i);
-    ncm_matrix_mul_row (cm2, i, 1.0 / sigma_i);
-  }
-
-  return cm2;
-}
-
-/**
  * ncm_matrix_copy_triangle:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
@@ -1619,6 +1583,55 @@ ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_mi
 	}
 	
   ncm_rng_unlock (rng);
+}
+
+/**
+ * ncm_matrix_cov2cor:
+ * @cov: a square #NcmMatrix
+ * @cor: the output matrix
+ * 
+ * Convert a covariance matrix @cov to a correlation
+ * matrix @cor. The matrices @cor and @cov can be the same
+ * object.
+ *
+ */
+void 
+ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
+{
+  const guint n = ncm_matrix_nrows (cov);
+  gint i;
+
+  g_assert_cmpuint (ncm_matrix_ncols (cov), ==, n);
+  if (cov != cor)
+    ncm_matrix_memcpy (cor, cov);
+
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *row_i = ncm_matrix_get_row (cor, i);
+    NcmVector *col_i = ncm_matrix_get_col (cor, i);    
+    const gdouble w_i = 1.0 / sqrt (fabs (ncm_matrix_get (cov, i, i)));
+
+    ncm_vector_scale (row_i, w_i);
+    ncm_vector_scale (col_i, w_i);
+  }
+}
+
+/**
+ * ncm_matrix_cov_dup_cor:
+ * @cov: a square #NcmMatrix
+ * 
+ * Convert a covariance matrix @cov to a newly allocated
+ * correlation matrix. 
+ *
+ * Returns: (transfer full): the newly allocated correlation matrix.
+ */
+NcmMatrix *
+ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
+{
+  NcmMatrix *cor = ncm_matrix_dup (cov);
+  ncm_matrix_cov2cor (cov, cor);
+
+  return cor;
 }
 
 /**

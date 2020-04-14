@@ -67,7 +67,7 @@ nc_hicosmo_gcg_init (NcHICosmoGCG *cosmo_de)
   gchar *filename   = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
   gint i;
 
-  cosmo_de->priv               = G_TYPE_INSTANCE_GET_PRIVATE (cosmo_de, NC_TYPE_HICOSMO_GCG, NcHICosmoGCGPrivate);
+  cosmo_de->priv               = nc_hicosmo_gcg_get_instance_private (cosmo_de);
   cosmo_de->priv->BBN_spline2d = NCM_SPLINE2D (ncm_serialize_from_file (ser, filename));
 
   g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));

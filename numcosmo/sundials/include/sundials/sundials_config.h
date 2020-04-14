@@ -19,8 +19,8 @@
  * -----------------------------------------------------------------*/
 
 /* Define SUNDIALS version numbers */
-#define SUNDIALS_VERSION "4.1.0"
-#define SUNDIALS_VERSION_MAJOR 4
+#define SUNDIALS_VERSION "5.1.0"
+#define SUNDIALS_VERSION_MAJOR 5
 #define SUNDIALS_VERSION_MINOR 1
 #define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
@@ -57,12 +57,12 @@
  *     #define SUNDIALS_INT64_T 1
  *     #define SUNDIALS_INT32_T 1
  */
-#define SUNDIALS_INT32_T 1
+#define SUNDIALS_INT64_T 1
 
 /* Define the type of vector indices in SUNDIALS 'sunindextype'.
  * The macro will be defined with a type of the appropriate size.
  */
-#define SUNDIALS_INDEX_TYPE int32_t
+#define SUNDIALS_INDEX_TYPE int64_t
 
 /* Use generic math functions 
  * If it was decided that generic math functions can be used, then
@@ -88,11 +88,28 @@
 /* #undef SUNDIALS_SUPERLUMT */
 /* #undef SUNDIALS_SUPERLUMT_THREAD_TYPE */
 
+/* SUPERLUDIST available
+ * If working libraries for SUPERLUDIST support were found, then
+ *    #define SUNDIALS_SUPERLUDIST
+ */
+/* #undef SUNDIALS_SUPERLUDIST */
+
 /* KLU available
  * If working libraries for KLU support were found, then
  *     #define SUNDIALS_KLU 
  */
 /* #undef SUNDIALS_KLU */
+
+/* Trilinos available
+ * If working libraries for Trilinos support were found, then
+ *     #define SUNDIALS_TRILINOS
+ */
+/* #undef SUNDIALS_TRILINOS */
+
+ /* Trilinos with MPI is available, then
+  *    #define SUNDIALS_TRILINOS_HAVE_MPI
+  */
+/* #undef SUNDIALS_TRILINOS_HAVE_MPI */
 
 /* Set if SUNDIALS is built with MPI support.
  * 
@@ -105,7 +122,7 @@
  * otherwise
  *      #define SUNDIALS_MPI_COMM_F2C 0
  */
-/* #define SUNDIALS_MPI_COMM_F2C 1 */
+#define SUNDIALS_MPI_COMM_F2C 0
 
 /* Mark SUNDIALS API functions for export/import
  * When building shared SUNDIALS libraries under Windows, use

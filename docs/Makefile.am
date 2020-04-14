@@ -51,7 +51,7 @@ SCANGOBJ_OPTIONS=
 
 # Extra options to supply to gtkdoc-scan.
 # e.g. SCAN_OPTIONS=--deprecated-guards="GTK_DISABLE_DEPRECATED"
-SCAN_OPTIONS=--rebuild-types --rebuild-sections
+SCAN_OPTIONS=--rebuild-types --rebuild-sections --ignore-decorators="NCM_INLINE"
 
 # Extra options to supply to gtkdoc-mkdb.
 # e.g. MKDB_OPTIONS=--xml-mode --output-format=xml
@@ -102,6 +102,7 @@ endif
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
 IGNORE_HFILES= \
               config.h                  \
+              config_extra.h            \
               ncm_gsl_blas_types.h      \
               ncm_fit_nlopt_enum_meta.h \
               ncm_sphere_map_block.c    \
@@ -121,7 +122,9 @@ IGNORE_HFILES= \
               class/hyrec		\
               class/include             \
               toeplitz                  \
-              sundials
+              sundials                  \
+              rcm.h                     \
+              rcm.c
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -129,7 +132,7 @@ HTML_IMAGES=
 
 # Extra SGML files that are included by $(DOC_MAIN_SGML_FILE).
 # e.g. content_files=running.sgml building.sgml changes-2.0.sgml
-content_files=$(XML_FILES) $(XML_GEN_FILES) references.bib container.css
+content_files=$(XML_FILES) $(XML_GEN_FILES) container.css
 
 # SGML files where gtk-doc abbrevations (#GtkWidget) are expanded
 # These files must be listed here *and* in content_files
@@ -148,6 +151,7 @@ GTKDOC_LIBS=$(top_builddir)/numcosmo/libnumcosmo.la
 include $(top_srcdir)/gtk-doc.make
 
 setup-build.stamp: $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
+#setup-build.stamp: $(content_files)
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
@@ -197,29 +201,40 @@ MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
 
 BUILT_EXTRA_DIST = $(man_MANS)
 
-CLEANFILES += bibfile.stamp addmathjax.stamp
+CLEANFILES += \
+	addmathjax.stamp                                    \
+	$(addsuffix .log,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .4ct,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .4tc,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .aux,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .bbl,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .blg,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .dvi,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .idv,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .lg,   $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .out,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .tmp,  $(basename $(XML_GEN_FILES)))    \
+	$(addsuffix .xref, $(basename $(XML_GEN_FILES)))    \
+	$(addprefix $(top_srcdir)/docs/, $(XML_GEN_FILES))
 
 dist-hook-local: dist-local-check-mans-enabled all-local
 
 numcosmo-docs-clean: clean
 	cd $(srcdir) && rm -rf xml html
 
-bibfile.stamp: $(top_srcdir)/docs/references.bib
-	-$(GTK_DOC_V_SETUP)if test "$(abs_srcdir)" != "$(abs_builddir)" ; then \
-	    cp -p $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
-	fi
-	$(AM_V_at)touch bibfile.stamp
-
-%.xml: %.tex bibfile.stamp
-	$(AM_V_at)echo "  DOC   Building XML $@ from $<"
-	$(AM_V_at)rm -f $*.aux $*.bbl 
-	$(AM_V_at)latex --interaction=nonstopmode $< >  $(@F).htlatex.log 2>&1
-	$(AM_V_at)bibtex8 $(*F)                      >> $(@F).htlatex.log 2>&1
-	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
-	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
-	$(AM_V_at)htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
+$(top_srcdir)/docs/%.xml: %.tex $(top_srcdir)/docs/references.bib
+	$(AM_V_at)echo "  DOC   Building XML $@ from $< "
+	$(AM_V_at)rm -f $*.aux $*.bbl
+	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)" -ef "$(<D)"; then cp $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); fi
+	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >  $(@F).htlatex.log 2>&1
+	$(AM_V_at)bibtex8 $(*F)                                                           >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)latex --interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR) $< >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode --output-directory=$(DOC_TARGET_DIR)" >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
-	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
+	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)" -ef "$(<D)"; then echo "  DOC   Moving $(@F) to $(<D) "; mv $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); rm $(DOC_TARGET_DIR)/references.bib; fi
+
+$(XML_GEN_FILES): $(addprefix $(top_srcdir)/docs/, $(XML_GEN_FILES))
 
 if ENABLE_GTK_DOC
 HTML_BUILD_STAMP += addmathjax.stamp

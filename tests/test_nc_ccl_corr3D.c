@@ -321,7 +321,7 @@ test_nc_ccl_corr_3d_new (TestNcCCLCorr3D *test, gconstpointer pdata)
   
   ncm_powspec_corr3d_prepare (test->psc, NCM_MODEL (test->cosmo));
   
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
+  g_assert_true (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void

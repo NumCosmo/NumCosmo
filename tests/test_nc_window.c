@@ -78,8 +78,8 @@ void
 test_nc_window_new_tophat (void)
 {
   wf = nc_window_tophat_new ();
-  g_assert (NC_IS_WINDOW (wf));
-  g_assert (NC_IS_WINDOW_TOPHAT (wf));
+  g_assert_true (NC_IS_WINDOW (wf));
+  g_assert_true (NC_IS_WINDOW_TOPHAT (wf));
 
   test_nc_window_free ();
 
@@ -88,16 +88,16 @@ test_nc_window_new_tophat (void)
 #else
   wf = nc_window_tophat_new ();
 #endif
-  g_assert (NC_IS_WINDOW (wf));
-  g_assert (NC_IS_WINDOW_TOPHAT (wf));  
+  g_assert_true (NC_IS_WINDOW (wf));
+  g_assert_true (NC_IS_WINDOW_TOPHAT (wf));  
 }
 
 void
 test_nc_window_new_gaussian (void)
 {
   wf = nc_window_gaussian_new ();
-  g_assert (NC_IS_WINDOW (wf));
-  g_assert (NC_IS_WINDOW_GAUSSIAN (wf));
+  g_assert_true (NC_IS_WINDOW (wf));
+  g_assert_true (NC_IS_WINDOW_GAUSSIAN (wf));
 
   test_nc_window_free();
 
@@ -106,8 +106,8 @@ test_nc_window_new_gaussian (void)
 #else
   wf = nc_window_gaussian_new ();
 #endif
-  g_assert (NC_IS_WINDOW (wf));
-  g_assert (NC_IS_WINDOW_GAUSSIAN (wf));  
+  g_assert_true (NC_IS_WINDOW (wf));
+  g_assert_true (NC_IS_WINDOW_GAUSSIAN (wf));  
 }
 
 void

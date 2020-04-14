@@ -37,6 +37,7 @@
 #include <numcosmo/math/ncm_mpi_job_test.h>
 #include <numcosmo/math/ncm_mpi_job_fit.h>
 #include <numcosmo/math/ncm_mpi_job_mcmc.h>
+#include <numcosmo/math/ncm_mpi_job_feval.h>
 
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>
@@ -71,6 +72,7 @@
 #include <numcosmo/math/ncm_powspec_sphere_proj.h>
 #include <numcosmo/math/ncm_powspec_corr3d.h>
 #include <numcosmo/math/ncm_hoaa.h>
+#include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>
 #include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
@@ -115,7 +117,7 @@
 #include <numcosmo/math/ncm_prior_flat.h>
 #include <numcosmo/math/ncm_prior_flat_param.h>
 #include <numcosmo/math/ncm_prior_flat_func.h>
-#include <numcosmo/math/function_cache.h>
+#include <numcosmo/math/ncm_function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_diff.h>

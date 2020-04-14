@@ -76,7 +76,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT);
 static void
 ncm_diff_init (NcmDiff *diff)
 {
-  diff->priv           = G_TYPE_INSTANCE_GET_PRIVATE (diff, NCM_TYPE_DIFF, NcmDiffPrivate);
+  diff->priv           = ncm_diff_get_instance_private (diff);
   diff->priv->maxorder = 0;
   diff->priv->rs       = 0.0;
   diff->priv->roff_pad = 0.0;

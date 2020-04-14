@@ -123,7 +123,7 @@ _nc_hipert_first_order_clear_var (NcHIPertFirstOrderVar *var)
 static void
 nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
 {
-  NcHIPertFirstOrderPrivate * const self = fo->priv = G_TYPE_INSTANCE_GET_PRIVATE (fo, NC_TYPE_HIPERT_FIRST_ORDER, NcHIPertFirstOrderPrivate); 
+  NcHIPertFirstOrderPrivate * const self = fo->priv = nc_hipert_first_order_get_instance_private (fo); 
   
   self->grav         = NULL;
   self->comps        = g_ptr_array_new ();
@@ -999,6 +999,7 @@ nc_hipert_first_order_get_abstol (NcHIPertFirstOrder *fo)
 /**
  * nc_hipert_first_order_set_integ:
  * @fo: a #NcHIPertFirstOrder
+ * @integ: integrator type #NcHIPertFirstOrderInteg
  *
  * Sets the integrator to be used.
  * 
@@ -1015,6 +1016,7 @@ nc_hipert_first_order_set_integ (NcHIPertFirstOrder *fo, NcHIPertFirstOrderInteg
 
 /**
  * nc_hipert_first_order_get_integ:
+ * @fo: a #NcHIPertFirstOrder
  *
  * Gets the integrator used.
  * 

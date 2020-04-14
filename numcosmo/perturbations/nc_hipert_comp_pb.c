@@ -56,7 +56,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_CO
 static void
 nc_hipert_comp_pb_init (NcHIPertCompPB *pb)
 {
-  pb->priv = G_TYPE_INSTANCE_GET_PRIVATE (pb, NC_TYPE_HIPERT_COMP_PB, NcHIPertCompPBPrivate);
+  pb->priv = nc_hipert_comp_pb_get_instance_private (pb);
 
   pb->priv->lmax = 0;
 }

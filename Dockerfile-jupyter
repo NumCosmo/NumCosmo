@@ -1,0 +1,95 @@
+ARG BASE_CONTAINER=jupyter/base-notebook
+FROM $BASE_CONTAINER AS compile-image
+
+USER root
+
+# Install basic stuff
+RUN apt-get update && apt-get install -y \
+    nano       \
+    wget       \
+    git        \
+    cmake      \
+    pkg-config
+
+# Install compilers
+RUN apt-get update && apt-get install -y \
+    gcc-8      \
+    gfortran-8
+
+# Install GLib and GObject related packages
+RUN apt-get update && apt-get install -y \
+    gtk-doc-tools          \
+    gobject-introspection  \
+    libgirepository1.0-dev \
+    libglib2.0-dev
+
+# Install package building tools
+RUN apt-get update && apt-get install -y \
+    autoconf      \
+    automake      \
+    autotools-dev \
+    libtool
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    libgsl-dev       \
+    libgmp-dev       \
+    libmpfr-dev      \
+    libcfitsio-dev   \
+    libfftw3-dev     \
+    libnlopt-dev     \
+    liblapack-dev    \
+    libopenblas-dev  \
+    libhdf5-dev      \
+    libflint-arb-dev
+
+# NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
+RUN cd && mkdir NumCosmo usr
+COPY . /root/NumCosmo/
+
+WORKDIR /root/NumCosmo
+
+RUN NOCONFIGURE=yes ./autogen.sh
+RUN CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" FCFLAGS="-O3 -g -Wall" ./configure --prefix=/usr --enable-opt-cflags 
+RUN make -j12
+RUN make install DESTDIR=/root
+
+FROM $BASE_CONTAINER AS runtime-image
+
+USER root
+
+# Install python gobject support
+RUN conda install --quiet --yes    \
+    pygobject numpy matplotlib &&  \
+    conda clean --all -f -y &&     \
+    npm cache clean --force &&     \
+    fix-permissions $CONDA_DIR &&  \
+    fix-permissions /home/$NB_USER
+
+# Install dependencies (runtime only)
+RUN apt-get update && apt-get install -y \
+    libgfortran5     \
+    libgsl23         \
+    libgmp10         \
+    libmpfr6         \
+    libcfitsio5      \
+    libfftw3-double3 \
+    libfftw3-single3 \
+    libnlopt0        \
+    liblapack3       \
+    libopenblas-base \
+    libhdf5-100      \
+    libflint-arb2 
+
+COPY --from=compile-image /root/usr /usr
+
+# Set environment variables 
+ENV CUBACORES=1
+ENV OMP_NUM_THREADS=1
+ENV OMP_THREAD_LIMIT=1
+ENV GI_TYPELIB_PATH="/usr/lib/girepository-1.0"
+
+RUN cp /usr/share/numcosmo-0.14.2/notebooks/* work/
+
+# Switch back to jovyan to avoid accidental container runs as root
+USER $NB_UID

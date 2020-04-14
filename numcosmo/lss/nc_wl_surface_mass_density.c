@@ -60,7 +60,7 @@
  * See, e.g., [Mandelbaum (2006)][XMandelbaum2006], [Umetsu (2012)][XUmetsu2012], [Applegate (2014)][XApplegate2014], 
  * [Melchior (2017)][XMelchior2017], [Parroni (2017)][XParroni2017].
  * 
- * Usually $z_{lens} = z_{cluster}, but we define these two properties in order to handle cases where shear signal has been 
+ * Usually $z_{lens} = z_{cluster}, but we define these as two different arguments in order to handle cases where shear signal has been 
  * rescaled to a different cluster redshift (following D. Applegate's code.).
  * 
  */
@@ -290,6 +290,35 @@ nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd)
 }
 
 /**
+ * nc_wl_surface_mass_density_prepare:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * 
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation.
+ *
+ */
+void 
+nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+{
+  nc_distance_prepare_if_needed (smd->dist, cosmo);
+}
+
+/**
+ * nc_wl_surface_mass_density_prepare_if_needed:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * 
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary.
+ *
+ */
+void 
+nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
+{
+  if (ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo)))
+    nc_wl_surface_mass_density_prepare (smd, cosmo);
+}
+
+/**
  * nc_wl_surface_mass_density_sigma_critical:
  * @smd: a #NcWLSurfaceMassDensity
  * @cosmo: a #NcHICosmo
@@ -469,9 +498,9 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
 gdouble 
 nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
-	gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
-	gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
+  const gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+	const gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
+	const gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
 
 	return (mean_sigma - sigma) / sigma_crit;
 }

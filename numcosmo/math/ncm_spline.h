@@ -102,20 +102,20 @@ void ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub);
 void ncm_spline_free (NcmSpline *s);
 void ncm_spline_clear (NcmSpline **s);
 
-G_INLINE_FUNC void ncm_spline_prepare (NcmSpline *s);
-G_INLINE_FUNC void ncm_spline_prepare_base (NcmSpline *s);
-G_INLINE_FUNC gdouble ncm_spline_eval (const NcmSpline *s, const gdouble x);
-G_INLINE_FUNC gdouble ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x);
-G_INLINE_FUNC gdouble ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x);
-G_INLINE_FUNC gdouble ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x);
-G_INLINE_FUNC gdouble ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
-G_INLINE_FUNC gboolean ncm_spline_is_empty (const NcmSpline *s);
-G_INLINE_FUNC gsize ncm_spline_min_size (const NcmSpline *s);
-G_INLINE_FUNC guint ncm_spline_get_index (const NcmSpline *s, const gdouble x);
+NCM_INLINE void ncm_spline_prepare (NcmSpline *s);
+NCM_INLINE void ncm_spline_prepare_base (NcmSpline *s);
+NCM_INLINE gdouble ncm_spline_eval (const NcmSpline *s, const gdouble x);
+NCM_INLINE gdouble ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x);
+NCM_INLINE gdouble ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x);
+NCM_INLINE gdouble ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x);
+NCM_INLINE gdouble ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
+NCM_INLINE gboolean ncm_spline_is_empty (const NcmSpline *s);
+NCM_INLINE gsize ncm_spline_min_size (const NcmSpline *s);
+NCM_INLINE guint ncm_spline_get_index (const NcmSpline *s, const gdouble x);
 
 /* Utilities -- internal use */
 
-G_INLINE_FUNC gdouble _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble ci, const gdouble di, const gdouble xi, const gdouble a, const gdouble b);
+NCM_INLINE gdouble _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble ci, const gdouble di, const gdouble xi, const gdouble a, const gdouble b);
 
 G_END_DECLS
 
@@ -124,67 +124,67 @@ G_END_DECLS
 #ifndef _NCM_SPLINE_INLINE_H_
 #define _NCM_SPLINE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline_prepare (NcmSpline *s)
 {
   s->init = TRUE;
   NCM_SPLINE_GET_CLASS (s)->prepare (s);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_spline_prepare_base (NcmSpline *s)
 {
 	if (NCM_SPLINE_GET_CLASS (s)->prepare_base)
 		NCM_SPLINE_GET_CLASS (s)->prepare_base (s);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline_eval (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS (s)->eval (s, x);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS (s)->deriv (s, x);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS (s)->deriv2 (s, x);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS (s)->deriv_nmax (s, x);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   return NCM_SPLINE_GET_CLASS (s)->integ (s, x0, x1);
 }
 
-G_INLINE_FUNC gboolean
+NCM_INLINE gboolean
 ncm_spline_is_empty (const NcmSpline *s)
 {
 	return s->empty;
 }
 
-G_INLINE_FUNC gsize
+NCM_INLINE gsize
 ncm_spline_min_size (const NcmSpline *s)
 {
 	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
-#ifndef __GTK_DOC_IGNORE__
-static gsize
+NCM_INLINE gsize
 _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const gdouble x, gsize index_lo, gsize index_hi)
 {
   gsize ilo = index_lo;
@@ -202,7 +202,7 @@ _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const g
   return ilo;
 }
 
-static gsize
+NCM_INLINE gsize
 _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint stride, gsize len, gdouble x)
 {
   gsize x_index = a->cache;
@@ -224,9 +224,8 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
   
   return a->cache;
 }
-#endif
 
-G_INLINE_FUNC guint
+NCM_INLINE guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 {
 	if (ncm_vector_stride (s->xv) == 1)
@@ -247,7 +246,7 @@ ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 
 /* Utilities -- internal use */
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble ci, const gdouble di, const gdouble xi, const gdouble a, const gdouble b)
 {
   const gdouble r1    = (a - xi);
@@ -262,5 +261,6 @@ _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble c
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE_INLINE_H_ */

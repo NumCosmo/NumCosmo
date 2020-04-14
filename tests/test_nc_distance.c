@@ -54,7 +54,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/distance/comoving", TestNcDistance, NULL,
               &test_nc_distance_new,
               &test_nc_distance_comoving,
@@ -75,7 +74,6 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new,
               &test_nc_distance_transverse_z_to_infinity,
               &test_nc_distance_free); 
-#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }
@@ -93,8 +91,8 @@ test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
   NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcDistance *dist            = nc_distance_new (6.0);
 	
-  g_assert (dist != NULL);
-  g_assert (NC_IS_DISTANCE (dist));
+  g_assert_true (dist != NULL);
+  g_assert_true (NC_IS_DISTANCE (dist));
 	
   test->cosmo = cosmo;
 	test->dist  = dist;
@@ -110,7 +108,8 @@ test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
 	ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
-	
+
+  nc_distance_prepare (dist, cosmo);
 }
 
 void

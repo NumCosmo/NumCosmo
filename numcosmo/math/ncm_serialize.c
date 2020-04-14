@@ -950,7 +950,8 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   if (params != NULL)
   {
     GVariantIter *p_iter  = g_variant_iter_new (params);
-    GParameter *gprop     = g_new (GParameter, nprop);
+    const gchar **names   = g_new (const gchar *, nprop);
+    GValue *values        = g_new (GValue, nprop);
     GVariant *var         = NULL;
     gboolean is_NcmVector = g_type_is_a (gtype, NCM_TYPE_VECTOR);
     gboolean is_NcmMatrix = g_type_is_a (gtype, NCM_TYPE_MATRIX);
@@ -960,40 +961,44 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     {
       GVariant *var_key = g_variant_get_child_value (var, 0);
       GVariant *var_val = g_variant_get_child_value (var, 1);
-      GVariant *val = g_variant_get_variant (var_val);
-      gprop[i].name = g_variant_get_string (var_key, NULL);
+      GVariant *val     = g_variant_get_variant (var_val);
+      names[i]          = g_variant_get_string (var_key, NULL);
 
       if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)) && !is_NcmVector)
       {
         NcmVector *vec = ncm_vector_new_variant (val);
-        GValue lval = G_VALUE_INIT;
+        GValue lval    = G_VALUE_INIT;
+        
         g_value_init (&lval, G_TYPE_OBJECT);
-        gprop[i].value = lval;
-        g_value_take_object (&gprop[i].value, vec);
+        values[i] = lval;
+        g_value_take_object (&values[i], vec);
       }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE)) && !is_NcmMatrix)
       {
         NcmMatrix *mat = ncm_matrix_new_variant (val);
-        GValue lval = G_VALUE_INIT;
+        GValue lval    = G_VALUE_INIT;
+        
         g_value_init (&lval, G_TYPE_OBJECT);
-        gprop[i].value = lval;
-        g_value_take_object (&gprop[i].value, mat);
+        values[i] = lval;
+        g_value_take_object (&values[i], mat);
       }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_STRV_TYPE)))
       {
         gchar **strv = g_variant_dup_strv (val, NULL);
-        GValue lval = G_VALUE_INIT;
+        GValue lval  = G_VALUE_INIT;
+        
         g_value_init (&lval, G_TYPE_STRV);
-        gprop[i].value = lval;
-        g_value_take_boxed (&gprop[i].value, strv);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], strv);
       }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
       {
         NcmObjArray *oa = ncm_obj_array_new_from_variant (ser, val);
-        GValue lval = G_VALUE_INIT;
+        GValue lval     = G_VALUE_INIT;
+        
         g_value_init (&lval, NCM_TYPE_OBJ_ARRAY);
-        gprop[i].value = lval;
-        g_value_take_boxed (&gprop[i].value, oa);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], oa);
       }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
       {
@@ -1006,14 +1011,14 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
                                           nest_obj_params);
 
         g_value_init (&lval, G_TYPE_OBJECT);
-        gprop[i].value = lval;
+        values[i] = lval;
         
-        g_value_take_object (&gprop[i].value, nest_obj);
+        g_value_take_object (&values[i], nest_obj);
         g_variant_unref (nest_obj_key);
         g_variant_unref (nest_obj_params);
       }
       else
-        g_dbus_gvariant_to_gvalue (val, &gprop[i].value);
+        g_dbus_gvariant_to_gvalue (val, &values[i]);
 
       i++;
       g_variant_unref (var_key);
@@ -1023,29 +1028,25 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     }
 
 #if GLIB_CHECK_VERSION(2,54,0)
+    obj = g_object_new_with_properties (gtype, nprop, names, values);
+#else
     {
-      const gchar **names = g_new (const gchar *, nprop);
-      GValue *values      = g_new (GValue, nprop);
-  
+      GParameter *gprop     = g_new (GParameter, nprop);
       for (i = 0; i < nprop; i++)
       {
-        names[i]  = gprop[i].name;
-        values[i] = gprop[i].value;
+        gprop[i].name  = names[i];
+        gprop[i].value = values[i];
       }
-  
-      obj = g_object_new_with_properties (gtype, nprop, names, values);
-
-      g_free (names);
-      g_free (values);
+      obj = g_object_newv (gtype, nprop, gprop);
+      g_free (gprop);
     }
-#else
-    obj = g_object_newv (gtype, nprop, gprop);
 #endif /* GLIB_CHECK_VERSION(2,54,0) */
 
     for (i = 0; i < nprop; i++)
-      g_value_unset (&gprop[i].value);
+      g_value_unset (&values[i]);
 
-    g_free (gprop);
+    g_free (names);
+    g_free (values);
     g_variant_iter_free (p_iter);
   }
   else

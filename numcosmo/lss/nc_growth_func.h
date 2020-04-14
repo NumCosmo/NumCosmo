@@ -70,10 +70,10 @@ void nc_growth_func_clear (NcGrowthFunc **gf);
 void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo *cosmo);
 void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);
 
-G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
-G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
-G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
-G_INLINE_FUNC gdouble nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf);
+NCM_INLINE gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
+NCM_INLINE gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
+NCM_INLINE void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
+NCM_INLINE gdouble nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf);
 
 G_END_DECLS
 
@@ -82,27 +82,25 @@ G_END_DECLS
 #ifndef _NC_GROWTH_FUNC_INLINE_H_
 #define _NC_GROWTH_FUNC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
-#include <gsl/gsl_spline.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble 
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
   return ncm_spline_eval (gf->s, a);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
   return - a * a * ncm_spline_eval_deriv (gf->s, a);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
   const gdouble a = 1.0 / (1.0 + z);
@@ -110,7 +108,7 @@ nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble
   *f = - a * a * ncm_spline_eval_deriv (gf->s, a);
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf)
 {
   return gf->Da0;
@@ -118,5 +116,6 @@ nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_GROWTH_FUNC_INLINE_H_ */

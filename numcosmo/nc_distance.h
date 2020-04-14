@@ -32,7 +32,7 @@
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
-#include <numcosmo/math/function_cache.h>
+#include <numcosmo/math/ncm_function_cache.h>
 
 G_BEGIN_DECLS
 
@@ -118,7 +118,7 @@ void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 void nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
+NCM_INLINE void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
 
 void nc_distance_free (NcDistance *dist);
 void nc_distance_clear (NcDistance **dist);
@@ -187,10 +187,11 @@ G_END_DECLS
 #ifndef _NC_DISTANCE_INLINE_H_
 #define _NC_DISTANCE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo)))
@@ -199,5 +200,6 @@ nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_DISTANCE_INLINE_H_ */

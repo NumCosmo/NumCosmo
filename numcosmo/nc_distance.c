@@ -399,13 +399,12 @@ static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
-  dist->comoving_distance_cache->clear = TRUE;
-	dist->comoving_infinity->clear       = TRUE;
-  dist->time_cache->clear              = TRUE;
-  dist->lookback_time_cache->clear     = TRUE;
-  dist->conformal_time_cache->clear    = TRUE;
-
-  dist->sound_horizon_cache->clear = TRUE;
+  ncm_function_cache_empty_cache (dist->comoving_distance_cache);
+	ncm_function_cache_empty_cache (dist->comoving_infinity);
+  ncm_function_cache_empty_cache (dist->time_cache);
+  ncm_function_cache_empty_cache (dist->lookback_time_cache);
+  ncm_function_cache_empty_cache (dist->conformal_time_cache);
+  ncm_function_cache_empty_cache (dist->sound_horizon_cache);
 
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
   {
@@ -421,6 +420,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 
       ncm_spline_free (s);
     }
+
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
@@ -531,7 +531,6 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   NCM_UNUSED (cd);
-
   return 1.0 / sqrt (E2);
 }
 

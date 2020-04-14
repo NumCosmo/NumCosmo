@@ -86,6 +86,7 @@ cosmo.add_submodel (prim)
 # Preparing CLASS backend
 #
 cbe.prepare (cosmo)
+dist.prepare (cosmo)
 
 print ("# theta100CMB % 22.15e" % (dist.theta100CMB (cosmo)))
 print ("# zt          % 22.15e" % (cosmo.zt (5.0)))

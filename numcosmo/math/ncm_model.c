@@ -702,7 +702,7 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
   if (sparam_id >= model_class->sparam_len)
     g_error ("ncm_model_class_set_sparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
              sparam_id + 1, model_class->sparam_len, ncm_sparam_name (sparam), model_class->name);
-  g_assert (prop_id > 0);
+	g_assert_cmpint (prop_id, >, 0);
 
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
     g_error ("Scalar Parameter: %u is already set.", sparam_id);
@@ -1322,9 +1322,9 @@ ncm_model_params_valid_bounds (NcmModel *model)
   for (i = 0; i < model->total_len; i++)
   {
     const gdouble lb  = ncm_model_param_get_lower_bound (model, i);
-    const gdouble ub  = ncm_model_param_get_lower_bound (model, i);
-    const gdouble val = ncm_model_param_get (model, i);
-    if (val < lb || val > ub)
+    const gdouble ub  = ncm_model_param_get_upper_bound (model, i);
+    const gdouble val = ncm_model_param_get (model, i);    
+    if ((val < lb) || (val > ub))
       return FALSE;
   }
   return TRUE;
@@ -1976,9 +1976,13 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
 void
 ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
 {
-  guint i;
-  gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
-  g_assert (has_param);
+	guint i;
+  const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+	
+	if (!has_param)
+		g_error ("ncm_model_param_set_by_name: model `%s' does not have a parameter called `%s'. "
+	           "Use the method ncm_model_param_index_from_name() to check if the parameter exists.", 
+		         G_OBJECT_TYPE_NAME (model), param_name);
   ncm_model_param_set (model, i, val);
 }
 
@@ -1994,9 +1998,13 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
 void
 ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
 {
-  guint i;
-  gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
-  g_assert (has_param);
+	guint i;
+  const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+	
+	if (!has_param)
+		g_error ("ncm_model_orig_param_set_by_name: model `%s' does not have a parameter called `%s'. "
+	           "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.", 
+		         G_OBJECT_TYPE_NAME (model), param_name);
   ncm_model_orig_param_set (model, i, val);
 }
 
@@ -2013,8 +2021,12 @@ gdouble
 ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
   guint i;
-  gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
-  g_assert (has_param);
+  const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+	
+	if (!has_param)
+		g_error ("ncm_model_param_get_by_name: model `%s' does not have a parameter called `%s'. "
+	           "Use the method ncm_model_param_index_from_name() to check if the parameter exists.", 
+		         G_OBJECT_TYPE_NAME (model), param_name);
   return ncm_model_param_get (model, i);
 }
 
@@ -2030,9 +2042,13 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 gdouble
 ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
-  guint i = 0;
-  gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
-  g_assert (has_param);
+  guint i;
+  const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+
+	if (!has_param)
+		g_error ("ncm_model_orig_param_get_by_name: model `%s' does not have a parameter called `%s'. "
+	           "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.", 
+		         G_OBJECT_TYPE_NAME (model), param_name);
 
   return ncm_model_orig_param_get (model, i);
 }

@@ -175,7 +175,7 @@ test_ncm_matrix_new_gsl (TestNcmMatrix *test, gconstpointer pdata)
       }
     }
 
-    g_assert (ncm_matrix_nrows (test->m) == gm->size1 && ncm_matrix_ncols (test->m) == gm->size2);
+    g_assert_true (ncm_matrix_nrows (test->m) == gm->size1 && ncm_matrix_ncols (test->m) == gm->size2);
   }  
 }
 
@@ -209,7 +209,7 @@ test_ncm_matrix_new_array (TestNcmMatrix *test, gconstpointer pdata)
 
     g_assert_cmpuint (ncm_matrix_nrows (test->m), ==, ga->len / test->ncols);
 
-    g_assert (ga == ncm_matrix_get_array (test->m));
+    g_assert_true (ga == ncm_matrix_get_array (test->m));
     g_array_unref (ga);
   }
 }
@@ -237,7 +237,7 @@ test_ncm_matrix_new_data_slice (TestNcmMatrix *test, gconstpointer pdata)
       }
     }
     
-    g_assert ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
+    g_assert_true ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
   }
 }
 
@@ -291,7 +291,7 @@ test_ncm_matrix_new_data_static (TestNcmMatrix *test, gconstpointer pdata)
       }
     }
 
-    g_assert ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
+    g_assert_true ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
   }
 }
 
@@ -318,7 +318,7 @@ test_ncm_matrix_new_data_static_tda (TestNcmMatrix *test, gconstpointer pdata)
       }
     }
 
-    g_assert ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
+    g_assert_true ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
 
     for (i = 0; i < 10 * test->nrows; i++)
     {
@@ -332,7 +332,7 @@ test_ncm_matrix_new_data_static_tda (TestNcmMatrix *test, gconstpointer pdata)
 
     {
       NcmVector *v = ncm_matrix_get_col (test->m, test->ncols - 1);
-      g_assert (ncm_vector_len (v) == ncm_matrix_nrows (test->m));
+      g_assert_true (ncm_vector_len (v) == ncm_matrix_nrows (test->m));
       for (i = 0; i < test->nrows; i++)
       {
         ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_matrix_get (test->m, i, test->ncols - 1));
@@ -342,9 +342,9 @@ test_ncm_matrix_new_data_static_tda (TestNcmMatrix *test, gconstpointer pdata)
 
     {
       NcmVector *v = ncm_matrix_get_row (test->m, test->nrows - 1);
-      g_assert (ncm_vector_len (v) == ncm_matrix_ncols (test->m));
+      g_assert_true (ncm_vector_len (v) == ncm_matrix_ncols (test->m));
       for (i = 0; i < test->ncols; i++)
-        g_assert (ncm_vector_get (v, i) == ncm_matrix_get (test->m, test->nrows - 1, i));
+        g_assert_true (ncm_vector_get (v, i) == ncm_matrix_get (test->m, test->nrows - 1, i));
       ncm_vector_free (v);
     }
   }
@@ -355,7 +355,7 @@ test_ncm_matrix_sanity (TestNcmMatrix *test, gconstpointer pdata)
 {
   guint i, j;
 
-  g_assert (NCM_IS_MATRIX (test->m));
+  g_assert_true (NCM_IS_MATRIX (test->m));
 
   for (i = 0; i < test->nrows; i++)
   {
@@ -513,7 +513,7 @@ test_ncm_matrix_submatrix (TestNcmMatrix *test, gconstpointer pdata)
   NcmMatrix *sm    = ncm_matrix_get_submatrix (test->m, nrows, ncols, test->nrows - nrows, test->ncols - ncols);
   guint ntests     = 20 * test->nrows;
 
-  g_assert (ncm_matrix_nrows (sm) == (test->nrows - nrows) && ncm_matrix_ncols (sm) == (test->ncols - ncols));
+  g_assert_true (ncm_matrix_nrows (sm) == (test->nrows - nrows) && ncm_matrix_ncols (sm) == (test->ncols - ncols));
 
   while (ntests--)
   {
@@ -523,10 +523,10 @@ test_ncm_matrix_submatrix (TestNcmMatrix *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_matrix_get (sm, nr, nc), ==, ncm_matrix_get (test->m, nr + nrows, nc + ncols));
   }
 
-  g_assert (NCM_IS_MATRIX (sm));
+  g_assert_true (NCM_IS_MATRIX (sm));
 
   ncm_matrix_free (test->m);
-  g_assert (G_IS_OBJECT (test->m));
+  g_assert_true (G_IS_OBJECT (test->m));
   ncm_matrix_ref (test->m);
 
   NCM_TEST_FREE (ncm_matrix_free, sm);
@@ -540,7 +540,7 @@ test_ncm_matrix_add_mul (TestNcmMatrix *test, gconstpointer pdata)
   NcmMatrix *sm    = ncm_matrix_get_submatrix (test->m, nrows, ncols, test->nrows - nrows, test->ncols - ncols);
   guint i, j;
 
-  g_assert (ncm_matrix_nrows (sm) == (test->nrows - nrows) && ncm_matrix_ncols (sm) == (test->ncols - ncols));
+  g_assert_true (ncm_matrix_nrows (sm) == (test->nrows - nrows) && ncm_matrix_ncols (sm) == (test->ncols - ncols));
 
   ncm_matrix_set_zero (sm);
 

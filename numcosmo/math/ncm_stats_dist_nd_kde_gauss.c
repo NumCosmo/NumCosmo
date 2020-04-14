@@ -98,7 +98,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdKDEGauss, ncm_stats_dist_nd_kde_gauss,
 static void
 ncm_stats_dist_nd_kde_gauss_init (NcmStatsDistNdKDEGauss *dndg)
 {
-  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = G_TYPE_INSTANCE_GET_PRIVATE (dndg, NCM_TYPE_STATS_DIST_ND_KDE_GAUSS, NcmStatsDistNdKDEGaussPrivate);
+  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_kde_gauss_get_instance_private (dndg);
 
   self->sample           = NULL;
   self->cov_decomp       = NULL;
@@ -647,6 +647,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f (gdouble *x, gdouble *hx, 
 
 	if (ret != 0)
 	{
+    /*printf ("cholesky failed!\n");*/
     _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
 
     g_array_set_size (self->ipiv, self->n);
@@ -770,6 +771,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
       opts[1] = 1.0e-15; 
       opts[2] = 1.0e-15;
       opts[3] = 1.0e-20;
+      opts[4] = -LM_DIFF_DELTA;
 
       ret = dlevmar_dif (&_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f,
                          ht, NULL, n, self->n, 10000,   
@@ -798,7 +800,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
     F.function = &_ncm_stats_dist_nd_kde_gauss_LOOCV_err2;
 
     gsl_min_fminimizer_set (fmin, &F, ht, hi, hf);
-    printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+    /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
     do {
       iter++;
       status = gsl_min_fminimizer_iterate (fmin);
@@ -817,7 +819,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
         break;
       }
 
-      printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+      /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
 
       last_hi = hi;
       last_hf = hf;

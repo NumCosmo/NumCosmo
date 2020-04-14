@@ -56,7 +56,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmODE, ncm_ode, G_TYPE_OBJECT);
 static void
 ncm_ode_init (NcmODE *ode)
 {
-  NcmODEPrivate * const self = ode->priv = G_TYPE_INSTANCE_GET_PRIVATE (ode, NCM_TYPE_ODE, NcmODEPrivate);
+  NcmODEPrivate * const self = ode->priv = ncm_ode_get_instance_private (ode);
 
   self->sys_size = 0;
 }

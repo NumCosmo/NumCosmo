@@ -58,7 +58,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT
 static void
 nc_hipert_comp_init (NcHIPertComp *comp)
 {
-  comp->priv = G_TYPE_INSTANCE_GET_PRIVATE (comp, NC_TYPE_HIPERT_COMP, NcHIPertCompPrivate);
+  comp->priv = nc_hipert_comp_get_instance_private (comp);
 
   comp->priv->gauge = NC_HIPERT_GRAV_GAUGE_LEN;
 }

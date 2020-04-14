@@ -69,7 +69,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
 static void
 nc_hipert_grav_init (NcHIPertGrav *grav)
 {
-  grav->priv = G_TYPE_INSTANCE_GET_PRIVATE (grav, NC_TYPE_HIPERT_GRAV, NcHIPertGravPrivate);
+  grav->priv = nc_hipert_grav_get_instance_private (grav);
 
   grav->priv->gauge = NC_HIPERT_GRAV_GAUGE_LEN;
 }
@@ -564,14 +564,19 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
 /**
  * nc_hipert_grav_get_G_scalar: (virtual get_G_scalar)
  * @grav: a #NcHIPertGrav
+ * @bg_var: a #NcHIPertBGVar
+ * @ydy: a #NcHIPertBGVarYDY
+ * @T_scalar: a #NcHIPertGravTScalar
  * @G_scalar: a #NcHIPertGravScalar
  * 
  * Gets the scalar part of the gravitation potentials.
- * 
  */
 /**
  * nc_hipert_grav_get_dy_scalar: (virtual get_dy_scalar)
  * @grav: a #NcHIPertGrav
+ * @bg_var: a #NcHIPertBGVar
+ * @ydy: a #NcHIPertBGVarYDY
+ * @T_scalar: a #NcHIPertGravTScalar
  * @G_scalar: a #NcHIPertGravScalar
  * 
  * Gets the scalar part of the gravitation potentials.

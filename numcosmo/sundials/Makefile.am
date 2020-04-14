@@ -69,12 +69,16 @@ sundials_cvode_sources = \
 	include/cvode/cvode_bbdpre.h   \
 	include/cvode/cvode_diag.h     \
 	include/cvode/cvode.h          \
+	include/cvode/cvode_spils.h    \
+	include/cvode/cvode_direct.h   \
 	include/cvode/cvode_ls.h       \
 	src/cvode/cvode_bandpre.c      \
 	src/cvode/cvode_bandpre_impl.h \
 	src/cvode/cvode_bbdpre.c       \
 	src/cvode/cvode_bbdpre_impl.h  \
 	src/cvode/cvode.c              \
+	src/cvode/cvode_spils.c        \
+	src/cvode/cvode_direct.c       \
 	src/cvode/cvode_diag.c         \
 	src/cvode/cvode_diag_impl.h    \
 	src/cvode/cvode_impl.h         \
@@ -133,39 +137,28 @@ sundials_sources = \
 	include/sundials/sundials_band.h                \
 	include/sundials/sundials_lapack.h              \
 	include/sundials/sundials_nvector.h             \
-	include/sundials/sundials_spfgmr.h              \
 	include/sundials/sundials_version.h             \
-	include/sundials/sundials_config.h              \
 	include/sundials/sundials_linearsolver.h        \
 	include/sundials/sundials_nvector_senswrapper.h \
-	include/sundials/sundials_spgmr.h               \
 	include/sundials/sundials_dense.h               \
 	include/sundials/sundials_math.h                \
-	include/sundials/sundials_pcg.h                 \
-	include/sundials/sundials_sptfqmr.h             \
 	include/sundials/sundials_direct.h              \
 	include/sundials/sundials_matrix.h              \
-	include/sundials/sundials_sparse.h              \
 	include/sundials/sundials_iterative.h           \
 	include/sundials/sundials_nonlinearsolver.h     \
-	include/sundials/sundials_spbcgs.h              \
 	include/sundials/sundials_types.h               \
+	include/sundials/sundials_mpi_types.h           \
+	include/sundials/sundials_config.h              \
 	src/sundials/sundials_band.c                    \
 	src/sundials/sundials_iterative.c               \
 	src/sundials/sundials_matrix.c                  \
 	src/sundials/sundials_nvector.c                 \
-	src/sundials/sundials_sparse.c                  \
-	src/sundials/sundials_spgmr.c                   \
 	src/sundials/sundials_dense.c                   \
 	src/sundials/sundials_linearsolver.c            \
 	src/sundials/sundials_nvector_senswrapper.c     \
-	src/sundials/sundials_spbcgs.c                  \
-	src/sundials/sundials_sptfqmr.c                 \
 	src/sundials/sundials_direct.c                  \
 	src/sundials/sundials_math.c                    \
 	src/sundials/sundials_nonlinearsolver.c         \
-	src/sundials/sundials_pcg.c                     \
-	src/sundials/sundials_spfgmr.c                  \
 	src/sundials/sundials_version.c
 
 libsundials_la_SOURCES = \

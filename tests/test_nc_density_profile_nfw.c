@@ -54,7 +54,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/density_profile_nfw/eval_density", TestNcDensityProfileNFW, NULL,
               &test_nc_density_profile_nfw_new,
               &test_nc_density_profile_nfw_eval_density,
@@ -71,7 +70,6 @@ main (gint argc, gchar *argv[])
               &test_nc_density_profile_nfw_new,
               &test_nc_density_profile_nfw_scale_radius,
               &test_nc_density_profile_nfw_free);
-#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }
@@ -88,9 +86,9 @@ test_nc_density_profile_nfw_new (TestNcDensityProfileNFW *test, gconstpointer pd
 {
   NcHICosmo *cosmo        = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcDistance *dist        = nc_distance_new (3.0);
-  NcDensityProfileNFW *dp = NC_DENSITY_PROFILE_NFW (nc_density_profile_nfw_new ());
+  NcDensityProfileNFW *dp = nc_density_profile_nfw_new (NC_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0);
   
-  g_assert (dp != NULL);
+  g_assert_true (dp != NULL);
 
   test->cosmo = cosmo;
   test->dp    = dp;
@@ -98,7 +96,7 @@ test_nc_density_profile_nfw_new (TestNcDensityProfileNFW *test, gconstpointer pd
   test->R1    = 0.3; /* Mpc */
   test->R3    = 10.0;
 	
-  g_assert (NC_IS_DENSITY_PROFILE_NFW (dp));
+  g_assert_true (NC_IS_DENSITY_PROFILE_NFW (dp));
 
 	ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       70.0);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
@@ -110,8 +108,8 @@ test_nc_density_profile_nfw_new (TestNcDensityProfileNFW *test, gconstpointer pd
 	nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
   
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta", 1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "c",      4.0);
 
   nc_distance_free (dist);
 }

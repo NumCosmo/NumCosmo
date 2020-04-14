@@ -104,7 +104,7 @@ cmblkl* clik_smica_init(cldf * df, int nell, int* ell, int* has_cl, double unit,
     char cur_cmp_tot[256];
     clik_smica_comp_init_func *smica_dl_init;
     void* dlhandle;
-    char init_func_name[256];
+    char init_func_name[512];
     parname comp_type;
     cldf *comp_df;
 
@@ -135,7 +135,7 @@ cmblkl* clik_smica_init(cldf * df, int nell, int* ell, int* has_cl, double unit,
     SCs[ic] = smica_dl_init(comp_df,nb,mT,mP, nell, ell, has_cl, unit, wl, bins,nb,err);
  
     forwardError(*err,__LINE__,NULL);
-    sprintf(comp_type,"%s_%d",comp_type,ic);
+    sprintf(comp_type+strlen(comp_type),"_%d",ic);
     SC_set_compname(SCs[ic],comp_type);
       
     cldf_close(&comp_df);

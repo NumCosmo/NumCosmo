@@ -108,7 +108,7 @@ ncm_calc_constructed (GObject *object)
   {
     NcmCalc *calc            = NCM_CALC (object);
     NcmCalcClass *calc_class = NCM_CALC_GET_CLASS (calc);
-    const guint len = calc_class->dep_list->len;
+    const guint len          = calc_class->dep_list->len;
     guint i;
     
     for (i = 0; i < len; i++)

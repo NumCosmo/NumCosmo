@@ -44,50 +44,96 @@ G_BEGIN_DECLS
 typedef struct _NcHIPertGravClass NcHIPertGravClass;
 typedef struct _NcHIPertGrav NcHIPertGrav;
 typedef struct _NcHIPertGravPrivate NcHIPertGravPrivate;
+typedef struct _NcHIPertGravScalar NcHIPertGravScalar;
+typedef struct _NcHIPertGravVector NcHIPertGravVector;
+typedef struct _NcHIPertGravTensor NcHIPertGravTensor;
+typedef struct _NcHIPertGravTScalar NcHIPertGravTScalar;
+typedef struct _NcHIPertGravTVector NcHIPertGravTVector;
+typedef struct _NcHIPertGravTTensor NcHIPertGravTTensor;
+typedef struct _NcHIPertGravTScalarInfo NcHIPertGravTScalarInfo;
+typedef struct _NcHIPertGravInfo NcHIPertGravInfo;
 
-typedef struct _NcHIPertGravScalar
+/**
+ * NcHIPertGravScalar:
+ * 
+ * Boxed object describing scalar modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravScalar
 {
+  /*< private >*/
   gdouble phi;
   gdouble dsigma;
   gdouble psi;
-} NcHIPertGravScalar;
+};
 
-typedef struct _NcHIPertGravVector
+/**
+ * NcHIPertGravVector:
+ * 
+ * Boxed object describing vector modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravVector
 {
+  /*< private >*/
   gdouble dsigma[2];
-} NcHIPertGravVector;
+};
 
-typedef struct _NcHIPertGravTensor
+/**
+ * NcHIPertGravTensor:
+ * 
+ * Boxed object describing tensor modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravTensor
 {
+  /*< private >*/
   gdouble h[2];
-} NcHIPertGravTensor;
+};
 
-typedef struct _NcHIPertGravTScalar
+/**
+ * NcHIPertGravTScalar:
+ * 
+ * Boxed object describing scalar modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTScalar
 {
   gdouble drho_m_Aphi;
   gdouble A;
   gdouble rhopp_v;
   gdouble dp;
   gdouble Pi;
-} NcHIPertGravTScalar;
+};
 
-typedef struct _NcHIPertGravTVector
+/**
+ * NcHIPertGravTVector:
+ * 
+ * Boxed object describing vector modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTVector
 {
   gdouble a;
-} NcHIPertGravTVector;
+};
 
-typedef struct _NcHIPertGravTTensor
+/**
+ * NcHIPertGravTTensor:
+ * 
+ * Boxed object describing tensor modes of the energy-momentum tensor perturbations.
+ */ 
+struct _NcHIPertGravTTensor
 {
   gdouble a;
-} NcHIPertGravTTensor;
+};
 
-typedef struct _NcHIPertGravTScalarInfo
+/**
+ * NcHIPertGravTScalarInfo:
+ * 
+ * Boxed object describing the dependencies of the scalar modes of the gravitational perturbations.
+ */ 
+struct _NcHIPertGravTScalarInfo
 {
   GArray *drho_deps;
   GArray *rhoppv_deps;
   GArray *dp_deps;
   GArray *dPi_deps;
-} NcHIPertGravTScalarInfo;
+};
 
 /**
  * NcHIPertGravSElem:
@@ -141,9 +187,6 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
 
 /**
  * NcHIPertGravInfo:
- * @phi_dtype: determination type for $\phi$
- * @dsigma_dtype: determination type for $\delta\sigma$
- * @psi_dtype: determination type for $\psi$
  * @phi_deps: (array) (element-type gint): $\phi$ dependencies
  * @dsigma_deps: (array) (element-type gint): $\delta\sigma$ dependencies
  * @psi_deps: (array) (element-type gint): $\psi$ dependencies
@@ -152,13 +195,13 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
  * Gravitation section info
  * 
  */
-typedef struct _NcHIPertGravInfo
+struct _NcHIPertGravInfo
 {
   GArray *phi_deps;
   GArray *dsigma_deps;
   GArray *psi_deps;
   GArray *dotpsi_deps; 
-} NcHIPertGravInfo;
+};
 
 typedef guint (*NcHIPertGravNDynVar) (NcHIPertGrav *grav);
 typedef GArray *(*NcHIPertGravDeps) (NcHIPertGrav *grav, guint vindex);
@@ -204,76 +247,76 @@ GType nc_hipert_grav_T_scalar_info_get_type (void) G_GNUC_CONST;
 
 GType nc_hipert_grav_get_type (void) G_GNUC_CONST;
 
-G_INLINE_FUNC NcHIPertGravScalar *nc_hipert_grav_scalar_new (void);
-G_INLINE_FUNC NcHIPertGravScalar *nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs);
-G_INLINE_FUNC void nc_hipert_grav_scalar_free (NcHIPertGravScalar *gs);
-G_INLINE_FUNC void nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs);
+NCM_INLINE NcHIPertGravScalar *nc_hipert_grav_scalar_new (void);
+NCM_INLINE NcHIPertGravScalar *nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs);
+NCM_INLINE void nc_hipert_grav_scalar_free (NcHIPertGravScalar *gs);
+NCM_INLINE void nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs);
 
-G_INLINE_FUNC NcHIPertGravVector *nc_hipert_grav_vector_new (void);
-G_INLINE_FUNC NcHIPertGravVector *nc_hipert_grav_vector_dup (NcHIPertGravVector *gv);
-G_INLINE_FUNC void nc_hipert_grav_vector_free (NcHIPertGravVector *gv);
-G_INLINE_FUNC void nc_hipert_grav_vector_set_zero (NcHIPertGravVector *gv);
+NCM_INLINE NcHIPertGravVector *nc_hipert_grav_vector_new (void);
+NCM_INLINE NcHIPertGravVector *nc_hipert_grav_vector_dup (NcHIPertGravVector *gv);
+NCM_INLINE void nc_hipert_grav_vector_free (NcHIPertGravVector *gv);
+NCM_INLINE void nc_hipert_grav_vector_set_zero (NcHIPertGravVector *gv);
 
-G_INLINE_FUNC NcHIPertGravTensor *nc_hipert_grav_tensor_new (void);
-G_INLINE_FUNC NcHIPertGravTensor *nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt);
-G_INLINE_FUNC void nc_hipert_grav_tensor_free (NcHIPertGravTensor *gt);
-G_INLINE_FUNC void nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt);
+NCM_INLINE NcHIPertGravTensor *nc_hipert_grav_tensor_new (void);
+NCM_INLINE NcHIPertGravTensor *nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt);
+NCM_INLINE void nc_hipert_grav_tensor_free (NcHIPertGravTensor *gt);
+NCM_INLINE void nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt);
 
-G_INLINE_FUNC NcHIPertGravTScalar *nc_hipert_grav_T_scalar_new (void);
-G_INLINE_FUNC NcHIPertGravTScalar *nc_hipert_grav_T_scalar_dup (NcHIPertGravTScalar *Ts);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_free (NcHIPertGravTScalar *Ts);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_add (NcHIPertGravTScalar *Ts, const NcHIPertGravTScalar *Ts1, const NcHIPertGravTScalar *Ts2);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_set_zero (NcHIPertGravTScalar *Ts);
+NCM_INLINE NcHIPertGravTScalar *nc_hipert_grav_T_scalar_new (void);
+NCM_INLINE NcHIPertGravTScalar *nc_hipert_grav_T_scalar_dup (NcHIPertGravTScalar *Ts);
+NCM_INLINE void nc_hipert_grav_T_scalar_free (NcHIPertGravTScalar *Ts);
+NCM_INLINE void nc_hipert_grav_T_scalar_add (NcHIPertGravTScalar *Ts, const NcHIPertGravTScalar *Ts1, const NcHIPertGravTScalar *Ts2);
+NCM_INLINE void nc_hipert_grav_T_scalar_set_zero (NcHIPertGravTScalar *Ts);
 
-G_INLINE_FUNC NcHIPertGravTVector *nc_hipert_grav_T_vector_new (void);
-G_INLINE_FUNC NcHIPertGravTVector *nc_hipert_grav_T_vector_dup (NcHIPertGravTVector *Tv);
-G_INLINE_FUNC void nc_hipert_grav_T_vector_free (NcHIPertGravTVector *Tv);
-G_INLINE_FUNC void nc_hipert_grav_T_vector_add (NcHIPertGravTVector *Tv, const NcHIPertGravTVector *Tv1, const NcHIPertGravTVector *Tv2);
-G_INLINE_FUNC void nc_hipert_grav_T_vector_set_zero (NcHIPertGravTVector *Tv);
+NCM_INLINE NcHIPertGravTVector *nc_hipert_grav_T_vector_new (void);
+NCM_INLINE NcHIPertGravTVector *nc_hipert_grav_T_vector_dup (NcHIPertGravTVector *Tv);
+NCM_INLINE void nc_hipert_grav_T_vector_free (NcHIPertGravTVector *Tv);
+NCM_INLINE void nc_hipert_grav_T_vector_add (NcHIPertGravTVector *Tv, const NcHIPertGravTVector *Tv1, const NcHIPertGravTVector *Tv2);
+NCM_INLINE void nc_hipert_grav_T_vector_set_zero (NcHIPertGravTVector *Tv);
 
-G_INLINE_FUNC NcHIPertGravTTensor *nc_hipert_grav_T_tensor_new (void);
-G_INLINE_FUNC NcHIPertGravTTensor *nc_hipert_grav_T_tensor_dup (NcHIPertGravTTensor *Tt);
-G_INLINE_FUNC void nc_hipert_grav_T_tensor_free (NcHIPertGravTTensor *Tt);
-G_INLINE_FUNC void nc_hipert_grav_T_tensor_add (NcHIPertGravTTensor *Tt, const NcHIPertGravTTensor *Tt1, const NcHIPertGravTTensor *Tt2);
-G_INLINE_FUNC void nc_hipert_grav_T_tensor_set_zero (NcHIPertGravTTensor *Tt);
+NCM_INLINE NcHIPertGravTTensor *nc_hipert_grav_T_tensor_new (void);
+NCM_INLINE NcHIPertGravTTensor *nc_hipert_grav_T_tensor_dup (NcHIPertGravTTensor *Tt);
+NCM_INLINE void nc_hipert_grav_T_tensor_free (NcHIPertGravTTensor *Tt);
+NCM_INLINE void nc_hipert_grav_T_tensor_add (NcHIPertGravTTensor *Tt, const NcHIPertGravTTensor *Tt1, const NcHIPertGravTTensor *Tt2);
+NCM_INLINE void nc_hipert_grav_T_tensor_set_zero (NcHIPertGravTTensor *Tt);
 
-G_INLINE_FUNC NcHIPertGravInfo *nc_hipert_grav_info_new (void);
-G_INLINE_FUNC NcHIPertGravInfo *nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo);
+NCM_INLINE NcHIPertGravInfo *nc_hipert_grav_info_new (void);
+NCM_INLINE NcHIPertGravInfo *nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo);
 
-G_INLINE_FUNC void nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo);
-G_INLINE_FUNC void nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo);
-G_INLINE_FUNC void nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps); 
-G_INLINE_FUNC void nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps); 
-G_INLINE_FUNC void nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps);
-G_INLINE_FUNC void nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_deps);
+NCM_INLINE void nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo);
+NCM_INLINE void nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo);
+NCM_INLINE void nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps); 
+NCM_INLINE void nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps); 
+NCM_INLINE void nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps);
+NCM_INLINE void nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_deps);
 
-G_INLINE_FUNC GArray *nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo);
-G_INLINE_FUNC GArray *nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo); 
-G_INLINE_FUNC GArray *nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo);
-G_INLINE_FUNC GArray *nc_hipert_grav_info_get_dotpsi_deps (NcHIPertGravInfo *ginfo); 
+NCM_INLINE GArray *nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo);
+NCM_INLINE GArray *nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo); 
+NCM_INLINE GArray *nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo);
+NCM_INLINE GArray *nc_hipert_grav_info_get_dotpsi_deps (NcHIPertGravInfo *ginfo); 
 
-G_INLINE_FUNC NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_new (void);
-G_INLINE_FUNC NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGravTScalarInfo *Tsinfo1);
-G_INLINE_FUNC void nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo);
+NCM_INLINE NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_new (void);
+NCM_INLINE NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGravTScalarInfo *Tsinfo1);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo);
 
 NcHIPertGrav *nc_hipert_grav_ref (NcHIPertGrav *grav);
 void nc_hipert_grav_free (NcHIPertGrav *grav);
 void nc_hipert_grav_clear (NcHIPertGrav **grav);
 
-G_INLINE_FUNC NcHIPertBGVarID nc_hipert_grav_get_id (NcHIPertGrav *grav);
+NCM_INLINE NcHIPertBGVarID nc_hipert_grav_get_id (NcHIPertGrav *grav);
 
-G_INLINE_FUNC guint nc_hipert_grav_ndyn_var (NcHIPertGrav *grav);
-G_INLINE_FUNC GArray *nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex);
+NCM_INLINE guint nc_hipert_grav_ndyn_var (NcHIPertGrav *grav);
+NCM_INLINE GArray *nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex);
 
-G_INLINE_FUNC void nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge);
-G_INLINE_FUNC NcHIPertGravGauge nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
+NCM_INLINE void nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge);
+NCM_INLINE NcHIPertGravGauge nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
 
-G_INLINE_FUNC NcHIPertGravInfo *nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav);
-G_INLINE_FUNC void nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
+NCM_INLINE NcHIPertGravInfo *nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav);
+NCM_INLINE void nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
-G_INLINE_FUNC void nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
+NCM_INLINE void nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 G_END_DECLS
 
@@ -282,16 +325,17 @@ G_END_DECLS
 #ifndef _NC_HIPERT_GRAV_INLINE_H_
 #define _NC_HIPERT_GRAV_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertGravScalar *
+NCM_INLINE NcHIPertGravScalar *
 nc_hipert_grav_scalar_new (void)
 {
   return g_new0 (NcHIPertGravScalar, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravScalar *
+NCM_INLINE NcHIPertGravScalar *
 nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs)
 {
   NcHIPertGravScalar *gs_dup = g_new0 (NcHIPertGravScalar, 1);
@@ -301,13 +345,13 @@ nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs)
   return gs_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_scalar_free (NcHIPertGravScalar *gs)
 {
   g_free (gs);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs)
 {
   gs->phi    = 0.0;
@@ -315,13 +359,13 @@ nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs)
   gs->psi    = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravVector *
+NCM_INLINE NcHIPertGravVector *
 nc_hipert_grav_vector_new (void)
 {
   return g_new0 (NcHIPertGravVector, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravVector *
+NCM_INLINE NcHIPertGravVector *
 nc_hipert_grav_vector_dup (NcHIPertGravVector *gv)
 {
   NcHIPertGravVector *gv_dup = g_new0 (NcHIPertGravVector, 1);
@@ -331,26 +375,26 @@ nc_hipert_grav_vector_dup (NcHIPertGravVector *gv)
   return gv_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_vector_free (NcHIPertGravVector *gv)
 {
   g_free (gv);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_vector_set_zero (NcHIPertGravVector *gv)
 {
   gv->dsigma[0] = 0.0;
   gv->dsigma[1] = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravTensor *
+NCM_INLINE NcHIPertGravTensor *
 nc_hipert_grav_tensor_new (void)
 {
   return g_new0 (NcHIPertGravTensor, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravTensor *
+NCM_INLINE NcHIPertGravTensor *
 nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt)
 {
   NcHIPertGravTensor *gt_dup = g_new0 (NcHIPertGravTensor, 1);
@@ -360,26 +404,26 @@ nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt)
   return gt_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_tensor_free (NcHIPertGravTensor *gt)
 {
   g_free (gt);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt)
 {
   gt->h[0] = 0.0;
   gt->h[1] = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravTScalar *
+NCM_INLINE NcHIPertGravTScalar *
 nc_hipert_grav_T_scalar_new (void)
 {
   return g_new0 (NcHIPertGravTScalar, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravTScalar *
+NCM_INLINE NcHIPertGravTScalar *
 nc_hipert_grav_T_scalar_dup (NcHIPertGravTScalar *Ts)
 {
   NcHIPertGravTScalar *Ts_dup = g_new0 (NcHIPertGravTScalar, 1);
@@ -389,13 +433,13 @@ nc_hipert_grav_T_scalar_dup (NcHIPertGravTScalar *Ts)
   return Ts_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_scalar_free (NcHIPertGravTScalar *Ts)
 {
   g_free (Ts);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_scalar_add (NcHIPertGravTScalar *Ts, const NcHIPertGravTScalar *Ts1, const NcHIPertGravTScalar *Ts2)
 {
   Ts->drho_m_Aphi = Ts1->drho_m_Aphi + Ts2->drho_m_Aphi;
@@ -405,7 +449,7 @@ nc_hipert_grav_T_scalar_add (NcHIPertGravTScalar *Ts, const NcHIPertGravTScalar 
   Ts->Pi          = Ts1->Pi          + Ts2->Pi;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_scalar_set_zero (NcHIPertGravTScalar *Ts)
 {
   Ts->drho_m_Aphi = 0.0;
@@ -415,13 +459,13 @@ nc_hipert_grav_T_scalar_set_zero (NcHIPertGravTScalar *Ts)
   Ts->Pi          = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravTVector *
+NCM_INLINE NcHIPertGravTVector *
 nc_hipert_grav_T_vector_new (void)
 {
   return g_new0 (NcHIPertGravTVector, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravTVector *
+NCM_INLINE NcHIPertGravTVector *
 nc_hipert_grav_T_vector_dup (NcHIPertGravTVector *Tv)
 {
   NcHIPertGravTVector *Tv_dup = g_new0 (NcHIPertGravTVector, 1);
@@ -431,31 +475,31 @@ nc_hipert_grav_T_vector_dup (NcHIPertGravTVector *Tv)
   return Tv_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_vector_free (NcHIPertGravTVector *Tv)
 {
   g_free (Tv);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_vector_add (NcHIPertGravTVector *Tv, const NcHIPertGravTVector *Tv1, const NcHIPertGravTVector *Tv2)
 {
   Tv->a = Tv1->a + Tv2->a;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_vector_set_zero (NcHIPertGravTVector *Tv)
 {
   Tv->a = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravTTensor *
+NCM_INLINE NcHIPertGravTTensor *
 nc_hipert_grav_T_tensor_new (void)
 {
   return g_new0 (NcHIPertGravTTensor, 1);
 }
 
-G_INLINE_FUNC NcHIPertGravTTensor *
+NCM_INLINE NcHIPertGravTTensor *
 nc_hipert_grav_T_tensor_dup (NcHIPertGravTTensor *Tt)
 {
   NcHIPertGravTTensor *Tt_dup = g_new0 (NcHIPertGravTTensor, 1);
@@ -465,25 +509,25 @@ nc_hipert_grav_T_tensor_dup (NcHIPertGravTTensor *Tt)
   return Tt_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_tensor_free (NcHIPertGravTTensor *Tt)
 {
   g_free (Tt);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_tensor_add (NcHIPertGravTTensor *Tt, const NcHIPertGravTTensor *Tt1, const NcHIPertGravTTensor *Tt2)
 {
   Tt->a = Tt1->a + Tt2->a;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_T_tensor_set_zero (NcHIPertGravTTensor *Tt)
 {
   Tt->a = 0.0;
 }
 
-G_INLINE_FUNC NcHIPertGravInfo *
+NCM_INLINE NcHIPertGravInfo *
 nc_hipert_grav_info_new (void)
 {
   NcHIPertGravInfo *ginfo = g_new0 (NcHIPertGravInfo, 1);
@@ -496,7 +540,7 @@ nc_hipert_grav_info_new (void)
   return ginfo;
 }
 
-G_INLINE_FUNC NcHIPertGravInfo *
+NCM_INLINE NcHIPertGravInfo *
 nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo)
 {
   NcHIPertGravInfo *ginfo_dup = nc_hipert_grav_info_new ();
@@ -510,7 +554,7 @@ nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo)
   return ginfo_dup;
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo)
 {
   g_array_unref (ginfo->phi_deps);
@@ -520,7 +564,7 @@ nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo)
   g_free (ginfo);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo)
 {
   g_array_set_size (ginfo->phi_deps,    0);
@@ -529,7 +573,7 @@ nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo)
   g_array_set_size (ginfo->dotpsi_deps, 0);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps) 
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->phi_deps), ==, g_array_get_element_size (phi_deps));
@@ -537,7 +581,7 @@ nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps)
   g_array_append_vals (ginfo->phi_deps, phi_deps->data, phi_deps->len);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps) 
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->dsigma_deps), ==, g_array_get_element_size (dsigma_deps));
@@ -545,7 +589,7 @@ nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_dep
   g_array_append_vals (ginfo->dsigma_deps, dsigma_deps->data, dsigma_deps->len);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps) 
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->psi_deps), ==, g_array_get_element_size (psi_deps));
@@ -553,7 +597,7 @@ nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps)
   g_array_append_vals (ginfo->psi_deps, psi_deps->data, psi_deps->len);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_deps) 
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->dotpsi_deps), ==, g_array_get_element_size (dotpsi_deps));
@@ -561,31 +605,31 @@ nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_dep
   g_array_append_vals (ginfo->dotpsi_deps, dotpsi_deps->data, dotpsi_deps->len);
 }
 
-G_INLINE_FUNC GArray *
+NCM_INLINE GArray *
 nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo) 
 {
   return g_array_ref (ginfo->phi_deps);
 }
 
-G_INLINE_FUNC GArray *
+NCM_INLINE GArray *
 nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo) 
 {
   return g_array_ref (ginfo->dsigma_deps);
 }
 
-G_INLINE_FUNC GArray *
+NCM_INLINE GArray *
 nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo) 
 {
   return g_array_ref (ginfo->psi_deps);
 }
 
-G_INLINE_FUNC GArray *
+NCM_INLINE GArray *
 nc_hipert_grav_info_get_dotpsi_deps (NcHIPertGravInfo *ginfo) 
 {
   return g_array_ref (ginfo->dotpsi_deps);
 }
 
-G_INLINE_FUNC NcHIPertGravTScalarInfo *
+NCM_INLINE NcHIPertGravTScalarInfo *
 nc_hipert_grav_T_scalar_info_new (void)
 {
   NcHIPertGravTScalarInfo *Tsinfo = g_new0 (NcHIPertGravTScalarInfo, 1);
@@ -598,7 +642,7 @@ nc_hipert_grav_T_scalar_info_new (void)
   return Tsinfo;
 }
 
-G_INLINE_FUNC NcHIPertGravTScalarInfo *
+NCM_INLINE NcHIPertGravTScalarInfo *
 nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo)
 {
   NcHIPertGravTScalarInfo *Tsinfo_dup = nc_hipert_grav_T_scalar_info_new ();
@@ -606,7 +650,7 @@ nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo)
   return Tsinfo_dup;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo)
 {
   g_array_unref (Tsinfo->drho_deps);
@@ -617,7 +661,7 @@ nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo)
   g_free (Tsinfo);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGravTScalarInfo *Tsinfo1)
 {
   g_array_append_vals (Tsinfo->drho_deps,   Tsinfo1->drho_deps->data,   Tsinfo1->drho_deps->len);
@@ -638,7 +682,7 @@ G_BEGIN_DECLS { \
   } \
 } G_END_DECLS
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_grav_T_scalar_info_add_pad (NcHIPertGravTScalarInfo *Tsinfo, gint pad)
 {
   if (pad == 0)
@@ -650,7 +694,7 @@ nc_hipert_grav_T_scalar_info_add_pad (NcHIPertGravTScalarInfo *Tsinfo, gint pad)
   __NC_HIPERT_COMP_ADD_PAD (Tsinfo->dPi_deps,    pad);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo)
 {
   g_array_set_size (Tsinfo->drho_deps,   0);
@@ -660,7 +704,7 @@ nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo)
 }
 
 
-G_INLINE_FUNC NcHIPertBGVarID 
+NCM_INLINE NcHIPertBGVarID 
 nc_hipert_grav_get_id (NcHIPertGrav *grav)
 {
   const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (grav));
@@ -668,43 +712,43 @@ nc_hipert_grav_get_id (NcHIPertGrav *grav)
   return id;
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 nc_hipert_grav_ndyn_var (NcHIPertGrav *grav)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->ndyn_var (grav);
 }
 
-G_INLINE_FUNC GArray *
+NCM_INLINE GArray *
 nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_deps (grav, vindex);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge)
 {
   NC_HIPERT_GRAV_GET_CLASS (grav)->set_gauge (grav, gauge);
 }
 
-G_INLINE_FUNC NcHIPertGravGauge 
+NCM_INLINE NcHIPertGravGauge 
 nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_gauge (grav);
 }
 
-G_INLINE_FUNC NcHIPertGravInfo *
+NCM_INLINE NcHIPertGravInfo *
 nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_G_scalar_info (grav);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_G_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
 }
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_dy_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
@@ -712,5 +756,6 @@ nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPer
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_GRAV_INLINE_H_ */

@@ -31,7 +31,7 @@ char* clik_get_version(clik_object *clikid,error **_err) {
     lbs = _clik_dig(clikid,err);
     _forwardError(*err,__LINE__,NULL);
     for(ilkl=0;ilkl<lbs->nlkl;ilkl++) {
-      sprintf(version_str,"%s\n  %s",version_str,lbs->lkls[ilkl]->version);
+      sprintf(version_str+strlen(version_str),"\n  %s",lbs->lkls[ilkl]->version);
     }
 
   }

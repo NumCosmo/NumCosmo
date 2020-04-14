@@ -220,7 +220,7 @@ test_ncm_spline2d_bicubic_notaknot_new_empty (void)
 {
   test_error = 1.0e-4;
   s2d_base = ncm_spline2d_bicubic_notaknot_new ();
-  g_assert (NCM_IS_SPLINE2D_BICUBIC (s2d_base));
+  g_assert_true (NCM_IS_SPLINE2D_BICUBIC (s2d_base));
 }
 
 /*
@@ -228,7 +228,7 @@ test_ncm_spline2d_bicubic_notaknot_new_empty (void)
  * test_ncm_spline2d_bicubic_spline_new_empty (void)
  * {
  *   s2d_base = ncm_spline2d_bicubic_new (s_base);
- *   g_assert (NCM_IS_SPLINE2D_BICUBIC (s2d_base));
+ *   g_assert_true (NCM_IS_SPLINE2D_BICUBIC (s2d_base));
  * }
  */
 void
@@ -236,14 +236,14 @@ test_ncm_spline2d_gsl_cspline_new_empty (void)
 {
   test_error = 1.0e-3;
   s2d_base = ncm_spline2d_gsl_natural_new ();
-  g_assert (NCM_IS_SPLINE2D_GSL (s2d_base));
+  g_assert_true (NCM_IS_SPLINE2D_GSL (s2d_base));
 }
 /*
  * void
  * test_ncm_spline2d_gsl_spline_new_empty (void)
  * {
  *   s2d_base = ncm_spline2d_gsl_new (s_base);
- *   g_assert (NCM_IS_SPLINE2D_GSL (s2d_base));
+ *   g_assert_true (NCM_IS_SPLINE2D_GSL (s2d_base));
  * }
  */
 void
@@ -252,7 +252,7 @@ test_ncm_spline2d_spline_new_empty (void)
   test_error = 1.0e-4;
   s_base = ncm_spline_cubic_notaknot_new ();
   s2d_base = ncm_spline2d_spline_new (s_base);
-  g_assert (NCM_IS_SPLINE2D_SPLINE (s2d_base));
+  g_assert_true (NCM_IS_SPLINE2D_SPLINE (s2d_base));
 }
 
 void
@@ -264,7 +264,7 @@ test_ncm_spline2d_free_empty (void)
 void
 test_ncm_spline2d_new_sanity (NcmSpline2d *s2d)
 {
-  g_assert (NCM_IS_SPLINE2D (s2d));
+  g_assert_true (NCM_IS_SPLINE2D (s2d));
 }
 
 void
@@ -277,7 +277,7 @@ test_ncm_spline2d_new (void)
     NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
 
     test_ncm_spline2d_new_sanity (s2d);
-    g_assert (s2d->init == FALSE);
+    g_assert_true (s2d->init == FALSE);
     ncm_spline2d_free (s2d);
   }
 
@@ -303,7 +303,7 @@ test_ncm_spline2d_new (void)
 
     s2d = ncm_spline2d_new (s2d_base, x, y, z, TRUE);
     test_ncm_spline2d_new_sanity (s2d);
-    g_assert (s2d->init == TRUE);
+    g_assert_true (s2d->init == TRUE);
     ncm_spline2d_free (s2d);
   }
 }
@@ -312,7 +312,7 @@ void
 test_ncm_spline2d_copy_empty (void)
 {
   NcmSpline2d *s2d = ncm_spline2d_copy_empty (s2d_base);
-  g_assert (G_TYPE_FROM_INSTANCE (s2d) == G_TYPE_FROM_INSTANCE (s2d_base));
+  g_assert_true (G_TYPE_FROM_INSTANCE (s2d) == G_TYPE_FROM_INSTANCE (s2d_base));
   ncm_spline2d_free (s2d);
 }
 
@@ -331,7 +331,7 @@ test_ncm_spline2d_copy (void)
   {
     NcmSpline2d *s2d_cp = ncm_spline2d_copy (s2d);
     guint i, j;
-    g_assert (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
+    g_assert_true (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
     for (j = 0; j < _NCM_SPLINE2D_TEST_NKNOTS_Y; j++)
     {
       ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->yv, j), ==, ncm_vector_get (s2d->yv, j));

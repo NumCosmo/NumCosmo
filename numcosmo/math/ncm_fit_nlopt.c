@@ -244,9 +244,9 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
       ncm_vector_clear (&fit_nlopt->pabs);
       ncm_vector_clear (&fit_nlopt->pscale);
 
-      fit_nlopt->lb = ncm_vector_new (fit_nlopt->fparam_len);
-      fit_nlopt->ub = ncm_vector_new (fit_nlopt->fparam_len);
-      fit_nlopt->pabs = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->lb     = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->ub     = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->pabs   = ncm_vector_new (fit_nlopt->fparam_len);
       fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
 
 #ifdef HAVE_NLOPT_2_2

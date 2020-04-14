@@ -209,6 +209,8 @@ _ncm_mset_dispose (GObject *object)
   g_clear_pointer (&mset->fullname_parray, g_ptr_array_unref);
   g_clear_pointer (&mset->pi_array, g_array_unref);
 
+  ncm_vector_clear (&mset->temp_fparams);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->dispose (object);
 }
@@ -1030,6 +1032,13 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   }
 
   g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
+
+  ncm_vector_clear (&mset->temp_fparams);
+  if (mset->fparam_len > 0)
+  {
+    mset->temp_fparams = ncm_vector_new (mset->fparam_len);
+  }
+    
   mset->valid_map = TRUE;
 }
 
@@ -1958,9 +1967,9 @@ ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_set_pi:
  * @mset: a #NcmMSet
- * @pi: a #NcmMSetPIndex
- * @x: FIXME
- * @n: FIXME
+ * @pi: (array length=n) (element-type NcmMSetPIndex): a #NcmMSetPIndex
+ * @x: (array length=n) (element-type double): values to be set
+ * @n: number of parameters to set
  *
  * FIXME
  *
@@ -2386,7 +2395,7 @@ ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i);
-      if (val < lb || val > ub)
+      if ((val < lb) || (val > ub))
         return FALSE;
     }
     return TRUE;
@@ -2415,11 +2424,36 @@ ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offs
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i + offset);
-      if (val < lb || val > ub)
+      if ((val < lb) || (val > ub))
         return FALSE;
     }
     return TRUE;
   }
+}
+
+/**
+ * ncm_mset_fparam_validate_all:
+ * @mset: a #NcmMSet
+ * @theta: free parameters vector
+ *
+ * FIXME
+ *
+ * Returns: whether @theta contain values respecting all requirements.
+ */
+gboolean
+ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
+{
+  gboolean valid;
+  g_assert (mset->valid_map);
+  g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len);
+
+  ncm_mset_fparams_get_vector (mset, mset->temp_fparams);
+  ncm_mset_fparams_set_vector (mset, theta);
+
+  valid = ncm_mset_params_valid (mset) && ncm_mset_params_valid_bounds (mset);
+  ncm_mset_fparams_set_vector (mset, mset->temp_fparams);
+  
+  return valid;
 }
 
 /**

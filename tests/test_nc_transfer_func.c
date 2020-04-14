@@ -73,8 +73,8 @@ void
 test_nc_transfer_func_new_bbks (void)
 {
   tf = nc_transfer_func_bbks_new ();
-  g_assert (NC_IS_TRANSFER_FUNC (tf));
-  g_assert (NC_IS_TRANSFER_FUNC_BBKS (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_BBKS (tf));
 
   test_nc_transfer_func_free ();
 
@@ -85,8 +85,8 @@ test_nc_transfer_func_new_bbks (void)
 #endif
 
   model = nc_hicosmo_lcdm_new ();
-  g_assert (NC_IS_TRANSFER_FUNC (tf));
-  g_assert (NC_IS_TRANSFER_FUNC_BBKS (tf));  
+  g_assert_true (NC_IS_TRANSFER_FUNC (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_BBKS (tf));  
 }
 
 void
@@ -94,8 +94,8 @@ test_nc_transfer_func_new_eh (void)
 {
   tf = nc_transfer_func_eh_new ();
   model = nc_hicosmo_lcdm_new ();
-  g_assert (NC_IS_TRANSFER_FUNC (tf));
-  g_assert (NC_IS_TRANSFER_FUNC_EH (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (tf));
 
   test_nc_transfer_func_free ();
 
@@ -105,8 +105,8 @@ test_nc_transfer_func_new_eh (void)
   tf = nc_transfer_func_eh_new ();
 #endif
 
-  g_assert (NC_IS_TRANSFER_FUNC (tf));
-  g_assert (NC_IS_TRANSFER_FUNC_EH (tf));  
+  g_assert_true (NC_IS_TRANSFER_FUNC (tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (tf));  
 }
 
 void

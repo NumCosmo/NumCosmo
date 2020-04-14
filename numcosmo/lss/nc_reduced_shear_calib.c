@@ -59,7 +59,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcReducedShearCalib, nc_reduced_shear_calib
 static void
 nc_reduced_shear_calib_init (NcReducedShearCalib *rs_calib)
 {
-  rs_calib->priv = G_TYPE_INSTANCE_GET_PRIVATE (rs_calib, NC_TYPE_REDUCED_SHEAR_CALIB, NcReducedShearCalibPrivate);
+  rs_calib->priv = nc_reduced_shear_calib_get_instance_private (rs_calib);
 }
 
 static void

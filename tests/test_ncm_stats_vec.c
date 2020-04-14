@@ -129,7 +129,7 @@ test_ncm_stats_vec_mean_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -142,7 +142,7 @@ test_ncm_stats_vec_var_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -155,7 +155,7 @@ test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -168,7 +168,7 @@ test_ncm_stats_vec_autocorr_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
