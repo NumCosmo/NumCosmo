@@ -55,7 +55,10 @@ typedef enum _NcmSplineFuncType
   NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT,
 } NcmSplineFuncType;
 
+typedef gdouble (*NcmSplineFuncF) (gdouble x, GObject *obj);
+
 void ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error);
+void ncm_spline_set_func1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error);
 
 #define NCM_SPLINE_FUNC_DEFAULT_MAX_NODES 10000000
 #define NCM_SPLINE_KNOT_DIFF_TOL (GSL_DBL_EPSILON * 1.0e2)

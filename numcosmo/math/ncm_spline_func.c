@@ -687,13 +687,13 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, gdouble 
 
 /**
  * ncm_spline_set_func: (skip)
- * @s: a #NcmSpline.
- * @ftype: a #NcmSplineFuncType.
- * @F: function to be approximated by spline functions.
- * @xi: lower knot.
- * @xf: upper knot.
- * @max_nodes: maximum number of knots.
- * @rel_error: relative error between the function to be interpolated and the spline result.
+ * @s: a #NcmSpline
+ * @ftype: a #NcmSplineFuncType
+ * @F: function to be approximated by spline functions
+ * @xi: lower knot
+ * @xf: upper knot
+ * @max_nodes: maximum number of knots
+ * @rel_error: relative error between the function to be interpolated and the spline result
  *
  * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
  */
@@ -721,5 +721,27 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, gdo
       
       return;
   }
+}
+
+/**
+ * ncm_spline_set_func1:
+ * @s: a #NcmSpline.
+ * @ftype: a #NcmSplineFuncType
+ * @F: (scope call): function to be approximated by spline functions
+ * @obj: (allow-none): #GObject used by the function @F  
+ * @xi: lower knot
+ * @xf: upper knot
+ * @max_nodes: maximum number of knots
+ * @rel_error: relative error between the function to be interpolated and the spline result
+ *
+ * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
+ * 
+ *   
+ */
+void 
+ncm_spline_set_func1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
+{
+  gsl_function gslF = {(gdouble (*) (gdouble, gpointer))F, obj};
+  ncm_spline_set_func (s, ftype, &gslF, xi, xf, max_nodes, rel_error);
 }
 
