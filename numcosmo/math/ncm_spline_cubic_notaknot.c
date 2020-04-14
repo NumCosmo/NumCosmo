@@ -101,9 +101,9 @@ ncm_spline_cubic_notaknot_new ()
 
 /**
  * ncm_spline_cubic_notaknot_new_full:
- * @xv: #NcmVector of knots.
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv.
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it.
+ * @xv: #NcmVector of knots
+ * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
+ * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
  *
  * This function returns a new #NcmSpline setting all its members.
  *

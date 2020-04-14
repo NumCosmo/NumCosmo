@@ -523,9 +523,9 @@ ncm_spline_get_len (NcmSpline *s)
 
 /**
  * ncm_spline_set_xv:
- * @s: a #NcmSpline.
- * @xv: #NcmVector of knots.
- * @init: TRUE to prepare @s or FALSE to not prepare it.
+ * @s: a #NcmSpline
+ * @xv: #NcmVector of knots
+ * @init: TRUE to prepare @s or FALSE to not prepare it
  *
  * This function sets @xv as the knot vector of the spline.
  *
