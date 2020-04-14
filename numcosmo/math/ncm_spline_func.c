@@ -40,7 +40,7 @@
  *
  * The function $f$ is first interpolated at the $\mathbf{x}_0$ knots, producing the interpolated function $\hat{f}_0$. 
  * Next, the existing $n_0 - 1$ bins, $\Delta \mathbf{x}_0 = \mathbf{x}_0^{i+1} - \mathbf{x}_0^{i}$, are divided in half and 
- * a new set of knots are placed at those positions, $\overline{\mathbf{x}}_0$.
+ * test points are placed at those positions, $\overline{\mathbf{x}}_0 = \frac{\mathbf{x}_0^{i+1} + \mathbf{x}_0^{i}}{2}$.
  * The following tests are done for each one of the bins $\Delta \mathbf{x}_0$ separately:
  * \begin{equation*}
  *   \left| \frac{ \hat{f}_0(\overline{\mathbf{x}}_0) - f(\overline{\mathbf{x}}_0)}{f(\overline{\mathbf{x}}_0)} \right| < \mathrm{rel \\_ error}
@@ -55,11 +55,11 @@
  *\end{equation*}
  *
  * and the interpolated function $\hat{f}_0$ is integrated by applying ncm_spline_eval_integ(). 
- * If any bin passes those relations, then its associated $\mathbf{x}_0 \cup  \overline{\mathbf{x}}_0$ knots 
+ * If any bin passes those relations then, its associated test point $\overline{\mathbf{x}}_0$ together with both knots, 
  * are defined as a good representation of the function $f$ and this specific bin does not need to be refined anymore.
- * If not, then $\mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ is splitted once again into two more symmetric knots around $\overline{\mathbf{x}}_0$.
- * All the knots from the previous step defines a new set of knots, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$. 
- * The spllited ones, which did not pass the tests, define another set of knots $\overline{\mathbf{x}}_1$ that lie between the $\mathbf{x}_0\cup \overline{\mathbf{x}}_0$. 
+ * If not, then $\mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ is splitted once again into two more symmetric test points around $\overline{\mathbf{x}}_0$.
+ * A new set of knots is defined, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$. 
+ * The ones which did not pass the tests define another set of test points $\overline{\mathbf{x}}_1$ that lie between the $\mathbf{x}_0\cup \overline{\mathbf{x}}_0$. 
  * The new set of knots $\mathbf{x}_1$ are used to create a new interpolated function $\hat{f}_1$, always in the full range [@xi, @xf]. 
  * The same tests are performed as before, but now with $\hat{f}_1(\overline{\mathbf{x}}_1)$, $f(\overline{\mathbf{x}}_1)$ 
  * and the integral now has limits $\Delta \mathbf{x}_1 = \Delta \mathbf{x}_0/2$, but only for those bins that did not pass the previous test. 
@@ -72,19 +72,25 @@
  *
  *
  * The figure shows a schematically evolution of the methodology for choosing the knots.
- * It starts with 6 knots, $\mathbf{x}_0$ (black filled circles), used to create the interpolated function $\hat{f}_0$.
- * The $\overline{\mathbf{x}}_0$ knots are created (blue squares) and the first tests are performed in each of the five bins: black filled circle+blue square+black filled circles. 
+ * It starts with 6 knots, $\mathbf{x}_0$ (black filled circles in the first line), used to create the interpolated function $\hat{f}_0$.
+ * The $\overline{\mathbf{x}}_0$ test points are created (blue squares in the second line) and the first tests are performed in each one of the five bins. 
  * In this example, only the first and the fourth bins did not pass both tests. 
- * Two new sets of knots are created, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ (second line) and $\overline{\mathbf{x}}_1$ (red diamonds). 
- * Note that $\overline{\mathbf{x}}_1$ are only placed in the middle of the previously bins that did not passed the tests.
- * The tests are done 4 times, one time for each bin with a red diamond at it center, with width $\Delta \mathbf{x}_1 = \Delta \mathbf{x}_0/2$. Again only two of them pass the tests. 
- * Two new sets of knots are created $\mathbf{x}_2 = \mathbf{x}_1 \cup \overline{\mathbf{x}}_1$ (third line) and $\overline{\mathbf{x}}_2$ (black vertical thicks). 
- * The tests are done 4 times, one time for each bin with a black vertical thick at it center, with width $\Delta \mathbf{x}_2 = \Delta \mathbf{x}_1/2$. 
+ * One new set of knots is created, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ (second line) and their new test points, 
+ * $\overline{\mathbf{x}}_1$ (red diamonds in the third line). 
+ * Note that $\overline{\mathbf{x}}_1$ are only placed in the middle of the previously bins that did not pass the tests.
+ * The tests are done 4 times, one for each bin with a red diamond at it center, 
+ * with width $\Delta \mathbf{x}_1 = \Delta \mathbf{x}_0/2$. Again, only two of them passed the tests. 
+ * One new set of knots is created $\mathbf{x}_2 = \mathbf{x}_1 \cup \overline{\mathbf{x}}_1$ (third line) and their new test points, 
+ * $\overline{\mathbf{x}}_2$ (black vertical ticks in the fourth line). 
+ * The tests are done 4 times more, one for each bin with a black vertical tick at it center, with width $\Delta \mathbf{x}_2 = \Delta \mathbf{x}_1/2$. 
  * 
- * In this schematic example, the final set of knots is given by the last line $\mathbf{x} = \mathbf{x}_3 = \mathbf{x}_2 \cup \overline{\mathbf{x}}_2$, with 19 knots in total, 
+ * In this schematic example, the final set of knots is given by the last line 
+ * $\mathbf{x} = \mathbf{x}_3 = \mathbf{x}_2 \cup \overline{\mathbf{x}}_2$, with 19 knots in total, 
  * also showing that the final distribution is not homogeneous. 
- * It is important to note that in all stages the interpolated function is created with all its knots: 
+ * It is important to note that in all steps the interpolated function is created with all its knots: 
  * $\mathbf{x}_0 \rightarrow \hat{f}_0$, $\mathbf{x}_1 \rightarrow \hat{f}_1$, $\mathbf{x}_2 \rightarrow \hat{f}_2$, $\mathbf{x}_3 \rightarrow \hat{f}_3$. 
+ * It is also worth noting that, in the description and example above, it was assumed a linear distribution of knots in each step, 
+ * but there are other options listed at #NcmSplineFuncType. 
  *
  *
  */
