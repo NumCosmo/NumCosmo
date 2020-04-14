@@ -5,6 +5,7 @@
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
@@ -64,6 +65,7 @@ GType ncm_ode_spline_get_type (void) G_GNUC_CONST;
 
 NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx);
 NcmOdeSpline *ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf);
+
 void ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata);
 void ncm_ode_spline_free (NcmOdeSpline *os);
 void ncm_ode_spline_clear (NcmOdeSpline **os);
@@ -108,3 +110,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_ODE_SPLINE_INLINE_H_ */
+
