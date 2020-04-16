@@ -143,7 +143,7 @@ test_nc_wl_surface_mass_density_sigma (TestNcWLSurfaceMassDensity *test, gconstp
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
     
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble sig1 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R1, test->zc);
   gdouble sig2 = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, test->R2, test->zc);
@@ -161,7 +161,7 @@ test_nc_wl_surface_mass_density_sigma_mean (TestNcWLSurfaceMassDensity *test, gc
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
     
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble sig1 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R1, test->zc);
   gdouble sig2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, test->R2, test->zc);
@@ -192,7 +192,7 @@ test_nc_wl_surface_mass_density_convergence (TestNcWLSurfaceMassDensity *test, g
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
     
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -210,7 +210,7 @@ test_nc_wl_surface_mass_density_shear (TestNcWLSurfaceMassDensity *test, gconstp
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
     
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -228,7 +228,7 @@ test_nc_wl_surface_mass_density_reduced_shear (TestNcWLSurfaceMassDensity *test,
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
     
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);
@@ -246,7 +246,7 @@ test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensi
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
 
-  test->R2 = nc_halo_density_profile_scale_radius (dp, cosmo, test->zc);
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, test->zc);
 
   gdouble k1 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R1, test->zs, test->zl, test->zc);
   gdouble k2 = nc_wl_surface_mass_density_reduced_shear_infinity (smd, dp, cosmo, test->R2, test->zs, test->zl, test->zc);

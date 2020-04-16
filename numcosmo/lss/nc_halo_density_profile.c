@@ -308,9 +308,6 @@ _nc_halo_density_profile_finalize (GObject *object)
 NCM_MSET_MODEL_REGISTER_ID (nc_halo_density_profile, NC_TYPE_HALO_DENSITY_PROFILE);
 
 static gdouble _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
-static gdouble _nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp);
 static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp);
@@ -454,9 +451,9 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   klass->eval_dl_density    = &_nc_halo_density_profile_eval_dl_density;
-  klass->eval_dl_spher_mass = &_nc_halo_density_profile_eval_dl_spher_mass;
-  klass->eval_dl_2d_density = &_nc_halo_density_profile_eval_dl_2d_density;
-  klass->eval_dl_cyl_mass   = &_nc_halo_density_profile_eval_dl_cyl_mass;
+  klass->eval_dl_spher_mass = &nc_halo_density_profile_eval_numint_dl_spher_mass;
+  klass->eval_dl_2d_density = &nc_halo_density_profile_eval_numint_dl_2d_density;
+  klass->eval_dl_cyl_mass   = &nc_halo_density_profile_eval_numint_dl_cyl_mass;
 }
 
 static gdouble
@@ -485,7 +482,7 @@ _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp)
     const gdouble MDelta                     = M_DELTA;
     
     self->r_s0   = cbrt (3.0 * MDelta / (4.0 * ncm_c_pi ())) / cDelta;
-    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp));
+    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cDelta));
     
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_CTES);
   }
@@ -598,14 +595,15 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X_x_1 (gdouble x, gpointer userdata
 }
 
 static gdouble
-_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_2 (gdouble x, gpointer userdata)
+_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_2 (gdouble mu, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
-  const gdouble x2             = x * x;
-  const gdouble mu             = dp2D->X / x;
   const gdouble mu2            = mu * mu;
-  
-  return x2 * mu2 / (1.0 + sqrt ((1.0 - mu) * (1.0 + mu))) * nc_halo_density_profile_eval_dl_density (dp2D->dp, x);
+
+  if (mu == 0.0)
+    return 0.0;
+  else
+    return nc_halo_density_profile_eval_dl_density (dp2D->dp, dp2D->X / mu) / (mu2 * (1.0 + sqrt ((1.0 - mu) * (1.0 + mu))));
 }
 
 static gdouble
@@ -619,14 +617,14 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
   gdouble abstol;
   
   dp2D->X = exp (lnX);
-  
+
   abstol = GSL_FN_EVAL (dp2D->F, 0.5 * dp2D->X) * dp2D->X * self->reltol;
   gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
   dl_cyl_mass_X += dl_cyl_mass_X_i;
   
   abstol = dl_cyl_mass_X * self->reltol;
-  gsl_integration_qagiu (dp2D->F2, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, dp2D->w, &dl_cyl_mass_X_i, &err);
-  dl_cyl_mass_X += dl_cyl_mass_X_i;
+  gsl_integration_qag (dp2D->F2, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
+  dl_cyl_mass_X += gsl_pow_3 (dp2D->X) * dl_cyl_mass_X_i;
   
   return log (2.0 * dl_cyl_mass_X);
 }
@@ -661,36 +659,6 @@ _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_CYL_MASS);
   }
-}
-
-static gdouble
-_nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-  
-  _nc_halo_density_profile_prepare_dl_spher_mass (dp);
-  
-  return self->dl_spher_mass;
-}
-
-static gdouble
-_nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-  
-  _nc_halo_density_profile_prepare_dl_2d_density (dp);
-  
-  return exp (ncm_spline_eval (self->dl_2d_density_s, log (X)));
-}
-
-static gdouble
-_nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-  
-  _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
-  
-  return exp (ncm_spline_eval (self->dl_cyl_mass_s, log (X)));
 }
 
 /**
@@ -902,14 +870,15 @@ nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble
 /**
  * nc_halo_density_profile_eval_dl_spher_mass: (virtual eval_dl_spher_mass)
  * @dp: a #NcHaloDensityProfile
+ * @x: dimensionless radius $x = r / r_s$
  *
  * This function computes the 2d projection of the dimensionless density
  * profile as described in Eq. \eqref{def:Ix2_dld}.
  *
- * Returns: the value of the integral $I_{x^2\hat\rho}(c_\Delta)$.
+ * Returns: the value of the integral $I_{x^2\hat\rho}(x)$.
  */
 gdouble
-nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp)
+nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
   return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_spher_mass (dp, C_DELTA);
 }
@@ -1181,7 +1150,7 @@ nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *co
   
   sVol = 4.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
   
-  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp);
+  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, C_DELTA);
 }
 
 /**
@@ -1352,3 +1321,67 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
   }
 }
 
+/**
+ * nc_halo_density_profile_eval_numint_dl_spher_mass:
+ * @dp: a #NcHaloDensityProfile
+ *
+ * This function computes the 2d projection of the dimensionless density
+ * profile as described in Eq. \eqref{def:Ix2_dld}. This is the default
+ * implementation that will be used unless the child object provides one.
+ * This interface is present for testing purpose.
+ *
+ * Returns: the value of the integral $I_{x^2\hat\rho}(c_\Delta)$.
+ */
+gdouble
+nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+{
+  NcHaloDensityProfilePrivate * const self = dp->priv;
+  
+  _nc_halo_density_profile_prepare_dl_spher_mass (dp);
+  
+  return self->dl_spher_mass;
+}
+
+/**
+ * nc_halo_density_profile_eval_numint_dl_2d_density:
+ * @dp: a #NcHaloDensityProfile
+ * @X: dimensionless 2D radius $X = R / r_s$
+ *
+ * This function computes the dimensionless 2D density profile,
+ * see Eq. \eqref{eq:def:hatSigma}. This is the default
+ * implementation that will be used unless the child object provides one.
+ * This interface is present for testing purpose.
+ *
+ * Returns: the value of the dimensionless 2D density profile $\hat\Sigma(X)$.
+ */
+gdouble
+nc_halo_density_profile_eval_numint_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
+{
+  NcHaloDensityProfilePrivate * const self = dp->priv;
+  
+  _nc_halo_density_profile_prepare_dl_2d_density (dp);
+  
+  return exp (ncm_spline_eval (self->dl_2d_density_s, log (X)));
+}
+
+/**
+ * nc_halo_density_profile_eval_numint_dl_cyl_mass:
+ * @dp: a #NcHaloDensityProfile
+ * @X: dimensionless 2D radius $X = R / r_s$
+ *
+ * This function computes the dimensionless cylinder mass,
+ * see Eq. \eqref{eq:def:cylmass}. This is the default
+ * implementation that will be used unless the child object 
+ * provides one. This interface is present for testing purpose.
+ *
+ * Returns: the value of the dimensionless cylinder mass $\hat{\overline{\Sigma}}(X)$.
+ */
+gdouble
+nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X)
+{
+  NcHaloDensityProfilePrivate * const self = dp->priv;
+  
+  _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
+  
+  return exp (ncm_spline_eval (self->dl_cyl_mass_s, log (X)));
+}
