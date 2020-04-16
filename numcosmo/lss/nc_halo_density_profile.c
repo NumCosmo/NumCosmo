@@ -1324,6 +1324,7 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
 /**
  * nc_halo_density_profile_eval_numint_dl_spher_mass:
  * @dp: a #NcHaloDensityProfile
+ * @x: dimensionless radius $x = r / r_s$
  *
  * This function computes the 2d projection of the dimensionless density
  * profile as described in Eq. \eqref{def:Ix2_dld}. This is the default
