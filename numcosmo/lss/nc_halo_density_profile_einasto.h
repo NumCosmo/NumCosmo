@@ -51,37 +51,30 @@ struct _NcHaloDensityProfileEinastoClass
 
 /**
  * NcHaloDensityProfileEinastoParams:
- * @NC_HALO_DENSITY_PROFILE_EINASTO_RHOS: the central scale density in $M_\odot h^{2}/kpc^3$.
- * @NC_HALO_DENSITY_PROFILE_EINASTO_RS: the scale radius in physical $kpc/h$
  * @NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA: determines how quickly the slope of the inner Einasto profile steepens
  *
  * FIXME
  */
 typedef enum _NcHaloDensityProfileEinastoParams
 {
-  NC_HALO_DENSITY_PROFILE_EINASTO_RHOS = NC_HALO_DENSITY_PROFILE_SPARAM_LEN,
-  NC_HALO_DENSITY_PROFILE_EINASTO_RS,
-  NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA,
+  NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA = NC_HALO_DENSITY_PROFILE_SPARAM_LEN,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_EINASTO_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileEinastoParams;
+
+#define NC_HALO_DENSITY_PROFILE_EINASTO_LOCAL_SPARAM_LEN (NC_HALO_DENSITY_PROFILE_EINASTO_SPARAM_LEN - NC_HALO_DENSITY_PROFILE_SPARAM_LEN)
 
 struct _NcHaloDensityProfileEinasto
 {
   /*< private > */
   NcHaloDensityProfile parent_instance;
-  gdouble Delta;
-  gdouble r_Delta;
 };
 
 GType nc_halo_density_profile_einasto_get_type (void) G_GNUC_CONST;
 
-NcHaloDensityProfile *nc_halo_density_profile_einasto_new (void);
+NcHaloDensityProfileEinasto *nc_halo_density_profile_einasto_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta);
 
-#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RHOS  (0.0)
-#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_RS    (0.0)
-#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA (0.0)
-
+#define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA (0.25)
 #define NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS

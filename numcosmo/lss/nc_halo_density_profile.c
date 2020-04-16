@@ -28,26 +28,26 @@
  * @title: NcHaloDensityProfile
  * @short_description: Abstract class for density profile functions.
  *
- * This abstract class describe radial matter density profile in both real
- * and Fourier spaces. Each implementation must provide, at least, the 
+ * This abstract class describes the radial matter density profile in real
+ * space. Each implementation must provide, at least, the 
  * dimensionless 3D density:
  * \begin{equation}\label{def:dlrho}
  * \hat\rho(x) \equiv \frac{\rho(x r_s)}{\rho_s}, \quad \rho(r) = \rho_s \hat\rho\left(\frac{r}{r_s}\right),
  * \end{equation}
  * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale
- * and $r_s$ the radial scale. This function correspond to the virtual function 
+ * and $r_s$ the scale radius. This function corresponds to the virtual function 
  * nc_halo_density_profile_eval_dl_density(). 
  * 
  * # Parametrization
  *
  * The two parameters $\rho_s$ and $r_s$ are described by the fundamental 
- * parametrization in terms of the $M_\Delta$ (#NcHaloDensityProfile:MDelta) 
+ * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:MDelta) 
  * and the concentration $c_\Delta$ (#NcHaloDensityProfile:cDelta) given a mass 
- * definition $\Delta$ (#NcHaloDensityProfile:Delta) and a background density 
+ * defined by $\Delta$ (#NcHaloDensityProfile:Delta) and a background density 
  * $\rho_\mathrm{bg}$ (#NcHaloDensityProfile:mass-def). Strictly speaking, 
  * the object has two unmutable properties #NcHaloDensityProfile:Delta 
  * and #NcHaloDensityProfile:mass-def that defines the value of $\Delta$ and the 
- * background density $\rho_\mathrm{bg}$, once these properties are defined
+ * background density $\rho_\mathrm{bg}$. Once these properties are defined,
  * one can compute $(r_s,\;\rho_s)$ from $(M_\Delta,\; c_\Delta)$.
  * 
  * ## Computing $r_s$
@@ -77,7 +77,7 @@
  * ## Computing $\rho_s$
  * 
  * Now, applying the mass definition $M_\Delta$ in terms of the radius $r_\Delta$
- * to our profile, results in
+ * to our profile results in
  * \begin{equation}\label{eq:def:Mr}
  * M_\Delta = \int_0^{r_\Delta}4\pi r^2\rho(r)\mathrm{d}r 
  *          = 4\pi r_s^3 \rho_s \int_0^{c_\Delta}x^2\hat\rho(x)\mathrm{d}x 
@@ -105,7 +105,7 @@
  * # 2D projection
  * 
  * The surface density obtained from the projection of the density
- * profile along the line-of-sight, is given by
+ * profile along the line-of-sight is given by
  * \begin{align}
  * \Sigma(R) &= \int_{-\infty}^\infty\rho(\sqrt{R^2+z^2})\mathrm{d}z, \\\\
  *           &= 2\rho_s\int_{0}^\infty\hat\rho(\sqrt{R^2/r_s^2 + z^2/r_s^2})\mathrm{d}z, \\\\ \label{eq:def:hatSigma}
@@ -119,18 +119,18 @@
  * ## Mass on the cylinder of radius $R$
  * 
  * Using the 2D projection $\Sigma(R)$ one computes the total mass
- * inside a infinite cylinder of radius $R$ using
+ * inside an infinite cylinder of radius $R$ using
  * \begin{align}
- * \overline\Sigma(R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{\Sigma}}(R/r_s), \\\\ \label{eq:def:cylmass}
- * \hat{\overline{\Sigma}}(X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
+ * \overline\Sigma(<R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{\Sigma}}(<R/r_s), \\\\ \label{eq:def:cylmass}
+ * \hat{\overline{\Sigma}}(<X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
  * \end{align}
- * Here it is possible to implement the function $\hat{\overline{\Sigma}}(X)$
+ * Here it is possible to implement the function $\hat{\overline{\Sigma}}(<X)$
  * through the method nc_halo_density_profile_eval_dl_cyl_mass() or to use
  * the default numerical implementation.
  * 
  * # Numerical computation
  * 
- * If the implementation does not provide any of the functions: 
+ * If the implementation (i.e., a particular radial profile implementation of this abstract class) does not provide any of the functions: 
  * nc_halo_density_profile_eval_dl_spher_mass(),
  * nc_halo_density_profile_eval_dl_2d_density(), 
  * nc_halo_density_profile_eval_dl_cyl_mass(),
@@ -141,11 +141,18 @@
  * and #NcHaloDensityProfile:lnXf and using the relative
  * tolerance #NcHaloDensityProfile:reltol. See the following
  * functions to control this behavior:
- * - nc_halo_density_profile_set_reltol()
- * - nc_halo_density_profile_set_lnXi()
- * - nc_halo_density_profile_set_lnXf()
+ *  nc_halo_density_profile_set_reltol(),
+ *
+ *  nc_halo_density_profile_set_lnXi(),
+ *
+ *  nc_halo_density_profile_set_lnXf().
  * 
- * 
+ * # Units
+ *
+ * Distance: $[r] = \mathrm{Mpc}$; Mass: $[M_\Delta] = \mathrm{M}_\odot$; Density: 
+ * $[\rho] = \mathrm{M}_\odot \, \mathrm{Mpc}^{-3}$; Surface mass density: 
+ * $[\Sigma] = \mathrm{M}_\odot \, \mathrm{Mpc}^{-2}$.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -335,6 +342,14 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    * Concentration parameter, $c_\Delta$, see Eq \eqref{def:cDelta}.
    * 
    */
+  /**
+   * NcHaloDensityProfile:cDelta-fit:
+   * 
+   * Boolean property that controls whether the parameter 
+   * #NcHaloDensityProfile:cDelta should be included in
+   * a statistical analysis.
+   * 
+   */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_C_DELTA, "c_{\\Delta}", "cDelta",
                               0.5,  10.0, 1.0e-1,
                               NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA,
@@ -346,6 +361,14 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    * Cluster mass $M_\Delta$ in units of solar masses $M_\odot$ 
    * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is 
    * the overdensity, see Eq. \eqref{eq:mrr}.
+   * 
+   */
+  /**
+   * NcHaloDensityProfile:MDelta-fit:
+   * 
+   * Boolean property that controls whether the parameter 
+   * #NcHaloDensityProfile:MDelta should be included in
+   * a statistical analysis.
    * 
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_M_DELTA, "M_{\\Delta}", "MDelta",
@@ -1193,4 +1216,123 @@ nc_halo_density_profile_eval_cyl_mass (NcHaloDensityProfile *dp, NcHICosmo *cosm
   sVol = 2.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
   
   return sVol * nc_halo_density_profile_eval_dl_cyl_mass (dp, R / r_s);
+}
+
+/**
+ * nc_halo_density_profile_eval_density_array:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @r: (in) (element-type gdouble): radius $r\;\left[\mathrm{Mpc}\right]$
+ * @fin: input array factor
+ * @fout: output array factor
+ * @z: redshift $z$
+ *
+ * This function computes the density profile in real space.
+ *
+ * Returns: (transfer full) (element-type gdouble): the value of the density profile $\rho(r)\;\left[M_\odot\times\mathrm{Mpc}^{-3}\right]$.
+ */
+GArray *
+nc_halo_density_profile_eval_density_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *r, gdouble fin, gdouble fout, const gdouble z)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (r->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+  fout = fout * rho_s;
+
+  {
+    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), r->len);
+    guint i;
+
+    g_array_set_size (res, r->len);
+    
+    for (i = 0; i < r->len; i++)
+    {
+      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_dl_density (dp, g_array_index (r, gdouble, i) * fin);
+    }
+    return res;
+  }
+}
+
+/**
+ * nc_halo_density_profile_eval_2d_density_array:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: (in) (element-type gdouble): radius $r\;\left[\mathrm{Mpc}\right]$
+ * @fin: input array factor
+ * @fout: output array factor
+ * @z: redshift $z$
+ *
+ * This function computes 2D projection of the density profile 
+ * at radius $R$ and redshift $z$, see Eq. \eqref{}.
+ *
+ * Returns: (transfer full) (element-type gdouble): the value of $\Sigma(R)\left[M_\odot\times\mathrm{Mpc}^{-2}\right]$.
+ */
+GArray *
+nc_halo_density_profile_eval_2d_density_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+  fout = fout * r_s * rho_s;
+
+  {
+    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    guint i;
+
+    g_array_set_size (res, R->len);
+    
+    for (i = 0; i < R->len; i++)
+    {
+      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_dl_2d_density (dp, g_array_index (R, gdouble, i) * fin);
+    }
+    return res;
+  }
+}
+
+/**
+ * nc_halo_density_profile_eval_cyl_mass_array:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: (in) (element-type gdouble): radius $r\;\left[\mathrm{Mpc}\right]$
+ * @fin: input array factor
+ * @fout: output array factor
+ * @z: redshift $z$
+ *
+ * This function computes the total mass enclose in the 
+ * cylinder of radius $R$, see Eq. \eqref{}.
+ *
+ * Returns: (transfer full) (element-type gdouble): the value of $\overline{\Sigma}(R)\left[M_\odot\right]$.
+ */
+GArray *
+nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+  fout = fout * 2.0 * ncm_c_pi () * rho_s * gsl_pow_3 (r_s);
+
+  {
+    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    guint i;
+
+    g_array_set_size (res, R->len);
+    
+    for (i = 0; i < R->len; i++)
+    {
+      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_dl_cyl_mass (dp, g_array_index (R, gdouble, i) * fin);
+    }
+    return res;
+  }
 }

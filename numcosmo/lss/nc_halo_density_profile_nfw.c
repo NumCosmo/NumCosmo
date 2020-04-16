@@ -29,36 +29,36 @@
  * @short_description: Density profile of Navarro-Frenk-White type.
  *
  * This object implements the #NcHaloDensityProfile class for a Navarro-Frenk-White (NFW) density profile.
+ * 
+ * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$ 
+ * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()]. 
+ * In particular, the NFW profile is given by
+ * \begin{equation}
+ * \hat{\rho}(x) = \frac{1}{x(1 + x)^2},
+ * \end{equation}
+ * where $x = r/r_s$ and $r_s$ is the scale radius.
  *
- * The NFW profile is defined as
+ * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral 
+ * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()]. 
+ * The respective NFW implementation provides  
  * \begin{equation}
- * \rho(r) = \frac{\delta_c \rho_{crit}}{(r/r_s)(1 + r/r_s)^2},
- * \end{equation}
- * where $\rho_{crit} (z) = \frac{3 H^2(z)}{8\pi G} [M_\odot / Mpc^3]$,
- * \begin{equation}
- * \delta_c = \frac{\Delta}{3} \frac{c^3}{\ln (1 + c) - \frac{c}{1 + c}},
- * \end{equation}
- * $c$ is the concentration parameter and $r_s$ is the scale radius,
- * \begin{equation}
- * r_s [Mpc] \equiv \frac{r_{\Delta}}{c} = \left(\frac{3}{4\pi} \frac{M}{\Delta \rho_{crit}(z) c^3}\right)^{1/3},
- * \end{equation}
- * where $M$ is the halo mass $[M_\odot]$, $\Delta$ is the overdensity parameter (as defined in #NcMultiplicityFunc).
- *
- * FIXME
- * The normalized NFW density profile ($u_M(r) = \rho(r) / M$) in the Fourier space is given by
- * \begin{equation}
- * \tilde{u}_M(k) = \frac{1}{m_{nfw}(c)} \left[ \sin(x) \left[\text{Si}((1+c)x) - \text{Si}(x) \right] + \cos(x) \left[\text{Ci}((1+c)x) - \text{Ci}(x) \right] - \frac{\sin(cx)}{(1+c)x} \right],
- * \end{equation}
- * where $x \equiv (1+z)kr_s$, and $\text{Si}(x)$ and $\text{Ci}(x)$ are the sine and cosine integrals, namely.
- * \begin{equation}
- * \text{Si}(x) = \int_0^x \frac{\sin(t)}{t} dt \quad \text{and} \quad \text{Ci}(x) = - \int_x^\infty \frac{\cos(t)}{t} dt.
+ * I_{x^2\hat\rho}(x) = \ln(1 + x) - \frac{x}{1 + x}.
  * \end{equation}
  *
- * The concentration parameter is (change this!)
+ * The NFW dimensionless surface mass density [virtual function nc_halo_density_profile_eval_dl_2d_density()] is 
  * \begin{equation}
- * c(M, z) = A_{vir} \left( \frac{M}{2 \times 10^{12} \text{h}^{-1}M_{\odot}}\right)^{B_{vir}} (1+z)^{C_{vir}}.
+ * \hat{\Sigma}(X) = \frac{2}{X^2 -1} \left[1 - \frac{\arctan (\sqrt{X^2 -1})}{\sqrt{X^2 - 1}}\right].
+ * \end{equation} 
+ * For $X^2 - 1 < 0$ the equation above can be written in terms of $\mathrm{arctanh}(\sqrt{1 - X^2})/\sqrt{1 - X^2}$. 
+ * If $\vert X - 1 \vert < 10^{-6}$ or $X < 10^{-6}$, $\hat{\Sigma} (X)$ is computed using 
+ * the Taylor series expansion at $1$ or $0$ respectively (with sufficient terms in order to obtain double precision).
+ *  
+ * The NFW enclosed mass is [virtual function nc_halo_density_profile_eval_dl_cyl_mass()]
+ * \begin{equation}
+ * \hat{\overline{\Sigma}} (< X) = 2 \left[\frac{\arctan  (\sqrt{X^2 - 1})}{\sqrt{X^2 - 1}} + \ln (X / 2)\right],
  * \end{equation}
- *
+ * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
+ * 
  * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
  */
 
@@ -147,6 +147,9 @@ nc_halo_density_profile_nfw_class_init (NcHaloDensityProfileNFWClass *klass)
   ncm_model_class_set_name_nick (model_class, "NFW Density Profile", "NFW");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
+  
   dp_class->eval_dl_density    = &_nc_halo_density_profile_nfw_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
   dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
@@ -168,53 +171,85 @@ _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const
 static gdouble 
 _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
-  const gdouble Xm1           = X - 1.0;
-  const gdouble Xp1           = X + 1.0;
-  const gdouble X2m1          = Xm1 * Xp1;
-  const gdouble sqrt_abs_X2m1 = sqrt (fabs (X2m1));
+  const gdouble Xm1              = X - 1.0;
+  const gdouble Xp1              = X + 1.0;
+  const gdouble abs_Xm1          = fabs (Xm1);
+  const gdouble X2m1             = Xm1 * Xp1;
+  const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
+  const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
 
-  if (fabs (Xm1) < 1.0e-6)
+  if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
     return 2.0 * (1.0 / 3.0 + (-2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * Xm1) * Xm1) * Xm1);
   }
   else if (Xm1 < 0.0)
   {
-    if (X < 1.0e-6)
+    if (X < pow (GSL_DBL_EPSILON, 1.0 / 10.0))
     {
       const gdouble X_2     = 0.5 * X;
       const gdouble log_X_2 = log (X_2);
-      return 2.0 / X2m1 * ((1.0 + log_X_2) + 0.25 * (1.0 + 2.0 * log_X_2) * X_2 * X_2 + (7.0 / 2.0 + 6.0 * log_X_2) * X_2 * X_2 * X_2 * X_2);
+      return 2.0 / X2m1 * (
+                           (  1.0        +  1.0 * log_X_2) + 
+                           (  1.0        +  2.0 * log_X_2) * X_2 * X_2 + 
+                           (  7.0 / 2.0  +  6.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 +
+                           ( 37.0 / 3.0  + 20.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 +
+                           (533.0 / 12.0 + 70.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 
+                          );
     }
     else
-      return 2.0 / X2m1 * (1.0 - atanh (sqrt_abs_X2m1) / sqrt_abs_X2m1);
+      return 2.0 / X2m1 * (1.0 - 2.0 * atanh (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
   }
   else
   {
-    return 2.0 / X2m1 * (1.0 - atan (sqrt_abs_X2m1) / sqrt_abs_X2m1);
+    return 2.0 / X2m1 * (1.0 - 2.0 * atan (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
   }
 }
 
 static gdouble 
 _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X)
 {
-  const gdouble Xm1           = X - 1.0;
-  const gdouble Xp1           = X + 1.0;
-  const gdouble X2m1          = Xm1 * Xp1;
-  const gdouble sqrt_abs_X2m1 = sqrt (fabs (X2m1));
+  const gdouble Xm1              = X - 1.0;
+  const gdouble Xp1              = X + 1.0;
+  const gdouble abs_Xm1          = fabs (Xm1);
+  const gdouble sqrt_abs_X2m1    = sqrt (abs_Xm1 * Xp1);
+  const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
 
-  if (fabs (Xm1) < 1.0e-6)
+  if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
     return 2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (-1.0 / 15.0 - 2.0 / 105.0 * Xm1) * Xm1) * Xm1;
   }
   else if (Xm1 < 0.0)
   {
-    return 2.0 * (atanh (sqrt_abs_X2m1) / sqrt_abs_X2m1 + log (0.5 * X));
+    if (X < pow (GSL_DBL_EPSILON, 1.0 / 10.0))
+    {
+      const gdouble X_2    = 0.5 * X;
+      const gdouble X_22   = X_2 * X_2;
+      const gdouble ln_X_2 = log (X_2);
+      
+      return -2.0 * (
+                     (
+                      (1.0 + 2.0 * ln_X_2) + 
+                      (
+                       ( 7.0 / 2.0 + 6.0 * ln_X_2) + 
+                       (
+                        ( 37.0 / 3.0  + 20.0 * ln_X_2) +
+                        (
+                         (533.0 / 12.0 + 70.0 * ln_X_2)
+                        ) * X_22
+                       ) * X_22
+                      ) * X_22
+                     ) * X_22
+                    );
+    }
+    else
+    {
+      return 2.0 * (2.0 * atanh (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1 + log (0.5 * X));
+    }
   }
   else
   {
-    return 2.0 * (atan  (sqrt_abs_X2m1) / sqrt_abs_X2m1 + log (0.5 * X));
+    return 2.0 * (2.0 * atan (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1 + log (0.5 * X));
   }
-
 }
 
 /**
@@ -222,9 +257,11 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
  * @mdef: a #NcHaloDensityProfileMassDef
  * @Delta: cluster threshold mass definition $\Delta$
  *
- * This function returns a #NcHaloDensityProfile with a #NcHaloDensityProfileNFW implementation.
+ * This function returns the #NcHaloDensityProfileNFW implementation of 
+ * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
+ * and #NcHaloDensityProfile:Delta to @Delta.
  *
- * Returns: A new #NcHaloDensityProfileNFW.
+ * Returns: a new instance of #NcHaloDensityProfileNFW.
  */
 NcHaloDensityProfileNFW *
 nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta)

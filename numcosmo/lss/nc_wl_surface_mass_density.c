@@ -436,13 +436,10 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensit
 gdouble 
 nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
-	const gdouble rs             = nc_halo_density_profile_scale_radius (dp, cosmo, zc);
-	const gdouble x              = R / rs;
-  const gdouble x2             = x * x;
-	const gdouble mean_sigma_2x2 = nc_halo_density_profile_integral_density_2d (dp, cosmo, R, zc);
-	const gdouble sigma          = 2.0 * nc_halo_density_profile_integral_density_los (dp, cosmo, R, zc);
+	const gdouble mean_sigma_2x2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
+	const gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 
-	return (2.0 / x2) * mean_sigma_2x2 - sigma;
+	return (mean_sigma_2x2 - sigma);
 }
 
 /* Correction term: Central point mass */
@@ -648,4 +645,64 @@ nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDen
 	gdouble magnification = 1.0 / (one_m_conv * one_m_conv - shear2); 
 
 	return magnification;
+}
+
+/**
+ * nc_wl_surface_mass_density_sigma_array:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile  
+ * @cosmo: a #NcHICosmo
+ * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the surface mass density at @R, see Eq. $\eqref{eq:sigma}$.
+ *
+ * Returns: (transfer full) (element-type gdouble): $\Sigma (R)$
+ */
+GArray *
+nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc)
+{
+  return nc_halo_density_profile_eval_2d_density_array (dp, cosmo, R, fin, fout, zc); 
+}
+
+/**
+ * nc_wl_surface_mass_density_sigma_excess_array:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile  
+ * @cosmo: a #NcHICosmo
+ * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes difference between the mean surface mass density inside the circle with radius @R (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @R (Eq. $\eqref{eq:sigma}$).
+ *
+ * Returns: (transfer full) (element-type gdouble): $\overline{\Sigma} (<R) - \Sigma (R)$
+ */
+GArray *
+nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+  fout = fout *   rho_s * r_s;
+
+  {
+    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    guint i;
+
+    g_array_set_size (res, R->len);
+    
+    for (i = 0; i < R->len; i++)
+    {
+      const gdouble X        = g_array_index (R, gdouble, i) * fin;
+      const gdouble barSigma = 2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X);
+      const gdouble sigma    = nc_halo_density_profile_eval_dl_2d_density (dp, X);
+                                                                         
+      g_array_index (res, gdouble, i) = fout * (barSigma - sigma);
+    }
+    return res;
+  }
 }
