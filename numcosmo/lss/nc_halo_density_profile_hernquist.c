@@ -29,36 +29,36 @@
  * @short_description: Density profile of Hernquist type.
  *
  * This object implements the #NcHaloDensityProfile class for a Hernquist density profile.
- * 
- * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$ 
- * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()]. 
+ *
+ * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
+ * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].
  * In particular, the Hernquist profile is given by
  * \begin{equation}
  * \hat{\rho}(x) = \frac{1}{x(1 + x)^3},
  * \end{equation}
  * where $x = r/r_s$ and $r_s$ is the scale radius.
  *
- * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral 
- * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()]. 
- * The respective Hernquist implementation provides  
+ * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral
+ * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()].
+ * The respective Hernquist implementation provides
  * \begin{equation}
  * I_{x^2\hat\rho}(x) = \frac{x^2}{2(1 + x)^2}.
  * \end{equation}
  *
- * The Hernquist dimensionless surface mass density [virtual function nc_halo_density_profile_eval_dl_2d_density()] is 
+ * The Hernquist dimensionless surface mass density [virtual function nc_halo_density_profile_eval_dl_2d_density()] is
  * \begin{equation}
  * \hat{\Sigma}(X) = \frac{1}{\left( X^2 - 1 \right)^2} \left[\frac{\left(2 + X^2 \right) \arctan \left(\sqrt{X^2 - 1} \right)}{\sqrt{\left( X^2 - 1 \right)}} - 3\right].
- * \end{equation} 
- * For $X^2 - 1 < 0$ the equation above can be written in terms of $\mathrm{arctanh}(\sqrt{\vert X^2 - 1 \vert})$. 
- * If $\vert X - 1 \vert < 10^{-6}$ or $X < 10^{-6}$, $\hat{\Sigma} (X)$ is computed using 
+ * \end{equation}
+ * For $X^2 - 1 < 0$ the equation above can be written in terms of $\mathrm{arctanh}(\sqrt{\vert X^2 - 1 \vert})$.
+ * If $\vert X - 1 \vert < 10^{-6}$ or $X < 10^{-6}$, $\hat{\Sigma} (X)$ is computed using
  * the Taylor series expansion at $1$ or $0$ respectively (with sufficient terms in order to obtain double precision).
- *  
+ *
  * The Hernquist enclosed mass is [virtual function nc_halo_density_profile_eval_dl_cyl_mass()]
  * \begin{equation}
  * \hat{\overline{\Sigma}} (< X) = X^2 / (X^2 - 1) * \eft[1 - 2 * \arctan \left(\sqrt{\vert X - 1 \vert / (X + 1)\right)\right];,
  * \end{equation}
  * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
- * 
+ *
  * References: , arxiv:1712.04512.
  */
 
@@ -146,7 +146,7 @@ nc_halo_density_profile_hernquist_class_init (NcHaloDensityProfileHernquistClass
   
   ncm_model_class_set_name_nick (model_class, "Hernquist Density Profile", "Hernquist");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-
+  
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
@@ -156,19 +156,19 @@ nc_halo_density_profile_hernquist_class_init (NcHaloDensityProfileHernquistClass
   dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_hernquist_eval_dl_cyl_mass;
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
   return 1.0 / (x * gsl_pow_3 (1.0 + x));
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
-  return gsl_pow_2 (x) / ( 2.0 * gsl_pow_2 (1.0 + x));
+  return gsl_pow_2 (x) / (2.0 * gsl_pow_2 (1.0 + x));
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
   const gdouble Xm1              = X - 1.0;
@@ -178,22 +178,16 @@ _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp,
   const gdouble X2m1_2           = X2m1 * X2m1;
   const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-
+  
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
-  {
     return 4.0 * (1.0 / 15.0 + (-4.0 / 35.0 + (2.0 / 15.0 - 92.0 / 693.0 * Xm1) * Xm1) * Xm1);
-  }
   else if (X2m1 < 0.0)
-  {
-    return 1.0 / X2m1_2 * (- 3.0 + (2.0 + X * X) * 2.0 * atanh (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
-  }
+    return 1.0 / X2m1_2 * (-3.0 + (2.0 + X * X) * 2.0 * atanh (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
   else
-  {
-    return 1.0 / X2m1_2 * (- 3.0 + (2.0 + X * X) * 2.0 * atan (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
-  }
+    return 1.0 / X2m1_2 * (-3.0 + (2.0 + X * X) * 2.0 * atan (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1);
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X)
 {
   const gdouble Xm1              = X - 1.0;
@@ -202,10 +196,10 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
   const gdouble abs_Xm1          = fabs (Xm1);
   const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-
+  
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
-    return 1.0 / 3.0 + (4.0 / 15.0 + (- 2.0 / 21.0 + 8.0 / 315.0 * Xm1) * Xm1) * Xm1;
+    return 1.0 / 3.0 + (4.0 / 15.0 + (-2.0 / 21.0 + 8.0 / 315.0 * Xm1) * Xm1) * Xm1;
   }
   else if (Xm1 < 0.0)
   {
@@ -216,18 +210,18 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
       const gdouble ln_X_2 = log (X_2);
       
       return -4.0 * (
-                     (
-                      (1.0 + ln_X_2) + 
-                      (
-                       (5.0 + 6.0 * ln_X_2) + 
-                       (
-                        (47.0 / 2.0  + 30.0 * ln_X_2) +
-                        (
-                         (319.0 / 3.0 + 140.0 * ln_X_2)
-                        ) * X_22
-                       ) * X_22
-                      ) * X_22
-                     ) * X_22
+        (
+          (1.0 + ln_X_2) +
+          (
+            (5.0 + 6.0 * ln_X_2) +
+            (
+              (47.0 / 2.0  + 30.0 * ln_X_2) +
+              (
+                (319.0 / 3.0 + 140.0 * ln_X_2)
+              ) * X_22
+            ) * X_22
+          ) * X_22
+        ) * X_22
                     );
     }
     else
@@ -246,7 +240,7 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
  * @mdef: a #NcHaloDensityProfileMassDef
  * @Delta: cluster threshold mass definition $\Delta$
  *
- * This function returns the #NcHaloDensityProfileHernquist implementation of 
+ * This function returns the #NcHaloDensityProfileHernquist implementation of
  * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
  * and #NcHaloDensityProfile:Delta to @Delta.
  *
@@ -256,9 +250,10 @@ NcHaloDensityProfileHernquist *
 nc_halo_density_profile_hernquist_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta)
 {
   NcHaloDensityProfileHernquist *dph = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST,
-                                                  "mass-def", mdef,
-                                                  "Delta",    Delta,
-                                                  NULL);
-
+                                                     "mass-def", mdef,
+                                                     "Delta",    Delta,
+                                                     NULL);
+  
   return dph;
 }
+

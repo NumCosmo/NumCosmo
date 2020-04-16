@@ -57,7 +57,7 @@ struct _NcHaloDensityProfileDK14Class
  * @NC_HALO_DENSITY_PROFILE_DK14_BE: amplitude of one factor of the outer profile.
  * @NC_HALO_DENSITY_PROFILE_DK14_SE: slope of the outer profile.
  *
- * The first three parameters, $\pho_s$, $r_s$ and $\alpha$, are the Einasto profile's parameters.
+ * The first three parameters, $\rho_s$, $r_s$ and $\alpha$, are the Einasto profile's parameters.
  * The transition term $f_{trans}$ is a function parametrized by $r_t$, $beta$ and $\gamma$. These two functions determine the inner
  * profile, whereas the outer profile is parametrized br $b_e$ and $s_e$.
  *
