@@ -125,7 +125,7 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
 
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "c",       4.0);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
   test->zc = 1.0;
   test->zl = 1.0;
