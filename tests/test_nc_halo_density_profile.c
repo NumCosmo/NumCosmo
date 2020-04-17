@@ -99,6 +99,14 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_density_profile_einasto_new,
               &test_nc_halo_density_profile_eval_dl_spher_mass,
               &test_nc_halo_density_profile_free);
+  g_test_add ("/nc/density_profile/einasto/eval_dl_2d_density", TestNcHaloDensityProfile, NULL,
+              &test_nc_halo_density_profile_einasto_new,
+              &test_nc_halo_density_profile_eval_dl_2d_density,
+              &test_nc_halo_density_profile_free);
+  g_test_add ("/nc/density_profile/einasto/eval_dl_cyl_mass", TestNcHaloDensityProfile, NULL,
+              &test_nc_halo_density_profile_einasto_new,
+              &test_nc_halo_density_profile_eval_dl_cyl_mass,
+              &test_nc_halo_density_profile_free);
 
   g_test_run ();
 }

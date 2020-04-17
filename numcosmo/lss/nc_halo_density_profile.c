@@ -539,11 +539,9 @@ _nc_halo_density_profile_prepare_dl_2d_density_X (gdouble lnX, gpointer userdata
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
   NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
   gdouble err, dl_2d_density_X;
-  gdouble abstol;
+  gdouble abstol = 0.0;
   
   dp2D->X = exp (lnX);
-  abstol  = GSL_FN_EVAL (dp2D->F, 0.0) * dp2D->X * self->reltol;
-  
   gsl_integration_qagiu (dp2D->F, 0.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, dp2D->w, &dl_2d_density_X, &err);
   
   return log (2.0 * dl_2d_density_X);
@@ -614,18 +612,16 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
   
   gdouble dl_cyl_mass_X = 0.0;
   gdouble err, dl_cyl_mass_X_i;
-  gdouble abstol;
+  gdouble abstol = 0.0;
   
   dp2D->X = exp (lnX);
 
-  abstol = GSL_FN_EVAL (dp2D->F, 0.5 * dp2D->X) * dp2D->X * self->reltol;
   gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
   dl_cyl_mass_X += dl_cyl_mass_X_i;
   
-  abstol = dl_cyl_mass_X * self->reltol;
   gsl_integration_qag (dp2D->F2, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
   dl_cyl_mass_X += gsl_pow_3 (dp2D->X) * dl_cyl_mass_X_i;
-  
+
   return log (2.0 * dl_cyl_mass_X);
 }
 
