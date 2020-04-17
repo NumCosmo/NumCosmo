@@ -22,7 +22,9 @@ END SUBROUTINE  CAMSPEC_EXTRA_ONLY_ONE
 SUBROUTINE CAMSPEC_EXTRA_FREE()
     USE CAMSPEC_EXTRA
     DEALLOCATE(cltt)
-    BOK =0
+    BOK =1
+    ! forbid double instantiation of camspec. Need more work to cleanup correctly it seems...
+
 END SUBROUTINE  CAMSPEC_EXTRA_FREE
 
 SUBROUTINE CAMSPEC_EXTRA_INIT(iNspec, inX,ilminX,ilmaxX,inp,inpt, ic_inv,iX,ilmax_sz,isz_143_temp,iksz_temp,itszxcib_temp,ibeam_Nspec,inum_modes_per_beam,ibeam_lmax,icov_dim,ibeam_cov_inv,ibeam_modes,ihas_dust,ihas_calib,imarge_flag, imarge_mode,imarge_num, ikeep_num,bs_factor)
@@ -315,6 +317,16 @@ SUBROUTINE CAMSPEC_EXTRA_LKL_V3(LKL,CL)
     lkl = -tlkl/2.
 
 END SUBROUTINE CAMSPEC_EXTRA_LKL_V3
+
+SUBROUTINE CAMSPEC_EXTRA_FREE_V3()
+    USE CAMSPEC_EXTRA
+    use temp_like_camspec3
+
+    DEALLOCATE(cltt)
+    call camspec_clean()
+    BOK =1
+    ! forbid double instantiation of camspec. Need more work to cleanup correctly it seems...
+END SUBROUTINE  CAMSPEC_EXTRA_FREE_v3
 
 #endif
 

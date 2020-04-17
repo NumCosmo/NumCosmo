@@ -79,7 +79,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FF
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
-  fftlog_jl->priv      = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jl, NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJPrivate);
+  fftlog_jl->priv      = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   fftlog_jl->priv->ell = 0;
   fftlog_jl->priv->q   = 0.0;
 }
@@ -322,7 +322,7 @@ ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
  * 
  * Sets the value of $\ln(r_0)$ which gives the best results for
  * the transformation based on the current value of $\ln(k_0)$, 
- * this is based in the rule of thumb $\mathrm{max}_x^*(j_l)$ 
+ * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$ 
  * where $ x^* \approx l + 1$.
  * 
  */
@@ -348,8 +348,8 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
  * 
  * Sets the value of $\ln(k_0)$ which gives the best results for
  * the transformation based on the current value of $\ln(r_0)$, 
- * this is based in the rule of thumb $\mathrm{max}_x^*(j_l)$ 
- * where $ x^* \approx l+1$.
+ * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$ 
+ * where $ x^* \approx l + 1$.
  * 
  */
 void 

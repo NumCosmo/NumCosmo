@@ -80,7 +80,7 @@ void ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on);
 void ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step);
 gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
 
-G_INLINE_FUNC NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
+NCM_INLINE NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (0.0)
@@ -93,10 +93,11 @@ G_END_DECLS
 #ifndef _NCM_ODE_SPLINE_INLINE_H_
 #define _NCM_ODE_SPLINE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcmSpline *
+NCM_INLINE NcmSpline *
 ncm_ode_spline_peek_spline (NcmOdeSpline *os)
 {
   return os->spline;
@@ -104,5 +105,6 @@ ncm_ode_spline_peek_spline (NcmOdeSpline *os)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_ODE_SPLINE_INLINE_H_ */

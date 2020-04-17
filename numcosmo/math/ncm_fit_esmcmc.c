@@ -68,6 +68,8 @@ struct _NcmFitESMCMCPrivate
   NcmMSetCatalogTrimType trim_type;
   guint min_runs;
   gdouble max_runs_time;
+  gdouble log_time_interval;
+  guint interm_log;
   GPtrArray *full_theta;
   GPtrArray *full_thetastar;
   GPtrArray *full_thetastar_inout;
@@ -116,6 +118,8 @@ enum
   PROP_TRIM_TYPE,
   PROP_MIN_RUNS,
   PROP_MAX_RUNS_TIME,
+  PROP_LOG_TIME_INTERVAL,
+  PROP_INTERM_LOG,
   PROP_MTYPE,
   PROP_NTHREADS,
   PROP_USE_MPI,
@@ -131,27 +135,28 @@ static void _ncm_fit_esmcmc_worker_free (gpointer p);
 static void
 ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 {
-	NcmFitESMCMCPrivate * const self = esmcmc->priv = G_TYPE_INSTANCE_GET_PRIVATE (esmcmc, NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCPrivate);
+	NcmFitESMCMCPrivate * const self = esmcmc->priv = ncm_fit_esmcmc_get_instance_private (esmcmc);
 	
-  self->fit             = NULL;
-	self->mj              = NULL;
-  self->walker_pool     = ncm_memory_pool_new (&_ncm_fit_esmcmc_worker_dup, esmcmc, 
-                                               &_ncm_fit_esmcmc_worker_free);
+  self->fit               = NULL;
+	self->mj                = NULL;
+  self->walker_pool       = ncm_memory_pool_new (&_ncm_fit_esmcmc_worker_dup, esmcmc, 
+                                                 &_ncm_fit_esmcmc_worker_free);
 
-  self->sampler         = NULL;
-  self->mcat            = NULL;
-  self->mtype           = NCM_FIT_RUN_MSGS_NONE;
-  self->nt              = ncm_timer_new ();
-  self->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  self->walker          = NULL;
-  self->lre_step        = 0.0;
-  self->auto_trim       = FALSE;
-  self->auto_trim_div   = 0;
-  self->trim_type       = 0;
-  self->min_runs        = 0;
-  self->max_runs_time   = 0.0;
-  self->nadd_vals       = 0;
-  self->fparam_len      = 0;
+  self->sampler           = NULL;
+  self->mcat              = NULL;
+  self->mtype             = NCM_FIT_RUN_MSGS_NONE;
+  self->nt                = ncm_timer_new ();
+  self->ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  self->walker            = NULL;
+  self->lre_step          = 0.0;
+  self->auto_trim         = FALSE;
+  self->auto_trim_div     = 0;
+  self->trim_type         = 0;
+  self->min_runs          = 0;
+  self->max_runs_time     = 0.0;
+  self->log_time_interval = 0.0;
+  self->nadd_vals         = 0;
+  self->fparam_len        = 0;
 
   self->m2lnL                = g_ptr_array_new ();
   self->theta                = g_ptr_array_new ();
@@ -332,6 +337,12 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_MAX_RUNS_TIME:
       self->max_runs_time = g_value_get_double (value);
       break;
+    case PROP_LOG_TIME_INTERVAL:
+      self->log_time_interval = g_value_get_double (value);
+      break;
+    case PROP_INTERM_LOG:
+      self->interm_log = g_value_get_uint (value);
+      break;
     case PROP_MTYPE:
       ncm_fit_esmcmc_set_mtype (esmcmc, g_value_get_enum (value));
       break;
@@ -405,6 +416,12 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_MAX_RUNS_TIME:
       g_value_set_double (value, self->max_runs_time);
+      break;
+    case PROP_LOG_TIME_INTERVAL:
+      g_value_set_double (value, self->log_time_interval);
+      break;
+    case PROP_INTERM_LOG:
+      g_value_set_uint (value, self->interm_log);
       break;
     case PROP_MTYPE:
       g_value_set_enum (value, self->mtype);
@@ -570,6 +587,20 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         "Maximum time between runs",
                                                         1.0, G_MAXDOUBLE, 2.0 * 60.0 * 60.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LOG_TIME_INTERVAL,
+                                   g_param_spec_double ("log-time-interval",
+                                                        NULL,
+                                                        "Time interval between log",
+                                                        1.0, G_MAXDOUBLE, 60.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INTERM_LOG,
+                                   g_param_spec_uint ("intermediary-log",
+                                                      NULL,
+                                                      "Number of intermediary logs",
+                                                      1, G_MAXUINT, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MTYPE,
                                    g_param_spec_enum ("mtype",
@@ -1052,8 +1083,7 @@ void
 _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
 {
 	NcmFitESMCMCPrivate * const self = esmcmc->priv;
-  const guint part = 5;
-  const guint step = self->nwalkers * ((self->n / part) == 0 ? 1 : (self->n / part));
+  const guint step = self->nwalkers * ((self->n / self->interm_log) == 0 ? 1 : (self->n / self->interm_log));
   guint k;
 
   g_assert_cmpuint (ki, <, kf);
@@ -1086,7 +1116,6 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
       self->noffboard_lup++;
       g_array_index (self->offboard, gboolean, k) = FALSE;
     }
-    
   }
 
   switch (self->mtype)
@@ -1098,7 +1127,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
       guint stepi = (self->cur_sample_id + 1) % step;
       gboolean log_timeout = FALSE;
 
-      if ((self->nt->pos_time - self->nt->last_log_time) > 60.0)
+      if ((self->nt->pos_time - self->nt->last_log_time) > self->log_time_interval)
       {
         log_timeout = ((self->cur_sample_id + 1) % self->nwalkers == 0);
       }
@@ -1637,7 +1666,8 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
 
 		/*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "#  FULL IN: ", "% 22.15g", TRUE);*/
 
-		if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))
+		/*if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))*/
+    if (ncm_mset_fparam_validate_all (self->fit->mset, thetastar)) /* TEST! */
 		{
 			g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
 			g_ptr_array_add (thetastar_out_a, thetastar_out_k);
@@ -1693,7 +1723,8 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 
     ncm_fit_esmcmc_walker_step (self->walker, self->theta, self->m2lnL, thetastar, k);
 
-    if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+		/*if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))*/
+    if (ncm_mset_fparam_validate_all (fit_k->mset, thetastar)) /* TEST! */
     {
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
       ncm_fit_m2lnL_val (fit_k, m2lnL_star);

@@ -65,7 +65,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_M
 static void
 nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)
 {
-  NcPowspecMLCBEPrivate * const self = ps_cbe->priv = G_TYPE_INSTANCE_GET_PRIVATE (ps_cbe, NC_TYPE_POWSPEC_ML_CBE, NcPowspecMLCBEPrivate);
+  NcPowspecMLCBEPrivate * const self = ps_cbe->priv = nc_powspec_ml_cbe_get_instance_private (ps_cbe);
 	NcTransferFunc *tf = nc_transfer_func_eh_new ();
 
 	self->cbe          = NULL;

@@ -58,6 +58,7 @@
 
 /* Perturbations */
 #include <numcosmo/perturbations/nc_hipert.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
@@ -66,6 +67,11 @@
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_comp_pb.h>
 
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_idem2.h>
@@ -80,6 +86,7 @@
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
+#include <numcosmo/model/nc_hicosmo_qrbf.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
 #include <numcosmo/model/nc_hicosmo_Vexp.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
@@ -97,8 +104,11 @@
 #include <numcosmo/lss/nc_transfer_func_eh.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
-#include <numcosmo/lss/nc_density_profile.h>
-#include <numcosmo/lss/nc_density_profile_nfw.h>
+#include <numcosmo/lss/nc_halo_density_profile.h>
+#include <numcosmo/lss/nc_halo_density_profile_nfw.h>
+#include <numcosmo/lss/nc_halo_density_profile_einasto.h>
+#include <numcosmo/lss/nc_halo_density_profile_dk14.h>
+#include <numcosmo/lss/nc_halo_density_profile_hernquist.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>

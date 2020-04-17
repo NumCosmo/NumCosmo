@@ -159,7 +159,7 @@ G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_h
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv = G_TYPE_INSTANCE_GET_PRIVATE (qg1d, NC_TYPE_HIQG_1D, NcHIQG1DPrivate);
+  NcHIQG1DPrivate * const self = qg1d->priv = nc_hiqg_1d_get_instance_private (qg1d);
 
   self->lambda     = 0.0;
   self->acs_a      = 0.0;
@@ -969,6 +969,14 @@ nc_hiqg_1d_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdoubl
   return _nc_hiqg_1d_basis (x, y, h, a);
 }
 
+/*
+ * READ HERE
+ */
+
+
+/*
+ * Computes H . K(x, y)
+ */
 static gdouble
 _nc_hiqg_1d_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
@@ -1008,6 +1016,13 @@ nc_hiqg_1d_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdoub
   return _nc_hiqg_1d_Hbasis (x, y, h, a);
 }
 
+/*
+ * Computes: K(x, y) / (x x^a)
+ * 
+ * It uses the function sinh1(x) = sinh(x)/x, such that when computing close
+ * to the border x = 0 it avoids computing 0/0.
+ * 
+ */
 static gdouble
 _nc_hiqg_1d_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
@@ -1029,6 +1044,13 @@ _nc_hiqg_1d_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const 
   }
 }
 
+/*
+ * Computes: (K(x,y1)dK(x,y2)/dx - K(x,y2)dK(x,y1)/dx) / x^3
+ * 
+ * Computes the subtraction above (necessary to compute the derivative of the phase)
+ * taking care of all the cancellations.
+ * 
+ */
 static gdouble
 _nc_hiqg_1d_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
@@ -1244,6 +1266,8 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
  * @qg1d: a #NcHIQG1D
  *
  * FIXME
+ * 
+ * READ HERE
  *
  */
 void

@@ -62,8 +62,6 @@ NcPowspecML *nc_powspec_ml_ref (NcPowspecML *ps_ml);
 void nc_powspec_ml_free (NcPowspecML *ps_ml);
 void nc_powspec_ml_clear (NcPowspecML **ps_ml);
 
-gdouble nc_powspec_ml_sigma_R (NcPowspecML *ps_ml, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
-
 G_END_DECLS
 
 #endif /* _NC_POWSPEC_ML_H_ */

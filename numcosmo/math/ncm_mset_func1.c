@@ -50,7 +50,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC);
 static void
 ncm_mset_func1_init (NcmMSetFunc1 *f1)
 {
-	f1->priv = G_TYPE_INSTANCE_GET_PRIVATE (f1, NCM_TYPE_MSET_FUNC1, NcmMSetFunc1Private);
+	f1->priv = ncm_mset_func1_get_instance_private (f1);
 	f1->priv->placeholder = 0;
 }
 

@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
-
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la
@@ -24,6 +22,7 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
 	 $(OPENMP_CFLAGS)     \
+	 $(HDF5_CPPFLAGS)     \
 	 $(HDF5_CFLAGS)       \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
@@ -78,6 +77,7 @@ ncm_sources = \
 	math/ncm_mpi_job_test.c              \
 	math/ncm_mpi_job_fit.c               \
 	math/ncm_mpi_job_mcmc.c              \
+	math/ncm_mpi_job_feval.c             \
 	math/ncm_util.c                      \
 	math/ncm_diff.c                      \
 	math/ncm_ode.c                       \
@@ -112,7 +112,9 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c          \
 	math/ncm_powspec.c                   \
 	math/ncm_powspec_filter.c            \
+	math/ncm_powspec_corr3d.c            \
 	math/ncm_hoaa.c                      \
+	math/ncm_csq1d.c                     \
 	math/ncm_func_eval.c                 \
 	math/ncm_mpsf_trig_int.c             \
 	math/ncm_mpsf_sbessel.c              \
@@ -180,9 +182,9 @@ ncm_sources = \
 	math/ncm_abc.c                       \
 	math/ncm_quaternion.c                \
 	math/ncm_sphere_map.c                \
+	math/ncm_function_cache.c            \
 	math/poly.c               \
 	math/integral.c           \
-	math/function_cache.c     \
 	math/quadrature.c         \
 	math/matrix_exp.c         \
 	math/magnus_iserles_ode.c \
@@ -193,7 +195,8 @@ ncm_sources = \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c \
+	math/Faddeeva.c  \
+	math/rcm.c       \
 	math/LowRankQP.c \
 	gslextras/cqp/cqpminimizer.c  \
 	gslextras/cqp/initial_point.c \
@@ -206,6 +209,7 @@ ncm_headers =                                \
 	math/ncm_mpi_job_test.h              \
 	math/ncm_mpi_job_fit.h               \
 	math/ncm_mpi_job_mcmc.h              \
+	math/ncm_mpi_job_feval.h             \
 	math/ncm_util.h                      \
 	math/ncm_diff.h                      \
 	math/ncm_ode.h                       \
@@ -240,7 +244,9 @@ ncm_headers =                                \
 	math/ncm_spline2d_bicubic.h          \
 	math/ncm_powspec.h                   \
 	math/ncm_powspec_filter.h            \
+	math/ncm_powspec_corr3d.h            \
 	math/ncm_hoaa.h                      \
+	math/ncm_csq1d.h                     \
 	math/ncm_func_eval.h                 \
 	math/ncm_mpsf_trig_int.h             \
 	math/ncm_mpsf_sbessel.h              \
@@ -308,7 +314,7 @@ ncm_headers =                                \
 	math/ncm_abc.h                       \
 	math/ncm_quaternion.h                \
 	math/ncm_sphere_map.h                \
-	math/function_cache.h     \
+	math/ncm_function_cache.h            \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
 	math/matrix_exp.h         \
@@ -326,6 +332,7 @@ ncm_headers_nogi = \
 ncm_headers_internal = \
 	gslextras/cqp/gsl_cqp.h           \
 	gslextras/cqp/initial_point.h     \
+	math/rcm.h                        \
 	math/ncm_flapack.h                \
 	math/Faddeeva.h                   \
 	perturbations/nc_hipert_private.h
@@ -367,6 +374,7 @@ nc_headers = \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qspline.h    \
+	model/nc_hicosmo_qrbf.h       \
 	model/nc_hicosmo_qgrw.h       \
 	model/nc_hicosmo_Vexp.h       \
 	model/nc_hiprim_power_law.h   \
@@ -382,8 +390,11 @@ nc_headers = \
 	lss/nc_transfer_func_eh.h     \
 	lss/nc_transfer_func_camb.h   \
 	lss/nc_growth_func.h          \
-	lss/nc_density_profile.h      \
-	lss/nc_density_profile_nfw.h  \
+	lss/nc_halo_density_profile.h           \
+	lss/nc_halo_density_profile_nfw.h       \
+	lss/nc_halo_density_profile_einasto.h   \
+	lss/nc_halo_density_profile_dk14.h      \
+	lss/nc_halo_density_profile_hernquist.h \
 	lss/nc_galaxy_acf.h           \
 	lss/nc_multiplicity_func.h    \
 	lss/nc_multiplicity_func_ps.h           \
@@ -451,6 +462,7 @@ nc_headers = \
 	data/nc_data_xcor.h                       \
 	abc/nc_abc_cluster_ncount.h               \
 	perturbations/nc_hipert.h                 \
+	perturbations/nc_hipert_bg_var.h          \
 	perturbations/nc_hipert_wkb.h             \
 	perturbations/nc_hipert_itwo_fluids.h     \
 	perturbations/nc_hipert_adiab.h           \
@@ -459,6 +471,11 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann.h       \
 	perturbations/nc_hipert_boltzmann_std.h   \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
+	perturbations/nc_hipert_first_order.h     \
+	perturbations/nc_hipert_grav.h            \
+	perturbations/nc_hipert_grav_einstein.h   \
+	perturbations/nc_hipert_comp.h            \
+	perturbations/nc_hipert_comp_pb.h         \
 	xcor/nc_xcor.h                            \
 	xcor/nc_xcor_AB.h                         \
 	xcor/nc_xcor_limber_kernel.h              \
@@ -503,6 +520,7 @@ nc_sources = \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
 	model/nc_hicosmo_qspline.c    \
+	model/nc_hicosmo_qrbf.c       \
 	model/nc_hicosmo_qgrw.c       \
 	model/nc_hicosmo_Vexp.c       \
 	model/nc_hiprim_power_law.c   \
@@ -518,8 +536,11 @@ nc_sources = \
 	lss/nc_transfer_func_eh.c     \
 	lss/nc_transfer_func_camb.c   \
 	lss/nc_growth_func.c          \
-	lss/nc_density_profile.c      \
-	lss/nc_density_profile_nfw.c  \
+	lss/nc_halo_density_profile.c           \
+	lss/nc_halo_density_profile_nfw.c       \
+	lss/nc_halo_density_profile_einasto.c   \
+	lss/nc_halo_density_profile_dk14.c      \
+	lss/nc_halo_density_profile_hernquist.c \
 	lss/nc_galaxy_acf.c           \
 	lss/nc_multiplicity_func.c    \
 	lss/nc_multiplicity_func_ps.c           \
@@ -587,6 +608,7 @@ nc_sources = \
 	data/nc_data_xcor.c                       \
 	abc/nc_abc_cluster_ncount.c               \
 	perturbations/nc_hipert.c                 \
+	perturbations/nc_hipert_bg_var.c          \
 	perturbations/nc_hipert_wkb.c             \
 	perturbations/nc_hipert_itwo_fluids.c     \
 	perturbations/nc_hipert_adiab.c           \
@@ -595,6 +617,11 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann.c       \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
+	perturbations/nc_hipert_first_order.c     \
+	perturbations/nc_hipert_grav.c            \
+	perturbations/nc_hipert_grav_einstein.c   \
+	perturbations/nc_hipert_comp.c            \
+	perturbations/nc_hipert_comp_pb.c         \
 	xcor/nc_xcor.c                            \
 	xcor/nc_xcor_AB.c                         \
 	xcor/nc_xcor_limber_kernel.c              \
@@ -602,7 +629,7 @@ nc_sources = \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
 	xcor/nc_xcor_limber_kernel_weak_lensing.c
 
-cosmo_includedir = \
+libnumcosmo_la_includedir = \
 	$(pkgincludedir)
 
 ncm_enum_types_built_headers =
@@ -692,6 +719,7 @@ libnumcosmo_la_SOURCES = \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
 	$(ncm_cond_headers)     \
+	config_extra.h          \
 	numcosmo-math.h         \
 	numcosmo.h
 
@@ -702,22 +730,22 @@ nodist_libnumcosmo_la_SOURCES = \
 	$(nc_enum_types_headers)  \
 	$(nc_enum_types_sources)
 
-nobase_cosmo_include_HEADERS = \
-	$(ncm_headers)                 \
-	$(ncm_headers_nogi)            \
-	$(nc_headers)                  \
-	$(ncm_cond_headers)            \
-	math/binsplit_eval.c           \
-	numcosmo-math.h                \
+nobase_libnumcosmo_la_include_HEADERS = \
+	$(ncm_headers)            \
+	$(ncm_headers_nogi)       \
+	$(nc_headers)             \
+	$(ncm_cond_headers)       \
+	math/binsplit_eval.c      \
+	numcosmo-math.h           \
 	numcosmo.h
 
-nodist_cosmo_include_HEADERS = \
+nodist_libnumcosmo_la_include_HEADERS = \
 	build_cfg.h               \
 	$(ncm_enum_types_headers) \
 	$(nc_enum_types_headers)
 
 EXTRA_DIST = \
-	$(nobase_cosmo_include_HEADERS) \
+	$(nobase_libnumcosmo_la_include_HEADERS) \
 	build_cfg.h.in                  \
 	ncm_enum_types.h.template       \
 	ncm_enum_types.c.template       \

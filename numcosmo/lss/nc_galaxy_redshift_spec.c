@@ -58,7 +58,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpec, nc_galaxy_redshift_spec, NC_TY
 static void
 nc_galaxy_redshift_spec_init (NcGalaxyRedshiftSpec *gzs)
 {
-	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv = G_TYPE_INSTANCE_GET_PRIVATE (gzs, NC_TYPE_GALAXY_REDSHIFT_SPEC, NcGalaxyRedshiftSpecPrivate);
+	NcGalaxyRedshiftSpecPrivate * const self = gzs->priv = nc_galaxy_redshift_spec_get_instance_private (gzs);
 
 	self->z_spec = -1.0;
 }

@@ -245,12 +245,10 @@ nc_recomb_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
     case PROP_ZI:
-      recomb->zi      = g_value_get_double (value);
-      recomb->lambdai = -log (1.0 + recomb->zi);
-      ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
+      nc_recomb_set_zi (recomb, g_value_get_double (value));
       break;
     case PROP_PREC:
-      recomb->prec    = g_value_get_double (value);
+      recomb->prec = g_value_get_double (value);
       ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
     default:
@@ -268,7 +266,7 @@ nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   switch (prop_id)
   {
     case PROP_ZI:
-      g_value_set_double (value, recomb->zi);
+      g_value_set_double (value, nc_recomb_get_zi (recomb));
       break;
     case PROP_INIT_FRAC:
       g_value_set_double (value, recomb->init_frac);
@@ -448,6 +446,55 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
  * since last preparation.
  *
  */
+
+/**
+ * nc_recomb_set_zi:
+ * @recomb: a #NcRecomb
+ * @zi: initial redshift to prepare the recombination functions $z_i$
+ * 
+ * Sets the initial redshift of the integration $[0, z_i]$.
+ * 
+ */
+void 
+nc_recomb_set_zi (NcRecomb *recomb, const gdouble zi)
+{
+  if (recomb->zi != zi)
+  {
+    recomb->zi      = zi;
+    recomb->lambdai = -log (1.0 + recomb->zi);
+    ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
+  }
+}
+
+/**
+ * nc_recomb_require_zi:
+ * @recomb: a #NcRecomb
+ * @zi: initial redshift to prepare the recombination functions $z_i$
+ *
+ * Requires the initial redshift of at least $z_i$ = @zi.
+ *
+ */
+void 
+nc_recomb_require_zi (NcRecomb *recomb, const gdouble zi)
+{
+  if (zi > recomb->zi)
+  {
+    recomb->zi = zi;
+    ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
+  }
+}
+
+/**
+ * nc_recomb_get_zi:
+ * @recomb: a #NcRecomb
+ *
+ * Returns: the current initial redshift $z_i$.
+ */
+gdouble 
+nc_recomb_get_zi (NcRecomb *recomb)
+{
+  return recomb->zi;
+}
 
 static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 

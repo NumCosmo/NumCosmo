@@ -221,7 +221,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
 static void
 nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
 {
-  cbe_prec->priv = G_TYPE_INSTANCE_GET_PRIVATE (cbe_prec, NC_TYPE_CBE_PRECISION, NcCBEPrecisionPrivate);
+  cbe_prec->priv = nc_cbe_precision_get_instance_private (cbe_prec);
 }
 
 static void

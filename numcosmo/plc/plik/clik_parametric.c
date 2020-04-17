@@ -630,7 +630,7 @@ void parametric_norm_derivative(parametric * egl, int iv, double *Rq, double *dR
 
 void parametric_triangle_fill(parametric *egl, double *A, error **err) {
   int m1,m2,p;
-  pfchar Ac;
+  pflchar Ac;
   double *Abuf;
 
   Abuf = A + egl->nfreq*egl->nfreq;
@@ -673,7 +673,7 @@ void parametric_triangle_fill_derivative(parametric * egl, int iv, double *A, er
   memset(A,0,sizeof(double)*egl->nfreq*egl->nfreq);
 
   for(p=0;p<=ic2;p++) {
-    pfchar Ac;
+    pflchar Ac;
     sprintf(Ac,"%s%d_%d",egl->tensor_norm_template,p,ic2);    
     A[ic1*egl->nfreq+p] += parametric_get_value(egl,Ac,err);
     forwardError(*err,__LINE__,); 
@@ -684,7 +684,7 @@ void parametric_triangle_fill_derivative(parametric * egl, int iv, double *A, er
 
 void parametric_tanh_fill(parametric *egl, double *A, error **err) {
   int m1,m2,p;
-  pfchar Ac;
+  pflchar Ac;
   double *Abuf;
   double theta;
 
@@ -713,7 +713,7 @@ void parametric_tanh_fill_derivative(parametric * egl, int iv, double *A, error 
   int ic1,ic2,p;
   double *mRq;
   double A1,A2,theta,dm;
-  pfchar Ac;
+  pflchar Ac;
     
 
   key = egl->varkey[iv];
@@ -766,7 +766,7 @@ void parametric_tanh_fill_derivative(parametric * egl, int iv, double *A, error 
 
 void parametric_tensor_fill(parametric *egl,double *A,error **err) {
   int ic;
-  pfchar Ac;
+  pflchar Ac;
 
   for(ic=0;ic<egl->nfreq;ic++) {
     sprintf(Ac,"%s%d",egl->tensor_norm_template,ic);    
@@ -931,6 +931,8 @@ void powerlaw_free_emissivity_compute(parametric* egl, double *Rq,  error **err)
   double *A;
   pfchar name;
   int stop;
+  double nrmit;
+  int l2norm;
 
   l_pivot = parametric_get_value(egl,"pwfe_l_pivot",err);
   forwardError(*err,__LINE__,);
@@ -939,6 +941,15 @@ void powerlaw_free_emissivity_compute(parametric* egl, double *Rq,  error **err)
   index = parametric_get_value(egl,"pwfe_index",err);
   forwardError(*err,__LINE__,);
 
+  l2norm = parametric_get_value(egl,"pwfe_l2_norm",err);
+  forwardError(*err,__LINE__,);
+
+  nrmit = 1;
+  if (l2norm==1) {
+    nrmit = l_pivot*(l_pivot+1.)/2./M_PI;
+  }
+  
+
   A = egl->payload;
   nfreq = egl->nfreq;
   for(m1=0;m1<nfreq;m1++) {
@@ -946,8 +957,8 @@ void powerlaw_free_emissivity_compute(parametric* egl, double *Rq,  error **err)
       sprintf(name,"pwfe_A_%d_%d",(int)egl->freqlist[m1],(int)egl->freqlist[m2]);
       v = 1;
       v = parametric_get_value(egl,name,err);
-      A[m1*nfreq+m2] = v;
-      A[m2*nfreq+m1] = v;
+      A[m1*nfreq+m2] = v/nrmit;
+      A[m2*nfreq+m1] = v/nrmit;
     }
   }
 
@@ -973,12 +984,23 @@ void powerlaw_free_emissivity_A_derivative(parametric* egl, int iv,double *Rq, d
   double *A;
   pfchar name;
   int stop;
+  double nrmit;
+  int l2norm;
+
 
   l_pivot = parametric_get_value(egl,"pwfe_l_pivot",err);
   forwardError(*err,__LINE__,);
   
   index = parametric_get_value(egl,"pwfe_index",err);
   forwardError(*err,__LINE__,);
+
+  l2norm = parametric_get_value(egl,"pwfe_l2_norm",err);
+  forwardError(*err,__LINE__,);
+
+  nrmit = 1;
+  if (l2norm==1) {
+    nrmit = l_pivot*(l_pivot+1.)/2./M_PI;
+  }
 
   //A = egl->payload;
   nfreq = egl->nfreq;
@@ -1000,7 +1022,7 @@ void powerlaw_free_emissivity_A_derivative(parametric* egl, int iv,double *Rq, d
         stop=1;
         memset(dRq,0,sizeof(double)*(egl->lmax+1-egl->lmin)*nfreq*nfreq);
         for(ell=egl->lmin;ell<=egl->lmax;ell++) {
-          v = pow(ell/l_pivot,index);
+          v = pow(ell/l_pivot,index)/nrmit;
           dRq[IDX_R(egl,ell,m1,m2)] = v;
           dRq[IDX_R(egl,ell,m2,m1)] = v;
         }
@@ -1041,10 +1063,14 @@ parametric *powerlaw_free_emissivity_init(int ndet, double *detlist, int ndef, c
   for(m1=0;m1<egl->nfreq;m1++) {
     for(m2=m1;m2<egl->nfreq;m2++) {
       sprintf(name,"pwfe_A_%d_%d",(int)egl->freqlist[m1],(int)egl->freqlist[m2]);
-      parametric_set_default(egl,name,1,err);
+      parametric_set_default(egl,name,0,err);
       forwardError(*err,__LINE__,NULL);
     }
   }  
+
+  parametric_set_default(egl,"pwfe_XX_l2_norm",0,err);
+  forwardError(*err,__LINE__,NULL);
+
   parametric_add_derivative_function(egl,"any",&powerlaw_free_emissivity_A_derivative,err);  
   forwardError(*err,__LINE__,NULL);
 

@@ -61,7 +61,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmModelMVND, ncm_model_mvnd, NCM_TYPE_MODEL);
 static void
 ncm_model_mvnd_init (NcmModelMVND *model_mvnd)
 {
-  model_mvnd->priv      = G_TYPE_INSTANCE_GET_PRIVATE (model_mvnd, NCM_TYPE_MODEL_MVND, NcmModelMVNDPrivate);
+  model_mvnd->priv      = ncm_model_mvnd_get_instance_private (model_mvnd);
   model_mvnd->priv->dim = 0;
   model_mvnd->priv->mu  = NULL;
 }

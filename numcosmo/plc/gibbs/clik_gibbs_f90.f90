@@ -75,6 +75,7 @@ SUBROUTINE GIBBS_EXTRA_PARAMETER_INIT(handle,datadir,l_datadir,lmin,lmax,firstch
 		
 END SUBROUTINE 	GIBBS_EXTRA_PARAMETER_INIT
 
+
 SUBROUTINE GIBBS_GAUSS_EXTRA_FREE(handle)
 	use comm_gauss_br_mod
 	use GIBBS_EXTRA
@@ -130,6 +131,66 @@ SUBROUTINE GIBBS_GAUSS_EXTRA_PARAMETER_INIT(handle,lmin,lmax,delta_l)
 	clik_lmax(handle) = lmax
 		
 END SUBROUTINE 	GIBBS_GAUSS_EXTRA_PARAMETER_INIT
+
+
+SUBROUTINE GIBBS_GAUSS_EXTRA_V3_FREE(handle)
+	use comm_gauss_br_mod_v3
+	use GIBBS_EXTRA
+	INTEGER,intent(in)::handle
+
+	call comm_gauss_br_deallocate_object(handle)
+
+	clik_lmin(handle) = -1
+	clik_lmax(handle) = -1
+
+END SUBROUTINE 	GIBBS_GAUSS_EXTRA_V3_FREE
+
+SUBROUTINE GIBBS_GAUSS_EXTRA_V3_LKL(LKL,handle,CL)
+	use comm_gauss_br_mod_v3
+	use GIBBS_EXTRA
+
+	REAL(8),INTENT(OUT)::LKL
+	INTEGER,intent(in)::handle
+	REAL(8),INTENT(IN),DIMENSION(0:CLIK_LMAX(handle)-CLIK_LMIN(handle))::CL
+	real(8),dimension(2:1000) :: cltt
+	INTEGER::i,cur
+
+	!TT
+	cur = 0
+	cltt = 0
+	DO i = clik_lmin(handle),clik_lmax(handle)
+		cltt(i)=CL(cur)*(i*(i+1.))/2./PI
+		cur = cur + 1
+	END DO  
+
+	LKL = comm_gauss_br_compute_lnL(cltt(2:clik_lmax(handle)),handle)
+
+END SUBROUTINE 	GIBBS_GAUSS_EXTRA_V3_LKL
+
+
+
+SUBROUTINE GIBBS_GAUSS_EXTRA_PARAMETER_V3_INIT(handle,lmin,lmax,delta_l)
+	use comm_gauss_br_mod_v3
+	use GIBBS_EXTRA
+
+	INTEGER,INTENT(IN)::lmin,lmax,delta_l
+	INTEGER,INTENT(OUT)::handle
+	character(len=1000)::sigma_file
+
+
+	sigma_file = "sigma.fits"
+
+	handle = 0
+
+	call comm_gauss_br_initialize_object(sigma_file, lmin, lmax, delta_l, handle)
+
+	clik_lmin(handle) = lmin
+	clik_lmax(handle) = lmax
+
+END SUBROUTINE 	GIBBS_GAUSS_EXTRA_PARAMETER_v3_INIT
+
+
+
 
 MODULE COMM_LOWL_EXTRA
 

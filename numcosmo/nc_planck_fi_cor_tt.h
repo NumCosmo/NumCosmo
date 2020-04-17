@@ -45,7 +45,7 @@ typedef struct _NcPlanckFICorTTClass NcPlanckFICorTTClass;
 typedef struct _NcPlanckFICorTT NcPlanckFICorTT;
 
 /**
- * NcPlanckFICorTTParams:
+ * NcPlanckFICorTTSParams:
  * @NC_PLANCK_FI_COR_TT_A_cib_217: Contribution of CIB power to $\mathcal{D}^{217}_{3000}$ at the Planck CMB frequency for $217\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TT_cib_index: The effective slope of the CIB spectrum
  * @NC_PLANCK_FI_COR_TT_xi_sz_cib: Correlation coefficient between the CIB and tSZ
@@ -59,15 +59,20 @@ typedef struct _NcPlanckFICorTT NcPlanckFICorTT;
  * @NC_PLANCK_FI_COR_TT_gal545_A_143: Amplitude of Galactic dust power at $\ell=200$ at $143\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TT_gal545_A_143_217: Amplitude of Galactic dust power at $\ell=200$ at $143\times 217\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TT_gal545_A_217: Amplitude of Galactic dust power at $\ell=200$ at $217\,$GHz (in $\mu\mathrm{K}^2$)
+ * @NC_PLANCK_FI_COR_TT_A_sbpx_100_100_TT: A rescaling amplitude for the subpixel effects $\ell=200$ in $100 \times 100$ TT
+ * @NC_PLANCK_FI_COR_TT_A_sbpx_143_143_TT: A rescaling amplitude for the subpixel effects $\ell=200$ in $143 \times 143$ TT
+ * @NC_PLANCK_FI_COR_TT_A_sbpx_143_217_TT: A rescaling amplitude for the subpixel effects $\ell=200$ in $143 \times 217$ TT
+ * @NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT: A rescaling amplitude for the subpixel effects $\ell=200$ in $217 \times 217$ TT
  * @NC_PLANCK_FI_COR_TT_calib_100T: Power spectrum calibration for the $100\,$GHz
  * @NC_PLANCK_FI_COR_TT_calib_217T: Power spectrum calibration for the $217\,$GHz
  * @NC_PLANCK_FI_COR_TT_A_planck: Absolute map calibration for Planck
  *
- * Planck Foregound and Instrument parameters, compatible with 2013 and 2015
- * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]).
+ * Planck Foregound and Instrument parameters, compatible with 2013, 2015 and 2018
+ * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a] and
+ * [Planck 2018 results V (2019)][XPlanckCollaboration2019]).
  *
  */
-typedef enum _NcPlanckFICorTTParams
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS >*/
 {
   NC_PLANCK_FI_COR_TT_A_cib_217 = 0,
   NC_PLANCK_FI_COR_TT_cib_index,
@@ -82,29 +87,37 @@ typedef enum _NcPlanckFICorTTParams
   NC_PLANCK_FI_COR_TT_gal545_A_143,
   NC_PLANCK_FI_COR_TT_gal545_A_143_217,
   NC_PLANCK_FI_COR_TT_gal545_A_217,
+  NC_PLANCK_FI_COR_TT_A_sbpx_100_100_TT,
+  NC_PLANCK_FI_COR_TT_A_sbpx_143_143_TT,
+  NC_PLANCK_FI_COR_TT_A_sbpx_143_217_TT,
+  NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT,
   NC_PLANCK_FI_COR_TT_calib_100T,
   NC_PLANCK_FI_COR_TT_calib_217T,
   NC_PLANCK_FI_COR_TT_A_planck,   
   /* < private > */
   NC_PLANCK_FI_COR_TT_SPARAM_LEN, /*< skip >*/
-} NcPlanckFICorTTParams;
+} NcPlanckFICorTTSParams;
 
-#define NC_PLANCK_FI_COR_TT_DEFAULT_A_cib_217        (100.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_cib_index        (-1.3)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_xi_sz_cib        (0.5)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sz             (5.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_100_100     (200.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_143_143     (200.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_143_217     (200.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_217_217     (200.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_ksz_norm         (5.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_100     (7.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_143     (9.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_143_217 (21.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_217     (80.0)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_calib_100T       (0.9990004)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_calib_217T       (0.99501)
-#define NC_PLANCK_FI_COR_TT_DEFAULT_A_planck         (1.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_cib_217         (100.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_cib_index         (-1.3)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_xi_sz_cib         (0.5)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sz              (5.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_100_100      (200.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_143_143      (200.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_143_217      (200.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_ps_A_217_217      (200.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_ksz_norm          (5.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_100      (7.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_143      (9.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_143_217  (21.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_gal545_A_217      (80.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_100_100_TT (1.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_143_143_TT (1.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_143_217_TT (1.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_sbpx_217_217_TT (1.0)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_calib_100T        (0.9990004)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_calib_217T        (0.99501)
+#define NC_PLANCK_FI_COR_TT_DEFAULT_A_planck          (1.0)
 
 struct _NcPlanckFICorTTClass
 {
@@ -128,7 +141,12 @@ void nc_planck_fi_cor_tt_add_default_gal_priors (NcmLikelihood *lh);
 void nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh);
 void nc_planck_fi_cor_tt_add_default_sz_prior (NcmLikelihood *lh);
 
+void nc_planck_fi_cor_tt_add_default18_gal_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_tt_add_default18_calib_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_tt_add_default18_sz_prior (NcmLikelihood *lh);
+
 void nc_planck_fi_cor_tt_add_all_default_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_tt_add_all_default18_priors (NcmLikelihood *lh);
 
 G_END_DECLS
 

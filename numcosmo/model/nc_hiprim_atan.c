@@ -160,6 +160,16 @@ nc_hiprim_atan_new (void)
  * Power spectrum
  ****************************************************************************/
 
+static gdouble 
+_Datan_xpd (const gdouble x, const gdouble d)
+{
+  const gdouble x2     = x * x;
+  const gdouble onepx2 = 1.0 + x2;
+  const gdouble Y      = d / onepx2;
+
+  return Y * (1.0 + Y * (- x + Y * ((x2 - 1.0 / 3.0) + Y * x * (1.0 - x2))));
+}
+
 static gdouble
 _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
@@ -171,11 +181,12 @@ _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble c3        = C3;
   const gdouble pi_2      = ncm_c_pi () * 0.5;
   const gdouble pi_2_m_c3 = pi_2 - c3;
-  const gdouble tc2       = tan (pi_2_m_c3 + c3 * c2);
+  const gdouble a1        = pi_2_m_c3 + c3 * c2;
+  const gdouble tan_a1    = tan (a1);
 
-  const gdouble atan_fac    = atan2 (k_kc_l + tc2, 1.0) - pi_2_m_c3;
+  const gdouble atan_fac    = (k_kc_l > 1.0e-4) ? atan2 (k_kc_l + tan_a1, 1.0) - pi_2_m_c3 : _Datan_xpd (tan_a1, k_kc_l) + c3 * c2;
   const gdouble ln_atan_fac = log (atan_fac / c3);
-
+  
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_atan_fac;
 }
 

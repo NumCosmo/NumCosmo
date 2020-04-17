@@ -60,6 +60,9 @@
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline2d_bicubic.h"
+#include "math/ncm_fftlog_tophatwin2.h"
+#include "math/ncm_fftlog_gausswin2.h"
+#include "math/ncm_c.h"
 #include "ncm_enum_types.h"
 
 enum
@@ -394,7 +397,7 @@ _ncm_powspec_filter_k2Pk (gdouble k, gpointer userdata)
   NcmPowspecFilterArg *arg = (NcmPowspecFilterArg *) userdata;
   const gdouble k2 = k * k;
   const gdouble Pk = ncm_powspec_eval (arg->psf->ps, arg->model, arg->z, k);
-  const gdouble f  = Pk * k2 / (2.0 * M_PI * M_PI);
+  const gdouble f  = Pk * k2 / ncm_c_2_pi_2 ();
   
   return f;
 }
@@ -481,7 +484,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
-/*
+/*    
     printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
             psf->zi, psf->zf, 
             ncm_powspec_filter_get_r_min (psf), 
@@ -503,7 +506,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
 
-      /*ncm_vector_log_vals (var_z, "NADA: ", "% 11.5e");*/
+      /*ncm_vector_log_vals (var_z, "NADA: ", "% 11.5e", TRUE);*/
 
       ncm_vector_free (var_z);
       ncm_vector_free (dvar_z);
@@ -516,7 +519,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     ncm_vector_free (lnr_vec);
     ncm_matrix_free (lnvar);
     ncm_matrix_free (dlnvar);
-    
+
     psf->calibrated = TRUE;
   }
   else

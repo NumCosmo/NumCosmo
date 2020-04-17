@@ -1,4 +1,3 @@
-// SZ alone
 #include "clik_parametric.h"
 #include "clik_parametric_addon.h"
 
@@ -78,12 +77,14 @@ parametric *bleak_init(int ndet_T, int ndet_P, int *has_TEB, double *detlist, in
   int mtot;
   int i,j,ip;
   pfchar name;
-  pfchar iN, jN;
+  pfichar iN, jN;
   bleak_data *dlata;
   int u1,u2,mf1,mf2;
   int ugly[9];
   double dfreq[4];
   int ell,cli;
+
+  testErrorRet(template==NULL,-11111,"template must be defined",*err,__LINE__,NULL);
 
   // init
   egl = parametric_pol_init(ndet_T, ndet_P, has_TEB, detlist, ndef, defkey, defvalue, nvar, varkey, lmin, lmax, err);
@@ -224,7 +225,7 @@ void bleak_compute(parametric* egl, double *Rq, error **err) {
   int mtot;
   int i,j,ip;
   pfchar name;
-  pfchar iN, jN;
+  pfichar iN, jN;
   double *templ, *beta_coeff, *epsilon_coeff, *leak_matrix;
   int cli;
   double tmp;

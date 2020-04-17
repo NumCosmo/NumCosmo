@@ -631,12 +631,12 @@ _peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bound
   NcClusterPseudoCounts *cpc = data->cpc;
   NcClusterMass *clusterm = data->clusterm;
   gsl_multifit_function_fdf f;
-  gint status;
   
   gdouble lb[] = {bounds[0], bounds[2]};
   gdouble ub[] = {bounds[1], bounds[3]};
 
 #ifdef HAVE_GSL_2_2
+  gint status;
   gint info;
   const gdouble xtol = 1e-8;
   const gdouble gtol = 1e-8;

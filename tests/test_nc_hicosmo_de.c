@@ -58,9 +58,9 @@ test_nc_hicosmo_de_xcdm_new (TestNcHICosmoDE *test, gconstpointer pdata)
 {
   test->cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
-  g_assert (test->cosmo != NULL);
-  g_assert (NC_IS_HICOSMO_DE (test->cosmo));
-  g_assert (NC_IS_HICOSMO_DE_XCDM (test->cosmo));
+  g_assert_true (test->cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO_DE (test->cosmo));
+  g_assert_true (NC_IS_HICOSMO_DE_XCDM (test->cosmo));
 }
 
 void

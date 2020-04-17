@@ -55,7 +55,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TY
 static void
 ncm_data_gauss_cov_mvnd_init (NcmDataGaussCovMVND *gauss_mvnd)
 {
-  gauss_mvnd->priv = G_TYPE_INSTANCE_GET_PRIVATE (gauss_mvnd, NCM_TYPE_DATA_GAUSS_COV_MVND, NcmDataGaussCovMVNDPrivate);
+  gauss_mvnd->priv = ncm_data_gauss_cov_mvnd_get_instance_private (gauss_mvnd);
 }
 
 static void

@@ -139,7 +139,7 @@ test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
   g_assert_cmpuint (ncm_integral1d_get_rule (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ALG);
   g_assert_cmpuint (ncm_integral1d_get_partition (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_PARTITION);
 
-  g_assert (NCM_IS_INTEGRAL1D (test->int1d));
+  g_assert_true (NCM_IS_INTEGRAL1D (test->int1d));
 }
 
 void
@@ -154,7 +154,7 @@ test_ncm_integral1d_new_x5_2_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
   g_assert_cmpuint (ncm_integral1d_get_rule (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ALG);
   g_assert_cmpuint (ncm_integral1d_get_partition (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_PARTITION);
   
-  g_assert (NCM_IS_INTEGRAL1D (test->int1d));
+  g_assert_true (NCM_IS_INTEGRAL1D (test->int1d));
 }
 
 

@@ -6,7 +6,7 @@ test -z "$srcdir" && srcdir=.
 
 DIE=0
 
-ACLOCAL_FLAGS="-I m4 $ACLOCAL_FLAGS"
+ACLOCAL_FLAGS="--install -I m4 $ACLOCAL_FLAGS"
 
 if [ -n "$GNOME2_DIR" ]; then
 	ACLOCAL_FLAGS="-I $GNOME2_DIR/share/aclocal $ACLOCAL_FLAGS"
@@ -136,6 +136,8 @@ do
     echo processing $dr
     ( cd $dr
 
+      echo "Running aclocal in $dr $srcdir ..."
+      aclocal $ACLOCAL_FLAGS
       echo "Running autoreconf in $dr $srcdir ..."
       autoreconf -fvi
     )

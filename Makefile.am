@@ -1,8 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
-
-SUBDIRS = numcosmo tools data docs tests examples
+SUBDIRS = numcosmo tools data docs tests examples notebooks
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = numcosmo.pc
@@ -22,9 +20,11 @@ numcosmodoc_DATA = \
 #DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 EXTRA_DIST = \
-	INSTALL                   \
-	$(numcosmodoc_DATA)       \
-	numcosmo.pc.in
+	INSTALL             \
+	$(numcosmodoc_DATA) \
+	numcosmo.pc.in      \
+        tap-driver.sh       \
+        tap-test
 
 AM_CFLAGS = 
 

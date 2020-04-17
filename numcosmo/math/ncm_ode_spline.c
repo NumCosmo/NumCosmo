@@ -96,7 +96,7 @@ typedef struct _NcmOdeSplineDydxData
 static void
 ncm_ode_spline_init (NcmOdeSpline *os)
 {
-  NcmOdeSplinePrivate * const self = os->priv = G_TYPE_INSTANCE_GET_PRIVATE (os, NCM_TYPE_ODE_SPLINE, NcmOdeSplinePrivate);
+  NcmOdeSplinePrivate * const self = os->priv = ncm_ode_spline_get_instance_private (os);
 
   os->spline        = NULL;
   self->cvode       = CVodeCreate (CV_ADAMS);
@@ -486,7 +486,10 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
   x0 = self->xi;
   if (!gsl_finite (self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata)))
-    g_error ("ncm_ode_spline_prepare: not finite integrand.");
+    g_error ("ncm_ode_spline_prepare: not finite integrand at (% 22.15g, % 22.15g; % 22.15g).", 
+             x0, 
+             NV_Ith_S (self->y, 0), 
+             self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata));
 
 	if (!gsl_finite (self->yf))
 	{

@@ -129,7 +129,7 @@ test_ncm_stats_vec_mean_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -142,7 +142,7 @@ test_ncm_stats_vec_var_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -155,7 +155,7 @@ test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -168,7 +168,7 @@ test_ncm_stats_vec_autocorr_new (TestNcmStatsVec *test, gconstpointer pdata)
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
 
-  g_assert (NCM_IS_STATS_VEC (test->svec));
+  g_assert_true (NCM_IS_STATS_VEC (test->svec));
 }
 
 void
@@ -223,6 +223,7 @@ test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
+  ncm_rng_free (rng);
   NCM_TEST_FAIL (ncm_stats_vec_get_var (test->svec, 0));  
 }
 
@@ -270,6 +271,7 @@ test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
+  ncm_rng_free (rng);
   NCM_TEST_FAIL (ncm_stats_vec_get_cov (test->svec, 0, 1));  
 }
 
@@ -331,6 +333,7 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
       }
     }
   }  
+  ncm_rng_free (rng);
 }
 
 void
@@ -391,6 +394,7 @@ test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
   }
   
   ncm_vector_free (last);
+  ncm_rng_free (rng);
 }
 
 void
@@ -453,6 +457,7 @@ test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer
   }
   
   ncm_matrix_free (last);
+  ncm_rng_free (rng);
 }
 
 void

@@ -181,7 +181,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv = G_TYPE_INSTANCE_GET_PRIVATE (smap, NCM_TYPE_SPHERE_MAP, NcmSphereMapPrivate);
+  NcmSphereMapPrivate * const self = smap->priv = ncm_sphere_map_get_instance_private (smap);
   self->nside             = 0;
   self->npix              = 0;
   self->face_size         = 0;
@@ -803,15 +803,13 @@ ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax)
   NcmSphereMapPrivate * const self = smap->priv;
   if (self->lmax != lmax)
   {
-    /*ncm_vector_clear (&self->alm);*/
+    g_clear_pointer (&self->alm,  _fft_vec_free);
     ncm_vector_clear (&self->Cl);
     self->lmax = lmax;
 
     if (self->lmax > 0)
     {
-      /*self->alm = ncm_vector_new (2 * NCM_SPHERE_MAP_ALM_SIZE (self->lmax));*/
-      self->Cl  = ncm_vector_new (self->lmax + 1);
-
+      self->Cl      = ncm_vector_new (self->lmax + 1);
       self->alm_len = NCM_SPHERE_MAP_ALM_SIZE (self->lmax);
       self->alm     = _fft_vec_alloc_complex (self->alm_len);
       memset (self->alm, 0, sizeof (_fft_complex) * self->alm_len);      
@@ -2093,6 +2091,19 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 }
 
 /**
+ * ncm_sphere_map_update_Cl:
+ * @smap: a #NcmSphereMap
+ *
+ * Updates the values of $C_\ell$ based on the current $a_{lm}$.
+ * 
+ */
+void
+ncm_sphere_map_update_Cl (NcmSphereMap *smap)
+{
+	_ncm_sphere_map_map2alm_calc_Cl (smap);
+}
+
+/**
  * ncm_sphere_map_get_alm:
  * @smap: a #NcmSphereMap
  * @l: value of $l < \ell_\mathrm{max}$
@@ -2114,6 +2125,26 @@ ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, g
   /*Im_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 1);*/
   Re_alm[0] = creal (self->alm[lm_index]);
   Im_alm[0] = cimag (self->alm[lm_index]);
+}
+
+/**
+ * ncm_sphere_map_set_alm:
+ * @smap: a #NcmSphereMap
+ * @l: value of $l < \ell_\mathrm{max}$
+ * @m: value of $m \leq l$.
+ * @Re_alm: real part of $a_{lm}$
+ * @Im_alm: imaginary part of $a_{lm}$
+ *
+ * Sets the value of $a_{lm}$. 
+ * 
+ */
+void
+ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm)
+{
+  NcmSphereMapPrivate * const self = smap->priv;
+  gint lm_index = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m); 
+
+  self->alm[lm_index] = Re_alm + I * Im_alm;
 }
 
 /**
@@ -2311,7 +2342,6 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
 	return Ctheta / (4.0 * ncm_c_pi ());
 }
 
-
 /**
  * ncm_sphere_map_calc_Ctheta:
  * @smap: a #NcmSphereMap
@@ -2344,9 +2374,3 @@ ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 		return s;
 	}
 }
-
-
-
-
-
-

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-@CODE_COVERAGE_RULES@
+include $(top_srcdir)/glib-tap.mk
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
@@ -129,8 +129,8 @@ test_nc_data_bao_dvdv_SOURCES =  \
 test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
 
-test_nc_density_profile_nfw_SOURCES =  \
-        test_nc_density_profile_nfw.c
+test_nc_halo_density_profile_SOURCES =  \
+        test_nc_halo_density_profile.c
 
 test_nc_wl_surface_mass_density_SOURCES =  \
         test_nc_wl_surface_mass_density.c
@@ -138,7 +138,7 @@ test_nc_wl_surface_mass_density_SOURCES =  \
 test_nc_distance_SOURCES =  \
         test_nc_distance.c
         
-check_PROGRAMS =  \
+test_programs =  \
 	test_ncm_vector                 \
 	test_ncm_matrix                 \
 	test_ncm_stats_vec              \
@@ -164,7 +164,7 @@ check_PROGRAMS =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
-	test_nc_hiqg_1d                \
+	test_nc_hiqg_1d                 \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
 	test_nc_transfer_func           \
@@ -174,11 +174,11 @@ check_PROGRAMS =  \
 	test_nc_data_bao_rdv            \
         test_nc_data_bao_dvdv           \
         test_nc_cluster_pseudo_counts   \
-        test_nc_density_profile_nfw     \
+        test_nc_halo_density_profile    \
         test_nc_wl_surface_mass_density \
         test_nc_distance
 
-# TEST_PROGS += $(check_PROGRAMS)
+# TEST_PROGS += $(check_programs)
 
 test_ncm_sparam_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -390,7 +390,7 @@ test_nc_cluster_pseudo_counts_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
-test_nc_density_profile_nfw_LDADD = \
+test_nc_halo_density_profile_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
@@ -416,18 +416,40 @@ AM_CFLAGS += \
 test_nc_ccl_Pk_SOURCES =  \
         test_nc_ccl_Pk.c
 
+test_nc_ccl_NLPk_SOURCES =  \
+        test_nc_ccl_NLPk.c
+
+test_nc_ccl_corr3D_SOURCES =  \
+        test_nc_ccl_corr3D.c
+
 test_nc_ccl_dist_SOURCES =  \
         test_nc_ccl_dist.c
 
 test_nc_ccl_massfunc_SOURCES =  \
         test_nc_ccl_massfunc.c
 
-check_PROGRAMS += \
-	test_nc_ccl_Pk   \
-	test_nc_ccl_dist \
+test_programs += \
+	test_nc_ccl_Pk     \
+	test_nc_ccl_NLPk   \
+	test_nc_ccl_corr3D \
+	test_nc_ccl_dist   \
 	test_nc_ccl_massfunc
 
 test_nc_ccl_Pk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_NLPk_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+	$(CCL_LDFLAGS) \
+	$(GLIB_LIBS)   \
+	$(GSL_LIBS)    \
+	$(COVLIBS)
+
+test_nc_ccl_corr3D_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
 	$(CCL_LDFLAGS) \
 	$(GLIB_LIBS)   \
@@ -450,6 +472,6 @@ test_nc_ccl_massfunc_LDADD = \
 
 endif
         
-TESTS = $(check_PROGRAMS)
+#TESTS = $(check_programs)
+#export VERBOSE = 1
 
-export VERBOSE = 1

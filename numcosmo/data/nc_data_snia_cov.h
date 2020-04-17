@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss_cov.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/data/nc_data_snia.h>
 
 G_BEGIN_DECLS
 
@@ -218,6 +219,7 @@ struct _NcDataSNIACov
   NcmDataGaussCov parent_instance;
   guint mu_len;
   guint uppertri_len;
+  gdouble mag_cut;
   NcmVector *z_cmb;
   NcmVector *z_he;
   NcmVector *mag;
@@ -263,6 +265,9 @@ NcmVector *nc_data_snia_cov_peek_thirdpar (NcDataSNIACov *snia_cov);
 GArray *nc_data_snia_cov_peek_abs_mag_set (NcDataSNIACov *snia_cov);
 NcmMatrix *nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov);
 
+void nc_data_snia_cov_set_mag_cut (NcDataSNIACov *snia_cov, const gdouble mag_cut);
+gdouble nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov);
+
 void nc_data_snia_cov_set_z_cmb (NcDataSNIACov *snia_cov, NcmVector *z_cmb);
 void nc_data_snia_cov_set_z_he (NcDataSNIACov *snia_cov, NcmVector *z_he);
 void nc_data_snia_cov_set_sigma_z (NcDataSNIACov *snia_cov, NcmVector *sigma_z);
@@ -284,6 +289,11 @@ NcmVector *nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet 
 NcmVector *nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSet *mset);
 NcmVector *nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
 
+void nc_data_snia_cov_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id);
+gchar *nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size);
+gchar *nc_data_snia_cov_get_catalog (gchar *id);
+gchar *nc_data_snia_cov_get_catalog_by_id (NcDataSNIAId id);
+
 #define NC_DATA_SNIA_COV_SYMM_TOL (1.0e-13)
 
 #define NC_DATA_SNIA_COV_CAT_LAST_VERSION 1
@@ -302,6 +312,10 @@ NcmVector *nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMS
 #define NC_DATA_SNIA_COV_DATA_HAS_COMPLETE_COV_KEY "has-complete-cov"
 #define NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV "CMPL_COV"
 #define NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV_COMMENT "Whether the covariance matrix is complete"
+
+#define NC_DATA_SNIA_COV_MAG_CUT "MAG_CUT"
+#define NC_DATA_SNIA_COV_MAG_CUT_DEFAULT (10.0)
+#define NC_DATA_SNIA_COV_MAG_CUT_COMMENT "Absolute magnitude cut"
 
 #define NC_DATA_SNIA_COV_MAG_KEY "magnitude"
 #define NC_DATA_SNIA_COV_WIDTH_KEY "width"

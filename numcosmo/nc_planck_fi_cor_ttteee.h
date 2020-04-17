@@ -45,7 +45,7 @@ typedef struct _NcPlanckFICorTTTEEEClass NcPlanckFICorTTTEEEClass;
 typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
 
 /**
- * NcPlanckFICorTTTEEEParams:
+ * NcPlanckFICorTTTEEESParams:
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100: EE amplitude of Galactic dust power at $\ell = 500$ at $100\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143: EE amplitude of Galactic dust power at $\ell = 500$ at $100 \times 143\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_217: EE amplitude of Galactic dust power at $\ell = 500$ at $100 \times 217\,$GHz (in $\mu\mathrm{K}^2$)
@@ -60,6 +60,9 @@ typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
  * @NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217: TE amplitude of Galactic dust power at $\ell = 500$ at $143 \times 217\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217: TE amplitude of Galactic dust power at $\ell = 500$ at $217\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_TE_index: the dust TE template slope
+ * @NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE: Normalization for the end2end empirical correlated noise template at 100GHz
+ * @NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_143_143_EE: Normalization for the end2end empirical correlated noise template at 143GHz
+ * @NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_217_217_EE: Normalization for the end2end empirical correlated noise template at 217GHz
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0T_0E: beam-leakage parameter, $\epsilon_0$, $100\times100$ TE
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0T_0E: beam-leakage parameter, $\epsilon_1$, $100\times100$ TE
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0T_0E: beam-leakage parameter, $\epsilon_2$, $100\times100$ TE
@@ -120,16 +123,23 @@ typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_2E_2E: beam-leakage parameter, $\epsilon_2$, $217\times217$ EE
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_2E_2E: beam-leakage parameter, $\epsilon_3$, $217\times217$ EE
  * @NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_2E_2E: beam-leakage parameter, $\epsilon_4$, $217\times217$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_100_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $100 \times 100$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_143_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $100 \times 143$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_217_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $100 \times 217$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_143_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $143 \times 143$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_217_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $143 \times 217$ EE
+ * @NC_PLANCK_FI_COR_TTTEEE_A_sbpx_217_217_EE: A rescaling amplitude for the subpixel effects $\ell=200$ in $217 \times 217$ EE
  * @NC_PLANCK_FI_COR_TTTEEE_calib_100P: Calibration of the 100 EE spectra
  * @NC_PLANCK_FI_COR_TTTEEE_calib_143P: Calibration of the 143 EE spectra
  * @NC_PLANCK_FI_COR_TTTEEE_calib_217P: Calibration of the 217 EE spectra
  * @NC_PLANCK_FI_COR_TTTEEE_A_pol: Calibration of the polarization relative to the temperature
  * 
- * Planck Foregound and Instrument parameters, compatible with 2013 and 2015
- * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]).
+ * Planck Foregound and Instrument parameters, compatible with 2013, 2015 and 2018
+ * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a] and
+ * [Planck 2018 results V (2019)][XPlanckCollaboration2019]).
  * 
  */
-typedef enum _NcPlanckFICorTTTEEEParams
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TTTEEE_SPARAMS >*/
 {
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100 = NC_PLANCK_FI_COR_TT_SPARAM_LEN,
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143,
@@ -145,6 +155,9 @@ typedef enum _NcPlanckFICorTTTEEEParams
   NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217,
   NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217,
   NC_PLANCK_FI_COR_TTTEEE_galf_TE_index,
+  NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_143_143_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_217_217_EE,
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0T_0E,
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0T_0E,
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0T_0E,
@@ -205,92 +218,107 @@ typedef enum _NcPlanckFICorTTTEEEParams
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_2E_2E,
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_2E_2E,
   NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_2E_2E,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_100_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_143_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_217_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_143_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_217_EE,
+  NC_PLANCK_FI_COR_TTTEEE_A_sbpx_217_217_EE,
   NC_PLANCK_FI_COR_TTTEEE_calib_100P,
   NC_PLANCK_FI_COR_TTTEEE_calib_143P,
   NC_PLANCK_FI_COR_TTTEEE_calib_217P,
   NC_PLANCK_FI_COR_TTTEEE_A_pol,      
   /* < private > */
   NC_PLANCK_FI_COR_TTTEEE_SPARAM_LEN, /*< skip >*/
-} NcPlanckFICorTTTEEEParams;
+} NcPlanckFICorTTTEEESParams;
 
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100     ( 0.060)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100_143 ( 0.050)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100_217 ( 0.110)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_143     ( 0.10)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_143_217 ( 0.240)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_217     ( 0.72)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_index     (-2.4)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100     ( 0.140)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_143 ( 0.120)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_217 ( 0.30)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143     ( 0.240)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143_217 ( 0.60)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_217     ( 1.80)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_index     (-2.4)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1T_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_2T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_2T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_2T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_2T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_2T_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_0E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1E_1E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_2E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_2E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_2E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_2E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_2E_2E (0.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_100P (1.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_143P (1.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_217P (1.0)
-#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_pol      (1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100           ( 0.060)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100_143       ( 0.050)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100_217       ( 0.110)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_143           ( 0.10)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_143_217       ( 0.240)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_217           ( 0.72)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_index           (-2.4)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100           ( 0.140)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_143       ( 0.120)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_217       ( 0.30)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143           ( 0.240)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143_217       ( 0.60)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_217           ( 1.80)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_index           (-2.4)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_100_100_EE ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_143_143_EE ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_217_217_EE ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1T_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_2T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_2T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_2T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_2T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_2T_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_0E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_0E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_0E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_0E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_0E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_0E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1E_1E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_1E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_1E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_1E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_1E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_1E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_0_2E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_1_2E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_2_2E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_3_2E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_bleak_epsilon_4_2E_2E   ( 0.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_100_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_143_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_100_217_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_143_143_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_143_217_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_sbpx_217_217_EE       ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_100P              ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_143P              ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_calib_217P              ( 1.0)
+#define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_A_pol                   ( 1.0)
 
 struct _NcPlanckFICorTTTEEEClass
 {
@@ -311,10 +339,10 @@ void nc_planck_fi_cor_ttteee_add_calib_priors (NcmLikelihood *lh, NcmVector *mea
 void nc_planck_fi_cor_ttteee_add_sz_prior (NcmLikelihood *lh, gdouble f_tSZ, gdouble mean, gdouble sigma);
 
 void nc_planck_fi_cor_ttteee_add_default_galf_priors (NcmLikelihood *lh);
-void nc_planck_fi_cor_ttteee_add_default_calib_priors (NcmLikelihood *lh);
-void nc_planck_fi_cor_ttteee_add_default_sz_prior (NcmLikelihood *lh);
+void nc_planck_fi_cor_ttteee_add_default18_galf_priors (NcmLikelihood *lh);
 
 void nc_planck_fi_cor_ttteee_add_all_default_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_ttteee_add_all_default18_priors (NcmLikelihood *lh);
 
 G_END_DECLS
 

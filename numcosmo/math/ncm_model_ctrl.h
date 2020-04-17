@@ -68,13 +68,13 @@ void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_free (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_clear (NcmModelCtrl **ctrl);
 
-G_INLINE_FUNC NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
-G_INLINE_FUNC gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);
-G_INLINE_FUNC gboolean ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model);
+NCM_INLINE NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
+NCM_INLINE gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);
+NCM_INLINE gboolean ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model);
 
-G_INLINE_FUNC gboolean ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl);
-G_INLINE_FUNC gboolean ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid);
-G_INLINE_FUNC gboolean ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid);
+NCM_INLINE gboolean ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl);
+NCM_INLINE gboolean ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid);
+NCM_INLINE gboolean ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid);
 
 G_END_DECLS
 
@@ -83,16 +83,17 @@ G_END_DECLS
 #ifndef _NCM_MODEL_CTRL_INLINE_H_
 #define _NCM_MODEL_CTRL_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcmModel *
+NCM_INLINE NcmModel *
 ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
 {
   return g_weak_ref_get (&ctrl->model_wr);
 }
 
-G_INLINE_FUNC gboolean
+NCM_INLINE gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
@@ -145,7 +146,7 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
   return up;
 }
 
-G_INLINE_FUNC gboolean
+NCM_INLINE gboolean
 ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
@@ -194,13 +195,13 @@ ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
   return up;
 }
 
-G_INLINE_FUNC gboolean 
+NCM_INLINE gboolean 
 ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl)
 {
   return ctrl->last_update;
 }
 
-G_INLINE_FUNC gboolean 
+NCM_INLINE gboolean 
 ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
@@ -223,7 +224,7 @@ ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
   }
 }
 
-G_INLINE_FUNC gboolean 
+NCM_INLINE gboolean 
 ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
@@ -256,5 +257,6 @@ ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MODEL_CTRL_INLINE_H_ */

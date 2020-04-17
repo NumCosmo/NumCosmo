@@ -576,7 +576,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     ncm_cfg_lock_plan_fftw ();
 
-    fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk,   fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     fftlog->p_CmYm2Gr = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm, fftlog->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
     for (i = 0; i <= fftlog->nderivs; i++)
@@ -713,14 +713,14 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
       gint i;
       for (i = 0; i < 5; i++)
       {
-      fftw_complex YNf_2_0 = Ym_0[fftlog->Nf / 2];
-      const gdouble theta  = carg (YNf_2_0);
-      const gdouble M      = (fftlog->Nf / Lt) * lnr0k0 - theta / M_PI;
-      const glong M_round  = M;
-      const gdouble dM     = M - M_round;
+        fftw_complex YNf_2_0 = Ym_0[fftlog->Nf / 2];
+        const gdouble theta  = carg (YNf_2_0);
+        const gdouble M      = (fftlog->Nf / Lt) * lnr0k0 - theta / M_PI;
+        const glong M_round  = M;
+        const gdouble dM     = M - M_round;
 
-      lnr0k0       -= (Lt / fftlog->Nf) * dM;
-      fftlog->lnr0 -= (Lt / fftlog->Nf) * dM;
+        lnr0k0       -= (Lt / fftlog->Nf) * dM;
+        fftlog->lnr0 -= (Lt / fftlog->Nf) * dM;
       }
     }
 

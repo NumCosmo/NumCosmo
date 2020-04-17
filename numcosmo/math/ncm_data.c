@@ -237,6 +237,8 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         "Data bootstrap object",
                                                         NCM_TYPE_BOOTSTRAP,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /* TODO create error raising stubs for the virtual methods */
   data_class->name             = NULL;
   data_class->get_length       = NULL;
   data_class->begin            = NULL;

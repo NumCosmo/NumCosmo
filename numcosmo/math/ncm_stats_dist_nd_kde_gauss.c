@@ -98,7 +98,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdKDEGauss, ncm_stats_dist_nd_kde_gauss,
 static void
 ncm_stats_dist_nd_kde_gauss_init (NcmStatsDistNdKDEGauss *dndg)
 {
-  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = G_TYPE_INSTANCE_GET_PRIVATE (dndg, NCM_TYPE_STATS_DIST_ND_KDE_GAUSS, NcmStatsDistNdKDEGaussPrivate);
+  NcmStatsDistNdKDEGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_kde_gauss_get_instance_private (dndg);
 
   self->sample           = NULL;
   self->cov_decomp       = NULL;
@@ -444,8 +444,8 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2 (gdouble h, gpointer user_data)
 	guint i;
 	gint ret;
 
-  self->href   = h;
-  self->href2  = self->href * self->href;
+  self->href      = h;
+  self->href2     = self->href * self->href;
   self->us_lnnorm = 0.5 * (self->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (self->cov_decomp));
   self->lnnorm    = self->us_lnnorm + self->d * log (self->href);
   
@@ -647,6 +647,7 @@ _ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f (gdouble *x, gdouble *hx, 
 
 	if (ret != 0)
 	{
+    /*printf ("cholesky failed!\n");*/
     _ncm_stats_dist_nd_kde_gauss_prepare_IM (self);
 
     g_array_set_size (self->ipiv, self->n);
@@ -733,22 +734,22 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
     ncm_vector_set (self->weights, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
   }
 
-  if (FALSE)
+  if (TRUE)
   {
-    const gint n    = (self->d * (self->d + 1)) / 2;
-    gdouble *dht    = g_new0 (gdouble, n);
-    gdouble *ht     = g_new0 (gdouble, n);
-    NcmMatrix *cov  = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+    const gint n     = (self->d * (self->d + 1)) / 2;
+    gdouble *dht     = g_new0 (gdouble, n);
+    gdouble *ht      = g_new0 (gdouble, n);
+    NcmMatrix *cov   = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
     NcmMatrix *ln_cm = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
     gint k = 0;
     
     ncm_matrix_scale (cov, gsl_pow_2 (self->over_smooth * pow (4.0 / (self->n * (self->d + 2.0)), 1.0 / (self->d + 4.0))));
-    printf ("\n");
-    ncm_matrix_log_vals (cov, "ORIG_COV: ", "% 22.15g");
+    /*printf ("\n");*/
+    /*ncm_matrix_log_vals (cov, "ORIG_COV: ", "% 22.15g");*/
 
     ncm_matrix_sym_posdef_log (cov, 'U', ln_cm);
 
-    ncm_matrix_log_vals (ln_cm, "OLOG_COV: ", "% 22.15g");
+    /*ncm_matrix_log_vals (ln_cm, "OLOG_COV: ", "% 22.15g");*/
 
     for (i = 0; i < self->d; i++)
     {
@@ -770,6 +771,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
       opts[1] = 1.0e-15; 
       opts[2] = 1.0e-15;
       opts[3] = 1.0e-20;
+      opts[4] = -LM_DIFF_DELTA;
 
       ret = dlevmar_dif (&_ncm_stats_dist_nd_kde_gauss_LOOCV_err2_full_levmar_f,
                          ht, NULL, n, self->n, 10000,   
@@ -798,7 +800,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
     F.function = &_ncm_stats_dist_nd_kde_gauss_LOOCV_err2;
 
     gsl_min_fminimizer_set (fmin, &F, ht, hi, hf);
-    printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+    /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
     do {
       iter++;
       status = gsl_min_fminimizer_iterate (fmin);
@@ -817,7 +819,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
         break;
       }
 
-      printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);
+      /*printf ("[%d] % 22.15e [% 22.15e % 22.15e]  \n", status, ht, hi, hf);*/
 
       last_hi = hi;
       last_hf = hf;

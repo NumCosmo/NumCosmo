@@ -88,6 +88,7 @@ struct _NcmMSet
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
+  NcmVector *temp_fparams;
 };
 
 struct _NcmMSetPIndex
@@ -126,7 +127,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * FIXME
  *
  */
-#define NCM_MSET_MODEL_DECLARE_ID(model_ns) gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
+#define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
 
 /**
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
@@ -137,9 +138,9 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  *
  */
 #define NCM_MSET_MODEL_REGISTER_ID(model_ns,typemacro) \
-gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
+NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
 { \
-  static gint32 id = -1; \
+  static NcmModelID id = -1; \
   if (id == -1) \
   { \
     NcmModelClass *model_class = g_type_class_ref (typemacro); \
@@ -178,10 +179,10 @@ gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 gint ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1);
 
-gint ncm_mset_get_id_by_type (GType model_type);
-gint ncm_mset_get_id_by_ns (const gchar *ns);
-const gchar *ncm_mset_get_ns_by_id (gint id);
-GType ncm_mset_get_type_by_id (gint id);
+NcmModelID ncm_mset_get_id_by_type (GType model_type);
+NcmModelID ncm_mset_get_id_by_ns (const gchar *ns);
+const gchar *ncm_mset_get_ns_by_id (NcmModelID id);
+GType ncm_mset_get_type_by_id (NcmModelID id);
 
 void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
@@ -247,6 +248,7 @@ gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
 gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
 gboolean ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offset);
+gboolean ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta);
 
 gdouble ncm_mset_fparam_get (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);

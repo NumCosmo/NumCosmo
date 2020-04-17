@@ -16,9 +16,13 @@
 #define m_isnan(v) (isnan(v))
 #endif
 
+#define pflcharsize 512
 #define pfcharsize 256
+#define pficharsize 64
 
 typedef char pfchar[pfcharsize];
+typedef char pfichar[pficharsize];
+typedef char pflchar[pflcharsize];
 
 #if 0
 

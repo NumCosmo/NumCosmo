@@ -104,7 +104,7 @@ cmblkl* clik_smica_init(cldf * df, int nell, int* ell, int* has_cl, double unit,
     char cur_cmp_tot[256];
     clik_smica_comp_init_func *smica_dl_init;
     void* dlhandle;
-    char init_func_name[256];
+    char init_func_name[512];
     parname comp_type;
     cldf *comp_df;
 
@@ -135,7 +135,7 @@ cmblkl* clik_smica_init(cldf * df, int nell, int* ell, int* has_cl, double unit,
     SCs[ic] = smica_dl_init(comp_df,nb,mT,mP, nell, ell, has_cl, unit, wl, bins,nb,err);
  
     forwardError(*err,__LINE__,NULL);
-    sprintf(comp_type,"%s_%d",comp_type,ic);
+    sprintf(comp_type+strlen(comp_type),"_%d",ic);
     SC_set_compname(SCs[ic],comp_type);
       
     cldf_close(&comp_df);
@@ -591,3 +591,66 @@ SmicaComp * clik_smica_comp_totcalP_init(cldf *df,int nb, int mT,int mP, int nel
   return SC;
 }
 
+SmicaComp * clik_smica_comp_totcalTP_init(cldf *df,int nb, int mT,int mP, int nell, int* ell, int* has_cl, double unit,double* wl, double *bins, int nbins,error **err) {
+  SmicaComp *SC; 
+  int npar,i;
+  int *im,*jm;
+  double *tpl;
+  int tot_tpl;
+  char *calname;
+  int m;
+  int dsz;
+  double *w;
+  int *other;
+  int hk,im1,im2;
+  int neigen;
+  double *modes;
+
+  m = mtot(mT,mP,has_cl);
+  
+  dsz = -1;
+  calname = cldf_readstr(df,"calnameTP",&dsz, err);
+  forwardError(*err,__LINE__,NULL);  
+
+  SC = comp_totcalTP_init(nb, mT,mP,has_cl,err);
+  forwardError(*err,__LINE__,NULL);    
+
+  SC_setnames(SC, &calname, err);
+  forwardError(*err,__LINE__,NULL);
+  
+  free(calname); 
+
+  return SC;
+}
+
+SmicaComp * clik_smica_comp_totcalPP_init(cldf *df,int nb, int mT,int mP, int nell, int* ell, int* has_cl, double unit,double* wl, double *bins, int nbins,error **err) {
+  SmicaComp *SC; 
+  int npar,i;
+  int *im,*jm;
+  double *tpl;
+  int tot_tpl;
+  char *calname;
+  int m;
+  int dsz;
+  double *w;
+  int *other;
+  int hk,im1,im2;
+  int neigen;
+  double *modes;
+
+  m = mtot(mT,mP,has_cl);
+  
+  dsz = -1;
+  calname = cldf_readstr(df,"calnamePP",&dsz, err);
+  forwardError(*err,__LINE__,NULL);  
+
+  SC = comp_totcalPP_init(nb, mT,mP,has_cl,err);
+  forwardError(*err,__LINE__,NULL);    
+
+  SC_setnames(SC, &calname, err);
+  forwardError(*err,__LINE__,NULL);
+  
+  free(calname); 
+
+  return SC;
+}

@@ -21,7 +21,6 @@ from py_sline_model import PySLineModel
 # Creating a new class implementing our object Ncm.Data
 #
 class PySLineGauss (Ncm.DataGaussCov):
-
   #
   # We need one vector property to save the independent variables x
   #
@@ -92,8 +91,7 @@ class PySLineGauss (Ncm.DataGaussCov):
 
     return
 
-  def create_random_cov (self, slm, rng):
-    
+  def create_random_cov (self, slm, rng):    
     ya = [slm.f_x (x) for x in self.xv.dup_array ()]
     yv = Ncm.Vector.new_array (ya)
 			
@@ -101,7 +99,6 @@ class PySLineGauss (Ncm.DataGaussCov):
 	
     # Remove comment to print the covariance matrix
     # self.cov.log_vals ("# COV: ", "% 10.3g")
-
 #
 # Register our new Python class PySLineGauss
 #

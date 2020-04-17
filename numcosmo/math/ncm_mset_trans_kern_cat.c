@@ -68,7 +68,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TY
 static void
 ncm_mset_trans_kern_cat_init (NcmMSetTransKernCat *tcat)
 {
-  NcmMSetTransKernCatPrivate * const self = tcat->priv = G_TYPE_INSTANCE_GET_PRIVATE (tcat, NCM_TYPE_MSET_TRANS_KERN_CAT, NcmMSetTransKernCatPrivate);
+  NcmMSetTransKernCatPrivate * const self = tcat->priv = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   
   self->mcat     = NULL;
   self->stype    = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;

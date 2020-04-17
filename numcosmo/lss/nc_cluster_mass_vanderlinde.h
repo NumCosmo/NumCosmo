@@ -44,7 +44,7 @@ typedef struct _NcClusterMassVanderlindeClass NcClusterMassVanderlindeClass;
 typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
 
 /**
- * NcClusterMassVanderlindeParams:
+ * NcClusterMassVanderlindeSParams:
  * @NC_CLUSTER_MASS_VANDERLINDE_A_SZ: normalization of the mass-observable relation
  * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: FIXME
  * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: FIXME
@@ -52,7 +52,7 @@ typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
  *
  * FIXME
  */
-typedef enum _NcClusterMassVanderlindeParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_VANDERLINDE_SPARAMS >*/
 {
   NC_CLUSTER_MASS_VANDERLINDE_A_SZ = 0,
   NC_CLUSTER_MASS_VANDERLINDE_B_SZ,
@@ -60,7 +60,7 @@ typedef enum _NcClusterMassVanderlindeParams
   NC_CLUSTER_MASS_VANDERLINDE_D_SZ, 
   /* < private > */
   NC_CLUSTER_MASS_VANDERLINDE_SPARAM_LEN, /*< skip >*/
-} NcClusterMassVanderlindeParams;
+} NcClusterMassVanderlindeSParams;
 
 #define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ  (6.01)
 #define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ  (1.31)

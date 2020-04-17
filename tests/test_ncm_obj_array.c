@@ -90,7 +90,7 @@ test_ncm_obj_array_new (TestNcmObjArray *test, gconstpointer pdata)
   test->ntests = 1000;
   oa = test->oa = ncm_obj_array_new ();
 
-  g_assert (oa != NULL);
+  g_assert_true (oa != NULL);
 }
 
 void
@@ -105,7 +105,7 @@ test_ncm_obj_array_add (TestNcmObjArray *test, gconstpointer pdata)
 {
   NcmObjArray *oa = test->oa;
 
-  g_assert (oa != NULL);
+  g_assert_true (oa != NULL);
 
   {
     NcmVector *v     = ncm_vector_new (10);

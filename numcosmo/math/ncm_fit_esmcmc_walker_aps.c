@@ -74,7 +74,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPS, ncm_fit_esmcmc_walker_aps, NC
 static void
 ncm_fit_esmcmc_walker_aps_init (NcmFitESMCMCWalkerAPS *aps)
 {
-  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv = G_TYPE_INSTANCE_GET_PRIVATE (aps, NCM_TYPE_FIT_ESMCMC_WALKER_APS, NcmFitESMCMCWalkerAPSPrivate);
+  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv = ncm_fit_esmcmc_walker_aps_get_instance_private (aps);
 
   self->size            = 0;
   self->size_2          = 0;

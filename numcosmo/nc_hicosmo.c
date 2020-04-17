@@ -122,6 +122,8 @@ static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, const gdouble z);
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo);
 static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 
+static void _nc_hicosmo_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var);
+
 /* Default implemented */
 
 static gdouble _nc_hicosmo_Omega_m0 (NcHICosmo *cosmo);
@@ -191,6 +193,8 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   klass->NMassNu      = &_nc_hicosmo_NMassNu;
   klass->MassNuInfo   = &_nc_hicosmo_MassNuInfo;
 
+  klass->get_bg_var   = &_nc_hicosmo_get_bg_var;
+
   nc_hicosmo_set_Omega_m0_impl (klass, &_nc_hicosmo_Omega_m0);
   nc_hicosmo_set_Omega_r0_impl (klass, &_nc_hicosmo_Omega_r0);
 
@@ -233,6 +237,8 @@ static gdouble _nc_hicosmo_E2Press_mnu_n (NcHICosmo *cosmo, const guint n, const
 
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo) { return 0; }
 static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g) { g_error ("nc_hicosmo_NuMass: model `%s' does not implement massive neutrinos.", G_OBJECT_TYPE_NAME (cosmo)); }
+
+static void _nc_hicosmo_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var) {g_error ("_nc_hicosmo_get_bg_var: model `%s' does not implement perturbation background variables.", G_OBJECT_TYPE_NAME (cosmo));}
 
 static gdouble
 _nc_hicosmo_Omega_m0 (NcHICosmo *cosmo)
@@ -689,6 +695,16 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncNMassNu,NMa
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncMassNuInfo,MassNuInfo)
+
+/**
+ * nc_hicosmo_set_get_bg_var_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoGetBGVar,get_bg_var)
 
 /**
  * nc_hicosmo_new_from_name:
@@ -1665,15 +1681,33 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_powspec: (virtual powspec)
+ * nc_hicosmo_NMassNu: (virtual NMassNu)
  * @cosmo: a #NcHICosmo
- * @k: wavenumber $k$
  *
  * FIXME
  *
  * Returns: FIXME
  */
-
+/**
+ * nc_hicosmo_MassNuInfo: (virtual MassNuInfo)
+ * @cosmo: a #NcHICosmo
+ * @nu_i: FIXME
+ * @mass_eV: (out): FIXME
+ * @T_0: (out): FIXME
+ * @xi: (out): FIXME
+ * @g: (out): FIXME
+ * 
+ * FIXME
+ *
+ */
+/**
+ * nc_hicosmo_get_bg_var: (virtual get_bg_var)
+ * @cosmo: a #NcHICosmo
+ * @t: FIXME
+ * @bg_var: a #NcHIPertBGVar
+ * 
+ * 
+ */
 /**
  * nc_hicosmo_Neff:
  * @cosmo: a #NcHICosmo
@@ -1682,6 +1716,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  *
  * Returns: FIXME
  */
+
 /**
  * nc_hicosmo_E2Omega_k:
  * @cosmo: a #NcHICosmo

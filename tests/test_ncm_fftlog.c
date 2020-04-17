@@ -123,6 +123,8 @@ main (gint argc, gchar *argv[])
 #endif
 }
 
+#define NTESTS 20
+
 typedef struct _TestNcmFftlogPlaw
 {
   gdouble lnA;
@@ -185,7 +187,7 @@ test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 1000;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);
@@ -197,9 +199,9 @@ test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
   ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
   ncm_fftlog_set_length (fftlog, Lk);
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
 }
 
 void
@@ -221,7 +223,7 @@ test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 1000;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);
@@ -233,9 +235,9 @@ test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
   ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
   ncm_fftlog_set_length (fftlog, Lk);
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
 }
 
 void
@@ -258,7 +260,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
   test->lnk_i        = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
   test->lnk_f        = test->lnk_i + Lk;
 
-  test->ntests       = 100;
+  test->ntests       = NTESTS;
 
   arg->lnA           = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
   arg->ns            = g_test_rand_double_range (0.5, 1.5);
@@ -272,9 +274,9 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 
   ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
   
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
 }
 
 void

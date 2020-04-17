@@ -84,8 +84,8 @@ NcmODEEval *ncm_ode_eval_ref (NcmODEEval *ode_eval);
 void ncm_ode_eval_free (NcmODEEval *ode_eval);
 void ncm_ode_eval_clear (NcmODEEval **ode_eval);
 
-G_INLINE_FUNC gint ncm_ode_eval_df (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df);
-G_INLINE_FUNC gint ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble ** restrict J_col);
+NCM_INLINE gint ncm_ode_eval_df (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df);
+NCM_INLINE gint ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble ** restrict J_col);
 
 #define NCM_ODE_EVAL_DECLARE_IMPL(ModuleObjName, module_obj_name, MODULE, OBJ_NAME, LocalStruct)         \
   GType module_obj_name##_get_type (void);                                                               \
@@ -94,15 +94,15 @@ G_INLINE_FUNC gint ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_s
   typedef struct _##ModuleObjName##Class ModuleObjName##Class;                                           \
   struct _##ModuleObjName##Class { NcmODEEvalClass parent_class; };                                      \
                                                                                                          \
-  static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                                     \
+  NCM_INLINE ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                                     \
     return G_TYPE_CHECK_INSTANCE_CAST (ptr, module_obj_name##_get_type (), ModuleObjName); }             \
-  static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_CLASS (gpointer ptr) {                      \
+  NCM_INLINE ModuleObjName##Class * MODULE##_##OBJ_NAME##_CLASS (gpointer ptr) {                      \
     return G_TYPE_CHECK_CLASS_CAST (ptr, module_obj_name##_get_type (), ModuleObjName##Class); }         \
-  static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                                         \
+  NCM_INLINE gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                                         \
     return G_TYPE_CHECK_INSTANCE_TYPE (ptr, module_obj_name##_get_type ()); }                            \
-  static inline gboolean MODULE##_IS_##OBJ_NAME##_CLASS (gpointer ptr) {                                 \
+  NCM_INLINE gboolean MODULE##_IS_##OBJ_NAME##_CLASS (gpointer ptr) {                                 \
     return G_TYPE_CHECK_CLASS_TYPE (ptr, module_obj_name##_get_type ()); }                               \
-  static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_GET_CLASS (gpointer ptr) {                  \
+  NCM_INLINE ModuleObjName##Class * MODULE##_##OBJ_NAME##_GET_CLASS (gpointer ptr) {                  \
     return G_TYPE_INSTANCE_GET_CLASS (ptr, module_obj_name##_get_type (), ModuleObjName##Class); }       \
   G_GNUC_END_IGNORE_DEPRECATIONS                                                                         \
   ModuleObjName *module_obj_name##_new (void);                                                           \
@@ -134,17 +134,18 @@ G_END_DECLS
 #ifndef _NCM_ODE_EVAL_INLINE_H_
 #define _NCM_ODE_EVAL_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gint 
+NCM_INLINE gint 
 ncm_ode_eval_df (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df)
 {
   NCM_ODE_EVAL_GET_CLASS (ode_eval)->df (ode_eval, sys_size, t, f, df);
   return 0;
 }
 
-G_INLINE_FUNC gint 
+NCM_INLINE gint 
 ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble ** restrict J_col)
 {
   return NCM_ODE_EVAL_GET_CLASS (ode_eval)->J_dense (ode_eval, sys_size, t, f, J_col);
@@ -152,5 +153,6 @@ ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble 
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_ODE_EVAL_INLINE_H_ */

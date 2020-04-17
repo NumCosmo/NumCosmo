@@ -56,7 +56,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistNd, ncm_stats_dist_nd, G_TYPE_O
 static void
 ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
 {
-  NcmStatsDistNdPrivate * const self = dnd->priv = G_TYPE_INSTANCE_GET_PRIVATE (dnd, NCM_TYPE_STATS_DIST_ND, NcmStatsDistNdPrivate);
+  NcmStatsDistNdPrivate * const self = dnd->priv = ncm_stats_dist_nd_get_instance_private (dnd);
 
   self->dim = 0;
 }

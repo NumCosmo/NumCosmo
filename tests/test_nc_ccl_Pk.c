@@ -43,25 +43,17 @@ typedef struct _TestNcCCLPk
   NcPowspecML *Pk; 
 } TestNcCCLPk;
 
-void test_nc_ccl_pk_new_model1_bbks (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model2_bbks (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model3_bbks (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model1_eh (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model2_eh (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model3_eh (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model1_cbe (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model2_cbe (TestNcCCLPk *test, gconstpointer pdata);
-void test_nc_ccl_pk_new_model3_cbe (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_new (TestNcCCLPk *test, gconstpointer pdata);
 void test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata);
 
-void test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_create_BBKS (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_create_EH (TestNcCCLPk *test, gconstpointer pdata);
+void test_nc_ccl_pk_create_CBE (TestNcCCLPk *test, gconstpointer pdata);
+
+void test_nc_ccl_pk_cmp_pk (TestNcCCLPk *test, gconstpointer pdata);
 
 void test_nc_ccl_pk_bbks_traps (TestNcCCLPk *test, gconstpointer pdata);
 void test_nc_ccl_pk_bbks_invalid_st (TestNcCCLPk *test, gconstpointer pdata);
-
-#define BBKS_TOLERANCE 1.0E-5
-#define CTEST_DATA(name) typedef struct _##name##_data name##_data; struct _##name##_data
-#define CTEST_SETUP(name) void name##_setup (name##_data* data)
 
 typedef struct _ccl_params_data 
 {
@@ -83,6 +75,11 @@ typedef struct _ccl_params_data
 void
 ccl_params_data_init (ccl_params_data *data)
 {
+  gdouble Omega_v[5] = { 0.7,  0.7,  0.7,  0.65, 0.75};
+  gdouble w_0[5]     = {-1.0, -0.9, -0.9, -0.9, -0.9};
+  gdouble w_a[5]     = { 0.0,  0.0,  0.1,  0.1,  0.1};
+  gint i;
+
   data->Omega_c  = 0.25;
   data->Omega_b  = 0.05;
   data->h        = 0.7;
@@ -92,12 +89,8 @@ ccl_params_data_init (ccl_params_data *data)
   data->Neff     = 3.046;
   data->mnu      = 0.0;
   data->mnu_type = ccl_mnu_sum;
-
-  double Omega_v[5] = { 0.7,  0.7,  0.7,  0.65, 0.75};
-  double w_0[5]     = {-1.0, -0.9, -0.9, -0.9, -0.9};
-  double w_a[5]     = { 0.0,  0.0,  0.1,  0.1,  0.1};
-
-  for (int i=0;i<5;i++) 
+  
+  for (i = 0; i < 5; i++) 
   {
     data->Omega_v[i] = Omega_v[i];
     data->w_0[i]     = w_0[i];
@@ -106,68 +99,97 @@ ccl_params_data_init (ccl_params_data *data)
   }
 }
 
+typedef struct _TestNcCCLPkPk
+{
+  const gchar *path;
+  void (*create_pk) (TestNcCCLPk *test, gconstpointer pdata);
+  transfer_function_t pk_t;
+} TestNcCCLPkPk;
+
+typedef struct _TestNcCCLPkModel
+{
+  const gchar *path;
+  gint model_i;
+} TestNcCCLPkModel;
+
+typedef struct _TestNcCCLPkCMP
+{
+  const gchar *path;
+  void (*cmp) (TestNcCCLPk *test, gconstpointer pdata);
+} TestNcCCLPkCMP;
+
+typedef struct _TestNcCCLPkData
+{
+  TestNcCCLPkPk pk;
+  TestNcCCLPkModel model;
+  TestNcCCLPkCMP cmp;
+} TestNcCCLPkData;
+
+#define TEST_NC_CCL_PK_NPKS 3
+TestNcCCLPkPk pks[3] = {
+  {"bbks", &test_nc_ccl_pk_create_BBKS, ccl_bbks},
+  {"eh",   &test_nc_ccl_pk_create_EH,   ccl_eisenstein_hu},
+  {"cbe",  &test_nc_ccl_pk_create_CBE,  ccl_boltzmann_class},
+};
+
+#define TEST_NC_CCL_PK_NMODELS 5
+TestNcCCLPkModel models[5] = {
+  {"model1", 1},
+  {"model2", 2},
+  {"model3", 3},
+  {"model4", 4},
+  {"model5", 5},
+};
+
+#define TEST_NC_CCL_PK_NCMPS 1
+TestNcCCLPkCMP cmps[1] = {
+  {"Pk", &test_nc_ccl_pk_cmp_pk},
+};
+
+#define NTESTS ((TEST_NC_CCL_PK_NPKS)*(TEST_NC_CCL_PK_NMODELS)*(TEST_NC_CCL_PK_NCMPS))
+
 gint
 main (gint argc, gchar *argv[])
 {
+  TestNcCCLPkData data[NTESTS];
+  gint i, m;
+ 
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_set_nonfatal_assertions ();
-  
-  g_test_add ("/nc/ccl/Pk/model1/bbks/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model1_bbks,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/Pk/model2/bbks/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model2_bbks,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
+  m = 0;
+  for (i = 0; i < TEST_NC_CCL_PK_NPKS; i++)
+  {
+    gint j;
+    for (j = 0; j < TEST_NC_CCL_PK_NMODELS; j++)
+    {
+      gint k;
+      for (k = 0; k < TEST_NC_CCL_PK_NCMPS; k++)
+      {
+        gchar *path   = g_strdup_printf ("/nc/ccl/Pk/%s/%s/%s", pks[i].path, models[j].path, cmps[k].path);
+        data[m].pk    = pks[i];
+        data[m].model = models[j];
+        data[m].cmp   = cmps[k];
 
-  g_test_add ("/nc/ccl/Pk/model3/bbks/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model3_bbks,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
+        g_test_add (path, TestNcCCLPk, &data[m], &test_nc_ccl_pk_new, cmps[k].cmp, &test_nc_ccl_pk_free);
 
-  g_test_add ("/nc/ccl/Pk/model1/eh/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model1_eh,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
+        g_free (path);
+        m++;
+      }
+    }
+  }
 
-  g_test_add ("/nc/ccl/Pk/model2/eh/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model2_eh,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
-
-  g_test_add ("/nc/ccl/Pk/model3/eh/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model3_eh,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
-
-  g_test_add ("/nc/ccl/Pk/model1/cbe/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model1_cbe,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
-
-  g_test_add ("/nc/ccl/Pk/model2/cbe/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model2_cbe,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
-
-  g_test_add ("/nc/ccl/Pk/model3/cbe/cmp", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model3_cbe,
-              &test_nc_ccl_pk_cmp,
-              &test_nc_ccl_pk_free);
-
-  g_test_add ("/nc/ccl/Pk/model1/bbks/traps", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model1_bbks,
+  g_test_add ("/nc/ccl/Pk/bbks/model1/traps", TestNcCCLPk, &data[0],
+              &test_nc_ccl_pk_new,
               &test_nc_ccl_pk_bbks_traps,
               &test_nc_ccl_pk_free);
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_add ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", TestNcCCLPk, NULL,
-              &test_nc_ccl_pk_new_model1_bbks,
+  g_test_add ("/nc/ccl/Pk/model1/bbks/invalid/st/subprocess", TestNcCCLPk, &data[0],
+              &test_nc_ccl_pk_new,
               &test_nc_ccl_pk_bbks_invalid_st,
               &test_nc_ccl_pk_free);
 #endif
@@ -186,12 +208,7 @@ test_nc_create_ccl_cosmo (gint i_model, transfer_function_t pk_t)
   ccl_params_data_init (data);
   config.transfer_function_method = pk_t;
 
-  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, -1, NULL, NULL, &status);
-  /*params.Omega_g = 0;*/
-  /*printf ("# Setting % 22.15g % 22.15g\n", params.Omega_l, data->Omega_v[i_model - 1]);*/
-  /*params.Omega_l = data->Omega_v[i_model - 1];*/
-  /*params.sigma8  = data->sigma8;*/
-
+  params = ccl_parameters_create (data->Omega_c, data->Omega_b, data->Omega_k[i_model - 1], data->Neff, &data->mnu, data->mnu_type, data->w_0[i_model - 1], data->w_a[i_model - 1], data->h, data->sigma8, data->n_s, -1, -1, -1, 0.0, 0.0, -1, NULL, NULL, &status);
   cosmo = ccl_cosmology_create (params, config);
 
   /*cosmo->spline_params.A_SPLINE_NLOG_PK = 200;*/
@@ -225,7 +242,7 @@ test_nc_ccl_pk_create_BBKS (TestNcCCLPk *test, gconstpointer pdata)
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", 
                                  ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
 
   ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
@@ -252,7 +269,7 @@ test_nc_ccl_pk_create_EH (TestNcCCLPk *test, gconstpointer pdata)
   {
     NcmModel *mprim = ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ());
     ncm_model_param_set_by_name (mprim, "ln10e10ASA", ncm_model_param_get_by_name (mprim, "ln10e10ASA") 
-                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
+                                 + 2.0 * log (test->ccl_cosmo->params.sigma8 / ncm_powspec_sigma_tophat_R (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))));
   }
   
   ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
@@ -261,7 +278,7 @@ test_nc_ccl_pk_create_EH (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void 
-test_nc_ccl_pk_create_cbe (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_create_CBE (TestNcCCLPk *test, gconstpointer pdata)
 {
   NcCBE *cbe;
 
@@ -279,136 +296,19 @@ test_nc_ccl_pk_create_cbe (TestNcCCLPk *test, gconstpointer pdata)
   ncm_powspec_require_kmax (NCM_POWSPEC (test->Pk), 1.0e+1);
 
   ncm_powspec_prepare (NCM_POWSPEC (test->Pk), NCM_MODEL (test->cosmo));
-
-  if (FALSE)
-  {
-    ncm_model_orig_params_log_all (NCM_MODEL (test->cosmo));
-    ncm_model_orig_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ()));
-    ncm_model_orig_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hireion_id ()));
-    printf ("# As: % 22.15g, sigma8_cbe: % 22.15g, sigma8_int: % 22.15g\n", 
-            nc_hiprim_SA_Ampl (NC_HIPRIM (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->cosmo), nc_hiprim_id ()))),
-            nc_cbe_get_sigma8 (cbe),
-            nc_powspec_ml_sigma_R (test->Pk, NCM_MODEL (test->cosmo), 1.0e-7, 0.0, 8.0 / nc_hicosmo_h (test->cosmo))
-            );
-  }
-
 }
 
 void
-test_nc_ccl_pk_new_model1_bbks (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_new (TestNcCCLPk *test, gconstpointer pdata)
 {
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, ccl_bbks);
+  const TestNcCCLPkData *data = pdata;
+
+  test->ccl_cosmo = test_nc_create_ccl_cosmo (data->model.model_i, data->pk.pk_t);
   test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
 
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_BBKS (test, pdata);
+  data->pk.create_pk (test, pdata);
   
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model2_bbks (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, ccl_bbks);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_BBKS (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model3_bbks (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, ccl_bbks);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_BBKS (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model1_eh (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, ccl_eisenstein_hu);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_EH (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model2_eh (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, ccl_eisenstein_hu);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_EH (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model3_eh (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, ccl_eisenstein_hu);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_EH (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model1_cbe (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (1, ccl_boltzmann_class);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_cbe (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model2_cbe (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (2, ccl_boltzmann_class);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_cbe (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
-}
-
-void
-test_nc_ccl_pk_new_model3_cbe (TestNcCCLPk *test, gconstpointer pdata)
-{
-  test->ccl_cosmo = test_nc_create_ccl_cosmo (3, ccl_boltzmann_class);
-  test->cosmo     = NC_HICOSMO (nc_hicosmo_de_cpl_new_from_ccl (&test->ccl_cosmo->params));
-
-  /*ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Tgamma0", 0.0);*/
-
-  test_nc_ccl_pk_create_cbe (test, pdata);
-  
-  g_assert (NC_IS_HICOSMO_DE_CPL (test->cosmo));
+  g_assert_true (NC_IS_HICOSMO_DE_CPL (test->cosmo));
 }
 
 void
@@ -422,7 +322,7 @@ test_nc_ccl_pk_free (TestNcCCLPk *test, gconstpointer pdata)
 }
 
 void
-test_nc_ccl_pk_cmp (TestNcCCLPk *test, gconstpointer pdata)
+test_nc_ccl_pk_cmp_pk (TestNcCCLPk *test, gconstpointer pdata)
 {
   const gint ntests       = 200;
   const gdouble z_max     = 6.0;

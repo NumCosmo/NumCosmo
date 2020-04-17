@@ -56,6 +56,9 @@
 #include <cuba.h>
 #include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
+#include <sundials/sundials_matrix.h>
+#include <sunmatrix/sunmatrix_dense.h>
+#include <sunlinsol/sunlinsol_dense.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -364,10 +367,12 @@ static void
 _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector* vp)
 {
 	const guint nell = lmax - lmin + 1;
-	const gdouble dz = (zmax - zmin) * NCM_DEFAULT_PRECISION;
+	const gdouble dz = (zmax - zmin) * NC_XCOR_PRECISION;
 
 	N_Vector yv = N_VNew_Serial (nell);
 	N_Vector yv0 = N_VNew_Serial (nell);
+	SUNMatrix A = SUNDenseMatrix (nell, nell);
+	SUNLinearSolver LS = SUNDenseLinearSolver (yv, A);
 	gpointer cvode = CVodeCreate (CV_ADAMS);
 	gpointer cvodefunc = &_xcor_limber_cvode_int;
 	NcmVector* Pk = ncm_vector_new (nell);
@@ -378,6 +383,11 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	ncm_vector_set_zero (k);
 	ncm_vector_set_zero (Pk);
+	for (i = 0; i < nell; i++)
+	{
+		NV_Ith_S (yv, i) = 0.0;
+		NV_Ith_S (yv0, i) = 0.0;
+	}
 
 	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo };
 
@@ -390,12 +400,14 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	flag = CVodeInit (cvode, cvodefunc, zmid, yv0);
 	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
+	flag = CVodeSStolerances (cvode, NC_XCOR_PRECISION, 0.0);
 	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 	flag = CVodeSetMaxNumSteps (cvode, G_MAXUINT32);
 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 	flag = CVodeSetUserData (cvode, &xclc);
 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+	flag = CVodeSetLinearSolver (cvode, LS, A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
 	/* First integrate from zmid to zmin */
 	flag = CVode (cvode, zmin, yv, &z, CV_NORMAL);
@@ -408,8 +420,17 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	}
 
 	/* Then integrate from zmid to zmax */
-	flag = CVodeInit (cvode, cvodefunc, zmid, yv);
-	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+	flag = CVodeReInit (cvode, zmid, yv);
+	NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+	flag = CVodeSStolerances (cvode, NC_XCOR_PRECISION, 0.0);
+	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+	flag = CVodeSetMaxNumSteps (cvode, G_MAXUINT32);
+	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+	flag = CVodeSetUserData (cvode, &xclc);
+	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+	flag = CVodeSetLinearSolver (cvode, LS, A);
+    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
+
 	flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
 	NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
@@ -419,10 +440,11 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 		ncm_vector_set (vp, i, NV_Ith_S (yv, i));
 	}
 
-
 	CVodeFree (&cvode);
 	N_VDestroy (yv);
 	N_VDestroy (yv0);
+	SUNMatDestroy (A);
+	SUNLinSolFree (LS);
 
 	ncm_vector_free (k);
 	ncm_vector_free (Pk);
@@ -535,7 +557,7 @@ _nc_xcor_limber_suave (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	Suave(1, nell,
 		&_nc_xcor_limber_suave_integrand, &xcls, 1,
-		NCM_DEFAULT_PRECISION, 0.0,
+		NC_XCOR_PRECISION, 0.0,
 		flags, 0,
 		mineval, maxeval,
 		nnew, nmin,
@@ -638,7 +660,7 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 	for (i = 0; i < lmax - lmin + 1; i++)
 	{
 		xclki.l = lmin + i;
-		ret = gsl_integration_qag (&F, zmin, zmax, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
+		ret = gsl_integration_qag (&F, zmin, zmax, 0.0, NC_XCOR_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
 		if (ret != GSL_SUCCESS)
 			g_error ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
 

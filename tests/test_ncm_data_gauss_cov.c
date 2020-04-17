@@ -83,8 +83,8 @@ test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
   guint i, j;
-  g_assert (NCM_IS_DATA_GAUSS_COV (test->data));
-  g_assert (NCM_IS_MATRIX (gauss->cov));
+  g_assert_true (NCM_IS_DATA_GAUSS_COV (test->data));
+  g_assert_true (NCM_IS_MATRIX (gauss->cov));
 
   for (i = 0; i < gauss->np; i++)
   {

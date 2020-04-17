@@ -149,9 +149,9 @@ void lklbs_bs_compute(lklbs *self,double* pars, error **err) {
     problem = malloc(sizeof(char)*(50+10*self->ndim));
     sprintf(problem,"Problem in cl code at :\n    ");
     for (iii=0;iii<self->ndim;iii++) {
-      sprintf(problem,"%s %g",problem,pars[iii]);
+      sprintf(problem+strlen(problem)," %g",pars[iii]);
     }
-    sprintf(problem,"%s\n",problem);
+    sprintf(problem+strlen(problem),"\n");
     //_DEBUGHERE_("%s",problem);
     free(problem);
   }

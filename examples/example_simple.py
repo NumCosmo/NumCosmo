@@ -39,12 +39,12 @@ dist = Nc.Distance.new (2.0)
 #
 # C-like
 #
-cosmo.orig_param_set (Nc.HICosmoDEParams.H0,       70.00)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_C,   0.25)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_X,   0.70)
-cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
-cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
-cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.10)
+cosmo.orig_param_set (Nc.HICosmoDESParams.H0,       70.00)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_C,   0.25)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_X,   0.70)
+cosmo.orig_param_set (Nc.HICosmoDESParams.T_GAMMA0,  2.72)
+cosmo.orig_param_set (Nc.HICosmoDESParams.OMEGA_B,   0.05)
+cosmo.orig_param_set (Nc.HICosmoDEXCDMSParams.W,    -1.10)
 
 cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.06)
 
@@ -66,6 +66,8 @@ cosmo.props.massnu  = massnu_v
 #
 print ("# Model parameters: ")
 cosmo.params_log_all ()
+
+dist.prepare (cosmo)
 
 #
 #  Printing some distances up to redshift 1.0.

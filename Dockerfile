@@ -1,28 +1,83 @@
-FROM ubuntu:latest
+FROM ubuntu:latest AS compile-image
 
-RUN apt-get update
-# Install basic stuff (language-pack-en powerline dconf-cli emacs zsh)
-RUN apt-get install -y nano wget git cmake pkg-config
+# Install basic stuff
+RUN apt-get update && apt-get install -y \
+    nano       \
+    wget       \
+    git        \
+    cmake      \
+    pkg-config
+
 # Install compilers
-RUN apt-get install -y gcc-5 gfortran gfortran-5
-# Install G things
-RUN apt-get install -y gtk-doc-tools gobject-introspection libgirepository1.0-dev libglib2.0-dev
-# Install python
-RUN apt-get install -y python-numpy python-gobject python-gi-cairo
+RUN apt-get update && apt-get install -y \
+    gcc-8      \
+    gfortran-8
+
+# Install GLib and GObject related packages
+RUN apt-get update && apt-get install -y \
+    gtk-doc-tools          \
+    gobject-introspection  \
+    libgirepository1.0-dev \
+    libglib2.0-dev
+
+# Install package building tools
+RUN apt-get update && apt-get install -y \
+    autoconf      \
+    automake      \
+    autotools-dev \
+    libtool
 
 # Install dependencies
-RUN apt-get install -y libgsl-dev libgmp-dev libmpfr-dev libcfitsio-dev libfftw3-dev libnlopt-dev libatlas-base-dev liblapack-dev
-# sundials
-RUN cd && wget http://computation.llnl.gov/projects/sundials/download/sundials-2.7.0.tar.gz && \
-	tar -xvf sundials-2.7.0.tar.gz && \
-	mkdir sundials-build && cd sundials-build && cmake ../sundials-2.7.0 && make && make install
+RUN apt-get update && apt-get install -y \
+    libgsl-dev       \
+    libgmp-dev       \
+    libmpfr-dev      \
+    libcfitsio-dev   \
+    libfftw3-dev     \
+    libnlopt-dev     \
+    liblapack-dev    \
+    libopenblas-dev  \
+    libhdf5-dev      \
+    libflint-arb-dev
 
-# NumCosmo (clone from dropbox)
-RUN cd && mkdir NumCosmo
+# NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
+RUN cd && mkdir NumCosmo usr
 COPY . /root/NumCosmo/
-ENV LD_LIBRARY_PATH=/usr/local/lib
-ENV GI_TYPELIB_PATH=/usr/local/lib/girepository-1.0
+
+# Set environment variables 
 ENV CUBACORES=1
 ENV OMP_NUM_THREADS=1
 ENV OMP_THREAD_LIMIT=1
-RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh --with-thread-pool-max=4 && make -j12 && make install #
+
+WORKDIR /root/NumCosmo
+
+RUN NOCONFIGURE=yes ./autogen.sh
+RUN CC=gcc-8 FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 CFLAGS="-O3 -g -Wall" FCFLAGS="-O3 -g -Wall" ./configure --prefix=/usr --enable-opt-cflags 
+RUN make -j12
+RUN make install DESTDIR=/root
+
+FROM ubuntu:latest AS runtime-image
+
+# Install python
+RUN apt-get update && apt-get install -y \
+    python3-gi         \
+    python3-numpy      \
+    python3-matplotlib \
+    python3-scipy
+
+# Install dependencies (runtime only)
+RUN apt-get update && apt-get install -y \
+    libgfortran5     \
+    libgsl23         \
+    libgmp10         \
+    libmpfr6         \
+    libcfitsio5      \
+    libfftw3-double3 \
+    libfftw3-single3 \
+    libnlopt0        \
+    liblapack3       \
+    libopenblas-base \
+    libhdf5-100      \
+    libflint-arb2 
+
+COPY --from=compile-image /root/usr /usr

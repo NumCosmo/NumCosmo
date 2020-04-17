@@ -95,7 +95,7 @@ void nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec);
 void nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd);
 void nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
 void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+NCM_INLINE void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
@@ -107,7 +107,7 @@ gdouble nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo
 gdouble nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 
 gdouble nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
-G_INLINE_FUNC gdouble nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+NCM_INLINE gdouble nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 gdouble nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline);
 gdouble nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline);
 
@@ -118,12 +118,11 @@ G_END_DECLS
 #ifndef _NC_HALO_MASS_FUNCTION_INLINE_H_
 #define _NC_HALO_MASS_FUNCTION_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
-
-#include <glib-object.h>
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
@@ -132,7 +131,7 @@ nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cos
 	  nc_halo_mass_function_prepare (mfp, cosmo);
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   return ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
@@ -140,5 +139,6 @@ nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HALO_MASS_FUNCTION_INLINE_H_ */

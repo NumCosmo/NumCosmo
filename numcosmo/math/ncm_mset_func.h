@@ -78,11 +78,11 @@ void ncm_mset_func_clear (NcmMSetFunc **func);
 
 GPtrArray *ncm_mset_func_array_new (void);
 
-G_INLINE_FUNC void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
-G_INLINE_FUNC gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
-G_INLINE_FUNC gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
-G_INLINE_FUNC gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
-G_INLINE_FUNC void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
+NCM_INLINE void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
+NCM_INLINE gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
+NCM_INLINE gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
+NCM_INLINE gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
+NCM_INLINE void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
 
 void ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len);
 
@@ -111,10 +111,11 @@ G_END_DECLS
 #ifndef _NCM_MSET_FUNC_INLINE_H_
 #define _NCM_MSET_FUNC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void
+NCM_INLINE void
 ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
 {
   if (func->eval_x != NULL)
@@ -129,7 +130,7 @@ ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
   }
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
 {
   gdouble res;
@@ -138,43 +139,27 @@ ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
   return res;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
 {
   gdouble res;
-
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert ((func->nvar == 0) || (func->eval_x != NULL));
-#endif
-  
-	NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);
-	
+	NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);	
   return res;
 }
 
-G_INLINE_FUNC gdouble
+NCM_INLINE gdouble
 ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
 {
   gdouble res;
 	
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert_cmpint (func->nvar, ==, 1);  
-#endif
   NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, &x, &res);
   return res;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
 {
   guint i;
-#ifdef NCM_MSET_FUNC_CHECK_TYPE
-  g_assert_cmpint (func->dim,  ==, 1);
-  g_assert_cmpint (func->nvar, ==, 1);
-  g_assert_cmpuint (ncm_vector_len (x_v), <=, ncm_vector_len (res_v));
-#endif
   for (i = 0; i < ncm_vector_len (x_v); i++)
   {		
     NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_ptr (x_v, i), ncm_vector_ptr (res_v, i));
@@ -183,5 +168,6 @@ ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, Ncm
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MSET_FUNC_INLINE_H_ */

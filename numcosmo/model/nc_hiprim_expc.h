@@ -45,7 +45,7 @@ typedef struct _NcHIPrimExpcClass NcHIPrimExpcClass;
 typedef struct _NcHIPrimExpc NcHIPrimExpc;
 
 /**
- * NcHIPrimExpcParams:
+ * NcHIPrimExpcSParams:
  * @NC_HIPRIM_EXPC_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
  * @NC_HIPRIM_EXPC_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_EXPC_LAMBDAC: Exp parameter $\lambda_c$
@@ -57,7 +57,7 @@ typedef struct _NcHIPrimExpc NcHIPrimExpc;
  * FIXME
  * 
  */
-typedef enum _NcHIPrimExpcParams
+typedef enum /*< enum,underscore_name=NC_HIPRIM_EXPC_SPARAMS >*/
 {
   NC_HIPRIM_EXPC_LN10E10ASA,
   NC_HIPRIM_EXPC_N_SA,
@@ -68,7 +68,7 @@ typedef enum _NcHIPrimExpcParams
   NC_HIPRIM_EXPC_N_T,        
   /* < private > */
   NC_HIPRIM_EXPC_SPARAM_LEN, /*< skip >*/
-} NcHIPrimExpcParams;
+} NcHIPrimExpcSParams;
 
 struct _NcHIPrimExpcClass
 {

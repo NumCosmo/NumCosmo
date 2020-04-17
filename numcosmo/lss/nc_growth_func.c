@@ -71,7 +71,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
 static void
 nc_growth_func_init (NcGrowthFunc *gf)
 {
-  NcGrowthFuncPrivate * const self = gf->priv = G_TYPE_INSTANCE_GET_PRIVATE (gf, NC_TYPE_GROWTH_FUNC, NcGrowthFuncPrivate);
+  NcGrowthFuncPrivate * const self = gf->priv = nc_growth_func_get_instance_private (gf);
   self->cvode      = NULL;
   self->yv         = N_VNew_Serial (3);
   self->A          = SUNDenseMatrix (3, 3);

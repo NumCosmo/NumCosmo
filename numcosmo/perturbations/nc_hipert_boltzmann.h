@@ -109,7 +109,7 @@ struct _NcHIPertBoltzmannClass
  *
  * FIXME
  */
-typedef enum _NcHIPertBoltzmannVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_BOLTZMANN_VARS  >*/
 {
   NC_HIPERT_BOLTZMANN_B0 = 0,
   NC_HIPERT_BOLTZMANN_THETA0,

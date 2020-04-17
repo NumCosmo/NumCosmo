@@ -176,14 +176,15 @@ static void
 _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const gdouble f_lnRH  = 5.0 * log10 (nc_hicosmo_RH_Mpc (cosmo));  
   guint i;
 
   for (i = 0; i < diag->np; i++)
   {
     const gdouble z   = ncm_vector_get (dist_mu->x, i);
     const gdouble dmu = nc_distance_dmodulus (dist_mu->dist, cosmo, z);
-    ncm_vector_set (vp, i, dmu);
+    ncm_vector_set (vp, i, dmu + f_lnRH);
   }
 }
 

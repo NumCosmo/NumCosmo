@@ -89,14 +89,14 @@ void ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_le
 void ncm_fit_state_reset (NcmFitState *fstate);
 void ncm_fit_state_realloc (NcmFitState *fstate);
 
-G_INLINE_FUNC void ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J);
-G_INLINE_FUNC void ncm_fit_state_set_niter (NcmFitState *fstate, guint niter);
-G_INLINE_FUNC guint ncm_fit_state_get_niter (NcmFitState *fstate);
-G_INLINE_FUNC void ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec);
-G_INLINE_FUNC gdouble ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate);
-G_INLINE_FUNC void ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec);
-G_INLINE_FUNC gdouble ncm_fit_state_get_params_prec (NcmFitState *fstate);
-G_INLINE_FUNC guint ncm_fit_state_get_data_len (NcmFitState *fstate);
+NCM_INLINE void ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J);
+NCM_INLINE void ncm_fit_state_set_niter (NcmFitState *fstate, guint niter);
+NCM_INLINE guint ncm_fit_state_get_niter (NcmFitState *fstate);
+NCM_INLINE void ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec);
+NCM_INLINE gdouble ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate);
+NCM_INLINE void ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec);
+NCM_INLINE gdouble ncm_fit_state_get_params_prec (NcmFitState *fstate);
+NCM_INLINE guint ncm_fit_state_get_data_len (NcmFitState *fstate);
 
 G_END_DECLS
 
@@ -105,10 +105,11 @@ G_END_DECLS
 #ifndef _NCM_FIT_STATE_INLINE_H_
 #define _NCM_FIT_STATE_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
 {
   g_assert (fstate->is_least_squares);
@@ -129,55 +130,55 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
   ncm_matrix_memcpy (fstate->ls_J, J);
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_fit_state_set_niter (NcmFitState *fstate, guint niter)
 {
   fstate->niter = niter;
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 ncm_fit_state_get_niter (NcmFitState *fstate)
 {
   return fstate->niter;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec)
 {
   fstate->m2lnL_prec = prec;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate)
 {
   return fstate->m2lnL_prec;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_fit_state_set_m2lnL_curval (NcmFitState *fstate, gdouble m2lnL)
 {
   fstate->m2lnL_curval = m2lnL;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_fit_state_get_m2lnL_curval (NcmFitState *fstate)
 {
   return fstate->m2lnL_curval;
 }
 
-G_INLINE_FUNC void 
+NCM_INLINE void 
 ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec)
 {
   fstate->params_prec = prec;
 }
 
-G_INLINE_FUNC gdouble 
+NCM_INLINE gdouble 
 ncm_fit_state_get_params_prec (NcmFitState *fstate)
 {
   return fstate->params_prec;
 }
 
-G_INLINE_FUNC guint 
+NCM_INLINE guint 
 ncm_fit_state_get_data_len (NcmFitState *fstate)
 {
   return fstate->data_len;
@@ -185,5 +186,6 @@ ncm_fit_state_get_data_len (NcmFitState *fstate)
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_FIT_STATE_INLINE_H_ */

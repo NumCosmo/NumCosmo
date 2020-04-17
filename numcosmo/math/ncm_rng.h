@@ -86,15 +86,15 @@ void ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions);
 
 NcmRNG *ncm_rng_pool_get (const gchar *name);
 
-G_INLINE_FUNC gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu); 
-G_INLINE_FUNC gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma); 
-G_INLINE_FUNC gdouble ncm_rng_ugaussian_gen (NcmRNG *rng); 
-G_INLINE_FUNC gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma); 
-G_INLINE_FUNC gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu);
-G_INLINE_FUNC gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
-G_INLINE_FUNC gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
-G_INLINE_FUNC gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
-G_INLINE_FUNC gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+NCM_INLINE gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu); 
+NCM_INLINE gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma); 
+NCM_INLINE gdouble ncm_rng_ugaussian_gen (NcmRNG *rng); 
+NCM_INLINE gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma); 
+NCM_INLINE gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu);
+NCM_INLINE gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
+NCM_INLINE gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+NCM_INLINE gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+NCM_INLINE gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
 
 G_END_DECLS
 
@@ -103,21 +103,23 @@ G_END_DECLS
 #ifndef _NCM_RNG_INLINE_H_
 #define _NCM_RNG_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)         { return gsl_ran_flat (rng->r, xl, xu);            }
-G_INLINE_FUNC gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)     { return gsl_ran_gaussian (rng->r, sigma) + mu;    } 
-G_INLINE_FUNC gdouble ncm_rng_ugaussian_gen (NcmRNG *rng)                                           { return gsl_ran_ugaussian (rng->r);               } 
-G_INLINE_FUNC gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma) { return gsl_ran_gaussian_tail (rng->r, a, sigma); } 
-G_INLINE_FUNC gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)                       { return gsl_ran_exponential (rng->r, mu);         }
-G_INLINE_FUNC gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)                            { return gsl_ran_laplace (rng->r, a);              }
-G_INLINE_FUNC gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)            { return gsl_ran_exppow (rng->r, a, b);            }
-G_INLINE_FUNC gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)              { return gsl_ran_beta (rng->r, a, b);              } 
-G_INLINE_FUNC gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)             { return gsl_ran_gamma (rng->r, a, b);             } 
+NCM_INLINE gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)         { return gsl_ran_flat (rng->r, xl, xu);            }
+NCM_INLINE gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)     { return gsl_ran_gaussian (rng->r, sigma) + mu;    } 
+NCM_INLINE gdouble ncm_rng_ugaussian_gen (NcmRNG *rng)                                           { return gsl_ran_ugaussian (rng->r);               } 
+NCM_INLINE gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma) { return gsl_ran_gaussian_tail (rng->r, a, sigma); } 
+NCM_INLINE gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)                       { return gsl_ran_exponential (rng->r, mu);         }
+NCM_INLINE gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)                            { return gsl_ran_laplace (rng->r, a);              }
+NCM_INLINE gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)            { return gsl_ran_exppow (rng->r, a, b);            }
+NCM_INLINE gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)              { return gsl_ran_beta (rng->r, a, b);              } 
+NCM_INLINE gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)             { return gsl_ran_gamma (rng->r, a, b);             } 
 
 G_END_DECLS
 
+#endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_RNG_INLINE_H_ */
 
