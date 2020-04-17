@@ -63,7 +63,6 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_multifit.h>
-#include <nlopt.h>
 
 #include <nvector/nvector_serial.h>
 
