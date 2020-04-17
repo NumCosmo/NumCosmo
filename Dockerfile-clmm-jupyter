@@ -51,6 +51,9 @@ RUN cd cluster_toolkit && python setup.py install --root=/root
 RUN git clone -b master https://github.com/LSSTDESC/CLMM.git
 RUN cd CLMM && python setup.py install --root=/root && mkdir -p /root/usr/share/CLMM/examples && cp -rf examples/* /root/usr/share/CLMM/examples
 
+RUN git clone https://bitbucket.org/bdiemer/colossus.git
+RUN cd colossus && python setup.py install --root=/root 
+
 # NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
 RUN cd && mkdir NumCosmo usr
 COPY . /root/NumCosmo/
