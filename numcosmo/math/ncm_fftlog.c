@@ -178,7 +178,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT);
 static void
 ncm_fftlog_init (NcmFftlog *fftlog)
 {
-  NcmFftlogPrivate * const self = fftlog->priv = G_TYPE_INSTANCE_GET_PRIVATE (fftlog, NCM_TYPE_FFTLOG, NcmFftlogPrivate);
+  NcmFftlogPrivate * const self = fftlog->priv = ncm_fftlog_get_instance_private (fftlog);
 
   self->lnr0                 = 0.0;
   self->use_eval_int         = FALSE;

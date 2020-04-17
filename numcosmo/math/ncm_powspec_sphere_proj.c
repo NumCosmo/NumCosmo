@@ -87,7 +87,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSphereProj, ncm_powspec_sphere_proj, G_TYP
 static void
 ncm_powspec_sphere_proj_init (NcmPowspecSphereProj *psp)
 {
-  NcmPowspecSphereProjPrivate * const self = psp->priv = G_TYPE_INSTANCE_GET_PRIVATE (psp, NCM_TYPE_POWSPEC_SPHERE_PROJ, NcmPowspecSphereProjPrivate);
+  NcmPowspecSphereProjPrivate * const self = psp->priv = ncm_powspec_sphere_proj_get_instance_private (psp);
   self->ps          = NULL;
   self->w_array     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->lnr0        = 0.0;

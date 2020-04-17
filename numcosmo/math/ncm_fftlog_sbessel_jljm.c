@@ -110,7 +110,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_T
 static void
 ncm_fftlog_sbessel_jljm_init (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jljm, NCM_TYPE_FFTLOG_SBESSEL_JLJM, NcmFftlogSBesselJLJMPrivate);
+  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   self->ell        = 0;
   self->dell       = 0;
   self->lnw        = G_MAXDOUBLE;
@@ -225,14 +225,14 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
                                    PROP_ELL,
                                    g_param_spec_int ("ell",
                                                       NULL,
-                                                      "Spherical Bessel integer order j_\ell j_{\ell+d\ell}",
+                                                      "Spherical Bessel integer order j_\\ell j_{\\ell+d\\ell}",
                                                       0, G_MAXINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_DELL,
                                    g_param_spec_int ("dell",
                                                       NULL,
-                                                      "Spherical Bessel integer order difference j_\ell j_{\ell+d\ell}",
+                                                      "Spherical Bessel integer order difference $j_\\ell j_{\\ell+d\\ell}$",
                                                       G_MININT32, G_MAXINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
