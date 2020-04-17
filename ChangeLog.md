@@ -1,6 +1,408 @@
 CHANGELOG
 ----------------------
 
+[Current]
+
+[v0.15.0]
+ * Version 0.15.0
+
+ * Polishing nc_halo_density_profile. Added NumCosmo x Colossus comparison
+     notebook.
+
+ * Fixed missing parameter doc.
+
+ * Updated test test_nc_wl_surface_mass_density.
+
+ * Better integration strategy for NcHaloDensityProfile. Updated test
+     test_nc_halo_density_profile.
+
+ * Final tweaks before release.
+
+ * Minor improvements in notebooks/BounceVecPert.ipynb.
+
+ * Added new profile (Hernquist), Einasto implementation is now complete. Added
+     documentation.
+
+ * Improved notebooks/BounceVecPert.ipynb.
+
+ * Removed old nlopt header in csq1d.
+
+ * Fixed indentation and conditional load of NLOPT library object.
+
+ * Implemented Einasto profile (just rho, not the integrals). Included the
+     funciton to compute the magnification.
+
+ * New refactored NcHaloDensityProfile (working in progress). Added support for
+     different internal checkpoints in NcmModel.
+
+ * Added numcosmo's uncrustiify settings.
+
+ * Uniform indentation.
+
+ * Uniform indentation.
+
+ * Homogenization and standardization of the #NcmVector module.
+
+     A bunch of minor changes, .e.g. all #NcmVector are @cv now. Minimal changes
+     in some docs.
+
+     Added description at enum NcmVectorInternal.
+
+ * Uniform indentation.
+
+ * Finished first version of #NcmVector documentation. Still needs a careful
+     check.
+
+ * Renamed NcDensity* objects to NcHaloDensity*.
+
+ * Added "@stability: Stable" and "@include: numcosmo/math/ncm_c.h" to section in
+     ncm_c.c.
+
+ * Fixed use of Planck likelihood without check_param. Fixed typo in
+     numcosmo/math/ncm_c.c.
+
+ * 1) Changed function name: ncm_c_hubble_cte_planck_base_2018 to 
+     ncm_c_hubble_cte_planck6_base.
+
+     2) Added doc to functions:
+       * ncm_c_blackbody_energy_density
+       * ncm_c_blackbody_per_crit_density_h2
+
+     3) Corrected units in functions ncm_c_h() and ncm_c_hbar(): Js^{-1} to Js.
+
+     4) Deleted last function ncm_c_radiation_h2Omega_r0_to_temp Not used 
+     anywhere.
+
+ * Now the last commit is correct.
+
+ *    * ncm_c_crit_density_h2
+       * ncm_c_crit_mass_density_h2
+
+ * 1) Deleted function from #NcmC:
+       * ncm_c_hubble_cte_msa - it was not applied anywhere.
+
+     2) Replaced function from #NcmC:
+       * ncm_c_hubble_cte_wmap H0 = 72 --> ncm_c_hubble_cte_planck_base_2018 H0
+     = 67.36
+
+     3) Replaced ncm_c_hubble_cte_wmap to ncm_c_hubble_cte_planck_base_2018 in
+     functions from module #NcHIcosmo*
+       * nc_hicosmo_de
+       * nc_hicosmo_gcg
+       * nc_hicosmo_idem2
+       * nc_hicosmo_qconst
+       * nc_hicosmo_qgrw
+       * nc_hicosmo_qlinear
+       * nc_hicosmo_qspline
+
+     4) Added Planck reference in references.bib and references.tex
+
+     5) Added docs in functions from #NcmC:
+       * ncm_c_hubble_cte_planck_base_2018
+       * ncm_c_hubble_radius_hm1_Mpc
+       * ncm_c_crit_number_density_p
+       * ncm_c_crit_number_density_n
+
+ * 1) Changed documentation to the following #NcmC module functions:
+       * ncm_c_wmap5_coadded_I_K
+       * ncm_c_wmap5_coadded_I_Ka
+       * ncm_c_hubble_cte_hst
+
+     2) Added documentation to the following #NcmC module functions:
+       * ncm_c_wmap5_coadded_I_Q
+       * ncm_c_wmap5_coadded_I_V
+       * ncm_c_wmap5_coadded_I_W
+
+ * Added documentation to the following #NcmC modules functions:
+
+        * ncm_c_wmap5_coadded_I_K
+       * ncm_c_wmap5_coadded_I_Ka
+       * ncm_c_hubble_cte_hst
+
+ * Documented function ncm_vector_len.
+
+ * Better expansion for tan(x+d)-tan(x) for small d.
+
+ * Fixed corner case in numcosmo/model/nc_hiprim_atan.c.
+
+ * Fixed MPI in hdf5 incompatibility.
+
+ * Removed update option on homebrew.
+
+ * Fixed error handling, clik returns wrong values when an error occurs (due to a
+     wrong usage of forwardError), to fix this we changed the likelihood to
+     return m2lnL = 1.0e10 whenever clik returns an error.
+
+ * Workaround to fix travis ci bundle issue.
+
+ * Removed wrong free in CLIK_CHECK_ERROR.
+
+ * Updated old m4 files and building system to keep them updated in the m4/
+     folder.
+
+ * New MPI server (in progress). NcDataPlanckLKL no longer kills process when clik
+     returns an error (just sends a warning).
+
+ * Better OpenMP (and others) number of threads control.
+
+ * Finished update to 2018 Planck likelihood (in testing).
+
+ * Updates in the notebook.
+
+ * Fixed sprintf related warnings.
+
+ * Removed typo.
+
+ * Fixing new docs build process...
+
+ * Fixing error messages in plik. Working on doc building process.
+
+ * Fixing new docs build process...
+
+ * Reorganized docs building process.
+
+ * Testing travis-ci on osx.
+
+ * Testing travis-ci on osx.
+
+ * Testing travis-ci on osx.
+
+ * Testing travis osx.
+
+ * Fixed doc typos. Testing travis on osx.
+
+ * Fixed doc in NcDensityProfile. Testing travis ci on osx.
+
+ * Updated sundials to version 5.1.0. Fixed somes tests and updated to TAP.
+
+ * Update MagDustBounce.ipynb from Emmanuel Frion.
+
+ * Minor updates and annotation improvements.
+
+ * Copy all examples in Dockerfile-clmm-jupyter.
+
+ * Updated notebooks and Dockerfile-clmm-jupyter.
+
+ * New parametrization for CSQ1D, updates in BounceVecPert.ipynb and
+     MagDustBounce.ipynb.
+
+ * Several improvements in MagDustBounce.ipynb.
+
+ * New NcHICosmoQRBF model.
+
+ * Added options to logger function to redirect all library logs.
+
+ * Testing CLMM+NumCosmo notebook.
+
+ * Removed debug print.
+
+ * Fixed documentation error.
+
+ * Added missing scipy for CLMM.
+
+ * Added missing Astropy for CLMM.
+
+ * Cloning the right branch from CLMM.
+
+ * Copying examples from CLMM to work.
+
+ * Added COPY from opt.
+
+ * Fixed build script name...
+
+ * Testing different build order.
+
+ * Testing build from git.
+
+ * New Dockerfile for CLMM comparison.
+
+ * Updated to CODATA 2018. Reorganized density profile objets (in progress).
+
+ * Fixed test test_nc_ccl_dist.c, decreased number of tests in test_ncm_fftlog.c
+     and test_ncm_mset_catalog.c. Testing ncm_csq1d.c. Updated
+     binder/Dockerfile.
+
+ * Adding missing notebooks to _DATA.
+
+ * Updated binder notebook.
+
+ * Removed debug messages in CSQ1D.
+
+ * Minor fixes and new notebook.
+
+ * Missing notebooks in Makefile.
+
+ * Updated image used by binder.
+
+ * Tweaking notebooks.
+
+ * Included two notebooks.
+
+ * Testing different methods to deal with zero-crossing mass.
+
+ * New tutorial notebooks.
+
+ * Modifying density profile objects. E.g., including more mass definitions.
+
+ * Using the full SHA hash.
+
+ * Testing a mybinder using a Dockerfile.
+
+ * Testing methods to integrate regular singular points.
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks
+
+ * Testing docker jupyter notebooks.
+
+ * Added support for matplotlib and scipy in the docker image.
+
+ * Updated to python3 on Dockerfile.
+
+ * Working on Dockerfile.
+
+ * Working on Dockerfile.
+
+ * Added necessary dist.prepare to examples.
+
+ * Working on Dockerfile.
+
+ * Working on dockerfile.
+
+ * Updating Dockerfile.
+
+ * Fixed lgamma_r declaration presence test. Fixed glong/gint64 mismatch.
+
+ * Added detection for lgamma_r declaration and workaround when it is not declared
+     but present (usually implemented by the compiler).
+
+ * Fixed many documentation bugs (in most part by adding __GTK_DOC_IGNORE__ to the
+     inline sections).
+
+ * Added the GSL 2.2 guard back to where it was really necessary.
+
+ * Fixing documentation bugs.
+
+ * Removed old GSL guards from tests.
+
+ * Added prepare_ functions on NcWLSurfaceMassDensity object. Added necessary
+     prepare calls to tests.
+
+ * Support for gcc 9 in macos.
+
+ * Added missing header.
+
+ * Fixed inlined sincos to use default c keywords.
+
+ * Changed inline macro to the actual keyword in config_extra.h.
+
+ * Several updates and fixes.
+
+     - Updated config.h, now it includes config_extra.h that contains local
+     compile only functions necessary to NumCosmo.
+     - Updated function_cache to a proper object.
+     - New NcmCSQ1D object that implemest the complex structure quantization
+     method.
+     - New macro to control inlining (Glib's deprecated their).
+     - Updated inlining macro at all necessary headers.
+
+ * Added rcm to ignore list in docs.
+
+ * Added missing CPPFLAGS for HDF5.
+
+ * Testing HDF5 in ubuntu.
+
+ * Fixing missing doc. Testing HDF5 in ubuntu.
+
+ * Fixed bug in preparing a fparams_map with no free variables.
+
+ * Removed fitting test in APS.
+
+ * Testing APS.
+
+ * Fix pitch.
+
+ * Improving edge cases and validation.
+
+ * New validation on mset.
+
+ * Removed old debug/test print in class.
+
+ * Updated and reorganized SNIa catalogs support. Added Pantheon.
+
+ * Working on new Boltzmann code.
+
+ * Working on new Boltzmann code.
+
+ * Set up CI with Azure Pipelines
+
+     [skip ci]
+ * Fix transport vectors.
+
+ * Fixed instrospection tags.
+
+ * Fix email.
+
+ * Updated to new sundials interface.
+
+ * Updated Planck likelihood code (not tested).
+
+ * Minor changes in HIPrimTutorial.ipynb. Updated ccl interface.
+
+ * Minor modifications related to some tests comparing with "Cluster toolkit".
+
+ * New function to update Cls.
+
+ * Minor improvements.
+
+ * Added missing test file.
+
+ * Fixed indentation.
+
+ * New object NcmPowspecCorr3d (for the moment computes the simples 2point
+     function). Moved filter functions from NcPowspecML to NcmPowspec. Improved
+     bounds sync in Halofit.
+
+ * Update README.md
+ * Converting python examples to jupyter notebooks.
+
+ * New Nonlinear Pk tests. Finished nc_powspec_mnl_halofit encapsulation (private
+     members).
+
+ * Fixes xcor to work with sundials 4.0.1.
+
+ * Updating to new sundials API.
+
+ * Updating to the new sundials API.
+
+ * Fixed conditional use of OPENMP (mainly for clang).
+
+ * Fixed merge leftovers.
+
+ * Several improvements in the new Boltzmann code (pre-alpha). Minor fixes.
+
+ * Reorganized the hipert usage of bg_var. Moved gauge enumerator to Grav
+     namespace.
+
+ * Added support for system reordering to lower the bandwidth. New component PB
+     photon-baryon and gravitation Einstein.
+
+ * New abstract class describing first order problems. Fixed enum type names.
+
+ * New abstract class to describe arbitrary perturbation components.
+
+ * First commit of new perturbation module.
+
+
 [v0.14.2]
  * Final tweaks for the v0.14.2 release.
 
