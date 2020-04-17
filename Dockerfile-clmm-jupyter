@@ -48,8 +48,11 @@ WORKDIR /root
 RUN git clone https://github.com/tmcclintock/cluster_toolkit.git
 RUN cd cluster_toolkit && python setup.py install --root=/root
 
-RUN git clone -b master https://github.com/LSSTDESC/CLMM.git
+RUN git clone -b "issue/254/clmm_numcosmo_cmp" https://github.com/LSSTDESC/CLMM.git
 RUN cd CLMM && python setup.py install --root=/root && mkdir -p /root/usr/share/CLMM/examples && cp -rf examples/* /root/usr/share/CLMM/examples
+
+RUN git clone https://bitbucket.org/bdiemer/colossus.git
+RUN cd colossus && python setup.py install --root=/root 
 
 # NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
 RUN cd && mkdir NumCosmo usr
@@ -98,7 +101,7 @@ ENV OMP_NUM_THREADS=1
 ENV OMP_THREAD_LIMIT=1
 ENV GI_TYPELIB_PATH="/usr/lib/girepository-1.0"
 
-RUN cp -rf /usr/share/numcosmo-0.14.2/notebooks/* work/
+RUN cp -rf /usr/share/numcosmo-0.15.0/notebooks/* work/
 RUN cp -rf /usr/share/CLMM/examples/* work/
 
 # Switch back to jovyan to avoid accidental container runs as root

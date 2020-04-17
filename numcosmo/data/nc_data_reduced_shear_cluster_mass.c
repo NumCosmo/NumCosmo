@@ -309,7 +309,7 @@ typedef struct _NcDataReducedShearClusterMassInteg
 	NcDistance *dist;
 	NcHICosmo *cosmo;
 	NcWLSurfaceMassDensity *smd;
-	NcDensityProfile *dp;
+	NcHaloDensityProfile *dp;
 	gdouble z_cluster;
 	gdouble R_Mpc;
 	gdouble dt_cluster;
@@ -362,7 +362,7 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
   NcHICosmo *cosmo              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd   = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcDensityProfile *dp          = NC_DENSITY_PROFILE (ncm_mset_peek (mset, nc_density_profile_id ()));
+  NcHaloDensityProfile *dp      = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
 	NcReducedShearClusterMass *rs = NC_REDUCED_SHEAR_CLUSTER_MASS (ncm_mset_peek (mset, nc_reduced_shear_cluster_mass_id ()));
 	NcReducedShearCalib *rs_calib = NC_REDUCED_SHEAR_CALIB (ncm_mset_peek (mset, nc_reduced_shear_calib_id ()));
 	const guint ngal              = self->photoz_array->len;
@@ -416,7 +416,8 @@ _nc_data_reduced_shear_cluster_mass_m2lnL_val (NcmData *data, NcmMSet *mset, gdo
 
 		const gdouble z_gal       = nc_galaxy_redshift_mode (gz);
 
-		if (R_Mpc < 0.75 || R_Mpc > 3.0 || z_gal < self->z_cluster + 0.1 || z_gal > 1.25)
+    /* FIXME: need improvement! */
+		if (R_Mpc < 0.75 || R_Mpc > 3.0 || z_gal < self->z_cluster + 0.1)
 		{
 			//printf ("r_arcmin = %.5g R_Mpc = %.5g\n", r_arcmin, R_Mpc);
 			//printf ("z_gal = %.5g\n", z_gal);
@@ -482,14 +483,13 @@ _nc_data_reduced_shear_cluster_mass_prepare (NcmData *data, NcmMSet *mset)
 	NcDataReducedShearClusterMassPrivate * const self = drs->priv;
 	NcHICosmo *cosmo              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd   = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcDensityProfile *dp          = NC_DENSITY_PROFILE (ncm_mset_peek (mset, nc_density_profile_id ()));
+  NcHaloDensityProfile *dp      = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   NcReducedShearClusterMass *rs = NC_REDUCED_SHEAR_CLUSTER_MASS (ncm_mset_peek (mset, nc_reduced_shear_cluster_mass_id ()));
 	
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL) && (rs != NULL));
 
   nc_distance_prepare_if_needed (self->dist, cosmo);
 }
-
 
 /**
  * nc_data_reduced_shear_cluster_mass_new:
