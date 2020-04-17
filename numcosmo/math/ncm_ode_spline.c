@@ -26,9 +26,9 @@
 /**
  * SECTION:ncm_ode_spline
  * @title: NcmOdeSpline
- * @short_description: Automatic generation of splines from ODE solvers.
- *
- * FIXME
+ * @short_description: Automatic generation of splines from ODE solvers (#NcmODE).
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_ode_spline.h
  *
  */
 
@@ -276,6 +276,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   object_class->dispose      = &_ncm_ode_spline_dispose;
   object_class->finalize     = &_ncm_ode_spline_finalize;
   
+ /**   
+   * NcmOdeSpline:reltol:
+   *
+   * #NcmODE integrator's relative tolerance. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -284,6 +290,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:abs:
+   *
+   * #NcmODE integrator's absolute tolerance. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
                                    g_param_spec_double ("abs",
@@ -292,6 +304,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_ABSTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:xi:
+   *
+   * The initial point to integrate the ode. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_XI,
                                    g_param_spec_double ("xi",
@@ -300,6 +318,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:xf:
+   *
+   * The final point to integrate the ode. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_XF,
                                    g_param_spec_double ("xf",
@@ -308,6 +332,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:yi:
+   *
+   * The initial value of the function to be evaluated. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_YI,
                                    g_param_spec_double ("yi",
@@ -316,6 +346,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:yf:
+   *
+   * The final value of the function to be evaluated. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_YF,
                                    g_param_spec_double ("yf",
@@ -324,12 +360,24 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+ /**   
+   * NcmOdeSpline:dydx:
+   *
+   * A pointer to the dydx function, a.k.a. the jacobian. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_DYDX,
                                    g_param_spec_pointer ("dydx",
                                                          NULL,
                                                          "Pointer to the dydx function",
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**   
+   * NcmOdeSpline:spline:
+   *
+   * The spline algorithm to be used. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_SPLINE,
                                    g_param_spec_object ("spline",
@@ -337,6 +385,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Spline algorithm to be used",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**   
+   * NcmOdeSpline:stop-hnil:
+   *
+   * Whether treat hnil as error. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_STOP_HNIL,
                                    g_param_spec_boolean ("stop-hnil",
@@ -344,6 +398,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          "Whether treat hnil as error",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**   
+   * NcmOdeSpline:auto-abstol:
+   *
+   * Boolean to set whether or not the absolute tolerance is going to be estimated internally by the ode integrator. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_AUTO_ABSTOL,
                                    g_param_spec_boolean ("auto-abstol",
@@ -351,6 +411,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          "Automatic abstol",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**   
+   * NcmOdeSpline:ini-step:
+   *
+   * The integration initial step size. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_INI_STEP,
                                    g_param_spec_double ("ini-step",
@@ -376,9 +442,9 @@ _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
  * @s: a #NcmSpline
  * @dydx: (scope notified): a #NcmOdeSplineDydx
  *
- * FIXME
+ * This function creates a new #NcmOdeSpline. 
  *
- * Returns: FIXME
+ * Returns: a new #NcmOdeSpline.
  */
 NcmOdeSpline *
 ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
@@ -395,13 +461,13 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
  * ncm_ode_spline_new_full:
  * @s: a #NcmSpline
  * @dydx: (scope notified): a #NcmOdeSplineDydx
- * @yi: FIXME
- * @xi: FIXME
- * @xf: FIXME
+ * @yi: initial value of the function to be evaluated 
+ * @xi: initial point to integrate the edo
+ * @xf: final point to integrate the edo
  *
- * FIXME
+ * This function creates a new #NcmOdeSpline setting all its members.
  *
- * Returns: FIXME
+ * Returns: a new #NcmOdeSpline. 
  */
 NcmOdeSpline *
 ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf)
@@ -431,9 +497,9 @@ _ncm_ode_spline_yf_root (realtype lambda, N_Vector y, realtype *gout, gpointer u
 /**
  * ncm_ode_spline_prepare:
  * @os: a #NcmOdeSpline
- * @userdata: (closure): FIXME
+ * @userdata: (closure): ode additional parameters 
  *
- * FIXME
+ * This function prepares the #NcmOdeSpline @os and fills its internal #NcmSpline with the evaluated ode's solution. 
  */
 void
 ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
@@ -584,7 +650,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
  * ncm_ode_spline_free:
  * @os: a #NcmOdeSpline
  *
- * FIXME
+ * Decreases the reference count of @os by one. 
  */
 void
 ncm_ode_spline_free (NcmOdeSpline *os)
@@ -596,7 +662,8 @@ ncm_ode_spline_free (NcmOdeSpline *os)
  * ncm_ode_spline_clear:
  * @os: a #NcmOdeSpline
  *
- * FIXME
+ * Atomically decrements the reference count of @os by one. If the reference count drops to 0, all memory allocated by @os is released. The pointer is set to NULL.
+ *
  */
 void
 ncm_ode_spline_clear (NcmOdeSpline **os)
@@ -607,11 +674,11 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
 /**
  * ncm_ode_spline_set_interval:
  * @os: a #NcmOdeSpline
- * @yi: FIXME
- * @xi: FIXME
- * @xf: FIXME
+ * @yi: initial value of the function to be evaluated 
+ * @xi: initial point to integrate the edo
+ * @xf: final point to integrate the edo
  *
- * FIXME
+ * This function sets @os interval [@xi, @xf] and initial value @yi in order to integrate the ode.
  *
  */
 void
@@ -627,9 +694,9 @@ ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble x
 /**
  * ncm_ode_spline_set_reltol:
  * @os: a #NcmOdeSpline
- * @reltol: FIXME
+ * @reltol: relative tolerance of the ode integrator 
  *
- * FIXME
+ * This functions sets the relative tolerance (@reltol) of the edo integrator. 
  *
  */
 void
@@ -643,9 +710,9 @@ ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol)
 /**
  * ncm_ode_spline_set_abstol:
  * @os: a #NcmOdeSpline
- * @abstol: FIXME
+ * @abstol: absolute tolerance of the ode integrator  
  *
- * FIXME
+ * This functions sets the absolute error (@abstol) of the edo integrator.  
  *
  */
 void
@@ -659,9 +726,9 @@ ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
 /**
  * ncm_ode_spline_set_xi:
  * @os: a #NcmOdeSpline
- * @xi: FIXME
+ * @xi: initial point to integrate the edo 
  *
- * FIXME
+ * This function sets the initial point (@xi) to integrate the edo.
  *
  */
 void
@@ -675,9 +742,10 @@ ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi)
 /**
  * ncm_ode_spline_set_xf:
  * @os: a #NcmOdeSpline
- * @xf: FIXME
+ * @xf: final point to integrate the edo 
  *
- * FIXME
+ * This function sets the final point (@xf) to integrate the edo. 
+ * Note that if @yf is also set, @yf will take precedence.
  *
  */
 void
@@ -694,9 +762,9 @@ ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
 /**
  * ncm_ode_spline_set_yi:
  * @os: a #NcmOdeSpline
- * @yi: FIXME
+ * @yi: initial value of the function to be evaluated  
  *
- * FIXME
+ * This function sets the initial value of the function to be evaluated. 
  *
  */
 void
@@ -710,9 +778,11 @@ ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
 /**
  * ncm_ode_spline_set_yf:
  * @os: a #NcmOdeSpline
- * @yf: FIXME
+ * @yf: final value of the function to be evaluated 
  *
- * FIXME
+ * This function sets the final value of the function to be evaluated. 
+ * When @yf is reached, the edo's integration is stopped. 
+ * Note that if @xf is also set, @yf will take precedence.
  *
  */
 void
