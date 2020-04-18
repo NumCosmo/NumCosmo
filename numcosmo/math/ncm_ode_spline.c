@@ -291,14 +291,14 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
  /**   
-   * NcmOdeSpline:abs:
+   * NcmOdeSpline:abstol:
    *
    * #NcmODE integrator's absolute tolerance. 
    * 
    */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
-                                   g_param_spec_double ("abs",
+                                   g_param_spec_double ("abstol",
                                                         NULL,
                                                         "Absolute tolerance",
                                                         0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_ABSTOL,
@@ -678,7 +678,7 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
  * @xi: initial point to integrate the edo
  * @xf: final point to integrate the edo
  *
- * This function sets @os interval [@xi, @xf] and initial value @yi in order to integrate the ode.
+ * This function sets @os interval [@xi, @xf] and its initial value @yi in order to integrate the ode.
  *
  */
 void
@@ -696,7 +696,7 @@ ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble x
  * @os: a #NcmOdeSpline
  * @reltol: relative tolerance of the ode integrator 
  *
- * This functions sets the relative tolerance (@reltol) of the edo integrator. 
+ * This functions sets the relative tolerance, @reltol, of the edo integrator. 
  *
  */
 void
@@ -712,7 +712,7 @@ ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol)
  * @os: a #NcmOdeSpline
  * @abstol: absolute tolerance of the ode integrator  
  *
- * This functions sets the absolute error (@abstol) of the edo integrator.  
+ * This functions sets the absolute tolerance, @abstol, of the edo integrator.  
  *
  */
 void
@@ -728,7 +728,7 @@ ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
  * @os: a #NcmOdeSpline
  * @xi: initial point to integrate the edo 
  *
- * This function sets the initial point (@xi) to integrate the edo.
+ * This function sets the initial point, @xi, to integrate the edo.
  *
  */
 void
@@ -744,7 +744,7 @@ ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi)
  * @os: a #NcmOdeSpline
  * @xf: final point to integrate the edo 
  *
- * This function sets the final point (@xf) to integrate the edo. 
+ * This function sets the final point, @xf, to integrate the edo. 
  * Note that if @yf is also set, @yf will take precedence.
  *
  */
