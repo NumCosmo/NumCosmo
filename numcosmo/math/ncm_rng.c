@@ -26,10 +26,14 @@
 /**
  * SECTION:ncm_rng
  * @title: NcmRNG 
- * @short_description: Encapsulated GSL random number generator with support for multhreading.
+ * @short_description: Encapsulated [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/) random number generator with support for multhreading.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_rng.h
  *
- * This object encapsulates the GSL pseudo random number generator (PRNG). The purpose is to
- * add support for saving and loading state and multhreading.
+ * This object encapsulates the [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/) pseudo random number generator (PRNG). 
+ * Its main purpose is to add support for saving and loading state and multhreading. 
+ * For more information about the GSL routines see both links: [random number generation](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generation) 
+ * and [random number distributions](https://www.gnu.org/software/gsl/doc/html/randist.html#random-number-distributions).
  * 
  */
 
@@ -140,6 +144,13 @@ ncm_rng_class_init (NcmRNGClass *klass)
   object_class->set_property = &_ncm_rng_set_property;
   object_class->get_property = &_ncm_rng_get_property;
 
+ /**   
+   * NcmRNG:algorithm:
+   *
+   * The name of the pseudo random number algorithm to be used from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/). 
+   * A list of the available algorithms can be find [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms). 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_ALGO,
                                    g_param_spec_string ("algorithm",
@@ -147,6 +158,12 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         "Algorithm name",
                                                         gsl_rng_default->name,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**   
+   * NcmRNG:seed:
+   *
+   * Pseudo random number algorithm seed. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_SEED,
                                    g_param_spec_ulong ("seed",
@@ -155,6 +172,12 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         0, G_MAXULONG, 0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+ /**   
+   * NcmRNG:state:
+   *
+   * Pseudo random number algorithm state. 
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_STATE,
                                    g_param_spec_string ("state",
@@ -171,13 +194,12 @@ ncm_rng_class_init (NcmRNGClass *klass)
 
 /**
  * ncm_rng_new:
- * @algo: (allow-none): algorithm name. 
+ * @algo: (allow-none): algorithm name 
  * 
- * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
- * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
- * If @algo is NULL the default algorithm and seed are used, see 
- * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html\#Random-number-environment-variables )
- * for more details.
+ * Creates a new #NcmRNG using the algorithm @algo. 
+ * See the list of algorithms [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
+ * If @algo is NULL the default algorithm and seed are used. 
+ * See this [link](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-environment-variables) for more details.
  * 
  * Returns: (transfer full): a new #NcmRNG.
  */
@@ -192,14 +214,13 @@ ncm_rng_new (const gchar *algo)
 
 /**
  * ncm_rng_seeded_new:
- * @algo: (allow-none): algorithm name. 
- * @seed: seed used to initialize the PRNG.
+ * @algo: (allow-none): algorithm name 
+ * @seed: seed used to initialize the PRNG
  * 
- * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
- * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
- * If @algo is NULL the default algorithm is used, see 
- * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html\#Random-number-environment-variables )
- * for more details.
+ * Creates a new #NcmRNG using the algorithm @algo. 
+ * See the list of algorithms [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
+ * If @algo is NULL the default algorithm is used. 
+ * See this [link](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-environment-variables) for more details.
  * 
  * Returns: (transfer full): a new #NcmRNG.
  */
@@ -215,7 +236,7 @@ ncm_rng_seeded_new (const gchar *algo, gulong seed)
 
 /**
  * ncm_rng_ref:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Increases the reference count of @rng by one.
  * 
@@ -229,7 +250,7 @@ ncm_rng_ref (NcmRNG *rng)
 
 /**
  * ncm_rng_free:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Decreases the reference count of @rng by one.
  * 
@@ -242,7 +263,7 @@ ncm_rng_free (NcmRNG *rng)
 
 /**
  * ncm_rng_clear:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Decreases the reference count of *@rng by one and sets *@rng to NULL.
  * 
@@ -255,7 +276,7 @@ ncm_rng_clear (NcmRNG **rng)
 
 /**
  * ncm_rng_lock:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Locks @rng.
  * 
@@ -268,7 +289,7 @@ ncm_rng_lock (NcmRNG *rng)
 
 /**
  * ncm_rng_unlock:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Unlocks @rng.
  * 
@@ -281,7 +302,7 @@ ncm_rng_unlock (NcmRNG *rng)
 
 /**
  * ncm_rng_get_algo:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
  * Gets the name of the algorithm.
  * 
@@ -295,10 +316,10 @@ ncm_rng_get_algo (NcmRNG *rng)
 
 /**
  * ncm_rng_get_state:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
- * Gets the state of the algorithm in Base64. It can be a very large string
- * depending on the underlining 
+ * Gets the state of the algorithm in [Base64](https://en.wikipedia.org/wiki/Base64). 
+ * It can be a very large string depending on the underlining state.
  * 
  * Returns: (transfer full): algorithm state.
  */
@@ -312,10 +333,10 @@ ncm_rng_get_state (NcmRNG *rng)
 
 /**
  * ncm_rng_set_algo:
- * @rng: a #NcmRNG. 
- * @algo: algorithm name.
+ * @rng: a #NcmRNG 
+ * @algo: algorithm name
  * 
- * Sets the algorithm.
+ * Sets the PRNG algorithm.
  * 
  */
 void 
@@ -356,10 +377,10 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
 
 /**
  * ncm_rng_set_state:
- * @rng: a #NcmRNG. 
- * @state: algorithm state.
+ * @rng: a #NcmRNG 
+ * @state: algorithm state
  * 
- * Sets the algorithm state.
+ * Sets the PRNG algorithm state.
  * 
  */
 void 
@@ -378,12 +399,12 @@ ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 
 /**
  * ncm_rng_check_seed:
- * @rng: a #NcmRNG. 
- * @seed: seed for the PRNG.
+ * @rng: a #NcmRNG 
+ * @seed: seed for the PRNG
  * 
  * Check if the seed was already used by any #NcmRNG. 
  * 
- * Returns: TRUE is @seed was never used.
+ * Returns: TRUE if @seed was never used and FALSE otherwise.
  */
 gboolean
 ncm_rng_check_seed (NcmRNG *rng, gulong seed)
@@ -396,10 +417,10 @@ ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 
 /**
  * ncm_rng_set_seed:
- * @rng: a #NcmRNG. 
- * @seed: seed for the PRNG.
+ * @rng: a #NcmRNG 
+ * @seed: seed for the PRNG
  * 
- * Sets the algorithm seed. 
+ * Sets the PRNG algorithm seed. 
  * 
  */
 void 
@@ -418,9 +439,11 @@ ncm_rng_set_seed (NcmRNG *rng, gulong seed)
 
 /**
  * ncm_rng_get_seed:
- * @rng: a #NcmRNG. 
+ * @rng: a #NcmRNG 
  * 
- * Returns: the seed used to initialize the PRNG.
+ * This functions returns the seed used to initialize the PRNG.
+ *
+ * Returns: @rng's @seed.
  * 
  */
 gulong 
@@ -431,13 +454,12 @@ ncm_rng_get_seed (NcmRNG *rng)
 
 /**
  * ncm_rng_set_random_seed:
- * @rng: a #NcmRNG.
- * @allow_colisions: a gboolean.
+ * @rng: a #NcmRNG
+ * @allow_colisions: a gboolean
  * 
  * Sets the algorithm seed using a PRNG seeded by /dev/urandom (Unix/Linux)
- * or current time  when the first is not available (see #g_rand_new()). If
- * @allow_colisions is FALSE this function will set the first unused seed
- * generated.
+ * or current time, when the first is not available (see #g_rand_new()). 
+ * If @allow_colisions is FALSE this function will set the first unused seed generated.
  * 
  */
 void 
@@ -454,10 +476,10 @@ static GHashTable *rng_table = NULL;
 
 /**
  * ncm_rng_pool_get:
- * @name: a string.
+ * @name: a string
  * 
- * Gets the #NcmRNG named @name from the pool. If it doesn't exists creates
- * one, add to the pool and returns it.
+ * Gets the #NcmRNG named @name from the pool. 
+ * If it doesn't exists, it creates one, add it to the pool and returns it.
  * 
  * Returns: (transfer full): the #NcmRNG named @name.
  */
@@ -500,70 +522,104 @@ ncm_rng_pool_get (const gchar *name)
 /**
  * ncm_rng_uniform_gen:
  * @rng: a #NcmRNG
- * @xl: FIXME
- * @xu: FIXME
+ * @xl: lower value 
+ * @xu: upper value
  * 
- * FIXME
+ * This functions returns a random number drawn from the  
+ * uniform distribution between the values @xl and @xu.
  * 
+ * Returns: a random number from the uniform distribution. 
  */
 /**
  * ncm_rng_gaussian_gen:
  * @rng: a #NcmRNG
- * @mu: FIXME
- * @sigma: FIXME
+ * @mu: mean 
+ * @sigma: standard deviation
  * 
- * FIXME
+ * This function returns a random number drawn from the 
+ * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution), 
+ * with mean @mu and standard deviation @sigma. 
  * 
+ * Returns: a random number from the Gaussian distribution. 
+ */
+/**
+ * ncm_rng_ugaussian_gen:
+ * @rng: a #NcmRNG
+ * 
+ * This function returns a random number drwan from the 
+ * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution), 
+ * with mean zero and standard deviation one. 
+ * Equivalent as above but with @mean = 0 and @sigma = 1. 
+ * 
+ * Returns: a random number from the Gaussian distribution.
  */
 /**
  * ncm_rng_gaussian_tail_gen:
  * @rng: a #NcmRNG
- * @a: FIXME
- * @sigma: FIXME
+ * @a: positive lower limit 
+ * @sigma: standard deviation
  * 
- * FIXME
+ * This function returns a random number drawn from the upper tail of the 
+ * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution) with standard deviation @sigma. 
+ * The value returned is larger than the lower limit @a, which must be positive.
  * 
+ * Returns: a random number from the Gaussian distribution tail.
  */
 /**
  * ncm_rng_exponential_gen:
  * @rng: a #NcmRNG
- * @mu: FIXME
+ * @mu: scale parameter 
  * 
- * FIXME
+ * This function returns a random number drawn from the 
+ * [exponential distribution](https://en.wikipedia.org/wiki/Exponential_distribution)
+ * with scale parameter (mean) @mu.
  * 
+ * Returns: a random number from the exponential distribution.
  */
 /**
  * ncm_rng_laplace_gen:
  * @rng: a #NcmRNG
- * @a: FIXME
+ * @a: width of the distribution 
  * 
- * FIXME
+ * This function returns a random number drawn from the 
+ * [Laplace distribution](https://en.wikipedia.org/wiki/Laplace_distribution)
+ * with width @a. 
  * 
+ * Returns: a random number from the Laplace distribution.
  */
 /**
  * ncm_rng_exppow_gen:
  * @rng: a #NcmRNG
- * @a: FIXME
- * @b: FIXME
+ * @a: scale parameter 
+ * @b: exponent
  * 
- * FIXME
- * 
+ * This function returns a random number drawn from the 
+ * [exponential power distribution](https://en.wikipedia.org/wiki/Generalized_normal_distribution#Version_1) 
+ * with scale parameter @a and exponent @b. 
+ *
+ * Returns: a random number from the exponential power distribution.
  */
 /**
  * ncm_rng_beta_gen:
  * @rng: a #NcmRNG
- * @a: FIXME
- * @b: FIXME
+ * @a: shape parameter 
+ * @b: shape parameter
  * 
- * FIXME
- * 
+ * This function returns a random number drawn from the 
+ * [beta distribution](https://en.wikipedia.org/wiki/Beta_distribution)
+ * with shape parameters @a and @b. The shape parameters must be positive.
+ *
+ * Returns: a random number from the beta distribution.
  */
 /**
  * ncm_rng_gamma_gen:
  * @rng: a #NcmRNG
- * @a: FIXME
- * @b: FIXME
+ * @a: shape parameter 
+ * @b: scale parameter
  * 
- * FIXME
+ * This function returns a random number drawn from the
+ * [gamma distribution](https://en.wikipedia.org/wiki/Gamma_distribution) 
+ * with shape parameter @a and scale parameter @b.
  * 
+ * Returns: a random number from the gamma distribution.
  */
