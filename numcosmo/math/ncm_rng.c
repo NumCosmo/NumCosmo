@@ -27,7 +27,7 @@
 /**
  * SECTION:ncm_rng
  * @title: NcmRNG
- * @short_description: Encapsulated [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/) random number generator with support for multhreading.
+ * @short_description: Encapsulated GNU Scientific Library (GSL) random number generator with support for multhreading.
  * @stability: Stable
  * @include: numcosmo/math/ncm_rng.h
  *
