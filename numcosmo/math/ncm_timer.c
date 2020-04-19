@@ -27,8 +27,15 @@
  * SECTION:ncm_timer
  * @title: NcmTimer
  * @short_description: A timer with ETA support.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_timer.h
  *
- * FIXME
+ *
+ * This object has several functions to track time, 
+ * with the availability to be devided in several tasks.
+ * Also it provides two different formats: 
+ * the default is time in seconds but also have date plus time.
+ * All with estimated time of accomplishment (ETA) support.  
  * 
  */
 
@@ -154,7 +161,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:name:
    *
-   * Timer's name.
+   * The timer's name.
    * 
    */
   g_object_class_install_property (object_class,
@@ -168,7 +175,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:task-len:
    *
-   * Length of the current task.
+   * The length of the current task.
    * 
    */
   g_object_class_install_property (object_class,
@@ -181,7 +188,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:task-pos:
    *
-   * Position of the current task, varying from [0, #NcmTimer:task-len - 1]
+   * The Position of the current task, varying from [0, #NcmTimer:task-len - 1]
    * 
    */
   g_object_class_install_property (object_class,
@@ -196,9 +203,9 @@ ncm_timer_class_init (NcmTimerClass *klass)
 /**
  * ncm_timer_new:
  * 
- * FIXME
+ * This function creates a new #NcmTimer. 
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmTimer.
  */
 NcmTimer *
 ncm_timer_new (void)
@@ -209,11 +216,12 @@ ncm_timer_new (void)
 
 /**
  * ncm_timer_ref:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * Increases the reference count of @nt by one.
+ *
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @nt. 
  */
 NcmTimer *
 ncm_timer_ref (NcmTimer *nt)
@@ -223,9 +231,9 @@ ncm_timer_ref (NcmTimer *nt)
 
 /**
  * ncm_timer_free:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * Decreases the reference count of @nt by one.
  * 
  */
 void
@@ -236,9 +244,9 @@ ncm_timer_free (NcmTimer *nt)
 
 /**
  * ncm_timer_clear:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * Decreases the reference count of *@nt by one and sets *@nt to NULL. 
  * 
  */
 void
@@ -249,10 +257,10 @@ ncm_timer_clear (NcmTimer **nt)
 
 /**
  * ncm_timer_set_name:
- * @nt: FIXME
- * @name: FIXME
+ * @nt: a #NcmTimer 
+ * @name: a string
  * 
- * FIXME
+ * This functions set the named @name to the @nt #NcmTimer. 
  * 
  */
 void 
@@ -265,11 +273,15 @@ ncm_timer_set_name (NcmTimer *nt, const gchar *name)
 
 /**
  * ncm_timer_elapsed:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * If @nt timer has been started but not stopped, obtains the time since the timer was started. 
+ * If timer has been stopped, obtains the elapsed time between the time it was started and the time it was stopped. 
+ * The return value is the number of seconds elapsed, including any fractional part.
+ * This function applies [g_timer_elapsed()](https://developer.gnome.org/glib/stable/glib-Timers.html#g-timer-elapsed)
+ * from [Glib](https://developer.gnome.org/glib/).
  * 
- * Returns: FIXME
+ * Returns: seconds elapsed as a floating point value, including any fractional part. 
  */
 gdouble
 ncm_timer_elapsed (NcmTimer *nt)
@@ -309,14 +321,15 @@ _ncm_timer_dhms_to_string (GString *s, guint elap_day, guint elap_hour, guint el
 
 /**
  * ncm_timer_elapsed_dhms:
- * @nt: FIXME
- * @elap_day: (out): FIXME   
- * @elap_hour: (out): FIXME   
- * @elap_min: (out): FIXME   
- * @elap_sec: (out): FIXME   
+ * @nt: a #NcmTimer  
+ * @elap_day: (out): elapsed days 
+ * @elap_hour: (out): elapsed hours
+ * @elap_min: (out): elapsed minutes
+ * @elap_sec: (out): elapsed seconds
  * 
- * FIXME
- * 
+ * The this function returns the same information as above, but now the format is in days, hours, minutes and seconds. 
+ * Those information are passed by the variables @elap_day, @elap_hour, @elap_min and @elap_sec, respectively.
+ *
  */
 void
 ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *elap_min, gdouble *elap_sec)
@@ -327,11 +340,11 @@ ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *
 
 /**
  * ncm_timer_elapsed_dhms_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * Similar as the function above, but now the resulted time elapsed is returned in a string format.
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a string. 
  */
 gchar *
 ncm_timer_elapsed_dhms_str (NcmTimer *nt)
@@ -345,9 +358,9 @@ ncm_timer_elapsed_dhms_str (NcmTimer *nt)
 
 /**
  * ncm_timer_start:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function starts @nt timer. @nt must not have a task running. 
  * 
  */
 void
@@ -360,9 +373,9 @@ ncm_timer_start (NcmTimer *nt)
 
 /**
  * ncm_timer_stop:
- * @nt: FIXME
+ * @nt: a #NcmTimer  
  * 
- * FIXME
+ * This function stop @nt timer. @nt must not have a task running.
  * 
  */
 void
@@ -375,9 +388,9 @@ ncm_timer_stop (NcmTimer *nt)
 
 /**
  * ncm_timer_continue:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function continues @nt timer. @nt must not have a task running.
  * 
  */
 void
@@ -390,10 +403,12 @@ ncm_timer_continue (NcmTimer *nt)
 
 /**
  * ncm_timer_task_start:
- * @nt: FIXME
- * @task_len: FIXME
+ * @nt: a #NcmTimer 
+ * @task_len: number of task
  * 
- * FIXME
+ * This function starts a task at @nt with lenght @task_len.
+ * @nt must not have a task already assigned to it.
+ * @task_len must be bigger than 0, @task_len>0. 
  * 
  */
 void
@@ -414,9 +429,10 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
 
 /**
  * ncm_timer_task_increment:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function increment @nt task by one.
+ * The final task ID must be greater than the task length defined by ncm_timer_task_start ().
  * 
  */
 void
@@ -439,11 +455,11 @@ ncm_timer_task_increment (NcmTimer *nt)
 
 /**
  * ncm_timer_task_accumulate:
- * @nt: FIXME
- * @nitens: FIXME
+ * @nt: a #NcmTimer
+ * @nitens: number of itens to include in the task
  * 
- * FIXME
- * 
+ * This function takes a task already created and divids it in @nitens.
+ * The number of @nitens must not exceed the length of the original task. 
  */
 void
 ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
@@ -466,10 +482,10 @@ ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
 
 /**
  * ncm_timer_task_estimate_by_time:
- * @nt: FIXME
+ * @nt: a #NcmTimer
  * @sec: time in seconds
  * 
- * Estimate how many task points would take @sec seconds.
+ * This function estimate how many task points would take @sec seconds.
  * 
  * Returns: the estimated number of points.
  */
@@ -481,9 +497,10 @@ ncm_timer_task_estimate_by_time (NcmTimer *nt, gdouble sec)
 
 /**
  * ncm_timer_task_pause:
- * @nt: FIXME
+ * @nt: a #NcmTimer
  * 
- * FIXME
+ * This function pauses a @nt task.
+ * The @nt task length must be greater than 0.
  * 
  */
 void
@@ -495,9 +512,10 @@ ncm_timer_task_pause (NcmTimer *nt)
 
 /**
  * ncm_timer_task_continue:
- * @nt: FIXME
+ * @nt: a #NcmTimer
  * 
- * FIXME
+ * This function resumes a @nt task. 
+ * The @nt task length must be greater than 0.
  * 
  */
 void
@@ -509,10 +527,11 @@ ncm_timer_task_continue (NcmTimer *nt)
 
 /**
  * ncm_timer_task_add_tasks:
- * @nt: FIXME
- * @ptasks: FIXME
+ * @nt: a #NcmTimer 
+ * @ptasks: number of taks to be added
  * 
- * FIXME
+ * This function adds @ptasks to @nt. 
+ * The @nt task length must be greater than 0.
  * 
  */
 void
@@ -524,9 +543,9 @@ ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks)
 
 /**
  * ncm_timer_task_is_running:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This functions verify if @nt has a task already running. 
  * 
  */
 gboolean
@@ -537,9 +556,10 @@ ncm_timer_task_is_running (NcmTimer *nt)
 
 /**
  * ncm_timer_task_end:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function ends @nt task.
+ * The @nt task length must be greater than 0.
  * 
  */
 gboolean
@@ -555,11 +575,11 @@ ncm_timer_task_end (NcmTimer *nt)
 
 /**
  * ncm_timer_task_mean_time:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function returns the mean time between all @nt task.
  * 
- * Returns: FIXME
+ * Returns: @nt tasks mean time. 
  */
 gdouble 
 ncm_timer_task_mean_time (NcmTimer *nt)
@@ -569,11 +589,11 @@ ncm_timer_task_mean_time (NcmTimer *nt)
 
 /**
  * ncm_timer_task_time_left:
- * @nt: FIXME
+ * @nt: a #NcmTimer  
  * 
- * FIXME
+ * This function calculates the time for the remaining tasks of @nt. 
  * 
- * Returns: FIXME
+ * Returns: tasks time left.
  */
 gdouble 
 ncm_timer_task_time_left (NcmTimer *nt)
@@ -585,11 +605,13 @@ ncm_timer_task_time_left (NcmTimer *nt)
 
 /**
  * ncm_timer_task_elapsed_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer  
  * 
- * FIXME
- * 
- * Returns: (transfer none): FIXME
+ * This function returns a string wiht the time needed 
+ * to complete the tasks until the program reaches it. 
+ * The @nt task length must be greater than 0.
+ *
+ * Returns: (transfer none): a string. 
  */
 const gchar *
 ncm_timer_task_elapsed_str (NcmTimer *nt)
@@ -610,11 +632,11 @@ ncm_timer_task_elapsed_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_mean_time_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer  
  * 
- * FIXME
- * 
- * Returns: (transfer none): FIXME
+ * This function returns astring with the average time to go through each task. 
+ *
+ * Returns: (transfer none): a string. 
  */
 const gchar *
 ncm_timer_task_mean_time_str (NcmTimer *nt)
@@ -642,11 +664,11 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_time_left_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function returns a string with the time left to execute the remaining tasks. 
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a string.
  */
 const gchar *
 ncm_timer_task_time_left_str (NcmTimer *nt)
@@ -676,11 +698,11 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_start_datetime_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function returns a string wiht the start time of the @nt task in date plus time format. 
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a string.
  */
 const gchar *
 ncm_timer_task_start_datetime_str (NcmTimer *nt)
@@ -702,11 +724,11 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_end_datetime_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function returns a string with the end time of the @nt task in date plus time format.
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a string. 
  */
 const gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
@@ -737,11 +759,11 @@ ncm_timer_task_end_datetime_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_cur_datetime_str:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function returns a string with the current time of the @nt task in date plus time format.
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a string.
  */
 const gchar *
 ncm_timer_task_cur_datetime_str (NcmTimer *nt)
@@ -761,9 +783,9 @@ ncm_timer_task_cur_datetime_str (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_elapsed:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function log the time elapsed through all @nt's tasks. 
  * 
  */
 void 
@@ -775,9 +797,9 @@ ncm_timer_task_log_elapsed (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_mean_time:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function log the mean time elapsed of each of the @nt tasks.  
  * 
  */
 void 
@@ -789,9 +811,9 @@ ncm_timer_task_log_mean_time (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_time_left:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function log the time left of the @nt's remaining tasks.  
  * 
  */
 void 
@@ -803,9 +825,9 @@ ncm_timer_task_log_time_left (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_start_datetime:
- * @nt: FIXME
+ * @nt: a #NcmTimer  
  * 
- * FIXME
+ * This function log the start time of the @nt's tasks in date plus time format.
  * 
  */
 void 
@@ -817,9 +839,9 @@ ncm_timer_task_log_start_datetime (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_cur_datetime:
- * @nt: FIXME
+ * @nt: a #NcmTimer 
  * 
- * FIXME
+ * This function log the current time of the @nt's tasks in date plus time format.
  * 
  */
 void 
@@ -831,9 +853,9 @@ ncm_timer_task_log_cur_datetime (NcmTimer *nt)
 
 /**
  * ncm_timer_task_log_end_datetime:
- * @nt: FIXME
+ * @nt: a #NcmTimer
  * 
- * FIXME
+ * This function log the end time of the @nt's tasks in date plus time format.
  * 
  */
 void 
