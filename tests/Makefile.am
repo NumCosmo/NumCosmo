@@ -1,5 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
+# gcov support
+include $(top_srcdir)/aminclude_static.am
+
 include $(top_srcdir)/glib-tap.mk
 
 MY_CFLAGS = \
