@@ -56,10 +56,10 @@ struct _NcDistanceClass
 
 /**
  * NcDistanceComovingMethod:
- * @NC_DISTANCE_COMOVING_METHOD_INT_E: FIXME
- * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: FIXME
+ * @NC_DISTANCE_COMOVING_METHOD_INT_E: performs a numerical evaluation. 
+ * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: uses the method defined by the implementation of #NcHICosmo.
  *
- * FIXME
+ * Enumeration to define which method to be applied in order to compute the cosmological distances. 
  * 
  */
 typedef enum _NcDistanceComovingMethod
@@ -129,7 +129,6 @@ gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo);
-gdouble nc_distance_Omega_k0 (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
