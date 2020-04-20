@@ -368,7 +368,7 @@ nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb)
   }
 }
 
-static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
+static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
  * nc_distance_prepare:
@@ -401,7 +401,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
       NcmSpline *s = ncm_spline_cubic_notaknot_new ();
       
       dist->comoving_distance_spline =
-        ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->zf);
+        ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
       
       ncm_spline_free (s);
     }
@@ -447,7 +447,7 @@ nc_distance_hubble (NcDistance *dist, NcHICosmo *cosmo)
   return ncm_c_c () / (nc_hicosmo_H0 (cosmo) * 1.0e3);
 }
 
-static gdouble comoving_distance_integral_argument (gdouble z, gpointer p);
+static gdouble _comoving_distance_integral_argument (gdouble z, gpointer p);
 
 /**
  * nc_distance_comoving:
@@ -480,7 +480,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
         gdouble result, error;
         gsl_function F;
         
-        F.function = &comoving_distance_integral_argument;
+        F.function = &_comoving_distance_integral_argument;
         F.params   = cosmo;
         
         if (dist->use_cache)
@@ -502,7 +502,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 }
 
 static gdouble
-comoving_distance_integral_argument (gdouble z, gpointer p)
+_comoving_distance_integral_argument (gdouble z, gpointer p)
 {
   NcHICosmo *cosmo = NC_HICOSMO (p);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
@@ -514,7 +514,7 @@ comoving_distance_integral_argument (gdouble z, gpointer p)
 }
 
 static gdouble
-dcddz (gdouble cd, gdouble z, gpointer userdata)
+_dcddz (gdouble cd, gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
