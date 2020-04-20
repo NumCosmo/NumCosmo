@@ -5,6 +5,7 @@
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
@@ -56,18 +57,18 @@ struct _NcDistanceClass
 
 /**
  * NcDistanceComovingMethod:
- * @NC_DISTANCE_COMOVING_METHOD_INT_E: performs a numerical evaluation. 
+ * @NC_DISTANCE_COMOVING_METHOD_INT_E: performs a numerical evaluation.
  * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: uses the method defined by the implementation of #NcHICosmo.
  *
- * Enumeration to define which method to be applied in order to compute the cosmological distances. 
- * 
+ * Enumeration to define which method to be applied in order to compute the cosmological distances.
+ *
  */
 typedef enum _NcDistanceComovingMethod
 {
   NC_DISTANCE_COMOVING_METHOD_INT_E = 0,
   NC_DISTANCE_COMOVING_METHOD_FROM_MODEL,
   /* < private > */
-  NC_DISTANCE_COMOVING_METHOD_LEN,   /*< skip >*/  
+  NC_DISTANCE_COMOVING_METHOD_LEN, /*< skip >*/
 } NcDistanceComovingMethod;
 
 struct _NcDistance
@@ -76,7 +77,7 @@ struct _NcDistance
   GObject parent_instance;
   NcmOdeSpline *comoving_distance_spline;
   NcmFunctionCache *comoving_distance_cache;
-	NcmFunctionCache *comoving_infinity;
+  NcmFunctionCache *comoving_infinity;
   NcmFunctionCache *time_cache;
   NcmFunctionCache *lookback_time_cache;
   NcmFunctionCache *conformal_time_cache;
@@ -192,3 +193,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_DISTANCE_INLINE_H_ */
+
