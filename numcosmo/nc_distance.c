@@ -290,7 +290,7 @@ nc_distance_new (gdouble zf)
  * nc_distance_ref:
  * @dist: a #NcDistance
  *
- * Increases the reference count of @dist by one.
+ * Increases the reference count of @dist atomically. 
  *
  * Returns: (transfer full): @dist.
  */
@@ -304,7 +304,8 @@ nc_distance_ref (NcDistance *dist)
  * nc_distance_free:
  * @dist: a #NcDistance
  *
- * Decreases the reference count of @dist by one.
+ * Atomically decrements the reference count of @dist by one. 
+ * If the reference count drops to 0, all memory allocated by @dist is released.
  *
  */
 void
@@ -317,7 +318,9 @@ nc_distance_free (NcDistance *dist)
  * nc_distance_clear:
  * @dist: a #NcDistance
  *
- * Decreases the reference count of *@dist by one and sets *@dist to NULL.
+ * Atomically decrements the reference count of @dist by one. 
+ * If the reference count drops to 0, all memory allocated by @dist is released. 
+ * Set pointer to NULL.
  *
  */
 void
