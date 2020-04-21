@@ -27,9 +27,36 @@
  * SECTION:nc_growth_func
  * @title: NcGrowthFunc
  * @short_description: Growth function of linear perturbations.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_growth_func.h
  *
- * FIXME
- * 
+ *
+ * This object implements the integration of second order diferential equation 
+ * for the dust (baryons + cold dark matter) density contrast, $\delta$, in the linear regime of perturbations.
+ * The equation is given by
+ * \begin{equation*}
+ * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a) \, \delta = 0 \,\, ,
+ * \end{equation*}
+ * where, $a$ is the scale factor, $G$ is universal gravitational constant and the derivatives are taken with respect to the cosmological time. 
+ * By changing the variable from time to $x=(1+z)$, the ode becomes,
+ * \begin{equation*}
+ * \delta^{''} + \left( \frac{E^{'}(x)}{E(x)} - \frac{1}{x} \right) \delta^{'} - \frac{3}{2} \Omega_{\mathrm{dust}}(x) \frac{x}{E(x)^2} \, \delta = 0 \,\, .
+ * \end{equation*}
+ * Where $\Omega_{\mathrm{dust}}(x)$ is the dust density matter as a function of the redshift $z$,
+ * \begin{equation*}
+ * \Omega_{\mathrm{dust}}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{\mathrm{dust,0}} \,\, , 
+ * \end{equation*}
+ * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].  
+ *
+ * The edo initial conditions are defined as, at $a=10^{-12}$ the universe is well approximated to an Einstein-de Sitter model. Therefore,
+ * \begin{equation*}
+ * D(a=10^{-12}) \rightarrow D_{\mathrm{EdS}} = a \approx 0 \,\, , 
+ * \end{equation*}
+ * and
+ * \begin{equation*}
+ * \frac{\mathrm{d} D(a=10^{-12})}{\mathrm{d} a} \rightarrow \frac{\mathrm{d} D_{\mathrm{EdS}}}{\mathrm{d} a} = 1  \,\, .
+ * \end{equation*}  
+ * Note that it was assumed that the dark energy component is negligible at $a=10^{-12}$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -250,7 +277,9 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
  * @gf: a #NcGrowthFunc
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * This function prepares the object @gf using @cosmo,
+ * such that all the available #NcGrowthFunc functions can be evaluated,
+ * e.g. nc_growth_func_eval() and nc_growth_func_eval_deriv().
  *
  */
 void
@@ -368,7 +397,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @gf: a #NcGrowthFunc
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * This function prepares the object @gf using @cosmo
+ * if it was changed since last preparation.
  *
  */
 void
@@ -387,9 +417,9 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * This function evaluates the normalized growth function $D$ at redshift $z$, $D(z)$. 
  *
- * Returns: The normalized growth function at @z.
+ * Returns: the normalized growth function $D(z)$.
  */
 /**
  * nc_growth_func_eval_deriv:
@@ -397,25 +427,35 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * This function evaluates the derivative of the normalized growth 
+ * function $\mathrm{d}D/\mathrm{d}a$ at redshift $z$, also called as linear growth rate.
+ * Where $a$ is the scale factor.
+ * Note that this  definition is different from the one normally applied in redshift-space distortion studies. 
+ * These studies use the parameter given by the logarithmic derivative,
+ * \begin{equation*}
+ * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_{z} \,\, . 
+ * \end{equation*}  
+ * For more details see e.g. [Zarrouk et al. (2018)][X2018MNRAS.477.1639Z] [[arXiv](https://arxiv.org/abs/1801.03062)].
  *
- * Returns: FIXME
+ * Returns: the derivative of the normalized growth function $\frac{\mathrm{d} D}{\mathrm{d} a}$.
  */
 /**
  * nc_growth_func_eval_both:
  * @gf: a #NcGrowthFunc
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
- * @d: (out): Growth function
- * @f: (out): Growth function derivative
+ * @d: (out): Growth function $D(z)$
+ * @f: (out): Growth function derivative $\left. \mathrm{d}D/\mathrm{d}a \right|_{z}$
  *
- * FIXME
+ * This function evaluates the normalized growth function $D$ and its derivative $\mathrm{d}D/\mathrm{d}a$ at redshift $z$.  
  *
  */
 /**
  * nc_growth_func_get_dust_norma_Da0:
  * @gf: a #NcGrowthFunc
  *
- * FIXME
+ * This function returns today's growth function true value, $D(a=a_0) = D(z=0)$, 
+ * without imposing the normalization $D(a=a_0) = 1$.
  *
+ * Returns: the growth function true value today $D(a=a_0)$.
  */
