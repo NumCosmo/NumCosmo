@@ -5,6 +5,7 @@
  *  Copyright  2010  Mariana Penna Lima
  *  <pennalima@gmail.com>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
@@ -62,12 +63,13 @@ struct _NcGrowthFunc
 
 GType nc_growth_func_get_type (void) G_GNUC_CONST;
 
-NcGrowthFunc * nc_growth_func_new (void);
-NcGrowthFunc * nc_growth_func_ref (NcGrowthFunc *gf);
+NcGrowthFunc *nc_growth_func_new (void);
+NcGrowthFunc *nc_growth_func_ref (NcGrowthFunc *gf);
+
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_clear (NcGrowthFunc **gf);
 
-void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo *cosmo);
+void nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo);
 void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);
 
 NCM_INLINE gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
@@ -86,10 +88,11 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
+  
   return ncm_spline_eval (gf->s, a);
 }
 
@@ -97,18 +100,20 @@ NCM_INLINE gdouble
 nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
-  return - a * a * ncm_spline_eval_deriv (gf->s, a);
+  
+  return -a *a *ncm_spline_eval_deriv (gf->s, a);
 }
 
 NCM_INLINE void
 nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
   const gdouble a = 1.0 / (1.0 + z);
+  
   *d = ncm_spline_eval (gf->s, a);
-  *f = - a * a * ncm_spline_eval_deriv (gf->s, a);
+  *f = -a *a *ncm_spline_eval_deriv (gf->s, a);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf)
 {
   return gf->Da0;
@@ -119,3 +124,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_GROWTH_FUNC_INLINE_H_ */
+

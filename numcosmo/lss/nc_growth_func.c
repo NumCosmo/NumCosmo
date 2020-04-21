@@ -5,6 +5,7 @@
  *  Copyright  2010  Mariana Penna Lima
  *  <pennalima@gmail.com>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
@@ -31,31 +32,31 @@
  * @include: numcosmo/lss/nc_growth_func.h
  *
  *
- * This object implements the integration of second order diferential equation 
+ * This object implements the integration of second order diferential equation
  * for the dust (baryons + cold dark matter) density contrast, $\delta$, in the linear regime of perturbations.
  * The equation is given by
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a) \, \delta = 0 \,\, ,
  * \end{equation*}
- * where, $a$ is the scale factor, $G$ is universal gravitational constant and the derivatives are taken with respect to the cosmological time. 
+ * where, $a$ is the scale factor, $G$ is universal gravitational constant and the derivatives are taken with respect to the cosmological time.
  * By changing the variable from time to $x=(1+z)$, the ode becomes,
  * \begin{equation*}
  * \delta^{''} + \left( \frac{E^{'}(x)}{E(x)} - \frac{1}{x} \right) \delta^{'} - \frac{3}{2} \Omega_{\mathrm{dust}}(x) \frac{x}{E(x)^2} \, \delta = 0 \,\, .
  * \end{equation*}
  * Where $\Omega_{\mathrm{dust}}(x)$ is the dust density matter as a function of the redshift $z$,
  * \begin{equation*}
- * \Omega_{\mathrm{dust}}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{\mathrm{dust,0}} \,\, , 
+ * \Omega_{\mathrm{dust}}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{\mathrm{dust,0}} \,\, ,
  * \end{equation*}
- * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].  
+ * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].
  *
  * The edo initial conditions are defined as, at $a=10^{-12}$ the universe is well approximated to an Einstein-de Sitter model. Therefore,
  * \begin{equation*}
- * D(a=10^{-12}) \rightarrow D_{\mathrm{EdS}} = a \approx 0 \,\, , 
+ * D(a=10^{-12}) \rightarrow D_{\mathrm{EdS}} = a \approx 0 \,\, ,
  * \end{equation*}
  * and
  * \begin{equation*}
  * \frac{\mathrm{d} D(a=10^{-12})}{\mathrm{d} a} \rightarrow \frac{\mathrm{d} D_{\mathrm{EdS}}}{\mathrm{d} a} = 1  \,\, .
- * \end{equation*}  
+ * \end{equation*}
  * Note that it was assumed that the dark energy component is negligible at $a=10^{-12}$.
  */
 
@@ -99,6 +100,7 @@ static void
 nc_growth_func_init (NcGrowthFunc *gf)
 {
   NcGrowthFuncPrivate * const self = gf->priv = nc_growth_func_get_instance_private (gf);
+  
   self->cvode      = NULL;
   self->yv         = N_VNew_Serial (3);
   self->A          = SUNDenseMatrix (3, 3);
@@ -106,22 +108,22 @@ nc_growth_func_init (NcGrowthFunc *gf)
   self->zf         = 0.0;
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   
-  gf->s            = NULL;
-  gf->Da0          = 0.0;
-
-  NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
-  NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
+  gf->s   = NULL;
+  gf->Da0 = 0.0;
+  
+  NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
+  NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
 }
 
 static void
-_nc_growth_func_dispose (GObject * object)
+_nc_growth_func_dispose (GObject *object)
 {
-  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+  NcGrowthFunc *gf                 = NC_GROWTH_FUNC (object);
   NcGrowthFuncPrivate * const self = gf->priv;
-
+  
   ncm_spline_clear (&gf->s);
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
 }
@@ -129,17 +131,18 @@ _nc_growth_func_dispose (GObject * object)
 static void
 _nc_growth_func_finalize (GObject *object)
 {
-  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+  NcGrowthFunc *gf                 = NC_GROWTH_FUNC (object);
   NcGrowthFuncPrivate * const self = gf->priv;
-
+  
   CVodeFree (&self->cvode);
   N_VDestroy (self->yv);
-
+  
   if (self->A != NULL)
   {
     SUNMatDestroy (self->A);
     self->A = NULL;
   }
+  
   if (self->LS != NULL)
   {
     SUNLinSolFree (self->LS);
@@ -153,8 +156,8 @@ _nc_growth_func_finalize (GObject *object)
 static void
 nc_growth_func_class_init (NcGrowthFuncClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->dispose  = &_nc_growth_func_dispose;
   object_class->finalize = &_nc_growth_func_finalize;
 }
@@ -169,8 +172,9 @@ nc_growth_func_class_init (NcGrowthFuncClass *klass)
 NcGrowthFunc *
 nc_growth_func_new (void)
 {
-  NcGrowthFunc *gf = g_object_new (NC_TYPE_GROWTH_FUNC, 
+  NcGrowthFunc *gf = g_object_new (NC_TYPE_GROWTH_FUNC,
                                    NULL);
+  
   return gf;
 }
 
@@ -181,7 +185,7 @@ nc_growth_func_new (void)
  * Increases the reference count of @gf atomically.
  *
  * Returns: (transfer full): @gf.
-   */
+ */
 NcGrowthFunc *
 nc_growth_func_ref (NcGrowthFunc *gf)
 {
@@ -219,18 +223,18 @@ nc_growth_func_clear (NcGrowthFunc **gf)
 static gint
 growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcHICosmo *cosmo       = NC_HICOSMO (f_data);
-  const gdouble a2       = a * a;
-  const gdouble a5       = a2 * gsl_pow_3 (a);
-  const gdouble z        = 1.0 / a - 1.0;
-  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
-  const gdouble E        = sqrt (E2);
-  const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
+  NcHICosmo *cosmo    = NC_HICOSMO (f_data);
+  const gdouble a2    = a * a;
+  const gdouble a5    = a2 * gsl_pow_3 (a);
+  const gdouble z     = 1.0 / a - 1.0;
+  const gdouble E2    = nc_hicosmo_E2 (cosmo, z);
+  const gdouble E     = sqrt (E2);
+  const gdouble dE2dz = nc_hicosmo_dE2_dz (cosmo, z);
   
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble D        = NV_Ith_S (y, 0);
   const gdouble B        = NV_Ith_S (y, 1);
-
+  
   NV_Ith_S (ydot, 0) = B;
   NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * Omega_m0 * D / (2.0 * a5 * E2);
   NV_Ith_S (ydot, 2) = 1.0 / gsl_pow_3 (a * E);
@@ -248,7 +252,7 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
   const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-
+  
   NCM_UNUSED (y);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
@@ -258,11 +262,11 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   SUN_DENSE_ACCESS (J, 0, 0) = 0.0;
   SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
   SUN_DENSE_ACCESS (J, 0, 2) = 0.0;
-
+  
   SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
   SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
   SUN_DENSE_ACCESS (J, 1, 2) = 0.0;
-
+  
   SUN_DENSE_ACCESS (J, 2, 0) = 0.0;
   SUN_DENSE_ACCESS (J, 2, 1) = 0.0;
   SUN_DENSE_ACCESS (J, 2, 2) = 0.0;
@@ -292,9 +296,9 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
   gdouble dDa0;
   gint flag;
-
+  
   ai = _NC_GROWTH_FUNC_START_A;
-
+  
   if (gf->s != NULL)
   {
     x_array = ncm_vector_get_array (gf->s->xv);
@@ -305,26 +309,26 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
     x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
-
+  
   g_array_set_size (x_array, 0);
   g_array_set_size (y_array, 0);
-
+  
   dDa0 = 1.0e-20 / gsl_pow_3 (ai * nc_hicosmo_E (cosmo, 1.0 / ai - 1.0));
   
   NV_Ith_S (self->yv, 0) = 1.0;
   NV_Ith_S (self->yv, 1) = (Omega_r0 > 0.0) ? ((3.0 / 2.0) * Omega_m0 / Omega_r0) : 1.0;
   NV_Ith_S (self->yv, 2) = dDa0;
-
+  
   if (self->cvode == NULL)
   {
     self->cvode = CVodeCreate (CV_BDF);
-
+    
     flag = CVodeInit (self->cvode, &growth_f, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-
+    
     flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
+    
     flag = CVodeSetJacFn (self->cvode, &growth_J);
     NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
@@ -332,14 +336,14 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   {
     flag = CVodeReInit (self->cvode, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-
+    
     flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
+    
     flag = CVodeSetJacFn (self->cvode, &growth_J);
     NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
-
+  
   flag = CVodeSStolerances (self->cvode, 1e-13, 0.0);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
   
@@ -351,44 +355,44 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   
   flag = CVodeSetStopTime (self->cvode, 1.0);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
-
+  
   g_array_append_val (x_array, ai);
   g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
-
+  
   while (TRUE)
   {
     gint flag = CVode (self->cvode, 1.0, self->yv, &a, CV_ONE_STEP);
+    
     NCM_CVODE_CHECK (&flag, "CVode", 1, );
-
+    
     g_array_append_val (x_array, a);
     g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
     
     if (a == 1.0)
       break;
   }
-
+  
   gf->Da0 = 2.5 * Omega_m0 * (NV_Ith_S (self->yv, 2) - dDa0);
-
+  
   if (gf->s == NULL)
-  {
     gf->s = ncm_spline_cubic_notaknot_new ();
-  }
 
   {
     NcmVector *xv = ncm_vector_new_array (x_array);
     NcmVector *yv = ncm_vector_new_array (y_array);
-
+    
     ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, y_array->len - 1));
     ncm_spline_set (gf->s, xv, yv, TRUE);
-
+    
     ncm_vector_free (xv);
     ncm_vector_free (yv);
   }
-
+  
   g_array_unref (x_array);
   g_array_unref (y_array);
-
+  
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
+  
   return;
 }
 
@@ -405,8 +409,8 @@ void
 nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   NcGrowthFuncPrivate * const self = gf->priv;
-  gboolean cosmo_up = ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
-
+  gboolean cosmo_up                = ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
+  
   if (cosmo_up)
     nc_growth_func_prepare (gf, cosmo);
 }
@@ -417,28 +421,30 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * This function evaluates the normalized growth function $D$ at redshift $z$, $D(z)$. 
+ * This function evaluates the normalized growth function $D$ at redshift $z$, $D(z)$.
  *
  * Returns: the normalized growth function $D(z)$.
  */
+
 /**
  * nc_growth_func_eval_deriv:
  * @gf: a #NcGrowthFunc
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * This function evaluates the derivative of the normalized growth 
+ * This function evaluates the derivative of the normalized growth
  * function $\mathrm{d}D/\mathrm{d}a$ at redshift $z$, also called as linear growth rate.
  * Where $a$ is the scale factor.
- * Note that this  definition is different from the one normally applied in redshift-space distortion studies. 
+ * Note that this  definition is different from the one normally applied in redshift-space distortion studies.
  * These studies use the parameter given by the logarithmic derivative,
  * \begin{equation*}
- * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_{z} \,\, . 
- * \end{equation*}  
+ * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_{z} \,\, .
+ * \end{equation*}
  * For more details see e.g. [Zarrouk et al. (2018)][X2018MNRAS.477.1639Z] [[arXiv](https://arxiv.org/abs/1801.03062)].
  *
  * Returns: the derivative of the normalized growth function $\frac{\mathrm{d} D}{\mathrm{d} a}$.
  */
+
 /**
  * nc_growth_func_eval_both:
  * @gf: a #NcGrowthFunc
@@ -447,15 +453,17 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @d: (out): Growth function $D(z)$
  * @f: (out): Growth function derivative $\left. \mathrm{d}D/\mathrm{d}a \right|_{z}$
  *
- * This function evaluates the normalized growth function $D$ and its derivative $\mathrm{d}D/\mathrm{d}a$ at redshift $z$.  
+ * This function evaluates the normalized growth function $D$ and its derivative $\mathrm{d}D/\mathrm{d}a$ at redshift $z$.
  *
  */
+
 /**
  * nc_growth_func_get_dust_norma_Da0:
  * @gf: a #NcGrowthFunc
  *
- * This function returns today's growth function true value, $D(a=a_0) = D(z=0)$, 
+ * This function returns today's growth function true value, $D(a=a_0) = D(z=0)$,
  * without imposing the normalization $D(a=a_0) = 1$.
  *
  * Returns: the growth function true value today $D(a=a_0)$.
  */
+
