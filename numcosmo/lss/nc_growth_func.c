@@ -36,7 +36,7 @@
  * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
  * and nc_hicosmo_E2()) density contrast, $\delta$, in the linear regime of
- * perturbations, see for instance [Matínez and Saar (2002)][XMartinez2002]).
+ * perturbations, see for instance [Matínez and Saar (2002)][XMartinez2002].
  * The equation is given by
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a)\delta = 0,
@@ -55,7 +55,7 @@
  * \end{equation*}
  * and $E$ is the normalized Hubble function [nc_hicosmo_E()].
  *
- * The ODE initial conditions are defined set at $a_i / a_0 = 10^{-12}$ (#NcGrowthFunc:x-i),
+ * The ODE initial conditions are defined at $a_i / a_0 = 10^{-12}$ (#NcGrowthFunc:x-i),
  * where the universe is well approximated by a radiation and matter model. Therefore,
  * within this assumption the growing mode is simply
  * \begin{equation*}
@@ -635,7 +635,7 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * This function evaluates the normalized growth function $D$ at redshift $z$, $D(z)$.
+ * This function evaluates the normalized growth function at redshift $z$, $D(z)$.
  *
  * Returns: the normalized growth function $D(z)$.
  */
@@ -651,13 +651,13 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * Where $a$ is the scale factor.
  *
  * Note that this  definition is different from the one normally applied in redshift-space distortion studies.
- * These studies use the parameter given by the logarithmic derivative,
+ * These studies use the parameter given by,
  * \begin{equation*}
  * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_{z} \,\, .
  * \end{equation*}
  * For more details see e.g. [Zarrouk et al. (2018)][X2018MNRAS.477.1639Z] [[arXiv](https://arxiv.org/abs/1801.03062)].
  *
- * Returns: the derivative of the normalized growth function $\frac{\mathrm{d} D}{\mathrm{d} a}$.
+ * Returns: the derivative of the normalized growth function $\left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_z$.
  */
 
 /**
@@ -676,9 +676,9 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * nc_growth_func_get_dust_norma_Da0:
  * @gf: a #NcGrowthFunc
  *
- * This function returns today's growth function true value, $D(a=a_0) = D(z=0)$,
- * without imposing the normalization $D(a=a_0) = 1$.
+ * This function returns today's growth function true value, $D(a_0)$,
+ * without imposing the normalization.
  *
- * Returns: the growth function true value today $D(a=a_0)$.
+ * Returns: the growth function true value today $D(a_0)$.
  */
 
