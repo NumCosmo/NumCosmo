@@ -35,13 +35,57 @@
  * SECTION:ncm_fftlog_sbessel_j
  * @title: NcmFftlogSBesselJ
  * @short_description: Logarithm fast fourier transform for a kernel given by the spatial correlation function multipoles.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_fftlog_sbessel_j.h
  *
  *
  * This object computes the function (see #NcmFftlog)
  * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel are the spherical bessel function of the first kind $K(t) = t^q j_{\ell}(t)$.
+ * where the kernel are the spherical bessel function 
+ * of the first kind multiplied by a power law, $K(t) = t^q j_{\ell}(t)$.
+ * The spherical bessel function's order $\ell$ must be an integer number.
  * 
+ * The spatial correlation function multipoles, $\xi_{\ell}^{(n)}(r)$, can be defined as 
+ * (see [Matsubara (2004)][XMatsubara2004a] [[arXiv](https://arxiv.org/abs/astro-ph/0408349)])
+ *
+ * \begin{equation}\label{ref:eq:xi_multipoles}
+ * \xi_{\ell}^{(n)}(r) = \frac{(-1)^{n+\ell}}{r^{2n-\ell}} \int_{0}^{\infty} \frac{\mathrm{d} k}{2\pi^2} \frac{k^2}{k^{2n-\ell}} j_{\ell}(kr) P(k) \,\, .
+ * \end{equation} 
+ * Where, $P(k)$ is the power spectrum (see #NcmPowspec).
+
+ * Therefore, it multipoles are proportional to the following integral
+ *
+ * \begin{equation*}
+ * \xi_{\ell}^{(n)}(r) \propto \int_{0}^{\infty} \mathrm{d}k \, k^{2-2n+\ell} \, j_{\ell}(kr) P(k) \,\, .
+ * \end{equation*}
+ *
+ * For example, the integral above can be evaluated using #NcmFftlog method by defining the function
+ * \begin{equation*}
+ * F(k) = k^{2-2n+\ell} \, P(k) 
+ * \end{equation*}
+ * and the kernel
+ * \begin{equation*}
+ * K(t) = j_{\ell}(t) \,\, .
+ * \end{equation*}
+ * With that choice we have $q=0$. 
  * 
+ * But instead, one might choose another format,
+ * \begin{equation*}
+ * F(k) = k^{-2n+\ell} \, P(k) 
+ * \end{equation*}
+ * and the kernel
+ * \begin{equation*}
+ * K(t) = t^2 \, j_{\ell}(t) \,\, .
+ * \end{equation*}
+ * which evaluates the same integral, but now $q=2$.
+ * Therefore, the parameter $q$ is the power of the wavelength 
+ * included to the kernel with the spherical bessel function and 
+ * it will be referred to as "spherical bessel power".  
+ *
+ * In general, $q=0$ is an accurate and fast choice to make, but it is interesting to 
+ * perform tests to evaluate which format is best for each type of integral.
+ *
+ * The #NcmPowspecCorr3d object already evaluates Eq. \eqref{ref:eq:xi_multipoles} for the case of the monopole, $n=\ell=0$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -144,6 +188,13 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
   object_class->get_property = &_ncm_fftlog_sbessel_j_get_property;
   object_class->finalize     = &_ncm_fftlog_sbessel_j_finalize;
 
+  /**
+   * NcmFftlogSBesselJ:ell:
+   *
+   * The Spherical Bessel integer order. 
+   * Default value: $0$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_ELL,
                                    g_param_spec_uint ("ell",
@@ -151,6 +202,14 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                       "Spherical Bessel integer order",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmFftlogSBesselJ:q:
+   *
+   * The Spherical Bessel power, i.e. the power of the wavelength $k$ 
+   * included to the kernel $K(t)$ together with the Spherical Bessel function.
+   * Default value: $0$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_Q,
                                    g_param_spec_double ("q",
@@ -251,7 +310,7 @@ ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, gui
 }
 
 /**
- * ncm_fftlog_set_ell:
+ * ncm_fftlog_sbessel_j_set_ell:
  * @fftlog_jl: a #NcmFftlogSBesselJ
  * @ell: Spherical Bessel integer order $\ell$
  * 
@@ -284,11 +343,11 @@ ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 }
 
 /**
- * ncm_fftlog_set_q:
+ * ncm_fftlog_sbessel_j_set_q:
  * @fftlog_jl: a #NcmFftlogSBesselJ
- * @ell: Spherical Bessel integer order $\ell$
+ * @q: Spherical Bessel power $q$
  * 
- * Sets @q as the Spherical Bessel power $q$.
+ * Sets @q as the Spherical Bessel power.
  * 
  */
 void 
