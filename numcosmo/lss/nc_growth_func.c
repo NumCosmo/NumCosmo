@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_growth_func.c
  *
@@ -32,32 +33,35 @@
  * @include: numcosmo/lss/nc_growth_func.h
  *
  *
- * This object implements the integration of second order diferential equation
- * for the dust (baryons + cold dark matter) density contrast, $\delta$, in the linear regime of perturbations.
- * The equation is given by
+ * This object implements the integration of second order differential equation
+ * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
+ * and nc_hicosmo_E2()) density contrast, $\delta$, in the linear regime of
+ * perturbations. The equation is given by
  * \begin{equation*}
- * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a) \, \delta = 0 \,\, ,
+ * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a)\delta = 0,
  * \end{equation*}
- * where, $a$ is the scale factor, $G$ is universal gravitational constant and the derivatives are taken with respect to the cosmological time.
+ * where, $a$ is the scale factor, $G$ is universal gravitational constant and the
+ * derivatives are taken with respect to the cosmological time.
  * By changing the variable from time to $x=(1+z)$, the ode becomes,
+ * \begin{equation}\label{eq:mov}
+ * \delta'' + \left( \frac{E'(x)}{E(x)} - \frac{1}{x} \right) \delta' - \frac{3}{2} \frac{\Omega_{m}(x)}{x^2}\delta = 0.
+ * \end{equation}
+ * Where $'$ denote derivatives with respect to $x$ and $\Omega_{m}(x)$ is the
+ * matter density as a function of the redshift $z$,
  * \begin{equation*}
- * \delta^{''} + \left( \frac{E^{'}(x)}{E(x)} - \frac{1}{x} \right) \delta^{'} - \frac{3}{2} \Omega_{\mathrm{dust}}(x) \frac{x}{E(x)^2} \, \delta = 0 \,\, .
- * \end{equation*}
- * Where $\Omega_{\mathrm{dust}}(x)$ is the dust density matter as a function of the redshift $z$,
- * \begin{equation*}
- * \Omega_{\mathrm{dust}}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{\mathrm{dust,0}} \,\, ,
+ * \Omega_{m}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{m,0} \,\, ,
  * \end{equation*}
  * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].
  *
- * The edo initial conditions are defined as, at $a=10^{-12}$ the universe is well approximated to an Einstein-de Sitter model. Therefore,
+ * The ODE initial conditions are defined set at $a/a_0 = 10^{-12}$, where the universe
+ * is well approximated by a radiation and matter model. Therefore, within this
+ * assumption the growing mode is simply
  * \begin{equation*}
- * D(a=10^{-12}) \rightarrow D_{\mathrm{EdS}} = a \approx 0 \,\, ,
+ * \delta(a) \propto 1 + \frac{3\Omega_{m,0}}{2\Omega_{r,0}}\frac{a}{a_0},
  * \end{equation*}
- * and
- * \begin{equation*}
- * \frac{\mathrm{d} D(a=10^{-12})}{\mathrm{d} a} \rightarrow \frac{\mathrm{d} D_{\mathrm{EdS}}}{\mathrm{d} a} = 1  \,\, .
- * \end{equation*}
- * Note that it was assumed that the dark energy component is negligible at $a=10^{-12}$.
+ * Note that it was chosen a large enough redshift ($z \approx 10^{12}$) such that
+ * it is safe to assume that the dark energy component and curvature are negligible.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -90,8 +94,18 @@ struct _NcGrowthFuncPrivate
   N_Vector yv;
   SUNMatrix A;
   SUNLinearSolver LS;
-  gdouble zf;
+  gdouble x_i;
+  gdouble reltol;
+  gdouble abstol;
   NcmModelCtrl *ctrl_cosmo;
+};
+
+enum
+{
+  PROP_0,
+  PROP_RELTOL,
+  PROP_ABSTOL,
+  PROP_X_I,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
@@ -105,7 +119,9 @@ nc_growth_func_init (NcGrowthFunc *gf)
   self->yv         = N_VNew_Serial (3);
   self->A          = SUNDenseMatrix (3, 3);
   self->LS         = SUNDenseLinearSolver (self->yv, self->A);
-  self->zf         = 0.0;
+  self->x_i        = 0.0;
+  self->reltol     = 0.0;
+  self->abstol     = 0.0;
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   
   gf->s   = NULL;
@@ -113,6 +129,52 @@ nc_growth_func_init (NcGrowthFunc *gf)
   
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
+}
+
+static void
+_nc_growth_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+  g_return_if_fail (NC_IS_GROWTH_FUNC (object));
+
+  switch (prop_id)
+  {
+    case PROP_RELTOL:
+      nc_growth_func_set_reltol (gf, g_value_get_double (value));
+      break;
+    case PROP_ABSTOL:
+      nc_growth_func_set_abstol (gf, g_value_get_double (value));
+      break;
+    case PROP_X_I:
+      nc_growth_func_set_x_i (gf, g_value_get_double (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_growth_func_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+  g_return_if_fail (NC_IS_GROWTH_FUNC (object));
+
+  switch (prop_id)
+  {
+    case PROP_RELTOL:
+      g_value_set_double (value, nc_growth_func_get_reltol (gf));
+      break;
+    case PROP_ABSTOL:
+      g_value_set_double (value, nc_growth_func_get_abstol (gf));
+      break;
+    case PROP_X_I:
+      g_value_set_double (value, nc_growth_func_get_x_i (gf));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
@@ -158,8 +220,58 @@ nc_growth_func_class_init (NcGrowthFuncClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   
-  object_class->dispose  = &_nc_growth_func_dispose;
-  object_class->finalize = &_nc_growth_func_finalize;
+  object_class->set_property = &_nc_growth_func_set_property;
+  object_class->get_property = &_nc_growth_func_get_property;
+  object_class->dispose      = &_nc_growth_func_dispose;
+  object_class->finalize     = &_nc_growth_func_finalize;
+
+  /**
+   * NcGrowthFunc:reltol:
+   *
+   * Relative tolerance used when integrating the ODE \eqref{eq:mov}.
+   * Default value: $10^{-13}$.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RELTOL,
+                                   g_param_spec_double ("reltol",
+                                                        NULL,
+                                                        "Relative tolerance",
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-13,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcGrowthFunc:abstol:
+   *
+   * Absolute tolerance used when integrating the ODE \eqref{eq:mov}.
+   * Default value: $0$.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ABSTOL,
+                                   g_param_spec_double ("abstol",
+                                                        NULL,
+                                                        "Absolute tolerance tolerance",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGrowthFunc:x-i:
+   *
+   * Initial redshift variable $x_i = 1 + z_i = a_0 / a_i$ where to begin
+   * the integration of Eq. \eqref{eq:mov}, it must be large enough such
+   * that radiation plus matter is a good description of the background
+   * energy content.
+   * Default value: $10^{12}$.
+   *
+   */
+g_object_class_install_property (object_class,
+                                   PROP_X_I,
+                                   g_param_spec_double ("x-i",
+                                                        NULL,
+                                                        "Initial value for $x_i$",
+                                                        0.0, G_MAXDOUBLE, 1.0e12,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
 
 /**
@@ -220,6 +332,106 @@ nc_growth_func_clear (NcGrowthFunc **gf)
   g_clear_object (gf);
 }
 
+/**
+ * nc_growth_func_set_reltol:
+ * @gf: a #NcGrowthFunc
+ * @reltol: relative tolerance
+ *
+ * Sets the relative tolerance (#NcGrowthFunc:reltol) used when
+ * integrating Eq. \eqref{eq:mov}.
+ *
+ */
+void
+nc_growth_func_set_reltol (NcGrowthFunc *gf, const gdouble reltol)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  g_assert_cmpfloat (reltol, >=, GSL_DBL_EPSILON);
+  g_assert_cmpfloat (reltol, <, 1.0);
+
+  self->reltol = reltol;
+}
+
+/**
+ * nc_growth_func_set_abstol:
+ * @gf: a #NcGrowthFunc
+ * @abstol: absolute tolerance
+ *
+ * Sets the absolute tolerance (#NcGrowthFunc:abstol) used when
+ * integrating Eq. \eqref{eq:mov}.
+ *
+ */
+void
+nc_growth_func_set_abstol (NcGrowthFunc *gf, const gdouble abstol)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  g_assert_cmpfloat (abstol, >, 0.0);
+
+  self->abstol = abstol;
+}
+
+/**
+ * nc_growth_func_set_x_i:
+ * @gf: a #NcGrowthFunc
+ * @x_i: initial scale $x_i = a_0 / a_i$
+ *
+ * Sets the initial redshift variable $x_i = 1 + z_i$ where the
+ * integration begins.
+ *
+ */
+void
+nc_growth_func_set_x_i (NcGrowthFunc *gf, const gdouble x_i)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  g_assert_cmpfloat (x_i, >, 0.0);
+
+  self->x_i = x_i;
+}
+
+/**
+ * nc_growth_func_get_reltol:
+ * @gf: a #NcGrowthFunc
+ *
+ * Returns: the current value of #NcGrowthFunc:reltol.
+ */
+gdouble
+nc_growth_func_get_reltol (NcGrowthFunc *gf)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  return self->reltol;
+}
+
+/**
+ * nc_growth_func_get_abstol:
+ * @gf: a #NcGrowthFunc
+ *
+ * Returns: the current value of #NcGrowthFunc:abstol.
+ */
+gdouble
+nc_growth_func_get_abstol (NcGrowthFunc *gf)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  return self->abstol;
+}
+
+/**
+ * nc_growth_func_get_x_i:
+ * @gf: a #NcGrowthFunc
+ *
+ * Returns: the current value of #NcGrowthFunc:x_i.
+ */
+gdouble
+nc_growth_func_get_x_i (NcGrowthFunc *gf)
+{
+  NcGrowthFuncPrivate * const self = gf->priv;
+
+  return self->x_i;
+}
+
 static gint
 growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -274,8 +486,6 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   return 0;
 }
 
-#define _NC_GROWTH_FUNC_START_A (1.0e-12)
-
 /**
  * nc_growth_func_prepare:
  * @gf: a #NcGrowthFunc
@@ -297,7 +507,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   gdouble dDa0;
   gint flag;
   
-  ai = _NC_GROWTH_FUNC_START_A;
+  ai = 1.0 / self->x_i;
   
   if (gf->s != NULL)
   {
@@ -344,7 +554,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
     NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
   
-  flag = CVodeSStolerances (self->cvode, 1e-13, 0.0);
+  flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
   
   flag = CVodeSetMaxNumSteps (self->cvode, 500000);
@@ -435,6 +645,7 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * This function evaluates the derivative of the normalized growth
  * function $\mathrm{d}D/\mathrm{d}a$ at redshift $z$, also called as linear growth rate.
  * Where $a$ is the scale factor.
+ *
  * Note that this  definition is different from the one normally applied in redshift-space distortion studies.
  * These studies use the parameter given by the logarithmic derivative,
  * \begin{equation*}

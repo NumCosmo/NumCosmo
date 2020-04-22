@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            nc_growth_func.h
  *
@@ -68,6 +69,14 @@ NcGrowthFunc *nc_growth_func_ref (NcGrowthFunc *gf);
 
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_clear (NcGrowthFunc **gf);
+
+void nc_growth_func_set_reltol (NcGrowthFunc *gf, const gdouble reltol);
+void nc_growth_func_set_abstol (NcGrowthFunc *gf, const gdouble abstol);
+void nc_growth_func_set_x_i (NcGrowthFunc *gf, const gdouble x_i);
+
+gdouble nc_growth_func_get_reltol (NcGrowthFunc *gf);
+gdouble nc_growth_func_get_abstol (NcGrowthFunc *gf);
+gdouble nc_growth_func_get_x_i (NcGrowthFunc *gf);
 
 void nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo);
 void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);

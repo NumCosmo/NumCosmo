@@ -47,7 +47,7 @@ G_BEGIN_DECLS
  * Enumeration to choose which of the functions to be applied when interpolating the input #gsl_function *@F, $f$, 
  * with the desired @rel_error in the range [@xi, @xf]. 
  * The interpolation knots, $\mathbf{x}$, are automatically defined internally by the functions. 
- * For more details see [description][NcmSplineFunc.description] above. 
+ * For more details see [description][numcosmo-NcmSplineFunc.description] above.
  * 
  */
 typedef enum _NcmSplineFuncType
