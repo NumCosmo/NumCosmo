@@ -101,7 +101,6 @@ NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog);
 void ncm_fftlog_free (NcmFftlog *fftlog);
 void ncm_fftlog_clear (NcmFftlog **fftlog);
 
-void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
 const gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs);
