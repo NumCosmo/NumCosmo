@@ -33,16 +33,18 @@
  * @include: numcosmo/lss/nc_growth_func.h
  *
  *
- * This object implements the integration of second order differential equation
+ * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
  * and nc_hicosmo_E2()) density contrast, $\delta$, in the linear regime of
- * perturbations. The equation is given by
+ * perturbations, see for instance [Matínez and Saar (2002)][XMartinez2002]).
+ * The equation is given by
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a)\delta = 0,
  * \end{equation*}
- * where, $a$ is the scale factor, $G$ is universal gravitational constant and the
- * derivatives are taken with respect to the cosmological time.
- * By changing the variable from time to $x=(1+z)$, the ode becomes,
+ * where, $a$ is the scale factor of the universe, $G$ is the universal gravitational
+ * constant, $\bar{\rho}$ is the mean matter density at $a$, and the derivatives are
+ * taken with respect to the cosmic time, $t$.
+ * By changing the variable from cosmic time to $x=(1+z)$, the ODE becomes,
  * \begin{equation}\label{eq:mov}
  * \delta'' + \left( \frac{E'(x)}{E(x)} - \frac{1}{x} \right) \delta' - \frac{3}{2} \frac{\Omega_{m}(x)}{x^2}\delta = 0.
  * \end{equation}
@@ -51,16 +53,18 @@
  * \begin{equation*}
  * \Omega_{m}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{m,0} \,\, ,
  * \end{equation*}
- * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].
+ * and $E$ is the normalized Hubble function [nc_hicosmo_E()].
  *
- * The ODE initial conditions are defined set at $a/a_0 = 10^{-12}$, where the universe
- * is well approximated by a radiation and matter model. Therefore, within this
- * assumption the growing mode is simply
+ * The ODE initial conditions are defined set at $a_i / a_0 = 10^{-12}$ (#NcGrowthFunc:x-i),
+ * where the universe is well approximated by a radiation and matter model. Therefore,
+ * within this assumption the growing mode is simply
  * \begin{equation*}
  * \delta(a) \propto 1 + \frac{3\Omega_{m,0}}{2\Omega_{r,0}}\frac{a}{a_0},
  * \end{equation*}
  * Note that it was chosen a large enough redshift ($z \approx 10^{12}$) such that
  * it is safe to assume that the dark energy component and curvature are negligible.
+ *
+ * As usual, the growth function is set to unit at the present time, $D(a_0) = 1$.
  *
  */
 
