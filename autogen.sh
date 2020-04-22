@@ -8,14 +8,6 @@ DIE=0
 
 ACLOCAL_FLAGS="--install -I m4 $ACLOCAL_FLAGS"
 
-if [ -n "$GNOME2_DIR" ]; then
-	ACLOCAL_FLAGS="-I $GNOME2_DIR/share/aclocal $ACLOCAL_FLAGS"
-	LD_LIBRARY_PATH="$GNOME2_DIR/lib:$LD_LIBRARY_PATH"
-	PATH="$GNOME2_DIR/bin:$PATH"
-	export PATH
-	export LD_LIBRARY_PATH
-fi
-
 (test -f $srcdir/configure.ac) || {
     echo -n "**Error**: Directory "\`$srcdir\'" does not look like the"
     echo " top-level package directory"
@@ -28,11 +20,6 @@ if test -z $GTKDOCIZE; then
   echo "**Warning**: You must have \`gtk-doc' installed to build documentation."
   echo "Download the appropriate package for your distribution,"
   echo "or get the source tarball at https://www.gtk.org/gtk-doc/"
-  rm -f $srcdir/gtk-doc.make
-  cat > $srcdir/gtk-doc.make <<EOF
-EXTRA_DIST =
-CLEANFILES =
-EOF
 else
   gtkdocize --copy --srcdir $srcdir 2>/dev/null || gtkdocize --copy || exit $?
 fi
@@ -98,7 +85,6 @@ fi
   DIE=1
   NO_AUTOMAKE=yes
 }
-
 
 # if no automake, don't bother testing for aclocal
 test -n "$NO_AUTOMAKE" || (aclocal --version) < /dev/null > /dev/null 2>&1 || {
