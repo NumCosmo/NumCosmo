@@ -34,7 +34,7 @@ EXTRA_DIST =
 CLEANFILES =
 EOF
 else
-  gtkdocize --srcdir $srcdir 2>/dev/null || gtkdocize || exit $?
+  gtkdocize --copy --srcdir $srcdir 2>/dev/null || gtkdocize --copy || exit $?
 fi
 
 (autoconf --version) < /dev/null > /dev/null 2>&1 || {
