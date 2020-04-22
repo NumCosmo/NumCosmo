@@ -5,6 +5,7 @@
  *  Copyright  2017  Fernando de Simoni
  *  <fernando.saliby@gmail.com>
  ****************************************************************************/
+
 /***************************************************************************
  *            ncm_fftlog_sbessel_j.h
  *
@@ -12,6 +13,7 @@
  *  Copyright  2017  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * ncm_fftlog_sbessel_j.h
  *
@@ -87,3 +89,4 @@ void ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl);
 G_END_DECLS
 
 #endif /* _NCM_FFTLOG_SBESSEL_J_H_ */
+
