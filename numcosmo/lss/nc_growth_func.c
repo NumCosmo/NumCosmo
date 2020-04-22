@@ -370,7 +370,7 @@ nc_growth_func_set_abstol (NcGrowthFunc *gf, const gdouble abstol)
 {
   NcGrowthFuncPrivate * const self = gf->priv;
 
-  g_assert_cmpfloat (abstol, >, 0.0);
+  g_assert_cmpfloat (abstol, >=, 0.0);
 
   self->abstol = abstol;
 }
