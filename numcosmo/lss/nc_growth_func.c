@@ -32,32 +32,31 @@
  * @include: numcosmo/lss/nc_growth_func.h
  *
  *
- * This object implements the integration of second order diferential equation
+ * This object implements the integration of the second order diferential equation
  * for the dust (baryons + cold dark matter) density contrast, $\delta$, in the linear regime of perturbations.
- * The equation is given by
+ * The equation is given by (see [Matínez and Saar (2002)][XMartinez2002])
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a) \, \delta = 0 \,\, ,
  * \end{equation*}
- * where, $a$ is the scale factor, $G$ is universal gravitational constant and the derivatives are taken with respect to the cosmological time.
+ * where, $a$ is the scale factor of the universe, $G$ is the universal gravitational constant, 
+ * $\bar{\rho}$ is the mean dust density at $a$, 
+ * and the derivatives are taken with respect to the cosmological time, $t$.
  * By changing the variable from time to $x=(1+z)$, the ode becomes,
  * \begin{equation*}
  * \delta^{''} + \left( \frac{E^{'}(x)}{E(x)} - \frac{1}{x} \right) \delta^{'} - \frac{3}{2} \Omega_{\mathrm{dust}}(x) \frac{x}{E(x)^2} \, \delta = 0 \,\, .
  * \end{equation*}
- * Where $\Omega_{\mathrm{dust}}(x)$ is the dust density matter as a function of the redshift $z$,
+ * Where primes are derivatives with respect to $x$ and 
+ * $\Omega_{\mathrm{dust}}(x)$ is the dust density parameter as a function of $x$,
  * \begin{equation*}
- * \Omega_{\mathrm{dust}}(z) = \frac{(1+z)^3}{E(z)^{2}} \Omega_{\mathrm{dust,0}} \,\, ,
+ * \Omega_{\mathrm{dust}}(x) = \frac{x^3}{E(x)^{2}} \Omega_{\mathrm{dust,0}} \,\, ,
  * \end{equation*}
- * and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].
+ * and $E$ is the normalized Hubble function [nc_hicosmo_E()].
  *
- * The edo initial conditions are defined as, at $a=10^{-12}$ the universe is well approximated to an Einstein-de Sitter model. Therefore,
- * \begin{equation*}
- * D(a=10^{-12}) \rightarrow D_{\mathrm{EdS}} = a \approx 0 \,\, ,
- * \end{equation*}
- * and
- * \begin{equation*}
- * \frac{\mathrm{d} D(a=10^{-12})}{\mathrm{d} a} \rightarrow \frac{\mathrm{d} D_{\mathrm{EdS}}}{\mathrm{d} a} = 1  \,\, .
- * \end{equation*}
- * Note that it was assumed that the dark energy component is negligible at $a=10^{-12}$.
+ * The edo's initial conditions are defined at $a=10^{-12}$ ($z_i=10^{12}-1$), 
+ * when the universe is well approximated to a dust plus radiation model, 
+ * hence the dark energy is neglected at $a_i$.
+ *
+ * As usual, the growth function is set to unit at the present time, $D(a_0) = 1$.
  */
 
 #ifdef HAVE_CONFIG_H
