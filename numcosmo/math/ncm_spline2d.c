@@ -26,6 +26,8 @@
  * SECTION:ncm_spline2d
  * @title: NcmSpline2d
  * @short_description: Abstract class for implementing bidimensional splines.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline2d.h
  *
  * This class comprises all functions to provide a #NcmSpline2d, get its properties
  * and evaluate it given an interpolation method.
@@ -212,7 +214,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:xv:
    *
-   * #NcmVector x-knots
+   * #NcmVector x-knots.
    */
   g_object_class_install_property (object_class,
                                    PROP_XV,
@@ -224,7 +226,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:yv:
    *
-   * #NcmVector y-knots
+   * #NcmVector y-knots.
    */
   g_object_class_install_property (object_class,
                                    PROP_YV,
@@ -236,7 +238,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:zm:
    *
-   * #NcmMatrix z-values
+   * #NcmMatrix z-values.
    */
   g_object_class_install_property (object_class,
                                    PROP_ZM,
@@ -248,7 +250,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:init:
    *
-   * boolean whether to prepare the NcmSpline2d
+   * boolean whether to prepare the NcmSpline2d.
    */
   g_object_class_install_property (object_class,
                                    PROP_INIT,
@@ -261,7 +263,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:use_acc:
    *
-   * boolean whether to use acc 
+   * boolean whether to use acc. 
    */
   g_object_class_install_property (object_class,
                                    PROP_USE_ACC,
@@ -311,7 +313,7 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
  * @zm: a #NcmMatrix of the values of the function, to be interpolated, computed at @xv and @yv
  * @init: TRUE to prepare the #NcmSpline2d or FALSE to not prepare it
  *
- * This funtion sets @xv and @yv vectors and @zm matrix to @s.
+ * This funtion sets @xv and @yv vectors and @zm matrix to @s2d.
  *
  */
 void
@@ -330,7 +332,7 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
 
 /**
  * ncm_spline2d_copy_empty:
- * @s2d: a #NcmSpline2d.
+ * @s2d: a #NcmSpline2d
  *
  * This function copies the bidimensional spline @s2d into an initialized
  * empty #NcmSpline2d of a specific type.
@@ -448,7 +450,7 @@ ncm_spline2d_clear (NcmSpline2d **s2d)
  * @use_acc: a boolean
  * 
  * Whether to use accelerated bsearch to find the
- * right knots. When enabled evalulation functions
+ * right knots. When enabled evaluation functions
  * are not reentrant.
  * 
  */
