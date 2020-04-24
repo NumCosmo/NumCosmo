@@ -35,6 +35,8 @@
  * SECTION:ncm_fftlog_gausswin2
  * @title: NcmFftlogGausswin2
  * @short_description: Logarithm fast fourier transform for a kernel given by the square of a Gaussian window function.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_fftlog_gausswin2.h
  *
  *
  * This object computes the function (see #NcmFftlog)
