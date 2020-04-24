@@ -26,8 +26,11 @@
  * SECTION:ncm_spline2d_spline
  * @title: NcmSpline2dSpline
  * @short_description: Implements bidimensional splines from splines method.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline2d_spline.h 
  *
- * FIXME
+ * This object implements bidimensional splines with the method 
+ * given by the #NcmSpline class, e.g. #NcmSplineCubicNotaknot. 
  * 
  */
 
@@ -43,10 +46,10 @@ G_DEFINE_TYPE (NcmSpline2dSpline, ncm_spline2d_spline, NCM_TYPE_SPLINE2D);
 
 /**
  * ncm_spline2d_spline_new:
- * @s: a #NcmSpline.
+ * @s: a #NcmSpline
  *
  * This function initializes a #NcmSpline2d
- * FIXME
+ * object with a spline method given in @s.
  *
  * Returns: A new #NcmSpline2d.
  */

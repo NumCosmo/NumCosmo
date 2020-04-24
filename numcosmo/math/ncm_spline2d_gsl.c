@@ -25,10 +25,13 @@
 /**
  * SECTION:ncm_spline2d_gsl
  * @title: NcmSpline2dGsl
- * @short_description: Implements spline from spline method using GSL as base splines.
+ * @short_description: Implements spline from spline method using The GNU Scientific Library (GSL) as base splines.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline2d_gsl.h
  *
- * This object implements spline from spline methods using GSL splines as
- * base objects.
+ * This object implements bidimensional splines with the method 
+ * given by the #NcmSplineGsl class.
+ *
  * 
  */
 
@@ -46,9 +49,10 @@ G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D);
 
 /**
  * ncm_spline2d_gsl_new:
- * @s: a #NcmSplineGsl derived #NcmSpline.
+ * @s: a #NcmSplineGsl derived #NcmSpline
  *
- * This function initializes a #NcmSpline2d of gsl type given s.
+ * This function initializes a #NcmSpline2d of 
+ * [GSL](https://www.gnu.org/software/gsl/) type given in @s.
  *
  * Returns: A new #NcmSpline2d.
  */
@@ -67,7 +71,8 @@ ncm_spline2d_gsl_new (NcmSpline *s)
 /**
  * ncm_spline2d_gsl_natural_new:
  *
- * This function initializes a #NcmSpline2d of gsl type.
+ * This function initializes a #NcmSpline2d of [GSL](https://www.gnu.org/software/gsl/) 
+ * type [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline).
  *
  * Returns: A new #NcmSpline2d.
  */
