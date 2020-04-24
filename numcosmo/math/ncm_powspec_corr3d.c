@@ -27,11 +27,13 @@
  * SECTION:ncm_powspec_corr3d
  * @title: NcmPowspecCorr3d
  * @short_description: Class to compute filtered power spectrum
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_powspec_corr3d.h
  * 
- * This class computes the 3d spatial correlation function $\xi(r)$ from the power spectrum 
- * using the FFTLog approach (see #NcmFftlog),
- * \begin{equation}\lable{eq:variance}
- * \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) j_0(kr) \ \mathrm{d}k, 
+ * This class computes the 3d spatial correlation function $\xi(r, z)$ from the power spectrum 
+ * using the FFTLog approach (see #NcmFftlog and #NcmFftlogSBesselJ),
+ * \begin{equation}\label{eq:variance}
+ * \xi(r, z) = \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) j_0(kr) \ \mathrm{d}k, 
  * \end{equation}
  * where $P(k, z)$ is the power spectrum at mode $k$ and redshift $z$ and $j_0(kr)$ is the order zero spherical bessel function.
  *
@@ -208,6 +210,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
   object_class->dispose      = &_ncm_powspec_corr3d_dispose;
   object_class->finalize     = &_ncm_powspec_corr3d_finalize;
 
+  /**
+   * NcmPowspecCorr3d:lnr0:
+   *
+   * The Center value for $\ln(r)$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
                                    g_param_spec_double ("lnr0",
@@ -215,6 +223,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
                                                         "Output center value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecCorr3d:zi:
+   *
+   * The output inital time $z_i$ of the correlation function, $\xi(r,z)$. 
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
@@ -222,6 +236,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
                                                         "Output initial time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecCorr3d:zf:
+   *
+   * The output final time $z_f$ of the correlation function, $\xi(r,z)$. 
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZF,
                                    g_param_spec_double ("zf",
@@ -229,6 +249,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
                                                         "Output final time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecCorr3d:reltol:
+   *
+   * The relative tolerance for calibration in the distance direction. 
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -236,6 +262,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
                                                         "Relative tolerance for calibration",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecCorr3d:reltol-z:
+   *
+   * The relative tolerance for calibration in the redshift direction. 
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL_Z,
                                    g_param_spec_double ("reltol-z",
@@ -243,6 +275,12 @@ ncm_powspec_corr3d_class_init (NcmPowspecCorr3dClass *klass)
                                                         "Relative tolerance for calibration in the redshift direction",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecCorr3d:powerspectrum:
+   *
+   * The #NcmPowspec object to be transformed into $\xi(r, z)$. 
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_POWERSPECTRUM,
                                    g_param_spec_object ("powerspectrum",
@@ -484,7 +522,7 @@ ncm_powspec_corr3d_prepare_if_needed (NcmPowspecCorr3d *psc, NcmModel *model)
  * @psc: a #NcmPowspecCorr3d
  * @lnr0: the output center value $\ln(r_0)$
  * 
- * FIXME
+ * Sets the center of the transform output $\ln(r_0)$ (see ncm_fftlog_set_lnr0()). 
  * 
  */
 void 
@@ -515,7 +553,10 @@ ncm_powspec_corr3d_set_lnr0 (NcmPowspecCorr3d *psc, gdouble lnr0)
  * ncm_powspec_corr3d_set_best_lnr0:
  * @psc: a #NcmPowspecCorr3d
  * 
- * FIXME
+ * Sets the value of $\ln(r_0)$ which gives the best results for
+ * the transformation based on the current value of $\ln(k_0)$,
+ * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$
+ * where $ x^* \approx l + 1$ (see ncm_fftlog_sbessel_j_set_best_lnr0()).
  * 
  */
 void 
@@ -538,7 +579,7 @@ ncm_powspec_corr3d_set_best_lnr0 (NcmPowspecCorr3d *psc)
  * @psc: a #NcmPowspecCorr3d
  * @zi: the output initial time $z_i$
  * 
- * FIXME
+ * Sets the inital time $z_i$. 
  * 
  */
 void 
@@ -558,7 +599,7 @@ ncm_powspec_corr3d_set_zi (NcmPowspecCorr3d *psc, gdouble zi)
  * @psc: a #NcmPowspecCorr3d
  * @zf: the output final time $z_f$
  * 
- * FIXME
+ * Sets the final time $z_f$. 
  * 
  */
 void 
@@ -577,9 +618,9 @@ ncm_powspec_corr3d_set_zf (NcmPowspecCorr3d *psc, gdouble zf)
  * ncm_powspec_corr3d_get_r_min:
  * @psc: a #NcmPowspecCorr3d
  * 
- * FIXME
+ * This function returns $\xi(r, z)$'s minimum evaluated distance. 
  * 
- * Returns: FIXME 
+ * Returns: the minimum distance $r_{\mathrm{min}}$.  
  */
 gdouble
 ncm_powspec_corr3d_get_r_min (NcmPowspecCorr3d *psc)
@@ -591,9 +632,9 @@ ncm_powspec_corr3d_get_r_min (NcmPowspecCorr3d *psc)
  * ncm_powspec_corr3d_get_r_max:
  * @psc: a #NcmPowspecCorr3d
  * 
- * FIXME
+ * This function returns $\xi(r, z)$'s maximum evaluated distance. 
  * 
- * Returns: FIXME 
+ * Returns: the maximum distance $r_{\mathrm{max}}$.  
  */
 gdouble
 ncm_powspec_corr3d_get_r_max (NcmPowspecCorr3d *psc)
@@ -609,7 +650,7 @@ ncm_powspec_corr3d_get_r_max (NcmPowspecCorr3d *psc)
  * 
  * Evaluates the function $\xi(z, r)$ at @lnr and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\xi(\ln r, z)$. 
  */
 gdouble
 ncm_powspec_corr3d_eval_xi_lnr (NcmPowspecCorr3d *psc, const gdouble z, const gdouble lnr)
@@ -620,12 +661,12 @@ ncm_powspec_corr3d_eval_xi_lnr (NcmPowspecCorr3d *psc, const gdouble z, const gd
 /**
  * ncm_powspec_corr3d_eval_xi:
  * @psc: a #NcmPowspecCorr3d
- * @z: redshift 
- * @r: FIXME
+ * @z: redshift $z$
+ * @r: distance $r$ 
  * 
  * Evaluate the function $\xi(z, r)$ at @r and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\xi(r, z)$. 
  */
 gdouble
 ncm_powspec_corr3d_eval_xi (NcmPowspecCorr3d *psc, const gdouble z, const gdouble r)
