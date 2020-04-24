@@ -43,14 +43,14 @@
  *
  * This object computes the function (see #NcmFftlog)
  * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel are the spherical bessel function
+ * where the kernel are the spherical Bessel function
  * of the first kind multiplied by a power law, 
  *
  * \begin{equation}\label{eq:kerneljl}
  * K(t) = t^q j_{\ell}(t).
  * \end{equation}
  *
- * Note that the spherical bessel function's order, $\ell$ (#NcmFftlogSBesselJ:ell), must be an integer number.
+ * Note that the spherical Bessel function's order, $\ell$ (#NcmFftlogSBesselJ:ell), must be an integer number.
  *
  * The spatial correlation function multipoles, $\xi_{\ell}^{(n)}(r)$, can be defined as
  * (see [Matsubara (2004)][XMatsubara2004a] [[arXiv](https://arxiv.org/abs/astro-ph/0408349)])
@@ -60,10 +60,10 @@
  * \end{equation}
  * Where, $P(k)$ is the power spectrum (see #NcmPowspec).
  *
- * Therefore, it multipoles are proportional to the following integral
+ * The multipoles integral can be written in the following format
  *
  * \begin{equation*}
- * \xi_{\ell}^{(n)}(r) \propto \int_{0}^{\infty} \mathrm{d}k \, k^{2-2n+\ell} \, j_{\ell}(kr) P(k) \,\, .
+ * \xi_{\ell}^{(n)}(r) = \frac{(-1)^{n+\ell}}{r^2} \int_{0}^{\infty} \mathrm{d}k \, (kr)^{2-2n+\ell} \, j_{\ell}(kr) P(k) \,\, .
  * \end{equation*}
  *
  * The object #NcmFftlogSBesselJ can be used to evaluate the above integral in several ways.
@@ -75,26 +75,28 @@
  * \begin{equation*}
  * K(t) = j_{\ell}(t) \,\, .
  * \end{equation*}
+ * Where, $t=kr$ and $r^{(2-2n+\ell)}$ was taken out of the integral. 
  * Comparing this kernel with the one defined in Eq. \eqref{eq:kerneljl}, we have $q=0$.
  *
- * But instead, one might choose another format,
+ * But instead, one might choose another format for the function,
  * \begin{equation*}
  * F(k) = k^{\ell} \, P(k)
  * \end{equation*}
  * and the kernel
  * \begin{equation*}
- * K(t) = t^{2-2n} \, j_{\ell}(t) \,\, .
+ * K(t) = t^{2-2n} \, j_{\ell}(t) \,\, ,
  * \end{equation*}
- * which evaluates the same integral, but now with $q=2-2n$.
- * Therefore, the parameter $q$ is the power of the wavenumber $k$
- * included to the kernel with the spherical bessel function.
- * Hereafter it will be referred to as "spherical bessel power" (#NcmFftlogSBesselJ:q).
+ * which evaluates the same integral, but now with $q=2-2n$, and 
+ * in this case, the term $r^{\ell}$ was the one taken out of the integral.
+ * Therefore, the parameter $q$ is the power of the wavenumber $k$ times the distance $r$, $t=kr$,
+ * included to the kernel with the spherical Bessel function.
+ * Hereafter, it will be referred to as "spherical Bessel power" (#NcmFftlogSBesselJ:q).
  *
  * In general, $q=0$ is an accurate and fast choice to make, but it is interesting to
- * perform tests to evaluate which kernel format is best for each type of integral.
+ * perform tests to evaluate which kernel format fits best for each type of integral.
  *
  * The #NcmPowspecCorr3d object already evaluates Eq. \eqref{eq:xi_multipoles} 
- * for the case of the monopole, $n=\ell=0$, with support for redshift $z$ evolution.
+ * for the case of the monopole, $n=\ell=0$, with support for redshift evolution.
  *
  */
 
@@ -202,8 +204,7 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
   /**
    * NcmFftlogSBesselJ:ell:
    *
-   * The Spherical Bessel integer order.
-   * Default value: $0$.
+   * The spherical Bessel integer order.
    *
    */
   g_object_class_install_property (object_class,
@@ -217,9 +218,8 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
   /**
    * NcmFftlogSBesselJ:q:
    *
-   * The Spherical Bessel power, i.e. the power of the wavenumber $k$
-   * included to the kernel $K(t)$ together with the Spherical Bessel function.
-   * Default value: $0$.
+   * The spherical Bessel power, i.e., the power of the variable $t=kr$,
+   * included to the kernel $K(t)$ multiplying the spherical Bessel function.
    *
    */
   g_object_class_install_property (object_class,
