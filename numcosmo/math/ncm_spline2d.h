@@ -5,6 +5,7 @@
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
  *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <sandro@isoftware.com.br>
@@ -48,6 +49,7 @@ struct _NcmSpline2dClass
   /*< private >*/
   GObjectClass parent_class;
   NcmSpline2d *(*copy_empty) (const NcmSpline2d *s2d);
+  
   void (*reset) (NcmSpline2d *s2d);
   void (*prepare) (NcmSpline2d *s2d);
   gdouble (*eval) (NcmSpline2d *s2d, gdouble x, gdouble y);
@@ -98,11 +100,13 @@ void ncm_spline2d_clear (NcmSpline2d **s2d);
 void ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc);
 
 NCM_INLINE gdouble ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
+
 gdouble ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
 gdouble ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);
 gdouble ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
 NcmSpline *ncm_spline2d_integ_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu);
 NcmSpline *ncm_spline2d_integ_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+
 gdouble ncm_spline2d_integ_dx_spline_val (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
 gdouble ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);
 gdouble ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
@@ -136,51 +140,56 @@ ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
 NCM_INLINE gdouble
 ncm_spline2dim_integ_total (NcmSpline2d *s2d)
 {
-	return ncm_spline2d_integ_dxdy (s2d,
-	                                ncm_vector_get (s2d->xv, 0),
-	                                ncm_vector_get (s2d->xv, ncm_vector_len (s2d->xv) - 1),
-	                                ncm_vector_get (s2d->yv, 0),
-	                                ncm_vector_get (s2d->yv, ncm_vector_len (s2d->yv) - 1)
-	                                );
+  return ncm_spline2d_integ_dxdy (s2d,
+                                  ncm_vector_get (s2d->xv, 0),
+                                  ncm_vector_get (s2d->xv, ncm_vector_len (s2d->xv) - 1),
+                                  ncm_vector_get (s2d->yv, 0),
+                                  ncm_vector_get (s2d->yv, ncm_vector_len (s2d->yv) - 1)
+                                 );
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdx (s2d, x, y);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdy (s2d, x, y);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdxy (s2d, x, y);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdx2 (s2d, x, y);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdy2 (s2d, x, y);
 }
 
@@ -189,3 +198,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE2D_INLINE_H_ */
+
