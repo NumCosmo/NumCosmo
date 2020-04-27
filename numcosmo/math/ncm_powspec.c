@@ -571,11 +571,11 @@ _ncm_powspec_var_tophat_R_integ (gdouble lnk, gpointer user_data)
  * This function computes the value of the linearly extrapolated
  * rms fluctuations of mass in a sphere of radius $R$ applying a top-hat filter at redshift $z$,
  * $$\sigma_{R}^{2}(z) = \frac{1}{2\pi^2} \int_{k_{\mathrm{min}}}^{k_\mathrm{max}}  W^{2}_{TH}(kR) \, P(k,z) \, k^2 \, \mathrm{d}k \, .$$
- * Where, $W(t)$ is the top-hat filter in Fourier space,
+ * Where, $W_{TH}(t)$ is the top-hat filter in Fourier space,
  * $$W_{TH}(t) = \frac{3}{t^3} \left( \sin t - t \cos t  \right) = \frac{3}{t} j_{1}(t),$$
  * and $j_1(t)$ is the first order spherical Bessel function of the first kind.
  * This function is recommended for a small set of $z$ and $R$ values.
- * For a wide range of values it is best to apply #NcmFftlog with #NcmFftlogTophatwin2, instead.
+ * For a wide range of values it is best to apply #NcmPowspecFilter, instead.
  *
  * Returns: $\sigma_{R}^{2}(z)$.
  */
