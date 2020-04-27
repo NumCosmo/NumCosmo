@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_ode_eval.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,10 +32,10 @@
  * @stability: Stable
  * @include: numcosmo/math/ncm_ode_eval.h
  *
- * This class implement an abstract interface between 
+ * This class implement an abstract interface between
  * the Ordinary differential equation (ODE) system (see #NcmODE)
- * and the evaluation of its derivatives $\mathrm{d}f$ and 
- * its Jacobian matrix $J$. 
+ * and the evaluation of its derivatives $\mathrm{d}f$ and
+ * its Jacobian matrix $J$.
  *
  */
 
@@ -62,16 +63,13 @@ static void
 ncm_ode_eval_init (NcmODEEval *ode_eval)
 {
   NcmODEEvalPrivate * const self = ode_eval->priv = ncm_ode_eval_get_instance_private (ode_eval);
-
+  
   self->sys_size = 0;
 }
 
 static void
 _ncm_ode_eval_finalize (GObject *object)
 {
-
-  
-  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_eval_parent_class)->finalize (object);
 }
@@ -80,7 +78,7 @@ static void
 _ncm_ode_eval_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   g_return_if_fail (NCM_IS_ODE_EVAL (object));
-
+  
   switch (prop_id)
   {
     case PROP_SYS_SIZE:
@@ -95,7 +93,7 @@ static void
 _ncm_ode_eval_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   g_return_if_fail (NCM_IS_ODE_EVAL (object));
-
+  
   switch (prop_id)
   {
     case PROP_SYS_SIZE:
@@ -106,18 +104,31 @@ _ncm_ode_eval_get_property (GObject *object, guint prop_id, GValue *value, GPara
   }
 }
 
-static gint _ncm_ode_eval_df (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df) { g_error ("_ncm_ode_eval_df: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode_eval)); return 1; }
-static gint _ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble ** restrict J_col) { g_error ("_ncm_ode_eval_J_dense: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode_eval)); return 1; }
+static gint
+_ncm_ode_eval_df (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble * restrict df)
+{
+  g_error ("_ncm_ode_eval_df: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode_eval));
+  
+  return 1;
+}
+
+static gint
+_ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size, const gdouble t, const gdouble * restrict f, gdouble ** restrict J_col)
+{
+  g_error ("_ncm_ode_eval_J_dense: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode_eval));
+  
+  return 1;
+}
 
 static void
 ncm_ode_eval_class_init (NcmODEEvalClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->set_property = &_ncm_ode_eval_set_property;
   object_class->get_property = &_ncm_ode_eval_get_property;
   object_class->finalize     = &_ncm_ode_eval_finalize;
-
+  
   /**
    * NcmODEEval:sys-size:
    *
@@ -130,7 +141,7 @@ ncm_ode_eval_class_init (NcmODEEvalClass *klass)
                                                       "ODE system size",
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   klass->df      = &_ncm_ode_eval_df;
   klass->J_dense = &_ncm_ode_eval_J_dense;
 }
@@ -139,7 +150,7 @@ ncm_ode_eval_class_init (NcmODEEvalClass *klass)
  * ncm_ode_eval_ref:
  * @ode_eval: a #NcmODEEval
  *
- * Increases the reference count of @ode_eval by one atomically. 
+ * Increases the reference count of @ode_eval by one atomically.
  *
  * Returns: (transfer full): @ode_eval.
  */
@@ -182,26 +193,27 @@ ncm_ode_eval_clear (NcmODEEval **ode_eval)
 /**
  * ncm_ode_eval_df: (virtual df)
  * @ode_eval: a #NcmODEEval
- * @sys_size: ODE system size 
+ * @sys_size: ODE system size
  * @t: the current time $t$
  * @f: (array length=sys_size): ODE system current state $f$
  * @df: (inout) (array length=sys_size): Vector to hold the time derivatives $\mathrm{d}f$
- * 
- * Computes the time derivatives of the ODE system in @df using the 
+ *
+ * Computes the time derivatives of the ODE system in @df using the
  * current state in @f.
- * 
+ *
  * Return: status
  */
 /**
  * ncm_ode_eval_J_dense: (virtual J_dense)
  * @ode_eval: a #NcmODEEval
- * @sys_size: ODE system size 
+ * @sys_size: ODE system size
  * @t: the current time $t$
  * @f: (array length=sys_size): ODE system current state $f$
- * @J_col: (array length=sys_size): Array containing the Jacobian columns 
+ * @J_col: (array length=sys_size): Array containing the Jacobian columns
  *
- * Computes the jacobian matrix $J$ of the ODE system in @J_col using the 
+ * Computes the jacobian matrix $J$ of the ODE system in @J_col using the
  * current state in @f.
- * 
+ *
  * Return: status
  */
+
