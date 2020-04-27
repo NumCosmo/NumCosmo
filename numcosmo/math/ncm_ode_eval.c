@@ -28,9 +28,13 @@
  * SECTION:ncm_ode_eval
  * @title: NcmODEEval
  * @short_description: Abstract class for ODE system evaluation
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_ode_eval.h
  *
- * This class implement an abstract interface between the ODE system
- * and the evaluation of $\mathrm{d}f$ and $J$. 
+ * This class implement an abstract interface between 
+ * the Ordinary differential equation (ODE) system (see #NcmODE)
+ * and the evaluation of its derivatives $\mathrm{d}f$ and 
+ * its Jacobian matrix $J$. 
  *
  */
 
@@ -114,6 +118,11 @@ ncm_ode_eval_class_init (NcmODEEvalClass *klass)
   object_class->get_property = &_ncm_ode_eval_get_property;
   object_class->finalize     = &_ncm_ode_eval_finalize;
 
+  /**
+   * NcmODEEval:sys-size:
+   *
+   * The ordinary differential equation (EDO) system size.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SYS_SIZE,
                                    g_param_spec_uint ("sys-size",
@@ -130,7 +139,7 @@ ncm_ode_eval_class_init (NcmODEEvalClass *klass)
  * ncm_ode_eval_ref:
  * @ode_eval: a #NcmODEEval
  *
- * Increase the reference of @ode_eval by one.
+ * Increases the reference count of @ode_eval by one atomically. 
  *
  * Returns: (transfer full): @ode_eval.
  */
@@ -144,7 +153,8 @@ ncm_ode_eval_ref (NcmODEEval *ode_eval)
  * ncm_ode_eval_free:
  * @ode_eval: a #NcmODEEval
  *
- * Decrease the reference count of @ode_eval by one.
+ * Atomically decrements the reference count of @ode_eval by one.
+ * If the reference count drops to 0, all memory allocated by @ode_eval is released.
  *
  */
 void
@@ -157,8 +167,10 @@ ncm_ode_eval_free (NcmODEEval *ode_eval)
  * ncm_ode_eval_clear:
  * @ode_eval: a #NcmODEEval
  *
- * Decrease the reference count of @ode_eval by one, and sets the pointer *@ode_eval to
- * NULL.
+ * If @ode_eval is different from NULL,
+ * atomically decrements the reference count of @ode_eval by one.
+ * If the reference count drops to 0, all memory allocated
+ * by @ode is released and @ode_eval is set to NULL.
  *
  */
 void

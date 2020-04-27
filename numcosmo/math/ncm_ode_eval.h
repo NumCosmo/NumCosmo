@@ -67,7 +67,7 @@ struct _NcmODEEval
 
 /**
  * NcmODEEvalReturn:
- * @NCM_ODE_EVAL_RETURN_SUCCESS: computation done with success
+ * @NCM_ODE_EVAL_RETURN_SUCCESS: if computation was done with success
  * 
  * NcmODEEval return codes.
  * 
