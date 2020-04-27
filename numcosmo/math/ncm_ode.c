@@ -28,8 +28,10 @@
  * SECTION:ncm_ode
  * @title: NcmODE
  * @short_description: Abstract class for ODE solvers
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_ode.h
  *
- * This class determine the methods needed to implement a ODE solver.
+ * This class determine the methods needed to implement a ordinary differential equation (ODE) solver.
  *
  */
 
@@ -123,6 +125,11 @@ ncm_ode_class_init (NcmODEClass *klass)
   object_class->dispose      = &_ncm_ode_dispose;
   object_class->finalize     = &_ncm_ode_finalize;
 
+  /**
+   * NcmODE:sys-size:
+   *
+   * The ordinary differential equation (EDO) system size.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SYS_SIZE,
                                    g_param_spec_uint ("sys-size",
@@ -138,7 +145,7 @@ ncm_ode_class_init (NcmODEClass *klass)
  * ncm_ode_ref:
  * @ode: a #NcmODE
  *
- * Increase the reference of @ode by one.
+ * Increases the reference count of @ode by one atomically. 
  *
  * Returns: (transfer full): @ode.
  */
@@ -152,7 +159,8 @@ ncm_ode_ref (NcmODE *ode)
  * ncm_ode_free:
  * @ode: a #NcmODE
  *
- * Decrease the reference count of @ode by one.
+ * Atomically decrements the reference count of @ode by one. 
+ * If the reference count drops to 0, all memory allocated by @ode is released. 
  *
  */
 void
@@ -165,8 +173,10 @@ ncm_ode_free (NcmODE *ode)
  * ncm_ode_clear:
  * @ode: a #NcmODE
  *
- * Decrease the reference count of @ode by one, and sets the pointer *@ode to
- * NULL.
+ * If @ode is different from NULL, 
+ * atomically decrements the reference count of @ode by one. 
+ * If the reference count drops to 0, all memory allocated 
+ * by @ode is released and @ode is set to NULL.
  *
  */
 void
