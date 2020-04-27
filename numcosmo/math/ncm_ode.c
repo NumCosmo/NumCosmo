@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_ode.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -59,16 +60,17 @@ static void
 ncm_ode_init (NcmODE *ode)
 {
   NcmODEPrivate * const self = ode->priv = ncm_ode_get_instance_private (ode);
-
+  
   self->sys_size = 0;
 }
 
 static void
 _ncm_ode_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmODE *ode = NCM_ODE (object);  
+  NcmODE *ode = NCM_ODE (object);
+  
   g_return_if_fail (NCM_IS_ODE (object));
-
+  
   switch (prop_id)
   {
     case PROP_SYS_SIZE:
@@ -84,8 +86,9 @@ static void
 _ncm_ode_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmODE *ode = NCM_ODE (object);
+  
   g_return_if_fail (NCM_IS_ODE (object));
-
+  
   switch (prop_id)
   {
     case PROP_SYS_SIZE:
@@ -100,7 +103,6 @@ _ncm_ode_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 static void
 _ncm_ode_dispose (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_parent_class)->dispose (object);
 }
@@ -108,23 +110,26 @@ _ncm_ode_dispose (GObject *object)
 static void
 _ncm_ode_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_parent_class)->finalize (object);
 }
 
-void _ncm_ode_set_sys_size (NcmODE *ode, guint sys_size) { g_error ("_ncm_ode_set_sys_size: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode)); }
+void
+_ncm_ode_set_sys_size (NcmODE *ode, guint sys_size)
+{
+  g_error ("_ncm_ode_set_sys_size: not implemented by `%s'.", G_OBJECT_TYPE_NAME (ode));
+}
 
 static void
 ncm_ode_class_init (NcmODEClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->set_property = &_ncm_ode_set_property;
   object_class->get_property = &_ncm_ode_get_property;
   object_class->dispose      = &_ncm_ode_dispose;
   object_class->finalize     = &_ncm_ode_finalize;
-
+  
   /**
    * NcmODE:sys-size:
    *
@@ -137,7 +142,7 @@ ncm_ode_class_init (NcmODEClass *klass)
                                                       "ODE system size",
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   klass->set_sys_size = &_ncm_ode_set_sys_size;
 }
 
@@ -145,7 +150,7 @@ ncm_ode_class_init (NcmODEClass *klass)
  * ncm_ode_ref:
  * @ode: a #NcmODE
  *
- * Increases the reference count of @ode by one atomically. 
+ * Increases the reference count of @ode by one atomically.
  *
  * Returns: (transfer full): @ode.
  */
@@ -159,8 +164,8 @@ ncm_ode_ref (NcmODE *ode)
  * ncm_ode_free:
  * @ode: a #NcmODE
  *
- * Atomically decrements the reference count of @ode by one. 
- * If the reference count drops to 0, all memory allocated by @ode is released. 
+ * Atomically decrements the reference count of @ode by one.
+ * If the reference count drops to 0, all memory allocated by @ode is released.
  *
  */
 void
@@ -173,9 +178,9 @@ ncm_ode_free (NcmODE *ode)
  * ncm_ode_clear:
  * @ode: a #NcmODE
  *
- * If @ode is different from NULL, 
- * atomically decrements the reference count of @ode by one. 
- * If the reference count drops to 0, all memory allocated 
+ * If @ode is different from NULL,
+ * atomically decrements the reference count of @ode by one.
+ * If the reference count drops to 0, all memory allocated
  * by @ode is released and @ode is set to NULL.
  *
  */
@@ -191,15 +196,15 @@ ncm_ode_clear (NcmODE **ode)
  * @sys_size: system size
  *
  * Sets the ODE system size to @sys_size.
- * 
+ *
  */
-void 
+void
 ncm_ode_set_sys_size (NcmODE *ode, guint sys_size)
 {
   NcmODEPrivate * const self = ode->priv;
-
+  
   self->sys_size = sys_size;
-
+  
   NCM_ODE_GET_CLASS (ode)->set_sys_size (ode, sys_size);
 }
 
@@ -208,12 +213,14 @@ ncm_ode_set_sys_size (NcmODE *ode, guint sys_size)
  * @ode: a #NcmODE
  *
  * Gets the current ODE system size.
- * 
+ *
  * Returns: current ODE system size.
  */
-guint 
+guint
 ncm_ode_get_sys_size (NcmODE *ode)
 {
   NcmODEPrivate * const self = ode->priv;
+  
   return self->sys_size;
 }
+
