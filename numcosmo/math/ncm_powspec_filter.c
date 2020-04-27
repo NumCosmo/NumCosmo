@@ -42,10 +42,12 @@
  * SECTION:ncm_powspec_filter
  * @title: NcmPowspecFilter
  * @short_description: Class to compute filtered power spectrum
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_powspec_filter.h
  * 
  * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$ 
  * (#ncm_powspec_filter_eval_dnvar_dlnrn()) using the FFTLog approach (see #NcmFftlog),
- * \begin{equation}\lable{eq:variance}
+ * \begin{equation}\label{eq:variance}
  * \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) \vert W(k,r) \vert^2 \ \mathrm{d}k, 
  * \end{equation}
  * where $P(k, z)$ is the power spectrum at mode $k$ and redshift $z$ and $W(k, r)$ is the filter (or window function).
@@ -223,6 +225,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
   object_class->dispose      = &_ncm_powspec_filter_dispose;
   object_class->finalize     = &_ncm_powspec_filter_finalize;
 
+  /**
+   * NcmPowspecFilter:lnr0:
+   *
+   * The output center value for $\ln(r)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
                                    g_param_spec_double ("lnr0",
@@ -230,6 +237,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output center value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:zi:
+   *
+   * The output initial time $z_i$ of the variance $\sigma^{2}(r,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
@@ -237,6 +249,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output initial time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:zf:
+   *
+   * The output final time $z_f$ of the variance $\sigma^{2}(r,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZF,
                                    g_param_spec_double ("zf",
@@ -244,6 +261,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output final time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:reltol:
+   *
+   * The relative tolerance for calibration in the distance direction. 
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -251,6 +273,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Relative tolerance for calibration",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:reltol-z:
+   *
+   * The relative tolerance for calibration in the redshift direction.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL_Z,
                                    g_param_spec_double ("reltol-z",
@@ -258,6 +285,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Relative tolerance for calibration in the redshift direction",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:type:
+   *
+   * The type of fliter used $W(k,r)$. 
+   */
   g_object_class_install_property (object_class,
                                    PROP_TYPE,
                                    g_param_spec_enum ("type",
@@ -265,6 +297,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                       "Filter type",
                                                       NCM_TYPE_POWSPEC_FILTER_TYPE, NCM_POWSPEC_FILTER_TYPE_TOPHAT,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcmPowspecFilter:powerspectrum:
+   *
+   * The #NcmPowspec object to be used to compute the variance $\sigma^{2}(r,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_POWERSPECTRUM,
                                    g_param_spec_object ("powerspectrum",
@@ -298,7 +335,7 @@ ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type)
  * ncm_powspec_filter_ref:
  * @psf: a #NcmPowspecFilter
  * 
- * Increases the reference count of @psf by one.
+ * Increases the reference count of @psf by one atomically. 
  * 
  * Returns: (transfer full): @psf
  */
@@ -312,7 +349,8 @@ ncm_powspec_filter_ref (NcmPowspecFilter *psf)
  * ncm_powspec_filter_free:
  * @psf: a #NcmPowspecFilter
  * 
- * Decreases the reference count of @psf by one.
+ * Atomically decrements the reference count of @psf by one. 
+ * If the reference count drops to 0, all memory allocated by @psf is released. 
  * 
  */
 void
@@ -325,8 +363,10 @@ ncm_powspec_filter_free (NcmPowspecFilter *psf)
  * ncm_powspec_filter_clear:
  * @psf: a #NcmPowspecFilter
  * 
- * If @psf is different from NULL, decreases the reference count of 
- * @psf by one and sets @fftlog to NULL.
+ * If @psf is different from NULL, 
+ * atomically decrements the reference count of @psf by one. 
+ * If the reference count drops to 0, 
+ * all memory allocated by @psf is released and @psf is set to NULL.
  * 
  */
 void
@@ -569,7 +609,7 @@ ncm_powspec_filter_prepare_if_needed (NcmPowspecFilter *psf, NcmModel *model)
  * @psf: a #NcmPowspecFilter
  * @lnr0: the output center value $\ln(r_0)$
  * 
- * FIXME
+ * Sets the center of the transform output $\ln(r_0)$ (see ncm_fftlog_set_lnr0()).
  * 
  */
 void 
@@ -600,7 +640,8 @@ ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
  * ncm_powspec_filter_set_best_lnr0:
  * @psf: a #NcmPowspecFilter
  * 
- * FIXME
+ * Sets the value of $\ln(r_0)$ which gives the best results for
+ * the transformation based on the current value of $\ln(k_0)$. 
  * 
  */
 void 
@@ -623,7 +664,7 @@ ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf)
  * @psf: a #NcmPowspecFilter
  * @zi: the output initial time $z_i$
  * 
- * FIXME
+ * Sets the inital time $z_i$.
  * 
  */
 void 
@@ -643,7 +684,7 @@ ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi)
  * @psf: a #NcmPowspecFilter
  * @zf: the output final time $z_f$
  * 
- * FIXME
+ * Sets the final time $z_f$.
  * 
  */
 void 
@@ -662,9 +703,9 @@ ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf)
  * ncm_powspec_filter_get_r_min:
  * @psf: a #NcmPowspecFilter
  * 
- * FIXME
+ * This function returns $\sigma^2(r, z)$'s minimum evaluated distance. 
  * 
- * Returns: FIXME 
+ * Returns: the minimum distance $r_{\mathrm{min}}$. 
  */
 gdouble
 ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf)
@@ -676,9 +717,9 @@ ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf)
  * ncm_powspec_filter_get_r_max:
  * @psf: a #NcmPowspecFilter
  * 
- * FIXME
+ * This function returns $\sigma^2(r, z)$'s maximum evaluated distance. 
  * 
- * Returns: FIXME 
+ * Returns: the maximum distance $r_{\mathrm{max}}$. 
  */
 gdouble
 ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
@@ -689,12 +730,12 @@ ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
 /**
  * ncm_powspec_filter_eval_lnvar_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
  * Evaluates the logarithm base e of the filtered power spectrum at @lnr and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\ln \left[ \sigma^2(\ln r, z)  \right]$. 
  */
 gdouble
 ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -705,12 +746,12 @@ ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_var_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
  * Evaluates the filtered power spectrum at @lnr and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\sigma^2(\ln r, z)$. 
  */
 gdouble
 ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -721,12 +762,12 @@ ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const g
 /**
  * ncm_powspec_filter_eval_var:
  * @psf: a #NcmPowspecFilter
- * @z: redshift 
- * @r: FIXME
+ * @z: redshift $z$
+ * @r: distance $r$ 
  * 
- * Evaluate the filtered variance at @r.
+ * Evaluate the filtered variance at $r$.
  * 
- * Returns: FIXME 
+ * Returns: $\sigma^2(r, z)$. 
  */
 gdouble
 ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdouble r)
@@ -737,12 +778,12 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
 /**
  * ncm_powspec_filter_eval_sigma_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
- * Evaluate the suare root of the filtered power spectrum at @lnr and @z.
+ * Evaluate the square root of the filtered power spectrum at @lnr and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\sqrt{ \sigma^2(\ln r, z) }$. 
  */
 gdouble
 ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -753,12 +794,12 @@ ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_sigma:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
- * @r: FIXME
+ * @z: redshift $z$
+ * @r: distance $r$ 
  * 
- * Evaluates the filtered variance at @r.
+ * Evaluates the square root of the filtered power spectrum at @r and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\sqrt{ \sigma^2(r, z) }$. 
  */
 gdouble
 ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdouble r)
@@ -769,12 +810,13 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
 /**
  * ncm_powspec_filter_eval_dvar_dlnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
- * Evaluates the filtered variance at @lnr.
+ * Evaluates the first derivative of the filtered 
+ * variance with respect to $\ln r$ at @lnr and @z.
  * 
- * Returns: FIXME 
+ * Returns: $\frac{\mathrm{d} \sigma^2(\ln r, z) }{\mathrm{d} \ln r }$. 
  */
 gdouble
 ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -785,12 +827,13 @@ ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_dlnvar_dlnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the first derivative of the logarithm of the filtered 
+ * variance with respect to $\ln r$ at @lnr and @z. 
  * 
- * Returns: FIXME 
+ * Returns:  $\frac{\mathrm{d} \left[ \ln \sigma^2(\ln r, z) \right] }{\mathrm{d} \ln r }$.
  */
 gdouble
 ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -801,12 +844,13 @@ ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, con
 /**
  * ncm_powspec_filter_eval_dlnvar_dr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * 
- * Evaluates the filtered variance at @lnr.
+ * Evaluates the first derivative of the logarithm of the filtered 
+ * variance with respect to $r$ at @lnr and @z. 
  * 
- * Returns: FIXME 
+ * Returns:  $\frac{\mathrm{d} \left[ \ln \sigma^2(\ln r, z) \right] }{\mathrm{d} r }$.
  */
 gdouble
 ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
@@ -817,17 +861,17 @@ ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_dnvar_dlnrn:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * @n: number of derivatives
+ * @n: number of derivatives $n$
  * 
- * Evaluates the derivative of the filtered variance at @lnr and @z, namely:
- * - @n = 0: $\sigma(r, z)^2$,
- * - @n = 1: $\frac{d\sigma^2}{d\ln r}$,
- * - @n = 2: $\frac{d^2\sigma^2}{d(\ln r)^2}$,
- * - @n = 3: $\frac{d^3\sigma^2}{d(\ln r)^3}$.
+ * Evaluates the derivatives of the filtered variance at @lnr and @z, namely:
+ * - $n = 0 \rightarrow \sigma(r, z)^2$,
+ * - $n = 1 \rightarrow \frac{\mathrm{d}\sigma^2}{\mathrm{d} \ln r}$,
+ * - $n = 2 \rightarrow \frac{\mathrm{d}^2\sigma^2}{\mathrm{d}(\ln r)^2}$,
+ * - $n = 3 \rightarrow \frac{\mathrm{d}^3\sigma^2}{\mathrm{d}(\ln r)^3}$.
  * 
- * Returns: FIXME 
+ * Returns: one of the four derivatives described above. 
  */
 gdouble 
 ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
@@ -856,13 +900,17 @@ ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, con
 /**
  * ncm_powspec_filter_eval_dnlnvar_dlnrn:
  * @psf: a #NcmPowspecFilter
- * @z: redshift
+ * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * @n: number of derivatives
+ * @n: number of derivatives $n$
  * 
- * Evaluates the filtered variance at @lnr.
- * 
- * Returns: FIXME 
+ * Evaluates the derivatives of the logarithm of the filtered variance at @lnr and @z, namely:
+ * - $n = 0 \rightarrow \ln \left[ \sigma(r, z)^2 \right]$,
+ * - $n = 1 \rightarrow \frac{\mathrm{d}\ln \left( \sigma^2 \right)}{\mathrm{d} \ln r}$,
+ * - $n = 2 \rightarrow \frac{\mathrm{d}^2 \ln \left( \sigma^2 \right)}{\mathrm{d}(\ln r)^2}$,
+ * - $n = 3 \rightarrow \frac{\mathrm{d}^3 \ln \left( \sigma^2 \right)}{\mathrm{d}(\ln r)^3}$.
+ *
+ * Returns: one of the four derivatives described above.
  */
 gdouble 
 ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
