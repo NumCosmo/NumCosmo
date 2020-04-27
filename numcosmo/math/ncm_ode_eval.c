@@ -181,7 +181,7 @@ ncm_ode_eval_free (NcmODEEval *ode_eval)
  * If @ode_eval is different from NULL,
  * atomically decrements the reference count of @ode_eval by one.
  * If the reference count drops to 0, all memory allocated
- * by @ode is released and @ode_eval is set to NULL.
+ * by @ode_eval is released and @ode_eval is set to NULL.
  *
  */
 void
