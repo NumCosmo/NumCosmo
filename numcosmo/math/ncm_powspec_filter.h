@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -56,16 +56,16 @@ struct _NcmPowspecFilterClass
  * @NCM_POWSPEC_FILTER_TYPE_TOPHAT: Apply the top-hat filter.
  * @NCM_POWSPEC_FILTER_TYPE_GAUSS: Apply the Gaussian filter.
  *
- * Filter type to apply to the power spectrum. 
- * See also #NcmFftlogTophatwin2 and #NcmFftlogGausswin2, for the top-hat and Gaussian filters, respectively. 
- * 
- */	
+ * Filter type to apply to the power spectrum.
+ * See also #NcmFftlogTophatwin2 and #NcmFftlogGausswin2, for the top-hat and Gaussian filters, respectively.
+ *
+ */
 typedef enum _NcmPowspecFilterType
 {
   NCM_POWSPEC_FILTER_TYPE_TOPHAT = 0,
   NCM_POWSPEC_FILTER_TYPE_GAUSS,
   /* < private > */
-  NCM_POWSPEC_FILTER_TYPE_LEN,   /*< skip >*/
+  NCM_POWSPEC_FILTER_TYPE_LEN, /*< skip >*/
 } NcmPowspecFilterType;
 
 struct _NcmPowspecFilter
@@ -93,6 +93,7 @@ GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
 
 NcmPowspecFilter *ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type);
 NcmPowspecFilter *ncm_powspec_filter_ref (NcmPowspecFilter *psf);
+
 void ncm_powspec_filter_free (NcmPowspecFilter *psf);
 void ncm_powspec_filter_clear (NcmPowspecFilter **psf);
 
@@ -129,3 +130,4 @@ gdouble ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf);
 G_END_DECLS
 
 #endif /* _NCM_POWSPEC_FILTER_H_ */
+
