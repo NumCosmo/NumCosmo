@@ -39,7 +39,7 @@
  * 
  * The mean surface mass density within a circular aperture of radius $R$ is, [nc_wl_surface_mass_density_sigma_mean()]
  * \begin{equation}\label{eq:sigma_mean}
- * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, \Sigma (R^\prime).
+ * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, R^\prime \Sigma (R^\prime).
  * \end{equation}
  * 
  * The convergence $\kappa (R)$ [nc_wl_surface_mass_density_convergence()] and the shear $\gamma(R)$ [nc_wl_surface_mass_density_shear()] 

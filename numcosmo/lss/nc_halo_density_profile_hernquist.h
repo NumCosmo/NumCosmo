@@ -2,12 +2,12 @@
  *            nc_halo_density_profile_hernquist.h
  *
  *  Sat April 11 17:23:06 2020
- *  Copyright  2014
+ *  Copyright  2020
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_halo_density_profile_hernquist.h
- * Copyright (C) 2014 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

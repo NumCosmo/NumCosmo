@@ -121,10 +121,10 @@
  * Using the 2D projection $\Sigma(R)$ one computes the total mass
  * inside an infinite cylinder of radius $R$ using
  * \begin{align}
- * \overline\Sigma(<R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{\Sigma}}(<R/r_s), \\\\ \label{eq:def:cylmass}
- * \hat{\overline{\Sigma}}(<X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
+ * \overline{M}(R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{\Sigma}}(<R/r_s), \\\\ \label{eq:def:cylmass}
+ * \hat{\overline{M}}(X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
  * \end{align}
- * Here it is possible to implement the function $\hat{\overline{\Sigma}}(<X)$
+ * Here it is possible to implement the function $\hat{\overline{\M}}(X)$
  * through the method nc_halo_density_profile_eval_dl_cyl_mass() or to use
  * the default numerical implementation.
  * 
