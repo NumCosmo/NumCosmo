@@ -63,7 +63,7 @@ struct _NcHaloDensityProfileClass
  *
  * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
  * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
- * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:MDelta is ignored and 
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:MDelta is ignored and
  * \begin{equation}\label{def:DVir}
  * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
  * \end{equation}
@@ -86,7 +86,7 @@ typedef enum _NcHaloDensityProfileMassDef
  * Fundamental parametrization of the profile $\rho(r)$,
  * any additional parameter must be included in the implementation
  * of this class.
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_SPARAMS >*/
 {
@@ -124,7 +124,7 @@ gdouble nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp);
 void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
 
 gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp);
+gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
 gdouble nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 gdouble nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -145,7 +145,12 @@ GArray *nc_halo_density_profile_eval_density_array (NcHaloDensityProfile *dp, Nc
 GArray *nc_halo_density_profile_eval_2d_density_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z);
 GArray *nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z);
 
-#define NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA (4.0   )
+gdouble nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_numint_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+gdouble nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
+
+
+#define NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA (4.0)
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA (2.0e14)
 
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL (0.0)
@@ -153,3 +158,4 @@ GArray *nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, N
 G_END_DECLS
 
 #endif /* _NC_HALO_DENSITY_PROFILE_H_ */
+

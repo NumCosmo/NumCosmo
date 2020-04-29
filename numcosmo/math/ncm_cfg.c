@@ -565,13 +565,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-
+  
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_DK14);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
-
+  
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
@@ -701,13 +701,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   if (!_mpi_ctrl.initialized)
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initalized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
     MPI_Init (argc, argv);
     MPI_Initialized (&_mpi_ctrl.initialized);
   }
   else
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initalized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   }
   
   {
@@ -1352,7 +1352,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
             if ((g_ascii_strcasecmp (val, "1") == 0) ||
                 (g_ascii_strcasecmp (val, "true") == 0))
               argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-
+            
             g_free (val);
           }
           else if (strlen (val) > 0)
@@ -1771,7 +1771,7 @@ ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
+  
   g_free (file);
   g_free (full_filename);
   
@@ -1803,7 +1803,7 @@ ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
+  
   g_free (file);
   g_free (full_filename);
   

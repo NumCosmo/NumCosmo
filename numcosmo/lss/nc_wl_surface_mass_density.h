@@ -57,7 +57,7 @@ typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
 typedef enum _NcWLSurfaceMassDensityParams
 {
   NC_WL_SURFACE_MASS_DENSITY_PCC = 0,
-  NC_WL_SURFACE_MASS_DENSITY_ROFF, 
+  NC_WL_SURFACE_MASS_DENSITY_ROFF,
   /* < private > */
   NC_WL_SURFACE_MASS_DENSITY_SPARAM_LEN, /*< skip >*/
 } NcWLSurfaceMassDensityParams;
@@ -70,16 +70,16 @@ typedef enum _NcWLSurfaceMassDensityParams
 struct _NcWLSurfaceMassDensityClass
 {
   /*< private >*/
-	NcmModelClass parent_class;
+  NcmModelClass parent_class;
 };
 
 struct _NcWLSurfaceMassDensity
 {
   /*< private >*/
   NcmModel parent_instance;
-	NcDistance *dist;
-	NcmModelCtrl *ctrl_cosmo;
-	NcmModelCtrl *ctrl_dp;
+  NcDistance *dist;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_dp;
 };
 
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
@@ -124,3 +124,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_WL_SURFACE_MASS_DENSITY_INLINE_H_ */
+

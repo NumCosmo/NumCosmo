@@ -30,24 +30,24 @@
  *
  * This object implements the #NcHaloDensityProfile class for the Einasto density profile.
  *
- * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$ 
- * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()]. 
+ * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
+ * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].
  * In particular, the Einasto profile is given by
  * \begin{equation}
  * \hat{\rho}(x) = \exp \left[ - \frac{2}{\alpha} \left( x^\alpha - 1 \right) \right],
  * \end{equation}
- * where $x = r/r_s$ and $r_s$ is the scale radius and $\alpha$ is a parameter that defines how the 
- * profile steepens with slope. 
+ * where $x = r/r_s$ and $r_s$ is the scale radius and $\alpha$ is a parameter that defines how the
+ * profile steepens with slope.
  *
- * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral 
- * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()]. 
- * The respective Einasto implementation provides  
+ * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral
+ * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()].
+ * The respective Einasto implementation provides
  * \begin{equation}
- * I_{x^2\hat\rho}(x) = \left(\frac{\alpha}{2}\right)^{3/\alpha} \frac{e^{2/\alpha}}{\alpha} 
+ * I_{x^2\hat\rho}(x) = \left(\frac{\alpha}{2}\right)^{3/\alpha} \frac{e^{2/\alpha}}{\alpha}
  * \Gamma \left( \frac{3}{\alpha} \right) \left[1 - \frac{\Gamma \left( 3/\alpha, 2c_{\Delta}^\alpha / \alpha\right)}{\Gamma \left( 3/\alpha \right)} \right],
- * \end{equation} 
+ * \end{equation}
  * where $c_{\Delta}$ is the concentration parameter.
- * 
+ *
  * References: Einasto (1965), arXiv:1712.04512.
  */
 
@@ -125,9 +125,9 @@ static gdouble _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensit
 static void
 nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class          = G_OBJECT_CLASS (klass);
   NcHaloDensityProfileClass *dp_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
   
   model_class->set_property = &_nc_halo_density_profile_einasto_set_property;
   model_class->get_property = &_nc_halo_density_profile_einasto_get_property;
@@ -139,14 +139,14 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   /**
    * NcHaloDensityProfileEinasto:alpha:
    *
-   * Defines how the profile steepens with slope. 
+   * Defines how the profile steepens with slope.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA, "\\alpha", "alpha",
                               0.155,  0.5, 0.01,
                               NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
-
+  
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
@@ -154,10 +154,10 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_einasto_eval_dl_spher_mass;
 }
 
-static gdouble 
+static gdouble
 _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
-  return exp (- 2.0/ALPHA * (pow (x, ALPHA) - 1.0));
+  return exp (-2.0 / ALPHA * (pow (x, ALPHA) - 1.0));
 }
 
 static gdouble
@@ -165,8 +165,8 @@ _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, c
 {
   const gdouble gamma_3_alpha = gsl_sf_gamma (3.0 / ALPHA);
   const gdouble arg_2         = 2.0 * pow (C_DELTA, ALPHA) / ALPHA;
-  const gdouble gamma_inc_P   = gsl_sf_gamma_inc_P(3.0 / ALPHA, arg_2);
-
+  const gdouble gamma_inc_P   = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
+  
   return (pow (ALPHA / 2.0, 3.0 / ALPHA) * exp (2.0 / ALPHA) / ALPHA * gamma_3_alpha * gamma_inc_P);
 }
 
@@ -175,7 +175,7 @@ _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, c
  * @mdef: a #NcHaloDensityProfileMassDef
  * @Delta: cluster threshold mass definition $\Delta$
  *
- * This function returns the #NcHaloDensityProfileEinasto implementation of 
+ * This function returns the #NcHaloDensityProfileEinasto implementation of
  * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
  * and #NcHaloDensityProfile:Delta to @Delta.
  *
@@ -189,3 +189,4 @@ nc_halo_density_profile_einasto_new (const NcHaloDensityProfileMassDef mdef, con
                        "Delta",    Delta,
                        NULL);
 }
+

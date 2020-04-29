@@ -1,5 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
+# gcov support
+include $(top_srcdir)/aminclude_static.am
+
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la

@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [14])
-m4_define([numcosmo_micro_version], [2])
+m4_define([numcosmo_minor_version], [15])
+m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])

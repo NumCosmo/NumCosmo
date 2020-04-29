@@ -1,5 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
+# gcov support
+include $(top_srcdir)/aminclude_static.am
+
 include $(top_srcdir)/glib-tap.mk
 
 MY_CFLAGS = \
@@ -129,8 +132,8 @@ test_nc_data_bao_dvdv_SOURCES =  \
 test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
 
-test_nc_halo_density_profile_nfw_SOURCES =  \
-        test_nc_halo_density_profile_nfw.c
+test_nc_halo_density_profile_SOURCES =  \
+        test_nc_halo_density_profile.c
 
 test_nc_wl_surface_mass_density_SOURCES =  \
         test_nc_wl_surface_mass_density.c
@@ -164,7 +167,7 @@ test_programs =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
-	test_nc_hiqg_1d                \
+	test_nc_hiqg_1d                 \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
 	test_nc_transfer_func           \
@@ -174,7 +177,7 @@ test_programs =  \
 	test_nc_data_bao_rdv            \
         test_nc_data_bao_dvdv           \
         test_nc_cluster_pseudo_counts   \
-        test_nc_halo_density_profile_nfw     \
+        test_nc_halo_density_profile    \
         test_nc_wl_surface_mass_density \
         test_nc_distance
 
@@ -390,7 +393,7 @@ test_nc_cluster_pseudo_counts_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
-test_nc_halo_density_profile_nfw_LDADD = \
+test_nc_halo_density_profile_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
