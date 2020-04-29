@@ -869,6 +869,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
           MPI_Get_count (&status, input_dtype, &input_recv);
           
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
+
           g_assert_cmpint (input_recv, ==, input_len);
           
           ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
