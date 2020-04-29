@@ -27,6 +27,8 @@
  * SECTION:nc_window
  * @title: NcWindow
  * @short_description: Abstract class for window functions.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_window.h
  * 
  * This module comprises the set of functions to compute the window function in both real 
  * and Fourier spaces as well as its derivative with respect to the scale $R$ in Fourier space. 
@@ -34,6 +36,8 @@
  * In order to study the statistical properties of the density fluctuation field at a certain
  * scale $R$, we use the window function. As an example, to compute the variance of the density
  * contrast at scale $R$, we convolve the window function in the Fourier space with the power spectrum.
+ *
+ * Seee also: #NcmFftlogTophatwin2 an #NcmFftlogGausswin2.
  * 
  */
 
@@ -51,7 +55,7 @@ G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT);
 
 /**
  * nc_window_new_from_name:
- * @window_name: "#NcWindowTophat" or "#NcWindowGaussian".
+ * @window_name: "#NcWindowTophat" or "#NcWindowGaussian"
  * 
  * This function returns a new #NcWindow whose type is defined by @window_name string.
  * 
@@ -69,7 +73,7 @@ nc_window_new_from_name (gchar *window_name)
 
 /**
  * nc_window_volume:
- * @wf: a #NcWindow.
+ * @wf: a #NcWindow
  *  
  * This function returns the volume of the region (with radius 1) defined by the window function.
  * 
@@ -87,9 +91,9 @@ nc_window_volume (NcWindow *wf)
 
 /**
  * nc_window_eval_fourier:
- * @wf: a #NcWindow.
- * @k: mode. 
- * @R: scale.
+ * @wf: a #NcWindow
+ * @k: mode 
+ * @R: scale
  *  
  * This function computes the window function in the Fourier space. 
  *
@@ -103,11 +107,11 @@ nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
 
 /**
  * nc_window_deriv_fourier:
- * @wf: a #NcWindow. 
- * @k: mode.  
- * @R: scale. 
+ * @wf: a #NcWindow 
+ * @k: mode 
+ * @R: scale 
  *
- * This function returns the derivative with respect to R of the window function 
+ * This function returns the derivative with respect to @R of the window function 
  * in the Fourier space.
  * 
  * Returns: The value of the first derivative of the window function in the Fourier space at scale @R.
@@ -120,9 +124,9 @@ nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
 
 /**
  * nc_window_eval_realspace:
- * @wf: a #NcWindow.  
- * @r: distance module to the center point of the filtered region.
- * @R: scale.
+ * @wf: a #NcWindow 
+ * @r: distance module to the center point of the filtered region
+ * @R: scale
  *
  * This function computes the window function in real space. 
  *
@@ -136,7 +140,7 @@ nc_window_eval_realspace (const NcWindow *wf, const gdouble r, const gdouble R)
 
 /**
  * nc_window_free: 
- * @wf: a #NcWindow.
+ * @wf: a #NcWindow
  *
  * Atomically decrements the reference count of @wf by one. If the reference count drops to 0, 
  * all memory allocated by @wf is released.
@@ -150,10 +154,10 @@ nc_window_free (NcWindow *wf)
 
 /**
  * nc_window_clear: 
- * @wf: a #NcWindow.
+ * @wf: a #NcWindow
  *
  * Atomically decrements the reference count of @wf by one. If the reference count drops to 0, 
- * all memory allocated by @wf is released. Set the pointer to NULL;
+ * all memory allocated by @wf is released. Set the pointer to NULL.
  *
  */
 void 
