@@ -27,32 +27,29 @@
  * SECTION:nc_window_tophat
  * @title: NcWindowTophat
  * @short_description: A top-hat window function.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_window_tophat.h
  * 
  * This object implements the #NcWindow class for a top-hat window function.
  * 
  * This object returns the top hat window function in the real space.
- * \begin{align}
- * W_{TH}(r, R) = \frac{3}{4\pi R^3} \left\{ \begin{array} {ll}
- * 1 & \leq R\\
- * 0 & &gt; R.
- * \end{array} \right.
- * \end{align}
- * The mass enclosed within the volume selected by this window function is $M_{TH}(R)=
- * \frac{4\pi}{3}\overline{\rho} R^3$,where $\overline{\rho}(z)$ is the mean density of the
- * universe at redshift $z$.
+ * 
+ * \begin{equation*}
+ *   W_{TH}(r, R) = \frac{3}{4\pi R^3}, \,\,\,\, \mathrm{for} \,\,\, r \leq R \,\, ,
+ * \end{equation*}
+ * and 0 otherwise. The mass enclosed within the volume selected by this window function is 
+ * $$M_{TH}(R)= \frac{4\pi}{3}\bar{\rho} R^3 \, ,$$ 
+ * where $\bar{\rho}(z)$ is the mean density of the universe at redshift $z$.
  * 
  * The top-hat window function in the Fourier space is given by
  * 
- * \begin{align}
- * W_{th}(k, R) &= \frac{3}{(kR)^3}(\sin kR - (kR)\cos kR) \\
- * &= \frac{3}{(kR)} j_1(kR),
- * \end{align}
- * where $j_\nu(kR)$ is the spherical Bessel function.
- * 
- * The first derivative with respect to $R$
- * \begin{equation}
- * \frac{dW_{TH}(k, R)}{dR} = \frac{-9}{k^3 R^4} (\sin kR - (kR)\cos kR) + \frac{3}{k R^2} \sin kR.
- * \end{equation}
+ * \begin{equation*}
+ * W_{th}(k, R) = \frac{3}{(kR)^3} \left[ \sin (kR) - (kR)\cos (kR)\right] = \frac{3}{(kR)} j_1(kR),
+ * \end{equation*}
+ * where $j_\nu(kR)$ is the spherical Bessel function and its first derivative with respect to $R$ is,
+ * \begin{equation*}
+ * \frac{\mathrm{d} W_{TH}(k, R)}{\mathrm{d} R} = -\frac{9}{k^3 R^4} \left[ \sin (kR) - (kR)\cos (kR) \right] + \frac{3}{k R^2} \sin (kR) \, .
+ * \end{equation*}
  * 
  */
 
