@@ -32,8 +32,7 @@
  *
  * This object implements the #NcWindow class for a top-hat window function.
  *
- * This object returns the top hat window function in the real space.
- *
+ * The top-hat window function in the real space is defined as, 
  * \begin{equation*}
  *   W_{TH}(r, R) = \frac{3}{4\pi R^3}, \,\,\,\, \mathrm{for} \,\,\, r \leq R \,\, ,
  * \end{equation*}
@@ -41,15 +40,17 @@
  * $$M_{TH}(R)= \frac{4\pi}{3}\bar{\rho} R^3 \, ,$$
  * where $\bar{\rho}(z)$ is the mean density of the universe at redshift $z$.
  *
- * The top-hat window function in the Fourier space is given by
- *
+ * When the function nc_window_eval_fourier() is applied,
+ * it returns the top-hat window function in the Fourier space, 
  * \begin{equation*}
- * W_{th}(k, R) = \frac{3}{(kR)^3} \left[ \sin (kR) - (kR)\cos (kR)\right] = \frac{3}{(kR)} j_1(kR),
+ *  W_{th}(k, R) = \frac{3}{(kR)^3} \left[ \sin (kR) - (kR)\cos (kR)\right] = \frac{3}{(kR)} j_1(kR),
  * \end{equation*}
- * where $j_\nu(kR)$ is the spherical Bessel function and its first derivative with respect to $R$ is,
+ * where $j_\nu(kR)$ is the spherical Bessel function.
+ * The function nc_window_deriv_fourier() returns the derivative with respect to R in Fourier space,
  * \begin{equation*}
  * \frac{\mathrm{d} W_{TH}(k, R)}{\mathrm{d} R} = -\frac{9}{k^3 R^4} \left[ \sin (kR) - (kR)\cos (kR) \right] + \frac{3}{k R^2} \sin (kR) \, .
  * \end{equation*}
+ * The derivative with respect to R in real space is performed by nc_window_eval_realspace().
  *
  */
 

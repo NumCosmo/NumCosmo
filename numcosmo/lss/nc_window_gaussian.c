@@ -53,7 +53,6 @@
  * \end{equation*}
  * The derivative with respect to R in real space is performed by nc_window_eval_realspace().
  *
- * See #NcWindow for more informations.
  */
 
 #ifdef HAVE_CONFIG_H
