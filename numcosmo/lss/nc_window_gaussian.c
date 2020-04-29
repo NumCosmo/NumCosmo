@@ -27,28 +27,33 @@
  * SECTION:nc_window_gaussian
  * @title: NcWindowGaussian
  * @short_description: A gaussian window function.  
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_window_gaussian.h
  * 
  * This object implements the #NcWindow class for a Gaussian window function.
  * 
- * This function returns the gaussian window function in the real space,
- * \begin{equation}
+ * The gaussian window function in the real space is defined as,
+ * \begin{equation*}
  * W_G(r, R) = (2 \pi R^2)^{-3/2}\exp \left( \frac{-r^2}{2 R^2} \right).
- * \end{equation}
+ * \end{equation*}
  * The mass enclosed within the volume selected by this window function is
- * $M_G(R) = (2\pi)^{3/2}\overline{\rho}(z) R^3$, where $\overline{\rho}(z)$
+ * $$M_G(R) = (2\pi)^{3/2}\bar{\rho}(z) R^3 \, ,$$ 
+ * where $\bar{\rho}(z)$
  * is the mean density of the universe at redshift $z$.
  * 
- * This function returns the gaussian window function in the Fourier space,
- * \begin{equation}
+ * When the function nc_window_eval_fourier() is applied,
+ * it returns the gaussian window function in the Fourier space,
+ * \begin{equation*}
  * W_G(k, R) = \exp \left( \frac{-k^2 R^2}{2} \right).
- * \end{equation}
- * 
- * This function returns the derivative with respect to R of the gaussian window function
- * in the real space,
- * \begin{equation}
+ * \end{equation*}
+ * and nc_window_deriv_fourier() returns the derivative with 
+ * respect to R of the gaussian window function in the Fourier space,
+ * \begin{equation*}
  * \frac{dW_G(k, R)}{dR} = -k^2 R \exp \left( \frac{-k^2 R^2}{2} \right).
- * \end{equation}
- * 
+ * \end{equation*}
+ * The derivative with respect to R in real space is performed by nc_window_eval_realspace().
+ *
+ * See #NcWindow for more informations. 
  */
 
 #ifdef HAVE_CONFIG_H
