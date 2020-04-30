@@ -27,8 +27,61 @@
  * SECTION:nc_transfer_func_eh
  * @title: NcTransferFuncEH
  * @short_description: Eisenstein-Hu fitting function for the transfer function.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_transfer_func_eh.h
  *
- * FIXME
+ * This objects implements the Eisenstein-Hu fitting function for the transfer function.
+ * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)]. 
+ *
+ * The transfer function is divided into a sum of two picies,
+ * \begin{equation*}
+ *  T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_{c}}{\Omega_m} T_c(k) \, ,
+ * \end{equation*}
+ * where $\Omega_b$, $\Omega_m$ and $\Omega_{c}$ are the baryons, 
+ * matter and cold dark matter density parameters today, respectevely.
+ * $T_b(k)$ and $T_c(k)$ are the weights from baryons and cold dark matter to the transfer function $T(k)$. 
+ * 
+ * The cold dark matter term is defined as,
+ * \begin{equation*}
+ *  T_c(k) = f \, \widetilde{T}_0(k, 1, \beta_c) + (1-f) \, \widetilde{T}_0(k, \alpha_c, \beta_c)) 
+ * \end{equation*}
+ * and
+ * $$ f = \frac{1}{1+ (ks/5.4)^4} \, ,$$
+ * with 
+ * $$\widetilde{T}_0(k, \alpha_c, \beta_c) = \frac{\ln\left( e + 1.8 \beta_c \, q  \right)}{\ln\left( e + 1.8 \beta_c \, q  \right) + C q^2}  $$
+ * and
+ * $$ C = \frac{14.2}{\alpha_c} + \frac{386}{1+ 69.9 \, q^{1.08}} \, .$$
+ * The paremeter $q$, is defined as,
+ * $$ q = \frac{k}{13.41 k_{eq}} \, .$$
+ * $\alpha_c$ and $\beta_c$ are fit by,
+ * $$\alpha_c = a_1^{-\Omega_b/\Omega_m} \, a_2^{-(\Omega_b/\Omega_m)^3} \, ,$$
+ * $$ a_1 = (46.9 \, \Omega_m h^2)^{0.670} \left[ 1 + (32.1 \, \Omega_m h^2)^{-0.532}  \right] \, ,$$
+ * $$ a_2 = (12.0 \, \Omega_m h^2)^{0.424} \left[ 1 + (45.0 \, \Omega_m h^2)^{-0.582}  \right] \, ,$$
+ * $$ \beta_c^{-1} = 1 + b_1 \left[ (\Omega_c/\Omega_m)^{b_{2}}  -1\right] \, ,$$
+ * $$ b_1 = 0.944 \left[ 1+ (458\, \Omega_m h^2)^{-0.708}  \right]^{-1} \, , $$
+ * $$ b_2 = (0.395 \, \Omega_m h^2)^{-0.0266}  \, .$$
+ * 
+ * The baryon term is defined as,
+ * \begin{equation*}
+ *   T_b(k) = \left[ \frac{\widetilde{T}_0(k, 1, 1)}{1 + (ks/5.2)^2} + \frac{\alpha_b}{1+ (\beta_b/ks)^3}\mathrm{e}^{-(k/k_{\mathrm{Silk}})^{1.4}}  \right] \, \frac{\sin (k \tilde{s})}{k \tilde{s}} \, .
+ * \end{equation*}
+ * where, $s$ is the sound horizon scale, given by,
+ * $$ s = \int_0^{z_d} c_s (1+z) \mathrm{d}t  \, ,$$ 
+ * with $z_d$ as the drag redshift (#nc_distance_drag_redshift) and $c_s$ is the baryon-photon plasma speed of sound (see #nc_hicosmo_bgp_cs2).
+ * The Silk damping scale is well fit by the approximation,
+ * $$ k_{Silk} = 1.6 (\Omega_b h^2)^{0.52}(\Omega_m h^2)^{0.73} \left[ 1 + (10.4 \, \Omega_m h^2)^{-0.95}  \right] \, \mathrm{Mpc}^{-1} \, ,$$
+ * and 
+ * $$ \alpha_b = 2.07 \,  k_{eq} \, s (1+ R_d )^{-3/4} G \left( \frac{1+ z_{eq}}{1+z_d}  \right) \, ,$$
+ * $$ G(y) = y \left[-6 \sqrt{1+y} + (2+3y) \ln \left( \frac{\sqrt{1+y} + 1}{\sqrt{1+y} - 1} \right) \right]  \, ,$$
+ * $$ k_{eq} = (2 \Omega_m H_0^2 z_{eq})^{1/2}  \, ,$$
+ * $$ z_{eq} = 2.5 \times 10^4 \Omega_m h^2 /(T_{cmb} / 2.7)^4 \, ,$$
+ * $$ R(z_d) = 31.5 \, \Omega_b h^2 (T_{cmb} / 2.7)^{-4} (z_d/10^3)^{-1} \, ,$$
+ * $$ \tilde{s}(k) = \frac{s}{\left[ 1 + (\beta_{node}/ks)^3 \right]^{1/3}} \, ,$$
+ * $$\beta_{node} = 8.41 \, (\Omega_m h^2)^{0.435} \, , $$
+ * an finally the last parameter of the fitting function,
+ * $$\beta_b = 0.5 + \frac{\Omega_b}{\Omega_m} + \left( 3  -2 \frac{\Omega_b}{\Omega_m} \right) \sqrt{(17.2 \, \Omega_m h^2)^2 +1} \, .$$  
+ *
+ * With those relations in hand it is possible to evaluate the transfer function from [Eisenstein and Hu (1998)][XEisenstein1998] fitting formula.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -138,6 +191,12 @@ nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
   object_class->get_property = &_nc_transfer_func_eh_get_property;
   object_class->finalize     = &_nc_transfer_func_eh_finalize;
 
+  /**
+   * NcTransferFuncEH:CCL-comp:
+   *
+   * Whether to use CCL compatible mode.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_CCL_COMP,
                                    g_param_spec_boolean ("CCL-comp",
@@ -256,7 +315,7 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
 /**
  * nc_transfer_func_eh_new:
  *
- * FIXME
+ * Creates a new #NcTransferFunc of the #NcTransferFuncEH type. 
  *
  * Returns: A new #NcTransferFunc.
  */
