@@ -176,7 +176,7 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 /**
  * nc_transfer_func_bbks_new:
  *
- * Creates a new ##NcTransferFunc of the BBKS type.
+ * Creates a new #NcTransferFunc of the BBKS type.
  *
  * Returns: A new #NcTransferFunc.
  */
