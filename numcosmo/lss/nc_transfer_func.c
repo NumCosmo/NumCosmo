@@ -27,10 +27,22 @@
  * SECTION:nc_transfer_func
  * @title: NcTransferFunc
  * @short_description: Abstrac class for perturbation transfer function.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_transfer_func.h
  *
  * This module comprises the set of functions to compute the transfer function and
  * derived quantities.
- * 
+ *
+ * The transfer function, $T(k)$, is defined as,
+ * \begin{equation*}
+ *    T(k) \equiv \frac{\hat{\delta}(k, z=0)}{\hat{\delta}(k, z=\infty)} \frac{\hat{\delta}(k=0, z=\infty)}{\hat{\delta}(k=0, z=0)} \, ,
+ * \end{equation*}
+ * where $\hat{\delta}(k, z)$ is the density perturbation, in Fourier space, 
+ * for mode (wavenumber) $k$ at redshift $z$. By definition, we have 
+ * $$ \lim_{k \rightarrow 0} T(k) \rightarrow  1 \, .$$
+ *
+ * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more informations.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -82,7 +94,7 @@ nc_transfer_func_class_init (NcTransferFuncClass *klass)
 
 /**
  * nc_transfer_func_new_from_name:
- * @transfer_name: string which specifies the transfer function type.
+ * @transfer_name: string which specifies the transfer function type
  *
  * This function returns a new #NcTransferFunc whose type is defined by @transfer_name.
  *
@@ -118,7 +130,7 @@ nc_transfer_func_ref (NcTransferFunc *tf)
 
 /**
  * nc_transfer_func_free:
- * @tf: a #NcTransferFunc.
+ * @tf: a #NcTransferFunc
  *
  * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
  * all memory allocated by @tf is released.
@@ -132,7 +144,7 @@ nc_transfer_func_free (NcTransferFunc *tf)
 
 /**
  * nc_transfer_func_clear:
- * @tf: a #NcTransferFunc.
+ * @tf: a #NcTransferFunc
  *
  * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
  * all memory allocated by @tf is released. Set the pointer to NULL.
@@ -149,7 +161,8 @@ nc_transfer_func_clear (NcTransferFunc **tf)
  * @tf: a #NcTransferFunc
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the transfer function @tf with model @cosmo, 
+ * such that one can evaluate it (#nc_transfer_func_eval).
  *
 */
 void
@@ -165,7 +178,7 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
  * @tf: a #NcTransferFunc
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares (if necessary) the transfer function with model @cosmo. 
  *
  */
 void
@@ -179,13 +192,13 @@ nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo)
 
 /**
  * nc_transfer_func_eval:
- * @tf: a #NcTransferFunc.
- * @cosmo: a #NcHICosmo.
- * @kh: FIXME
+ * @tf: a #NcTransferFunc $T(k)$
+ * @cosmo: a #NcHICosmo
+ * @kh: mode (wavenumber) 
  *
- * FIXME
+ * The transfer function @tf value at mode (wavenumber) @kh with model @cosmo. 
  *
- * Returns: FIXME
+ * Returns: $T(k)$. 
 */
 gdouble
 nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
