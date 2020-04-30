@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,9 +49,10 @@ struct _NcTransferFuncClass
 {
   /*< private > */
   GObjectClass parent_class;
-  gpointer (*alloc)(void);
-  void (*prepare)(NcTransferFunc *tf, NcHICosmo *cosmo);
-  gdouble (*calc)(NcTransferFunc *tf, gdouble k);
+  
+  gpointer (*alloc) (void);
+  void (*prepare) (NcTransferFunc *tf, NcHICosmo *cosmo);
+  gdouble (*calc) (NcTransferFunc *tf, gdouble k);
 };
 
 struct _NcTransferFunc
@@ -64,8 +65,9 @@ struct _NcTransferFunc
 
 GType nc_transfer_func_get_type (void) G_GNUC_CONST;
 
-NcTransferFunc *nc_transfer_func_new_from_name (gchar *transfer_name); 
+NcTransferFunc *nc_transfer_func_new_from_name (gchar *transfer_name);
 NcTransferFunc *nc_transfer_func_ref (NcTransferFunc *tf);
+
 void nc_transfer_func_free (NcTransferFunc *tf);
 void nc_transfer_func_clear (NcTransferFunc **tf);
 
@@ -77,3 +79,4 @@ gdouble nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 G_END_DECLS
 
 #endif /* _NC_TRANSFER_FUNC_H_ */
+
