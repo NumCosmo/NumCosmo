@@ -27,9 +27,26 @@
  * SECTION:nc_transfer_func_bbks
  * @title: NcTransferFuncBBKS
  * @short_description: Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_transfer_func_bbks.h
  * 
- * Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function, see [Sugiyama (1995)][XSugiyama1995].
+ * This objects implements the Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
+ * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ADS](http://articles.adsabs.harvard.edu/pdf/1986ApJ...304...15B)]. 
+ *
+ * All three available transfer functions basically follow the same pattern,
+ * \begin{equation*}
+ *  T(k) = \frac{\ln \left( 1 + 2.34q \right)}{2.34 q} \left[1 + 3.89 q + (16.1 q)^2 + (5.46 q)^3 + (6.71 q)^4 \right]^{-1/4} \, .
+ * \end{equation*} 
+ * The only difference is in the parameter $q$:
+ *
+ * - Cold Dark Matter without baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS):
+ *   $$ q = k \frac{(T_0/2.7)^2}{\Omega_m h^2}  \, .$$
+ *
+ * - Cold Dark Matter with baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS):
+ *   $$ q = k \frac{(T_0/2.7)^2}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
  * 
+ * - Cold Dark Matter with baryons but without the radiation term (#NC_TRANSFER_FUNC_BBKS_TYPE_CCL):
+ *   $$ q =  \frac{1}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
  * 
  */
 
@@ -129,6 +146,20 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
   object_class->get_property = &_nc_transfer_func_bbks_get_property;
   object_class->finalize     = &_nc_transfer_func_bbks_finalize;
 
+  /**
+   * NcTransferFuncBBKS:type:
+   *
+   * The BBKS transfer function variant type to be applied in #NcTransferFunc. 
+   * 
+   * We have three options:
+   *
+   * - Cold Dark Matter without baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS):
+   *
+   * - Cold Dark Matter with baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS):
+   * 
+   * - Cold Dark Matter with baryons but without the radiation term (#NC_TRANSFER_FUNC_BBKS_TYPE_CCL):
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_TYPE,
                                    g_param_spec_enum ("type",
@@ -144,7 +175,7 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 /**
  * nc_transfer_func_bbks_new:
  *
- * FIXME
+ * Creates a new ##NcTransferFunc of the BBKS type.
  *
  * Returns: A new #NcTransferFunc.
  */
