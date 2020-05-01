@@ -31,7 +31,7 @@
  * @include: numcosmo/lss/nc_transfer_func.h
  *
  * This module comprises the set of functions to compute the transfer function and
- * derived quantities.
+ * derived quantities. The applied $k$ unit is $[\mathrm{Mpc}^{-1}]$. 
  *
  * The transfer function, $T(k)$, is defined as,
  * \begin{equation*}
@@ -41,7 +41,7 @@
  * for mode (wavenumber) $k$ at redshift $z$. By definition, we have
  * $$ \lim_{k \rightarrow 0} T(k) \rightarrow  1 \, .$$
  *
- * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more informations.
+ * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
  *
  */
 
@@ -177,7 +177,7 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
  * @tf: a #NcTransferFunc
  * @cosmo: a #NcHICosmo
  *
- * Prepares (if necessary) the transfer function with model @cosmo.
+ * Prepares (if necessary) the transfer function @tf with model @cosmo.
  *
  */
 void
@@ -195,7 +195,8 @@ nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @kh: mode (wavenumber)
  *
- * The transfer function @tf value at mode (wavenumber) @kh with model @cosmo.
+ * The transfer function @tf value at mode (wavenumber) 
+ * @kh (in $Mpc^{-1}$ units) with model @cosmo.
  *
  * Returns: $T(k)$.
  */

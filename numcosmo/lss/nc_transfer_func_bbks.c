@@ -31,23 +31,26 @@
  * @include: numcosmo/lss/nc_transfer_func_bbks.h
  *
  * This objects implements the Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
- * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ADS](http://articles.adsabs.harvard.edu/pdf/1986ApJ...304...15B)].
+ * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ads](https://ui.adsabs.harvard.edu/abs/1986ApJ...304...15B/abstract)].
  *
  * All three available transfer functions basically follow the same pattern,
  * \begin{equation*}
  *  T(k) = \frac{\ln \left( 1 + 2.34q \right)}{2.34 q} \left[1 + 3.89 q + (16.1 q)^2 + (5.46 q)^3 + (6.71 q)^4 \right]^{-1/4} \, .
  * \end{equation*}
- * The only difference is in the parameter $q$:
+ * The difference is the parameter $q$:
  *
  * - Cold Dark Matter without baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS):
- *   $$ q = k \frac{(T_0/2.7)^2}{\Omega_m h^2}  \, .$$
+ *   $$ q = k \frac{(T_{\mathrm{cmb}}/2.7)^2}{\Omega_m h^2}  \, .$$
  *
  * - Cold Dark Matter with baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS):
- *   $$ q = k \frac{(T_0/2.7)^2}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
+ *   $$ q = k \frac{(T_{\mathrm{cmb}}/2.7)^2}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
  *
  * - Cold Dark Matter with baryons but without the radiation term (#NC_TRANSFER_FUNC_BBKS_TYPE_CCL):
- *   $$ q =  \frac{1}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
+ *   $$ q = k \frac{1}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
  *
+ *  Where $T_{\mathrm{cmb}}$ is cosmic microwave background radiation mean temperature today (#nc_hicosmo_T_gamma0),
+ *  $\Omega_m h^2$ is dimensionless total dust density today multiplied by the reduced Hubble constant, $h$, squared (#nc_hicosmo_Omega_m0h2),
+ *  $\Omega_b$ is the dimensionless baryon density today (#nc_hicosmo_Omega_b0).
  */
 
 #ifdef HAVE_CONFIG_H

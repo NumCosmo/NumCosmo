@@ -31,19 +31,19 @@
  * @include: numcosmo/lss/nc_transfer_func_eh.h
  *
  * This objects implements the Eisenstein-Hu fitting function for the transfer function.
- * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)].
+ * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
  *
  * The transfer function is divided into a sum of two picies,
  * \begin{equation*}
  *  T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_{c}}{\Omega_m} T_c(k) \, ,
  * \end{equation*}
- * where $\Omega_b$, $\Omega_m$ and $\Omega_{c}$ are the baryons,
- * matter and cold dark matter density parameters today, respectevely.
+ * where $\Omega_b$, $\Omega_m$ and $\Omega_{c}$ are the baryons (#nc_hicosmo_Omega_b0),
+ * matter (#nc_hicosmo_Omega_m0) and cold dark matter (#nc_hicosmo_Omega_c0) density parameters today, respectevely.
  * $T_b(k)$ and $T_c(k)$ are the weights from baryons and cold dark matter to the transfer function $T(k)$.
  *
  * The cold dark matter term is defined as,
  * \begin{equation*}
- *  T_c(k) = f \, \widetilde{T}_0(k, 1, \beta_c) + (1-f) \, \widetilde{T}_0(k, \alpha_c, \beta_c))
+ *  T_c(k) = f \, \widetilde{T}_0(k, 1, \beta_c) + (1-f) \, \widetilde{T}_0(k, \alpha_c, \beta_c)
  * \end{equation*}
  * and
  * $$ f = \frac{1}{1+ (ks/5.4)^4} \, ,$$
@@ -66,15 +66,16 @@
  *   T_b(k) = \left[ \frac{\widetilde{T}_0(k, 1, 1)}{1 + (ks/5.2)^2} + \frac{\alpha_b}{1+ (\beta_b/ks)^3}\mathrm{e}^{-(k/k_{\mathrm{Silk}})^{1.4}}  \right] \, \frac{\sin (k \tilde{s})}{k \tilde{s}} \, .
  * \end{equation*}
  * where, $s$ is the sound horizon scale, given by,
- * $$ s = \int_0^{z_d} c_s (1+z) \mathrm{d}t  \, ,$$
- * with $z_d$ as the drag redshift (#nc_distance_drag_redshift) and $c_s$ is the baryon-photon plasma speed of sound (see #nc_hicosmo_bgp_cs2).
+ * $$ s = \int_0^{z_d} c_s (1+z) \mathrm{d}t  = \frac{2}{3k_{eq}}\sqrt{\frac{6}{R(z_{eq})}} \ln \left( \frac{\sqrt{1+R(z_d)} + \sqrt{R(z_{d}) + R(z_{eq})}}{1 + \sqrt{R(z_{eq})}} \right) \, ,$$
+ * with $z_d$ as the drag redshift (#nc_distance_drag_redshift) and $c_s$ is the baryon-photon plasma speed of sound (see #nc_hicosmo_bgp_cs2). The quantity $R$ is defined as,
+ * $$ R(z) \equiv 31.5 \, \Omega_b h^2 \, \left( \frac{T_{\mathrm{CMB}}}{2.7} \right)^{-4} \left( \frac{z}{10^3}  \right)^{-1} \, .$$
  * The Silk damping scale is well fit by the approximation,
  * $$ k_{Silk} = 1.6 (\Omega_b h^2)^{0.52}(\Omega_m h^2)^{0.73} \left[ 1 + (10.4 \, \Omega_m h^2)^{-0.95}  \right] \, \mathrm{Mpc}^{-1} \, ,$$
  * and
  * $$ \alpha_b = 2.07 \,  k_{eq} \, s (1+ R_d )^{-3/4} G \left( \frac{1+ z_{eq}}{1+z_d}  \right) \, ,$$
  * $$ G(y) = y \left[-6 \sqrt{1+y} + (2+3y) \ln \left( \frac{\sqrt{1+y} + 1}{\sqrt{1+y} - 1} \right) \right]  \, ,$$
  * $$ k_{eq} = (2 \Omega_m H_0^2 z_{eq})^{1/2}  \, ,$$
- * $$ z_{eq} = 2.5 \times 10^4 \Omega_m h^2 /(T_{cmb} / 2.7)^4 \, ,$$
+ * $$ z_{eq} = 2.5 \times 10^4 \Omega_m h^2 \, (T_{\mathrm{CMB}}} / 2.7)^{-4} \, ,$$
  * $$ R(z_d) = 31.5 \, \Omega_b h^2 (T_{cmb} / 2.7)^{-4} (z_d/10^3)^{-1} \, ,$$
  * $$ \tilde{s}(k) = \frac{s}{\left[ 1 + (\beta_{node}/ks)^3 \right]^{1/3}} \, ,$$
  * $$\beta_{node} = 8.41 \, (\Omega_m h^2)^{0.435} \, , $$
