@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,15 +27,17 @@
  * SECTION:nc_powspec_ml
  * @title: NcPowspecML
  * @short_description: Abstrac class for linear matter power spectrum implementation.
+ * @stability: Stable
+ * @include: numcosmo/nc_powspec_ml.h
  *
  * This module comprises the set of functions to compute the linear matter power spectrum and
  * derived quantities.
- * 
- * Following the description presented in #NcmPowspec, in this case we have that the field $\delta(\vec{x})$ 
+ *
+ * Following the description presented in #NcmPowspec, in this case we have that the field $\delta(\vec{x})$
  * represents the matter density fluctuations, i.e.,
- * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$ 
+ * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$
  * where $\rho$ is the cold matter density field and $\bar{\rho}$ its mean.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -55,7 +57,6 @@ nc_powspec_ml_init (NcPowspecML *nc_powspec_ml)
 static void
 _nc_powspec_ml_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_parent_class)->finalize (object);
 }
@@ -63,8 +64,8 @@ _nc_powspec_ml_finalize (GObject *object)
 static void
 nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->finalize = &_nc_powspec_ml_finalize;
 }
 
@@ -80,10 +81,10 @@ NcPowspecML *
 nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
 {
   GObject *obj = ncm_serialize_global_from_string (ps_ml_name);
-
+  
   if (!NC_IS_POWSPEC_ML (obj))
     g_error ("nc_powspec_ml_new_from_name: NcPowspecML %s do not descend from %s.", ps_ml_name, g_type_name (NC_TYPE_POWSPEC_ML));
-
+  
   return NC_POWSPEC_ML (obj);
 }
 
@@ -108,7 +109,7 @@ nc_powspec_ml_ref (NcPowspecML *ps_ml)
  * Decreases the reference count of @ps_ml atomically.
  *
  */
-void 
+void
 nc_powspec_ml_free (NcPowspecML *ps_ml)
 {
   g_object_unref (ps_ml);
@@ -121,7 +122,7 @@ nc_powspec_ml_free (NcPowspecML *ps_ml)
  * Decreses the reference count of *@ps_ml atomically and sets the pointer *@ps_ml to null.
  *
  */
-void 
+void
 nc_powspec_ml_clear (NcPowspecML **ps_ml)
 {
   g_clear_object (ps_ml);
