@@ -718,7 +718,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
     MPI_Get_processor_name (mpi_hostname, &len);
     
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
     
     if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     {
@@ -864,9 +864,13 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           gint input_recv    = 0;
           MPI_Request wr_request;
           
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
           MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
           MPI_Get_count (&status, input_dtype, &input_recv);
           
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
+
           g_assert_cmpint (input_recv, ==, input_len);
           
           ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
@@ -876,7 +880,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           ncm_mpi_job_run (mpi_job, input, bd.obj);
           bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
           
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
           
           MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
           

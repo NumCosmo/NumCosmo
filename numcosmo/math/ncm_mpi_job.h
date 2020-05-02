@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_mpi_job.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -35,12 +36,18 @@
 #ifdef NUMCOSMO_HAVE_MPI
 #  ifndef NUMCOSMO_GIR_SCAN
 #    include <mpi.h>
+
 typedef MPI_Datatype NcmMPIDatatype;
+
 #  else
+
 typedef gpointer NcmMPIDatatype;
+
 #  endif /* NUMCOSMO_GIR_SCAN */
 #else
+
 typedef gpointer NcmMPIDatatype;
+
 #endif /* NUMCOSMO_HAVE_MPI */
 
 G_BEGIN_DECLS
@@ -58,43 +65,44 @@ typedef struct _NcmMPIJobPrivate NcmMPIJobPrivate;
 
 struct _NcmMPIJobClass
 {
-	/*< private >*/
-	GObjectClass parent_class;
-	void (*work_init) (NcmMPIJob *mpi_job);
-	void (*work_clear) (NcmMPIJob *mpi_job);
-	NcmMPIDatatype (*input_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
-	NcmMPIDatatype (*return_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
-	gpointer (*create_input) (NcmMPIJob *mpi_job);
-	gpointer (*create_return) (NcmMPIJob *mpi_job);
-	void (*destroy_input) (NcmMPIJob *mpi_job, gpointer input);
-	void (*destroy_return) (NcmMPIJob *mpi_job, gpointer ret);
-	gpointer (*get_input_buffer) (NcmMPIJob *mpi_job, gpointer input);
-	gpointer (*get_return_buffer) (NcmMPIJob *mpi_job, gpointer ret);
-	void (*destroy_input_buffer) (NcmMPIJob *mpi_job, gpointer input, gpointer buf);
-	void (*destroy_return_buffer) (NcmMPIJob *mpi_job, gpointer ret, gpointer buf);
-	gpointer (*pack_input) (NcmMPIJob *mpi_job, gpointer input);
-	gpointer (*pack_return) (NcmMPIJob *mpi_job, gpointer ret);
-	void (*unpack_input) (NcmMPIJob *mpi_job, gpointer buf, gpointer input);
-	void (*unpack_return) (NcmMPIJob *mpi_job, gpointer buf, gpointer ret);
-	void (*run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
+  /*< private >*/
+  GObjectClass parent_class;
+  
+  void (*work_init) (NcmMPIJob *mpi_job);
+  void (*work_clear) (NcmMPIJob *mpi_job);
+  NcmMPIDatatype (*input_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
+  NcmMPIDatatype (*return_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
+  gpointer (*create_input) (NcmMPIJob *mpi_job);
+  gpointer (*create_return) (NcmMPIJob *mpi_job);
+  void (*destroy_input) (NcmMPIJob *mpi_job, gpointer input);
+  void (*destroy_return) (NcmMPIJob *mpi_job, gpointer ret);
+  gpointer (*get_input_buffer) (NcmMPIJob *mpi_job, gpointer input);
+  gpointer (*get_return_buffer) (NcmMPIJob *mpi_job, gpointer ret);
+  void (*destroy_input_buffer) (NcmMPIJob *mpi_job, gpointer input, gpointer buf);
+  void (*destroy_return_buffer) (NcmMPIJob *mpi_job, gpointer ret, gpointer buf);
+  gpointer (*pack_input) (NcmMPIJob *mpi_job, gpointer input);
+  gpointer (*pack_return) (NcmMPIJob *mpi_job, gpointer ret);
+  void (*unpack_input) (NcmMPIJob *mpi_job, gpointer buf, gpointer input);
+  void (*unpack_return) (NcmMPIJob *mpi_job, gpointer buf, gpointer ret);
+  void (*run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
 };
 
 struct _NcmMPIJob
 {
-	/*< private >*/
-	GObject parent_instance;
-	NcmMPIJobPrivate *priv;
+  /*< private >*/
+  GObject parent_instance;
+  NcmMPIJobPrivate *priv;
 };
 
 /**************************************************************************************/
 
-typedef struct _NcmMPIJobCtrl 
+typedef struct _NcmMPIJobCtrl
 {
-	gint initialized;
-	gint rank;
-	gint size;
-	gint nslaves;
-	gint working_slaves;
+  gint initialized;
+  gint rank;
+  gint size;
+  gint nslaves;
+  gint working_slaves;
 } NcmMPIJobCtrl;
 
 #define NCM_MPI_CTRL_MASTER_ID (0)
@@ -105,18 +113,18 @@ typedef struct _NcmMPIJobCtrl
  * @NCM_MPI_CTRL_SLAVE_FREE: FIXME
  * @NCM_MPI_CTRL_SLAVE_KILL: FIXME
  * @NCM_MPI_CTRL_SLAVE_WORK: FIXME
- * 
+ *
  * FIXME
- * 
- */ 
-typedef enum _NcmMPIJobCtrlMsg 
+ *
+ */
+typedef enum _NcmMPIJobCtrlMsg
 {
-	NCM_MPI_CTRL_SLAVE_INIT = 0,
-	NCM_MPI_CTRL_SLAVE_FREE,
-	NCM_MPI_CTRL_SLAVE_KILL,
-	NCM_MPI_CTRL_SLAVE_WORK,
-	/* < private > */
-	NCM_MPI_CTRL_SLAVE_LEN, /*< skip >*/
+  NCM_MPI_CTRL_SLAVE_INIT = 0,
+  NCM_MPI_CTRL_SLAVE_FREE,
+  NCM_MPI_CTRL_SLAVE_KILL,
+  NCM_MPI_CTRL_SLAVE_WORK,
+  /* < private > */
+  NCM_MPI_CTRL_SLAVE_LEN, /*< skip >*/
 } NcmMPIJobCtrlMsg;
 
 /**
@@ -125,18 +133,18 @@ typedef enum _NcmMPIJobCtrlMsg
  * @NCM_MPI_CTRL_TAG_JOB: FIXME
  * @NCM_MPI_CTRL_TAG_WORK_INPUT: FIXME
  * @NCM_MPI_CTRL_TAG_WORK_RETURN: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcmMPIJobCtrlTag
 {
-	NCM_MPI_CTRL_TAG_CMD = 0,
-	NCM_MPI_CTRL_TAG_JOB,
-	NCM_MPI_CTRL_TAG_WORK_INPUT,
-	NCM_MPI_CTRL_TAG_WORK_RETURN,
-	/* < private > */
-	NCM_MPI_CTRL_TAG_LEN, /*< skip >*/
+  NCM_MPI_CTRL_TAG_CMD = 0,
+  NCM_MPI_CTRL_TAG_JOB,
+  NCM_MPI_CTRL_TAG_WORK_INPUT,
+  NCM_MPI_CTRL_TAG_WORK_RETURN,
+  /* < private > */
+  NCM_MPI_CTRL_TAG_LEN, /*< skip >*/
 } NcmMPIJobCtrlTag;
 
 /**************************************************************************************/
@@ -181,7 +189,7 @@ void ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job);
 
 /*#define NCM_MPI_DEBUG 1*/
 #ifdef NCM_MPI_DEBUG
-#define NCM_MPI_JOB_DEBUG_PRINT(fmt, ...)  printf (fmt, ##__VA_ARGS__)
+#define NCM_MPI_JOB_DEBUG_PRINT(fmt, ...)  printf (fmt, ## __VA_ARGS__)
 #else
 #define NCM_MPI_JOB_DEBUG_PRINT(fmt, ...)
 #endif
@@ -189,3 +197,4 @@ void ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job);
 G_END_DECLS
 
 #endif /* _NCM_MPI_JOB_H_ */
+
