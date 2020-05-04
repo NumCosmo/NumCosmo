@@ -1083,40 +1083,6 @@ fi
 AC_SUBST(PLC_DEFINES)
 
 dnl ***************************************************************************
-dnl CCL
-dnl ***************************************************************************
-
-AC_ARG_VAR([CCL_LDFLAGS], [C linker flags for CCL])
-AC_ARG_VAR([CCL_CFLAGS], [C compiler flags for CCL])
-AC_SUBST(CCL_LDFLAGS)
-AC_SUBST(CCL_CFLAGS)
-
-AC_CHECK_LIB([ccl],[ccl_cosmology_create],[ccl_found=yes],[ccl_found=no],[$CCL_LDFLAGS])
-
-SAVED_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $CCL_CFLAGS"
-AC_CHECK_HEADERS([ccl.h],[ccl_header_found=yes],[ccl_header_found=no])
-CPPFLAGS="$SAVED_CPPFLAGS"
-
-numcosmo_check_ccl=no
-AC_MSG_CHECKING([CCL usability])
-if test "x$ccl_found" = "xyes"; then
-  CCL_LDFLAGS="$CCL_LDFLAGS -lccl"
-  if test "x$ccl_header_found" = "xyes"; then
-    CCL_LDFLAGS="$CCL_LDFLAGS -lccl"
-    numcosmo_check_ccl=yes
-    AC_DEFINE(HAVE_CCL,1,[Define if you have the CCL library.])
-    AC_MSG_RESULT([yes])    
-  else
-    AC_MSG_RESULT([no])
-  fi
-else
-  AC_MSG_RESULT([no])
-fi
-
-AM_CONDITIONAL([NUMCOSMO_CHECK_CCL], [test "x$numcosmo_check_ccl" != "xno"])
-
-dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 

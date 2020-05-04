@@ -39,10 +39,6 @@ AM_CFLAGS =    \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-if NUMCOSMO_CHECK_CCL
-  AM_CFLAGS += $(CCL_CFLAGS)
-endif
-
 SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 
 lib_LTLIBRARIES = libnumcosmo.la
@@ -67,10 +63,6 @@ libnumcosmo_la_LIBADD =         \
 	class/libclass.la       \
 	sundials/libsundials.la \
 	toeplitz/libtoeplitz.la
-
-if NUMCOSMO_CHECK_CCL
-  libnumcosmo_la_LIBADD += $(CCL_LDFLAGS)
-endif
 
 ncm_sources = \
 	ncm_build_inline.c                   \
