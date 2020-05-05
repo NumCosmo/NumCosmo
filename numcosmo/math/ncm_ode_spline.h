@@ -84,7 +84,7 @@ gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
 
 NCM_INLINE NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
-#define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
+#define NCM_ODE_SPLINE_DEFAULT_RELTOL (GSL_DBL_EPSILON)
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (0.0)
 #define NCM_ODE_SPLINE_MIN_STEP (1.0e-10)
 

@@ -546,6 +546,9 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   
   flag = CVodeSetMaxNumSteps (self->cvode, NCM_INTEGRAL_PARTITION);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+
+  flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
   
   flag = CVodeSetUserData (self->cvode, &f_data);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
