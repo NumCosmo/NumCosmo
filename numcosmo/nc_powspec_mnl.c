@@ -87,7 +87,7 @@ nc_powspec_mnl_new_from_name (const gchar *ps_mnl_name)
  * nc_powspec_mnl_ref:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * Increases the reference count of @ps_mnl atomically.
+ * Increases the reference count of @ps_mnl by one atomically. 
  *
  * Returns: (transfer full): @ps_mnl.
  */
@@ -101,7 +101,8 @@ nc_powspec_mnl_ref (NcPowspecMNL *ps_mnl)
  * nc_powspec_mnl_free:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * Decreases the reference count of @ps_mnl atomically.
+ * Atomically decrements the reference count of @ps_mnl by one. 
+ * If the reference count drops to 0, all memory allocated by @ps_mnl is released. 
  *
  */
 void
@@ -114,7 +115,10 @@ nc_powspec_mnl_free (NcPowspecMNL *ps_mnl)
  * nc_powspec_mnl_clear:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * Decrese the reference count of *@ps_mnl atomically and sets the pointer *@ps_mnl to null.
+ * If @ps_mnl is different from NULL, 
+ * atomically decrements the reference count of @ps_mnl by one. 
+ * If the reference count drops to 0, 
+ * all memory allocated by @ps_mnl is released and @ps_mnl is set to NULL. 
  *
  */
 void

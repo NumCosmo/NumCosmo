@@ -30,7 +30,8 @@
  * @stability: Stable
  * @include: numcosmo/nc_powspec_ml_cbe.h
  *
- * Provides the linear matter power spectrum using the CLASS backend #NcCBE.
+ * Provides the linear matter power spectrum using the 
+ * [CLASS](https://lesgourg.github.io/class_public/class.html) backend #NcCBE.
  *
  */
 
@@ -322,7 +323,7 @@ nc_powspec_ml_cbe_new_full (NcCBE *cbe)
 }
 
 /**
- * nc_powspec_ml_cbe_set_tf:
+ * nc_powspec_ml_cbe_set_cbe:
  * @ps_cbe: a #NcPowspecMLCBE
  * @cbe: a #NcCBE
  *
