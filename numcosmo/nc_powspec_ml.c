@@ -92,7 +92,7 @@ nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
  * nc_powspec_ml_ref:
  * @ps_ml: a #NcPowspecML
  *
- * Increases the reference count of @ps_ml atomically.
+ * Increases the reference count of @ps_ml by one atomically.
  *
  * Returns: (transfer full): @ps_ml.
  */
@@ -106,7 +106,8 @@ nc_powspec_ml_ref (NcPowspecML *ps_ml)
  * nc_powspec_ml_free:
  * @ps_ml: a #NcPowspecML
  *
- * Decreases the reference count of @ps_ml atomically.
+ * Atomically decrements the reference count of @ps_ml by one.
+ * If the reference count drops to 0, all memory allocated by @ps_ml is released.
  *
  */
 void
@@ -119,7 +120,10 @@ nc_powspec_ml_free (NcPowspecML *ps_ml)
  * nc_powspec_ml_clear:
  * @ps_ml: a #NcPowspecML
  *
- * Decreses the reference count of *@ps_ml atomically and sets the pointer *@ps_ml to null.
+ *  If @ps_ml is different from NULL,
+ *  atomically decrements the reference count of @ps_ml by one.
+ *  If the reference count drops to 0,
+ *  all memory allocated by @ps_ml is released and @ps_ml is set to NULL.
  *
  */
 void

@@ -75,7 +75,7 @@
  * $$ \alpha_b = 2.07 \,  k_{eq} \, s (1+ R_d )^{-3/4} G \left( \frac{1+ z_{eq}}{1+z_d}  \right) \, ,$$
  * $$ G(y) = y \left[-6 \sqrt{1+y} + (2+3y) \ln \left( \frac{\sqrt{1+y} + 1}{\sqrt{1+y} - 1} \right) \right]  \, ,$$
  * $$ k_{eq} = (2 \Omega_m H_0^2 z_{eq})^{1/2}  \, ,$$
- * $$ z_{eq} = 2.5 \times 10^4 \Omega_m h^2 \, (T_{\mathrm{CMB}}} / 2.7)^{-4} \, ,$$
+ * $$ z_{eq} = 2.5 \times 10^4 \Omega_m h^2 \, (T_{\mathrm{CMB}} / 2.7)^{-4} \, ,$$
  * $$ R(z_d) = 31.5 \, \Omega_b h^2 (T_{cmb} / 2.7)^{-4} (z_d/10^3)^{-1} \, ,$$
  * $$ \tilde{s}(k) = \frac{s}{\left[ 1 + (\beta_{node}/ks)^3 \right]^{1/3}} \, ,$$
  * $$\beta_{node} = 8.41 \, (\Omega_m h^2)^{0.435} \, , $$
