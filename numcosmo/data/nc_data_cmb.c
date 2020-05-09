@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,19 @@
  * SECTION:nc_data_cmb
  * @title: NcDataCMB
  * @short_description: Helper function for instantiating CMB data
+ * @stability: Stable
+ * @include: numcosmo/data/nc_data_cmb.h
  *
- * FIXME
- * 
+ *
+ * This function is an interface to all available CMB related data. 
+ *
+ * The #NcDataCMBDataType is not available yet.
+ *
+ * The #NcDataCMBId contains the so-called distance priors: 
+ *
+ * - Shift parameter $R$: #NcDataCMBShiftParam (see also #nc_distance_shift_parameter).
+ * - Location of the first acoustic peak $l_A$ (see [Hinshaw et al. (2012)][XHinshaw2013a] section 4.6.1 [[arXiv](https://arxiv.org/abs/1212.5226)]). 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,7 +71,9 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
     case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
     {
       NcDataCMBShiftParam *cmb_shift_param = nc_data_cmb_shift_param_new_from_id (dist, id);
+      
       return NCM_DATA (cmb_shift_param);
+      
       break;
     }
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
@@ -69,7 +81,9 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
     case NC_DATA_CMB_DIST_PRIORS_WMAP9:
     {
       NcDataCMBDistPriors *cmb_dist_prior = nc_data_cmb_dist_priors_new_from_id (dist, id);
+      
       return NCM_DATA (cmb_dist_prior);
+      
       break;
     }
     default:
@@ -77,3 +91,4 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
       break;
   }
 }
+
