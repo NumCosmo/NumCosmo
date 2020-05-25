@@ -740,3 +740,126 @@ ncm_spline_set_func1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, G
   ncm_spline_set_func (s, ftype, &gslF, xi, xf, max_nodes, rel_error);
 }
 
+static void
+_ncm_spline_new_function_grid_linear (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize nnodes)
+{
+  guint i;
+  NcmVector *xv = ncm_vector_new (nnodes);
+  NcmVector *yv = ncm_vector_new (nnodes);
+  
+  for (i = 0; i < nnodes; i++)
+  {
+    const gdouble x = xi + (xf - xi) / (nnodes - 1.0) * i;
+    const gdouble y = GSL_FN_EVAL (F, x);
+    
+    g_assert (gsl_finite (x));
+    g_assert (gsl_finite (y));
+    
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, y);
+  }
+  
+  ncm_spline_set (s, xv, yv, TRUE);
+  
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  
+  return;
+}
+
+static void
+_ncm_spline_new_function_grid_log (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize nnodes)
+{
+  guint i;
+  const gdouble lnxi = log (xi);
+  const gdouble lnxf = log (xf);
+  NcmVector *xv      = ncm_vector_new (nnodes);
+  NcmVector *yv      = ncm_vector_new (nnodes);
+  
+  g_assert (xi > 0.0);
+  
+  for (i = 0; i < nnodes; i++)
+  {
+    const gdouble x = exp (lnxi + (lnxf - lnxi) / (nnodes - 1.0) * i);
+    const gdouble y = GSL_FN_EVAL (F, x);
+    
+    g_assert (gsl_finite (x));
+    g_assert (gsl_finite (y));
+    
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, y);
+  }
+  
+  ncm_spline_set (s, xv, yv, TRUE);
+  
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  
+  return;
+}
+
+/**
+ * ncm_spline_set_func_grid: (skip)
+ * @s: a #NcmSpline
+ * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
+ * @F: function to be interpolated
+ * @xi: lower knot
+ * @xf: upper knot
+ * @nnodes: number of knots including both limits knots [@xi, @xf]
+ *
+ * This function fills the spline @s with the function @F values 
+ * in a uniform grid within the range [@xi, @xf] and a total of @nnodes knots. 
+ *
+ */
+void
+ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize nnodes)
+{
+  ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
+  
+  g_assert_cmpuint (nnodes, <, NCM_SPLINE_FUNC_DEFAULT_MAX_NODES);
+  g_assert_cmpuint (nnodes, >, ncm_spline_min_size (s));
+  
+  g_assert_null (s->xv);
+  g_assert_null (s->yv);
+  
+  switch (ftype)
+  {
+    case NCM_SPLINE_FUNC_GRID_LINEAR:
+      _ncm_spline_new_function_grid_linear (s, F, xi, xf, nnodes);
+      break;
+    case NCM_SPLINE_FUNC_GRID_LOG:
+      _ncm_spline_new_function_grid_log (s, F, xi, xf, nnodes);
+      break;
+    default:
+      g_assert_not_reached ();
+      
+      return;
+  }
+}
+
+/**
+ * ncm_spline_set_func_grid1:
+ * @s: a #NcmSpline.
+ * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
+ * @F: (scope call): function to be interpolated
+ * @obj: (allow-none): #GObject used by the function @F
+ * @xi: lower knot
+ * @xf: upper knot
+ * @nnodes: number of knots including both limits knots [@xi, @xf]
+ *
+ * This function fills the spline @s with the function @F values 
+ * in a uniform grid within the range [@xi, @xf] and a total of @nnodes knots. 
+ *
+ * The difference between #ncm_spline_set_func_grid is how the user function is passed.
+ * Here, it uses a #NcmSplineFuncF function and it parameters are allocated in the object @obj. 
+ * This function is more suitable to be used within Python.
+ *
+ */
+void
+ncm_spline_set_func_grid1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize nnodes)
+{
+  gsl_function gslF = {(gdouble (*)(gdouble, gpointer))F, obj};
+  
+  ncm_spline_set_func_grid (s, ftype, &gslF, xi, xf, nnodes);
+}
+
