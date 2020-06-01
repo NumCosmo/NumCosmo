@@ -6,7 +6,9 @@ tutorialsdir = \
 	$(pkgdatadir)-$(VERSION)/notebooks/tutorials
 
 tutorials_DATA = \
-	DarkEnergyIntro.ipynb
+	DarkEnergyIntro.ipynb \
+	DistTutorial.ipynb    \
+	HIPrimTutorial.ipynb
 
 EXTRA_DIST = \
 	$(tutorials_DATA)

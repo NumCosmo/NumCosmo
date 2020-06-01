@@ -6,9 +6,7 @@ notebooksdir = \
 	$(pkgdatadir)-$(VERSION)/notebooks
 
 notebooks_DATA = \
-	HIPrimTutorial.ipynb               \
-	cosmology_tutorial.ipynb           \
-	lrt_fm_with_sne_bao.ipynb          \
+	LRTvsFisher.ipynb                  \
 	MagDustBounce.ipynb                \
 	BounceVecPert.ipynb                \
 	NC_Colossus_density_profiles.ipynb
