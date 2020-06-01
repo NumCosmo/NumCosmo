@@ -70,11 +70,11 @@ FROM $BASE_CONTAINER AS runtime-image
 USER root
 
 # Install python gobject support
-RUN conda install --quiet --yes                  \
-    pygobject numpy matplotlib astropy scipy &&  \
-    conda clean --all -f -y &&                   \
-    npm cache clean --force &&                   \
-    fix-permissions $CONDA_DIR &&                \
+RUN conda install --quiet --yes                             \
+    pygobject numpy matplotlib astropy scipy ipywidgets &&  \
+    conda clean --all -f -y &&                              \
+    npm cache clean --force &&                              \
+    fix-permissions $CONDA_DIR &&                           \
     fix-permissions /home/$NB_USER
 
 # Install dependencies (runtime only)
