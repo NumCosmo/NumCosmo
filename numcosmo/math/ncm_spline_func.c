@@ -819,9 +819,6 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
   g_assert_cmpuint (nnodes, <, NCM_SPLINE_FUNC_DEFAULT_MAX_NODES);
   g_assert_cmpuint (nnodes, >, ncm_spline_min_size (s));
   
-  g_assert_null (s->xv);
-  g_assert_null (s->yv);
-  
   switch (ftype)
   {
     case NCM_SPLINE_FUNC_GRID_LINEAR:
