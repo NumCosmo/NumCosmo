@@ -90,7 +90,7 @@
  *   If someone wants to perform a sum of two cosine functions, must provide a matrix with four rows: $A_0$, $\nu_0$, $A_1$ and $\nu_1$, for example. 
  * <note>
  *   <para>
- *     The cosine input parameters matrix must have an even number of rows. 
+ *     The #NCM_SPLINE_FUNC_TEST_TYPE_COSINE input parameters matrix must have an even number of rows. 
  *   </para>
  * </note>
  *
@@ -361,6 +361,7 @@
  *   ncm_spline_func_test_set_type (sft, NCM_SPLINE_FUNC_TEST_TYPE_USER);
  *  
  *   ncm_spline_func_test_set_rel_error (sft, 1.e-10);
+ *   ncm_spline_func_test_set_out_threshold (sft, 10.0);
  * 
  *   ncm_spline_func_test_set_xi (sft, -0.5);
  *   ncm_spline_func_test_set_xf (sft, +0.5);
@@ -391,6 +392,8 @@
  * Unlike the previous example, the Monte Carlo statistic is not saved in a file. 
  * Instead, it is used the ncm_spline_func_test_monte_carlo() function.
  * This procedure has a faster execution time, but the drawback is information waste.
+ * The function ncm_spline_func_test_set_out_threshold() saves information only
+ * for the functions with outilers above 10\% of the threshold given in Eq. \eqref{eq:condition}.
  *
  * Below is shown the output of ncm_spline_func_test_log_vals_mc_stats():
  * <informalexample>
@@ -415,10 +418,11 @@
  *   </programlisting>
  * </informalexample>
  *
- * The results shows a slightly better approximation of the user function by the linear grid 
+ * The results shows a better approximation by the linear grid 
  * compared to the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) method.
- * In order to try to understand this behaviour, it is needed to use the 
- * ncm_spline_func_test_monte_carlo_and_save_to_txt() and make a detailed analysis of the output file.
+ * In order to try to understand this behaviour, the user should look into the files
+ * created by ncm_spline_func_test_set_out_threshold(), but note that "Ncm abs. max. diff." has mean 
+ * near the desired tolerance. 
  *
  *
  * # Future improvements
@@ -453,7 +457,7 @@
  *   * NUMCOSMO-WARNING: ncm_spline_new_function_spline: cannot archive requested precision with at most 5000000 nodes.
  *     But it seems to not happen with #NCM_SPLINE_FUNCTION_4POINTS method.
  *   * Segmentation fault (core dumped): sometimes without even passing by ncm_spline_func_test_set_one_grid_stats(),
- *     but when enter the Monte Carlo, it happens after very few realizations (the most a checked was ~150).  
+ *     but when enter the Monte Carlo, it happens after very few realizations (the highest value checked was ~150 realizations).  
  *   * NUMCOSMO-ERROR: _ncm_spline_rbf_prepare[ncm_matrix_cholesky_solve]: 7. (seems to happen very rarely).
  *   * NUMCOSMO-ERROR: Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous (seems to happen rarely).
  *   * It is interesting to note that this method seems to have no memory issue.
