@@ -462,23 +462,6 @@
  *    If you do not go too crazy with the frequencies values and the function become a [EEG](https://pt.wikipedia.org/wiki/Eletroencefalografia).
  *    But with #NCM_SPLINE_FUNCTION_4POINTS we have the same memory issue as in the first case.
  *
- * Valgrind output:
- *
- * ==9917== 136 (88 direct, 48 indirect) bytes in 1 blocks are definitely lost in loss record 359 of 379
- * ==9917==    at 0x483A7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
- * ==9917==    by 0x7369558: g_malloc (in /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.6200.4)
- * ==9917==    by 0x7381B35: g_slice_alloc (in /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.6200.4)
- * ==9917==    by 0x738215D: g_slice_alloc0 (in /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.6200.4)
- * ==9917==    by 0x72ED0AF: g_type_create_instance (in /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.6200.4)
- * ==9917==    by 0x72CF344: ??? (in /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.6200.4)
- * ==9917==    by 0x72D0A44: g_object_new_with_properties (in /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.6200.4)
- * ==9917==    by 0x72D15F0: g_object_new (in /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.6200.4)
- * ==9917==    by 0x48EEBA6: ncm_vector_new_full (in /home/fsimoni/cosmology/NumCosmo/build/numcosmo/.libs/libnumcosmo.so.0.1500.0)
- * ==9917==    by 0x48EEEF1: ncm_vector_new_data_slice (in /home/fsimoni/cosmology/NumCosmo/build/numcosmo/.libs/libnumcosmo.so.0.1500.0)
- * ==9917==    by 0x4910B10: _ncm_spline_func_test_prepare_spl (in /home/fsimoni/cosmology/NumCosmo/build/numcosmo/.libs/libnumcosmo.so.0.1500.0)
- * ==9917==    by 0x4911D07: ncm_spline_func_test_set_one_grid_stats (in /home/fsimoni/cosmology/NumCosmo/build/numcosmo/.libs/libnumcosmo.so.0.1500.0)
- *
- *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1302,6 +1285,8 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
   self->ftype   = ftype;
   self->npar    = ncm_matrix_nrows (self->par_info);
   self->params  = ncm_vector_new (self->npar);
+  self->x_spl   = ncm_vector_new (self->npar);
+  
   
   if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_COSINE)
     g_assert (GSL_IS_EVEN (self->npar));
@@ -1900,8 +1885,6 @@ static void
 _ncm_spline_func_test_prepare_spl (NcmSplineFuncTestPrivate *self)
 {
   guint i;
-  
-  self->x_spl = ncm_vector_new (self->npar);
   
   for (i = 0; i < self->npar; i++)
     ncm_vector_fast_set (self->x_spl, i, ncm_rng_uniform_gen (self->rng, self->xi, self->xf));
