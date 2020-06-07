@@ -122,6 +122,9 @@ gdouble ncm_spline_func_test_get_rel_error (NcmSplineFuncTest *sft);
 void ncm_spline_func_test_set_scale (NcmSplineFuncTest *sft, const gdouble scale);
 gdouble ncm_spline_func_test_get_scale (NcmSplineFuncTest *sft);
 
+void ncm_spline_func_test_set_out_threshold (NcmSplineFuncTest *sft, const gdouble out_threshold);
+gdouble ncm_spline_func_test_get_out_threshold (NcmSplineFuncTest *sft);
+
 void ncm_spline_func_test_set_user_gsl_function (NcmSplineFuncTest *sft, gsl_function *F);
 
 void ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, NcmSplineFuncTestTypePDF pdftype);
