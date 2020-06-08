@@ -245,6 +245,9 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, cons
   
   ncm_spline_set_array (s, x_array, y_array, TRUE);
   
+  g_array_unref (x_array);
+  g_array_unref (y_array);
+
   return;
 }
 
