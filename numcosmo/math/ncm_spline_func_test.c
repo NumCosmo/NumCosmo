@@ -323,7 +323,7 @@
  *
  * * "NcmSplineFunc number of knots:" $\langle \mathrm{spline \\_ length}  \rangle \pm  \sigma \left( \mathrm{spline \\_ length} \right)$.
  * * "clean grid (%):" it is the proportion of the grids realizations with no outliers at all.
- * * "outliers (%):" $\Big \langle \overline{\mathrm{outlier}} \Big  \rangle \pm  \sigma \left( \overline{\mathrm{outlier}} \right)$.
+ * * "outliers (%):" $\Big \langle \mathrm{outlier} \Big  \rangle \pm  \sigma \left( \mathrm{outlier} \right)$.
  * * "diff.:" $\Big \langle \overline{\Delta f(x)} \Big \rangle \pm  \sigma \left( \overline{\Delta f(x)} \right)$.
  * * "abs. max. diff.:" $\Big \langle |\Delta f(x)|_{\mathrm{max}} \Big \rangle \pm  \sigma \left( |\Delta f(x)|_{\mathrm{max}} \right)$.
  * 
@@ -361,6 +361,7 @@
  *   ncm_spline_func_test_set_type (sft, NCM_SPLINE_FUNC_TEST_TYPE_USER);
  *  
  *   ncm_spline_func_test_set_rel_error (sft, 1.e-10);
+ *   ncm_spline_func_test_set_scale (sft, 10.0);
  *   ncm_spline_func_test_set_out_threshold (sft, 10.0);
  * 
  *   ncm_spline_func_test_set_xi (sft, -0.5);
@@ -391,7 +392,7 @@
  * \end{equation*}
  * Unlike the previous example, the Monte Carlo statistic is not saved in a file. 
  * Instead, it is used the ncm_spline_func_test_monte_carlo() function.
- * This procedure has a faster execution time, but the drawback is information waste.
+ * This procedure has a faster execution time, but the drawback is information lost.
  * The function ncm_spline_func_test_set_out_threshold() saves information only
  * for the functions with outilers above 10\% of the threshold given in Eq. \eqref{eq:condition}.
  *
@@ -401,19 +402,19 @@
  *
  * ####  Monte Carlo statistics for 100000 simulations  ####
  *
- *  * NcmSplineFunc number of knots:   738.92 +/-   451.61
+ *  * NcmSplineFunc number of knots:   581.23 +/-   331.82
  *
- *  * Ncm clean grid (%): 83.33
- *  * Lin clean grid (%): 96.18
+ *  * Ncm clean grid (%): 79.74
+ *  * Lin clean grid (%): 91.69
  *
- *  * Ncm outliers (%):  0.16 +/-  0.54
- *  * Lin outliers (%):  0.00 +/-  0.02
+ *  * Ncm outliers (%):  0.24 +/-  0.68
+ *  * Lin outliers (%):  0.01 +/-  0.03
  *
- *  * Ncm diff. : 1.926e-11 +/- 3.332e-10
- *  * Lin diff. : -9.121e-13 +/- 2.690e-11
+ *  * Ncm diff. : -8.430e-10 +/- 6.675e-09
+ *  * Lin diff. : -1.745e-12 +/- 5.589e-11
  *
- *  * Ncm abs. max. diff. : 2.619e-09 +/- 3.357e-07
- *  * Lin abs. max. diff. : 4.122e-10 +/- 4.484e-10
+ *  * Ncm abs. max. diff. : 3.114e-08 +/- 8.864e-06
+ *  * Lin abs. max. diff. : 8.927e-10 +/- 6.938e-10
  *
  *   </programlisting>
  * </informalexample>
@@ -422,43 +423,46 @@
  * compared to the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) method.
  * In order to try to understand this behaviour, the user should look into the files
  * created by ncm_spline_func_test_set_out_threshold(), but note that "Ncm abs. max. diff." has mean 
- * near the desired tolerance. 
+ * near the desired tolerance. In this case we have an absolute error 
+ * $\left( |f(x)| + 10 \right) \mathrm{rel \\_ error} \approx 10^{-9} \rightarrow 10^{-8}$, which is
+ * around the "Ncm abs. max. diff.". Around 10 grids have outliers greater than 10\%. 
  *
+ * If, instead, it is applied the method #NCM_SPLINE_FUNCTION_4POINTS, as was found previously,
+ * the result is more robust compared to #NCM_SPLINE_FUNCTION_SPLINE. Applying the 4POINTS, 
+ * we got no grids with outliers, as can be seem below:
+ * <informalexample>
+ *   <programlisting>
  *
- * # Future improvements
+ * ####  Monte Carlo statistics for 100000 simulations  ####
  *
- * 1. Add OpenMP on grid and/or Monte Carlo loops.
+ *  * NcmSplineFunc number of knots:  4173.34 +/-  2363.36
  *
- * 2. Add @nsim parameter as an object property.
+ *  * Ncm clean grid (%): 100.00
+ *  * Lin clean grid (%): 100.00
  *
- * 3. Add option for the user to set the $x$ values as input for the spline methods, polynomial and RBF.
+ *  * Ncm outliers (%):  0.00 +/-  0.00
+ *  * Lin outliers (%):  0.00 +/-  0.00
  *
- * 4. Add a function that returns to the user the parameters that created the base function.
+ *  * Ncm diff. : 2.707e-14 +/- 3.753e-13
+ *  * Lin diff. : -9.547e-16 +/- 1.582e-14
  *
- * # Known bugs
+ *  * Ncm abs. max. diff. : 4.948e-12 +/- 7.645e-12
+ *  * Lin abs. max. diff. : 9.834e-14 +/- 7.774e-14
  *
- * 1. In the last example with the user function, if the method from [NcmSplineFunc](numcosmo-NcmSplineFunc.html)
- *    is changed to #NCM_SPLINE_FUNCTION_4POINTS, after some realizations it gives "Segmentation fault (core dumped)". 
- *    But does not have memory issue anymore.
+ *   </programlisting>
+ * </informalexample>
+ * It is highly advisable to apply a scale for this method. 
+ * Its high precision can produce a crash while crossing the abscissa.
  *
- * 2. When #NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL is used with different values from 
- *    the default for #NcmSplineFuncTest:xi and #NcmSplineFuncTest:xf it become very unstable.
- *    Rarely it even can not perform the ncm_spline_func_test_set_one_grid_stats(), but if it
- *    is able to enter the Monte Carlo simulation, it crashes within very few realizations.
- *    It happens with both [NcmSplineFunc](numcosmo-NcmSplineFunc.html) methods and PDFs.
- *    Curiously, with the default values, 0 and 1, it is stable.
- *    The displayed error is "gsl: interp.c:150: ERROR: interpolation error".
- *       
- * 3. When #NCM_SPLINE_FUNC_TEST_TYPE_RBF is used it becomes very unstable. Rarely it can pass the function
- *    ncm_spline_func_test_set_one_grid_stats(). But when it is able to, it can produce a series of errors and warnings listed below:
+ * Note that both Monte Carlo examples can have slightly different results for 
+ * any given run, due to the fact that the @seed is created internally.
  *
- *   * NUMCOSMO-WARNING: ncm_spline_new_function_spline: cannot archive requested precision with at most 5000000 nodes.
- *     But it seems to not happen with #NCM_SPLINE_FUNCTION_4POINTS method.
- *   * Segmentation fault (core dumped): sometimes without even passing by ncm_spline_func_test_set_one_grid_stats(),
- *     but when enter the Monte Carlo, it happens after very few realizations (the highest value checked was ~150 realizations).  
- *   * NUMCOSMO-ERROR: _ncm_spline_rbf_prepare[ncm_matrix_cholesky_solve]: 7. (seems to happen very rarely).
- *   * NUMCOSMO-ERROR: Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous (seems to happen rarely).
- *   * It is interesting to note that this method seems to have no memory issue.
+ * <note>
+ *   <para>
+ * The examples above are stress tests, with some not so commom functions, but even then, 
+ * the results from NcmSplineFunc are quite remarkable.
+ *   </para>
+ * </note>
  *
  */
 
@@ -569,7 +573,7 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   self->x_spl        = NULL;
   self->params       = NULL;
   self->par_info     = NULL;
-  self->par_is_fixed = g_array_new (FALSE, FALSE, sizeof (gboolean));
+  self->par_is_fixed = NULL; 
   self->all_fixed    = TRUE;
   
   self->ncm_good      = 0;
@@ -983,11 +987,13 @@ ncm_spline_func_test_set_params_info (NcmSplineFuncTest *sft, NcmMatrix *par_inf
 {
   NcmSplineFuncTestPrivate * const self = sft->priv;
   
-  g_assert_nonnull (par_info);
-  g_assert_cmpuint (ncm_matrix_nrows (par_info),  >, 0);
+  self->npar = ncm_matrix_nrows (par_info);
+
+  g_assert_cmpuint (self->npar,  >, 0);
   g_assert_cmpuint (ncm_matrix_ncols (par_info), ==, 2);
-  
-  self->par_info = ncm_matrix_ref (par_info);
+
+  self->par_is_fixed = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), self->npar);
+  self->par_info     = ncm_matrix_ref (par_info);
 }
 
 /**
@@ -1011,8 +1017,11 @@ ncm_spline_func_test_set_params_info_all (NcmSplineFuncTest *sft, const guint np
   
   guint i;
   
-  self->par_info = ncm_matrix_new (npar, 2);
-  
+  self->npar = npar;
+
+  self->par_is_fixed = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), self->npar);
+  self->par_info     = ncm_matrix_new (npar, 2);
+
   for (i = 0; i < npar; i++)
   {
     ncm_matrix_set (self->par_info, i, 0, p1);
@@ -1281,7 +1290,6 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
   
   self->pdftype = pdftype;
   self->ftype   = ftype;
-  self->npar    = ncm_matrix_nrows (self->par_info);
   self->params  = ncm_vector_new (self->npar);
   self->x_spl   = ncm_vector_new (self->npar);
   
@@ -1667,7 +1675,7 @@ ncm_spline_func_test_save_knots_to_txt (NcmSplineFuncTest *sft, gchar *fname)
   
   FILE *fout = fopen (fname, "w");
   
-  for (i = 0; i < ncm_spline_get_len (self->ncm); i++)
+  for (i = 0; i < self->len; i++)
     fprintf (fout, "%22.15e\n", ncm_vector_fast_get (knots, i));
   
   fclose (fout);
@@ -1786,7 +1794,7 @@ _ncm_spline_func_test_set_params_is_fixed_normal (NcmSplineFuncTestPrivate *self
   
   if (fabs (p2) > G_MINDOUBLE)
   {
-    g_array_append_val (self->par_is_fixed, f);
+    g_array_insert_val(self->par_is_fixed, i, f);
     self->all_fixed = FALSE;
     
     ncm_matrix_set (self->par_info, i, 0, p1);
@@ -1794,7 +1802,7 @@ _ncm_spline_func_test_set_params_is_fixed_normal (NcmSplineFuncTestPrivate *self
   }
   else
   {
-    g_array_append_val (self->par_is_fixed, t);
+    g_array_insert_val(self->par_is_fixed, i, t);
   }
 }
 
@@ -1806,7 +1814,7 @@ _ncm_spline_func_test_set_params_is_fixed_flat (NcmSplineFuncTestPrivate *self, 
   
   if (ncm_cmp (p1, p2, 1.e-12, 0.0))
   {
-    g_array_append_val (self->par_is_fixed, f);
+    g_array_insert_val(self->par_is_fixed, i, f);
     self->all_fixed = FALSE;
     
     ncm_matrix_set (self->par_info, i, 0, GSL_MIN (p1, p2));
@@ -1814,7 +1822,7 @@ _ncm_spline_func_test_set_params_is_fixed_flat (NcmSplineFuncTestPrivate *self, 
   }
   else
   {
-    g_array_append_val (self->par_is_fixed, t);
+    g_array_insert_val(self->par_is_fixed, i, t);
   }
 }
 
