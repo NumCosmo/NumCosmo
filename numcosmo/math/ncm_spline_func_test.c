@@ -431,17 +431,15 @@
  *
  * 2. Add @nsim parameter as an object property.
  *
- * 3. Avoid "collision" between $x$ points. Set a minimum difference between two drawn points.
+ * 3. Add option for the user to set the $x$ values as input for the spline methods, polynomial and RBF.
  *
- * 4. Add option for the user to set the $x$ values as input for the spline methods, polynomial and RBF.
- *
- * 5. Add a function that returns to the user the parameters that created the base function.
+ * 4. Add a function that returns to the user the parameters that created the base function.
  *
  * # Known bugs
  *
  * 1. In the last example with the user function, if the method from [NcmSplineFunc](numcosmo-NcmSplineFunc.html)
- *    is changed to #NCM_SPLINE_FUNCTION_4POINTS, the used memory increases as the Monte Carlo is performed until
- *    it crashes.
+ *    is changed to #NCM_SPLINE_FUNCTION_4POINTS, after some realizations it gives "Segmentation fault (core dumped)". 
+ *    But does not have memory issue anymore.
  *
  * 2. When #NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL is used with different values from 
  *    the default for #NcmSplineFuncTest:xi and #NcmSplineFuncTest:xf it become very unstable.
@@ -461,10 +459,6 @@
  *   * NUMCOSMO-ERROR: _ncm_spline_rbf_prepare[ncm_matrix_cholesky_solve]: 7. (seems to happen very rarely).
  *   * NUMCOSMO-ERROR: Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous (seems to happen rarely).
  *   * It is interesting to note that this method seems to have no memory issue.
- *
- * 4. When #NCM_SPLINE_FUNC_TEST_TYPE_COSINE together with #NCM_SPLINE_FUNCTION_SPLINE it seems stable. No memory issue, errors and warnings. 
- *    If you do not go too crazy with the frequencies values and the function become a [EEG](https://pt.wikipedia.org/wiki/Eletroencefalografia).
- *    But with #NCM_SPLINE_FUNCTION_4POINTS we have the same memory issue as in the first case.
  *
  */
 
