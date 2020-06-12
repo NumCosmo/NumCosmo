@@ -339,13 +339,13 @@ gdouble
 nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   /*g_assert_cmpfloat (nc_hicosmo_Omega_k0 (cosmo), >=, 0.0); */
-  const gdouble a  = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
-  const gdouble Ds = nc_distance_angular_diameter (smd->dist, cosmo, zs);
-  const gdouble Dl = nc_distance_angular_diameter (smd->dist, cosmo, zl);
-  /* Dls below is only valid for Omega_k >= 0 */
-  const gdouble Dls    = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl)) / (1.0 + zs);
+  const gdouble a   = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
+  const gdouble Ds  = nc_distance_angular_diameter (smd->dist, cosmo, zs);
+  const gdouble Dl  = nc_distance_angular_diameter (smd->dist, cosmo, zl);
+  const gdouble Dls = nc_distance_angular_diameter_z1_z2 (smd->dist, cosmo, zl, zs);
+
   const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  
+
   return a * Ds / (Dl * Dls * RH_Mpc);
 }
 

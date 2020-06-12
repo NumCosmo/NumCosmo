@@ -96,7 +96,12 @@
  * $$\mu(z) = \delta\mu(z) + 5\log_{10}[\RH_0/(1\,\text{Mpc})],$$
  * where $\text{Mpc}$ is megaparsec [ncm_c_Mpc()].
  *
- *
+ * We also implement the following distances between $z_1$ and $z_2$:
+ * \begin{align}\label{eq:def:Dt12}
+ * D_t(z_1, z_2) &= \frac{\sinh\left\\{\sqrt{\Omega_{k0}}\left[D_c(z_2)-D_c(z_1)\right]\right\\}}{\sqrt{\Omega_{k0}}}, \\\\ \label{eq:def:DA12}
+ * D_A(z_1, z_2) &= D_t (z_1, z_2) / (1 + z_2).
+ * \end{align}
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -463,7 +468,7 @@ static gdouble _comoving_distance_integral_argument (gdouble z, gpointer p);
  * Returns: $D_c(z)$.
  */
 gdouble
-nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   switch (dist->cmethod)
   {
@@ -517,7 +522,7 @@ _comoving_distance_integral_argument (gdouble z, gpointer p)
 }
 
 static gdouble
-_dcddz (gdouble cd, gdouble z, gpointer userdata)
+_dcddz (gdouble cd, const gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
@@ -570,7 +575,7 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
  * Returns: $D_t(z)$.
  */
 gdouble
-nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
@@ -579,6 +584,27 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
     return comoving_dist;
   
   return _nc_distance_sinn (comoving_dist, Omega_k0);
+}
+
+/**
+ * nc_distance_transverse_z1_z2:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z1: redshift $z_1$
+ * @z2: redshift $z_2$
+ *
+ * Compute the transverse comoving distance between $z_1$ and $z_2$, $D_t (z1, z2)$ defined in Eq. $\eqref{eq:def:Dt12}$.
+ *
+ * Returns: $D_t(z_1, z_2)$.
+ */
+gdouble
+nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble dc1      = nc_distance_comoving (dist, cosmo, z1);
+  const gdouble dc2      = nc_distance_comoving (dist, cosmo, z2);
+  
+  return _nc_distance_sinn (dc2 - dc1, Omega_k0);
 }
 
 /**
@@ -593,7 +619,7 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $\frac{dD_t(z)}{dz}$.
  */
 gdouble
-nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
@@ -643,7 +669,7 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $D_l(z)$.
  */
 gdouble
-nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   const gdouble Dl = (1.0 + z) * Dt;
@@ -657,15 +683,35 @@ nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * Compute the angular diameter $D_A(z)$  defined in Eq. $\eqref{eq:def:Dl}$.
+ * Compute the angular diameter $D_A(z)$, defined in Eq. $\eqref{eq:def:Dl}$.
  *
  * Returns: $D_A(z)$.
  */
 gdouble
-nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   const gdouble DA = Dt / (1.0 + z);
+  
+  return DA;
+}
+
+/**
+ * nc_distance_angular_diameter_z1_z2:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z1: redshift $z_1$
+ * @z2: redshift $z_2$
+ *
+ * Compute the angular diameter $D_A(z_1, z_2)$, defined in Eq. $\eqref{eq:def:DA12}$.
+ *
+ * Returns: $D_A(z_1, z_2)$.
+ */
+gdouble
+nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2)
+{
+  const gdouble Dt = nc_distance_transverse_z1_z2 (dist, cosmo, z1, z2);
+  const gdouble DA = Dt / (1.0 + z2);
   
   return DA;
 }
@@ -681,7 +727,7 @@ nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $\delta\mu(z)$.
  */
 gdouble
-nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Dl = nc_distance_luminosity (dist, cosmo, z);
   
@@ -703,7 +749,7 @@ nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $D_l(z_{hef},z_{CMB})$.
  */
 gdouble
-nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
+nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb)
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z_cmb);
   const gdouble Dl = (1.0 + z_he) * Dt;
@@ -724,7 +770,7 @@ nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gd
  * Returns: $\delta\mu(z_{hef},z_{CMB})$.
  */
 gdouble
-nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
+nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb)
 {
   const gdouble Dl = nc_distance_luminosity_hef (dist, cosmo, z_he, z_cmb);
   
@@ -776,7 +822,7 @@ nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo
  * Returns: $R(z)$.
  */
 gdouble
-nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble sqrt_mod_Omega_m0 = sqrt (fabs (nc_hicosmo_Omega_m0 (cosmo)));
   const gdouble transverse        = nc_distance_transverse (dist, cosmo, z);
@@ -892,7 +938,7 @@ static gdouble sound_horizon_integral_argument (gdouble z, gpointer p);
  * Returns: $r_s(z)$.
  */
 gdouble
-nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
   gdouble result, error;
@@ -937,7 +983,7 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
  * Returns: $\frac{d r_s(z)}{dz}$.
  */
 gdouble
-nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   NCM_UNUSED (dist);
   
@@ -1057,7 +1103,7 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
  * Returns: $D_V^\star(z)$.
  */
 gdouble
-nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   gdouble E  = sqrt (nc_hicosmo_E2 (cosmo, z));
@@ -1082,7 +1128,7 @@ nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $A(z)$.
  */
 gdouble
-nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble Dv            = nc_distance_dilation_scale (dist, cosmo, z);
   gdouble sqrt_Omega_m0 = sqrt (nc_hicosmo_Omega_m0 (cosmo));
@@ -1150,7 +1196,7 @@ nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo)
  * Returns: $r(z_d) / D_V(z)$.
  */
 gdouble
-nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble Dv   = nc_distance_dilation_scale (dist, cosmo, z);
@@ -1170,7 +1216,7 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $R_H/r_d = c / (H(z) r_d)$.
  */
 gdouble
-nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble E    = nc_hicosmo_E (cosmo, z);
@@ -1190,7 +1236,7 @@ nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $D_A(z) / (c \, r_d)$.
  */
 gdouble
-nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble DA   = nc_distance_angular_diameter (dist, cosmo, z);
@@ -1231,7 +1277,7 @@ _nc_distance_comoving_infinity_integrand (gdouble logx, gpointer p)
  * Returns: $D_c$ from $z$ to $\infty$.
  */
 gdouble
-nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
@@ -1259,7 +1305,7 @@ nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble 
  * Returns: $D_t(z)$ from $z$ to $\infty$.
  */
 gdouble
-nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving_z_to_infinity (dist, cosmo, z);
@@ -1268,8 +1314,6 @@ nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdoubl
     return comoving_dist;
   
   return _nc_distance_sinn (comoving_dist, Omega_k0);
-  
-  ;
 }
 
 /***************************************************************************
@@ -1314,7 +1358,7 @@ _nc_distance_cosmic_time_integrand (gdouble logx, gpointer p)
  * Returns: $t(z)$.
  */
 gdouble
-nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
@@ -1345,7 +1389,7 @@ nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $t_{lb}(z)$.
  */
 gdouble
-nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
@@ -1374,7 +1418,7 @@ nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Returns: $\eta_{lb}(z)$.
  */
 gdouble
-nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   return nc_distance_comoving (dist, cosmo, z);
 }
@@ -1412,7 +1456,7 @@ _nc_distance_conformal_time_integrand (gdouble logx, gpointer p)
  * Returns: $\eta(z)$.
  */
 gdouble
-nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
