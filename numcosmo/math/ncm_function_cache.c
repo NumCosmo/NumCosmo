@@ -132,7 +132,10 @@ _ncm_function_cache_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 _ncm_function_cache_dispose (GObject *object)
 {
-  /*NcmFunctionCache *cache = NCM_FUNCTION_CACHE (object);*/
+  NcmFunctionCache *cache = NCM_FUNCTION_CACHE (object);
+  NcmFunctionCachePrivate * const self = cache->priv;
+
+  g_clear_pointer (&self->tree, g_tree_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_function_cache_parent_class)->dispose (object);

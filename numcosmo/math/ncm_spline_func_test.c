@@ -529,6 +529,7 @@ struct _NcmSplineFuncTestPrivate
   NcmRNG *rng;
   
   gsl_function F;
+  NcmSplineFuncTestPrepare F_prepare;
 };
 
 enum
@@ -581,8 +582,8 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   self->ncm_out       = 0;
   self->lin_out       = 0;
   self->out_threshold = 0.0;
-  self->stats_grid    = NULL;
-  self->stats_mc      = NULL;
+  self->stats_grid    = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
+  self->stats_mc      = ncm_stats_vec_new (9, NCM_STATS_VEC_VAR, FALSE);
   
   self->len = 0;
   self->ncm = ncm_spline_cubic_notaknot_new ();
@@ -594,6 +595,7 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   
   self->F.function = NULL;
   self->F.params   = NULL;
+  self->F_prepare  = NULL;
 }
 
 static void
@@ -713,7 +715,7 @@ _ncm_spline_func_test_dispose (GObject *object)
   
   ncm_rng_clear (&self->rng);
   
-  g_array_unref (self->par_is_fixed);
+  g_clear_pointer (&self->par_is_fixed, g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_func_test_parent_class)->dispose (object);
@@ -992,8 +994,14 @@ ncm_spline_func_test_set_params_info (NcmSplineFuncTest *sft, NcmMatrix *par_inf
   g_assert_cmpuint (self->npar,  >, 0);
   g_assert_cmpuint (ncm_matrix_ncols (par_info), ==, 2);
 
+  ncm_matrix_clear (&self->par_info);
+  g_clear_pointer (&self->par_is_fixed, g_array_unref);
+  
   self->par_is_fixed = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), self->npar);
   self->par_info     = ncm_matrix_ref (par_info);
+  
+  g_array_set_size (self->par_is_fixed, self->npar);
+  
 }
 
 /**
@@ -1019,6 +1027,9 @@ ncm_spline_func_test_set_params_info_all (NcmSplineFuncTest *sft, const guint np
   
   self->npar = npar;
 
+  ncm_matrix_clear (&self->par_info);
+  g_clear_pointer (&self->par_is_fixed, g_array_unref);
+  
   self->par_is_fixed = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), self->npar);
   self->par_info     = ncm_matrix_new (npar, 2);
 
@@ -1027,6 +1038,8 @@ ncm_spline_func_test_set_params_info_all (NcmSplineFuncTest *sft, const guint np
     ncm_matrix_set (self->par_info, i, 0, p1);
     ncm_matrix_set (self->par_info, i, 1, p2);
   }
+  
+  g_array_set_size (self->par_is_fixed, self->npar);
 }
 
 /**
@@ -1142,6 +1155,25 @@ ncm_spline_func_test_set_user_gsl_function (NcmSplineFuncTest *sft, gsl_function
   
   self->F.function = F->function;
   self->F.params   = F->params;
+}
+
+/**
+ * ncm_spline_func_test_set_prepare_user_function:
+ * @sft: a #NcmSplineFuncTest
+ * @F_prepare: (scope notified): a function of the type #NcmSplineFuncTestPrepare
+ *
+ * Sets the user supplied prepare function. It will be called one before computing
+ * the function provided by ncm_spline_func_test_set_user_gsl_function().
+ *
+ */
+void
+ncm_spline_func_test_set_prepare_user_function (NcmSplineFuncTest *sft, NcmSplineFuncTestPrepare F_prepare)
+{
+  NcmSplineFuncTestPrivate * const self = sft->priv;
+
+  g_assert_cmpuint (self->type, ==, NCM_SPLINE_FUNC_TEST_TYPE_USER);
+
+  self->F_prepare = F_prepare;
 }
 
 /**
@@ -1321,8 +1353,7 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
       g_assert_nonnull (self->F.function);
       break;
     default:
-      printf ("This option is not available yet.\n");
-      g_assert_not_reached ();
+      g_error ("ncm_spline_func_test_prepare: test type `%d' not supported.\n", self->type);
       break;
   }
 }
@@ -1409,8 +1440,7 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
     nsim = 1;
 
   self->nsim = nsim;
-
-  self->stats_mc = ncm_stats_vec_new (9, NCM_STATS_VEC_VAR, FALSE);
+  ncm_stats_vec_reset (self->stats_mc, TRUE);
 
   do {
     gdouble ncm_min, ncm_max, lin_min, lin_max, ncm_out, lin_out;
@@ -1423,8 +1453,8 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
     if (self->lin_out == 0)
       self->lin_good++;
 
-    ncm_out = (100. * self->ncm_out) / (1.0 * self->ngrid);
-    lin_out = (100. * self->lin_out) / (1.0 * self->ngrid);
+    ncm_out = (100.0 * self->ncm_out) / (1.0 * self->ngrid);
+    lin_out = (100.0 * self->lin_out) / (1.0 * self->ngrid);
 
     if ((ncm_out > self->out_threshold) && (self->out_threshold > G_MINDOUBLE))
     {
@@ -1512,8 +1542,8 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
     if (self->lin_out == 0)
       self->lin_good++;
 
-    ncm_out = (100. * self->ncm_out) / (1.0 * self->ngrid);
-    lin_out = (100. * self->lin_out) / (1.0 * self->ngrid);
+    ncm_out = (100.0 * self->ncm_out) / (1.0 * self->ngrid);
+    lin_out = (100.0 * self->lin_out) / (1.0 * self->ngrid);
 
     if ((ncm_out > self->out_threshold) && (self->out_threshold > G_MINDOUBLE))
     {
@@ -1539,8 +1569,8 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
     
     fprintf (fout, "%6u  %7.3e  %7.3e  %22.15e  %22.15e  %22.15e  %22.15e  %22.15e  %22.15e\n", 
              self->len,
-             (100. * self->ncm_out) / (1. * self->ngrid),
-             (100. * self->lin_out) / (1. * self->ngrid),
+             (100.0 * self->ncm_out) / (1.0 * self->ngrid),
+             (100.0 * self->lin_out) / (1.0 * self->ngrid),
              ncm_stats_vec_get_mean (self->stats_grid, 0),
              ncm_stats_vec_get_mean (self->stats_grid, 1),
              ncm_stats_vec_get_sd (self->stats_grid, 0),
@@ -1705,8 +1735,8 @@ ncm_spline_func_test_log_vals_mc_stats (NcmSplineFuncTest *sft)
   printf ("\n####  Monte Carlo statistics for %u simulations  ####\n\n", self->nsim);
   printf ("   * NcmSplineFunc number of knots: %8.2f +/- %8.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 0), ncm_stats_vec_get_sd (self->stats_mc, 0));
   printf ("\n");
-  printf ("   * Ncm clean grid (%%): %5.2f\n", 100.*self->ncm_good / (1.*self->nsim));
-  printf ("   * Lin clean grid (%%): %5.2f\n", 100.*self->lin_good / (1.*self->nsim));
+  printf ("   * Ncm clean grid (%%): %5.2f\n", 100.0 * self->ncm_good / (1.0 * self->nsim));
+  printf ("   * Lin clean grid (%%): %5.2f\n", 100.0 * self->lin_good / (1.0 * self->nsim));
   printf ("\n");
   printf ("   * Ncm outliers (%%): %5.2f +/- %5.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 1), ncm_stats_vec_get_sd (self->stats_mc, 1));
   printf ("   * Lin outliers (%%): %5.2f +/- %5.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 2), ncm_stats_vec_get_sd (self->stats_mc, 2));
@@ -1746,8 +1776,7 @@ _ncm_spline_func_test_drawn_params (NcmSplineFuncTestPrivate *self)
           ncm_vector_fast_set (self->params, i, ncm_rng_gaussian_gen (self->rng, p1, p2));
           break;
         default:
-          printf ("This PDF option is not available yet.\n");
-          g_assert_not_reached ();
+          g_error ("_ncm_spline_func_test_set_params_is_fixed: pdf type `%d' not supported.\n", self->pdftype);
           break;
       }
     }
@@ -1773,14 +1802,20 @@ _ncm_spline_func_test_set_grid (NcmSplineFuncTestPrivate *self)
     self->xf = xf;
   }
   
+  ncm_vector_clear (&self->xgrid);
+  ncm_vector_clear (&self->ygrid_true);
+  ncm_vector_clear (&self->ygrid_ncm);
+  ncm_vector_clear (&self->ygrid_lin);
+  ncm_vector_clear (&self->diff_ncm);
+  ncm_vector_clear (&self->diff_lin);
+
   self->xgrid      = ncm_vector_new (self->ngrid);
   self->ygrid_true = ncm_vector_new (self->ngrid);
   self->ygrid_ncm  = ncm_vector_new (self->ngrid);
   self->ygrid_lin  = ncm_vector_new (self->ngrid);
   self->diff_ncm   = ncm_vector_new (self->ngrid);
   self->diff_lin   = ncm_vector_new (self->ngrid);
-  
-  self->stats_grid = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
+
   
   for (i = 0; i < self->ngrid; i++)
     ncm_vector_fast_set (self->xgrid, i, (dx * i + self->xi));
@@ -1789,12 +1824,9 @@ _ncm_spline_func_test_set_grid (NcmSplineFuncTestPrivate *self)
 static void
 _ncm_spline_func_test_set_params_is_fixed_normal (NcmSplineFuncTestPrivate *self, guint i, const gdouble p1, const gdouble p2)
 {
-  const gboolean f = FALSE;
-  const gboolean t = TRUE;
-  
   if (fabs (p2) > G_MINDOUBLE)
   {
-    g_array_insert_val(self->par_is_fixed, i, f);
+    g_array_index (self->par_is_fixed, gboolean, i) = FALSE;
     self->all_fixed = FALSE;
     
     ncm_matrix_set (self->par_info, i, 0, p1);
@@ -1802,19 +1834,16 @@ _ncm_spline_func_test_set_params_is_fixed_normal (NcmSplineFuncTestPrivate *self
   }
   else
   {
-    g_array_insert_val(self->par_is_fixed, i, t);
+	g_array_index (self->par_is_fixed, gboolean, i) = TRUE;
   }
 }
 
 static void
 _ncm_spline_func_test_set_params_is_fixed_flat (NcmSplineFuncTestPrivate *self, guint i, const gdouble p1, const gdouble p2)
 {
-  const gboolean f = FALSE;
-  const gboolean t = TRUE;
-  
   if (ncm_cmp (p1, p2, 1.e-12, 0.0))
   {
-    g_array_insert_val(self->par_is_fixed, i, f);
+	g_array_index (self->par_is_fixed, gboolean, i) = FALSE;
     self->all_fixed = FALSE;
     
     ncm_matrix_set (self->par_info, i, 0, GSL_MIN (p1, p2));
@@ -1822,7 +1851,7 @@ _ncm_spline_func_test_set_params_is_fixed_flat (NcmSplineFuncTestPrivate *self, 
   }
   else
   {
-    g_array_insert_val(self->par_is_fixed, i, t);
+	g_array_index (self->par_is_fixed, gboolean, i) = TRUE;
   }
 }
 
@@ -1845,8 +1874,7 @@ _ncm_spline_func_test_set_params_is_fixed (NcmSplineFuncTestPrivate *self)
         _ncm_spline_func_test_set_params_is_fixed_normal (self, i, p1, p2);
         break;
       default:
-        printf ("This PDF option is not available yet.\n");
-        g_assert_not_reached ();
+        g_error ("_ncm_spline_func_test_set_params_is_fixed: pdf type `%d' not supported.\n", self->pdftype);
         break;
     }
   }
@@ -1935,12 +1963,14 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
       _ncm_spline_func_test_drawn_params (self);
       break;
     default:
-      printf ("This option is not available yet.\n");
-      g_assert_not_reached ();
+      g_error ("_ncm_spline_func_test_prepare_to_loop: test type `%d' not supported.\n", self->type);
       break;
   }
   
-  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 5000000, self->rel_error, self->scale);
+  if (self->F_prepare != NULL)
+    self->F_prepare (self->F.params);
+
+  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale);
   
   self->len = ncm_spline_get_len (self->ncm);
   

@@ -1611,6 +1611,7 @@ ncm_fit_esmcmc_intern_skip (NcmFitESMCMC *esmcmc, guint n)
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Skipping %u points (%f iterations), will start at %u-th point.\n", n, n * 1.0 / self->nwalkers, self->cur_sample_id + n + 1 + 1);
     }
+    break;
     case NCM_FIT_RUN_MSGS_NONE:
       break;
   }
@@ -1662,6 +1663,7 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
       g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [%s]\n",
                  self->n, ncm_fit_esmcmc_walker_desc (self->walker));
     }
+      break;
     case NCM_FIT_RUN_MSGS_NONE:
       break;
   }

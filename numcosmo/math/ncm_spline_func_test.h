@@ -75,6 +75,8 @@ typedef enum _NcmSplineFuncTestType
   NCM_SPLINE_FUNC_TEST_TYPE_USER,
 } NcmSplineFuncTestType;
 
+typedef void (*NcmSplineFuncTestPrepare) (gpointer p);
+
 /**
  * NcmSplineFuncTestTypePDF:
  * @NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT: a flat PDF (see #ncm_rng_uniform_gen).
@@ -126,6 +128,7 @@ void ncm_spline_func_test_set_out_threshold (NcmSplineFuncTest *sft, const gdoub
 gdouble ncm_spline_func_test_get_out_threshold (NcmSplineFuncTest *sft);
 
 void ncm_spline_func_test_set_user_gsl_function (NcmSplineFuncTest *sft, gsl_function *F);
+void ncm_spline_func_test_set_prepare_user_function (NcmSplineFuncTest *sft, NcmSplineFuncTestPrepare F_prepare);
 
 void ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, NcmSplineFuncTestTypePDF pdftype);
 
