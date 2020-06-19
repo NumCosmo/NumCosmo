@@ -1529,7 +1529,7 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
   
   self->nsim = nsim;
   
-  self->stats_mc = ncm_stats_vec_new (9, NCM_STATS_VEC_VAR, FALSE);
+  ncm_stats_vec_reset (self->stats_mc, TRUE);
   
   do {
     gdouble ncm_min, ncm_max, lin_min, lin_max, ncm_out, lin_out;
