@@ -710,6 +710,36 @@ ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf)
 }
 
 /**
+ * ncm_powspec_filter_require_zi:
+ * @psf: a #NcmPowspecFilter
+ * @zi: the output initial time $z_i$
+ *
+ * Require the initial time of at least $z_i$.
+ *
+ */
+void
+ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi)
+{
+  if (psf->zi > zi)
+	ncm_powspec_filter_set_zi (psf, zi);
+}
+
+/**
+ * ncm_powspec_filter_require_zf:
+ * @psf: a #NcmPowspecFilter
+ * @zf: the output final time $z_f$
+ *
+ * Requires the final time of at least $z_f$.
+ *
+ */
+void
+ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf)
+{
+  if (psf->zf < zf)
+	ncm_powspec_filter_set_zf (psf, zf);
+}
+
+/**
  * ncm_powspec_filter_get_r_min:
  * @psf: a #NcmPowspecFilter
  *
