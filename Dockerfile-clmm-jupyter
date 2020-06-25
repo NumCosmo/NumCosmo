@@ -54,6 +54,13 @@ RUN cd CLMM && python setup.py install --root=/root && mkdir -p /root/usr/share/
 RUN git clone https://bitbucket.org/bdiemer/colossus.git
 RUN cd colossus && python setup.py install --root=/root 
 
+RUN git clone https://github.com/cmbant/forutils.git
+RUN git clone https://github.com/cmbant/CAMB.git
+RUN cd CAMB && FORUTILSPATH=../forutils  python setup.py install --root=/root
+
+RUN git clone https://github.com/LSSTDESC/CCL.git
+RUN cd CCL && python setup.py install --root=/root
+
 # NumCosmo (Creates a NumCosmo dir and copy everything from context to it)
 RUN cd && mkdir NumCosmo usr
 COPY . /root/NumCosmo/
