@@ -1014,7 +1014,7 @@ _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
   cad->purity        = ncount->purity;
   cad->sd_lnM        = ncount->sd_lnM;
 
-  cad->mfp->area_survey = ncount->area_survey;
+  nc_halo_mass_function_set_area (cad->mfp, ncount->area_survey);
 }
 
 static void
@@ -1501,7 +1501,7 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
     gsl_histogram2d_get_yrange (h, j, &zl, &zu);
     zm = (zu + zl) / 2.0;
     dz = (zu - zl);
-    V = nc_halo_mass_function_dv_dzdomega (cad->mfp, cosmo, zm) * cad->mfp->area_survey * dz;
+    V = nc_halo_mass_function_dv_dzdomega (cad->mfp, cosmo, zm) * ncount->area_survey * dz;
     for (i = 0; i < nbins_M; i++)
     {
       gdouble ln_ml, ln_mu, Mm, lnMm, log_mu, log_ml;
