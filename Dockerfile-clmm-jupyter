@@ -56,7 +56,7 @@ RUN cd colossus && python setup.py install --root=/root
 
 RUN git clone https://github.com/cmbant/forutils.git
 RUN git clone https://github.com/cmbant/CAMB.git
-RUN cd CAMB && FORUTILSPATH=../forutils  python setup.py install --root=/root
+RUN cd CAMB && FC=gfortran-8 F90=gfortran-8 F77=gfortran-8 FORUTILSPATH=../forutils  python setup.py install --root=/root
 
 RUN git clone https://github.com/LSSTDESC/CCL.git
 RUN cd CCL && python setup.py install --root=/root
