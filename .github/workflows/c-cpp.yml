@@ -18,7 +18,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure
+      run: ./configure --enable-gtk-doc
     - name: make
       run: make -j8
     - name: make check
