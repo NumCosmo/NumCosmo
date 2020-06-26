@@ -107,6 +107,9 @@ void ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf);
 void ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi);
 void ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf);
 
+void ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi);
+void ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf);
+
 gdouble ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf);
 gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
 
