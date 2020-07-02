@@ -1191,7 +1191,7 @@ nc_halo_density_profile_eval_cyl_mass (NcHaloDensityProfile *dp, NcHICosmo *cosm
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
   
   sVol = 2.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
-  
+
   return sVol * nc_halo_density_profile_eval_dl_cyl_mass (dp, R / r_s);
 }
 

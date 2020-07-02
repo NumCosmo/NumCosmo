@@ -223,7 +223,7 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
   }
   else if (Xm1 < 0.0)
   {
-    if (X < pow (GSL_DBL_EPSILON, 1.0 / 10.0))
+    if (X < pow (GSL_DBL_EPSILON, 1.0 / 12.0))
     {
       const gdouble X_2    = 0.5 * X;
       const gdouble X_22   = X_2 * X_2;
@@ -237,7 +237,10 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
             (
               (37.0 / 3.0  + 20.0 * ln_X_2) +
               (
-                (533.0 / 12.0 + 70.0 * ln_X_2)
+                (533.0 / 12.0 + 70.0 * ln_X_2) +
+                (
+                  (1627.0 / 10.0 + 252.0 * ln_X_2)
+                ) * X_22
               ) * X_22
             ) * X_22
           ) * X_22
