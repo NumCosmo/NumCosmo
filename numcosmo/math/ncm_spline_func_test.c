@@ -1970,7 +1970,7 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
   if (self->F_prepare != NULL)
     self->F_prepare (self->F.params);
 
-  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale);
+  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale, 10000, 1.0);
   
   self->len = ncm_spline_get_len (self->ncm);
   

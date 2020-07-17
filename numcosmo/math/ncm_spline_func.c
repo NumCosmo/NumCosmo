@@ -253,7 +253,7 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, cons
 }
 
 static void
-ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale, gboolean refine)
+ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale, gint refine, gdouble refine_ns)
 {
   GArray *x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
@@ -262,7 +262,6 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
   GList *nodes = NULL, *wnodes = NULL;
   NcmStatsVec *dx_stats = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
   gsize n = ncm_spline_min_size (s);
-  const gdouble nsigma_threshold = 1.0;
   gdouble max_dx, min_dx;
   guint i;
   
@@ -385,13 +384,15 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
     
     if (improves == 0)
     {
-      if (!refine)
+      if (refine < 1)
         break;
       else
       {
         const gdouble dx_mean = ncm_stats_vec_get_mean (dx_stats, 0);
         const gdouble dx_sd   = ncm_stats_vec_get_sd (dx_stats, 0);
-        const gdouble dx_lim  = nsigma_threshold * dx_sd + dx_mean;
+        const gdouble dx_lim  = refine_ns * dx_sd + dx_mean;
+
+        refine--;
 
         if (max_dx > dx_lim)
         {
@@ -713,7 +714,7 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
       ncm_spline_new_function_4 (s, F, xi, xf, max_nodes, rel_error, 0.0);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE:
-      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, 0.0, TRUE);
+      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, 0.0, 10000, 1.0);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE_LNKNOT:
       ncm_spline_new_function_spline_lnknot (s, F, xi, xf, max_nodes, rel_error, 0.0);
@@ -743,7 +744,7 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
  * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
  */
 void
-ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble scale, const gboolean refine)
+ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble scale, const gint refine, gdouble refine_ns)
 {
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
   
@@ -753,7 +754,7 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
       ncm_spline_new_function_4 (s, F, xi, xf, max_nodes, rel_error, scale);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE:
-      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, scale, refine);
+      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, scale, refine, refine_ns);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE_LNKNOT:
       ncm_spline_new_function_spline_lnknot (s, F, xi, xf, max_nodes, rel_error, scale);
