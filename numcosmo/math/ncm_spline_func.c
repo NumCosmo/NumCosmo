@@ -714,7 +714,7 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
       ncm_spline_new_function_4 (s, F, xi, xf, max_nodes, rel_error, 0.0);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE:
-      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, 0.0, 10000, 1.0);
+      ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, 0.0, 1, 1.0);
       break;
     case NCM_SPLINE_FUNCTION_SPLINE_LNKNOT:
       ncm_spline_new_function_spline_lnknot (s, F, xi, xf, max_nodes, rel_error, 0.0);
