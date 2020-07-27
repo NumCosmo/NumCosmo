@@ -880,3 +880,134 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
     return res;
   }
 }
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_array_equal:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $g(R)$, it should be $1$ or the appropriated unit conversion
+ * @zs: (element-type gdouble): source redshift $z_\mathrm{source}$
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].
+ *
+ * Returns: (transfer full) (element-type gdouble): $g(R)$
+ */
+GArray *
+nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, ==, zs->len);
+  g_assert_cmpint (zs->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+
+  {
+    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+    gint i;
+
+    g_array_set_size (res, R->len);
+
+    switch (k)
+    {
+      case -1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      case 0:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = dl / (1.0 + zl);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = ds        / x_i;
+            const gdouble Dls           = (ds - dl) / x_i;
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      case 1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    return res;
+  }
+}
+

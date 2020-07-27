@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_galaxy_redshift.h
  *
@@ -15,12 +16,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,22 +50,23 @@ typedef struct _NcGalaxyRedshiftPrivate NcGalaxyRedshiftPrivate;
 struct _NcGalaxyRedshiftClass
 {
   /*< private >*/
-	GObjectClass parent_class;
-	gboolean (*has_dist) (NcGalaxyRedshift *gz);
-	gdouble (*mode) (NcGalaxyRedshift *gz);
-	guint (*nintervals) (NcGalaxyRedshift *gz);
-	gdouble (*interval_weight) (NcGalaxyRedshift *gz, const guint di);
-	void (*pdf_limits) (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
-	gdouble (*pdf) (NcGalaxyRedshift *gz, const guint di, const gdouble z);
-	gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng);
-	gdouble (*quantile) (NcGalaxyRedshift *gz, const gdouble q);
+  GObjectClass parent_class;
+  
+  gboolean (*has_dist) (NcGalaxyRedshift *gz);
+  gdouble (*mode) (NcGalaxyRedshift *gz);
+  guint (*nintervals) (NcGalaxyRedshift *gz);
+  gdouble (*interval_weight) (NcGalaxyRedshift *gz, const guint di);
+  void (*pdf_limits) (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax);
+  gdouble (*pdf) (NcGalaxyRedshift *gz, const guint di, const gdouble z);
+  gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng);
+  gdouble (*quantile) (NcGalaxyRedshift *gz, const gdouble q);
 };
 
 struct _NcGalaxyRedshift
 {
-	/*< private >*/
-	GObject parent_instance;
-	NcGalaxyRedshiftPrivate *priv;
+  /*< private >*/
+  GObject parent_instance;
+  NcGalaxyRedshiftPrivate *priv;
 };
 
 GType nc_galaxy_redshift_get_type (void) G_GNUC_CONST;
@@ -94,52 +96,52 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE gboolean 
+NCM_INLINE gboolean
 nc_galaxy_redshift_has_dist (NcGalaxyRedshift *gz)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->has_dist (gz);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->has_dist (gz);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_galaxy_redshift_mode (NcGalaxyRedshift *gz)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->mode (gz);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->mode (gz);
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 nc_galaxy_redshift_nintervals (NcGalaxyRedshift *gz)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->nintervals (gz);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->nintervals (gz);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const guint di)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->interval_weight (gz, di);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->interval_weight (gz, di);
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf_limits (gz, di, zmin, zmax);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf_limits (gz, di, zmin, zmax);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf (gz, di, z);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf (gz, di, z);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->gen (gz, rng);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->gen (gz, rng);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q)
 {
-	return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->quantile (gz, q);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->quantile (gz, q);
 }
 
 G_END_DECLS
@@ -147,3 +149,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_GALAXY_REDSHIFT_INLINE_H_ */
+

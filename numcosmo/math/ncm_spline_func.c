@@ -740,6 +740,7 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
  * @rel_error: relative error between the function to be interpolated and the spline result
  * @scale: scale of function, it is used to compute the absolute tolerance abstol = f_scale * rel_error
  * @refine: if TRUE sample additional points to check if there are regions not satisfying the required tolerance
+ * @refine_ns: number of standard-deviation used to refine the grid
  *
  * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
  */

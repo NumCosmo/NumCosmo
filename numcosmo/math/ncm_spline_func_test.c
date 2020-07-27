@@ -27,7 +27,7 @@
  * SECTION:ncm_spline_func_test
  * @title: NcmSplineFuncTest
  * @short_description: test suite to analyze the NcmSplineFunc's knots distribution.
- * @stability: Private and Unstable
+ * @stability: Unstable
  * @include: numcosmo/math/ncm_spline_func_test.h
  *
  * This module is intended to be a test suite for the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) object. 
