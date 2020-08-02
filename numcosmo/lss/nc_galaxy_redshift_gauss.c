@@ -82,7 +82,9 @@ nc_galaxy_redshift_gauss_init (NcGalaxyRedshiftGauss *gzg)
   self->norma       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->constructed = FALSE;
   
+#ifdef HAVE_GSL_2_4
   g_ptr_array_set_free_func (self->fpws, (GDestroyNotify) gsl_integration_fixed_free);
+#endif /* HAVE_GSL_2_4 */
 }
 
 static void
@@ -369,6 +371,7 @@ nc_galaxy_redshift_gauss_clear (NcGalaxyRedshiftGauss **gzg)
 void
 nc_galaxy_redshift_gauss_set_obs (NcGalaxyRedshiftGauss *gzg, NcmMatrix *obs)
 {
+#ifdef HAVE_GSL_2_4
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
   guint i;
   
@@ -412,6 +415,9 @@ nc_galaxy_redshift_gauss_set_obs (NcGalaxyRedshiftGauss *gzg, NcmMatrix *obs)
     g_array_index (self->nnodes, guint, i)   = N - j;
     g_array_index (self->norma,  gdouble, i) = norma;
   }
+#else /* HAVE_GSL_2_4 */
+  g_error ("nc_galaxy_redshift_gauss_set_obs: gsl >= 2.4 required to use this object.");
+#endif /* HAVE_GSL_2_4 */
 }
 
 /**
