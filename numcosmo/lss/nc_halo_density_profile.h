@@ -81,7 +81,7 @@ typedef enum _NcHaloDensityProfileMassDef
 /**
  * NcHaloDensityProfileSParams:
  * @NC_HALO_DENSITY_PROFILE_C_DELTA: concentration parameter $r_\Delta$
- * @NC_HALO_DENSITY_PROFILE_M_DELTA: halo mass $M_\Delta$
+ * @NC_HALO_DENSITY_PROFILE_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$,
  * any additional parameter must be included in the implementation
@@ -91,7 +91,7 @@ typedef enum _NcHaloDensityProfileMassDef
 typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_SPARAMS >*/
 {
   NC_HALO_DENSITY_PROFILE_C_DELTA = 0,
-  NC_HALO_DENSITY_PROFILE_M_DELTA,
+  NC_HALO_DENSITY_PROFILE_LOG10M_DELTA,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileSParams;
@@ -151,7 +151,7 @@ gdouble nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *d
 
 
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA (4.0)
-#define NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA (2.0e14)
+#define NC_HALO_DENSITY_PROFILE_DEFAULT_LOG10M_DELTA (log10 (2.0e14))
 
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL (0.0)
 

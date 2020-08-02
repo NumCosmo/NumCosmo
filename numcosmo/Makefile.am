@@ -427,6 +427,11 @@ nc_headers = \
         lss/nc_galaxy_redshift.h               \
         lss/nc_galaxy_redshift_spec.h          \
         lss/nc_galaxy_redshift_spline.h        \
+        lss/nc_galaxy_redshift_gauss.h         \
+        lss/nc_galaxy_wl.h                     \
+        lss/nc_galaxy_wl_dist.h                \
+        lss/nc_galaxy_wl_reduced_shear_gauss.h \
+        lss/nc_galaxy_wl_proj.h                \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
         lss/nc_reduced_shear_cluster_mass.h    \
@@ -454,6 +459,7 @@ nc_headers = \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
+	data/nc_data_cluster_wl.h                 \
 	data/nc_data_reduced_shear_cluster_mass.h \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
@@ -573,6 +579,11 @@ nc_sources = \
 	lss/nc_galaxy_redshift.c               \
 	lss/nc_galaxy_redshift_spec.c          \
 	lss/nc_galaxy_redshift_spline.c        \
+	lss/nc_galaxy_redshift_gauss.c         \
+	lss/nc_galaxy_wl.c                     \
+	lss/nc_galaxy_wl_dist.c                \
+	lss/nc_galaxy_wl_reduced_shear_gauss.c \
+	lss/nc_galaxy_wl_proj.c                \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
 	lss/nc_reduced_shear_cluster_mass.c    \
@@ -600,6 +611,7 @@ nc_sources = \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
+	data/nc_data_cluster_wl.c                 \
 	data/nc_data_reduced_shear_cluster_mass.c \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \

@@ -47,6 +47,8 @@ typedef struct _NcGalaxyRedshiftClass NcGalaxyRedshiftClass;
 typedef struct _NcGalaxyRedshift NcGalaxyRedshift;
 typedef struct _NcGalaxyRedshiftPrivate NcGalaxyRedshiftPrivate;
 
+typedef gdouble (*NcGalaxyRedshiftF) (const gdouble z, gpointer userdata);
+
 struct _NcGalaxyRedshiftClass
 {
   /*< private >*/
@@ -60,6 +62,8 @@ struct _NcGalaxyRedshiftClass
   gdouble (*pdf) (NcGalaxyRedshift *gz, const guint di, const gdouble z);
   gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng);
   gdouble (*quantile) (NcGalaxyRedshift *gz, const gdouble q);
+  gdouble (*compute_mean_m2lnf) (NcGalaxyRedshift *gz, guint gal_i, NcGalaxyRedshiftF m2lnf, gpointer userdata);
+  guint (*len) (NcGalaxyRedshift *gz);
 };
 
 struct _NcGalaxyRedshift
@@ -84,6 +88,8 @@ NCM_INLINE void nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint
 NCM_INLINE gdouble nc_galaxy_redshift_pdf (NcGalaxyRedshift *gz, const guint di, const gdouble z);
 NCM_INLINE gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng);
 NCM_INLINE gdouble nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q);
+NCM_INLINE gdouble nc_galaxy_redshift_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i, NcGalaxyRedshiftF m2lnf, gpointer userdata);
+NCM_INLINE guint nc_galaxy_redshift_len (NcGalaxyRedshift *gz);
 
 G_END_DECLS
 
@@ -142,6 +148,18 @@ NCM_INLINE gdouble
 nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q)
 {
   return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->quantile (gz, q);
+}
+
+NCM_INLINE gdouble
+nc_galaxy_redshift_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i, NcGalaxyRedshiftF m2lnf, gpointer userdata)
+{
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->compute_mean_m2lnf (gz, gal_i, m2lnf, userdata);
+}
+
+NCM_INLINE guint
+nc_galaxy_redshift_len (NcGalaxyRedshift *gz)
+{
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->len (gz);
 }
 
 G_END_DECLS

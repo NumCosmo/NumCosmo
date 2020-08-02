@@ -125,6 +125,22 @@ _nc_galaxy_redshift_quantile (NcGalaxyRedshift *gz, const gdouble q)
   return 0.0;
 }
 
+static gdouble
+_nc_galaxy_redshift_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i, NcGalaxyRedshiftF m2lnf, gpointer userdata)
+{
+  g_error ("_nc_galaxy_redshift_compute_mean_m2lnf: method not implemented.");
+
+  return 0.0;
+}
+
+static guint
+_nc_galaxy_redshift_len (NcGalaxyRedshift *gz)
+{
+  g_error ("_nc_galaxy_redshift_len: method not implemented.");
+
+  return 0.0;
+}
+
 static void
 nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
 {
@@ -132,14 +148,16 @@ nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
   
   object_class->finalize = &_nc_galaxy_redshift_finalize;
   
-  klass->has_dist        = &_nc_galaxy_redshift_has_dist;
-  klass->mode            = &_nc_galaxy_redshift_mode;
-  klass->nintervals      = &_nc_galaxy_redshift_nintervals;
-  klass->interval_weight = &_nc_galaxy_redshift_interval_weight;
-  klass->pdf_limits      = &_nc_galaxy_redshift_pdf_limits;
-  klass->pdf             = &_nc_galaxy_redshift_pdf;
-  klass->gen             = &_nc_galaxy_redshift_gen;
-  klass->quantile        = &_nc_galaxy_redshift_quantile;
+  klass->has_dist           = &_nc_galaxy_redshift_has_dist;
+  klass->mode               = &_nc_galaxy_redshift_mode;
+  klass->nintervals         = &_nc_galaxy_redshift_nintervals;
+  klass->interval_weight    = &_nc_galaxy_redshift_interval_weight;
+  klass->pdf_limits         = &_nc_galaxy_redshift_pdf_limits;
+  klass->pdf                = &_nc_galaxy_redshift_pdf;
+  klass->gen                = &_nc_galaxy_redshift_gen;
+  klass->quantile           = &_nc_galaxy_redshift_quantile;
+  klass->compute_mean_m2lnf = &_nc_galaxy_redshift_compute_mean_m2lnf;
+  klass->len                = &_nc_galaxy_redshift_len;
 }
 
 /**
@@ -244,5 +262,21 @@ nc_galaxy_redshift_clear (NcGalaxyRedshift **gz)
  * Computes the $q$ quantile.
  *
  * Returns: the $q$ quantile.
+ */
+/**
+ * nc_galaxy_redshift_compute_mean_m2lnf: (virtual compute_mean_m2lnf)
+ * @gz: a #NcGalaxyRedshift
+ * @m2lnf: (scope call): a #NcGalaxyRedshiftF
+ * @userdata: (closure): user data for @m2lnf calls
+ *
+ * Computes the mean of a functions through $\int\mathrm{d}z P(z)f(z)$.
+ *
+ * Returns: $-2\ln\left[\int \mathrm{d}z P(z)f(z)\right]$.
+ */
+/**
+ * nc_galaxy_redshift_len: (virtual len)
+ * @gz: a #NcGalaxyRedshift
+ *
+ * Returns: number of galaxies in the object.
  */
 

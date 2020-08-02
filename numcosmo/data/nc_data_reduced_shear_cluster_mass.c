@@ -1134,7 +1134,12 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
         
         if (is_delta)
         {
-          gz = NC_GALAXY_REDSHIFT (nc_galaxy_redshift_spec_new (zb));
+          NcmVector *vz = ncm_vector_new (1);
+
+          ncm_vector_set (vz, 0, zb);
+          gz = NC_GALAXY_REDSHIFT (nc_galaxy_redshift_spec_new ());
+          nc_galaxy_redshift_spec_set_z (NC_GALAXY_REDSHIFT_SPEC (gz), vz);
+          ncm_vector_free (vz);
         }
         else
         {

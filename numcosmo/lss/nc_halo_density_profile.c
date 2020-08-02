@@ -199,7 +199,7 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL);
 
 #define VECTOR  (NCM_MODEL (dp)->params)
-#define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
+#define LOG10M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA))
 #define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 static void
@@ -359,7 +359,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    *
    * Cluster mass $M_\Delta$ in units of solar masses $M_\odot$
    * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is
-   * the overdensity, see Eq. \eqref{eq:mrr}.
+   * the over-density, see Eq. \eqref{eq:mrr}.
    *
    */
   /**
@@ -370,9 +370,9 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    * a statistical analysis.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_M_DELTA, "M_{\\Delta}", "MDelta",
-                              1.0e10,  1.0e17, 1.0e13,
-                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA,
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, "\\log_{10}(M_{\\Delta})", "log10MDelta",
+                              10.0,  17.0, 0.5,
+                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_LOG10M_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   
   /**
@@ -479,7 +479,7 @@ _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp)
   {
     NcHaloDensityProfilePrivate * const self = dp->priv;
     const gdouble cDelta                     = C_DELTA;
-    const gdouble MDelta                     = M_DELTA;
+    const gdouble MDelta                     = exp10 (LOG10M_DELTA);
     
     self->r_s0   = cbrt (3.0 * MDelta / (4.0 * ncm_c_pi ())) / cDelta;
     self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cDelta));
