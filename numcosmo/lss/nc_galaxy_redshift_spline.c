@@ -513,7 +513,7 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
   
   if (self->dists->len == 0)
     g_error ("nc_galaxy_redshift_spline_init_from_vectors: empty P_z.");
-
+  
   {
     gdouble norma_t = 0.0;
     

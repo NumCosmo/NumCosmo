@@ -75,7 +75,7 @@ typedef enum _NcGalaxyWLReducedShearGaussPos
   NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_ANG,
   NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_R,
   /* < private > */
-  NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_LEN,  /*< skip >*/
+  NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_LEN, /*< skip >*/
 } NcGalaxyWLReducedShearGaussPos;
 
 GType nc_galaxy_wl_reduced_shear_gauss_get_type (void) G_GNUC_CONST;

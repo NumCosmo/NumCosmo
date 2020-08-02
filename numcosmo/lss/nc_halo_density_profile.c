@@ -41,7 +41,7 @@
  * # Parametrization
  *
  * The two parameters $\rho_s$ and $r_s$ are described by the fundamental
- * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:MDelta)
+ * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:log10MDelta)
  * and the concentration $c_\Delta$ (#NcHaloDensityProfile:cDelta) given a mass
  * defined by $\Delta$ (#NcHaloDensityProfile:Delta) and a background density
  * $\rho_\mathrm{bg}$ (#NcHaloDensityProfile:mass-def). Strictly speaking,
@@ -355,7 +355,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   
   /**
-   * NcHaloDensityProfile:MDelta:
+   * NcHaloDensityProfile:log10MDelta:
    *
    * Cluster mass $M_\Delta$ in units of solar masses $M_\odot$
    * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is
@@ -363,10 +363,10 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    *
    */
   /**
-   * NcHaloDensityProfile:MDelta-fit:
+   * NcHaloDensityProfile:log10MDelta-fit:
    *
    * Boolean property that controls whether the parameter
-   * #NcHaloDensityProfile:MDelta should be included in
+   * #NcHaloDensityProfile:log10MDelta should be included in
    * a statistical analysis.
    *
    */

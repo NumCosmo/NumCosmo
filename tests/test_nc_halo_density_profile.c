@@ -139,7 +139,7 @@ test_nc_halo_density_profile_nfw_new (TestNcHaloDensityProfile *test, gconstpoin
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
   
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "MDelta", 1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
 
   test->cosmo  = cosmo;
@@ -174,7 +174,7 @@ test_nc_halo_density_profile_hernquist_new (TestNcHaloDensityProfile *test, gcon
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
   
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "MDelta", 1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
 
   test->cosmo  = cosmo;
@@ -209,7 +209,7 @@ test_nc_halo_density_profile_einasto_new (TestNcHaloDensityProfile *test, gconst
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
   
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "MDelta", 1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
 
   test->cosmo  = cosmo;

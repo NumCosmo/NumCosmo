@@ -30,6 +30,8 @@
  * SECTION:nc_galaxy_wl_reduced_shear_gauss
  * @title: NcGalaxyWLReducedShearGauss
  * @short_description: Abstract class describing galaxy weak lensing reduced shear Gaussian distribution
+ * @stability: Unstable
+ *
  *
  * Class defining a galaxy weak lensing reduced shear normally distributed.
  * probability distribution $P_\mathrm{wl}(g)$.
@@ -84,16 +86,16 @@ static void
 _nc_galaxy_wl_reduced_shear_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (object);
-
+  
   g_return_if_fail (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (object));
-
+  
   switch (prop_id)
   {
     case PROP_POS:
       nc_galaxy_wl_reduced_shear_gauss_set_pos (grsg, g_value_get_enum (value));
       break;
     case PROP_OBS:
-      nc_galaxy_wl_reduced_shear_gauss_set_obs (grsg, g_value_get_object(value));
+      nc_galaxy_wl_reduced_shear_gauss_set_obs (grsg, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -105,9 +107,9 @@ static void
 _nc_galaxy_wl_reduced_shear_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (object);
-
+  
   g_return_if_fail (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (object));
-
+  
   switch (prop_id)
   {
     case PROP_POS:
@@ -145,13 +147,13 @@ static void
 nc_galaxy_wl_reduced_shear_gauss_class_init (NcGalaxyWLReducedShearGaussClass *klass)
 {
   NcGalaxyWLDistClass *wl_dist_class = NC_GALAXY_WL_DIST_CLASS (klass);
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class         = G_OBJECT_CLASS (klass);
   
   object_class->set_property = &_nc_galaxy_wl_reduced_shear_gauss_set_property;
   object_class->get_property = &_nc_galaxy_wl_reduced_shear_gauss_get_property;
   object_class->dispose      = &_nc_galaxy_wl_reduced_shear_gauss_dispose;
   object_class->finalize     = &_nc_galaxy_wl_reduced_shear_gauss_finalize;
-
+  
   /**
    * NcGalaxyWLReducedShearGauss:pos:
    *
@@ -161,11 +163,11 @@ nc_galaxy_wl_reduced_shear_gauss_class_init (NcGalaxyWLReducedShearGaussClass *k
   g_object_class_install_property (object_class,
                                    PROP_POS,
                                    g_param_spec_enum ("pos",
-                                                        NULL,
-                                                        "Observable position type",
-                                                        NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS, NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_R,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                                      NULL,
+                                                      "Observable position type",
+                                                      NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS, NC_GALAXY_WL_REDUCED_SHEAR_GAUSS_POS_R,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcGalaxyWLReducedShearGauss:obs:
    *
@@ -179,7 +181,7 @@ nc_galaxy_wl_reduced_shear_gauss_class_init (NcGalaxyWLReducedShearGaussClass *k
                                                         "Galaxy observables",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   wl_dist_class->m2lnP_prep = &_nc_galaxy_wl_reduced_shear_gauss_m2lnP_prep;
   wl_dist_class->m2lnP      = &_nc_galaxy_wl_reduced_shear_gauss_m2lnP;
   wl_dist_class->gen        = &_nc_galaxy_wl_reduced_shear_gauss_gen;
@@ -188,42 +190,42 @@ nc_galaxy_wl_reduced_shear_gauss_class_init (NcGalaxyWLReducedShearGaussClass *k
 
 static void
 _nc_galaxy_wl_reduced_shear_gauss_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
-{  
-  NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
+{
+  NcGalaxyWLReducedShearGauss *grsg               = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
-  const gdouble R       = ncm_matrix_get (self->obs, gal_i, 0);
-
+  const gdouble R                                 = ncm_matrix_get (self->obs, gal_i, 0);
+  
   nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, R, z_cluster, z_cluster, &self->optzs);
 }
 
 static gdouble
 _nc_galaxy_wl_reduced_shear_gauss_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
 {
-  NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
+  NcGalaxyWLReducedShearGauss *grsg               = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
-  const gdouble g_mean  = ncm_matrix_get (self->obs, gal_i, 1);
-  const gdouble sigma_g = ncm_matrix_get (self->obs, gal_i, 2);
-  const gdouble g_th    = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cluster, &self->optzs);//nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, z, z_cluster, z_cluster);
-
-  return gsl_pow_2 ((g_th - g_mean)/sigma_g);// + self->twolnN;
+  const gdouble g_mean                            = ncm_matrix_get (self->obs, gal_i, 1);
+  const gdouble sigma_g                           = ncm_matrix_get (self->obs, gal_i, 2);
+  const gdouble g_th                              = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cluster, &self->optzs); /*nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, z, z_cluster, z_cluster); */
+  
+  return gsl_pow_2 ((g_th - g_mean) / sigma_g); /* + self->twolnN; */
 }
 
 static gdouble
 _nc_galaxy_wl_reduced_shear_gauss_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng)
 {
-  NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
+  NcGalaxyWLReducedShearGauss *grsg               = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
-  const gdouble sigma_g = ncm_matrix_get (self->obs, 0, 2);
-
+  const gdouble sigma_g                           = ncm_matrix_get (self->obs, 0, 2);
+  
   return ncm_rng_gaussian_gen (rng, g_true, sigma_g);
 }
 
 static guint
 _nc_galaxy_wl_reduced_shear_gauss_len (NcGalaxyWLDist *gwld)
 {
-  NcGalaxyWLReducedShearGauss *grsg = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
+  NcGalaxyWLReducedShearGauss *grsg               = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (gwld);
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
-
+  
   return self->len;
 }
 
@@ -242,7 +244,7 @@ nc_galaxy_wl_reduced_shear_gauss_new (NcGalaxyWLReducedShearGaussPos pos)
   NcGalaxyWLReducedShearGauss *grsg = g_object_new (NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS,
                                                     "pos", pos,
                                                     NULL);
-
+  
   return grsg;
 }
 
@@ -291,20 +293,21 @@ nc_galaxy_wl_reduced_shear_gauss_clear (NcGalaxyWLReducedShearGauss **grsg)
  * nc_galaxy_wl_reduced_shear_gauss_set_pos:
  * @grsg: a #NcGalaxyWLReducedShearGauss
  * @pos: a #NcGalaxyWLReducedShearGaussPos
- * 
+ *
  * Sets the position observable type.
  */
 void
 nc_galaxy_wl_reduced_shear_gauss_set_pos (NcGalaxyWLReducedShearGauss *grsg, NcGalaxyWLReducedShearGaussPos pos)
 {
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
+  
   self->pos = pos;
 }
 
 /**
  * nc_galaxy_wl_reduced_shear_gauss_get_pos:
  * @grsg: a #NcGalaxyWLReducedShearGauss
- * 
+ *
  * Gets the position observable type.
  *
  * Returns: the position observable type.
@@ -313,6 +316,7 @@ NcGalaxyWLReducedShearGaussPos
 nc_galaxy_wl_reduced_shear_gauss_get_pos (NcGalaxyWLReducedShearGauss *grsg)
 {
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
+  
   return self->pos;
 }
 
@@ -327,12 +331,12 @@ void
 nc_galaxy_wl_reduced_shear_gauss_set_obs (NcGalaxyWLReducedShearGauss *grsg, NcmMatrix *obs)
 {
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
-
+  
   g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
   g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
-
+  
   ncm_matrix_clear (&self->obs);
-
+  
   self->len = ncm_matrix_nrows (obs);
   self->obs = ncm_matrix_ref (obs);
 }
@@ -349,6 +353,7 @@ NcmMatrix *
 nc_galaxy_wl_reduced_shear_gauss_peek_obs (NcGalaxyWLReducedShearGauss *grsg)
 {
   NcGalaxyWLReducedShearGaussPrivate * const self = grsg->priv;
+  
   return self->obs;
 }
 

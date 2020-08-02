@@ -30,6 +30,7 @@
  * SECTION:nc_galaxy_redshift
  * @title: NcGalaxyRedshift
  * @short_description: Abstract class describing galaxy redshifts.
+ * @stability: Unstable
  *
  * Abstract class used to define a generic galaxy redshift probability
  * distribution $P_g(z)$.
@@ -129,7 +130,7 @@ static gdouble
 _nc_galaxy_redshift_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i, NcGalaxyRedshiftF m2lnf, gpointer userdata)
 {
   g_error ("_nc_galaxy_redshift_compute_mean_m2lnf: method not implemented.");
-
+  
   return 0.0;
 }
 
@@ -137,7 +138,7 @@ static guint
 _nc_galaxy_redshift_len (NcGalaxyRedshift *gz)
 {
   g_error ("_nc_galaxy_redshift_len: method not implemented.");
-
+  
   return 0.0;
 }
 
@@ -266,6 +267,7 @@ nc_galaxy_redshift_clear (NcGalaxyRedshift **gz)
 /**
  * nc_galaxy_redshift_compute_mean_m2lnf: (virtual compute_mean_m2lnf)
  * @gz: a #NcGalaxyRedshift
+ * @gal_i: galaxy redshift id
  * @m2lnf: (scope call): a #NcGalaxyRedshiftF
  * @userdata: (closure): user data for @m2lnf calls
  *

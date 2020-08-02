@@ -53,7 +53,7 @@ struct _NcGalaxyWLDistClass
 {
   /*< private >*/
   GObjectClass parent_class;
-
+  
   void (*m2lnP_prep) (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i);
   gdouble (*m2lnP) (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z);
   gdouble (*gen) (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng);
@@ -94,6 +94,7 @@ NCM_INLINE void
 nc_galaxy_wl_dist_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
 {
   NcGalaxyWLDistClass *gwld_class = NC_GALAXY_WL_DIST_GET_CLASS (gwld);
+  
   if (gwld_class->m2lnP_prep != NULL)
     return NC_GALAXY_WL_DIST_GET_CLASS (gwld)->m2lnP_prep (gwld, cosmo, dp, smd, z_cluster, gal_i);
 }

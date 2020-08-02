@@ -3,7 +3,7 @@
 /***************************************************************************
  *            nc_galaxy_wl_proj.c
  *
- *  Thu Jul 30 11:12:53 2020
+ *  Sun Aug 02 11:12:53 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
  *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
@@ -30,9 +30,9 @@
  * SECTION:nc_galaxy_wl_proj
  * @title: NcGalaxyWLProj
  * @short_description: Abstract class describing galaxy weak lensing reduced shear Gaussian distribution
+ * @stability: Unstable
  *
- * Class defining a galaxy weak lensing reduced shear normally distributed.
- * probability distribution $P_\mathrm{wl}(g)$.
+ * Class defining a galaxy weak lensing projected distribution.
  *
  */
 
@@ -42,59 +42,58 @@
 #include "build_cfg.h"
 
 #include "lss/nc_galaxy_wl_proj.h"
+#include "nc_enum_types.h"
+
 #include <math.h>
 #include <gsl/gsl_math.h>
 
 struct _NcGalaxyWLProjPrivate
 {
-  gdouble g_mean;
-  gdouble sigma_g;
-  gdouble R;
+  NcmMatrix *obs;
+  NcGalaxyWLProjPos pos;
   gdouble norma;
   gdouble r;
   gdouble twolnN;
+  guint len;
+  NcWLSurfaceMassDensityOptzs optzs;
 };
 
 enum
 {
   PROP_0,
-  PROP_G_MEAN,
-  PROP_SIGMA_G,
-  PROP_R,
+  PROP_POS,
+  PROP_OBS,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLProj, nc_galaxy_wl_proj, NC_TYPE_GALAXY_WL_DIST);
 
 static void
-nc_galaxy_wl_proj_init (NcGalaxyWLProj *gp)
+nc_galaxy_wl_proj_init (NcGalaxyWLProj *gwlp)
 {
-  NcGalaxyWLProjPrivate * const self = gp->priv = nc_galaxy_wl_proj_get_instance_private (gp);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv = nc_galaxy_wl_proj_get_instance_private (gwlp);
   
-  self->g_mean  = 0.0;
-  self->sigma_g = 0.0;
-  self->R       = 0.0;
-  self->norma   = 0.0;
-  self->r       = 0.0;
-  self->twolnN  = 0.0;
+  self->obs    = NULL;
+  self->pos    = NC_GALAXY_WL_PROJ_POS_LEN;
+  self->norma  = 0.0;
+  self->r      = 0.0;
+  self->twolnN = 0.0;
+  self->len    = 0;
 }
 
 static void
 _nc_galaxy_wl_proj_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLProj *gp = NC_GALAXY_WL_PROJ (object);
-
+  NcGalaxyWLProj *gwlp = NC_GALAXY_WL_PROJ (object);
+  
   g_return_if_fail (NC_IS_GALAXY_WL_PROJ (object));
-
+  
   switch (prop_id)
   {
-    case PROP_G_MEAN:
-      nc_galaxy_wl_proj_set_g_obs (gp, g_value_get_double (value));
+    case PROP_POS:
+      nc_galaxy_wl_proj_set_pos (gwlp, g_value_get_enum (value));
       break;
-    case PROP_SIGMA_G:
-      nc_galaxy_wl_proj_set_sigma_g (gp, g_value_get_double (value));
-      break;
-    case PROP_R:
-      nc_galaxy_wl_proj_set_R (gp, g_value_get_double (value));
+    case PROP_OBS:
+      nc_galaxy_wl_proj_set_obs (gwlp, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -105,25 +104,29 @@ _nc_galaxy_wl_proj_set_property (GObject *object, guint prop_id, const GValue *v
 static void
 _nc_galaxy_wl_proj_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLProj *gp = NC_GALAXY_WL_PROJ (object);
-
+  NcGalaxyWLProj *gwlp = NC_GALAXY_WL_PROJ (object);
+  
   g_return_if_fail (NC_IS_GALAXY_WL_PROJ (object));
-
+  
   switch (prop_id)
   {
-    case PROP_G_MEAN:
-      g_value_set_double (value, nc_galaxy_wl_proj_get_g_obs (gp));
+    case PROP_POS:
+      g_value_set_enum (value, nc_galaxy_wl_proj_get_pos (gwlp));
       break;
-    case PROP_SIGMA_G:
-      g_value_set_double (value, nc_galaxy_wl_proj_get_sigma_g (gp));
-      break;
-    case PROP_R:
-      g_value_set_double (value, nc_galaxy_wl_proj_get_R (gp));
+    case PROP_OBS:
+      g_value_set_object (value, nc_galaxy_wl_proj_peek_obs (gwlp));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+static void
+_nc_galaxy_wl_proj_dispose (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_galaxy_wl_proj_parent_class)->dispose (object);
 }
 
 static void
@@ -133,238 +136,222 @@ _nc_galaxy_wl_proj_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_wl_proj_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_wl_proj_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble z);
+static void _nc_galaxy_wl_proj_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i);
+static gdouble _nc_galaxy_wl_proj_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z);
 static gdouble _nc_galaxy_wl_proj_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng);
+static guint _nc_galaxy_wl_proj_len (NcGalaxyWLDist *gwld);
 
 static void
 nc_galaxy_wl_proj_class_init (NcGalaxyWLProjClass *klass)
 {
   NcGalaxyWLDistClass *wl_dist_class = NC_GALAXY_WL_DIST_CLASS (klass);
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class         = G_OBJECT_CLASS (klass);
   
   object_class->set_property = &_nc_galaxy_wl_proj_set_property;
   object_class->get_property = &_nc_galaxy_wl_proj_get_property;
+  object_class->dispose      = &_nc_galaxy_wl_proj_dispose;
   object_class->finalize     = &_nc_galaxy_wl_proj_finalize;
-
+  
   /**
-   * NcGalaxyWLProj:g-mean:
+   * NcGalaxyWLProj:pos:
    *
    * FIXME
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_G_MEAN,
-                                   g_param_spec_double ("g-mean",
-                                                        NULL,
-                                                        "Observed value for g",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_POS,
+                                   g_param_spec_enum ("pos",
+                                                      NULL,
+                                                      "Observable position type",
+                                                      NC_TYPE_GALAXY_WL_PROJ_POS, NC_GALAXY_WL_PROJ_POS_R,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
-   * NcGalaxyWLProj:sigma-g:
+   * NcGalaxyWLProj:obs:
    *
    * FIXME
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_SIGMA_G,
-                                   g_param_spec_double ("sigma-g",
+                                   PROP_OBS,
+                                   g_param_spec_object ("obs",
                                                         NULL,
-                                                        "Observed value for g standard deviation",
-                                                        1.0e-200, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcGalaxyWLProj:R:
-   *
-   * FIXME [Mpc]
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_R,
-                                   g_param_spec_double ("R",
-                                                        NULL,
-                                                        "Distance with respect to cluster center [Mpc]",
-                                                        0.0, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        "Galaxy observables",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  wl_dist_class->m2lnP_prep = &_nc_galaxy_wl_proj_m2lnP_prep;
+  wl_dist_class->m2lnP      = &_nc_galaxy_wl_proj_m2lnP;
+  wl_dist_class->gen        = &_nc_galaxy_wl_proj_gen;
+  wl_dist_class->len        = &_nc_galaxy_wl_proj_len;
+}
 
-  wl_dist_class->m2lnP = &_nc_galaxy_wl_proj_m2lnP;
-  wl_dist_class->gen   = &_nc_galaxy_wl_proj_gen;
+static void
+_nc_galaxy_wl_proj_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
+{
+  NcGalaxyWLProj *gwlp               = NC_GALAXY_WL_PROJ (gwld);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  const gdouble R                    = ncm_matrix_get (self->obs, gal_i, 0);
+  
+  nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, R, z_cluster, z_cluster, &self->optzs);
 }
 
 static gdouble
-_nc_galaxy_wl_proj_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble z)
-{  
-  NcGalaxyWLProj *gp = NC_GALAXY_WL_PROJ (gwld);
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-  const gdouble g_th = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, self->R, z, z_cluster, z_cluster);
-
-  return gsl_pow_2 (g_th - self->g_mean) * self->r;// + self->twolnN;
+_nc_galaxy_wl_proj_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
+{
+  NcGalaxyWLProj *gwlp               = NC_GALAXY_WL_PROJ (gwld);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  const gdouble g_mean               = ncm_matrix_get (self->obs, gal_i, 1);
+  const gdouble sigma_g              = ncm_matrix_get (self->obs, gal_i, 2);
+  const gdouble g_th                 = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cluster, &self->optzs); /*nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, z, z_cluster, z_cluster); */
+  
+  return gsl_pow_2 ((g_th - g_mean) / sigma_g); /* + self->twolnN; */
 }
 
 static gdouble
 _nc_galaxy_wl_proj_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng)
 {
-  NcGalaxyWLProj *gp = NC_GALAXY_WL_PROJ (gwld);
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-  return ncm_rng_gaussian_gen (rng, g_true, self->sigma_g);
+  NcGalaxyWLProj *gwlp               = NC_GALAXY_WL_PROJ (gwld);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  const gdouble sigma_g              = ncm_matrix_get (self->obs, 0, 2);
+  
+  return ncm_rng_gaussian_gen (rng, g_true, sigma_g);
+}
+
+static guint
+_nc_galaxy_wl_proj_len (NcGalaxyWLDist *gwld)
+{
+  NcGalaxyWLProj *gwlp               = NC_GALAXY_WL_PROJ (gwld);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  
+  return self->len;
 }
 
 /**
  * nc_galaxy_wl_proj_new:
- * @g_obs: the observed value of $g$
- * @sigma_g: the observed value of $g$ standard deviation
+ * @pos: a #NcGalaxyWLProjPos
+ *
+ * Creates a new #NcGalaxyWLProj using
+ * @pos as the position type.
  *
  * Returns: (transfer full): a new NcGalaxyWLProj.
  */
 NcGalaxyWLProj *
-nc_galaxy_wl_proj_new (const gdouble g_obs, const gdouble sigma_g)
+nc_galaxy_wl_proj_new (NcGalaxyWLProjPos pos)
 {
-  NcGalaxyWLProj *gp = g_object_new (NC_TYPE_GALAXY_WL_PROJ,
-                                                    "g-mean", g_obs,
-                                                    "sigma-g", sigma_g,
-                                                    NULL);
-
-  return gp;
+  NcGalaxyWLProj *gwlp = g_object_new (NC_TYPE_GALAXY_WL_PROJ,
+                                       "pos", pos,
+                                       NULL);
+  
+  return gwlp;
 }
 
 /**
  * nc_galaxy_wl_proj_ref:
- * @gp: a #NcGalaxyWLProj
+ * @gwlp: a #NcGalaxyWLProj
  *
- * Increase the reference of @gp by one.
+ * Increase the reference of @gwlp by one.
  *
- * Returns: (transfer full): @gp.
+ * Returns: (transfer full): @gwlp.
  */
 NcGalaxyWLProj *
-nc_galaxy_wl_proj_ref (NcGalaxyWLProj *gp)
+nc_galaxy_wl_proj_ref (NcGalaxyWLProj *gwlp)
 {
-  return g_object_ref (gp);
+  return g_object_ref (gwlp);
 }
 
 /**
  * nc_galaxy_wl_proj_free:
- * @gp: a #NcGalaxyWLProj
+ * @gwlp: a #NcGalaxyWLProj
  *
- * Decrease the reference count of @gp by one.
+ * Decrease the reference count of @gwlp by one.
  *
  */
 void
-nc_galaxy_wl_proj_free (NcGalaxyWLProj *gp)
+nc_galaxy_wl_proj_free (NcGalaxyWLProj *gwlp)
 {
-  g_object_unref (gp);
+  g_object_unref (gwlp);
 }
 
 /**
  * nc_galaxy_wl_proj_clear:
- * @gp: a #NcGalaxyWLProj
+ * @gwlp: a #NcGalaxyWLProj
  *
- * Decrease the reference count of @gp by one, and sets the pointer *@gp to
+ * Decrease the reference count of @gwlp by one, and sets the pointer *@gwlp to
  * NULL.
  *
  */
 void
-nc_galaxy_wl_proj_clear (NcGalaxyWLProj **gp)
+nc_galaxy_wl_proj_clear (NcGalaxyWLProj **gwlp)
 {
-  g_clear_object (gp);
+  g_clear_object (gwlp);
 }
 
 /**
- * nc_galaxy_wl_proj_set_g_obs:
- * @gp: a #NcGalaxyWLProj
- * @g_obs: the observed value of $g$
- * 
- * Sets the value of $g_\mathrm{obs}$.
+ * nc_galaxy_wl_proj_set_pos:
+ * @gwlp: a #NcGalaxyWLProj
+ * @pos: a #NcGalaxyWLProjPos
+ *
+ * Sets the position observable type.
  */
 void
-nc_galaxy_wl_proj_set_g_obs (NcGalaxyWLProj *gp, const gdouble g_obs)
+nc_galaxy_wl_proj_set_pos (NcGalaxyWLProj *gwlp, NcGalaxyWLProjPos pos)
 {
-  NcGalaxyWLProjPrivate * const self = gp->priv;
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
   
-  self->g_mean = g_obs;
+  self->pos = pos;
 }
 
 /**
- * nc_galaxy_wl_proj_set_sigma_g:
- * @gp: a #NcGalaxyWLProj
- * @sigma_g: the observed value of $g$ standard deviation
- * 
- * Sets the value of $\sigma_g$.
- * 
+ * nc_galaxy_wl_proj_get_pos:
+ * @gwlp: a #NcGalaxyWLProj
+ *
+ * Gets the position observable type.
+ *
+ * Returns: the position observable type.
  */
-void
-nc_galaxy_wl_proj_set_sigma_g (NcGalaxyWLProj *gp, const gdouble sigma_g)
+NcGalaxyWLProjPos
+nc_galaxy_wl_proj_get_pos (NcGalaxyWLProj *gwlp)
 {
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-
-  g_assert_cmpfloat (sigma_g, >, 0.0);
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
   
-  self->sigma_g = sigma_g;
-  self->norma   = sqrt (2.0 * M_PI) * sigma_g;
-  self->r       = 1.0 / gsl_pow_2 (sigma_g);
-  self->twolnN  = 2.0 * log (self->norma);
+  return self->pos;
 }
 
 /**
- * nc_galaxy_wl_proj_set_R:
- * @gp: a #NcGalaxyWLProj
- * @R: the radial distance from the cluster center
+ * nc_galaxy_wl_proj_set_obs:
+ * @gwlp: a #NcGalaxyWLProj
+ * @obs: a #NcmMatrix
  *
- * Sets the value of $R\,\mathrm{Mpc}$.
- *
+ * Sets the observables matrix @obs.
  */
 void
-nc_galaxy_wl_proj_set_R (NcGalaxyWLProj *gp, const gdouble R)
+nc_galaxy_wl_proj_set_obs (NcGalaxyWLProj *gwlp, NcmMatrix *obs)
 {
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-
-  g_assert_cmpfloat (R, >, 0.0);
-
-  self->R = R;
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  
+  g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
+  g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
+  
+  ncm_matrix_clear (&self->obs);
+  
+  self->len = ncm_matrix_nrows (obs);
+  self->obs = ncm_matrix_ref (obs);
 }
 
 /**
- * nc_galaxy_wl_proj_get_g_obs:
- * @gp: a #NcGalaxyWLProj
- * 
- * Gets the value of $g_\mathrm{obs}$.
+ * nc_galaxy_wl_proj_peek_obs:
+ * @gwlp: a #NcGalaxyWLProj
  *
- * Returns: $g_\mathrm{obs}$.
- */
-gdouble
-nc_galaxy_wl_proj_get_g_obs (NcGalaxyWLProj *gp)
-{
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-  return self->g_mean;
-}
-
-/**
- * nc_galaxy_wl_proj_get_sigma_g:
- * @gp: a #NcGalaxyWLProj
- * 
- * Gets the value of $\sigma_g$.
- * 
- * Returns: $\sigma_g$.
- */
-gdouble
-nc_galaxy_wl_proj_get_sigma_g (NcGalaxyWLProj *gp)
-{
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-
-  return self->sigma_g;
-}
-
-/**
- * nc_galaxy_wl_proj_get_R:
- * @gp: a #NcGalaxyWLProj
+ * Gets the observables matrix.
  *
- * Gets the value of the radial distance from the cluster center $R\,\mathrm{Mpc}$.
- *
- * Returns: $R\,\mathrm{Mpc}$.
+ * Returns: (transfer none): the observables matrix.
  */
-gdouble
-nc_galaxy_wl_proj_get_R (NcGalaxyWLProj *gp)
+NcmMatrix *
+nc_galaxy_wl_proj_peek_obs (NcGalaxyWLProj *gwlp)
 {
-  NcGalaxyWLProjPrivate * const self = gp->priv;
-
-  return self->R;
+  NcGalaxyWLProjPrivate * const self = gwlp->priv;
+  
+  return self->obs;
 }
 

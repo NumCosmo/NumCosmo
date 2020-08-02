@@ -27,6 +27,7 @@
  * SECTION:nc_data_cluster_wl
  * @title: NcDataClusterWL
  * @short_description: Cluster weak lensing likelihood.
+ * @stability: Unstable
  *
  * FIXME
  *
@@ -153,7 +154,7 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
 static void
 nc_data_cluster_wl_dispose (GObject *object)
 {
-  NcDataClusterWL *dcwl                = NC_DATA_CLUSTER_WL (object);
+  NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = dcwl->priv;
   
   ncm_obj_array_clear (&self->galaxy_array);
@@ -238,12 +239,13 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   const guint ngal                    = self->galaxy_array->len;
   gint i;
-
+  
   m2lnL[0] = 0.0;
-
+  
   for (i = 0; i < ngal; i++)
   {
     NcGalaxyWL *gwl_i = NC_GALAXY_WL (ncm_obj_array_peek (self->galaxy_array, i));
+    
     m2lnL[0] += nc_galaxy_wl_eval_m2lnP (gwl_i, cosmo, dp, smd, self->z_cluster);
   }
   
@@ -258,20 +260,23 @@ _nc_data_cluster_wl_get_len (NcmData *data)
   
   if (self->galaxy_array != NULL)
   {
-
     const guint ngal = self->galaxy_array->len;
-    guint len = 0;
+    guint len        = 0;
     gint i;
-
+    
     for (i = 0; i < ngal; i++)
     {
       NcGalaxyWL *gwl_i = NC_GALAXY_WL (ncm_obj_array_peek (self->galaxy_array, i));
+      
       len += nc_galaxy_wl_len (gwl_i);
     }
+    
     return len;
   }
   else
+  {
     return 0;
+  }
 }
 
 static void
@@ -279,9 +284,9 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 {
   /*NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);*/
   /*NcDataClusterWLPrivate * const self = dcwl->priv;*/
-  NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
   
@@ -362,3 +367,4 @@ nc_data_cluster_wl_clear (NcDataClusterWL **dcwl)
 {
   g_clear_object (dcwl);
 }
+

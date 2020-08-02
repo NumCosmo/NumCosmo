@@ -30,8 +30,9 @@
  * SECTION:nc_galaxy_wl_dist
  * @title: NcGalaxyWLDist
  * @short_description: Abstract class describing galaxy wl_dists.
+ * @stability: Unstable
  *
- * Abstract class used to define a generic galaxy weak lensing observable 
+ * Abstract class used to define a generic galaxy weak lensing observable
  * probability distribution $P_\mathrm{wl}(g)$.
  *
  */
@@ -83,7 +84,7 @@ static guint
 _nc_galaxy_wl_dist_len (NcGalaxyWLDist *gwld)
 {
   g_error ("_nc_galaxy_wl_dist_len: method not implemented.");
-
+  
   return 0;
 }
 
@@ -94,9 +95,9 @@ nc_galaxy_wl_dist_class_init (NcGalaxyWLDistClass *klass)
   
   object_class->finalize = &_nc_galaxy_wl_dist_finalize;
   
-  klass->m2lnP           = &_nc_galaxy_wl_dist_m2lnP;
-  klass->gen             = &_nc_galaxy_wl_dist_gen;
-  klass->len             = &_nc_galaxy_wl_dist_len;
+  klass->m2lnP = &_nc_galaxy_wl_dist_m2lnP;
+  klass->gen   = &_nc_galaxy_wl_dist_gen;
+  klass->len   = &_nc_galaxy_wl_dist_len;
 }
 
 /**
@@ -147,6 +148,7 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
  * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ * @gal_i: galaxy id
  *
  * Prepare to compute nc_galaxy_wl_dist_m2lnP() at different redshifts.
  *
@@ -158,6 +160,7 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
  * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ * @gal_i: galaxy id
  * @z: source redshift
  *
  * Returns: the probability density at @g, $-2\ln\left[P_\mathrm{wl}(g)\right]$.
@@ -178,3 +181,4 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
  *
  * Returns: the number of galaxies in the object.
  */
+

@@ -103,11 +103,11 @@ _nc_galaxy_redshift_spec_get_property (GObject *object, guint prop_id, GValue *v
 static void
 _nc_galaxy_redshift_spec_dispose (GObject *object)
 {
-  NcGalaxyRedshiftSpec *gzs = NC_GALAXY_REDSHIFT_SPEC (object);
+  NcGalaxyRedshiftSpec *gzs                = NC_GALAXY_REDSHIFT_SPEC (object);
   NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
-
+  
   ncm_vector_clear (&self->z_spec);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_redshift_spec_parent_class)->dispose (object);
 }
@@ -232,8 +232,8 @@ _nc_galaxy_redshift_spec_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i, 
 {
   NcGalaxyRedshiftSpec *gzs                = NC_GALAXY_REDSHIFT_SPEC (gz);
   NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
-  const gdouble z_spec = ncm_vector_get (self->z_spec, gal_i);
-
+  const gdouble z_spec                     = ncm_vector_get (self->z_spec, gal_i);
+  
   return m2lnf (z_spec, userdata);
 }
 
@@ -242,7 +242,7 @@ _nc_galaxy_redshift_spec_len (NcGalaxyRedshift *gz)
 {
   NcGalaxyRedshiftSpec *gzs                = NC_GALAXY_REDSHIFT_SPEC (gz);
   NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
-
+  
   return ncm_vector_len (self->z_spec);
 }
 
@@ -315,7 +315,7 @@ void
 nc_galaxy_redshift_spec_set_z (NcGalaxyRedshiftSpec *gzs, NcmVector *z_spec)
 {
   NcGalaxyRedshiftSpecPrivate * const self = gzs->priv;
-
+  
   ncm_vector_clear (&self->z_spec);
   self->z_spec = ncm_vector_ref (z_spec);
 }

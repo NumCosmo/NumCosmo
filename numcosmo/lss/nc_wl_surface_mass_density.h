@@ -46,6 +46,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcWLSurfaceMassDensityClass NcWLSurfaceMassDensityClass;
 typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
+typedef struct _NcWLSurfaceMassDensityOptzs NcWLSurfaceMassDensityOptzs;
 
 /**
  * NcWLSurfaceMassDensityParams:
@@ -82,15 +83,22 @@ struct _NcWLSurfaceMassDensity
   NcmModelCtrl *ctrl_dp;
 };
 
-typedef struct _NcWLSurfaceMassDensityOptzs
+/**
+ * NcWLSurfaceMassDensityOptzs:
+ *
+ * Optimization structure.
+ *
+ */
+struct _NcWLSurfaceMassDensityOptzs
 {
+  /*< private >*/
   gint k;
   gdouble sqrt_Omega_k0;
   gdouble dl;
   gdouble sc_Dls_Ds;
   gdouble sigma;
   gdouble mean_sigma;
-} NcWLSurfaceMassDensityOptzs;
+};
 
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 

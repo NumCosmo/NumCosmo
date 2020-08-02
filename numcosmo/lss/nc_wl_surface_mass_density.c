@@ -761,6 +761,7 @@ nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
  * @zs: source redshift $z_\mathrm{source}$
+ * @zl: lens redshift $z_\mathrm{lens}$
  * @optzs: a #NcWLSurfaceMassDensityOptzs
  *
  * Computes the reduced shear:

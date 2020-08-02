@@ -3,7 +3,7 @@
 /***************************************************************************
  *            nc_galaxy_wl_proj.h
  *
- *  Thu Jul 30 11:13:56 2020
+ *  Sun Aug 02 11:13:56 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
  *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
@@ -33,6 +33,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/lss/nc_galaxy_wl_dist.h>
 
 G_BEGIN_DECLS
@@ -61,20 +62,35 @@ struct _NcGalaxyWLProj
   NcGalaxyWLProjPrivate *priv;
 };
 
+/**
+ * NcGalaxyWLProjPos:
+ * @NC_GALAXY_WL_PROJ_POS_ANG: FIXME
+ * @NC_GALAXY_WL_PROJ_POS_R: FIXME
+ *
+ * FIXME
+ *
+ */
+typedef enum _NcGalaxyWLProjPos
+{
+  NC_GALAXY_WL_PROJ_POS_ANG,
+  NC_GALAXY_WL_PROJ_POS_R,
+  /* < private > */
+  NC_GALAXY_WL_PROJ_POS_LEN, /*< skip >*/
+} NcGalaxyWLProjPos;
+
 GType nc_galaxy_wl_proj_get_type (void) G_GNUC_CONST;
 
-NcGalaxyWLProj *nc_galaxy_wl_proj_new (const gdouble g_obs, const gdouble sigma_g);
-NcGalaxyWLProj *nc_galaxy_wl_proj_ref (NcGalaxyWLProj *gp);
+NcGalaxyWLProj *nc_galaxy_wl_proj_new (NcGalaxyWLProjPos pos);
+NcGalaxyWLProj *nc_galaxy_wl_proj_ref (NcGalaxyWLProj *gwlp);
 
-void nc_galaxy_wl_proj_free (NcGalaxyWLProj *gp);
-void nc_galaxy_wl_proj_clear (NcGalaxyWLProj **gp);
+void nc_galaxy_wl_proj_free (NcGalaxyWLProj *gwlp);
+void nc_galaxy_wl_proj_clear (NcGalaxyWLProj **gwlp);
 
-void nc_galaxy_wl_proj_set_g_obs (NcGalaxyWLProj *gp, const gdouble g_obs);
-void nc_galaxy_wl_proj_set_sigma_g (NcGalaxyWLProj *gp, const gdouble sigma_g);
-void nc_galaxy_wl_proj_set_R (NcGalaxyWLProj *gp, const gdouble R);
-gdouble nc_galaxy_wl_proj_get_g_obs (NcGalaxyWLProj *gp);
-gdouble nc_galaxy_wl_proj_get_sigma_g (NcGalaxyWLProj *gp);
-gdouble nc_galaxy_wl_proj_get_R (NcGalaxyWLProj *gp);
+void nc_galaxy_wl_proj_set_pos (NcGalaxyWLProj *gwlp, NcGalaxyWLProjPos pos);
+NcGalaxyWLProjPos nc_galaxy_wl_proj_get_pos (NcGalaxyWLProj *gwlp);
+
+void nc_galaxy_wl_proj_set_obs (NcGalaxyWLProj *gwlp, NcmMatrix *obs);
+NcmMatrix *nc_galaxy_wl_proj_peek_obs (NcGalaxyWLProj *gwlp);
 
 G_END_DECLS
 

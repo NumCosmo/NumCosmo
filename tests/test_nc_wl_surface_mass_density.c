@@ -139,7 +139,7 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
   test->zc = 1.0;
@@ -177,7 +177,7 @@ test_nc_wl_surface_mass_density_new_Okp (TestNcWLSurfaceMassDensity *test, gcons
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.1);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
   test->zc = 1.0;
@@ -215,7 +215,7 @@ test_nc_wl_surface_mass_density_new_Okn (TestNcWLSurfaceMassDensity *test, gcons
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", -0.1);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
   test->zc = 1.0;
