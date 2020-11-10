@@ -2437,6 +2437,8 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err)
  * ncm_model___setitem__:
  * @model: a #NcmModel
  * @param: parameter name
+ * @val: parameter value
+ * @err: a pointer for #GError
  *
  * Sets the parameter by name.
  *
