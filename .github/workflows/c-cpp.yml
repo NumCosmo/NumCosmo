@@ -20,7 +20,7 @@ jobs:
     - name: configure
       run: ./configure --enable-gtk-doc --enable-man
     - name: make
-      run: make -j8 || : 
+      run: make -j8 || echo "TRUE"
     - name: print_logs
       run: cat docs/*.log
     - name: make check
