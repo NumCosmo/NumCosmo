@@ -71,6 +71,7 @@ void arkPrintAdaptMem(ARKodeHAdaptMem hadapt_mem, FILE *outfile)
     fprintf(outfile, "ark_hadapt: etamax = %"RSYM"\n", hadapt_mem->etamax);
     fprintf(outfile, "ark_hadapt: etamx1 = %"RSYM"\n", hadapt_mem->etamx1);
     fprintf(outfile, "ark_hadapt: etamxf = %"RSYM"\n", hadapt_mem->etamxf);
+    fprintf(outfile, "ark_hadapt: etamin = %"RSYM"\n", hadapt_mem->etamin);
     fprintf(outfile, "ark_hadapt: small_nef = %i\n", hadapt_mem->small_nef);
     fprintf(outfile, "ark_hadapt: etacf = %"RSYM"\n", hadapt_mem->etacf);
     fprintf(outfile, "ark_hadapt: imethod = %i\n", hadapt_mem->imethod);
@@ -131,25 +132,25 @@ int arkAdapt(void* arkode_mem, ARKodeHAdaptMem hadapt_mem,
 
   /* Call algorithm-specific error adaptivity method */
   switch (hadapt_mem->imethod) {
-  case(0):    /* PID controller */
+  case(ARK_ADAPT_PID):         /* PID controller */
     ier = arkAdaptPID(hadapt_mem, k, hcur, ecur, &h_acc);
     break;
-  case(1):    /* PI controller */
+  case(ARK_ADAPT_PI):          /* PI controller */
     ier = arkAdaptPI(hadapt_mem, k, hcur, ecur, &h_acc);
     break;
-  case(2):    /* I controller */
+  case(ARK_ADAPT_I):           /* I controller */
     ier = arkAdaptI(hadapt_mem, k, hcur, ecur, &h_acc);
     break;
-  case(3):    /* explicit Gustafsson controller */
+  case(ARK_ADAPT_EXP_GUS):     /* explicit Gustafsson controller */
     ier = arkAdaptExpGus(hadapt_mem, k, nst, hcur, ecur, &h_acc);
     break;
-  case(4):    /* implicit Gustafsson controller */
+  case(ARK_ADAPT_IMP_GUS):     /* implicit Gustafsson controller */
     ier = arkAdaptImpGus(hadapt_mem, k, nst, hcur, ecur, &h_acc);
     break;
-  case(5):    /* imex Gustafsson controller */
+  case(ARK_ADAPT_IMEX_GUS):    /* imex Gustafsson controller */
     ier = arkAdaptImExGus(hadapt_mem, k, nst, hcur, ecur, &h_acc);
     break;
-  case(-1):   /* user-supplied controller */
+  case(ARK_ADAPT_CUSTOM):      /* user-supplied controller */
     ier = hadapt_mem->HAdapt(ycur, tcur, hcur, hadapt_mem->hhist[0],
                              hadapt_mem->hhist[1], ecur,
                              hadapt_mem->ehist[0],
@@ -178,7 +179,7 @@ int arkAdapt(void* arkode_mem, ARKodeHAdaptMem hadapt_mem,
                     "Error in explicit stability function.");
     return (ARK_ILL_INPUT);
   }
-  if (h_cfl <= 0.0)  h_cfl = RCONST(1.0e30) * SUNRabs(hcur);
+  if (h_cfl <= ZERO)  h_cfl = RCONST(1.0e30) * SUNRabs(hcur);
 
   /* Solver diagnostics reporting */
   if (ark_mem->report)
@@ -194,7 +195,7 @@ int arkAdapt(void* arkode_mem, ARKodeHAdaptMem hadapt_mem,
   h_acc = int_dir * SUNMIN(SUNRabs(h_acc), SUNRabs(hadapt_mem->etamax*hcur));
 
   /* enforce minimum bound time step reduction */
-  h_acc = int_dir * SUNMAX(SUNRabs(h_acc), SUNRabs(ETAMIN*hcur));
+  h_acc = int_dir * SUNMAX(SUNRabs(h_acc), SUNRabs(hadapt_mem->etamin*hcur));
 
   /* Solver diagnostics reporting */
   if (ark_mem->report)

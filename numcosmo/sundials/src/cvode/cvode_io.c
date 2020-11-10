@@ -1,8 +1,4 @@
-/*
- * -----------------------------------------------------------------
- * $Revision$
- * $Date$
- * -----------------------------------------------------------------
+/* -----------------------------------------------------------------
  * Programmer(s): Alan C. Hindmarsh and Radu Serban @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
@@ -17,14 +13,13 @@
  * -----------------------------------------------------------------
  * This is the implementation file for the optional input and output
  * functions for the CVODE solver.
- * -----------------------------------------------------------------
- */
+ * -----------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "cvode_impl.h"
-#include <sundials/sundials_types.h>
+#include "sundials/sundials_types.h"
 
 #define ZERO   RCONST(0.0)
 #define HALF   RCONST(0.5)
@@ -102,6 +97,64 @@ int CVodeSetUserData(void *cvode_mem, void *user_data)
   cv_mem->cv_user_data = user_data;
 
   return(CV_SUCCESS);
+}
+
+/*
+ * CVodeSetMonitorFn
+ *
+ * Specifies the user function to call for monitoring
+ * the solution and/or integrator statistics.
+ */
+
+int CVodeSetMonitorFn(void *cvode_mem, CVMonitorFn fn)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem==NULL) {
+    cvProcessError(NULL, CV_MEM_NULL, "CVODE", "CVodeSetMonitorFn", MSGCV_NO_MEM);
+    return(CV_MEM_NULL);
+  }
+
+  cv_mem = (CVodeMem) cvode_mem;
+
+#ifdef SUNDIALS_BUILD_WITH_MONITORING
+  cv_mem->cv_monitorfun = fn;
+  return(CV_SUCCESS);
+#else
+  cvProcessError(cv_mem, CV_ILL_INPUT, "CVODE", "CVodeSetMonitorFn", "SUNDIALS was not built with monitoring enabled.");
+  return(CV_ILL_INPUT);
+#endif
+}
+
+/*
+ * CVodeSetMonitorFrequency
+ *
+ * Specifies the frequency with which to call the user function.
+ */
+
+int CVodeSetMonitorFrequency(void *cvode_mem, long int nst)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem==NULL) {
+    cvProcessError(NULL, CV_MEM_NULL, "CVODE", "CVodeSetMonitorFrequency", MSGCV_NO_MEM);
+    return(CV_MEM_NULL);
+  }
+
+  if (nst < 0) {
+    cvProcessError(NULL, CV_ILL_INPUT, "CVODE", "CVodeSetMonitorFrequency", "step interval must be >= 0\n");
+    return(CV_ILL_INPUT);
+  }
+
+  cv_mem = (CVodeMem) cvode_mem;
+
+#ifdef SUNDIALS_BUILD_WITH_MONITORING
+  cv_mem->cv_monitor_interval = nst;
+  return(CV_SUCCESS);
+#else
+  cvProcessError(cv_mem, CV_ILL_INPUT, "CVODE", "CVodeSetMonitorFrequency", "SUNDIALS was not built with monitoring enabled.");
+  return(CV_ILL_INPUT);
+#endif
 }
 
 /*
@@ -448,6 +501,38 @@ int CVodeSetNonlinConvCoef(void *cvode_mem, realtype nlscoef)
 }
 
 /*
+ * CVodeSetLSetupFrequency
+ *
+ * Specifies the frequency for calling the linear solver setup function to
+ * recompute the Jacobian matrix and/or preconditioner
+ */
+
+int CVodeSetLSetupFrequency(void *cvode_mem, long int msbp)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem == NULL) {
+    cvProcessError(NULL, CV_MEM_NULL, "CVODE", "CVodeSetLSetupFrequency",
+                   MSGCV_NO_MEM);
+    return(CV_MEM_NULL);
+  }
+
+  cv_mem = (CVodeMem) cvode_mem;
+
+  /* check for a valid input */
+  if (msbp < 0) {
+    cvProcessError(cv_mem, CV_ILL_INPUT, "CVODE", "CVodeSetLSetupFrequency",
+                   "A negative setup frequency was provided");
+    return(CV_ILL_INPUT);
+  }
+
+  /* use default or user provided value */
+  cv_mem->cv_msbp = (msbp == 0) ? MSBP : msbp;
+
+  return(CV_SUCCESS);
+}
+
+/*
  * CVodeSetRootDirection
  *
  * Specifies the direction of zero-crossings to be monitored.
@@ -561,6 +646,37 @@ int CVodeSetConstraints(void *cvode_mem, N_Vector constraints)
   cv_mem->cv_constraintsSet = SUNTRUE;
 
   return(CV_SUCCESS);
+}
+
+/*
+ * CVodeSetUseIntegratorFusedKernels
+ *
+ * Enable or disable integrator specific fused kernels
+ */
+
+int CVodeSetUseIntegratorFusedKernels(void *cvode_mem, booleantype onoff)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem==NULL) {
+    cvProcessError(NULL, CV_MEM_NULL, "CVODE", "CVodeSetUseIntegratorFusedKernels", MSGCV_NO_MEM);
+    return(CV_MEM_NULL);
+  }
+
+  cv_mem = (CVodeMem) cvode_mem;
+
+#ifdef SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS
+  if (!cv_mem->cv_MallocDone ||
+      N_VGetVectorID(cv_mem->cv_ewt) != SUNDIALS_NVEC_CUDA) {
+    cvProcessError(cv_mem, CV_ILL_INPUT, "CVODE", "CVodeSetUseIntegratorFusedKernels", MSGCV_BAD_NVECTOR);
+    return(CV_MEM_NULL);
+  }
+  cv_mem->cv_usefused = onoff;
+  return(CV_SUCCESS);
+#else
+  cvProcessError(cv_mem, CV_ILL_INPUT, "CVODE", "CVodeSetUseIntegratorFusedKernels", "CVODE was not built with fused integrator kernels enabled");
+  return(CV_ILL_INPUT);
+#endif
 }
 
 /*
@@ -1048,12 +1164,9 @@ int CVodeGetNumNonlinSolvIters(void *cvode_mem, long int *nniters)
 
   cv_mem = (CVodeMem) cvode_mem;
 
-  if (cv_mem->NLS == NULL) {
-    cvProcessError(NULL, CV_MEM_FAIL, "CVODE", "CVodeGetNumNonlinSolvIters", MSGCV_MEM_FAIL);
-    return (CV_MEM_FAIL);
-  }
+  *nniters = cv_mem->cv_nni;
 
-  return(SUNNonlinSolGetNumIters(cv_mem->NLS, nniters));
+  return(CV_SUCCESS);
 }
 
 /*
@@ -1097,15 +1210,10 @@ int CVodeGetNonlinSolvStats(void *cvode_mem, long int *nniters,
 
   cv_mem = (CVodeMem) cvode_mem;
 
+  *nniters  = cv_mem->cv_nni;
   *nncfails = cv_mem->cv_ncfn;
 
-  if (cv_mem->NLS == NULL) {
-    cvProcessError(NULL, CV_MEM_FAIL, "CVODE", "CVodeGetNonlinSolvStats", MSGCV_MEM_FAIL);
-    return (CV_MEM_FAIL);
-  }
-
-  return(SUNNonlinSolGetNumIters(cv_mem->NLS, nniters));
-
+  return(CV_SUCCESS);
 }
 
 /*-----------------------------------------------------------------*/
@@ -1194,6 +1302,15 @@ char *CVodeGetReturnFlagName(long int flag)
     break;
   case CV_NLS_FAIL:
     sprintf(name,"CV_NLS_FAIL");
+    break;
+  case CV_PROJ_MEM_NULL:
+    sprintf(name,"CV_PROJ_MEM_NULL");
+    break;
+  case CV_PROJFUNC_FAIL:
+    sprintf(name,"CV_PROJFUNC_FAIL");
+    break;
+  case CV_REPTD_PROJFUNC_ERR:
+    sprintf(name,"CV_REPTD_PROJFUNC_ERR");
     break;
   default:
     sprintf(name,"NONE");
