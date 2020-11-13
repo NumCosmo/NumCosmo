@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build-gcc-ubuntu:
 
     runs-on: ubuntu-latest
 
@@ -30,3 +30,21 @@ jobs:
       with:
         name: release
         path: numcosmo-*.tar.gz
+
+  build-gcc-macos:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq
+      run: brew install gobject-introspection gsl gtk-doc gmp mpfr fftw cfitsio nlopt
+    - name: Autogen
+      run: NOCONFIGURE=yes ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make -j8
+    - name: make check
+      run: make check -j8
+
