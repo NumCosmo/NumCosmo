@@ -38,7 +38,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install prereq
-      run: brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt
+      run: brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
