@@ -156,7 +156,7 @@ setup-build.stamp: $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_c
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += $(XML_FILES) $(XML_GEN_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
+EXTRA_DIST += $(XML_FILES) $(XML_GEN_FILES) references.xml references.bib container.css addmathjax.pl xmltogtk.pl
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types

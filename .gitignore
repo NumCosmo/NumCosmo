@@ -35,7 +35,6 @@ docs/references.aux
 docs/references.dvi
 docs/references.log
 docs/references.out
-docs/references.xml
 scripts/*.pyc
 *~
 *.la
