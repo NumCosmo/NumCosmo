@@ -48,14 +48,13 @@ jobs:
       run: make -j8
     - name: make check
       run: make check -j8
-    - name: Run coveralls
-      run: |
-        sudo pip3 install cpp-coveralls python-coveralls
-        cpp-coveralls --gcov-options '\-lp' -i tests -r tests
+    - name: make code-coverage-capture
+      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./numcosmo-coverage.info
 
   build-gcc-macos:
 
