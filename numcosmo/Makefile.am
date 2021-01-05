@@ -359,6 +359,7 @@ nc_headers = \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
 	nc_hiqg_1d.h                  \
+	nc_de_cont.h                  \
 	model/nc_hicosmo_idem2.h      \
 	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
@@ -511,6 +512,7 @@ nc_sources = \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
 	nc_hiqg_1d.c                  \
+	nc_de_cont.c                  \
 	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
