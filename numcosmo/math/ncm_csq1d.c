@@ -2735,7 +2735,7 @@ _ncm_csq1d_prepare_integrator_Prop (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, const gdoub
   /*flag = CVodeSetMaxStep (self->cvode_Prop, (self->tf - self->t) / 100.0);*/
   /*NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );*/
 
-  flag = CVodeRootInit (self->cvode_Prop, 1, &_ncm_csq1d_root_Prop);
+  flag = CVodeRootInit (self->cvode_Prop, 3, &_ncm_csq1d_root_Prop);
   NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
 
 }
@@ -2745,9 +2745,12 @@ _ncm_csq1d_root_Prop (realtype t, N_Vector y, realtype *gout, gpointer f_data)
 {
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
   /*NcmCSQ1DPrivate * const self = ws->csq1d->priv;*/
+  const gdouble a_2  = NV_Ith_S (y, 0) * NV_Ith_S (y, 0);
   const gdouble u1_2 = - NV_Ith_S (y, 1) * NV_Ith_S (y, 2) - NV_Ith_S (y, 3) * NV_Ith_S (y, 3);
 
   gout[0] = u1_2 - ws->reltol;
+  gout[1] = fabs ((a_2 + u1_2) - 1.0) - 1.0e-1;
+  gout[2] = fabs ((a_2 + u1_2) - 1.0) - 5.0e-1;
 
   return 0;
 }
@@ -2887,6 +2890,7 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
   NcmCSQ1DWS ws  = {csq1d, model, self->prop_threshold};
   GArray *t_a    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   gdouble t      = 0.0;
+  gboolean tf_Prop_found = FALSE;
   GArray *R_a[4];
   gdouble u1[3];
   gint i;
@@ -2908,6 +2912,7 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
 
   _ncm_csq1d_prepare_integrator_Prop (csq1d, &ws, tii, tf);
 
+  self->tf_Prop = GSL_NAN;
   while (TRUE)
   {
     gint flag = CVode (self->cvode_Prop, tf, self->y_Prop, &t, CV_ONE_STEP);
@@ -2919,15 +2924,22 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
 
     if (flag == CV_ROOT_RETURN)
     {
-      self->tf_Prop = t;
-      break;
+      gint roots[4];
+      flag = CVodeGetRootInfo (self->cvode_Prop, roots);
+      NCM_CVODE_CHECK (&flag, "CVodeGetRootInfo[ncm_csq1d_prepare_prop]", 1, );
+
+      /*ncm_message ("% 22.15g %d %d %d\n", t, roots[0], roots[1], roots[2]);*/
+      if (roots[0] && !tf_Prop_found)
+      {
+        self->tf_Prop = t;
+        tf_Prop_found = TRUE;
+      }
+      else if ((roots[1] != 0) || (roots[2] != 0))
+        break;
     }
 
     if (t >= tf)
-    {
-      self->tf_Prop = GSL_NAN;
       break;
-    }
   }
 
   for (i = 0; i < 4; i++)

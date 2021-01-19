@@ -35,6 +35,7 @@ test.restype = ctypes.c_double
 s = Ncm.SplineCubicNotaknot.new ()
 
 os = Ncm.OdeSpline.new (s, test)
+os.set_reltol (1.0e-3)
 
 os.props.xi = 0.0
 os.props.xf = 5.0
@@ -44,9 +45,13 @@ nhaca = [1,2,3,4]
 
 os.prepare (id (nhaca))
 
-for i in range (100):
-  x = 1.0 / 99.0 * i
-  expx = exp (x)
-  odex = os.s.eval (x)
-  print (x, expx, odex, fabs ((expx - odex) / expx))
+ss = os.peek_spline()
 
+for i in range (ss.len):
+    print ("%d % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g" % (i, ss.xv.get (i), ss.yv.get (i), ss.b.get (i), ss.c.get(i), ss.d.get(i)))
+
+#for i in range (100):
+#  x = 1.0 / 99.0 * i
+#  expx = exp (x)
+#  odex = ss.eval (x)
+#  print (x, expx, odex, fabs ((expx - odex) / expx))
