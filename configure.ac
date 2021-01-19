@@ -50,7 +50,7 @@ dnl add the correct m4 directory location.
 dnl ***************************************************************************
 AC_CONFIG_MACRO_DIR([m4])
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.70])
 AM_INIT_AUTOMAKE([1.11 gnu -Wno-portability subdir-objects])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
@@ -161,7 +161,7 @@ if test x$use_mpi != "xno"; then
   AC_SUBST(have_mpi_support)
 fi
 
-AC_PROG_CC_C99
+AC_PROG_CC
 AC_PROG_F77
 
 dnl ***************************************************************************
@@ -169,7 +169,6 @@ dnl Checks for programs.
 dnl ***************************************************************************
 AC_PROG_INSTALL   
 AC_PROG_LN_S
-AC_PROG_CC_STDC
 AC_PROG_GREP
 AC_PROG_SED
 AM_PROG_VALAC

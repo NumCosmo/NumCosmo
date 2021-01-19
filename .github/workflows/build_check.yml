@@ -44,6 +44,10 @@ jobs:
       run: make -j8
     - name: make check
       run: make check -j8
+    - name: Test example compilation
+      run: |
+        cd examples
+        gcc -Wall simple_example.c -o simple_example $(pkg-config numcosmo --libs --cflags)
     - name: make code-coverage-capture
       run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info
     - name: Coveralls
