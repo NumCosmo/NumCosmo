@@ -41,6 +41,11 @@ main (gint argc, gchar *argv[])
    ****************************************************************************/
   printf ("# Model parameters:\n"); 
   ncm_model_params_log_all (NCM_MODEL (cosmo));
+  
+  /**************************************************************************** 
+   * Preparing the distance object.
+   ****************************************************************************/
+  nc_distance_prepare (dist, cosmo);
 
   /**************************************************************************** 
    * Printing some distances up to redshift 1.0.
