@@ -15,7 +15,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/${LIB}
+      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib64
     - name: make
       run: make -j8
     - name: Test example compilation
