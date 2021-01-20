@@ -50,7 +50,7 @@ dnl add the correct m4 directory location.
 dnl ***************************************************************************
 AC_CONFIG_MACRO_DIR([m4])
 
-AC_PREREQ([2.70])
+AC_PREREQ([2.69])
 AM_INIT_AUTOMAKE([1.11 gnu -Wno-portability subdir-objects])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
