@@ -30,6 +30,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/config_extra.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_c.h>
 

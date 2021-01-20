@@ -27,7 +27,9 @@ jobs:
         sudo make install
         cd examples
         gcc -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
+        gcc -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
         ./example_simple
+        ./example_ca
     - name: make check
       run: make check -j8
     - name: make dist
