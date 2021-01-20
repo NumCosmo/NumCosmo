@@ -2,11 +2,11 @@ name: Build and Check
 
 on: [push, pull_request]
 
-env:
-  CC: gcc-10
-  FC: gfortran-10
-  F77: gfortran-10
-  F90: gfortran-10
+#env:
+#  CC: gcc-10
+#  FC: gfortran-10
+#  F77: gfortran-10
+#  F90: gfortran-10
 
 jobs:
 
@@ -78,9 +78,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: |
-        ./configure
-        cat config.log
+      run: ./configure
     - name: make
       run: make -j8
     - name: make check
