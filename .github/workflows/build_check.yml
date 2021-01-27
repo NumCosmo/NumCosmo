@@ -84,7 +84,10 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure || cat config.log
+      run: |
+        gcc -print-search-dirs
+        gcc-10 -print-search-dirs
+        ./configure || cat config.log
     - name: make
       run: make -j8
     - name: make check
