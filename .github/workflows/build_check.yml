@@ -87,6 +87,8 @@ jobs:
       run: |
         gcc -print-search-dirs
         gcc-10 -print-search-dirs
+        ls /Applications/Xcode_12.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/12.0.0
+        find /Applications/Xcode_12.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/12.0.0
         ./configure || cat config.log
     - name: make
       run: make -j8
