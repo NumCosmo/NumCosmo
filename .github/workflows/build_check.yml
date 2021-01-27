@@ -70,10 +70,10 @@ jobs:
 
     runs-on: macos-latest
     env:
-      CC: gcc-10
-      FC: gfortran-10
-      F77: gfortran-10
-      F90: gfortran-10
+      CC: gcc-9
+      FC: gfortran-9
+      F77: gfortran-9
+      F90: gfortran-9
 
     steps:
     - uses: actions/checkout@v2
@@ -86,7 +86,7 @@ jobs:
     - name: configure
       run: |
         gcc -print-search-dirs
-        gcc-10 -print-search-dirs
+        gcc-9 -print-search-dirs
         gcc -print-file-name=libgmp.so
         ls /Applications/Xcode_12.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/12.0.0
         find /Applications/Xcode_12.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/12.0.0
