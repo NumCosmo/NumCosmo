@@ -69,6 +69,11 @@ jobs:
   build-gcc-macos:
 
     runs-on: macos-latest
+    env:
+      CC: gcc-10
+      FC: gfortran-10
+      F77: gfortran-10
+      F90: gfortran-10
 
     steps:
     - uses: actions/checkout@v2
