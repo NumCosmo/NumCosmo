@@ -74,6 +74,7 @@ jobs:
       FC: gfortran-10
       F77: gfortran-10
       F90: gfortran-10
+      LIBRARY_PATH: /usr/local/lib
       LD_LIBRARY_PATH: /usr/local/lib
       DYLD_LIBRARY_PATH: /usr/local/lib
 
@@ -82,7 +83,6 @@ jobs:
     - name: Install prereq
       run: |
         brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran
-        brew reinstall gmp
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
