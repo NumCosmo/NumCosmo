@@ -84,7 +84,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure
+      run: ./configure || cat config.log
     - name: make
       run: make -j8
     - name: make check
