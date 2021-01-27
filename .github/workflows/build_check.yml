@@ -70,10 +70,12 @@ jobs:
 
     runs-on: macos-latest
     env:
-      CC: gcc-9
-      FC: gfortran-9
-      F77: gfortran-9
-      F90: gfortran-9
+      CC: gcc-10
+      FC: gfortran-10
+      F77: gfortran-10
+      F90: gfortran-10
+      LD_LIBRARY_PATH: /usr/local/lib
+      DYLD_LIBRARY_PATH: /usr/local/lib
 
     steps:
     - uses: actions/checkout@v2
