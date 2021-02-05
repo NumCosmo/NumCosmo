@@ -254,8 +254,8 @@ ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
  * ncm_data_gauss_cov_mvnd_gen:
  * @data_mvnd: a #NcmDataGaussCovMVND
  * @mset: a #NcmMSet
- * @obj: a pointer to use in @bound
- * @bound: (scope call): a NcmDataGaussCovMVNDBound
+ * @obj: (allow-none): a pointer to use in @bound
+ * @bound: (scope call) (allow-none): a NcmDataGaussCovMVNDBound
  * @rng: a #NcmRNG
  * @N: (out): number of realizations necessary to generate a valid one
  * 
