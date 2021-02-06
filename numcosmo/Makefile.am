@@ -803,7 +803,8 @@ NumCosmoMath-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 NumCosmoMath_1_0_gir_VERSION      = 1.0
 NumCosmoMath_1_0_gir_INCLUDES     = GObject-2.0
 NumCosmoMath_1_0_gir_CFLAGS       = $(MY_CFLAGS) -DNUMCOSMO_GIR_SCAN
-NumCosmoMath_1_0_gir_LIBS         = libnumcosmo.la $(CODE_COVERAGE_LIBS)
+NumCosmoMath_1_0_gir_LDFLAGS      = $(CODE_COVERAGE_LIBS)
+NumCosmoMath_1_0_gir_LIBS         = libnumcosmo.la
 NumCosmoMath_1_0_gir_FILES        = $(ncm_introspection_sources)
 NumCosmoMath_1_0_gir_SCANNERFLAGS = \
 	--c-include="numcosmo/numcosmo-math.h"  \
