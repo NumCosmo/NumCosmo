@@ -32,12 +32,12 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)      \
-	 -I$(SUNDIALS_INCL)   \
-	 $(CODE_COVERAGE_CFLAGS)
+	 -I$(SUNDIALS_INCL)
 
-AM_CFLAGS =    \
-	 -Wall \
-	 $(MY_CFLAGS)
+AM_CFLAGS = \
+	 -Wall        \
+	 $(MY_CFLAGS) \
+	 $(CODE_COVERAGE_CFLAGS)
 
 SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 
