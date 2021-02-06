@@ -57,7 +57,7 @@ jobs:
     - name: make
       run: make -j8 V=1
     - name: make check
-      run: make check -j8 || cat numcosmo/libnumcosmo.la
+      run: make check -j8 || ldd numcosmo/.libs/libnumcosmo.so && cat numcosmo/libnumcosmo.la
     - name: make code-coverage-capture
       run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info
     - name: Coveralls
