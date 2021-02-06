@@ -803,7 +803,6 @@ NumCosmoMath-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 NumCosmoMath_1_0_gir_VERSION      = 1.0
 NumCosmoMath_1_0_gir_INCLUDES     = GObject-2.0
 NumCosmoMath_1_0_gir_CFLAGS       = $(MY_CFLAGS) -DNUMCOSMO_GIR_SCAN
-NumCosmoMath_1_0_gir_LDFLAGS      = $(CODE_COVERAGE_LIBS)
 NumCosmoMath_1_0_gir_LIBS         = libnumcosmo.la
 NumCosmoMath_1_0_gir_FILES        = $(ncm_introspection_sources)
 NumCosmoMath_1_0_gir_SCANNERFLAGS = \
@@ -816,7 +815,6 @@ NumCosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER) NumCosmoMath-1.0.gir
 NumCosmo_1_0_gir_VERSION      = 1.0
 NumCosmo_1_0_gir_INCLUDES     = GObject-2.0
 NumCosmo_1_0_gir_CFLAGS       = $(MY_CFLAGS) -DNUMCOSMO_GIR_SCAN
-NumCosmo_1_0_gir_LDFLAGS      = $(CODE_COVERAGE_LIBS)
 NumCosmo_1_0_gir_LIBS         = libnumcosmo.la
 NumCosmo_1_0_gir_FILES        = $(nc_introspection_sources)
 NumCosmo_1_0_gir_SCANNERFLAGS = \
