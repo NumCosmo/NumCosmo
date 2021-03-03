@@ -98,6 +98,7 @@ NCM_INLINE gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
 NCM_INLINE gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
 NCM_INLINE gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
 NCM_INLINE gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+NCM_INLINE gdouble ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu);
 
 G_END_DECLS
 
@@ -109,6 +110,13 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
+
+NCM_INLINE gdouble
+ncm_rng_chisq_gen(NcmRNG *rng, const gdouble nu)
+{
+  return gsl_ran_chisq(rng->r, nu);
+}
+
 
 NCM_INLINE gdouble
 ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)

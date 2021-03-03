@@ -94,6 +94,7 @@ ncm_sources = \
         math/ncm_stats_dist2d_spline.c       \
 	math/ncm_stats_dist_nd.c             \
 	math/ncm_stats_dist_nd_kde_gauss.c   \
+	math/ncm_stats_dist_nd_kde_studentt.c\
 	math/ncm_bootstrap.c                 \
 	math/ncm_spline.c                    \
 	math/ncm_spline_gsl.c                \
@@ -227,6 +228,7 @@ ncm_headers =                                \
         math/ncm_stats_dist2d_spline.h       \
 	math/ncm_stats_dist_nd.h             \
 	math/ncm_stats_dist_nd_kde_gauss.h   \
+	math/ncm_stats_dist_nd_kde_studentt.h\
 	math/ncm_bootstrap.h                 \
 	math/ncm_spline.h                    \
 	math/ncm_spline_gsl.h                \
