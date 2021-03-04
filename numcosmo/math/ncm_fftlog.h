@@ -127,6 +127,7 @@ gboolean ncm_fftlog_get_noring (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
+gdouble *ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size);
 void ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk);
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
 void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data);
