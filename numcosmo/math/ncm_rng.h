@@ -112,9 +112,9 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE gdouble
-ncm_rng_chisq_gen(NcmRNG *rng, const gdouble nu)
+ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu)
 {
-  return gsl_ran_chisq(rng->r, nu);
+  return gsl_ran_chisq (rng->r, nu);
 }
 
 

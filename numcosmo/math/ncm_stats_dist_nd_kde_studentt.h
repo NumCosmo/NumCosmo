@@ -61,7 +61,7 @@ struct _NcmStatsDistNdKDEStudentt
 
 GType ncm_stats_dist_nd_kde_studentt_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_new (const guint dim, const gboolean LOOCV, const guint freedom);
+NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_new (const guint dim, const gboolean LOOCV, const gdouble nu);
 
 NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_ref (NcmStatsDistNdKDEStudentt *dndg);
 void ncm_stats_dist_nd_kde_studentt_free (NcmStatsDistNdKDEStudentt *dndg);
