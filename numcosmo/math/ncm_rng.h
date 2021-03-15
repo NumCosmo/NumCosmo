@@ -112,13 +112,6 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE gdouble
-ncm_rng_chisq_gen(NcmRNG *rng, const gdouble nu)
-{
-  return gsl_ran_chisq(rng->r, nu);
-}
-
-
-NCM_INLINE gdouble
 ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)
 {
   return gsl_ran_flat (rng->r, xl, xu);
@@ -170,6 +163,12 @@ NCM_INLINE gdouble
 ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)
 {
   return gsl_ran_gamma (rng->r, a, b);
+}
+
+NCM_INLINE gdouble
+ncm_rng_chisq_gen(NcmRNG *rng, const gdouble nu)
+{
+  return gsl_ran_chisq(rng->r, nu);
 }
 
 G_END_DECLS
