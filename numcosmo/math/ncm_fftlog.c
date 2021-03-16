@@ -875,6 +875,26 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
+ * ncm_fftlog_get_Ym:
+ * @fftlog: a #NcmFftlog
+ * @size: (out): return size
+ *
+ * Computes the $Y_m$ vector.
+ *
+ * Returns: (transfer none) (array length=size): $Y_m$.
+ */
+gdouble *
+ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
+{
+  fftw_complex *Ym_0 = g_ptr_array_index (fftlog->Ym, 0);
+  NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+
+  size[0] = ncm_fftlog_get_full_size (fftlog) * 2;
+
+  return (gdouble *)Ym_0;
+}
+
+/**
  * ncm_fftlog_get_lnk_vector:
  * @fftlog: a #NcmFftlog
  * @lnk: a #NcmVector
