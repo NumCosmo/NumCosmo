@@ -134,6 +134,7 @@
       <xi:include href="xml/ncm_stats_dist2d_spline.xml"/>
       <xi:include href="xml/ncm_stats_dist_nd.xml"/>
       <xi:include href="xml/ncm_stats_dist_nd_kde_gauss.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd_kde_studentt.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_prior.xml"/>
