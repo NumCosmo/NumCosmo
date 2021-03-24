@@ -210,8 +210,7 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
       ncm_vector_fast_set (sc->g,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
     }
   }
-  
-  
+
   {
     const gdouble g_0 = 1.0 / h_0;
     const gdouble g_1 = 1.0 / h_1;
@@ -271,7 +270,7 @@ _ncm_spline_cubic_notaknot_prepare (NcmSpline *s)
   size_t i;
   
   _ncm_spline_cubic_notaknot_prepare_base (s);
-  
+
   for (i = 0; i < n; i++)
   {
     const gdouble dx    = ncm_vector_get (s->xv, i + 1) - ncm_vector_get (s->xv, i);

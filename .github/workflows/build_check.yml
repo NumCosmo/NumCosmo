@@ -2,6 +2,12 @@ name: Build and Check
 
 on: [push, pull_request]
 
+#env:
+#  CC: gcc-10
+#  FC: gfortran-10
+#  F77: gfortran-10
+#  F90: gfortran-10
+
 jobs:
 
   build-gcc-ubuntu:
@@ -15,9 +21,17 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure --enable-gtk-doc --enable-man
+      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
     - name: make
       run: make -j8
+    - name: Test example compilation
+      run: |
+        sudo make install
+        cd examples
+        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
+        ./example_simple
+        ./example_ca
     - name: make check
       run: make check -j8
     - name: make dist
@@ -55,11 +69,21 @@ jobs:
   build-gcc-macos:
 
     runs-on: macos-latest
+    env:
+      CC: gcc-10
+      FC: gfortran-10
+      F77: gfortran-10
+      F90: gfortran-10
+      LIBRARY_PATH: /usr/local/lib
+      LD_LIBRARY_PATH: /usr/local/lib
+      DYLD_LIBRARY_PATH: /usr/local/lib
+      CPATH: /usr/local/include
 
     steps:
     - uses: actions/checkout@v2
     - name: Install prereq
-      run: brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt
+      run: |
+        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure

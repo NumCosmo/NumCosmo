@@ -9,7 +9,8 @@ notebooks_DATA = \
 	LRTvsFisher.ipynb                      \
 	MagDustBounce.ipynb                    \
 	BounceVecPert.ipynb                    \
-	NC_CCL_Colossus_density_profiles.ipynb
+	NC_CCL_Colossus_density_profiles.ipynb \
+	FisherMatrixExample.ipynb
 
 EXTRA_DIST = \
 	$(notebooks_DATA)
