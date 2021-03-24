@@ -357,7 +357,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
   /**
    * NcHaloDensityProfile:log10MDelta:
    *
-   * Cluster mass $M_\Delta$ in units of solar masses $M_\odot$
+   * Logarithm base 10 of the cluster mass $M_\Delta$ in units of solar masses $M_\odot$
    * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is
    * the over-density, see Eq. \eqref{eq:mrr}.
    *
@@ -1156,7 +1156,7 @@ nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *co
  * @R: radius $R$ in Mpc
  * @z: redshift $z$
  *
- * This function computes 2D projection of the density profile
+ * This function computes the 2D projection of the density profile
  * at radius $R$ and redshift $z$, see Eq. \eqref{}.
  *
  * Returns: the value of $\Sigma(R)\left[M_\odot\times\mathrm{Mpc}^{-2}\right]$.

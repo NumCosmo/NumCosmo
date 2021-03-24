@@ -259,6 +259,39 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
 }
 
 /**
+ * nc_halo_density_profile_nfw_class_set_ni:
+ * @num: boolean (true - numeric; false - analytic)  
+ *
+ * This function substitutes the child methods by the parent ones if num is TRUE. 
+ * It enforces the computations to be performed by numerical integration.
+ *
+ * WARNING: this function modifies the behavior object. It should be used for testing only!   
+ *
+ */
+void 
+nc_halo_density_profile_nfw_class_set_ni (gboolean num)
+{
+  NcHaloDensityProfileClass *dp_class        = g_type_class_ref (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
+  NcHaloDensityProfileClass *dp_parent_class = g_type_class_peek_parent (dp_class);
+  
+  if (num)
+  {
+    dp_class->eval_dl_spher_mass = dp_parent_class->eval_dl_spher_mass;
+    dp_class->eval_dl_2d_density = dp_parent_class->eval_dl_2d_density;
+    dp_class->eval_dl_cyl_mass   = dp_parent_class->eval_dl_cyl_mass;
+  }
+  else
+  {
+    dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
+    dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
+    dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
+  }
+
+  g_type_class_unref (dp_class);  
+}
+
+
+/**
  * nc_halo_density_profile_nfw_new:
  * @mdef: a #NcHaloDensityProfileMassDef
  * @Delta: cluster threshold mass definition $\Delta$
