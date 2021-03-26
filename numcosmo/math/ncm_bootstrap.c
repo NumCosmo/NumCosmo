@@ -128,7 +128,11 @@ _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GPar
       if (bstrap->init)
       {
         gsize msize = sizeof (guint) * bstrap->bootstrap_index->len;
+#if GLIB_CHECK_VERSION(2,68,0)
+        gpointer mem = g_memdup2 (bstrap->bootstrap_index->data, msize);
+#else
         gpointer mem = g_memdup (bstrap->bootstrap_index->data, msize);
+#endif /* GLIB_CHECK_VERSION(2,68,0) */
         var = g_variant_new_from_data (G_VARIANT_TYPE ("au"),
                                        mem, msize, TRUE, &g_free, mem);
       }

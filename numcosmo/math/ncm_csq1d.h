@@ -67,6 +67,7 @@ struct _NcmCSQ1DClass
 
 /**
  * NcmCSQ1DEvolState:
+ * @NCM_CSQ1D_EVOL_STATE_INVALID: Invalid state
  * @NCM_CSQ1D_EVOL_STATE_ADIABATIC: Adiabatic state variables $(\alpha,\, \delta\gamma)$
  * @NCM_CSQ1D_EVOL_STATE_UP: $(\chi,\, U_+)$ state variables
  * @NCM_CSQ1D_EVOL_STATE_UM: $(\chi,\, U_-)$ state variables

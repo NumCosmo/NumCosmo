@@ -2,6 +2,155 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Minor release v0.15.3.
+
+
+[v0.15.3]
+ * Minor release.
+
+ * Included a function to compute numerical integrals of the NFW profile (instead
+     of the analytical forms). To be used for testing only!
+
+ * New methods to access Ym values in NcmFftlog.
+
+ * Added a second run to avoid unfinished minimization process.
+
+ * Removed debug msgs from coverage build.
+
+ * Removed coverage flags from introspection build.
+
+ * Debug coverage build.
+
+ * Debug coverage build.
+
+ * Debug coverage build.
+
+ * Removed LDFLAGS for coverage.
+
+ * Debug coveralls build.
+
+ * Moved (all) flags to the right places.
+
+ * Moved flags to the right place.
+
+ * Added explict CODE_COVERAGE_LIBS to introspection build.
+
+ * Debug coveralls build.
+
+ * Test speedups.
+
+ * Allowed reasonable failures.
+
+ * Added 10% allowed test errors when estimating hessian computation error.
+
+ * Testing ncm_stats_dist_nd_kde_gauss.c. Minor modifications to
+     ncm_data_gauss_cov_mvnd.c. New notebook to test multidimensional
+     interpolation.
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA.
+
+ * Debug mac-os GHA.
+
+ * Debug mac-os GHA build.
+
+ * Trying reinstalling gmp.
+
+ * Testing a solution for GHA on mac-os.
+
+ * Still debugging macos build in GHA.
+
+ * Debug macos build.
+
+ * Conditional use of sincos.
+
+ * Fixed sincos warning.
+
+ * More compiler env.
+
+ * Fixed sincos included warning.
+
+ * Updated example.
+
+ * Setting compilers.
+
+ * Cask install for gfortran in macos build.
+
+ * Testing lib dir in GHA.
+
+ * Added cask install fortran for macos build.
+
+ * Trying lib dirs.
+
+ * Added gfortran req to macos build.
+
+ * Added prefix option to configure in GHA.
+
+ * Fixed example name and moved test.
+
+ * Rolled back autoconf version req.
+
+ * Included missing make install in build check.
+
+ * Updated autotools and deps. New check in GHA. Fixed bug in numcosmo.pc.in.
+
+ * Working on ncm_csq1d.c. New notebook FisherMatrixExample.ipynb.
+
+ * Adding timezone info.
+
+ * New docker image with NumCosmo prereqs.
+
+ * Working on nc_de_cont.
+
+ * Running actions in every branch.
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing coveralls build.
+
+ * Updated CI badge to GHA.
+
+ * Adding missing prereq for the macos build.
+
+ * Better workflow name and removed unnecessary prereq in the macos build.
+
+ * Adding macos build.
+
+ * Removed debug print in c-cpp.yml.
+
+ * Adding references.xml to the repo.
+
+ * Update c-cpp.yml
+
+     Checking xml logs
+ * Update c-cpp.yml
+
+     Debug xml build
+ * Fixed doc typo.
+
+ * Updated to sundials 5.5.0.
+
+ * Added NumCosmo CCL test notebook.
+
+ * Fixed conditional compilation for system with gsl < 2.4.
+
+
+[v0.15.2]
  * Minor release 0.15.2.
 
  * Updated tests and fixed indentation.
