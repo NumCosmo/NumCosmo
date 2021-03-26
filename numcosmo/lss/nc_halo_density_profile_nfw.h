@@ -57,6 +57,7 @@ struct _NcHaloDensityProfileNFW
 
 GType nc_halo_density_profile_nfw_get_type (void) G_GNUC_CONST;
 
+void nc_halo_density_profile_nfw_class_set_ni (gboolean num);
 NcHaloDensityProfileNFW *nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta);
 
 G_END_DECLS
