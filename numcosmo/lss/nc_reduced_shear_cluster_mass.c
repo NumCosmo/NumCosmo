@@ -42,7 +42,7 @@
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
 #include "math/ncm_memory_pool.h"
-#include "math/Faddeeva.h"
+#include "misc/Faddeeva.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>

@@ -3,7 +3,7 @@
 #  include "config.h"
 #endif
 
-#include "math/rcm.h"
+#include "rcm.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -44,8 +44,6 @@
 #include "math/ncm_lapack.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include "gslextras/cqp/gsl_cqp.h"
-#include "libqp.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
 #include "levmar/levmar.h"

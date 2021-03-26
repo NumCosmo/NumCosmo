@@ -1121,6 +1121,7 @@ numcosmo/plc/Makefile
 numcosmo/class/Makefile
 numcosmo/sundials/Makefile
 numcosmo/toeplitz/Makefile
+numcosmo/misc/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile

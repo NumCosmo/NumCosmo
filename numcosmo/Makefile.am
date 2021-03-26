@@ -39,7 +39,7 @@ AM_CFLAGS = \
 	 $(MY_CFLAGS) \
 	 $(CODE_COVERAGE_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials misc .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
@@ -62,7 +62,8 @@ libnumcosmo_la_LIBADD =         \
 	levmar/liblevmar.la     \
 	class/libclass.la       \
 	sundials/libsundials.la \
-	toeplitz/libtoeplitz.la
+	toeplitz/libtoeplitz.la \
+	misc/libnumcosmo_misc.la
 
 ncm_sources = \
 	ncm_build_inline.c                    \
@@ -191,17 +192,7 @@ ncm_sources = \
 	math/dividedifference.c   \
 	math/ncm_memory_pool.c
 
-ncm_sources_nogi = \
-	math/Faddeeva.c   \
-	math/rcm.c        \
-	math/LowRankQP.c  \
-	math/libqp_gsmo.c \
-	math/libqp_splx.c \
-	math/libqp.h      \
-	math/nnls.c       \
-	gslextras/cqp/cqpminimizer.c  \
-	gslextras/cqp/initial_point.c \
-	gslextras/cqp/mg_pdip.c
+ncm_sources_nogi = 
 
 ncm_headers =                                 \
 	math/ncm_c.h                          \
@@ -329,15 +320,11 @@ ncm_headers =                                 \
 	math/dividedifference.h   \
 	math/ncm_memory_pool.h
 
-ncm_headers_nogi = \
-	math/ncm_gsl_blas_types.h
+ncm_headers_nogi = 
 
 ncm_headers_internal = \
-	gslextras/cqp/gsl_cqp.h           \
-	gslextras/cqp/initial_point.h     \
-	math/rcm.h                        \
+	math/ncm_gsl_blas_types.h         \
 	math/ncm_flapack.h                \
-	math/Faddeeva.h                   \
 	perturbations/nc_hipert_private.h
 
 nc_headers = \
