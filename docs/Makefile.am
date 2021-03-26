@@ -124,7 +124,12 @@ IGNORE_HFILES= \
               toeplitz                  \
               sundials                  \
               rcm.h                     \
-              rcm.c
+              rcm.c                     \
+              nnls.c                    \
+              libqp_gsmo.c              \
+              libqp.h                   \
+              libqp_splx.c
+
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

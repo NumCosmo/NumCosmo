@@ -651,7 +651,7 @@ ncm_stats_dist_nd_get_dim (NcmStatsDistNd *dnd)
 }
 
 /**
- * ncm_stats_dist_nd_get_rot_bandwidth: (virtual get_rot_bandwidth):
+ * ncm_stats_dist_nd_get_rot_bandwidth: (virtual get_rot_bandwidth)
  * @dnd: a #NcmStatsDistNd
  * @d: problem dimension
  * @n: sample size
@@ -667,10 +667,12 @@ ncm_stats_dist_nd_get_rot_bandwidth (NcmStatsDistNd *dnd, const guint d, const g
 }
 
 /**
- * ncm_stats_dist_nd_get_kernel_lnnorm: (virtual get_kernel_lnnorm):
+ * ncm_stats_dist_nd_get_kernel_lnnorm: (virtual get_kernel_lnnorm)
  * @dnd: a #NcmStatsDistNd
+ * @cov_decomp: Cholesky decomposition (U) of the covariance matrix
  * @d: problem dimension
  * @n: sample size
+ * @href: interpolation bandwidth
  *
  * Returns: the log-normalization of a single kernel.
  */
