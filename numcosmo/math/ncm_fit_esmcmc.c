@@ -2000,7 +2000,7 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
   m2lnL_var = ncm_vector_get (var, NCM_FIT_ESMCMC_M2LNL_ID);
   cb        = ncm_mset_catalog_calc_const_break (self->mcat, NCM_FIT_ESMCMC_M2LNL_ID, self->mtype);
   ti        = (self->cur_sample_id + 1) / self->nwalkers;
-  
+
   while (ntimes * cb > ti)
   {
     const guint truns = ntimes * cb;

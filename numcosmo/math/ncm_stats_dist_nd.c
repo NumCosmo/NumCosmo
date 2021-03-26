@@ -490,6 +490,7 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
 {
   NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd);
   NcmStatsDistNdPrivate * const self = dnd->priv;
+  const gdouble dbl_limit = 1.0;
   gint method = NNLS;
   gint i;
 
@@ -536,6 +537,21 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     default:
       g_assert_not_reached ();
       break;
+  }
+
+  if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
+  {
+    const guint fi = ncm_vector_get_min_index (m2lnp);
+
+    g_assert_cmpuint (fi, <, ncm_vector_len (m2lnp));
+
+    ncm_vector_set_zero (self->weights);
+    ncm_vector_set (self->weights, fi, 1.0);
+
+    self->href  = 1.0;
+    self->href2 = 1.0;
+
+    return;
   }
 
   if (self->n > 10000)
