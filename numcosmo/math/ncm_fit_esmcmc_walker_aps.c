@@ -262,8 +262,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
     self->dndg0      = ncm_stats_dist_nd_kde_gauss_new (self->nparams, FALSE);
     self->dndg1      = ncm_stats_dist_nd_kde_gauss_new (self->nparams, FALSE);
 
-    ncm_stats_dist_nd_kde_gauss_set_over_smooth (self->dndg0, 1.273);
-    ncm_stats_dist_nd_kde_gauss_set_over_smooth (self->dndg1, 1.273);
+    ncm_stats_dist_nd_set_over_smooth (NCM_STATS_DIST_ND (self->dndg0), 1.273);
+    ncm_stats_dist_nd_set_over_smooth (NCM_STATS_DIST_ND (self->dndg1), 1.273);
     
     for (i = 0; i < self->size; i++)
     {
@@ -337,7 +337,7 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
       ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
 
-      ncm_stats_dist_nd_kde_gauss_add_obs (self->dndg0, theta_i);
+      ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->dndg0), theta_i);
       /*printf ("SETUP! ADD   %d\n", i);*/
     }
 
@@ -369,7 +369,7 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
       ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
 
-      ncm_stats_dist_nd_kde_gauss_add_obs (self->dndg1, theta_i);
+      ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->dndg1), theta_i);
       /*printf ("SETUP! ADD   %d\n", i);*/
     }
     

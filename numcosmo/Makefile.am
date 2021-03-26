@@ -192,9 +192,13 @@ ncm_sources = \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c  \
-	math/rcm.c       \
-	math/LowRankQP.c \
+	math/Faddeeva.c   \
+	math/rcm.c        \
+	math/LowRankQP.c  \
+	math/libqp_gsmo.c \
+	math/libqp_splx.c \
+	math/libqp.h      \
+	math/nnls.c       \
 	gslextras/cqp/cqpminimizer.c  \
 	gslextras/cqp/initial_point.c \
 	gslextras/cqp/mg_pdip.c

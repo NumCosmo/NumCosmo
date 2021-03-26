@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_stats_dist_nd_kde_studentt.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -55,27 +56,22 @@ struct _NcmStatsDistNdKDEStudenttClass
 struct _NcmStatsDistNdKDEStudentt
 {
   NcmStatsDistNd parent_instance;
-
+  
   NcmStatsDistNdKDEStudenttPrivate *priv;
 };
 
 GType ncm_stats_dist_nd_kde_studentt_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_new (const guint dim, const gboolean LOOCV, const gdouble nu);
+NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_new (const guint dim, const NcmStatsDistNdCV cv_type, const gdouble nu);
 
-NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_ref (NcmStatsDistNdKDEStudentt *dndg);
-void ncm_stats_dist_nd_kde_studentt_free (NcmStatsDistNdKDEStudentt *dndg);
-void ncm_stats_dist_nd_kde_studentt_clear (NcmStatsDistNdKDEStudentt **dndg);
+NcmStatsDistNdKDEStudentt *ncm_stats_dist_nd_kde_studentt_ref (NcmStatsDistNdKDEStudentt *dndt);
+void ncm_stats_dist_nd_kde_studentt_free (NcmStatsDistNdKDEStudentt *dndt);
+void ncm_stats_dist_nd_kde_studentt_clear (NcmStatsDistNdKDEStudentt **dndt);
 
-void ncm_stats_dist_nd_kde_studentt_set_over_smooth (NcmStatsDistNdKDEStudentt *dndg, const gdouble over_smooth);
-gdouble ncm_stats_dist_nd_kde_studentt_get_over_smooth (NcmStatsDistNdKDEStudentt *dndg);
-
-void ncm_stats_dist_nd_kde_studentt_set_LOOCV_bandwidth_adj (NcmStatsDistNdKDEStudentt *dndg, gboolean LOOCV);
-gboolean ncm_stats_dist_nd_kde_studentt_get_LOOCV_bandwidth_adj (NcmStatsDistNdKDEStudentt *dndg);
-
-void ncm_stats_dist_nd_kde_studentt_add_obs_weight (NcmStatsDistNdKDEStudentt *dndg, NcmVector *y, const gdouble w);
-void ncm_stats_dist_nd_kde_studentt_add_obs (NcmStatsDistNdKDEStudentt *dndg, NcmVector *y);
+void ncm_stats_dist_nd_kde_studentt_set_nu (NcmStatsDistNdKDEStudentt *dndt, const gdouble nu);
+gdouble ncm_stats_dist_nd_kde_studentt_get_nu (NcmStatsDistNdKDEStudentt *dndt);
 
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST_ND_KDE_STUDENTT_H_ */
+

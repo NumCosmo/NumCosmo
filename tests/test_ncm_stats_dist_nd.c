@@ -102,7 +102,7 @@ static void
 test_ncm_stats_dist_nd_new_kde_gauss (TestNcmStatsDistNd *test, gconstpointer pdata)
 {
   test->dim   = g_test_rand_int_range (2, 4);
-  test->dnd   = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (test->dim, TRUE));
+  test->dnd   = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (test->dim, NCM_STATS_DIST_ND_CV_NONE));
   test->nfail = 0;
 }
 
@@ -133,7 +133,7 @@ test_ncm_stats_dist_nd_gauss_dens_est (TestNcmStatsDistNd *test, gconstpointer p
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE);*/
-    ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
+    ncm_stats_dist_nd_add_obs (test->dnd, y);
   }
 
   ncm_stats_dist_nd_prepare (test->dnd);
@@ -151,7 +151,7 @@ test_ncm_stats_dist_nd_gauss_dens_est (TestNcmStatsDistNd *test, gconstpointer p
       ntests_fail++;
     
     /* ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE); */
-    /* printf ("# EVAL: % 22.15g % 22.15g % 22.15f\n", p_s,  exp (-0.5 * m2lnL), fabs (exp (-0.5 * m2lnL) / p_s - 1.0)); */
+    /* printf ("# EVAL: % 22.15g % 22.15g % 22.15g % 22.15f\n", p_s,  exp (-0.5 * m2lnL), p_s / exp (-0.5 * m2lnL), fabs (exp (-0.5 * m2lnL) / p_s - 1.0)); */
   }
 
   /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
@@ -186,7 +186,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp (TestNcmStatsDistNd *test, gconstpointe
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnL;
 
-    ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
+    ncm_stats_dist_nd_add_obs (test->dnd, y);
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
@@ -253,7 +253,7 @@ test_ncm_stats_dist_nd_gauss_dens_interp_unormalized (TestNcmStatsDistNd *test, 
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnL;
 
-    ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
+    ncm_stats_dist_nd_add_obs (test->dnd, y);
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
@@ -329,7 +329,7 @@ test_ncm_stats_dist_nd_gauss_sampling (TestNcmStatsDistNd *test, gconstpointer p
     gdouble m2lnL;
     /*ncm_vector_log_vals (y, "Y: ", "% 12.5g", TRUE);*/
 
-    ncm_stats_dist_nd_kde_gauss_add_obs (NCM_STATS_DIST_ND_KDE_GAUSS (test->dnd), y);
+    ncm_stats_dist_nd_add_obs (test->dnd, y);
 
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
   }
