@@ -320,11 +320,11 @@ ncm_headers =                                 \
 	math/dividedifference.h   \
 	math/ncm_memory_pool.h
 
-ncm_headers_nogi = 
+ncm_headers_nogi = \
+	math/ncm_flapack.h        \
+	math/ncm_gsl_blas_types.h
 
 ncm_headers_internal = \
-	math/ncm_gsl_blas_types.h         \
-	math/ncm_flapack.h                \
 	perturbations/nc_hipert_private.h
 
 nc_headers = \
