@@ -30,8 +30,37 @@
  * @short_description: An N dimensional probability distributions using gaussian KDE
  *
  * An arbitrary N dimensional probability distribution using gaussian KDE.
+ *
  * 
- */
+ * This object provides the tools to perform a radial basis interpolation
+ * in a multidimensional function, using a multivariate gaussian distribution.
+ * such that we are able to sample the original functio from this new interpolation function.
+ * For more informations about radial basis interpolation,   
+ * check #NcmStatsDistNd.
+ * A brief description of the Multivariate gaussian function can be found below.
+ * For more information, check [[The R Journal Vol. 5/2, December 2013](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)]  
+ *
+ * In this file, we use the Multivariate gaussian function as the radial basis function. The function has the stocastic representation given by  
+ *
+ * \begin{align} 
+ * \boldsymbol{X}=\boldsymbol{\mu}+ A \boldsymbol{Z} 
+ * ,\end{align}                     
+ * where $\boldsymbol{Z}$ is a p-dimensional random vector, $A$ is a $p \times p$ matrix and $\mu$ is the mean vector.
+ *
+ *$\boldsymbol{X}$ is fully determined by the covariance matrix $\Sigma = \boldsymbol{A}\boldsymbol{A}^t$ and the mean vector $\mu$.
+ * Assuming that the covariance matrix is positive definite, $\boldsymbol{X}$ has the probability density
+ *
+ * \begin{align} 
+ * f_{X}(x)=\frac{1}{(2 \pi)^{d / 2} \sqrt{\operatorname{det} \Sigma}} \exp \left(-\frac{1}{2}(x-\mu)^{\top} \Sigma^{-1}(x-\mu)\right), \quad x \in \mathbb{R}^{d}    
+ *, \end{align} 
+ * where $p$ is the dimension and $x$ are the points to be evaluated. 
+ *
+ * Once this object is initialized, we may use the methods in the #NcmStatsDistNd class to perform the interpolation 
+ * and to generate a sample from the interpolated polinomal function.    
+ *
+ * The user must provide the following input values: $p$ - ncm_stats_dist_nd_kde_gauss_new(),
+ * cv_type - ncm_stats_dist_nd_kde_gauss_new().
+ **/
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
