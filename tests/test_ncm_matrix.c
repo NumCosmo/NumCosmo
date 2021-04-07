@@ -53,6 +53,9 @@ void test_ncm_matrix_sanity (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_operations (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_add_mul (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_square_to_sym (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_update_vector (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_sym_update_vector (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_submatrix (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_serialization (TestNcmMatrix *test, gconstpointer pdata);
@@ -115,7 +118,21 @@ main (gint argc, gchar *argv[])
               &test_ncm_matrix_new,
               &test_ncm_matrix_log_exp,
               &test_ncm_matrix_free);
-  
+
+  g_test_add ("/ncm/matrix/square_to_sym", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_square_to_sym,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/update_vector", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_update_vector,
+              &test_ncm_matrix_free);
+  g_test_add ("/ncm/matrix/sym_update_vector", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_sym_update_vector,
+              &test_ncm_matrix_free);
+
   g_test_add ("/ncm/matrix/submatrix", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_submatrix,
@@ -633,6 +650,273 @@ test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, exp_m);
   NCM_TEST_FREE (ncm_matrix_free, exp_c);
   NCM_TEST_FREE (ncm_matrix_free, log_m);
+}
+
+void
+test_ncm_matrix_square_to_sym (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gdouble reltol = 1.0e-14;
+  const gdouble abstol = 0.0;
+  gint tests;
+  for (tests = 0; tests < 10; tests++)
+  {
+    gint nrows    = g_test_rand_int_range (2, 100);
+    gint ncols    = g_test_rand_int_range (2, 100);
+    NcmMatrix *A  = ncm_matrix_new (nrows, ncols);
+    NcmMatrix *C0 = ncm_matrix_new (nrows, nrows);
+    NcmMatrix *C1 = ncm_matrix_new (ncols, ncols);
+    gint i, j, k;
+
+    if (g_test_rand_int_range (0, 1))
+    {
+      NcmMatrix *subA, *subC0, *subC1;
+      nrows = g_test_rand_int_range (2, nrows);
+      ncols = g_test_rand_int_range (2, ncols);
+      subA  = ncm_matrix_get_submatrix (A,  0, 0, nrows, ncols);
+      subC0 = ncm_matrix_get_submatrix (C0, 0, 0, nrows, nrows);
+      subC1 = ncm_matrix_get_submatrix (C1, 0, 0, ncols, ncols);
+
+      ncm_matrix_clear (&A);
+      ncm_matrix_clear (&C0);
+      ncm_matrix_clear (&C1);
+
+      A  = subA;
+      C0 = subC0;
+      C1 = subC1;
+    }
+
+    for (i = 0; i < nrows; i++)
+    {
+      for (j = 0; j < ncols; j++)
+      {
+        ncm_matrix_set (A, i, j, g_test_rand_double ());
+      }
+    }
+
+    ncm_matrix_square_to_sym (A, 'N', 'U', C0);
+    ncm_matrix_square_to_sym (A, 'T', 'U', C1);
+
+    for (i = 0; i < nrows; i++)
+    {
+      for (j = i; j < nrows; j++)
+      {
+        gdouble C0_ij = 0.0;
+        for (k = 0; k < ncols; k++)
+        {
+          C0_ij += ncm_matrix_get (A, i, k) * ncm_matrix_get (A, j, k);
+        }
+        ncm_assert_cmpdouble_e (ncm_matrix_get (C0, i, j), ==, C0_ij, reltol, abstol);
+      }
+    }
+
+    for (i = 0; i < ncols; i++)
+    {
+      for (j = i; j < ncols; j++)
+      {
+        gdouble C1_ij = 0.0;
+        for (k = 0; k < nrows; k++)
+        {
+          C1_ij += ncm_matrix_get (A, k, i) * ncm_matrix_get (A, k, j);
+        }
+        ncm_assert_cmpdouble_e (ncm_matrix_get (C1, i, j), ==, C1_ij, reltol, abstol);
+      }
+    }
+
+    ncm_matrix_square_to_sym (A, 'N', 'L', C0);
+    ncm_matrix_square_to_sym (A, 'T', 'L', C1);
+
+    for (i = 0; i < nrows; i++)
+    {
+      for (j = 0; j <= i; j++)
+      {
+        gdouble C0_ij = 0.0;
+        for (k = 0; k < ncols; k++)
+        {
+          C0_ij += ncm_matrix_get (A, i, k) * ncm_matrix_get (A, j, k);
+        }
+        ncm_assert_cmpdouble_e (ncm_matrix_get (C0, i, j), ==, C0_ij, reltol, abstol);
+      }
+    }
+
+    for (i = 0; i < ncols; i++)
+    {
+      for (j = 0; j <= i; j++)
+      {
+        gdouble C1_ij = 0.0;
+        for (k = 0; k < nrows; k++)
+        {
+          C1_ij += ncm_matrix_get (A, k, i) * ncm_matrix_get (A, k, j);
+        }
+        ncm_assert_cmpdouble_e (ncm_matrix_get (C1, i, j), ==, C1_ij, reltol, abstol);
+      }
+    }
+
+    ncm_matrix_clear (&A);
+    ncm_matrix_clear (&C0);
+    ncm_matrix_clear (&C1);
+  }
+}
+
+void
+test_ncm_matrix_update_vector (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gdouble reltol = 1.0e-14;
+  const gdouble abstol = 0.0;
+  gint tests;
+  for (tests = 0; tests < 10; tests++)
+  {
+    gint nrows          = g_test_rand_int_range (2, 100);
+    gint ncols          = g_test_rand_int_range (2, 100);
+    NcmMatrix *A        = ncm_matrix_new (nrows, ncols);
+    NcmVector *v        = ncm_vector_new (ncols);
+    NcmVector *v_dup    = ncm_vector_new (ncols);
+    NcmVector *u        = ncm_vector_new (nrows);
+    NcmVector *u_dup    = ncm_vector_new (nrows);
+    const gdouble alpha = g_test_rand_double ();
+    const gdouble beta  = g_test_rand_double ();
+    gint i, j;
+
+    if (g_test_rand_int_range (0, 1))
+    {
+      NcmMatrix *subA;
+      nrows = g_test_rand_int_range (2, nrows);
+      ncols = g_test_rand_int_range (2, ncols);
+      subA  = ncm_matrix_get_submatrix (A,  0, 0, nrows, ncols);
+
+      ncm_matrix_clear (&A);
+
+      A  = subA;
+    }
+
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_vector_set (v, j, g_test_rand_double ());
+      for (i = 0; i < nrows; i++)
+      {
+        ncm_matrix_set (A, i, j, g_test_rand_double ());
+        if (j == 0)
+          ncm_vector_set (u, i, g_test_rand_double ());
+      }
+    }
+
+    ncm_vector_memcpy (u_dup, u);
+    ncm_matrix_update_vector (A, 'N', alpha, v, beta, u_dup);
+
+    for (i = 0; i < nrows; i++)
+    {
+      gdouble Av_i = 0.0;
+      for (j = 0; j < ncols; j++)
+      {
+        Av_i += ncm_matrix_get (A, i, j) * ncm_vector_get (v, j);
+      }
+      Av_i = alpha * Av_i + beta * ncm_vector_get (u, i);
+
+      ncm_assert_cmpdouble_e (ncm_vector_get (u_dup, i), ==, Av_i, reltol, abstol);
+    }
+
+    ncm_vector_memcpy (v_dup, v);
+    ncm_matrix_update_vector (A, 'T', alpha, u, beta, v_dup);
+
+    for (i = 0; i < ncols; i++)
+    {
+      gdouble Au_i = 0.0;
+      for (j = 0; j < nrows; j++)
+      {
+        Au_i += ncm_matrix_get (A, j, i) * ncm_vector_get (u, j);
+      }
+      Au_i = alpha * Au_i + beta * ncm_vector_get (v, i);
+
+      ncm_assert_cmpdouble_e (ncm_vector_get (v_dup, i), ==, Au_i, reltol, abstol);
+    }
+
+    ncm_matrix_clear (&A);
+    ncm_vector_clear (&v);
+    ncm_vector_clear (&v_dup);
+    ncm_vector_clear (&u);
+    ncm_vector_clear (&u_dup);
+  }
+}
+
+void
+test_ncm_matrix_sym_update_vector (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gdouble reltol = 1.0e-14;
+  const gdouble abstol = 0.0;
+  gint tests;
+
+  for (tests = 0; tests < 10; tests++)
+  {
+    gint n              = g_test_rand_int_range (2, 100);
+    NcmMatrix *A        = ncm_matrix_new (n, n);
+    NcmVector *v        = ncm_vector_new (n);
+    NcmVector *u        = ncm_vector_new (n);
+    NcmVector *u_dup    = ncm_vector_new (n);
+    const gdouble alpha = g_test_rand_double ();
+    const gdouble beta  = g_test_rand_double ();
+    gchar Uplo          = g_test_rand_int_range (0, 1) ? 'U' : 'L';
+    gint i, j;
+
+    if (g_test_rand_int_range (0, 1))
+    {
+      NcmMatrix *subA;
+
+      n    = g_test_rand_int_range (2, n);
+      subA = ncm_matrix_get_submatrix (A,  0, 0, n, n);
+
+      ncm_matrix_clear (&A);
+
+      A  = subA;
+    }
+
+    for (j = 0; j < n; j++)
+    {
+      ncm_vector_set (v, j, g_test_rand_double ());
+      for (i = 0; i < n; i++)
+      {
+        ncm_matrix_set (A, i, j, g_test_rand_double ());
+        if (j == 0)
+          ncm_vector_set (u, i, g_test_rand_double ());
+      }
+    }
+
+    ncm_vector_memcpy (u_dup, u);
+    ncm_matrix_sym_update_vector (A, Uplo, alpha, v, beta, u_dup);
+
+    for (i = 0; i < n; i++)
+    {
+      gdouble Av_i = 0.0;
+      if (Uplo == 'U')
+      {
+        for (j = 0; j < i; j++)
+        {
+          Av_i += ncm_matrix_get (A, j, i) * ncm_vector_get (v, j);
+        }
+        for (j = i; j < n; j++)
+        {
+          Av_i += ncm_matrix_get (A, i, j) * ncm_vector_get (v, j);
+        }
+      }
+      else
+      {
+        for (j = 0; j < i; j++)
+        {
+          Av_i += ncm_matrix_get (A, i, j) * ncm_vector_get (v, j);
+        }
+        for (j = i; j < n; j++)
+        {
+          Av_i += ncm_matrix_get (A, j, i) * ncm_vector_get (v, j);
+        }
+      }
+      Av_i = alpha * Av_i + beta * ncm_vector_get (u, i);
+
+      ncm_assert_cmpdouble_e (ncm_vector_get (u_dup, i), ==, Av_i, reltol, abstol);
+    }
+
+    ncm_matrix_clear (&A);
+    ncm_vector_clear (&v);
+    ncm_vector_clear (&u);
+    ncm_vector_clear (&u_dup);
+  }
 }
 
 void

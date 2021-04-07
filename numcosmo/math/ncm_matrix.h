@@ -183,6 +183,10 @@ gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const
 void ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec);
 void ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm);
 void ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym);
+void ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym);
+void ncm_matrix_update_vector (NcmMatrix *cm, gchar NT, const gdouble alpha, NcmVector *v, const gdouble beta, NcmVector *u);
+void ncm_matrix_sym_update_vector (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmVector *v, const gdouble beta, NcmVector *u);
+
 void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
 
 void ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng);

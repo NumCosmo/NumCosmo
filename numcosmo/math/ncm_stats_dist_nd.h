@@ -115,6 +115,8 @@ gdouble ncm_stats_dist_nd_eval (NcmStatsDistNd *dnd, NcmVector *x);
 gdouble ncm_stats_dist_nd_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x);
 void ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
 
+gdouble ncm_stats_dist_nd_get_rnorm (NcmStatsDistNd *dnd);
+
 void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble href, NcmRNG *rng);
 gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble href);
 

@@ -689,6 +689,50 @@ ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble
 }
 
 /**
+ * ncm_lapack_dsysv:
+ * @uplo: UPLO is CHARACTER*1
+ * @n: N is INTEGER
+ * @nrhs: NRHS is INTEGER
+ * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
+ * @lda: LDA is INTEGER
+ * @ipiv: IPIV is INTEGER array, dimension (N)
+ * @b: B is DOUBLE PRECISION array, dimension (LDB,NRHS)
+ * @ldb: LDB is INTEGER
+ * @work: WORK is DOUBLE PRECISION array, dimension (MAX(1,LWORK))
+ * @lwork: LWORK is INTEGER
+ * 
+ * # Purpose #
+ * 
+ * DSYSV uses the diagonal pivoting factorization to compute the
+ * solution to a real system of linear equations A * X = B,
+ * where A is an N-by-N symmetric matrix and X and B are N-by-NRHS
+ * matrices.
+ * 
+ * Returns: INFO is INTEGER
+ * - = 0: successful exit
+ * - < 0: if INFO = -i, the i-th argument had an illegal value
+ * - > 0: if INFO = i, and i is
+ * - <= N:  D(i,i) is exactly zero.  The factorization
+ *   has been completed but the factor D is exactly
+ *   singular, so the solution could not be computed.
+ */
+gint
+ncm_lapack_dsysv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb, gdouble *work, gint lwork)
+{
+#if defined (HAVE_LAPACK) && defined (HAVE_DSYSV_)
+  gint info = 0;
+  uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
+
+  dsysv_ (&uplo, &n, &nrhs, a, &lda, ipiv, b, &ldb, work, &lwork, &info);
+
+  return info;
+#else /* No fall back */
+    g_error ("ncm_lapack_dsysv: lapack not present, no fallback implemented.");
+#endif
+}
+
+
+/**
  * ncm_lapack_dsysvx:
  * @fact: FACT is CHARACTER*1
  * @uplo: UPLO is CHARACTER*1
@@ -709,21 +753,21 @@ ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble
  * @work: WORK is DOUBLE PRECISION array, dimension (MAX(1,LWORK))
  * @lwork: LWORK is INTEGER
  * @iwork: IWORK is INTEGER array, dimension (N)
- * 
+ *
  * # Purpose #
- * 
+ *
  * DSYSVX uses the diagonal pivoting factorization to compute the
  * solution to a real system of linear equations A * X = B,
  * where A is an N-by-N symmetric matrix and X and B are N-by-NRHS
  * matrices.
- * 
+ *
  * Error bounds on the solution and a condition estimate are also
  * provided.
- * 
+ *
  * # Description #
- * 
+ *
  * The following steps are performed:
- * 
+ *
  * 1. If FACT = 'N', the diagonal pivoting method is used to factor A.
  *    The form of the factorization is
  * 		- A = U * D * U**T,  if UPLO = 'U', or
@@ -766,11 +810,11 @@ ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint l
   gint info = 0;
   uplo      = _NCM_LAPACK_CONV_UPLO (uplo);
 	
-	dsysvx_ (&fact, &uplo, &n, &nrhs, a, &lda, af, &ldaf, ipiv, b, &ldb, x, &ldx, rcond, ferr, berr, work, &lwork, iwork, &info);
+  dsysvx_ (&fact, &uplo, &n, &nrhs, a, &lda, af, &ldaf, ipiv, b, &ldb, x, &ldx, rcond, ferr, berr, work, &lwork, iwork, &info);
 
-	return info;
+  return info;
 #else /* No fall back */
-	g_error ("ncm_lapack_dsytrs: lapack not present, no fallback implemented.");
+  g_error ("ncm_lapack_dsysvx: lapack not present, no fallback implemented.");
 #endif
 }
 
@@ -806,14 +850,14 @@ ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdoubl
 {
 #if defined (HAVE_LAPACK) && defined (HAVE_DGEEV_)
   gint info = 0;
-	
-	/* swap L <=> R : col-major <=> row-major */
+
+  /* swap L <=> R : col-major <=> row-major */
   dgeev_ (&jobvr, &jobvl, &n, a, &lda, wr, wi, vr, &ldvr, vl, &ldvl, work, &lwork, &info);  
 
-	return info;
+  return info;
 #else /* No fall back. */
-	g_error ("ncm_lapack_dgeev: no lapack support!");
-	return -1;
+  g_error ("ncm_lapack_dgeev: no lapack support!");
+  return -1;
 #endif
 }
 
@@ -859,10 +903,10 @@ ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, 
 #if defined (HAVE_LAPACK) && defined (HAVE_DGEEVX_)
   gint info = 0;
 	
-	/* swap L <=> R : col-major <=> row-major */
-	dgeevx_ (&balanc, &jobvr, &jobvl, &sense, &n, a, &lda, wr, wi, vr, &ldvr, vl, &ldvl, ilo, ihi, scale, abnrm, rconde, rcondv, work, &lwork, iwork, &info);
+  /* swap L <=> R : col-major <=> row-major */
+  dgeevx_ (&balanc, &jobvr, &jobvl, &sense, &n, a, &lda, wr, wi, vr, &ldvr, vl, &ldvl, ilo, ihi, scale, abnrm, rconde, rcondv, work, &lwork, iwork, &info);
 
-	return info;
+  return info;
 #else /* No fall back. */
 	g_error ("ncm_lapack_dgeev: no lapack support!");
 	return -1;

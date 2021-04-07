@@ -49,6 +49,7 @@ static void test_ncm_stats_dist_nd_new_kde_studentt (TestNcmStatsDistNd *test, g
 
 static void test_ncm_stats_dist_nd_dens_est (TestNcmStatsDistNd *test, gconstpointer pdata);
 static void test_ncm_stats_dist_nd_dens_interp (TestNcmStatsDistNd *test, gconstpointer pdata);
+static void test_ncm_stats_dist_nd_dens_interp_cv_split (TestNcmStatsDistNd *test, gconstpointer pdata);
 static void test_ncm_stats_dist_nd_dens_interp_unormalized (TestNcmStatsDistNd *test, gconstpointer pdata);
 static void test_ncm_stats_dist_nd_sampling (TestNcmStatsDistNd *test, gconstpointer pdata);
 
@@ -64,7 +65,7 @@ typedef struct _TestNcmStatsDistNdFunc
 } TestNcmStatsDistNdFunc;
 
 #define TEST_NCM_STATS_DIST_ND_CONSTRUCTORS_LEN 2
-#define TEST_NCM_STATS_DIST_ND_TESTS_LEN 4
+#define TEST_NCM_STATS_DIST_ND_TESTS_LEN 5
 
 static TestNcmStatsDistNdFunc constructors[TEST_NCM_STATS_DIST_ND_CONSTRUCTORS_LEN] = {
   {"gauss",    &test_ncm_stats_dist_nd_new_kde_gauss},
@@ -74,6 +75,7 @@ static TestNcmStatsDistNdFunc constructors[TEST_NCM_STATS_DIST_ND_CONSTRUCTORS_L
 static TestNcmStatsDistNdFunc tests[TEST_NCM_STATS_DIST_ND_TESTS_LEN] = {
   {"gauss/dens/est",                &test_ncm_stats_dist_nd_dens_est},
   {"gauss/dens/interp",             &test_ncm_stats_dist_nd_dens_interp},
+  {"gauss/dens/interp/cv_split",    &test_ncm_stats_dist_nd_dens_interp_cv_split},
   {"gauss/dens/interp/unormalized", &test_ncm_stats_dist_nd_dens_interp_unormalized},
   {"gauss/sampling",                &test_ncm_stats_dist_nd_sampling}
 };
@@ -254,6 +256,74 @@ test_ncm_stats_dist_nd_dens_interp (TestNcmStatsDistNd *test, gconstpointer pdat
   ncm_vector_free (m2lnp_v);
   ncm_mset_free (mset);
 }
+
+static void
+test_ncm_stats_dist_nd_dens_interp_cv_split (TestNcmStatsDistNd *test, gconstpointer pdata)
+{
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  const guint np                 = TESTMULT * test->dim;
+  const guint ntests             = 100 * g_test_rand_int_range (1, 5);
+  NcmVector *m2lnp_v             = ncm_vector_new (np);
+  gdouble dm2lnL_mean            = 0.0;
+  gulong N = 0;
+  guint ntests_fail;
+  guint i;
+
+  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+
+  for (i = 0; i < np; i++)
+  {
+    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble m2lnL;
+
+    ncm_stats_dist_nd_add_obs (test->dnd, y);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    ncm_vector_set (m2lnp_v, i, m2lnL);
+  }
+
+  ncm_stats_dist_nd_set_cv_type (test->dnd, NCM_STATS_DIST_ND_CV_SPLIT);
+  ncm_stats_dist_nd_prepare_interp (test->dnd, m2lnp_v);
+
+  for (i = 0; i < ntests; i++)
+  {
+    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble p_s  = ncm_stats_dist_nd_eval (test->dnd, y);
+    gdouble m2lnL;
+
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+
+    dm2lnL_mean += (-2.0 * log (p_s) - m2lnL);
+  }
+  dm2lnL_mean = dm2lnL_mean / ntests;
+
+  ntests_fail = 0;
+  for (i = 0; i < ntests; i++)
+  {
+    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble p_s  = ncm_stats_dist_nd_eval (test->dnd, y);
+    gdouble m2lnL;
+
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+
+    if (fabs (p_s / exp (-0.5 * (m2lnL + dm2lnL_mean)) - 1.0) > 0.5)
+      ntests_fail++;
+  }
+
+  /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
+
+  g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
+
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+  ncm_vector_free (m2lnp_v);
+  ncm_mset_free (mset);
+}
+
+
 
 static void
 test_ncm_stats_dist_nd_dens_interp_unormalized (TestNcmStatsDistNd *test, gconstpointer pdata)

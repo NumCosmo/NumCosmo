@@ -1141,7 +1141,7 @@ nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  *
- * This funtion computes the sound horizon [nc_distance_sound_horizon ()]
+ * This function computes the sound horizon [nc_distance_sound_horizon ()]
  * at the drag redshift [nc_distance_drag_redshift()].
  *
  * Returns: $r(z_d)$.

@@ -39,6 +39,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_stats_dist_nd.h"
+#include "math/ncm_iset.h"
+#include "math/ncm_lapack.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -46,6 +48,7 @@
 #include "misc/libqp.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
+#include <gsl/gsl_multimin.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -65,6 +68,7 @@ struct _NcmStatsDistNdPrivate
   gdouble kernel_lnnorm;
   gdouble min_m2lnp;
   gdouble max_m2lnp;
+  gdouble rnorm;
   guint n;
   guint alloc_n;
   guint d;
@@ -78,6 +82,8 @@ struct _NcmStatsDistNdPrivate
   NcmVector *alpha;
   NcmVector *xi;
   NcmVector *zeta;
+  gsl_min_fminimizer *min;
+  gsl_multimin_fminimizer *mmin;
 };
 
 enum
@@ -112,6 +118,7 @@ ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
   self->kernel_lnnorm    = 0.0;
   self->min_m2lnp        = 0.0;
   self->max_m2lnp        = 0.0;
+  self->rnorm            = 0.0;
   self->n                = 0;
   self->alloc_n          = 0;
   self->d                = 0;
@@ -125,6 +132,8 @@ ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
   self->alpha            = NULL;
   self->xi               = NULL;
   self->zeta             = NULL;
+  self->min              = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+  self->mmin             = gsl_multimin_fminimizer_alloc ( gsl_multimin_fminimizer_nmsimplex2, 1);
 
   g_ptr_array_set_free_func (self->invUsample, (GDestroyNotify) ncm_vector_free);
 }
@@ -223,6 +232,11 @@ _ncm_stats_dist_nd_dispose (GObject *object)
 static void
 _ncm_stats_dist_nd_finalize (GObject *object)
 {
+  NcmStatsDistNd *dnd = NCM_STATS_DIST_ND (object);
+  NcmStatsDistNdPrivate * const self = dnd->priv;
+
+  g_clear_pointer (&self->min,  gsl_min_fminimizer_free);
+  g_clear_pointer (&self->mmin, gsl_multimin_fminimizer_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_nd_parent_class)->finalize (object);
@@ -467,17 +481,291 @@ _ncm_stats_dist_nd_libqp_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVe
 
 }
 
-static void
+static gdouble
 _ncm_stats_dist_nd_nnls_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
     NcmVector *b, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
 {
-  gint nnn = n, mode = -31;
+  gint nrows = n, ncols = n * 0.9, nda = n, mode = -31;
   gdouble rnorm;
 
-  nnls_c (ncm_matrix_data (IM), &nnn, &nnn, &nnn, ncm_vector_data (f),
+  nnls_c (ncm_matrix_data (IM), &nda, &nrows, &ncols, ncm_vector_data (f),
       ncm_vector_data (x), &rnorm, ncm_vector_data (zeta), ncm_vector_data (xi), (gint *)ncm_vector_data (beta),
       &mode);
+
+  return rnorm;
 }
+
+static void
+_ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmMatrix *M, NcmVector *b, NcmMatrix *M_dup, NcmVector *b_dup, const guint max_remove, const gdouble reltol)
+{
+  gint ret;
+  g_assert_cmpuint (ncm_iset_get_max_size (Pset), ==, ncm_vector_len (x));
+
+  if (ncm_iset_get_len (Pset) == ncm_vector_len (x))
+  {
+    ncm_matrix_memcpy (M_dup, M);
+    ncm_vector_memcpy (b_dup, b);
+    ret = ncm_matrix_cholesky_solve (M_dup, b_dup, 'U');
+    if (ret > 0)
+    {
+      const guint n = ncm_vector_len (b_dup);
+      GArray *p = g_array_new (FALSE, FALSE, sizeof (gint));
+      GArray *w = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      gint lwork;
+
+      g_array_set_size (p, n * 20);
+      g_array_set_size (w, n * 20);
+
+      ncm_message ("b_dup stride: %d\n", ncm_vector_stride (b_dup));
+      printf ("Nhoca! %d %d\n", n, ncm_vector_stride (b_dup));fflush (stdout);
+      lwork = -1;
+      ret = ncm_lapack_dsysv ('U', n, 1,
+                              ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
+                              &g_array_index (p, gint, 0),
+                              ncm_vector_data (b_dup), n,
+                              &g_array_index (w, gdouble, 0), lwork);
+      g_assert_cmpint (ret, ==, 0);
+
+      lwork = g_array_index (w, gdouble, 0);
+      g_array_set_size (w, lwork);
+
+      printf ("Nhoca!\n");fflush (stdout);
+
+      ret = ncm_lapack_dsysv ('U', n, 1,
+                              ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
+                              &g_array_index (p, gint, 0),
+                              ncm_vector_data (b_dup), n,
+                              &g_array_index (w, gdouble, 0), lwork);
+      ncm_message ("ret00 %d\n", ret);
+
+      g_array_unref (p);
+      g_array_unref (w);
+    }
+    else
+      ncm_message ("ret0 %d\n", ret);
+
+    ncm_iset_get_subset_vec_lt (Pset, invalid, b_dup, reltol);
+  }
+  else
+  {
+    NcmMatrix *sub_M = ncm_iset_get_submatrix (Pset, M, M_dup);
+    NcmVector *sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
+
+    ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
+    ncm_message ("ret1 %d\n", ret);
+
+    ncm_vector_set_zero (x);
+    ncm_iset_set_subvector (Pset, x, sub_b);
+
+    ncm_iset_get_subset_vec_lt (Pset, invalid, x, reltol);
+  }
+
+  while (ncm_iset_get_len (invalid))
+  {
+    NcmMatrix *sub_M;
+    NcmVector *sub_b;
+
+    /*ncm_iset_log_vals (invalid, "Inv ");*/
+    ncm_iset_remove_smallest_subset (invalid, Pset, x, max_remove);
+    /*ncm_iset_remove_subset (invalid, Pset);*/
+    /*ncm_iset_log_vals (Pset, "Pset");*/
+
+    sub_M = ncm_iset_get_submatrix (Pset, M, M_dup);
+    sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
+
+    ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
+    ncm_message ("ret2 %d\n", ret);
+
+    ncm_vector_set_zero (x);
+    ncm_iset_set_subvector (Pset, x, sub_b);
+
+    ncm_iset_get_subset_vec_lt (Pset, invalid, x, reltol);
+  }
+}
+
+static gdouble
+_ncm_stats_dist_nd_local_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
+    NcmVector *b0, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
+{
+  gint nrows = n, ncols = ceil (n * 0.9);
+  NcmMatrix *subIM     = ncm_matrix_get_submatrix (IM, 0, 0, nrows, ncols);
+  NcmMatrix *IM2       = ncm_matrix_new (ncols, ncols);
+  NcmMatrix *IM2_dup   = ncm_matrix_new (ncols, ncols);
+  NcmVector *b         = ncm_vector_new (ncols);
+  NcmVector *b_dup     = ncm_vector_new (ncols);
+  NcmVector *w         = ncm_vector_new (ncols);
+  NcmVector *xsol      = ncm_vector_get_subvector (x, 0, ncols);
+  NcmVector *xtmp      = ncm_vector_new (ncols);
+  NcmVector *tmp       = ncm_vector_new (ncols);
+  NcmISet *Pset        = ncm_iset_new (ncols);
+  NcmISet *Pset_try    = ncm_iset_new (ncols);
+  NcmISet *invalid     = ncm_iset_new (ncols);
+  const gdouble reltol = 1.0e-14;
+  gdouble rnorm;
+
+  ncm_vector_set_zero (x);
+  ncm_matrix_square_to_sym (subIM, 'T', 'U', IM2);
+  ncm_matrix_update_vector (subIM, 'T', 1.0, f, 0.0, b);
+
+  ncm_iset_add_range (Pset, 0, ncols);
+
+  _ncm_nnls_solve_feasible_ls (Pset, invalid, xtmp, IM2, b, IM2_dup, b_dup, ncols, reltol);
+
+  /* Residual */
+  ncm_vector_memcpy (zeta, f);
+  ncm_matrix_update_vector (subIM, 'N', -1.0, xtmp, 1.0, zeta);
+  rnorm = ncm_vector_dnrm2 (zeta);
+
+  /* - Grad chi2 */
+  ncm_matrix_update_vector (subIM, 'T', 1.0, zeta, 0.0, w);
+
+  /*ncm_vector_log_vals (w, "w: ", "% .2e", TRUE);*/
+
+  while (TRUE)
+  {
+    gdouble add_frac = 1.0;
+    gboolean finish  = FALSE;
+    gdouble lrnorm;
+    guint added;
+
+    while (TRUE)
+    {
+      add_frac *= 0.2;
+
+      ncm_iset_copy (Pset, Pset_try);
+      /*ncm_iset_log_vals (Pset_try, "PsetB");*/
+      added = ncm_iset_add_largest_subset (Pset_try, w, 0.0, add_frac);
+      /*ncm_message ("Added %u indexes and resolved obtained Pset: %d!\n", added, ncm_iset_get_len (Pset));*/
+      /*ncm_iset_log_vals (Pset_try, "PsetA");*/
+      if (added == 0)
+      {
+        finish = TRUE;
+        break;
+      }
+
+      _ncm_nnls_solve_feasible_ls (Pset_try, invalid, tmp, IM2, b, IM2_dup, b_dup, added, reltol);
+      /*ncm_message ("After solving Pset: %d!\n", ncm_iset_get_len (Pset));*/
+
+      /* Residual */
+      ncm_vector_memcpy (zeta, f);
+      ncm_matrix_update_vector (subIM, 'N', -1.0, tmp, 1.0, zeta);
+      lrnorm = ncm_vector_dnrm2 (zeta);
+
+      ncm_message ("added %u lrnorm % 22.15g rnorm % 22.15g\n", added, lrnorm, rnorm);
+      if (lrnorm < rnorm * (1.0 - reltol))
+      {
+        ncm_iset_copy (Pset_try, Pset);
+        ncm_vector_memcpy (xtmp, tmp);
+        rnorm = lrnorm;
+        break;
+      }
+
+      if (added == 1)
+      {
+        finish = TRUE;
+        break;
+      }
+    }
+
+    if (finish)
+      break;
+
+    /* - Grad chi2 */
+    ncm_matrix_update_vector (subIM, 'T', 1.0, zeta, 0.0, w);
+  }
+
+/*
+
+  while (ncm_iset_get_len (invalid))
+  {
+    NcmMatrix *sub_IM2;
+    NcmVector *sub_b;
+
+    ncm_iset_remove_subset (invalid, Pset);
+
+    sub_IM2  = ncm_iset_get_submatrix (Pset, IM2,  IM2_dup);
+    sub_b    = ncm_iset_get_subvector (Pset, b,    b_dup);
+
+    ncm_matrix_cholesky_solve (sub_IM2, sub_b, 'U');
+
+    ncm_vector_set_zero (xtmp);
+    ncm_iset_set_subvector (Pset, xtmp, sub_b);
+
+    ncm_vector_log_vals (xtmp, "x: ", "% .2e", TRUE);
+
+    ncm_iset_get_subset_vec_lt (Pset, invalid, xtmp, reltol);
+  }
+*/
+
+  ncm_vector_memcpy (xsol, xtmp);
+
+  ncm_matrix_free (IM2);
+  ncm_matrix_free (IM2_dup);
+  ncm_vector_free (b);
+  ncm_vector_free (b_dup);
+  ncm_vector_free (w);
+  ncm_vector_free (xsol);
+  ncm_vector_free (xtmp);
+  ncm_vector_free (tmp);
+
+  ncm_iset_free (Pset);
+  ncm_iset_free (Pset_try);
+  ncm_iset_free (invalid);
+
+  return rnorm;
+}
+
+/*
+
+  while (TRUE)
+  {
+    gint max_w_i = 0;
+    NcmMatrix *sub_IM2;
+    NcmVector *sub_b;
+    NcmISet *subPset;
+
+    ncm_iset_get_vector_max (Aset, w, &max_w_i);
+
+    ncm_iset_del (Aset, max_w_i);
+    ncm_iset_add (Pset, max_w_i);
+
+    sub_IM2  = ncm_iset_get_submatrix (Pset, IM2,  IM2_dup);
+    sub_b    = ncm_iset_get_subvector (Pset, b,    b_dup);
+
+    ncm_matrix_cholesky_solve (sub_IM2, sub_b, 'U');
+
+    ncm_vector_set_zero (xtmp);
+    ncm_iset_set_subvector (Pset, xtmp, sub_b);
+
+    ncm_iset_get_subset_vec_lt (Pset, subPset, xtmp, reltol);
+
+    while (ncm_iset_get_len (subPset) > 0)
+    {
+      NcmVector *av = ncm_iset_get_vector_inv_cmp (subPset, x, xtmp, tmp);
+      const gdouble alpha = ncm_vector_get_min (av);
+
+      if (alpha != 0.0)
+      {
+        ncm_vector_memcpy (tmp, xtmp);
+        ncm_vector_sub (tmp, xsol);
+        ncm_vector_axpy (xsol, alpha, tmp);
+
+        ncm_iset_get_subset_vec_lt (Pset, subPset, xsol, reltol);
+
+
+      }
+
+      ncm_vector_free (av);
+    }
+
+    ncm_matrix_free (sub_IM2);
+    ncm_vector_free (sub_b);
+  }
+
+
+
+ */
+
 
 enum {
   LOW_RANK_QP,
@@ -485,11 +773,87 @@ enum {
   NNLS,
 };
 
+typedef struct _NcmStatsDistNdEval
+{
+  NcmStatsDistNd *dnd;
+  NcmStatsDistNdPrivate * const self;
+  NcmStatsDistNdClass *dnd_class;
+  NcmVector *m2lnp;
+} NcmStatsDistNdEval;
+
+static gdouble
+_ncm_stats_dist_nd_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
+{
+  NcmStatsDistNdEval *eval = userdata;
+  const gdouble href = os * ncm_stats_dist_nd_get_rot_bandwidth (eval->dnd, eval->self->d, eval->self->n);
+  gdouble rnorm;
+  gint i;
+
+  for (i = 0; i < eval->self->n; i++)
+  {
+    const gdouble m2lnp_i = ncm_vector_get (eval->m2lnp, i);
+    ncm_vector_set (eval->self->weights, i, + exp (-0.5 * (m2lnp_i - eval->self->min_m2lnp)));
+  }
+
+  eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, href, href * href, eval->self->IM);
+
+  ncm_vector_set_zero (eval->self->alpha);
+
+/*
+  rnorm = _ncm_stats_dist_nd_nnls_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
+      eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
+*/
+  if (FALSE)
+  {
+    rnorm = _ncm_stats_dist_nd_nnls_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
+        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
+  }
+  else
+  {
+    rnorm = _ncm_stats_dist_nd_local_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
+        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
+  }
+
+  {
+    gdouble rnorm2 = rnorm;
+/*
+    NcmVector *f;
+    for (i = 0; i < eval->self->n; i++)
+    {
+      const gdouble m2lnp_i = ncm_vector_get (eval->m2lnp, i);
+      ncm_vector_set (eval->self->weights, i, + exp (-0.5 * (m2lnp_i - eval->self->min_m2lnp)));
+    }
+    f = ncm_vector_dup (eval->self->weights);
+
+    eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, href, href * href, eval->self->IM);
+
+    ncm_matrix_sym_update_vector (eval->self->IM, 'U', 1.0, eval->self->alpha, -1.0, f);
+    rnorm2 = ncm_vector_dnrm2 (f);
+    ncm_vector_clear (&f);
+    ncm_vector_log_vals (eval->self->alpha, "x: ", "% .2e", TRUE);
+*/
+
+    ncm_message ("OS: % 22.15g, RNORM: % 22.15g : % 22.15g\n", os, rnorm, rnorm2);
+
+  }
+
+  return rnorm;
+}
+
+static gdouble
+_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec (const gsl_vector *ln_os, gpointer userdata)
+{
+  const gdouble os = exp (gsl_vector_get (ln_os, 0));
+  return _ncm_stats_dist_nd_prepare_interp_fit_nnls (os, userdata);
+}
+
+
 static void
 _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
 {
   NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd);
   NcmStatsDistNdPrivate * const self = dnd->priv;
+  NcmStatsDistNdEval eval = {dnd, self, dnd_class, m2lnp};
   const gdouble dbl_limit = 1.0;
   gint method = NNLS;
   gint i;
@@ -528,15 +892,6 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
     self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
     self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
-  }
-
-  switch (self->cv_type)
-  {
-    case NCM_STATS_DIST_ND_CV_NONE:
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
   }
 
   if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
@@ -584,17 +939,55 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
           self->b, self->A, self->dv, self->beta, self->xi, self->zeta);
       break;
     case NNLS:
-      dnd_class->prepare_IM (dnd, self->invUsample, self->d, self->n, self->href, self->href2, self->IM);
-
-      for (i = 0; i < self->n; i++)
+    {
+      switch (self->cv_type)
       {
-        const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-        ncm_vector_set (self->weights, i, + exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
-      }
+        case NCM_STATS_DIST_ND_CV_SPLIT:
+        {
+          gint iter = 0, maxiter = 1000000, status;
+          NcmVector *x = ncm_vector_new (1);
+          NcmVector *s = ncm_vector_new (1);
+          gsl_multimin_function fmin = {_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec, 1, &eval};
 
-      _ncm_stats_dist_nd_nnls_solve_IMx_f (self->n, self->IM, self->alpha, self->weights,
-          self->b, self->A, self->dv, self->beta, self->xi, self->zeta);
+          ncm_vector_set (x, 0, log (self->over_smooth));
+          ncm_vector_set (s, 0, 0.1);
+
+          gsl_multimin_fminimizer_set (self->mmin, &fmin, ncm_vector_gsl (x), ncm_vector_gsl (s));
+          do
+          {
+            gdouble size;
+            iter++;
+            status = gsl_multimin_fminimizer_iterate (self->mmin);
+
+            if (status)
+              break;
+
+            size = gsl_multimin_fminimizer_size (self->mmin);
+            status = gsl_multimin_test_size (size, 1.0e-7);
+
+           } while (status == GSL_CONTINUE && iter < maxiter);
+
+          self->over_smooth = exp (gsl_vector_get (self->mmin->x, 0));
+
+          self->href          = self->over_smooth * ncm_stats_dist_nd_get_rot_bandwidth (dnd, self->d, self->n);
+          self->href2         = self->href * self->href;
+          self->kernel_lnnorm = ncm_stats_dist_nd_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
+
+          self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
+
+          ncm_vector_free (x);
+          ncm_vector_free (s);
+        }
+        break;
+        case NCM_STATS_DIST_ND_CV_NONE:
+          self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
+          break;
+        default:
+          g_assert_not_reached ();
+          break;
+      }
       break;
+    }
     default:
       g_assert_not_reached ();
       break;
@@ -909,6 +1302,23 @@ ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng)
       break;
     }
   }
+}
+
+/**
+ * ncm_stats_dist_nd_get_rnorm:
+ * @dnd: a #NcmStatsDistNd
+ *
+ * Gets the value of the last $\chi^2$ fit obtained
+ * when computing the interpolation through
+ * ncm_stats_dist_nd_prepare_interp().
+ *
+ * Returns: the value of the $\chi^2$.
+ */
+gdouble
+ncm_stats_dist_nd_get_rnorm (NcmStatsDistNd *dnd)
+{
+  NcmStatsDistNdPrivate * const self = dnd->priv;
+  return self->rnorm * self->rnorm;
 }
 
 /**

@@ -75,6 +75,7 @@ ncm_sources = \
 	math/ncm_mpi_job_mcmc.c               \
 	math/ncm_mpi_job_feval.c              \
 	math/ncm_util.c                       \
+	math/ncm_iset.c                       \
 	math/ncm_diff.c                       \
 	math/ncm_ode.c                        \
 	math/ncm_ode_eval.c                   \
@@ -203,6 +204,7 @@ ncm_headers =                                 \
 	math/ncm_mpi_job_mcmc.h               \
 	math/ncm_mpi_job_feval.h              \
 	math/ncm_util.h                       \
+	math/ncm_iset.h                       \
 	math/ncm_diff.h                       \
 	math/ncm_ode.h                        \
 	math/ncm_ode_eval.h                   \

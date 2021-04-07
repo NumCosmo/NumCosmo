@@ -29,7 +29,7 @@
  * @short_description: Matrix object representing an array of doubles.
  *
  * This object defines the functions for allocating and accessing matrices.
- * Also includes serveral matrix operations.
+ * Also includes several matrix operations.
  *
  */
 
@@ -952,7 +952,7 @@ ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble s
  * @UL: char indicating 'U'pper or 'L'ower matrix
  *
  * If @UL == 'U' copy the upper triangle over the lower.
- * If @UL == 'L' copy the lower triangle over the lower.
+ * If @UL == 'L' copy the lower triangle over the upper.
  *
  */
 void
@@ -1092,7 +1092,7 @@ ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix
  *
- * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * Calculates in-place the Cholesky decomposition for a symmetric positive
  * definite matrix.
  *
  */
@@ -1167,7 +1167,7 @@ ncm_matrix_cholesky_lndet (NcmMatrix *cm)
  * @b: a #NcmVector
  * @UL: char indicating 'U'pper or 'L'ower matrix
  *
- * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * Calculates in-place the Cholesky decomposition for a symmetric positive
  * definite matrix and solve the system $A x = B$ where $A=$@cm and $B$=@b.
  *
  */
@@ -1502,6 +1502,118 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
                  ncm_matrix_data (sym), ncm_matrix_tda (sym));
   else
     g_assert_not_reached ();
+}
+
+/**
+ * ncm_matrix_square_to_sym:
+ * @cm: $M$ a #NcmMatrix
+ * @NT: char indicating 'N' or 'T'
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ * @sym: a #NcmMatrix to store the result
+ *
+ * Computes the symmetric matrix $M^\intercal \times M$ if
+ * @NT == 'T' or $M\times M^\intercal$ if @NT == 'N'. The result
+ * is stored in the upper/lower triangle if @UL='U'/'L'
+ *
+ *
+ */
+void
+ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  const CBLAS_UPLO Uplo       = (UL == 'U') ? CblasUpper : CblasLower;
+  CBLAS_TRANSPOSE Trans;
+  gint n, k;
+
+  if (NT == 'N')
+  {
+    Trans = CblasNoTrans;
+    n     = nrows;
+    k     = ncols;
+  }
+  else
+  {
+    Trans = CblasTrans;
+    n     = ncols;
+    k     = nrows;
+  }
+
+  g_assert_cmpuint (ncm_matrix_ncols (sym), ==, n);
+  g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (sym));
+
+  cblas_dsyrk (CblasRowMajor, Uplo, Trans, n, k,
+               1.0, ncm_matrix_data (cm),  ncm_matrix_tda (cm),
+               0.0, ncm_matrix_data (sym), ncm_matrix_tda (sym));
+}
+
+/**
+ * ncm_matrix_update_vector:
+ * @cm: $M$ a #NcmMatrix
+ * @NT: char indicating 'N' or 'T'
+ * @alpha: a double $\alpha$
+ * @v: a #NcmVector to update
+ * @beta: a double $\beta$
+ * @u: a #NcmVector to store the result
+ *
+ * Computes the matrix - vector product $u = \alpha M v + \beta u$
+ * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
+ * and stores the result in @u.
+ */
+void
+ncm_matrix_update_vector (NcmMatrix *cm, gchar NT, const gdouble alpha, NcmVector *v, const gdouble beta, NcmVector *u)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  CBLAS_TRANSPOSE Trans;
+
+  if (NT == 'N')
+  {
+    Trans = CblasNoTrans;
+    g_assert_cmpuint (nrows, ==, ncm_vector_len (u));
+    g_assert_cmpuint (ncols, ==, ncm_vector_len (v));
+  }
+  else
+  {
+    Trans = CblasTrans;
+    g_assert_cmpuint (nrows, ==, ncm_vector_len (v));
+    g_assert_cmpuint (ncols, ==, ncm_vector_len (u));
+  }
+
+  cblas_dgemv (CblasRowMajor, Trans, nrows, ncols,
+      alpha, ncm_matrix_data (cm), ncm_matrix_tda (cm),
+      ncm_vector_data (v), ncm_vector_stride (v),
+      beta, ncm_vector_data (u), ncm_vector_stride (u));
+}
+
+/**
+ * ncm_matrix_sym_update_vector:
+ * @cm: $M$ a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ * @alpha: a double $\alpha$
+ * @v: a #NcmVector to update
+ * @beta: a double $\beta$
+ * @u: a #NcmVector to store the result
+ *
+ * Computes the matrix - vector product $u = \alpha M v + \beta u$
+ * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
+ * and stores the result in @u. This function assumes
+ * that $M$ is symmetric and it´s stored in the Upper/Lower
+ * triangle if @UL == 'U'/'L'.
+ */
+void
+ncm_matrix_sym_update_vector (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmVector *v, const gdouble beta, NcmVector *u)
+{
+  const guint nrows     = ncm_matrix_nrows (cm);
+  const guint ncols     = ncm_matrix_ncols (cm);
+  const CBLAS_UPLO Uplo = (UL == 'U') ? CblasUpper : CblasLower;
+
+  g_assert_cmpuint (nrows, ==, ncols);
+
+  cblas_dsymv (CblasRowMajor, Uplo, nrows,
+               alpha, ncm_matrix_data (cm), ncm_matrix_tda (cm),
+               ncm_vector_data (v), ncm_vector_stride (v),
+               beta, ncm_vector_data (u), ncm_vector_stride (u));
 }
 
 /**

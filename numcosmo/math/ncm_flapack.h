@@ -21,6 +21,7 @@ extern void dposv_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble 
 extern void dsytrf_ (const gchar *uplo, gint *n, gdouble *a, gint *lda, gint *ipiv, gdouble *work, gint *lwork, gint *info);
 extern void dsytrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, const gint *ipiv, gdouble *b, const gint *ldb, gint *info);
 extern void dsytri_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, const gint *ipiv, gdouble *work, gint *info);
+extern void dsysv_  (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gint *ipiv, gdouble *b, const gint *ldb, gdouble *work, gint *lwork, gint *info);
 extern void dsysvx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint *lwork, gint *iwork, gint *info);
 extern void dsysvxx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
 

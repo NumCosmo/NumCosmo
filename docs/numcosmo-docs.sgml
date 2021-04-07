@@ -21,6 +21,7 @@
       <xi:include href="xml/ncm_c.xml"/>
       <xi:include href="xml/ncm_cfg.xml"/>
       <xi:include href="xml/ncm_util.xml"/>
+      <xi:include href="xml/ncm_iset.xml"/>
       <xi:include href="xml/ncm_diff.xml"/>
       <xi:include href="xml/ncm_vector.xml"/>
       <xi:include href="xml/ncm_matrix.xml"/>
