@@ -40,6 +40,7 @@
 
 #include "math/ncm_stats_dist_nd.h"
 #include "math/ncm_iset.h"
+#include "math/ncm_nnls.h"
 #include "math/ncm_lapack.h"
 #include "ncm_enum_types.h"
 
@@ -516,8 +517,8 @@ _ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmM
       g_array_set_size (p, n * 20);
       g_array_set_size (w, n * 20);
 
-      ncm_message ("b_dup stride: %d\n", ncm_vector_stride (b_dup));
-      printf ("Nhoca! %d %d\n", n, ncm_vector_stride (b_dup));fflush (stdout);
+      /*ncm_message ("b_dup stride: %d\n", ncm_vector_stride (b_dup));*/
+      /*printf ("Nhoca! %d %d\n", n, ncm_vector_stride (b_dup));fflush (stdout);*/
       lwork = -1;
       ret = ncm_lapack_dsysv ('U', n, 1,
                               ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
@@ -529,20 +530,22 @@ _ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmM
       lwork = g_array_index (w, gdouble, 0);
       g_array_set_size (w, lwork);
 
-      printf ("Nhoca!\n");fflush (stdout);
+      /*printf ("Nhoca!\n");fflush (stdout);*/
 
       ret = ncm_lapack_dsysv ('U', n, 1,
                               ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
                               &g_array_index (p, gint, 0),
                               ncm_vector_data (b_dup), n,
                               &g_array_index (w, gdouble, 0), lwork);
-      ncm_message ("ret00 %d\n", ret);
+      /*ncm_message ("ret00 %d\n", ret);*/
 
       g_array_unref (p);
       g_array_unref (w);
     }
+/*
     else
       ncm_message ("ret0 %d\n", ret);
+*/
 
     ncm_iset_get_subset_vec_lt (Pset, invalid, b_dup, reltol);
   }
@@ -552,7 +555,7 @@ _ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmM
     NcmVector *sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
 
     ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
-    ncm_message ("ret1 %d\n", ret);
+    /*ncm_message ("ret1 %d\n", ret);*/
 
     ncm_vector_set_zero (x);
     ncm_iset_set_subvector (Pset, x, sub_b);
@@ -574,7 +577,7 @@ _ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmM
     sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
 
     ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
-    ncm_message ("ret2 %d\n", ret);
+    /*ncm_message ("ret2 %d\n", ret);*/
 
     ncm_vector_set_zero (x);
     ncm_iset_set_subvector (Pset, x, sub_b);
@@ -582,6 +585,30 @@ _ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmM
     ncm_iset_get_subset_vec_lt (Pset, invalid, x, reltol);
   }
 }
+
+static gdouble
+_ncm_stats_dist_nd_local2_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
+    NcmVector *b0, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
+{
+  gint nrows = n, ncols = ceil (n * 0.9);
+  NcmNNLS *nnls    = ncm_nnls_new (nrows, ncols);
+  NcmMatrix *subIM = ncm_matrix_get_submatrix (IM, 0, 0, nrows, ncols);
+  NcmVector *xsol  = ncm_vector_get_subvector (x, 0, ncols);
+  gdouble rnorm;
+
+  ncm_nnls_set_umethod (nnls, NCM_NNLS_UMETHOD_NORMAL);
+  ncm_vector_set_zero (x);
+
+  /*ncm_nnls_set_reltol (1.0e-300);*/
+  rnorm = ncm_nnls_solve (nnls, subIM, xsol, f);
+
+  ncm_matrix_free (subIM);
+  ncm_vector_free (xsol);
+  ncm_nnls_free (nnls);
+
+  return rnorm;
+}
+
 
 static gdouble
 _ncm_stats_dist_nd_local_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
@@ -607,9 +634,11 @@ _ncm_stats_dist_nd_local_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVe
   ncm_matrix_square_to_sym (subIM, 'T', 'U', IM2);
   ncm_matrix_update_vector (subIM, 'T', 1.0, f, 0.0, b);
 
-  ncm_iset_add_range (Pset, 0, ncols);
+  //ncm_iset_add_range (Pset, 0, ncols);
+  ncm_iset_add (Pset, ncm_vector_get_max_index (b));
+  //ncm_iset_add_largest_subset (Pset, b, 0.0, 0.1);
 
-  _ncm_nnls_solve_feasible_ls (Pset, invalid, xtmp, IM2, b, IM2_dup, b_dup, ncols, reltol);
+  _ncm_nnls_solve_feasible_ls (Pset, invalid, xtmp, IM2, b, IM2_dup, b_dup, ncols, 0.0);
 
   /* Residual */
   ncm_vector_memcpy (zeta, f);
@@ -633,18 +662,18 @@ _ncm_stats_dist_nd_local_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVe
       add_frac *= 0.2;
 
       ncm_iset_copy (Pset, Pset_try);
-      /*ncm_iset_log_vals (Pset_try, "PsetB");*/
+      ncm_iset_log_vals (Pset_try, "PsetB");
       added = ncm_iset_add_largest_subset (Pset_try, w, 0.0, add_frac);
-      /*ncm_message ("Added %u indexes and resolved obtained Pset: %d!\n", added, ncm_iset_get_len (Pset));*/
-      /*ncm_iset_log_vals (Pset_try, "PsetA");*/
+      ncm_message ("Added %u indexes and resolved obtained Pset: %d!\n", added, ncm_iset_get_len (Pset));
+      ncm_iset_log_vals (Pset_try, "PsetA");
       if (added == 0)
       {
         finish = TRUE;
         break;
       }
 
-      _ncm_nnls_solve_feasible_ls (Pset_try, invalid, tmp, IM2, b, IM2_dup, b_dup, added, reltol);
-      /*ncm_message ("After solving Pset: %d!\n", ncm_iset_get_len (Pset));*/
+      _ncm_nnls_solve_feasible_ls (Pset_try, invalid, tmp, IM2, b, IM2_dup, b_dup, added, 0.0);
+      ncm_message ("After solving Pset: %d!\n", ncm_iset_get_len (Pset));
 
       /* Residual */
       ncm_vector_memcpy (zeta, f);
@@ -808,9 +837,14 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
     rnorm = _ncm_stats_dist_nd_nnls_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
         eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
   }
-  else
+  else if (FALSE)
   {
     rnorm = _ncm_stats_dist_nd_local_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
+        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
+  }
+  else
+  {
+    rnorm = _ncm_stats_dist_nd_local2_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
         eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
   }
 

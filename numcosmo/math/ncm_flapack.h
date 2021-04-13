@@ -38,4 +38,6 @@ extern void dgerqf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, 
 extern void dgeqlf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
 extern void dgelqf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
 
+extern void dgels_ (const gchar *trans, const gint *m, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gdouble *work, const gint *lwork, gint *info);
+
 #endif /* NUMCOSMO_GIR_SCAN */

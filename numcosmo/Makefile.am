@@ -83,6 +83,7 @@ ncm_sources = \
 	math/ncm_lapack.c                     \
 	math/ncm_vector.c                     \
 	math/ncm_matrix.c                     \
+	math/ncm_nnls.c                       \
 	math/ncm_serialize.c                  \
 	math/ncm_obj_array.c                  \
 	math/ncm_integral1d.c                 \
@@ -212,6 +213,7 @@ ncm_headers =                                 \
 	math/ncm_lapack.h                     \
 	math/ncm_vector.h                     \
 	math/ncm_matrix.h                     \
+	math/ncm_nnls.h                       \
 	math/ncm_serialize.h                  \
 	math/ncm_obj_array.h                  \
 	math/ncm_integral1d.h                 \

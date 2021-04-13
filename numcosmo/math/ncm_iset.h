@@ -2,8 +2,8 @@
 /***************************************************************************
  *            ncm_iset.h
  *
- *  Sun April 10 46:59:36 2021
- *  Copyright  2017  Sandro Dias Pinto Vitenti
+ *  Sun April 7 16:59:36 2021
+ *  Copyright  2021  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
@@ -79,6 +79,7 @@ guint ncm_iset_get_len (NcmISet *iset);
 gdouble ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i);
 NcmVector *ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup);
 NcmMatrix *ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
+NcmMatrix *ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
 NcmMatrix *ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_dup);
 void ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdouble tol);
 void ncm_iset_remove_subset (NcmISet *iset, NcmISet *target);

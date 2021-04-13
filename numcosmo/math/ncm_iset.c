@@ -2,8 +2,8 @@
 /***************************************************************************
  *            ncm_iset.c
  *
- *  Sun April 10 46:59:36 2021
- *  Copyright  2017  Sandro Dias Pinto Vitenti
+ *  Sun April 7 16:59:36 2021
+ *  Copyright  2021  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
@@ -147,6 +147,7 @@ _ncm_iset_finalize (GObject *object)
 
   g_array_unref (self->ptmp);
   g_array_unref (self->atmp);
+  g_queue_free (self->iq);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_iset_parent_class)->finalize (object);
@@ -444,11 +445,11 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
   GList *node;
   gint i;
 
-  g_assert_cmpuint (self->n, >=, ncm_vector_len (v));
+  g_assert_cmpuint (self->n, ==, ncm_vector_len (v));
 
   if (v_dup != NULL)
   {
-    g_assert_cmpuint (self->n, >=, ncm_vector_len (v_dup));
+    g_assert_cmpuint (self->n, ==, ncm_vector_len (v_dup));
     sub = ncm_vector_get_subvector (v_dup, 0, nsub);
   }
   else
@@ -477,10 +478,10 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
  * @M: a #NcmMatrix
  * @M_dup: a #NcmMatrix
  *
- * Construct a continuous matrix $S$ using the values from @M
- * and the indexes in @iset. If @M_dup is not null use
- * this matrix to build the submatrix, otherwise, allocates
- * a new matrix.
+ * Construct a continuous matrix square $S$ using the values
+ * from the square matrix @M and the indexes in @iset. If
+ * @M_dup is not null use this matrix to build the submatrix,
+ * otherwise, allocates a new matrix.
  *
  * Returns: (transfer full): the matrix $S$.
  */
@@ -493,13 +494,13 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
   GList *node0, *node;
   gint i, j;
 
-  g_assert_cmpuint (self->n, >=, ncm_matrix_nrows (M));
-  g_assert_cmpuint (self->n, >=, ncm_matrix_ncols (M));
+  g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M));
+  g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M));
 
   if (M_dup != NULL)
   {
-    g_assert_cmpuint (self->n, >=, ncm_matrix_nrows (M_dup));
-    g_assert_cmpuint (self->n, >=, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M_dup));
+    g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M_dup));
 
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nsub, nsub);
   }
@@ -534,6 +535,62 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 }
 
 /**
+ * ncm_iset_get_submatrix_cols:
+ * @iset: a #NcmISet
+ * @M: a #NcmMatrix
+ * @M_dup: a #NcmMatrix
+ *
+ * Construct a continuous matrix retangular $S$ using the columns
+ * from the rectangular matrix @M and the indexes in @iset. If
+ * @M_dup is not null use this matrix to build the submatrix,
+ * otherwise, allocates a new matrix.
+ *
+ * Returns: (transfer full): the matrix $S$.
+ */
+NcmMatrix *
+ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
+{
+  NcmISetPrivate *const self = iset->priv;
+  const guint nsub  = g_queue_get_length (self->iq);
+  const guint nrows = ncm_matrix_nrows (M);
+  const guint ncols = ncm_matrix_ncols (M);
+  NcmMatrix *sub;
+  GList *node;
+  gint i;
+
+  g_assert_cmpuint (self->n, ==, ncols);
+
+  if (M_dup != NULL)
+  {
+    g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (M_dup));
+
+    sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nrows, nsub);
+  }
+  else
+    sub = ncm_matrix_new (nrows, nsub);
+
+  _ncm_iset_sort (iset);
+  node = g_queue_peek_head_link (self->iq);
+  i    = 0;
+
+  while (node != NULL)
+  {
+    const gint k = GPOINTER_TO_INT (node->data);
+    NcmVector *col_k = ncm_matrix_get_col (M, k);
+    NcmVector *col_i = ncm_matrix_get_col (sub, i);
+
+    ncm_vector_memcpy (col_i, col_k);
+
+    i++;
+    node = node->next;
+  }
+
+  return sub;
+}
+
+
+/**
  * ncm_iset_get_sym_submatrix:
  * @iset: a #NcmISet
  * @UL: char indicating 'U'pper or 'L'ower matrix
@@ -557,13 +614,13 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
   GList *node;
   gint i, j;
 
-  g_assert_cmpuint (self->n, >=, ncm_matrix_nrows (M));
-  g_assert_cmpuint (self->n, >=, ncm_matrix_ncols (M));
+  g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M));
+  g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M));
 
   if (M_dup != NULL)
   {
-    g_assert_cmpuint (self->n, >=, ncm_matrix_nrows (M_dup));
-    g_assert_cmpuint (self->n, >=, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M_dup));
+    g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M_dup));
 
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nsub, nsub);
   }
@@ -916,12 +973,12 @@ ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVecto
   GList *node;
   gint i;
 
-  g_assert_cmpuint (self->n, >=, ncm_vector_len (v));
-  g_assert_cmpuint (self->n, >=, ncm_vector_len (u));
+  g_assert_cmpuint (self->n, ==, ncm_vector_len (v));
+  g_assert_cmpuint (self->n, ==, ncm_vector_len (u));
 
   if (v_dup != NULL)
   {
-    g_assert_cmpuint (self->n, >=, ncm_vector_len (v_dup));
+    g_assert_cmpuint (self->n, ==, ncm_vector_len (v_dup));
     cmp = ncm_vector_get_subvector (v_dup, 0, nsub);
   }
   else

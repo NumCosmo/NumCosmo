@@ -827,7 +827,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dtrsv_],[],[])
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dgels_ dtrsv_],[],[])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],

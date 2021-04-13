@@ -42,6 +42,7 @@
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_nnls.h>
 #include <numcosmo/math/ncm_serialize.h>
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_integral1d.h>
