@@ -1854,6 +1854,21 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  */
 
 /**
+ * ncm_matrix_get_colmajor:
+ * @cm: a constant #NcmMatrix
+ * @i: row index
+ * @j: column index
+ *
+ * Gets the (@i,@j)-th component of @cm assuming
+ * a [column-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
+ *
+ * All column-major methods should be used carefully, they are inconsistent with
+ * most other methods and are used mainly to interface with Fortran sub-routines.
+ *
+ * Returns: The (@i,@j)-th element of the matrix @cm.
+ */
+
+/**
  * ncm_matrix_ptr:
  * @cm: a #NcmMatrix
  * @i: row index
@@ -1889,7 +1904,11 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * @j: column index
  * @val: a double
  *
- * This function sets the value of the (@i,@j)-th element of the matrix @cm to @val considering it being in the [column-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
+ * This function sets the value of the (@i,@j)-th element of the matrix @cm to @val
+ * considering it being in the [column-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
+ *
+ * All column-major methods should be used carefully, they are inconsistent with
+ * most other methods and are used mainly to interface with Fortran sub-routines.
  *
  */
 
@@ -2042,9 +2061,23 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * @cm1: a #NcmMatrix
  * @cm2: a #NcmMatrix
  *
- * This function copies the elements of the matrix @cm1 into the matrix @cm2.
+ * This function copies the elements of the matrix @cm2 into the matrix @cm1.
  * The two matrices must have the same size.
  *
+ */
+
+/**
+ * ncm_matrix_memcpy_to_colmajor:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function copies the elements of the matrix @cm2 into the matrix @cm1.
+ * The two matrices must have the same size. The elements are written in @cm1
+ * in [column-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order)
+ * order.
+ *
+ * All column-major methods should be used carefully, they are inconsistent with
+ * most other methods and are used mainly to interface with Fortran sub-routines.
  */
 
 /**

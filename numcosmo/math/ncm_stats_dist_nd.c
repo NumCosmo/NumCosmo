@@ -45,8 +45,6 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include "misc/gsl_cqp.h"
-#include "misc/libqp.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
@@ -64,6 +62,7 @@ struct _NcmStatsDistNdPrivate
   NcmVector *v;
   gdouble over_smooth;
   NcmStatsDistNdCV cv_type;
+  gdouble split_frac;
   gdouble href;
   gdouble href2;
   gdouble kernel_lnnorm;
@@ -75,14 +74,11 @@ struct _NcmStatsDistNdPrivate
   guint d;
   GArray *sampling;
   guint nearPD_maxiter;
-  NcmMatrix *A;
+  NcmNNLS *nnls;
   NcmMatrix *IM;
-  NcmVector *b;
-  NcmVector *beta;
-  NcmVector *dv;
-  NcmVector *alpha;
-  NcmVector *xi;
-  NcmVector *zeta;
+  NcmMatrix *sub_IM;
+  NcmVector *sub_x;
+  NcmVector *f;
   gsl_min_fminimizer *min;
   gsl_multimin_fminimizer *mmin;
 };
@@ -95,7 +91,7 @@ enum
   PROP_OVER_SMOOTH,
   PROP_NEARPD_MAXITER,
   PROP_CV_TYPE,
-
+  PROP_SPLIT_FRAC,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistNd, ncm_stats_dist_nd, G_TYPE_OBJECT);
@@ -114,6 +110,7 @@ ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
   self->v                = NULL;
   self->over_smooth      = 0.0;
   self->cv_type          = NCM_STATS_DIST_ND_CV_LEN;
+  self->split_frac       = 0.0;
   self->href             = 0.0;
   self->href2            = 0.0;
   self->kernel_lnnorm    = 0.0;
@@ -125,14 +122,11 @@ ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
   self->d                = 0;
   self->sampling         = g_array_new (FALSE, FALSE, sizeof (guint));
   self->nearPD_maxiter   = 0;
-  self->A                = NULL;
+  self->nnls             = NULL;
   self->IM               = NULL;
-  self->b                = NULL;
-  self->beta             = NULL;
-  self->dv               = NULL;
-  self->alpha            = NULL;
-  self->xi               = NULL;
-  self->zeta             = NULL;
+  self->sub_IM           = NULL;
+  self->sub_x            = NULL;
+  self->f                = NULL;
   self->min              = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   self->mmin             = gsl_multimin_fminimizer_alloc ( gsl_multimin_fminimizer_nmsimplex2, 1);
 
@@ -163,6 +157,9 @@ _ncm_stats_dist_nd_set_property (GObject *object, guint prop_id, const GValue *v
       break;
     case PROP_CV_TYPE:
       ncm_stats_dist_nd_set_cv_type (dnd, g_value_get_enum (value));
+      break;
+    case PROP_SPLIT_FRAC:
+      ncm_stats_dist_nd_set_split_frac (dnd, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -195,6 +192,9 @@ _ncm_stats_dist_nd_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_CV_TYPE:
       g_value_set_enum (value, ncm_stats_dist_nd_get_cv_type (dnd));
       break;
+    case PROP_SPLIT_FRAC:
+      g_value_set_double (value, ncm_stats_dist_nd_get_split_frac (dnd));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -217,14 +217,12 @@ _ncm_stats_dist_nd_dispose (GObject *object)
   g_clear_pointer (&self->sampling, g_array_unref);
   g_clear_pointer (&self->invUsample, g_ptr_array_unref);
 
-  ncm_matrix_clear (&self->A);
+  ncm_nnls_clear (&self->nnls);
+
   ncm_matrix_clear (&self->IM);
-  ncm_vector_clear (&self->b);
-  ncm_vector_clear (&self->beta);
-  ncm_vector_clear (&self->dv);
-  ncm_vector_clear (&self->alpha);
-  ncm_vector_clear (&self->xi);
-  ncm_vector_clear (&self->zeta);
+  ncm_matrix_clear (&self->sub_IM);
+  ncm_vector_clear (&self->sub_x);
+  ncm_vector_clear (&self->f);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_nd_parent_class)->dispose (object);
@@ -291,6 +289,13 @@ ncm_stats_dist_nd_class_init (NcmStatsDistNdClass *klass)
                                                       "Cross-validation method",
                                                       NCM_TYPE_STATS_DIST_ND_CV, NCM_STATS_DIST_ND_CV_NONE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SPLIT_FRAC,
+                                   g_param_spec_double ("split-frac",
+                                                        NULL,
+                                                        "Fraction to use in the split cross-validation",
+                                                        0.50, 0.95, 0.9,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_NEARPD_MAXITER,
@@ -402,412 +407,11 @@ _ncm_stats_dist_nd_prepare (NcmStatsDistNd *dnd)
   ncm_vector_set_all (self->weights, 1.0 / (1.0 * self->n));
 }
 
-void LowRankQP (gint *n, gint *m, gint *p, gint *method, gint *verbose, gint *niter,
-                gdouble *Q, gdouble *c, gdouble *A, gdouble *b, gdouble *u, gdouble *alpha,
-                gdouble *beta, gdouble *xi, gdouble *zeta);
-
-int nnls_c (double *a, const int *mda, const int *m, const int *n, double *b,
-            double *x, double* rnorm, double* w, double* zz, int *index,
-            int *mode);
-
-static void
-_ncm_stats_dist_nd_LowRankQP_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
-    NcmVector *b, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
-{
-  gint nc      = 0;
-  gint method  = 2;
-  gint verbose = 0;
-  gint maxiter = 4000;
-
-  /* Setting constraint value */
-  ncm_vector_set (b, 0, 1.0);
-
-  /* Setting constraint matrix */
-  ncm_matrix_set_all (A, 1.0);
-
-  /* Setting upper-bound */
-  ncm_vector_set_all (ub, 1.0e20);
-
-  /* Setting output vectors to zero */
-  ncm_vector_set_zero (x);
-  ncm_vector_set_zero (beta);
-  ncm_vector_set_zero (xi);
-  ncm_vector_set_zero (zeta);
-
-  LowRankQP (&n, &n, &nc, &method, &verbose, &maxiter,
-             ncm_matrix_data (IM), ncm_vector_data (f),
-             ncm_matrix_data (A), ncm_vector_data (b), ncm_vector_data (ub),
-             ncm_vector_data (x), ncm_vector_data (beta), ncm_vector_data (xi), ncm_vector_data (zeta));
-
-}
-
-static libqp_state_T
-_ncm_stats_dist_nd_libqp_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
-    NcmVector *b, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
-{
-  GPtrArray *col = g_ptr_array_new ();
-  uint32_t *II = g_new (uint32_t, n);
-  gdouble bbb = 1.0;
-  uint8_t S = 0;
-  libqp_state_T res;
-  gint i;
-
-  for (i = 0; i < n; i++)
-  {
-    g_ptr_array_add (col, ncm_matrix_ptr (IM, i, 0));
-  }
-
-  ncm_vector_set_all (zeta, 1.0);
-  ncm_vector_set_all (x, 0.0);
-  ncm_vector_set_all (xi, GSL_POSINF);
-  ncm_vector_set_zero (beta);
-
-  for (i = 0; i < n; i++)
-    II[i] = 1;
-
-  res = libqp_splx_solver ((gdouble **)col->pdata,
-                           ncm_vector_data (zeta),
-                           ncm_vector_data (f),
-                           &bbb,
-                           II,
-                           &S,
-                           ncm_vector_data (x),
-                           n, 10000000,
-                           0.0, 1.0e-13, 1.0e-10, NULL);
-
-  g_ptr_array_unref (col);
-  g_free (II);
-
-  return res;
-
-}
-
-static gdouble
-_ncm_stats_dist_nd_nnls_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
-    NcmVector *b, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
-{
-  gint nrows = n, ncols = n * 0.9, nda = n, mode = -31;
-  gdouble rnorm;
-
-  nnls_c (ncm_matrix_data (IM), &nda, &nrows, &ncols, ncm_vector_data (f),
-      ncm_vector_data (x), &rnorm, ncm_vector_data (zeta), ncm_vector_data (xi), (gint *)ncm_vector_data (beta),
-      &mode);
-
-  return rnorm;
-}
-
-static void
-_ncm_nnls_solve_feasible_ls (NcmISet *Pset, NcmISet *invalid, NcmVector *x, NcmMatrix *M, NcmVector *b, NcmMatrix *M_dup, NcmVector *b_dup, const guint max_remove, const gdouble reltol)
-{
-  gint ret;
-  g_assert_cmpuint (ncm_iset_get_max_size (Pset), ==, ncm_vector_len (x));
-
-  if (ncm_iset_get_len (Pset) == ncm_vector_len (x))
-  {
-    ncm_matrix_memcpy (M_dup, M);
-    ncm_vector_memcpy (b_dup, b);
-    ret = ncm_matrix_cholesky_solve (M_dup, b_dup, 'U');
-    if (ret > 0)
-    {
-      const guint n = ncm_vector_len (b_dup);
-      GArray *p = g_array_new (FALSE, FALSE, sizeof (gint));
-      GArray *w = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      gint lwork;
-
-      g_array_set_size (p, n * 20);
-      g_array_set_size (w, n * 20);
-
-      /*ncm_message ("b_dup stride: %d\n", ncm_vector_stride (b_dup));*/
-      /*printf ("Nhoca! %d %d\n", n, ncm_vector_stride (b_dup));fflush (stdout);*/
-      lwork = -1;
-      ret = ncm_lapack_dsysv ('U', n, 1,
-                              ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
-                              &g_array_index (p, gint, 0),
-                              ncm_vector_data (b_dup), n,
-                              &g_array_index (w, gdouble, 0), lwork);
-      g_assert_cmpint (ret, ==, 0);
-
-      lwork = g_array_index (w, gdouble, 0);
-      g_array_set_size (w, lwork);
-
-      /*printf ("Nhoca!\n");fflush (stdout);*/
-
-      ret = ncm_lapack_dsysv ('U', n, 1,
-                              ncm_matrix_data (M_dup), ncm_matrix_tda (M_dup),
-                              &g_array_index (p, gint, 0),
-                              ncm_vector_data (b_dup), n,
-                              &g_array_index (w, gdouble, 0), lwork);
-      /*ncm_message ("ret00 %d\n", ret);*/
-
-      g_array_unref (p);
-      g_array_unref (w);
-    }
-/*
-    else
-      ncm_message ("ret0 %d\n", ret);
-*/
-
-    ncm_iset_get_subset_vec_lt (Pset, invalid, b_dup, reltol);
-  }
-  else
-  {
-    NcmMatrix *sub_M = ncm_iset_get_submatrix (Pset, M, M_dup);
-    NcmVector *sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
-
-    ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
-    /*ncm_message ("ret1 %d\n", ret);*/
-
-    ncm_vector_set_zero (x);
-    ncm_iset_set_subvector (Pset, x, sub_b);
-
-    ncm_iset_get_subset_vec_lt (Pset, invalid, x, reltol);
-  }
-
-  while (ncm_iset_get_len (invalid))
-  {
-    NcmMatrix *sub_M;
-    NcmVector *sub_b;
-
-    /*ncm_iset_log_vals (invalid, "Inv ");*/
-    ncm_iset_remove_smallest_subset (invalid, Pset, x, max_remove);
-    /*ncm_iset_remove_subset (invalid, Pset);*/
-    /*ncm_iset_log_vals (Pset, "Pset");*/
-
-    sub_M = ncm_iset_get_submatrix (Pset, M, M_dup);
-    sub_b = ncm_iset_get_subvector (Pset, b, b_dup);
-
-    ret = ncm_matrix_cholesky_solve (sub_M, sub_b, 'U');
-    /*ncm_message ("ret2 %d\n", ret);*/
-
-    ncm_vector_set_zero (x);
-    ncm_iset_set_subvector (Pset, x, sub_b);
-
-    ncm_iset_get_subset_vec_lt (Pset, invalid, x, reltol);
-  }
-}
-
-static gdouble
-_ncm_stats_dist_nd_local2_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
-    NcmVector *b0, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
-{
-  gint nrows = n, ncols = ceil (n * 0.9);
-  NcmNNLS *nnls    = ncm_nnls_new (nrows, ncols);
-  NcmMatrix *subIM = ncm_matrix_get_submatrix (IM, 0, 0, nrows, ncols);
-  NcmVector *xsol  = ncm_vector_get_subvector (x, 0, ncols);
-  gdouble rnorm;
-
-  ncm_nnls_set_umethod (nnls, NCM_NNLS_UMETHOD_NORMAL);
-  ncm_vector_set_zero (x);
-
-  /*ncm_nnls_set_reltol (1.0e-300);*/
-  rnorm = ncm_nnls_solve (nnls, subIM, xsol, f);
-
-  ncm_matrix_free (subIM);
-  ncm_vector_free (xsol);
-  ncm_nnls_free (nnls);
-
-  return rnorm;
-}
-
-
-static gdouble
-_ncm_stats_dist_nd_local_solve_IMx_f (gint n, NcmMatrix *IM, NcmVector *x, NcmVector *f,
-    NcmVector *b0, NcmMatrix *A, NcmVector *ub, NcmVector *beta, NcmVector *xi, NcmVector *zeta)
-{
-  gint nrows = n, ncols = ceil (n * 0.9);
-  NcmMatrix *subIM     = ncm_matrix_get_submatrix (IM, 0, 0, nrows, ncols);
-  NcmMatrix *IM2       = ncm_matrix_new (ncols, ncols);
-  NcmMatrix *IM2_dup   = ncm_matrix_new (ncols, ncols);
-  NcmVector *b         = ncm_vector_new (ncols);
-  NcmVector *b_dup     = ncm_vector_new (ncols);
-  NcmVector *w         = ncm_vector_new (ncols);
-  NcmVector *xsol      = ncm_vector_get_subvector (x, 0, ncols);
-  NcmVector *xtmp      = ncm_vector_new (ncols);
-  NcmVector *tmp       = ncm_vector_new (ncols);
-  NcmISet *Pset        = ncm_iset_new (ncols);
-  NcmISet *Pset_try    = ncm_iset_new (ncols);
-  NcmISet *invalid     = ncm_iset_new (ncols);
-  const gdouble reltol = 1.0e-14;
-  gdouble rnorm;
-
-  ncm_vector_set_zero (x);
-  ncm_matrix_square_to_sym (subIM, 'T', 'U', IM2);
-  ncm_matrix_update_vector (subIM, 'T', 1.0, f, 0.0, b);
-
-  //ncm_iset_add_range (Pset, 0, ncols);
-  ncm_iset_add (Pset, ncm_vector_get_max_index (b));
-  //ncm_iset_add_largest_subset (Pset, b, 0.0, 0.1);
-
-  _ncm_nnls_solve_feasible_ls (Pset, invalid, xtmp, IM2, b, IM2_dup, b_dup, ncols, 0.0);
-
-  /* Residual */
-  ncm_vector_memcpy (zeta, f);
-  ncm_matrix_update_vector (subIM, 'N', -1.0, xtmp, 1.0, zeta);
-  rnorm = ncm_vector_dnrm2 (zeta);
-
-  /* - Grad chi2 */
-  ncm_matrix_update_vector (subIM, 'T', 1.0, zeta, 0.0, w);
-
-  /*ncm_vector_log_vals (w, "w: ", "% .2e", TRUE);*/
-
-  while (TRUE)
-  {
-    gdouble add_frac = 1.0;
-    gboolean finish  = FALSE;
-    gdouble lrnorm;
-    guint added;
-
-    while (TRUE)
-    {
-      add_frac *= 0.2;
-
-      ncm_iset_copy (Pset, Pset_try);
-      ncm_iset_log_vals (Pset_try, "PsetB");
-      added = ncm_iset_add_largest_subset (Pset_try, w, 0.0, add_frac);
-      ncm_message ("Added %u indexes and resolved obtained Pset: %d!\n", added, ncm_iset_get_len (Pset));
-      ncm_iset_log_vals (Pset_try, "PsetA");
-      if (added == 0)
-      {
-        finish = TRUE;
-        break;
-      }
-
-      _ncm_nnls_solve_feasible_ls (Pset_try, invalid, tmp, IM2, b, IM2_dup, b_dup, added, 0.0);
-      ncm_message ("After solving Pset: %d!\n", ncm_iset_get_len (Pset));
-
-      /* Residual */
-      ncm_vector_memcpy (zeta, f);
-      ncm_matrix_update_vector (subIM, 'N', -1.0, tmp, 1.0, zeta);
-      lrnorm = ncm_vector_dnrm2 (zeta);
-
-      ncm_message ("added %u lrnorm % 22.15g rnorm % 22.15g\n", added, lrnorm, rnorm);
-      if (lrnorm < rnorm * (1.0 - reltol))
-      {
-        ncm_iset_copy (Pset_try, Pset);
-        ncm_vector_memcpy (xtmp, tmp);
-        rnorm = lrnorm;
-        break;
-      }
-
-      if (added == 1)
-      {
-        finish = TRUE;
-        break;
-      }
-    }
-
-    if (finish)
-      break;
-
-    /* - Grad chi2 */
-    ncm_matrix_update_vector (subIM, 'T', 1.0, zeta, 0.0, w);
-  }
-
-/*
-
-  while (ncm_iset_get_len (invalid))
-  {
-    NcmMatrix *sub_IM2;
-    NcmVector *sub_b;
-
-    ncm_iset_remove_subset (invalid, Pset);
-
-    sub_IM2  = ncm_iset_get_submatrix (Pset, IM2,  IM2_dup);
-    sub_b    = ncm_iset_get_subvector (Pset, b,    b_dup);
-
-    ncm_matrix_cholesky_solve (sub_IM2, sub_b, 'U');
-
-    ncm_vector_set_zero (xtmp);
-    ncm_iset_set_subvector (Pset, xtmp, sub_b);
-
-    ncm_vector_log_vals (xtmp, "x: ", "% .2e", TRUE);
-
-    ncm_iset_get_subset_vec_lt (Pset, invalid, xtmp, reltol);
-  }
-*/
-
-  ncm_vector_memcpy (xsol, xtmp);
-
-  ncm_matrix_free (IM2);
-  ncm_matrix_free (IM2_dup);
-  ncm_vector_free (b);
-  ncm_vector_free (b_dup);
-  ncm_vector_free (w);
-  ncm_vector_free (xsol);
-  ncm_vector_free (xtmp);
-  ncm_vector_free (tmp);
-
-  ncm_iset_free (Pset);
-  ncm_iset_free (Pset_try);
-  ncm_iset_free (invalid);
-
-  return rnorm;
-}
-
-/*
-
-  while (TRUE)
-  {
-    gint max_w_i = 0;
-    NcmMatrix *sub_IM2;
-    NcmVector *sub_b;
-    NcmISet *subPset;
-
-    ncm_iset_get_vector_max (Aset, w, &max_w_i);
-
-    ncm_iset_del (Aset, max_w_i);
-    ncm_iset_add (Pset, max_w_i);
-
-    sub_IM2  = ncm_iset_get_submatrix (Pset, IM2,  IM2_dup);
-    sub_b    = ncm_iset_get_subvector (Pset, b,    b_dup);
-
-    ncm_matrix_cholesky_solve (sub_IM2, sub_b, 'U');
-
-    ncm_vector_set_zero (xtmp);
-    ncm_iset_set_subvector (Pset, xtmp, sub_b);
-
-    ncm_iset_get_subset_vec_lt (Pset, subPset, xtmp, reltol);
-
-    while (ncm_iset_get_len (subPset) > 0)
-    {
-      NcmVector *av = ncm_iset_get_vector_inv_cmp (subPset, x, xtmp, tmp);
-      const gdouble alpha = ncm_vector_get_min (av);
-
-      if (alpha != 0.0)
-      {
-        ncm_vector_memcpy (tmp, xtmp);
-        ncm_vector_sub (tmp, xsol);
-        ncm_vector_axpy (xsol, alpha, tmp);
-
-        ncm_iset_get_subset_vec_lt (Pset, subPset, xsol, reltol);
-
-
-      }
-
-      ncm_vector_free (av);
-    }
-
-    ncm_matrix_free (sub_IM2);
-    ncm_vector_free (sub_b);
-  }
-
-
-
- */
-
-
-enum {
-  LOW_RANK_QP,
-  LIBQP,
-  NNLS,
-};
-
 typedef struct _NcmStatsDistNdEval
 {
   NcmStatsDistNd *dnd;
   NcmStatsDistNdPrivate * const self;
   NcmStatsDistNdClass *dnd_class;
-  NcmVector *m2lnp;
 } NcmStatsDistNdEval;
 
 static gdouble
@@ -816,60 +420,11 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
   NcmStatsDistNdEval *eval = userdata;
   const gdouble href = os * ncm_stats_dist_nd_get_rot_bandwidth (eval->dnd, eval->self->d, eval->self->n);
   gdouble rnorm;
-  gint i;
-
-  for (i = 0; i < eval->self->n; i++)
-  {
-    const gdouble m2lnp_i = ncm_vector_get (eval->m2lnp, i);
-    ncm_vector_set (eval->self->weights, i, + exp (-0.5 * (m2lnp_i - eval->self->min_m2lnp)));
-  }
 
   eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, href, href * href, eval->self->IM);
+  rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
-  ncm_vector_set_zero (eval->self->alpha);
-
-/*
-  rnorm = _ncm_stats_dist_nd_nnls_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
-      eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
-*/
-  if (FALSE)
-  {
-    rnorm = _ncm_stats_dist_nd_nnls_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
-        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
-  }
-  else if (FALSE)
-  {
-    rnorm = _ncm_stats_dist_nd_local_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
-        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
-  }
-  else
-  {
-    rnorm = _ncm_stats_dist_nd_local2_solve_IMx_f (eval->self->n, eval->self->IM, eval->self->alpha, eval->self->weights,
-        eval->self->b, eval->self->A, eval->self->dv, eval->self->beta, eval->self->xi, eval->self->zeta);
-  }
-
-  {
-    gdouble rnorm2 = rnorm;
-/*
-    NcmVector *f;
-    for (i = 0; i < eval->self->n; i++)
-    {
-      const gdouble m2lnp_i = ncm_vector_get (eval->m2lnp, i);
-      ncm_vector_set (eval->self->weights, i, + exp (-0.5 * (m2lnp_i - eval->self->min_m2lnp)));
-    }
-    f = ncm_vector_dup (eval->self->weights);
-
-    eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, href, href * href, eval->self->IM);
-
-    ncm_matrix_sym_update_vector (eval->self->IM, 'U', 1.0, eval->self->alpha, -1.0, f);
-    rnorm2 = ncm_vector_dnrm2 (f);
-    ncm_vector_clear (&f);
-    ncm_vector_log_vals (eval->self->alpha, "x: ", "% .2e", TRUE);
-*/
-
-    ncm_message ("OS: % 22.15g, RNORM: % 22.15g : % 22.15g\n", os, rnorm, rnorm2);
-
-  }
+  /*ncm_message ("OS: % 22.15g, RNORM: % 22.15g\n", os, rnorm);*/
 
   return rnorm;
 }
@@ -885,150 +440,134 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls_vec (const gsl_vector *ln_os, gpointe
 static void
 _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
 {
-  NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd);
   NcmStatsDistNdPrivate * const self = dnd->priv;
-  NcmStatsDistNdEval eval = {dnd, self, dnd_class, m2lnp};
-  const gdouble dbl_limit = 1.0;
-  gint method = NNLS;
-  gint i;
-
   ncm_stats_dist_nd_prepare (dnd);
   g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n);
-
-  if (self->n != self->alloc_n)
   {
-    ncm_matrix_clear (&self->A);
-    ncm_matrix_clear (&self->IM);
-    ncm_vector_clear (&self->b);
-    ncm_vector_clear (&self->beta);
-    ncm_vector_clear (&self->dv);
-    ncm_vector_clear (&self->alpha);
-    ncm_vector_clear (&self->xi);
-    ncm_vector_clear (&self->zeta);
+    NcmStatsDistNdClass *dnd_class = NCM_STATS_DIST_ND_GET_CLASS (dnd);
+    NcmStatsDistNdEval eval = {dnd, self, dnd_class};
+    const gint nrows        = self->n;
+    const gint ncols        = ceil (self->n * self->split_frac);
+    const gdouble dbl_limit = 1.0;
+    gint i;
 
-    self->A       = ncm_matrix_new (1, self->n);
-    self->IM      = ncm_matrix_new (self->n, self->n);
-    self->b       = ncm_vector_new (self->n);
-    self->beta    = ncm_vector_new (self->n);
-    self->dv      = ncm_vector_new (self->n);
-    self->alpha   = ncm_vector_new (self->n);
-    self->xi      = ncm_vector_new (self->n);
-    self->zeta    = ncm_vector_new (self->n);
+    g_assert_cmpuint (nrows, >=, ncols);
 
-    self->alloc_n = self->n;
-  }
-
-  self->min_m2lnp = GSL_POSINF;
-  self->max_m2lnp = GSL_NEGINF;
-
-  for (i = 0; i < self->n; i++)
-  {
-    const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-    self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
-    self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
-  }
-
-  if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
-  {
-    const guint fi = ncm_vector_get_min_index (m2lnp);
-
-    g_assert_cmpuint (fi, <, ncm_vector_len (m2lnp));
-
-    ncm_vector_set_zero (self->weights);
-    ncm_vector_set (self->weights, fi, 1.0);
-
-    self->href  = 1.0;
-    self->href2 = 1.0;
-
-    return;
-  }
-
-  if (self->n > 10000)
-    g_warning ("_ncm_stats_dist_nd_prepare_interp: very large system n = %u!", self->n);
-
-  switch (method)
-  {
-    case LOW_RANK_QP:
-      dnd_class->prepare_IM (dnd, self->invUsample, self->d, self->n, self->href, self->href2, self->IM);
-
-      for (i = 0; i < self->n; i++)
-      {
-        const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-        ncm_vector_set (self->weights, i, - exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
-      }
-
-      _ncm_stats_dist_nd_LowRankQP_solve_IMx_f (self->n, self->IM, self->alpha, self->weights,
-          self->b, self->A, self->dv, self->beta, self->xi, self->zeta);
-      break;
-    case LIBQP:
-      dnd_class->prepare_IM (dnd, self->invUsample, self->d, self->n, self->href, self->href2, self->IM);
-
-      for (i = 0; i < self->n; i++)
-      {
-        const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-        ncm_vector_set (self->weights, i, - exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
-      }
-
-      _ncm_stats_dist_nd_libqp_solve_IMx_f (self->n, self->IM, self->alpha, self->weights,
-          self->b, self->A, self->dv, self->beta, self->xi, self->zeta);
-      break;
-    case NNLS:
+    /*
+     * Preparing allocations
+     */
+    if (self->n != self->alloc_n)
     {
-      switch (self->cv_type)
+      ncm_matrix_clear (&self->IM);
+      ncm_vector_clear (&self->f);
+
+      self->IM      = ncm_matrix_new (self->n, self->n);
+      self->f       = ncm_vector_new (self->n);
+
+      self->alloc_n = self->n;
+    }
+
+    if ((self->nnls == NULL) ||
+        ((ncm_nnls_get_nrows (self->nnls) != nrows) || (ncm_nnls_get_ncols (self->nnls) != ncols)))
+    {
+      ncm_nnls_clear (&self->nnls);
+      self->nnls = ncm_nnls_new (nrows, ncols);
+      ncm_nnls_set_umethod (self->nnls, NCM_NNLS_UMETHOD_NORMAL);
+
+      ncm_matrix_clear (&self->sub_IM);
+      ncm_vector_clear (&self->sub_x);
+
+      self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
+      self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
+
+      ncm_vector_set_zero (self->weights);
+    }
+
+    /*
+     * Evaluating the right-hand-side
+     */
+
+    self->min_m2lnp = GSL_POSINF;
+    self->max_m2lnp = GSL_NEGINF;
+
+    for (i = 0; i < self->n; i++)
+    {
+      const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
+      self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
+      self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
+    }
+
+    if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
+    {
+      const guint fi = ncm_vector_get_min_index (m2lnp);
+
+      g_assert_cmpuint (fi, <, ncm_vector_len (m2lnp));
+
+      ncm_vector_set_zero (self->weights);
+      ncm_vector_set (self->weights, fi, 1.0);
+
+      self->href  = 1.0;
+      self->href2 = 1.0;
+
+      return;
+    }
+
+    for (i = 0; i < self->n; i++)
+    {
+      const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
+      ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
+    }
+
+    if (self->n > 10000)
+      g_warning ("_ncm_stats_dist_nd_prepare_interp: very large system n = %u!", self->n);
+
+    switch (self->cv_type)
+    {
+      case NCM_STATS_DIST_ND_CV_SPLIT:
       {
-        case NCM_STATS_DIST_ND_CV_SPLIT:
+        gint iter = 0, maxiter = 200, status;
+        NcmVector *x = ncm_vector_new (1);
+        NcmVector *s = ncm_vector_new (1);
+        gsl_multimin_function fmin = {_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec, 1, &eval};
+
+        ncm_vector_set (x, 0, log (self->over_smooth));
+        ncm_vector_set (s, 0, 0.1);
+
+        gsl_multimin_fminimizer_set (self->mmin, &fmin, ncm_vector_gsl (x), ncm_vector_gsl (s));
+        do
         {
-          gint iter = 0, maxiter = 1000000, status;
-          NcmVector *x = ncm_vector_new (1);
-          NcmVector *s = ncm_vector_new (1);
-          gsl_multimin_function fmin = {_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec, 1, &eval};
+          gdouble size;
+          iter++;
+          status = gsl_multimin_fminimizer_iterate (self->mmin);
 
-          ncm_vector_set (x, 0, log (self->over_smooth));
-          ncm_vector_set (s, 0, 0.1);
+          if (status)
+            break;
 
-          gsl_multimin_fminimizer_set (self->mmin, &fmin, ncm_vector_gsl (x), ncm_vector_gsl (s));
-          do
-          {
-            gdouble size;
-            iter++;
-            status = gsl_multimin_fminimizer_iterate (self->mmin);
+          size = gsl_multimin_fminimizer_size (self->mmin);
+          status = gsl_multimin_test_size (size, 1.0e-7);
 
-            if (status)
-              break;
+        } while (status == GSL_CONTINUE && iter < maxiter);
 
-            size = gsl_multimin_fminimizer_size (self->mmin);
-            status = gsl_multimin_test_size (size, 1.0e-7);
+        self->over_smooth   = exp (gsl_vector_get (self->mmin->x, 0));
 
-           } while (status == GSL_CONTINUE && iter < maxiter);
+        self->href          = self->over_smooth * ncm_stats_dist_nd_get_rot_bandwidth (dnd, self->d, self->n);
+        self->href2         = self->href * self->href;
+        self->kernel_lnnorm = ncm_stats_dist_nd_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
 
-          self->over_smooth = exp (gsl_vector_get (self->mmin->x, 0));
+        self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
 
-          self->href          = self->over_smooth * ncm_stats_dist_nd_get_rot_bandwidth (dnd, self->d, self->n);
-          self->href2         = self->href * self->href;
-          self->kernel_lnnorm = ncm_stats_dist_nd_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
-
-          self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
-
-          ncm_vector_free (x);
-          ncm_vector_free (s);
-        }
-        break;
-        case NCM_STATS_DIST_ND_CV_NONE:
-          self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
-          break;
-        default:
-          g_assert_not_reached ();
-          break;
+        ncm_vector_free (x);
+        ncm_vector_free (s);
       }
       break;
+      case NCM_STATS_DIST_ND_CV_NONE:
+        self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
-    default:
-      g_assert_not_reached ();
-      break;
   }
-
-  ncm_vector_memcpy (self->weights, self->alpha);
-  /*ncm_vector_scale (self->weights, 1.0 / ncm_vector_sum_cpts (self->weights));*/
 }
 
 static void
@@ -1156,6 +695,39 @@ ncm_stats_dist_nd_get_over_smooth (NcmStatsDistNd *dnd)
   NcmStatsDistNdPrivate * const self = dnd->priv;
 
   return self->over_smooth;
+}
+
+/**
+ * ncm_stats_dist_nd_set_split_frac:
+ * @dnd: a #NcmStatsDistNd
+ * @split_frac: the over-smooth factor
+ *
+ * Sets cross-correlation split fraction to @split_frac.
+ *
+ */
+void
+ncm_stats_dist_nd_set_split_frac (NcmStatsDistNd *dnd, const gdouble split_frac)
+{
+  NcmStatsDistNdPrivate * const self = dnd->priv;
+
+  g_assert_cmpfloat (split_frac, >=, 0.5);
+  g_assert_cmpfloat (split_frac, <=, 0.95);
+
+  self->split_frac = split_frac;
+}
+
+/**
+ * ncm_stats_dist_nd_get_split_frac:
+ * @dnd: a #NcmStatsDistNd
+ *
+ * Returns: the cross-correlation split fraction.
+ */
+gdouble
+ncm_stats_dist_nd_get_split_frac (NcmStatsDistNd *dnd)
+{
+  NcmStatsDistNdPrivate * const self = dnd->priv;
+
+  return self->split_frac;
 }
 
 /**

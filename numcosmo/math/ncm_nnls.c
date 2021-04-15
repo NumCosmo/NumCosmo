@@ -44,6 +44,7 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
+#include "misc/libqp.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmNNLSPrivate
@@ -177,6 +178,7 @@ _ncm_nnls_constructed (GObject *object)
     NcmNNLS *nnls = NCM_NNLS (object);
     NcmNNLSPrivate *const self = nnls->priv;
 
+    self->b         = ncm_vector_new (self->ncols);
     self->x_tmp     = ncm_vector_new (self->ncols);
     self->x_try     = ncm_vector_new (self->ncols);
     self->residuals = ncm_vector_new (self->nrows);
@@ -653,7 +655,6 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
       {
         self->M   = ncm_matrix_new (self->ncols, self->ncols);
         self->M_U = ncm_matrix_new (self->ncols, self->ncols);
-        self->b   = ncm_vector_new (self->ncols);
         self->LU_alloc = TRUE;
       }
 
@@ -730,5 +731,267 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
   return rnorm;
 }
 
+int nnls_c (double *a, const int *mda, const int *m, const int *n, double *b,
+            double *x, double* rnorm, double* w, double* zz, int *index,
+            int *mode);
 
+/**
+ * ncm_nnls_solve_LH:
+ * @nnls: a #NcmNNLS
+ * @A: a #NcmMatrix $A$
+ * @x: a #NcmVector $\vec{x}$
+ * @f: a #NcmVector $\vec{f}$
+ *
+ * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
+ * imposing the non negativity constraint on $\vec{x}$,
+ * i.e., $\vec{x} > 0$. This method solves the system
+ * using the original code by Charles L. Lawson and
+ * Richard J. Hanson translated to C using f2c.
+ *
+ * Returns: the Euclidean norm of the residuals.
+ */
+gdouble
+ncm_nnls_solve_LH (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  NcmNNLSPrivate *const self = nnls->priv;
+  gint nrows = self->nrows;
+  gint ncols = self->ncols;
+  gint mode = -31;
+  gdouble rnorm;
 
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, self->nrows);
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, self->ncols);
+
+  if (!self->QR_alloc)
+  {
+    self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
+    self->QR_alloc = TRUE;
+  }
+
+  ncm_matrix_memcpy_to_colmajor (self->A_QR, A);
+  ncm_vector_memcpy (self->residuals, f);
+
+  if (self->work->len < self->nrows)
+    g_array_set_size (self->work, self->nrows);
+  if (self->ipiv->len < self->ncols)
+    g_array_set_size (self->ipiv, self->ncols);
+
+  nnls_c (ncm_matrix_data (A), &nrows, &nrows, &ncols, ncm_vector_data (self->residuals),
+      ncm_vector_data (x), &rnorm, ncm_vector_data (self->x_tmp), &g_array_index (self->work, gdouble, 0),
+      &g_array_index (self->ipiv, gint, 0), &mode);
+
+  return rnorm;
+
+}
+
+void LowRankQP (gint *n, gint *m, gint *p, gint *method, gint *verbose, gint *niter,
+                gdouble *Q, gdouble *c, gdouble *A, gdouble *b, gdouble *u, gdouble *alpha,
+                gdouble *beta, gdouble *xi, gdouble *zeta);
+
+/**
+ * ncm_nnls_solve_lowrankqp:
+ * @nnls: a #NcmNNLS
+ * @A: a #NcmMatrix $A$
+ * @x: a #NcmVector $\vec{x}$
+ * @f: a #NcmVector $\vec{f}$
+ *
+ * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
+ * imposing the non negativity constraint on $\vec{x}$,
+ * i.e., $\vec{x} > 0$. This method solves the system
+ * using the LowRankQP quadratic programming code.
+ *
+ * Returns: the Euclidean norm of the residuals.
+ */
+gdouble
+ncm_nnls_solve_lowrankqp (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  NcmNNLSPrivate *const self = nnls->priv;
+  gint nrows   = self->nrows;
+  gint ncols   = self->ncols;
+  gint nc      = 0;
+  gint verbose = 0;
+  gint maxiter = 4000;
+  gint method;
+
+  /* Setting upper-bound */
+  ncm_vector_set_all (self->x_tmp, 1.0e20);
+
+  g_assert_cmpuint (self->ncols, !=, self->nrows);
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, self->nrows);
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, self->ncols);
+
+  switch (self->umethod)
+  {
+    case NCM_NNLS_UMETHOD_NORMAL:
+      method = 2;
+      break;
+    case NCM_NNLS_UMETHOD_NORMAL_LU:
+      method = 1;
+      break;
+    default:
+      g_error ("ncm_nnls_solve_lowrankqp: LowRankQP only support UMETHOD_NORMAL and UMETHOD_NORMAL_QP.");
+      method = 2;
+      break;
+  }
+
+  if (!self->QR_alloc)
+  {
+    self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
+    self->QR_alloc = TRUE;
+  }
+  if (self->work->len < self->nrows)
+    g_array_set_size (self->work, self->nrows);
+
+  ncm_matrix_memcpy (self->A_QR, A);
+  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
+
+  LowRankQP (&ncols, &nrows, &nc, &method, &verbose, &maxiter,
+             ncm_matrix_data (self->A_QR), ncm_vector_data (self->b),
+             NULL, NULL, ncm_vector_data (self->x_tmp),
+             ncm_vector_data (x),
+             ncm_vector_data (self->x_try),
+             ncm_vector_data (self->residuals),
+             &g_array_index (self->work, gdouble, 0));
+
+  return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
+}
+
+static void
+print_state (libqp_state_T state)
+{
+  ncm_message ("niter %d QP % 22.15g QD % 22.15g %d\n", state.nIter, state.QP, state.QD, state.exitflag);
+}
+
+/**
+ * ncm_nnls_solve_splx:
+ * @nnls: a #NcmNNLS
+ * @A: a #NcmMatrix $A$
+ * @x: a #NcmVector $\vec{x}$
+ * @f: a #NcmVector $\vec{f}$
+ *
+ * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
+ * imposing the non negativity constraint on $\vec{x}$,
+ * i.e., $\vec{x} > 0$. This method solves the system
+ * using function libqp_splx_solver from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/).
+ *
+ * Returns: the Euclidean norm of the residuals.
+ */
+gdouble
+ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  NcmNNLSPrivate *const self = nnls->priv;
+  GPtrArray *col   = g_ptr_array_new ();
+  const gint ncols = self->ncols;
+  uint32_t *II = g_new (uint32_t, ncols);
+  gdouble bbb = 1.0;
+  uint8_t S = 1;
+  libqp_state_T res;
+  gint i;
+
+  if (!self->LU_alloc)
+  {
+    self->M   = ncm_matrix_new (ncols, ncols);
+    self->M_U = ncm_matrix_new (ncols, ncols);
+    self->LU_alloc = TRUE;
+  }
+
+  ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
+  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
+
+  for (i = 0; i < ncols; i++)
+    g_ptr_array_add (col, ncm_matrix_ptr (self->M, i, 0));
+
+  ncm_vector_set_all (self->x_tmp, 1.0);
+  ncm_vector_set_all (x, 0.0);
+
+  for (i = 0; i < ncols; i++)
+    II[i] = 1;
+
+  res = libqp_splx_solver ((gdouble **)col->pdata,
+                           ncm_vector_data (self->x_tmp),
+                           ncm_vector_data (self->b),
+                           &bbb,
+                           II,
+                           &S,
+                           ncm_vector_data (x),
+                           ncols, 1000,
+                           0.0, self->reltol, GSL_NEGINF,
+                           /*&print_state*/ NULL);
+
+  g_ptr_array_unref (col);
+  g_free (II);
+
+  g_assert_cmpint (res.exitflag, >=, 0);
+  if (FALSE)
+    print_state (res);
+
+  return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
+}
+
+/**
+ * ncm_nnls_solve_gmso:
+ * @nnls: a #NcmNNLS
+ * @A: a #NcmMatrix $A$
+ * @x: a #NcmVector $\vec{x}$
+ * @f: a #NcmVector $\vec{f}$
+ *
+ * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
+ * imposing the non negativity constraint on $\vec{x}$,
+ * i.e., $\vec{x} > 0$. This method solves the system
+ * using function libqp_gmso_solver from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/).
+ *
+ * Returns: the Euclidean norm of the residuals.
+ */
+gdouble
+ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  NcmNNLSPrivate *const self = nnls->priv;
+  GPtrArray *col   = g_ptr_array_new ();
+  const gint ncols = self->ncols;
+  uint32_t *II = g_new (uint32_t, ncols);
+  libqp_state_T res;
+  gint i;
+
+  if (!self->LU_alloc)
+  {
+    self->M   = ncm_matrix_new (ncols, ncols);
+    self->M_U = ncm_matrix_new (ncols, ncols);
+    self->LU_alloc = TRUE;
+  }
+
+  ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
+  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
+
+  for (i = 0; i < ncols; i++)
+    g_ptr_array_add (col, ncm_matrix_ptr (self->M, i, 0));
+
+  ncm_vector_set_all (self->x_tmp, 1.0);
+  ncm_vector_set_all (self->x_try, 1.0);
+  ncm_vector_set_all (self->mgrad, 0.0);
+  ncm_vector_set_all (self->residuals, GSL_POSINF);
+  ncm_vector_set_all (x, 1.0 / ncols);
+
+  for (i = 0; i < ncols; i++)
+    II[i] = 1;
+
+  res = libqp_gsmo_solver ((gdouble **)col->pdata,
+                           ncm_vector_data (self->x_tmp),
+                           ncm_vector_data (self->b),
+                           ncm_vector_data (self->x_try),
+                           1.0,
+                           ncm_vector_data (self->mgrad),
+                           ncm_vector_data (self->residuals),
+                           ncm_vector_data (x),
+                           ncols, 1000,
+                           self->reltol,
+                           /*&print_state*/ NULL);
+
+  g_ptr_array_unref (col);
+  g_free (II);
+
+  g_assert_cmpint (res.exitflag, >=, 0);
+  if (FALSE)
+    print_state (res);
+
+  return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
+}

@@ -93,6 +93,10 @@ guint ncm_nnls_get_nrows (NcmNNLS *nnls);
 guint ncm_nnls_get_ncols (NcmNNLS *nnls);
 
 gdouble ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
+gdouble ncm_nnls_solve_LH (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
+gdouble ncm_nnls_solve_lowrankqp (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
+gdouble ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
+gdouble ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
 
 G_END_DECLS
 

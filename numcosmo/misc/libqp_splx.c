@@ -4,7 +4,7 @@
  *
  * DESCRIPTION
  *  The library provides function which solves the following instance of
- *  a convex Quadratic Programmin task:
+ *  a convex Quadratic Programming task:
  *  
  *   min QP(x):= 0.5*x'*H*x + f'*x  
  *    x
@@ -16,7 +16,7 @@
  *   
  *  where I_k = { i | I[i] == k}, k={1,...,m}.
  *
- * A precision of the found solution is controled by the input argumens
+ * A precision of the found solution is controlled by the input arguments
  * MaxIter, TolAbs, QP_TH and MaxIter which define the stopping conditions:
  * 
  *  nIter >= MaxIter     ->  exitflag = 0   Number of iterations
@@ -108,6 +108,7 @@ libqp_state_T libqp_splx_solver(double * col[],
   uint32_t k;
   uint32_t i, j;
   libqp_state_T state;
+  double QP0, QD0;
 
   
   /* ------------------------------------------------------------ 
@@ -214,6 +215,8 @@ libqp_state_T libqp_splx_solver(double * col[],
   /* ------------------------------------------------------------ 
     Main optimization loop 
   ------------------------------------------------------------ */
+  QP0 = state.QP;
+  QD0 = state.QD;
   while( state.exitflag == 100 ) 
   {
     state.nIter ++;
@@ -389,7 +392,10 @@ libqp_state_T libqp_splx_solver(double * col[],
     if(state.QP-state.QD <= LIBQP_ABS(state.QP)*TolRel ) state.exitflag = 1;
     else if( state.QP-state.QD <= TolAbs ) state.exitflag = 2;
     else if( state.QP <= QP_TH ) state.exitflag = 3;
+    else if( (fabs (state.QP - QP0) < fabs (state.QP * TolRel)) && (fabs (state.QD - QD0) < fabs (state.QD * TolRel))) state.exitflag = 4;
     else if( state.nIter >= MaxIter) state.exitflag = 0;
+    QP0 = state.QP;
+    QD0 = state.QD;
   }
 
   /*----------------------------------------------------------

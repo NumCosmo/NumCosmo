@@ -118,6 +118,7 @@ void ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a);
 
 NCM_INLINE const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *gm);
 NCM_INLINE gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);
+NCM_INLINE gdouble ncm_matrix_get_colmajor (const NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE const gdouble *ncm_matrix_const_ptr (const NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE GArray *ncm_matrix_get_array (NcmMatrix *cm);
@@ -142,6 +143,7 @@ NCM_INLINE void ncm_matrix_get_diag (NcmMatrix *cm, NcmVector *diag);
 NCM_INLINE void ncm_matrix_set_diag (NcmMatrix *cm, NcmVector *diag);
 
 NCM_INLINE void ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2);
+NCM_INLINE void ncm_matrix_memcpy_to_colmajor (NcmMatrix *cm1, const NcmMatrix *cm2);
 NCM_INLINE void ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv);
 NCM_INLINE void ncm_matrix_set_row (NcmMatrix *cm, const guint n, const NcmVector *cv);
 NCM_INLINE gdouble ncm_matrix_fast_get (NcmMatrix *cm, const guint ij);
@@ -216,6 +218,12 @@ NCM_INLINE gdouble
 ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j)
 {
   return gsl_matrix_get (ncm_matrix_const_gsl (cm), i, j);
+}
+
+NCM_INLINE gdouble
+ncm_matrix_get_colmajor (const NcmMatrix *cm, const guint i, const guint j)
+{
+  return ncm_matrix_const_data (cm)[i + ncm_matrix_nrows (cm) * j];
 }
 
 NCM_INLINE gdouble *
@@ -374,21 +382,41 @@ ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
   const guint nrows = ncm_matrix_nrows (cm1);
   const guint ncols = ncm_matrix_ncols (cm1);
   const guint total = nrows * ncols;
-  
+
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
-  
+
   if ((ncm_matrix_tda (cm1) != ncols) || (ncm_matrix_tda (cm2) != ncm_matrix_ncols (cm2)))
   {
     register guint i;
     const guint ncols_bytes = sizeof (gdouble) * ncols;
-    
+
     for (i = 0; i < nrows; i++)
       memcpy (ncm_matrix_ptr (cm1, i, 0), ncm_matrix_const_ptr (cm2, i, 0), ncols_bytes);
   }
   else
   {
     memcpy (ncm_matrix_data (cm1), ncm_matrix_const_data (cm2), sizeof (gdouble) * total);
+  }
+}
+
+NCM_INLINE void
+ncm_matrix_memcpy_to_colmajor (NcmMatrix *cm1, const NcmMatrix *cm2)
+{
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  register guint i;
+  
+  g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
+  g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
+  
+  for (i = 0; i < nrows; i++)
+  {
+    register guint j;
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_matrix_set_colmajor (cm1, i, j, ncm_matrix_get (cm2, i, j));
+    }
   }
 }
 

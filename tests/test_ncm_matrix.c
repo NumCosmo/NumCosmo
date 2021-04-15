@@ -51,6 +51,7 @@ void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
 
 void test_ncm_matrix_sanity (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_operations (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_colmajor (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_add_mul (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_square_to_sym (TestNcmMatrix *test, gconstpointer pdata);
@@ -108,7 +109,12 @@ main (gint argc, gchar *argv[])
               &test_ncm_matrix_new,
               &test_ncm_matrix_operations,
               &test_ncm_matrix_free);
-  
+
+  g_test_add ("/ncm/matrix/colmajor", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_colmajor,
+              &test_ncm_matrix_free);
+
   g_test_add ("/ncm/matrix/add_mul", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_add_mul,
@@ -520,6 +526,40 @@ test_ncm_matrix_operations (TestNcmMatrix *test, gconstpointer pdata)
   }
 
   NCM_TEST_FREE (ncm_matrix_free, cm);
+}
+
+void
+test_ncm_matrix_colmajor (TestNcmMatrix *test, gconstpointer pdata)
+{
+  NcmMatrix *cm0 = ncm_matrix_dup (test->m);
+  NcmMatrix *cm1 = ncm_matrix_dup (test->m);
+  guint i;
+
+  test_ncm_matrix_sanity (test, pdata);
+
+  ncm_matrix_memcpy_to_colmajor (cm1, cm0);
+
+  for (i = 0; i < test->nrows; i++)
+  {
+    guint j;
+    for (j = 0; j < test->ncols; j++)
+      ncm_assert_cmpdouble (ncm_matrix_get_colmajor (cm1, i, j), ==, ncm_matrix_get (cm0, i, j));
+  }
+
+  for (i = 0; i < test->nrows; i++)
+  {
+    guint j;
+    for (j = 0; j < test->ncols; j++)
+    {
+      const gdouble m_ij = g_test_rand_double_range (-1.0, 1.0);
+      ncm_matrix_set_colmajor (cm0, i, j, m_ij);
+
+      ncm_assert_cmpdouble (ncm_matrix_get_colmajor (cm0, i, j), ==, m_ij);
+    }
+  }
+
+  NCM_TEST_FREE (ncm_matrix_free, cm0);
+  NCM_TEST_FREE (ncm_matrix_free, cm1);
 }
 
 void

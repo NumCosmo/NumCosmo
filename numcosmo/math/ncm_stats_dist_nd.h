@@ -103,6 +103,9 @@ gdouble ncm_stats_dist_nd_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov
 void ncm_stats_dist_nd_set_over_smooth (NcmStatsDistNd *dnd, const gdouble over_smooth);
 gdouble ncm_stats_dist_nd_get_over_smooth (NcmStatsDistNd *dnd);
 
+void ncm_stats_dist_nd_set_split_frac (NcmStatsDistNd *dnd, const gdouble split_frac);
+gdouble ncm_stats_dist_nd_get_split_frac (NcmStatsDistNd *dnd);
+
 void ncm_stats_dist_nd_set_nearPD_maxiter (NcmStatsDistNd *dnd, const guint maxiter);
 guint ncm_stats_dist_nd_get_nearPD_maxiter (NcmStatsDistNd *dnd);
 
