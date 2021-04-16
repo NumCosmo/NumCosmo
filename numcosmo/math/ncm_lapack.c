@@ -908,7 +908,7 @@ ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, 
 
   return info;
 #else /* No fall back. */
-	g_error ("ncm_lapack_dgeev: no lapack support!");
+	g_error ("ncm_lapack_dgeevx: no lapack support!");
 	return -1;
 #endif
 }
