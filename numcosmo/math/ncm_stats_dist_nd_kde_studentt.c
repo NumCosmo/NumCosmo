@@ -160,12 +160,12 @@ _ncm_stats_dist_nd_kde_studentt_finalize (GObject *object)
 }
 
 static gdouble _ncm_stats_dist_nd_kde_studentt_get_rot_bandwidth (NcmStatsDistNd *dnd, const guint d, const gdouble n);
-static gdouble _ncm_stats_dist_nd_kde_studentt_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const gdouble href);
-static void _ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *invUsample, const gint d, const gint n, const gdouble href, const gdouble href2, NcmMatrix *IM);
+static gdouble _ncm_stats_dist_nd_kde_studentt_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
+static void _ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
 
-static gdouble _ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const gdouble href, const gdouble href2);
-static void _ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, gdouble href, NcmRNG *rng);
-static gdouble _ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const gdouble href, const gdouble href2);
+static gdouble _ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+static void _ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+static gdouble _ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
 
 static void
 ncm_stats_dist_nd_kde_studentt_class_init (NcmStatsDistNdKDEStudenttClass *klass)
@@ -208,7 +208,7 @@ _ncm_stats_dist_nd_kde_studentt_get_rot_bandwidth (NcmStatsDistNd *dnd, const gu
 }
 
 static gdouble
-_ncm_stats_dist_nd_kde_studentt_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const gdouble href)
+_ncm_stats_dist_nd_kde_studentt_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href)
 {
   NcmStatsDistNdKDEStudentt *dndt               = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
   NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
@@ -216,12 +216,17 @@ _ncm_stats_dist_nd_kde_studentt_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatri
   const gdouble lg_lnnorm   = lgamma (self->nu / 2.0) - lgamma ((self->nu + d) / 2.0);
   const gdouble chol_lnnorm = 0.5 * ncm_matrix_cholesky_lndet (cov_decomp);
   const gdouble nc_lnnorm   = (d / 2.0) * (ncm_c_lnpi () + log (self->nu));
+  gdouble href_det          = 1.0;
+  gint i;
 
-  return lg_lnnorm + nc_lnnorm + chol_lnnorm + d * log (href);
+  for (i = 0; i < d; i++)
+    href_det *= ncm_vector_fast_get (href, i);
+
+  return lg_lnnorm + nc_lnnorm + chol_lnnorm + log (href_det);
 }
 
 static void
-_ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *Us, const gint d, const gint n, const gdouble href, const gdouble href2, NcmMatrix *IM)
+_ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM)
 {
   NcmStatsDistNdKDEStudentt *dndt               = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
   NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
@@ -243,10 +248,10 @@ _ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *Us, 
       
       for (k = 0; k < d; k++)
       {
-        m2lnp_ij += gsl_pow_2 (ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k));
+        m2lnp_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)) /  ncm_vector_fast_get (href, k));
       }
       
-      p_ij = _ncm_stats_dist_nd_kde_studentt_f (self, d, m2lnp_ij / href2);
+      p_ij = _ncm_stats_dist_nd_kde_studentt_f (self, d, m2lnp_ij);
       
       ncm_matrix_set (IM, i, j, p_ij);
       ncm_matrix_set (IM, j, i, p_ij);
@@ -255,7 +260,7 @@ _ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *Us, 
 }
 
 static gdouble
-_ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const gdouble href, const gdouble href2)
+_ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
 {
   NcmStatsDistNdKDEStudentt *dndt = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
   NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
@@ -271,10 +276,10 @@ _ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, N
 
     for (k = 0; k < d; k++)
     {
-      chi2_i += gsl_pow_2 (ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k));
+      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k)) / ncm_vector_fast_get (href, k));
     }
     
-    e_i = ncm_vector_get (weights, i) * _ncm_stats_dist_nd_kde_studentt_f (self, d, chi2_i / href2);
+    e_i = ncm_vector_get (weights, i) * _ncm_stats_dist_nd_kde_studentt_f (self, d, chi2_i);
     t   = s + e_i;
     c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
     s   = t;
@@ -284,7 +289,7 @@ _ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, N
 }
 
 static void
-_ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, gdouble href, NcmRNG *rng)
+_ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng)
 {
   NcmStatsDistNdKDEStudentt *dndt = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
   NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
@@ -294,7 +299,7 @@ _ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *c
   for (i = 0; i < d; i++)
   {
     const gdouble u_i = gsl_ran_ugaussian (rng->r);
-    ncm_vector_set (y, i, u_i);
+    ncm_vector_set (y, i, u_i * ncm_vector_fast_get (href, i));
   }
 
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
@@ -304,12 +309,12 @@ _ncm_stats_dist_nd_kde_studentt_kernel_sample (NcmStatsDistNd *dnd, NcmMatrix *c
 
   chi_scale = sqrt (self->nu / gsl_ran_chisq (rng->r, self->nu));
 
-  ncm_vector_scale (y, href * chi_scale);
+  ncm_vector_scale (y, chi_scale);
   ncm_vector_add (y, mu);
 }
 
 static gdouble
-_ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const gdouble href, const gdouble href2)
+_ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href)
 {
   NcmStatsDistNdKDEStudentt *dndt               = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
   NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
@@ -323,10 +328,12 @@ _ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmMatri
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp", ret);
   
+  ncm_vector_div (v, href);
+
   ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp);
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_kde_studentt_kernel_eval_m2lnp", ret);
   
-  return (self->nu + d) * log1p (m2lnp / href2);
+  return (self->nu + d) * log1p (m2lnp);
 }
 
 /**

@@ -93,6 +93,7 @@ main (gint argc, gchar *argv[])
   gboolean dump           = FALSE;
   gint dump_chain         = -1;
   gint trim               = -1;
+  gint thin               = -1;
   gdouble zi = 0.0;
   gdouble zf = 1.0;
   gint nsteps = 100;
@@ -153,6 +154,7 @@ main (gint argc, gchar *argv[])
     { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain, if --dump-param not specified dump all columns.", "N"},
     { "dump-param",       0, 0, G_OPTION_ARG_STRING_ARRAY, &dump_param,     "Parameters to dump.", "param-name"},
     { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
+    { "thin",           'T', 0, G_OPTION_ARG_INT,          &thin,           "Thin the catalog skipping every (T-1) rows.", "T" },
     { NULL }
   };
 
@@ -253,12 +255,12 @@ main (gint argc, gchar *argv[])
     if (auto_trim)
     {
       ncm_mset_catalog_trim_by_type (mcat, ntests, NCM_MSET_CATALOG_TRIM_TYPE_ESS, NCM_FIT_RUN_MSGS_FULL);
-      if (trim > 0)
-        g_warning ("mcat_analize: --auto-trim enabled ignoring --trim");
+      if ((trim > 0) || (thin > 0))
+        g_warning ("mcat_analize: --auto-trim enabled ignoring --trim and --thin");
     }
-    else if (trim > 0)
+    else if ((trim > 0) || (thin > 0))
     {
-      ncm_mset_catalog_trim (mcat, trim);
+      ncm_mset_catalog_trim (mcat, MAX (trim, 0), MAX (thin, 1));
     }
 
     ncm_mset_catalog_estimate_autocorrelation_tau (mcat, info_scf);

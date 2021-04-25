@@ -167,7 +167,7 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
                                    PROP_SCALE,
                                    g_param_spec_double ("scale",
                                                         NULL,
-                                                        "Strech scale a",
+                                                        "Stretch scale a",
                                                         1.1, G_MAXDOUBLE, 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,

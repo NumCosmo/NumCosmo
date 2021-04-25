@@ -54,14 +54,15 @@ struct _NcmStatsDistNdClass
   GObjectClass parent_class;
   void (*set_dim) (NcmStatsDistNd *dnd, const guint dim);
   gdouble (*get_rot_bandwidth) (NcmStatsDistNd *dnd, const guint d, const gdouble n);
-  gdouble (*get_kernel_lnnorm) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const gdouble href);
+  gdouble (*get_kernel_lnnorm) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
   void (*prepare_kernel_args) (NcmStatsDistNd *dnd, NcmStatsVec *sample);
-  void (*prepare_IM) (NcmStatsDistNd *dnd, GPtrArray *invUsample, const gint d, const gint n, const gdouble href, const gdouble href2, NcmMatrix *IM);
+  void (*prepare_IM) (NcmStatsDistNd *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
   void (*prepare) (NcmStatsDistNd *dnd);
   void (*prepare_interp) (NcmStatsDistNd *dnd, NcmVector *m2lnp);
-  gdouble (*eval) (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const gdouble href, const gdouble href2);
-  void (*kernel_sample) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, gdouble href, NcmRNG *rng);
-  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const gdouble href, const gdouble href2);
+  gdouble (*eval) (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+  gdouble (*eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+  void (*kernel_sample) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
   void (*reset) (NcmStatsDistNd *dnd);
 };
 
@@ -76,6 +77,7 @@ struct _NcmStatsDistNd
  * NcmStatsDistNdCV:
  * @NCM_STATS_DIST_ND_CV_NONE: No cross validation
  * @NCM_STATS_DIST_ND_CV_SPLIT: Sample split cross validation
+ * @NCM_STATS_DIST_ND_CV_SPLIT_FITD: Sample split cross validation fitting all diagonal elements
  *
  * Cross-validation method to be applied.
  *
@@ -84,6 +86,7 @@ typedef enum _NcmStatsDistNdCV
 {
   NCM_STATS_DIST_ND_CV_NONE,
   NCM_STATS_DIST_ND_CV_SPLIT,
+  NCM_STATS_DIST_ND_CV_SPLIT_FITD,
   /* < private > */
   NCM_STATS_DIST_ND_CV_LEN, /*< skip >*/
 
@@ -98,7 +101,7 @@ void ncm_stats_dist_nd_clear (NcmStatsDistNd **dnd);
 guint ncm_stats_dist_nd_get_dim (NcmStatsDistNd *dnd);
 
 gdouble ncm_stats_dist_nd_get_rot_bandwidth (NcmStatsDistNd *dnd, const guint d, const gdouble n);
-gdouble ncm_stats_dist_nd_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const gdouble href);
+gdouble ncm_stats_dist_nd_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
 
 void ncm_stats_dist_nd_set_over_smooth (NcmStatsDistNd *dnd, const gdouble over_smooth);
 gdouble ncm_stats_dist_nd_get_over_smooth (NcmStatsDistNd *dnd);
@@ -120,8 +123,8 @@ void ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
 
 gdouble ncm_stats_dist_nd_get_rnorm (NcmStatsDistNd *dnd);
 
-void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble href, NcmRNG *rng);
-gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble href);
+void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const NcmVector *href);
 
 void ncm_stats_dist_nd_add_obs_weight (NcmStatsDistNd *dndg, NcmVector *y, const gdouble w);
 void ncm_stats_dist_nd_add_obs (NcmStatsDistNd *dndg, NcmVector *y);

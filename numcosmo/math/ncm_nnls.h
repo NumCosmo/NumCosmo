@@ -98,6 +98,8 @@ gdouble ncm_nnls_solve_lowrankqp (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, Ncm
 gdouble ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
 gdouble ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f);
 
+NcmVector *ncm_nnls_get_residuals (NcmNNLS *nnls);
+
 G_END_DECLS
 
 #endif /* _NCM_NNLS_H_ */

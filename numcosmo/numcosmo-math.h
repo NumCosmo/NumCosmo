@@ -95,6 +95,7 @@
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_model_builder.h>
 #include <numcosmo/math/ncm_model_mvnd.h>
+#include <numcosmo/math/ncm_model_rosenbrock.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_mset_func1.h>
@@ -109,6 +110,7 @@
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/math/ncm_data_poisson.h>
 #include <numcosmo/math/ncm_data_gauss_cov_mvnd.h>
+#include <numcosmo/math/ncm_data_rosenbrock.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_prior.h>

@@ -62,6 +62,7 @@ struct _NcmNNLSPrivate
   NcmVector *x_tmp;
   NcmVector *x_try;
   NcmVector *residuals;
+  NcmVector *residuals_try;
   NcmVector *mgrad;
   NcmMatrix *sub_M_U;
   NcmVector *sub_x_tmp;
@@ -89,29 +90,30 @@ static void
 ncm_nnls_init (NcmNNLS *nnls)
 {
   NcmNNLSPrivate *const self = nnls->priv = ncm_nnls_get_instance_private (nnls);
-  self->umethod   = NCM_NNLS_UMETHOD_LEN;
-  self->reltol    = 0.0;
-  self->nrows     = 0;
-  self->ncols     = 0;
-  self->uncols    = 0;
-  self->A_QR      = NULL;
-  self->sub_A_QR  = NULL;
-  self->M         = NULL;
-  self->M_U       = NULL;
-  self->b         = NULL;
-  self->x_tmp     = NULL;
-  self->x_try     = NULL;
-  self->residuals = NULL;
-  self->mgrad     = NULL;
-  self->sub_M_U   = NULL;
-  self->sub_x_tmp = NULL;
-  self->Pset      = NULL;
-  self->Pset_try  = NULL;
-  self->invalid   = NULL;
-  self->LU_alloc  = FALSE;
-  self->QR_alloc  = FALSE;
-  self->ipiv      = g_array_new (FALSE, FALSE, sizeof (gint));
-  self->work      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->umethod       = NCM_NNLS_UMETHOD_LEN;
+  self->reltol        = 0.0;
+  self->nrows         = 0;
+  self->ncols         = 0;
+  self->uncols        = 0;
+  self->A_QR          = NULL;
+  self->sub_A_QR      = NULL;
+  self->M             = NULL;
+  self->M_U           = NULL;
+  self->b             = NULL;
+  self->x_tmp         = NULL;
+  self->x_try         = NULL;
+  self->residuals     = NULL;
+  self->residuals_try = NULL;
+  self->mgrad         = NULL;
+  self->sub_M_U       = NULL;
+  self->sub_x_tmp     = NULL;
+  self->Pset          = NULL;
+  self->Pset_try      = NULL;
+  self->invalid       = NULL;
+  self->LU_alloc      = FALSE;
+  self->QR_alloc      = FALSE;
+  self->ipiv          = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->work          = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
 
 static void _ncm_nnls_set_nrows (NcmNNLS *nnls, const guint nrows);
@@ -178,14 +180,15 @@ _ncm_nnls_constructed (GObject *object)
     NcmNNLS *nnls = NCM_NNLS (object);
     NcmNNLSPrivate *const self = nnls->priv;
 
-    self->b         = ncm_vector_new (self->ncols);
-    self->x_tmp     = ncm_vector_new (self->ncols);
-    self->x_try     = ncm_vector_new (self->ncols);
-    self->residuals = ncm_vector_new (self->nrows);
-    self->mgrad     = ncm_vector_new (self->ncols);
-    self->Pset      = ncm_iset_new (self->ncols);
-    self->Pset_try  = ncm_iset_new (self->ncols);
-    self->invalid   = ncm_iset_new (self->ncols);
+    self->b             = ncm_vector_new (self->ncols);
+    self->x_tmp         = ncm_vector_new (self->ncols);
+    self->x_try         = ncm_vector_new (self->ncols);
+    self->residuals     = ncm_vector_new (self->nrows);
+    self->residuals_try = ncm_vector_new (self->nrows);
+    self->mgrad         = ncm_vector_new (self->ncols);
+    self->Pset          = ncm_iset_new (self->ncols);
+    self->Pset_try      = ncm_iset_new (self->ncols);
+    self->invalid       = ncm_iset_new (self->ncols);
 
   }
 }
@@ -203,6 +206,7 @@ _ncm_nnls_dispose (GObject *object)
   ncm_vector_clear (&self->x_tmp);
   ncm_vector_clear (&self->x_try);
   ncm_vector_clear (&self->residuals);
+  ncm_vector_clear (&self->residuals_try);
   ncm_vector_clear (&self->mgrad);
 
   ncm_matrix_clear (&self->sub_A_QR);
@@ -705,12 +709,13 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
       }
 
       _ncm_nnls_solve_feasible (self, self->Pset_try, A, self->x_try, f, added);
-      lrnorm = _ncm_nnls_compute_residuals (self, A, self->x_try, f, self->residuals);
+      lrnorm = _ncm_nnls_compute_residuals (self, A, self->x_try, f, self->residuals_try);
 
       if (lrnorm < rnorm * (1.0 - self->reltol))
       {
         ncm_iset_copy (self->Pset_try, self->Pset);
         ncm_vector_memcpy (x, self->x_try);
+        ncm_vector_memcpy (self->residuals, self->residuals_try);
         rnorm = lrnorm;
         break;
       }
@@ -994,4 +999,21 @@ ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
     print_state (res);
 
   return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
+}
+
+/**
+ * ncm_nnls_get_residuals:
+ * @nnls: a #NcmNNLS
+ *
+ * Gets the solution residuals, this method return the last residuals
+ * computed during ncm_nnls_solve(). If ncm_nnls_solve() was not
+ * called the return is undefined.
+ *
+ * Returns: (transfer none): residuals vector.
+ */
+NcmVector *
+ncm_nnls_get_residuals (NcmNNLS *nnls)
+{
+  NcmNNLSPrivate *const self = nnls->priv;
+  return self->residuals;
 }
