@@ -84,7 +84,7 @@ Ncm.func_eval_log_pool_stats ()
 init_sampler = Ncm.MSetTransKernGauss.new (0)
 init_sampler.set_mset (mset)
 init_sampler.set_prior_from_mset ()
-init_sampler.set_cov_from_rescale (10.0)
+init_sampler.set_cov_from_rescale (100.0)
 
 #
 # Creates the ESMCMC walker object, this object is responsible
@@ -93,7 +93,7 @@ init_sampler.set_cov_from_rescale (10.0)
 # very correlated parametric space.
 # 
 sampler  = 'aps'
-nwalkers = int (math.ceil (1000 * 2 * 2))
+nwalkers = int (math.ceil (200 * 2 * 2))
 
 if sampler == 'aps':
   walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
@@ -141,7 +141,7 @@ esmcmc.set_data_file ("example_rosenbrock_%s_st_%d.fits" % (sampler, nwalkers))
 # 
 #
 esmcmc.start_run ()
-esmcmc.run (8000000 / nwalkers)
+esmcmc.run (20000000 / nwalkers)
 esmcmc.end_run ()
 
 #

@@ -280,6 +280,7 @@ _ncm_stats_dist_nd_kde_studentt_eval (NcmStatsDistNd *dnd, NcmVector *weights, N
     }
     
     e_i = ncm_vector_get (weights, i) * _ncm_stats_dist_nd_kde_studentt_f (self, d, chi2_i);
+
     t   = s + e_i;
     c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
     s   = t;

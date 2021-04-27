@@ -174,7 +174,7 @@ ncm_stats_dist_nd_init (NcmStatsDistNd *dnd)
   self->levmar_workz     = NULL;
   self->levmar_n         = 0;
 
-  ncm_stats_vec_enable_quantile (self->m2lnp_stats, 0.6827);
+  ncm_stats_vec_enable_quantile (self->m2lnp_stats, 0.9999); /* 0.6827, 0.9545, 0.9973 */
 
   g_ptr_array_set_free_func (self->invUsample, (GDestroyNotify) ncm_vector_free);
 }
@@ -489,7 +489,7 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
   eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
   rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
-  ncm_message ("RNORM: % 22.15g | href %.1e\n", rnorm, href0);
+  /*ncm_message ("RNORM: % 22.15g | href %.1e\n", rnorm, href0);*/
 
   return rnorm;
 }
@@ -586,9 +586,8 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
 
       self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
       self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
-
-      ncm_vector_set_zero (self->weights);
     }
+    ncm_vector_set_zero (self->weights);
 
     /*
      * Evaluating the right-hand-side
@@ -609,13 +608,6 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     }
     qq = ncm_stats_vec_get_quantile (self->m2lnp_stats, 0);
 
-    for (i = 0; i < self->n; i++)
-    {
-      const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-      if (m2lnp_i > qq)
-        ncm_stats_vec_set (self->m2lnp_stats, 0, qq);
-    }
-
     /*printf ("% 22.15g % 22.15g % 22.15g\n", self->max_m2lnp, self->min_m2lnp, qq);*/
 
     if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
@@ -634,7 +626,11 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     for (i = 0; i < self->n; i++)
     {
       const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-      ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
+
+      if (m2lnp_i > qq)
+        ncm_vector_set (self->f, i, exp (-0.5 * (qq      - self->min_m2lnp)));
+      else
+        ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
     }
 
     if (self->n > 10000)
@@ -723,6 +719,7 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
               ncm_stats_vec_get_cor (self->sample, 0, 1));
         }
 
+        /*ncm_vector_log_vals (self->weights, "weights: ", "% 22.15g", TRUE);*/
 
         ncm_vector_free (x);
       }
@@ -878,7 +875,7 @@ ncm_stats_dist_nd_set_split_frac (NcmStatsDistNd *dnd, const gdouble split_frac)
   NcmStatsDistNdPrivate * const self = dnd->priv;
 
   g_assert_cmpfloat (split_frac, >=, 0.5);
-  g_assert_cmpfloat (split_frac, <=, 0.95);
+  g_assert_cmpfloat (split_frac, <=, 1.0);
 
   self->split_frac = split_frac;
 }
