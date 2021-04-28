@@ -208,7 +208,7 @@ ncm_fit_esmcmc_walker_aps_class_init (NcmFitESMCMCWalkerAPSClass *klass)
                                    g_param_spec_double ("rand-walk-prob",
                                                          NULL,
                                                          "The probability of making a random walk step",
-                                                         0.0, 1.0, 0.01,
+                                                         0.0, 1.0, 0.0,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -263,8 +263,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
 
     if (TRUE)
     {
-      self->dndg0 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_studentt_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT_FITD, 1.0));
-      self->dndg1 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_studentt_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT_FITD, 1.0));
+      self->dndg0 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_studentt_new (self->nparams, NCM_STATS_DIST_ND_CV_NONE, 1.0));
+      self->dndg1 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_studentt_new (self->nparams, NCM_STATS_DIST_ND_CV_NONE, 1.0));
     }
     else
     {
@@ -272,10 +272,10 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
       self->dndg1 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT_FITD));
     }
 
-    ncm_stats_dist_nd_set_over_smooth (self->dndg0, 1.0);
-    ncm_stats_dist_nd_set_over_smooth (self->dndg1, 1.0);
-    ncm_stats_dist_nd_set_split_frac (self->dndg0, 0.5);
-    ncm_stats_dist_nd_set_split_frac (self->dndg1, 0.5);
+    ncm_stats_dist_nd_set_over_smooth (self->dndg0, 1.5);
+    ncm_stats_dist_nd_set_over_smooth (self->dndg1, 1.5);
+    ncm_stats_dist_nd_set_split_frac (self->dndg0, 1.0);
+    ncm_stats_dist_nd_set_split_frac (self->dndg1, 1.0);
     
     for (i = 0; i < self->size; i++)
     {
