@@ -272,8 +272,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
       self->dndg1 = NCM_STATS_DIST_ND (ncm_stats_dist_nd_kde_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT_FITD));
     }
 
-    ncm_stats_dist_nd_set_over_smooth (self->dndg0, 1.5);
-    ncm_stats_dist_nd_set_over_smooth (self->dndg1, 1.5);
+    ncm_stats_dist_nd_set_over_smooth (self->dndg0, 2.0);
+    ncm_stats_dist_nd_set_over_smooth (self->dndg1, 2.0);
     ncm_stats_dist_nd_set_split_frac (self->dndg0, 1.0);
     ncm_stats_dist_nd_set_split_frac (self->dndg1, 1.0);
     

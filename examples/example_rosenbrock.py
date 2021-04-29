@@ -93,7 +93,8 @@ init_sampler.set_cov_from_rescale (100.0)
 # very correlated parametric space.
 # 
 sampler  = 'aps'
-nwalkers = int (math.ceil (200 * 2 * 2))
+nwalkers = int (math.ceil (250 * 2))
+ssize    = 15000000
 
 if sampler == 'aps':
   walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
@@ -141,7 +142,7 @@ esmcmc.set_data_file ("example_rosenbrock_%s_st_%d.fits" % (sampler, nwalkers))
 # 
 #
 esmcmc.start_run ()
-esmcmc.run (20000000 / nwalkers)
+esmcmc.run (ssize / nwalkers)
 esmcmc.end_run ()
 
 #

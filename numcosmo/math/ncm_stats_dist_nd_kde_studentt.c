@@ -204,7 +204,14 @@ _ncm_stats_dist_nd_kde_studentt_f (NcmStatsDistNdKDEStudenttPrivate * const self
 static gdouble
 _ncm_stats_dist_nd_kde_studentt_get_rot_bandwidth (NcmStatsDistNd *dnd, const guint d, const gdouble n)
 {
-  return pow (4.0 / (n * (d + 2.0)), 1.0 / (d + 4.0));
+  NcmStatsDistNdKDEStudentt *dndt               = NCM_STATS_DIST_ND_KDE_STUDENTT (dnd);
+  NcmStatsDistNdKDEStudenttPrivate * const self = dndt->priv;
+  const gdouble nu = (self->nu >= 3.0) ? self->nu : 3.0;
+
+  return pow (
+      16.0 * gsl_pow_2 (nu - 2) * (1.0 + d + nu) * (3.0 + d + nu) /
+        ((2.0 + d) * (d + nu) * (2.0 + d + nu) * (d + 2.0 * nu) * (2.0 + d + 2.0 * nu) * n),
+      1.0 / (d + 4.0));
 }
 
 static gdouble
