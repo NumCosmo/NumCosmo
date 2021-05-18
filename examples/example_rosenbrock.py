@@ -92,8 +92,9 @@ init_sampler.set_cov_from_rescale (100.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-sampler  = 'aps'
-nwalkers = int (math.ceil (250 * 2))
+sampler = 'aps'
+#sampler  = 'stretch'
+nwalkers = int (math.ceil (300 * 2))
 ssize    = 15000000
 
 if sampler == 'aps':

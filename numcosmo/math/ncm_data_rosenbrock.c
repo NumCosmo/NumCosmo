@@ -103,7 +103,7 @@ _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   const gdouble x1 = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1);
   const gdouble x2 = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2);
 
-  m2lnL[0] = (/*100.0 * */gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1)) * 1.0e-1;
+  m2lnL[0] = (100.0 * gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1)) * 1.0e-1;
 }
 
 /**

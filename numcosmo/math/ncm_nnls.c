@@ -446,6 +446,12 @@ _ncm_nnls_prepare_usys_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
 {
   self->uncols = ncm_iset_get_len (Pset);
 
+  if (G_UNLIKELY (!self->QR_alloc))
+  {
+    self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
+    self->QR_alloc = TRUE;
+  }
+
   if (self->uncols == self->ncols)
   {
     ncm_matrix_memcpy (self->A_QR, A);
@@ -495,6 +501,8 @@ _ncm_nnls_prepare_usys_normal (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMat
   }
 }
 
+static void _ncm_nnls_solve_normal_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f);
+
 static void
 _ncm_nnls_solve_normal_LU (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
 {
@@ -523,7 +531,8 @@ _ncm_nnls_solve_normal_LU (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
                           &g_array_index (self->ipiv, gint, 0),
                           ncm_vector_data (self->sub_x_tmp), self->uncols,
                           &g_array_index (self->work, gdouble, 0), lwork);
-  g_assert_cmpint (ret, ==, 0);
+  if (ret > 0)
+    _ncm_nnls_solve_normal_QR (self, Pset, A, x, f);
 }
 
 static void
@@ -655,26 +664,18 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
     case NCM_NNLS_UMETHOD_NORMAL:
     case NCM_NNLS_UMETHOD_NORMAL_LU:
     {
-      if (!self->LU_alloc)
+      if (G_UNLIKELY (!self->LU_alloc))
       {
         self->M   = ncm_matrix_new (self->ncols, self->ncols);
         self->M_U = ncm_matrix_new (self->ncols, self->ncols);
         self->LU_alloc = TRUE;
       }
-
       ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
       ncm_matrix_update_vector (A, 'T', 1.0, f, 0.0, self->b);
       break;
     }
     case NCM_NNLS_UMETHOD_QR:
-    {
-      if (!self->QR_alloc)
-      {
-        self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
-        self->QR_alloc = TRUE;
-      }
       break;
-    }
     default:
       g_assert_not_reached ();
       break;

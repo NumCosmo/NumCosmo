@@ -489,16 +489,7 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
   eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
   rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
-  /*ncm_message ("RNORM: % 22.15g | href %.1e\n", rnorm, href0);*/
-
   return rnorm;
-}
-
-static gdouble
-_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec (const gsl_vector *ln_os, gpointer userdata)
-{
-  const gdouble os = exp (gsl_vector_get (ln_os, 0));
-  return _ncm_stats_dist_nd_prepare_interp_fit_nnls (os, userdata);
 }
 
 static gdouble
@@ -514,13 +505,45 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls_vec_fitd (const gsl_vector *ln_href, 
   eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
   rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
-/*
-  ncm_message ("RNORM: % 22.15g | ", rnorm);
-  ncm_vector_log_vals (eval->self->href, "href: ", "%.1e", TRUE);
-*/
+  return rnorm;
+}
+
+static gdouble
+_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec (const gsl_vector *ln_href, gpointer userdata)
+{
+  NcmStatsDistNdEval *eval = userdata;
+  gdouble rnorm;
+  gint i;
+
+  for (i = 0; i < eval->self->d; i++)
+    ncm_vector_set (eval->self->href, i, exp (gsl_vector_get (ln_href, 0)));
+
+  eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
+  rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
   return rnorm;
 }
+
+static void
+_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
+{
+  NcmStatsDistNdEval *eval = adata;
+  NcmVector *f = ncm_vector_new_data_static (hx, n, 1);
+  NcmVector *res;
+  gint i;
+
+  for (i = 0; i < eval->self->d; i++)
+    ncm_vector_set (eval->self->href, i, exp (p[0]));
+
+  eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
+  ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
+
+  res = ncm_nnls_get_residuals (eval->self->nnls);
+
+  ncm_vector_memcpy (f, res);
+  ncm_vector_free (f);
+}
+
 
 static void
 _ncm_stats_dist_nd_prepare_interp_fit_nnls_vec_fitd_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
@@ -537,7 +560,6 @@ _ncm_stats_dist_nd_prepare_interp_fit_nnls_vec_fitd_f (gdouble *p, gdouble *hx, 
   ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
   res = ncm_nnls_get_residuals (eval->self->nnls);
-  /*ncm_vector_log_vals (eval->self->href, "href: ", "% 22.15g", TRUE);*/
 
   ncm_vector_memcpy (f, res);
   ncm_vector_free (f);
@@ -640,46 +662,43 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     {
       case NCM_STATS_DIST_ND_CV_SPLIT:
       {
-        gint iter = 0, maxiter = 200, status;
         NcmVector *x = ncm_vector_new (1);
-        NcmVector *s = ncm_vector_new (1);
-        gsl_multimin_function fmin = {_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec, 1, &eval};
-        gdouble last_iter = GSL_NEGINF;
+        gdouble info[LM_INFO_SZ];
+        gdouble opts[LM_OPTS_SZ];
 
-        ncm_vector_set (x, 0, log (self->over_smooth));
-        ncm_vector_set (s, 0, 0.1);
-
-        gsl_multimin_fminimizer_set (self->mmin, &fmin, ncm_vector_gsl (x), ncm_vector_gsl (s));
-        do
+        if (self->levmar_n != self->n)
         {
-          gdouble size;
-          iter++;
-          status = gsl_multimin_fminimizer_iterate (self->mmin);
-
-          if (status)
-            break;
-
-          size = gsl_multimin_fminimizer_size (self->mmin);
-          status = gsl_multimin_test_size (size, 1.0e-7);
-
-          if (last_iter == gsl_multimin_fminimizer_minimum (self->mmin))
-            break;
-          last_iter = gsl_multimin_fminimizer_minimum (self->mmin);
-
-        } while (status == GSL_CONTINUE && iter < maxiter);
-
-        self->over_smooth   = exp (gsl_vector_get (self->mmin->x, 0));
-
-        {
-          const gdouble href0 = self->over_smooth * ncm_stats_dist_nd_get_rot_bandwidth (dnd, self->d, self->n);
-          ncm_vector_set_all (self->href, href0);
-          self->kernel_lnnorm = ncm_stats_dist_nd_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
+          g_clear_pointer (&self->levmar_workz, g_free);
+          self->levmar_workz = g_new0 (gdouble, LM_DIF_WORKSZ (self->d, self->n));
         }
 
-        self->rnorm = _ncm_stats_dist_nd_prepare_interp_fit_nnls (self->over_smooth, &eval);
+        opts[0] = LM_INIT_MU;
+        opts[1] = 1.0e-7;
+        opts[2] = 1.0e-7;
+        opts[3] = 1.0e-10;
+        opts[4] = LM_DIFF_DELTA;
+
+        ncm_vector_set (x, 0, log (ncm_vector_fast_get (self->href, 0) * 1.0e-1));
+
+        dlevmar_dif (&_ncm_stats_dist_nd_prepare_interp_fit_nnls_vec_f,
+            ncm_vector_data (x), NULL, 1, self->n,
+            10000, opts, info, self->levmar_workz, ncm_matrix_data (self->href_cov), &eval);
+
+        self->rnorm         = _ncm_stats_dist_nd_prepare_interp_fit_nnls_vec (ncm_vector_gsl (x), &eval);
+        self->kernel_lnnorm = ncm_stats_dist_nd_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
+
+        if ((ncm_vector_get (self->href, 0) > 1.0e1) || (ncm_vector_get (self->href, 1) > 1.0e1))
+        {
+          ncm_vector_log_vals (self->href, "href: ", "% 22.15g", TRUE);
+          ncm_message ("sd_x1 % 22.15g sd_x2 % 22.15g rho % 22.15g\n",
+              ncm_stats_vec_get_sd (self->sample, 0),
+              ncm_stats_vec_get_sd (self->sample, 1),
+              ncm_stats_vec_get_cor (self->sample, 0, 1));
+        }
+
+        /*ncm_vector_log_vals (self->weights, "weights: ", "% 22.15g", TRUE);*/
 
         ncm_vector_free (x);
-        ncm_vector_free (s);
       }
       break;
       case NCM_STATS_DIST_ND_CV_SPLIT_FITD:

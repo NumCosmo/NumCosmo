@@ -1853,7 +1853,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
   if (self->n > 0)
   {
     _ncm_fit_esmcmc_get_jumps (esmcmc, ki, self->nwalkers);
-    ncm_fit_esmcmc_walker_setup (self->walker, self->theta, self->m2lnL, ki, self->nwalkers, rng);
+    ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, ki, self->nwalkers, rng);
     
     if (ki < nwalkers_2)
     {
@@ -1873,7 +1873,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
     for (i = 1; i < self->n; i++)
     {
       _ncm_fit_esmcmc_get_jumps (esmcmc, 0, self->nwalkers);
-      ncm_fit_esmcmc_walker_setup (self->walker, self->theta, self->m2lnL, 0, self->nwalkers, rng);
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, 0, self->nwalkers, rng);
       
       run (esmcmc, 0, nwalkers_2);
       run (esmcmc, nwalkers_2, self->nwalkers);
