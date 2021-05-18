@@ -55,8 +55,10 @@
 #include <numcosmo/math/ncm_stats_dist2d.h>
 #include <numcosmo/math/ncm_stats_dist2d_spline.h>
 #include <numcosmo/math/ncm_stats_dist_nd.h>
+#include <numcosmo/math/ncm_stats_dist_nd_vbk.h>
 #include <numcosmo/math/ncm_stats_dist_nd_kde_gauss.h>
 #include <numcosmo/math/ncm_stats_dist_nd_kde_studentt.h>
+#include <numcosmo/math/ncm_stats_dist_nd_vbk_studentt.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
