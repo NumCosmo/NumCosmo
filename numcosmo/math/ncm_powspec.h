@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -47,6 +47,7 @@ struct _NcmPowspecClass
 {
   /*< private > */
   GObjectClass parent_class;
+  
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
@@ -67,6 +68,7 @@ struct _NcmPowspec
 GType ncm_powspec_get_type (void) G_GNUC_CONST;
 
 NcmPowspec *ncm_powspec_ref (NcmPowspec *powspec);
+
 void ncm_powspec_free (NcmPowspec *powspec);
 void ncm_powspec_clear (NcmPowspec **powspec);
 
@@ -91,7 +93,7 @@ void ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 NCM_INLINE void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
 NCM_INLINE void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
 NCM_INLINE gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
-NCM_INLINE void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
+NCM_INLINE void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
 gdouble ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
 gdouble ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
@@ -109,7 +111,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
   NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
@@ -119,12 +121,12 @@ NCM_INLINE void
 ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
 {
   gboolean model_up = ncm_model_ctrl_update (powspec->ctrl, NCM_MODEL (model));
-
+  
   if (model_up)
     ncm_powspec_prepare (powspec, model);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, model, z, k);
@@ -141,3 +143,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_POWSPEC_INLINE_H_ */
+

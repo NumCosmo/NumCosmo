@@ -41,7 +41,7 @@
  * # Parametrization
  *
  * The two parameters $\rho_s$ and $r_s$ are described by the fundamental
- * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:MDelta)
+ * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:log10MDelta)
  * and the concentration $c_\Delta$ (#NcHaloDensityProfile:cDelta) given a mass
  * defined by $\Delta$ (#NcHaloDensityProfile:Delta) and a background density
  * $\rho_\mathrm{bg}$ (#NcHaloDensityProfile:mass-def). Strictly speaking,
@@ -121,10 +121,10 @@
  * Using the 2D projection $\Sigma(R)$ one computes the total mass
  * inside an infinite cylinder of radius $R$ using
  * \begin{align}
- * \overline\Sigma(<R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{\Sigma}}(<R/r_s), \\\\ \label{eq:def:cylmass}
- * \hat{\overline{\Sigma}}(<X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
+ * \overline{M}(R) &= \int_0^R\Sigma(R')2\pi R'\mathrm{d}R' = 2\pi r_s^3\rho_s \hat{\overline{M}}(<R/r_s), \\\\ \label{eq:def:cylmass}
+ * \hat{\overline{M}}(X) &\equiv \int_0^X\hat\Sigma(X')X'\mathrm{d}X'.
  * \end{align}
- * Here it is possible to implement the function $\hat{\overline{\Sigma}}(<X)$
+ * Here it is possible to implement the function $\hat{\overline{M}}(X)$
  * through the method nc_halo_density_profile_eval_dl_cyl_mass() or to use
  * the default numerical implementation.
  *
@@ -199,7 +199,7 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL);
 
 #define VECTOR  (NCM_MODEL (dp)->params)
-#define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
+#define LOG10M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA))
 #define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 static void
@@ -355,24 +355,24 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   
   /**
-   * NcHaloDensityProfile:MDelta:
+   * NcHaloDensityProfile:log10MDelta:
    *
-   * Cluster mass $M_\Delta$ in units of solar masses $M_\odot$
+   * Logarithm base 10 of the cluster mass $M_\Delta$ in units of solar masses $M_\odot$
    * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is
-   * the overdensity, see Eq. \eqref{eq:mrr}.
+   * the over-density, see Eq. \eqref{eq:mrr}.
    *
    */
   /**
-   * NcHaloDensityProfile:MDelta-fit:
+   * NcHaloDensityProfile:log10MDelta-fit:
    *
    * Boolean property that controls whether the parameter
-   * #NcHaloDensityProfile:MDelta should be included in
+   * #NcHaloDensityProfile:log10MDelta should be included in
    * a statistical analysis.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_M_DELTA, "M_{\\Delta}", "MDelta",
-                              1.0e10,  1.0e17, 1.0e13,
-                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA,
+  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, "\\log_{10}(M_{\\Delta})", "log10MDelta",
+                              10.0,  17.0, 0.5,
+                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_LOG10M_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   
   /**
@@ -479,7 +479,7 @@ _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp)
   {
     NcHaloDensityProfilePrivate * const self = dp->priv;
     const gdouble cDelta                     = C_DELTA;
-    const gdouble MDelta                     = M_DELTA;
+    const gdouble MDelta                     = exp10 (LOG10M_DELTA);
     
     self->r_s0   = cbrt (3.0 * MDelta / (4.0 * ncm_c_pi ())) / cDelta;
     self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cDelta));
@@ -1156,7 +1156,7 @@ nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *co
  * @R: radius $R$ in Mpc
  * @z: redshift $z$
  *
- * This function computes 2D projection of the density profile
+ * This function computes the 2D projection of the density profile
  * at radius $R$ and redshift $z$, see Eq. \eqref{}.
  *
  * Returns: the value of $\Sigma(R)\left[M_\odot\times\mathrm{Mpc}^{-2}\right]$.
@@ -1191,7 +1191,7 @@ nc_halo_density_profile_eval_cyl_mass (NcHaloDensityProfile *dp, NcHICosmo *cosm
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
   
   sVol = 2.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
-  
+
   return sVol * nc_halo_density_profile_eval_dl_cyl_mass (dp, R / r_s);
 }
 

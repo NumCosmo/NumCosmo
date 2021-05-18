@@ -2,6 +2,562 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Minor release v0.15.3.
+
+
+[v0.15.3]
+ * Minor release.
+
+ * Included a function to compute numerical integrals of the NFW profile (instead
+     of the analytical forms). To be used for testing only!
+
+ * New methods to access Ym values in NcmFftlog.
+
+ * Added a second run to avoid unfinished minimization process.
+
+ * Removed debug msgs from coverage build.
+
+ * Removed coverage flags from introspection build.
+
+ * Debug coverage build.
+
+ * Debug coverage build.
+
+ * Debug coverage build.
+
+ * Removed LDFLAGS for coverage.
+
+ * Debug coveralls build.
+
+ * Moved (all) flags to the right places.
+
+ * Moved flags to the right place.
+
+ * Added explict CODE_COVERAGE_LIBS to introspection build.
+
+ * Debug coveralls build.
+
+ * Test speedups.
+
+ * Allowed reasonable failures.
+
+ * Added 10% allowed test errors when estimating hessian computation error.
+
+ * Testing ncm_stats_dist_nd_kde_gauss.c. Minor modifications to
+     ncm_data_gauss_cov_mvnd.c. New notebook to test multidimensional
+     interpolation.
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA
+
+ * Debug mac-os GHA.
+
+ * Debug mac-os GHA.
+
+ * Debug mac-os GHA build.
+
+ * Trying reinstalling gmp.
+
+ * Testing a solution for GHA on mac-os.
+
+ * Still debugging macos build in GHA.
+
+ * Debug macos build.
+
+ * Conditional use of sincos.
+
+ * Fixed sincos warning.
+
+ * More compiler env.
+
+ * Fixed sincos included warning.
+
+ * Updated example.
+
+ * Setting compilers.
+
+ * Cask install for gfortran in macos build.
+
+ * Testing lib dir in GHA.
+
+ * Added cask install fortran for macos build.
+
+ * Trying lib dirs.
+
+ * Added gfortran req to macos build.
+
+ * Added prefix option to configure in GHA.
+
+ * Fixed example name and moved test.
+
+ * Rolled back autoconf version req.
+
+ * Included missing make install in build check.
+
+ * Updated autotools and deps. New check in GHA. Fixed bug in numcosmo.pc.in.
+
+ * Working on ncm_csq1d.c. New notebook FisherMatrixExample.ipynb.
+
+ * Adding timezone info.
+
+ * New docker image with NumCosmo prereqs.
+
+ * Working on nc_de_cont.
+
+ * Running actions in every branch.
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing GHA
+
+ * Testing coveralls build.
+
+ * Updated CI badge to GHA.
+
+ * Adding missing prereq for the macos build.
+
+ * Better workflow name and removed unnecessary prereq in the macos build.
+
+ * Adding macos build.
+
+ * Removed debug print in c-cpp.yml.
+
+ * Adding references.xml to the repo.
+
+ * Update c-cpp.yml
+
+     Checking xml logs
+ * Update c-cpp.yml
+
+     Debug xml build
+ * Fixed doc typo.
+
+ * Updated to sundials 5.5.0.
+
+ * Added NumCosmo CCL test notebook.
+
+ * Fixed conditional compilation for system with gsl < 2.4.
+
+
+[v0.15.2]
+ * Minor release 0.15.2.
+
+ * Updated tests and fixed indentation.
+
+ * New framework for Cluster fitting with WL data (in progress).
+
+ * New minor version. Reorganizing WL likelihood (in progress).
+
+
+[v0.15.1]
+ * Default refine set to 1.
+
+ * More options to refine.
+
+ * Add refine as an option.
+
+ * Added vectorized interface for nc_wl_surface_mass_density_reduced_shear. Minor
+     other improvements.
+
+ * Improvement in ncm_spline_func to remove outliers.
+
+ * Update c-cpp.yml
+
+     Removed distcheck (split into check and dist)
+ * Update c-cpp.yml
+
+     Added --enable-man
+ * Update c-cpp.yml
+
+     Added reqs for doc building.
+ * Update c-cpp.yml
+
+     Added doc building
+ * Update c-cpp.yml
+
+     Added support for gtk-doc
+ * Update c-cpp.yml
+
+     added parallel build and upload artifact
+ * Update c-cpp.yml
+
+     More deps and removed double configure.
+ * Update c-cpp.yml
+
+     More missing deps
+ * Update c-cpp.yml
+
+     Added more missing deps
+ * Update c-cpp.yml
+
+     Added missing dep: gfortran.
+ * Update c-cpp.yml
+
+     Testing install prereqs.
+ * Update c-cpp.yml
+
+     Added prereqs
+ * Updated and finished support for CCL in Dockerfile-clmm-jupyter.
+
+ * Added python3-yaml support.
+
+ * Added support for CAMB and CCL.
+
+ * Support for CCL and CAMB.
+
+ * Adding support for camb and ccl.
+
+ * Fixed new filename.
+
+ * Notebook comparing Colossus and CCL with NumCosmo: density profiles, surface
+     mass density and the excess smd.
+
+ * Added hook between nc_halo_mass_function and ncm_powspec_filter to ensure the
+     same redshift range.
+
+ * Fixed minor leak.
+
+ * Minor fixes and improvements in ncm_spline_func_test.*.
+
+ * Update c-cpp.yml
+
+     Testing github actions
+ * Create c-cpp.yml
+
+     Trying the github actions.
+ * Included new distance functions from z1 to z2.
+
+ * Test suit NcmSplineFuncTest is now stable enough. Next step: add some
+     cosmological functions examples.
+
+ * Doc. minor changes.
+
+ * Memory leak - ncm_spline_new_function_4
+
+ * Added new outlier function to last description example.
+
+ * Corrected vector memory lost.
+
+ * Added option to save outliers grid to further analysis.
+
+ * Added test suite to NcmSplineFunc.
+
+ * Tutorial reviewed.
+
+ * Text review (Mari).
+
+ * Added missing ipywidgets from docker build.
+
+ * Fixed makefiles.
+
+ * Reorganized and added copyright notices to notebooks.
+
+ * New tutorial.
+
+ * New code for homogeneous knots.
+
+ * ncm_vector.c documentation improve.
+
+ * Doc. improvement.
+
+        * NcDataCMB
+       * NcDataCMBShiftParam
+       * NcDataCMBDistPriors
+
+ * Minor doc. modification.
+
+ * Minor doc. changes.
+
+ * Added support for abstol in NcmSplineFunc.
+
+ * Set max order to 3 in NcmODESpline to make the ode integration tolerance agree
+     with spline interpolation error.
+
+ * Removed old CCL interface (they no longer have a C api, we are moving to test
+     in python since their API is only there).
+
+ * Improve doc. & fixed indentation:
+
+        * NcPowspecML
+       * NcPowspecMLFixSpline
+       * NcPowspecMLTransfer
+       * NcPowspecMLCBE
+       * NcPowspecMNL
+       * NcPowspecMNLHaloFit
+
+ * Transfer function improve doc.
+
+ * NcTransferFuncEH: fixed indentation.
+
+ * NcTransferFuncEH: improve doc.
+
+ * NcTransferFuncBBKS: corrected minor typo.
+
+ * NcTransferFuncBBKS: fixed indentation.
+
+ * NcTransferFuncBBKS: improve doc. Add BBKS ref.
+
+ * NcTransferFunc: fixed indentation.
+
+ * NcTransferFunc: improve doc.
+
+ * NcWindowGaussian & NcWindowTophat: standardization between both descriptions.
+
+ * NcWindowGaussian: fixed indentation.
+
+ * NcWindowGaussian: improve doc.
+
+ * NcWindow: fixed indentation.
+
+ * NcWindow: improve doc.
+
+ * NcWindowTophat: fixed indentation.
+
+ * NcWindowTophat: improve doc.
+
+     Note: it seems that latex commands "cases" and "array" does not work.
+
+ * More debug messages in MPI.
+
+ * Better debug messages and identation.
+
+ * Documentation.
+
+ * Fixed details in the documentation.
+
+ * NcmPowspecFilter: fixed indentation.
+
+ * NcmPowspecFilter: doc. improvement.
+
+ * NcmPowspec: reference to function NcmPowspecFilter in ncm_powspec_var_tophat_R
+     ()
+
+ * NcmPowspec: Fixed indentation.
+
+ * NcmPowspec: doc. improvement.
+
+ * Minor typo.
+
+ * NcmODEEval: Fixed indentation.
+
+ * NcmODEEval: doc. improvement.
+
+ * NcmODE fixed indentation.
+
+ * NcmODE doc. improvement.
+
+ * NcmSpline2dBicubic: fixed indentation and tweak doc.
+
+     *The documentation still needs lots of work.*
+
+ * Fixed minor typos.
+
+ * Fixed indentation:
+
+        * ncm_spline2d_spline.h/c
+       * ncm_spline2d_gsl.h/c
+
+ * NcmSpline2dSpline and NcmSpline2dGsl doc tweaks.
+
+ * NcmSpline2d: fixed indentation.
+
+ * NcmSpline2d: Added Include and Stable tags + Minor tweaks.
+
+ * Fixed indentation:
+
+        * ncm_fftlog_tophatwin2.h/c
+       * ncm_fftlog_gausswin2.h/c
+
+ * NcmFftlogTophatwin2 and NcmFftlogGausswin2: doc. improvement.
+
+ * Fixed indentation: ncm_powspec_corr3d.c/h.
+
+ * NcmPowspecCorr3d: doc. improvement.
+
+ * NcmFftlogSBesselJ: fixed description and minor tweaks.
+
+ * NcmFftlogSBesselJ: tiny tweaks in the description.
+
+ * Fixed indentantion.
+
+ * NcmFftlogSBesselJ: corrected indentation.
+
+ * NcmFftlogSBesselJ: documentation improved.
+
+ * Fixed wrong lower bound for abstol.
+
+ * Removed old test in autogen.sh and overwritting of gtk-doc.make.
+
+ * Add gtkdoc related files (instead of soft links).
+
+ * Added to repo all necessary m4 files.
+
+ * NcmGrowthFunc: doc tiny tweaks
+
+ * NcmFftlog: corrected indentation.
+
+ * NcmFftlog: documentation's minor improvement.
+
+ * Tweaking NcGrowthFunc documentation and fixed wrong link for NcmSplineFunc.
+
+ * NcGrowthFunc: changed description to a vague explanation on the initial 
+     conditions. Added Martinez and Saar book on the references.
+
+ * NcGrowthFunc: corrected indentation.
+
+ * NcGrowthFunc: improved documentation.
+
+ * NcDistance: Standardization of function documentation
+
+        *_free.c
+       *_clear.c
+       *_ref.c
+
+ * NcDistance: modified two static functions names:
+
+        * comoving_distance_integral_argument -->
+     _comoving_distance_integral_argument
+       * dcddz --> _dcddz
+
+ * NcDistance: corrected indentation.
+
+ * NcmDistance: improved documentation.
+
+ * Testing support for gcov.
+
+ * ncm_timer.* - correct indentation with uncrustify.
+
+ * NcmTimer: improved documentation.
+
+ * Corrected a broken link in short description.
+
+ * Indentation using uncrustify.
+
+ * Improved documentation from NcmRNG.
+
+ * Changed "abs" --> "abstol" in ncm_ode_spline_class_init. Also some minor
+     changes.
+
+ * Improved #NcmOdeSpline documentation.
+
+ * Using different branch in CLMM.
+
+ * Added colossus to Dockerfile-clmm-jupyter.
+
+ * Version 0.15.0
+
+ * Corrected indentation of ncm_ode_spline.*
+
+ * [DOC] Improved main and enum description.
+
+        * ncm_spline_func.h
+       * ncm_spline_func.c
+
+ * Removed punctuation from parameter descriptions:
+
+        * ncm_spline.c
+       * ncm_spline_cubic_notaknot.c
+       * ncm_spline_gsl.c
+
+ * Removed punctuation from parameter descriptions in ncm_matrix.h/c.
+
+ * Removed punctuation from parameter descriptions. Added bindable function to
+     NcmSplineFunc.
+
+ * Added description/documentation to ncm_spline_func.h/c
+
+     Corrected missing link in NcmC.
+
+ * Fixed minor bugs.
+
+ * Added part of doc from spline_func module.
+
+ * Included "@stability: Unstable" and "@include: numcosmo/math/ncm_spline_rbf.h".
+
+     Added NcmSplineRBFType enum description.
+
+     Added doc in function ncm_spline_rbf_class_init
+     (g_object_class_install_property).
+
+ * Added NcmSplineGslType enum description.
+
+     Added doc in function ncm_spline_gsl_class_init
+     (g_object_class_install_property).
+
+     Corrected indentation of ncm_spline_gsl.c & ncm_spline_gsl.h with
+     uncrustify.
+
+ * Added "@stability: Stable" and "@include:
+     numcosmo/math/ncm_spline_cubic_notaknot.h".
+
+     Corrected indentation of ncm_spline_cubic_notaknot.c & 
+     ncm_spline_cubic_notaknot.h with uncrustify.
+
+ * Corrected indentation of ncm_spline_cubic.c and ncm_spline_cubic.h with 
+     uncrustify.
+
+ * Added doc to functions:
+       * ncm_spline_is_empty
+       * ncm_spline_class_init (g_object_class_install_property)
+
+     Correct indentation of ncm_spline.c and ncm_spline.h with uncrustify.
+
+ * Added doc in functions ncm_vector_class_init & ncm_matrix_class_init.
+
+       /**
+       * NcmMatrix:values:
+       *
+       * GVariant representation of the matrix used to serialize the object.
+       *
+       */
+
+     And the same for NcmVector.
+
+ * Some minor tweaks:
+
+        * ncm_matrix.c
+       * ncm_matrix.h
+       * ncm_vector.c
+
+ * Passed ncm_matrix.h and ncm_matrix.c through uncrustify to set indentation.
+
+ * Added doc to the following functions of NcmMatrix:
+
+        * ncm_matrix_get_array
+       * ncm_matrix_fast_get
+       * ncm_matrix_fast_set
+       * ncm_matrix_gsl
+       * ncm_matrix_const_gsl
+       * ncm_matrix_col_len
+       * ncm_matrix_row_len
+       * ncm_matrix_nrows
+       * ncm_matrix_ncols
+       * ncm_matrix_add_mul
+       * ncm_matrix_cmp
+       * ncm_matrix_cmp_diag
+       * ncm_matrix_dsymm
+       * ncm_matrix_set_colmajor
+       * ncm_matrix_get_diag
+       * ncm_matrix_set_diag
+       * NCM_MATRIX_SLICE
+       * NCM_MATRIX_GSL_MATRIX
+       * NCM_MATRIX_MALLOC
+       * NCM_MATRIX_GARRAY
+       * NCM_MATRIX_DERIVED
+
+     Also deleted NcmMatrix struct doc.
+
 
 [v0.15.0]
  * Version 0.15.0

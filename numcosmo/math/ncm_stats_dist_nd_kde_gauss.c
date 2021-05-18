@@ -734,7 +734,7 @@ _ncm_stats_dist_nd_kde_gauss_calib_href (NcmStatsDistNdKDEGaussPrivate * const s
     ncm_vector_set (self->weights, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
   }
 
-  if (TRUE)
+  if (FALSE)
   {
     const gint n     = (self->d * (self->d + 1)) / 2;
     gdouble *dht     = g_new0 (gdouble, n);
@@ -895,7 +895,7 @@ _ncm_stats_dist_nd_kde_gauss_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2l
 
 	if (self->LOOCV)
 	{
-    _ncm_stats_dist_nd_kde_gauss_calib_href (self, m2lnp);
+	  _ncm_stats_dist_nd_kde_gauss_calib_href (self, m2lnp);
 	}
   
   /*printf ("# Using INTERP? % 22.15g % 22.15g | % 22.15g % 22.15g\n", self->max_m2lnp, self->min_m2lnp, -0.5 * (self->max_m2lnp - self->min_m2lnp), GSL_LOG_DBL_EPSILON);*/

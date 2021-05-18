@@ -63,7 +63,7 @@ struct _NcHaloDensityProfileClass
  *
  * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
  * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
- * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:MDelta is ignored and
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:log10MDelta is ignored and
  * \begin{equation}\label{def:DVir}
  * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
  * \end{equation}
@@ -81,7 +81,7 @@ typedef enum _NcHaloDensityProfileMassDef
 /**
  * NcHaloDensityProfileSParams:
  * @NC_HALO_DENSITY_PROFILE_C_DELTA: concentration parameter $r_\Delta$
- * @NC_HALO_DENSITY_PROFILE_M_DELTA: halo mass $M_\Delta$
+ * @NC_HALO_DENSITY_PROFILE_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$,
  * any additional parameter must be included in the implementation
@@ -91,7 +91,7 @@ typedef enum _NcHaloDensityProfileMassDef
 typedef enum /*< enum,underscore_name=NC_HALO_DENSITY_PROFILE_SPARAMS >*/
 {
   NC_HALO_DENSITY_PROFILE_C_DELTA = 0,
-  NC_HALO_DENSITY_PROFILE_M_DELTA,
+  NC_HALO_DENSITY_PROFILE_LOG10M_DELTA,
   /* < private > */
   NC_HALO_DENSITY_PROFILE_SPARAM_LEN, /*< skip >*/
 } NcHaloDensityProfileSParams;
@@ -151,7 +151,7 @@ gdouble nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *d
 
 
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA (4.0)
-#define NC_HALO_DENSITY_PROFILE_DEFAULT_M_DELTA (2.0e14)
+#define NC_HALO_DENSITY_PROFILE_DEFAULT_LOG10M_DELTA (log10 (2.0e14))
 
 #define NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL (0.0)
 

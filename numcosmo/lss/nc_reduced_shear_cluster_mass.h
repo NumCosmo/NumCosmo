@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima 2018 <pennalima@gmail.com> 
+ * Copyright (C) Mariana Penna Lima 2018 <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -60,29 +60,29 @@ typedef struct _NcReducedShearClusterMass NcReducedShearClusterMass;
  * @NC_REDUCED_SHEAR_CLUSTER_MASS_XP: pivot parameter
  * @NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA: Voigt profile parameter, $\sigma$ is the standard deviation of the Gaussian distribution
  * @NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA: Voigt profile parameter, $\Gamma$ is the width of the  Lorentzian profile
- * 
- * These parameters refers to the shear calibration, and 
- * the Voigt profile. 
- * 
+ *
+ * These parameters refers to the shear calibration, and
+ * the Voigt profile.
+ *
  * In particular, we consider the shear calibration as defined for STEP and STEP2 simulations:
  * $$\hat{g}_{Teo} = (1 + m)g + c,$$
- * where $g$ is the reduced shear, the multiplicative bias $m$ is  
+ * where $g$ is the reduced shear, the multiplicative bias $m$ is
  * $$ m =\left\{
- *   \begin{array}{c l}	
+ *   \begin{array}{c l}
  *        a \frac{r_{gal}}{r_{PSF}} + b & \frac{r_{gal}}{r_{PSF}} < x_p \\
  *        b & \frac{r_{gal}}{r_{PSF}} \geq x_p
  *   \end{array}\right. $$
  * and $c = constant.$
  * $r_{gal}$ and $r_{PSF}$ are the galaxy and PSF (point spread function) sizes, respectively.
- * See [Applegate (2014)][XApplegate2014].  
- * 
+ * See [Applegate (2014)][XApplegate2014].
+ *
  */
 typedef enum _NcReducedShearClusterMassParams
 {
-  NC_REDUCED_SHEAR_CLUSTER_MASS_A = 0, 
-  NC_REDUCED_SHEAR_CLUSTER_MASS_B, 
+  NC_REDUCED_SHEAR_CLUSTER_MASS_A = 0,
+  NC_REDUCED_SHEAR_CLUSTER_MASS_B,
   NC_REDUCED_SHEAR_CLUSTER_MASS_C,
-  NC_REDUCED_SHEAR_CLUSTER_MASS_XP, 
+  NC_REDUCED_SHEAR_CLUSTER_MASS_XP,
   NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA,
   NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA,
   /* < private > */
@@ -130,3 +130,4 @@ gdouble nc_reduced_shear_cluster_mass_posterior_no_shear_calibration (NcReducedS
 G_END_DECLS
 
 #endif /* _NC_REDUCED_SHEAR_CLUSTER_MASS_H_ */
+

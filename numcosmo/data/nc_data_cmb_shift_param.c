@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,8 +27,11 @@
  * SECTION:nc_data_cmb_shift_param
  * @title: NcDataCMBShiftParam
  * @short_description: Cosmic microwave background data -- shift parameter.
+ * @stability: Stable
+ * @include: numcosmo/data/nc_data_cmb_shift_param.h
  *
- * FIXME
+ * This object creates a CMB shift parameter $R$ data (#NcmData).
+ * See #NcDataCMBId and #nc_distance_shift_parameter for more informations.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -60,8 +63,9 @@ static void
 nc_data_cmb_shift_param_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
+  
   g_return_if_fail (NC_IS_DATA_CMB_SHIFT_PARAM (object));
-
+  
   switch (prop_id)
   {
     case PROP_DIST:
@@ -80,8 +84,9 @@ static void
 nc_data_cmb_shift_param_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
+  
   g_return_if_fail (NC_IS_DATA_CMB_SHIFT_PARAM (object));
-
+  
   switch (prop_id)
   {
     case PROP_DIST:
@@ -100,7 +105,7 @@ static void
 nc_data_cmb_shift_param_dispose (GObject *object)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
-
+  
   nc_distance_clear (&cmb_shift_param->dist);
   ncm_vector_clear (&cmb_shift_param->x);
   
@@ -122,15 +127,20 @@ static void _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
 static void
 nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass* diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
-
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
+  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
+  
   object_class->set_property = &nc_data_cmb_shift_param_set_property;
   object_class->get_property = &nc_data_cmb_shift_param_get_property;
   object_class->dispose      = &nc_data_cmb_shift_param_dispose;
   object_class->finalize     = &nc_data_cmb_shift_param_finalize;
-
+  
+  /**
+   * NcDataCMBShiftParam:dist:
+   *
+   * The #NcDistance object to be used.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DIST,
                                    g_param_spec_object ("dist",
@@ -138,6 +148,12 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcDataCMBShiftParam:z:
+   *
+   * The data redshift.
+   */
   g_object_class_install_property (object_class,
                                    PROP_Z,
                                    g_param_spec_object ("z",
@@ -155,7 +171,8 @@ static void
 _nc_data_cmb_shift_param_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  
   nc_distance_prepare_if_needed (cmb_shift_param->dist, cosmo);
 }
 
@@ -164,25 +181,25 @@ _nc_data_cmb_shift_param_prepare (NcmData *data, NcmMSet *mset)
  *
  ****************************************************************************/
 
-static void 
+static void
 _nc_data_cmb_shift_param_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  const gdouble zrec = ncm_vector_get (cmb_shift_param->x, 0);
-  const gdouble R    = nc_distance_shift_parameter (cmb_shift_param->dist, cosmo, zrec);
-
+  NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const gdouble zrec                   = ncm_vector_get (cmb_shift_param->x, 0);
+  const gdouble R                      = nc_distance_shift_parameter (cmb_shift_param->dist, cosmo, zrec);
+  
   ncm_vector_set (vp, 0, R);
 }
 
-static void 
+static void
 _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
-
+  
   if ((np == 0) || (np != diag->np))
     ncm_vector_clear (&cmb_shift_param->x);
-
+  
   if ((np != 0) && (np != diag->np))
     cmb_shift_param->x = ncm_vector_new (np);
   
@@ -192,11 +209,11 @@ _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_cmb_shift_param_new_empty:
- * @dist: FIXME
+ * @dist: a #NcDistance
  *
- * FIXME
+ * This function allocates an empty #NcDataCMBShiftParam object. 
  *
- * Returns: FIXME
+ * Returns: a #NcDataCMBShiftParam.
  */
 NcDataCMBShiftParam *
 nc_data_cmb_shift_param_new_empty (NcDistance *dist)
@@ -204,42 +221,44 @@ nc_data_cmb_shift_param_new_empty (NcDistance *dist)
   NcDataCMBShiftParam *cmb_shift_param = g_object_new (NC_TYPE_DATA_CMB_SHIFT_PARAM,
                                                        "dist", dist,
                                                        NULL);
+  
   return cmb_shift_param;
 }
 
 /**
  * nc_data_cmb_shift_param_new_from_file:
  * @filename: file containing a serialized #NcDataCMBShiftParam.
- * 
+ *
  * Creates a new #NcDataCMBShiftParam from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataCMBShiftParam.
  */
 NcDataCMBShiftParam *
 nc_data_cmb_shift_param_new_from_file (const gchar *filename)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (ncm_serialize_global_from_file (filename));
+  
   g_assert (NC_IS_DATA_CMB_SHIFT_PARAM (cmb_shift_param));
-
+  
   return cmb_shift_param;
 }
 
-
 /**
  * nc_data_cmb_shift_param_new_from_id:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataCMBId
  *
- * FIXME
+ * Creates a new #NcDataCMBShiftParam from @id.
+ * See #NcDataCMBId for the available options.
  *
- * Returns: FIXME
+ * Returns: the newly created #NcDataCMBShiftParam.
  */
 NcDataCMBShiftParam *
 nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
 {
   NcDataCMBShiftParam *cmb_shift_param;
   gchar *filename;
-
+  
   switch (id)
   {
     case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
@@ -255,11 +274,11 @@ nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
       g_error ("nc_data_cmb_shift_param_new_from_id: id %d not recognized.", id);
       break;
   }
-
+  
   cmb_shift_param = nc_data_cmb_shift_param_new_from_file (filename);
   nc_data_cmb_shift_param_set_dist (cmb_shift_param, dist);
   g_free (filename);
-
+  
   return cmb_shift_param;
 }
 
@@ -267,13 +286,14 @@ nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
  * nc_data_cmb_shift_param_set_dist:
  * @cmb_shift_param: a #NcDataCMBShiftParam
  * @dist: a #NcDistance
- * 
- * Sets the distance object.
- * 
+ *
+ * Sets the distance object @dist to @cmb_shift_param.
+ *
  */
-void 
+void
 nc_data_cmb_shift_param_set_dist (NcDataCMBShiftParam *cmb_shift_param, NcDistance *dist)
 {
   nc_distance_clear (&cmb_shift_param->dist);
   cmb_shift_param->dist = nc_distance_ref (dist);
 }
+

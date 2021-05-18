@@ -202,7 +202,9 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
 
-  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE); 
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
   {
     NcmModel *model = NCM_MODEL (ncm_mset_peek (fit->mset, ncm_model_mvnd_id ()));
     NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);

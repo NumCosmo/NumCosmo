@@ -1,0 +1,95 @@
+name: Build and Check
+
+on: [push, pull_request]
+
+#env:
+#  CC: gcc-10
+#  FC: gfortran-10
+#  F77: gfortran-10
+#  F90: gfortran-10
+
+jobs:
+
+  build-gcc-ubuntu:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq
+      run: sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
+    - name: Autogen
+      run: NOCONFIGURE=yes ./autogen.sh
+    - name: configure
+      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
+    - name: make
+      run: make -j8
+    - name: Test example compilation
+      run: |
+        sudo make install
+        cd examples
+        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
+        ./example_simple
+        ./example_ca
+    - name: make check
+      run: make check -j8
+    - name: make dist
+      run: make dist
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: release
+        path: numcosmo-*.tar.gz
+
+  coveralls-gcc-ubuntu:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq
+      run: sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools
+    - name: Autogen
+      run: NOCONFIGURE=yes ./autogen.sh
+    - name: configure
+      run: ./configure 'CFLAGS=-Wall -g -O0' 'FCFLAGS=-O0 -Wall' --enable-maintainer-mode --disable-gtk-doc --prefix=/usr --enable-code-coverage
+    - name: make
+      run: make -j8
+    - name: make check
+      run: make check -j8
+    - name: make code-coverage-capture
+      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./numcosmo-coverage.info
+
+  build-gcc-macos:
+
+    runs-on: macos-latest
+    env:
+      CC: gcc-10
+      FC: gfortran-10
+      F77: gfortran-10
+      F90: gfortran-10
+      LIBRARY_PATH: /usr/local/lib
+      LD_LIBRARY_PATH: /usr/local/lib
+      DYLD_LIBRARY_PATH: /usr/local/lib
+      CPATH: /usr/local/include
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq
+      run: |
+        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc
+    - name: Autogen
+      run: NOCONFIGURE=yes ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make -j8
+    - name: make check
+      run: make check -j8
+

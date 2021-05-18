@@ -798,7 +798,7 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
  * 
  * Enables quantile calculation, it will calculate the $p$
  * quantile. Warning, it does not support weighted samples, the results
- * will disconsider the weights.
+ * will ignores the weights.
  * 
  */
 void 

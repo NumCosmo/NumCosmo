@@ -42,12 +42,15 @@ typedef struct _TestNcWLSurfaceMassDensity
 } TestNcWLSurfaceMassDensity;
 
 void test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
+void test_nc_wl_surface_mass_density_new_Okp (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
+void test_nc_wl_surface_mass_density_new_Okn (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_sigma (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_sigma_mean (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_sigma_critical (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_convergence (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_shear (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_reduced_shear (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
+void test_nc_wl_surface_mass_density_reduced_shear_array (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_free (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 
@@ -81,6 +84,18 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/wl_surface_mass_density/nfw/reduced_shear", TestNcWLSurfaceMassDensity, NULL,
               &test_nc_wl_surface_mass_density_new,
               &test_nc_wl_surface_mass_density_reduced_shear,
+              &test_nc_wl_surface_mass_density_free);   
+  g_test_add ("/nc/wl_surface_mass_density/nfw/reduced_shear/array", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new,
+              &test_nc_wl_surface_mass_density_reduced_shear_array,
+              &test_nc_wl_surface_mass_density_free);   
+  g_test_add ("/nc/wl_surface_mass_density/Okp/nfw/reduced_shear/array", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new_Okp,
+              &test_nc_wl_surface_mass_density_reduced_shear_array,
+              &test_nc_wl_surface_mass_density_free);   
+  g_test_add ("/nc/wl_surface_mass_density/Okn/nfw/reduced_shear/array", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new_Okn,
+              &test_nc_wl_surface_mass_density_reduced_shear_array,
               &test_nc_wl_surface_mass_density_free);   
   g_test_add ("/nc/wl_surface_mass_density/nfw/reduced_shear_infinity", TestNcWLSurfaceMassDensity, NULL,
               &test_nc_wl_surface_mass_density_new,
@@ -124,7 +139,83 @@ test_nc_wl_surface_mass_density_new (TestNcWLSurfaceMassDensity *test, gconstpoi
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "MDelta",  1.0e15);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
+
+  test->zc = 1.0;
+  test->zl = 1.0;
+  test->zs = 1.5;
+
+  nc_distance_free (dist);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+}
+
+void
+test_nc_wl_surface_mass_density_new_Okp (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcDistance *dist            = nc_distance_new (3.0);
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  
+  g_assert_true (smd != NULL);
+
+  test->cosmo = cosmo;
+  test->dp    = dp;
+  test->smd   = smd;
+  test->R1    = 0.3; /* Mpc */
+  test->R3    = 10.0;
+  g_assert_true (NC_IS_HALO_DENSITY_PROFILE_NFW (dp));
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       70.0);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.1);
+
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
+
+  test->zc = 1.0;
+  test->zl = 1.0;
+  test->zs = 1.5;
+
+  nc_distance_free (dist);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+}
+
+void
+test_nc_wl_surface_mass_density_new_Okn (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcDistance *dist            = nc_distance_new (3.0);
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  
+  g_assert_true (smd != NULL);
+
+  test->cosmo = cosmo;
+  test->dp    = dp;
+  test->smd   = smd;
+  test->R1    = 0.3; /* Mpc */
+  test->R3    = 10.0;
+  g_assert_true (NC_IS_HALO_DENSITY_PROFILE_NFW (dp));
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       70.0);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", -0.1);
+
+  ncm_model_param_set_by_name (NCM_MODEL (test->dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (test->dp), "cDelta",  4.0);
 
   test->zc = 1.0;
@@ -256,3 +347,46 @@ test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensi
   ncm_assert_cmpdouble_e (k2, ==, 0.12174598,   1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (k3, ==, 0.0021164506, 1.0e-5, 0.0);
 }
+
+void
+test_nc_wl_surface_mass_density_reduced_shear_array (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo            = test->cosmo;
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+  const gint nR  = g_test_rand_int_range (40, 50);
+  const gint nzs = g_test_rand_int_range (40, 50);
+  GArray *R      = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), nR);
+  GArray *zs     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), nzs);
+  gint i;
+  
+  g_array_set_size (R, nR);
+  g_array_set_size (zs, nzs);
+  
+  for (i = 0; i < nR; i++)
+    g_array_index (R, gdouble, i) = exp (g_test_rand_double_range (log (1.0e-2), log (1.0e2)));
+  for (i = 0; i < nzs; i++)
+    g_array_index (zs, gdouble, i) = g_test_rand_double_range (0.05, 1.5);
+
+  {
+    GArray *res = nc_wl_surface_mass_density_reduced_shear_array (smd, dp, cosmo, R, 1.0, 1.0, zs, test->zl, test->zc);
+    for (i = 0; i < nR; i++)
+    {
+      const gdouble R_i = g_array_index (R, gdouble, i);
+      gint j;
+      
+      for (j = 0; j < nzs; j++)
+      {
+        const gdouble zs_j = g_array_index (zs, gdouble, j);
+        const gdouble rs_a = g_array_index (res, gdouble, nzs * i + j);
+        const gdouble rs_d = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R_i, zs_j, test->zl, test->zc);
+        
+        ncm_assert_cmpdouble_e (rs_a, ==, rs_d,  1.0e-8, 0.0);
+      }
+    }
+    
+    g_array_unref (res);
+  }
+}
+
+

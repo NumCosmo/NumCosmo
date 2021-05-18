@@ -128,7 +128,8 @@ IGNORE_HFILES= \
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
-HTML_IMAGES=
+HTML_IMAGES= \
+	    $(srcdir)/images/spline_func_knots_evolution.png
 
 # Extra SGML files that are included by $(DOC_MAIN_SGML_FILE).
 # e.g. content_files=running.sgml building.sgml changes-2.0.sgml
@@ -155,7 +156,7 @@ setup-build.stamp: $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_c
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += $(XML_FILES) $(XML_GEN_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
+EXTRA_DIST += $(XML_FILES) $(XML_GEN_FILES) references.xml references.bib container.css addmathjax.pl xmltogtk.pl
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types

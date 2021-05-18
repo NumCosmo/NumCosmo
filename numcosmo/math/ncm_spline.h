@@ -5,6 +5,7 @@
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
@@ -51,6 +52,7 @@ struct _NcmSplineClass
   /*< private >*/
   GObjectClass parent_class;
   const gchar *(*name) (NcmSpline *s);
+  
   void (*reset) (NcmSpline *s);
   void (*prepare) (NcmSpline *s);
   void (*prepare_base) (NcmSpline *s);
@@ -97,6 +99,7 @@ void ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len
 guint ncm_spline_get_len (NcmSpline *s);
 NcmVector *ncm_spline_get_xv (NcmSpline *s);
 NcmVector *ncm_spline_get_yv (NcmSpline *s);
+
 void ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub);
 
 void ncm_spline_free (NcmSpline *s);
@@ -138,8 +141,8 @@ ncm_spline_prepare (NcmSpline *s)
 NCM_INLINE void
 ncm_spline_prepare_base (NcmSpline *s)
 {
-	if (NCM_SPLINE_GET_CLASS (s)->prepare_base)
-		NCM_SPLINE_GET_CLASS (s)->prepare_base (s);
+  if (NCM_SPLINE_GET_CLASS (s)->prepare_base)
+    NCM_SPLINE_GET_CLASS (s)->prepare_base (s);
 }
 
 NCM_INLINE gdouble
@@ -175,13 +178,13 @@ ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 NCM_INLINE gboolean
 ncm_spline_is_empty (const NcmSpline *s)
 {
-	return s->empty;
+  return s->empty;
 }
 
 NCM_INLINE gsize
 ncm_spline_min_size (const NcmSpline *s)
 {
-	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
+  return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
 NCM_INLINE gsize
@@ -189,10 +192,11 @@ _ncm_spline_bsearch_stride (const gdouble x_array[], const guint stride, const g
 {
   gsize ilo = index_lo;
   gsize ihi = index_hi;
-	
-  while (ihi > ilo + 1) 
-	{
-    gsize i = (ihi + ilo)/2;
+  
+  while (ihi > ilo + 1)
+  {
+    gsize i = (ihi + ilo) / 2;
+    
     if (x_array[i * stride] > x)
       ihi = i;
     else
@@ -206,19 +210,19 @@ NCM_INLINE gsize
 _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint stride, gsize len, gdouble x)
 {
   gsize x_index = a->cache;
- 
-  if (x < xa[x_index * stride]) 
-	{
+  
+  if (x < xa[x_index * stride])
+  {
     a->miss_count++;
     a->cache = _ncm_spline_bsearch_stride (xa, stride, x, 0, x_index);
   }
-  else if (x >= xa[stride * (x_index + 1)]) 
-	{
+  else if (x >= xa[stride * (x_index + 1)])
+  {
     a->miss_count++;
     a->cache = _ncm_spline_bsearch_stride (xa, stride, x, x_index, len - 1);
   }
-  else 
-	{
+  else
+  {
     a->hit_count++;
   }
   
@@ -228,20 +232,20 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
 NCM_INLINE guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 {
-	if (ncm_vector_stride (s->xv) == 1)
-	{
-		if (s->acc)
-			return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x);
-		else
-			return gsl_interp_bsearch (ncm_vector_ptr (s->xv, 0), x, 0, ncm_vector_len (s->xv) - 1);
-	}
-	else
-	{
-		if (s->acc)
-			return _ncm_spline_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), s->len, x);
-		else
-			return _ncm_spline_bsearch_stride (ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), x, 0, ncm_vector_len (s->xv) - 1);
-	}
+  if (ncm_vector_stride (s->xv) == 1)
+  {
+    if (s->acc)
+      return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x);
+    else
+      return gsl_interp_bsearch (ncm_vector_ptr (s->xv, 0), x, 0, ncm_vector_len (s->xv) - 1);
+  }
+  else
+  {
+    if (s->acc)
+      return _ncm_spline_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), s->len, x);
+    else
+      return _ncm_spline_bsearch_stride (ncm_vector_ptr (s->xv, 0), ncm_vector_stride (s->xv), x, 0, ncm_vector_len (s->xv) - 1);
+  }
 }
 
 /* Utilities -- internal use */
@@ -255,7 +259,7 @@ _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble c
   const gdouble bterm = 0.5 * bi * r12;
   const gdouble cterm = (1.0 / 3.0) * ci * (r1 * r1 + r2 * r2 + r1 * r2);
   const gdouble dterm = 0.25 * di * r12 * (r1 * r1 + r2 * r2);
-
+  
   return (b - a) * (ai + bterm + cterm + dterm);
 }
 
@@ -264,3 +268,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_SPLINE_INLINE_H_ */
+

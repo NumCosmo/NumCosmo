@@ -23,7 +23,7 @@ installed library.
 
 # If numcosmo is already installed in your system
 
-gcc -Wall simple_example.c -o simple_example \
+gcc -Wall example_simple.c -o example_simple \
 `pkg-config numcosmo --libs --cflags`
 
 This line may need modification depending on the system. Just look

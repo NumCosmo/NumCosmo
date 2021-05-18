@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #include "arkode_impl.h"
+#include "arkode_interp_impl.h"
 #include <sundials/sundials_math.h>
 #include <sundials/sundials_types.h>
 
@@ -56,14 +57,13 @@ int arkSetDefaults(void *arkode_mem)
   ark_mem = (ARKodeMem) arkode_mem;
 
   /* Set default values for integrator optional inputs */
-  ark_mem->dense_q                 = QDENSE_DEF;     /* dense output order */
   ark_mem->fixedstep               = SUNFALSE;       /* default to use adaptive steps */
-  ark_mem->reltol                  = 1.e-4;          /* relative tolerance */
+  ark_mem->reltol                  = RCONST(1.e-4);  /* relative tolerance */
   ark_mem->itol                    = ARK_SS;         /* scalar-scalar solution tolerances */
   ark_mem->ritol                   = ARK_SS;         /* scalar-scalar residual tolerances */
-  ark_mem->Sabstol                 = 1.e-9;          /* solution absolute tolerance */
+  ark_mem->Sabstol                 = RCONST(1.e-9);  /* solution absolute tolerance */
   ark_mem->atolmin0                = SUNFALSE;       /* min(abstol) > 0 */
-  ark_mem->SRabstol                = 1.e-9;          /* residual absolute tolerance */
+  ark_mem->SRabstol                = RCONST(1.e-9);  /* residual absolute tolerance */
   ark_mem->Ratolmin0               = SUNFALSE;       /* min(Rabstol) > 0 */
   ark_mem->user_efun               = SUNFALSE;       /* no user-supplied ewt function */
   ark_mem->efun                    = arkEwtSetSS;    /* built-in scalar-scalar ewt function */
@@ -88,11 +88,12 @@ int arkSetDefaults(void *arkode_mem)
   ark_mem->report                  = SUNFALSE;       /* don't report solver diagnostics */
   ark_mem->hadapt_mem->etamx1      = ETAMX1;         /* max change on first step */
   ark_mem->hadapt_mem->etamxf      = ETAMXF;         /* max change on error-failed step */
+  ark_mem->hadapt_mem->etamin      = ETAMIN;         /* min bound on time step reduction */
   ark_mem->hadapt_mem->small_nef   = SMALL_NEF;      /* num error fails before ETAMXF enforced */
   ark_mem->hadapt_mem->etacf       = ETACF;          /* max change on convergence failure */
   ark_mem->hadapt_mem->HAdapt      = NULL;           /* step adaptivity fn */
   ark_mem->hadapt_mem->HAdapt_data = NULL;           /* step adaptivity data */
-  ark_mem->hadapt_mem->imethod     = 0;              /* PID controller */
+  ark_mem->hadapt_mem->imethod     = ARK_ADAPT_PID;  /* PID controller */
   ark_mem->hadapt_mem->cfl         = CFLFAC;         /* explicit stability factor */
   ark_mem->hadapt_mem->safety      = SAFETY;         /* step adaptivity safety factor  */
   ark_mem->hadapt_mem->bias        = BIAS;           /* step adaptivity error bias */
@@ -110,30 +111,110 @@ int arkSetDefaults(void *arkode_mem)
 
 
 /*---------------------------------------------------------------
-  arkSetDenseOrder:
+  arkSetInterpolantType:
 
-  Specifies the polynomial order for dense output.  Positive
-  values are sent to the interpolation module; negative values
-  imply to use the default.
+  Specifies use of the Lagrange or Hermite interpolation modules.
+    itype == ARK_INTERP_HERMITE specifies the Hermite (nonstiff)
+      interpolation module.
+    itype == ARK_INTERP_LAGRANGE specifies the Lagrange (stiff)
+      interpolation module.
+
+  Return values:
+     ARK_SUCCESS on success.
+     ARK_MEM_NULL on NULL-valued arkode_mem input.
+     ARK_MEM_FAIL if the interpolation module cannot be allocated.
+     ARK_ILL_INPUT if the itype argument is not recognized.
   ---------------------------------------------------------------*/
-int arkSetDenseOrder(void *arkode_mem, int dord)
+int arkSetInterpolantType(void *arkode_mem, int itype)
 {
   ARKodeMem ark_mem;
   if (arkode_mem==NULL) {
     arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
-                    "arkSetDenseOrder", MSG_ARK_NO_MEM);
+                    "arkSetInterpolantType", MSG_ARK_NO_MEM);
     return(ARK_MEM_NULL);
   }
   ark_mem = (ARKodeMem) arkode_mem;
 
-  /* set user-provided value, or default, depending on argument */
-  if (dord < 0) {
-    ark_mem->dense_q = QDENSE_DEF;
+  /* check for legal itype input */
+  if ((itype != ARK_INTERP_HERMITE) && (itype != ARK_INTERP_LAGRANGE)) {
+    arkProcessError(ark_mem, ARK_ILL_INPUT, "ARKode",
+                    "arkSetInterpolantType",
+                    "Illegal interpolation type input.");
+    return(ARK_ILL_INPUT);
+  }
+
+  /* do not change type once the module has been initialized */
+  if (ark_mem->initialized) {
+    arkProcessError(ark_mem, ARK_INTERP_FAIL, "ARKode",
+                    "arkSetInterpolantType",
+                    "Type cannot be specified after module initialization.");
+    return(ARK_ILL_INPUT);
+  }
+
+  /* delete any existing interpolation module */
+  if (ark_mem->interp != NULL) {
+    arkInterpFree(ark_mem, ark_mem->interp);
+    ark_mem->interp = NULL;
+  }
+
+  /* create requested interpolation module, initially specifying
+     the maximum possible interpolant degree. */
+  if (itype == ARK_INTERP_HERMITE) {
+    ark_mem->interp = arkInterpCreate_Hermite(arkode_mem, ARK_INTERP_MAX_DEGREE);
   } else {
-    ark_mem->dense_q = dord;
+    ark_mem->interp = arkInterpCreate_Lagrange(arkode_mem, ARK_INTERP_MAX_DEGREE);
+  }
+  if (ark_mem->interp == NULL) {
+    arkProcessError(ark_mem, ARK_MEM_FAIL, "ARKode", "arkSetInterpolantType",
+                    "Unable to allocate interpolation structure");
+    return(ARK_MEM_FAIL);
   }
 
   return(ARK_SUCCESS);
+}
+
+
+/*---------------------------------------------------------------
+  arkSetInterpolantDegree:
+
+  Specifies the polynomial degree for the dense output
+  interpolation module.
+
+  Return values:
+     ARK_SUCCESS on success.
+     ARK_MEM_NULL on NULL-valued arkode_mem input or nonexistent
+       interpolation module.
+     ARK_INTERP_FAIL if the interpolation module is already
+       initialized.
+     ARK_ILL_INPUT if the degree is illegal.
+  ---------------------------------------------------------------*/
+int arkSetInterpolantDegree(void *arkode_mem, int degree)
+{
+  ARKodeMem ark_mem;
+  if (arkode_mem==NULL) {
+    arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
+                    "arkSetInterpolantDegree", MSG_ARK_NO_MEM);
+    return(ARK_MEM_NULL);
+  }
+  ark_mem = (ARKodeMem) arkode_mem;
+
+  if (ark_mem->interp == NULL) {
+    arkProcessError(ark_mem, ARK_MEM_NULL, "ARKode",
+                    "arkSetInterpolantDegree",
+                    "Interpolation module is not yet allocated");
+    return(ARK_MEM_NULL);
+  }
+
+  /* do not change degree once the module has been initialized */
+  if (ark_mem->initialized) {
+    arkProcessError(ark_mem, ARK_INTERP_FAIL, "ARKode",
+                    "arkSetInterpolantType",
+                    "Degree cannot be specified after module initialization.");
+    return(ARK_ILL_INPUT);
+  }
+
+  /* pass 'degree' to interpolation module, returning its value */
+  return(arkInterpSetDegree(ark_mem, ark_mem->interp, degree));
 }
 
 
@@ -319,6 +400,15 @@ int arkSetInitStep(void *arkode_mem, realtype hin)
   } else {
     ark_mem->hin = hin;
   }
+
+  /* Clear previous initial step */
+  ark_mem->h0u = ZERO;
+
+  /* Clear error and step size history */
+  ark_mem->hadapt_mem->ehist[0] = ONE;
+  ark_mem->hadapt_mem->ehist[1] = ONE;
+  ark_mem->hadapt_mem->hhist[0] = ZERO;
+  ark_mem->hadapt_mem->hhist[1] = ZERO;
 
   return(ARK_SUCCESS);
 }
@@ -544,7 +634,7 @@ int arkSetNoInactiveRootWarn(void *arkode_mem)
   arkSetPostprocessStepFn:
 
   Specifies a user-provided step postprocessing function having
-  type ARKPostProcessStepFn.  A NULL input function disables step
+  type ARKPostProcessFn.  A NULL input function disables step
   postprocessing.
 
   IF THE SUPPLIED FUNCTION MODIFIES ANY OF THE ACTIVE STATE DATA,
@@ -552,7 +642,7 @@ int arkSetNoInactiveRootWarn(void *arkode_mem)
   STABILITY ARE LOST.
   ---------------------------------------------------------------*/
 int arkSetPostprocessStepFn(void *arkode_mem,
-                            ARKPostProcessStepFn ProcessStep)
+                            ARKPostProcessFn ProcessStep)
 {
   ARKodeMem ark_mem;
   if (arkode_mem==NULL) {
@@ -565,6 +655,35 @@ int arkSetPostprocessStepFn(void *arkode_mem,
   /* NULL argument sets default, otherwise set inputs */
   ark_mem->ProcessStep = ProcessStep;
   ark_mem->ps_data     = ark_mem->user_data;
+
+  return(ARK_SUCCESS);
+}
+
+
+/*---------------------------------------------------------------
+  arkSetPostprocessStageFn:
+
+  Specifies a user-provided stage postprocessing function having
+  type ARKPostProcessFn.  A NULL input function disables
+  stage postprocessing.
+
+  IF THE SUPPLIED FUNCTION MODIFIES ANY OF THE ACTIVE STATE DATA,
+  THEN ALL THEORETICAL GUARANTEES OF SOLUTION ACCURACY AND
+  STABILITY ARE LOST.
+  ---------------------------------------------------------------*/
+int arkSetPostprocessStageFn(void *arkode_mem,
+                             ARKPostProcessFn ProcessStage)
+{
+  ARKodeMem ark_mem;
+  if (arkode_mem==NULL) {
+    arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
+                    "arkSetPostprocessStageFn", MSG_ARK_NO_MEM);
+    return(ARK_MEM_NULL);
+  }
+  ark_mem = (ARKodeMem) arkode_mem;
+
+  /* NULL argument sets default, otherwise set inputs */
+  ark_mem->ProcessStage = ProcessStage;
 
   return(ARK_SUCCESS);
 }
@@ -586,14 +705,9 @@ int arkSetConstraints(void *arkode_mem, N_Vector constraints)
   }
   ark_mem = (ARKodeMem) arkode_mem;
 
-  /* If there are no constarints, destroy data structures */
+  /* If there are no constraints, destroy data structures */
   if (constraints == NULL) {
-    if (ark_mem->ConstraintsMallocDone) {
-      N_VDestroy(ark_mem->constraints);
-      ark_mem->lrw -= ark_mem->lrw1;
-      ark_mem->liw -= ark_mem->liw1;
-    }
-    ark_mem->ConstraintsMallocDone = SUNFALSE;
+    arkFreeVec(ark_mem, &ark_mem->constraints);
     ark_mem->constraintsSet = SUNFALSE;
     return(ARK_SUCCESS);
   }
@@ -617,16 +731,12 @@ int arkSetConstraints(void *arkode_mem, N_Vector constraints)
     return(ARK_ILL_INPUT);
   }
 
-  if ( !(ark_mem->ConstraintsMallocDone) ) {
-    ark_mem->constraints = N_VClone(constraints);
-    ark_mem->lrw += ark_mem->lrw1;
-    ark_mem->liw += ark_mem->liw1;
-    ark_mem->ConstraintsMallocDone = SUNTRUE;
-  }
+  /* Allocate the internal constrains vector (if necessary) */
+  if (!arkAllocVec(ark_mem, constraints, &ark_mem->constraints))
+    return(ARK_MEM_FAIL);
 
   /* Load the constraints vector */
   N_VScale(ONE, constraints, ark_mem->constraints);
-
   ark_mem->constraintsSet = SUNTRUE;
 
   return(ARK_SUCCESS);
@@ -677,7 +787,7 @@ int arkSetCFLFraction(void *arkode_mem, realtype cfl_frac)
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* check for allowable parameters */
-  if (cfl_frac >= 1.0) {
+  if (cfl_frac >= ONE) {
     arkProcessError(ark_mem, ARK_ILL_INPUT, "ARKode",
                     "arkSetCFLFraction", "Illegal CFL fraction");
     return(ARK_ILL_INPUT);
@@ -712,7 +822,7 @@ int arkSetSafetyFactor(void *arkode_mem, realtype safety)
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* check for allowable parameters */
-  if (safety >= 1.0) {
+  if (safety >= ONE) {
     arkProcessError(ark_mem, ARK_ILL_INPUT, "ARKode",
                     "arkSetSafetyFactor", "Illegal safety factor");
     return(ARK_ILL_INPUT);
@@ -746,7 +856,7 @@ int arkSetErrorBias(void *arkode_mem, realtype bias)
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* set allowed value, otherwise set default */
-  if (bias < 1.0) {
+  if (bias < ONE) {
     hadapt_mem->bias = BIAS;
   } else {
     hadapt_mem->bias = bias;
@@ -774,10 +884,38 @@ int arkSetMaxGrowth(void *arkode_mem, realtype mx_growth)
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* set allowed value, otherwise set default */
-  if (mx_growth == ZERO) {
+  if (mx_growth <= ONE) {
     hadapt_mem->growth = GROWTH;
   } else {
     hadapt_mem->growth = mx_growth;
+  }
+
+  return(ARK_SUCCESS);
+}
+
+
+/*---------------------------------------------------------------
+  arkSetMinReduction:
+
+  Specifies the minimum possible step size reduction factor to be
+  allowed between successive integration steps. Allowable values
+  must be > 0.0 and < 1.0. Any illegal value implies a reset to
+  the default.
+  ---------------------------------------------------------------*/
+int arkSetMinReduction(void *arkode_mem, realtype eta_min)
+{
+  int retval;
+  ARKodeHAdaptMem hadapt_mem;
+  ARKodeMem ark_mem;
+  retval = arkAccessHAdaptMem(arkode_mem, "arkSetMinReduction",
+                              &ark_mem, &hadapt_mem);
+  if (retval != ARK_SUCCESS) return(retval);
+
+  /* set allowed value, otherwise set default */
+  if (eta_min >= ONE || eta_min <= ZERO) {
+    hadapt_mem->etamin = ETAMIN;
+  } else {
+    hadapt_mem->etamin = eta_min;
   }
 
   return(ARK_SUCCESS);
@@ -801,7 +939,7 @@ int arkSetFixedStepBounds(void *arkode_mem, realtype lb, realtype ub)
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* set allowable interval, otherwise set defaults */
-  if ((lb <= 1.0) && (ub >= 1.0)) {
+  if ((lb <= ONE) && (ub >= ONE)) {
     hadapt_mem->lbound = lb;
     hadapt_mem->ubound = ub;
   } else {
@@ -831,7 +969,7 @@ int arkSetAdaptivityMethod(void *arkode_mem, int imethod, int idefault,
   if (retval != ARK_SUCCESS)  return(retval);
 
   /* check for allowable parameters */
-  if ((imethod > 5) || (imethod < 0)) {
+  if ((imethod > ARK_ADAPT_IMEX_GUS) || (imethod < ARK_ADAPT_PID)) {
     arkProcessError(ark_mem, ARK_ILL_INPUT, "ARKode",
                     "arkSetAdaptivityMethod", "Illegal imethod");
     return(ARK_ILL_INPUT);
@@ -840,28 +978,28 @@ int arkSetAdaptivityMethod(void *arkode_mem, int imethod, int idefault,
   /* set adaptivity method */
   hadapt_mem->imethod = imethod;
 
-  /* set flag whether to use p or q */
+  /* set flag whether to use p (embedding, 0) or q (method, 1) order */
   hadapt_mem->pq = (pq != 0);
 
   /* set method parameters */
   if (idefault == 1) {
     switch (hadapt_mem->imethod) {
-    case (0):
+    case (ARK_ADAPT_PID):
       hadapt_mem->k1 = AD0_K1;
       hadapt_mem->k2 = AD0_K2;
       hadapt_mem->k3 = AD0_K3; break;
-    case (1):
+    case (ARK_ADAPT_PI):
       hadapt_mem->k1 = AD1_K1;
       hadapt_mem->k2 = AD1_K2; break;
-    case (2):
+    case (ARK_ADAPT_I):
       hadapt_mem->k1 = AD2_K1; break;
-    case (3):
+    case (ARK_ADAPT_EXP_GUS):
       hadapt_mem->k1 = AD3_K1;
       hadapt_mem->k2 = AD3_K2; break;
-    case (4):
+    case (ARK_ADAPT_IMP_GUS):
       hadapt_mem->k1 = AD4_K1;
       hadapt_mem->k2 = AD4_K2; break;
-    case (5):
+    case (ARK_ADAPT_IMEX_GUS):
       hadapt_mem->k1 = AD5_K1;
       hadapt_mem->k2 = AD5_K2;
       hadapt_mem->k3 = AD5_K3; break;
@@ -894,11 +1032,11 @@ int arkSetAdaptivityFn(void *arkode_mem, ARKAdaptFn hfun, void *h_data)
   if (hfun == NULL) {
     hadapt_mem->HAdapt      = NULL;
     hadapt_mem->HAdapt_data = NULL;
-    hadapt_mem->imethod     = 0;
+    hadapt_mem->imethod     = ARK_ADAPT_PID;
   } else {
     hadapt_mem->HAdapt      = hfun;
     hadapt_mem->HAdapt_data = h_data;
-    hadapt_mem->imethod     = -1;
+    hadapt_mem->imethod     = ARK_ADAPT_CUSTOM;
   }
 
   return(ARK_SUCCESS);
@@ -1102,6 +1240,26 @@ int arkSetMaxConvFails(void *arkode_mem, int maxncf)
   ===============================================================*/
 
 /*---------------------------------------------------------------
+  arkGetNumStepAttempts:
+
+   Returns the current number of steps attempted by the solver
+  ---------------------------------------------------------------*/
+int arkGetNumStepAttempts(void *arkode_mem, long int *nstep_attempts)
+{
+  ARKodeMem ark_mem;
+  if (arkode_mem==NULL) {
+    arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
+                    "arkGetNumStepAttempts", MSG_ARK_NO_MEM);
+    return(ARK_MEM_NULL);
+  }
+  ark_mem = (ARKodeMem) arkode_mem;
+
+  *nstep_attempts = ark_mem->nst_attempts;
+  return(ARK_SUCCESS);
+}
+
+
+/*---------------------------------------------------------------
   arkGetNumSteps:
 
   Returns the current number of integration steps
@@ -1184,9 +1342,10 @@ int arkGetCurrentStep(void *arkode_mem, realtype *hcur)
 /*---------------------------------------------------------------
   arkGetCurrentState:
 
-  Returns the current solution
+  Returns the current solution (before or after as step) or
+  stage value (during step solve).
   ---------------------------------------------------------------*/
-int arkGetCurrentState(void *arkode_mem, N_Vector *ycur)
+int arkGetCurrentState(void *arkode_mem, N_Vector *state)
 {
   ARKodeMem ark_mem;
   if (arkode_mem==NULL) {
@@ -1196,7 +1355,7 @@ int arkGetCurrentState(void *arkode_mem, N_Vector *ycur)
   }
   ark_mem = (ARKodeMem) arkode_mem;
 
-  *ycur = ark_mem->ycur;
+  *state = ark_mem->ycur;
   return(ARK_SUCCESS);
 }
 
@@ -1466,7 +1625,7 @@ int arkGetNumErrTestFails(void *arkode_mem, long int *netfails)
 char *arkGetReturnFlagName(long int flag)
 {
   char *name;
-  name = (char *)malloc(25*sizeof(char));
+  name = (char *)malloc(27*sizeof(char));
 
   switch(flag) {
   case ARK_SUCCESS:
@@ -1556,8 +1715,11 @@ char *arkGetReturnFlagName(long int flag)
   case ARK_TOO_CLOSE:
     sprintf(name,"ARK_TOO_CLOSE");
     break;
-  case ARK_POSTPROCESS_FAIL:
-    sprintf(name,"ARK_POSTPROCESS_FAIL");
+  case ARK_POSTPROCESS_STEP_FAIL:
+    sprintf(name,"ARK_POSTPROCESS_STEP_FAIL");
+    break;
+  case ARK_POSTPROCESS_STAGE_FAIL:
+    sprintf(name,"ARK_POSTPROCESS_STAGE_FAIL");
     break;
   case ARK_VECTOROP_ERR:
     sprintf(name,"ARK_VECTOROP_ERR");
@@ -1605,7 +1767,6 @@ int arkWriteParameters(ARKodeMem ark_mem, FILE *fp)
 
   /* print integrator parameters to file */
   fprintf(fp, "ARKode solver parameters:\n");
-  fprintf(fp, "  Dense output order %i\n",ark_mem->dense_q);
   if (ark_mem->hmin != ZERO)
     fprintf(fp, "  Minimum step size = %" RSYM"\n",ark_mem->hmin);
   if (ark_mem->hmax_inv != ZERO)
@@ -1667,6 +1828,54 @@ int arkWriteParameters(ARKodeMem ark_mem, FILE *fp)
 
   fprintf(fp, "  Maximum number of error test failures = %i\n",ark_mem->maxnef);
   fprintf(fp, "  Maximum number of convergence test failures = %i\n",ark_mem->maxncf);
+
+  return(ARK_SUCCESS);
+}
+
+
+/*===============================================================
+  ARKODE + XBraid interface utility functions
+  ===============================================================*/
+
+
+/*---------------------------------------------------------------
+  arkSetForcePass:
+
+  Ignore the value of kflag after the temporal error test and
+  force the step to pass.
+  ---------------------------------------------------------------*/
+int arkSetForcePass(void *arkode_mem, booleantype force_pass)
+{
+  ARKodeMem ark_mem;
+  if (arkode_mem==NULL) {
+    arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
+                    "arkSetForcePass", MSG_ARK_NO_MEM);
+    return(ARK_MEM_NULL);
+  }
+  ark_mem = (ARKodeMem) arkode_mem;
+
+  ark_mem->force_pass = force_pass;
+
+  return(ARK_SUCCESS);
+}
+
+
+/*---------------------------------------------------------------
+  arkGetLastKFlag:
+
+  The last kflag value retured by the temporal error test.
+  ---------------------------------------------------------------*/
+int arkGetLastKFlag(void *arkode_mem, int *last_kflag)
+{
+  ARKodeMem ark_mem;
+  if (arkode_mem==NULL) {
+    arkProcessError(NULL, ARK_MEM_NULL, "ARKode",
+                    "arkGetLastKFlag", MSG_ARK_NO_MEM);
+    return(ARK_MEM_NULL);
+  }
+  ark_mem = (ARKodeMem) arkode_mem;
+
+  *last_kflag = ark_mem->last_kflag;
 
   return(ARK_SUCCESS);
 }

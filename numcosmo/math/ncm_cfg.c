@@ -118,6 +118,9 @@
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_galaxy_redshift_spec.h"
 #include "lss/nc_galaxy_redshift_spline.h"
+#include "lss/nc_galaxy_redshift_gauss.h"
+#include "lss/nc_galaxy_wl.h"
+#include "lss/nc_galaxy_wl_reduced_shear_gauss.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -170,6 +173,7 @@
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_counts_box_poisson.h"
+#include "data/nc_data_cluster_wl.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
@@ -565,13 +569,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-
+  
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_DK14);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
-
+  
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
@@ -588,7 +592,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
   
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS);
+
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
@@ -665,6 +673,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
   
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
@@ -701,13 +710,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   if (!_mpi_ctrl.initialized)
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initalized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
     MPI_Init (argc, argv);
     MPI_Initialized (&_mpi_ctrl.initialized);
   }
   else
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initalized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   }
   
   {
@@ -718,7 +727,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
     MPI_Get_processor_name (mpi_hostname, &len);
     
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
     
     if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     {
@@ -864,9 +873,13 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           gint input_recv    = 0;
           MPI_Request wr_request;
           
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
           MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
           MPI_Get_count (&status, input_dtype, &input_recv);
           
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
+
           g_assert_cmpint (input_recv, ==, input_len);
           
           ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
@@ -876,7 +889,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           ncm_mpi_job_run (mpi_job, input, bd.obj);
           bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
           
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
           
           MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
           
@@ -1352,7 +1365,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
             if ((g_ascii_strcasecmp (val, "1") == 0) ||
                 (g_ascii_strcasecmp (val, "true") == 0))
               argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-
+            
             g_free (val);
           }
           else if (strlen (val) > 0)
@@ -1771,7 +1784,7 @@ ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
+  
   g_free (file);
   g_free (full_filename);
   
@@ -1803,7 +1816,7 @@ ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
+  
   g_free (file);
   g_free (full_filename);
   

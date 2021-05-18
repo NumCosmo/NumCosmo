@@ -180,7 +180,7 @@ ncm_c_class_init (NcmCClass *klass)
 
 /**
  * ncm_c_degree_to_radian:
- * @d: angle in degrees.
+ * @d: angle in degrees
  *
  * Returns: $d \times \pi / 180$.
  */

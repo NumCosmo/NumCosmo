@@ -41,7 +41,7 @@ gdouble
 Fsin (gdouble x, gpointer p)
 {
   return 1.0 * sin (M_PI * x * 1.0 + 0.0 * M_PI / 2.0) * exp(1.0 * x / 5.0) +
-    1.0 * (1.0 * x * x / 2.0 + 5.0 * x + 0.1 * x * x * x + 0.0e-3 * gsl_pow_5 (x));
+    1.0 * (1.0 * x * x / 2.0 + 5.0 * x + 0.1 * x * x * x + 0.0e-3 * pow (x, 5.0));
 }
 
 gdouble

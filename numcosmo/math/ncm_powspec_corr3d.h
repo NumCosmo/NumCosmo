@@ -5,6 +5,7 @@
  *  Copyright  2019  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * ncm_powspec_corr3d.h
  * Copyright (C) 2019 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
@@ -13,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -74,6 +75,7 @@ GType ncm_powspec_corr3d_get_type (void) G_GNUC_CONST;
 
 NcmPowspecCorr3d *ncm_powspec_corr3d_new (NcmPowspec *ps);
 NcmPowspecCorr3d *ncm_powspec_corr3d_ref (NcmPowspecCorr3d *psc);
+
 void ncm_powspec_corr3d_free (NcmPowspecCorr3d *psc);
 void ncm_powspec_corr3d_clear (NcmPowspecCorr3d **psc);
 
@@ -97,3 +99,4 @@ gdouble ncm_powspec_corr3d_eval_xi (NcmPowspecCorr3d *psc, const gdouble z, cons
 G_END_DECLS
 
 #endif /* _NCM_POWSPEC_CORR3D_H_ */
+

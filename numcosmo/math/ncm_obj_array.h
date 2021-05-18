@@ -55,6 +55,8 @@ void ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj);
 GObject *ncm_obj_array_get (NcmObjArray *oa, guint i);
 GObject *ncm_obj_array_peek (NcmObjArray *oa, guint i);
 
+gint ncm_obj_array_len (NcmObjArray *oa);
+
 void ncm_obj_array_save (NcmObjArray *oa, NcmSerialize *ser, const gchar *filename, gboolean save_comment);
 NcmObjArray *ncm_obj_array_load (const gchar *filename, NcmSerialize *ser);
 

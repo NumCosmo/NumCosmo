@@ -3,10 +3,11 @@
 SUNDIALS_DIR = $(top_srcdir)/numcosmo/sundials
 
 MY_CFLAGS = \
-	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 -I$(SUNDIALS_DIR)/include   \
-	 $(SUNDIALS_DEFINES)         \
-	 $(OPENMP_CFLAGS)            \
+	 -DG_LOG_DOMAIN=\"NUMCOSMO\"    \
+	 -I$(SUNDIALS_DIR)/include      \
+	 -I$(SUNDIALS_DIR)/src/sundials \
+	 $(SUNDIALS_DEFINES)            \
+	 $(OPENMP_CFLAGS)               \
 	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \
@@ -62,6 +63,8 @@ sundials_arkode_sources = \
 	src/arkode/arkode_impl.h             \
 	src/arkode/arkode_io.c               \
 	src/arkode/arkode_mristep.c          \
+	src/arkode/arkode_mri_tables.c       \
+	src/arkode/arkode_mristep_nls.c      \
 	src/arkode/arkode_root.c
 
 sundials_cvode_sources = \
@@ -72,6 +75,7 @@ sundials_cvode_sources = \
 	include/cvode/cvode_spils.h    \
 	include/cvode/cvode_direct.h   \
 	include/cvode/cvode_ls.h       \
+	include/cvode/cvode_proj.h     \
 	src/cvode/cvode_bandpre.c      \
 	src/cvode/cvode_bandpre_impl.h \
 	src/cvode/cvode_bbdpre.c       \
@@ -85,7 +89,10 @@ sundials_cvode_sources = \
 	src/cvode/cvode_io.c           \
 	src/cvode/cvode_ls.c           \
 	src/cvode/cvode_ls_impl.h      \
-	src/cvode/cvode_nls.c
+	src/cvode/cvode_nls.c          \
+	src/cvode/cvode_fused_stubs.c  \
+	src/cvode/cvode_proj.c         \
+	src/cvode/cvode_proj_impl.h
 
 sundials_nvector_sources = \
 	include/nvector/nvector_pthreads.h      \
@@ -149,6 +156,8 @@ sundials_sources = \
 	include/sundials/sundials_types.h               \
 	include/sundials/sundials_mpi_types.h           \
 	include/sundials/sundials_config.h              \
+	include/sundials/sundials_export.h              \
+	include/sundials/sundials_memory.h              \
 	src/sundials/sundials_band.c                    \
 	src/sundials/sundials_iterative.c               \
 	src/sundials/sundials_matrix.c                  \
@@ -159,7 +168,9 @@ sundials_sources = \
 	src/sundials/sundials_direct.c                  \
 	src/sundials/sundials_math.c                    \
 	src/sundials/sundials_nonlinearsolver.c         \
-	src/sundials/sundials_version.c
+	src/sundials/sundials_version.c                 \
+	src/sundials/sundials_memory.c                  \
+	src/sundials/sundials_debug.h
 
 libsundials_la_SOURCES = \
 	$(sundials_arkode_sources)       \

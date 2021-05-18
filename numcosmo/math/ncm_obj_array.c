@@ -262,6 +262,20 @@ ncm_obj_array_peek (NcmObjArray *oa, guint i)
 }
 
 /**
+ * ncm_obj_array_len:
+ * @oa: a #NcmObjArray
+ *
+ * FIXME
+ *
+ * Returns: array length
+ */
+gint
+ncm_obj_array_len (NcmObjArray *oa)
+{
+  return oa->len;
+}
+
+/**
  * ncm_obj_array_save:
  * @oa: a #NcmObjArray
  * @ser: a #NcmSerialize
