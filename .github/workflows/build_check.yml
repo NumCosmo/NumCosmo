@@ -83,7 +83,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install prereq
       run: |
-        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran
+        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
