@@ -83,22 +83,16 @@ extern "C" {
 #include <limits.h>
 #include <float.h>
 #include <math.h>
-#ifndef USE_LOCAL_HEADERS
-#include <CVector.h>
-#else
 #include "CVector.h"
-#endif
 #ifndef CVECTOR_FAR
 #define CVECTOR_FAR CNEARTREE_FAR
 #endif
     
     
     
-#ifndef USE_LOCAL_HEADERS
-#include <rhrand.h>
-#else
+
 #include "rhrand.h"
-#endif
+
     
     
     /* function returns */

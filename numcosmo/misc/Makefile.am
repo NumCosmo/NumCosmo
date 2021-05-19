@@ -8,8 +8,10 @@ MY_CFLAGS = \
 	 $(FFTW3_CFLAGS) \
 	 $(CFITSIO_CFLAGS) \
 	 $(NLOPT_CFLAGS) \
+	 $(DCNEARTREE_SAFE_TRIANG=1)\
 	 -I$(top_srcdir)/numcosmo \
 	 -I$(builddir)/.. \
+	 -I$(INC) $(CVECTOR_INCLUDE)\
 	 $(VISIBILITY_HIDDEN_FLAG)
 
 AM_CFLAGS = \

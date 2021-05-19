@@ -62,11 +62,8 @@ extern "C" {
     
 #endif
     
-#ifndef USE_LOCAL_HEADERS
-#include <CNearTree.h>
-#else
+
 #include "CNearTree.h"
-#endif
 #include <math.h>
     
 #ifdef CNEARTREE_SAFE_TRIANG
