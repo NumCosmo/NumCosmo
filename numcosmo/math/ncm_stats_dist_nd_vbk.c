@@ -436,6 +436,7 @@ _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVbk *dnd, NcmStatsVec 
     {
       NcmVector *row_i = ncm_matrix_get_row (self->sample_matrix, i);
       g_ptr_array_add (self->invUsample, row_i);
+      printf("teste");
     }
   }
 

@@ -57,30 +57,88 @@ int main ( int argc, char** argv )
     double xdist;
     long i,j,k;
     const long lMaxRow = 10;
-    double   dRad = 100000.;
+    double   dRad = 0.6;
     void * qualquer;    
     double qualquer2[3];
     size_t indp;
-    double w[3],n[3],l[3];
-    NcmVector *ncmvec;    
-    double *pointervec;
-/**  Aqui eu crio os vetores, que no caso seram nosso sample entao nao precisa criar **/    
-    w[0]=1.;w[1]=2;w[2] =3.; n[0]=23.;n[1]=1212;n[2] =2133.; l[0]=231.;l[1]=22;l[2] =43.; v[0]=11.;v[1]=12;v[2] =13.;vSearch[0]=1., vSearch[1]=2.; vSearch[2]=3.;
-    
-/** Eu crio um objeto do neartree e crio alguns objetos CVector que eu vou precisar pras contas. Mudar tamanho deles pro tamanho da dimensao, da tree tambem ***/           
+       
     CNearTreeCreate(&treehandle,3,CNEARTREE_TYPE_DOUBLE);
     CVectorCreate(&vReturn,sizeof(void *),10);
     CVectorCreate(&oReturn,sizeof(void *),10);
     CVectorCreate(&dDs,sizeof(double),10);
     CVectorCreate(&stIndices,sizeof(size_t),10);
-/***Depois de criar a tree, a gente precisa inserir todos nossos vetores nela. Aqui vai entrar um FOR, 
-ai a gente precisa copiar os vetores da numcosmo pra um vetor normal, e passar o pointer do primeiro termo de cada vetor
-pra inserir na arvore. No meu caso, os vetores v,n e l. Nao colocar na arvore o vetor que queremos procurar a distancia****/   
-    CNearTreeInsert(treehandle,&v[0],NULL);    
-    CNearTreeInsert(treehandle,&n[0],NULL);
-    CNearTreeInsert(treehandle,&l[0],NULL); 
-    /*** Essa funcao acha todos os vetores a um distancia dRad do nosso. A gente pode por o tamanho maximo do sample e depois pegar so os primeiros 20% de vetores. ***/
-        CNearTreeFindInSphere( treehandle, dRad, vReturn, oReturn, vSearch,0 );  
+    
+    if (argc <= 1) {
+        CRHrandSrandom(&rhr, (int)time( NULL ) );  /* use the current time to seed the
+         random number generator */
+    } else {
+        CRHrandSrandom(&rhr, (int)atoi(argv[1]));
+    }    
+
+    /*---------------------------------------
+     build up a library of points to search among
+     ---------------------------------------*/
+    for ( k=-1; k<=lMaxRow; k++ )
+    {
+        for ( j=-1; j<=lMaxRow; j++) 
+        {
+            for ( i= lMaxRow ; i>=-1;  i-- ) 
+            {  v[0] = (double)i; v[1] = (double)j; v[2] = (double)k;
+                CNearTreeInsert(treehandle,&v[0],NULL);
+            }  /* for i */
+        }     /* for j */
+    }        /* for k */
+    fprintf(stdout,"\n");
+    
+    /*---------------------------------------
+     Done building the tree; now try a retrieval
+     ---------------------------------------*/
+    
+    for ( i=0;  i<10; i++ )
+    {  double x, y, z;
+        dRad += 0.05;
+
+        x = CRHrandUrand(&rhr) * ((double) lMaxRow );
+
+        y = x;
+        z = ( 1.25 * ((double) lMaxRow) - 1.5 * x );
+        vSearch[0] = x; vSearch[1] = 0.5*(x+y); vSearch[2] = z;
+        fprintf(stdout,"Trial %ld from probe point [%g, %g, %g]\n",
+                i, vSearch[0], vSearch[1], vSearch[2]);
+        
+        
+        /* find the nearest point to vSearch */
+        if ( !CNearTreeNearestNeighbor(treehandle,dRad,&vvBest,NULL,vSearch))
+        {   vBest = (double *)vvBest;
+           fprintf(stdout," Closest distance %g to [%g, %g, %g] \n",
+                   sqrt(CNearTreeDistsq((void *)vSearch,vvBest,3,CNEARTREE_TYPE_DOUBLE)),
+                   vBest[0],vBest[1],vBest[2]);
+        }
+        else
+        {  fprintf(stdout," ***** nothing within %g of [%g, %g, %g]\n",
+                   dRad,  vSearch[0], vSearch[1], vSearch[2]);
+        }
+        
+        
+        /* find the farthest point from vSearch */
+        if ( !CNearTreeFarthestNeighbor(treehandle,&vvBest,NULL,vSearch))
+        {   vBest = (double *)vvBest; 
+            fprintf(stdout," Farthest distance %g to [%g, %g, %g]\n",
+                   sqrt(CNearTreeDistsq(vSearch,vBest,3,CNEARTREE_TYPE_DOUBLE)),
+                   vBest[0],vBest[1],vBest[2]);
+        }
+        else
+        {  fprintf(stdout," No Farthest object found\n");
+        }
+        
+        /* search for all points within a "sphere" out to radius dRad */
+
+        
+        CVectorClear( dDs );
+        CVectorClear( stIndices );
+        CVectorClear( vReturn );
+        CVectorClear( oReturn );
+        if ( !CNearTreeFindInSphere( treehandle, dRad, vReturn, oReturn, vSearch,1 ) ) 
         {
             size_t index, jndex, kndex, tndex;
             void * prevpoint;
@@ -88,21 +146,16 @@ pra inserir na arvore. No meu caso, os vetores v,n e l. Nao colocar na arvore o 
             void * localmetrics;
             void * localindices;
             int redo;
-            /**Um print que veio do exemplo, mas bom pra saber como usar as coisas.
-            A gente n consegue pegar ou tirar elementos da arvore com a documentacao do neartree,
-            precisa usar funcoes do CVector. Eu tentei fazer contas de outro jeito mas eu nao consegui
-            remover vetores da arvore que eu ja tinha inserido, por meu plano era inserir todos, e ir procurando o vizinho mais proximo,
-            e cada vez que achar um, remover da arvore. Usei CVectoreRemoveElement na estrutura da arvore, mas nao consegui**/
+            
             fprintf(stdout," Returned %lu items within %g of [%g,%g,%g]\n",
                     (long unsigned int)vReturn->size, dRad, vSearch[0], vSearch[1], vSearch[2]);
-            for (index=0; index < CVectorSize(vReturn); index++) {/*Nessa parte da pra por index < 0.2 * , ai cortaria o itnervalo, mas ele dai corta os menores 20%*/
+            for (index=0; index < CVectorSize(vReturn); index++) {
                 CVectorGetElement(vReturn,&foundpoint,index);
                 xdist = CNearTreeDist(treehandle,(void CNEARTREE_FAR *)foundpoint,
                                       (void CNEARTREE_FAR *)vSearch);
                           CNearTreeSortIn(dDs,stIndices,xdist,index,CVectorSize(vReturn));
             }
-      /**Essa parte eu nao consegui entender muito bem. Quando ele calcula todos os vetores do raio, ele guarda em vReturn. E aqui pra baixo ele
-      da um jeito de acessar todos eles e deixar em ordem do mais proximo pro mais longe**/      
+            
             CVectorGetElementptr(dDs, &localmetrics,0);
             CVectorGetElementptr(stIndices, &localindices,0);
             
@@ -133,8 +186,7 @@ pra inserir na arvore. No meu caso, os vetores v,n e l. Nao colocar na arvore o 
                     }
                 }
             }
-            /**Quando acaba de organizar, ele imprime todos os vetores. Ai eh so pegar os 20% primeiros vetores e copiar pra um vetor da NumCosmo
-            , e copiar pra um GPtrArray**/
+            
             for (index=0; index < CVectorSize(stIndices); index++) {
                 CVectorGetElement(stIndices,&jndex,index);
                 CVectorGetElement(vReturn,&foundpoint,jndex);
@@ -142,17 +194,13 @@ pra inserir na arvore. No meu caso, os vetores v,n e l. Nao colocar na arvore o 
                 fprintf (stdout,"\t [%g,%g,%g] DISTANCIA %g\n ",((double *)foundpoint)[0],
                          ((double *)foundpoint)[1],
                          ((double *)foundpoint)[2],xdist);
-                         pointervec =&((double*)foundpoint)[0];
-                         ncmvec =ncm_vector_new_data_dup(pointervec,3,1);
-           
-                        
-                         
             }
         }
         
         fprintf(stdout," -------------------------------------------------------------\n");
-  /* for i */
+    }  /* for i */
     
     CNearTreeFree(&treehandle);
     
+    return ( EXIT_SUCCESS );
 }
