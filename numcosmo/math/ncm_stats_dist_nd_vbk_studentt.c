@@ -328,7 +328,7 @@ _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMa
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gdouble m2lnp;
   gint ret;
-  
+
   ncm_vector_memcpy (v, x);
   ncm_vector_sub (v, y);
   
@@ -355,7 +355,7 @@ _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMa
  * Returns: a new #NcmStatsDistNdVBKStudentt.
  */
 NcmStatsDistNdVBKStudentt *
-vbk_new(const guint dim, const NcmStatsDistNdVbkCV cv_type, const gdouble nu)
+ncm_stats_dist_nd_vbk_studentt_new (const guint dim, const NcmStatsDistNdVbkCV cv_type, const gdouble nu)
 {
   NcmStatsDistNdVBKStudentt *dndt = g_object_new (NCM_TYPE_STATS_DIST_ND_VBK_STUDENTT,
                                                   "dimension", dim,
