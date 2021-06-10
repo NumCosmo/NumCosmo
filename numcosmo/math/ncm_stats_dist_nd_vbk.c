@@ -57,8 +57,10 @@
 struct _NcmStatsDistNdVbkPrivate
 {
   GPtrArray *sample_array;
+  GPtrArray *cov_array;
   GArray *weights_array;
-
+  GPtrArray *IM_array;
+  
   NcmStatsVec *sample;
   NcmMatrix *cov_decomp;
   NcmMatrix *log_cov;
@@ -114,7 +116,9 @@ ncm_stats_dist_nd_vbk_init (NcmStatsDistNdVbk *dnd)
 
   self->sample_array     = g_ptr_array_new ();
   self->weights_array    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-
+  self->cov_array 	 = g_ptr_array_new ();
+  self->IM_array	 = g_ptr_array_new ();
+  
   self->sample           = NULL;
   self->cov_decomp       = NULL;
   self->log_cov          = NULL;
@@ -152,7 +156,9 @@ ncm_stats_dist_nd_vbk_init (NcmStatsDistNdVbk *dnd)
   ncm_stats_vec_enable_quantile (self->m2lnp_stats, 0.9999); /* 0.6827, 0.9545, 0.9973 */
 
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
+  g_ptr_array_set_free_func (self->cov_array, (GDestroyNotify) ncm_matrix_free);
   g_ptr_array_set_free_func (self->invUsample, (GDestroyNotify) ncm_vector_free);
+  g_ptr_array_set_free_func (self->IM_array, (GDestroyNotify) ncm_matrix_free);
 }
 
 static void _ncm_stats_dist_nd_vbk_set_dim (NcmStatsDistNdVbk *dnd, const guint dim);
@@ -230,6 +236,7 @@ _ncm_stats_dist_nd_vbk_dispose (GObject *object)
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
 
   g_clear_pointer (&self->sample_array, g_ptr_array_unref);
+  g_clear_pointer (&self->cov_array, g_ptr_array_unref);
   g_clear_pointer (&self->weights_array, g_array_unref);
 
   ncm_stats_vec_clear (&self->sample);
@@ -243,6 +250,7 @@ _ncm_stats_dist_nd_vbk_dispose (GObject *object)
 
   g_clear_pointer (&self->sampling, g_array_unref);
   g_clear_pointer (&self->invUsample, g_ptr_array_unref);
+  g_clear_pointer (&self->IM_array, g_ptr_array_unref);
 
   ncm_stats_vec_clear (&self->m2lnp_stats);
 
@@ -379,37 +387,55 @@ static void
 _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVbk *dnd, NcmStatsVec *sample)
 {
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
-  gint i, ret;
-
+  gint i, ret, j;
+  
   {
     CNearTreeHandle treehandle;
     const size_t k        = 0.2 * self->sample_array->len;
     const gdouble dRadius = 1.0e10;
     CVectorHandle results_coords;
     CVectorHandle results_objs;
-
+    NcmVector *scale_vec_mean = ncm_vector_new (self->d);
+    NcmVector *scale_vec_sd = ncm_vector_new (self->d);
+    NcmVector *scale_vec_ratio = ncm_vector_new (self->d);
+    NcmStatsVec *theta_t;
+        
     CVectorCreate (&results_objs,   sizeof (gpointer), k);
     CVectorCreate (&results_coords, sizeof (gpointer), k);
 
     CNearTreeCreate (&treehandle, self->d, CNEARTREE_TYPE_DOUBLE | CNEARTREE_NORM_L2);
 
+    g_ptr_array_set_size (self->invUsample, 0);
+    theta_t = ncm_stats_vec_new (self->sample_array->len, NCM_STATS_VEC_VAR ,FALSE);
+    for (j=0; j < self->sample_array->len; j++)
     {
-      gdouble bla[5] = {1.0, 1.0, 0.0, 0.0, 0.0};
-      gdouble blb[5] = {0.0, 1.0, 1.0, 1.0, 1.0};
-
-      printf ("teste: % 22.15g\n", CNearTreeDist (treehandle, bla, blb));
+      NcmVector *theta_j = g_ptr_array_index (self->sample_array, j);
+      for (i=0; i < self->d; i++)
+     {
+     ncm_stats_vec_set(theta_t, i, ncm_vector_get(theta_j, i));
+     }
+     ncm_stats_vec_update(theta_t);
     }
-
-    for (i = 0; i < self->sample_array->len; i++)
+   
+    for(i = 0; i < self->d; i++)
     {
+    ncm_vector_set (scale_vec_mean, i, ncm_stats_vec_get_mean (theta_t, i));
+    ncm_vector_set (scale_vec_sd, i, ncm_stats_vec_get_sd (theta_t, i));
+    ncm_vector_set (scale_vec_ratio, i, ncm_stats_vec_get_mean (theta_t, i) / ncm_stats_vec_get_sd (theta_t, i));
+    }        
+   
+    for (i = 0; i < self->sample_array->len; i++)
+     {
       NcmVector *theta_i = g_ptr_array_index (self->sample_array, i);
+      ncm_vector_div (theta_i, scale_vec_sd);
+      ncm_vector_sub (theta_i, scale_vec_ratio);
       CNearTreeInsert (treehandle, ncm_vector_data (theta_i), NULL);
-    }
-
+     }
+    
 
     for (i = 0; i < self->sample_array->len; i++)
     {
-      NcmVector *theta_i = g_ptr_array_index (self->sample_array, i);
+      NcmVector *theta_i = g_ptr_array_index (self->sample_array, i); 
       gdouble *vdata;
       gint res, j, l;
 
@@ -431,69 +457,53 @@ _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVbk *dnd, NcmStatsVec 
         /*printf ("vector[%2d]:", j);*/
         for (l = 0; l < self->d; l++)
         {
-          ncm_stats_vec_set (self->sample, l, vdata[l]);
-          /*printf (" % 22.15g", vdata[l]);*/
+          ncm_stats_vec_set (self->sample, l, (vdata[l] * ncm_vector_get(scale_vec_sd,l)) + ncm_vector_get(scale_vec_mean, l));
+          
+        /* printf (" % 22.15g", vdata[l]);*/
         }
         ncm_stats_vec_update (self->sample);
         /*printf ("\n");*/
       }
-
+      {
+      NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
       ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COV: ", "% 12.5g");
-
-      /*printf ("res %d\n", res);*/
-    }
-
-    CNearTreeFree (&treehandle);
-  }
-
-
-
-
-
-
-
-  self->n = ncm_stats_vec_nitens (sample);
+      g_ptr_array_add(self->cov_array, sample_cov);
+      }
+    }  /*printf ("res %d\n", res);*/
+    CNearTreeFree (&treehandle); 
+   }    
+   
+ self->n = (self->sample_array->len);
   g_assert_cmpuint (self->n, >, 1);
 
-  ncm_matrix_memcpy (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (sample, 0));
-
-  if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
-  {
-    if (ncm_matrix_nearPD (self->cov_decomp, 'U', TRUE, self->nearPD_maxiter) != 0)
-    {
-      ncm_matrix_set_zero (self->cov_decomp);
-      for (i = 0; i < self->d; i++)
-      {
-        ncm_matrix_set (self->cov_decomp, i, i, ncm_stats_vec_get_cov (sample, i, i));
-      }
-      g_assert_cmpint (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U'), ==, 0);
-    }
-  }
-
-  {
-    const gdouble href0 = self->over_smooth * ncm_stats_dist_nd_vbk_get_rot_bandwidth (dnd, self->d, self->n);
-    ncm_vector_set_all (self->href, href0);
-    self->kernel_lnnorm = ncm_stats_dist_nd_vbk_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
-  }
-
-  if ((self->sample_matrix == NULL) || (self->n != ncm_matrix_nrows (self->sample_matrix)) || (self->d != ncm_matrix_ncols (self->sample_matrix)))
-  {
-    ncm_matrix_clear (&self->sample_matrix);
-    self->sample_matrix = ncm_matrix_new (self->n, self->d);
-
-    g_ptr_array_set_size (self->invUsample, 0);
-    for (i = 0; i < self->n; i++)
-    {
-      NcmVector *row_i = ncm_matrix_get_row (self->sample_matrix, i);
-      g_ptr_array_add (self->invUsample, row_i);
-    }
-  }
-
+ {
+ const gdouble href0 = self->over_smooth * ncm_stats_dist_nd_vbk_get_rot_bandwidth (dnd, self->d, self->n);
+ ncm_vector_set_all (self->href, href0);
+ }
+if ((self->sample_matrix == NULL) || (self->n != ncm_matrix_nrows (self->sample_matrix)) || (self->d != ncm_matrix_ncols (self->sample_matrix)))
+ {
+  ncm_matrix_clear (&self->sample_matrix);
+  self->sample_matrix = ncm_matrix_new (self->n, self->d);
+  g_ptr_array_set_size (self->invUsample, 0);
   for (i = 0; i < self->n; i++)
-    ncm_matrix_set_row (self->sample_matrix, i, ncm_stats_vec_peek_row (self->sample, i));
+  {
+  NcmVector *row_i = ncm_matrix_get_row (self->sample_matrix, i);
+  g_ptr_array_add (self->invUsample, row_i);
+  }
+ }
+for (i = 0; i < self-> n; i++)
+ {
+  ncm_matrix_set_row (self->sample_matrix, i, g_ptr_array_index (self->sample_array, i));
+  ncm_matrix_cholesky_decomp(g_ptr_array_index(self->cov_array, i), 'U');
+ }
 
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (self->cov_decomp), ncm_matrix_gsl (self->sample_matrix));
+for(i = 0; i <self-> n; i++)
+ { 
+  NcmMatrix *sub_sample_matrix = ncm_matrix_get_submatrix (self->sample_matrix, i, 0, 1, self->d);
+  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (g_ptr_array_index(self->cov_array, i)), ncm_matrix_gsl (sub_sample_matrix));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_prepare_kernel_args", ret);
+  ncm_matrix_set_row (self->sample_matrix, i, ncm_matrix_get_row (sub_sample_matrix, 0));
+ }
 }
 
 static void
@@ -533,9 +543,9 @@ _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
   NcmStatsDistNdVbkEval *eval = userdata;
   const gdouble href0 = os * ncm_stats_dist_nd_vbk_get_rot_bandwidth (eval->dnd, eval->self->d, eval->self->n);
   gdouble rnorm;
-
+  
   ncm_vector_set_all (eval->self->href, href0);
-
+  
   eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
   rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
 
@@ -544,70 +554,21 @@ _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
   return rnorm;
 }
 
-static gdouble
-_ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec (const gsl_vector *ln_os, gpointer userdata)
-{
-  const gdouble os = exp (gsl_vector_get (ln_os, 0));
-  return _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (os, userdata);
-}
-
-static gdouble
-_ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec_fitd (const gsl_vector *ln_href, gpointer userdata)
-{
-  NcmStatsDistNdVbkEval *eval = userdata;
-  gdouble rnorm;
-  gint i;
-
-  for (i = 0; i < eval->self->d; i++)
-    ncm_vector_set (eval->self->href, i, exp (gsl_vector_get (ln_href, i)));
-
-  eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
-  rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
-
-/*
-  ncm_message ("RNORM: % 22.15g | ", rnorm);
-  ncm_vector_log_vals (eval->self->href, "href: ", "%.1e", TRUE);
-*/
-
-  return rnorm;
-}
-
-static void
-_ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec_fitd_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
-{
-  NcmStatsDistNdVbkEval *eval = adata;
-  NcmVector *f = ncm_vector_new_data_static (hx, n, 1);
-  NcmVector *res;
-  gint i;
-
-  for (i = 0; i < eval->self->d; i++)
-    ncm_vector_set (eval->self->href, i, exp (p[i]));
-
-  eval->dnd_class->prepare_IM (eval->dnd, eval->self->invUsample, eval->self->d, eval->self->n, eval->self->href, eval->self->IM);
-  ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
-
-  res = ncm_nnls_get_residuals (eval->self->nnls);
-  /*ncm_vector_log_vals (eval->self->href, "href: ", "% 22.15g", TRUE);*/
-
-  ncm_vector_memcpy (f, res);
-  ncm_vector_free (f);
-}
-
 static void
 _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp)
 {
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
   ncm_stats_dist_nd_vbk_prepare (dnd);
-  g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n);
+  g_assert_cmpuint ( ncm_vector_len (m2lnp), ==, self->n);
   {
     NcmStatsDistNdVbkClass *dnd_class = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
     NcmStatsDistNdVbkEval eval = {dnd, self, dnd_class};
     const gint nrows        = self->n;
-    const gint ncols        = ceil (self->n * self->split_frac);
+    const gint ncols        = self->n;
     const gdouble dbl_limit = 1.0;
     gdouble qq;
     gint i;
-
+    
     g_assert_cmpuint (nrows, >=, ncols);
 
     /*
@@ -638,7 +599,6 @@ _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp)
       self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
     }
     ncm_vector_set_zero (self->weights);
-
     /*
      * Evaluating the right-hand-side
      */
@@ -685,102 +645,9 @@ _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp)
 
     if (self->n > 10000)
       g_warning ("_ncm_stats_dist_nd_vbk_prepare_interp: very large system n = %u!", self->n);
-
-    switch (self->cv_type)
-    {
-      case NCM_STATS_DIST_ND_VBK_CV_SPLIT:
-      {
-        gint iter = 0, maxiter = 200, status;
-        NcmVector *x = ncm_vector_new (1);
-        NcmVector *s = ncm_vector_new (1);
-        gsl_multimin_function fmin = {_ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec, 1, &eval};
-        gdouble last_iter = GSL_NEGINF;
-
-        ncm_vector_set (x, 0, log (self->over_smooth));
-        ncm_vector_set (s, 0, 0.1);
-
-        gsl_multimin_fminimizer_set (self->mmin, &fmin, ncm_vector_gsl (x), ncm_vector_gsl (s));
-        do
-        {
-          gdouble size;
-          iter++;
-          status = gsl_multimin_fminimizer_iterate (self->mmin);
-
-          if (status)
-            break;
-
-          size = gsl_multimin_fminimizer_size (self->mmin);
-          status = gsl_multimin_test_size (size, 1.0e-7);
-
-          if (last_iter == gsl_multimin_fminimizer_minimum (self->mmin))
-            break;
-          last_iter = gsl_multimin_fminimizer_minimum (self->mmin);
-
-        } while (status == GSL_CONTINUE && iter < maxiter);
-
-        self->over_smooth   = exp (gsl_vector_get (self->mmin->x, 0));
-
-        {
-          const gdouble href0 = self->over_smooth * ncm_stats_dist_nd_vbk_get_rot_bandwidth (dnd, self->d, self->n);
-          ncm_vector_set_all (self->href, href0);
-          self->kernel_lnnorm = ncm_stats_dist_nd_vbk_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
-        }
-
-        self->rnorm = _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (self->over_smooth, &eval);
-
-        ncm_vector_free (x);
-        ncm_vector_free (s);
-      }
-      break;
-      case NCM_STATS_DIST_ND_VBK_CV_SPLIT_FITD:
-      {
-        NcmVector *x = ncm_vector_new (self->d);
-        gdouble info[LM_INFO_SZ];
-        gdouble opts[LM_OPTS_SZ];
-
-        if (self->levmar_n != self->n)
-        {
-          g_clear_pointer (&self->levmar_workz, g_free);
-          self->levmar_workz = g_new0 (gdouble, LM_DIF_WORKSZ (self->d, self->n));
-        }
-
-        opts[0] = LM_INIT_MU;
-        opts[1] = 1.0e-7;
-        opts[2] = 1.0e-7;
-        opts[3] = 1.0e-10;
-        opts[4] = LM_DIFF_DELTA;
-
-        for (i = 0; i < self->d; i++)
-          ncm_vector_set (x, i, log (ncm_vector_fast_get (self->href, i) * 1.0e-1));
-
-        dlevmar_dif (&_ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec_fitd_f,
-            ncm_vector_data (x), NULL, self->d, self->n,
-            10000, opts, info, self->levmar_workz, ncm_matrix_data (self->href_cov), &eval);
-
-        self->rnorm         = _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls_vec_fitd (ncm_vector_gsl (x), &eval);
-        self->kernel_lnnorm = ncm_stats_dist_nd_vbk_get_kernel_lnnorm (dnd, self->cov_decomp, self->d, self->n, self->href);
-
-        if ((ncm_vector_get (self->href, 0) > 1.0e1) || (ncm_vector_get (self->href, 1) > 1.0e1))
-        {
-          ncm_vector_log_vals (self->href, "href: ", "% 22.15g", TRUE);
-          ncm_message ("sd_x1 % 22.15g sd_x2 % 22.15g rho % 22.15g\n",
-              ncm_stats_vec_get_sd (self->sample, 0),
-              ncm_stats_vec_get_sd (self->sample, 1),
-              ncm_stats_vec_get_cor (self->sample, 0, 1));
-        }
-
-        /*ncm_vector_log_vals (self->weights, "weights: ", "% 22.15g", TRUE);*/
-
-        ncm_vector_free (x);
-      }
-      break;
-      case NCM_STATS_DIST_ND_VBK_CV_NONE:
-        self->rnorm = _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (self->over_smooth, &eval);
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
+    
+    self->rnorm = _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (self->over_smooth, &eval);
+    
   }
 }
 
@@ -790,6 +657,7 @@ _ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVbk *dnd)
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
 
   g_ptr_array_set_size (self->sample_array, 0);
+  g_ptr_array_set_size(self->cov_array, 0);
   g_array_set_size (self->weights_array, 0);
 }
 
@@ -1084,13 +952,17 @@ ncm_stats_dist_nd_vbk_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *x)
 {
   NcmStatsDistNdVbkClass *dnd_class = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
-  gint ret;
+  gint ret, i;
 
   ncm_vector_memcpy (self->v, x);
-  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-      ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
-  NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
-
+  for(i = 0; i < ncm_vector_len(self->v); i++)
+  {
+   NcmVector *sub_vec = ncm_vector_get_subvector (self->v, i, 1); 
+   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+       ncm_matrix_gsl (g_ptr_array_index(self->cov_array, i)), ncm_vector_gsl (self->v));
+   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
+  }
+  
   if (dnd_class->eval_m2lnp != NULL)
     return dnd_class->eval_m2lnp (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href) + 2.0 * self->kernel_lnnorm;
   else

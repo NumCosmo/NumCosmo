@@ -237,16 +237,17 @@ _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *U
 {
   NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
-  gint i;
-  
-  for (i = 0; i < n; i++)
+  gint i,l;
+  l =  n;
+          
+  for (i = 0; i < l; i++)
   {
     NcmVector *row_i = g_ptr_array_index (Us, i);
     gint j;
     
     ncm_matrix_set (IM, i, i, 1.0);
     
-    for (j = i + 1; j < n; j++)
+    for (j = i + 1; j < l; j++)
     {
       NcmVector *row_j = g_ptr_array_index (Us, j);
       gdouble m2lnp_ij = 0.0;
