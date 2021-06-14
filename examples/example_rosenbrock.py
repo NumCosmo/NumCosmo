@@ -94,12 +94,12 @@ init_sampler.set_cov_from_rescale (100.0)
 # 
 sampler = 'aps'
 #sampler  = 'stretch'
-nwalkers = int (math.ceil (300 * 2))
-ssize    = 15000000
+nwalkers = int (math.ceil (80 *2 * 2))
+ssize    = 8000000
 
 if sampler == 'aps':
   walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
-  walker.set_rand_walk_prob (0.0)
+ # walker.set_rand_walk_prob (0.0)
 elif sampler == "stretch":
   walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 

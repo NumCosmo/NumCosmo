@@ -163,7 +163,7 @@ static gdouble _ncm_stats_dist_nd_vbk_studentt_get_rot_bandwidth (NcmStatsDistNd
 static gdouble _ncm_stats_dist_nd_vbk_studentt_get_kernel_lnnorm (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
 static void _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
 
-static gdouble _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+static gdouble _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array);
 static void _ncm_stats_dist_nd_vbk_studentt_kernel_sample (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
 static gdouble _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
 
@@ -268,23 +268,30 @@ _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *U
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
+_ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array)
 {
   NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gdouble s = 0.0;
   gdouble c = 0.0;
-  gint i;
-
+  gint i, ret;
+  NcmVector *invUy_i = ncm_vector_new (d);
+  
   for (i = 0; i < n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (invUsample, i);
+    NcmMatrix *cov_i = g_ptr_array_index (cov_array, i);
     gdouble e_i, t, chi2_i = 0.0;
     gint k;
 
+    ncm_vector_memcpy(invUy_i, invUy);
+    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+    ncm_matrix_gsl (cov_i), ncm_vector_gsl (invUy_i));
+    NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
+    
     for (k = 0; k < d; k++)
     {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k)) / ncm_vector_fast_get (href, k));
+      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy_i, k)) / ncm_vector_fast_get (href, k));
     }
     
     e_i = ncm_vector_get (weights, i) * _ncm_stats_dist_nd_vbk_studentt_f (self, d, chi2_i);

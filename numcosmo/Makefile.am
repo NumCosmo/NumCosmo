@@ -98,6 +98,7 @@ ncm_sources = \
 	math/ncm_stats_dist_nd.c              \
 	math/ncm_stats_dist_nd_vbk.c          \
 	math/ncm_stats_dist_nd_kde_gauss.c    \
+	math/ncm_stats_dist_nd_vbk_gauss.c    \
 	math/ncm_stats_dist_nd_kde_studentt.c \
         math/ncm_stats_dist_nd_vbk_studentt.c \
 	math/ncm_bootstrap.c                  \
@@ -234,6 +235,7 @@ ncm_headers =                                 \
 	math/ncm_stats_dist_nd.h              \
 	math/ncm_stats_dist_nd_vbk.h          \
 	math/ncm_stats_dist_nd_kde_gauss.h    \
+	math/ncm_stats_dist_nd_vbk_gauss.h    \
 	math/ncm_stats_dist_nd_kde_studentt.h \
 	math/ncm_stats_dist_nd_vbk_studentt.h \
 	math/ncm_bootstrap.h                  \

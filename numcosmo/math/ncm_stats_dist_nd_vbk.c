@@ -442,13 +442,6 @@ _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVbk *dnd, NcmStatsVec 
       res = CNearTreeFindKNearest (treehandle, k, dRadius,
           results_coords, results_objs, ncm_vector_data (theta_i), TRUE);
 
-      printf ("Searching vectors near to:");
-      for (l = 0; l < self->d; l++)
-      {
-        printf (" % 22.15g", ncm_vector_get (theta_i, l));
-      }
-      printf ("\n");
-
       ncm_stats_vec_reset (self->sample, TRUE);
       for (j = 0; j < k; j++)
       {
@@ -466,7 +459,6 @@ _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVbk *dnd, NcmStatsVec 
       }
       {
       NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
-      ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COV: ", "% 12.5g");
       g_ptr_array_add(self->cov_array, sample_cov);
       }
     }  /*printf ("res %d\n", res);*/
@@ -925,14 +917,8 @@ ncm_stats_dist_nd_vbk_eval (NcmStatsDistNdVbk *dnd, NcmVector *x)
 {
   NcmStatsDistNdVbkClass *dnd_class = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd); 
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
-  gint ret;
 
-  ncm_vector_memcpy (self->v, x);
-  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
-  NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
-
-  return dnd_class->eval (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href) * exp (- self->kernel_lnnorm);
+  return dnd_class->eval (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href, self->cov_array) * exp (- self->kernel_lnnorm);
 }
 
 /**
@@ -952,21 +938,13 @@ ncm_stats_dist_nd_vbk_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *x)
 {
   NcmStatsDistNdVbkClass *dnd_class = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   NcmStatsDistNdVbkPrivate * const self = dnd->priv;
-  gint ret, i;
 
   ncm_vector_memcpy (self->v, x);
-  for(i = 0; i < ncm_vector_len(self->v); i++)
-  {
-   NcmVector *sub_vec = ncm_vector_get_subvector (self->v, i, 1); 
-   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-       ncm_matrix_gsl (g_ptr_array_index(self->cov_array, i)), ncm_vector_gsl (self->v));
-   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
-  }
   
   if (dnd_class->eval_m2lnp != NULL)
-    return dnd_class->eval_m2lnp (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href) + 2.0 * self->kernel_lnnorm;
+    return dnd_class->eval_m2lnp (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href, self->cov_array) + 2.0 * self->kernel_lnnorm;
   else
-    return -2.0 * (log (dnd_class->eval (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href)) - self->kernel_lnnorm);
+    return -2.0 * (log (dnd_class->eval (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href, self->cov_array)) - self->kernel_lnnorm);
 }
 
 /**

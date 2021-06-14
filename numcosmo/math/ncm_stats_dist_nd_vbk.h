@@ -59,8 +59,8 @@ struct _NcmStatsDistNdVbkClass
   void (*prepare_IM) (NcmStatsDistNdVbk *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
   void (*prepare) (NcmStatsDistNdVbk *dnd);
   void (*prepare_interp) (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp);
-  gdouble (*eval) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
-  gdouble (*eval_m2lnp) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+  gdouble (*eval) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array);
+  gdouble (*eval_m2lnp) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array);
   void (*kernel_sample) (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
   gdouble (*kernel_eval_m2lnp) (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
   void (*reset) (NcmStatsDistNdVbk *dnd);
