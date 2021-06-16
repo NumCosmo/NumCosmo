@@ -208,7 +208,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->LS_Um           = SUNDenseLinearSolver (self->y_Um, self->A_Um);
   NCM_CVODE_CHECK ((gpointer)self->LS_Um, "SUNDenseLinearSolver", 0, );
 
-  self->LS_Prop         = SUNDenseLinearSolver (self->y_Um, self->A_Um);
+  self->LS_Prop         = SUNDenseLinearSolver (self->y_Prop, self->A_Prop);
   NCM_CVODE_CHECK ((gpointer)self->LS_Um, "SUNDenseLinearSolver", 0, );
 
   self->alpha_s         = ncm_spline_cubic_notaknot_new ();
@@ -410,16 +410,19 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
   }
 }
 
-static gdouble _ncm_csq1d_eval_xi      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_dxi     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_nu      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_nu2     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_m       (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_dm      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_F1      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_F2      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_FN      (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_nu2        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
 
 static void
@@ -502,6 +505,9 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_nu2            = &_ncm_csq1d_eval_nu2;
   klass->eval_m              = &_ncm_csq1d_eval_m;
   klass->eval_int_1_m        = &_ncm_csq1d_eval_int_1_m;
+  klass->eval_int_mnu2       = &_ncm_csq1d_eval_int_mnu2;
+  klass->eval_int_qmnu2      = &_ncm_csq1d_eval_int_qmnu2;
+  klass->eval_int_q2mnu2     = &_ncm_csq1d_eval_int_q2mnu2;
   klass->eval_dm             = &_ncm_csq1d_eval_dm;
   klass->eval_F1             = &_ncm_csq1d_eval_F1;
   klass->eval_F2             = &_ncm_csq1d_eval_F2;
@@ -549,6 +555,27 @@ _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, cons
 }
 
 static gdouble 
+_ncm_csq1d_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_int_mnu2: not implemented.");
+  return 0.0;
+}
+
+static gdouble
+_ncm_csq1d_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_int_qmnu2: not implemented.");
+  return 0.0;
+}
+
+static gdouble
+_ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_int_q2mnu2: not implemented.");
+  return 0.0;
+}
+
+static gdouble
 _ncm_csq1d_eval_dm (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   g_error ("_ncm_csq1d_eval_dm: not implemented.");
@@ -1628,6 +1655,33 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @k: mode $k$
  *
  * Returns: $\int 1/m \mathrm{d}t$.
+ */
+/**
+ * ncm_csq1d_eval_int_mnu2: (virtual eval_int_mnu2)
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @k: mode $k$
+ *
+ * Returns: $\int m\nu^2 \mathrm{d}t$.
+ */
+/**
+ * ncm_csq1d_eval_int_qmnu2: (virtual eval_int_qmnu2)
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @k: mode $k$
+ *
+ * Returns: $\int \left(\int 1/m \mathrm{d}t\right) m\nu^2 \mathrm{d}t$.
+ */
+/**
+ * ncm_csq1d_eval_int_q2mnu2: (virtual eval_int_q2mnu2)
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @k: mode $k$
+ *
+ * Returns: $\int \left(\int 1/m \mathrm{d}t\right)^2 m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_dm: (virtual eval_dm)
@@ -2896,6 +2950,14 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
   gint i;
 
   _ncm_csq1d_prepare_prop_eval_u1 (csq1d, model, ti, tii, u1);
+
+/*
+  ncm_message ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ti, tii,
+      u1[0], +ncm_csq1d_eval_int_qmnu2 (csq1d, model, tii, self->k),
+      u1[1], +ncm_csq1d_eval_int_q2mnu2 (csq1d, model, tii, self->k),
+      u1[2], -ncm_csq1d_eval_int_mnu2 (csq1d, model, tii, self->k)
+      );
+*/
 
   NV_Ith_S (self->y_Prop, 0) = 1.0;
   NV_Ith_S (self->y_Prop, 1) = u1[1];
