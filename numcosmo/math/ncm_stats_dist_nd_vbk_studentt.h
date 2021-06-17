@@ -50,19 +50,19 @@ typedef struct _NcmStatsDistNdVBKStudenttPrivate NcmStatsDistNdVBKStudenttPrivat
 
 struct _NcmStatsDistNdVBKStudenttClass
 {
-  NcmStatsDistNdVbkClass parent_class;
+  NcmStatsDistNdVBKClass parent_class;
 };
 
 struct _NcmStatsDistNdVBKStudentt
 {
-  NcmStatsDistNdVbk parent_instance;
+  NcmStatsDistNdVBK parent_instance;
   
   NcmStatsDistNdVBKStudenttPrivate *priv;
 };
 
 GType ncm_stats_dist_nd_vbk_studentt_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdVBKStudentt *ncm_stats_dist_nd_vbk_studentt_new (const guint dim, const NcmStatsDistNdVbkCV cv_type, const gdouble nu);
+NcmStatsDistNdVBKStudentt *ncm_stats_dist_nd_vbk_studentt_new (const guint dim, const NcmStatsDistNdVBKCV cv_type, const gdouble nu);
 
 NcmStatsDistNdVBKStudentt *ncm_stats_dist_nd_vbk_studentt_ref (NcmStatsDistNdVBKStudentt *dndt);
 void ncm_stats_dist_nd_vbk_studentt_free (NcmStatsDistNdVBKStudentt *dndt);

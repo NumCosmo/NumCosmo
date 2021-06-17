@@ -38,43 +38,43 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_STATS_DIST_ND_VBK             (ncm_stats_dist_nd_vbk_get_type ())
-#define NCM_STATS_DIST_ND_VBK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVbk))
-#define NCM_STATS_DIST_ND_VBK_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVbkClass))
+#define NCM_STATS_DIST_ND_VBK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVBK))
+#define NCM_STATS_DIST_ND_VBK_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVBKClass))
 #define NCM_IS_STATS_DIST_ND_VBK(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_ND_VBK))
 #define NCM_IS_STATS_DIST_ND_VBK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_ND_VBK))
-#define NCM_STATS_DIST_ND_VBK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVbkClass))
+#define NCM_STATS_DIST_ND_VBK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_ND_VBK, NcmStatsDistNdVBKClass))
 
-typedef struct _NcmStatsDistNdVbkClass NcmStatsDistNdVbkClass;
-typedef struct _NcmStatsDistNdVbk NcmStatsDistNdVbk;
-typedef struct _NcmStatsDistNdVbkPrivate NcmStatsDistNdVbkPrivate;
+typedef struct _NcmStatsDistNdVBKClass NcmStatsDistNdVBKClass;
+typedef struct _NcmStatsDistNdVBK NcmStatsDistNdVBK;
+typedef struct _NcmStatsDistNdVBKPrivate NcmStatsDistNdVBKPrivate;
 
-struct _NcmStatsDistNdVbkClass
+struct _NcmStatsDistNdVBKClass
 {
   /*< private >*/ 
   GObjectClass parent_class;
-  void (*set_dim) (NcmStatsDistNdVbk *dnd, const guint dim);
-  gdouble (*get_rot_bandwidth) (NcmStatsDistNdVbk *dnd, const guint d, const gdouble n);
-  gdouble (*get_kernel_lnnorm) (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
-  void (*prepare_kernel_args) (NcmStatsDistNdVbk *dnd, NcmStatsVec *sample);
-  void (*prepare_IM) (NcmStatsDistNdVbk *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
-  void (*prepare) (NcmStatsDistNdVbk *dnd);
-  void (*prepare_interp) (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp);
-  gdouble (*eval) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
-  gdouble (*eval_m2lnp) (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
-  void (*kernel_sample) (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
-  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
-  void (*reset) (NcmStatsDistNdVbk *dnd);
+  void (*set_dim) (NcmStatsDistNdVBK *dnd, const guint dim);
+  gdouble (*get_rot_bandwidth) (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n);
+  gdouble (*get_kernel_lnnorm) (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
+  void (*prepare_kernel_args) (NcmStatsDistNdVBK *dnd, NcmStatsVec *sample);
+  void (*prepare_IM) (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *norm);
+  void (*prepare) (NcmStatsDistNdVBK *dnd);
+  void (*prepare_interp) (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp);
+  gdouble (*eval) (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *y, GPtrArray *sample_array, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array, GArray *norm_array);
+  gdouble (*eval_m2lnp) (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array);
+  void (*kernel_sample) (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
+  void (*reset) (NcmStatsDistNdVBK *dnd);
 };
 
-struct _NcmStatsDistNdVbk
+struct _NcmStatsDistNdVBK
 {
   /*< private >*/
   GObject parent_instance;
-  NcmStatsDistNdVbkPrivate *priv;
+  NcmStatsDistNdVBKPrivate *priv;
 };
 
 /**
- * NcmStatsDistNdVbkCV:
+ * NcmStatsDistNdVBKCV:
  * @NCM_STATS_DIST_ND_VBK_CV_NONE: No cross validation
  * @NCM_STATS_DIST_ND_CV_VBK_SPLIT: Sample split cross validation
  * @NCM_STATS_DIST_ND_CV_VBK_SPLIT_FITD: Sample split cross validation fitting all diagonal elements
@@ -82,7 +82,7 @@ struct _NcmStatsDistNdVbk
  * Cross-validation method to be applied.
  *
  */
-typedef enum _NcmStatsDistNdVbkCV
+typedef enum _NcmStatsDistNdVBKCV
 {
   NCM_STATS_DIST_ND_VBK_CV_NONE,
   NCM_STATS_DIST_ND_VBK_CV_SPLIT,
@@ -90,46 +90,46 @@ typedef enum _NcmStatsDistNdVbkCV
   /* < private > */
   NCM_STATS_DIST_ND_VBK_CV_LEN, /*< skip >*/
 
-} NcmStatsDistNdVbkCV;
+} NcmStatsDistNdVBKCV;
 
 GType ncm_stats_dist_nd_vbk_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdVbk *ncm_stats_dist_nd_vbk_ref (NcmStatsDistNdVbk *dnd);
-void ncm_stats_dist_nd_vbk_free (NcmStatsDistNdVbk *dnd);
-void ncm_stats_dist_nd_vbk_clear (NcmStatsDistNdVbk **dnd);
+NcmStatsDistNdVBK *ncm_stats_dist_nd_vbk_ref (NcmStatsDistNdVBK *dnd);
+void ncm_stats_dist_nd_vbk_free (NcmStatsDistNdVBK *dnd);
+void ncm_stats_dist_nd_vbk_clear (NcmStatsDistNdVBK **dnd);
 
-guint ncm_stats_dist_nd_vbk_get_dim (NcmStatsDistNdVbk *dnd);
+guint ncm_stats_dist_nd_vbk_get_dim (NcmStatsDistNdVBK *dnd);
 
-gdouble ncm_stats_dist_nd_vbk_get_rot_bandwidth (NcmStatsDistNdVbk *dnd, const guint d, const gdouble n);
-gdouble ncm_stats_dist_nd_vbk_get_kernel_lnnorm (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
+gdouble ncm_stats_dist_nd_vbk_get_rot_bandwidth (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n);
+gdouble ncm_stats_dist_nd_vbk_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
 
-void ncm_stats_dist_nd_vbk_set_over_smooth (NcmStatsDistNdVbk *dnd, const gdouble over_smooth);
-gdouble ncm_stats_dist_nd_vbk_get_over_smooth (NcmStatsDistNdVbk *dnd);
+void ncm_stats_dist_nd_vbk_set_over_smooth (NcmStatsDistNdVBK *dnd, const gdouble over_smooth);
+gdouble ncm_stats_dist_nd_vbk_get_over_smooth (NcmStatsDistNdVBK *dnd);
 
-void ncm_stats_dist_nd_vbk_set_split_frac (NcmStatsDistNdVbk *dnd, const gdouble split_frac);
-gdouble ncm_stats_dist_nd_vbk_get_split_frac (NcmStatsDistNdVbk *dnd);
+void ncm_stats_dist_nd_vbk_set_split_frac (NcmStatsDistNdVBK *dnd, const gdouble split_frac);
+gdouble ncm_stats_dist_nd_vbk_get_split_frac (NcmStatsDistNdVBK *dnd);
 
-void ncm_stats_dist_nd_vbk_set_nearPD_maxiter (NcmStatsDistNdVbk *dnd, const guint maxiter);
-guint ncm_stats_dist_nd_vbk_get_nearPD_maxiter (NcmStatsDistNdVbk *dnd);
+void ncm_stats_dist_nd_vbk_set_nearPD_maxiter (NcmStatsDistNdVBK *dnd, const guint maxiter);
+guint ncm_stats_dist_nd_vbk_get_nearPD_maxiter (NcmStatsDistNdVBK *dnd);
 
-void ncm_stats_dist_nd_vbk_set_cv_type (NcmStatsDistNdVbk *dnd, const NcmStatsDistNdVbkCV cv_type);
-NcmStatsDistNdVbkCV ncm_stats_dist_nd_vbk_get_cv_type (NcmStatsDistNdVbk *dnd);
+void ncm_stats_dist_nd_vbk_set_cv_type (NcmStatsDistNdVBK *dnd, const NcmStatsDistNdVBKCV cv_type);
+NcmStatsDistNdVBKCV ncm_stats_dist_nd_vbk_get_cv_type (NcmStatsDistNdVBK *dnd);
 
-void ncm_stats_dist_nd_vbk_prepare (NcmStatsDistNdVbk *dnd);
-void ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVbk *dnd, NcmVector *m2lnp);
-gdouble ncm_stats_dist_nd_vbk_eval (NcmStatsDistNdVbk *dnd, NcmVector *x);
-gdouble ncm_stats_dist_nd_vbk_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *x);
-void ncm_stats_dist_nd_vbk_sample (NcmStatsDistNdVbk *dnd, NcmVector *x, NcmRNG *rng);
+void ncm_stats_dist_nd_vbk_prepare (NcmStatsDistNdVBK *dnd);
+void ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp);
+gdouble ncm_stats_dist_nd_vbk_eval (NcmStatsDistNdVBK *dnd, NcmVector *x);
+gdouble ncm_stats_dist_nd_vbk_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *x);
+void ncm_stats_dist_nd_vbk_sample (NcmStatsDistNdVBK *dnd, NcmVector *x, NcmRNG *rng);
 
-gdouble ncm_stats_dist_nd_vbk_get_rnorm (NcmStatsDistNdVbk *dnd);
+gdouble ncm_stats_dist_nd_vbk_get_rnorm (NcmStatsDistNdVBK *dnd);
 
-void ncm_stats_dist_nd_vbk_kernel_sample (NcmStatsDistNdVbk *dnd, NcmVector *x, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
-gdouble ncm_stats_dist_nd_vbk_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *x, NcmVector *y, const NcmVector *href);
+void ncm_stats_dist_nd_vbk_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, NcmVector *x, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+gdouble ncm_stats_dist_nd_vbk_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *x, NcmVector *y, const NcmVector *href);
 
-void ncm_stats_dist_nd_vbk_add_obs_weight (NcmStatsDistNdVbk *dndg, NcmVector *y, const gdouble w);
-void ncm_stats_dist_nd_vbk_add_obs (NcmStatsDistNdVbk *dndg, NcmVector *y);
+void ncm_stats_dist_nd_vbk_add_obs_weight (NcmStatsDistNdVBK *dndg, NcmVector *y, const gdouble w);
+void ncm_stats_dist_nd_vbk_add_obs (NcmStatsDistNdVBK *dndg, NcmVector *y);
 
-void ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVbk *dnd);
+void ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVBK *dnd);
 
 G_END_DECLS
 
