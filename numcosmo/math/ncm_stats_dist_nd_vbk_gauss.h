@@ -36,36 +36,36 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_STATS_DIST_ND_VBK_GAUSS             (ncm_stats_dist_nd_vbk_gauss_get_type ())
-#define NCM_STATS_DIST_ND_VBK_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVbkGauss))
-#define NCM_STATS_DIST_ND_VBK_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVbkGaussClass))
+#define NCM_STATS_DIST_ND_VBK_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVBKGauss))
+#define NCM_STATS_DIST_ND_VBK_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVBKGaussClass))
 #define NCM_IS_STATS_DIST_ND_VBK_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS))
 #define NCM_IS_STATS_DIST_ND_VBK_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS))
-#define NCM_STATS_DIST_ND_VBK_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVbkGaussClass))
+#define NCM_STATS_DIST_ND_VBK_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_ND_VBK_GAUSS, NcmStatsDistNdVBKGaussClass))
 
-typedef struct _NcmStatsDistNdVbkGaussClass NcmStatsDistNdVbkGaussClass;
-typedef struct _NcmStatsDistNdVbkGauss NcmStatsDistNdVbkGauss;
-typedef struct _NcmStatsDistNdVbkGaussPrivate NcmStatsDistNdVbkGaussPrivate;
+typedef struct _NcmStatsDistNdVBKGaussClass NcmStatsDistNdVBKGaussClass;
+typedef struct _NcmStatsDistNdVBKGauss NcmStatsDistNdVBKGauss;
+typedef struct _NcmStatsDistNdVBKGaussPrivate NcmStatsDistNdVBKGaussPrivate;
 
 
-struct _NcmStatsDistNdVbkGaussClass
+struct _NcmStatsDistNdVBKGaussClass
 {
-  NcmStatsDistNdVbkClass parent_class;
+  NcmStatsDistNdVBKClass parent_class;
 };
 
-struct _NcmStatsDistNdVbkGauss
+struct _NcmStatsDistNdVBKGauss
 {
-  NcmStatsDistNdVbk parent_instance;
+  NcmStatsDistNdVBK parent_instance;
 
-  NcmStatsDistNdVbkGaussPrivate *priv;
+  NcmStatsDistNdVBKGaussPrivate *priv;
 };
 
 GType ncm_stats_dist_nd_vbk_gauss_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistNdVbkGauss *ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVbkCV cv_type);
+NcmStatsDistNdVBKGauss *ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVBKCV cv_type);
 
-NcmStatsDistNdVbkGauss *ncm_stats_dist_nd_vbk_gauss_ref (NcmStatsDistNdVbkGauss *dndg);
-void ncm_stats_dist_nd_vbk_gauss_free (NcmStatsDistNdVbkGauss *dndg);
-void ncm_stats_dist_nd_vbk_gauss_clear (NcmStatsDistNdVbkGauss **dndg);
+NcmStatsDistNdVBKGauss *ncm_stats_dist_nd_vbk_gauss_ref (NcmStatsDistNdVBKGauss *dndg);
+void ncm_stats_dist_nd_vbk_gauss_free (NcmStatsDistNdVBKGauss *dndg);
+void ncm_stats_dist_nd_vbk_gauss_clear (NcmStatsDistNdVBKGauss **dndg);
 
 G_END_DECLS
 

@@ -26,7 +26,7 @@
 
 /**
  * SECTION:ncm_stats_dist_nd_vbk_gauss
- * @title: NcmStatsDistNdVbkGauss
+ * @title: NcmStatsDistNdVBKGauss
  * @short_description: An N dimensional probability distributions using gaussian KDE
  *
  * An arbitrary N dimensional probability distribution using gaussian KDE.
@@ -55,7 +55,7 @@
  *, \end{align} 
  * where $p$ is the dimension and $x$ are the points to be evaluated. 
  *
- * Once this object is initialized, we may use the methods in the #NcmStatsDistNdVbkclass to perform the interpolation 
+ * Once this object is initialized, we may use the methods in the #NcmStatsDistNdVBKclass to perform the interpolation 
  * and to generate a sample from the interpolated polinomal function.    
  *
  * The user must provide the following input values: $p$ - ncm_stats_dist_nd_vbk_gauss_new(),
@@ -80,7 +80,7 @@
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmStatsDistNdVbkGaussPrivate
+struct _NcmStatsDistNdVBKGaussPrivate
 {
   GArray *eval_v;
 };
@@ -90,12 +90,12 @@ enum
   PROP_0,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdVbkGauss, ncm_stats_dist_nd_vbk_gauss, NCM_TYPE_STATS_DIST_ND_VBK);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistNdVBKGauss, ncm_stats_dist_nd_vbk_gauss, NCM_TYPE_STATS_DIST_ND_VBK);
 
 static void
-ncm_stats_dist_nd_vbk_gauss_init (NcmStatsDistNdVbkGauss *dndg)
+ncm_stats_dist_nd_vbk_gauss_init (NcmStatsDistNdVBKGauss *dndg)
 {
-  NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_vbk_gauss_get_instance_private (dndg);
+  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_vbk_gauss_get_instance_private (dndg);
 
   self->eval_v = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
@@ -103,8 +103,8 @@ ncm_stats_dist_nd_vbk_gauss_init (NcmStatsDistNdVbkGauss *dndg)
 static void
 _ncm_stats_dist_nd_vbk_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  /*NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (object);*/
-  /*NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;*/
+  /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (object);*/
+  /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_GAUSS (object));
 
@@ -119,8 +119,8 @@ _ncm_stats_dist_nd_vbk_gauss_set_property (GObject *object, guint prop_id, const
 static void
 _ncm_stats_dist_nd_vbk_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  /*NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (object);*/
-  /*NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;*/
+  /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (object);*/
+  /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
 
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_GAUSS (object));
 
@@ -135,8 +135,8 @@ _ncm_stats_dist_nd_vbk_gauss_get_property (GObject *object, guint prop_id, GValu
 static void
 _ncm_stats_dist_nd_vbk_gauss_dispose (GObject *object)
 {
-  NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (object);
-  NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;
+  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (object);
+  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
 
   g_clear_pointer (&self->eval_v, g_array_unref);
 
@@ -152,20 +152,20 @@ _ncm_stats_dist_nd_vbk_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_stats_dist_nd_vbk_gauss_parent_class)->finalize (object);
 }
 
-static gdouble _ncm_stats_dist_nd_vbk_gauss_get_rot_bandwidth (NcmStatsDistNdVbk *dnd, const guint d, const gdouble n);
-static gdouble _ncm_stats_dist_nd_vbk_gauss_get_kernel_lnnorm (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
-static void _ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
+static gdouble _ncm_stats_dist_nd_vbk_gauss_get_rot_bandwidth (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n);
+static gdouble _ncm_stats_dist_nd_vbk_gauss_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, GPtrArray *cov_array, const guint d, const gdouble n, const NcmVector *href, gint l);
+static void _ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
 
-static gdouble _ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
-static gdouble _ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
-static void _ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
-static gdouble _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
+static gdouble _ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+static gdouble _ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+static void _ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+static gdouble _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
 
 static void
-ncm_stats_dist_nd_vbk_gauss_class_init (NcmStatsDistNdVbkGaussClass *klass)
+ncm_stats_dist_nd_vbk_gauss_class_init (NcmStatsDistNdVBKGaussClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmStatsDistNdVbkClass *dnd_class  = NCM_STATS_DIST_ND_VBK_CLASS (klass);
+  NcmStatsDistNdVBKClass *dnd_class  = NCM_STATS_DIST_ND_VBK_CLASS (klass);
 
   object_class->set_property = &_ncm_stats_dist_nd_vbk_gauss_set_property;
   object_class->get_property = &_ncm_stats_dist_nd_vbk_gauss_get_property;
@@ -182,32 +182,32 @@ ncm_stats_dist_nd_vbk_gauss_class_init (NcmStatsDistNdVbkGaussClass *klass)
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_gauss_f (NcmStatsDistNdVbkGaussPrivate * const self, const gdouble chi2)
+_ncm_stats_dist_nd_vbk_gauss_f (NcmStatsDistNdVBKGaussPrivate * const self, const gdouble chi2)
 {
   return exp (- 0.5 * chi2);
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_gauss_get_rot_bandwidth (NcmStatsDistNdVbk *dnd, const guint d, const gdouble n)
+_ncm_stats_dist_nd_vbk_gauss_get_rot_bandwidth (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n)
 {
   return pow (4.0 / (n * (d + 2.0)), 1.0 / (d + 4.0));
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_gauss_get_kernel_lnnorm (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href)
+_ncm_stats_dist_nd_vbk_gauss_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, GPtrArray *cov_array, const guint d, const gdouble n, const NcmVector *href, gint l)
 {
   register gdouble det_href = 1.0;
   gint i;
   for (i = 0; i < d; i++)
     det_href *= ncm_vector_fast_get (href, i);
 
-  return 0.5 * (d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov_decomp)) + log (det_href);
+  return 0.5 * (d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (g_ptr_array_index (cov_array, l))) + log (det_href);
 }
 
 static void 
-_ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM)
+_ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM)
 {
-  NcmStatsDistNdVbkGaussPrivate * const self = NCM_STATS_DIST_ND_VBK_GAUSS (dnd)->priv;
+  NcmStatsDistNdVBKGaussPrivate * const self = NCM_STATS_DIST_ND_VBK_GAUSS (dnd)->priv;
   gint i;
 
   for (i = 0; i < n; i++)
@@ -238,10 +238,10 @@ _ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVbk *dnd, GPtrArray *invU
 }
 
 static gdouble 
-_ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
+_ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
 {
-  NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
-  NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;
+  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
+  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
   gdouble s = 0.0;
   gdouble c = 0.0;
   gint i;
@@ -268,10 +268,10 @@ _ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVbk *dnd, NcmVector *weights, N
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
+_ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
 {
-  NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
-  NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;
+  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
+  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
   gdouble s = 0.0;
   gdouble c = 0.0;
   gint i;
@@ -298,10 +298,10 @@ _ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmVector *weig
 }
 
 static void
-_ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng)
+_ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng)
 {
-  /*NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);*/
-  /*NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;*/
+  /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);*/
+  /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   gint i, ret;
 
   for (i = 0; i < d; i++)
@@ -319,10 +319,10 @@ _ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVbk *dnd, NcmMatrix *c
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href)
+_ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href)
 {
-  /*NcmStatsDistNdVbkGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);*/
-  /*NcmStatsDistNdVbkGaussPrivate * const self = dndg->priv;*/
+  /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);*/
+  /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   gdouble m2lnp;
   gint ret;
 
@@ -346,14 +346,14 @@ _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVbk *dnd, NcmMatri
  * @dim: sample space dimension
  * @cv_type: a #NcmStatsDistNdCV
  * 
- * Creates a new #NcmStatsDistNdVbkGauss object with sample dimension @dim.
+ * Creates a new #NcmStatsDistNdVBKGauss object with sample dimension @dim.
  * 
- * Returns: a new #NcmStatsDistNdVbkGauss.
+ * Returns: a new #NcmStatsDistNdVBKGauss.
  */
-NcmStatsDistNdVbkGauss *
-ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVbkCV cv_type)
+NcmStatsDistNdVBKGauss *
+ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVBKCV cv_type)
 {
-  NcmStatsDistNdVbkGauss *dndg = g_object_new (NCM_TYPE_STATS_DIST_ND_VBK_GAUSS,
+  NcmStatsDistNdVBKGauss *dndg = g_object_new (NCM_TYPE_STATS_DIST_ND_VBK_GAUSS,
                                                "dimension", dim,
                                                "CV-type",   cv_type,
                                                NULL);
@@ -362,41 +362,41 @@ ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVbkCV cv_t
 
 /**
  * ncm_stats_dist_nd_vbk_gauss_ref:
- * @dndg: a #NcmStatsDistNdVbkGauss
+ * @dndg: a #NcmStatsDistNdVBKGauss
  *
  * Increase the reference of @stats_dist_nd_vbk_gauss by one.
  *
  * Returns: (transfer full): @stats_dist_nd_vbk_gauss.
  */
-NcmStatsDistNdVbkGauss *
-ncm_stats_dist_nd_vbk_gauss_ref (NcmStatsDistNdVbkGauss *dndg)
+NcmStatsDistNdVBKGauss *
+ncm_stats_dist_nd_vbk_gauss_ref (NcmStatsDistNdVBKGauss *dndg)
 {
   return g_object_ref (dndg);
 }
 
 /**
  * ncm_stats_dist_nd_vbk_gauss_free:
- * @dndg: a #NcmStatsDistNdVbkGauss
+ * @dndg: a #NcmStatsDistNdVBKGauss
  *
  * Decrease the reference count of @stats_dist_nd_vbk_gauss by one.
  *
  */
 void
-ncm_stats_dist_nd_vbk_gauss_free (NcmStatsDistNdVbkGauss *dndg)
+ncm_stats_dist_nd_vbk_gauss_free (NcmStatsDistNdVBKGauss *dndg)
 {
   g_object_unref (dndg);
 }
 
 /**
  * ncm_stats_dist_nd_vbk_gauss_clear:
- * @dndg: a #NcmStatsDistNdVbkGauss
+ * @dndg: a #NcmStatsDistNdVBKGauss
  *
  * Decrease the reference count of @stats_dist_nd_vbk_gauss by one, and sets the pointer *@stats_dist_nd_vbk_gauss to
  * NULL.
  *
  */
 void
-ncm_stats_dist_nd_vbk_gauss_clear (NcmStatsDistNdVbkGauss **dndg)
+ncm_stats_dist_nd_vbk_gauss_clear (NcmStatsDistNdVBKGauss **dndg)
 {
   g_clear_object (dndg);
 }

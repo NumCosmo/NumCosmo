@@ -257,11 +257,11 @@ _ncm_stats_dist_nd_kde_studentt_prepare_IM (NcmStatsDistNd *dnd, GPtrArray *Us, 
       {
         m2lnp_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)) /  ncm_vector_fast_get (href, k));
       }
-      
+      printf("result %22.15g", m2lnp_ij);
       p_ij = _ncm_stats_dist_nd_kde_studentt_f (self, d, m2lnp_ij);
-      
       ncm_matrix_set (IM, i, j, p_ij);
       ncm_matrix_set (IM, j, i, p_ij);
+      /*printf("valor %22.15g na pos %d  e %d ", p_ij, i, j);*/
     }
   }
 }

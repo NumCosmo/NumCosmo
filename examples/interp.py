@@ -81,6 +81,6 @@ for x in xn_a:
 
 yi_a = np.array (yi_a)
 ya_a = np.array (ya_a)
-
 m = -np.mean (yi_a - ya_a)
 diff = (yi_a + m) / ya_a - 1.0
+print(diff)

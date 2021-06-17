@@ -453,7 +453,6 @@ _ncm_stats_dist_nd_prepare (NcmStatsDistNd *dnd)
   NcmStatsDistNdPrivate * const self = dnd->priv;
 
   dnd_class->prepare_kernel_args (dnd, self->sample);
-
   self->min_m2lnp = 0.0;
   self->max_m2lnp = 0.0;
 
@@ -752,6 +751,7 @@ _ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp)
     }
   }
 }
+
 
 static void
 _ncm_stats_dist_nd_reset (NcmStatsDistNd *dnd)
