@@ -657,3 +657,13 @@ ncm_rng_pool_get (const gchar *name)
  * Returns: a random number from the gamma distribution.
  */
 
+/**
+* ncm_rng_chisq_gen:
+* @rng: a #NcmRNG
+* @nu: degrees of freedom $\nu$
+*
+* This function returns a random number drawn from the
+* [Chi-square Distribution](https://en.wikipedia.org/wiki/Chi-square_distribution),
+* with $\nu$ degrees of freedom.
+* Returns: a random number from Chi-square distribution.
+*/

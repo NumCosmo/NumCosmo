@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -57,15 +57,15 @@ struct _NcmMSetCatalogClass
  * @NCM_MSET_CATALOG_SYNC_DISABLE: Catalog will be synchronized only when closing the file or with an explicit call of ncm_mset_catalog_sync().
  * @NCM_MSET_CATALOG_SYNC_AUTO: Catalog will be synchronized in every catalog addition.
  * @NCM_MSET_CATALOG_SYNC_TIMED: Catalog will be synchronized with a minimum time interval between syncs.
- * 
- * Catalog sync modes. 
- * 
+ *
+ * Catalog sync modes.
+ *
  */
 typedef enum _NcmMSetCatalogSync
 {
   NCM_MSET_CATALOG_SYNC_DISABLE,
   NCM_MSET_CATALOG_SYNC_AUTO,
-  NCM_MSET_CATALOG_SYNC_TIMED, 
+  NCM_MSET_CATALOG_SYNC_TIMED,
   /* < private > */
   NCM_MSET_CATALOG_SYNC_LEN, /*< skip >*/
 } NcmMSetCatalogSync;
@@ -76,16 +76,16 @@ typedef enum _NcmMSetCatalogSync
  * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
  * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
  * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
- * 
+ *
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
- * 
+ *
  */
 typedef enum _NcmMSetCatalogTrimType
 {
-  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
+  NCM_MSET_CATALOG_TRIM_TYPE_ESS = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
+  NCM_MSET_CATALOG_TRIM_TYPE_CK = 1 << 2,
+  NCM_MSET_CATALOG_TRIM_TYPE_ALL = (1 << 3) - 1,
 } NcmMSetCatalogTrimType;
 
 /**
@@ -93,9 +93,9 @@ typedef enum _NcmMSetCatalogTrimType
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: Uses a MVND limited in a hyperbox and bootstrap to estimate error.
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in elipsoids.
- * 
+ *
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
- * 
+ *
  */
 typedef enum _NcmMSetCatalogPostNormMethod
 {
@@ -110,14 +110,14 @@ typedef enum _NcmMSetCatalogPostNormMethod
  * NcmMSetCatalogTauMethod:
  * @NCM_MSET_CATALOG_TAU_METHOD_ACOR: uses the autocorrelation to estimate $\tau$.
  * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an autoregressive model fitting to estimate $\tau$.
- * 
+ *
  * Method used to estimate the autocorrelation time $\tau$.
- * 
+ *
  */
 typedef enum _NcmMSetCatalogTauMethod
 {
   NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
-  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL, 
+  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,
   /* < private > */
   NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogTauMethod;
@@ -230,7 +230,7 @@ NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, g
 void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
-void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc);
+void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin);
 void ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p);
 guint ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file);
 void ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat);

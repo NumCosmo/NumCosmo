@@ -65,12 +65,6 @@ NcmFitESMCMCWalkerAPS *ncm_fit_esmcmc_walker_aps_new (guint nwalkers, guint npar
 
 void ncm_fit_esmcmc_walker_aps_use_interp (NcmFitESMCMCWalkerAPS *aps, gboolean use_interp);
 
-void ncm_fit_esmcmc_walker_aps_set_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps, const gdouble prob);
-void ncm_fit_esmcmc_walker_aps_set_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps, const gdouble scale);
-
-gdouble ncm_fit_esmcmc_walker_aps_get_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps);
-gdouble ncm_fit_esmcmc_walker_aps_get_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps);
-
 G_END_DECLS
 
 #endif /* _NCM_FIT_ESMCMC_WALKER_APS_H_ */

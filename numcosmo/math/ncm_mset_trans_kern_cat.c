@@ -252,7 +252,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
       {
         NcmVector *srow_i = ncm_vector_get_subvector (row_i, nadd, theta_size);
 
-        ncm_stats_dist_nd_kde_gauss_add_obs (self->rbf, srow_i);
+        ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->rbf), srow_i);
         ncm_vector_set (m2lnp, j, ncm_vector_get (row_i, m2lnp_i));
         j++;
         
@@ -308,7 +308,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
       {
         NcmVector *srow_i = ncm_vector_get_subvector (row_i, nadd, theta_size);
 
-        ncm_stats_dist_nd_kde_gauss_add_obs (self->rbf, srow_i);
+        ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->rbf), srow_i);
         
         ncm_vector_free (srow_i);
       }

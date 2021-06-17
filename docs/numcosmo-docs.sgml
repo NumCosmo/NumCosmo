@@ -21,9 +21,11 @@
       <xi:include href="xml/ncm_c.xml"/>
       <xi:include href="xml/ncm_cfg.xml"/>
       <xi:include href="xml/ncm_util.xml"/>
+      <xi:include href="xml/ncm_iset.xml"/>
       <xi:include href="xml/ncm_diff.xml"/>
       <xi:include href="xml/ncm_vector.xml"/>
       <xi:include href="xml/ncm_matrix.xml"/>
+      <xi:include href="xml/ncm_nnls.xml"/>
       <xi:include href="xml/ncm_serialize.xml"/>
       <xi:include href="xml/ncm_obj_array.xml"/>
       <xi:include href="xml/ncm_integral1d.xml"/>
@@ -100,7 +102,6 @@
       <xi:include href="xml/ncm_vparam.xml"/>
       <xi:include href="xml/ncm_model_ctrl.xml"/>
       <xi:include href="xml/ncm_model_builder.xml"/>
-      <xi:include href="xml/ncm_model_mvnd.xml"/>
       <xi:include href="xml/ncm_mset.xml"/>
       <xi:include href="xml/ncm_mset_func.xml"/>
       <xi:include href="xml/ncm_mset_func1.xml"/>
@@ -122,7 +123,6 @@
       <xi:include href="xml/ncm_data_poisson.xml"/>    
       <xi:include href="xml/ncm_data_dist1d.xml"/>
       <xi:include href="xml/ncm_data_dist2d.xml"/>
-      <xi:include href="xml/ncm_data_gauss_cov_mvnd.xml"/>
     </section>
     <section>
     <title>Statistical Analysis</title>
@@ -134,6 +134,7 @@
       <xi:include href="xml/ncm_stats_dist2d_spline.xml"/>
       <xi:include href="xml/ncm_stats_dist_nd.xml"/>
       <xi:include href="xml/ncm_stats_dist_nd_kde_gauss.xml"/>
+      <xi:include href="xml/ncm_stats_dist_nd_kde_studentt.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_prior.xml"/>
@@ -158,16 +159,28 @@
       <xi:include href="xml/ncm_fit_levmar.xml"/>
       <xi:include href="xml/ncm_fit_mc.xml"/>
       <xi:include href="xml/ncm_fit_mcbs.xml"/>
+      <xi:include href="xml/ncm_lh_ratio1d.xml"/>
+      <xi:include href="xml/ncm_lh_ratio2d.xml"/>
+      <xi:include href="xml/ncm_abc.xml"/>
+    </section>
+    <section>
+      <title>MCMC and ESMCMC</title>
       <xi:include href="xml/ncm_fit_mcmc.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_stretch.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_walk.xml"/>
       <xi:include href="xml/ncm_fit_esmcmc_walker_aps.xml"/>
-      <xi:include href="xml/ncm_lh_ratio1d.xml"/>
-      <xi:include href="xml/ncm_lh_ratio2d.xml"/>
-      <xi:include href="xml/ncm_abc.xml"/>
-    </section>
+    </section>   
+    <section>
+      <title>MCMC Testing</title>
+      <xi:include href="xml/ncm_model_mvnd.xml"/>
+      <xi:include href="xml/ncm_data_gauss_cov_mvnd.xml"/>
+      <xi:include href="xml/ncm_model_rosenbrock.xml"/>
+      <xi:include href="xml/ncm_data_rosenbrock.xml"/>
+      <xi:include href="xml/ncm_model_funnel.xml"/>
+      <xi:include href="xml/ncm_data_funnel.xml"/>
+    </section>   
     <section>
       <title>Spherical maps and Healpix</title>
       <xi:include href="xml/ncm_sphere_map.xml"/>

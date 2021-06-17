@@ -32,6 +32,8 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_stats_vec.h>
 
 G_BEGIN_DECLS
 
@@ -50,14 +52,17 @@ struct _NcmStatsDistNdClass
 {
   /*< private >*/ 
   GObjectClass parent_class;
+  void (*set_dim) (NcmStatsDistNd *dnd, const guint dim);
+  gdouble (*get_rot_bandwidth) (NcmStatsDistNd *dnd, const guint d, const gdouble n);
+  gdouble (*get_kernel_lnnorm) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
+  void (*prepare_kernel_args) (NcmStatsDistNd *dnd, NcmStatsVec *sample);
+  void (*prepare_IM) (NcmStatsDistNd *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM);
   void (*prepare) (NcmStatsDistNd *dnd);
   void (*prepare_interp) (NcmStatsDistNd *dnd, NcmVector *m2lnp);
-  void (*set_dim) (NcmStatsDistNd *dnd, const guint dim);
-  gdouble (*eval) (NcmStatsDistNd *dnd, NcmVector *x);
-  gdouble (*eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *x);
-  void (*sample) (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
-  void (*kernel_sample) (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble scale, NcmRNG *rng);
-  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble scale);
+  gdouble (*eval) (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+  gdouble (*eval_m2lnp) (NcmStatsDistNd *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href);
+  void (*kernel_sample) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+  gdouble (*kernel_eval_m2lnp) (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
   void (*reset) (NcmStatsDistNd *dnd);
 };
 
@@ -68,6 +73,25 @@ struct _NcmStatsDistNd
   NcmStatsDistNdPrivate *priv;
 };
 
+/**
+ * NcmStatsDistNdCV:
+ * @NCM_STATS_DIST_ND_CV_NONE: No cross validation
+ * @NCM_STATS_DIST_ND_CV_SPLIT: Sample split cross validation
+ * @NCM_STATS_DIST_ND_CV_SPLIT_FITD: Sample split cross validation fitting all diagonal elements
+ *
+ * Cross-validation method to be applied.
+ *
+ */
+typedef enum _NcmStatsDistNdCV
+{
+  NCM_STATS_DIST_ND_CV_NONE,
+  NCM_STATS_DIST_ND_CV_SPLIT,
+  NCM_STATS_DIST_ND_CV_SPLIT_FITD,
+  /* < private > */
+  NCM_STATS_DIST_ND_CV_LEN, /*< skip >*/
+
+} NcmStatsDistNdCV;
+
 GType ncm_stats_dist_nd_get_type (void) G_GNUC_CONST;
 
 NcmStatsDistNd *ncm_stats_dist_nd_ref (NcmStatsDistNd *dnd);
@@ -76,14 +100,34 @@ void ncm_stats_dist_nd_clear (NcmStatsDistNd **dnd);
 
 guint ncm_stats_dist_nd_get_dim (NcmStatsDistNd *dnd);
 
+gdouble ncm_stats_dist_nd_get_rot_bandwidth (NcmStatsDistNd *dnd, const guint d, const gdouble n);
+gdouble ncm_stats_dist_nd_get_kernel_lnnorm (NcmStatsDistNd *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
+
+void ncm_stats_dist_nd_set_over_smooth (NcmStatsDistNd *dnd, const gdouble over_smooth);
+gdouble ncm_stats_dist_nd_get_over_smooth (NcmStatsDistNd *dnd);
+
+void ncm_stats_dist_nd_set_split_frac (NcmStatsDistNd *dnd, const gdouble split_frac);
+gdouble ncm_stats_dist_nd_get_split_frac (NcmStatsDistNd *dnd);
+
+void ncm_stats_dist_nd_set_nearPD_maxiter (NcmStatsDistNd *dnd, const guint maxiter);
+guint ncm_stats_dist_nd_get_nearPD_maxiter (NcmStatsDistNd *dnd);
+
+void ncm_stats_dist_nd_set_cv_type (NcmStatsDistNd *dnd, const NcmStatsDistNdCV cv_type);
+NcmStatsDistNdCV ncm_stats_dist_nd_get_cv_type (NcmStatsDistNd *dnd);
+
 void ncm_stats_dist_nd_prepare (NcmStatsDistNd *dnd);
 void ncm_stats_dist_nd_prepare_interp (NcmStatsDistNd *dnd, NcmVector *m2lnp);
 gdouble ncm_stats_dist_nd_eval (NcmStatsDistNd *dnd, NcmVector *x);
 gdouble ncm_stats_dist_nd_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x);
 void ncm_stats_dist_nd_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmRNG *rng);
 
-void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const gdouble scale, NcmRNG *rng);
-gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const gdouble scale);
+gdouble ncm_stats_dist_nd_get_rnorm (NcmStatsDistNd *dnd);
+
+void ncm_stats_dist_nd_kernel_sample (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
+gdouble ncm_stats_dist_nd_kernel_eval_m2lnp (NcmStatsDistNd *dnd, NcmVector *x, NcmVector *y, const NcmVector *href);
+
+void ncm_stats_dist_nd_add_obs_weight (NcmStatsDistNd *dndg, NcmVector *y, const gdouble w);
+void ncm_stats_dist_nd_add_obs (NcmStatsDistNd *dndg, NcmVector *y);
 
 void ncm_stats_dist_nd_reset (NcmStatsDistNd *dnd);
 

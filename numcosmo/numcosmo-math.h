@@ -42,6 +42,7 @@
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_nnls.h>
 #include <numcosmo/math/ncm_serialize.h>
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_integral1d.h>
@@ -54,7 +55,10 @@
 #include <numcosmo/math/ncm_stats_dist2d.h>
 #include <numcosmo/math/ncm_stats_dist2d_spline.h>
 #include <numcosmo/math/ncm_stats_dist_nd.h>
+#include <numcosmo/math/ncm_stats_dist_nd_vbk.h>
 #include <numcosmo/math/ncm_stats_dist_nd_kde_gauss.h>
+#include <numcosmo/math/ncm_stats_dist_nd_kde_studentt.h>
+#include <numcosmo/math/ncm_stats_dist_nd_vbk_studentt.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -93,6 +97,8 @@
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_model_builder.h>
 #include <numcosmo/math/ncm_model_mvnd.h>
+#include <numcosmo/math/ncm_model_rosenbrock.h>
+#include <numcosmo/math/ncm_model_funnel.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_mset_func1.h>
@@ -107,6 +113,8 @@
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/math/ncm_data_poisson.h>
 #include <numcosmo/math/ncm_data_gauss_cov_mvnd.h>
+#include <numcosmo/math/ncm_data_rosenbrock.h>
+#include <numcosmo/math/ncm_data_funnel.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_prior.h>
@@ -119,6 +127,7 @@
 #include <numcosmo/math/ncm_function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
+#include <numcosmo/math/ncm_iset.h>
 #include <numcosmo/math/ncm_diff.h>
 #include <numcosmo/math/ncm_ode.h>
 #include <numcosmo/math/ncm_ode_eval.h>

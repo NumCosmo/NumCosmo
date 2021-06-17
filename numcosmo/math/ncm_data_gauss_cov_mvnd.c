@@ -337,7 +337,7 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
 
     if (NNin > maxiter)
     {
-      g_warning ("ncm_data_gauss_cov_mvnd_est_ratio: too many interations, result is not trustworthy!");
+      g_warning ("ncm_data_gauss_cov_mvnd_est_ratio: too many iterations, result is not trustworthy!");
       break;
     }
   }

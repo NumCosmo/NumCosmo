@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
 
 G_BEGIN_DECLS
@@ -52,7 +53,7 @@ struct _NcmFitESMCMCWalkerClass
   guint (*get_size) (NcmFitESMCMCWalker *walker);
   void (*set_nparams) (NcmFitESMCMCWalker *walker, guint nparams);
   guint (*get_nparams) (NcmFitESMCMCWalker *walker);  
-  void (*setup) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
+  void (*setup) (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
   void (*step) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
   gdouble (*prob) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
   gdouble (*prob_norm) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
@@ -78,7 +79,7 @@ guint ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker);
 void ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
 guint ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker);
 
-void ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
+void ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
 void ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 gdouble ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
 gdouble ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);

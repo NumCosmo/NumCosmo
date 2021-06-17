@@ -41,14 +41,17 @@
 #include "math/ncm_fit_esmcmc_walker_aps.h"
 
 #include "math/ncm_fit_esmcmc.h"
-#include "math/ncm_stats_dist_nd_kde_gauss.h"
+#include "math/ncm_stats_dist_nd_vbk_studentt.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_sort.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 
 enum
 {
   PROP_0,
   PROP_USE_INTERP,
-  PROP_RAND_WALK_PROB,
-  PROP_RAND_WALK_SCALE,
 };
 
 struct _NcmFitESMCMCWalkerAPSPrivate
@@ -59,14 +62,12 @@ struct _NcmFitESMCMCWalkerAPSPrivate
   NcmVector *m2lnp_star;
   NcmVector *m2lnp_cur;
   gchar *desc;
-  NcmStatsDistNdKDEGauss *dndg0;
-  NcmStatsDistNdKDEGauss *dndg1;
+  NcmStatsDistNdVBK *dndg0;
+  NcmStatsDistNdVBK *dndg1;
   GPtrArray *thetastar;
   NcmVector *m2lnL_s0;
   NcmVector *m2lnL_s1;
   gboolean use_interp;
-  gdouble rand_walk_prob;
-  gdouble rand_walk_scale;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPS, ncm_fit_esmcmc_walker_aps, NCM_TYPE_FIT_ESMCMC_WALKER);
@@ -88,8 +89,6 @@ ncm_fit_esmcmc_walker_aps_init (NcmFitESMCMCWalkerAPS *aps)
   self->m2lnL_s0        = NULL;
   self->m2lnL_s1        = NULL;
   self->use_interp      = FALSE;
-  self->rand_walk_prob  = 0.0;
-  self->rand_walk_scale = 0.0;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
 }
@@ -104,12 +103,6 @@ _ncm_fit_esmcmc_walker_aps_set_property (GObject *object, guint prop_id, const G
   {
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_aps_use_interp (aps, g_value_get_boolean (value));
-      break;
-    case PROP_RAND_WALK_PROB:
-      ncm_fit_esmcmc_walker_aps_set_rand_walk_prob (aps, g_value_get_double (value));
-      break;
-    case PROP_RAND_WALK_SCALE:
-      ncm_fit_esmcmc_walker_aps_set_rand_walk_scale (aps, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -130,12 +123,6 @@ _ncm_fit_esmcmc_walker_aps_get_property (GObject *object, guint prop_id, GValue 
     case PROP_USE_INTERP:
       g_value_set_boolean (value, self->use_interp);
       break;
-    case PROP_RAND_WALK_PROB:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_aps_get_rand_walk_prob (aps));
-      break;
-    case PROP_RAND_WALK_SCALE:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_aps_get_rand_walk_scale (aps));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -153,8 +140,8 @@ _ncm_fit_esmcmc_walker_aps_dispose (GObject *object)
   ncm_vector_clear (&self->m2lnL_s0);
   ncm_vector_clear (&self->m2lnL_s1);
   
-  ncm_stats_dist_nd_kde_gauss_clear (&self->dndg0);
-  ncm_stats_dist_nd_kde_gauss_clear (&self->dndg1);
+  ncm_stats_dist_nd_vbk_clear (&self->dndg0);
+  ncm_stats_dist_nd_vbk_clear (&self->dndg1);
 
   g_clear_pointer (&self->thetastar, g_ptr_array_unref);
 
@@ -176,7 +163,7 @@ static void _ncm_fit_esmcmc_walker_aps_set_size (NcmFitESMCMCWalker *walker, gui
 static guint _ncm_fit_esmcmc_walker_aps_get_size (NcmFitESMCMCWalker *walker);
 static void _ncm_fit_esmcmc_walker_aps_set_nparams (NcmFitESMCMCWalker *walker, guint nparams);
 static guint _ncm_fit_esmcmc_walker_aps_get_nparams (NcmFitESMCMCWalker *walker);
-static void _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
+static void _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
 static void _ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 static gdouble _ncm_fit_esmcmc_walker_aps_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
 static gdouble _ncm_fit_esmcmc_walker_aps_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
@@ -200,22 +187,6 @@ ncm_fit_esmcmc_walker_aps_class_init (NcmFitESMCMCWalkerAPSClass *klass)
                                                          NULL,
                                                          "Whether to use interpolation to build the posterior approximation",
                                                          TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_RAND_WALK_PROB,
-                                   g_param_spec_double ("rand-walk-prob",
-                                                         NULL,
-                                                         "The probability of making a random walk step",
-                                                         0.0, 1.0, 0.01,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_RAND_WALK_SCALE,
-                                   g_param_spec_double ("rand-walk-scale",
-                                                         NULL,
-                                                         "The probability of making a random walk step",
-                                                         0.0, G_MAXDOUBLE, 0.5,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_aps_set_size;
@@ -243,8 +214,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
   {
     gint i;
     
-    ncm_stats_dist_nd_kde_gauss_clear (&self->dndg0);
-    ncm_stats_dist_nd_kde_gauss_clear (&self->dndg1);
+    ncm_stats_dist_nd_vbk_clear (&self->dndg0);
+    ncm_stats_dist_nd_vbk_clear (&self->dndg1);
     ncm_vector_clear (&self->m2lnp_star);
     ncm_vector_clear (&self->m2lnp_cur);
 
@@ -259,11 +230,22 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
     self->m2lnp_cur  = ncm_vector_new (self->size);
     self->m2lnL_s0   = ncm_vector_new (self->size_2);
     self->m2lnL_s1   = ncm_vector_new (self->size_2);
-    self->dndg0      = ncm_stats_dist_nd_kde_gauss_new (self->nparams, FALSE);
-    self->dndg1      = ncm_stats_dist_nd_kde_gauss_new (self->nparams, FALSE);
 
-    ncm_stats_dist_nd_kde_gauss_set_over_smooth (self->dndg0, 1.273);
-    ncm_stats_dist_nd_kde_gauss_set_over_smooth (self->dndg1, 1.273);
+    if (TRUE)
+    {
+      self->dndg0 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_studentt_new (self->nparams, NCM_STATS_DIST_ND_VBK_CV_NONE, 1.0));
+      self->dndg1 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_studentt_new (self->nparams, NCM_STATS_DIST_ND_VBK_CV_NONE, 1.0));
+    }
+ /*   else
+    {
+      self->dndg0 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT));
+      self->dndg1 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT));
+    }*/
+
+    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg0, 1.0);
+    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg1, 1.0);
+    ncm_stats_dist_nd_vbk_set_split_frac (self->dndg0, 1.0);
+    ncm_stats_dist_nd_vbk_set_split_frac (self->dndg1, 1.0);
     
     for (i = 0; i < self->size; i++)
     {
@@ -320,75 +302,89 @@ _ncm_fit_esmcmc_walker_aps_get_nparams (NcmFitESMCMCWalker *walker)
 }
 
 static void 
-_ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
+_ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
   NcmFitESMCMCWalkerAPS *aps = NCM_FIT_ESMCMC_WALKER_APS (walker);
   NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
+  const gdouble T = 1.0;
   gint i;
 
-  /*printf ("SETUP!\n");*/
-  
   if (ki < self->size_2)
   {
-    ncm_stats_dist_nd_reset (NCM_STATS_DIST_ND (self->dndg0));
+    ncm_stats_dist_nd_vbk_reset (NCM_STATS_DIST_ND_VBK (self->dndg0));
     for (i = self->size_2; i < self->size; i++)
     {
-      NcmVector *theta_i = g_ptr_array_index (theta, i);
+      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
+      ncm_vector_set (self->m2lnL_s0, i - self->size_2, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
+      /*ncm_stats_dist_nd_vbk_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
+    }
 
-      ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
+    {
+      const gint n = self->size - self->size_2;
+      size_t p[n];
+      gsl_sort_index (p, ncm_vector_data (self->m2lnL_s0), ncm_vector_stride (self->m2lnL_s0), n);
 
-      ncm_stats_dist_nd_kde_gauss_add_obs (self->dndg0, theta_i);
-      /*printf ("SETUP! ADD   %d\n", i);*/
+      for (i = self->size_2; i < self->size; i++)
+      {
+        const gint j = self->size_2 + p[n - 1 - (i-self->size_2)];
+        NcmVector *theta_j = g_ptr_array_index (theta, j);
+        ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
+        ncm_stats_dist_nd_vbk_add_obs (self->dndg0, theta_j);
+        /*printf ("AddingA [%d %d %d] % 22.15g\n", i, n - 1 - (i-self->size_2), j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
+      }
     }
 
     if (self->use_interp)
-      ncm_stats_dist_nd_prepare_interp (NCM_STATS_DIST_ND (self->dndg0), self->m2lnL_s0);
+      ncm_stats_dist_nd_vbk_prepare_interp (NCM_STATS_DIST_ND_VBK (self->dndg0), self->m2lnL_s0);
     else
-      ncm_stats_dist_nd_prepare (NCM_STATS_DIST_ND (self->dndg0));
+      ncm_stats_dist_nd_vbk_prepare (NCM_STATS_DIST_ND_VBK (self->dndg0));
 
     for (i = ki; i < self->size_2; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
-      if ((self->rand_walk_prob > 0.0) && (gsl_rng_uniform (rng->r) < self->rand_walk_prob))
-      {
-        NcmVector *theta_i = g_ptr_array_index (theta, i);        
-        ncm_stats_dist_nd_kernel_sample (NCM_STATS_DIST_ND (self->dndg0), thetastar_i, theta_i, self->rand_walk_scale, rng);
-      }
-      else
-        ncm_stats_dist_nd_sample (NCM_STATS_DIST_ND (self->dndg0), thetastar_i, rng);
-      /*printf ("SETUP! SAMPLE %d\n", i);*/
+      do {
+        ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg0), thetastar_i, rng);
+      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
     }
   }
   if (kf >= self->size_2)
   {
-    ncm_stats_dist_nd_reset (NCM_STATS_DIST_ND (self->dndg1));
+    ncm_stats_dist_nd_vbk_reset (NCM_STATS_DIST_ND_VBK (self->dndg1));
     
     for (i = 0; i < self->size_2; i++)
     {
-      NcmVector *theta_i = g_ptr_array_index (theta, i);
-
-      ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-
-      ncm_stats_dist_nd_kde_gauss_add_obs (self->dndg1, theta_i);
-      /*printf ("SETUP! ADD   %d\n", i);*/
+      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
+      ncm_vector_set (self->m2lnL_s1, i, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
+      /*ncm_stats_dist_nd_vbk_add_obs (self->dndg1, theta_i);*/
     }
+
+    {
+      const gint n = self->size_2;
+      size_t p[n];
+      gsl_sort_index (p, ncm_vector_data (self->m2lnL_s1), ncm_vector_stride (self->m2lnL_s1), n);
+
+      for (i = 0; i < self->size_2; i++)
+      {
+        const gint j = p[n - 1 - i];
+        NcmVector *theta_j = g_ptr_array_index (theta, j);
+        ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
+        ncm_stats_dist_nd_vbk_add_obs (self->dndg1, theta_j);
+        /*printf ("AddingB [%d %d %d] % 22.15g\n", i, n - 1 - i, j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
+      }
+    }
+
     
     if (self->use_interp)
-      ncm_stats_dist_nd_prepare_interp (NCM_STATS_DIST_ND (self->dndg1), self->m2lnL_s1);
+      ncm_stats_dist_nd_vbk_prepare_interp (NCM_STATS_DIST_ND_VBK (self->dndg1), self->m2lnL_s1);
     else
-      ncm_stats_dist_nd_prepare (NCM_STATS_DIST_ND (self->dndg1));
+      ncm_stats_dist_nd_vbk_prepare (NCM_STATS_DIST_ND_VBK (self->dndg1));
     
     for (i = self->size_2; i < kf; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
-      if ((self->rand_walk_prob > 0.0) && (gsl_rng_uniform (rng->r) < self->rand_walk_prob))
-      {
-        NcmVector *theta_i = g_ptr_array_index (theta, i);
-        ncm_stats_dist_nd_kernel_sample (NCM_STATS_DIST_ND (self->dndg1), thetastar_i, theta_i, self->rand_walk_scale, rng);
-      }
-      else
-        ncm_stats_dist_nd_sample (NCM_STATS_DIST_ND (self->dndg1), thetastar_i, rng);
-      /*printf ("SETUP! SAMPLE %d\n", i);*/
+      do {
+        ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg1), thetastar_i, rng);
+      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
     }
   }
 }
@@ -403,24 +399,22 @@ _ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
 
   if (k < self->size_2)
   {
-    const gdouble Kxy          = (self->rand_walk_prob > 0.0) ? ncm_stats_dist_nd_kernel_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg0), theta_k, thetastar, self->rand_walk_scale) : 0.0;
-    const gdouble m2lnaps_star = (1.0 - self->rand_walk_prob) * ncm_stats_dist_nd_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg0), thetastar) + self->rand_walk_prob * Kxy;
-    const gdouble m2lnaps_cur  = (1.0 - self->rand_walk_prob) * ncm_stats_dist_nd_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg0), theta_k)   + self->rand_walk_prob * Kxy;
+    const gdouble m2lnaps_star = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg0), thetastar);
+    const gdouble m2lnaps_cur  = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_k);
     
     ncm_vector_set (self->m2lnp_star, k, m2lnaps_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnaps_cur);
-    /*printf ("%u % 22.15g | % 22.15g % 22.15g\n", k, - 0.5 * (m2lnaps_cur - m2lnaps_star), - 0.5 * m2lnaps_cur, - 0.5 * m2lnaps_star);*/
+    /*printf ("%u % 22.15g | lnp_cur % 22.15g lnp_star % 22.15g\n", k, - 0.5 * (m2lnaps_cur - m2lnaps_star), - 0.5 * m2lnaps_cur, - 0.5 * m2lnaps_star);*/
   }
 
   if (k >= self->size_2)
   {
-    const gdouble Kxy          = (self->rand_walk_prob > 0.0) ? ncm_stats_dist_nd_kernel_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg1), theta_k, thetastar, self->rand_walk_scale) : 0.0;
-    const gdouble m2lnaps_star = (1.0 - self->rand_walk_prob) * ncm_stats_dist_nd_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg1), thetastar) + self->rand_walk_prob * Kxy;
-    const gdouble m2lnaps_cur  = (1.0 - self->rand_walk_prob) * ncm_stats_dist_nd_eval_m2lnp (NCM_STATS_DIST_ND (self->dndg1), theta_k)   + self->rand_walk_prob * Kxy;
+    const gdouble m2lnaps_star = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg1), thetastar);
+    const gdouble m2lnaps_cur  = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg1), theta_k);
     
     ncm_vector_set (self->m2lnp_star, k, m2lnaps_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnaps_cur);
-    /*printf ("%u % 22.15g | % 22.15g % 22.15g\n", k, - 0.5 * (m2lnaps_cur - m2lnaps_star), - 0.5 * m2lnaps_cur, - 0.5 * m2lnaps_star);*/
+    /*printf ("%u % 22.15g | lnp_cur % 22.15g lnp_star % 22.15g\n", k, - 0.5 * (m2lnaps_cur - m2lnaps_star), - 0.5 * m2lnaps_cur, - 0.5 * m2lnaps_star);*/
   }
   
   /*ncm_vector_log_vals (theta_k,   "    THETA: ", "% 22.15g", TRUE);*/
@@ -435,13 +429,13 @@ _ncm_fit_esmcmc_walker_aps_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
   const gdouble m2lnp_star = ncm_vector_get (self->m2lnp_star, k);
   const gdouble m2lnp_cur  = ncm_vector_get (self->m2lnp_cur, k);
 
-/*  
-  const gdouble cor = ((m2lnL_star - m2lnp_star) + (m2lnL_cur - m2lnp_cur)) * 0.5;
-  printf ("m2lnL_star % 22.15g m2lnp_star % 22.15g m2lnL_cur % 22.15g m2lnp_cur % 22.15g L cur->star: %12.5g p star->cur: %12.5g | T %12.5g\n", 
-          m2lnL_star, m2lnp_star + cor, m2lnL_cur, m2lnp_cur + cor, 
+/*
+  printf ("AAA m2lnL_star % 22.15g m2lnp_star % 22.15g m2lnL_cur % 22.15g m2lnp_cur % 22.15g L cur->star: %12.5g p star->cur: %12.5g | T %12.5g\n",
+          -0.5 * m2lnL_star, -0.5 * m2lnp_star, -0.5 * m2lnL_cur, -0.5 * m2lnp_cur,
           exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)),
           MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
-*/    
+*/
+
 
   return exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
 }
@@ -511,72 +505,4 @@ ncm_fit_esmcmc_walker_aps_use_interp (NcmFitESMCMCWalkerAPS *aps, gboolean use_i
   NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
   
   self->use_interp = use_interp;
-}
-
-/**
- * ncm_fit_esmcmc_walker_aps_set_rand_walk_prob:
- * @aps: a #NcmFitESMCMCWalkerAPS
- * @prob: a double $\in [0,1)$
- * 
- * Sets the probability of stepping using a random walk instead of sampling from
- * the posterior approximation.
- * 
- */
-void 
-ncm_fit_esmcmc_walker_aps_set_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps, const gdouble prob)
-{
-  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
-
-  g_assert_cmpfloat (prob, >=, 0.0);
-  g_assert_cmpfloat (prob, <,  1.0);
-
-  self->rand_walk_prob = prob;
-}
-
-/**
- * ncm_fit_esmcmc_walker_aps_set_rand_walk_scale:
- * @aps: a #NcmFitESMCMCWalkerAPS
- * @scale: a double $\in (0,\infty)$
- * 
- * Sets the scale of the random walk step.
- * 
- */
-void 
-ncm_fit_esmcmc_walker_aps_set_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps, const gdouble scale)
-{
-  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
-
-  g_assert_cmpfloat (scale, >, 0.0);
-
-  self->rand_walk_scale = scale;
-}
-
-/**
- * ncm_fit_esmcmc_walker_aps_get_rand_walk_prob:
- * @aps: a #NcmFitESMCMCWalkerAPS
- * 
- * Gets current probability of stepping using a random walk instead of sampling from
- * the posterior approximation.
- * 
- */
-gdouble 
-ncm_fit_esmcmc_walker_aps_get_rand_walk_prob (NcmFitESMCMCWalkerAPS *aps)
-{
-  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
-  return self->rand_walk_prob;
-}
-
-/**
- * ncm_fit_esmcmc_walker_aps_get_rand_walk_scale:
- * @aps: a #NcmFitESMCMCWalkerAPS
- * 
- * Gets current probability of stepping using a random walk instead of sampling from
- * the posterior approximation.
- * 
- */
-gdouble 
-ncm_fit_esmcmc_walker_aps_get_rand_walk_scale (NcmFitESMCMCWalkerAPS *aps)
-{
-  NcmFitESMCMCWalkerAPSPrivate * const self = aps->priv;
-  return self->rand_walk_scale;
 }
