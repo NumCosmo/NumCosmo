@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_stats_dist_nd_vbk_gauss.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,32 +32,32 @@
  *
  * An arbitrary N dimensional probability distribution using gaussian KDE.
  *
- * 
+ *
  * This object provides the tools to perform a radial basis interpolation
  * in a multidimensional function, using a multivariate gaussian distribution.
  * such that we are able to sample the original functio from this new interpolation function.
- * For more informations about radial basis interpolation,   
+ * For more informations about radial basis interpolation,
  * check #NcmStatsDistNd.
  * A brief description of the Multivariate gaussian function can be found below.
- * For more information, check [[The R Journal Vol. 5/2, December 2013](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)]  
+ * For more information, check [[The R Journal Vol. 5/2, December 2013](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)]
  *
- * In this file, we use the Multivariate gaussian function as the radial basis function. The function has the stocastic representation given by  
+ * In this file, we use the Multivariate gaussian function as the radial basis function. The function has the stocastic representation given by
  *
- * \begin{align} 
- * \boldsymbol{X}=\boldsymbol{\mu}+ A \boldsymbol{Z} 
- * ,\end{align}                     
+ * \begin{align}
+ * \boldsymbol{X}=\boldsymbol{\mu}+ A \boldsymbol{Z}
+ * ,\end{align}
  * where $\boldsymbol{Z}$ is a p-dimensional random vector, $A$ is a $p \times p$ matrix and $\mu$ is the mean vector.
  *
  *$\boldsymbol{X}$ is fully determined by the covariance matrix $\Sigma = \boldsymbol{A}\boldsymbol{A}^t$ and the mean vector $\mu$.
  * Assuming that the covariance matrix is positive definite, $\boldsymbol{X}$ has the probability density
  *
- * \begin{align} 
- * f_{X}(x)=\frac{1}{(2 \pi)^{d / 2} \sqrt{\operatorname{det} \Sigma}} \exp \left(-\frac{1}{2}(x-\mu)^{\top} \Sigma^{-1}(x-\mu)\right), \quad x \in \mathbb{R}^{d}    
- *, \end{align} 
- * where $p$ is the dimension and $x$ are the points to be evaluated. 
+ * \begin{align}
+ * f_{X}(x)=\frac{1}{(2 \pi)^{d / 2} \sqrt{\operatorname{det} \Sigma}} \exp \left(-\frac{1}{2}(x-\mu)^{\top} \Sigma^{-1}(x-\mu)\right), \quad x \in \mathbb{R}^{d}
+ *, \end{align}
+ * where $p$ is the dimension and $x$ are the points to be evaluated.
  *
- * Once this object is initialized, we may use the methods in the #NcmStatsDistNdVBKclass to perform the interpolation 
- * and to generate a sample from the interpolated polinomal function.    
+ * Once this object is initialized, we may use the methods in the #NcmStatsDistNdVBKclass to perform the interpolation
+ * and to generate a sample from the interpolated polinomal function.
  *
  * The user must provide the following input values: $p$ - ncm_stats_dist_nd_vbk_gauss_new(),
  * cv_type - ncm_stats_dist_nd_vbk_gauss_new().
@@ -96,7 +97,7 @@ static void
 ncm_stats_dist_nd_vbk_gauss_init (NcmStatsDistNdVBKGauss *dndg)
 {
   NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv = ncm_stats_dist_nd_vbk_gauss_get_instance_private (dndg);
-
+  
   self->eval_v = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
 
@@ -107,7 +108,7 @@ _ncm_stats_dist_nd_vbk_gauss_set_property (GObject *object, guint prop_id, const
   /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_GAUSS (object));
-
+  
   switch (prop_id)
   {
     default:
@@ -121,9 +122,9 @@ _ncm_stats_dist_nd_vbk_gauss_get_property (GObject *object, guint prop_id, GValu
 {
   /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (object);*/
   /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
-
+  
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_GAUSS (object));
-
+  
   switch (prop_id)
   {
     default:
@@ -135,11 +136,11 @@ _ncm_stats_dist_nd_vbk_gauss_get_property (GObject *object, guint prop_id, GValu
 static void
 _ncm_stats_dist_nd_vbk_gauss_dispose (GObject *object)
 {
-  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (object);
+  NcmStatsDistNdVBKGauss *dndg               = NCM_STATS_DIST_ND_VBK_GAUSS (object);
   NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
-
+  
   g_clear_pointer (&self->eval_v, g_array_unref);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_nd_vbk_gauss_parent_class)->dispose (object);
 }
@@ -147,7 +148,6 @@ _ncm_stats_dist_nd_vbk_gauss_dispose (GObject *object)
 static void
 _ncm_stats_dist_nd_vbk_gauss_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_nd_vbk_gauss_parent_class)->finalize (object);
 }
@@ -164,9 +164,9 @@ static gdouble _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVBK
 static void
 ncm_stats_dist_nd_vbk_gauss_class_init (NcmStatsDistNdVBKGaussClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmStatsDistNdVBKClass *dnd_class  = NCM_STATS_DIST_ND_VBK_CLASS (klass);
-
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmStatsDistNdVBKClass *dnd_class = NCM_STATS_DIST_ND_VBK_CLASS (klass);
+  
   object_class->set_property = &_ncm_stats_dist_nd_vbk_gauss_set_property;
   object_class->get_property = &_ncm_stats_dist_nd_vbk_gauss_get_property;
   object_class->dispose      = &_ncm_stats_dist_nd_vbk_gauss_dispose;
@@ -184,7 +184,7 @@ ncm_stats_dist_nd_vbk_gauss_class_init (NcmStatsDistNdVBKGaussClass *klass)
 static gdouble
 _ncm_stats_dist_nd_vbk_gauss_f (NcmStatsDistNdVBKGaussPrivate * const self, const gdouble chi2)
 {
-  return exp (- 0.5 * chi2);
+  return exp (-0.5 * chi2);
 }
 
 static gdouble
@@ -198,37 +198,38 @@ _ncm_stats_dist_nd_vbk_gauss_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, GPtrArra
 {
   register gdouble det_href = 1.0;
   gint i;
+  
   for (i = 0; i < d; i++)
     det_href *= ncm_vector_fast_get (href, i);
-
+  
   return 0.5 * (d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (g_ptr_array_index (cov_array, l))) + log (det_href);
 }
 
-static void 
+static void
 _ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM)
 {
   NcmStatsDistNdVBKGaussPrivate * const self = NCM_STATS_DIST_ND_VBK_GAUSS (dnd)->priv;
   gint i;
-
+  
   for (i = 0; i < n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (invUsample, i);
     gint j;
-
+    
     ncm_matrix_set (IM, i, i, 1.0);
-
+    
     for (j = i + 1; j < n; j++)
     {
       NcmVector *row_j = g_ptr_array_index (invUsample, j);
-      gdouble chi2_ij = 0.0;
+      gdouble chi2_ij  = 0.0;
       gdouble p_ij;
       gint k;
-
+      
       for (k = 0; k < d; k++)
       {
         chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)) / ncm_vector_fast_get (href, k));
       }
-
+      
       p_ij = _ncm_stats_dist_nd_vbk_gauss_f (self, chi2_ij);
       
       ncm_matrix_set (IM, i, j, p_ij);
@@ -237,63 +238,63 @@ _ncm_stats_dist_nd_vbk_gauss_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *invU
   }
 }
 
-static gdouble 
+static gdouble
 _ncm_stats_dist_nd_vbk_gauss_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
 {
-  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
+  NcmStatsDistNdVBKGauss *dndg               = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
   NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
-  gdouble s = 0.0;
-  gdouble c = 0.0;
+  gdouble s                                  = 0.0;
+  gdouble c                                  = 0.0;
   gint i;
   
-  for (i = 0; i < n; i++)
-  {
-    NcmVector *row_i  = g_ptr_array_index (invUsample, i);
-    const gdouble w_i = ncm_vector_get (weights, i);
-    gdouble e_i, t, chi2_i = 0.0;
-    gint k;
-
-    for (k = 0; k < d; k++)
-    {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k)) / ncm_vector_fast_get (href, k));
-    }
-
-    e_i  = w_i * _ncm_stats_dist_nd_vbk_gauss_f (self, chi2_i);
-    t    = s + e_i;
-    c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
-    s    = t;
-  }
-
-  return s;
-}
-
-static gdouble
-_ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
-{
-  NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
-  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
-  gdouble s = 0.0;
-  gdouble c = 0.0;
-  gint i;
-
   for (i = 0; i < n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (invUsample, i);
     const gdouble w_i = ncm_vector_get (weights, i);
     gdouble e_i, t, chi2_i = 0.0;
     gint k;
-
+    
     for (k = 0; k < d; k++)
     {
       chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k)) / ncm_vector_fast_get (href, k));
     }
-
-    e_i  = w_i * _ncm_stats_dist_nd_vbk_gauss_f (self, chi2_i);
-    t    = s + e_i;
-    c   += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
-    s    = t;
+    
+    e_i = w_i * _ncm_stats_dist_nd_vbk_gauss_f (self, chi2_i);
+    t   = s + e_i;
+    c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+    s   = t;
   }
+  
+  return s;
+}
 
+static gdouble
+_ncm_stats_dist_nd_vbk_gauss_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *invUy, GPtrArray *invUsample, const gint d, const gint n, const NcmVector *href)
+{
+  NcmStatsDistNdVBKGauss *dndg               = NCM_STATS_DIST_ND_VBK_GAUSS (dnd);
+  NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;
+  gdouble s                                  = 0.0;
+  gdouble c                                  = 0.0;
+  gint i;
+  
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *row_i = g_ptr_array_index (invUsample, i);
+    const gdouble w_i = ncm_vector_get (weights, i);
+    gdouble e_i, t, chi2_i = 0.0;
+    gint k;
+    
+    for (k = 0; k < d; k++)
+    {
+      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (invUy, k)) / ncm_vector_fast_get (href, k));
+    }
+    
+    e_i = w_i * _ncm_stats_dist_nd_vbk_gauss_f (self, chi2_i);
+    t   = s + e_i;
+    c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+    s   = t;
+  }
+  
   return -2.0 * log (s);
 }
 
@@ -303,18 +304,19 @@ _ncm_stats_dist_nd_vbk_gauss_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *c
   /*NcmStatsDistNdVBKGauss *dndg = NCM_STATS_DIST_ND_KDE_GAUSS (dnd);*/
   /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   gint i, ret;
-
+  
   for (i = 0; i < d; i++)
   {
     const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    
     ncm_vector_set (y, i, u_i * ncm_vector_fast_get (href, i));
   }
-
+  
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
   ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (y));
   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_gauss_sample_mean_scale", ret);
-
+  
   ncm_vector_add (y, mu);
 }
 
@@ -325,19 +327,19 @@ _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMatri
   /*NcmStatsDistNdVBKGaussPrivate * const self = dndg->priv;*/
   gdouble m2lnp;
   gint ret;
-
+  
   ncm_vector_memcpy (v, x);
   ncm_vector_sub (v, y);
-
+  
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp", ret);
-
+  
   ncm_vector_div (v, href);
-
+  
   ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp);
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp", ret);
-
+  
   return m2lnp;
 }
 
@@ -345,9 +347,9 @@ _ncm_stats_dist_nd_vbk_gauss_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMatri
  * ncm_stats_dist_nd_vbk_gauss_new:
  * @dim: sample space dimension
  * @cv_type: a #NcmStatsDistNdCV
- * 
+ *
  * Creates a new #NcmStatsDistNdVBKGauss object with sample dimension @dim.
- * 
+ *
  * Returns: a new #NcmStatsDistNdVBKGauss.
  */
 NcmStatsDistNdVBKGauss *
@@ -357,6 +359,7 @@ ncm_stats_dist_nd_vbk_gauss_new (const guint dim, const NcmStatsDistNdVBKCV cv_t
                                                "dimension", dim,
                                                "CV-type",   cv_type,
                                                NULL);
+  
   return dndg;
 }
 

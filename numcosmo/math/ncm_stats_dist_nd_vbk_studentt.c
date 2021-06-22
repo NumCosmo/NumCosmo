@@ -48,12 +48,12 @@
  * $\boldsymbol{Z}$ is a p-dimensional random vector, $A$ is a $p \times p$ matrix and $\mu$ is the mean vector.
  *
  * $\boldsymbol{X}$ is fully determined by the covariance matrix $\Sigma = \boldsymbol{A}\boldsymbol{A}^t$ and the mean vector $\mu$.
- * Assuming that the covariance matrix is positive definite, $\boldsymbol{X}$ has the probability density 
- 
+ * Assuming that the covariance matrix is positive definite, $\boldsymbol{X}$ has the probability density
+ *
  * \begin{align}
  * \phi(x) &= \frac{\Gamma[(\nu+p) / 2]}{\Gamma(\nu / 2) \nu^{p / 2} \pi^{p / 2}|\mathbf{\Sigma}|^{1 / 2}}\left[1+\frac{1}{\nu}
  * (\mathbf{x}-\boldsymbol{\mu})^{T} \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\right]^{-(\nu+p) / 2},
- * \end{align} 
+ * \end{align}
  * where $p$ is the dimension and $x$ are the points to be evaluated.
  *
  * Once this object is initialized, we may use the methods in the #NcmStasDistNd class to perform the interpolation
@@ -61,7 +61,7 @@
  *
  * The user must provide the following input values: $p$ - ncm_stats_dist_nd_vbk_studentt_new(),
  * cv_type - ncm_stats_dist_nd_vbk_studentt_new(), $\nu$ - ncm_stats_dist_nd_vbk_studentt_new().
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -100,14 +100,15 @@ static void
 ncm_stats_dist_nd_vbk_studentt_init (NcmStatsDistNdVBKStudentt *dndt)
 {
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv = ncm_stats_dist_nd_vbk_studentt_get_instance_private (dndt);
-
+  
   self->nu = 0.0;
 }
 
 static void
 _ncm_stats_dist_nd_vbk_studentt_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (object);
+  NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (object);
+  
   /*NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;*/
   
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_STUDENTT (object));
@@ -126,7 +127,8 @@ _ncm_stats_dist_nd_vbk_studentt_set_property (GObject *object, guint prop_id, co
 static void
 _ncm_stats_dist_nd_vbk_studentt_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (object);
+  NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (object);
+  
   /*NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;*/
   
   g_return_if_fail (NCM_IS_STATS_DIST_ND_VBK_STUDENTT (object));
@@ -147,7 +149,7 @@ _ncm_stats_dist_nd_vbk_studentt_dispose (GObject *object)
 {
   /*NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (object);*/
   /*NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;*/
-    
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_nd_vbk_studentt_parent_class)->dispose (object);
 }
@@ -169,7 +171,7 @@ static gdouble _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNd
 static void
 ncm_stats_dist_nd_vbk_studentt_class_init (NcmStatsDistNdVBKStudenttClass *klass)
 {
-  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmStatsDistNdVBKClass *dnd_class = NCM_STATS_DIST_ND_VBK_CLASS (klass);
   
   object_class->set_property = &_ncm_stats_dist_nd_vbk_studentt_set_property;
@@ -184,7 +186,7 @@ ncm_stats_dist_nd_vbk_studentt_class_init (NcmStatsDistNdVBKStudenttClass *klass
                                                         "nu value of the function",
                                                         1.0, G_MAXDOUBLE, 3.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   dnd_class->get_rot_bandwidth = &_ncm_stats_dist_nd_vbk_studentt_get_rot_bandwidth;
   dnd_class->get_kernel_lnnorm = &_ncm_stats_dist_nd_vbk_studentt_get_kernel_lnnorm;
   dnd_class->prepare_IM        = &_ncm_stats_dist_nd_vbk_studentt_prepare_IM;
@@ -205,12 +207,12 @@ _ncm_stats_dist_nd_vbk_studentt_get_rot_bandwidth (NcmStatsDistNdVBK *dnd, const
 {
   NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
-  const gdouble nu = (self->nu >= 3.0) ? self->nu : 3.0;
-
+  const gdouble nu                              = (self->nu >= 3.0) ? self->nu : 3.0;
+  
   return pow (
-      16.0 * gsl_pow_2 (nu - 2) * (1.0 + d + nu) * (3.0 + d + nu) /
-        ((2.0 + d) * (d + nu) * (2.0 + d + nu) * (d + 2.0 * nu) * (2.0 + d + 2.0 * nu) * n),
-      1.0 / (d + 4.0));
+    16.0 * gsl_pow_2 (nu - 2) * (1.0 + d + nu) * (3.0 + d + nu) /
+    ((2.0 + d) * (d + nu) * (2.0 + d + nu) * (d + 2.0 * nu) * (2.0 + d + 2.0 * nu) * n),
+    1.0 / (d + 4.0));
 }
 
 static gdouble
@@ -218,60 +220,63 @@ _ncm_stats_dist_nd_vbk_studentt_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMa
 {
   NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
-
+  
   const gdouble lg_lnnorm   = lgamma (self->nu / 2.0) - lgamma ((self->nu + d) / 2.0);
   const gdouble chol_lnnorm = 0.5 * ncm_matrix_cholesky_lndet (cov_decomp);
   const gdouble nc_lnnorm   = (d / 2.0) * (ncm_c_lnpi () + log (self->nu));
   gdouble href_det          = 1.0;
   gint i;
-
+  
   for (i = 0; i < d; i++)
     href_det *= ncm_vector_fast_get (href, i);
+  
   return lg_lnnorm + nc_lnnorm + chol_lnnorm + log (href_det);
 }
 
 static void
 _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *norm_array)
 {
-  NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
+  NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gint i, j, res;
-  NcmVector *sample_i = ncm_vector_new (d);
-  NcmVector *sample_j = ncm_vector_new (d);
+  NcmVector *sample_i  = ncm_vector_new (d);
+  NcmVector *sample_j  = ncm_vector_new (d);
   NcmVector *result_ij = ncm_vector_new (d);
-  NcmMatrix *cov_i = ncm_matrix_new (d,d);
-            
+  NcmMatrix *cov_i     = ncm_matrix_new (d, d);
+  
   for (i = 0; i < n; i++)
   {
     gdouble norm_i;
-
-    cov_i = ncm_matrix_dup (g_ptr_array_index (Us, i));
-    norm_i = exp (g_array_index(norm_array, gdouble, i));
-    sample_i = ncm_vector_dup (g_ptr_array_index (sample_array, i));
-   for (j = 0; j < n; j++)
-   {
-    gdouble m2lnp_ij = 0.0;
-    gdouble p_ij;
-    gint k;
     
-    sample_j = ncm_vector_dup (g_ptr_array_index (sample_array, j));      
-    result_ij = ncm_vector_dup (sample_i); 
-    ncm_vector_sub (result_ij, sample_j);
-    res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,ncm_matrix_gsl (cov_i), ncm_vector_gsl (result_ij));
-    NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_prepare_IM", res);
-    for (k = 0; k < d; k++)
+    cov_i    = ncm_matrix_dup (g_ptr_array_index (Us, i));
+    norm_i   = exp (g_array_index (norm_array, gdouble, i));
+    sample_i = ncm_vector_dup (g_ptr_array_index (sample_array, i));
+    
+    for (j = 0; j < n; j++)
+    {
+      gdouble m2lnp_ij = 0.0;
+      gdouble p_ij;
+      gint k;
+      
+      sample_j  = ncm_vector_dup (g_ptr_array_index (sample_array, j));
+      result_ij = ncm_vector_dup (sample_i);
+      ncm_vector_sub (result_ij, sample_j);
+      res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_i), ncm_vector_gsl (result_ij));
+      NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_prepare_IM", res);
+      
+      for (k = 0; k < d; k++)
       {
-        m2lnp_ij += gsl_pow_2 (ncm_vector_fast_get (result_ij, k) / ncm_vector_fast_get (href, k) );
+        m2lnp_ij += gsl_pow_2 (ncm_vector_fast_get (result_ij, k) / ncm_vector_fast_get (href, k));
       }
       
-    p_ij = norm_i * _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij);
-    
-    if (i == j)
-    p_ij = norm_i;
-    
-    ncm_matrix_set (IM, i, j, p_ij);
-    /*printf("valor %22.15g na pos %d  e %d \n ", p_ij, i, j);*/
-   }
+      p_ij = norm_i * _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij);
+      
+      if (i == j)
+        p_ij = norm_i;
+      
+      ncm_matrix_set (IM, i, j, p_ij);
+      /*printf("valor %22.15g na pos %d  e %d \n ", p_ij, i, j);*/
+    }
   }
 }
 
@@ -293,7 +298,7 @@ _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights
     gdouble e_i, t, chi2_i = 0.0;
     gdouble norm_i;
     gint k;
-
+    
     ncm_vector_memcpy (y_i, y);
     ncm_vector_sub (y_i, sample_i);
     norm_i = exp (g_array_index (norm_array, gdouble, i));
@@ -305,12 +310,12 @@ _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights
     {
       chi2_i += gsl_pow_2 (ncm_vector_fast_get (y_i, k) / ncm_vector_fast_get (href, k));
     }
-
+    
     e_i =  ncm_vector_get (weights, i) * norm_i * _ncm_stats_dist_nd_vbk_studentt_f (self, d, chi2_i);
-
-    t   = s + e_i;
-    c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
-    s   = t;
+    
+    t  = s + e_i;
+    c += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
+    s  = t;
   }
   
   return s;
@@ -319,24 +324,25 @@ _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights
 static void
 _ncm_stats_dist_nd_vbk_studentt_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng)
 {
-  NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
+  NcmStatsDistNdVBKStudentt *dndt               = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gdouble chi_scale;
   gint i, ret;
-
+  
   for (i = 0; i < d; i++)
   {
     const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    
     ncm_vector_set (y, i, u_i * ncm_vector_fast_get (href, i));
   }
-
+  
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
   ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (y));
   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_studentt_sample_mean_scale", ret);
-
+  
   chi_scale = sqrt (self->nu / gsl_ran_chisq (rng->r, self->nu));
-
+  
   ncm_vector_scale (y, chi_scale);
   ncm_vector_add (y, mu);
 }
@@ -348,7 +354,7 @@ _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMa
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gdouble m2lnp;
   gint ret;
-
+  
   ncm_vector_memcpy (v, x);
   ncm_vector_sub (v, y);
   
@@ -357,7 +363,7 @@ _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMa
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp", ret);
   
   ncm_vector_div (v, href);
-
+  
   ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp);
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp", ret);
   
@@ -382,6 +388,7 @@ ncm_stats_dist_nd_vbk_studentt_new (const guint dim, const NcmStatsDistNdVBKCV c
                                                   "CV-type",   cv_type,
                                                   "nu",        nu,
                                                   NULL);
+  
   return dndt;
 }
 
@@ -438,7 +445,7 @@ void
 ncm_stats_dist_nd_vbk_studentt_set_nu (NcmStatsDistNdVBKStudentt *dndt, const gdouble nu)
 {
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
-
+  
   self->nu = nu;
 }
 
@@ -452,7 +459,7 @@ gdouble
 ncm_stats_dist_nd_vbk_studentt_get_nu (NcmStatsDistNdVBKStudentt *dndt)
 {
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
-
+  
   return self->nu;
 }
 
