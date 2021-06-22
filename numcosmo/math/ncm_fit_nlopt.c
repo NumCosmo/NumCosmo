@@ -89,10 +89,13 @@ _ncm_fit_nlopt_constructed (GObject *object)
 
     fit_nlopt->fparam_len = fit->fstate->fparam_len;
 
-    fit_nlopt->lb         = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->ub         = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->pabs       = ncm_vector_new (fit_nlopt->fparam_len);
-    fit_nlopt->pscale     = ncm_vector_new (fit_nlopt->fparam_len);
+    if (fit_nlopt->fparam_len > 0)
+    {
+      fit_nlopt->lb     = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->ub     = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->pabs   = ncm_vector_new (fit_nlopt->fparam_len);
+      fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
+    }
         
     ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->nlopt_algo);
   }
@@ -244,10 +247,13 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
       ncm_vector_clear (&fit_nlopt->pabs);
       ncm_vector_clear (&fit_nlopt->pscale);
 
-      fit_nlopt->lb     = ncm_vector_new (fit_nlopt->fparam_len);
-      fit_nlopt->ub     = ncm_vector_new (fit_nlopt->fparam_len);
-      fit_nlopt->pabs   = ncm_vector_new (fit_nlopt->fparam_len);
-      fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
+      if (fit_nlopt->fparam_len > 0)
+      {
+        fit_nlopt->lb     = ncm_vector_new (fit_nlopt->fparam_len);
+        fit_nlopt->ub     = ncm_vector_new (fit_nlopt->fparam_len);
+        fit_nlopt->pabs   = ncm_vector_new (fit_nlopt->fparam_len);
+        fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
+      }
 
 #ifdef HAVE_NLOPT_2_2
       g_clear_pointer (&fit_nlopt->nlopt, nlopt_destroy);

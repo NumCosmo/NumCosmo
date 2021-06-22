@@ -66,16 +66,19 @@ _ncm_fit_gsl_ls_constructed (GObject *object)
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (object);
     NcmFit *fit = NCM_FIT (fit_gsl_ls);
 
-    fit_gsl_ls->f.f      = &ncm_fit_gsl_ls_f;
-    fit_gsl_ls->f.df     = &ncm_fit_gsl_ls_df;
-    fit_gsl_ls->f.fdf    = &ncm_fit_gsl_ls_fdf;
-    fit_gsl_ls->f.p      = fit->fstate->fparam_len;
-    fit_gsl_ls->f.n      = fit->fstate->data_len;
-    fit_gsl_ls->f.params = fit;
+    if (fit->fstate->fparam_len > 0)
+    {
+      fit_gsl_ls->f.f      = &ncm_fit_gsl_ls_f;
+      fit_gsl_ls->f.df     = &ncm_fit_gsl_ls_df;
+      fit_gsl_ls->f.fdf    = &ncm_fit_gsl_ls_fdf;
+      fit_gsl_ls->f.p      = fit->fstate->fparam_len;
+      fit_gsl_ls->f.n      = fit->fstate->data_len;
+      fit_gsl_ls->f.params = fit;
 
-    fit_gsl_ls->ls = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
-                                                   fit_gsl_ls->f.n,
-                                                   fit_gsl_ls->f.p);
+      fit_gsl_ls->ls = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
+                                                     fit_gsl_ls->f.n,
+                                                     fit_gsl_ls->f.p);
+    }
   }
 }
 
@@ -84,7 +87,7 @@ ncm_fit_gsl_ls_finalize (GObject *object)
 {
   NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (object);
 
-  gsl_multifit_fdfsolver_free (fit_gsl_ls->ls);
+  g_clear_pointer (&fit_gsl_ls->ls, gsl_multifit_fdfsolver_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_gsl_ls_parent_class)->finalize (object);
@@ -128,13 +131,16 @@ _ncm_fit_gsl_ls_reset (NcmFit *fit)
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
     if (fit_gsl_ls->f.p != fit->fstate->fparam_len || fit_gsl_ls->f.n != fit->fstate->data_len)
     {
-      gsl_multifit_fdfsolver_free (fit_gsl_ls->ls);
+      g_clear_pointer (&fit_gsl_ls->ls, gsl_multifit_fdfsolver_free);
 
-      fit_gsl_ls->f.p = fit->fstate->fparam_len;
-      fit_gsl_ls->f.n = fit->fstate->data_len;
-      fit_gsl_ls->ls  = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
-                                                      fit_gsl_ls->f.n,
-                                                      fit_gsl_ls->f.p);
+      if (fit->fstate->fparam_len > 0)
+      {
+        fit_gsl_ls->f.p = fit->fstate->fparam_len;
+        fit_gsl_ls->f.n = fit->fstate->data_len;
+        fit_gsl_ls->ls  = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
+                                                        fit_gsl_ls->f.n,
+                                                        fit_gsl_ls->f.p);
+      }
     }
   }
 }
