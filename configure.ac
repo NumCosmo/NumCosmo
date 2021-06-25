@@ -1109,6 +1109,7 @@ dnl ***************************************************************************
 
 AC_CONFIG_FILES([
 numcosmo.pc
+numcosmo_export.sh
 Makefile
 numcosmo/Makefile
 numcosmo/levmar/Makefile

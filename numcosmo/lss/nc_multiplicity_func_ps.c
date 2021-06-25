@@ -108,7 +108,7 @@ static void
 nc_multiplicity_func_ps_init (NcMultiplicityFuncPS *mulf_ps)
 {
   /* TODO: Add initialization code here */
-  mulf_ps->delta_c = 1.686;
+  mulf_ps->delta_c = 1.6864701998411454502;
 }
 
 static void

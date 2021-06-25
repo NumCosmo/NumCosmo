@@ -163,12 +163,15 @@ _nc_de_cont_finalize (GObject *object)
   G_OBJECT_CLASS (nc_de_cont_parent_class)->finalize (object);
 }
 
-static gdouble _nc_de_cont_eval_m       (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_de_cont_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_de_cont_eval_nu      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_de_cont_eval_xi      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_de_cont_eval_F1      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_de_cont_eval_F2      (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_de_cont_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 
 static void
 nc_de_cont_class_init (NcDEContClass *klass)
@@ -209,12 +212,15 @@ nc_de_cont_class_init (NcDEContClass *klass)
                                                         "w",
                                                         1.0e-30, 1.0, 1.0e-2,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  csq1d_class->eval_m       = &_nc_de_cont_eval_m;
-  csq1d_class->eval_int_1_m = &_nc_de_cont_eval_int_1_m;
-  csq1d_class->eval_nu      = &_nc_de_cont_eval_nu;
-  csq1d_class->eval_xi      = &_nc_de_cont_eval_xi;
-  csq1d_class->eval_F1      = &_nc_de_cont_eval_F1;
-  csq1d_class->eval_F2      = &_nc_de_cont_eval_F2;
+  csq1d_class->eval_m          = &_nc_de_cont_eval_m;
+  csq1d_class->eval_int_1_m    = &_nc_de_cont_eval_int_1_m;
+  csq1d_class->eval_int_mnu2   = &_nc_de_cont_eval_int_mnu2;
+  csq1d_class->eval_int_qmnu2  = &_nc_de_cont_eval_int_qmnu2;
+  csq1d_class->eval_int_q2mnu2 = &_nc_de_cont_eval_int_q2mnu2;
+  csq1d_class->eval_nu         = &_nc_de_cont_eval_nu;
+  csq1d_class->eval_xi         = &_nc_de_cont_eval_xi;
+  csq1d_class->eval_F1         = &_nc_de_cont_eval_F1;
+  csq1d_class->eval_F2         = &_nc_de_cont_eval_F2;
 }
 
 static gdouble
@@ -247,6 +253,91 @@ _nc_de_cont_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, con
 
   return -2.0 * self->cs2 * mE * _2F1 / (9.0 * self->w * (1.0 + self->w) * self->Omega_w * t_3w);
 }
+
+static gdouble
+_nc_de_cont_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDEContPrivate * const self = dec->priv;
+
+  const gdouble three1pw = 3.0 * (1.0 + self->w);
+  const gdouble t_3p3w   = pow (t, three1pw);
+  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z2       = z * z;
+  const gdouble z3       = z2 * z;
+  const gdouble z4       = z2 * z2;
+  const gdouble T0       = three1pw - 1.0;
+  const gdouble T1       = T0 + three1pw;
+  const gdouble T2       = T1 + three1pw;
+  const gdouble T3       = T2 + three1pw;
+  const gdouble T4       = T3 + three1pw;
+  const gdouble prefac   = k * k *  three1pw * self->Omega_w * pow (t, T0) / (2.0 * T0 * sqrt (gsl_pow_3 (self->Omega_L)));
+
+  /*err[0] = fabs (315.0 / 128.0 * T0 * (z4 / T4));*/
+
+  return prefac * (1.0 + T0 * ((3.0 / 2.0) * z / T1 + (15.0 / 8.0) * z2 / T2 + (35.0 / 16.0) * z3 / T3 + (315.0 / 128.0) * z4 / T4));
+}
+
+static gdouble
+_nc_de_cont_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDEContPrivate * const self = dec->priv;
+
+  const gdouble three1pw = 3.0 * (1.0 + self->w);
+  const gdouble t_3p3w   = pow (t, three1pw);
+  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z2       = z * z;
+  const gdouble z3       = z2 * z;
+  const gdouble z4       = z2 * z2;
+  const gdouble prefac   = - self->cs2 * gsl_pow_2 (k * t) / (6.0 * self->w * self->Omega_L);
+  const gdouble n1       = (3.0 + self->w);
+  const gdouble n2       = n1 * (5.0 + 3.0 * self->w);
+  const gdouble n3       = n2 * (7.0 + 5.0 * self->w);
+  const gdouble n4       = n3 * (9.0 + 7.0 * self->w);
+  const gdouble d1       = (5.0 + 3.0 * self->w);
+  const gdouble d2       =  4.0 * (2.0 + self->w) * (4.0 + 3.0 * self->w);
+  const gdouble d3       =  4.0 * (2.0 + self->w) * (3.0 + 2.0 * self->w) * (11.0 + 9.0 * self->w);
+  const gdouble d4       = d2 * 4.0 * (3.0 + 2.0 * self->w) * (7.0 + 6.0 * self->w);
+
+  /*err[0] = n4 * z4 / d4;*/
+
+  return prefac * (1.0 + n1 * z / d1 + n2 * z2 / d2 + n3 * z3 / d3 + n4 * z4 / d4);
+}
+
+static gdouble
+_nc_de_cont_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDEContPrivate * const self = dec->priv;
+
+  const gdouble three1pw = 3.0 * (1.0 + self->w);
+  const gdouble t_3p3w   = pow (t, three1pw);
+  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z2       = z * z;
+  const gdouble z3       = z2 * z;
+  const gdouble z4       = z2 * z2;
+  const gdouble w2       = self->w * self->w;
+  const gdouble w3       = w2 * self->w;
+  const gdouble w4       = w2 * w2;
+  const gdouble w5       = w2 * w3;
+  const gdouble w6       = w3 * w3;
+  const gdouble T0       = 2.0 - 3.0 * self->w;
+  const gdouble prefac   = 2.0 * gsl_pow_2 (self->cs2 * k) * pow (t, T0) / (27.0 * w2 * sqrt (self->Omega_L) * self->Omega_w * (1.0 + self->w) * T0);
+  const gdouble n1       = 3.0 + 2.0 * self->w;
+  const gdouble n2       =    30.0 +    41.0 * self->w +    16.0 * w2 +     2.0 * w3;
+  const gdouble n3       =   210.0 +   447.0 * self->w +   336.0 * w2 +   106.0 * w3 +    12.0 * w4;
+  const gdouble n4       = 15120.0 + 51924.0 * self->w + 72480.0 * w2 + 52591.0 * w3 + 20898.0 * w4 + 4308.0 * w5 + 360.0 * w6;
+  const gdouble d1       = 10.0;
+  const gdouble d2       =   8.0 * (2.0 + self->w) * (8.0 + 3.0 * self->w);
+  const gdouble d3       =  16.0 * (2.0 + self->w) * (3.0 + 2.0 * self->w) * (11.0 + 6.0 * self->w);
+  const gdouble d4       = 128.0 * gsl_pow_2 (2.0 + self->w) * (3.0 + 2.0 * self->w) * (4.0 + 3.0 * self->w) * (14.0 + 9.0 * self->w);
+
+  /*err[0] = fabs (T0 * n4 * z4 / d4);*/
+
+  return prefac * (1.0 + T0 * (n1 * z / d1 + n2 * z2 / d2 + n3 * z3 / d3 + n4 * z4 / d4));
+}
+
 
 static gdouble
 _nc_de_cont_eval_nu  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)

@@ -209,7 +209,7 @@ nc_multiplicity_func_st_init (NcMultiplicityFuncST *mulf_st)
   mulf_st->A = 0.3222;
   mulf_st->b = 0.707;
   mulf_st->p = 0.3;
-  mulf_st->delta_c = 1.686;
+  mulf_st->delta_c = 1.6864701998411454502;
 }
 
 static void
