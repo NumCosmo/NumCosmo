@@ -242,8 +242,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
       self->dndg1 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT));
     }*/
 
-    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg0, 1.0);
-    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg1, 1.0);
+    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg0, 0.2);
+    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg1, 0.2);
     ncm_stats_dist_nd_vbk_set_split_frac (self->dndg0, 1.0);
     ncm_stats_dist_nd_vbk_set_split_frac (self->dndg1, 1.0);
     
@@ -326,7 +326,7 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
 
       for (i = self->size_2; i < self->size; i++)
       {
-        const gint j = self->size_2 + p[n - 1 - (i-self->size_2)];
+        const gint j = self->size_2 + p[(i-self->size_2)];
         NcmVector *theta_j = g_ptr_array_index (theta, j);
         ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
         ncm_stats_dist_nd_vbk_add_obs (self->dndg0, theta_j);
@@ -342,9 +342,9 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
     for (i = ki; i < self->size_2; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
-      do {
+      /*do {*/
         ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg0), thetastar_i, rng);
-      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
+      /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
     }
   }
   if (kf >= self->size_2)
@@ -365,7 +365,7 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
 
       for (i = 0; i < self->size_2; i++)
       {
-        const gint j = p[n - 1 - i];
+        const gint j = p[i];
         NcmVector *theta_j = g_ptr_array_index (theta, j);
         ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
         ncm_stats_dist_nd_vbk_add_obs (self->dndg1, theta_j);
@@ -382,9 +382,9 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
     for (i = self->size_2; i < kf; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
-      do {
+      /*do {*/
         ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg1), thetastar_i, rng);
-      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
+      /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
     }
   }
 }
@@ -431,11 +431,10 @@ _ncm_fit_esmcmc_walker_aps_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
 
 /*
   printf ("AAA m2lnL_star % 22.15g m2lnp_star % 22.15g m2lnL_cur % 22.15g m2lnp_cur % 22.15g L cur->star: %12.5g p star->cur: %12.5g | T %12.5g\n",
-          -0.5 * m2lnL_star, -0.5 * m2lnp_star, -0.5 * m2lnL_cur, -0.5 * m2lnp_cur,
+          m2lnL_star, m2lnp_star, m2lnL_cur, m2lnp_cur,
           exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)),
           MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
 */
-
 
   return exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
 }

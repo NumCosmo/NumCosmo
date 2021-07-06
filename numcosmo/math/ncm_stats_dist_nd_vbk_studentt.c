@@ -163,7 +163,7 @@ _ncm_stats_dist_nd_vbk_studentt_finalize (GObject *object)
 
 static gdouble _ncm_stats_dist_nd_vbk_studentt_get_rot_bandwidth (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n);
 static gdouble _ncm_stats_dist_nd_vbk_studentt_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
-static void _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *norm);
+static void _ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *lnnorm);
 static gdouble _ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *y, GPtrArray *sample_array, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array, GArray *norm);
 static void _ncm_stats_dist_nd_vbk_studentt_kernel_sample (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *y, NcmVector *mu, const NcmVector *href, NcmRNG *rng);
 static gdouble _ncm_stats_dist_nd_vbk_studentt_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, NcmVector *x, NcmVector *y, NcmVector *v, const NcmVector *href);
@@ -234,90 +234,83 @@ _ncm_stats_dist_nd_vbk_studentt_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMa
 }
 
 static void
-_ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *norm_array)
+_ncm_stats_dist_nd_vbk_studentt_prepare_IM (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *lnnorm_array)
 {
   NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
+  NcmVector *delta_ij = ncm_vector_new (d);
   gint i, j, res;
-  NcmVector *sample_i  = ncm_vector_new (d);
-  NcmVector *sample_j  = ncm_vector_new (d);
-  NcmVector *result_ij = ncm_vector_new (d);
-  NcmMatrix *cov_i     = ncm_matrix_new (d, d);
   
   for (i = 0; i < n; i++)
   {
-    gdouble norm_i;
-    
-    cov_i    = ncm_matrix_dup (g_ptr_array_index (Us, i));
-    norm_i   = exp (g_array_index (norm_array, gdouble, i));
-    sample_i = ncm_vector_dup (g_ptr_array_index (sample_array, i));
+    NcmMatrix *cov_decomp_i = g_ptr_array_index (Us, i);
+    NcmVector *theta_i      = g_ptr_array_index (sample_array, i);
+    gdouble norm_i          = exp (g_array_index (lnnorm_array, gdouble, i));
     
     for (j = 0; j < n; j++)
     {
+      NcmVector *theta_j = g_ptr_array_index (sample_array, j);
       gdouble m2lnp_ij = 0.0;
       gdouble p_ij;
       gint k;
       
-      sample_j  = ncm_vector_dup (g_ptr_array_index (sample_array, j));
-      result_ij = ncm_vector_dup (sample_i);
-      ncm_vector_sub (result_ij, sample_j);
-      res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_i), ncm_vector_gsl (result_ij));
+      ncm_vector_memcpy (delta_ij, theta_i);
+      ncm_vector_sub (delta_ij, theta_j);
+
+      res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (delta_ij));
       NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_prepare_IM", res);
       
       for (k = 0; k < d; k++)
       {
-        m2lnp_ij += gsl_pow_2 (ncm_vector_fast_get (result_ij, k) / ncm_vector_fast_get (href, k));
+        m2lnp_ij += gsl_pow_2 (ncm_vector_fast_get (delta_ij, k) / ncm_vector_fast_get (href, k));
       }
       
-      p_ij = norm_i * _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij);
-      
-      if (i == j)
-        p_ij = norm_i;
-      
-      ncm_matrix_set (IM, i, j, p_ij);
-      /*printf("valor %22.15g na pos %d  e %d \n ", p_ij, i, j);*/
+      p_ij = _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij) / norm_i;
+
+      ncm_matrix_set (IM, j, i, p_ij);
     }
   }
+
+  ncm_vector_free (delta_ij);
 }
 
 static gdouble
-_ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *y, GPtrArray *sample_array, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array, GArray *norm_array)
+_ncm_stats_dist_nd_vbk_studentt_eval (NcmStatsDistNdVBK *dnd, NcmVector *weights, NcmVector *y, GPtrArray *sample_array, const gint d, const gint n, const NcmVector *href, GPtrArray *cov_array, GArray *lnnorm_array)
 {
   NcmStatsDistNdVBKStudentt *dndt = NCM_STATS_DIST_ND_VBK_STUDENTT (dnd);
   NcmStatsDistNdVBKStudenttPrivate * const self = dndt->priv;
   gdouble s = 0.0;
   gdouble c = 0.0;
   gint i, ret;
-  NcmVector *y_i = ncm_vector_new (d);
-  
+  NcmVector *delta_i = ncm_vector_new (d);
   
   for (i = 0; i < n; i++)
   {
-    NcmVector *sample_i = ncm_vector_dup (g_ptr_array_index (sample_array, i));
-    NcmMatrix *cov_i = ncm_matrix_dup (g_ptr_array_index (cov_array, i));
+    NcmMatrix *cov_decomp_i = g_ptr_array_index (cov_array, i);
+    NcmVector *theta_i      = g_ptr_array_index (sample_array, i);
+    gdouble norm_i          = exp (g_array_index (lnnorm_array, gdouble, i));
     gdouble e_i, t, chi2_i = 0.0;
-    gdouble norm_i;
     gint k;
     
-    ncm_vector_memcpy (y_i, y);
-    ncm_vector_sub (y_i, sample_i);
-    norm_i = exp (g_array_index (norm_array, gdouble, i));
+    ncm_vector_memcpy (delta_i, y);
+    ncm_vector_sub (delta_i, theta_i);
     
-    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_i), ncm_vector_gsl (y_i));
-    NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_vbk_eval", ret);
+    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (delta_i));
+    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
     
     for (k = 0; k < d; k++)
     {
-      chi2_i += gsl_pow_2 (ncm_vector_fast_get (y_i, k) / ncm_vector_fast_get (href, k));
+      chi2_i += gsl_pow_2 (ncm_vector_fast_get (delta_i, k) / ncm_vector_fast_get (href, k));
     }
     
-    e_i =  ncm_vector_get (weights, i) * norm_i * _ncm_stats_dist_nd_vbk_studentt_f (self, d, chi2_i);
-    
+    e_i =  ncm_vector_get (weights, i) * _ncm_stats_dist_nd_vbk_studentt_f (self, d, chi2_i) / norm_i;
     t  = s + e_i;
     c += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
     s  = t;
   }
   
+  ncm_vector_free (delta_i);
+
   return s;
 }
 

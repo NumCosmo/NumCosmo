@@ -57,7 +57,7 @@ struct _NcmStatsDistNdVBKClass
   void (*set_dim) (NcmStatsDistNdVBK *dnd, const guint dim);
   gdouble (*get_rot_bandwidth) (NcmStatsDistNdVBK *dnd, const guint d, const gdouble n);
   gdouble (*get_kernel_lnnorm) (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href);
-  void (*prepare_kernel_args) (NcmStatsDistNdVBK *dnd, NcmStatsVec *sample);
+  void (*prepare_kernel_args) (NcmStatsDistNdVBK *dnd, GPtrArray *sample_array);
   void (*prepare_IM) (NcmStatsDistNdVBK *dnd, GPtrArray *Us, const gint d, const gint n, const NcmVector *href, NcmMatrix *IM, GPtrArray *sample_array, GArray *norm);
   void (*prepare) (NcmStatsDistNdVBK *dnd);
   void (*prepare_interp) (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp);
@@ -107,6 +107,9 @@ gdouble ncm_stats_dist_nd_vbk_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMatr
 void ncm_stats_dist_nd_vbk_set_over_smooth (NcmStatsDistNdVBK *dnd, const gdouble over_smooth);
 gdouble ncm_stats_dist_nd_vbk_get_over_smooth (NcmStatsDistNdVBK *dnd);
 
+void ncm_stats_dist_nd_vbk_set_local_frac (NcmStatsDistNdVBK *dnd, const gdouble local_frac);
+gdouble ncm_stats_dist_nd_vbk_get_local_frac (NcmStatsDistNdVBK *dnd);
+
 void ncm_stats_dist_nd_vbk_set_split_frac (NcmStatsDistNdVBK *dnd, const gdouble split_frac);
 gdouble ncm_stats_dist_nd_vbk_get_split_frac (NcmStatsDistNdVBK *dnd);
 
@@ -131,6 +134,8 @@ void ncm_stats_dist_nd_vbk_add_obs_weight (NcmStatsDistNdVBK *dndg, NcmVector *y
 void ncm_stats_dist_nd_vbk_add_obs (NcmStatsDistNdVBK *dndg, NcmVector *y);
 
 void ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVBK *dnd);
+
+void ncm_stats_dist_nd_vbk_get_Ki (NcmStatsDistNdVBK *dnd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i);
 
 G_END_DECLS
 

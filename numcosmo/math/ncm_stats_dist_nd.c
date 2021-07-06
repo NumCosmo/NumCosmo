@@ -409,6 +409,7 @@ _ncm_stats_dist_nd_prepare_kernel_args (NcmStatsDistNd *dnd, NcmStatsVec *sample
 
   if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
   {
+    ncm_matrix_memcpy (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (sample, 0));
     if (ncm_matrix_nearPD (self->cov_decomp, 'U', TRUE, self->nearPD_maxiter) != 0)
     {
       ncm_matrix_set_zero (self->cov_decomp);

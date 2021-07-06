@@ -51,6 +51,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include "misc/CVector.h"
+#include "misc/kdtree.h"
 #include "misc/CNearTree.h"
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -59,7 +60,7 @@ struct _NcmStatsDistNdVBKPrivate
 {
   GPtrArray *sample_array;
   GPtrArray *cov_array;
-  GArray *norm_array;
+  GArray *lnnorm_array;
   GPtrArray *IM_array;
   
   NcmStatsVec *sample;
@@ -73,8 +74,8 @@ struct _NcmStatsDistNdVBKPrivate
   gdouble over_smooth;
   NcmStatsDistNdVBKCV cv_type;
   gdouble split_frac;
+  gdouble local_frac;
   NcmVector *href;
-  gdouble kernel_lnnorm;
   gdouble min_m2lnp;
   gdouble max_m2lnp;
   NcmStatsVec *m2lnp_stats;
@@ -106,6 +107,7 @@ enum
   PROP_NEARPD_MAXITER,
   PROP_CV_TYPE,
   PROP_SPLIT_FRAC,
+  PROP_LOCAL_FRAC,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistNdVBK, ncm_stats_dist_nd_vbk, G_TYPE_OBJECT);
@@ -116,7 +118,7 @@ ncm_stats_dist_nd_vbk_init (NcmStatsDistNdVBK *dnd)
   NcmStatsDistNdVBKPrivate * const self = dnd->priv = ncm_stats_dist_nd_vbk_get_instance_private (dnd);
   
   self->sample_array = g_ptr_array_new ();
-  self->norm_array   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->lnnorm_array = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->cov_array    = g_ptr_array_new ();
   self->IM_array     = g_ptr_array_new ();
   
@@ -131,8 +133,8 @@ ncm_stats_dist_nd_vbk_init (NcmStatsDistNdVBK *dnd)
   self->over_smooth    = 0.0;
   self->cv_type        = NCM_STATS_DIST_ND_VBK_CV_LEN;
   self->split_frac     = 0.0;
+  self->local_frac     = 0.0;
   self->href           = NULL;
-  self->kernel_lnnorm  = 0.0;
   self->min_m2lnp      = 0.0;
   self->max_m2lnp      = 0.0;
   self->m2lnp_stats    = ncm_stats_vec_new (1, NCM_STATS_VEC_MEAN, FALSE);
@@ -191,6 +193,9 @@ _ncm_stats_dist_nd_vbk_set_property (GObject *object, guint prop_id, const GValu
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_nd_vbk_set_split_frac (dnd, g_value_get_double (value));
       break;
+    case PROP_LOCAL_FRAC:
+      ncm_stats_dist_nd_vbk_set_local_frac (dnd, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -225,6 +230,9 @@ _ncm_stats_dist_nd_vbk_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_nd_vbk_get_split_frac (dnd));
       break;
+    case PROP_LOCAL_FRAC:
+      g_value_set_double (value, ncm_stats_dist_nd_vbk_get_local_frac (dnd));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -239,7 +247,7 @@ _ncm_stats_dist_nd_vbk_dispose (GObject *object)
   
   g_clear_pointer (&self->sample_array, g_ptr_array_unref);
   g_clear_pointer (&self->cov_array, g_ptr_array_unref);
-  g_clear_pointer (&self->norm_array, g_array_unref);
+  g_clear_pointer (&self->lnnorm_array, g_array_unref);
   
   ncm_stats_vec_clear (&self->sample);
   ncm_matrix_clear (&self->cov_decomp);
@@ -301,7 +309,7 @@ _ncm_stats_dist_nd_vbk_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMatrix *cov
   return 0.0;
 }
 
-static void _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVBK *dnd, NcmStatsVec *sample);
+static void _ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVBK *dnd, GPtrArray *sample_array);
 static void _ncm_stats_dist_nd_vbk_prepare (NcmStatsDistNdVBK *dnd);
 static void _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp);
 static void _ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVBK *dnd);
@@ -354,6 +362,13 @@ ncm_stats_dist_nd_vbk_class_init (NcmStatsDistNdVBKClass *klass)
                                                         "Fraction to use in the split cross-validation",
                                                         0.50, 0.95, 0.9,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LOCAL_FRAC,
+                                   g_param_spec_double ("local-frac",
+                                                        NULL,
+                                                        "Fraction to use in the local kernel covariance computation",
+                                                        0.001, 1.0, 0.05,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
                                    PROP_NEARPD_MAXITER,
@@ -391,7 +406,7 @@ _ncm_stats_dist_nd_vbk_set_dim (NcmStatsDistNdVBK *dnd, const guint dim)
   ncm_vector_clear (&self->v);
   
   self->d          = dim;
-  self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
+  self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
   self->href       = ncm_vector_new (dim);
   self->cov_decomp = ncm_matrix_new (dim, dim);
   self->log_cov    = ncm_matrix_new (dim, dim);
@@ -400,114 +415,159 @@ _ncm_stats_dist_nd_vbk_set_dim (NcmStatsDistNdVBK *dnd, const guint dim)
 }
 
 static void
-_ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVBK *dnd, NcmStatsVec *sample)
+_cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const guint maxiter)
+{
+  ncm_matrix_memcpy (cov_decomp, cov);
+  if (ncm_matrix_cholesky_decomp (cov_decomp, 'U') != 0)
+  {
+    ncm_matrix_memcpy (cov_decomp, cov);
+    if (ncm_matrix_nearPD (cov_decomp, 'U', TRUE, maxiter) != 0)
+    {
+      gint i;
+      ncm_matrix_set_zero (cov_decomp);
+      for (i = 0; i < d; i++)
+      {
+        ncm_matrix_set (cov_decomp, i, i, ncm_matrix_get (cov, i, i));
+      }
+      g_assert_cmpint (ncm_matrix_cholesky_decomp (cov_decomp, 'U'), ==, 0);
+    }
+  }
+}
+
+
+static void
+_ncm_stats_dist_nd_vbk_prepare_kernel_args (NcmStatsDistNdVBK *dnd, GPtrArray *sample_array)
 {
   NcmStatsDistNdVBKPrivate * const self = dnd->priv;
-  gint i, ret, j;
-  
-  {
-    CNearTreeHandle treehandle;
-    const size_t k        = 0.2 * self->sample_array->len;
-    const gdouble dRadius = 1.0e10;
-    CVectorHandle results_coords;
-    CVectorHandle results_objs;
-    NcmVector *scale_vec_mean  = ncm_vector_new (self->d);
-    NcmVector *scale_vec_sd    = ncm_vector_new (self->d);
-    NcmVector *scale_vec_ratio = ncm_vector_new (self->d);
-    NcmStatsVec *theta_t;
-    
-    CVectorCreate (&results_objs,   sizeof (gpointer), k);
-    CVectorCreate (&results_coords, sizeof (gpointer), k);
-    
-    CNearTreeCreate (&treehandle, self->d, CNEARTREE_TYPE_DOUBLE | CNEARTREE_NORM_L2);
-    
-    theta_t = ncm_stats_vec_new (self->sample_array->len, NCM_STATS_VEC_VAR, FALSE);
-    
-    for (j = 0; j < self->sample_array->len; j++)
-    {
-      NcmVector *theta_j = ncm_vector_dup (g_ptr_array_index (self->sample_array, j));
-      
-      for (i = 0; i < self->d; i++)
-      {
-        ncm_stats_vec_set (theta_t, i, ncm_vector_get (theta_j, i));
-      }
-      
-      ncm_stats_vec_update (theta_t);
-    }
-    
-    for (i = 0; i < self->d; i++)
-    {
-      ncm_vector_set (scale_vec_mean, i, ncm_stats_vec_get_mean (theta_t, i));
-      ncm_vector_set (scale_vec_sd, i, ncm_stats_vec_get_sd (theta_t, i));
-      ncm_vector_set (scale_vec_ratio, i, ncm_stats_vec_get_mean (theta_t, i) / ncm_stats_vec_get_sd (theta_t, i));
-    }
-    
-    for (i = 0; i < self->sample_array->len; i++)
-    {
-      NcmVector *theta_i = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
-      
-      ncm_vector_div (theta_i, scale_vec_sd);
-      ncm_vector_sub (theta_i, scale_vec_ratio);
-      CNearTreeInsert (treehandle, ncm_vector_data (theta_i), NULL);
-    }
-    
-    
-    for (i = 0; i < self->sample_array->len; i++)
-    {
-      NcmVector *theta_i = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
-      gdouble *vdata;
-      gint res, j, l;
-      
-      res = CNearTreeFindKNearest (treehandle, k, dRadius,
-                                   results_coords, results_objs, ncm_vector_data (theta_i), TRUE);
-      
-      ncm_stats_vec_reset (self->sample, TRUE);
-      
-      for (j = 0; j < k; j++)
-      {
-        CVectorGetElement (results_coords, &vdata, j);
-        
-        /*printf ("vector[%2d]:", j);*/
-        for (l = 0; l < self->d; l++)
-        {
-          ncm_stats_vec_set (self->sample, l, (vdata[l] * ncm_vector_get (scale_vec_sd, l)) + ncm_vector_get (scale_vec_mean, l));
-          
-          /* printf (" % 22.15g", vdata[l]);*/
-        }
-        
-        ncm_stats_vec_update (self->sample);
-        /*printf ("\n");*/
-      }
-      
-      {
-        NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
-        
-        g_ptr_array_add (self->cov_array, sample_cov);
-      }
-    } /*printf ("res %d\n", res);*/
-    
-    CNearTreeFree (&treehandle);
-  }
-  
-  self->n = (self->sample_array->len);
+  gint i;
+
+  self->n = sample_array->len;
   g_assert_cmpuint (self->n, >, 1);
-  
+
+  /*
+   * Computing the covariance matrix considering the whole sample.
+   */
+  ncm_stats_vec_reset (self->sample, TRUE);
+  for (i = 0; i < self->n; i++)
   {
-    const gdouble href0 = self->over_smooth * ncm_stats_dist_nd_vbk_get_rot_bandwidth (dnd, self->d, 0.2 * self->n);
-    
-    ncm_vector_set_all (self->href, href0);
+    NcmVector *theta_i = g_ptr_array_index (sample_array, i);
+    ncm_stats_vec_append (self->sample, theta_i, FALSE);
   }
-  g_ptr_array_set_size (self->invUsample, 0);
-  g_array_set_size  (self->norm_array, 0);
   
+  /*
+   * Computing the Cholesky decomposition of the total covariance.
+   */
+  _cholesky_decomp (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), self->d, self->nearPD_maxiter);
+
+  /*
+   * (Re)Allocating a sample matrix to insert all sample vectors
+   * to apply the transformation to a basis that diagonalizes
+   * the total covariance. By definition in that coordinate system
+   * the sample has covariance equal to the identity.
+   */
+  if ((self->sample_matrix == NULL) || (self->n != ncm_matrix_nrows (self->sample_matrix)) || (self->d != ncm_matrix_ncols (self->sample_matrix)))
+  {
+    ncm_matrix_clear (&self->sample_matrix);
+    self->sample_matrix = ncm_matrix_new (self->n, self->d);
+
+    g_ptr_array_set_size (self->invUsample, 0);
+    for (i = 0; i < self->n; i++)
+    {
+      NcmVector *row_i = ncm_matrix_get_row (self->sample_matrix, i);
+      g_ptr_array_add (self->invUsample, row_i);
+    }
+  }
+
+  /*
+   * Copying the sample to the matrix
+   */
+  for (i = 0; i < self->n; i++)
+    ncm_matrix_set_row (self->sample_matrix, i, g_ptr_array_index (self->sample_array, i));
+  /*
+   * Applying the transformation to the matrix, row by row.
+   */
+  {
+    gint ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (self->cov_decomp), ncm_matrix_gsl (self->sample_matrix));
+    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_prepare_kernel_args", ret);
+  }
+
+  /*
+   * Creates a near tree object and add all transformed vector.
+   */
+  {
+    struct kdtree *tree = kdtree_init (self->d);
+
+    for (i = 0; i < self->n; i++)
+    {
+      NcmVector *invUtheta_i = g_ptr_array_index (self->invUsample, i);
+
+      /*
+       * Inserting the transformed vector in the tree, saving also the index.
+       */
+      kdtree_insert(tree, ncm_vector_data (invUtheta_i));
+    }
+    kdtree_rebuild(tree);
+
+    /*
+     * Lets find the k nearest neighbors of each vector in the
+     * sample and use them to define the local covariance at each
+     * vector location.
+     */
+    {
+      const size_t k = self->local_frac * sample_array->len;
+
+      g_ptr_array_set_size (self->cov_array, 0);
+      for (i = 0; i < self->n; i++)
+      {
+        NcmVector *invUtheta_i = g_ptr_array_index (self->invUsample, i);
+
+        kdtree_knn_search_clean (tree);
+        kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
+
+        ncm_stats_vec_reset (self->sample, TRUE);
+        {
+          struct knn_list *p = tree->knn_list_head.next;
+          while (p != &tree->knn_list_head)
+          {
+            NcmVector *ni = g_ptr_array_index (self->sample_array, p->node->coord_index);
+            ncm_stats_vec_append (self->sample, ni, FALSE);
+            p = p->next;
+          }
+        }
+
+        /*
+         * Saving the covariance for each vector.
+         */
+        {
+          NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+          g_ptr_array_add (self->cov_array, sample_cov);
+        }
+      }
+
+      /*
+       * Computing the bandwidth for each local kernel.
+       */
+      {
+        const gdouble href0 = self->over_smooth / self->local_frac * ncm_stats_dist_nd_vbk_get_rot_bandwidth (dnd, self->d, self->n);
+        ncm_vector_set_all (self->href, href0);
+      }
+    }
+    kdtree_destroy(tree);
+  }
+
+  g_array_set_size  (self->lnnorm_array, self->n);
   for (i = 0; i < self->n; i++)
   {
     NcmMatrix *cov_i = g_ptr_array_index (self->cov_array, i);
-    gdouble norm_i;
+    gdouble lnnorm_i;
     
-    ncm_matrix_cholesky_decomp (g_ptr_array_index (self->cov_array, i), 'U');
-    norm_i = ncm_stats_dist_nd_vbk_get_kernel_lnnorm (dnd, cov_i, self->d, self->n, self->href);
-    g_array_append_val (self->norm_array, norm_i);
+    ncm_matrix_memcpy (self->log_cov, cov_i);
+
+    _cholesky_decomp (cov_i, self->log_cov, self->d, self->nearPD_maxiter);
+
+    lnnorm_i = ncm_stats_dist_nd_vbk_get_kernel_lnnorm (dnd, cov_i, self->d, self->n, self->href);
+
+    g_array_index (self->lnnorm_array, gdouble, i) = lnnorm_i;
   }
 }
 
@@ -517,7 +577,7 @@ _ncm_stats_dist_nd_vbk_prepare (NcmStatsDistNdVBK *dnd)
   NcmStatsDistNdVBKClass *dnd_class     = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   NcmStatsDistNdVBKPrivate * const self = dnd->priv;
   
-  dnd_class->prepare_kernel_args (dnd, self->sample);
+  dnd_class->prepare_kernel_args (dnd, self->sample_array);
   
   self->min_m2lnp = 0.0;
   self->max_m2lnp = 0.0;
@@ -546,15 +606,13 @@ static gdouble
 _ncm_stats_dist_nd_vbk_prepare_interp_fit_nnls (gdouble os, gpointer userdata)
 {
   NcmStatsDistNdVBKEval *eval = userdata;
-  const gdouble href0         = os * ncm_stats_dist_nd_vbk_get_rot_bandwidth (eval->dnd, eval->self->d, 0.2 * eval->self->n);
+  const gdouble href0         = os / eval->self->local_frac * ncm_stats_dist_nd_vbk_get_rot_bandwidth (eval->dnd, eval->self->d, eval->self->n);
   gdouble rnorm;
   
   ncm_vector_set_all (eval->self->href, href0);
   
-  eval->dnd_class->prepare_IM (eval->dnd, eval->self->cov_array, eval->self->d, eval->self->n, eval->self->href, eval->self->IM, eval->self->sample_array, eval->self->norm_array);
+  eval->dnd_class->prepare_IM (eval->dnd, eval->self->cov_array, eval->self->d, eval->self->n, eval->self->href, eval->self->IM, eval->self->sample_array, eval->self->lnnorm_array);
   rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
-  
-  /*ncm_message ("RNORM: % 22.15g | href %.1e\n", rnorm, href0);*/
   
   return rnorm;
 }
@@ -604,7 +662,7 @@ _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp)
       self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
       self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
     }
-    
+
     ncm_vector_set_zero (self->weights);
     
     /*
@@ -646,10 +704,11 @@ _ncm_stats_dist_nd_vbk_prepare_interp (NcmStatsDistNdVBK *dnd, NcmVector *m2lnp)
     for (i = 0; i < self->n; i++)
     {
       const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
-      
+/*
       if (m2lnp_i > qq)
         ncm_vector_set (self->f, i, exp (-0.5 * (qq      - self->min_m2lnp)));
       else
+*/
         ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
     }
     
@@ -667,7 +726,7 @@ _ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVBK *dnd)
   
   g_ptr_array_set_size (self->sample_array, 0);
   g_ptr_array_set_size (self->cov_array, 0);
-  g_array_set_size (self->norm_array, 0);
+  g_array_set_size (self->lnnorm_array, 0);
 }
 
 /**
@@ -754,7 +813,7 @@ gdouble
 ncm_stats_dist_nd_vbk_get_kernel_lnnorm (NcmStatsDistNdVBK *dnd, NcmMatrix *cov_decomp, const guint d, const gdouble n, const NcmVector *href)
 {
   NcmStatsDistNdVBKClass *dnd_class     = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
-  NcmStatsDistNdVBKPrivate * const self = dnd->priv;
+  /*NcmStatsDistNdVBKPrivate * const self = dnd->priv;*/
   
   return dnd_class->get_kernel_lnnorm (dnd, cov_decomp, d, n, href);
 }
@@ -820,6 +879,39 @@ ncm_stats_dist_nd_vbk_get_split_frac (NcmStatsDistNdVBK *dnd)
   NcmStatsDistNdVBKPrivate * const self = dnd->priv;
   
   return self->split_frac;
+}
+
+/**
+ * ncm_stats_dist_nd_vbk_set_local_frac:
+ * @dnd: a #NcmStatsDistNdVBK
+ * @local_frac: the over-smooth factor
+ *
+ * Sets local kernel fraction to @local_frac.
+ *
+ */
+void
+ncm_stats_dist_nd_vbk_set_local_frac (NcmStatsDistNdVBK *dnd, const gdouble local_frac)
+{
+  NcmStatsDistNdVBKPrivate * const self = dnd->priv;
+
+  g_assert_cmpfloat (local_frac, >=, 0.001);
+  g_assert_cmpfloat (local_frac, <=, 1.0);
+
+  self->local_frac = local_frac;
+}
+
+/**
+ * ncm_stats_dist_nd_vbk_get_local_frac:
+ * @dnd: a #NcmStatsDistNdVBK
+ *
+ * Returns: the local kernel fraction.
+ */
+gdouble
+ncm_stats_dist_nd_vbk_get_local_frac (NcmStatsDistNdVBK *dnd)
+{
+  NcmStatsDistNdVBKPrivate * const self = dnd->priv;
+
+  return self->local_frac;
 }
 
 /**
@@ -935,7 +1027,7 @@ ncm_stats_dist_nd_vbk_eval (NcmStatsDistNdVBK *dnd, NcmVector *x)
   NcmStatsDistNdVBKClass *dnd_class     = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   NcmStatsDistNdVBKPrivate * const self = dnd->priv;
   
-  return dnd_class->eval (dnd, self->weights, self->v, self->sample_array, self->d, self->n, self->href, self->cov_array, self->norm_array);
+  return dnd_class->eval (dnd, self->weights, self->v, self->sample_array, self->d, self->n, self->href, self->cov_array, self->lnnorm_array);
 }
 
 /**
@@ -959,9 +1051,9 @@ ncm_stats_dist_nd_vbk_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *x)
   ncm_vector_memcpy (self->v, x);
   
   if (dnd_class->eval_m2lnp != NULL)
-    return dnd_class->eval_m2lnp (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href, self->cov_array) + 2.0 * self->kernel_lnnorm;
+    return dnd_class->eval_m2lnp (dnd, self->weights, self->v, self->invUsample, self->d, self->n, self->href, self->cov_array);
   else
-    return -2.0 * (log (dnd_class->eval (dnd, self->weights, self->v, self->sample_array, self->d, self->n, self->href, self->cov_array, self->norm_array)));  /*- self->kernel_lnnorm);*/
+    return -2.0 * (log (dnd_class->eval (dnd, self->weights, self->v, self->sample_array, self->d, self->n, self->href, self->cov_array, self->lnnorm_array)));
 }
 
 /**
@@ -1053,7 +1145,7 @@ ncm_stats_dist_nd_vbk_kernel_eval_m2lnp (NcmStatsDistNdVBK *dnd, NcmVector *x, N
   NcmStatsDistNdVBKClass *dnd_class     = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   NcmStatsDistNdVBKPrivate * const self = dnd->priv;
   
-  return dnd_class->kernel_eval_m2lnp (dnd, self->cov_decomp, self->d, x, y, self->v, href) + 2.0 * self->kernel_lnnorm;
+  return dnd_class->kernel_eval_m2lnp (dnd, self->cov_decomp, self->d, x, y, self->v, href);
 }
 
 /**
@@ -1100,5 +1192,32 @@ ncm_stats_dist_nd_vbk_reset (NcmStatsDistNdVBK *dnd)
   NcmStatsDistNdVBKClass *dnd_class = NCM_STATS_DIST_ND_VBK_GET_CLASS (dnd);
   
   dnd_class->reset (dnd);
+}
+
+/**
+ * ncm_stats_dist_nd_vbk_get_Ki:
+ * @dnd: a #NcmStatsDistNdVBK
+ * @i: kernel index
+ * @y_i: (out callee-allocates) (transfer full): kernel location
+ * @cov_i: (out callee-allocates) (transfer full): kernel covariance U
+ * @n_i: (out): kernel normalization
+ * @w_i: (out): kernel weight
+ *
+ * Return all information about the @i-th kernel.
+ *
+ */
+void
+ncm_stats_dist_nd_vbk_get_Ki (NcmStatsDistNdVBK *dnd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i)
+{
+  NcmStatsDistNdVBKPrivate * const self = dnd->priv;
+
+  g_assert (i < self->n);
+
+  y_i[0] = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
+  cov_i[0] = ncm_matrix_dup (g_ptr_array_index (self->cov_array, i));
+  n_i[0] = exp (g_array_index (self->lnnorm_array, gdouble, i));
+  w_i[0] = ncm_vector_get (self->weights, i);
+
+  ncm_matrix_triang_to_sym (g_ptr_array_index (self->cov_array, i), 'U', TRUE, cov_i[0]);
 }
 

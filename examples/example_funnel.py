@@ -27,7 +27,7 @@ Ncm.cfg_init ()
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
-mrb = Ncm.ModelFunnel.new (9)
+mrb = Ncm.ModelFunnel.new (3)
 
 #
 # New Model set object including slm with parameters
@@ -62,6 +62,8 @@ lh = Ncm.Likelihood.new (dset)
 #
 fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
 
+fit.run (Ncm.FitRunMsgs.SIMPLE)
+
 #
 # Printing fitting informations.
 #
@@ -92,10 +94,10 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-#sampler = 'aps'
-sampler  = 'stretch'
-nwalkers = int (math.ceil (200 * 2))
-ssize    = 5000000
+sampler = 'aps'
+#sampler  = 'stretch'
+nwalkers = int (math.ceil (1500 * 2))
+ssize    = 20000000
 
 if sampler == 'aps':
   walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())

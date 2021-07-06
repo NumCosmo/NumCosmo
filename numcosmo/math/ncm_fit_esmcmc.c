@@ -1781,9 +1781,10 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     }
     else
     {
+      /*ncm_vector_log_vals (thetastar, "thetastar", "% 22.15g", TRUE);*/
       g_array_index (self->offboard, gboolean, k) = TRUE;
     }
-    
+
     if (jump < prob)
     {
       if (fk_ptr[0]->funcs_array != NULL)

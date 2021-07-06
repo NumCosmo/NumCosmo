@@ -3686,6 +3686,9 @@ extern "C" {
             
         }
         
+        CVectorFree (&distances);
+        CVectorFree (&indices);
+
         return lresult;
         
     }
@@ -3713,7 +3716,7 @@ extern "C" {
         long lFound;
         int l2lazy;
         size_t size;
-        
+
         drat = 1.;        
         l2lazy = 0;
         if ((treehandle->m_iflags&CNEARTREE_NORM_L2LAZY)) {
@@ -3730,16 +3733,16 @@ extern "C" {
         shell = 1;
         closed = 1;
 
-        /*fprintf (stderr,
+        fprintf (stdout,
                  "Entering CNearTreeFindKNearest_Annular, dRadius %g, dRadiusInner %g, dRadiusOuter %g\n",
-                 dRadius, dRadiusInner, dRadiusOuter);*/
+                 dRadius, dRadiusInner, dRadiusOuter);
         
         /* First find the nearest k inner shell */
         do {
             dRadiusOuterSave = dRadiusOuter;
             size = CVectorSize(distances);
-            /*fprintf(stderr,"k %d, dRadius %g, dRadiusInner, dRadiusOuter %g %g\n", (int)k,
-                    (double)dRadius, (double)(dRadiusInner), (double)(dRadiusOuter));*/
+            fprintf(stdout,"k %d, dRadius %g, dRadiusInner, dRadiusOuter %g %g\n", (int)k,
+                    (double)dRadius, (double)(dRadiusInner), (double)(dRadiusOuter));
             error = CNearTreeFindKNearInAnnulus(treehandle,k-size,shell,closed,
                                                 dRadiusInner,
                                                 dRadiusOuter,
@@ -3749,9 +3752,9 @@ extern "C" {
             lFound = CVectorSize(distances)-size;
             if (lFound > 0) {
                 CVectorGetElement(distances,&dRadiusOuter,CVectorSize(distances)-1);
-                /*fprintf (stderr,
-                         "Ran CNearTreeFindKNearInAnnulus, lFound %ld , dRadiusInner %g, dRadiusOuter %g\n",
-                         (long)lFound, dRadiusInner, dRadiusOuter);*/
+                fprintf (stdout,
+                         "Ran1 CNearTreeFindKNearInAnnulus, lFound %ld , dRadiusInner %g, dRadiusOuter %g\n",
+                         (long)lFound, dRadiusInner, dRadiusOuter);
                 break;
             }
             dRadiusOuter = dRadiusOuterSave+(dRadiusOuterSave-dRadiusInner)*2.;
@@ -3795,14 +3798,14 @@ extern "C" {
                 if (dRadiusOuter <= dRadiusInner) dRadiusOuter = dRadiusInner+1.;
                 if (dRadiusOuter > dRadius) dRadiusOuter = dRadius;
             }
-            /*fprintf(stderr,"dRadiusInner, dRadiusOuter %g %g\n",
-             (double)(dRadiusInner), (double)(dRadiusOuter)); */
+            fprintf(stdout,"dRadiusInner, dRadiusOuter %g %g\n",
+             (double)(dRadiusInner), (double)(dRadiusOuter));
             /* Add any point from the next annular shell */
             do {
                 dRadiusOuterSave = dRadiusOuter;
                 size = CVectorSize(distances);
-                /*fprintf(stderr,"k %d, dRadius %g, dRadiusInner, dRadiusOuter %g %g\n", (int)k,
-                        (double)dRadius, (double)(dRadiusInner), (double)(dRadiusOuter));*/
+                fprintf(stdout,"k %d, dRadius %g, dRadiusInner, dRadiusOuter %g %g\n", (int)k,
+                        (double)dRadius, (double)(dRadiusInner), (double)(dRadiusOuter));
                 error = CNearTreeFindKNearInAnnulus(treehandle,k-size,shell,closed,
                                                     dRadiusInner,
                                                     dRadiusOuter,
@@ -3812,9 +3815,9 @@ extern "C" {
                 lFound = CVectorSize(distances) - size;
                 if (lFound > 0) {
                     CVectorGetElement(distances,&dRadiusOuter,CVectorSize(distances)-1);
-                    /*fprintf (stderr,
-                             "Ran CNearTreeFindKNearInAnnulus, lFound %ld , dRadiusInner %g, dRadiusOuter %g\n",
-                             (long)lFound, dRadiusInner, dRadiusOuter);*/
+                    fprintf (stdout,
+                             "Ran2 CNearTreeFindKNearInAnnulus, lFound %ld , dRadiusInner %g, dRadiusOuter %g\n",
+                             (long)lFound, dRadiusInner, dRadiusOuter);
                     break;
                 }
                 dRadiusOuter = dRadiusOuterSave+(dRadiusOuterSave-dRadiusInner)*1.1;
@@ -3823,7 +3826,7 @@ extern "C" {
                 if (dRadiusOuter > dRadius) dRadiusOuter = dRadius;
                 
             } while (lFound <= 0 && dRadiusOuterSave < dRadius);
-            /* fprintf(stderr,"found %ld points\n",lFound); */
+            fprintf(stdout,"found %ld points %ld\n",lFound,CVectorSize(distances));
             if (dRadiusOuter >= dRadius-1.e-36) break;
         }
         
@@ -3849,7 +3852,7 @@ extern "C" {
         enum  { left, right, end } eDir;
         
         eDir = left; /* examine the left nodes first */
-        
+
         nopoints = 1;
         
         dDR = dDL = DBL_MAX;

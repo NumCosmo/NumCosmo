@@ -132,9 +132,9 @@ ncm_model_funnel_class_init (NcmModelFunnelClass *klass)
                               NCM_MSET_MODEL_MAIN);
 
   ncm_model_class_set_sparam (model_class, NCM_MODEL_FUNNEL_NU, "\\nu", "nu",
-                              -100.0, 100.0, 1.0e-1, 0.0, 0.0, NCM_PARAM_TYPE_FREE);
+                              -1000.0, 1000.0, 1.0e-1, 0.0, 0.0, NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_vparam (model_class, NCM_MODEL_FUNNEL_X, 9, "x", "x",
-                              -500.0, 500.0, 1.0, 0.0, 0.0, NCM_PARAM_TYPE_FREE);
+                              -1.0e6, 1.0e6, 1.0, 0.0, 0.0, NCM_PARAM_TYPE_FREE);
 
   ncm_model_class_check_params_info (model_class);
 }

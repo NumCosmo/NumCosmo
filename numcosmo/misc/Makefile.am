@@ -51,6 +51,8 @@ libnumcosmo_misc_la_SOURCES = \
 	CVector.h	\
 	CVector.c       \
 	rhrand.h        \
+	kdtree.c        \
+	kdtree.h        \	
 	initial_point.h
 
 EXTRA_DIST =
