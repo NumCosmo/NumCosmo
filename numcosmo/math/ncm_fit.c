@@ -96,8 +96,8 @@ ncm_fit_init (NcmFit *fit)
   fit->equality_constraints_tot   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   fit->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-  fit->sub_fit = NULL;
-  fit->diff    = ncm_diff_new ();
+  fit->sub_fit     = NULL;
+  fit->diff        = ncm_diff_new ();
 }
 
 static void

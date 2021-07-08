@@ -2076,7 +2076,7 @@ NcmMSetCatalog *
 ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
 {
   NcmFitESMCMCPrivate * const self = esmcmc->priv;
-  
+
   return ncm_mset_catalog_ref (self->mcat);
 }
 
@@ -2092,8 +2092,23 @@ NcmMSetCatalog *
 ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc)
 {
   NcmFitESMCMCPrivate * const self = esmcmc->priv;
-  
+
   return self->mcat;
+}
+
+/**
+ * ncm_fit_esmcmc_peek_walker:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Gets the used #NcmFitESMCMCWalker object.
+ * 
+ * Returns: (transfer none): the #NcmFitESMCMCWalker object.
+ */
+NcmFitESMCMCWalker *
+ncm_fit_esmcmc_peek_walker (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  return self->walker;
 }
 
 /**
@@ -2108,7 +2123,7 @@ NcmFit *
 ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc)
 {
   NcmFitESMCMCPrivate * const self = esmcmc->priv;
-  
+
   return self->fit;
 }
 
