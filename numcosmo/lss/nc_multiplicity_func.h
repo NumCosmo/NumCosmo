@@ -50,6 +50,31 @@ struct _NcMultiplicityFuncClass
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 };
 
+/**
+ * NcMultiplicityFuncMassDef:
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN: halo mass defined in terms of the mean density $\rho_\mathrm{bg} = \rho_m(z)$
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_FOF: friends of friends 
+ *
+ * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
+ * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:log10MDelta is ignored and
+ * \begin{equation}\label{def:DVir}
+ * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
+ * \end{equation}
+ *
+ */
+typedef enum _NcMultiplicityFuncMassDef
+{
+  NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN = 0,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
+  /* < private > */
+  NC_HALO_DENSITY_PROFILE_MASS_DEF_LEN, /*< skip >*/
+} NcMultiplicityFuncMassDef;
+
 struct _NcMultiplicityFunc
 {
   /*< private >*/
@@ -62,6 +87,8 @@ NcMultiplicityFunc *nc_multiplicity_func_new_from_name (gchar *multiplicity_name
 gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
 void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
+
+
 
 G_END_DECLS
 

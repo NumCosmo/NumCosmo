@@ -40,6 +40,14 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
+enum
+{
+  PROP_0,
+  PROP_MDEF,
+  PROP_DELTA,
+  PROP_SIZE,
+};
+
 G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT);
 
 /**
@@ -108,7 +116,25 @@ nc_multiplicity_func_clear (NcMultiplicityFunc **mulf)
 static void
 nc_multiplicity_func_init (NcMultiplicityFunc *mulf)
 {
-  NCM_UNUSED (mulf);
+  mulf->mdef            = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+}
+
+static void
+_nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (object);
+
+  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC (object));
+
+  switch (prop_id)
+  {
+    case PROP_MDEF:
+      mulf->mdef = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
@@ -128,3 +154,20 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
   object_class->finalize = _nc_multiplicity_func_finalize;
 }
 
+static void
+_nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (object);
+
+  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC (object));
+
+  switch (prop_id)
+  {
+    case PROP_MDEF:
+      mulf->mdef = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
