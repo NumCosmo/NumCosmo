@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -52,15 +52,16 @@ struct _NcmStatsDist2dClass
 {
   /*< private >*/
   GObjectClass parent_class;
-	void (*xbounds) (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf);
-	void (*ybounds) (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf);
+  
+  void (*xbounds) (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf);
+  void (*ybounds) (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf);
   gdouble (*pdf) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
-	gdouble (*m2lnp) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
-	gdouble (*cdf) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
-	gdouble (*marginal_pdf) (NcmStatsDist2d *sd2, const gdouble xy);
-	gdouble (*marginal_cdf) (NcmStatsDist2d *sd2, const gdouble xy);
-	gdouble (*marginal_inv_cdf) (NcmStatsDist2d *sd2, const gdouble u);
-	gdouble (*inv_cond) (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
+  gdouble (*m2lnp) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
+  gdouble (*cdf) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
+  gdouble (*marginal_pdf) (NcmStatsDist2d *sd2, const gdouble xy);
+  gdouble (*marginal_cdf) (NcmStatsDist2d *sd2, const gdouble xy);
+  gdouble (*marginal_inv_cdf) (NcmStatsDist2d *sd2, const gdouble u);
+  gdouble (*inv_cond) (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
   void (*prepare) (NcmStatsDist2d *sd2);
 };
 
@@ -68,7 +69,6 @@ struct _NcmStatsDist2d
 {
   /*< private >*/
   GObject parent_instance;
-
 };
 
 GType ncm_stats_dist2d_get_type (void) G_GNUC_CONST;
@@ -94,3 +94,4 @@ gdouble ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, const gdouble u, co
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST2D_H_ */
+

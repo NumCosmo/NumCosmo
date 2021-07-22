@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -56,8 +56,8 @@ struct _NcmStatsDist2dSpline
   NcmStatsDist2d parent_instance;
   NcmSpline2d *m2lnp;
   gboolean marginal_x;
-	gdouble norma;
-	gdouble m2lnnorma;
+  gdouble norma;
+  gdouble m2lnnorma;
 };
 
 GType ncm_stats_dist2d_spline_get_type (void) G_GNUC_CONST;

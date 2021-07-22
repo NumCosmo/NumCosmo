@@ -95,12 +95,12 @@ ncm_sources = \
 	math/ncm_stats_dist1d_epdf.c          \
 	math/ncm_stats_dist2d.c               \
 	math/ncm_stats_dist2d_spline.c        \
-	math/ncm_stats_dist_nd.c              \
-	math/ncm_stats_dist_nd_vbk.c          \
-	math/ncm_stats_dist_nd_kde_gauss.c    \
-	math/ncm_stats_dist_nd_vbk_gauss.c    \
-	math/ncm_stats_dist_nd_kde_studentt.c \
-        math/ncm_stats_dist_nd_vbk_studentt.c \
+	math/ncm_stats_dist.c                 \
+	math/ncm_stats_dist_kde.c             \
+	math/ncm_stats_dist_vkde.c            \
+	math/ncm_stats_dist_kernel.c          \
+	math/ncm_stats_dist_kernel_gauss.c    \
+	math/ncm_stats_dist_kernel_st.c       \
 	math/ncm_bootstrap.c                  \
 	math/ncm_spline.c                     \
 	math/ncm_spline_gsl.c                 \
@@ -232,12 +232,12 @@ ncm_headers =                                 \
 	math/ncm_stats_dist1d_epdf.h          \
 	math/ncm_stats_dist2d.h               \
 	math/ncm_stats_dist2d_spline.h        \
-	math/ncm_stats_dist_nd.h              \
-	math/ncm_stats_dist_nd_vbk.h          \
-	math/ncm_stats_dist_nd_kde_gauss.h    \
-	math/ncm_stats_dist_nd_vbk_gauss.h    \
-	math/ncm_stats_dist_nd_kde_studentt.h \
-	math/ncm_stats_dist_nd_vbk_studentt.h \
+	math/ncm_stats_dist.h                 \
+	math/ncm_stats_dist_kde.h             \
+	math/ncm_stats_dist_vkde.h            \
+	math/ncm_stats_dist_kernel.h          \
+	math/ncm_stats_dist_kernel_gauss.h    \
+	math/ncm_stats_dist_kernel_st.h       \
 	math/ncm_bootstrap.h                  \
 	math/ncm_spline.h                     \
 	math/ncm_spline_gsl.h                 \
@@ -343,6 +343,10 @@ ncm_headers_nogi = \
 	math/ncm_gsl_blas_types.h
 
 ncm_headers_internal = \
+	math/ncm_stats_dist_kernel_private.h \
+	math/ncm_stats_dist_private.h        \
+	math/ncm_stats_dist_kde_private.h    \
+	math/ncm_stats_dist_vkde_private.h   \
 	perturbations/nc_hipert_private.h
 
 nc_headers = \

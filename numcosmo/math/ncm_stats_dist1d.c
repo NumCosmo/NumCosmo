@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@
  * @short_description: Abstract class for implementing one dimensional probability distributions
  *
  * Abstract class to reconstruct an arbitrary one dimensional probability distribution.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,23 +48,25 @@ enum
   PROP_NORMA,
   PROP_RELTOL,
   PROP_ABSTOL,
-  PROP_MAX_PROB, 
-	PROP_SIZE,
+  PROP_MAX_PROB,
+  PROP_SIZE,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT);
 
-static gdouble 
+static gdouble
 _ncm_stats_dist1d_inv_cdf_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
+  
   return sd1->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
 }
 
-static gdouble 
+static gdouble
 _ncm_stats_dist1d_pdf_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
+  
   /*printf ("B % 20.15g % 20.15g % 20.15g\n", x, y, ncm_stats_dist1d_eval_p (sd1, x));*/
   return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x);
 }
@@ -75,6 +77,7 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
   NcmSpline *s1 = ncm_spline_cubic_notaknot_new ();
   NcmSpline *s2 = ncm_spline_cubic_notaknot_new ();
   NcmSpline *s3 = ncm_spline_cubic_notaknot_new ();
+  
   sd1->xi       = 0.0;
   sd1->xf       = 0.0;
   sd1->norma    = 0.0;
@@ -83,7 +86,7 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
   sd1->inv_cdf  = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
   sd1->pdf      = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
   sd1->fmin     = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-
+  
   /* hnil is not an error in this case */
   /*sd1->inv_pdf->stop_hnil = FALSE;*/
   
@@ -108,7 +111,7 @@ static void
 ncm_stats_dist1d_finalize (GObject *object)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
-
+  
   gsl_min_fminimizer_free (sd1->fmin);
   
   /* Chain up : end */
@@ -119,8 +122,9 @@ static void
 ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  
   g_return_if_fail (NCM_IS_STATS_DIST1D (object));
-
+  
   switch (prop_id)
   {
     case PROP_XI:
@@ -148,8 +152,9 @@ static void
 ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  
   g_return_if_fail (NCM_IS_STATS_DIST1D (object));
-
+  
   switch (prop_id)
   {
     case PROP_XI:
@@ -179,13 +184,13 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
 static void
 ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->dispose      = ncm_stats_dist1d_dispose;
   object_class->finalize     = ncm_stats_dist1d_finalize;
   object_class->set_property = ncm_stats_dist1d_set_property;
   object_class->get_property = ncm_stats_dist1d_get_property;
-
+  
   g_object_class_install_property (object_class,
                                    PROP_XI,
                                    g_param_spec_double ("xi",
@@ -193,7 +198,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                         "x_i",
                                                         -G_MAXDOUBLE, +G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   g_object_class_install_property (object_class,
                                    PROP_XF,
                                    g_param_spec_double ("xf",
@@ -208,7 +213,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                         "Distribution norma",
                                                         0.0, +G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -231,7 +236,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                         "Maximal probability considered",
                                                         0.0, 1.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- 
+  
   klass->p       = NULL;
   klass->prepare = NULL;
 }
@@ -241,7 +246,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
  * @sd1: a #NcmStatsDist1d
  *
  * Increases the reference count of @sd1.
- * 
+ *
  * Returns: (transfer full): @sd1.
  */
 NcmStatsDist1d *
@@ -257,7 +262,7 @@ ncm_stats_dist1d_ref (NcmStatsDist1d *sd1)
  * Decreases the reference count of @sd1.
  *
  */
-void 
+void
 ncm_stats_dist1d_free (NcmStatsDist1d *sd1)
 {
   g_object_unref (sd1);
@@ -270,7 +275,7 @@ ncm_stats_dist1d_free (NcmStatsDist1d *sd1)
  * Decreases the reference count of *@sd1 and sets the pointer *@sd1 to NULL.
  *
  */
-void 
+void
 ncm_stats_dist1d_clear (NcmStatsDist1d **sd1)
 {
   g_clear_object (sd1);
@@ -282,58 +287,58 @@ ncm_stats_dist1d_clear (NcmStatsDist1d **sd1)
  *
  * Prepares the object for calculations.
  */
-void 
+void
 ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 {
-  NcmStatsDist1dClass *sd1_class = NCM_STATS_DIST1D_GET_CLASS (sd1); 
-
+  NcmStatsDist1dClass *sd1_class = NCM_STATS_DIST1D_GET_CLASS (sd1);
+  
   if (sd1_class->prepare != NULL)
     sd1_class->prepare (sd1);
-
+  
   if (G_LIKELY (sd1->xi != sd1->xf))
   {
     ncm_ode_spline_set_reltol (sd1->inv_cdf, sd1->reltol);
     ncm_ode_spline_set_reltol (sd1->pdf, sd1->reltol);
-
+    
     ncm_ode_spline_set_abstol (sd1->inv_cdf, sd1->abstol);
     ncm_ode_spline_set_abstol (sd1->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
-
-		ncm_ode_spline_set_xi (sd1->inv_cdf, 0.0);
-		ncm_ode_spline_set_yi (sd1->inv_cdf, sd1->xi);
-		ncm_ode_spline_set_yf (sd1->inv_cdf, sd1->xf);
-		
+    
+    ncm_ode_spline_set_xi (sd1->inv_cdf, 0.0);
+    ncm_ode_spline_set_yi (sd1->inv_cdf, sd1->xi);
+    ncm_ode_spline_set_yf (sd1->inv_cdf, sd1->xf);
+    
     ncm_ode_spline_set_interval (sd1->pdf, 0.0, sd1->xi, sd1->xf);
-
+    
     sd1->norma = 1.0;
     ncm_ode_spline_prepare (sd1->pdf, sd1);
     sd1->norma = ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), sd1->xf);
-
+    
     ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
-	}
+  }
 }
 
 /**
  * ncm_stats_dist1d_get_xi:
  * @sd1: a #NcmStatsDist1d
- * 
+ *
  * Returns: the lower bound of the distribution $x_i$.
- */ 
-gdouble 
+ */
+gdouble
 ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
 {
-	return sd1->xi;
+  return sd1->xi;
 }
 
 /**
  * ncm_stats_dist1d_get_xf:
  * @sd1: a #NcmStatsDist1d
- * 
+ *
  * Returns: the upper bound of the distribution $x_f$.
- */ 
-gdouble 
+ */
+gdouble
 ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
 {
-	return sd1->xf;
+  return sd1->xf;
 }
 
 /**
@@ -342,14 +347,15 @@ ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
  * @x: random variable value
  *
  * Calculates the value of the probability density at @x.
- * 
+ *
  * Returns: the value of the probability density at @x.
  */
-gdouble 
+gdouble
 ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi == x ? 1.0 : 0.0;
+  
   return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x) / sd1->norma;
 }
 
@@ -361,14 +367,15 @@ ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
  * Calculates the value of the $-2\ln(p(x))$ for the probability density.
  * It can be unnormalized, the norma can be retrieved using
  * ncm_stats_dist1d_eval_norma().
- * 
+ *
  * Returns: the value of $-2\ln(p(x))$.
  */
-gdouble 
+gdouble
 ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi == x ? 0.0 : GSL_NEGINF;
+  
   return NCM_STATS_DIST1D_GET_CLASS (sd1)->m2lnp (sd1, x);
 }
 
@@ -378,14 +385,15 @@ ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
  * @x: random variable value
  *
  * Calculates the value of the probability of the interval [x_i, @x].
- * 
+ *
  * Returns: the value of the probability of the interval [x_i, @x].
  */
-gdouble 
+gdouble
 ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi <= x ? 1.0 : 0.0;
+  
   return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), x) / sd1->norma;
 }
 
@@ -395,14 +403,15 @@ ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
  *
  * Calculates the norma of the distribution. If the probability
  * density is already normalized it will return 1.0.
- * 
+ *
  * Returns: the value distribution normalization.
  */
-gdouble 
+gdouble
 ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return 1.0;
+  
   return sd1->norma;
 }
 
@@ -413,7 +422,7 @@ ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
  *
  * Calculates the value of the random variable $x$ for which the cumulative
  * distribution satisfy $\int_{x_i}^x\mathrm{d}x^\prime p(x^\prime) = u$.
- * 
+ *
  * Returns: the value of x.
  */
 gdouble
@@ -436,21 +445,28 @@ ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
  *
  * Calculates the value of the random variable $x$ for which the cumulative
  * distribution satisfy $\int_{x}^{x_f}\mathrm{d}x^\prime p(x^\prime) = v$.
- * 
+ *
  * Returns: the value of x.
  */
 gdouble
 ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
+  {
     return sd1->xi;
+  }
   else if (G_UNLIKELY (v <= 0.0))
+  {
     return sd1->xf;
+  }
   else if (G_UNLIKELY (v >= 1.0))
+  {
     return sd1->xi;
+  }
   else
   {
-    const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (- 0.5 * v) - log (v));
+    const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (-0.5 * v) - log (v));
+    
     return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->inv_cdf), atan_1mv);
   }
 }
@@ -459,15 +475,16 @@ ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
  * ncm_stats_dist1d_gen:
  * @sd1: a #NcmStatsDist1d
  * @rng: a #NcmRNG
- * 
+ *
  * Generates a realization of the probability distribution.
- * 
+ *
  * Returns: the value of the probability of the interval [x_i, @x].
  */
-gdouble 
+gdouble
 ncm_stats_dist1d_gen (NcmStatsDist1d *sd1, NcmRNG *rng)
 {
   const gdouble u = gsl_rng_uniform (rng->r);
+  
   return ncm_stats_dist1d_eval_inv_pdf (sd1, u);
 }
 
@@ -475,15 +492,16 @@ static gdouble
 _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (p);
+  
   return ncm_stats_dist1d_eval_m2lnp (sd1, x);
 }
 
 /**
  * ncm_stats_dist1d_eval_mode:
  * @sd1: a #NcmStatsDist1d
- * 
+ *
  * Calculates the mode of the distribution.
- * 
+ *
  * Returns: the mode of the probability distribution.
  */
 gdouble
@@ -492,29 +510,31 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   gint status;
   gint iter = 0, max_iter = 1000000;
   gsl_function F;
-  gdouble x0 = sd1->xi;
-  gdouble x1 = sd1->xf;
-  gdouble x  = 0.5 * (sd1->xf + sd1->xi);
+  gdouble x0      = sd1->xi;
+  gdouble x1      = sd1->xf;
+  gdouble x       = 0.5 * (sd1->xf + sd1->xi);
   gdouble last_x0 = x0;
   gdouble last_x1 = x1;
-
+  
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi;
-
+  
   F.params   = sd1;
   F.function = &_ncm_stats_dist1d_m2lnp;
   
   gsl_min_fminimizer_set (sd1->fmin, &F, x, x0, x1);
+  
   do {
     iter++;
     status = gsl_min_fminimizer_iterate (sd1->fmin);
+    
     if (status)
       g_error ("ncm_stats_dist1d_mode: Cannot find minimum (%s)", gsl_strerror (status));
-
+    
     x  = gsl_min_fminimizer_x_minimum (sd1->fmin);
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
     x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
-
+    
     status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
     
     if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
@@ -522,11 +542,11 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
       g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up...");
       break;
     }
-
+    
     last_x0 = x0;
     last_x1 = x1;
-
-	} while (status == GSL_CONTINUE && iter < max_iter);
-
+  } while (status == GSL_CONTINUE && iter < max_iter);
+  
   return x;
 }
+

@@ -41,7 +41,8 @@
 #include "math/ncm_fit_esmcmc_walker_aps.h"
 
 #include "math/ncm_fit_esmcmc.h"
-#include "math/ncm_stats_dist_nd_vbk_studentt.h"
+#include "math/ncm_stats_dist_vkde.h"
+#include "math/ncm_stats_dist_kernel_st.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sort.h>
@@ -62,8 +63,8 @@ struct _NcmFitESMCMCWalkerAPSPrivate
   NcmVector *m2lnp_star;
   NcmVector *m2lnp_cur;
   gchar *desc;
-  NcmStatsDistNdVBK *dndg0;
-  NcmStatsDistNdVBK *dndg1;
+  NcmStatsDist *sd0;
+  NcmStatsDist *sd1;
   GPtrArray *thetastar;
   NcmVector *m2lnL_s0;
   NcmVector *m2lnL_s1;
@@ -83,8 +84,8 @@ ncm_fit_esmcmc_walker_aps_init (NcmFitESMCMCWalkerAPS *aps)
   self->m2lnp_star      = NULL;
   self->m2lnp_cur       = NULL;
   self->desc            = "APS-Move";
-  self->dndg0           = NULL;
-  self->dndg1           = NULL;
+  self->sd0             = NULL;
+  self->sd1             = NULL;
   self->thetastar       = g_ptr_array_new ();
   self->m2lnL_s0        = NULL;
   self->m2lnL_s1        = NULL;
@@ -140,8 +141,8 @@ _ncm_fit_esmcmc_walker_aps_dispose (GObject *object)
   ncm_vector_clear (&self->m2lnL_s0);
   ncm_vector_clear (&self->m2lnL_s1);
   
-  ncm_stats_dist_nd_vbk_clear (&self->dndg0);
-  ncm_stats_dist_nd_vbk_clear (&self->dndg1);
+  ncm_stats_dist_clear (&self->sd0);
+  ncm_stats_dist_clear (&self->sd1);
 
   g_clear_pointer (&self->thetastar, g_ptr_array_unref);
 
@@ -214,8 +215,8 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
   {
     gint i;
     
-    ncm_stats_dist_nd_vbk_clear (&self->dndg0);
-    ncm_stats_dist_nd_vbk_clear (&self->dndg1);
+    ncm_stats_dist_clear (&self->sd0);
+    ncm_stats_dist_clear (&self->sd1);
     ncm_vector_clear (&self->m2lnp_star);
     ncm_vector_clear (&self->m2lnp_cur);
 
@@ -233,19 +234,15 @@ _ncm_fit_esmcmc_walker_aps_set_sys (NcmFitESMCMCWalker *walker, guint size, guin
 
     if (TRUE)
     {
-      self->dndg0 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_studentt_new (self->nparams, NCM_STATS_DIST_ND_VBK_CV_NONE, 1.0));
-      self->dndg1 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_studentt_new (self->nparams, NCM_STATS_DIST_ND_VBK_CV_NONE, 1.0));
+      NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (self->nparams, 1.0));
+      self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (sdk, NCM_STATS_DIST_CV_NONE));
+      self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (sdk, NCM_STATS_DIST_CV_NONE));
     }
- /*   else
-    {
-      self->dndg0 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT));
-      self->dndg1 = NCM_STATS_DIST_ND_VBK (ncm_stats_dist_nd_vbk_gauss_new (self->nparams, NCM_STATS_DIST_ND_CV_SPLIT));
-    }*/
 
-    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg0, 0.2);
-    ncm_stats_dist_nd_vbk_set_over_smooth (self->dndg1, 0.2);
-    ncm_stats_dist_nd_vbk_set_split_frac (self->dndg0, 1.0);
-    ncm_stats_dist_nd_vbk_set_split_frac (self->dndg1, 1.0);
+    ncm_stats_dist_set_over_smooth (self->sd0, 1.0);
+    ncm_stats_dist_set_over_smooth (self->sd1, 1.0);
+    ncm_stats_dist_set_split_frac (self->sd0, 1.0);
+    ncm_stats_dist_set_split_frac (self->sd1, 1.0);
     
     for (i = 0; i < self->size; i++)
     {
@@ -311,12 +308,12 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
 
   if (ki < self->size_2)
   {
-    ncm_stats_dist_nd_vbk_reset (NCM_STATS_DIST_ND_VBK (self->dndg0));
+    ncm_stats_dist_reset (self->sd0);
     for (i = self->size_2; i < self->size; i++)
     {
       /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s0, i - self->size_2, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_nd_vbk_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
+      /*ncm_stats_dist_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
     }
 
     {
@@ -329,33 +326,33 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
         const gint j = self->size_2 + p[(i-self->size_2)];
         NcmVector *theta_j = g_ptr_array_index (theta, j);
         ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
-        ncm_stats_dist_nd_vbk_add_obs (self->dndg0, theta_j);
+        ncm_stats_dist_add_obs (self->sd0, theta_j);
         /*printf ("AddingA [%d %d %d] % 22.15g\n", i, n - 1 - (i-self->size_2), j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
       }
     }
 
     if (self->use_interp)
-      ncm_stats_dist_nd_vbk_prepare_interp (NCM_STATS_DIST_ND_VBK (self->dndg0), self->m2lnL_s0);
+      ncm_stats_dist_prepare_interp (self->sd0, self->m2lnL_s0);
     else
-      ncm_stats_dist_nd_vbk_prepare (NCM_STATS_DIST_ND_VBK (self->dndg0));
+      ncm_stats_dist_prepare (self->sd0);
 
     for (i = ki; i < self->size_2; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
       /*do {*/
-        ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg0), thetastar_i, rng);
+        ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
       /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
     }
   }
   if (kf >= self->size_2)
   {
-    ncm_stats_dist_nd_vbk_reset (NCM_STATS_DIST_ND_VBK (self->dndg1));
+    ncm_stats_dist_reset (self->sd1);
     
     for (i = 0; i < self->size_2; i++)
     {
       /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s1, i, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_nd_vbk_add_obs (self->dndg1, theta_i);*/
+      /*ncm_stats_dist_add_obs (self->dndg1, theta_i);*/
     }
 
     {
@@ -368,22 +365,22 @@ _ncm_fit_esmcmc_walker_aps_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPt
         const gint j = p[i];
         NcmVector *theta_j = g_ptr_array_index (theta, j);
         ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
-        ncm_stats_dist_nd_vbk_add_obs (self->dndg1, theta_j);
+        ncm_stats_dist_add_obs (self->sd1, theta_j);
         /*printf ("AddingB [%d %d %d] % 22.15g\n", i, n - 1 - i, j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
       }
     }
 
     
     if (self->use_interp)
-      ncm_stats_dist_nd_vbk_prepare_interp (NCM_STATS_DIST_ND_VBK (self->dndg1), self->m2lnL_s1);
+      ncm_stats_dist_prepare_interp (self->sd1, self->m2lnL_s1);
     else
-      ncm_stats_dist_nd_vbk_prepare (NCM_STATS_DIST_ND_VBK (self->dndg1));
+      ncm_stats_dist_prepare (self->sd1);
     
     for (i = self->size_2; i < kf; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
       /*do {*/
-        ncm_stats_dist_nd_vbk_sample (NCM_STATS_DIST_ND_VBK (self->dndg1), thetastar_i, rng);
+        ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
       /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
     }
   }
@@ -399,8 +396,8 @@ _ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
 
   if (k < self->size_2)
   {
-    const gdouble m2lnaps_star = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg0), thetastar);
-    const gdouble m2lnaps_cur  = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_k);
+    const gdouble m2lnaps_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
+    const gdouble m2lnaps_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
     
     ncm_vector_set (self->m2lnp_star, k, m2lnaps_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnaps_cur);
@@ -409,8 +406,8 @@ _ncm_fit_esmcmc_walker_aps_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
 
   if (k >= self->size_2)
   {
-    const gdouble m2lnaps_star = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg1), thetastar);
-    const gdouble m2lnaps_cur  = ncm_stats_dist_nd_vbk_eval_m2lnp (NCM_STATS_DIST_ND_VBK (self->dndg1), theta_k);
+    const gdouble m2lnaps_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
+    const gdouble m2lnaps_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
     
     ncm_vector_set (self->m2lnp_star, k, m2lnaps_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnaps_cur);

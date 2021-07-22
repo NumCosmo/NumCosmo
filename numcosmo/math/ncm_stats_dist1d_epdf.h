@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -55,17 +55,17 @@ struct _NcmStatsDist1dEPDFClass
  * @NCM_STATS_DIST1D_EPDF_BW_FIXED: Uses the given value of bandwidth.
  * @NCM_STATS_DIST1D_EPDF_BW_RoT: Uses the Silverman's rule of thumb to determine the bandwidth.
  * @NCM_STATS_DIST1D_EPDF_BW_AUTO: Uses Botev's et al method to automatically determine the best bandwidth.
- * 
+ *
  * Gaussian kernel bandwidth type.
- * 
+ *
  */
 typedef enum _NcmStatsDist1dEPDFBw
 {
   NCM_STATS_DIST1D_EPDF_BW_FIXED = 0,
   NCM_STATS_DIST1D_EPDF_BW_RoT,
-  NCM_STATS_DIST1D_EPDF_BW_AUTO, 
+  NCM_STATS_DIST1D_EPDF_BW_AUTO,
   /* < private > */
-  NCM_STATS_DIST1D_EPDF_BW_LEN,  /*< skip >*/
+  NCM_STATS_DIST1D_EPDF_BW_LEN, /*< skip >*/
 } NcmStatsDist1dEPDFBw;
 
 struct _NcmStatsDist1dEPDF
@@ -95,7 +95,7 @@ struct _NcmStatsDist1dEPDF
   NcmVector *p_est;
   NcmVector *xv;
   NcmVector *pv;
-  gpointer fft_data_to_tilde; 
+  gpointer fft_data_to_tilde;
   gpointer fft_tilde_to_est;
   NcmSpline *ph_spline;
   NcmSpline *p_spline;
@@ -119,3 +119,4 @@ gdouble ncm_stats_dist1d_epdf_get_obs_mean (NcmStatsDist1dEPDF *epdf1d);
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST1D_EPDF_H_ */
+

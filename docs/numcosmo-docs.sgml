@@ -132,9 +132,6 @@
       <xi:include href="xml/ncm_stats_dist1d_epdf.xml"/>
       <xi:include href="xml/ncm_stats_dist2d.xml"/>
       <xi:include href="xml/ncm_stats_dist2d_spline.xml"/>
-      <xi:include href="xml/ncm_stats_dist_nd.xml"/>
-      <xi:include href="xml/ncm_stats_dist_nd_kde_gauss.xml"/>
-      <xi:include href="xml/ncm_stats_dist_nd_kde_studentt.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_prior.xml"/>
@@ -162,6 +159,15 @@
       <xi:include href="xml/ncm_lh_ratio1d.xml"/>
       <xi:include href="xml/ncm_lh_ratio2d.xml"/>
       <xi:include href="xml/ncm_abc.xml"/>
+    </section>
+    <section>
+      <title>Multivariate density estimation</title>
+      <xi:include href="xml/ncm_stats_dist.xml"/>
+      <xi:include href="xml/ncm_stats_dist_kde.xml"/>
+      <xi:include href="xml/ncm_stats_dist_vkde.xml"/>
+      <xi:include href="xml/ncm_stats_dist_kernel.xml"/>
+      <xi:include href="xml/ncm_stats_dist_kernel_gauss.xml"/>
+      <xi:include href="xml/ncm_stats_dist_kernel_st.xml"/>
     </section>
     <section>
       <title>MCMC and ESMCMC</title>

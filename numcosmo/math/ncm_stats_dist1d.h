@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -52,6 +52,7 @@ struct _NcmStatsDist1dClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  
   gdouble (*p) (NcmStatsDist1d *sd1, gdouble x);
   gdouble (*m2lnp) (NcmStatsDist1d *sd1, gdouble x);
   void (*prepare) (NcmStatsDist1d *sd1);
@@ -95,3 +96,4 @@ gdouble ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1);
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST1D_H_ */
+

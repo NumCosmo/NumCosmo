@@ -40,7 +40,10 @@
 
 #include "math/ncm_mset_trans_kern_cat.h"
 #include "math/ncm_c.h"
-#include "math/ncm_stats_dist_nd_kde_gauss.h"
+#include "math/ncm_stats_dist_kde.h"
+#include "math/ncm_stats_dist_vkde.h"
+#include "math/ncm_stats_dist_kernel_gauss.h"
+#include "math/ncm_stats_dist_kernel_st.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -52,14 +55,15 @@ struct _NcmMSetTransKernCatPrivate
 {
   NcmMSetCatalog *mcat;
   NcmMSetTransKernCatSampling stype;
-  NcmStatsDistNdKDEGauss *rbf;
-  gboolean rbf_prep;
+  NcmStatsDist *sd;
+  gboolean sd_prep;
 };
 
 enum
 {
   PROP_0,
   PROP_MCAT,
+  PROP_SD,
   PROP_STYPE,
 };
 
@@ -70,10 +74,10 @@ ncm_mset_trans_kern_cat_init (NcmMSetTransKernCat *tcat)
 {
   NcmMSetTransKernCatPrivate * const self = tcat->priv = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   
-  self->mcat     = NULL;
-  self->stype    = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;
-  self->rbf      = NULL;
-  self->rbf_prep = FALSE;
+  self->mcat    = NULL;
+  self->stype   = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;
+  self->sd      = NULL;
+  self->sd_prep = FALSE;
 }
 
 static void
@@ -89,6 +93,11 @@ _ncm_mset_trans_kern_cat_set_property (GObject *object, guint prop_id, const GVa
       ncm_mset_catalog_clear (&self->mcat);
       self->mcat = g_value_dup_object (value);
       g_assert (self->mcat != NULL);
+      break;
+    case PROP_SD:
+      g_assert (self->sd == NULL);
+      self->sd = g_value_dup_object (value);
+      g_assert (self->sd != NULL);
       break;
     case PROP_STYPE:
       ncm_mset_trans_kern_cat_set_sampling (tcat, g_value_get_enum (value));
@@ -111,6 +120,9 @@ _ncm_mset_trans_kern_cat_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_MCAT:
       g_value_set_object (value, self->mcat);
       break;
+    case PROP_SD:
+      g_value_set_object (value, self->sd);
+      break;
     case PROP_STYPE:
       g_value_set_enum (value, ncm_mset_trans_kern_cat_get_sampling (tcat));
       break;
@@ -127,7 +139,7 @@ _ncm_mset_trans_kern_cat_dispose (GObject *object)
   NcmMSetTransKernCatPrivate * const self = tcat->priv;
 
   ncm_mset_catalog_clear (&self->mcat);
-  ncm_stats_dist_nd_kde_gauss_clear (&self->rbf);
+  ncm_stats_dist_clear (&self->sd);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_trans_kern_cat_parent_class)->dispose (object);
@@ -163,6 +175,13 @@ ncm_mset_trans_kern_cat_class_init (NcmMSetTransKernCatClass *klass)
                                                         NULL,
                                                         "catalog",
                                                         NCM_TYPE_MSET_CATALOG,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SD,
+                                   g_param_spec_object ("stats-dist",
+                                                        NULL,
+                                                        "NcmStatsDist object",
+                                                        NCM_TYPE_STATS_DIST,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -227,7 +246,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
 
   g_assert_cmpuint (theta_size, ==, ncm_vector_len (theta));
 
-  if (!self->rbf_prep)
+  if (!self->sd_prep)
   {
     const guint nchains = ncm_mset_catalog_nchains (self->mcat);
     const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
@@ -238,9 +257,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     NcmVector *last_row = NULL;
     gint i, j;
 
-    ncm_stats_dist_nd_kde_gauss_clear (&self->rbf);
-
-    self->rbf = ncm_stats_dist_nd_kde_gauss_new (theta_size, FALSE);
+    ncm_stats_dist_reset (self->sd);
 
     j = 0;
     for (i = cat_len - n; i < cat_len; i++)
@@ -252,7 +269,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
       {
         NcmVector *srow_i = ncm_vector_get_subvector (row_i, nadd, theta_size);
 
-        ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->rbf), srow_i);
+        ncm_stats_dist_add_obs (self->sd, srow_i);
         ncm_vector_set (m2lnp, j, ncm_vector_get (row_i, m2lnp_i));
         j++;
         
@@ -260,14 +277,14 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
       }
       last_row = row_i;
     }
-    ncm_stats_dist_nd_prepare_interp (NCM_STATS_DIST_ND (self->rbf), m2lnp);
+    ncm_stats_dist_prepare_interp (self->sd, m2lnp);
     ncm_vector_free (m2lnp);
   }
 
   ncm_rng_lock (rng);
   while (TRUE)
   {
-    ncm_stats_dist_nd_sample (NCM_STATS_DIST_ND (self->rbf), thetastar, rng);
+    ncm_stats_dist_sample (self->sd, thetastar, rng);
 
     if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
       break;
@@ -286,7 +303,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
 
   g_assert_cmpuint (theta_size, ==, ncm_vector_len (theta));
 
-  if (!self->rbf_prep)
+  if (!self->sd_prep)
   {
     const guint nchains = ncm_mset_catalog_nchains (self->mcat);
     const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
@@ -295,9 +312,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     NcmVector *last_row = NULL;
     gint i;
 
-    ncm_stats_dist_nd_kde_gauss_clear (&self->rbf);
-
-    self->rbf = ncm_stats_dist_nd_kde_gauss_new (theta_size, FALSE);
+    ncm_stats_dist_reset (self->sd);
 
     for (i = cat_len - n; i < cat_len; i++)
     {
@@ -308,19 +323,19 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
       {
         NcmVector *srow_i = ncm_vector_get_subvector (row_i, nadd, theta_size);
 
-        ncm_stats_dist_nd_add_obs (NCM_STATS_DIST_ND (self->rbf), srow_i);
+        ncm_stats_dist_add_obs (self->sd, srow_i);
         
         ncm_vector_free (srow_i);
       }
       last_row = row_i;
     }
-    ncm_stats_dist_nd_prepare (NCM_STATS_DIST_ND (self->rbf));
+    ncm_stats_dist_prepare (self->sd);
   }
 
   ncm_rng_lock (rng);
   while (TRUE)
   {
-    ncm_stats_dist_nd_sample (NCM_STATS_DIST_ND (self->rbf), thetastar, rng);
+    ncm_stats_dist_sample (self->sd, thetastar, rng);
 
     if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
       break;
@@ -373,10 +388,11 @@ _ncm_mset_trans_kern_cat_get_name (NcmMSetTransKern *tkern)
  *
  */
 NcmMSetTransKernCat *
-ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat)
+ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat, NcmStatsDist *sd)
 {
   NcmMSetTransKernCat *tcat = g_object_new (NCM_TYPE_MSET_TRANS_KERN_CAT,
                                             "catalog", mcat,
+                                            "stats-dist", sd,
                                             NULL);
   return tcat;
 }

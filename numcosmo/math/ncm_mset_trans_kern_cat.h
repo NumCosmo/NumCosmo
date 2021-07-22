@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_mset_catalog.h>
+#include <numcosmo/math/ncm_stats_dist.h>
 
 G_BEGIN_DECLS
 
@@ -78,7 +79,7 @@ typedef enum _NcmMSetTransKernCatSampling
 
 GType ncm_mset_trans_kern_cat_get_type (void) G_GNUC_CONST;
 
-NcmMSetTransKernCat *ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat);
+NcmMSetTransKernCat *ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat, NcmStatsDist *sd);
 
 void ncm_mset_trans_kern_cat_set_sampling (NcmMSetTransKernCat *tcat, NcmMSetTransKernCatSampling sampling);
 NcmMSetTransKernCatSampling ncm_mset_trans_kern_cat_get_sampling (NcmMSetTransKernCat *tcat);
