@@ -670,6 +670,8 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
         self->M_U = ncm_matrix_new (self->ncols, self->ncols);
         self->LU_alloc = TRUE;
       }
+      /*ncm_matrix_log_vals (A, "A", "% 22.15g");*/
+      /*ncm_matrix_log_vals (self->M, "M", "% 22.15g");*/
       ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
       ncm_matrix_update_vector (A, 'T', 1.0, f, 0.0, self->b);
       break;

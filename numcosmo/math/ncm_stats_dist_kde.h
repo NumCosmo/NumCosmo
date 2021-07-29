@@ -74,8 +74,6 @@ void ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde);
 void ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxiter);
 guint ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde);
 
-GPtrArray *ncm_stats_dist_kde_peek_invU_sample (NcmStatsDistKDE *sdkde);
-
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST_KDE_H_ */

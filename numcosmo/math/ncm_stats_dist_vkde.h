@@ -73,8 +73,6 @@ void ncm_stats_dist_vkde_clear (NcmStatsDistVKDE **sdvkde);
 void ncm_stats_dist_vkde_set_local_frac (NcmStatsDistVKDE *sdvkde, const gdouble local_frac);
 gdouble ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde);
 
-void ncm_stats_dist_vkde_get_Ki (NcmStatsDistVKDE *sdvkde, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i);
-
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST_ND_H_ */

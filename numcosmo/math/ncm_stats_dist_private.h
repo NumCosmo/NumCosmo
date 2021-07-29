@@ -38,23 +38,18 @@ struct _NcmStatsDistPrivate
 {
   NcmStatsDistKernel *kernel;
   GPtrArray *sample_array;
-  NcmStatsVec *sample;
-  NcmMatrix *cov_decomp;
-  NcmMatrix *sample_matrix;
-  GPtrArray *invUsample;
   NcmVector *weights;
-  NcmVector *v;
   gdouble over_smooth;
   NcmStatsDistCV cv_type;
   gdouble split_frac;
   gdouble min_m2lnp;
   gdouble max_m2lnp;
+  gdouble href;
   gdouble rnorm;
   guint n;
   guint alloc_n;
   guint d;
   GArray *sampling;
-  guint nearPD_maxiter;
   NcmNNLS *nnls;
   NcmMatrix *IM;
   NcmMatrix *sub_IM;

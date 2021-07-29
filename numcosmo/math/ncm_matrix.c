@@ -565,6 +565,29 @@ ncm_matrix_get_row (NcmMatrix *cm, const guint row)
 }
 
 /**
+ * ncm_matrix_as_vector:
+ * @cm: a #NcmMatrix
+ *
+ * Creates a vector containing the row-wise concatenation
+ * of the matrix @cm. It requires a matrix with tda==ncols.
+ *
+ * Returns: (transfer full): A #NcmVector.
+ */
+NcmVector *
+ncm_matrix_as_vector (NcmMatrix *cm)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  const guint len   = nrows * ncols;
+
+  NcmVector *v = ncm_vector_new_full (ncm_matrix_data (cm), len, 1, ncm_matrix_ref (cm), (GDestroyNotify)&ncm_matrix_free);
+
+  g_assert (ncm_matrix_tda (cm) == ncm_matrix_ncols (cm));
+
+  return v;
+}
+
+/**
  * ncm_matrix_set_from_variant:
  * @cm: a #NcmMatrix
  * @var: a #GVariant of type "aad"

@@ -55,7 +55,11 @@ struct _NcmStatsDistKernelClass
   void (*set_dim) (NcmStatsDistKernel *sdk, const guint dim);
   guint (*get_dim) (NcmStatsDistKernel *sdk);
   gdouble (*get_rot_bandwidth) (NcmStatsDistKernel *sdk, const gdouble n);
-  gdouble (*get_lnnorm) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href);
+  gdouble (*get_lnnorm) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
+  gdouble (*eval_unnorm) (NcmStatsDistKernel *sdk, const gdouble chi2);
+  void (*eval_unnorm_vec) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
+  void (*eval_sum0_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda);
+  void (*eval_sum1_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda);
   void (*sample) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 };
 
@@ -77,7 +81,12 @@ void ncm_stats_dist_kernel_clear (NcmStatsDistKernel **sdk);
 guint ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk);
 
 gdouble ncm_stats_dist_kernel_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
-gdouble ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href);
+gdouble ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
+
+gdouble ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
+void ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
+void ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda);
+void ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda);
 
 void ncm_stats_dist_kernel_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 

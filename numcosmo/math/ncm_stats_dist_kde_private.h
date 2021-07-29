@@ -40,16 +40,8 @@ struct _NcmStatsDistKDEPrivate
   NcmMatrix *sample_matrix;
   GPtrArray *invUsample;
   NcmVector *v;
-  gdouble href;
+  NcmVector *chi2;
   gdouble kernel_lnnorm;
-  gdouble min_m2lnp;
-  gdouble max_m2lnp;
-  NcmStatsVec *m2lnp_stats;
-  gdouble rnorm;
-  guint n;
-  guint alloc_n;
-  guint d;
-  GArray *sampling;
   guint nearPD_maxiter;
 };
 

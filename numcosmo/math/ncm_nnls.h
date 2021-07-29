@@ -61,7 +61,8 @@ struct _NcmNNLS
 
 /**
  * NcmNNLSUMethod:
- * @NCM_NNLS_UMETHOD_NORMAL: Solve using normal equations
+ * @NCM_NNLS_UMETHOD_NORMAL: Solve using normal equations and Cholesky decomposition
+ * @NCM_NNLS_UMETHOD_NORMAL_LU: Solve using normal equations and LU decomposition
  * @NCM_NNLS_UMETHOD_QR: Solve using QR decomposition
  *
  * Method used to solve the intermediate unconstrained least-squares.

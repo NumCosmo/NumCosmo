@@ -94,7 +94,7 @@ init_sampler.set_cov_from_rescale (100.0)
 # 
 sampler = 'aps'
 #sampler  = 'stretch'
-nwalkers = int (math.ceil (1500))
+nwalkers = int (math.ceil (1510))
 ssize    = 8000000
 
 if sampler == 'aps':

@@ -34,6 +34,7 @@
 #include <string.h>
 #include <math.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_statistics_double.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
@@ -124,6 +125,7 @@ void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
 
 NCM_INLINE gdouble ncm_vector_sum_cpts (const NcmVector *cv);
+NCM_INLINE gdouble ncm_vector_mean (const NcmVector *cv);
 NCM_INLINE const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *gv);
 NCM_INLINE gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 NCM_INLINE gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
@@ -200,6 +202,12 @@ ncm_vector_sum_cpts (const NcmVector *cv)
     sum += ncm_vector_get (cv, i);
   
   return sum;
+}
+
+NCM_INLINE gdouble
+ncm_vector_mean (const NcmVector *cv)
+{
+  return ncm_vector_sum_cpts (cv) / ncm_vector_len (cv);
 }
 
 NCM_INLINE const NcmVector *

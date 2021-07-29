@@ -91,10 +91,8 @@ enum
 {
   PROP_0,
   PROP_KERNEL,
-  PROP_DIM,
   PROP_SAMPLE_SIZE,
   PROP_OVER_SMOOTH,
-  PROP_NEARPD_MAXITER,
   PROP_CV_TYPE,
   PROP_SPLIT_FRAC,
 };
@@ -108,23 +106,18 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   
   self->kernel         = NULL;
   self->sample_array   = g_ptr_array_new ();
-  self->sample         = NULL;
-  self->cov_decomp     = NULL;
-  self->sample_matrix  = NULL;
-  self->invUsample     = g_ptr_array_new ();
   self->weights        = NULL;
-  self->v              = NULL;
   self->over_smooth    = 0.0;
   self->cv_type        = NCM_STATS_DIST_CV_LEN;
   self->split_frac     = 0.0;
   self->min_m2lnp      = 0.0;
   self->max_m2lnp      = 0.0;
+  self->href           = 0.0;
   self->rnorm          = 0.0;
   self->n              = 0;
   self->alloc_n        = 0;
   self->d              = 0;
   self->sampling       = g_array_new (FALSE, FALSE, sizeof (guint));
-  self->nearPD_maxiter = 0;
   self->nnls           = NULL;
   self->IM             = NULL;
   self->sub_IM         = NULL;
@@ -134,10 +127,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->levmar_n       = 0;
   
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
-  g_ptr_array_set_free_func (self->invUsample, (GDestroyNotify) ncm_vector_free);
 }
-
-static void _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim);
 
 static void
 _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -151,17 +141,11 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_KERNEL:
       ncm_stats_dist_set_kernel (sd, g_value_get_object (value));
       break;
-    case PROP_DIM:
-      _ncm_stats_dist_set_dim (sd, g_value_get_uint (value));
-      break;
     case PROP_SAMPLE_SIZE:
       g_assert_not_reached ();
       break;
     case PROP_OVER_SMOOTH:
       ncm_stats_dist_set_over_smooth (sd, g_value_get_double (value));
-      break;
-    case PROP_NEARPD_MAXITER:
-      ncm_stats_dist_set_nearPD_maxiter (sd, g_value_get_uint (value));
       break;
     case PROP_CV_TYPE:
       ncm_stats_dist_set_cv_type (sd, g_value_get_enum (value));
@@ -188,17 +172,11 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_KERNEL:
       g_value_set_object (value, ncm_stats_dist_peek_kernel (sd));
       break;
-    case PROP_DIM:
-      g_value_set_uint (value, self->d);
-      break;
     case PROP_SAMPLE_SIZE:
-      g_value_set_uint (value, ncm_stats_vec_nitens (self->sample));
+      g_value_set_uint (value, self->sample_array->len);
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_stats_dist_get_over_smooth (sd));
-      break;
-    case PROP_NEARPD_MAXITER:
-      g_value_set_uint (value, self->nearPD_maxiter);
       break;
     case PROP_CV_TYPE:
       g_value_set_enum (value, ncm_stats_dist_get_cv_type (sd));
@@ -221,14 +199,9 @@ _ncm_stats_dist_dispose (GObject *object)
   ncm_stats_dist_kernel_clear (&self->kernel);
   
   g_clear_pointer (&self->sample_array, g_ptr_array_unref);
-  ncm_stats_vec_clear (&self->sample);
-  ncm_matrix_clear (&self->cov_decomp);
-  ncm_matrix_clear (&self->sample_matrix);
   ncm_vector_clear (&self->weights);
-  ncm_vector_clear (&self->v);
   
   g_clear_pointer (&self->sampling, g_array_unref);
-  g_clear_pointer (&self->invUsample, g_ptr_array_unref);
   
   ncm_nnls_clear (&self->nnls);
   
@@ -248,11 +221,13 @@ _ncm_stats_dist_finalize (GObject *object)
   NcmStatsDistPrivate * const self = sd->priv;
   
   self->levmar_n = 0;
+  g_clear_pointer (&self->levmar_workz, g_free);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->finalize (object);
 }
 
+static void _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_get_href (NcmStatsDist *sd);
 
 static void
@@ -276,6 +251,14 @@ _ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
   g_error ("method peek_cov_decomp not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
   
   return NULL;
+}
+
+static gdouble
+_ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
+{
+  g_error ("method get_lnnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
+
+  return 0.0;
 }
 
 static gdouble
@@ -314,13 +297,6 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         NCM_TYPE_STATS_DIST_KERNEL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_DIM,
-                                   g_param_spec_uint ("dimension",
-                                                      NULL,
-                                                      "PDF dimension",
-                                                      2, G_MAXUINT, 2,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_SAMPLE_SIZE,
                                    g_param_spec_uint ("N",
                                                       NULL,
@@ -351,13 +327,6 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         0.50, 0.95, 0.9,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  g_object_class_install_property (object_class,
-                                   PROP_NEARPD_MAXITER,
-                                   g_param_spec_uint ("nearPD-maxiter",
-                                                      NULL,
-                                                      "Maximum number of iterations in the nearPD call",
-                                                      1, G_MAXUINT, 200,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   klass->set_dim            = &_ncm_stats_dist_set_dim;
   klass->get_href           = &_ncm_stats_dist_get_href;
@@ -366,6 +335,7 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
   klass->prepare_interp     = &_ncm_stats_dist_prepare_interp;
   klass->compute_IM         = &_ncm_stats_dist_compute_IM;
   klass->peek_cov_decomp    = &_ncm_stats_dist_peek_cov_decomp;
+  klass->get_lnnorm         = &_ncm_stats_dist_get_lnnorm;
   klass->eval_weights       = &_ncm_stats_dist_eval_weights;
   klass->eval_weights_m2lnp = &_ncm_stats_dist_eval_weights_m2lnp;
   klass->reset              = &_ncm_stats_dist_reset;
@@ -375,7 +345,7 @@ static void
 _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  
+
   self->d = dim;
 }
 
@@ -383,7 +353,7 @@ static gdouble
 _ncm_stats_dist_get_href (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  
+
   return self->over_smooth * ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n);
 }
 
@@ -396,20 +366,18 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   self->n = self->sample_array->len;
   
   if (self->n <= self->d)
-    g_error ("_ncm_stats_dist_prepare: sample too small, impossible to prepare.");
-  
+    g_error ("_ncm_stats_dist_prepare: sample too small.");
+
   sd_class->prepare_kernel (sd, self->sample_array);
   
-  if (self->weights == NULL)
-  {
-    self->weights = ncm_vector_new (self->n);
-  }
-  else if (self->n != ncm_vector_len (self->weights))
+  if ((self->weights == NULL) || (self->n != ncm_vector_len (self->weights)))
   {
     ncm_vector_clear (&self->weights);
     self->weights = ncm_vector_new (self->n);
   }
   
+  self->href = ncm_stats_dist_get_href (sd);
+
   ncm_vector_set_all (self->weights, 1.0 / (1.0 * self->n));
 }
 
@@ -426,15 +394,16 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   NcmStatsDistEval *eval = adata;
   NcmVector *f           = ncm_vector_new_data_static (hx, n, 1);
   NcmVector *res;
-  
-  ncm_stats_dist_set_over_smooth (eval->sd, exp (p[0]));
-  
+
+  eval->self->over_smooth = exp (p[0]);
+  eval->self->href        = ncm_stats_dist_get_href (eval->sd);
+
   eval->sd_class->compute_IM (eval->sd, eval->self->IM);
   ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
   
   res = ncm_nnls_get_residuals (eval->self->nnls);
-  
   ncm_vector_memcpy (f, res);
+
   ncm_vector_free (f);
 }
 
@@ -454,7 +423,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     gint i;
     
     g_assert_cmpuint (nrows, >=, ncols);
-    
+
     /*
      * Preparing allocations
      */
@@ -550,6 +519,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
                      10000, opts, info, self->levmar_workz, &cov, &eval);
         
         self->over_smooth = exp (ln_os);
+        self->href = ncm_stats_dist_get_href (sd);
         sd_class->compute_IM (sd, self->IM);
         
         self->rnorm = ncm_nnls_solve (self->nnls, self->sub_IM, self->sub_x, self->f);
@@ -571,7 +541,7 @@ _ncm_stats_dist_reset (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = sd->priv;
   
-  ncm_stats_vec_reset (self->sample, TRUE);
+  g_ptr_array_set_size (self->sample_array, 0);
 }
 
 /**
@@ -628,6 +598,8 @@ ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
   
   ncm_stats_dist_kernel_clear (&self->kernel);
   self->kernel = ncm_stats_dist_kernel_ref (sdk);
+
+  NCM_STATS_DIST_GET_CLASS (sd)->set_dim (sd, ncm_stats_dist_kernel_get_dim (sdk));
 }
 
 /**
@@ -768,37 +740,6 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
 }
 
 /**
- * ncm_stats_dist_set_nearPD_maxiter:
- * @sd: a #NcmStatsDist
- * @maxiter: maximum number of iterations
- *
- * Sets the maximum number of iterations when finding the
- * nearest positive definite covariance matrix to @maxiter.
- *
- */
-void
-ncm_stats_dist_set_nearPD_maxiter (NcmStatsDist *sd, const guint maxiter)
-{
-  NcmStatsDistPrivate * const self = sd->priv;
-  
-  self->nearPD_maxiter = maxiter;
-}
-
-/**
- * ncm_stats_dist_get_nearPD_maxiter:
- * @sd: a #NcmStatsDist
- *
- * Returns: maximum number of iterations when finding the nearest positive definite covariance matrix.
- */
-guint
-ncm_stats_dist_get_nearPD_maxiter (NcmStatsDist *sd)
-{
-  NcmStatsDistPrivate * const self = sd->priv;
-  
-  return self->nearPD_maxiter;
-}
-
-/**
  * ncm_stats_dist_set_cv_type:
  * @sd: a #NcmStatsDist
  * @cv_type: a #NcmStatsDistCV
@@ -899,10 +840,7 @@ ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   NcmStatsDistPrivate * const self = sd->priv;
   
-  if (sd_class->eval_weights_m2lnp != NULL)
-    return sd_class->eval_weights_m2lnp (sd, self->weights, x);
-  else
-    return -2.0 * log (sd_class->eval_weights (sd, self->weights, x));
+  return sd_class->eval_weights_m2lnp (sd, self->weights, x);
 }
 
 /**
@@ -920,23 +858,20 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistPrivate * const self = sd->priv;
   const guint n                    = ncm_vector_len (self->weights);
-  const gdouble href               = ncm_stats_dist_get_href (sd);
   gint i;
   
   g_array_set_size (self->sampling, ncm_vector_len (self->weights));
   gsl_ran_multinomial (rng->r, n, 1, ncm_vector_data (self->weights), (guint *) self->sampling->data);
   
-  
-  
   for (i = 0; i < n; i++)
   {
     if (g_array_index (self->sampling, guint, i) > 0)
     {
-      NcmVector *y_i = ncm_stats_vec_peek_row (self->sample, i);
+      NcmVector *x_i = g_ptr_array_index (self->sample_array, i);
       
       ncm_stats_dist_kernel_sample (self->kernel,
                                     ncm_stats_dist_peek_cov_decomp (sd, i),
-                                    href, y_i, x, rng);
+                                    self->href, x_i, x, rng);
       break;
     }
   }
@@ -969,11 +904,11 @@ ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
  *
  */
 void
-ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *y)
+ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *x)
 {
   NcmStatsDistPrivate * const self = sd->priv;
   
-  ncm_stats_vec_append_weight (self->sample, y, 1.0, TRUE);
+  g_ptr_array_add (self->sample_array, ncm_vector_dup (x));
 }
 
 /**
@@ -1009,6 +944,23 @@ ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
 }
 
 /**
+ * ncm_stats_dist_get_lnnorm: (virtual get_lnnorm)
+ * @sd: a #NcmStatsDist
+ * @i: kernel index
+ *
+ * Gets the logarithm of the @i-th kernel normalization.
+ *
+ * Returns: $\ln (N_i)$.
+ */
+gdouble
+ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
+{
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+
+  return sd_class->get_lnnorm (sd, i);
+}
+
+/**
  * ncm_stats_dist_peek_weights:
  * @sd: a #NcmStatsDist
  *
@@ -1035,5 +987,36 @@ ncm_stats_dist_reset (NcmStatsDist *sd)
   NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
   
   sd_class->reset (sd);
+}
+
+/**
+ * ncm_stats_dist_get_Ki:
+ * @sd: a #NcmStatsDist
+ * @i: kernel index
+ * @y_i: (out callee-allocates) (transfer full): kernel location
+ * @cov_i: (out callee-allocates) (transfer full): kernel covariance U
+ * @n_i: (out): kernel normalization
+ * @w_i: (out): kernel weight
+ *
+ * Return all information about the @i-th kernel.
+ *
+ */
+void
+ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  NcmMatrix *cov_decomp = ncm_stats_dist_peek_cov_decomp (sd, i);
+  const gdouble lnnorm  = ncm_stats_dist_get_lnnorm (sd, i);
+
+  g_assert (i < ncm_stats_dist_get_sample_size (sd));
+
+  y_i[0]   = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
+  cov_i[0] = ncm_matrix_dup (cov_decomp);
+  n_i[0]   = exp (lnnorm + self->d * log (self->href));
+  w_i[0]   = ncm_vector_get (self->weights, i);
+
+  ncm_matrix_triang_to_sym (cov_decomp, 'U', TRUE, cov_i[0]);
+
+  ncm_matrix_scale (cov_i[0], self->href * self->href);
 }
 

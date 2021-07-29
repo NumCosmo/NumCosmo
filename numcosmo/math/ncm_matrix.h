@@ -108,6 +108,7 @@ const NcmMatrix *ncm_matrix_const_new_variant (GVariant *var);
 NcmMatrix *ncm_matrix_get_submatrix (NcmMatrix *cm, const guint k1, const guint k2, const guint nrows, const guint ncols);
 NcmVector *ncm_matrix_get_col (NcmMatrix *cm, const guint col);
 NcmVector *ncm_matrix_get_row (NcmMatrix *cm, const guint row);
+NcmVector *ncm_matrix_as_vector (NcmMatrix *cm);
 
 void ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var);
 GVariant *ncm_matrix_get_variant (NcmMatrix *cm);

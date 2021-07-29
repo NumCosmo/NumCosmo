@@ -38,7 +38,8 @@ struct _NcmStatsDistVKDEPrivate
   NcmStatsVec *sample;
   GPtrArray *cov_array;
   NcmMatrix *tmp_cov;
-  GArray *lnnorm_array;
+  NcmVector *delta_x;
+  NcmVector *lnnorms;
   gdouble local_frac;
 };
 

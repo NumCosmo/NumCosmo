@@ -1401,3 +1401,13 @@ ncm_vector_reciprocal (NcmVector *cv)
  * Returns: the sum of the vector @cv components.
  */
 
+
+/**
+ * ncm_vector_mean:
+ * @cv: a constant #NcmVector
+ *
+ * Calculates the mean of the components.
+ *
+ * Returns: the mean of the vector @cv components.
+ */
+

@@ -62,6 +62,7 @@ struct _NcmStatsDistClass
   void (*prepare_interp) (NcmStatsDist *sd, NcmVector *m2lnp);
   void (*compute_IM) (NcmStatsDist *sd, NcmMatrix *IM);
   NcmMatrix *(*peek_cov_decomp) (NcmStatsDist *sd, guint i);
+  gdouble (*get_lnnorm) (NcmStatsDist *sd, guint i);
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*reset) (NcmStatsDist *sd);
@@ -110,9 +111,6 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 
-void ncm_stats_dist_set_nearPD_maxiter (NcmStatsDist *sd, const guint maxiter);
-guint ncm_stats_dist_get_nearPD_maxiter (NcmStatsDist *sd);
-
 void ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type);
 NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 
@@ -130,7 +128,10 @@ void ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *y);
 
 GPtrArray *ncm_stats_dist_peek_sample_array (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i);
+gdouble ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i);
 NcmVector *ncm_stats_dist_peek_weights (NcmStatsDist *sd);
+
+void ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i);
 
 void ncm_stats_dist_reset (NcmStatsDist *sd);
 

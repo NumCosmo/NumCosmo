@@ -316,6 +316,18 @@ test_ncm_matrix_new_data_static (TestNcmMatrix *test, gconstpointer pdata)
 
     g_assert_true ((ncm_matrix_nrows (test->m) * ncm_matrix_ncols (test->m)) == (test->nrows * test->ncols));
   }
+
+  {
+    NcmVector *v = ncm_matrix_as_vector (test->m);
+    const guint ncols = ncm_matrix_ncols (test->m);
+    gint i;
+
+    g_assert_true (ncm_vector_len (v) == ncols * ncm_matrix_nrows (test->m));
+    for (i = 0; i < ncm_vector_len (v); i++)
+      ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_matrix_get (test->m, i / ncols, i % ncols));
+    ncm_vector_free (v);
+  }
+
 }
 
 void
@@ -370,6 +382,7 @@ test_ncm_matrix_new_data_static_tda (TestNcmMatrix *test, gconstpointer pdata)
         g_assert_true (ncm_vector_get (v, i) == ncm_matrix_get (test->m, test->nrows - 1, i));
       ncm_vector_free (v);
     }
+
   }
 }
 
