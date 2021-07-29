@@ -10,7 +10,9 @@ notebooks_DATA = \
 	MagDustBounce.ipynb                    \
 	BounceVecPert.ipynb                    \
 	NC_CCL_Colossus_density_profiles.ipynb \
-	FisherMatrixExample.ipynb
+	FisherMatrixExample.ipynb              \
+	KDE/TestInterp.ipynb                   \
+	KDE/TestInterp-Rosenbrock.ipynb
 
 EXTRA_DIST = \
 	$(notebooks_DATA)
