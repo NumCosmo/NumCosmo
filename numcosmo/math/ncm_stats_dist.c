@@ -477,7 +477,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       ncm_vector_set_zero (self->weights);
       ncm_vector_set (self->weights, fi, 1.0);
       
-      self->over_smooth = 1.0 / ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n);
+      self->href = 1.0;
       
       return;
     }

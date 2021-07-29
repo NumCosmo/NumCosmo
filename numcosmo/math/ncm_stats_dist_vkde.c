@@ -211,7 +211,7 @@ static gdouble
 _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd)
 {
   /* Chain up : start */
-  const gdouble href_base = NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->get_href  (sd);
+  const gdouble href_base = NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->get_href (sd);
   {
     NcmStatsDistVKDEPrivate * const self = NCM_STATS_DIST_VKDE (sd)->priv;
 
@@ -357,6 +357,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
   /*NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;*/
   NcmStatsDistPrivate * const ppself   = sd->priv;
+  const gdouble href2 = ppself->href * ppself->href;
 
   gint i, j, res;
 
@@ -376,7 +377,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
       NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", res);
 
-      chi2_ij = ncm_vector_dot (self->delta_x, self->delta_x) / ppself->href;
+      chi2_ij = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
       /*p_ij = _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij) / norm_i;*/
 
       ncm_matrix_set (IM, j, i, chi2_ij);
