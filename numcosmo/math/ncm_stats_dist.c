@@ -104,27 +104,27 @@ ncm_stats_dist_init (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = sd->priv = ncm_stats_dist_get_instance_private (sd);
   
-  self->kernel         = NULL;
-  self->sample_array   = g_ptr_array_new ();
-  self->weights        = NULL;
-  self->over_smooth    = 0.0;
-  self->cv_type        = NCM_STATS_DIST_CV_LEN;
-  self->split_frac     = 0.0;
-  self->min_m2lnp      = 0.0;
-  self->max_m2lnp      = 0.0;
-  self->href           = 0.0;
-  self->rnorm          = 0.0;
-  self->n              = 0;
-  self->alloc_n        = 0;
-  self->d              = 0;
-  self->sampling       = g_array_new (FALSE, FALSE, sizeof (guint));
-  self->nnls           = NULL;
-  self->IM             = NULL;
-  self->sub_IM         = NULL;
-  self->sub_x          = NULL;
-  self->f              = NULL;
-  self->levmar_workz   = NULL;
-  self->levmar_n       = 0;
+  self->kernel       = NULL;
+  self->sample_array = g_ptr_array_new ();
+  self->weights      = NULL;
+  self->over_smooth  = 0.0;
+  self->cv_type      = NCM_STATS_DIST_CV_LEN;
+  self->split_frac   = 0.0;
+  self->min_m2lnp    = 0.0;
+  self->max_m2lnp    = 0.0;
+  self->href         = 0.0;
+  self->rnorm        = 0.0;
+  self->n            = 0;
+  self->alloc_n      = 0;
+  self->d            = 0;
+  self->sampling     = g_array_new (FALSE, FALSE, sizeof (guint));
+  self->nnls         = NULL;
+  self->IM           = NULL;
+  self->sub_IM       = NULL;
+  self->sub_x        = NULL;
+  self->f            = NULL;
+  self->levmar_workz = NULL;
+  self->levmar_n     = 0;
   
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
 }
@@ -257,7 +257,7 @@ static gdouble
 _ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
 {
   g_error ("method get_lnnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
-
+  
   return 0.0;
 }
 
@@ -345,7 +345,7 @@ static void
 _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-
+  
   self->d = dim;
 }
 
@@ -353,7 +353,7 @@ static gdouble
 _ncm_stats_dist_get_href (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-
+  
   return self->over_smooth * ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n);
 }
 
@@ -367,7 +367,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   
   if (self->n <= self->d)
     g_error ("_ncm_stats_dist_prepare: sample too small.");
-
+  
   sd_class->prepare_kernel (sd, self->sample_array);
   
   if ((self->weights == NULL) || (self->n != ncm_vector_len (self->weights)))
@@ -377,7 +377,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   }
   
   self->href = ncm_stats_dist_get_href (sd);
-
+  
   ncm_vector_set_all (self->weights, 1.0 / (1.0 * self->n));
 }
 
@@ -394,16 +394,16 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   NcmStatsDistEval *eval = adata;
   NcmVector *f           = ncm_vector_new_data_static (hx, n, 1);
   NcmVector *res;
-
+  
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
-
+  
   eval->sd_class->compute_IM (eval->sd, eval->self->IM);
   ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
   
   res = ncm_nnls_get_residuals (eval->self->nnls);
   ncm_vector_memcpy (f, res);
-
+  
   ncm_vector_free (f);
 }
 
@@ -423,7 +423,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     gint i;
     
     g_assert_cmpuint (nrows, >=, ncols);
-
+    
     /*
      * Preparing allocations
      */
@@ -519,7 +519,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
                      10000, opts, info, self->levmar_workz, &cov, &eval);
         
         self->over_smooth = exp (ln_os);
-        self->href = ncm_stats_dist_get_href (sd);
+        self->href        = ncm_stats_dist_get_href (sd);
         sd_class->compute_IM (sd, self->IM);
         
         self->rnorm = ncm_nnls_solve (self->nnls, self->sub_IM, self->sub_x, self->f);
@@ -598,7 +598,7 @@ ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
   
   ncm_stats_dist_kernel_clear (&self->kernel);
   self->kernel = ncm_stats_dist_kernel_ref (sdk);
-
+  
   NCM_STATS_DIST_GET_CLASS (sd)->set_dim (sd, ncm_stats_dist_kernel_get_dim (sdk));
 }
 
@@ -956,7 +956,7 @@ gdouble
 ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
 {
   NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
-
+  
   return sd_class->get_lnnorm (sd, i);
 }
 
@@ -1005,18 +1005,18 @@ void
 ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  NcmMatrix *cov_decomp = ncm_stats_dist_peek_cov_decomp (sd, i);
-  const gdouble lnnorm  = ncm_stats_dist_get_lnnorm (sd, i);
-
+  NcmMatrix *cov_decomp            = ncm_stats_dist_peek_cov_decomp (sd, i);
+  const gdouble lnnorm             = ncm_stats_dist_get_lnnorm (sd, i);
+  
   g_assert (i < ncm_stats_dist_get_sample_size (sd));
-
+  
   y_i[0]   = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
   cov_i[0] = ncm_matrix_dup (cov_decomp);
   n_i[0]   = exp (lnnorm + self->d * log (self->href));
   w_i[0]   = ncm_vector_get (self->weights, i);
-
+  
   ncm_matrix_triang_to_sym (cov_decomp, 'U', TRUE, cov_i[0]);
-
+  
   ncm_matrix_scale (cov_i[0], self->href * self->href);
 }
 

@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,10 +49,11 @@ struct _NcmFitESMCMCWalkerClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  
   void (*set_size) (NcmFitESMCMCWalker *walker, guint size);
   guint (*get_size) (NcmFitESMCMCWalker *walker);
   void (*set_nparams) (NcmFitESMCMCWalker *walker, guint nparams);
-  guint (*get_nparams) (NcmFitESMCMCWalker *walker);  
+  guint (*get_nparams) (NcmFitESMCMCWalker *walker);
   void (*setup) (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng);
   void (*step) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
   gdouble (*prob) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star);
@@ -89,3 +90,4 @@ const gchar *ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker);
 G_END_DECLS
 
 #endif /* _NCM_FIT_ESMCMC_WALKER_H_ */
+

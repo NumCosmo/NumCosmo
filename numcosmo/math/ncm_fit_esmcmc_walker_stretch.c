@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,7 +30,7 @@
  * @stability: Stable
  *
  * Implementing stretch move walker for #NcmFitESMCMC (affine invariant).
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -77,8 +77,9 @@ static void
 _ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
+  
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_STRETCH (object));
-
+  
   switch (prop_id)
   {
     case PROP_SCALE:
@@ -97,8 +98,9 @@ static void
 _ncm_fit_esmcmc_walker_stretch_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
+  
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_STRETCH (object));
-
+  
   switch (prop_id)
   {
     case PROP_SCALE:
@@ -117,16 +119,16 @@ static void
 _ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
-
+  
   ncm_vector_clear (&stretch->norm_box);
-
+  
   ncm_matrix_clear (&stretch->z);
   ncm_matrix_clear (&stretch->box);
-
+  
   g_clear_pointer (&stretch->use_box, g_array_unref);
   g_clear_pointer (&stretch->indices, g_array_unref);
   g_clear_pointer (&stretch->numbers, g_array_unref);
-
+  
   g_clear_pointer (&stretch->desc, g_free);
   
   /* Chain up : end */
@@ -136,7 +138,6 @@ _ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
 static void
 _ncm_fit_esmcmc_walker_stretch_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_stretch_parent_class)->finalize (object);
 }
@@ -155,14 +156,14 @@ static const gchar *_ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *wal
 static void
 ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
   NcmFitESMCMCWalkerClass *walker_class = NCM_FIT_ESMCMC_WALKER_CLASS (klass);
-
+  
   object_class->set_property = &_ncm_fit_esmcmc_walker_stretch_set_property;
   object_class->get_property = &_ncm_fit_esmcmc_walker_stretch_get_property;
   object_class->dispose      = &_ncm_fit_esmcmc_walker_stretch_dispose;
   object_class->finalize     = &_ncm_fit_esmcmc_walker_stretch_finalize;
-
+  
   g_object_class_install_property (object_class,
                                    PROP_SCALE,
                                    g_param_spec_double ("scale",
@@ -190,33 +191,35 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
   walker_class->desc        = &_ncm_fit_esmcmc_walker_stretch_desc;
 }
 
-static void 
+static void
 _ncm_fit_esmcmc_walker_stretch_set_sys (NcmFitESMCMCWalker *walker, guint size, guint nparams)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
+  
   g_assert_cmpuint (size, >, 0);
   g_assert_cmpuint (nparams, >, 0);
   
-  if (stretch->size != size || stretch->nparams != nparams)
+  if ((stretch->size != size) || (stretch->nparams != nparams))
   {
     guint i;
-
+    
     ncm_vector_clear (&stretch->norm_box);
     ncm_matrix_clear (&stretch->z);
     ncm_matrix_clear (&stretch->box);
-
+    
     g_assert (size % 2 == 0);
-
-    stretch->z        = ncm_matrix_new (size, nparams);
-
+    
+    stretch->z = ncm_matrix_new (size, nparams);
+    
     stretch->norm_box = ncm_vector_new (size);
     stretch->box      = ncm_matrix_new (nparams, 2);
-
+    
     g_array_set_size (stretch->use_box, nparams);
-
+    
     g_array_set_size (stretch->indices, size * nparams);
-
+    
     g_array_set_size (stretch->numbers, size);
+    
     for (i = 0; i < size; i++)
       g_array_index (stretch->numbers, guint, i) = i;
     
@@ -226,32 +229,32 @@ _ncm_fit_esmcmc_walker_stretch_set_sys (NcmFitESMCMCWalker *walker, guint size, 
   }
 }
 
-static void 
+static void
 _ncm_fit_esmcmc_walker_stretch_set_size (NcmFitESMCMCWalker *walker, guint size)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-
+  
   g_assert_cmpuint (size, >, 0);
   
   if (stretch->nparams != 0)
     _ncm_fit_esmcmc_walker_stretch_set_sys (walker, size, stretch->nparams);
   else
-    stretch->size = size;  
+    stretch->size = size;
 }
 
-static guint 
+static guint
 _ncm_fit_esmcmc_walker_stretch_get_size (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-
+  
   return stretch->size;
 }
 
-static void 
+static void
 _ncm_fit_esmcmc_walker_stretch_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-
+  
   g_assert_cmpuint (nparams, >, 0);
   
   if (stretch->size != 0)
@@ -260,20 +263,20 @@ _ncm_fit_esmcmc_walker_stretch_set_nparams (NcmFitESMCMCWalker *walker, guint np
     stretch->nparams = nparams;
 }
 
-static guint 
+static guint
 _ncm_fit_esmcmc_walker_stretch_get_nparams (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-
+  
   return stretch->nparams;
 }
 
-static void 
+static void
 _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
   guint k;
-
+  
   if (!stretch->multi)
   {
     for (k = ki; k < kf; k++)
@@ -282,9 +285,9 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset,
       const gdouble u         = gsl_rng_uniform (rng->r);
       const gdouble z         = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
       const guint j           = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;
-
+      
       /*printf ("# Walker %u using z = % 20.15g and other walker %u to move.\n", k, z, j);*/
-
+      
       ncm_matrix_set (stretch->z, k, 0, z);
       g_array_index (stretch->indices, guint, k) = j;
     }
@@ -295,38 +298,41 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset,
     {
       const guint subensemble = (k < stretch->size_2) ? stretch->size_2 : 0;
       guint pi;
+      
       for (pi = 0; pi < stretch->nparams; pi++)
       {
         const gdouble u = gsl_rng_uniform (rng->r);
         const gdouble z = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
+        
         /*const guint j   = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;*/
-
+        
         ncm_matrix_set (stretch->z, k, pi, z);
         /*g_array_index (stretch->indices, guint, k * stretch->nparams + pi) = j;*/
       }
-      gsl_ran_choose (rng->r, 
-                      &g_array_index (stretch->indices, guint, k * stretch->nparams), 
-                      stretch->nparams, 
-                      &g_array_index (stretch->numbers, guint, subensemble), 
+      
+      gsl_ran_choose (rng->r,
+                      &g_array_index (stretch->indices, guint, k * stretch->nparams),
+                      stretch->nparams,
+                      &g_array_index (stretch->numbers, guint, subensemble),
                       stretch->size_2,
                       g_array_get_element_size (stretch->numbers));
     }
   }
 }
 
-static gdouble 
+static gdouble
 _ncm_fit_esmcmc_walker_stretch_theta_to_x (NcmFitESMCMCWalkerStretch *stretch, guint i, const gdouble theta_i)
 {
   const gdouble lb          = ncm_matrix_get (stretch->box, i, 0);
   const gdouble ub          = ncm_matrix_get (stretch->box, i, 1);
   const gdouble bsize       = ub - lb;
   const gdouble tb          = theta_i - lb;
-  const gdouble maxatan     = - 0.5 * log (GSL_DBL_EPSILON * 0.5);
+  const gdouble maxatan     = -0.5 * log (GSL_DBL_EPSILON * 0.5);
   const gdouble twotb_bsize = 2.0 * tb / bsize;
-
+  
   /*printf ("[% 22.15g % 22.15g]<% 22.15g> % 22.15g % 22.15g % 22.15g % 22.15g\n", lb, ub, theta_i, tb, maxatan, bsize, atanh (twotb_bsize - 1.0));*/
   
-  if (twotb_bsize < GSL_DBL_EPSILON)             
+  if (twotb_bsize < GSL_DBL_EPSILON)
     return -maxatan;
   else if (tb >= bsize)
     return maxatan;
@@ -334,27 +340,27 @@ _ncm_fit_esmcmc_walker_stretch_theta_to_x (NcmFitESMCMCWalkerStretch *stretch, g
     return atanh (twotb_bsize - 1.0);
 }
 
-static gdouble 
+static gdouble
 _ncm_fit_esmcmc_walker_stretch_x_to_theta (NcmFitESMCMCWalkerStretch *stretch, guint i, const gdouble x_i)
 {
   const gdouble lb     = ncm_matrix_get (stretch->box, i, 0);
   const gdouble ub     = ncm_matrix_get (stretch->box, i, 1);
   const gdouble bsize  = ub - lb;
   const gdouble middle = 0.5 * (ub + lb);
-
+  
   return middle + bsize * tanh (x_i) * 0.5;
 }
 
-static gdouble 
+static gdouble
 _ncm_fit_esmcmc_walker_stretch_norm (NcmFitESMCMCWalkerStretch *stretch, guint i, const gdouble thetastar_i, const gdouble theta_i)
 {
-  const gdouble lb    = ncm_matrix_get (stretch->box, i, 0);
-  const gdouble ub    = ncm_matrix_get (stretch->box, i, 1);
-  const gdouble tb    = theta_i - lb;
-  const gdouble bt    = ub - theta_i;
-  const gdouble tsb   = thetastar_i - lb;
-  const gdouble bts   = ub - thetastar_i;
-  const gdouble norm  = tsb * bts / (tb * bt);
+  const gdouble lb   = ncm_matrix_get (stretch->box, i, 0);
+  const gdouble ub   = ncm_matrix_get (stretch->box, i, 1);
+  const gdouble tb   = theta_i - lb;
+  const gdouble bt   = ub - theta_i;
+  const gdouble tsb  = thetastar_i - lb;
+  const gdouble bts  = ub - thetastar_i;
+  const gdouble norm = tsb * bts / (tb * bt);
   
   return log (norm);
 }
@@ -366,9 +372,9 @@ _ncm_fit_esmcmc_walker_stretch_one_step (NcmFitESMCMCWalkerStretch *stretch, Ncm
   
   for (i = 0; i < stretch->nparams; i++)
   {
-    const gdouble theta_k_i   = ncm_vector_get (theta_k, i);
-    const gdouble theta_j_i   = ncm_vector_get (theta_j, i);
-
+    const gdouble theta_k_i = ncm_vector_get (theta_k, i);
+    const gdouble theta_j_i = ncm_vector_get (theta_j, i);
+    
     if (!g_array_index (stretch->use_box, gboolean, i))
     {
       const gdouble thetastar_i = theta_j_i + z * (theta_k_i - theta_j_i);
@@ -391,9 +397,9 @@ static void
 _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-  NcmVector *theta_k = g_ptr_array_index (theta, k);
+  NcmVector *theta_k                 = g_ptr_array_index (theta, k);
   guint i;
-
+  
   ncm_vector_set (stretch->norm_box, k, 0.0);
   
   if (!stretch->multi)
@@ -408,34 +414,35 @@ _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *thet
   {
     NcmVector *theta_c = theta_k;
     guint si;
-
+    
     /*ncm_vector_log_vals (theta_c, "before = ", "% 20.15g", TRUE);*/
     for (si = 0; si < stretch->nparams; si++)
     {
       const guint j      = g_array_index (stretch->indices, guint, k * stretch->nparams + si);
       const gdouble z    = ncm_matrix_get (stretch->z, k, si);
       NcmVector *theta_j = g_ptr_array_index (theta, j);
+      
       /*printf ("Stretching k %u using j %u and z % 20.15g\n", k, j, z);*/
       _ncm_fit_esmcmc_walker_stretch_one_step (stretch, theta_c, theta_j, z, thetastar);
       theta_c = thetastar;
       /*ncm_vector_log_vals (theta_c, "during = ", "% 20.15g", TRUE);*/
     }
   }
-
+  
   for (i = 0; i < stretch->nparams; i++)
   {
     if (g_array_index (stretch->use_box, gboolean, i))
     {
       const gdouble thetastar_i = ncm_vector_get (thetastar, i);
       const gdouble theta_k_i   = ncm_vector_get (theta_k, i);
-
-      ncm_vector_addto (stretch->norm_box, k, 
+      
+      ncm_vector_addto (stretch->norm_box, k,
                         _ncm_fit_esmcmc_walker_stretch_norm (stretch, i, thetastar_i, theta_k_i));
     }
   }
 }
 
-static gdouble 
+static gdouble
 _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
@@ -443,6 +450,7 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   if (!stretch->multi)
   {
     const gdouble z = ncm_matrix_get (stretch->z, k, 0);
+    
     return pow (z, stretch->nparams - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (stretch->norm_box, k));
   }
   else
@@ -451,7 +459,7 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   }
 }
 
-static gdouble 
+static gdouble
 _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
@@ -459,6 +467,7 @@ _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray 
   if (!stretch->multi)
   {
     const gdouble z = ncm_matrix_get (stretch->z, k, 0);
+    
     return (stretch->nparams - 1.0) * log (z) + ncm_vector_get (stretch->norm_box, k);
   }
   else
@@ -467,7 +476,7 @@ _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray 
   }
 }
 
-static void 
+static void
 _ncm_fit_esmcmc_walker_stretch_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf)
 {
   /* Nothing to do. */
@@ -477,9 +486,9 @@ const gchar *
 _ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-
+  
   g_clear_pointer (&stretch->desc, g_free);
-
+  
   stretch->desc = g_strdup_printf ("Stretch-Move%s", stretch->multi ? "[multi-strecth]" : "");
   
   return stretch->desc;
@@ -489,10 +498,10 @@ _ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker)
  * ncm_fit_esmcmc_walker_stretch_new:
  * @nwalkers: number of walkers
  * @nparams: number of parameters
- * 
+ *
  * Creates a new #NcmFitESMCMCWalkerStretch to be used
  * with @nwalkers.
- * 
+ *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerStretch.
  */
 NcmFitESMCMCWalkerStretch *
@@ -502,7 +511,7 @@ ncm_fit_esmcmc_walker_stretch_new (guint nwalkers, guint nparams)
                                                      "size", nwalkers,
                                                      "nparams", nparams,
                                                      NULL);
-
+  
   return stretch;
 }
 
@@ -510,9 +519,9 @@ ncm_fit_esmcmc_walker_stretch_new (guint nwalkers, guint nparams)
  * ncm_fit_esmcmc_walker_stretch_set_scale:
  * @stretch: a #NcmFitESMCMCWalkerStretch
  * @a: new scale $a > 1$
- * 
+ *
  * Sets the value of the scale $a > 1$.
- * 
+ *
  */
 void
 ncm_fit_esmcmc_walker_stretch_set_scale (NcmFitESMCMCWalkerStretch *stretch, const gdouble a)
@@ -524,9 +533,9 @@ ncm_fit_esmcmc_walker_stretch_set_scale (NcmFitESMCMCWalkerStretch *stretch, con
 /**
  * ncm_fit_esmcmc_walker_stretch_get_scale:
  * @stretch: a #NcmFitESMCMCWalkerStretch
- * 
+ *
  * Gets the value of the scale $a > 1$.
- * 
+ *
  * Returns: current value of $a$.
  */
 gdouble
@@ -541,17 +550,17 @@ ncm_fit_esmcmc_walker_stretch_get_scale (NcmFitESMCMCWalkerStretch *stretch)
  * @n: parameter index
  * @lb: lower bound
  * @ub: upper bound
- * 
+ *
  * Sets box sampling for the @n-th parameter using @lb as lower bound
  * and @ub as upper bound.
- * 
+ *
  */
-void 
+void
 ncm_fit_esmcmc_walker_stretch_set_box (NcmFitESMCMCWalkerStretch *stretch, guint n, const gdouble lb, const gdouble ub)
 {
   g_assert_cmpuint (n, <, stretch->nparams);
   g_assert_cmpfloat (lb, <, ub);
-
+  
   g_array_index (stretch->use_box, gboolean, n) = TRUE;
   ncm_matrix_set (stretch->box, n, 0, lb);
   ncm_matrix_set (stretch->box, n, 1, ub);
@@ -561,36 +570,38 @@ ncm_fit_esmcmc_walker_stretch_set_box (NcmFitESMCMCWalkerStretch *stretch, guint
  * ncm_fit_esmcmc_walker_stretch_set_box_mset:
  * @stretch: a #NcmFitESMCMCWalkerStretch
  * @mset: a #NcmMSet
- * 
+ *
  * Sets box sampling for the parameters using bounds from
  * @mset.
- * 
+ *
  */
-void 
+void
 ncm_fit_esmcmc_walker_stretch_set_box_mset (NcmFitESMCMCWalkerStretch *stretch, NcmMSet *mset)
 {
   const guint fparams_len = ncm_mset_fparams_len (mset);
   guint i;
   
   g_assert_cmpuint (stretch->nparams, ==, fparams_len);
+  
   for (i = 0; i < fparams_len; i++)
   {
-    ncm_fit_esmcmc_walker_stretch_set_box (stretch, i, 
+    ncm_fit_esmcmc_walker_stretch_set_box (stretch, i,
                                            ncm_mset_fparam_get_lower_bound (mset, i),
                                            ncm_mset_fparam_get_upper_bound (mset, i));
-  }  
+  }
 }
 
 /**
  * ncm_fit_esmcmc_walker_stretch_multi:
  * @stretch: a #NcmFitESMCMCWalkerStretch
  * @multi: a boolean
- * 
+ *
  * Sets whether it should use multi-stretchs in a single step.
- * 
+ *
  */
-void 
+void
 ncm_fit_esmcmc_walker_stretch_multi (NcmFitESMCMCWalkerStretch *stretch, gboolean multi)
 {
   stretch->multi = multi;
 }
+

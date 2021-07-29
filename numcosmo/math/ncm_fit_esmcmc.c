@@ -1154,7 +1154,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
       
       if ((self->nt->pos_time - self->nt->last_log_time) > self->log_time_interval)
         log_timeout = ((self->cur_sample_id + 1) % self->nwalkers == 0);
-
+      
       if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
       {
         NcmVector *e_var = ncm_mset_catalog_peek_current_e_var (self->mcat);
@@ -1663,7 +1663,7 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
       g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [%s]\n",
                  self->n, ncm_fit_esmcmc_walker_desc (self->walker));
     }
-      break;
+    break;
     case NCM_FIT_RUN_MSGS_NONE:
       break;
   }
@@ -1784,7 +1784,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       /*ncm_vector_log_vals (thetastar, "thetastar", "% 22.15g", TRUE);*/
       g_array_index (self->offboard, gboolean, k) = TRUE;
     }
-
+    
     if (jump < prob)
     {
       if (fk_ptr[0]->funcs_array != NULL)
@@ -1949,7 +1949,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     
     if (self->auto_trim)
       ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
-
+    
     ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
     lerror = ncm_mset_catalog_largest_error (self->mcat);
   }
@@ -2001,7 +2001,7 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
   m2lnL_var = ncm_vector_get (var, NCM_FIT_ESMCMC_M2LNL_ID);
   cb        = ncm_mset_catalog_calc_const_break (self->mcat, NCM_FIT_ESMCMC_M2LNL_ID, self->mtype);
   ti        = (self->cur_sample_id + 1) / self->nwalkers;
-
+  
   while (ntimes * cb > ti)
   {
     const guint truns = ntimes * cb;
@@ -2017,7 +2017,7 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
     
     if (self->auto_trim)
       ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
-
+    
     ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
     
     var       = ncm_mset_catalog_peek_current_e_var (self->mcat);

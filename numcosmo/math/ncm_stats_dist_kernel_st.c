@@ -103,8 +103,8 @@ static void
 ncm_stats_dist_kernel_st_init (NcmStatsDistKernelST *sdkst)
 {
   NcmStatsDistKernelSTPrivate * const self = sdkst->priv = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
-
-  self->nu = 0.0;
+  
+  self->nu      = 0.0;
   self->t_array = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
 
@@ -133,7 +133,7 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
   
   /*NcmStatsDistKernelSTPrivate * const self = sdkst->priv;*/
-
+  
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
   
   switch (prop_id)
@@ -160,11 +160,11 @@ _ncm_stats_dist_kernel_st_dispose (GObject *object)
 static void
 _ncm_stats_dist_kernel_st_finalize (GObject *object)
 {
-  NcmStatsDistKernelST *sdkst               = NCM_STATS_DIST_KERNEL_ST (object);
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object);
   NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
-
+  
   g_clear_pointer (&self->t_array, g_array_unref);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->finalize (object);
 }
@@ -239,7 +239,7 @@ _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble ch
 {
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
-
+  
   return pow (1.0 + chi2 / self->nu, -0.5 * (self->nu + pself->d));
 }
 
@@ -249,24 +249,26 @@ _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *c
   /*NcmStatsDistKernelPrivate * const pself = sdk->priv;*/
   const guint n = ncm_vector_len (chi2);
   gint i;
-
+  
   g_assert (ncm_vector_len (Ku) == n);
-
+  
   if ((ncm_vector_stride (Ku) == 1) && (ncm_vector_stride (chi2) == 1))
   {
-    for (i = 0 ; i < n; i++)
+    for (i = 0; i < n; i++)
     {
       const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
       const gdouble Ku_i   = _ncm_stats_dist_kernel_st_eval_unnorm (sdk, chi2_i);
+      
       ncm_vector_fast_set (Ku, i, Ku_i);
     }
   }
   else
   {
-    for (i = 0 ; i < n; i++)
+    for (i = 0; i < n; i++)
     {
       const gdouble chi2_i = ncm_vector_get (chi2, i);
       const gdouble Ku_i   = _ncm_stats_dist_kernel_st_eval_unnorm (sdk, chi2_i);
+      
       ncm_vector_set (Ku, i, Ku_i);
     }
   }
@@ -277,44 +279,45 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
 {
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
-
-  const guint n       = ncm_vector_len (chi2);
+  
+  const guint n = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
-  gdouble lnt_max     = GSL_NEGINF;
+  gdouble lnt_max = GSL_NEGINF;
   gint i, i_max = -1;
-
+  
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnnorms));
   g_assert (1 == ncm_vector_stride (chi2));
   g_assert (1 == ncm_vector_stride (weights));
   g_assert (1 == ncm_vector_stride (lnnorms));
-
+  
   g_array_set_size (self->t_array, n);
-
+  
   for (i = 0; i < n; i++)
   {
     const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
     const gdouble w_i    = ncm_vector_fast_get (weights, i);
     const gdouble lnu_i  = ncm_vector_fast_get (lnnorms, i);
-
-    const gdouble lnt_i  = kappa * log1p (chi2_i / self->nu) - lnu_i + log (w_i);
-
+    
+    const gdouble lnt_i = kappa * log1p (chi2_i / self->nu) - lnu_i + log (w_i);
+    
     if (lnt_i > lnt_max)
     {
-      i_max = i;
+      i_max   = i;
       lnt_max = lnt_i;
     }
-
+    
     g_array_index (self->t_array, gdouble, i) = lnt_i;
   }
-
+  
   lambda[0] = 0.0;
-
+  
   for (i = 0; i < i_max; i++)
     lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+  
   for (i = i_max + 1; i < n; i++)
     lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
-
+  
   gamma[0] = lnt_max;
 }
 
@@ -323,41 +326,42 @@ _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
 {
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
-
-  const guint n       = ncm_vector_len (chi2);
+  
+  const guint n = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
-  gdouble lnt_max     = GSL_NEGINF;
+  gdouble lnt_max = GSL_NEGINF;
   gint i, i_max = -1;
-
+  
   g_assert (n == ncm_vector_len (weights));
   g_assert (1 == ncm_vector_stride (chi2));
   g_assert (1 == ncm_vector_stride (weights));
-
+  
   g_array_set_size (self->t_array, n);
-
+  
   for (i = 0; i < n; i++)
   {
     const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
     const gdouble w_i    = ncm_vector_fast_get (weights, i);
-
-    const gdouble lnt_i  = kappa * log1p (chi2_i / self->nu) + log (w_i);
-
+    
+    const gdouble lnt_i = kappa * log1p (chi2_i / self->nu) + log (w_i);
+    
     if (lnt_i > lnt_max)
     {
-      i_max = i;
+      i_max   = i;
       lnt_max = lnt_i;
     }
-
+    
     g_array_index (self->t_array, gdouble, i) = lnt_i;
   }
-
+  
   lambda[0] = 0.0;
-
+  
   for (i = 0; i < i_max; i++)
     lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+  
   for (i = i_max + 1; i < n; i++)
     lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
-
+  
   gamma[0] = lnt_max - lnnorm;
 }
 
@@ -369,21 +373,21 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
   gdouble chi_scale;
   gint i, ret;
-
+  
   for (i = 0; i < pself->d; i++)
   {
     const gdouble u_i = gsl_ran_ugaussian (rng->r);
-
+    
     ncm_vector_set (x, i, u_i * href);
   }
-
+  
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
   ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_st_sample", ret);
-
+  
   chi_scale = sqrt (self->nu / gsl_ran_chisq (rng->r, self->nu));
-
+  
   ncm_vector_scale (x, chi_scale);
   ncm_vector_add (x, mu);
 }

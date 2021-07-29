@@ -179,7 +179,7 @@ static gdouble
 _ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2)
 {
   g_error ("method eval_unnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
-
+  
   return 0.0;
 }
 
@@ -241,7 +241,7 @@ static void
 _ncm_stats_dist_kernel_set_dim (NcmStatsDistKernel *sdk, const guint dim)
 {
   NcmStatsDistKernelPrivate * const self = sdk->priv;
-
+  
   self->d = dim;
 }
 
@@ -249,7 +249,7 @@ static guint
 _ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
 {
   NcmStatsDistKernelPrivate * const self = sdk->priv;
-
+  
   return self->d;
 }
 

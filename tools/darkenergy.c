@@ -910,18 +910,18 @@ main (gint argc, gchar *argv[])
       
       ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (walk));
     }
-    else if (de_fit.esmcmc_aps)
+    else if (de_fit.esmcmc_apes)
     {
-      NcmFitESMCMCWalkerAPS *aps = ncm_fit_esmcmc_walker_aps_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
+      NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
       
       esmcmc = ncm_fit_esmcmc_new_funcs_array (fit, 
                                                de_fit.mc_nwalkers, 
                                                NCM_MSET_TRANS_KERN (init_sampler), 
-                                               NCM_FIT_ESMCMC_WALKER (aps),
+                                               NCM_FIT_ESMCMC_WALKER (apes),
                                                de_fit.msg_level,
                                                funcs_oa);
       
-      ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (aps));
+      ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (apes));
     }
     else
     {

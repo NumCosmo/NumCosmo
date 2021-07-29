@@ -352,7 +352,7 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
         
         if (i != j)
           g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j) = *obs_i;
-
+        
         obs_j = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
       }
     }
@@ -386,7 +386,7 @@ _ncm_stats_dist1d_epdf_trim_outliers (NcmStatsDist1dEPDF *epdf1d)
     {
       if (i != j)
         g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j) = obs_c[0];
-
+      
       min = GSL_MIN (min, obs_c->x);
       max = GSL_MAX (max, obs_c->x);
       ncm_stats_vec_set (epdf1d->obs_stats, 0, obs_c->x);

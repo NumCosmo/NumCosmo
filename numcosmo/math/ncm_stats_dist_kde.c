@@ -160,9 +160,9 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   ncm_matrix_clear (&self->sample_matrix);
   ncm_vector_clear (&self->v);
   ncm_vector_clear (&self->chi2);
-
+  
   g_clear_pointer (&self->invUsample, g_ptr_array_unref);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kde_parent_class)->dispose (object);
 }
@@ -221,7 +221,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
   {
     NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
     NcmStatsDistKDEPrivate * const self = sdkde->priv;
-
+    
     ncm_stats_vec_clear (&self->sample);
     
     ncm_matrix_clear (&self->cov_decomp);
@@ -263,10 +263,10 @@ static void
 _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
   NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self  = sdkde->priv;
-  NcmStatsDistPrivate * const pself    = sd->priv;
+  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistPrivate * const pself = sd->priv;
   gint i, ret;
-
+  
   /*
    * Computing the covariance matrix considering the whole sample.
    */
@@ -303,17 +303,17 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
       g_ptr_array_add (self->invUsample, row_i);
     }
   }
-
+  
   for (i = 0; i < pself->n; i++)
     ncm_matrix_set_row (self->sample_matrix, i, g_ptr_array_index (sample_array, i));
   
   ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, ncm_matrix_gsl (self->cov_decomp), ncm_matrix_gsl (self->sample_matrix));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_prepare_kernel", ret);
-
+  
   /*
    * Allocating the evaluation vector
    */
-  if ((self->chi2 == NULL) || ncm_vector_len (self->chi2) != pself->n)
+  if ((self->chi2 == NULL) || (ncm_vector_len (self->chi2) != pself->n))
   {
     ncm_vector_clear (&self->chi2);
     self->chi2 = ncm_vector_new (pself->n);
@@ -323,40 +323,42 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 static void
 _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
   NcmStatsDistPrivate * const pself   = sd->priv;
-  const gdouble href2 = pself->href * pself->href;
+  const gdouble href2                 = pself->href * pself->href;
   gint i;
-
+  
   for (i = 0; i < pself->n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample, i);
     gint j;
-
+    
     ncm_matrix_set (IM, i, i, 1.0);
-
+    
     for (j = i + 1; j < pself->n; j++)
     {
       NcmVector *row_j = g_ptr_array_index (self->invUsample, j);
       gdouble chi2_ij  = 0.0;
       gint k;
-
+      
       for (k = 0; k < pself->d; k++)
       {
         chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
       }
+      
       chi2_ij = chi2_ij / href2;
-
+      
       ncm_matrix_set (IM, i, j, chi2_ij);
       ncm_matrix_set (IM, j, i, chi2_ij);
     }
   }
-
+  
   {
     NcmVector *IMv = ncm_matrix_as_vector (IM);
+    
     ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, IMv, IMv);
-
+    
     ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
   }
 }
@@ -364,18 +366,19 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 static NcmMatrix *
 _ncm_stats_dist_kde_peek_cov_decomp (NcmStatsDist *sd, guint i)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  
   return self->cov_decomp;
 }
 
 static gdouble
 _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
   NcmStatsDistPrivate * const pself   = sd->priv;
-
+  
   return self->kernel_lnnorm + pself->d * log (pself->href);
 }
 
@@ -387,29 +390,30 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
   NcmStatsDistPrivate * const pself = sd->priv;
   const gdouble href2 = pself->href * pself->href;
   gint i, ret;
-
+  
   ncm_vector_memcpy (self->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_eval", ret);
-
+  
   for (i = 0; i < pself->n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample, i);
-    gdouble chi2_i = 0.0;
+    gdouble chi2_i   = 0.0;
     gint k;
-
+    
     for (k = 0; k < pself->d; k++)
     {
       chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (self->v, k)));
     }
+    
     chi2_i = chi2_i / href2;
-
+    
     ncm_vector_fast_set (self->chi2, i, chi2_i);
   }
-
+  
   ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, self->chi2, self->chi2);
-
+  
   return ncm_vector_dot (self->chi2, pself->weights) * exp (-(self->kernel_lnnorm + pself->d * log (pself->href)));
 }
 
@@ -421,36 +425,36 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   NcmStatsDistPrivate * const pself = sd->priv;
   const gdouble href2 = pself->href * pself->href;
   gint i, ret;
-
+  
   ncm_vector_memcpy (self->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_eval", ret);
-
+  
   for (i = 0; i < pself->n; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample, i);
-    gdouble chi2_i = 0.0;
+    gdouble chi2_i   = 0.0;
     gint k;
-
+    
     for (k = 0; k < pself->d; k++)
     {
       chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (self->v, k)));
     }
+    
     chi2_i = chi2_i / href2;
-
+    
     ncm_vector_fast_set (self->chi2, i, chi2_i);
   }
-
+  
   {
     gdouble gamma, lambda;
-
+    
     ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, self->chi2, pself->weights, self->kernel_lnnorm, &gamma, &lambda);
-
+    
     return -2.0 * (gamma + log1p (lambda) - pself->d * log (pself->href));
   }
 }
-
 
 /**
  * ncm_stats_dist_kde_new:
@@ -469,7 +473,7 @@ ncm_stats_dist_kde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type)
                                          "kernel", sdk,
                                          "CV-type", CV_type,
                                          NULL);
-
+  
   return sdkde;
 }
 

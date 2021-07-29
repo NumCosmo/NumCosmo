@@ -163,7 +163,7 @@ struct _NcDEFitEntries
   gboolean mcmc;
   gboolean esmcmc;
   gboolean esmcmc_walk;
-  gboolean esmcmc_aps;
+  gboolean esmcmc_apes;
   gboolean esmcmc_sbox;
   gboolean esmcmc_ms;
   gint fisher;
