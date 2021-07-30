@@ -279,6 +279,8 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     }
     ncm_stats_dist_prepare_interp (self->sd, m2lnp);
     ncm_vector_free (m2lnp);
+
+    self->sd_prep = TRUE;
   }
 
   ncm_rng_lock (rng);
@@ -330,6 +332,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
       last_row = row_i;
     }
     ncm_stats_dist_prepare (self->sd);
+    self->sd_prep = TRUE;
   }
 
   ncm_rng_lock (rng);
@@ -410,6 +413,7 @@ ncm_mset_trans_kern_cat_set_sampling (NcmMSetTransKernCat *tcat, NcmMSetTransKer
 {
   NcmMSetTransKernCatPrivate * const self = tcat->priv;
   self->stype = sampling;
+  self->sd_prep = FALSE;
 }
 
 /**

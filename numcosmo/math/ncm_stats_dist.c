@@ -324,7 +324,7 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                    g_param_spec_double ("split-frac",
                                                         NULL,
                                                         "Fraction to use in the split cross-validation",
-                                                        0.50, 0.95, 0.9,
+                                                        0.10, 0.95, 0.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   
@@ -403,8 +403,27 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   
   res = ncm_nnls_get_residuals (eval->self->nnls);
   ncm_vector_memcpy (f, res);
-  
+
   ncm_vector_free (f);
+}
+
+static void
+_ncm_stats_dist_vkde_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  if ((self->nnls == NULL) ||
+      ((ncm_nnls_get_nrows (self->nnls) != nrows) || (ncm_nnls_get_ncols (self->nnls) != ncols)))
+  {
+    ncm_nnls_clear (&self->nnls);
+    self->nnls = ncm_nnls_new (nrows, ncols);
+    ncm_nnls_set_umethod (self->nnls, NCM_NNLS_UMETHOD_NORMAL);
+
+    ncm_matrix_clear (&self->sub_IM);
+    ncm_vector_clear (&self->sub_x);
+
+    self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
+    self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
+  }
 }
 
 static void
@@ -417,13 +436,9 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class};
-    const gint nrows            = self->n;
-    const gint ncols            = ceil (self->n * self->split_frac);
     const gdouble dbl_limit     = 1.0;
     gint i;
-    
-    g_assert_cmpuint (nrows, >=, ncols);
-    
+
     /*
      * Preparing allocations
      */
@@ -437,21 +452,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       
       self->alloc_n = self->n;
     }
-    
-    if ((self->nnls == NULL) ||
-        ((ncm_nnls_get_nrows (self->nnls) != nrows) || (ncm_nnls_get_ncols (self->nnls) != ncols)))
-    {
-      ncm_nnls_clear (&self->nnls);
-      self->nnls = ncm_nnls_new (nrows, ncols);
-      ncm_nnls_set_umethod (self->nnls, NCM_NNLS_UMETHOD_NORMAL);
-      
-      ncm_matrix_clear (&self->sub_IM);
-      ncm_vector_clear (&self->sub_x);
-      
-      self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
-      self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
-    }
-    
+
     ncm_vector_set_zero (self->weights);
     
     /*
@@ -496,6 +497,11 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     {
       case NCM_STATS_DIST_CV_SPLIT:
       {
+        const gint nrows            = self->n;
+        const gint ncols            = ceil (self->n * self->split_frac);
+        g_assert_cmpuint (nrows, >=, ncols);
+        _ncm_stats_dist_vkde_alloc_nnls (sd, nrows, ncols);
+
         gdouble info[LM_INFO_SZ];
         gdouble opts[LM_OPTS_SZ];
         gdouble cov, ln_os;
@@ -517,7 +523,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         dlevmar_dif (&_ncm_stats_dist_prepare_interp_fit_nnls_f,
                      &ln_os, NULL, 1, self->n,
                      10000, opts, info, self->levmar_workz, &cov, &eval);
-        
+
         self->over_smooth = exp (ln_os);
         self->href        = ncm_stats_dist_get_href (sd);
         sd_class->compute_IM (sd, self->IM);
@@ -526,6 +532,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       }
       break;
       case NCM_STATS_DIST_CV_NONE:
+        _ncm_stats_dist_vkde_alloc_nnls (sd, self->n, self->n);
         sd_class->compute_IM (sd, self->IM);
         self->rnorm = ncm_nnls_solve (self->nnls, self->sub_IM, self->sub_x, self->f);
         break;

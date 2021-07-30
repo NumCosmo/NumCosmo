@@ -40,7 +40,7 @@ typedef struct _TestNcmFitESMCMC
 } TestNcmFitESMCMC;
 
 void test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_esmcmc_new_aps (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -59,33 +59,33 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run,
               &test_ncm_fit_esmcmc_free);
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run_lre", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run_lre", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run_lre,
               &test_ncm_fit_esmcmc_free);
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run_burnin", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run_burnin", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run_burnin,
               &test_ncm_fit_esmcmc_free);
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run_restart_from_cat", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run_restart_from_cat", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run_restart_from_cat,
               &test_ncm_fit_esmcmc_free);
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run_lre/auto_trim", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run_lre/auto_trim", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run_lre_auto_trim,
               &test_ncm_fit_esmcmc_free);
   
-  g_test_add ("/ncm/fit/esmcmc/aps/run_lre/auto_trim/vol", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_aps,
+  g_test_add ("/ncm/fit/esmcmc/apes/run_lre/auto_trim/vol", TestNcmFitESMCMC, NULL,
+              &test_ncm_fit_esmcmc_new_apes,
               &test_ncm_fit_esmcmc_run_lre_auto_trim_vol,
               &test_ncm_fit_esmcmc_free);
   
@@ -124,10 +124,10 @@ main (gint argc, gchar *argv[])
 }
 
 void
-test_ncm_fit_esmcmc_new_aps (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
-  const gint dim                      = test->dim = g_test_rand_int_range (2, 10);
-  const gint nwalkers                 = 50 * g_test_rand_int_range (2, 5);
+  const gint dim                      = test->dim = g_test_rand_int_range (2, 4);
+  const gint nwalkers                 = 100 * test->dim;
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 5.0e-1, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
@@ -136,11 +136,11 @@ test_ncm_fit_esmcmc_new_aps (TestNcmFitESMCMC *test, gconstpointer pdata)
   NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
   NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
   
-  NcmFitESMCMCWalkerAPS *aps;
+  NcmFitESMCMCWalkerAPES *apes;
   NcmFitESMCMC *esmcmc;
   NcmFit *fit;
   
-  test->nrun_div = 5;
+  test->nrun_div = 100;
   
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   
@@ -148,12 +148,12 @@ test_ncm_fit_esmcmc_new_aps (TestNcmFitESMCMC *test, gconstpointer pdata)
   
   ncm_fit_set_maxiter (fit, 10000000);
   
-  aps = ncm_fit_esmcmc_walker_aps_new (nwalkers, ncm_mset_fparams_len (mset));
+  apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
   
   esmcmc = ncm_fit_esmcmc_new (fit,
                                nwalkers,
                                NCM_MSET_TRANS_KERN (init_sampler),
-                               NCM_FIT_ESMCMC_WALKER (aps),
+                               NCM_FIT_ESMCMC_WALKER (apes),
                                NCM_FIT_RUN_MSGS_NONE);
   
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
@@ -176,7 +176,7 @@ test_ncm_fit_esmcmc_new_aps (TestNcmFitESMCMC *test, gconstpointer pdata)
   ncm_mset_clear (&mset);
   ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
   ncm_fit_clear (&fit);
-  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (aps));
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (apes));
   ncm_fit_esmcmc_clear (&esmcmc);
 }
 
@@ -368,30 +368,35 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     NcmFit *fit                       = ncm_fit_esmcmc_peek_fit (test->esmcmc);
     NcmMSet *mset                     = ncm_fit_peek_mset (fit);
     NcmMSetCatalog *mcat              = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
-    NcmMSetTransKernCat *init_sampler = ncm_mset_trans_kern_cat_new (mcat);
-    const guint nwalkers              = 5 * ncm_mset_catalog_nchains (mcat);
-    NcmFitESMCMCWalkerAPS *aps        = ncm_fit_esmcmc_walker_aps_new (nwalkers, ncm_mset_fparams_len (mset));
+    NcmStatsDistKernel *kernel        = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (ncm_mset_fparams_len (mset)));
+    NcmStatsDist *sd                  = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
+    NcmMSetTransKernCat *init_sampler = ncm_mset_trans_kern_cat_new (mcat, sd);
+    const guint nwalkers              = 3 * ncm_mset_catalog_nchains (mcat);
+    NcmFitESMCMCWalkerAPES *apes      = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
     NcmFitESMCMC *esmcmc              = ncm_fit_esmcmc_new (fit,
                                                             nwalkers,
                                                             NCM_MSET_TRANS_KERN (init_sampler),
-                                                            NCM_FIT_ESMCMC_WALKER (aps),
+                                                            NCM_FIT_ESMCMC_WALKER (apes),
                                                             NCM_FIT_RUN_MSGS_NONE);
-    
     
     ncm_fit_esmcmc_set_rng (esmcmc, ncm_mset_catalog_peek_rng (mcat));
     
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
-    
+
     ncm_fit_esmcmc_start_run (esmcmc);
     ncm_fit_esmcmc_run_lre (esmcmc, 100, 1.0e-2);
     ncm_fit_esmcmc_end_run (esmcmc);
-    
+
     {
       NcmMatrix *data_cov = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
       NcmMatrix *cat_cov  = NULL;
       
       ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (esmcmc), &cat_cov);
+
+      ncm_matrix_log_vals (cat_cov,  "CAT_COV ", "% 22.15g");
+      ncm_matrix_log_vals (data_cov, "DATA_COV", "% 22.15g");
+
       
       g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
       
@@ -404,8 +409,10 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
       ncm_matrix_free (data_cov);
     }
     
+    ncm_stats_dist_kernel_free (kernel);
+    ncm_stats_dist_free (sd);
     ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
-    ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (aps));
+    ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (apes));
     ncm_fit_esmcmc_clear (&esmcmc);
   }
 }

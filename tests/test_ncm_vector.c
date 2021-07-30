@@ -32,8 +32,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define _TEST_NCM_VECTOR_STATIC_SIZE 100
-#define _TEST_NCM_VECTOR_MIN_SIZE 5
+#define _TEST_NCM_VECTOR_STATIC_SIZE 212
+#define _TEST_NCM_VECTOR_MIN_SIZE 51
 
 typedef struct _TestNcmVector
 {
@@ -540,6 +540,14 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
 
 	ncm_vector_clear (&cv);
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble d = g_test_rand_double_range (0.0, 1.0);
+    ncm_vector_set (v, i, d);
+  }
+
+  ncm_assert_cmpdouble_e (ncm_vector_mean (v), ==, 0.5, 5.0 / sqrt(12.0 * v_size), 0.0);
 }
 
 void
