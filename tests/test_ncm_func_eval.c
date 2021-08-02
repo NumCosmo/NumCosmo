@@ -49,11 +49,11 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/ncm/func_eval/run", TestNcmSparam, NULL, 
-              &test_ncm_func_eval_new, 
-              &test_ncm_func_eval_run, 
+  g_test_add ("/ncm/func_eval/run", TestNcmSparam, NULL,
+              &test_ncm_func_eval_new,
+              &test_ncm_func_eval_run,
               &test_ncm_func_eval_free);
-
+  
   g_test_run ();
 }
 
@@ -68,22 +68,24 @@ test_ncm_func_eval_free (TestNcmSparam *test, gconstpointer pdata)
 {
 }
 
-void 
+void
 test_ncm_func_eval_run_func (glong i, glong f, gpointer data)
 {
   G_LOCK_DEFINE_STATIC (save_data);
   glong k;
-  gdouble *res = (gdouble *)data;
+  gdouble *res = (gdouble *) data;
   gdouble part = 0.0;
   
   for (k = 0; k < 1000; k++)
   {
     gdouble v;
-    v = cos (k + M_PI * 8.9);
-    v = sin (part);
-    v = exp (log (fabs (part)) * 0.9);
+    
+    v     = cos (k + M_PI * 8.9);
+    v     = sin (part);
+    v     = exp (log (fabs (part)) * 0.9);
     part += v;
   }
+  
   G_LOCK (save_data);
   *res += part;
   G_UNLOCK (save_data);
@@ -93,5 +95,7 @@ void
 test_ncm_func_eval_run (TestNcmSparam *test, gconstpointer pdata)
 {
   gdouble res = 0.0;
+  
   ncm_func_eval_threaded_loop_full (test_ncm_func_eval_run_func, 0, test->ntests, &res);
 }
+

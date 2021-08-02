@@ -46,7 +46,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-
+  
   g_test_set_nonfatal_assertions ();
   
   g_test_add ("/nc/galaxy/acf/traps", TestNcGalaxyAcf, NULL,
@@ -60,7 +60,6 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_acf_free);
 #endif
   g_test_run ();
-
 }
 
 void
@@ -76,7 +75,7 @@ test_nc_galaxy_acf_free (TestNcGalaxyAcf *test, gconstpointer pdata)
 void
 test_nc_galaxy_acf_traps (TestNcGalaxyAcf *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION(2,38,0)
+#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/nc/galaxy/acf/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
@@ -87,3 +86,4 @@ test_nc_galaxy_acf_invalid_st (TestNcGalaxyAcf *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
 }
+

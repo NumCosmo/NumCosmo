@@ -67,7 +67,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-
+  
   g_test_add ("/nc/data_bao_rdv/set_sample/percival2007", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_percival2007,
               &test_nc_data_bao_rdv_set_sample_percival2007,
@@ -96,14 +96,15 @@ main (gint argc, gchar *argv[])
               &test_nc_data_bao_rdv_new_kazin2014,
               &test_nc_data_bao_rdv_set_sample_kazin2014,
               &test_nc_data_bao_rdv_free);
-
+  
   g_test_run ();
 }
 
 void
 test_nc_data_bao_rdv_free (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcmData *rdv = NCM_DATA(test->rdv);
+  NcmData *rdv = NCM_DATA (test->rdv);
+  
   NCM_TEST_FREE (ncm_data_free, rdv);
 }
 
@@ -113,43 +114,43 @@ void
 test_nc_data_bao_rdv_new_percival2007 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2007;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_PERCIVAL2007;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_percival2007 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2007;
-  gboolean R_DV = TRUE;
-
+  NcDataBaoId id      = NC_DATA_BAO_RDV_PERCIVAL2007;
+  gboolean R_DV       = TRUE;
+  
   const gdouble z0 = 0.2;
   const gdouble z1 = 0.35;
-
+  
   const gdouble bf0 = 0.1980;
   const gdouble bf1 = 0.1094;
-
+  
   const gdouble icov00 = 35059.0;
   const gdouble icov01 = -24031.0;
   const gdouble icov10 = -24031.0;
   const gdouble icov11 = 108300.0;
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 1), ==, z1);
   ncm_assert_cmpdouble (ncm_vector_get (gauss->y, 0), ==, bf0);
@@ -166,43 +167,43 @@ void
 test_nc_data_bao_rdv_new_percival2010 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2010;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_PERCIVAL2010;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_percival2010 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2010;
-  gboolean R_DV = TRUE;
-
+  NcDataBaoId id      = NC_DATA_BAO_RDV_PERCIVAL2010;
+  gboolean R_DV       = TRUE;
+  
   const gdouble z0 = 0.2;
   const gdouble z1 = 0.35;
-
+  
   const gdouble bf0 = 0.1905;
   const gdouble bf1 = 0.1097;
-
+  
   const gdouble icov00 = 30124.0;
   const gdouble icov01 = -17227.0;
   const gdouble icov10 = -17227.0;
   const gdouble icov11 = 86977.0;
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 1), ==, z1);
   ncm_assert_cmpdouble (ncm_vector_get (gauss->y, 0), ==, bf0);
@@ -219,37 +220,37 @@ void
 test_nc_data_bao_rdv_new_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_BEUTLER2011;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_BEUTLER2011;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_BEUTLER2011;
-  gboolean R_DV = TRUE;
-
-  const gdouble z0 = 0.106;
+  NcDataBaoId id      = NC_DATA_BAO_RDV_BEUTLER2011;
+  gboolean R_DV       = TRUE;
+  
+  const gdouble z0  = 0.106;
   const gdouble bf0 = 0.336 / 1.027;
-
+  
   const gdouble icov00 = 1.0 * 1.027 * 1.027 / (0.015 * 0.015);
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (gauss->y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_matrix_get (gauss->inv_cov, 0, 0), ==, icov00);
@@ -261,37 +262,37 @@ void
 test_nc_data_bao_rdv_new_padmanabhan2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_PADMANABHAN2012;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_PADMANABHAN2012;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_padmanabhan2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_PADMANABHAN2012;
-  gboolean R_DV = FALSE;
-
-  const gdouble z0 = 0.35;
+  NcDataBaoId id      = NC_DATA_BAO_RDV_PADMANABHAN2012;
+  gboolean R_DV       = FALSE;
+  
+  const gdouble z0  = 0.35;
   const gdouble bf0 = 8.88 * 1.025;
-
+  
   const gdouble icov00 = 1.0 / (0.17 * 0.17 * 1.025 * 1.025);
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (!R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (gauss->y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_matrix_get (gauss->inv_cov, 0, 0), ==, icov00);
@@ -303,37 +304,37 @@ void
 test_nc_data_bao_rdv_new_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_ANDERSON2012;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_ANDERSON2012;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_ANDERSON2012;
-  gboolean R_DV = FALSE;
-
-  const gdouble z0 = 0.57;
+  NcDataBaoId id      = NC_DATA_BAO_RDV_ANDERSON2012;
+  gboolean R_DV       = FALSE;
+  
+  const gdouble z0  = 0.57;
   const gdouble bf0 = 13.67;
-
+  
   const gdouble icov00 = 1.0 / (0.22 * 0.22);
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (!R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (gauss->y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_matrix_get (gauss->inv_cov, 0, 0), ==, icov00);
@@ -345,34 +346,34 @@ void
 test_nc_data_bao_rdv_new_blake2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_BLAKE2012;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_BLAKE2012;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_blake2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_BLAKE2012;
-  gboolean R_DV = TRUE;
-
+  NcDataBaoId id      = NC_DATA_BAO_RDV_BLAKE2012;
+  gboolean R_DV       = TRUE;
+  
   const gdouble z0 = 0.44;
   const gdouble z1 = 0.60;
   const gdouble z2 = 0.73;
-
+  
   const gdouble bf0 = 0.0916;
   const gdouble bf1 = 0.0726;
   const gdouble bf2 = 0.0592;
-
+  
   const gdouble icov00 = 24532.1;
   const gdouble icov01 = -25137.7;
   const gdouble icov02 = 12099.1;
@@ -382,13 +383,13 @@ test_nc_data_bao_rdv_set_sample_blake2012 (TestNcDataBaoRDV *test, gconstpointer
   const gdouble icov20 = 12099.1;
   const gdouble icov21 = -64783.9;
   const gdouble icov22 = 128837.6;
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 1), ==, z1);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 2), ==, z2);
@@ -412,34 +413,34 @@ void
 test_nc_data_bao_rdv_new_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
-  NcDataBaoId id = NC_DATA_BAO_RDV_KAZIN2014;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_KAZIN2014;
   NcDistance *dist = nc_distance_new (2.0);
-
+  
   test->id = id;
-  data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
   g_assert_true (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
+  
   nc_distance_free (dist);
 }
 
 void
 test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
-  NcDataBaoRDV *rdv = test->rdv;
+  NcDataBaoRDV *rdv   = test->rdv;
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
-  NcDataBaoId id = NC_DATA_BAO_RDV_KAZIN2014;
-  gboolean R_DV = FALSE;
-
+  NcDataBaoId id      = NC_DATA_BAO_RDV_KAZIN2014;
+  gboolean R_DV       = FALSE;
+  
   const gdouble z0 = 0.44;
   const gdouble z1 = 0.60;
   const gdouble z2 = 0.73;
-
+  
   const gdouble bf0 = 11.550;
   const gdouble bf1 = 14.945;
   const gdouble bf2 = 16.932;
-
+  
   const gdouble icov00 =  4.8116;
   const gdouble icov01 = -2.4651;
   const gdouble icov02 = 1.0375;
@@ -449,13 +450,13 @@ test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer
   const gdouble icov20 = 1.0375;
   const gdouble icov21 = -1.5865;
   const gdouble icov22 = 3.6498;
-
+  
   g_assert_true (rdv != NULL);
   g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
-
+  
   g_assert_cmpuint (test->id, ==, id);
   g_assert_true (!R_DV);
-
+  
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 1), ==, z1);
   ncm_assert_cmpdouble (ncm_vector_get (rdv->x, 2), ==, z2);
@@ -472,3 +473,4 @@ test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer
   ncm_assert_cmpdouble (ncm_matrix_get (gauss->inv_cov, 2, 1), ==, icov21);
   ncm_assert_cmpdouble (ncm_matrix_get (gauss->inv_cov, 2, 2), ==, icov22);
 }
+

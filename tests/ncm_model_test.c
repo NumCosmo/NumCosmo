@@ -33,7 +33,8 @@ G_DEFINE_TYPE (NcmModelTest, ncm_model_test, NCM_TYPE_MODEL);
 G_DEFINE_TYPE (NcmModelTestChild, ncm_model_test_child, NCM_TYPE_MODEL_TEST);
 G_DEFINE_TYPE (NcmModelTestChildChild, ncm_model_test_child_child, NCM_TYPE_MODEL_TEST_CHILD);
 
-enum {
+enum
+{
   PROP_0,
   PROP_A,
   PROP_SIZE,
@@ -75,13 +76,13 @@ ncm_model_test_child_child_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_model_test_child_child_parent_class)->finalize (object);
 }
 
-
 static void
 _ncm_model_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTest *tm = NCM_MODEL_TEST (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -97,8 +98,9 @@ static void
 _ncm_model_test_child_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChild *tmc = NCM_MODEL_TEST_CHILD (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST_CHILD (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -114,8 +116,9 @@ static void
 _ncm_model_test_child_child_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChildChild *tmcc = NCM_MODEL_TEST_CHILD_CHILD (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST_CHILD_CHILD (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -131,8 +134,9 @@ static void
 _ncm_model_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTest *tm = NCM_MODEL_TEST (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -148,8 +152,9 @@ static void
 _ncm_model_test_child_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChild *tmc = NCM_MODEL_TEST_CHILD (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST_CHILD (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -165,8 +170,9 @@ static void
 _ncm_model_test_child_child_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChildChild *tmcc = NCM_MODEL_TEST_CHILD_CHILD (object);
+  
   g_return_if_fail (NCM_IS_MODEL_TEST_CHILD_CHILD (object));
-
+  
   switch (prop_id)
   {
     case PROP_A:
@@ -198,74 +204,77 @@ static guint *v_len, ci_sparam_len, ci_vparam_len;
 static gchar *name_ext;
 
 static void
-ncm_model_test_base_class_init (NcmModelClass* model_class)
+ncm_model_test_base_class_init (NcmModelClass *model_class)
 {
   guint i;
-
+  
   for (i = 0; i < ci_sparam_len; i++)
   {
     const gdouble base_number = pow (10.0, g_test_rand_double_range (-10.0, 10.0));
+    
     s_symbol[i] = g_strdup_printf ("SP%s_%u", name_ext, i);
     s_name[i]   = g_strdup_printf ("SP%s%u", name_ext, i);
     s_lb[i]     = g_test_rand_double_range (-base_number, base_number);
-    s_ub[i]     = g_test_rand_double_range (     s_lb[i], base_number);
+    s_ub[i]     = g_test_rand_double_range (s_lb[i], base_number);
     s_scale[i]  = fabs (((s_ub[i] + s_lb[i]) != 0 ? (s_ub[i] + s_lb[i]) : 1.0) * pow (10.0, -g_test_rand_double_range (1.0,  2.0)));
     s_abstol[i] = s_scale[i] * pow (10.0, -g_test_rand_double_range (1.0, 11.0));
-    s_defval[i] = g_test_rand_double_range ( s_lb[i], s_ub[i]);
+    s_defval[i] = g_test_rand_double_range (s_lb[i], s_ub[i]);
     s_ftype[i]  = g_test_rand_bit () ? NCM_PARAM_TYPE_FREE  : NCM_PARAM_TYPE_FIXED;
   }
-
+  
   for (i = 0; i < ci_vparam_len; i++)
   {
     const gdouble base_number = pow (10.0, g_test_rand_double_range (-10.0, 10.0));
+    
     v_len[i]    = g_test_rand_int_range (1, 43);
     v_symbol[i] = g_strdup_printf ("VP%s_%u", name_ext, i);
     v_name[i]   = g_strdup_printf ("VP%s%u", name_ext, i);
     v_lb[i]     = g_test_rand_double_range (-base_number, base_number);
-    v_ub[i]     = g_test_rand_double_range (     v_lb[i], base_number);
+    v_ub[i]     = g_test_rand_double_range (v_lb[i], base_number);
     v_scale[i]  = fabs (((v_ub[i] + v_lb[i]) != 0 ? (v_ub[i] + v_lb[i]) : 1.0)  * pow (10.0, -g_test_rand_double_range (1.0,  2.0)));
     v_abstol[i] = v_scale[i] * pow (10.0, -g_test_rand_double_range (1.0, 11.0));
-    v_defval[i] = g_test_rand_double_range ( v_lb[i], v_ub[i]);
+    v_defval[i] = g_test_rand_double_range (v_lb[i], v_ub[i]);
     v_ftype[i]  = g_test_rand_bit () ? NCM_PARAM_TYPE_FREE  : NCM_PARAM_TYPE_FIXED;
   }
-
+  
   ncm_model_class_set_name_nick (model_class, name, nick);
   ncm_model_class_add_params (model_class, ci_sparam_len, ci_vparam_len, PROP_SIZE);
-
+  
   g_assert_true (model_class->sparam_len == model_class->parent_sparam_len + ci_sparam_len);
   g_assert_true (model_class->vparam_len == model_class->parent_vparam_len + ci_vparam_len);
-
+  
   g_assert_true (model_class->name != name);
   g_assert_true (model_class->nick != nick);
   g_assert_cmpstr (model_class->name, ==, name);
   g_assert_cmpstr (model_class->nick, ==, nick);
-
+  
   NCM_TEST_FAIL (ncm_model_class_check_params_info (model_class));
-
+  
   for (i = 0; i < ci_sparam_len; i++)
   {
     ncm_model_class_set_sparam (model_class, model_class->parent_sparam_len + i, s_symbol[i], s_name[i],
                                 s_lb[i], s_ub[i], s_scale[i], s_abstol[i],
                                 s_defval[i], s_ftype[i]);
   }
-
+  
   for (i = 0; i < ci_vparam_len; i++)
   {
     ncm_model_class_set_vparam (model_class, model_class->parent_vparam_len + i, v_len[i], v_symbol[i], v_name[i],
                                 v_lb[i], v_ub[i], v_scale[i], v_abstol[i],
                                 v_defval[i], v_ftype[i]);
   }
-
+  
   ncm_model_class_check_params_info (model_class);
-
+  
   for (i = 0; i < ci_sparam_len; i++)
   {
     NcmSParam *sp = g_ptr_array_index (model_class->sparam, model_class->parent_sparam_len + i);
+    
     g_assert_true (sp->name   != s_name[i]);
     g_assert_true (sp->symbol != s_symbol[i]);
     g_assert_cmpstr (sp->name,   ==, s_name[i]);
     g_assert_cmpstr (sp->symbol, ==, s_symbol[i]);
-
+    
     ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (sp),        ==, s_lb[i]);
     ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (sp),        ==, s_ub[i]);
     ncm_assert_cmpdouble (ncm_sparam_get_scale (sp),              ==, s_scale[i]);
@@ -273,15 +282,16 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
     ncm_assert_cmpdouble (ncm_sparam_get_default_value (sp),      ==, s_defval[i]);
     g_assert_cmpint      (ncm_sparam_get_fit_type (sp),           ==, s_ftype[i]);
   }
-
+  
   for (i = 0; i < ci_vparam_len; i++)
   {
     NcmVParam *vp = g_ptr_array_index (model_class->vparam, model_class->parent_vparam_len + i);
+    
     g_assert_true (vp->default_sparam->name   != v_name[i]);
     g_assert_true (vp->default_sparam->symbol != v_symbol[i]);
     g_assert_cmpstr (vp->default_sparam->name,   ==, v_name[i]);
     g_assert_cmpstr (vp->default_sparam->symbol, ==, v_symbol[i]);
-
+    
     ncm_assert_cmpdouble (ncm_vparam_get_lower_bound (vp, 0),        ==, v_lb[i]);
     ncm_assert_cmpdouble (ncm_vparam_get_upper_bound (vp, 0),        ==, v_ub[i]);
     ncm_assert_cmpdouble (ncm_vparam_get_scale (vp, 0),              ==, v_scale[i]);
@@ -294,12 +304,12 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
 static void
 ncm_model_test_class_init (NcmModelTestClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_ncm_model_test_set_property;
   model_class->get_property = &_ncm_model_test_get_property;
-
+  
   name     = name_tot[0];
   nick     = nick_tot[0];
   s_symbol = &s_symbol_tot[0];
@@ -319,13 +329,13 @@ ncm_model_test_class_init (NcmModelTestClass *klass)
   s_ftype  = &s_ftype_tot[0];
   v_ftype  = &v_ftype_tot[0];
   v_len    = &v_len_tot[0];
-
+  
   ci_sparam_len = SPARAM_LEN1;
   ci_vparam_len = VPARAM_LEN1;
-  name_ext = "Base";
-
+  name_ext      = "Base";
+  
   ncm_model_test_base_class_init (model_class);
-
+  
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_double ("A",
@@ -334,18 +344,17 @@ ncm_model_test_class_init (NcmModelTestClass *klass)
                                                         0.0, 100.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   object_class->finalize = ncm_model_test_finalize;
-
 }
 
 static void
 ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_ncm_model_test_child_set_property;
   model_class->get_property = &_ncm_model_test_child_get_property;
-
+  
   name     = name_tot[1];
   nick     = nick_tot[1];
   s_symbol = &s_symbol_tot[SPARAM_LEN1];
@@ -365,13 +374,13 @@ ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
   s_ftype  = &s_ftype_tot[SPARAM_LEN1];
   v_ftype  = &v_ftype_tot[VPARAM_LEN1];
   v_len    = &v_len_tot[VPARAM_LEN1];
-
+  
   ci_sparam_len = SPARAM_LEN2;
   ci_vparam_len = VPARAM_LEN2;
-  name_ext = "Child";
-
+  name_ext      = "Child";
+  
   ncm_model_test_base_class_init (model_class);
-
+  
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_double ("B",
@@ -385,12 +394,12 @@ ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
 static void
 ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_ncm_model_test_child_child_set_property;
   model_class->get_property = &_ncm_model_test_child_child_get_property;
-
+  
   name     = name_tot[2];
   nick     = nick_tot[2];
   s_symbol = &s_symbol_tot[SPARAM_LEN1 + SPARAM_LEN2];
@@ -410,13 +419,13 @@ ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
   s_ftype  = &s_ftype_tot[SPARAM_LEN1 + SPARAM_LEN2];
   v_ftype  = &v_ftype_tot[VPARAM_LEN1 + VPARAM_LEN2];
   v_len    = &v_len_tot[VPARAM_LEN1 + VPARAM_LEN2];
-
+  
   ci_sparam_len = SPARAM_LEN3;
   ci_vparam_len = VPARAM_LEN3;
-  name_ext = "Grandchild";
-
+  name_ext      = "Grandchild";
+  
   ncm_model_test_base_class_init (model_class);
-
+  
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_double ("C",
@@ -425,5 +434,5 @@ ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
                                                         0.0, 100.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   object_class->finalize = ncm_model_test_child_child_finalize;
-
 }
+
