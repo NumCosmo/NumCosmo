@@ -596,7 +596,7 @@ ncm_stats_dist_clear (NcmStatsDist **sd)
  * @sd: a #NcmStatsDist
  * @sdk: a #NcmStatsDistKernel
  *
- * Sets the kernel to be used in the interpolation.
+ * Sets the kernel to be used in the interpolation. The different types of kernels are: the gaussian kernel and the studentt kernel, which are under the file names ncm_stats_dist_kernel_gauss.c and ncm_stats_dist_kernel_st.c.
  */
 void
 ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
@@ -645,7 +645,7 @@ ncm_stats_dist_get_kernel (NcmStatsDist *sd)
  * ncm_stats_dist_get_dim:
  * @sd: a #NcmStatsDist
  *
- * Returns: the dimension of the sample space.
+ * Returns: an int d, the dimension of the sample space, which is the same dimension of the used kernel.
  */
 guint
 ncm_stats_dist_get_dim (NcmStatsDist *sd)
@@ -659,7 +659,7 @@ ncm_stats_dist_get_dim (NcmStatsDist *sd)
  * ncm_stats_dist_get_sample_size:
  * @sd: a #NcmStatsDist
  *
- * Returns: the size of the sample used in the last prepare call.
+ * Returns: an int n, the size of the sample used in the last prepare call.
  */
 guint
 ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
@@ -673,7 +673,7 @@ ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
  * ncm_stats_dist_get_href:
  * @sd: a #NcmStatsDist
  *
- * Returns: the currently used href.
+ * Returns: a double h, the currently used href. If the object was prepared with the VKDE class, the VKDE method is called.
  */
 gdouble
 ncm_stats_dist_get_href (NcmStatsDist *sd)
@@ -703,7 +703,7 @@ ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth)
  * ncm_stats_dist_get_over_smooth:
  * @sd: a #NcmStatsDist
  *
- * Returns: the over-smooth factor.
+ * Returns: a double os, the over-smooth factor.
  */
 gdouble
 ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
@@ -718,7 +718,7 @@ ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @split_frac: the over-smooth factor
  *
- * Sets cross-correlation split fraction to @split_frac.
+ * Sets cross-correlation split fraction to @split_frac. This method shall be used when the cv_type is the cv_split. The split fraction determines the fraction of sample points that will be left out to use the cross validation method.
  *
  */
 void
@@ -736,7 +736,7 @@ ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac)
  * ncm_stats_dist_get_split_frac:
  * @sd: a #NcmStatsDist
  *
- * Returns: the cross-correlation split fraction.
+ * Returns: a double split_frac, the cross-correlation split fraction.
  */
 gdouble
 ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
@@ -751,7 +751,7 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @cv_type: a #NcmStatsDistCV
  *
- * Sets the cross-validation method to @cv_type.
+ * Sets the cross-validation method to @cv_type. If the selected method is none, all the sample points will be used to compute the interpolation. If the cv_type is the cv_split, a split fraction of the points are randomly excluded and the interpolation is computed to a best fit of the remaining sample points, which leads to a more point independent interpolation.
  *
  */
 void
@@ -766,7 +766,7 @@ ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type)
  * ncm_stats_dist_get_cv_type:
  * @sd: a #NcmStatsDist
  *
- * Returns: current cross-validation method used.
+ * Returns: a string cv_type, current cross-validation method used.
  */
 NcmStatsDistCV
 ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
@@ -780,7 +780,7 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
  * ncm_stats_dist_prepare: (virtual prepare)
  * @sd: a #NcmStatsDist
  *
- * Prepares the object for calculations.
+ * Prepares the object for calculations.This function prepares the weight matrix and sets all the weights to 1.0/sample size. It also calls the kernel_prepare function, implemented by a child, and calls the get_href function.
  */
 void
 ncm_stats_dist_prepare (NcmStatsDist *sd)
@@ -793,10 +793,11 @@ ncm_stats_dist_prepare (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_prepare_interp: (virtual prepare_interp)
  * @sd: a #NcmStatsDist
- * @m2lnp: a #NcmVector containing the distribution values
+ * @m2lnp: a #NcmVector containing the distribution values that will be used to compute the interpolation function.
  *
  * Prepares the object for calculations. Using the distribution values
- * at the sample points.
+ * at the sample points. This function calls the prepare function and prepares the needed objects to compute the least squares problem. The interpolation matrix IM is prepered by a child object and called in this function.
+ * Then, depending on the cross validation method, the function solves the least squares problem using the ncm_nnls object.
  *
  */
 void
@@ -892,7 +893,7 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
  * when computing the interpolation through
  * ncm_stats_dist_prepare_interp().
  *
- * Returns: the value of the $\chi^2$.
+ * Returns: a double, the value of the $\chi^2$.
  */
 gdouble
 ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
@@ -907,7 +908,7 @@ ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @y: a #NcmVector
  *
- * Adds a new point @y to the sample with weight 1.0.
+ * Adds a new point @y to the sample with weight 1.0. This function must be called to insert an initial sample into the object, so the interpolation can be computed.
  *
  */
 void
