@@ -49,25 +49,24 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-
+  
   g_test_add ("/ncm/data_gauss_cov_test/sanity", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_sanity,
               &test_ncm_data_gauss_cov_test_free);
-
+  
   g_test_add ("/ncm/data_gauss_cov_test/resample", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_resample,
               &test_ncm_data_gauss_cov_test_free);
-
+  
   g_test_run ();
 }
-
 
 void
 test_ncm_data_gauss_cov_test_new (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
-  test->data = ncm_data_gauss_cov_test_new ();
+  test->data      = ncm_data_gauss_cov_test_new ();
   test->gcov_test = NCM_DATA_GAUSS_COV_TEST (test->data);
   ncm_data_gauss_cov_test_gen_cov (test->gcov_test);
 }
@@ -83,26 +82,29 @@ test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
   guint i, j;
+  
   g_assert_true (NCM_IS_DATA_GAUSS_COV (test->data));
   g_assert_true (NCM_IS_MATRIX (gauss->cov));
-
+  
   for (i = 0; i < gauss->np; i++)
   {
     for (j = 0; j < gauss->np; j++)
     {
       if (i == j)
+      {
         continue;
+      }
       else
       {
         gdouble cov_ij = ncm_matrix_get (gauss->cov, i, j);
         gdouble cov_ji = ncm_matrix_get (gauss->cov, j, i);
-        gdouble var_i = ncm_matrix_get (gauss->cov, i, i);
-        gdouble var_j = ncm_matrix_get (gauss->cov, j, j);
+        gdouble var_i  = ncm_matrix_get (gauss->cov, i, i);
+        gdouble var_j  = ncm_matrix_get (gauss->cov, j, j);
         gdouble cor_ij = cov_ij / sqrt (var_i * var_j);
-
+        
         ncm_assert_cmpdouble (var_i, >, 0.0);
         ncm_assert_cmpdouble (var_j, >, 0.0);
-
+        
         ncm_assert_cmpdouble (cov_ij, ==, cov_ji);
         ncm_assert_cmpdouble (cor_ij, >=, -1.0);
         ncm_assert_cmpdouble (cor_ij, <=,  1.0);
@@ -119,44 +121,45 @@ test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpoin
   NcmStatsVec *stat      = ncm_stats_vec_new (gauss->np, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmVector *mean        = ncm_vector_new (gauss->np);
-  guint nerr = 0;
+  guint nerr             = 0;
   guint i;
-
+  
   ncm_data_gauss_cov_test_mean_func (gauss, NULL, mean);
-
+  
   for (i = 0; i < resample_size; i++)
   {
     ncm_data_resample (test->data, NULL, rng);
     ncm_stats_vec_append (stat, gauss->y, FALSE);
   }
-
+  
   for (i = 0; i < gauss->np; i++)
   {
     guint j;
-    gdouble mean_i = ncm_vector_get (mean, i);
+    gdouble mean_i     = ncm_vector_get (mean, i);
     gdouble est_mean_i = ncm_stats_vec_get_mean (stat, i);
     gdouble est_var_i  = ncm_stats_vec_get_var (stat, i);
     gdouble var_i      = ncm_matrix_get (gauss->cov, i, i);
-
+    
     gdouble mean_diff_frac = fabs ((mean_i - est_mean_i) / mean_i);
-    gdouble var_diff_frac = fabs ((var_i - est_var_i) / var_i);
-
+    gdouble var_diff_frac  = fabs ((var_i - est_var_i) / var_i);
+    
     ncm_assert_cmpdouble (mean_diff_frac, <, 1.0e-2);
     ncm_assert_cmpdouble (var_diff_frac, <, 1.0e-1);
-
+    
     for (j = i + 1; j < gauss->np; j++)
     {
-      gdouble est_cov_ij = ncm_stats_vec_get_cov (stat, i, j);
-      gdouble cov_ij     = ncm_matrix_get (gauss->cov, i, j);
+      gdouble est_cov_ij    = ncm_stats_vec_get_cov (stat, i, j);
+      gdouble cov_ij        = ncm_matrix_get (gauss->cov, i, j);
       gdouble cov_diff_frac = fabs ((cov_ij - est_cov_ij) / cov_ij);
-
+      
       if (cov_diff_frac > 1.0)
         nerr++;
     }
   }
-
+  
   g_assert_cmpuint (nerr, <, (gauss->np * (gauss->np - 1)) / 20);
-
+  
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }
+

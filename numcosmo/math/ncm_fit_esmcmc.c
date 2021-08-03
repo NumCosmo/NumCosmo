@@ -1931,7 +1931,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     gdouble m             = n * lerror2 / lre2;
     guint runs            = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * self->lre_step), 100000) : ceil (m - n);
     guint ti              = (self->cur_sample_id + 1) / self->nwalkers;
-    
+
     runs = GSL_MIN (ncm_timer_task_estimate_by_time (self->nt, self->max_runs_time), runs);
     runs = GSL_MAX (runs / self->nwalkers + 1, self->min_runs);
     
@@ -1949,7 +1949,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     
     if (self->auto_trim)
       ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
-    
+
     ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
     lerror = ncm_mset_catalog_largest_error (self->mcat);
   }

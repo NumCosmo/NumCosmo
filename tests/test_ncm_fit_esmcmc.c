@@ -383,20 +383,19 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
-
+    
     ncm_fit_esmcmc_start_run (esmcmc);
     ncm_fit_esmcmc_run_lre (esmcmc, 100, 1.0e-2);
     ncm_fit_esmcmc_end_run (esmcmc);
-
+    
     {
       NcmMatrix *data_cov = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
       NcmMatrix *cat_cov  = NULL;
       
       ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (esmcmc), &cat_cov);
-
-      ncm_matrix_log_vals (cat_cov,  "CAT_COV ", "% 22.15g");
-      ncm_matrix_log_vals (data_cov, "DATA_COV", "% 22.15g");
-
+      
+      /* ncm_matrix_log_vals (cat_cov,  "CAT_COV ", "% 22.15g"); */
+      /* ncm_matrix_log_vals (data_cov, "DATA_COV", "% 22.15g"); */
       
       g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
       
@@ -428,12 +427,12 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
   ncm_matrix_cov2cor (data_cor, data_cor);
   
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  /*ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);*/
+  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
   
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
   ncm_fit_esmcmc_end_run (test->esmcmc);
-  
+
   {
     NcmMatrix *cat_cov  = NULL;
     NcmMatrix *cat_fcov = NULL;
@@ -495,6 +494,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
   gdouble lnnorm_sd;
   
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
+  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
   
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
