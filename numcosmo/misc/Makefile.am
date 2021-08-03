@@ -49,7 +49,7 @@ libnumcosmo_misc_la_SOURCES = \
 	gsl_cqp.h       \
 	rhrand.h        \
 	kdtree.c        \
-	kdtree.h        \	
+	kdtree.h        \
 	initial_point.h
 
 EXTRA_DIST =
