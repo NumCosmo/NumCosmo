@@ -10,6 +10,7 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS) \
 	 $(DCNEARTREE_SAFE_TRIANG=1)\
 	 -I$(top_srcdir)/numcosmo \
+	 -I$(top_srcdir) \
 	 -I$(builddir)/.. \
 	 -I$(INC) $(CVECTOR_INCLUDE)\
 	 $(VISIBILITY_HIDDEN_FLAG)
