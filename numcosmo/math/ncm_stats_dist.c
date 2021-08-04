@@ -71,14 +71,14 @@
  * 
  *
  * In this oobject, the radial basis interpolation function is not completely defined. One must choose one of the instances of the class, the
- * #NcmStatsDistKDEStudentt object or the #NcmStatsDistKDEGauss object, which uses a multivariate Student's t function and a Gaussian function as the kernel.
+ * #NcmStatsDistKernelST object or the #NcmStatsDistKernelGauss object, which uses a multivariate Student's t function and a Gaussian function as the kernel.
  * After initializing the desired object for the interpolation function, one may use the methods of this file to generate the interpolation and to
  * sample from the new interpolated function.
  *
  * The user must provide the input the values: @over_smooth - ncm_stats_dist_set_over_smooth(), @split_frac - ncm_stats_dist_set_split_frac(),
  * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ - ncm_stats_dist_prepare_interp(). The other parameters
  * must be inserted when the instance for the #NcmStatsDistKDE or the #NcmStatsDistVKDE object is initialized. To perform a calculation of this class, one
- * needs to initialize the class within one of its childs (#NcmStatsDistGauss or #NcmStatsDistST), along with the input of a child object of the class
+ * needs to initialize the class within one of its childs (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST), along with the input of a child object of the class
  * #NcmStatsDistKernel. For more information about the algorithm, see the description below.
  *
  *	 -Since this class does not define what type of kernel will be used in the calculation (the fixed kernel in the #NcmStatsDistKDE class or the variable kernel in #NcmStatsDistVKDE class),
@@ -438,7 +438,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
 }
 
 static void
-_ncm_stats_dist_vkde_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols)
+_ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols)
 {
   NcmStatsDistPrivate * const self = sd->priv;
   if ((self->nnls == NULL) ||
@@ -530,7 +530,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         const gint nrows            = self->n;
         const gint ncols            = ceil (self->n * self->split_frac);
         g_assert_cmpuint (nrows, >=, ncols);
-        _ncm_stats_dist_vkde_alloc_nnls (sd, nrows, ncols);
+        _ncm_stats_dist_alloc_nnls (sd, nrows, ncols);
 
         gdouble info[LM_INFO_SZ];
         gdouble opts[LM_OPTS_SZ];
@@ -562,7 +562,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       }
       break;
       case NCM_STATS_DIST_CV_NONE:
-        _ncm_stats_dist_vkde_alloc_nnls (sd, self->n, self->n);
+        _ncm_stats_dist_alloc_nnls (sd, self->n, self->n);
         sd_class->compute_IM (sd, self->IM);
         self->rnorm = ncm_nnls_solve (self->nnls, self->sub_IM, self->sub_x, self->f);
         break;
@@ -817,6 +817,27 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = sd->priv;
   
   return self->cv_type;
+}
+
+/**
+ * ncm_stats_dist_prepare_kernel: (virtual prepare_kernel)
+ * @sd: a #NcmStatsDist
+ * @sample_array: (element-type NcmVector): an array of #NcmVector
+ *
+ * Prepares the object for computations of the individuals kernels
+ * and is usually part of ncm_stats_dist_prepare() and is should not
+ * be called directly.
+ *
+ * This virtual method does not have a default implementation and
+ * must be defined by the descendants.
+ * 
+ */
+void
+ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
+{
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+
+  sd_class->prepare_kernel (sd, sample_array);
 }
 
 /**

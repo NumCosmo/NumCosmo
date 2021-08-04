@@ -326,6 +326,7 @@ ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
 /**
  * ncm_fit_esmcmc_walker_setup: (virtual setup)
  * @walker: a #NcmMSetCatalog
+ * @mset: a #NcmMSet
  * @theta: (element-type NcmVector): array of walkers positions
  * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @ki: first walker index

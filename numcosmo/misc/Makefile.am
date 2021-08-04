@@ -47,7 +47,6 @@ libnumcosmo_misc_la_SOURCES = \
 	initial_point.c \
 	mg_pdip.c       \
 	gsl_cqp.h       \
-	rhrand.h        \
 	kdtree.c        \
 	kdtree.h        \
 	initial_point.h

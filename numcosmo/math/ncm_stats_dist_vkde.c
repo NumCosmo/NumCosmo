@@ -27,7 +27,7 @@
 
 /**
  * SECTION:ncm_stats_dist_vkde
- * @title: NcmStatsDist
+ * @title: NcmStatsDistVKDE
  * @short_description: Abstract class for implementing N-dimensional probability distributions with a variable density estimator kernel.
  *
  * Abstract object to reconstruct an arbitrary N-dimensional probability distribution.
@@ -40,7 +40,7 @@
  * evaluated in these points. Some of these calculations are explained below.
  *
  * The #NcmStatsDistVKDE uses a different covariance matrix for each sample point. This feature is computed
- * in the ncm_stats_dist_vkde_prepare_kernel() function. In this algorithm, one should define the @local_frac parameter, that is,
+ * in the ncm_stats_dist_prepare_kernel() function. In this algorithm, one should define the @local_frac parameter, that is,
  * the fraction of nearest sample points that will be used to compute each covariance matrix of each
  * sample point. This is done by calling the function ncm_stats_dist_vkde_set_local_frac().
  * The rest of the calculation follows the same procedure as the #NcmStatsDist and #NcmStatsDistKDE objects,
@@ -51,6 +51,8 @@
  * @over_smooth - ncm_stats_dist_set_over_smooth(), @local_Frac - ncm_stats_dist_vkde_set_local_frac(), $v(x)$ - ncm_stats_dist_prepare_interp(). 
  * To see an example of how to use this object and the main functions that are called within each function, check the fluxogram at the end of this documentation,
  * where the order of the functions that should be called by the user and some of the functions that the algorithm calls.      
+ *
+ * ![vkde_sketch](vkde.png)
  */
 
 #ifdef HAVE_CONFIG_H
@@ -626,6 +628,3 @@ ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde)
   return self->local_frac;
 }
 
-/** ![an inline image](vkde.png)
-*
-* <inlinegraphic fileref="vkde.png" format="PNG" scale="98" align="right"/>                                                                **/

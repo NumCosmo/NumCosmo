@@ -113,25 +113,25 @@ extern "C" {
 extern int dlevmar_der(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       void (*jacf)(double *p, double *j, int m, int n, void *adata),
-      double *p, double *x, int m, int n, int itmax, double *opts,
-      double *info, double *work, double *covar, void *adata);
+      double *p, double *x, int m, int n, int itmax, double opts[4],
+      double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 extern int dlevmar_dif(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
-      double *p, double *x, int m, int n, int itmax, double *opts,
-      double *info, double *work, double *covar, void *adata);
+      double *p, double *x, int m, int n, int itmax, double opts[5],
+      double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 /* box-constrained minimization */
 extern int dlevmar_bc_der(
        void (*func)(double *p, double *hx, int m, int n, void *adata),
        void (*jacf)(double *p, double *j, int m, int n, void *adata),  
        double *p, double *x, int m, int n, double *lb, double *ub, double *dscl,
-       int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+       int itmax, double opts[4], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 extern int dlevmar_bc_dif(
        void (*func)(double *p, double *hx, int m, int n, void *adata),
        double *p, double *x, int m, int n, double *lb, double *ub, double *dscl,
-       int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+       int itmax, double opts[5], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 #ifdef HAVE_LAPACK
 /* linear equation constrained minimization */
@@ -139,24 +139,24 @@ extern int dlevmar_lec_der(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       void (*jacf)(double *p, double *j, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *A, double *b, int k,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[4], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 extern int dlevmar_lec_dif(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *A, double *b, int k,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[5], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 /* box & linear equation constrained minimization */
 extern int dlevmar_blec_der(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       void (*jacf)(double *p, double *j, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *lb, double *ub, double *A, double *b, int k, double *wghts,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[4], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 extern int dlevmar_blec_dif(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *lb, double *ub, double *A, double *b, int k, double *wghts,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[5], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 /* box, linear equations & inequalities constrained minimization */
 extern int dlevmar_bleic_der(
@@ -164,13 +164,13 @@ extern int dlevmar_bleic_der(
       void (*jacf)(double *p, double *j, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *lb, double *ub,
       double *A, double *b, int k1, double *C, double *d, int k2,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[4], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 extern int dlevmar_bleic_dif(
       void (*func)(double *p, double *hx, int m, int n, void *adata),
       double *p, double *x, int m, int n, double *lb, double *ub, 
       double *A, double *b, int k1, double *C, double *d, int k2,
-      int itmax, double *opts, double *info, double *work, double *covar, void *adata);
+      int itmax, double opts[5], double info[LM_INFO_SZ], double *work, double *covar, void *adata);
 
 /* box & linear inequality constraints */
 extern int dlevmar_blic_der(
@@ -218,25 +218,25 @@ extern int dlevmar_lic_dif(
 extern int slevmar_der(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       void (*jacf)(float *p, float *j, int m, int n, void *adata),
-      float *p, float *x, int m, int n, int itmax, float *opts,
-      float *info, float *work, float *covar, void *adata);
+      float *p, float *x, int m, int n, int itmax, float opts[4],
+      float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 extern int slevmar_dif(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
-      float *p, float *x, int m, int n, int itmax, float *opts,
-      float *info, float *work, float *covar, void *adata);
+      float *p, float *x, int m, int n, int itmax, float opts[5],
+      float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 /* box-constrained minimization */
 extern int slevmar_bc_der(
        void (*func)(float *p, float *hx, int m, int n, void *adata),
        void (*jacf)(float *p, float *j, int m, int n, void *adata),  
        float *p, float *x, int m, int n, float *lb, float *ub, float *dscl,
-       int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+       int itmax, float opts[4], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 extern int slevmar_bc_dif(
        void (*func)(float *p, float *hx, int m, int n, void *adata),
        float *p, float *x, int m, int n, float *lb, float *ub, float *dscl,
-       int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+       int itmax, float opts[5], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 #ifdef HAVE_LAPACK
 /* linear equation constrained minimization */
@@ -244,24 +244,24 @@ extern int slevmar_lec_der(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       void (*jacf)(float *p, float *j, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *A, float *b, int k,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[4], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 extern int slevmar_lec_dif(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *A, float *b, int k,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[5], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 /* box & linear equation constrained minimization */
 extern int slevmar_blec_der(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       void (*jacf)(float *p, float *j, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *lb, float *ub, float *A, float *b, int k, float *wghts,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[4], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 extern int slevmar_blec_dif(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *lb, float *ub, float *A, float *b, int k, float *wghts,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[5], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 /* box, linear equations & inequalities constrained minimization */
 extern int slevmar_bleic_der(
@@ -269,13 +269,13 @@ extern int slevmar_bleic_der(
       void (*jacf)(float *p, float *j, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *lb, float *ub,
       float *A, float *b, int k1, float *C, float *d, int k2,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[4], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 extern int slevmar_bleic_dif(
       void (*func)(float *p, float *hx, int m, int n, void *adata),
       float *p, float *x, int m, int n, float *lb, float *ub,
       float *A, float *b, int k1, float *C, float *d, int k2,
-      int itmax, float *opts, float *info, float *work, float *covar, void *adata);
+      int itmax, float opts[5], float info[LM_INFO_SZ], float *work, float *covar, void *adata);
 
 /* box & linear inequality constraints */
 extern int slevmar_blic_der(

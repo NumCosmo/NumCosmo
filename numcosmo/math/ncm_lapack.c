@@ -1230,20 +1230,20 @@ ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, Ncm
  * On entry, the matrix B of right hand side vectors, stored
  * columnwise; B is M-by-NRHS if TRANS = 'N', or N-by-NRHS
  * if TRANS = 'T'.
- *   On exit, if INFO = 0, B is overwritten by the solution
- *     vectors, stored columnwise:
+ * On exit, if INFO = 0, B is overwritten by the solution
+ * vectors, stored columnwise:
  * if TRANS = 'N' and m >= n, rows 1 to n of B contain the least
- *   squares solution vectors; the residual sum of squares for the
- *   solution in each column is given by the sum of squares of
- *   elements N+1 to M in that column;
+ * squares solution vectors; the residual sum of squares for the
+ * solution in each column is given by the sum of squares of
+ * elements N+1 to M in that column;
  * if TRANS = 'N' and m < n, rows 1 to N of B contain the
- *   minimum norm solution vectors;
+ * minimum norm solution vectors;
  * if TRANS = 'T' and m >= n, rows 1 to M of B contain the
- *   minimum norm solution vectors;
+ * minimum norm solution vectors;
  * if TRANS = 'T' and m < n, rows 1 to M of B contain the
- *   least squares solution vectors; the residual sum of squares
- *   for the solution in each column is given by the sum of
- *   squares of elements M+1 to N in that column.
+ * least squares solution vectors; the residual sum of squares
+ * for the solution in each column is given by the sum of
+ * squares of elements M+1 to N in that column.
  * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
  * @work: WORK is DOUBLE PRECISION array, dimension (4*N)
  * @lwork: LWORK is INTEGER

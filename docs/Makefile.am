@@ -101,34 +101,40 @@ endif
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
 IGNORE_HFILES= \
-              config.h                  \
-              config_extra.h            \
-              ncm_gsl_blas_types.h      \
-              ncm_fit_nlopt_enum_meta.h \
-              ncm_sphere_map_block.c    \
-              ncm_flapack.h             \
-              nc_hipert_private.h       \
-              gsl_rstat.h               \
-              gsl_cqp.h                 \
-              initial_point.h           \
-              rquantile.c               \
-              $(ignore_nlopt)           \
-              Faddeeva.h                \
-              levmar                    \
-              libcuba                   \
-              plc			\
-              class			\
-              class/source		\
-              class/hyrec		\
-              class/include             \
-              toeplitz                  \
-              sundials                  \
-              rcm.h                     \
-              rcm.c                     \
-              nnls.c                    \
-              libqp_gsmo.c              \
-              libqp.h                   \
-              libqp_splx.c
+              config.h                        \
+              config_extra.h                  \
+              ncm_gsl_blas_types.h            \
+              ncm_fit_nlopt_enum_meta.h       \
+              ncm_sphere_map_block.c          \
+              ncm_flapack.h                   \
+              ncm_stats_dist_kernel_private.h \
+              ncm_stats_dist_private.h        \
+              ncm_stats_dist_kde_private.h    \
+              ncm_stats_dist_vkde_private.h   \
+              nc_hipert_private.h             \
+              gsl_rstat.h                     \
+              gsl_cqp.h                       \
+              initial_point.h                 \
+              rquantile.c                     \
+              $(ignore_nlopt)                 \
+              Faddeeva.h                      \
+              levmar                          \
+              libcuba                  	      \
+              plc                             \
+              class                           \
+              class/source      	      \
+              class/hyrec      	              \
+              class/include                   \
+              toeplitz                        \
+              sundials                        \
+              rcm.h                           \
+              rcm.c                           \
+              nnls.c                          \
+              libqp_gsmo.c                    \
+              libqp.h                         \
+              libqp_splx.c                    \
+              kdtree.h                        \
+              kdtree.c
 
 
 # Images to copy into HTML directory.

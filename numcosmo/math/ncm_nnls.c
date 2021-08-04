@@ -352,6 +352,7 @@ ncm_nnls_clear (NcmNNLS **nnls)
 /**
  * ncm_nnls_set_umethod:
  * @nnls: a #NcmNNLS
+ * @umethod: a #NcmNNLSUMethod
  *
  * Sets which unconstrained least-squares method to use.
  *

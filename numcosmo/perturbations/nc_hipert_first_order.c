@@ -620,7 +620,7 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   gint *adj;
   gint node_num = self->vars->len;
   gchar *Jrow   = g_new0 (gchar, node_num + 1);
-  gint adj_max  = node_num * (node_num - 1); 
+  gint adj_max  = MAX (node_num * (node_num - 1), 1);
   gint adj_num  = 0;
   gint *adj_row;
   gint *perm;

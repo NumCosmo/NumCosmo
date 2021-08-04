@@ -77,7 +77,7 @@
  * check the fluxogram at the end of this documentation,
  * where the order of the functions that should be called by the user and some of the functions that the algorithm calls. 
  *
- *
+ * ![kde_sketch](kde.png)
  *
  */
 
@@ -562,7 +562,3 @@ ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
   return self->nearPD_maxiter;
 }
 
-/** ![an inline image](kde.png)
-*
-* <inlinegraphic fileref="kde.png" format="PNG" scale="98" align="right"/>
-**/

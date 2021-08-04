@@ -35,6 +35,7 @@ G_BEGIN_DECLS
 
 struct _NcmStatsDistKDEPrivate
 {
+  /*< private >*/
   NcmStatsVec *sample;
   NcmMatrix *cov_decomp;
   NcmMatrix *sample_matrix;

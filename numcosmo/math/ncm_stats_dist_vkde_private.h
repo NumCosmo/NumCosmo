@@ -35,6 +35,7 @@ G_BEGIN_DECLS
 
 struct _NcmStatsDistVKDEPrivate
 {
+  /*< private >*/
   NcmStatsVec *sample;
   GPtrArray *cov_array;
   NcmMatrix *tmp_cov;

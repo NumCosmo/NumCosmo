@@ -36,6 +36,7 @@ G_BEGIN_DECLS
 
 struct _NcmStatsDistPrivate
 {
+  /*< private >*/
   NcmStatsDistKernel *kernel;
   GPtrArray *sample_array;
   NcmVector *weights;

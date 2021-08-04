@@ -384,8 +384,10 @@ _ncm_mset_trans_kern_cat_get_name (NcmMSetTransKern *tkern)
 /**
  * ncm_mset_trans_kern_cat_new:
  * @mcat: a #NcmMSetCatalog
+ * @sd: a #NcmStatsDist
  *
- * New NcmMSetTransKernCat from @mcat catalog .
+ * New NcmMSetTransKernCat from @mcat catalog with the interpolation
+ * object @sd.
  *
  * Returns: (transfer full): a new #NcmMSetTransKernCat.
  *

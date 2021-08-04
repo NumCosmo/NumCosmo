@@ -1040,8 +1040,10 @@ ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
 /**
  * ncm_iset_log_vals:
  * @iset: a #NcmISet
+ * @prefix: a string
  *
- * Logs the indexes on @iset.
+ * Logs the indexes on @iset with prefix @prefix.
+ *
  */
 void
 ncm_iset_log_vals (NcmISet *iset, const gchar *prefix)
