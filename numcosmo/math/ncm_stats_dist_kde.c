@@ -28,28 +28,29 @@
 /**
  * SECTION:ncm_stats_dist_kde
  * @title: NcmStatsDistKDE
- * @short_description: Abstract class for implementing N dimensional probability distributions with a fixed density estimator kernel.
+ * @short_description: Abstract class for implementing N-dimensional probability distributions with a fixed density estimator kernel.
  *
- * Abstract object to reconstruct an arbitrary N dimensional probability distribution.
+ * Abstract object to reconstruct an arbitrary N-dimensional probability distribution.
  * This object provides the complementary tools to perform a radial basis interpolation
  * in a multidimensional function using the #NcmStatsDist class.
  *
  * This object sets the kernel $\phi$ to be used in the radial basis interpolation. This object also implements some
- * calculations needed in the #NcmStatsDist class, such as: the covariance matrix of the whole sample and its cholesky decomposition,
+ * calculations needed in the #NcmStatsDist class, such as the covariance matrix of the whole sample and its Cholesky decomposition,
  * the preparation of the interpolation matrix $IM$, the kernel normalization factor, and given a sample vector $\vec{x}$, the distribution
  * evaluated in these points. Some of these calculations are explained below.
  *
  * The #NcmStatsDistKDE class uses one covariance matrix for all the sample points. So, given $n$ points, there is only
- * one covariance matrix $\Sigma$ that is used for all the i\textit{th} kernels $\phi(|x-x_i|, \Sigma)$. After the covariance
- * matrix is computed, the algorithm computes the cholesky decomposition, that is
+ * one covariance matrix $\Sigma$ that is used for all the i$th$ kernels $\phi(|x-x_i|, \Sigma)$. After the covariance
+ * matrix is computed, the algorithm computes the Cholesky decomposition, that is
  * \begin{align}
  * \Sigma &= AA^T
  * ,\end{align}
  * where $A$ is a triangular positive defined matrix and $A^T$ is its transpose. The $A$ matrix is used in the least square squares
  * calculation method that is called in the #NcmStatsDist class.
  *
- * The object also prepares the interpolation matrix to be implemented in the least squares problem, that is, given the relation
- * \left[\begin{array}{cccc}
+ *
+ * The object also prepares the interpolation matrix to be implemented in the least-squares problem, that is, given the relation
+ * $\left[\begin{array}{cccc}
  * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{1}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{1}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{1}\right\|\right) \\
  * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{2}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{2}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{2}\right\|\right) \\
  * \vdots & \vdots & & \vdots \\
@@ -60,13 +61,13 @@
  * \vdots \\
  * \lambda_{n}
  * \end{array}\right]=\left[\begin{array}{c}
- * f_{1} \\
- * f_{2} \\
+ * g_{1} \\
+ * g_{2} \\
  * \vdots \\
- * f_{n}
- * ,\end{array}\right]
- * this object prepares the first matrix for all the $n$ points in the sample, using the covariance matrix and the defined kernel.
- * The #NcmStatsDist class implements the solution for this relation and then one is able to compute the distribution for a given
+ * g_{n}
+ * ,\end{array}\right]$
+ * which is explained in the #NcmStatsDist class, this object prepares the first matrix for all the $n$ points in the sample, using the covariance matrix and the defined kernel.
+ * The #NcmStatsDist class implements the solution for this relation and then one can compute the distribution for a given
  * vector $\vec{x}$ using a method of the #NcmStatsDist class but that is implemented in this object.
  *
  * 
@@ -561,3 +562,7 @@ ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
   return self->nearPD_maxiter;
 }
 
+/** ![an inline image](kde.png)
+*
+* <inlinegraphic fileref="kde.png" format="PNG" scale="98" align="right"/>
+**/
