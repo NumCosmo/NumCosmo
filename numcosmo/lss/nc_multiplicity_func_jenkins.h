@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_multiplicity_func_st.h
+ *            nc_multiplicity_func_jenkins.h
  *
  *  Mon Jun 28 15:09:13 2010
  *  Copyright  2010  Mariana Penna Lima
@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncJenkinsClass NcMultiplicityFuncJenkinsClass;
 typedef struct _NcMultiplicityFuncJenkins NcMultiplicityFuncJenkins;
+typedef struct _NcMultiplicityFuncJenkinsPrivate NcMultiplicityFuncJenkinsPrivate
 
 struct _NcMultiplicityFuncJenkinsClass
 {
@@ -53,29 +54,23 @@ struct _NcMultiplicityFuncJenkins
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble A;
-  gdouble A_tCDM;
-  gdouble B;
-  gdouble B_tCDM;
-  gdouble epsilon;
-  gdouble epsilon_tCDM;
+  NcMultiplicityFuncJenkinsPrivate *priv;
 };
 
 GType nc_multiplicity_func_jenkins_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_jenkins_new (gdouble A, gdouble A_tCDM, gdouble B, gdouble B_tCDM, gdouble epsilon, gdouble epsilon_tCDM);
-void nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble A);
-gdouble nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mulf_jenkins);
-void nc_multiplicity_func_jenkins_set_A_tCDM (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble A_tCDM);
-gdouble nc_multiplicity_func_jenkins_get_A_tCDM (const NcMultiplicityFuncJenkins *mulf_jenkins);
-void nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble B);
-gdouble nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mulf_jenkins);
-void nc_multiplicity_func_jenkins_set_B_tCDM (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble B_tCDM);
-gdouble nc_multiplicity_func_jenkins_get_B_tCDM (const NcMultiplicityFuncJenkins *mulf_jenkins);
-void nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble epsilon);
-gdouble nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mulf_jenkins);
-void nc_multiplicity_func_jenkins_set_epsilon_tCDM (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble epsilon_tCDM);
-gdouble nc_multiplicity_func_jenkins_get_epsilon_tCDM (const NcMultiplicityFuncJenkins *mulf_jenkins);
+NcMultiplicityFunc *nc_multiplicity_func_jenkins_new (void);
+NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_ref (NcMultiplicityFuncJenkins *mj);
+
+void nc_multiplicity_func_jenkins_free (NcMultiplicityFuncJenkins *mj);
+void nc_multiplicity_func_jenkins_clear (NcMultiplicityFuncJenkins **mj);
+
+void nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mj, gdouble A);
+gdouble nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mj);
+void nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mj, gdouble B);
+gdouble nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mj);
+void nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mj, gdouble epsilon);
+gdouble nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mj);
 
 G_END_DECLS
 

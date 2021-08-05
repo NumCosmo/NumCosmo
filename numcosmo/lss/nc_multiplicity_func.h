@@ -42,13 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncClass NcMultiplicityFuncClass;
 typedef struct _NcMultiplicityFunc NcMultiplicityFunc;
-
-struct _NcMultiplicityFuncClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
-};
+typedef struct _NcMultiplicityFuncPrivate NcMultiplicityFuncPrivate;
 
 /**
  * NcMultiplicityFuncMassDef:
@@ -72,23 +66,33 @@ typedef enum _NcMultiplicityFuncMassDef
   NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL,
   NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
   /* < private > */
-  NC_HALO_DENSITY_PROFILE_MASS_DEF_LEN, /*< skip >*/
+  NC_MULTIPLICITY_FUNC_MASS_DEF_LEN, /*< skip >*/
 } NcMultiplicityFuncMassDef;
+
+struct _NcMultiplicityFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  void (*set_mdef) (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+  NcMultiplicityFuncMassDef (*get_mdef) (NcMultiplicityFunc *mulf);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+};
 
 struct _NcMultiplicityFunc
 {
   /*< private >*/
   GObject parent_instance;
+  NcMultiplicityFuncPrivate *priv;
 };
 
 GType nc_multiplicity_func_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_new_from_name (gchar *multiplicity_name);
-gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
 void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
 
+NcMultiplicityFuncMassDef nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf);
 
+gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 G_END_DECLS
 

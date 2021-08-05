@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncSTClass NcMultiplicityFuncSTClass;
 typedef struct _NcMultiplicityFuncST NcMultiplicityFuncST;
+typedef struct _NcMultiplicityFuncSTPrivate NcMultiplicityFuncSTPrivate;
 
 struct _NcMultiplicityFuncSTClass
 {
@@ -53,23 +54,28 @@ struct _NcMultiplicityFuncST
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble A; 
-  gdouble b;
-  gdouble p;
-  gdouble delta_c;
+  NcMultiplicityFuncSTPrivate *priv;
 };
 
 GType nc_multiplicity_func_st_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_st_new (gdouble A, gdouble b, gdouble p, gdouble delta_c);
-void nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mulf_st, gdouble A);
-gdouble nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mulf_st);
-void nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mulf_st, gdouble b);
-gdouble nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mulf_st);
-void nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mulf_st, gdouble p);
-gdouble nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mulf_st);
-void nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mulf_st, gdouble delta_c);
-gdouble nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mulf_st);
+NcMultiplicityFunc *nc_multiplicity_func_st_new (void);
+NcMultiplicityFuncST *nc_multiplicity_func_st_ref (NcMultiplicityFuncST *mst);
+
+void nc_multiplicity_func_st_free (NcMultiplicityFuncST *mst);
+void nc_multiplicity_func_st_clear (NcMultiplicityFuncST **mst);
+
+void nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mst, gdouble A);
+gdouble nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mst);
+
+void nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mst, gdouble b);
+gdouble nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mst);
+
+void nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mst, gdouble p);
+gdouble nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mst);
+
+void nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mst, gdouble delta_c);
+gdouble nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst);
 
 G_END_DECLS
 

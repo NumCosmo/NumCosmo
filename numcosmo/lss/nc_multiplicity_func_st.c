@@ -39,207 +39,59 @@
 
 #include "lss/nc_multiplicity_func_st.h"
 
-G_DEFINE_TYPE (NcMultiplicityFuncST, nc_multiplicity_func_st, NC_TYPE_MULTIPLICITY_FUNC);
+struct _NcMultiplicityFuncSTPrivate
+{
+  NcMultiplicityFuncMassDef mdef;
+  gdouble A; 
+  gdouble b;
+  gdouble p;
+  gdouble delta_c;
+};
 
 enum
 {
   PROP_0,
   PROP_A,
   PROP_B,
-  PROP_P,
-  PROP_DELTA_C
+  PROP_P, 
+  PROP_DELTA_C,
+  PROP_SIZE,
 };
 
-/**
- * nc_multiplicity_func_st_new:
- * @A: FIXME
- * @b: FIXME
- * @p: FIXME
- * @delta_c: FIXME
- *
- * FIXME
- *
- * Returns: A new #NcMultiplicityFunc.
- */
-NcMultiplicityFunc *
-nc_multiplicity_func_st_new (gdouble A, gdouble b, gdouble p, gdouble delta_c)
-{
-  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_ST,
-                       "A", A,
-                       "b", b,
-                       "p", p,
-                       "critical-delta", delta_c,
-                       NULL);
-}
-
-static gdouble
-_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)          /* f(\sigma) - Sheth \& Tormen (ST) */
-{
-  NcMultiplicityFuncST *mulf_st = NC_MULTIPLICITY_FUNC_ST (mulf);
-//  const gdouble bc1 = sqrt(b/(2.0 * M_PI));
-  const gdouble A = mulf_st->A;
-  const gdouble b = mulf_st->b;
-  const gdouble bc1 = sqrt (2.0 * b / M_PI);
-  const gdouble p = mulf_st->p;
-  gdouble x = mulf_st->delta_c / sigma;
-  gdouble x2 = x * x;
-  //gdouble b2 = b * b;
-  gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's and Crocce's paper
-  //gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
-
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
- //  printf ("A = %.5g, b=%.5g, p=%.5g, delta_c= %.5g\n", A, b, p, mulf_st->delta_c);
-
-  return f_ST;
-}
-
-/**
- * nc_multiplicity_func_st_set_A:
- * @mulf_st: a #NcMultiplicityFuncST.
- * @A: value of #NcMultiplicityFuncST:A.
- *
- * Sets the value @A to the #NcMultiplicityFuncST:A property.
- *
- */
-void
-nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mulf_st, gdouble A)
-{
-  g_assert (A >= 0);
-  mulf_st->A = A;
-}
-
-/**
- * nc_multiplicity_func_st_get_A:
- * @mulf_st: a #NcMultiplicityFuncST.
- *
- * Returns: the value of #NcMultiplicityFuncST:A property.
- */
-gdouble
-nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mulf_st)
-{
-  return mulf_st->A;
-}
-
-/**
- * nc_multiplicity_func_st_set_b:
- * @mulf_st: a #NcMultiplicityFuncST.
- * @b: value of #NcMultiplicityFuncST:b.
- *
- * Sets the value @b to the #NcMultiplicityFuncST:b property.
- *
- */
-void
-nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mulf_st, gdouble b)
-{
-  g_assert (b >= 0);
-  mulf_st->b = b;
-}
-
-/**
- * nc_multiplicity_func_st_get_b:
- * @mulf_st: a #NcMultiplicityFuncST.
- *
- * Returns: the value of #NcMultiplicityFuncST:b property.
- */
-gdouble
-nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mulf_st)
-{
-  return mulf_st->b;
-}
-
-/**
- * nc_multiplicity_func_st_set_p:
- * @mulf_st: a #NcMultiplicityFuncST.
- * @p: value of #NcMultiplicityFuncST:p.
- *
- * Sets the value @p to the #NcMultiplicityFuncST:p property.
- *
- */
-void
-nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mulf_st, gdouble p)
-{
-  g_assert (p >= 0);
-  mulf_st->p = p;
-}
-
-/**
- * nc_multiplicity_func_st_get_p:
- * @mulf_st: a #NcMultiplicityFuncST.
- *
- * Returns: the value of #NcMultiplicityFuncST:p property.
- */
-gdouble
-nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mulf_st)
-{
-  return mulf_st->p;
-}
-
-/**
- * nc_multiplicity_func_st_set_delta_c:
- * @mulf_st: a #NcMultiplicityFuncST.
- * @delta_c: value of #NcMultiplicityFuncST:critical-delta.
- *
- * Sets the value @delta_c to the #NcMultiplicityFuncST:critical-delta property.
- *
- */
-void
-nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mulf_st, gdouble delta_c)
-{
-  g_assert (delta_c >= 0);
-  mulf_st->delta_c = delta_c;
-}
-
-/**
- * nc_multiplicity_func_st_get_delta_c:
- * @mulf_st: a #NcMultiplicityFuncST.
- *
- * Returns: the value of #NcMultiplicityFuncST:critical_delta property.
- */
-gdouble
-nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mulf_st)
-{
-  return mulf_st->delta_c;
-}
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncST, nc_multiplicity_func_st, NC_TYPE_MULTIPLICITY_FUNC);
 
 static void
-nc_multiplicity_func_st_init (NcMultiplicityFuncST *mulf_st)
+nc_multiplicity_func_st_init (NcMultiplicityFuncST *mst)
 {
-  /* TODO: Add initialization code here */
-  mulf_st->A = 0.3222;
-  mulf_st->b = 0.707;
-  mulf_st->p = 0.3;
-  mulf_st->delta_c = 1.6864701998411454502;
-}
+  NcMultiplicityFuncSTPrivate * const self = mst->priv = nc_multiplicity_func_st_get_instance_private (mst);
 
-static void
-_nc_multiplicity_func_st_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_multiplicity_func_st_parent_class)->finalize (object);
+  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->A       = 0.0;
+  self->b       = 0.0;
+  self->p       = 0.0;
+  self->delta_c = 0.0;
 }
 
 static void
 _nc_multiplicity_func_st_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncST *mulf_st = NC_MULTIPLICITY_FUNC_ST (object);
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_ST (object));
 
   switch (prop_id)
   {
-	case PROP_A:
-	  mulf_st->A = g_value_get_double (value);
-	  break;
-	case PROP_B:
-	  mulf_st->b = g_value_get_double (value);
-	  break;
-	case PROP_P:
-	  mulf_st->p = g_value_get_double (value);
-	  break;
-	case PROP_DELTA_C:
-	  mulf_st->delta_c = g_value_get_double (value);
-	  break;
+    case PROP_A:
+      nc_multiplicity_func_st_set_A (mst, g_value_get_double (value));
+      break;
+    case PROP_B:
+      nc_multiplicity_func_st_set_b (mst, g_value_get_double (value));
+      break;
+    case PROP_P:
+      nc_multiplicity_func_st_set_p (mst, g_value_get_double (value));
+      break;
+    case PROP_DELTA_C:
+      nc_multiplicity_func_st_set_delta_c (mst, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -249,22 +101,22 @@ _nc_multiplicity_func_st_set_property (GObject * object, guint prop_id, const GV
 static void
 _nc_multiplicity_func_st_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncST *mulf_st = NC_MULTIPLICITY_FUNC_ST (object);
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_ST (object));
 
   switch (prop_id)
   {
-	case PROP_A:
-	  g_value_set_double (value, mulf_st->A);
-	  break;
-	case PROP_B:
-	  g_value_set_double (value, mulf_st->b);
-	  break;
-	case PROP_P:
-	  g_value_set_double (value, mulf_st->p);
-	  break;
+    case PROP_A:
+      g_value_set_double (value, nc_multiplicity_func_st_get_A (mst));
+      break;
+    case PROP_B:
+      g_value_set_double (value, nc_multiplicity_func_st_get_b (mst));
+      break;
+    case PROP_P:
+      g_value_set_double (value, nc_multiplicity_func_st_get_p (mst));
+      break;
     case PROP_DELTA_C:
-      g_value_set_double (value, mulf_st->delta_c);
+      g_value_set_double (value, nc_multiplicity_func_st_get_delta_c (mst));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -273,16 +125,25 @@ _nc_multiplicity_func_st_get_property (GObject * object, guint prop_id, GValue *
 }
 
 static void
+_nc_multiplicity_func_st_finalize (GObject *object)
+{
+
+  G_OBJECT_CLASS (nc_multiplicity_func_st_parent_class)->finalize (object);
+}
+
+static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static NcMultiplicityFuncMassDef _nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
+static void
 nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
-  parent_class->eval = &_nc_multiplicity_func_st_eval;
-
-  object_class->finalize = _nc_multiplicity_func_st_finalize;
   object_class->set_property = _nc_multiplicity_func_st_set_property;
   object_class->get_property = _nc_multiplicity_func_st_get_property;
+  object_class->finalize     = _nc_multiplicity_func_st_finalize;
 
   /**
    * NcMultiplicityFuncST:A:
@@ -332,5 +193,254 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                                         "Critical delta",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  parent_class->set_mdef = &_nc_multiplicity_func_st_set_mdef;
+  parent_class->get_mdef = &_nc_multiplicity_func_st_get_mdef;
+  parent_class->eval     = &_nc_multiplicity_func_st_eval;
+}
+
+static void 
+_nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
+{
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  switch (mdef)
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+      /* nothing to do */
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+      g_error ("NcMultiplicityFuncST does not support critical mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
+      g_error ("NcMultiplicityFuncST does not support virial mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      g_error ("NcMultiplicityFuncST does not support fof mass def");
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  self->mdef = mdef;
+}
+
+static NcMultiplicityFuncMassDef 
+_nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->mdef;
+}
+
+static gdouble
+_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)          /* f(\sigma) - Sheth \& Tormen (ST) */
+{
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+//  const gdouble bc1 = sqrt(b/(2.0 * M_PI));
+  const gdouble A = self->A;
+  const gdouble b = self->b;
+  const gdouble bc1 = sqrt (2.0 * b / M_PI);
+  const gdouble p = self->p;
+  gdouble x = self->delta_c / sigma;
+  gdouble x2 = x * x;
+  //gdouble b2 = b * b;
+  gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's and Crocce's paper
+  //gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
+
+  NCM_UNUSED (cosmo);
+  NCM_UNUSED (z);
+ //  printf ("A = %.5g, b=%.5g, p=%.5g, delta_c= %.5g\n", A, b, p, mulf_st->delta_c);
+
+  return f_ST;
+}
+
+/**
+ * nc_multiplicity_func_st_new:
+ *
+ * FIXME
+ *
+ * Returns: A new #NcMultiplicityFunc.
+ */
+NcMultiplicityFunc *
+nc_multiplicity_func_st_new (void)
+{
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_ST,
+                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
+                       NULL);
+}
+
+/**
+ * nc_multiplicity_func_st_ref:
+ * @mst: a #NcMultiplicityFuncST
+ *
+ * Increases the reference count of @mst by one.
+ *
+ * Returns: (transfer full): @mst
+ */
+NcMultiplicityFuncST *
+nc_multiplicity_func_st_ref (NcMultiplicityFuncST *mst)
+{
+  return g_object_ref (mst);
+}
+
+/**
+ * nc_multiplicity_func_st_free:
+ * @mst: a #NcMultiplicityFuncST
+ *
+ * Atomically decrements the reference count of @mst by one. If the reference count drops to 0,
+ * all memory allocated by @mst is released.
+ *
+ */
+void
+nc_multiplicity_func_st_free (NcMultiplicityFuncST *mst)
+{
+  g_object_unref (mst);
+}
+
+/**
+ * nc_multiplicity_func_st_clear:
+ * @mst: a #NcMultiplicityFuncST
+ *
+ * Atomically decrements the reference count of @mst by one. If the reference count drops to 0,
+ * all memory allocated by @mst is released. Set the pointer to NULL;
+ *
+ */
+void
+nc_multiplicity_func_st_clear (NcMultiplicityFuncST **mst)
+{
+  g_clear_object (mst);
+}
+
+/**
+ * nc_multiplicity_func_st_set_A:
+ * @mst: a #NcMultiplicityFuncST.
+ * @A: value of #NcMultiplicityFuncST:A.
+ *
+ * Sets the value @A to the #NcMultiplicityFuncST:A property.
+ *
+ */
+void
+nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mst, gdouble A)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+    
+  g_assert (A >= 0);
+
+  self->A = A;
+}
+
+/**
+ * nc_multiplicity_func_st_get_A:
+ * @mst: a #NcMultiplicityFuncST.
+ *
+ * Returns: the value of #NcMultiplicityFuncST:A property.
+ */
+gdouble
+nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mst)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->A;
+}
+
+/**
+ * nc_multiplicity_func_st_set_b:
+ * @mst: a #NcMultiplicityFuncST.
+ * @b: value of #NcMultiplicityFuncST:b.
+ *
+ * Sets the value @b to the #NcMultiplicityFuncST:b property.
+ *
+ */
+void
+nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mst, gdouble b)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+    
+  g_assert (b >= 0);
+
+  self->b = b;
+}
+
+/**
+ * nc_multiplicity_func_st_get_b:
+ * @mst: a #NcMultiplicityFuncST.
+ *
+ * Returns: the value of #NcMultiplicityFuncST:b property.
+ */
+gdouble
+nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mst)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->b;
+}
+
+/**
+ * nc_multiplicity_func_st_set_p:
+ * @mst: a #NcMultiplicityFuncST.
+ * @p: value of #NcMultiplicityFuncST:p.
+ *
+ * Sets the value @p to the #NcMultiplicityFuncST:p property.
+ *
+ */
+void
+nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mst, gdouble p)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+    
+  g_assert (p >= 0);
+
+  self->p = p;
+}
+
+/**
+ * nc_multiplicity_func_st_get_p:
+ * @mst: a #NcMultiplicityFuncST.
+ *
+ * Returns: the value of #NcMultiplicityFuncST:p property.
+ */
+gdouble
+nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mst)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->p;
+}
+
+/**
+ * nc_multiplicity_func_st_set_delta_c:
+ * @mst: a #NcMultiplicityFuncST.
+ * @delta_c: value of #NcMultiplicityFuncST:critical-delta.
+ *
+ * Sets the value @delta_c to the #NcMultiplicityFuncST:critical-delta property.
+ *
+ */
+void
+nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mst, gdouble delta_c)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+    
+  g_assert (delta_c >= 0);
+  
+  self->delta_c = delta_c;
+}
+
+/**
+ * nc_multiplicity_func_st_get_delta_c:
+ * @mst: a #NcMultiplicityFuncST.
+ *
+ * Returns: the value of #NcMultiplicityFuncST:critical_delta property.
+ */
+gdouble
+nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst)
+{
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->delta_c;
 }
 
