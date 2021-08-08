@@ -2465,7 +2465,7 @@ nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
   _CMP_DBL (tol_ncdm_newtonian);
   _CMP_DBL (tol_ncdm_bg);
   _CMP_DBL (tol_ncdm_initial_w);
-  _CMP_DBL (safe_phi_scf); /* CHECK: FIXME */
+  /*_CMP_DBL (safe_phi_scf);*/ /* CHECK: FIXME */
   _CMP_DBL (tol_tau_eq);
   _CMP_DBL (recfast_z_initial);
   _CMP_DBL (recfast_Nz0);

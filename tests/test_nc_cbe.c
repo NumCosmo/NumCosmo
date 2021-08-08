@@ -57,6 +57,9 @@ static void test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_serialize (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_calc_ps (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_prec (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_thermodyn (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_Cls (TestNcCBE *test, gconstpointer pdata);
 
 static void test_nc_cbe_traps (TestNcCBE *test, gconstpointer pdata);
 
@@ -82,13 +85,16 @@ TestNcCBEFunc models[TEST_NC_CBE_MODEL_LEN] =
   {test_nc_cbe_flat_mnu_xcdm_new, "xcdm/flat/mnu", NULL},
 };
 
-#define TEST_NC_CBE_TEST_LEN 4
+#define TEST_NC_CBE_TEST_LEN 7
 TestNcCBEFunc tests[TEST_NC_CBE_TEST_LEN] =
 {
   {test_nc_cbe_compare_bg, "compare_bg", NULL},
   {test_nc_cbe_sanity,     "sanity",     NULL},
   {test_nc_cbe_serialize,  "serialize",  NULL},
   {test_nc_cbe_calc_ps,    "calc_ps",    NULL},
+  {test_nc_cbe_prec,       "precision",  NULL},
+  {test_nc_cbe_thermodyn,  "Thermodyn",  NULL},
+  {test_nc_cbe_Cls,        "Cls",        NULL},
 };
 
 gint
@@ -363,6 +369,12 @@ test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata)
   nc_cbe_ref (test->cbe);
   nc_cbe_free (test->cbe);
 
+  {
+    NcCBE *cbe = nc_cbe_ref (test->cbe);
+    nc_cbe_clear (&cbe);
+    g_assert_true (cbe == NULL);
+  }
+
   g_assert_true (NC_IS_CBE (test->cbe));
 }
 
@@ -377,8 +389,8 @@ test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
   nc_cbe_prepare (cbe, cosmo);
   {
     const gdouble err = nc_cbe_compare_bg (cbe, cosmo, FALSE);
-    
     g_assert_cmpfloat (err, <, 1.0e-4);
+    nc_cbe_compare_bg (cbe, cosmo, FALSE);
   }
 }
 
@@ -415,9 +427,89 @@ test_nc_cbe_calc_ps (TestNcCBE *test, gconstpointer pdata)
   {
     NcmSpline2d *ps = nc_cbe_get_matter_ps (test->cbe);
     ncm_spline2d_free (ps);
+
+    nc_cbe_get_sigma8 (test->cbe);
   }
 
 }
+
+static void
+test_nc_cbe_prec (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBEPrecision *cbe_prec = nc_cbe_precision_new ();
+
+  nc_cbe_precision_ref (cbe_prec);
+  nc_cbe_precision_free (cbe_prec);
+
+  {
+    NcCBEPrecision *cbe_prec0 = nc_cbe_precision_ref (cbe_prec);
+    nc_cbe_precision_clear (&cbe_prec0);
+
+    g_assert_true (cbe_prec0 == NULL);
+  }
+
+  nc_cbe_precision_assert_default (cbe_prec);
+
+  {
+    NcCBE *cbe = nc_cbe_prec_new (cbe_prec);
+
+    nc_cbe_free (cbe);
+  }
+
+  NCM_TEST_FREE (nc_cbe_precision_free, cbe_prec);
+}
+
+static void
+test_nc_cbe_thermodyn (TestNcCBE *test, gconstpointer pdata)
+{
+  nc_cbe_thermodyn_prepare (test->cbe, test->cosmo);
+  nc_cbe_thermodyn_prepare_if_needed (test->cbe, test->cosmo);
+
+  ncm_model_state_mark_outdated (NCM_MODEL (test->cosmo));
+  nc_cbe_thermodyn_prepare_if_needed (test->cbe, test->cosmo);
+
+  {
+    NcmSpline *Xe = nc_cbe_thermodyn_get_Xe (test->cbe);
+    ncm_spline_free (Xe);
+
+    nc_cbe_thermodyn_v_tau_max_z (test->cbe);
+    nc_cbe_thermodyn_z_d (test->cbe);
+
+  }
+}
+
+static void
+test_nc_cbe_Cls (TestNcCBE *test, gconstpointer pdata)
+{
+  const guint lmax = 128;
+  NcmVector *PP    = ncm_vector_new (lmax + 1);
+  NcmVector *TT    = ncm_vector_new (lmax + 1);
+  NcmVector *EE    = ncm_vector_new (lmax + 1);
+  NcmVector *BB    = ncm_vector_new (lmax + 1);
+  NcmVector *TE    = ncm_vector_new (lmax + 1);
+
+  nc_cbe_set_target_Cls (test->cbe,
+      NC_DATA_CMB_TYPE_TT |
+      NC_DATA_CMB_TYPE_EE |
+      NC_DATA_CMB_TYPE_BB |
+      NC_DATA_CMB_TYPE_TE |
+      NC_DATA_CMB_TYPE_PHIPHI);
+
+  nc_cbe_set_lensed_Cls (test->cbe, TRUE);
+  nc_cbe_set_tensor (test->cbe, TRUE);
+
+  nc_cbe_set_scalar_lmax (test->cbe, 1024);
+
+  nc_cbe_prepare_if_needed (test->cbe, test->cosmo);
+  nc_cbe_get_all_Cls (test->cbe, PP, TT, EE, BB, TE);
+
+  ncm_vector_free (PP);
+  ncm_vector_free (TT);
+  ncm_vector_free (EE);
+  ncm_vector_free (BB);
+  ncm_vector_free (TE);
+}
+
 
 void
 test_nc_cbe_traps (TestNcCBE *test, gconstpointer pdata)

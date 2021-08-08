@@ -560,7 +560,7 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
     ncm_vector_set (v, i, d);
   }
   
-  ncm_assert_cmpdouble_e (ncm_vector_mean (v), ==, 0.5, 5.0 / sqrt (12.0 * v_size), 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_mean (v), ==, 0.5, 10.0 / sqrt (12.0 * v_size), 0.0);
 }
 
 void

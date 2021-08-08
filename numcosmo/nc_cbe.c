@@ -2411,17 +2411,3 @@ nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *PHIPHI_Cls, NcmVector *TT_Cls, NcmVec
   }
 }
 
-/**
- * nc_cbe_debug_test:
- * @cbe: a #NcCBE
- *
- * Temporary debug function
- *
- */
-void
-nc_cbe_debug_test (NcCBE *cbe)
-{
-  NCM_UNUSED (cbe);
-  g_assert_not_reached ();
-}
-
