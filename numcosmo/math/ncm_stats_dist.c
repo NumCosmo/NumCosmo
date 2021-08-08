@@ -112,6 +112,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
+#include <gsl/gsl_sort.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -155,6 +156,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->f            = NULL;
   self->levmar_workz = NULL;
   self->levmar_n     = 0;
+  self->m2lnp_sort   = g_array_new (FALSE, FALSE, sizeof (size_t));
   
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
 }
@@ -240,6 +242,8 @@ _ncm_stats_dist_dispose (GObject *object)
   ncm_vector_clear (&self->sub_x);
   ncm_vector_clear (&self->f);
   
+  g_clear_pointer (&self->m2lnp_sort, g_array_unref);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->dispose (object);
 }
@@ -395,7 +399,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   
   self->n = self->sample_array->len;
   
-  if (self->n <= self->d)
+  if (self->n < self->d)
     g_error ("_ncm_stats_dist_prepare: sample too small.");
   
   sd_class->prepare_kernel (sd, self->sample_array);
@@ -482,8 +486,6 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       
       self->alloc_n = self->n;
     }
-
-    ncm_vector_set_zero (self->weights);
     
     /*
      * Evaluating the right-hand-side
@@ -498,21 +500,65 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
       self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
     }
-    
+
     if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
     {
-      const guint fi = ncm_vector_get_min_index (m2lnp);
-      
-      g_assert_cmpuint (fi, <, ncm_vector_len (m2lnp));
-      
-      ncm_vector_set_zero (self->weights);
-      ncm_vector_set (self->weights, fi, 1.0);
-      
-      self->href = 1.0;
-      
+      gint n_cut = 0;
+
+      g_array_set_size (self->m2lnp_sort, self->n);
+      gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
+          ncm_vector_data (m2lnp),
+          ncm_vector_stride (m2lnp),
+          ncm_vector_len (m2lnp));
+
+      for (i = 0; i < self->n; i++)
+      {
+        gint p = g_array_index (self->m2lnp_sort, size_t, i);
+        const gdouble m2lnp_p = ncm_vector_get (m2lnp, p);
+
+        if (-0.5 * (m2lnp_p - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
+        {
+          n_cut = i;
+          break;
+        }
+      }
+
+      /*
+       * Check if the cut removes more than 50%, if it does use normal
+       * kernel density estimation.
+       *
+       */
+      if (n_cut < (gint)(0.5 * self->n))
+        return;
+
+      {
+        NcmVector *m2lnp_cut = ncm_vector_new (n_cut);
+        GPtrArray *sample_array_cut = g_ptr_array_new ();
+        for (i = 0; i < n_cut; i++)
+        {
+          gint p = g_array_index (self->m2lnp_sort, size_t, i);
+
+          ncm_vector_set (m2lnp_cut, i, ncm_vector_get (m2lnp, p));
+          g_ptr_array_add (sample_array_cut, ncm_vector_ref (g_ptr_array_index (self->sample_array, p)));
+        }
+        g_ptr_array_set_size (self->sample_array, 0);
+        for (i = 0; i < n_cut; i++)
+        {
+          g_ptr_array_add (self->sample_array, g_ptr_array_index (sample_array_cut, i));
+        }
+
+        g_ptr_array_unref (sample_array_cut);
+
+        ncm_stats_dist_prepare_interp (sd, m2lnp_cut);
+
+        ncm_vector_free (m2lnp_cut);
+      }
+
       return;
     }
     
+    ncm_vector_set_zero (self->weights);
+
     for (i = 0; i < self->n; i++)
     {
       const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);

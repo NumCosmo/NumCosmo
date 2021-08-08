@@ -144,8 +144,9 @@ NcmSpline2d *nc_cbe_get_matter_ps (NcCBE *cbe);
 gdouble nc_cbe_get_sigma8 (NcCBE *cbe);
 
 void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *PHIPHI_Cls, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
-void nc_cbe_debug_test (NcCBE* cbe);
+void nc_cbe_debug_test (NcCBE *cbe);
 
 G_END_DECLS
 
 #endif /* _NC_CBE_H_ */
+

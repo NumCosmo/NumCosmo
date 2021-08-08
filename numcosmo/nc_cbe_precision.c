@@ -219,279 +219,280 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
 
 static void
-nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
+nc_cbe_precision_init (NcCBEPrecision *cbe_prec)
 {
   cbe_prec->priv = nc_cbe_precision_get_instance_private (cbe_prec);
 }
 
 static void
-nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec)
+nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
+  NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
+  
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-
+  
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
       cbe_prec->priv->ppr.a_ini_over_a_today_default = g_value_get_double (value);
       break;
     case PROP_BACK_INT_STEP:
-      cbe_prec->priv->ppr.back_integration_stepsize  = g_value_get_double (value);
+      cbe_prec->priv->ppr.back_integration_stepsize = g_value_get_double (value);
       break;
     case PROP_BACK_TOL:
       cbe_prec->priv->ppr.tol_background_integration = g_value_get_double (value);
       break;
     case PROP_INITIAL_OMEGA_R_TOL:
-      cbe_prec->priv->ppr.tol_initial_Omega_r        = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_initial_Omega_r = g_value_get_double (value);
       break;
     case PROP_M_NCDM_TOL:
-      cbe_prec->priv->ppr.tol_M_ncdm                 = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_M_ncdm = g_value_get_double (value);
       break;
     case PROP_NCDM_TOL:
-      cbe_prec->priv->ppr.tol_ncdm                   = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_ncdm = g_value_get_double (value);
       break;
     case PROP_NCDM_SYNCHRONOUS_TOL:
-      cbe_prec->priv->ppr.tol_ncdm_synchronous       = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_ncdm_synchronous = g_value_get_double (value);
       break;
     case PROP_NCDM_NEWTONIAN_TOL:
-      cbe_prec->priv->ppr.tol_ncdm_newtonian         = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_ncdm_newtonian = g_value_get_double (value);
       break;
     case PROP_NCDM_BG_TOL:
-      cbe_prec->priv->ppr.tol_ncdm_bg                = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_ncdm_bg = g_value_get_double (value);
       break;
     case PROP_NCDM_INITIAL_W_TOL:
-      cbe_prec->priv->ppr.tol_ncdm_initial_w         = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_ncdm_initial_w = g_value_get_double (value);
       break;
     case PROP_SAFE_PHI_SCF:
-      cbe_prec->priv->ppr.safe_phi_scf               = g_value_get_double (value);
+      cbe_prec->priv->ppr.safe_phi_scf = g_value_get_double (value);
       break;
     case PROP_TAU_EQ_TOL:
-      cbe_prec->priv->ppr.tol_tau_eq                 = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_tau_eq = g_value_get_double (value);
       break;
     case PROP_SBBN_FILE:
     {
       gchar *sBBN_file    = g_value_dup_string (value);
       guint sBBN_file_len = strlen (sBBN_file);
-
-      g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
-
+      
+      g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
+      
       if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
         g_free (sBBN_file);
-
-        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"bbn"G_DIR_SEPARATOR_S"sBBN.dat", TRUE);
+        
+        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
         sBBN_file_len = strlen (sBBN_file);
-        g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
+        g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
       }
-
+      
       memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
       g_free (sBBN_file);
-
+      
       break;
     }
     case PROP_RECFAST_Z_INI:
-      cbe_prec->priv->ppr.recfast_z_initial          = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_z_initial = g_value_get_double (value);
       break;
     case PROP_RECFAST_NZ0:
-      cbe_prec->priv->ppr.recfast_Nz0                = g_value_get_int (value);
+      cbe_prec->priv->ppr.recfast_Nz0 = g_value_get_int (value);
       break;
     case PROP_THERMO_INTEGRATION_TOL:
-      cbe_prec->priv->ppr.tol_thermo_integration     = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_thermo_integration = g_value_get_double (value);
       break;
     case PROP_RECFAST_HE_SWITCH:
-      cbe_prec->priv->ppr.recfast_Heswitch           = g_value_get_int (value);
+      cbe_prec->priv->ppr.recfast_Heswitch = g_value_get_int (value);
       break;
     case PROP_RECFAST_FUDGE_HE:
-      cbe_prec->priv->ppr.recfast_fudge_He           = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_fudge_He = g_value_get_double (value);
       break;
     case PROP_RECFAST_H_SWITCH:
-      cbe_prec->priv->ppr.recfast_Hswitch            = g_value_get_int (value);
+      cbe_prec->priv->ppr.recfast_Hswitch = g_value_get_int (value);
       break;
     case PROP_RECFAST_FUDGE_H:
-      cbe_prec->priv->ppr.recfast_fudge_H            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_fudge_H = g_value_get_double (value);
       break;
     case PROP_RECFAST_DELTA_FUDGE_H:
-      cbe_prec->priv->ppr.recfast_delta_fudge_H      = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_delta_fudge_H = g_value_get_double (value);
       break;
     case PROP_RECFAST_A_GAUSS_1:
-      cbe_prec->priv->ppr.recfast_AGauss1            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_AGauss1 = g_value_get_double (value);
       break;
     case PROP_RECFAST_A_GAUSS_2:
-      cbe_prec->priv->ppr.recfast_AGauss2            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_AGauss2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_Z_GAUSS_1:
-      cbe_prec->priv->ppr.recfast_zGauss1            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_zGauss1 = g_value_get_double (value);
       break;
     case PROP_RECFAST_Z_GAUSS_2:
-      cbe_prec->priv->ppr.recfast_zGauss2            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_zGauss2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_W_GAUSS_1:
-      cbe_prec->priv->ppr.recfast_wGauss1            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_wGauss1 = g_value_get_double (value);
       break;
     case PROP_RECFAST_W_GAUSS_2:
-      cbe_prec->priv->ppr.recfast_wGauss2            = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_wGauss2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_Z_HE_1:
-      cbe_prec->priv->ppr.recfast_z_He_1             = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_z_He_1 = g_value_get_double (value);
       break;
     case PROP_RECFAST_DELTA_Z_HE_1:
-      cbe_prec->priv->ppr.recfast_delta_z_He_1       = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_delta_z_He_1 = g_value_get_double (value);
       break;
     case PROP_RECFAST_Z_HE_2:
-      cbe_prec->priv->ppr.recfast_z_He_2             = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_z_He_2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_DELTA_Z_HE_2:
-      cbe_prec->priv->ppr.recfast_delta_z_He_2       = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_delta_z_He_2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_Z_HE_3:
-      cbe_prec->priv->ppr.recfast_z_He_3             = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_z_He_3 = g_value_get_double (value);
       break;
     case PROP_RECFAST_DELTA_Z_HE_3:
-      cbe_prec->priv->ppr.recfast_delta_z_He_3       = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_delta_z_He_3 = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_HE0_TRIGGER:
-      cbe_prec->priv->ppr.recfast_x_He0_trigger      = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_x_He0_trigger = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_HE0_TRIGGER2:
-      cbe_prec->priv->ppr.recfast_x_He0_trigger2     = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_x_He0_trigger2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_HE0_TRIGGER_DELTA:
       cbe_prec->priv->ppr.recfast_x_He0_trigger_delta = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_H0_TRIGGER:
-      cbe_prec->priv->ppr.recfast_x_H0_trigger       = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_x_H0_trigger = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_H0_TRIGGER2:
-      cbe_prec->priv->ppr.recfast_x_H0_trigger2      = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_x_H0_trigger2 = g_value_get_double (value);
       break;
     case PROP_RECFAST_X_H0_TRIGGER_DELTA:
       cbe_prec->priv->ppr.recfast_x_H0_trigger_delta = g_value_get_double (value);
       break;
     case PROP_RECFAST_H_FRAC:
-      cbe_prec->priv->ppr.recfast_H_frac             = g_value_get_double (value);
+      cbe_prec->priv->ppr.recfast_H_frac = g_value_get_double (value);
       break;
     case PROP_HYREC_ALPHA_INF_FILE:
     {
       gchar *Alpha_inf_file    = g_value_dup_string (value);
       guint Alpha_inf_file_len = strlen (Alpha_inf_file);
-
-      g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
-
+      
+      g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
+      
       if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
-
-        Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
+        
+        Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
         Alpha_inf_file_len = strlen (Alpha_inf_file);
-        g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
+        g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
       }
-
+      
       memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
       g_free (Alpha_inf_file);
-
+      
       break;
     }
     case PROP_HYREC_R_INF_FILE:
     {
       gchar *R_inf_file    = g_value_dup_string (value);
       guint R_inf_file_len = strlen (R_inf_file);
-
-      g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
-
+      
+      g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
+      
       if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
-
-        R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
+        
+        R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
         R_inf_file_len = strlen (R_inf_file);
-
-        g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
+        
+        g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
       }
-
+      
       memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
       g_free (R_inf_file);
-
+      
       break;
     }
     case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
     {
       gchar *two_photon_tables_file    = g_value_dup_string (value);
       guint two_photon_tables_file_len = strlen (two_photon_tables_file);
-
-      g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
-
+      
+      g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
+      
       if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
         g_free (two_photon_tables_file);
-
-        two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
+        
+        two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
         two_photon_tables_file_len = strlen (two_photon_tables_file);
-
-        g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
+        
+        g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
       }
-
+      
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
-
+      
       g_free (two_photon_tables_file);
       break;
     }
     case PROP_REION_Z_START_MAX:
-      cbe_prec->priv->ppr.reionization_z_start_max   = g_value_get_double (value);
+      cbe_prec->priv->ppr.reionization_z_start_max = g_value_get_double (value);
       break;
     case PROP_REION_SAMPLING:
-      cbe_prec->priv->ppr.reionization_sampling      = g_value_get_double (value);
+      cbe_prec->priv->ppr.reionization_sampling = g_value_get_double (value);
       break;
     case PROP_REION_OPT_DEPTH_TOL:
       cbe_prec->priv->ppr.reionization_optical_depth_tol = g_value_get_double (value);
       break;
     case PROP_REION_START_FACTOR:
-      cbe_prec->priv->ppr.reionization_start_factor  = g_value_get_double (value);
+      cbe_prec->priv->ppr.reionization_start_factor = g_value_get_double (value);
       break;
     case PROP_THERMO_RATE_SMOOTHING_RADIUS:
       cbe_prec->priv->ppr.thermo_rate_smoothing_radius = g_value_get_int (value);
       break;
     case PROP_EVOLVER:
-      cbe_prec->priv->ppr.evolver                    = g_value_get_int (value);
+      cbe_prec->priv->ppr.evolver = g_value_get_int (value);
       break;
     case PROP_K_MIN_TAU0:
-      cbe_prec->priv->ppr.k_min_tau0                 = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_min_tau0 = g_value_get_double (value);
       break;
     case PROP_K_MAX_TAU0_OVER_L_MAX:
-      cbe_prec->priv->ppr.k_max_tau0_over_l_max      = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_max_tau0_over_l_max = g_value_get_double (value);
       break;
     case PROP_K_STEP_SUB:
-      cbe_prec->priv->ppr.k_step_sub                 = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_step_sub = g_value_get_double (value);
       break;
     case PROP_K_STEP_SUPER:
-      cbe_prec->priv->ppr.k_step_super               = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_step_super = g_value_get_double (value);
       break;
     case PROP_K_STEP_TRANSITION:
-      cbe_prec->priv->ppr.k_step_transition          = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_step_transition = g_value_get_double (value);
       break;
     case PROP_K_STEP_SUPER_REDUCTION:
-      cbe_prec->priv->ppr.k_step_super_reduction     = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_step_super_reduction = g_value_get_double (value);
       break;
     case PROP_K_PER_DECADE_FOR_PK:
-      cbe_prec->priv->ppr.k_per_decade_for_pk        = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_per_decade_for_pk = g_value_get_double (value);
       break;
     case PROP_K_PER_DECADE_FOR_BAO:
-      cbe_prec->priv->ppr.k_per_decade_for_bao       = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_per_decade_for_bao = g_value_get_double (value);
       break;
     case PROP_K_BAO_CENTER:
-      cbe_prec->priv->ppr.k_bao_center               = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_bao_center = g_value_get_double (value);
       break;
     case PROP_K_BAO_WIDTH:
-      cbe_prec->priv->ppr.k_bao_width                = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_bao_width = g_value_get_double (value);
       break;
     case PROP_START_SMALL_K_AT_TAU_C_OVER_TAU_H:
-      cbe_prec->priv->ppr.start_small_k_at_tau_c_over_tau_h       = g_value_get_double (value);
+      cbe_prec->priv->ppr.start_small_k_at_tau_c_over_tau_h = g_value_get_double (value);
       break;
     case PROP_START_LARGE_K_AT_TAU_H_OVER_TAU_K:
-      cbe_prec->priv->ppr.start_large_k_at_tau_h_over_tau_k       = g_value_get_double (value);
+      cbe_prec->priv->ppr.start_large_k_at_tau_h_over_tau_k = g_value_get_double (value);
       break;
     case PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_H:
       cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_h = g_value_get_double (value);
@@ -500,52 +501,52 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_k = g_value_get_double (value);
       break;
     case PROP_START_SOURCES_AT_TAU_C_OVER_TAU_H:
-      cbe_prec->priv->ppr.start_sources_at_tau_c_over_tau_h       = g_value_get_double (value);
+      cbe_prec->priv->ppr.start_sources_at_tau_c_over_tau_h = g_value_get_double (value);
       break;
     case PROP_TIGHT_COUPLING_APPROXIMATION:
-      cbe_prec->priv->ppr.tight_coupling_approximation            = g_value_get_int (value);
+      cbe_prec->priv->ppr.tight_coupling_approximation = g_value_get_int (value);
       break;
     case PROP_L_MAX_G:
-      cbe_prec->priv->ppr.l_max_g                    = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_g = g_value_get_int (value);
       break;
     case PROP_L_MAX_POL_G:
-      cbe_prec->priv->ppr.l_max_pol_g                = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_pol_g = g_value_get_int (value);
       break;
     case PROP_L_MAX_DR:
-      cbe_prec->priv->ppr.l_max_dr                   = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_dr = g_value_get_int (value);
       break;
     case PROP_L_MAX_UR:
-      cbe_prec->priv->ppr.l_max_ur                   = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_ur = g_value_get_int (value);
       break;
     case PROP_L_MAX_NCDM:
-      cbe_prec->priv->ppr.l_max_ncdm                 = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_ncdm = g_value_get_int (value);
       break;
     case PROP_L_MAX_G_TEN:
-      cbe_prec->priv->ppr.l_max_g_ten                = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_g_ten = g_value_get_int (value);
       break;
     case PROP_L_MAX_POL_G_TEN:
-      cbe_prec->priv->ppr.l_max_pol_g_ten            = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_max_pol_g_ten = g_value_get_int (value);
       break;
     case PROP_CURVATURE_INI:
-      cbe_prec->priv->ppr.curvature_ini              = g_value_get_double (value);
+      cbe_prec->priv->ppr.curvature_ini = g_value_get_double (value);
       break;
     case PROP_ENTROPY_INI:
-      cbe_prec->priv->ppr.entropy_ini                = g_value_get_double (value);
+      cbe_prec->priv->ppr.entropy_ini = g_value_get_double (value);
       break;
     case PROP_GW_INI:
-      cbe_prec->priv->ppr.gw_ini                     = g_value_get_double (value);
+      cbe_prec->priv->ppr.gw_ini = g_value_get_double (value);
       break;
     case PROP_PERTURB_INTEGRATION_STEPSIZE:
       cbe_prec->priv->ppr.perturb_integration_stepsize = g_value_get_double (value);
       break;
     case PROP_TOL_TAU_APPROX:
-      cbe_prec->priv->ppr.tol_tau_approx             = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_tau_approx = g_value_get_double (value);
       break;
     case PROP_TOL_PERTURB_INTEGRATION:
-      cbe_prec->priv->ppr.tol_perturb_integration    = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_perturb_integration = g_value_get_double (value);
       break;
     case PROP_PERTURB_SAMPLING_STEPSIZE:
-      cbe_prec->priv->ppr.perturb_sampling_stepsize  = g_value_get_double (value);
+      cbe_prec->priv->ppr.perturb_sampling_stepsize = g_value_get_double (value);
       break;
     case PROP_RADIATION_STREAMING_APPROXIMATION:
       cbe_prec->priv->ppr.radiation_streaming_approximation = g_value_get_int (value);
@@ -557,13 +558,13 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.radiation_streaming_trigger_tau_c_over_tau = g_value_get_double (value);
       break;
     case PROP_UR_FLUID_APPROXIMATION:
-      cbe_prec->priv->ppr.ur_fluid_approximation     = g_value_get_int (value);
+      cbe_prec->priv->ppr.ur_fluid_approximation = g_value_get_int (value);
       break;
     case PROP_UR_FLUID_TRIGGER_TAU_OVER_TAU_K:
       cbe_prec->priv->ppr.ur_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
       break;
     case PROP_NCDM_FLUID_APPROXIMATION:
-      cbe_prec->priv->ppr.ncdm_fluid_approximation   = g_value_get_int (value);
+      cbe_prec->priv->ppr.ncdm_fluid_approximation = g_value_get_int (value);
       break;
     case PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K:
       cbe_prec->priv->ppr.ncdm_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
@@ -572,7 +573,7 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.neglect_CMB_sources_below_visibility = g_value_get_double (value);
       break;
     case PROP_K_PER_DECADE_PRIMORDIAL:
-      cbe_prec->priv->ppr.k_per_decade_primordial    = g_value_get_double (value);
+      cbe_prec->priv->ppr.k_per_decade_primordial = g_value_get_double (value);
       break;
     case PROP_PRIMORDIAL_INFLATION_RATIO_MIN:
       cbe_prec->priv->ppr.primordial_inflation_ratio_min = g_value_get_double (value);
@@ -623,16 +624,16 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.primordial_inflation_extra_efolds = g_value_get_double (value);
       break;
     case PROP_L_LOGSTEP:
-      cbe_prec->priv->ppr.l_logstep                  = g_value_get_double (value);
+      cbe_prec->priv->ppr.l_logstep = g_value_get_double (value);
       break;
     case PROP_L_LINSTEP:
-      cbe_prec->priv->ppr.l_linstep                  = g_value_get_int (value);
+      cbe_prec->priv->ppr.l_linstep = g_value_get_int (value);
       break;
     case PROP_HYPER_X_MIN:
-      cbe_prec->priv->ppr.hyper_x_min                = g_value_get_double (value);
+      cbe_prec->priv->ppr.hyper_x_min = g_value_get_double (value);
       break;
     case PROP_HYPER_SAMPLING_FLAT:
-      cbe_prec->priv->ppr.hyper_sampling_flat        = g_value_get_double (value);
+      cbe_prec->priv->ppr.hyper_sampling_flat = g_value_get_double (value);
       break;
     case PROP_HYPER_SAMPLING_CURVED_LOW_NU:
       cbe_prec->priv->ppr.hyper_sampling_curved_low_nu = g_value_get_double (value);
@@ -641,31 +642,31 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.hyper_sampling_curved_high_nu = g_value_get_double (value);
       break;
     case PROP_HYPER_NU_SAMPLING_STEP:
-      cbe_prec->priv->ppr.hyper_nu_sampling_step     = g_value_get_double (value);
+      cbe_prec->priv->ppr.hyper_nu_sampling_step = g_value_get_double (value);
       break;
     case PROP_HYPER_PHI_MIN_ABS:
-      cbe_prec->priv->ppr.hyper_phi_min_abs          = g_value_get_double (value);
+      cbe_prec->priv->ppr.hyper_phi_min_abs = g_value_get_double (value);
       break;
     case PROP_HYPER_X_TOL:
-      cbe_prec->priv->ppr.hyper_x_tol                = g_value_get_double (value);
+      cbe_prec->priv->ppr.hyper_x_tol = g_value_get_double (value);
       break;
     case PROP_HYPER_FLAT_APPROXIMATION_NU:
       cbe_prec->priv->ppr.hyper_flat_approximation_nu = g_value_get_double (value);
       break;
     case PROP_Q_LINSTEP:
-      cbe_prec->priv->ppr.q_linstep                  = g_value_get_double (value);
+      cbe_prec->priv->ppr.q_linstep = g_value_get_double (value);
       break;
     case PROP_Q_LOGSTEP_SPLINE:
-      cbe_prec->priv->ppr.q_logstep_spline           = g_value_get_double (value);
+      cbe_prec->priv->ppr.q_logstep_spline = g_value_get_double (value);
       break;
     case PROP_Q_LOGSTEP_OPEN:
-      cbe_prec->priv->ppr.q_logstep_open             = g_value_get_double (value);
+      cbe_prec->priv->ppr.q_logstep_open = g_value_get_double (value);
       break;
     case PROP_Q_LOGSTEP_TRAPZD:
-      cbe_prec->priv->ppr.q_logstep_trapzd           = g_value_get_double (value);
+      cbe_prec->priv->ppr.q_logstep_trapzd = g_value_get_double (value);
       break;
     case PROP_Q_NUMSTEP_TRANSITION:
-      cbe_prec->priv->ppr.q_numstep_transition       = g_value_get_double (value);
+      cbe_prec->priv->ppr.q_numstep_transition = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_S_T0:
       cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t0 = g_value_get_double (value);
@@ -677,7 +678,7 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t2 = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_S_E:
-      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_e  = g_value_get_double (value);
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_e = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_V_T1:
       cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t1 = g_value_get_double (value);
@@ -686,10 +687,10 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t2 = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_V_E:
-      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_e  = g_value_get_double (value);
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_e = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_V_B:
-      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_b  = g_value_get_double (value);
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_b = g_value_get_double (value);
       break;
     case PROP_TRANSFER_NEGLECT_DELTA_K_T_T2:
       cbe_prec->priv->ppr.transfer_neglect_delta_k_T_t2 = g_value_get_double (value);
@@ -704,64 +705,64 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       cbe_prec->priv->ppr.transfer_neglect_late_source = g_value_get_double (value);
       break;
     case PROP_L_SWITCH_LIMBER:
-      cbe_prec->priv->ppr.l_switch_limber            = g_value_get_double (value);
+      cbe_prec->priv->ppr.l_switch_limber = g_value_get_double (value);
       break;
     case PROP_L_SWITCH_LIMBER_FOR_NC_LOCAL_OVER_Z:
       cbe_prec->priv->ppr.l_switch_limber_for_nc_local_over_z = g_value_get_double (value);
       break;
     case PROP_L_SWITCH_LIMBER_FOR_NC_LOS_OVER_Z:
-      cbe_prec->priv->ppr.l_switch_limber_for_nc_los_over_z   = g_value_get_double (value);
+      cbe_prec->priv->ppr.l_switch_limber_for_nc_los_over_z = g_value_get_double (value);
       break;
     case PROP_SELECTION_CUT_AT_SIGMA:
-      cbe_prec->priv->ppr.selection_cut_at_sigma     = g_value_get_double (value);
+      cbe_prec->priv->ppr.selection_cut_at_sigma = g_value_get_double (value);
       break;
     case PROP_SELECTION_SAMPLING:
-      cbe_prec->priv->ppr.selection_sampling         = g_value_get_double (value);
+      cbe_prec->priv->ppr.selection_sampling = g_value_get_double (value);
       break;
     case PROP_SELECTION_SAMPLING_BESSEL:
-      cbe_prec->priv->ppr.selection_sampling_bessel  = g_value_get_double (value);
+      cbe_prec->priv->ppr.selection_sampling_bessel = g_value_get_double (value);
       break;
     case PROP_SELECTION_SAMPLING_BESSEL_LOS:
       cbe_prec->priv->ppr.selection_sampling_bessel_los = g_value_get_double (value);
       break;
     case PROP_SELECTION_TOPHAT_EDGE:
-      cbe_prec->priv->ppr.selection_tophat_edge      = g_value_get_double (value);
+      cbe_prec->priv->ppr.selection_tophat_edge = g_value_get_double (value);
       break;
     case PROP_HALOFIT_MIN_K_NONLINEAR:
-      cbe_prec->priv->ppr.halofit_min_k_nonlinear    = g_value_get_double (value);
+      cbe_prec->priv->ppr.halofit_min_k_nonlinear = g_value_get_double (value);
       break;
     case PROP_HALOFIT_MIN_K_MAX:
-      cbe_prec->priv->ppr.halofit_min_k_max          = g_value_get_double (value);
+      cbe_prec->priv->ppr.halofit_min_k_max = g_value_get_double (value);
       break;
     case PROP_HALOFIT_K_PER_DECADE:
-      cbe_prec->priv->ppr.halofit_k_per_decade       = g_value_get_double (value);
+      cbe_prec->priv->ppr.halofit_k_per_decade = g_value_get_double (value);
       break;
     case PROP_HALOFIT_SIGMA_PRECISION:
-      cbe_prec->priv->ppr.halofit_sigma_precision    = g_value_get_double (value);
+      cbe_prec->priv->ppr.halofit_sigma_precision = g_value_get_double (value);
       break;
     case PROP_HALOFIT_SIGMA_TOL:
-      cbe_prec->priv->ppr.halofit_tol_sigma          = g_value_get_double (value);
+      cbe_prec->priv->ppr.halofit_tol_sigma = g_value_get_double (value);
       break;
     case PROP_PK_EQ_Z_MAX:
-      cbe_prec->priv->ppr.pk_eq_z_max                = g_value_get_double (value);
+      cbe_prec->priv->ppr.pk_eq_z_max = g_value_get_double (value);
       break;
     case PROP_PK_EQ_TOL:
-      cbe_prec->priv->ppr.pk_eq_tol                  = g_value_get_double (value);
+      cbe_prec->priv->ppr.pk_eq_tol = g_value_get_double (value);
       break;
     case PROP_ACCURATE_LENSING:
-      cbe_prec->priv->ppr.accurate_lensing           = g_value_get_int (value);
+      cbe_prec->priv->ppr.accurate_lensing = g_value_get_int (value);
       break;
     case PROP_NUM_MU_MINUS_LMAX:
-      cbe_prec->priv->ppr.num_mu_minus_lmax          = g_value_get_int (value);
+      cbe_prec->priv->ppr.num_mu_minus_lmax = g_value_get_int (value);
       break;
     case PROP_DELTA_L_MAX:
-      cbe_prec->priv->ppr.delta_l_max                = g_value_get_int (value);
+      cbe_prec->priv->ppr.delta_l_max = g_value_get_int (value);
       break;
     case PROP_SMALLEST_ALLOWED_VARIATION:
       cbe_prec->priv->ppr.smallest_allowed_variation = g_value_get_double (value);
       break;
     case PROP_TOL_GAUSS_LEGENDRE:
-      cbe_prec->priv->ppr.tol_gauss_legendre         = g_value_get_double (value);
+      cbe_prec->priv->ppr.tol_gauss_legendre = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -770,11 +771,12 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
 }
 
 static void
-nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec)
+nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
+  NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
+  
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-
+  
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
@@ -1237,22 +1239,21 @@ nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GP
 }
 
 static void
-nc_cbe_precision_finalize (GObject* object)
+nc_cbe_precision_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cbe_precision_parent_class)->finalize (object);
 }
 
 static void
-nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
+nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->set_property = &nc_cbe_precision_set_property;
   object_class->get_property = &nc_cbe_precision_get_property;
   object_class->finalize     = &nc_cbe_precision_finalize;
-
+  
   /*
    * Background related parameters.
    */
@@ -1340,11 +1341,13 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)",
                                                         0.0, G_MAXDOUBLE, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * Thermodynamics related parameters
    */
   {
     gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
+    
     g_object_class_install_property (object_class,
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
@@ -1545,6 +1548,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   {
     gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
+    
     g_object_class_install_property (object_class,
                                      PROP_HYREC_ALPHA_INF_FILE,
                                      g_param_spec_string ("hyrec-Alpha-inf-file",
@@ -1556,6 +1560,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
   }
   {
     gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
+    
     g_object_class_install_property (object_class,
                                      PROP_HYREC_R_INF_FILE,
                                      g_param_spec_string ("hyrec-R-inf-file",
@@ -1567,6 +1572,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
   }
   {
     gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
+    
     g_object_class_install_property (object_class,
                                      PROP_HYREC_TWO_PHOTON_TABLES_FILE,
                                      g_param_spec_string ("hyrec-two-photon-tables-file",
@@ -1613,6 +1619,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                      "plays a minor (almost aesthetic) role in the definition of the variation rate of thermodynamical quantities",
                                                      0, G_MAXINT, 50,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * Perturbations parameters
    */
@@ -1733,7 +1740,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                    g_param_spec_int ("tight-coupling-approximation",
                                                      NULL,
                                                      "Tight coupling approximation scheme",
-                                                     0, G_MAXINT, (gint)compromise_CLASS,
+                                                     0, G_MAXINT, (gint) compromise_CLASS,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_L_MAX_G,
@@ -1889,6 +1896,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "neglect CMB sources below visibility",
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * Primordial spectra parameters
    */
@@ -2011,6 +2019,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "primordial inflation extra efolds",
                                                         0.0, G_MAXDOUBLE, 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * Transfer functions parameters
    */
@@ -2259,6 +2268,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "controls how smooth are the edge of top-hat window function (<<1 for very sharp, 0.1 for sharp)",
                                                         0.0, G_MAXDOUBLE, 0.1,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * Nonlinear module parameters
    */
@@ -2311,6 +2321,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         "tolerance for finding the equivalent models of the pk_equal method",
                                                         0.0, G_MAXDOUBLE, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * parameter related to lensing
    */
@@ -2335,10 +2346,11 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                      "difference between l_max in unlensed and lensed spectra",
                                                      0.0, G_MAXINT, 500,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /*
    * general precision parameters
    */
-
+  
   g_object_class_install_property (object_class,
                                    PROP_SMALLEST_ALLOWED_VARIATION,
                                    g_param_spec_double ("smallest-allowed-variation",
@@ -2355,7 +2367,6 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-
 /**
  * nc_cbe_precision_new: (constructor)
  *
@@ -2363,11 +2374,12 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
  *
  * Returns: (transfer full): a new #NcCBEPrecision
  */
-NcCBEPrecision*
+NcCBEPrecision *
 nc_cbe_precision_new (void)
 {
-  NcCBEPrecision* cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
+  NcCBEPrecision *cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
                                            NULL);
+  
   return cbe_prec;
 }
 
@@ -2379,8 +2391,8 @@ nc_cbe_precision_new (void)
  *
  * Returns: (transfer full): @cbe_prec.
  */
-NcCBEPrecision*
-nc_cbe_precision_ref (NcCBEPrecision* cbe_prec)
+NcCBEPrecision *
+nc_cbe_precision_ref (NcCBEPrecision *cbe_prec)
 {
   return g_object_ref (cbe_prec);
 }
@@ -2392,7 +2404,8 @@ nc_cbe_precision_ref (NcCBEPrecision* cbe_prec)
  * Decreases the reference count of @cbe_prec.
  *
  */
-void nc_cbe_precision_free (NcCBEPrecision* cbe_prec)
+void
+nc_cbe_precision_free (NcCBEPrecision *cbe_prec)
 {
   g_object_unref (cbe_prec);
 }
@@ -2404,7 +2417,8 @@ void nc_cbe_precision_free (NcCBEPrecision* cbe_prec)
  * Decreases the reference count of *@cbe_prec and sets *@cbe_prec to NULL.
  *
  */
-void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
+void
+nc_cbe_precision_clear (NcCBEPrecision **cbe_prec)
 {
   g_clear_object (cbe_prec);
 }
@@ -2416,30 +2430,31 @@ void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
  * Check agaist CLASS default values.
  *
  */
-void 
-nc_cbe_precision_assert_default (NcCBEPrecision* cbe_prec)
+void
+nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
 {
   struct precision ppr;
+  
   input_default_precision (&ppr);
-
+  
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
 #define _CMP_STR(name)                                        \
-G_STMT_START                                                  \
-{                                                             \
-  gchar *s1 = g_path_get_basename (ppr.name);                 \
-  gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
-  g_assert_cmpstr (s1, ==, s2);                               \
-  /*printf ("`%s'\n", ppr.name);*/                            \
-  g_free (s1);                                                \
-  g_free (s2);                                                \
-}                                                             \
-G_STMT_END
-
+  G_STMT_START                                                  \
+  {                                                             \
+    gchar *s1 = g_path_get_basename (ppr.name);                 \
+    gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
+    g_assert_cmpstr (s1, ==, s2);                               \
+    /*printf ("`%s'\n", ppr.name);*/                            \
+    g_free (s1);                                                \
+    g_free (s2);                                                \
+  }                                                             \
+  G_STMT_END
+  
   _CMP_STR (sBBN_file);
   _CMP_STR (hyrec_Alpha_inf_file);
   _CMP_STR (hyrec_R_inf_file);
   _CMP_STR (hyrec_two_photon_tables_file);
-
+  
   _CMP_DBL (a_ini_over_a_today_default);
   _CMP_DBL (back_integration_stepsize);
   _CMP_DBL (tol_background_integration);
@@ -2588,3 +2603,4 @@ G_STMT_END
   _CMP_DBL (smallest_allowed_variation);
   _CMP_DBL (tol_gauss_legendre);
 }
+

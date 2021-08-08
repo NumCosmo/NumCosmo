@@ -53,58 +53,66 @@ static void test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata);
 
 static void test_nc_cbe_free (TestNcCBE *test, gconstpointer pdata);
 
+static void test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_serialize (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_calc_ps (TestNcCBE *test, gconstpointer pdata);
 
 static void test_nc_cbe_traps (TestNcCBE *test, gconstpointer pdata);
 
 /*static void test_nc_cbe_invalid_model (TestNcCBE *test, gconstpointer pdata);*/
 
+typedef struct _TestNcCBEFunc
+{
+  void (*func) (TestNcCBE *, gconstpointer);
+  const gchar *name;
+  gconstpointer pdata;
+} TestNcCBEFunc;
+
+#define TEST_NC_CBE_MODEL_LEN 8
+TestNcCBEFunc models[TEST_NC_CBE_MODEL_LEN] =
+{
+  {test_nc_cbe_lcdm_new,          "lcdm",          NULL},
+  {test_nc_cbe_xcdm_new,          "xcdm",          NULL},
+  {test_nc_cbe_mnu_lcdm_new,      "lcdm/mnu",      NULL},
+  {test_nc_cbe_mnu_xcdm_new,      "xcdm/mnu",      NULL},
+  {test_nc_cbe_flat_lcdm_new,     "lcdm/flat",     NULL},
+  {test_nc_cbe_flat_xcdm_new,     "xcdm/flat",     NULL},
+  {test_nc_cbe_flat_mnu_lcdm_new, "lcdm/flat/mnu", NULL},
+  {test_nc_cbe_flat_mnu_xcdm_new, "xcdm/flat/mnu", NULL},
+};
+
+#define TEST_NC_CBE_TEST_LEN 4
+TestNcCBEFunc tests[TEST_NC_CBE_TEST_LEN] =
+{
+  {test_nc_cbe_compare_bg, "compare_bg", NULL},
+  {test_nc_cbe_sanity,     "sanity",     NULL},
+  {test_nc_cbe_serialize,  "serialize",  NULL},
+  {test_nc_cbe_calc_ps,    "calc_ps",    NULL},
+};
+
 gint
 main (gint argc, gchar *argv[])
 {
+  gint i, j;
+  
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/nc/cbe/lcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_lcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
   
-  g_test_add ("/nc/cbe/xcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_xcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/mnu_lcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_mnu_lcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/mnu_xcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_mnu_xcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/flat_lcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_flat_lcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/flat_xcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_flat_xcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/flat_mnu_lcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_flat_mnu_lcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
-  
-  g_test_add ("/nc/cbe/flat_mnu_xcdm/compare_bg", TestNcCBE, NULL,
-              &test_nc_cbe_flat_mnu_xcdm_new,
-              &test_nc_cbe_compare_bg,
-              &test_nc_cbe_free);
+  for (i = 0; i < TEST_NC_CBE_MODEL_LEN; i++)
+  {
+    for (j = 0; j < TEST_NC_CBE_TEST_LEN; j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/cbe/%s/%s", models[i].name, tests[j].name);
+      
+      g_test_add (path, TestNcCBE, models[i].pdata, models[i].func, tests[j].func, &test_nc_cbe_free);
+      
+      g_free (path);
+      
+    }
+  }
   
   g_test_add ("/nc/cbe/traps", TestNcCBE, NULL,
               &test_nc_cbe_lcdm_new,
@@ -349,6 +357,15 @@ test_nc_cbe_free (TestNcCBE *test, gconstpointer pdata)
   NCM_TEST_FREE (nc_hicosmo_free, cosmo);
 }
 
+static void
+test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata)
+{
+  nc_cbe_ref (test->cbe);
+  nc_cbe_free (test->cbe);
+
+  g_assert_true (NC_IS_CBE (test->cbe));
+}
+
 void
 test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
 {
@@ -363,6 +380,43 @@ test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
     
     g_assert_cmpfloat (err, <, 1.0e-4);
   }
+}
+
+static void
+test_nc_cbe_serialize (TestNcCBE *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
+  gchar *cbe_ser = ncm_serialize_to_string (ser, G_OBJECT (test->cbe), TRUE);
+
+  nc_cbe_free (test->cbe);
+
+  test->cbe = NC_CBE (ncm_serialize_from_string (ser, cbe_ser));
+
+  g_free (cbe_ser);
+
+  g_assert_true (NC_IS_CBE (test->cbe));
+
+  test_nc_cbe_compare_bg (test, pdata);
+}
+
+static void
+test_nc_cbe_calc_ps (TestNcCBE *test, gconstpointer pdata)
+{
+  nc_cbe_set_calc_transfer (test->cbe, TRUE);
+  nc_cbe_set_max_matter_pk_z (test->cbe, 1.0);
+
+  nc_cbe_prepare (test->cbe, test->cosmo);
+  nc_cbe_prepare_if_needed (test->cbe, test->cosmo);
+
+  ncm_model_state_mark_outdated (NCM_MODEL (test->cosmo));
+  nc_cbe_prepare_if_needed (test->cbe, test->cosmo);
+
+  {
+    NcmSpline2d *ps = nc_cbe_get_matter_ps (test->cbe);
+    ncm_spline2d_free (ps);
+  }
+
 }
 
 void

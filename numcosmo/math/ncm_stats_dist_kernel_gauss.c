@@ -185,17 +185,17 @@ ncm_stats_dist_kernel_gauss_class_init (NcmStatsDistKernelGaussClass *klass)
 static gdouble
 _ncm_stats_dist_kernel_gauss_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n)
 {
-  const guint d = ncm_stats_dist_kernel_get_dim (sdk);
-  
-  return pow (4.0 / (n * (d + 2.0)), 1.0 / (d + 4.0));
+  NcmStatsDistKernelPrivate * const pself = sdk->priv;
+
+  return pow (4.0 / (n * (pself->d + 2.0)), 1.0 / (pself->d + 4.0));
 }
 
 static gdouble
 _ncm_stats_dist_kernel_gauss_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
 {
-  const guint d = ncm_stats_dist_kernel_get_dim (sdk);
+  NcmStatsDistKernelPrivate * const pself = sdk->priv;
   
-  return 0.5 * (d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov_decomp));
+  return 0.5 * (pself->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov_decomp));
 }
 
 static gdouble
@@ -340,8 +340,8 @@ _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_dec
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
   ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
-  NCM_TEST_GSL_RESULT ("ncm_stats_dist_kernel_gauss_sample_mean_scale", ret);
-  
+  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_gauss_sample", ret);
+
   ncm_vector_add (x, mu);
 }
 

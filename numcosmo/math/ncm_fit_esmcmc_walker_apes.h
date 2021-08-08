@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_stats_dist.h>
 
 G_BEGIN_DECLS
 
@@ -59,11 +60,55 @@ struct _NcmFitESMCMCWalkerAPES
   NcmFitESMCMCWalkerAPESPrivate *priv;
 };
 
+/**
+ * NcmFitESMCMCWalkerAPESMethod:
+ * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE: Fixed kernel estimation.
+ * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE: Variable kernel estimation.
+ *
+ * Posterior estimation method.
+ *
+ */
+typedef enum _NcmFitESMCMCWalkerAPESMethod
+{
+  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE = 0,
+  NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE,
+  /* < private > */
+  NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN, /*< skip >*/
+} NcmFitESMCMCWalkerAPESMethod;
+
+/**
+ * NcmFitESMCMCWalkerAPESKType:
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY: Cauchy kernel.
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3: Student-t kernel with $\nu=3$.
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS: Gaussian kernel.
+ *
+ * Kernel used to build the approximate posterior.
+ *
+ */
+typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCMC_WALKER_APES_KTYPE >*/
+{
+  NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY = 0,
+  NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3,
+  NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS,
+  /* < private > */
+  NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN, /*< skip >*/
+} NcmFitESMCMCWalkerAPESKType;
+
 GType ncm_fit_esmcmc_walker_apes_get_type (void) G_GNUC_CONST;
 
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams);
+NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gboolean use_interp);
 
-void ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *aps, gboolean use_interp);
+void ncm_fit_esmcmc_walker_apes_set_method (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESMethod method);
+void ncm_fit_esmcmc_walker_apes_set_k_type (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESKType k_type);
+
+NcmFitESMCMCWalkerAPESMethod ncm_fit_esmcmc_walker_apes_get_method (NcmFitESMCMCWalkerAPES *apes);
+NcmFitESMCMCWalkerAPESKType ncm_fit_esmcmc_walker_apes_get_k_type (NcmFitESMCMCWalkerAPES *apes);
+
+void ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *apes, gboolean use_interp);
+gboolean ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes);
+
+void ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist **sd0, NcmStatsDist **sd1);
 
 G_END_DECLS
 

@@ -58,6 +58,7 @@ struct _NcmStatsDistPrivate
   NcmVector *f;
   gdouble *levmar_workz;
   guint levmar_n;
+  GArray *m2lnp_sort;
 };
 
 G_END_DECLS

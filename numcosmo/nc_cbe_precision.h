@@ -68,3 +68,4 @@ void nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec);
 G_END_DECLS
 
 #endif /* _NC_CBE_PRECISION_H_ */
+

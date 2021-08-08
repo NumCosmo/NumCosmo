@@ -259,7 +259,7 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
       {
         ncm_matrix_set (cov_decomp, i, i, ncm_matrix_get (cov, i, i));
       }
-      
+
       g_assert_cmpint (ncm_matrix_cholesky_decomp (cov_decomp, 'U'), ==, 0);
     }
   }

@@ -288,7 +288,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
     g_array_set_size (self->offboard, self->nwalkers);
     
     if (self->walker == NULL)
-      self->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerStretch");
+      self->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerAPES");
     
     ncm_fit_esmcmc_walker_set_size (self->walker, self->nwalkers);
     ncm_fit_esmcmc_walker_set_nparams (self->walker, self->fparam_len);
@@ -2304,5 +2304,19 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
   }
   
   return g_array_index (self->accepted, gboolean, 0);
+}
+
+/**
+ * ncm_fit_esmcmc_peek_walker:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Returns: (transfer none): the currently used walker #NcmFitESMCMCWalker.
+ */
+NcmFitESMCMCWalker *
+ncm_fit_esmcmc_peek_walker (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = esmcmc->priv;
+
+  return self->walker;
 }
 

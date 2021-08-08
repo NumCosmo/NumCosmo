@@ -112,6 +112,8 @@ NcmFit *ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 
+NcmFitESMCMCWalker *ncm_fit_esmcmc_peek_walker (NcmFitESMCMC *esmcmc);
+
 #define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
 #define NCM_FIT_ESMCMC_MPI_IN_LEN (3)
