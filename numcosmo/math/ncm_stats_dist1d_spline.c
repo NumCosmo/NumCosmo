@@ -62,7 +62,7 @@ ncm_stats_dist1d_spline_dispose (GObject *object)
   NcmStatsDist1dSpline *sd1s = NCM_STATS_DIST1D_SPLINE (object);
   
   ncm_spline_clear (&sd1s->m2lnp);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_spline_parent_class)->dispose (object);
 }
@@ -154,13 +154,12 @@ ncm_stats_dist1d_spline_class_init (NcmStatsDist1dSplineClass *klass)
 }
 
 static void
-ncm_stats_dist1d_spline_tail_init (NcmStatsDist1dSplineTail *tail, gdouble xb, gdouble p, gdouble d1p, gdouble d2p, gdouble sigma)
+ncm_stats_dist1d_spline_tail_init (NcmStatsDist1dSplineTail *tail, gdouble xb, gdouble p, gdouble d1p, gdouble d2p)
 {
   tail->xb    = xb;
   tail->a     = p;
   tail->b     = d1p;
   tail->c     = d2p;
-  tail->sigma = sigma;
 }
 
 static gdouble
@@ -168,10 +167,8 @@ ncm_stats_dist1d_spline_tail_eval (NcmStatsDist1dSplineTail *tail, gdouble x)
 {
   const gdouble xmxb   = x - tail->xb;
   const gdouble xmxb2  = xmxb * xmxb;
-  const gdouble xmxb3  = xmxb2 * xmxb;
-  const gdouble sigma2 = tail->sigma * tail->sigma;
   
-  return tail->a + tail->b * xmxb + 0.5 * tail->c * xmxb2 + fabs (xmxb3) * exp (0.5 * xmxb2 / sigma2);
+  return tail->a + tail->b * xmxb + 0.5 * tail->c * xmxb2;
 }
 
 static gdouble
@@ -220,8 +217,8 @@ ncm_stats_dist1d_spline_prepare (NcmStatsDist1d *sd1)
   d2m2lnp_lb = ncm_spline_eval_deriv2 (sd1s->m2lnp, x_lb);
   d2m2lnp_ub = ncm_spline_eval_deriv2 (sd1s->m2lnp, x_ub);
   
-  ncm_stats_dist1d_spline_tail_init (&sd1s->left_tail,  x_lb, m2lnp_lb, d1m2lnp_lb, d2m2lnp_lb, sd1s->tail_sigma);
-  ncm_stats_dist1d_spline_tail_init (&sd1s->right_tail, x_ub, m2lnp_ub, d1m2lnp_ub, d2m2lnp_ub, sd1s->tail_sigma);
+  ncm_stats_dist1d_spline_tail_init (&sd1s->left_tail,  x_lb, m2lnp_lb, d1m2lnp_lb, d2m2lnp_lb);
+  ncm_stats_dist1d_spline_tail_init (&sd1s->right_tail, x_ub, m2lnp_ub, d1m2lnp_ub, d2m2lnp_ub);
 }
 
 /**

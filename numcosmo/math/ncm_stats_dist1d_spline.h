@@ -55,7 +55,6 @@ typedef struct _NcmStatsDist1dSplineTail
   gdouble a;
   gdouble b;
   gdouble c;
-  gdouble sigma;
 } NcmStatsDist1dSplineTail;
 
 struct _NcmStatsDist1dSpline

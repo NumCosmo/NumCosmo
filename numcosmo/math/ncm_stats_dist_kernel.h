@@ -72,8 +72,6 @@ struct _NcmStatsDistKernel
 
 GType ncm_stats_dist_kernel_get_type (void) G_GNUC_CONST;
 
-NcmStatsDistKernel *ncm_stats_dist_kernel_new (const guint dim);
-
 NcmStatsDistKernel *ncm_stats_dist_kernel_ref (NcmStatsDistKernel *sdk);
 void ncm_stats_dist_kernel_free (NcmStatsDistKernel *sdk);
 void ncm_stats_dist_kernel_clear (NcmStatsDistKernel **sdk);

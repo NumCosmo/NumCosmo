@@ -147,14 +147,14 @@ static void
 _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (object);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  /*NcmStatsDistKDEPrivate * const self = sdkde->priv;*/
   
   g_return_if_fail (NCM_IS_STATS_DIST_KDE (object));
   
   switch (prop_id)
   {
     case PROP_NEARPD_MAXITER:
-      g_value_set_uint (value, self->nearPD_maxiter);
+      g_value_set_uint (value, ncm_stats_dist_kde_get_nearPD_maxiter (sdkde));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -373,6 +373,8 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, IMv, IMv);
     
     ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
+
+    ncm_vector_free (IMv);
   }
 }
 
