@@ -151,24 +151,24 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       break;
     case 1:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-          NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, TRUE);
+          NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0, TRUE);
       break;
     case 2:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-          NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, TRUE);
+          NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0, TRUE);
       /*test->nrun_div = 100;*/
       break;
     case 3:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY, TRUE);
+          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY, 1.0, TRUE);
       break;
     case 4:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, TRUE);
+          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0, TRUE);
       break;
     case 5:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, TRUE);
+          NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0, TRUE);
       test->nrun_div = 100;
       break;
     default:
@@ -176,6 +176,45 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       break;
   }
   
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    ncm_fit_esmcmc_walker_apes_ref (apes);
+    ncm_fit_esmcmc_walker_apes_free (apes);
+
+    {
+      NcmFitESMCMCWalkerAPES *apes0 = ncm_fit_esmcmc_walker_apes_ref (apes);
+      ncm_fit_esmcmc_walker_apes_clear (&apes0);
+      g_assert_true (apes0 == NULL);
+    }
+
+    {
+      gchar *apes_ser = ncm_serialize_to_string (ser, G_OBJECT (apes), TRUE);
+      NcmFitESMCMCWalkerAPES *apes0 = ncm_serialize_from_string (ser, apes_ser);
+
+      g_assert_true (ncm_fit_esmcmc_walker_apes_interp (apes)     == ncm_fit_esmcmc_walker_apes_interp (apes0));
+      g_assert_true (ncm_fit_esmcmc_walker_apes_get_method (apes) == ncm_fit_esmcmc_walker_apes_get_method (apes0));
+      g_assert_true (ncm_fit_esmcmc_walker_apes_get_k_type (apes) == ncm_fit_esmcmc_walker_apes_get_k_type (apes0));
+
+      ncm_assert_cmpdouble_e (ncm_fit_esmcmc_walker_apes_get_over_smooth (apes), ==, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes0), 1.0e-15, 0.0);
+
+      ncm_fit_esmcmc_walker_apes_clear (&apes0);
+      g_assert_true (apes0 == NULL);
+      g_free (apes_ser);
+    }
+
+    {
+      NcmStatsDist *sd0 = NULL;
+      NcmStatsDist *sd1 = NULL;
+
+      ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
+
+      g_assert_true (NCM_IS_STATS_DIST (sd0));
+      g_assert_true (NCM_IS_STATS_DIST (sd1));
+    }
+
+    ncm_serialize_free (ser);
+  }
+
   esmcmc = ncm_fit_esmcmc_new (fit,
                                nwalkers,
                                NCM_MSET_TRANS_KERN (init_sampler),
@@ -206,7 +245,6 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   test->rng       = rng;
   
   g_assert_true (NCM_IS_FIT (fit));
-  
 
   ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
   ncm_model_mvnd_clear (&model_mvnd);

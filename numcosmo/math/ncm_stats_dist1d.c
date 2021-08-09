@@ -219,7 +219,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "relative tolerance",
-                                                        0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_RELTOL,
+                                                        0.0, 1.0, 1.0e-14,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
@@ -227,7 +227,7 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                    g_param_spec_double ("abstol",
                                                         NULL,
                                                         "Absolute tolerance on the random variables",
-                                                        0.0, G_MAXDOUBLE, NCM_ODE_SPLINE_DEFAULT_ABSTOL,
+                                                        0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MAX_PROB,
@@ -539,7 +539,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     
     if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {
-      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up...");
+      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up. (% 22.15g) [% 22.15g % 22.15g]", x, x0, x1);
       break;
     }
     

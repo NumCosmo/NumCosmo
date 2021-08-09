@@ -57,6 +57,7 @@ enum
   PROP_0,
   PROP_METHOD,
   PROP_K_TYPE,
+  PROP_OVER_SMOOTH,
   PROP_USE_INTERP,
 };
 
@@ -78,6 +79,7 @@ struct _NcmFitESMCMCWalkerAPESPrivate
   NcmVector *m2lnL_s1;
   NcmFitESMCMCWalkerAPESMethod method;
   NcmFitESMCMCWalkerAPESKType k_type;
+  gdouble over_smooth;
   gboolean use_interp;
   gboolean constructed;
 };
@@ -107,6 +109,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->m2lnL_s1    = NULL;
   self->method      = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
   self->k_type      = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
+  self->over_smooth = 0.0;
   self->use_interp  = FALSE;
   self->constructed = FALSE;
   
@@ -127,6 +130,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_K_TYPE:
       ncm_fit_esmcmc_walker_apes_set_k_type (apes, g_value_get_enum (value));
+      break;
+    case PROP_OVER_SMOOTH:
+      ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, g_value_get_double (value));
       break;
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
@@ -151,6 +157,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_K_TYPE:
       g_value_set_enum (value, ncm_fit_esmcmc_walker_apes_get_k_type (apes));
+      break;
+    case PROP_OVER_SMOOTH:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes));
       break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
@@ -246,6 +255,13 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                       "Kernel used in posterior approximation",
                                                       NCM_TYPE_FIT_ESMCMC_WALKER_APES_KTYPE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_OVER_SMOOTH,
+                                   g_param_spec_double ("over-smooth",
+                                                        NULL,
+                                                        "Over-smooth parameter used to adjust kernel bandwidth",
+                                                        1.0e-10, 1.0e10, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_USE_INTERP,
@@ -332,8 +348,8 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       ncm_stats_dist_kernel_free (kernel);
     }
     
-    /*ncm_stats_dist_set_over_smooth (self->sd0, 1.0);*/
-    /*ncm_stats_dist_set_over_smooth (self->sd1, 1.0);*/
+    ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
+    ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
     
     for (i = 0; i < self->size; i++)
     {
@@ -625,28 +641,70 @@ ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams)
  * @nparams: number of parameters
  * @method: a #NcmFitESMCMCWalkerAPESMethod
  * @k_type: a #NcmFitESMCMCWalkerAPESKType
+ * @over_smooth: a double
  * @use_interp: a boolean
  *
  * Creates a new #NcmFitESMCMCWalkerAPES to be used with @nwalkers,
- * interpolation method @method and kernel @kernel. If @use_interp
- * is TRUE computes the approximation interpolating the computed
- * likelihood values, otherwise, use standard kernel density
- * estimation.
+ * interpolation method @method, kernel @kernel and over-smooth parameter
+ * @over_smooth. If @use_interp is TRUE computes the approximation
+ * interpolating the computed likelihood values, otherwise, use standard
+ * kernel density estimation.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerAPES.
  */
 NcmFitESMCMCWalkerAPES *
-ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gboolean use_interp)
+ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth, gboolean use_interp)
 {
   NcmFitESMCMCWalkerAPES *apes = g_object_new (NCM_TYPE_FIT_ESMCMC_WALKER_APES,
                                               "size",        nwalkers,
                                               "nparams",     nparams,
                                               "method",      method,
                                               "kernel-type", k_type,
+                                              "over-smooth", over_smooth,
                                               "use-interp",  use_interp,
                                               NULL);
 
   return apes;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_ref:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Increases the reference count of @apes atomically.
+ *
+ * Returns: (transfer full): @apes.
+ */
+NcmFitESMCMCWalkerAPES *
+ncm_fit_esmcmc_walker_apes_ref (NcmFitESMCMCWalkerAPES *apes)
+{
+  return g_object_ref (apes);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_free:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Decreases the reference count of @apes atomically.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_free (NcmFitESMCMCWalkerAPES *apes)
+{
+  g_object_unref (apes);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_clear:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Decreases the reference count of *@apes atomically and sets the pointer *@apes to null.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_clear (NcmFitESMCMCWalkerAPES **apes)
+{
+  g_clear_object (apes);
 }
 
 /**
@@ -694,6 +752,28 @@ ncm_fit_esmcmc_walker_apes_set_k_type (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCM
 }
 
 /**
+ * ncm_fit_esmcmc_walker_apes_set_over_smooth:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @os: a double
+ *
+ * Sets the over smooth parameter to adjust the interpolation
+ * bandwidth.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const gdouble os)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  self->over_smooth = os;
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
+    ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
+  }
+}
+
+/**
  * ncm_fit_esmcmc_walker_apes_get_method:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
@@ -723,6 +803,22 @@ ncm_fit_esmcmc_walker_apes_get_k_type (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
 
   return self->k_type;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_over_smooth:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Gets the currently used over-smooth parameter.
+ *
+ * Returns: currently used over-smooth.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  return self->over_smooth;
 }
 
 /**

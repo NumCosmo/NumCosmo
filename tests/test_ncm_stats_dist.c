@@ -300,6 +300,7 @@ test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
   
   g_assert_cmpfloat (ncm_stats_vec_get_mean (err_stats, 0), <, 0.5);
   
+  ncm_stats_vec_free (err_stats);
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
@@ -666,6 +667,7 @@ test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata)
 
   g_free (sd_ser);
   ncm_stats_dist_free (sd_dup);
+  ncm_serialize_free (ser);
 
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);

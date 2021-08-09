@@ -373,6 +373,8 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, IMv, IMv);
     
     ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
+
+    ncm_vector_free (IMv);
   }
 }
 

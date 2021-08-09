@@ -245,7 +245,7 @@ ncm_fit_esmcmc_walker_ref (NcmFitESMCMCWalker *walker)
 
 /**
  * ncm_fit_esmcmc_walker_free:
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
  * Decreases the reference count of @walker atomically.
  *
@@ -258,9 +258,9 @@ ncm_fit_esmcmc_walker_free (NcmFitESMCMCWalker *walker)
 
 /**
  * ncm_fit_esmcmc_walker_clear:
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
- * Decrese the reference count of *@walker atomically and sets the pointer *@walker to null.
+ * Decreases the reference count of *@walker atomically and sets the pointer *@walker to null.
  *
  */
 void
