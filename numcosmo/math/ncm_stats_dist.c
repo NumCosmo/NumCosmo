@@ -1135,7 +1135,7 @@ ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatr
   
   y_i[0]   = ncm_vector_dup (g_ptr_array_index (self->sample_array, i));
   cov_i[0] = ncm_matrix_dup (cov_decomp);
-  n_i[0]   = exp (lnnorm + self->d * log (self->href));
+  n_i[0]   = exp (lnnorm);
   w_i[0]   = ncm_vector_get (self->weights, i);
   
   ncm_matrix_triang_to_sym (cov_decomp, 'U', TRUE, cov_i[0]);

@@ -254,24 +254,6 @@ _ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
 }
 
 /**
- * ncm_stats_dist_kernel_new:
- * @dim: sample space dimension
- *
- * Creates a new #NcmStatsDistKernel object with sample dimension @dim.
- *
- * Returns: a new #NcmStatsDistKernel.
- */
-NcmStatsDistKernel *
-ncm_stats_dist_kernel_new (const guint dim)
-{
-  NcmStatsDistKernel *sdk = g_object_new (NCM_TYPE_STATS_DIST_KERNEL,
-                                          "dimension", dim,
-                                          NULL);
-  
-  return sdk;
-}
-
-/**
  * ncm_stats_dist_kernel_ref:
  * @sdk: a #NcmStatsDistKernel
  *
