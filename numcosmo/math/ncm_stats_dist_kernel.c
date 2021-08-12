@@ -28,39 +28,70 @@
 /**
  * SECTION:ncm_stats_dist_kernel
  * @title: NcmStatsDistKernel
- * @short_description: An N dimensional probability distributions using gaussian KDE
+ * @short_description: An N-dimensional kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
  *
- * An arbitrary N dimensional probability distribution using gaussian KDE.
+ * An N-dimensional kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
  *
+ * This class provides the tools to generate a kernel function to be used in a kernel 
+ * density estimation method. Below is a quick review of the kernel density estimation method 
+ * and some properties of the kernel function, which are generalized for multidimensional problems. 
+ * For further information, check [[Density Estimation for Statistics and Data Analysis, B.W. Silverman](https://www.routledge.com/Density-Estimation-for-Statistics-and-Data-Analysis/Silverman/p/book/9780412246203)].
  *
- * This object provides the tools to perform a radial basis interpolation
- * in a multidimensional function, using a multivariate gaussian distribution.
- * such that we are able to sample the original functio from this new interpolation function.
- * For more informations about radial basis interpolation,
- * check #NcmStatsDistKernel.
- * A brief description of the Multivariate gaussian function can be found below.
- * For more information, check [[The R Journal Vol. 5/2, December 2013](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)]
- *
- * In this file, we use the Multivariate gaussian function as the radial basis function. The function has the stocastic representation given by
- *
+ * Starting with the uni-dimensional case, let $X_1,...,X_n$ be independent and identically 
+ * distributed (iid) samples drawn from a distribution $f(x)$. The kernel density estimation of the function is 
  * \begin{align}
- * \boldsymbol{X}=\boldsymbol{\mu}+ A \boldsymbol{Z}
+ * \tilde{f}(x) = \sum_{i=1}^{n}K\left(\frac{x-x_i}{h}\right)
  * ,\end{align}
- * where $\boldsymbol{Z}$ is a p-dimensional random vector, $A$ is a $p \times p$ matrix and $\mu$ is the mean vector.
- *
- *$\boldsymbol{X}$ is fully determined by the covariance matrix $\Sigma = \boldsymbol{A}\boldsymbol{A}^t$ and the mean vector $\mu$.
- * Assuming that the covariance matrix is positive definite, $\boldsymbol{X}$ has the probability density
- *
+ * where $K$ is the kernel function and $h$ is the bandwidth parameter. The kernel density 
+ * estimator function must be close to the true density function $f(x)$, which can be tested 
+ * by analyzing whether the estimator provides similar expected values as the function $f(x)$, 
+ * that is, the function $\tilde{f}(x)$ must minimize the mean square error (MSE)
  * \begin{align}
- * f_{X}(x)=\frac{1}{(2 \pi)^{d / 2} \sqrt{\operatorname{det} \Sigma}} \exp \left(-\frac{1}{2}(x-\mu)^{\top} \Sigma^{-1}(x-\mu)\right), \quad x \in \mathbb{R}^{d}
- *, \end{align}
- * where $p$ is the dimension and $x$ are the points to be evaluated.
+ * \label{eqmse}
+ * MSE_x(\tilde{f}) = E\left[\tilde{f}(x) - f(x)\right]^2
+ * ,\end{align} 
+ * where $E$ represents the expected value. This value depends on the choice of the kernel function, 
+ * the data and the bandwidth. If the estimator $\tilde{f}(x)$ is close enough to the true function, 
+ * it shall be used to generate samples that are distributed by $f(x)$.
  *
- * Once this object is initialized, we may use the methods in the #NcmStatsDistKernel class to perform the interpolation
- * and to generate a sample from the interpolated polynomial function.
+ * The kernel $K$ is a symmetric function that must satisfy
+ * \begin{align}
+ * &\int K(x)~dx = 1 
+ * .\end{align}
+ * Usually, the kernel function is a symmetric probability density function that is easy to sample from,
+ * but it is totally under the user's control. Using simple kernels, such as the Gaussian kernel, makes 
+ * the kernel density estimator method a better alternative to generate samples when the desired distribution is a complicated function.
  *
- * The user must provide the following input values: $p$ - ncm_stats_dist_kernel_new(),
- * cv_type - ncm_stats_dist_kernel_new().
+ * For the multidimensional case, given i.i.d d-dimensional sample points $X_1,.., X_n$ distributed by $f(x)$,
+ * the multivariate kernel density estimator function $\tilde{f}(x)$ is given by
+ * \begin{align}
+ * \tilde{f}(x) = \frac{1}{h^d} \sum_{i=1}^n w_i K\left(\frac{x-x_i}{h}, \Sigma_i\right)
+ * ,\end{align}
+ * where $\Sigma_i$ is the covariance matrix of the $i$-th point (the kernels used in this library depend on the covariance matrix), 
+ * $d$ is the dimension and $w_i$ is the weight attached to each kernel to find the minimal error in equation \eqref{eqmse}.
+ *
+ * The methods in this class define the type of kernel $K$, compute the bandwidth factor $h$, evaluate the kernel 
+ * function at a given $d$-dimensional point $x$ or at a given vector of points $\vec{x}$, and, given the weights $w_i$, 
+ * compute the kernel density estimation function $\tilde{f}(x)$.
+ *
+ * Besides the function ncm\_stats\_dist\_kernel\_get\_dim(), this class object only has virtual methods.
+ * Therefore, to use this object, the user must initialize one of the child objects (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST). 
+ * Inside the child objects are the implemented functions, which must be defined for each specific type of kernel function. 
+ * Check the childs documentations for more information. More information about how the algorithm should be implemented is described below:
+ *		
+ *		-This class is implemented in the #NcmStatsDist class, where the #NcmStatsDistKernel class shall define
+ *		the type of kernel used in the interpolation function in #NcmStatsDist and how to compute values such as
+ *		the weighted sum of the kernels, the bandwidth, and so on. Yet, the user may use these class objects
+ *		to perform other kernel calculations, although some of the methods are not implemented outside the
+ *		#NcmStatsDist class.
+ *
+ *		-This class does not possess the methods to compute the weights of each kernel. You may find this method in the
+ *		#NcmStatsDist class. 
+ *
+ *		-Every child object of this class can be used either in the #NcmStatsDistKDE class or in the #NcmStatsDistVKDE class.
+ *
+ *
+ *
  **/
 
 #ifdef HAVE_CONFIG_H
@@ -379,10 +410,11 @@ ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2,
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
- * Computes the weighted sum of kernels at $\chi^2=$@chi2,
+ * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
  * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u_i,$$
  * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u_a)$ and $a$ labels
- * is the largest term of the sum.
+ * is the largest term of the sum. This function shall be used when
+ * each kernel has a different normalization factor.
  *
  */
 void
@@ -400,10 +432,11 @@ ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
- * Computes the weighted sum of kernels at $\chi^2=$@chi2,
+ * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
  * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u,$$
  * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u)$ and $a$ labels
- * is the largest term of the sum.
+ * is the largest term of the sum. This function shall be used when 
+ * all the kernels have the same normalization factor.
  *
  */
 void
