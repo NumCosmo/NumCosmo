@@ -30,9 +30,9 @@
  * @stability: Stable
  * @include: numcosmo/math/ncm_spline.h
  *
- * This class comprises all functions to provide a #NcmSpline, together with 
+ * This class comprises all functions to provide a #NcmSpline, together with
  * all necessary methods.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,7 +88,7 @@ _ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, G
   NcmSpline *s = NCM_SPLINE (object);
   
   g_return_if_fail (NCM_IS_SPLINE (object));
-
+  
   switch (prop_id)
   {
     case PROP_LEN:
@@ -127,7 +127,7 @@ _ncm_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamS
   NcmSpline *s = NCM_SPLINE (object);
   
   g_return_if_fail (NCM_IS_SPLINE (object));
-
+  
   switch (prop_id)
   {
     case PROP_LEN:
@@ -151,13 +151,13 @@ _ncm_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 static void
 _ncm_spline_dispose (GObject *object)
 {
-	NcmSpline *s = NCM_SPLINE (object);
-
+  NcmSpline *s = NCM_SPLINE (object);
+  
   ncm_vector_clear (&s->xv);
   ncm_vector_clear (&s->yv);
   
-	s->empty = TRUE;
-
+  s->empty = TRUE;
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->dispose (object);
 }
@@ -166,9 +166,9 @@ static void
 _ncm_spline_finalize (GObject *object)
 {
   NcmSpline *s = NCM_SPLINE (object);
-
+  
   g_clear_pointer (&s->acc, gsl_interp_accel_free);
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }
@@ -176,19 +176,19 @@ _ncm_spline_finalize (GObject *object)
 static void
 ncm_spline_class_init (NcmSplineClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->constructed  = &_ncm_spline_constructed;
   object_class->set_property = &_ncm_spline_set_property;
   object_class->get_property = &_ncm_spline_get_property;
   object_class->dispose      = &_ncm_spline_dispose;
   object_class->finalize     = &_ncm_spline_finalize;
-
+  
   /**
    * NcmSpline:length:
    *
    * The spline length (total number of knots).
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
@@ -197,12 +197,12 @@ ncm_spline_class_init (NcmSplineClass *klass)
                                                       "Spline length",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   /**
    * NcmSpline:x:
    *
    * #NcmVector with the spline knots.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_X,
@@ -211,12 +211,12 @@ ncm_spline_class_init (NcmSplineClass *klass)
                                                         "Spline knots",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   /**
    * NcmSpline:y:
    *
    * #NcmVector with the spline values.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_Y,
@@ -225,7 +225,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
                                                         "Spline values",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   klass->name         = NULL;
   klass->reset        = NULL;
   klass->prepare      = NULL;
@@ -234,7 +234,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
   klass->eval         = NULL;
   klass->deriv        = NULL;
   klass->deriv2       = NULL;
-  klass->integ        = NULL;  
+  klass->integ        = NULL;
 }
 
 /**
@@ -248,7 +248,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
 NcmSpline *
 ncm_spline_copy_empty (const NcmSpline *s)
 {
-	return NCM_SPLINE_GET_CLASS (s)->copy_empty (s);
+  return NCM_SPLINE_GET_CLASS (s)->copy_empty (s);
 }
 
 /**
@@ -265,7 +265,7 @@ ncm_spline_copy (const NcmSpline *s)
 {
   g_assert (s->xv != NULL && s->yv != NULL);
   
-	return ncm_spline_new (s, ncm_vector_dup (s->xv), ncm_vector_dup (s->yv), TRUE);
+  return ncm_spline_new (s, ncm_vector_dup (s->xv), ncm_vector_dup (s->yv), TRUE);
 }
 
 /**
@@ -284,11 +284,11 @@ ncm_spline_copy (const NcmSpline *s)
 NcmSpline *
 ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 {
-	NcmSpline *s_new = ncm_spline_copy_empty (s);
+  NcmSpline *s_new = ncm_spline_copy_empty (s);
   
-	ncm_spline_set (s_new, xv, yv, init);
+  ncm_spline_set (s_new, xv, yv, init);
   
-	return s_new;
+  return s_new;
 }
 
 /**
@@ -307,11 +307,11 @@ ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 NcmSpline *
 ncm_spline_new_array (const NcmSpline *s, GArray *x, GArray *y, gboolean init)
 {
-	NcmSpline *s_new = ncm_spline_copy_empty (s);
+  NcmSpline *s_new = ncm_spline_copy_empty (s);
   
-	ncm_spline_set_array (s_new, x, y, init);
+  ncm_spline_set_array (s_new, x, y, init);
   
-	return s_new;
+  return s_new;
 }
 
 /**
@@ -353,61 +353,61 @@ ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboo
 NcmSpline *
 ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 {
-	g_assert (xv != NULL && yv != NULL);
+  g_assert (xv != NULL && yv != NULL);
   
-	if (ncm_vector_len (xv) != ncm_vector_len (yv))
-		g_error ("ncm_spline_set: knot and function values vector has not the same size");
+  if (ncm_vector_len (xv) != ncm_vector_len (yv))
+    g_error ("ncm_spline_set: knot and function values vector has not the same size");
   
-	if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
-		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name (s),
-		         NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
-
-	if (s->xv != NULL)
-	{
-		if (s->xv != xv)
-		{
-			ncm_vector_ref (xv);
-			ncm_vector_free (s->xv);
-			s->xv = xv;
-		}
-	}
-	else
-	{
-		ncm_vector_ref (xv);
-		s->xv = xv;
-	}
-
-	if (s->yv != NULL)
-	{
-		if (s->yv != yv)
-		{
-			ncm_vector_ref (yv);
-			ncm_vector_free (s->yv);
-			s->yv = yv;
-		}
-	}
-	else
-	{
-		ncm_vector_ref (yv);
-		s->yv = yv;
-	}
-
-	s->len = ncm_vector_len (xv);
-
-	NCM_SPLINE_GET_CLASS (s)->reset (s);
-
-	s->empty = FALSE;
-
-	if (init)
-		ncm_spline_prepare (s);
-
+  if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
+    g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name (s),
+             NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
+  
+  if (s->xv != NULL)
+  {
+    if (s->xv != xv)
+    {
+      ncm_vector_ref (xv);
+      ncm_vector_free (s->xv);
+      s->xv = xv;
+    }
+  }
+  else
+  {
+    ncm_vector_ref (xv);
+    s->xv = xv;
+  }
+  
+  if (s->yv != NULL)
+  {
+    if (s->yv != yv)
+    {
+      ncm_vector_ref (yv);
+      ncm_vector_free (s->yv);
+      s->yv = yv;
+    }
+  }
+  else
+  {
+    ncm_vector_ref (yv);
+    s->yv = yv;
+  }
+  
+  s->len = ncm_vector_len (xv);
+  
+  NCM_SPLINE_GET_CLASS (s)->reset (s);
+  
+  s->empty = FALSE;
+  
+  if (init)
+    ncm_spline_prepare (s);
+  
   if (s->acc != NULL)
   {
     ncm_spline_acc (s, FALSE);
     ncm_spline_acc (s, TRUE);
   }
-
-	return s;
+  
+  return s;
 }
 
 /**
@@ -455,16 +455,16 @@ ncm_spline_clear (NcmSpline **s)
  * @s: a #NcmSpline
  * @enable: a boolean
  *
- * Enables or disables spline accelerator. Note that, if 
- * enabled, the spline becomes non-reentrant. In other words, 
- * if @enable is TRUE, the spline evaluation is not thread safe. 
- * Therefore, it should not be called concomitantly by two different threads. 
+ * Enables or disables spline accelerator. Note that, if
+ * enabled, the spline becomes non-reentrant. In other words,
+ * if @enable is TRUE, the spline evaluation is not thread safe.
+ * Therefore, it should not be called concomitantly by two different threads.
  *
- * Warning: the accelerator must be reset if the spline's size changes, otherwise, 
- * it can accessan out-of-bound index. 
+ * Warning: the accelerator must be reset if the spline's size changes, otherwise,
+ * it can accessan out-of-bound index.
  *
  */
-void 
+void
 ncm_spline_acc (NcmSpline *s, gboolean enable)
 {
   if (enable)
@@ -512,7 +512,7 @@ ncm_spline_set_len (NcmSpline *s, guint len)
  * @s: a #NcmSpline
  *
  * This function gets the length of the spline.
- * 
+ *
  * Returns: spline's size.
  */
 guint
@@ -608,7 +608,7 @@ ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gbo
 NcmVector *
 ncm_spline_get_xv (NcmSpline *s)
 {
-	if (s->xv != NULL)
+  if (s->xv != NULL)
     return ncm_vector_ref (s->xv);
   else
     return NULL;
@@ -638,13 +638,13 @@ ncm_spline_get_yv (NcmSpline *s)
  * @ub: (out): spline upper bound
  *
  * This function returns the lower and upper bound of @s.
- * 
+ *
  */
-void 
+void
 ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub)
 {
   g_assert_cmpuint (s->len, >, 0);
-
+  
   *lb = ncm_vector_get (s->xv, 0);
   *ub = ncm_vector_get (s->xv, s->len - 1);
 }
@@ -652,11 +652,11 @@ ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub)
 /**
  * ncm_spline_prepare:
  * @s: a #NcmSpline
- * 
+ *
  * This function prepares the spline @s such that one can evaluate it (#ncm_spline_eval), as well as
  * to compute its first and second derivatives (#ncm_spline_eval_deriv, #ncm_spline_eval_deriv2)
  * and integration (#ncm_spline_eval_integ).
- * 
+ *
  */
 
 /**
