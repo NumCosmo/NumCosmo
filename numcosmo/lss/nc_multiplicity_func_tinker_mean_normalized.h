@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncTinkerMeanNormalizedClass NcMultiplicityFuncTinkerMeanNormalizedClass;
 typedef struct _NcMultiplicityFuncTinkerMeanNormalized NcMultiplicityFuncTinkerMeanNormalized;
+typedef struct _NcMultiplicityFuncTinkerMeanNormalizedPrivate NcMultiplicityFuncTinkerMeanNormalizedPrivate;
 
 struct _NcMultiplicityFuncTinkerMeanNormalizedClass
 {
@@ -53,20 +54,19 @@ struct _NcMultiplicityFuncTinkerMeanNormalized
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble Delta;
-  guint int_Delta;
-  gdouble alpha;
-  gdouble beta;
-  gdouble phi;
-  gdouble eta;
-  gdouble gamma;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate *priv;
 };
 
 GType nc_multiplicity_func_tinker_mean_normalized_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_tinker_mean_normalized_new (gdouble Delta);
-void nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mtmn, gdouble Delta);
-gdouble nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mtmn);
+NcMultiplicityFuncTinkerMeanNormalized *nc_multiplicity_func_tinker_mean_normalized_new (void);
+NcMultiplicityFuncTinkerMeanNormalized *nc_multiplicity_func_tinker_mean_normalized_ref (NcMultiplicityFuncTinkerMeanNormalized *mt10);
+
+void nc_multiplicity_func_tinker_mean_normalized_free (NcMultiplicityFuncTinkerMeanNormalized *mt10);
+void nc_multiplicity_func_tinker_mean_normalized_clear (NcMultiplicityFuncTinkerMeanNormalized **mt10);
+
+void nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mt10, gdouble Delta);
+gdouble nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mt10);
 
 G_END_DECLS
 
