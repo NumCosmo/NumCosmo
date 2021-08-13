@@ -863,8 +863,9 @@ test_ncm_diff_rc_d1_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
     const gdouble df  = ncm_diff_rc_d1_1_to_1 (diff, x, &_test_ncm_diff_asin, &w, &err);
     const gdouble Adf = _test_ncm_diff_dasin (x, &w);
 
-    if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+    if (((err == 0.0) || gsl_isnan (err)) && nerr)
     {
+      nerr--;
       g_test_skip ("Unable to estimate error.");
       continue;
     }
@@ -889,8 +890,11 @@ test_ncm_diff_rc_d2_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
     const gdouble df  = ncm_diff_rc_d2_1_to_1 (diff, x, &_test_ncm_diff_asin, &w, &err);
     const gdouble Adf = _test_ncm_diff_d2asin (x, &w);
     
-    if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+    /*printf ("%d %d % 22.15g % 22.15g % 22.15g % 22.15g\n", i, nerr, err, x, df, Adf);*/
+
+    if (((err == 0.0) || gsl_isnan (err)) && nerr)
     {
+      nerr--;
       g_test_skip ("Unable to estimate error.");
       continue;
     }
@@ -961,8 +965,9 @@ test_ncm_diff_rc_d2_1_to_1_tan (TestNcmDiff *test, gconstpointer pdata)
     const gdouble Adf = _test_ncm_diff_d2tan (x, &w);
     
     /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", x, Adf, df, df / Adf - 1.0, err);*/
-    if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+    if (((err == 0.0) || gsl_isnan (err)) && nerr)
     {
+      nerr--;
       g_test_skip ("Unable to estimate error.");
       continue;
     }
@@ -1272,8 +1277,9 @@ test_ncm_diff_rf_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       const gdouble Adf = g_array_index (Adf_a, gdouble, j);
       const gdouble err = g_array_index (err_a, gdouble, j);
       
-      if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+      if (((err == 0.0) || gsl_isnan (err)) && nerr)
       {
+        nerr--;
         g_test_skip ("Unable to estimate error.");
         continue;
       }
@@ -1323,8 +1329,9 @@ test_ncm_diff_rc_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       const gdouble Adf = g_array_index (Adf_a, gdouble, j);
       const gdouble err = g_array_index (err_a, gdouble, j);
       
-      if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+      if (((err == 0.0) || gsl_isnan (err)) && nerr)
       {
+        nerr--;
         g_test_skip ("Unable to estimate error.");
         continue;
       }
@@ -1374,13 +1381,14 @@ test_ncm_diff_rc_d2_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       const gdouble Adf = g_array_index (Adf_a, gdouble, j);
       const gdouble err = g_array_index (err_a, gdouble, j);
 
-      if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+      /*printf ("[%2u %2d] % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", j, nerr, x, Adf, df, df / Adf - 1.0, err);*/
+      if (((err == 0.0) || gsl_isnan (err)) && nerr)
       {
+        nerr--;
         g_test_skip ("Unable to estimate error.");
         continue;
       }
 
-      /*printf ("[%u] % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", j, x, Adf, df, df / Adf - 1.0, err);*/
       ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
     }
     
@@ -1484,8 +1492,9 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
         
-        if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+        if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
+          nerr--;
           g_test_skip ("Unable to estimate error.");
           continue;
         }
@@ -1541,8 +1550,9 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
         
-        if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+        if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
+          nerr--;
           g_test_skip ("Unable to estimate error.");
           continue;
         }
@@ -1663,8 +1673,9 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
 
-        if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+        if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
+          nerr--;
           g_test_skip ("Unable to estimate error.");
           continue;
         }
@@ -1721,8 +1732,9 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
         
-        if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+        if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
+          nerr--;
           g_test_skip ("Unable to estimate error.");
           continue;
         }
@@ -1779,8 +1791,9 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
         
-        if (nerr-- && ((err == 0.0) || !gsl_finite (err)))
+        if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
+          nerr--;
           g_test_skip ("Unable to estimate error.");
           continue;
         }

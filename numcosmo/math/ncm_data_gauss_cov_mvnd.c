@@ -318,6 +318,7 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
   gulong NNin = (Nin != NULL) ? *Nin : 0;
   gdouble ratio;
   gulong maxiter = 100000000;
+  glong miniter  = MIN (10000, (glong)(1.0 / reltol));
 
   while (TRUE)
   {
@@ -332,7 +333,7 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
     ratio   = NNin * 1.0 / (1.0 * NN);
     err_rel = sqrt ((1.0 - ratio) / (NN * ratio));
 
-    if (err_rel < reltol)
+    if ((miniter < NN) && (err_rel < reltol))
       break;
 
     if (NNin > maxiter)

@@ -113,6 +113,8 @@ test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
   NcmMSetCatalog *mcat;
   
+  /*ncm_model_param_set_lower_bound (NCM_MODEL (model_mvnd), 0, 0.0);*/
+
   ncm_mset_param_set_vector (mset, NCM_DATA_GAUSS_COV (data_mvnd)->y);
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
@@ -241,14 +243,14 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmData *data = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 10;
   gdouble ratio, lnnorm_sd;
   gulong N, Nin;
   gint i;
   
   N     = Nin = 0;
   ratio = 0.0;
-  
+
   for (i = 0; i < nt; i++)
   {
     gdouble m2lnL = 0.0;
@@ -272,14 +274,15 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     
     ratio   = i * 1.0 / (1.0 * N);
     err_rel = sqrt ((1.0 - ratio) / (N * ratio));
-    
+
     if (err_rel < 1.0e-3)
       break;
   }
-  
-  /*printf ("<% 22.15g % 22.15g % 22.15e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (ratio), expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (ratio)), test->dim);*/
+
+  ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd);
   
   ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
+
 }
 
 void
@@ -288,14 +291,14 @@ test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata
   NcmData *data = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 100;
   gdouble ratio, lnnorm_sd;
   gulong N, Nin;
   gulong i;
   
   for (i = 0; i < test->dim; i++)
   {
-    ncm_model_param_set_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i, ncm_model_param_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i) * 1.05);
+    ncm_model_param_set_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i, ncm_model_param_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), i) * 1.01);
   }
   
   N     = Nin = 0;
@@ -325,7 +328,7 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 10;
   gdouble norma        = 1.0;
   gdouble lnnorm_sd;
   gulong i;

@@ -450,9 +450,9 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
       
-      /*do {*/
-      ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
-      /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
+      do {
+        ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
+      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
     }
   }
   
@@ -494,9 +494,9 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
       
-      /*do {*/
-      ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
-      /*} while (!ncm_mset_fparam_validate_all (mset, thetastar_i));*/
+      do {
+        ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
+      } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
     }
   }
 }

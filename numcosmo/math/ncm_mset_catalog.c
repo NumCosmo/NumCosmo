@@ -3302,7 +3302,7 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
   NcmStatsVec *slnnorm        = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
   gdouble s                   = 0.0;
   gdouble c                   = 0.0;
-  guint slice_min             = 1000;
+  guint slice_min             = 100;
   guint slice_div             = 100000;
   guint slice_size            = cat_len;
   guint slice_res             = 0;
@@ -3314,7 +3314,7 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
   {
     slice_div = slice_div / 10;
     
-    if (slice_div == 0)
+    if (slice_div <= 1)
     {
       slice_size = cat_len;
       slice_res  = 0;
@@ -3328,7 +3328,7 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
       nslices    = slice_div;
     }
   }
-  
+
   w = 0;
   
   for (j = 0; j < nslices; j++)
@@ -3363,20 +3363,21 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
     
     ncm_stats_vec_set (slnnorm, 0, (s + c) / (slice_size1));
     ncm_stats_vec_set (slnnorm, 1, -(log ((s + c) / (slice_size1)) - lnNorma + 0.5 * self->bestfit));
-    
+
     ncm_stats_vec_update_weight (slnnorm, slice_size1);
     
     w += slice_size1;
-    
-    /*
-     *  printf ("# SL LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n",
-     *       - (log ((s + c) / slice_size1) - lnNorma + 0.5 * self->bestfit),
-     *       - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
-     *       ncm_stats_vec_get_mean (slnnorm, 1),
-     *       ncm_stats_vec_get_sd (slnnorm, 1),
-     *       ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
-     *       );
-     */
+/*
+
+    printf ("# SL LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n",
+        - (log ((s + c) / slice_size1) - lnNorma + 0.5 * self->bestfit),
+        - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
+        ncm_stats_vec_get_mean (slnnorm, 1),
+        ncm_stats_vec_get_sd (slnnorm, 1),
+        ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
+    );
+*/
+
   }
   
   lnnorm_sd[0] = ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (1.0 * nslices);
@@ -3453,19 +3454,25 @@ _ncm_mset_catalog_get_post_lnnorm_sum_bs (NcmMSetCatalog *mcat, NcmVector *mean,
     
     ncm_stats_vec_update (slnnorm);
     
-    /*
-     *  printf ("# BS LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n",
-     *       - (log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit),
-     *       - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
-     *       ncm_stats_vec_get_mean (slnnorm, 1),
-     *       ncm_stats_vec_get_sd (slnnorm, 1),
-     *       ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
-     *       );
-     */
+
+    printf ("# BS LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n",
+        - (log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit),
+        - (log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
+        ncm_stats_vec_get_mean (slnnorm, 1),
+        ncm_stats_vec_get_sd (slnnorm, 1),
+        ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
+    );
+
+
     g_array_unref (bs_array);
-    
-    if ((j > 10) && (ncm_stats_vec_get_sd (slnnorm, 0) / sqrt (j + 1.0) < reltol))
-      break;
+    if (j > 10)
+    {
+      const gdouble lnnorm_mean    = ncm_stats_vec_get_sd (slnnorm, 0);
+      const gdouble lnnorm_mean_sd = ncm_stats_vec_get_sd (slnnorm, 0) / sqrt (j + 1.0);
+
+      if (lnnorm_mean_sd / lnnorm_mean < reltol)
+        break;
+    }
   }
   
   lnnorm_sd[0] = ncm_stats_vec_get_sd (slnnorm, 1);
@@ -3512,7 +3519,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
     ncm_model_mvnd_clear (&model_mvnd);
     ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
   }
-  
+
   ret = ncm_matrix_cholesky_decomp (cov, 'U');
   
   if (ret != 0)
