@@ -1184,7 +1184,9 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 gdouble *
 ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 {
-  fftw_complex *Ym_0 = g_ptr_array_index (fftlog->Ym, 0);
+  NcmFftlogPrivate * const self = fftlog->priv;
+
+  fftw_complex *Ym_0 = g_ptr_array_index (self->Ym, 0);
   
   NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
   
