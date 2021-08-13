@@ -53,6 +53,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
+#include "math/ncm_powspec_sphere_proj.h"
 #include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
@@ -71,6 +72,8 @@
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_fftlog_sbessel_j.h"
+#include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -492,6 +495,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
   
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
@@ -507,7 +511,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
   
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_DATA);
   ncm_cfg_register_obj (NCM_TYPE_DATASET);
   
@@ -518,9 +522,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 #ifdef NUMCOSMO_HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 #endif /* NUMCOSMO_HAVE_NLOPT */
+
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
   
+  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
+  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
+
   ncm_cfg_register_obj (NCM_TYPE_DATA);
   
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
@@ -567,13 +575,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_DK14);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
-  
+
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
@@ -592,7 +600,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS);
-
+  
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
@@ -1288,7 +1296,7 @@ ncm_cfg_msg_sepa (void)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
@@ -1361,7 +1369,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
             if ((g_ascii_strcasecmp (val, "1") == 0) ||
                 (g_ascii_strcasecmp (val, "true") == 0))
               argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-            
+
             g_free (val);
           }
           else if (strlen (val) > 0)
@@ -1780,7 +1788,7 @@ ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-  
+
   g_free (file);
   g_free (full_filename);
   
@@ -1812,7 +1820,7 @@ ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
   
   if (F == NULL)
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-  
+
   g_free (file);
   g_free (full_filename);
   

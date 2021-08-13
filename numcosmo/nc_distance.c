@@ -101,7 +101,7 @@
  * D_t(z_1, z_2) &= \frac{\sinh\left\\{\sqrt{\Omega_{k0}}\left[D_c(z_2)-D_c(z_1)\right]\right\\}}{\sqrt{\Omega_{k0}}}, \\\\ \label{eq:def:DA12}
  * D_A(z_1, z_2) &= D_t (z_1, z_2) / (1 + z_2).
  * \end{align}
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -127,6 +127,7 @@ enum
   PROP_0,
   PROP_ZF,
   PROP_RECOMB,
+  PROP_INV_COMOVING,
   PROP_SIZE,
 };
 
@@ -144,9 +145,11 @@ nc_distance_init (NcDistance *dist)
   dist->lookback_time_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->conformal_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   
-  dist->sound_horizon_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->sound_horizon_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   
   dist->comoving_distance_spline = NULL;
+  dist->inv_comoving_dist        = NULL;
+  dist->cpu_inv_comoving         = FALSE;
   
   dist->recomb = NULL;
   
@@ -171,6 +174,9 @@ _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_RECOMB:
       nc_distance_set_recomb (dist, g_value_get_object (value));
       break;
+    case PROP_INV_COMOVING:
+      nc_distance_compute_inv_comoving (dist, g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -191,6 +197,9 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
       break;
     case PROP_RECOMB:
       g_value_set_object (value, dist->recomb);
+      break;
+    case PROP_INV_COMOVING:
+      g_value_set_boolean (value, dist->cpu_inv_comoving);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -220,6 +229,7 @@ _nc_distance_dispose (GObject *object)
   ncm_function_cache_clear (&dist->sound_horizon_cache);
   
   ncm_ode_spline_clear (&dist->comoving_distance_spline);
+  ncm_spline_clear (&dist->inv_comoving_dist);
   
   ncm_model_ctrl_clear (&dist->ctrl);
   
@@ -274,6 +284,13 @@ nc_distance_class_init (NcDistanceClass *klass)
                                                         "Recombination object",
                                                         NC_TYPE_RECOMB,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INV_COMOVING,
+                                   g_param_spec_boolean ("compute-inv-comoving",
+                                                         NULL,
+                                                         "Whether to compute the inverse comoving function",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -295,7 +312,7 @@ nc_distance_new (gdouble zf)
  * nc_distance_ref:
  * @dist: a #NcDistance
  *
- * Increases the reference count of @dist atomically. 
+ * Increases the reference count of @dist atomically.
  *
  * Returns: (transfer full): @dist.
  */
@@ -309,7 +326,7 @@ nc_distance_ref (NcDistance *dist)
  * nc_distance_free:
  * @dist: a #NcDistance
  *
- * Atomically decrements the reference count of @dist by one. 
+ * Atomically decrements the reference count of @dist by one.
  * If the reference count drops to 0, all memory allocated by @dist is released.
  *
  */
@@ -323,8 +340,8 @@ nc_distance_free (NcDistance *dist)
  * nc_distance_clear:
  * @dist: a #NcDistance
  *
- * Atomically decrements the reference count of @dist by one. 
- * If the reference count drops to 0, all memory allocated by @dist is released. 
+ * Atomically decrements the reference count of @dist by one.
+ * If the reference count drops to 0, all memory allocated by @dist is released.
  * Set pointer to NULL.
  *
  */
@@ -371,7 +388,24 @@ nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb)
     
     if (recomb != NULL)
       dist->recomb = nc_recomb_ref (recomb);
+    
+    ncm_model_ctrl_force_update (dist->ctrl);
+  }
+}
 
+/**
+ * nc_distance_compute_inv_comoving:
+ * @dist: a #NcDistance
+ * @cpu_inv_xi: whether to compute the inverse function $z(\xi)$
+ *
+ * Enable/Disable the computation of $z(\xi)$
+ */
+void
+nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi)
+{
+  if ((dist->cpu_inv_comoving && !cpu_inv_xi) || (!dist->cpu_inv_comoving && cpu_inv_xi))
+  {
+    dist->cpu_inv_comoving = cpu_inv_xi;
     ncm_model_ctrl_force_update (dist->ctrl);
   }
 }
@@ -417,6 +451,21 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
+  }
+  
+  if (dist->cpu_inv_comoving)
+  {
+    NcmSpline *s      = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+    NcmVector *z_vec  = ncm_spline_get_xv (s);
+    NcmVector *xi_vec = ncm_spline_get_yv (s);
+    
+    ncm_spline_clear (&dist->inv_comoving_dist);
+    dist->inv_comoving_dist = ncm_spline_copy_empty (s);
+    
+    ncm_spline_set (dist->inv_comoving_dist, xi_vec, z_vec, TRUE);
+    
+    ncm_vector_free (z_vec);
+    ncm_vector_free (xi_vec);
   }
   
   if (dist->recomb != NULL)
@@ -1314,6 +1363,24 @@ nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const 
     return comoving_dist;
   
   return _nc_distance_sinn (comoving_dist, Omega_k0);
+}
+
+/**
+ * nc_distance_inv_comoving:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @xi: the comoving distance $\xi$
+ *
+ * Computes the inverse of $\xi(z)$.
+ *
+ * Returns: $z(\xi)$
+ */
+gdouble
+nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
+{
+  g_assert (dist->cpu_inv_comoving);
+  
+  return ncm_spline_eval (dist->inv_comoving_dist, xi);
 }
 
 /***************************************************************************

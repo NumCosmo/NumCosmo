@@ -70,6 +70,7 @@
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
 #include <numcosmo/math/ncm_powspec.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
+#include <numcosmo/math/ncm_powspec_sphere_proj.h>
 #include <numcosmo/math/ncm_powspec_corr3d.h>
 #include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
@@ -84,6 +85,7 @@
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
 #include <numcosmo/math/ncm_fftlog_sbessel_j.h>
+#include <numcosmo/math/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/math/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/math/ncm_fftlog_gausswin2.h>
 #include <numcosmo/math/ncm_sparam.h>
