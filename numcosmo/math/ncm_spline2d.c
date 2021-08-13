@@ -5,6 +5,7 @@
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
  *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <sandro@isoftware.com.br>
@@ -26,10 +27,12 @@
  * SECTION:ncm_spline2d
  * @title: NcmSpline2d
  * @short_description: Abstract class for implementing bidimensional splines.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline2d.h
  *
  * This class comprises all functions to provide a #NcmSpline2d, get its properties
  * and evaluate it given an interpolation method.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -75,8 +78,9 @@ static void
 _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
+  
   g_return_if_fail (NCM_IS_SPLINE2D (object));
-
+  
   switch (prop_id)
   {
     case PROP_SPLINE:
@@ -97,10 +101,10 @@ _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_INIT:
     {
       s2d->to_init = g_value_get_boolean (value);
+      
       if (s2d->to_init && (s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
-      {
         ncm_spline2d_prepare (s2d);
-      }
+
       break;
     }
     case PROP_USE_ACC:
@@ -116,8 +120,9 @@ static void
 _ncm_spline2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
+  
   g_return_if_fail (NCM_IS_SPLINE2D (object));
-
+  
   switch (prop_id)
   {
     case PROP_SPLINE:
@@ -148,14 +153,14 @@ static void
 ncm_spline2d_dispose (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-
+  
   ncm_vector_clear (&s2d->xv);
   ncm_vector_clear (&s2d->yv);
   ncm_matrix_clear (&s2d->zm);
   ncm_spline_clear (&s2d->s);
-
+  
   s2d->empty = TRUE;
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_parent_class)->dispose (object);
 }
@@ -164,7 +169,7 @@ static void
 ncm_spline2d_finalize (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-
+  
   g_clear_pointer (&s2d->acc_x, gsl_interp_accel_free);
   g_clear_pointer (&s2d->acc_y, gsl_interp_accel_free);
   
@@ -175,13 +180,13 @@ ncm_spline2d_finalize (GObject *object)
 static void
 ncm_spline2d_class_init (NcmSpline2dClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  
   object_class->set_property = &_ncm_spline2d_set_property;
   object_class->get_property = &_ncm_spline2d_get_property;
   object_class->dispose      = &ncm_spline2d_dispose;
   object_class->finalize     = &ncm_spline2d_finalize;
-
+  
   klass->copy_empty    = NULL;
   klass->reset         = NULL;
   klass->prepare       = NULL;
@@ -196,7 +201,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   klass->int_dxdy      = NULL;
   klass->int_dx_spline = NULL;
   klass->int_dy_spline = NULL;
-
+  
   /**
    * NcmSpline2d:spline:
    *
@@ -209,10 +214,11 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "Spline",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcmSpline2d:xv:
    *
-   * #NcmVector x-knots
+   * #NcmVector x-knots.
    */
   g_object_class_install_property (object_class,
                                    PROP_XV,
@@ -221,10 +227,11 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "x vector",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcmSpline2d:yv:
    *
-   * #NcmVector y-knots
+   * #NcmVector y-knots.
    */
   g_object_class_install_property (object_class,
                                    PROP_YV,
@@ -233,10 +240,11 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "y vector",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcmSpline2d:zm:
    *
-   * #NcmMatrix z-values
+   * #NcmMatrix z-values.
    */
   g_object_class_install_property (object_class,
                                    PROP_ZM,
@@ -245,10 +253,11 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "z matrix",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   /**
    * NcmSpline2d:init:
    *
-   * boolean whether to prepare the NcmSpline2d
+   * boolean whether to prepare the NcmSpline2d.
    */
   g_object_class_install_property (object_class,
                                    PROP_INIT,
@@ -261,7 +270,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   /**
    * NcmSpline2d:use_acc:
    *
-   * boolean whether to use acc 
+   * boolean whether to use acc.
    */
   g_object_class_install_property (object_class,
                                    PROP_USE_ACC,
@@ -281,25 +290,26 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
     g_assert_cmpuint (ncm_vector_len (s2d->yv), ==, ncm_matrix_col_len (s2d->zm));
     g_assert_cmpuint (ncm_vector_len (s2d->xv), >=, ncm_spline2d_min_size (s2d));
     g_assert_cmpuint (ncm_vector_len (s2d->yv), >=, ncm_spline2d_min_size (s2d));
-
+    
     s2d->empty = FALSE;
-
+    
     if ((ncm_vector_stride (s2d->xv) == 1) && (ncm_vector_stride (s2d->yv) == 1))
       s2d->no_stride = TRUE;
     else
       s2d->no_stride = FALSE;
-
+    
     if (s2d->use_acc && !s2d->no_stride)
     {
       g_warning ("_ncm_spline2d_makeup: use-acc true but strided knots vectors, disabling use-add.");
       s2d->use_acc = FALSE;
     }
-
+    
     NCM_SPLINE2D_GET_CLASS (s2d)->reset (s2d);
-
+    
     if (s2d->to_init)
       ncm_spline2d_prepare (s2d);
   }
+  
   return;
 }
 
@@ -311,26 +321,27 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
  * @zm: a #NcmMatrix of the values of the function, to be interpolated, computed at @xv and @yv
  * @init: TRUE to prepare the #NcmSpline2d or FALSE to not prepare it
  *
- * This funtion sets @xv and @yv vectors and @zm matrix to @s.
+ * This funtion sets @xv and @yv vectors and @zm matrix to @s2d.
  *
  */
 void
 ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init)
 {
   g_assert ((xv != NULL) && (yv != NULL) && (zm != NULL));
-
+  
   s2d->xv = ncm_vector_ref (xv);
   s2d->yv = ncm_vector_ref (yv);
   s2d->zm = ncm_matrix_ref (zm);
-
+  
   s2d->to_init = init;
   _ncm_spline2d_makeup (s2d);
+  
   return;
 }
 
 /**
  * ncm_spline2d_copy_empty:
- * @s2d: a #NcmSpline2d.
+ * @s2d: a #NcmSpline2d
  *
  * This function copies the bidimensional spline @s2d into an initialized
  * empty #NcmSpline2d of a specific type.
@@ -356,19 +367,18 @@ NcmSpline2d *
 ncm_spline2d_copy (NcmSpline2d *s2d)
 {
   NcmSpline2d *new_s2d = ncm_spline2d_copy_empty (s2d);
+  
   if (!s2d->empty)
-  {
     ncm_spline2d_set (new_s2d,
                       ncm_vector_dup (s2d->xv),
                       ncm_vector_dup (s2d->yv),
                       ncm_matrix_dup (s2d->zm),
                       s2d->init
-                      );
-  }
+                     );
 
+  
   return new_s2d;
 }
-
 
 /**
  * ncm_spline2d_new:
@@ -388,7 +398,9 @@ NcmSpline2d *
 ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init)
 {
   NcmSpline2d *s2d_new = ncm_spline2d_copy_empty (s2d);
+  
   ncm_spline2d_set (s2d_new, xv, yv, zm, init);
+  
   return s2d_new;
 }
 
@@ -411,7 +423,8 @@ ncm_spline2d_min_size (NcmSpline2d *s2d)
  * This function prepares the bidimensional spline @s2d such that one can evaluate it (#ncm_spline2d_eval),
  * as well as to compute its integration in x, y or both directions.
  */
-void ncm_spline2d_prepare (NcmSpline2d *s2d)
+void
+ncm_spline2d_prepare (NcmSpline2d *s2d)
 {
   NCM_SPLINE2D_GET_CLASS (s2d)->prepare (s2d);
 }
@@ -446,16 +459,17 @@ ncm_spline2d_clear (NcmSpline2d **s2d)
  * ncm_spline2d_use_acc:
  * @s2d: a #NcmSpline2d
  * @use_acc: a boolean
- * 
+ *
  * Whether to use accelerated bsearch to find the
- * right knots. When enabled evalulation functions
+ * right knots. When enabled evaluation functions
  * are not reentrant.
- * 
+ *
  */
-void 
+void
 ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc)
 {
   s2d->use_acc = use_acc;
+  
   if ((s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
   {
     if (s2d->use_acc && !s2d->no_stride)
@@ -483,6 +497,7 @@ ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dx (s2d, xl, xu, y);
 }
 
@@ -503,6 +518,7 @@ ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dy (s2d, x, yl, yu);
 }
 
@@ -524,6 +540,7 @@ ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, g
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dxdy (s2d, xl, xu, yl, yu);
 }
 
@@ -542,8 +559,10 @@ NcmSpline *
 ncm_spline2d_integ_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 {
   g_assert (!s2d->empty);
+  
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu));
 }
 
@@ -563,6 +582,7 @@ ncm_spline2d_integ_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu));
 }
 
@@ -583,6 +603,7 @@ ncm_spline2d_integ_dx_spline_val (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), y);
 }
 
@@ -603,6 +624,7 @@ ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble yl, gdoub
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), x);
 }
 
@@ -624,6 +646,7 @@ ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), yl, yu);
 }
 
@@ -645,6 +668,7 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
 {
   if (!s2d->init)
     ncm_spline2d_prepare (s2d);
+  
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), xl, xu);
 }
 
@@ -657,51 +681,56 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  *
  * Returns: The interpolated value of a function computed at the point (@x, @y).
  */
+
 /**
  * ncm_spline2d_deriv_dzdx: (virtual dzdx)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: y-coordinate value
- * 
+ *
  * Returns: The interpolated derivative $\mathrm{d}z/\mathrm{d}x$ computed at the point (@x, @y).
  */
+
 /**
  * ncm_spline2d_deriv_dzdy: (virtual dzdy)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: y-coordinate value
- * 
+ *
  * Returns: The interpolated derivative $\mathrm{d}z/\mathrm{d}y$ computed at the point (@x, @y).
  */
+
 /**
  * ncm_spline2d_deriv_d2zdxy: (virtual d2zdxy)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: y-coordinate value
- * 
+ *
  * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}x\mathrm{d}y$ computed at the point (@x, @y).
  */
+
 /**
  * ncm_spline2d_deriv_d2zdx2: (virtual d2zdx2)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: y-coordinate value
- * 
+ *
  * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}x^2$ computed at the point (@x, @y).
  */
+
 /**
  * ncm_spline2d_deriv_d2zdy2: (virtual d2zdy2)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: y-coordinate value
- * 
+ *
  * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}y^2$ computed at the point (@x, @y).
  */
 
 /**
  * ncm_spline2dim_integ_total:
  * @s2d: a #NcmSpline2d
- * 
+ *
  * Returns: The numerical integral in both x and y directions of an interpolated function
  * over the entire valid ranges of x and y coordinates.
  */
@@ -728,10 +757,10 @@ typedef struct __NcFunction2D_args
  * @yl: lower knot of y-coordinate
  * @yu: upper knot of y-coordinate
  * @rel_err: relative error between the function to be interpolated and the spline result
- * 
+ *
  * This function automatically determines the knots of @s2d in the intervals [@xl, @xu] and
  * [@yl, @yu] given a @ftype and @rel_error.
- * 
+ *
  * The functions @Fx and @Fy are the bidimensional function given at specific values of y and x, respectively.
  * These x and y values must be in the the intervals [@xl, @xu] and [@yl, @yu].
  */
@@ -740,24 +769,25 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
 {
   NcmSpline *s_x = ncm_spline_copy_empty (s2d->s);
   NcmSpline *s_y = ncm_spline_copy_empty (s2d->s);
-
+  
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
-
+  
 /*
-  printf ("x % 22.15g % 22.15g %u | y % 22.15g % 22.15g %u\n", xl, xu, ncm_vector_len (s_y->xv), yl, yu, ncm_vector_len (s_x->xv));
-  ncm_vector_log_vals (s_y->xv, "XV", "% 22.15g", TRUE);
-  ncm_vector_log_vals (s_x->xv, "XV", "% 22.15g", TRUE);
-*/  
+ *  printf ("x % 22.15g % 22.15g %u | y % 22.15g % 22.15g %u\n", xl, xu, ncm_vector_len (s_y->xv), yl, yu, ncm_vector_len (s_x->xv));
+ *  ncm_vector_log_vals (s_y->xv, "XV", "% 22.15g", TRUE);
+ *  ncm_vector_log_vals (s_x->xv, "XV", "% 22.15g", TRUE);
+ */
   {
     NcmMatrix *s_z = ncm_matrix_new (ncm_vector_len (s_y->xv), ncm_vector_len (s_x->xv));
+    
     ncm_spline2d_set (s2d, s_x->xv, s_y->xv, s_z, FALSE);
     ncm_matrix_free (s_z);
   }
   
   ncm_spline_free (s_x);
   ncm_spline_free (s_y);
-
+  
   return;
 }
 

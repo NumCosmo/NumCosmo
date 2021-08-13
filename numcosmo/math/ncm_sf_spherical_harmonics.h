@@ -695,7 +695,12 @@ ncm_sf_spherical_harmonics_Y_array_reset (NcmSFSphericalHarmonicsYArray *sphaYa,
 NCM_INLINE void 
 ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsY *sphaY, const gdouble theta)
 {
+#ifdef _GNU_SOURCE
 	sincos (theta, &sphaY->sqrt1mx2, &sphaY->x);
+#else
+	sphaY->sqrt1mx2 = sin (theta);
+	sphaY->x        = cos (theta);
+#endif /* _GNU_SOURCE */
 	
 	sphaY->l      = 0;
 	sphaY->l0     = 0;
@@ -721,7 +726,12 @@ ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHarmonics *spha, NcmSF
 
 	for (i = 0; i < len; i++)
 	{
+#ifdef _GNU_SOURCE
 		sincos (theta[i], &sphaYa->sqrt1mx2[i], &sphaYa->x[i]);
+#else
+		sphaYa->sqrt1mx2[i] = sin (theta[i]);
+		sphaYa->x[i]        = cos (theta[i]);
+#endif /* _GNU_SOURCE */
 
 		sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)] = ncm_c_sqrt_1_4pi () / NCM_SF_SPHERICAL_HARMONICS_EPS;
 		sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len)] = sphaYa->x[i] * _SN (2 * sphaYa->l + 3) * sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)];

@@ -5,6 +5,7 @@
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
@@ -54,6 +55,7 @@ struct _NcmFftlogClass
   /*< private >*/
   GObjectClass parent_class;
   const gchar *name;
+  
   void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
 };
 
@@ -69,10 +71,10 @@ struct _NcmFftlog
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;
 
 NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog);
+
 void ncm_fftlog_free (NcmFftlog *fftlog);
 void ncm_fftlog_clear (NcmFftlog **fftlog);
 
-void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
 const gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
 
 void ncm_fftlog_reset (NcmFftlog *fftlog);
@@ -105,6 +107,8 @@ void ncm_fftlog_set_eval_r_min (NcmFftlog *fftlog, const gdouble eval_r_min);
 void ncm_fftlog_set_eval_r_max (NcmFftlog *fftlog, const gdouble eval_r_max);
 gdouble ncm_fftlog_get_eval_r_min (NcmFftlog *fftlog);
 gdouble ncm_fftlog_get_eval_r_max (NcmFftlog *fftlog);
+
+gdouble *ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size);
 
 void ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk);
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
@@ -150,3 +154,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_FFTLOG_INLINE_H_ */
+

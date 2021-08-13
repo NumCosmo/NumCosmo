@@ -27,6 +27,8 @@
  * SECTION:ncm_powspec
  * @title: NcmPowspec
  * @short_description: Abstrac class for power spectrum implementation.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_powspec.h
  *
  * This module comprises the set of functions to compute a power spectrum and
  * derived quantities.
@@ -94,7 +96,6 @@ _ncm_powspec_dispose (GObject *object)
 static void
 _ncm_powspec_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_parent_class)->finalize (object);
 }
@@ -103,6 +104,7 @@ static void
 _ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
+  
   g_return_if_fail (NCM_IS_POWSPEC (object));
 
   switch (prop_id)
@@ -129,6 +131,7 @@ static void
 _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
+  
   g_return_if_fail (NCM_IS_POWSPEC (object));
 
   switch (prop_id)
@@ -151,8 +154,20 @@ _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParam
   }
 }
 
-static void _ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model) { g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it."); } 
-static gdouble _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k) { g_error ("_ncm_powspec_eval: no default implementation, all children must implement it."); return 0.0; }
+static void
+_ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
+{
+  g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it.");
+}
+
+static gdouble
+_ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  g_error ("_ncm_powspec_eval: no default implementation, all children must implement it.");
+  
+  return 0.0;
+}
+
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
 static void
@@ -166,6 +181,11 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   object_class->dispose      = &_ncm_powspec_dispose;
   object_class->finalize     = &_ncm_powspec_finalize;
 
+  /**
+   * NcmPowspec:zi:
+   *
+   * The initial time (redshift) to compute $P(k,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
@@ -174,6 +194,11 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPowspec:zf:
+   *
+   * The final time (redshift) to compute $P(k,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZF, 
                                    g_param_spec_double ("zf",
@@ -182,6 +207,11 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPowspec:kmin:
+   *
+   * The minimum mode (wavenumber) value to compute $P(k,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_KMIN,
                                    g_param_spec_double ("kmin",
@@ -190,6 +220,11 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0e-5,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPowspec:kmax:
+   *
+   * The maximum mode (wavenumber) value to compute $P(k,z)$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_KMAX,
                                    g_param_spec_double ("kmax",
@@ -208,12 +243,15 @@ _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Nc
 { 
   const guint len = ncm_vector_len (k);
   guint i;
+  
   for (i = 0; i < len; i++)
   {
     const gdouble ki  = ncm_vector_get (k, i);
     const gdouble Pki = ncm_powspec_eval (powspec, model, z, ki);
+    
     ncm_vector_set (Pk, i, Pki);
   }
+  
   return;
 }
 
@@ -221,7 +259,7 @@ _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Nc
  * ncm_powspec_ref:
  * @powspec: a #NcmPowspec
  *
- * Increases the reference count of @powspec by one.
+ * Increases the reference count of @powspec by one atomically.
  *
  * Returns: (transfer full): @powspec.
  */
@@ -235,7 +273,9 @@ ncm_powspec_ref (NcmPowspec *powspec)
  * ncm_powspec_free:
  * @powspec: a #NcmPowspec
  *
- * Decreases the reference count of @powspec by one.
+ * Atomically decrements the reference count of @powspec by one.
+ * If the reference count drops to 0,
+ * all memory allocated by @powspec is released.
  *
  */
 void 
@@ -248,8 +288,10 @@ ncm_powspec_free (NcmPowspec *powspec)
  * ncm_powspec_clear:
  * @powspec: a #NcmPowspec
  *
- * If @powspec is different from NULL, decreases the reference count of 
- * @powspec by one and sets @powspec to NULL.
+ * If @powspec is different from NULL,
+ * atomically decrements the reference count of @powspec by one.
+ * If the reference count drops to 0,
+ * all memory allocated by @powspec is released and @powspec is set to NULL.
  *
  */
 void 
@@ -416,7 +458,6 @@ ncm_powspec_get_zf (NcmPowspec *powspec)
   return powspec->zf;
 }
 
-
 /**
  * ncm_powspec_get_kmin:
  * @powspec: a #NcmPowspec
@@ -532,8 +573,16 @@ _ncm_powspec_var_tophat_R_integ (gdouble lnk, gpointer user_data)
  * @z: the value of $z$
  * @R: the value of $R$
  * 
- * Computes $\mathrm{Var}^\mathrm{tophat}_R = \int\dots$. FIXME
+ * This function computes the value of the linearly extrapolated
+ * rms fluctuations of mass in a sphere of radius $R$ applying a top-hat filter at redshift $z$,
+ * $$\sigma_{R}^{2}(z) = \frac{1}{2\pi^2} \int_{k_{\mathrm{min}}}^{k_\mathrm{max}}  W^{2}_{TH}(kR) \, P(k,z) \, k^2 \, \mathrm{d}k \, .$$
+ * Where, $W_{TH}(t)$ is the top-hat filter in Fourier space,
+ * $$W_{TH}(t) = \frac{3}{t^3} \left( \sin t - t \cos t  \right) = \frac{3}{t} j_{1}(t),$$
+ * and $j_1(t)$ is the first order spherical Bessel function of the first kind.
+ * This function is recommended for a small set of $z$ and $R$ values.
+ * For a wide range of values it is best to apply #NcmPowspecFilter, instead.
  * 
+ * Returns: $\sigma_{R}^{2}(z)$.
  */
 gdouble 
 ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
@@ -568,8 +617,9 @@ ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol,
  * @z: the value of $z$
  * @R: the value of $R$
  * 
- * Computes $\sigma^\mathrm{tophat}_R = \sqrt{\int\dots}$. FIXME
+ * Computes $\sigma_R(z) = \sqrt{\sigma_{R}^{2}(z)}$. See ncm_powspec_var_tophat_R().
  * 
+ * Returns: $\sigma_R(z)$.
  */
 gdouble 
 ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
@@ -597,8 +647,13 @@ _ncm_powspec_corr3D_integ (gdouble lnk, gpointer user_data)
  * @z: the value of $z$
  * @r: the value of $r$
  * 
- * Computes $\xi(r) = \int\dots$. FIXME
+ * Computes the spatial correlation function in configuration space at redshift $z$ and position $r$,
+ * $$\xi(r,z) = \frac{1}{2\pi^2} \int_{k_{\mathrm{min}}}^{k_\mathrm{max}} P(k,z) \, j_{0}(kr) \, k^2 \, \mathrm{d}k \, ,$$
+ * where, $j_0(t)$ is the zero order spherical Bessel function of the first kind.
+ * This function is recommended for a small set of $r$ and $z$ values.
+ * For a wide range of values it is best to apply #NcmPowspecCorr3d, instead.
  * 
+ * Returns: $\xi(r,z)$.
  */
 gdouble 
 ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)

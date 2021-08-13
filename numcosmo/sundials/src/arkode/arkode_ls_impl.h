@@ -34,7 +34,7 @@ extern "C" {
                on the nonlinear iteration is multiplied to get
                a tolerance on the linear iteration
   ---------------------------------------------------------------*/
-#define ARKLS_MSBJ   50
+#define ARKLS_MSBJ   51
 #define ARKLS_EPLIN  RCONST(0.05)
 
 
@@ -45,15 +45,22 @@ extern "C" {
   ---------------------------------------------------------------*/
 typedef struct ARKLsMemRec {
 
+  /* Linear solver type information */
+  booleantype iterative;    /* is the solver iterative?    */
+  booleantype matrixbased;  /* is a matrix structure used? */
+
   /* Jacobian construction & storage */
   booleantype jacDQ;  /* SUNTRUE if using internal DQ Jacobian approx. */
   ARKLsJacFn jac;     /* Jacobian routine to be called                 */
   void *J_data;       /* user data is passed to jac                    */
   booleantype jbad;   /* heuristic suggestion for pset                 */
 
+  /* Matrix-based solver, scale solution to account for change in gamma */
+  booleantype scalesol;
+
   /* Iterative solver tolerance */
-  realtype sqrtN;     /* sqrt(N)                                       */
   realtype eplifac;   /* nonlinear -> linear tol scaling factor        */
+  realtype nrmfac;    /* integrator -> LS norm conversion factor       */
 
   /* Linear solver, matrix and vector objects/pointers */
   SUNLinearSolver LS; /* generic linear solver object                  */
@@ -100,7 +107,9 @@ typedef struct ARKLsMemRec {
   booleantype jtimesDQ;
   ARKLsJacTimesSetupFn jtsetup;
   ARKLsJacTimesVecFn jtimes;
+  ARKRhsFn Jt_f;
   void *Jt_data;
+
 
   /* Linear system setup function
    * (a) user-provided linsys function:
@@ -125,6 +134,10 @@ typedef struct ARKLsMemRec {
   ---------------------------------------------------------------*/
 typedef struct ARKLsMassMemRec {
 
+  /* Linear solver type information */
+  booleantype iterative;    /* is the solver iterative?    */
+  booleantype matrixbased;  /* is a matrix structure used? */
+
   /* Mass matrix construction & storage */
   ARKLsMassFn mass;   /* user-provided mass matrix routine to call   */
   SUNMatrix M;        /* mass matrix structure                       */
@@ -132,20 +145,21 @@ typedef struct ARKLsMassMemRec {
   void* M_data;       /* user data pointer */
 
   /* Iterative solver tolerance */
-  realtype sqrtN;     /* sqrt(N)                                     */
   realtype eplifac;   /* nonlinear -> linear tol scaling factor      */
+  realtype nrmfac;    /* integrator -> LS norm conversion factor     */
 
   /* Statistics and associated parameters */
   booleantype time_dependent;  /* flag whether M depends on t        */
-  long int nmsetups;  /* total number of mass matrix-solver setups   */
-  long int nmsolves;  /* total number of mass matrix-solver solves   */
-  long int nmtsetup;  /* total number of calls to mtsetup            */
-  long int nmtimes;   /* total number of calls to mtimes             */
-  long int nmvsetup;  /* total number of calls to SUNMatMatvec setup */
-  long int npe;       /* total number of pset calls                  */
-  long int nli;       /* total number of linear iterations           */
-  long int nps;       /* total number of psolve calls                */
-  long int ncfl;      /* total number of convergence failures        */
+  realtype    msetuptime;      /* "t" value at last msetup call      */
+  long int    nmsetups;        /* total # mass matrix-solver setups  */
+  long int    nmsolves;        /* total # mass matrix-solver solves  */
+  long int    nmtsetup;        /* total # calls to mtsetup           */
+  long int    nmtimes;         /* total # calls to mtimes            */
+  long int    nmvsetup;        /* total # calls to matvec setup      */
+  long int    npe;             /* total # pset calls                 */
+  long int    nli;             /* total # linear iterations          */
+  long int    nps;             /* total # psolve calls               */
+  long int    ncfl;            /* total # convergence failures       */
 
   /* Linear solver, matrix and vector objects/pointers */
   SUNLinearSolver LS; /* generic linear solver object                */
@@ -222,7 +236,7 @@ int arkLsFree(void* arkode_mem);
 /* Generic minit/msetup/mmult/msolve/mfree routines for ARKode to call */
 int arkLsMassInitialize(void* arkode_mem);
 
-int arkLsMassSetup(void* arkode_mem, N_Vector vtemp1,
+int arkLsMassSetup(void* arkode_mem, realtype t, N_Vector vtemp1,
                    N_Vector vtemp2, N_Vector vtemp3);
 
 int arkLsMassMult(void* arkode_mem, N_Vector v, N_Vector Mv);
@@ -252,13 +266,17 @@ int arkLSSetJacFn(void* arkode_mem, ARKLsJacFn jac);
 int arkLSSetMassFn(void* arkode_mem, ARKLsMassFn mass);
 int arkLSSetEpsLin(void* arkode_mem, realtype eplifac);
 int arkLSSetMassEpsLin(void* arkode_mem, realtype eplifac);
-int arkLSSetMaxStepsBetweenJac(void* arkode_mem, long int msbj);
+int arkLSSetNormFactor(void* arkode_mem, realtype nrmfac);
+int arkLSSetMassNormFactor(void* arkode_mem, realtype nrmfac);
+int arkLSSetJacEvalFrequency(void* arkode_mem, long int msbj);
+int arkLSSetLinearSolutionScaling(void* arkode_mem, booleantype onoff);
 int arkLSSetPreconditioner(void* arkode_mem, ARKLsPrecSetupFn psetup,
                            ARKLsPrecSolveFn psolve);
 int arkLSSetMassPreconditioner(void* arkode_mem, ARKLsMassPrecSetupFn psetup,
                                ARKLsMassPrecSolveFn psolve);
 int arkLSSetJacTimes(void* arkode_mem, ARKLsJacTimesSetupFn jtsetup,
                      ARKLsJacTimesVecFn jtimes);
+int arkLSSetJacTimesRhsFn(void *arkode_mem, ARKRhsFn jtimesRhsFn);
 int arkLSSetMassTimes(void* arkode_mem, ARKLsMassTimesSetupFn msetup,
                       ARKLsMassTimesVecFn mtimes, void* mtimes_data);
 int arkLSSetLinSysFn(void* arkode_mem, ARKLsLinSysFn linsys);
@@ -288,6 +306,7 @@ int arkLSGetNumMassPrecSolves(void* arkode_mem, long int* nmpsolves);
 int arkLSGetNumMassIters(void* arkode_mem, long int* nmiters);
 int arkLSGetNumMassConvFails(void* arkode_mem, long int* nmcfails);
 int arkLSGetNumMTSetups(void* arkode_mem, long int* nmtsetups);
+int arkLSGetCurrentMassMatrix(void* arkode_mem, SUNMatrix *M);
 int arkLSGetLastMassFlag(void* arkode_mem, long int* flag);
 
 char* arkLSGetReturnFlagName(long int flag);

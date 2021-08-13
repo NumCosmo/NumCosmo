@@ -365,7 +365,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
 
   const gdouble lnR                   = nc_halo_mass_function_lnM_to_lnR (int_data->hbf->mfp, int_data->cosmo, lnM);
-  const gdouble V                     = ncm_powspec_filter_volume_rm3 (int_data->hbf->mfp->psf) * exp (3.0 * lnR);
+  const gdouble V                     = ncm_powspec_filter_volume_rm3 (nc_halo_mass_function_peek_psf (int_data->hbf->mfp)) * exp (3.0 * lnR);
   const gdouble dn_dlnM_times_b       = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
   const  gdouble integrand_powspec_2h = V * dn_dlnM_times_b;
 
@@ -434,7 +434,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
 
   ncm_memory_pool_return (w);
 
-  ps_2h_mm = int_powspec_mm_2h * int_powspec_mm_2h * ncm_powspec_eval (cad->mbiasf->mfp->psf->ps, NCM_MODEL (cosmo), z, k);
+  ps_2h_mm = int_powspec_mm_2h * int_powspec_mm_2h * ncm_powspec_eval (nc_halo_mass_function_peek_psf (cad->mbiasf->mfp)->ps, NCM_MODEL (cosmo), z, k);
 
   return ps_2h_mm;
 }
@@ -521,7 +521,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
 
   const gdouble k         = int_data->l / (dc_z * ncm_c_hubble_radius_hm1_Mpc ()); /* in units of h Mpc^-1 */
   const gdouble rho_mz    = nc_hicosmo_E2Omega_m (int_data->cosmo, z) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  const gdouble ps_linear = ncm_powspec_eval (int_data->cad->mbiasf->mfp->psf->ps, NCM_MODEL (int_data->cosmo), z, k);
+  const gdouble ps_linear = ncm_powspec_eval (nc_halo_mass_function_peek_psf (int_data->cad->mbiasf->mfp)->ps, NCM_MODEL (int_data->cosmo), z, k);
 
   const gdouble integral_mass1 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, z);
   const gdouble integral_mass2 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, int_data->dp, k, z);

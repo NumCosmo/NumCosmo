@@ -223,7 +223,7 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
   }
   else if (Xm1 < 0.0)
   {
-    if (X < pow (GSL_DBL_EPSILON, 1.0 / 10.0))
+    if (X < pow (GSL_DBL_EPSILON, 1.0 / 12.0))
     {
       const gdouble X_2    = 0.5 * X;
       const gdouble X_22   = X_2 * X_2;
@@ -237,7 +237,10 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
             (
               (37.0 / 3.0  + 20.0 * ln_X_2) +
               (
-                (533.0 / 12.0 + 70.0 * ln_X_2)
+                (533.0 / 12.0 + 70.0 * ln_X_2) +
+                (
+                  (1627.0 / 10.0 + 252.0 * ln_X_2)
+                ) * X_22
               ) * X_22
             ) * X_22
           ) * X_22
@@ -254,6 +257,39 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
     return 2.0 * (2.0 * atan (sqrt_abs_Xm1_Xp1) / sqrt_abs_X2m1 + log (0.5 * X));
   }
 }
+
+/**
+ * nc_halo_density_profile_nfw_class_set_ni:
+ * @num: boolean (true - numeric; false - analytic)  
+ *
+ * This function substitutes the child methods by the parent ones if num is TRUE. 
+ * It enforces the computations to be performed by numerical integration.
+ *
+ * WARNING: this function modifies the behavior object. It should be used for testing only!   
+ *
+ */
+void 
+nc_halo_density_profile_nfw_class_set_ni (gboolean num)
+{
+  NcHaloDensityProfileClass *dp_class        = g_type_class_ref (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
+  NcHaloDensityProfileClass *dp_parent_class = g_type_class_peek_parent (dp_class);
+  
+  if (num)
+  {
+    dp_class->eval_dl_spher_mass = dp_parent_class->eval_dl_spher_mass;
+    dp_class->eval_dl_2d_density = dp_parent_class->eval_dl_2d_density;
+    dp_class->eval_dl_cyl_mass   = dp_parent_class->eval_dl_cyl_mass;
+  }
+  else
+  {
+    dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
+    dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
+    dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
+  }
+
+  g_type_class_unref (dp_class);  
+}
+
 
 /**
  * nc_halo_density_profile_nfw_new:

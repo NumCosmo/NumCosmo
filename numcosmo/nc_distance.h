@@ -5,6 +5,7 @@
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
@@ -56,10 +57,10 @@ struct _NcDistanceClass
 
 /**
  * NcDistanceComovingMethod:
- * @NC_DISTANCE_COMOVING_METHOD_INT_E: FIXME
- * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: FIXME
+ * @NC_DISTANCE_COMOVING_METHOD_INT_E: performs a numerical evaluation.
+ * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: uses the method defined by the implementation of #NcHICosmo.
  *
- * FIXME
+ * Enumeration to define which method to be applied in order to compute the cosmological distances.
  * 
  */
 typedef enum _NcDistanceComovingMethod
@@ -134,7 +135,6 @@ gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo);
-gdouble nc_distance_Omega_k0 (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
@@ -143,24 +143,27 @@ gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
  * Redshift dependent 'distances'
  ****************************************************************************/
 
-gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
-gdouble nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
-gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
+gdouble nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
+gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+
+gdouble nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
+gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 
 /***************************************************************************
  * Inverse 'distances'
@@ -175,10 +178,10 @@ gdouble nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 
-gdouble nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 
 G_END_DECLS
 
@@ -203,3 +206,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_DISTANCE_INLINE_H_ */
+

@@ -5,6 +5,7 @@
  *  Copyright  2013  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * ncm_timer.h
  * Copyright (C) 2013 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
@@ -13,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -69,6 +70,7 @@ GType ncm_timer_get_type (void) G_GNUC_CONST;
 
 NcmTimer *ncm_timer_new (void);
 NcmTimer *ncm_timer_ref (NcmTimer *nt);
+
 void ncm_timer_free (NcmTimer *nt);
 void ncm_timer_clear (NcmTimer **nt);
 void ncm_timer_set_name (NcmTimer *nt, const gchar *name);
@@ -76,6 +78,7 @@ void ncm_timer_set_name (NcmTimer *nt, const gchar *name);
 gdouble ncm_timer_elapsed (NcmTimer *nt);
 void ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *elap_min, gdouble *elap_sec);
 gchar *ncm_timer_elapsed_dhms_str (NcmTimer *nt);
+
 void ncm_timer_start (NcmTimer *nt);
 void ncm_timer_stop (NcmTimer *nt);
 void ncm_timer_continue (NcmTimer *nt);
@@ -111,3 +114,4 @@ void ncm_timer_task_log_end_datetime (NcmTimer *nt);
 G_END_DECLS
 
 #endif /* _NCM_TIMER_H_ */
+

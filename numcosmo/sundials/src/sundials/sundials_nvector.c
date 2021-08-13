@@ -18,7 +18,9 @@
  * in nvector.h.
  * -----------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <stdlib.h>
+
 #include <sundials/sundials_nvector.h>
 
 /* -----------------------------------------------------------------
@@ -98,6 +100,15 @@ N_Vector N_VNewEmpty()
   ops->nvminquotientlocal = NULL;
   ops->nvwsqrsumlocal     = NULL;
   ops->nvwsqrsummasklocal = NULL;
+
+  /* XBraid interface operations */
+  ops->nvbufsize   = NULL;
+  ops->nvbufpack   = NULL;
+  ops->nvbufunpack = NULL;
+
+  /* debugging functions (called when SUNDIALS_DEBUG_PRINTVEC is defined) */
+  ops->nvprint     = NULL;
+  ops->nvprintfile = NULL;
 
   /* attach ops and initialize content to NULL */
   v->ops     = ops;
@@ -193,6 +204,15 @@ int N_VCopyOps(N_Vector w, N_Vector v)
   v->ops->nvminquotientlocal = w->ops->nvminquotientlocal;
   v->ops->nvwsqrsumlocal     = w->ops->nvwsqrsumlocal;
   v->ops->nvwsqrsummasklocal = w->ops->nvwsqrsummasklocal;
+
+  /* XBraid interface operations */
+  v->ops->nvbufsize   = w->ops->nvbufsize;
+  v->ops->nvbufpack   = w->ops->nvbufpack;
+  v->ops->nvbufunpack = w->ops->nvbufunpack;
+
+  /* debugging functions (called when SUNDIALS_DEBUG_PRINTVEC is defined) */
+  v->ops->nvprint     = w->ops->nvprint;
+  v->ops->nvprintfile = w->ops->nvprintfile;
 
   return(0);
 }
@@ -673,6 +693,28 @@ realtype N_VMinQuotientLocal(N_Vector num, N_Vector denom)
   return((realtype) num->ops->nvminquotientlocal(num,denom));
 }
 
+/* ------------------------------------
+ * OPTIONAL XBraid interface operations
+ * ------------------------------------*/
+
+int N_VBufSize(N_Vector x, sunindextype *size)
+{
+  if (x->ops->nvbufsize == NULL) return(-1);
+  return(x->ops->nvbufsize(x, size));
+}
+
+int N_VBufPack(N_Vector x, void *buf)
+{
+  if (x->ops->nvbufpack == NULL) return(-1);
+  return(x->ops->nvbufpack(x, buf));
+}
+
+int N_VBufUnpack(N_Vector x, void *buf)
+{
+  if (x->ops->nvbufunpack == NULL) return(-1);
+  return(x->ops->nvbufunpack(x, buf));
+}
+
 /* -----------------------------------------------------------------
  * Additional functions exported by the generic NVECTOR:
  *   N_VNewVectorArray
@@ -760,4 +802,38 @@ void N_VSetVecAtIndexVectorArray(N_Vector* vs, int index, N_Vector w)
   if (vs==NULL)       return;
   else if (index < 0) return;
   else                vs[index] = w;
+}
+
+
+/* -----------------------------------------------------------------
+ * Debugging functions
+ * ----------------------------------------------------------------- */
+
+void N_VPrint(N_Vector v)
+{
+  if (v == NULL) {
+    printf("NULL Vector\n");
+    return;
+  }
+  if (v->ops->nvprint == NULL) {
+    printf("NULL Print Op\n");
+    return;
+  }
+  v->ops->nvprint(v);
+  return;
+}
+
+
+void N_VPrintFile(N_Vector v, FILE* outfile)
+{
+  if (v == NULL) {
+    fprintf(outfile, "NULL Vector\n");
+    return;
+  }
+  if (v->ops->nvprintfile == NULL) {
+    fprintf(outfile, "NULL PrintFile Op\n");
+    return;
+  }
+  v->ops->nvprintfile(v, outfile);
+  return;
 }

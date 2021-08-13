@@ -5,6 +5,7 @@
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
@@ -51,13 +52,13 @@ typedef struct _NcmMatrix NcmMatrix;
 
 /**
  * NcmMatrixInternal:
- * @NCM_MATRIX_SLICE: FIXME
- * @NCM_MATRIX_GSL_MATRIX: FIXME
- * @NCM_MATRIX_MALLOC: FIXME
- * @NCM_MATRIX_GARRAY: FIXME
- * @NCM_MATRIX_DERIVED: FIXME
+ * @NCM_MATRIX_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments.
+ * @NCM_MATRIX_GSL_MATRIX: Uses [gsl_matrix](https://www.gnu.org/software/gsl/doc/html/vectors.html#matrices) from [GSL](https://www.gnu.org/software/gsl/) as the base object.
+ * @NCM_MATRIX_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions.
+ * @NCM_MATRIX_GARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
+ * @NCM_MATRIX_DERIVED: Uses another #NcmMatrix (for example, if it is getting a submatrix from a #NcmMatrix).
  *
- * FIXME
+ * This enumerator is only used internally. Only by developers.
  *
  */
 typedef enum _NcmMatrixInternal
@@ -75,11 +76,6 @@ struct _NcmMatrixClass
   GObjectClass parent_class;
 };
 
-/**
- * NcmMatrix:
- *
- * FIXME
- */
 struct _NcmMatrix
 {
   /*< private >*/
@@ -120,7 +116,7 @@ GVariant *ncm_matrix_peek_variant (NcmMatrix *cm);
 void ncm_matrix_set_from_data (NcmMatrix *cm, gdouble *data);
 void ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a);
 
-NCM_INLINE const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *m);
+NCM_INLINE const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *gm);
 NCM_INLINE gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE const gdouble *ncm_matrix_const_ptr (const NcmMatrix *cm, const guint i, const guint j);
@@ -163,8 +159,9 @@ NCM_INLINE gdouble *ncm_matrix_data (NcmMatrix *cm);
 NCM_INLINE const gdouble *ncm_matrix_const_data (const NcmMatrix *cm);
 
 NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
+
 void ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size);
-void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
+void ncm_matrix_add_mul (NcmMatrix *cm1, const gdouble a, NcmMatrix *cm2);
 
 gdouble ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
 gdouble ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale);
@@ -206,9 +203,9 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE const NcmMatrix *
-ncm_matrix_new_gsl_const (gsl_matrix *m)
+ncm_matrix_new_gsl_const (gsl_matrix *gm)
 {
-  return ncm_matrix_new_data_static_tda ((m)->data, (m)->size1, (m)->size2, (m)->tda);
+  return ncm_matrix_new_data_static_tda ((gm)->data, (gm)->size1, (gm)->size2, (gm)->tda);
 }
 
 NCM_INLINE gdouble
@@ -238,13 +235,14 @@ ncm_matrix_set (NcmMatrix *cm, const guint i, const guint j, gdouble val)
 NCM_INLINE void
 ncm_matrix_set_colmajor (NcmMatrix *cm, const guint i, const guint j, gdouble val)
 {
-  ncm_matrix_data (cm) [i + ncm_matrix_nrows (cm) * j] = val;
+  ncm_matrix_data (cm)[i + ncm_matrix_nrows (cm) * j] = val;
 }
 
 NCM_INLINE void
 ncm_matrix_addto (NcmMatrix *cm, guint i, guint j, gdouble val)
 {
   gdouble *m = gsl_matrix_ptr (ncm_matrix_gsl (cm), i, j);
+  
   *m += val;
 }
 
@@ -252,6 +250,7 @@ NCM_INLINE void
 ncm_matrix_transpose (NcmMatrix *cm)
 {
   const gint ret = gsl_matrix_transpose (ncm_matrix_gsl (cm));
+  
   NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
 }
 
@@ -309,38 +308,38 @@ ncm_matrix_add_constant (NcmMatrix *cm, const gdouble val)
   gsl_matrix_add_constant (ncm_matrix_gsl (cm), val);
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_matrix_mul_row (NcmMatrix *cm, const guint row_i, const gdouble val)
 {
   const guint ncols = ncm_matrix_ncols (cm);
   guint i;
-
+  
   for (i = 0; i < ncols; i++)
   {
     ncm_matrix_ptr (cm, row_i, i)[0] *= val;
   }
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_matrix_mul_col (NcmMatrix *cm, const guint col_i, const gdouble val)
 {
   const guint nrows = ncm_matrix_nrows (cm);
   guint i;
-
+  
   for (i = 0; i < nrows; i++)
   {
     ncm_matrix_ptr (cm, i, col_i)[0] *= val;
   }
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_matrix_get_diag (NcmMatrix *cm, NcmVector *diag)
 {
   const guint nrows = ncm_matrix_nrows (cm);
   const guint ncols = ncm_matrix_ncols (cm);
   const guint n     = MIN (nrows, ncols);
   guint i;
-
+  
   g_assert_cmpuint (ncm_vector_len (diag), >=, n);
   
   for (i = 0; i < n; i++)
@@ -349,14 +348,14 @@ ncm_matrix_get_diag (NcmMatrix *cm, NcmVector *diag)
   }
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_matrix_set_diag (NcmMatrix *cm, NcmVector *diag)
 {
   const guint nrows = ncm_matrix_nrows (cm);
   const guint ncols = ncm_matrix_ncols (cm);
   const guint n     = MIN (nrows, ncols);
   guint i;
-
+  
   g_assert_cmpuint (ncm_vector_len (diag), >=, n);
   
   for (i = 0; i < n; i++)
@@ -371,7 +370,7 @@ ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
   const guint nrows = ncm_matrix_nrows (cm1);
   const guint ncols = ncm_matrix_ncols (cm1);
   const guint total = nrows * ncols;
-
+  
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
   
@@ -379,17 +378,21 @@ ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
   {
     register guint i;
     const guint ncols_bytes = sizeof (gdouble) * ncols;
+    
     for (i = 0; i < nrows; i++)
-      memcpy (ncm_matrix_ptr (cm1, i, 0), ncm_matrix_const_ptr (cm2, i, 0), ncols_bytes);  
+      memcpy (ncm_matrix_ptr (cm1, i, 0), ncm_matrix_const_ptr (cm2, i, 0), ncols_bytes);
   }
   else
+  {
     memcpy (ncm_matrix_data (cm1), ncm_matrix_const_data (cm2), sizeof (gdouble) * total);
+  }
 }
 
 NCM_INLINE void
 ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv)
 {
   gint ret = gsl_matrix_set_col (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
+  
   g_assert (ret == GSL_SUCCESS);
 }
 
@@ -397,6 +400,7 @@ NCM_INLINE void
 ncm_matrix_set_row (NcmMatrix *cm, const guint n, const NcmVector *cv)
 {
   gint ret = gsl_matrix_set_row (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
+  
   g_assert (ret == GSL_SUCCESS);
 }
 
@@ -404,16 +408,17 @@ NCM_INLINE GArray *
 ncm_matrix_get_array (NcmMatrix *cm)
 {
   g_assert (cm->type == NCM_MATRIX_GARRAY);
+  
   return g_array_ref (cm->pdata);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_matrix_fast_get (NcmMatrix *cm, const guint ij)
 {
   return ncm_matrix_data (cm)[ij];
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_matrix_fast_set (NcmMatrix *cm, const guint ij, const gdouble val)
 {
   ncm_matrix_data (cm)[ij] = val;
@@ -421,8 +426,8 @@ ncm_matrix_fast_set (NcmMatrix *cm, const guint ij, const gdouble val)
 
 NCM_INLINE gsl_matrix *
 ncm_matrix_gsl (NcmMatrix *cm)
-{ 
-  return &cm->mv.matrix; 
+{
+  return &cm->mv.matrix;
 }
 
 NCM_INLINE const gsl_matrix *
@@ -431,37 +436,37 @@ ncm_matrix_const_gsl (const NcmMatrix *cm)
   return &(cm->mv.matrix);
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_col_len (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size1;
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_row_len (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size2;
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_nrows (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size1;
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_ncols (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size2;
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_size (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size1 * cm->mv.matrix.size2;
 }
 
-NCM_INLINE guint 
+NCM_INLINE guint
 ncm_matrix_tda (const NcmMatrix *cm)
 {
   return cm->mv.matrix.tda;
@@ -484,3 +489,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MATRIX_INLINE_H_ */
+

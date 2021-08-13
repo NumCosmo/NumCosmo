@@ -1,5 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
+# gcov support
+include $(top_srcdir)/aminclude_static.am
+
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la
@@ -29,16 +32,12 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)      \
-	 -I$(SUNDIALS_INCL)   \
-	 $(CODE_COVERAGE_CFLAGS)
+	 -I$(SUNDIALS_INCL)
 
 AM_CFLAGS =    \
 	 -Wall \
-	 $(MY_CFLAGS)
-
-if NUMCOSMO_CHECK_CCL
-  AM_CFLAGS += $(CCL_CFLAGS)
-endif
+	 $(MY_CFLAGS) \
+	 $(CODE_COVERAGE_CFLAGS)
 
 SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz sundials .
 
@@ -64,10 +63,6 @@ libnumcosmo_la_LIBADD =         \
 	class/libclass.la       \
 	sundials/libsundials.la \
 	toeplitz/libtoeplitz.la
-
-if NUMCOSMO_CHECK_CCL
-  libnumcosmo_la_LIBADD += $(CCL_LDFLAGS)
-endif
 
 ncm_sources = \
 	ncm_build_inline.c                   \
@@ -106,6 +101,7 @@ ncm_sources = \
 	math/ncm_spline_cubic_notaknot.c     \
 	math/ncm_spline_rbf.c                \
 	math/ncm_spline_func.c               \
+	math/ncm_spline_func_test.c          \
 	math/ncm_spline2d.c                  \
 	math/ncm_spline2d_spline.c           \
 	math/ncm_spline2d_gsl.c              \
@@ -240,6 +236,7 @@ ncm_headers =                                \
 	math/ncm_spline_cubic_notaknot.h     \
 	math/ncm_spline_rbf.h                \
 	math/ncm_spline_func.h               \
+	math/ncm_spline_func_test.h          \
 	math/ncm_spline2d.h                  \
 	math/ncm_spline2d_spline.h           \
 	math/ncm_spline2d_gsl.h              \
@@ -366,6 +363,7 @@ nc_headers = \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
 	nc_hiqg_1d.h                  \
+	nc_de_cont.h                  \
 	model/nc_hicosmo_idem2.h      \
 	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
@@ -434,6 +432,11 @@ nc_headers = \
         lss/nc_galaxy_redshift.h               \
         lss/nc_galaxy_redshift_spec.h          \
         lss/nc_galaxy_redshift_spline.h        \
+        lss/nc_galaxy_redshift_gauss.h         \
+        lss/nc_galaxy_wl.h                     \
+        lss/nc_galaxy_wl_dist.h                \
+        lss/nc_galaxy_wl_reduced_shear_gauss.h \
+        lss/nc_galaxy_wl_proj.h                \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
         lss/nc_reduced_shear_cluster_mass.h    \
@@ -461,6 +464,7 @@ nc_headers = \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
+	data/nc_data_cluster_wl.h                 \
 	data/nc_data_reduced_shear_cluster_mass.h \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
@@ -512,6 +516,7 @@ nc_sources = \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
 	nc_hiqg_1d.c                  \
+	nc_de_cont.c                  \
 	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
@@ -580,6 +585,11 @@ nc_sources = \
 	lss/nc_galaxy_redshift.c               \
 	lss/nc_galaxy_redshift_spec.c          \
 	lss/nc_galaxy_redshift_spline.c        \
+	lss/nc_galaxy_redshift_gauss.c         \
+	lss/nc_galaxy_wl.c                     \
+	lss/nc_galaxy_wl_dist.c                \
+	lss/nc_galaxy_wl_reduced_shear_gauss.c \
+	lss/nc_galaxy_wl_proj.c                \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
 	lss/nc_reduced_shear_cluster_mass.c    \
@@ -607,6 +617,7 @@ nc_sources = \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
+	data/nc_data_cluster_wl.c                 \
 	data/nc_data_reduced_shear_cluster_mass.c \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \

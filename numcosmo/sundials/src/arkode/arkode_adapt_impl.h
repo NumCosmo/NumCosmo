@@ -68,20 +68,21 @@ extern "C" {
 
 /*===============================================================
   ARKode Time Step Adaptivity Data Structure
-===============================================================*/
+  ===============================================================*/
 
 /*---------------------------------------------------------------
- Types : struct ARKodeHAdaptMemRec, ARKodeHAdaptMem
------------------------------------------------------------------
- The type ARKodeHAdaptMem is type pointer to struct
- ARKodeHAdaptMemRec.  This structure contains fields to
- keep track of temporal adaptivity.
----------------------------------------------------------------*/
+  Types : struct ARKodeHAdaptMemRec, ARKodeHAdaptMem
+  -----------------------------------------------------------------
+  The type ARKodeHAdaptMem is type pointer to struct
+  ARKodeHAdaptMemRec.  This structure contains fields to
+  keep track of temporal adaptivity.
+  ---------------------------------------------------------------*/
 typedef struct ARKodeHAdaptMemRec {
 
   realtype     etamax;      /* eta <= etamax                              */
   realtype     etamx1;      /* max step size change on first step         */
   realtype     etamxf;      /* h reduction factor on multiple error fails */
+  realtype     etamin;      /* eta >= etamin on error test fail           */
   int          small_nef;   /* bound to determine 'multiple' above        */
   realtype     etacf;       /* h reduction factor on nonlinear conv fail  */
   ARKAdaptFn   HAdapt;      /* function to set the new time step size     */
@@ -120,7 +121,7 @@ typedef struct ARKodeHAdaptMemRec {
 
 /*===============================================================
   ARKode Time Step Adaptivity Routines
-===============================================================*/
+  ===============================================================*/
 
 ARKodeHAdaptMem arkAdaptInit();
 void arkPrintAdaptMem(ARKodeHAdaptMem hadapt_mem, FILE *outfile);

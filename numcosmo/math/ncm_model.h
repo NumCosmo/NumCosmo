@@ -56,9 +56,11 @@ struct _NcmModelClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  
   void (*get_property) (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
   NcmModelAddSubmodel add_submodel;
+  
   gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
   gboolean can_stack;
@@ -194,6 +196,7 @@ const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
 const gchar *ncm_model_param_symbol (NcmModel *model, guint n);
+GPtrArray *ncm_model_param_names (NcmModel *model);
 
 void ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
 void ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
@@ -232,76 +235,80 @@ gint ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid);
 gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);
 
-#define NCM_MODEL_CLASS_IMPL_ALL ((guint64)(~((guint64)0)))
-#define NCM_MODEL_OPT2IMPL(opt) (((guint64)1) << ((guint64)(opt)))
-#define NCM_MODEL_2OPT2IMPL(opt1,opt2) (NCM_MODEL_OPT2IMPL (opt1) | NCM_MODEL_OPT2IMPL (opt2))
-#define NCM_MODEL_3OPT2IMPL(opt1,opt2,opt3) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_OPT2IMPL (opt3))
-#define NCM_MODEL_4OPT2IMPL(opt1,opt2,opt3,opt4) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_2OPT2IMPL (opt3, opt4))
+/* pygobject dict */
+gdouble ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err);
+void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **err);
+
+#define NCM_MODEL_CLASS_IMPL_ALL ((guint64) (~((guint64) 0)))
+#define NCM_MODEL_OPT2IMPL(opt) (((guint64) 1) << ((guint64) (opt)))
+#define NCM_MODEL_2OPT2IMPL(opt1, opt2) (NCM_MODEL_OPT2IMPL (opt1) | NCM_MODEL_OPT2IMPL (opt2))
+#define NCM_MODEL_3OPT2IMPL(opt1, opt2, opt3) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_OPT2IMPL (opt3))
+#define NCM_MODEL_4OPT2IMPL(opt1, opt2, opt3, opt4) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_2OPT2IMPL (opt3, opt4))
 
 /*
  * Model set functions
  */
-#define NCM_MODEL_SET_IMPL_FUNC(NS_NAME,NsName,ns_name,type,name) \
-void \
-ns_name##_set_##name##_impl (NsName##Class *model_class, type f) \
-{ \
-  ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (model_class), NS_NAME##_IMPL_##name, -1); \
-  model_class->name = f; \
-}
+#define NCM_MODEL_SET_IMPL_FUNC(NS_NAME, NsName, ns_name, type, name) \
+  void \
+  ns_name ## _set_ ## name ## _impl (NsName ## Class * model_class, type f) \
+  { \
+    ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (model_class), NS_NAME ## _IMPL_ ## name, -1); \
+    model_class->name = f; \
+  }
 
 /*
  * Constant model functions call accessor
  */
-#define NCM_MODEL_FUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m)); \
-}
+#define NCM_MODEL_FUNC0_IMPL(NS_NAME, NsName, ns_name, name) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m)); \
+  }
 
 /*
  * Model functions call
  */
-#define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name,var) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m, const gdouble var) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), var); \
-}
+#define NCM_MODEL_FUNC1_IMPL(NS_NAME, NsName, ns_name, name, var) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m, const gdouble var) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), var); \
+  }
 
 /*
  * Model functions 2d call
  */
-#define NCM_MODEL_FUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m, const gdouble x, const gdouble y) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x, y); \
-}
+#define NCM_MODEL_FUNC2_IMPL(NS_NAME, NsName, ns_name, name) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m, const gdouble x, const gdouble y) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), x, y); \
+  }
 
 /*
  * Constant model vector functions call accessor
  */
-#define NCM_MODEL_VFUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m, const guint n) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n); \
-}
+#define NCM_MODEL_VFUNC0_IMPL(NS_NAME, NsName, ns_name, name) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m, const guint n) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n); \
+  }
 
 /*
  * Model vector functions call
  */
-#define NCM_MODEL_VFUNC1_IMPL(NS_NAME,NsName,ns_name,name,var) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m, const guint n, const gdouble var) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n, var); \
-}
+#define NCM_MODEL_VFUNC1_IMPL(NS_NAME, NsName, ns_name, name, var) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m, const guint n, const gdouble var) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, var); \
+  }
 
 /*
  * Model functions 2d call
  */
-#define NCM_MODEL_VFUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
-NCM_INLINE gdouble ns_name##_##name (NsName *m, const guint n, const gdouble x, const gdouble y) \
-{ \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n, x, y); \
-}
+#define NCM_MODEL_VFUNC2_IMPL(NS_NAME, NsName, ns_name, name) \
+  NCM_INLINE gdouble ns_name ## _ ## name (NsName * m, const guint n, const gdouble x, const gdouble y) \
+  { \
+    return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, x, y); \
+  }
 
 G_END_DECLS
 
@@ -326,13 +333,16 @@ ncm_model_id_by_type (GType model_type)
   if (!g_type_is_a (model_type, NCM_TYPE_MODEL))
   {
     g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
+    
     return 0;
   }
   else
   {
     NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_ref (model_type));
-    NcmModelID id = model_class->model_id;
+    NcmModelID id              = model_class->model_id;
+    
     g_type_class_unref (model_class);
+    
     return id;
   }
 }
@@ -346,11 +356,11 @@ ncm_model_check_impl_flag (NcmModel *model, guint64 impl)
     return ((NCM_MODEL_GET_CLASS (model)->impl_flag & impl) != 0);
 }
 
-NCM_INLINE gboolean 
+NCM_INLINE gboolean
 ncm_model_check_impl_opt (NcmModel *model, gint opt)
 {
   guint64 flag = NCM_MODEL_OPT2IMPL (opt);
-
+  
   return ncm_model_check_impl_flag (model, flag);
 }
 
@@ -384,7 +394,7 @@ ncm_model_lstate_set_update (NcmModel *model, guint i)
   model->slkey[i] = model->pkey;
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 ncm_model_state_mark_outdated (NcmModel *model)
 {
   model->pkey++;
@@ -424,6 +434,7 @@ NCM_INLINE gboolean
 ncm_model_param_finite (NcmModel *model, guint i)
 {
   NcmVector *params = model->reparam ? model->reparam->new_params : model->params;
+  
   return gsl_finite (ncm_vector_get (params, i));
 }
 
@@ -431,11 +442,13 @@ NCM_INLINE gboolean
 ncm_model_params_finite (NcmModel *model)
 {
   guint i;
+  
   for (i = 0; i < ncm_model_len (model); i++)
   {
     if (!gsl_finite (ncm_vector_get (model->params, i)))
       return FALSE;
   }
+  
   return TRUE;
 }
 
@@ -443,6 +456,7 @@ NCM_INLINE void
 ncm_model_params_update (NcmModel *model)
 {
   model->pkey++;
+  
   if (model->reparam)
     ncm_reparam_new2old (model->reparam, model);
 }
@@ -451,6 +465,7 @@ NCM_INLINE void
 ncm_model_orig_params_update (NcmModel *model)
 {
   model->pkey++;
+  
   if (model->reparam)
     ncm_reparam_old2new (model->reparam, model);
 }
@@ -478,6 +493,7 @@ ncm_model_param_set (NcmModel *model, guint n, gdouble val)
 {
   ncm_vector_set (model->p, n, val);
   ncm_model_params_update (model);
+  
   return;
 }
 
@@ -491,6 +507,7 @@ NCM_INLINE NcmSParam *
 ncm_model_orig_param_peek_desc (NcmModel *model, guint n)
 {
   g_assert_cmpuint (n, <, model->total_len);
+  
   return g_ptr_array_index (model->sparams, n);
 }
 
@@ -498,13 +515,17 @@ NCM_INLINE NcmSParam *
 ncm_model_param_peek_desc (NcmModel *model, guint n)
 {
   NcmReparam *reparam = ncm_model_peek_reparam (model);
+  
   g_assert_cmpuint (n, <, model->total_len);
+  
   if (reparam != NULL)
   {
     NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n);
+    
     if (sp != NULL)
       return sp;
   }
+  
   return ncm_model_orig_param_peek_desc (model, n);
 }
 
@@ -519,6 +540,7 @@ ncm_model_orig_param_set (NcmModel *model, guint n, gdouble val)
 {
   ncm_vector_set (model->params, n, val);
   ncm_model_orig_params_update (model);
+  
   return;
 }
 
@@ -533,6 +555,7 @@ ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val)
 {
   ncm_vector_set (model->params, ncm_model_vparam_index (model, n, i), val);
   ncm_model_orig_params_update (model);
+  
   return;
 }
 
@@ -555,16 +578,21 @@ NCM_INLINE NcmVector *
 ncm_model_orig_vparam_get_vector (NcmModel *model, guint n)
 {
   const guint vparam_len = ncm_model_vparam_len (model, n);
+  
   if (vparam_len > 0)
   {
     NcmVector *val = ncm_vector_new (vparam_len);
+    
     ncm_vector_memcpy2 (val, model->params,
                         0, ncm_model_vparam_index (model, n, 0),
                         ncm_model_vparam_len (model, n));
+    
     return val;
   }
   else
+  {
     return NULL;
+  }
 }
 
 G_END_DECLS
@@ -572,3 +600,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MODEL_INLINE_H_ */
+

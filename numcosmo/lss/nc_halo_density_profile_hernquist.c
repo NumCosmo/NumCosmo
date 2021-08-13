@@ -2,7 +2,7 @@
  *            nc_halo_density_profile_hernquist.c
  *
  *  Sat April 11 17:23:06 2020
- *  Copyright  2014
+ *  Copyright  2020
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*

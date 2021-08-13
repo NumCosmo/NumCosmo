@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_galaxy_redshift_spec.h
  *
@@ -15,12 +16,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,6 +32,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/lss/nc_galaxy_redshift.h>
 
 G_BEGIN_DECLS
@@ -48,28 +50,29 @@ typedef struct _NcGalaxyRedshiftSpecPrivate NcGalaxyRedshiftSpecPrivate;
 
 struct _NcGalaxyRedshiftSpecClass
 {
-	/*< private >*/
-	NcGalaxyRedshiftClass parent_class;
+  /*< private >*/
+  NcGalaxyRedshiftClass parent_class;
 };
 
 struct _NcGalaxyRedshiftSpec
 {
-	/*< private >*/
-	NcGalaxyRedshift parent_instance;
-	NcGalaxyRedshiftSpecPrivate *priv;
+  /*< private >*/
+  NcGalaxyRedshift parent_instance;
+  NcGalaxyRedshiftSpecPrivate *priv;
 };
 
 GType nc_galaxy_redshift_spec_get_type (void) G_GNUC_CONST;
 
-NcGalaxyRedshiftSpec *nc_galaxy_redshift_spec_new (const gdouble z_spec);
+NcGalaxyRedshiftSpec *nc_galaxy_redshift_spec_new (void);
 NcGalaxyRedshiftSpec *nc_galaxy_redshift_spec_ref (NcGalaxyRedshiftSpec *gzs);
 
 void nc_galaxy_redshift_spec_free (NcGalaxyRedshiftSpec *gzs);
 void nc_galaxy_redshift_spec_clear (NcGalaxyRedshiftSpec **gzs);
 
-void nc_galaxy_redshift_spec_set_z (NcGalaxyRedshiftSpec *gzs, const gdouble z_spec);
-gdouble nc_galaxy_redshift_spec_get_z (NcGalaxyRedshiftSpec *gzs);
+void nc_galaxy_redshift_spec_set_z (NcGalaxyRedshiftSpec *gzs, NcmVector *z_spec);
+NcmVector *nc_galaxy_redshift_spec_peek_z (NcGalaxyRedshiftSpec *gzs);
 
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_SPEC_H_ */
+

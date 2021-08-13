@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima 2018 <pennalima@gmail.com> 
+ * Copyright (C) Mariana Penna Lima 2018 <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,8 +28,8 @@
  * @title: NcReducedShearClusterMass
  * @short_description: FIXME cluster mass estimation via reduced shear
  *
- * FIXME 
- * 
+ * FIXME
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -71,8 +71,9 @@ static void
 _nc_reduced_shear_cluster_mass_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcReducedShearClusterMass *rscm = NC_REDUCED_SHEAR_CLUSTER_MASS (object);
+  
   g_return_if_fail (NC_IS_REDUCED_SHEAR_CLUSTER_MASS (object));
-
+  
   switch (prop_id)
   {
     case PROP_R:
@@ -91,8 +92,9 @@ static void
 _nc_reduced_shear_cluster_mass_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcReducedShearClusterMass *rscm = NC_REDUCED_SHEAR_CLUSTER_MASS (object);
+  
   g_return_if_fail (NC_IS_REDUCED_SHEAR_CLUSTER_MASS (object));
-
+  
   switch (prop_id)
   {
     case PROP_R:
@@ -100,7 +102,7 @@ _nc_reduced_shear_cluster_mass_get_property (GObject *object, guint prop_id, GVa
       break;
     case PROP_NZBINS:
       g_value_set_uint (value, rscm->nzbins);
-      break;  
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -120,6 +122,7 @@ static void
 _nc_reduced_shear_cluster_mass_finalize (GObject *object)
 {
   NcReducedShearClusterMass *rscm = NC_REDUCED_SHEAR_CLUSTER_MASS (object);
+  
   gsl_multifit_fdfsolver_free (rscm->s);
   
   /* Chain up : end */
@@ -131,19 +134,19 @@ NCM_MSET_MODEL_REGISTER_ID (nc_reduced_shear_cluster_mass, NC_TYPE_REDUCED_SHEAR
 static void
 nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_nc_reduced_shear_cluster_mass_set_property;
   model_class->get_property = &_nc_reduced_shear_cluster_mass_get_property;
   object_class->dispose     = &_nc_reduced_shear_cluster_mass_dispose;
   object_class->finalize    = &_nc_reduced_shear_cluster_mass_finalize;
-
+  
   ncm_model_class_set_name_nick (model_class, "Lensing observable for cluster mass estimation: reduced shear", "ReducedShearClusterMass");
   ncm_model_class_add_params (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_SPARAM_LEN, 0, PROP_SIZE);
   
-
-   /**
+  
+  /**
    * NcClusterPseudoCounts:R_Mpc:
    *
    * Scale/distance in Mpc from the center of the lens.
@@ -155,7 +158,8 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
                                                         "Distance from the center of the lens",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-   /**
+  
+  /**
    * NcClusterPseudoCounts:nzbins:
    *
    * Number of redshift bins.
@@ -170,69 +174,74 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   
   /**
    * NcReducedShearClusterMass:a:
-   * 
-   * FIXME 
-   *  
+   *
+   * FIXME
+   *
    */
   /**
    * NcReducedShearClusterMass:a-fit:
-   * 
+   *
    * FIXME
-   *  
+   *
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_A, "a", "a",
                               0.0, 16.0, 2.0,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_A,
                               NCM_PARAM_TYPE_FIXED);
+  
   /**
    * NcReducedShearClusterMass:b:
-   * 
+   *
    * FIXME
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_B, "b", "b",
                               0.0,  0.9, 2.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_B,
                               NCM_PARAM_TYPE_FIXED);
+  
   /**
    * NcReducedShearClusterMass:c:
-   * 
+   *
    * FIXME
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_C, "c", "c",
                               0.0,  2.0, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_C,
                               NCM_PARAM_TYPE_FIXED);
+  
   /**
    * NcReducedShearClusterMass:xp:
-   * 
+   *
    * FIXME
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_XP, "xp", "xp",
                               0.0,  2.0, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_XP,
                               NCM_PARAM_TYPE_FIXED);
+  
   /**
    * NcReducedShearClusterMass:Vsigma:
-   * 
+   *
    * Voigt profile parameter, $\sigma$ is the standard deviation of the Gaussian distribution. Range: $\sigma \in [0.15, 0.5]$.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA, "\\sigma", "sigma",
                               0.15,  0.5, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_VSIGMA,
                               NCM_PARAM_TYPE_FIXED);
+  
   /**
    * NcReducedShearClusterMass:VGamma:
-   * 
+   *
    * Voigt profile parameter, $\Gamma$ is the width of the  Lorentzian profile. Range: $\Gamma \in [0.003, 0.1]$.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA, "\\Gamma", "Gamma",
                               0.0015,  0.05, 1.0e-2,
                               NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_PARAMS_ABSTOL, NC_REDUCED_SHEAR_CLUSTER_MASS_DEFAULT_VGAMMA,
                               NCM_PARAM_TYPE_FIXED);
-
+  
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
-
+  
   ncm_mset_model_register_id (model_class,
                               "NcReducedShearClusterMass",
                               "Lensing observable - cluster mass estimation: reduced shear",
@@ -241,16 +250,16 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
                               NCM_MSET_MODEL_MAIN);
 }
 
-#define VECTOR  (NCM_MODEL (rscm)->params)
-#define A  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
-#define B (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
-#define C    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
-#define XP    (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
-#define VSIGMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
-#define VGAMMA  (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
+#define VECTOR (NCM_MODEL (rscm)->params)
+#define A      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
+#define B      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
+#define C      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
+#define XP     (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
+#define VSIGMA (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
+#define VGAMMA (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
 
 /**
- * nc_reduced_shear_cluster_mass_new: 
+ * nc_reduced_shear_cluster_mass_new:
  *
  * This function instantiates a new object of type #NcReducedShearClusterMass.
  *
@@ -261,6 +270,7 @@ nc_reduced_shear_cluster_mass_new (void)
 {
   NcReducedShearClusterMass *rscm = g_object_new (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS,
                                                   NULL);
+  
   return rscm;
 }
 
@@ -284,7 +294,7 @@ nc_reduced_shear_cluster_mass_ref (NcReducedShearClusterMass *rscm)
  *
  * Atomically decreases the reference count of @rscm by one. If the reference count drops to 0,
  * all memory allocated by @rscm is released.
- *  
+ *
  */
 void
 nc_reduced_shear_cluster_mass_free (NcReducedShearClusterMass *rscm)
@@ -310,13 +320,13 @@ nc_reduced_shear_cluster_mass_clear (NcReducedShearClusterMass **rscm)
 /**
  * nc_reduced_shear_cluster_mass_P_z_gth_gobs:
  * @rscm: a #NcReducedShearClusterMass
- * @cosmo: a #NcHICosmo 
+ * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  * @g_th: the computed reduced shear $g_\mathrm{th}$
  * @g_obs: the observed reduced shear $g_\mathrm{obs}$
  *
  * Computes the probability distribution $P(g_\mathrm{obs} | g_\mathrm{th}, z)$.
- * 
+ *
  * Returns: $P(g_\mathrm{obs} | g_\mathrm{th}, z)$
  */
 gdouble
@@ -324,9 +334,8 @@ nc_reduced_shear_cluster_mass_P_z_gth_gobs (NcReducedShearClusterMass *rscm, NcH
 {
   const gdouble mu       = g_obs - g_th;
   const double complex Z = (mu + I * VGAMMA) / (M_SQRT2 * VSIGMA);
-  const gdouble voigt    = creal (Faddeeva_w (Z, 1.0e-6)) / (M_SQRT2 * M_SQRTPI * VSIGMA) ;
-
-	return voigt;
+  const gdouble voigt    = creal (Faddeeva_w (Z, 1.0e-6)) / (M_SQRT2 * M_SQRTPI * VSIGMA);
+  
+  return voigt;
 }
-
 

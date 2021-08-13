@@ -89,7 +89,7 @@ ENV OMP_NUM_THREADS=1
 ENV OMP_THREAD_LIMIT=1
 ENV GI_TYPELIB_PATH="/usr/lib/girepository-1.0"
 
-RUN cp /usr/share/numcosmo-0.15.0/notebooks/* work/
+RUN cp /usr/share/numcosmo-0.15.3/notebooks/* work/
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID

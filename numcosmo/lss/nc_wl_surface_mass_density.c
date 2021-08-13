@@ -39,7 +39,7 @@
  *
  * The mean surface mass density within a circular aperture of radius $R$ is, [nc_wl_surface_mass_density_sigma_mean()]
  * \begin{equation}\label{eq:sigma_mean}
- * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, \Sigma (R^\prime).
+ * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, R^\prime \Sigma (R^\prime).
  * \end{equation}
  *
  * The convergence $\kappa (R)$ [nc_wl_surface_mass_density_convergence()] and the shear $\gamma(R)$ [nc_wl_surface_mass_density_shear()]
@@ -338,15 +338,19 @@ nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHIC
 gdouble
 nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  /*g_assert_cmpfloat (nc_hicosmo_Omega_k0 (cosmo), >=, 0.0); */
-  const gdouble a  = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
-  const gdouble Ds = nc_distance_angular_diameter (smd->dist, cosmo, zs);
-  const gdouble Dl = nc_distance_angular_diameter (smd->dist, cosmo, zl);
-  /* Dls below is only valid for Omega_k >= 0 */
-  const gdouble Dls    = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl)) / (1.0 + zs);
-  const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  
-  return a * Ds / (Dl * Dls * RH_Mpc);
+  if (zs < zc)
+    return GSL_POSINF;
+  else
+  {
+    const gdouble a   = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
+    const gdouble Ds  = nc_distance_angular_diameter (smd->dist, cosmo, zs);
+    const gdouble Dl  = nc_distance_angular_diameter (smd->dist, cosmo, zl);
+    const gdouble Dls = nc_distance_angular_diameter_z1_z2 (smd->dist, cosmo, zl, zs);
+
+    const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+
+    return a * Ds / (Dl * Dls * RH_Mpc);
+  }
 }
 
 /**
@@ -416,7 +420,7 @@ gdouble
 nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
   const gdouble mean_sigma_2x2 = nc_halo_density_profile_eval_cyl_mass (dp, cosmo, R, zc) / (ncm_c_pi () * R * R);
-  
+
   return mean_sigma_2x2;
 }
 
@@ -470,10 +474,15 @@ nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDens
 gdouble
 nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
-  gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
+  if (zs < zc)
+    return 0.0;
+  else
+  {
+    gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+    gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
   
-  return sigma / sigma_crit;
+    return sigma / sigma_crit;
+  }
 }
 
 /**
@@ -515,11 +524,16 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
 gdouble
 nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  const gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
-  const gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
-  const gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
+  if (zs < zc)
+    return 0.0;
+  else
+  {
+    const gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
+    const gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
+    const gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
   
-  return (mean_sigma - sigma) / sigma_crit;
+    return (mean_sigma - sigma) / sigma_crit;
+  }
 }
 
 /**
@@ -565,12 +579,254 @@ nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDe
 gdouble
 nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  /* Optimize it to compute sigma and sigma_c just once*/
-  gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
-  gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
-  gdouble reduced_shear = shear / (1.0 - convergence);
+  gdouble r_s, rho_s;
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  {
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+
+    switch (k)
+    {
+      case -1:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          if (zs > zl)
+          {
+            const gdouble x_i           = 1.0 + zs;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+            const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            return reduced_shear;
+          }
+          else
+            return 0.0;
+        }
+        break;
+      case 0:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = dl / (1.0 + zl);
+          if (zs > zl)
+          {
+            const gdouble x_i           = 1.0 + zs;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+            const gdouble Ds            = ds        / x_i;
+            const gdouble Dls           = (ds - dl) / x_i;
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            return reduced_shear;
+          }
+          else
+            return 0.0;
+        }
+        break;
+      case 1:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          if (zs > zl)
+          {
+            const gdouble x_i           = 1.0 + zs;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+            const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            return reduced_shear;
+          }
+          else
+            return 0.0;
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
+
+  /* Old un-optimized code */
+  if (zs < zc)
+	return 0.0;
+  else
+  {
+    gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
+    gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
+    gdouble reduced_shear = shear / (1.0 - convergence);
   
-  return reduced_shear;
+    return reduced_shear;
+  }
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_optzs_prep: (skip)
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ * @optzs: a #NcWLSurfaceMassDensityOptzs
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].
+ *
+ * FIXME
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs)
+{
+  gdouble r_s, rho_s;
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  {
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+
+    optzs->sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+
+    optzs->k  = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+    optzs->dl = nc_distance_comoving (smd->dist, cosmo, zl);
+
+    switch (optzs->k)
+    {
+      case -1:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble Dl         = sinh (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
+
+          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          optzs->sc_Dls_Ds  = a / Dl;
+        }
+        break;
+      case 0:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble Dl         = optzs->dl / (1.0 + zl);
+
+          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          optzs->sc_Dls_Ds  = a / Dl;
+        }
+        break;
+      case 1:
+        {
+          const gdouble X          = R / r_s;
+          const gdouble Dl         = sin (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
+
+          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          optzs->sc_Dls_Ds  = a / Dl;
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_optzs:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @zs: source redshift $z_\mathrm{source}$
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @optzs: a #NcWLSurfaceMassDensityOptzs
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].
+ *
+ * FIXME
+ *
+ * Returns: $g(R)$
+ */
+gdouble
+nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs)
+{
+  if (zs < zl)
+    return 0.0;
+
+  switch (optzs->k)
+  {
+    case -1:
+    {
+      const gdouble x_i           = 1.0 + zs;
+      const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+      const gdouble Ds            = sinh (optzs->sqrt_Omega_k0 * ds)               / (x_i * optzs->sqrt_Omega_k0);
+      const gdouble Dls           = sinh (optzs->sqrt_Omega_k0 * (ds - optzs->dl)) / (x_i * optzs->sqrt_Omega_k0);
+      const gdouble sigma_crit    = optzs->sc_Dls_Ds * Ds / Dls;
+      const gdouble mu            = optzs->sigma / sigma_crit;
+      const gdouble shear         = (optzs->mean_sigma - optzs->sigma) / sigma_crit;
+      const gdouble reduced_shear = shear / (1.0 - mu);
+
+      return reduced_shear;
+    }
+    break;
+    case 0:
+    {
+      const gdouble x_i           = 1.0 + zs;
+      const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+      const gdouble Ds            = ds               / x_i;
+      const gdouble Dls           = (ds - optzs->dl) / x_i;
+      const gdouble sigma_crit    = optzs->sc_Dls_Ds * Ds / Dls;
+      const gdouble mu            = optzs->sigma / sigma_crit;
+      const gdouble shear         = (optzs->mean_sigma - optzs->sigma) / sigma_crit;
+      const gdouble reduced_shear = shear / (1.0 - mu);
+
+      return reduced_shear;
+    }
+    break;
+    case 1:
+    {
+      const gdouble x_i           = 1.0 + zs;
+      const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+      const gdouble Ds            = sin (optzs->sqrt_Omega_k0 * ds)               / (x_i * optzs->sqrt_Omega_k0);
+      const gdouble Dls           = sin (optzs->sqrt_Omega_k0 * (ds - optzs->dl)) / (x_i * optzs->sqrt_Omega_k0);
+      const gdouble sigma_crit    = optzs->sc_Dls_Ds * Ds / Dls;
+      const gdouble mu            = optzs->sigma / sigma_crit;
+      const gdouble shear         = (optzs->mean_sigma - optzs->sigma) / sigma_crit;
+      const gdouble reduced_shear = shear / (1.0 - mu);
+
+      return reduced_shear;
+    }
+    break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 }
 
 /**
@@ -595,24 +851,28 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
 gdouble
 nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  /* Optimize it to compute sigma and sigma_c just once, and distances at inf */
-  gdouble Dinf, betainf, beta_s;
-  gdouble convergence_inf, shear_inf, g;
-  gdouble Ds   = nc_distance_angular_diameter (smd->dist, cosmo, zs);
-  gdouble Dls  = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl)) / (1.0 + zs);
-  gdouble beta = Dls / Ds;
-  
-  Dinf =  nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
-  /* Angular diamater distance lens to infinity over angular diameter distance obs to infinity. It's equivalent to compute the ratio of the transverse distances. Source at infinity */
-  betainf = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl) / Dinf;
-  beta_s  = beta / betainf;
-  
-  convergence_inf = beta_s * nc_wl_surface_mass_density_convergence_infinity (smd, dp, cosmo, R, zl, zc);
-  shear_inf       = beta_s * nc_wl_surface_mass_density_shear_infinity (smd, dp, cosmo, R, zl, zc);
-  
-  g = shear_inf / (1.0 - convergence_inf);
-  
-  return g;
+  if (zs < zc)
+    return 0.0;
+  else
+  {
+    gdouble Dinf, betainf, beta_s;
+    gdouble convergence_inf, shear_inf, g;
+    gdouble Ds   = nc_distance_angular_diameter (smd->dist, cosmo, zs);
+    gdouble Dls  = (nc_distance_transverse (smd->dist, cosmo, zs) - nc_distance_transverse (smd->dist, cosmo, zl)) / (1.0 + zs);
+    gdouble beta = Dls / Ds;
+
+    Dinf =  nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
+    /* Angular diamater distance lens to infinity over angular diameter distance obs to infinity. It's equivalent to compute the ratio of the transverse distances. Source at infinity */
+    betainf = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl) / Dinf;
+    beta_s  = beta / betainf;
+
+    convergence_inf = beta_s * nc_wl_surface_mass_density_convergence_infinity (smd, dp, cosmo, R, zl, zc);
+    shear_inf       = beta_s * nc_wl_surface_mass_density_shear_infinity (smd, dp, cosmo, R, zl, zc);
+
+    g = shear_inf / (1.0 - convergence_inf);
+
+    return g;
+  }
 }
 
 /**
@@ -635,14 +895,18 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
 gdouble
 nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  /* Optimize it to compute sigma and sigma_c just once*/
-  gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
-  gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
-  gdouble one_m_conv    = 1.0 - convergence;
-  gdouble shear2        = shear * shear;
-  gdouble magnification = 1.0 / (one_m_conv * one_m_conv - shear2);
+  if (zs < zc)
+	return 1.0;
+  else
+  {
+    gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
+    gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
+    gdouble one_m_conv    = 1.0 - convergence;
+    gdouble shear2        = shear * shear;
+    gdouble magnification = 1.0 / (one_m_conv * one_m_conv - shear2);
   
-  return magnification;
+    return magnification;
+  }
 }
 
 /**
@@ -689,7 +953,7 @@ nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHa
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
   
   fin  = fin / r_s;
-  fout = fout *   rho_s * r_s;
+  fout = fout * rho_s * r_s;
   
   {
     GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
@@ -706,6 +970,281 @@ nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHa
       g_array_index (res, gdouble, i) = fout * (barSigma - sigma);
     }
     
+    return res;
+  }
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_array:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $g(R)$, it should be $1$ or the appropriated unit conversion
+ * @zs: (element-type gdouble): source redshift $z_\mathrm{source}$
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].
+ *
+ * Returns: (transfer full) (element-type gdouble): $g(R)$
+ */
+GArray *
+nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, >, 0);
+  g_assert_cmpint (zs->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+
+  {
+    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len * zs->len);
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+    gint i,j;
+
+    g_array_set_size (res, R->len * zs->len);
+
+    switch (k)
+    {
+      case -1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gint pad           = zs->len * i;
+
+          for (j = 0; j < zs->len; j++)
+          {
+            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            if (zs_j > zl)
+            {
+              const gdouble x_j           = 1.0 + zs_j;
+              const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_j);
+              const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_j * sqrt_Omega_k0);
+              const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_j * sqrt_Omega_k0);
+              const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+              const gdouble mu            = sigma / sigma_crit;
+              const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+              const gdouble reduced_shear = shear / (1.0 - mu);
+
+              g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
+            }
+            else
+              g_array_index (res, gdouble, pad + j) = 0.0;
+          }
+        }
+        break;
+      case 0:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = dl / (1.0 + zl);
+          const gint pad           = zs->len * i;
+
+          for (j = 0; j < zs->len; j++)
+          {
+            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            if (zs_j > zl)
+            {
+              const gdouble x_j           = 1.0 + zs_j;
+              const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_j);
+              const gdouble Ds            = ds        / x_j;
+              const gdouble Dls           = (ds - dl) / x_j;
+              const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+              const gdouble mu            = sigma / sigma_crit;
+              const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+              const gdouble reduced_shear = shear / (1.0 - mu);
+
+              g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
+            }
+            else
+              g_array_index (res, gdouble, pad + j) = 0.0;
+          }
+        }
+        break;
+      case 1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gint pad           = zs->len * i;
+
+          for (j = 0; j < zs->len; j++)
+          {
+            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            if (zs_j > zl)
+            {
+              const gdouble x_j           = 1.0 + zs_j;
+              const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_j);
+              const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_j * sqrt_Omega_k0);
+              const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_j * sqrt_Omega_k0);
+              const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+              const gdouble mu            = sigma / sigma_crit;
+              const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+              const gdouble reduced_shear = shear / (1.0 - mu);
+
+              g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
+            }
+            else
+              g_array_index (res, gdouble, pad + j) = 0.0;
+          }
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    return res;
+  }
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_array_equal:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $g(R)$, it should be $1$ or the appropriated unit conversion
+ * @zs: (element-type gdouble): source redshift $z_\mathrm{source}$
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * [nc_wl_surface_mass_density_convergence()].
+ *
+ * Returns: (transfer full) (element-type gdouble): $g(R)$
+ */
+GArray *
+nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
+{
+  gdouble r_s, rho_s;
+
+  g_assert_cmpint (R->len, ==, zs->len);
+  g_assert_cmpint (zs->len, >, 0);
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  fin  = fin / r_s;
+
+  {
+    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+    gint i;
+
+    g_array_set_size (res, R->len);
+
+    switch (k)
+    {
+      case -1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      case 0:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = dl / (1.0 + zl);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = ds        / x_i;
+            const gdouble Dls           = (ds - dl) / x_i;
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      case 1:
+        for (i = 0; i < R->len; i++)
+        {
+          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+          const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+          const gdouble zs_i       = g_array_index (zs, gdouble, i);
+          if (zs_i > zl)
+          {
+            const gdouble x_i           = 1.0 + zs_i;
+            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs_i);
+            const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+            const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+            const gdouble mu            = sigma / sigma_crit;
+            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+            const gdouble reduced_shear = shear / (1.0 - mu);
+
+            g_array_index (res, gdouble, i) = reduced_shear * fout;
+          }
+          else
+            g_array_index (res, gdouble, i) = 0.0;
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
     return res;
   }
 }

@@ -47,6 +47,7 @@ struct _NcmPowspecClass
 {
   /*< private > */
   GObjectClass parent_class;
+  
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
@@ -67,6 +68,7 @@ struct _NcmPowspec
 GType ncm_powspec_get_type (void) G_GNUC_CONST;
 
 NcmPowspec *ncm_powspec_ref (NcmPowspec *powspec);
+
 void ncm_powspec_free (NcmPowspec *powspec);
 void ncm_powspec_clear (NcmPowspec **powspec);
 
@@ -143,3 +145,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_POWSPEC_INLINE_H_ */
+

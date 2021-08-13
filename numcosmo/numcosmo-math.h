@@ -59,6 +59,7 @@
 #include <numcosmo/math/ncm_lapack.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline_func.h>
+#include <numcosmo/math/ncm_spline_func_test.h>
 #include <numcosmo/math/ncm_spline_gsl.h>
 #include <numcosmo/math/ncm_spline_cubic.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>

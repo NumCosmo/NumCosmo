@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -55,7 +55,7 @@ struct _NcPowspecMLCBE
 {
   /*< private > */
   NcPowspecML parent_instance;
-	NcPowspecMLCBEPrivate *priv;
+  NcPowspecMLCBEPrivate *priv;
 };
 
 GType nc_powspec_ml_cbe_get_type (void) G_GNUC_CONST;
@@ -78,3 +78,4 @@ gdouble nc_powspec_ml_cbe_get_intern_k_max (NcPowspecMLCBE *ps_cbe);
 G_END_DECLS
 
 #endif /* _NC_POWSPEC_ML_CBE_H_ */
+

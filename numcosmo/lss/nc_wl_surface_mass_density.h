@@ -46,6 +46,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcWLSurfaceMassDensityClass NcWLSurfaceMassDensityClass;
 typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
+typedef struct _NcWLSurfaceMassDensityOptzs NcWLSurfaceMassDensityOptzs;
 
 /**
  * NcWLSurfaceMassDensityParams:
@@ -82,6 +83,23 @@ struct _NcWLSurfaceMassDensity
   NcmModelCtrl *ctrl_dp;
 };
 
+/**
+ * NcWLSurfaceMassDensityOptzs:
+ *
+ * Optimization structure.
+ *
+ */
+struct _NcWLSurfaceMassDensityOptzs
+{
+  /*< private >*/
+  gint k;
+  gdouble sqrt_Omega_k0;
+  gdouble dl;
+  gdouble sc_Dls_Ds;
+  gdouble sigma;
+  gdouble mean_sigma;
+};
+
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_wl_surface_mass_density);
@@ -109,8 +127,13 @@ gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, N
 gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
 gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
 
+void nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs);
+gdouble nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs);
+
 GArray *nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
 GArray *nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
+GArray *nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
+GArray *nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
 
 G_END_DECLS
 

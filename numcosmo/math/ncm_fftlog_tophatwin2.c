@@ -6,6 +6,7 @@
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /* excerpt from: */
+
 /***************************************************************************
  *            nc_window_tophat.c
  *
@@ -13,6 +14,7 @@
  *  Copyright  2010  Mariana Penna Lima
  *  <pennalima@gmail.com>
  ****************************************************************************/
+
 /*
  * ncm_fftlog_tophatwin2.c
  * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
@@ -35,6 +37,8 @@
  * SECTION:ncm_fftlog_tophatwin2
  * @title: NcmFftlogTophatwin2
  * @short_description: Logarithm fast fourier transform for a kernel given by the square of the spherical Bessel function of order one.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_fftlog_tophatwin2.h
  *
  *
  * This object computes the function (see #NcmFftlog)
@@ -82,7 +86,6 @@ ncm_fftlog_tophatwin2_init (NcmFftlogTophatwin2 *j1pow2)
 static void
 _ncm_fftlog_tophatwin2_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_tophatwin2_parent_class)->finalize (object);
 }
@@ -133,6 +136,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   i = 0;
   {
     const gint phys_i = ncm_fftlog_get_mode_index (fftlog, i);
+    
     acb_mul_si (a_i, twopi_Lt, phys_i, prec); /* a_i = twopi_Lt * phys_i */
     acb_mul_onei (a_i, a_i);                  /* a_i = a_i * I */
 
@@ -150,9 +154,11 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     Ym_base[i] = ncm_acb_get_complex (Un_i);
     /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
   }
+  
   for (i = 1; i < Nf; i++)
   {
     const gint phys_i = ncm_fftlog_get_mode_index (fftlog, i);
+    
     acb_mul_si (a_i, twopi_Lt, phys_i, prec); /* a_i = twopi_Lt * phys_i */
     acb_mul_onei (a_i, a_i);                  /* a_i = a_i * I */
 
@@ -195,6 +201,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   const gint Nf           = ncm_fftlog_get_full_size (fftlog);
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
+  
   i = 0;
   {
     const gint phys_i          = ncm_fftlog_get_mode_index (fftlog, i);
@@ -206,6 +213,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     Ym_base[i] = U;
     /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
   }
+  
   for (i = 1; i < Nf; i++)
   {
     const gint phys_i          = ncm_fftlog_get_mode_index (fftlog, i);
@@ -221,6 +229,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     Ym_base[i] = U;
     /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
   }
+  
 #endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
@@ -245,5 +254,7 @@ ncm_fftlog_tophatwin2_new (gdouble lnr0, gdouble lnk0, gdouble Lk, guint N)
                                               "Lk", Lk,
                                               "N", N,
                                               NULL);
+  
   return fftlog;
 }
+

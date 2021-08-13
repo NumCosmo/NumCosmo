@@ -26,9 +26,11 @@
  * SECTION:ncm_spline_gsl
  * @title: NcmSplineGsl
  * @short_description: GSL spline object wrapper.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_spline_gsl.h
  *
- * This object comprises the proper functions to use the GNU Scientific
- * Library (GSL) spline functions and interpolation methods.
+ * This object comprises the proper functions to use the [GNU Scientific
+ * Library (GSL)](https://www.gnu.org/software/gsl/) spline functions and interpolation methods.
  *
  */
 
@@ -130,6 +132,12 @@ ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
   object_class->get_property = &_ncm_spline_gsl_get_property;
   object_class->finalize     = &ncm_spline_gsl_finalize;
 
+  /**
+   * NcmSplineGsl:type-name:
+   *
+   * The name of the interpolation method from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_TYPE_NAME,
                                    g_param_spec_string ("type-name",
@@ -260,7 +268,7 @@ _ncm_spline_gsl_copy_empty (const NcmSpline *s)
 
 /**
  * ncm_spline_gsl_new:
- * @type: gsl interpolation method.
+ * @type: gsl interpolation method
  *
  * This function returns a new gsl #NcmSpline which will use @type
  * interpolation method.
@@ -277,7 +285,7 @@ ncm_spline_gsl_new (const gsl_interp_type *type)
 
 /**
  * ncm_spline_gsl_new_by_id:
- * @type_id: gsl interpolation method id.
+ * @type_id: gsl interpolation method id
  *
  * This function returns a new gsl #NcmSpline which will use @type
  * interpolation method.
@@ -294,10 +302,10 @@ ncm_spline_gsl_new_by_id (NcmSplineGslType type_id)
 
 /**
  * ncm_spline_gsl_new_full:
- * @type: gsl interpolation method.
- * @xv: #NcmVector of knots.
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv.
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it.
+ * @type: gsl interpolation method
+ * @xv: #NcmVector of knots
+ * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
+ * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
  *
  * This function returns a new gsl #NcmSpline setting all its members.
  *
@@ -313,10 +321,10 @@ ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *
 
 /**
  * ncm_spline_gsl_new_full_by_id:
- * @type_id: gsl interpolation method id.
- * @xv: #NcmVector of knots.
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv.
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it.
+ * @type_id: gsl interpolation method id
+ * @xv: #NcmVector of knots
+ * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
+ * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
  *
  * This function returns a new gsl #NcmSpline setting all its members.
  *
@@ -332,8 +340,8 @@ ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVecto
 
 /**
  * ncm_spline_gsl_set_type:
- * @sg: a #NcmSplineGsl.
- * @type: gsl interpolation method.
+ * @sg: a #NcmSplineGsl
+ * @type: gsl interpolation method
  *
  * This function sets the interpolation method @type to @sg.
  *
@@ -362,8 +370,8 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 
 /**
  * ncm_spline_gsl_set_type_by_id:
- * @sg: a #NcmSplineGsl.
- * @type_id: gsl interpolation method id.
+ * @sg: a #NcmSplineGsl
+ * @type_id: gsl interpolation method id
  *
  * This function sets the interpolation method @type_id to @sg.
  *
@@ -400,8 +408,8 @@ ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
 
 /**
  * ncm_spline_gsl_set_type_by_name:
- * @sg: a #NcmSplineGsl.
- * @type_name: gsl interpolation method name.
+ * @sg: a #NcmSplineGsl
+ * @type_name: gsl interpolation method name
  *
  * This function sets the interpolation method @type_name to @sg.
  *

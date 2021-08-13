@@ -5,6 +5,7 @@
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
+
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
@@ -27,9 +28,15 @@
  * SECTION:ncm_fftlog
  * @title: NcmFftlog
  * @short_description: Abstract class for implementing logarithm fast fourier transform.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_fftlog.h
  *
- * This class provides the tools to compute the Fast Fourier Transform of any function, which is assumed to be a periodic 
- * sequence of logarithmically spaced points. It is inspired on the approach [FFTLog][XHamilton2000], which we extended as described below.
+ * This class provides the tools to compute the Fast Fourier Transform
+ * of any function, which is assumed to be a periodic
+ * sequence of logarithmically spaced points.
+ * It is inspired on the approach FFTLog developed by
+ * [Hamilton (2000)][XHamilton2000] [[arXiv](https://arxiv.org/abs/astro-ph/9905191)],
+ * which was extended as described below.
  * 
  * A function $G(r)$ is written as 
  * \begin{equation}\label{eq:Gr} G(r) = \int_0^\infty F(k) \ K(kr) dk, \end{equation}
@@ -79,7 +86,7 @@
  * $F(k) \equiv 0$ in the intervals $\left[\ln k_0 -\frac{L_T}{2}, \ln k_0 - \frac{L}{2} \right)$ and 
  * $ \left(\ln k_0 + \frac{L}{2}, \ln k_0 + \frac{L_T}{2}\right]$, where the total period $L_T$ is defined by the final 
  * number of knots, i.e., $N_f = N (1 + \mathrm{padding})$. 
- * - $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed in 
+ * - $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed
  * in the two simetric intervals as mentioned above. 
  * - For the sake of optimization, the final number of points $N_f$ is substituted by the smallest number $N_f^\prime$ (bigger than $N_f$) 
  * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, where $a$, 
@@ -225,6 +232,7 @@ static void
 _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFftlog *fftlog = NCM_FFTLOG (object);
+  
   g_return_if_fail (NCM_IS_FFTLOG (object));
 
   switch (prop_id)
@@ -329,6 +337,7 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
+
 static void
 _ncm_fftlog_free_all (NcmFftlog *fftlog)
 {
@@ -348,6 +357,7 @@ _ncm_fftlog_free_all (NcmFftlog *fftlog)
   g_ptr_array_set_size (self->Gr_s, 0);
   g_ptr_array_set_size (self->Ym, 0);  
 }
+
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 static void
@@ -378,6 +388,12 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   object_class->get_property = &_ncm_fftlog_get_property;
   object_class->finalize     = &_ncm_fftlog_finalize;
 
+  /**
+   * NcmFftlog:nderivs:
+   *
+   * The number of derivatives to be estimated.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_NDERIV,
                                    g_param_spec_uint ("nderivs",
@@ -385,6 +401,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       "Number of derivatives",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:lnr0:
+   *
+   * The Center value for $\ln(r)$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
                                    g_param_spec_double ("lnr0",
@@ -392,6 +415,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Center value for ln(r)",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:lnk0:
+   *
+   * The Center value for $\ln(k)$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LNK0,
                                    g_param_spec_double ("lnk0",
@@ -399,6 +429,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Center value for ln(k)",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:Lk:
+   *
+   * The function $F(k)$'s period in natural logarithm base.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LR,
                                    g_param_spec_double ("Lk",
@@ -406,6 +443,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Function log-period",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:N:
+   *
+   * The number of knots in the fundamental interval.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_N,
                                    g_param_spec_uint ("N",
@@ -413,6 +457,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       "Number of knots",
                                                       0, G_MAXUINT, 10,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:padding:
+   *
+   * The padding percentage of the number of knots $N$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PAD,
                                    g_param_spec_double ("padding",
@@ -420,6 +471,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Padding percentage",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:no-ringing:
+   *
+   * True to use the no-ringing adjustment of $\ln(r_0)$ and False otherwise.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_NORING,
                                    g_param_spec_boolean ("no-ringing",
@@ -427,6 +485,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                          "No ringing",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcmFftlog:name:
+   *
+   * FFTW Plan wisdown's name to perform the transformation.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -516,6 +581,7 @@ ncm_fftlog_clear (NcmFftlog **fftlog)
  * ncm_fftlog_peek_name:
  * @fftlog: a #NcmFftlog
  * 
+ * This function peeks the @fftlog's associated name.
  * 
  * Returns: (transfer none): The internal string describing #NcmFftlog.
  */
@@ -737,6 +803,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     ncm_fftlog_reset (fftlog);
   }
+  
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
@@ -976,6 +1043,7 @@ ncm_fftlog_get_eval_r_max (NcmFftlog *fftlog)
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
+
 static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
@@ -998,6 +1066,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     if (self->noring)
     {
       gint i;
+      
       for (i = 0; i < 5; i++)
       {
         fftw_complex YNf_2_0 = Ym_0[self->Nf / 2];
@@ -1022,6 +1091,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
       for (nd = 1; nd <= self->nderivs; nd++)
       {
         fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
+
         Ym_nd[i] = -(1.0 + a) * Ym_ndm1[i];
         Ym_ndm1  = Ym_nd;
       }
@@ -1059,14 +1129,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     {
       self->CmYm[i] = self->Cm[i] * Ym_nd[i]; 
     }
-/*    
-    printf ("% 20.15g % 20.15g | % 20.15g % 20.15g\n", 
-            creal (self->CmYm[self->Nf_2]),
-            cimag (self->CmYm[self->Nf_2]),
-            creal (self->CmYm[self->Nf_2 + 1]),
-            cimag (self->CmYm[self->Nf_2 + 1])
-            );
-*/
+    
     self->CmYm[self->Nf_2]     = creal (self->CmYm[self->Nf_2]);
     self->CmYm[self->Nf_2 + 1] = creal (self->CmYm[self->Nf_2 + 1]);
 
@@ -1084,7 +1147,28 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 
   self->evaluated = TRUE;
 }
+
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+
+/**
+ * ncm_fftlog_get_Ym:
+ * @fftlog: a #NcmFftlog
+ * @size: (out): return size
+ *
+ * Computes the $Y_m$ vector.
+ *
+ * Returns: (transfer none) (array length=size): $Y_m$.
+ */
+gdouble *
+ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
+{
+  fftw_complex *Ym_0 = g_ptr_array_index (fftlog->Ym, 0);
+  NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+
+  size[0] = ncm_fftlog_get_full_size (fftlog) * 2;
+
+  return (gdouble *)Ym_0;
+}
 
 /**
  * ncm_fftlog_get_lnk_vector:
@@ -1329,6 +1413,7 @@ ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint nderiv)
 {
   NcmFftlogPrivate * const self = fftlog->priv;
   g_assert (self->evaluated);
+
   return g_ptr_array_index (self->Gr_s, nderiv);
 }
 

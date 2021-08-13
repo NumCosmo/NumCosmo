@@ -27,10 +27,30 @@
  * SECTION:nc_transfer_func_bbks
  * @title: NcTransferFuncBBKS
  * @short_description: Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
- * 
- * Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function, see [Sugiyama (1995)][XSugiyama1995].
- * 
- * 
+ * @stability: Stable
+ * @include: numcosmo/lss/nc_transfer_func_bbks.h
+ *
+ * This objects implements the Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
+ * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ads](https://ui.adsabs.harvard.edu/abs/1986ApJ...304...15B/abstract)].
+ *
+ * All three available transfer functions basically follow the same pattern,
+ * \begin{equation*}
+ *  T(k) = \frac{\ln \left( 1 + 2.34q \right)}{2.34 q} \left[1 + 3.89 q + (16.1 q)^2 + (5.46 q)^3 + (6.71 q)^4 \right]^{-1/4} \, .
+ * \end{equation*}
+ * The difference is the parameter $q$:
+ *
+ * - Cold Dark Matter without baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS):
+ *   $$ q = k \frac{(T_{\mathrm{cmb}}/2.7)^2}{\Omega_m h^2}  \, .$$
+ *
+ * - Cold Dark Matter with baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS):
+ *   $$ q = k \frac{(T_{\mathrm{cmb}}/2.7)^2}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
+ *
+ * - Cold Dark Matter with baryons but without the radiation term (#NC_TRANSFER_FUNC_BBKS_TYPE_CCL):
+ *   $$ q = k \frac{1}{\Omega_m h^2} \frac{1}{\exp\left( -\Omega_b - \sqrt{2h} \frac{\Omega_b}{\Omega_m} \right)}  $$
+ *
+ *  Where $T_{\mathrm{cmb}}$ is cosmic microwave background radiation mean temperature today (#nc_hicosmo_T_gamma0),
+ *  $\Omega_m h^2$ is dimensionless total dust density today multiplied by the reduced Hubble constant, $h$, squared (#nc_hicosmo_Omega_m0h2),
+ *  $\Omega_b$ is the dimensionless baryon density today (#nc_hicosmo_Omega_b0).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,7 +84,7 @@ static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
 {
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv = nc_transfer_func_bbks_get_instance_private (tf_bbks);
-
+  
   self->c1    = 0.0;
   self->c2    = 0.0;
   self->c3    = 0.0;
@@ -77,8 +97,9 @@ static void
 _nc_transfer_func_bbks_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcTransferFuncBBKS *tf_bbks = NC_TRANSFER_FUNC_BBKS (object);
+  
   g_return_if_fail (NC_IS_TRANSFER_FUNC_BBKS (object));
-
+  
   switch (prop_id)
   {
     case PROP_TYPE:
@@ -93,10 +114,11 @@ _nc_transfer_func_bbks_set_property (GObject *object, guint prop_id, const GValu
 static void
 _nc_transfer_func_bbks_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcTransferFuncBBKS *tf_bbks = NC_TRANSFER_FUNC_BBKS (object);
+  NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (object);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  
   g_return_if_fail (NC_IS_TRANSFER_FUNC_BBKS (object));
-
+  
   switch (prop_id)
   {
     case PROP_TYPE:
@@ -111,7 +133,6 @@ _nc_transfer_func_bbks_get_property (GObject *object, guint prop_id, GValue *val
 static void
 _nc_transfer_func_bbks_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_bbks_parent_class)->finalize (object);
 }
@@ -122,13 +143,27 @@ static gdouble _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh);
 static void
 nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcTransferFuncClass* parent_class = NC_TRANSFER_FUNC_CLASS (klass);
-
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcTransferFuncClass *parent_class = NC_TRANSFER_FUNC_CLASS (klass);
+  
   object_class->set_property = &_nc_transfer_func_bbks_set_property;
   object_class->get_property = &_nc_transfer_func_bbks_get_property;
   object_class->finalize     = &_nc_transfer_func_bbks_finalize;
-
+  
+  /**
+   * NcTransferFuncBBKS:type:
+   *
+   * The BBKS transfer function variant type to be applied in #NcTransferFunc.
+   *
+   * We have three options:
+   *
+   * - Cold Dark Matter without baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS):
+   *
+   * - Cold Dark Matter with baryons (#NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS):
+   *
+   * - Cold Dark Matter with baryons but without the radiation term (#NC_TRANSFER_FUNC_BBKS_TYPE_CCL):
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_TYPE,
                                    g_param_spec_enum ("type",
@@ -144,7 +179,7 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 /**
  * nc_transfer_func_bbks_new:
  *
- * FIXME
+ * Creates a new #NcTransferFunc of the BBKS type.
  *
  * Returns: A new #NcTransferFunc.
  */
@@ -157,7 +192,7 @@ nc_transfer_func_bbks_new ()
 static void
 _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
-  NcTransferFuncBBKS *tf_bbks = NC_TRANSFER_FUNC_BBKS (tf);
+  NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
   
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
@@ -165,35 +200,35 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble c2  = gsl_pow_2 (16.1);
   const gdouble c3  = gsl_pow_3 (5.46);
   const gdouble c4  = gsl_pow_4 (6.71);
-  const gdouble c5  = gsl_pow_2 (T_0 / 2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
+  const gdouble c5  = gsl_pow_2 (T_0 / 2.7); /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
   const gdouble h   = nc_hicosmo_h (cosmo);
   const gdouble h2  = h * h;
   const gdouble Ob  = nc_hicosmo_Omega_b0 (cosmo);
   const gdouble Om  = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble wm  = Om * h2;
-
-  self->c1    = c1;
-  self->c2    = c2;
-  self->c3    = c3;
-  self->c4    = c4;
-  self->h     = h;
-
+  
+  self->c1 = c1;
+  self->c2 = c2;
+  self->c3 = c3;
+  self->c4 = c4;
+  self->h  = h;
+  
   switch (self->type)
   {
     case NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS:
       self->c5_wm = c5 / wm;
       break;
     case NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS:
-      self->c5_wm = (c5 / wm) / exp (- Ob - sqrt (2.0 * h) * Ob / Om);
+      self->c5_wm = (c5 / wm) / exp (-Ob - sqrt (2.0 * h) * Ob / Om);
       break;
     case NC_TRANSFER_FUNC_BBKS_TYPE_CCL:
-      self->c5_wm = (1.0 / wm) / exp (- Ob - sqrt (2.0 * h) * Ob / Om); /* Check why they modify it like this, is it an typo? */
+      self->c5_wm = (1.0 / wm) / exp (-Ob - sqrt (2.0 * h) * Ob / Om); /* Check why they modify it like this, is it an typo? */
       break;
     default:
       g_assert_not_reached ();
       break;
   }
-
+  
   if (c5 == 0.0)
     g_warning ("_nc_transfer_func_bbks_prepare: no radiation universe, BBKS is not defined transfer function will be exaclty = 1.");
 }
@@ -201,7 +236,7 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 static gdouble
 _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
 {
-  NcTransferFuncBBKS *tf_bbks = NC_TRANSFER_FUNC_BBKS (tf);
+  NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
   
   const gdouble k  = kh * self->h;
@@ -210,7 +245,7 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble q2 = q * q;
   const gdouble q3 = q2 * q;
   const gdouble q4 = q3 * q;
-
+  
   return (q1 == 0.0 ? 1.0 : (log1p (q1) / q1)) * pow (1.0 + self->c1 * q + self->c2 * q2 + self->c3 * q3 + self->c4 * q4, -1.0 / 4.0);
 }
 
@@ -218,13 +253,15 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
  * nc_transfer_func_bbks_set_type:
  * @tf_bbks: a #NcTransferFuncBBKS
  * @bbks_type: a #NcTransferFuncBBKSType
- * 
+ *
  * Sets BBKS variant type.
- * 
+ *
  */
-void 
+void
 nc_transfer_func_bbks_set_type (NcTransferFuncBBKS *tf_bbks, NcTransferFuncBBKSType bbks_type)
 {
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  
   self->type = bbks_type;
 }
+

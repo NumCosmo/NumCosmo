@@ -6,6 +6,7 @@
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /* excerpt from: */
+
 /***************************************************************************
  *            nc_window_gaussian.c
  *
@@ -13,6 +14,7 @@
  *  Copyright  2010  Mariana Penna Lima
  *  <pennalima@gmail.com>
  ****************************************************************************/
+
 /*
  * ncm_fftlog_gausswin2.c
  * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
@@ -35,6 +37,8 @@
  * SECTION:ncm_fftlog_gausswin2
  * @title: NcmFftlogGausswin2
  * @short_description: Logarithm fast fourier transform for a kernel given by the square of a Gaussian window function.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_fftlog_gausswin2.h
  *
  *
  * This object computes the function (see #NcmFftlog)
@@ -76,7 +80,6 @@ ncm_fftlog_gausswin2_init (NcmFftlogGausswin2 *gwin2)
 static void
 _ncm_fftlog_gausswin2_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_gausswin2_parent_class)->finalize (object);
 }
@@ -100,6 +103,7 @@ _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf           = ncm_fftlog_get_full_size (fftlog);
+  
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
@@ -118,6 +122,7 @@ _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
     Ym_base[i] = U;
   }
+  
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
@@ -141,5 +146,7 @@ ncm_fftlog_gausswin2_new (gdouble lnr0, gdouble lnk0, gdouble Lk, guint N)
                                              "Lk", Lk,
                                              "N", N,
                                              NULL);
+  
   return fftlog;
 }
+

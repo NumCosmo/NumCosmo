@@ -43,6 +43,7 @@ G_BEGIN_DECLS
 #define NC_HALO_MASS_FUNCTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunctionClass))
 typedef struct _NcHaloMassFunctionClass NcHaloMassFunctionClass;
 typedef struct _NcHaloMassFunction NcHaloMassFunction;
+typedef struct _NcHaloMassFunctionPrivate NcHaloMassFunctionPrivate;
 
 struct _NcHaloMassFunctionClass
 {
@@ -54,18 +55,8 @@ struct _NcHaloMassFunction
 {
   /*< private > */
   GObject parent_instance;
-  NcDistance *dist;
-  NcMultiplicityFunc *mulf;
-  NcmPowspecFilter *psf;
-  gdouble area_survey;
+  NcHaloMassFunctionPrivate *priv;
   NcmSpline2d *d2NdzdlnM;
-  gdouble lnMi;
-  gdouble lnMf;
-  gdouble zi;
-  gdouble zf;
-  gdouble prec;
-  NcmModelCtrl *ctrl_cosmo;
-  NcmModelCtrl *ctrl_reion;
 };
 
 /**
@@ -95,7 +86,9 @@ void nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec);
 void nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd);
 void nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
 void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
-NCM_INLINE void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+
+NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
@@ -122,15 +115,6 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE void
-nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
-{
-  gboolean cosmo_up = ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
-  
-  if (cosmo_up)
-	  nc_halo_mass_function_prepare (mfp, cosmo);
-}
-
 NCM_INLINE gdouble
 nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
@@ -142,3 +126,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HALO_MASS_FUNCTION_INLINE_H_ */
+

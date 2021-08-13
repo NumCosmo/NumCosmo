@@ -38,12 +38,17 @@ typedef struct _TestNcmFit
 
 #define TESTS_NCM_DECL(lib,algo) \
 void test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata); \
+void test_ncm_fit_##lib##_##algo##_new_empty (TestNcmFit *test, gconstpointer pdata); \
 void test_ncm_fit_##lib##_##algo##_traps (TestNcmFit *test, gconstpointer pdata);
 
 #define TESTS_NCM_ADD(lib,algo) \
   g_test_add ("/ncm/fit/" #lib "/" #algo "/run", TestNcmFit, NULL, \
               &test_ncm_fit_##lib##_##algo##_new, \
               &test_ncm_fit_run, \
+              &test_ncm_fit_free); \
+  g_test_add ("/ncm/fit/" #lib "/" #algo "/run/empty", TestNcmFit, NULL, \
+              &test_ncm_fit_##lib##_##algo##_new_empty, \
+              &test_ncm_fit_run_empty, \
               &test_ncm_fit_free); \
 \
   g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
@@ -71,6 +76,36 @@ test_ncm_fit_##lib##_##algo##_new (TestNcmFit *test, gconstpointer pdata) \
   NcmFit *fit; \
  \
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE); \
+   \
+  fit = ncm_fit_new (lib_enum, algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL); \
+  ncm_fit_set_maxiter (fit, max_iter); \
+ \
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd); \
+  test->fit       = ncm_fit_ref (fit); \
+  test->rng       = rng; \
+   \
+  g_assert_true (NCM_IS_FIT (fit)); \
+ \
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd); \
+  ncm_model_mvnd_clear (&model_mvnd); \
+  ncm_dataset_clear (&dset); \
+  ncm_likelihood_clear (&lh); \
+  ncm_mset_clear (&mset); \
+  ncm_fit_clear (&fit); \
+} \
+void \
+test_ncm_fit_##lib##_##algo##_new_empty (TestNcmFit *test, gconstpointer pdata) \
+{ \
+  const gint dim                 = g_test_rand_int_range (1, max_dim); \
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ()); \
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e0, 50.0, -1.0, 1.0, rng); \
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim); \
+  NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL); \
+  NcmLikelihood *lh              = ncm_likelihood_new (dset); \
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL); \
+  NcmFit *fit; \
+ \
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED); \
    \
   fit = ncm_fit_new (lib_enum, algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL); \
   ncm_fit_set_maxiter (fit, max_iter); \
@@ -124,6 +159,7 @@ TESTS_NCM_DECL (gsl, nmsimplex2rand)
 
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -202,7 +238,9 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
 
-  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE); 
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
   {
     NcmModel *model = NCM_MODEL (ncm_mset_peek (fit->mset, ncm_model_mvnd_id ()));
     NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
@@ -215,6 +253,16 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
       /* printf ("[%4d] % 22.15g % 22.15g %e\n", i, ncm_vector_get (y, i), ncm_vector_get (ym, i), fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0)); */
     }
   }
+}
+
+void
+test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT

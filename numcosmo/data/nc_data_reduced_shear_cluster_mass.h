@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -57,7 +57,7 @@ struct _NcDataReducedShearClusterMassClass
  * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_ZCLUSTER: cluster redshift
  * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_GOBS: measured reduced shear
  * @NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_PZ: redshift distribution (photometric)
- * 
+ *
  */
 typedef enum _NcDataReducedShearClusterMassObs
 {
@@ -72,7 +72,7 @@ struct _NcDataReducedShearClusterMass
 {
   /*< private >*/
   NcmData parent_instance;
-	NcDataReducedShearClusterMassPrivate *priv;
+  NcDataReducedShearClusterMassPrivate *priv;
 };
 
 GType nc_data_reduced_shear_cluster_mass_get_type (void) G_GNUC_CONST;
@@ -90,3 +90,4 @@ void nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass
 G_END_DECLS
 
 #endif /* _NC_DATA_REDUCED_SHEAR_CLUSTER_MASS_H_ */
+

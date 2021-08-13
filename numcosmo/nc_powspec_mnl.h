@@ -59,9 +59,11 @@ GType nc_powspec_mnl_get_type (void) G_GNUC_CONST;
 
 NcPowspecMNL *nc_powspec_mnl_new_from_name (const gchar *ps_mnl_name);
 NcPowspecMNL *nc_powspec_mnl_ref (NcPowspecMNL *ps_mnl);
+
 void nc_powspec_mnl_free (NcPowspecMNL *ps_mnl);
 void nc_powspec_mnl_clear (NcPowspecMNL **ps_mnl);
 
 G_END_DECLS
 
 #endif /* _NC_POWSPEC_MNL_H_ */
+
