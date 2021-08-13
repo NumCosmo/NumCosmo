@@ -63,13 +63,13 @@ struct _NcXcorLimberKernelCMBLensing
 {
   /*< private >*/
   NcXcorLimberKernel parent_instance;
-
-  NcDistance* dist;
-  NcRecomb* recomb;
-
-  NcmVector* Nl;
+  
+  NcDistance *dist;
+  NcRecomb *recomb;
+  
+  NcmVector *Nl;
   guint Nlmax;
-
+  
   gdouble xi_lss;
 };
 
@@ -81,8 +81,9 @@ struct _NcXcorLimberKernelCMBLensingClass
 
 GType nc_xcor_limber_kernel_cmb_lensing_get_type (void) G_GNUC_CONST;
 
-NcXcorLimberKernelCMBLensing* nc_xcor_limber_kernel_cmb_lensing_new (NcDistance* dist, NcRecomb* recomb, NcmVector* Nl);
+NcXcorLimberKernelCMBLensing *nc_xcor_limber_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_ */
+

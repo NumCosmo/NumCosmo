@@ -57,9 +57,9 @@ G_BEGIN_DECLS
  */
 typedef enum _NcXcorLimberMethod
 {
-	NC_XCOR_LIMBER_METHOD_GSL = 0,
-	NC_XCOR_LIMBER_METHOD_CVODE,
-	NC_XCOR_LIMBER_METHOD_SUAVE,
+  NC_XCOR_LIMBER_METHOD_GSL = 0,
+  NC_XCOR_LIMBER_METHOD_CVODE,
+  NC_XCOR_LIMBER_METHOD_SUAVE,
 } NcXcorLimberMethod;
 
 #define NC_XCOR_PRECISION (1e-5)
@@ -69,19 +69,20 @@ typedef struct _NcXcor NcXcor;
 
 struct _NcXcor
 {
-	/*< private > */
-	GObject parent_instance;
-	NcDistance* dist;
-	NcmPowspec* ps;
-	gdouble RH;
-	NcXcorLimberMethod meth;
+  /*< private > */
+  GObject parent_instance;
+  NcDistance *dist;
+  NcmPowspec *ps;
+  gdouble RH;
+  NcXcorLimberMethod meth;
 };
 
 struct _NcXcorClass
 {
-	/*< private > */
-	GObjectClass parent_class;
-	gpointer (*alloc) (void);
+  /*< private > */
+  GObjectClass parent_class;
+  
+  gpointer (*alloc) (void);
 };
 
 typedef struct _NcXcorKinetic
@@ -93,8 +94,8 @@ typedef struct _NcXcorKinetic
 GType nc_xcor_get_type (void) G_GNUC_CONST;
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
-NcXcor* nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
-NcXcor* nc_xcor_ref (NcXcor *xc);
+NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
+NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
 
@@ -108,3 +109,4 @@ void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
 G_END_DECLS
 
 #endif /* _NC_XCOR_H_ */
+

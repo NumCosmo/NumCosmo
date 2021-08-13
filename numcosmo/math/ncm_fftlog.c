@@ -1185,7 +1185,7 @@ gdouble *
 ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 {
   NcmFftlogPrivate * const self = fftlog->priv;
-
+  
   fftw_complex *Ym_0 = g_ptr_array_index (self->Ym, 0);
   
   NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
@@ -1521,7 +1521,8 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
       /*printf ("% 20.15g % 20.15e % 20.15e % 20.15e | % 20.15e % 20.15e\n", lnr_i, exp (lnr_i), lnG_i, lnS_i, lreltol_i, fabs ((lnG_i - lnS_i) / fabs (lnG_i)));*/
       if (lreltol_i > lreltol)
         lreltol = lreltol_i;
-        /*i_max   = i;*/
+      
+      /*i_max   = i;*/
     }
     
     ncm_spline_clear (&s[nd]);

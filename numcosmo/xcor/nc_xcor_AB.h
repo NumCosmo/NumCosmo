@@ -45,49 +45,50 @@ typedef struct _NcXcorAB NcXcorAB;
 
 struct _NcXcorAB
 {
-	/*< private > */
-	GObject parent_instance;
-
-	guint a;
-	guint b;
-
-	guint ell_th_cut_off;
-	guint ell_lik_min;
-	guint ell_lik_max;
-	guint nell_lik;
-
-	NcmMatrix* mixing;
-	NcmMatrix* cl_th; //column 0 : C_l^th, 1 : C_l^th+N_l, 2 : mixed C_l
-	NcmVector* cl_obs;
-
+  /*< private > */
+  GObject parent_instance;
+  
+  guint a;
+  guint b;
+  
+  guint ell_th_cut_off;
+  guint ell_lik_min;
+  guint ell_lik_max;
+  guint nell_lik;
+  
+  NcmMatrix *mixing;
+  NcmMatrix *cl_th; /*column 0 : C_l^th, 1 : C_l^th+N_l, 2 : mixed C_l */
+  NcmVector *cl_obs;
 };
 
 struct _NcXcorABClass
 {
-	/*< private > */
-	GObjectClass parent_class;
-	gpointer (*alloc) (void);
+  /*< private > */
+  GObjectClass parent_class;
+  
+  gpointer (*alloc) (void);
 };
 
 GType nc_xcor_AB_get_type (void) G_GNUC_CONST;
 
 
-// void nc_xcor_AB_prepare (NcXcorAB* xc, NcHICosmo* model);
-// NcXcorAB* nc_xcor_AB_new (NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf, gdouble zl, gdouble zu);
-NcXcorAB* nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar* clobs_filename, const gchar* mixing_filename, const guint mixing_filelength);
-NcXcorAB* nc_xcor_AB_ref (NcXcorAB* xcab);
-void nc_xcor_AB_free (NcXcorAB* xcab);
-void nc_xcor_AB_clear (NcXcorAB** xcab);
+/* void nc_xcor_AB_prepare (NcXcorAB* xc, NcHICosmo* model); */
+/* NcXcorAB* nc_xcor_AB_new (NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf, gdouble zl, gdouble zu); */
+NcXcorAB *nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar *clobs_filename, const gchar *mixing_filename, const guint mixing_filelength);
+NcXcorAB *nc_xcor_AB_ref (NcXcorAB *xcab);
+void nc_xcor_AB_free (NcXcorAB *xcab);
+void nc_xcor_AB_clear (NcXcorAB **xcab);
 
-// gdouble nc_xcor_AB_limber_cross_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint l);
-// void nc_xcor_AB_limber_cross_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp);
-// gdouble nc_xcor_AB_limber_auto_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint l, gboolean withnoise);
-// void nc_xcor_AB_limber_auto_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, gboolean withnoise);
-// void nc_xcor_AB_limber_auto_cl_clnl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmax, NcmVector* vcl, NcmVector* vclnl);
+/* gdouble nc_xcor_AB_limber_cross_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint l); */
+/* void nc_xcor_AB_limber_cross_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp); */
+/* gdouble nc_xcor_AB_limber_auto_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint l, gboolean withnoise); */
+/* void nc_xcor_AB_limber_auto_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, gboolean withnoise); */
+/* void nc_xcor_AB_limber_auto_cl_clnl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmax, NcmVector* vcl, NcmVector* vclnl); */
 
-// H0/c in h Mpc-1:
+/* H0/c in h Mpc-1: */
 #define H0_c_3 (gsl_pow_3 (1e5 / ncm_c_c ()))
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_AB_H_ */
+

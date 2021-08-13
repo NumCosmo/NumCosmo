@@ -24,19 +24,19 @@
  */
 
 
- /**
-  * SECTION:nc_xcor_limber_kernel
-  * @title: NcXcorLimberKernel
-  * @short_description: Abstract object for the kernels of projected observables used in cross-correlations.
-  *
-  * The projected field and its kernel are linked by
-  * \begin{equation}
-  * $A(\hat{\mathbf{n}}) = \int_0^\infty dz \ W^A(z) \ \delta(\chi(z)\hat{\mathbf{n}}, z)$
-  * \end{equation}
-  * where $\delta$ is the matter density field.
-  *
-  * Kernels also implement the nosie power spectrum.
-  */
+/**
+ * SECTION:nc_xcor_limber_kernel
+ * @title: NcXcorLimberKernel
+ * @short_description: Abstract object for the kernels of projected observables used in cross-correlations.
+ *
+ * The projected field and its kernel are linked by
+ * \begin{equation}
+ * $A(\hat{\mathbf{n}}) = \int_0^\infty dz \ W^A(z) \ \delta(\chi(z)\hat{\mathbf{n}}, z)$
+ * \end{equation}
+ * where $\delta$ is the matter density field.
+ *
+ * Kernels also implement the nosie power spectrum.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -61,7 +61,7 @@ enum
 };
 
 static void
-nc_xcor_limber_kernel_init (NcXcorLimberKernel* xclk)
+nc_xcor_limber_kernel_init (NcXcorLimberKernel *xclk)
 {
   xclk->cons_factor = 0.0;
   xclk->zmin        = 0.0;
@@ -69,27 +69,26 @@ nc_xcor_limber_kernel_init (NcXcorLimberKernel* xclk)
 }
 
 static void
-_nc_xcor_limber_kernel_dispose (GObject* object)
+_nc_xcor_limber_kernel_dispose (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_limber_kernel_parent_class)->dispose (object);
 }
 
 static void
-_nc_xcor_limber_kernel_finalize (GObject* object)
+_nc_xcor_limber_kernel_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_limber_kernel_parent_class)->finalize (object);
 }
 
 static void
-_nc_xcor_limber_kernel_set_property (GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec)
+_nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel* xclk = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
+  
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
-
+  
   switch (prop_id)
   {
     case PROP_ZMIN:
@@ -105,11 +104,12 @@ _nc_xcor_limber_kernel_set_property (GObject* object, guint prop_id, const GValu
 }
 
 static void
-_nc_xcor_limber_kernel_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec)
+_nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel* xclk = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
+  
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
-
+  
   switch (prop_id)
   {
     case PROP_ZMIN:
@@ -126,21 +126,22 @@ _nc_xcor_limber_kernel_get_property (GObject* object, guint prop_id, GValue* val
 
 NCM_MSET_MODEL_REGISTER_ID (nc_xcor_limber_kernel, NC_TYPE_XCOR_LIMBER_KERNEL);
 
-static void nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass* klass)
+static void
+nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   model_class->set_property = &_nc_xcor_limber_kernel_set_property;
   model_class->get_property = &_nc_xcor_limber_kernel_get_property;
   object_class->dispose     = &_nc_xcor_limber_kernel_dispose;
   object_class->finalize    = &_nc_xcor_limber_kernel_finalize;
-
+  
   ncm_model_class_set_name_nick (model_class, "Cross-correlation Limber Kernels", "xcor-limber-kernel");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-
+  
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
-
+  
   g_object_class_install_property (object_class,
                                    PROP_ZMIN,
                                    g_param_spec_double ("zmin",
@@ -155,7 +156,7 @@ static void nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass* klass)
                                                         "Maximum redshift",
                                                         0.0, 1e5, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   ncm_mset_model_register_id (model_class, "NcXcorLimberKernel", "Cross-correlation Limber Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
 }
@@ -168,18 +169,18 @@ static void nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass* klass)
  * @xcor_name.
  *
  * Returns: (transfer full): A new #NcXcorLimberKernel.
-   */
+ */
 NcXcorLimberKernel *
-nc_xcor_limber_kernel_new_from_name (gchar* xcor_name)
+nc_xcor_limber_kernel_new_from_name (gchar *xcor_name)
 {
-  GObject* obj = ncm_serialize_global_from_string (xcor_name);
+  GObject *obj    = ncm_serialize_global_from_string (xcor_name);
   GType xcor_type = G_OBJECT_TYPE (obj);
-
+  
   if (!g_type_is_a (xcor_type, NC_TYPE_XCOR_LIMBER_KERNEL))
     g_error ("nc_xcor_limber_kernel_new_from_name: NcXcorLimberKernel %s do not "
              "descend from %s.",
              xcor_name, g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
-
+  
   return NC_XCOR_LIMBER_KERNEL (obj);
 }
 
@@ -190,9 +191,9 @@ nc_xcor_limber_kernel_new_from_name (gchar* xcor_name)
  * FIXME
  *
  * Returns: (transfer full): @xclk.
-   */
+ */
 NcXcorLimberKernel *
-nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk)
+nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk)
 {
   return g_object_ref (xclk);
 }
@@ -205,7 +206,7 @@ nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk)
  *
  */
 void
-nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk)
+nc_xcor_limber_kernel_free (NcXcorLimberKernel *xclk)
 {
   g_object_unref (xclk);
 }
@@ -231,7 +232,8 @@ nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
  *
  * Returns: FIXME
  */
-guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
+guint
+nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
 {
   return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->obs_len (xclk);
 }
@@ -286,9 +288,10 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
 gdouble
 nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  const gdouble xi_z = nc_distance_comoving (dist, cosmo, z); // in units of Hubble radius
-  const gdouble E_z = nc_hicosmo_E (cosmo, z);
+  const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
+  const gdouble E_z       = nc_hicosmo_E (cosmo, z);
   const NcXcorKinetic xck = { xi_z, E_z };
+  
   if ((xclk->zmin <= z) && (xclk->zmax >= z))
     return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * xclk->cons_factor;
   else
@@ -308,7 +311,7 @@ nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 void
 nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
-  NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)-> add_noise (xclk, vp1, vp2, lmin);
+  NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->add_noise (xclk, vp1, vp2, lmin);
 }
 
 /**
@@ -330,20 +333,25 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
   GType *models = g_type_children (model_type, &nc);
+  
   for (i = 0; i < nc; i++)
   {
     guint ncc;
-    GType* modelsc = g_type_children (models[i], &ncc);
-
+    GType *modelsc = g_type_children (models[i], &ncc);
+    
     g_message ("#  ");
+    
     for (j = 0; j < n; j++)
       g_message (" ");
+    
     g_message ("%s\n", g_type_name (models[i]));
+    
     if (ncc)
       _nc_xcor_limber_kernel_log_all_models_go (models[i], n + 2);
-
+    
     g_free (modelsc);
   }
+  
   g_free (models);
 }
 
@@ -360,3 +368,4 @@ nc_xcor_limber_kernel_log_all_models (void)
              g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
   _nc_xcor_limber_kernel_log_all_models_go (NC_TYPE_XCOR_LIMBER_KERNEL, 0);
 }
+

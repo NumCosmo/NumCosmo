@@ -69,25 +69,25 @@ struct _NcXcorLimberKernelWeakLensing
 {
   /*< private >*/
   NcXcorLimberKernel parent_instance;
-
-  NcmSpline* dn_dz;
-
-  // NcmSpline* bias_spline;
-  // guint nknots;
-  // gdouble* bias;
-
-  NcDistance* dist;
-
-  NcmSpline* src_int;
-  // gboolean domagbias;
-
-  // gboolean fast_update;
-  // gdouble bias_old;
-  // gdouble noise_bias_old;
-
+  
+  NcmSpline *dn_dz;
+  
+  /* NcmSpline* bias_spline; */
+  /* guint nknots; */
+  /* gdouble* bias; */
+  
+  NcDistance *dist;
+  
+  NcmSpline *src_int;
+  /* gboolean domagbias; */
+  
+  /* gboolean fast_update; */
+  /* gdouble bias_old; */
+  /* gdouble noise_bias_old; */
+  
   gdouble nbar;
   gdouble intr_shear;
-
+  
   gdouble noise;
 };
 
@@ -97,20 +97,21 @@ struct _NcXcorLimberKernelWeakLensingClass
   NcXcorLimberKernelClass parent_class;
 };
 
-// #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_BIAS_DEFAULT_LEN (1)
-// #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_BIAS (1.0)
+/* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_BIAS_DEFAULT_LEN (1) */
+/* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_BIAS (1.0) */
 
-// #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_MAG_BIAS (0.4)
-// #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_NOISE_BIAS (0.0)
+/* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_MAG_BIAS (0.4) */
+/* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_NOISE_BIAS (0.0) */
 
-// #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_G_FUNC_LEN (200)
+/* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_G_FUNC_LEN (200) */
 
 #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
 GType nc_xcor_limber_kernel_weak_lensing_get_type (void) G_GNUC_CONST;
 
-NcXcorLimberKernelWeakLensing* nc_xcor_limber_kernel_weak_lensing_new (gdouble zmin, gdouble zmax, NcmSpline* dn_dz, gdouble nbar, gdouble intr_shear, NcDistance* dist);
+NcXcorLimberKernelWeakLensing *nc_xcor_limber_kernel_weak_lensing_new (gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear, NcDistance *dist);
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_H_ */
+

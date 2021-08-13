@@ -73,11 +73,12 @@ struct _NcXcorLimberKernelClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-  void (*prepare) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
-  void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
-  guint (*obs_len) (NcXcorLimberKernel* xclk);
-  guint (*obs_params_len) (NcXcorLimberKernel* xclk);
+  
+  gdouble (*eval) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+  void (*prepare) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
+  void (*add_noise) (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
+  guint (*obs_len) (NcXcorLimberKernel *xclk);
+  guint (*obs_params_len) (NcXcorLimberKernel *xclk);
 };
 
 struct _NcXcorLimberKernel
@@ -92,21 +93,22 @@ GType nc_xcor_limber_kernel_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_xcor_limber_kernel);
 
-NcXcorLimberKernel* nc_xcor_limber_kernel_new_from_name (gchar* xcor_name);
-NcXcorLimberKernel* nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk);
-void nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk);
-void nc_xcor_limber_kernel_clear (NcXcorLimberKernel** xclk);
+NcXcorLimberKernel *nc_xcor_limber_kernel_new_from_name (gchar *xcor_name);
+NcXcorLimberKernel *nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk);
+void nc_xcor_limber_kernel_free (NcXcorLimberKernel *xclk);
+void nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk);
 
-guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel* xclk);
-guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel* xclk);
+guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk);
+guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk);
 
-gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
-void nc_xcor_limber_kernel_prepare (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
-void nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
+void nc_xcor_limber_kernel_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
+void nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 
 void nc_xcor_limber_kernel_log_all_models (void);
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_LIMBER_KERNEL_H_ */
+

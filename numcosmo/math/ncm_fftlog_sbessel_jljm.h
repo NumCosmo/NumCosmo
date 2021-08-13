@@ -77,3 +77,4 @@ void ncm_fftlog_sbessel_jljm_set_best_lnk0 (NcmFftlogSBesselJLJM *fftlog_jljm);
 G_END_DECLS
 
 #endif /* _NCM_FFTLOG_SBESSEL_JLJM_H_ */
+

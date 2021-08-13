@@ -320,7 +320,7 @@ static gdouble
 _test_ncm_diff_asin (const gdouble x, gpointer userdata)
 {
   gdouble *w_ptr = (gdouble *) userdata;
-  
+
   return asin (x * w_ptr[0]);
 }
 
@@ -838,7 +838,7 @@ test_ncm_diff_rf_d1_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
   for (i = 0; i < ntests; i++)
   {
     gdouble w         = g_test_rand_double_range (1.0e-2, 1.0);
-    const gdouble x   = g_test_rand_double_range (-0.99, 0.99);
+    const gdouble x   = g_test_rand_double_range (-0.95, 0.95);
     const gdouble df  = ncm_diff_rf_d1_1_to_1 (diff, x, &_test_ncm_diff_asin, &w, &err);
     const gdouble Adf = _test_ncm_diff_dasin (x, &w);
     
@@ -853,13 +853,13 @@ test_ncm_diff_rc_d1_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
   NcmDiff *diff = test->diff;
   gdouble err   = 0.0;
   guint ntests  = 1000;
-  gint nerr     = 5;
+  gint nerr     = 1500;
   guint i;
   
   for (i = 0; i < ntests; i++)
   {
     gdouble w         = g_test_rand_double_range (1.0e-2, 1.0);
-    const gdouble x   = g_test_rand_double_range (-0.99, 0.99);
+    const gdouble x   = g_test_rand_double_range (-0.95, 0.95);
     const gdouble df  = ncm_diff_rc_d1_1_to_1 (diff, x, &_test_ncm_diff_asin, &w, &err);
     const gdouble Adf = _test_ncm_diff_dasin (x, &w);
 
@@ -886,7 +886,7 @@ test_ncm_diff_rc_d2_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
   for (i = 0; i < ntests; i++)
   {
     gdouble w         = g_test_rand_double_range (1.0e-2, 1.0);
-    const gdouble x   = g_test_rand_double_range (-0.99, 0.99);
+    const gdouble x   = g_test_rand_double_range (-0.95, 0.95);
     const gdouble df  = ncm_diff_rc_d2_1_to_1 (diff, x, &_test_ncm_diff_asin, &w, &err);
     const gdouble Adf = _test_ncm_diff_d2asin (x, &w);
     
@@ -1255,7 +1255,7 @@ test_ncm_diff_rf_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     TestNcmDiffAll arg =
     {
       g_test_rand_double_range (-100.0,       100.0),
-      g_test_rand_double_range (-0.99,         0.99),
+      g_test_rand_double_range (-0.95,         0.95),
       g_test_rand_double_range (-0.5 * M_PI,   0.5 * M_PI),
       g_test_rand_double_range (-100.0,       100.0),
       g_test_rand_double_range (1.0e-3,    1.0e3),
@@ -1277,6 +1277,8 @@ test_ncm_diff_rf_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       const gdouble Adf = g_array_index (Adf_a, gdouble, j);
       const gdouble err = g_array_index (err_a, gdouble, j);
       
+      /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", x, df, Adf, err);*/
+
       if (((err == 0.0) || gsl_isnan (err)) && nerr)
       {
         nerr--;
@@ -1307,7 +1309,7 @@ test_ncm_diff_rc_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     TestNcmDiffAll arg =
     {
       g_test_rand_double_range (-100.0,       100.0),
-      g_test_rand_double_range (-0.99,         0.99),
+      g_test_rand_double_range (-0.95,         0.95),
       g_test_rand_double_range (-0.5 * M_PI,   0.5 * M_PI),
       g_test_rand_double_range (-100.0,       100.0),
       g_test_rand_double_range (1.0e-3,    1.0e3),
@@ -1359,7 +1361,7 @@ test_ncm_diff_rc_d2_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     TestNcmDiffAll arg =
     {
       g_test_rand_double_range (-100.0,       100.0),
-      g_test_rand_double_range (-0.99,         0.99),
+      g_test_rand_double_range (-0.95,         0.95),
       g_test_rand_double_range (-0.5 * M_PI,   0.5 * M_PI),
       g_test_rand_double_range (-100.0,       100.0),
       g_test_rand_double_range (1.0e-3,    1.0e3),
@@ -1758,7 +1760,7 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
   GArray *x_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *err_a = NULL;
   guint ntests = 1000;
-  gint nerr = 5;
+  gint nerr = 15;
   guint i, j;
   
   g_array_set_size (x_a, 3);
@@ -1790,7 +1792,8 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble df  = g_array_index (df_a,  gdouble, j);
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
-        
+
+        /*printf ("(% 22.15g % 22.15g % 22.15g) % 22.15g % 22.15g % 22.15g\n", v1, v2, v3, df, Adf, err);*/
         if (((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
