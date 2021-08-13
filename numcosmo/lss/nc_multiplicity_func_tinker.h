@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncTinkerClass NcMultiplicityFuncTinkerClass;
 typedef struct _NcMultiplicityFuncTinker NcMultiplicityFuncTinker;
+typedef struct _NcMultiplicityFuncTinkerPrivate NcMultiplicityFuncTinkerPrivate;
 
 struct _NcMultiplicityFuncTinkerClass
 {
@@ -53,26 +54,20 @@ struct _NcMultiplicityFuncTinker
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble A0;
-  gdouble a0;
-  gdouble b0;
-  gdouble c;
-  gdouble Delta;
+  NcMultiplicityFuncTinkerPrivate *priv;
 };
 
 GType nc_multiplicity_func_tinker_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_tinker_new (gdouble A0, gdouble a0, gdouble b0, gdouble c, gdouble Delta);
-void nc_multiplicity_func_tinker_set_A0 (NcMultiplicityFuncTinker *mulf_tinker, gdouble A0);
-gdouble nc_multiplicity_func_tinker_get_A0 (const NcMultiplicityFuncTinker *mulf_tinker);
-void nc_multiplicity_func_tinker_set_a0 (NcMultiplicityFuncTinker *mulf_tinker, gdouble a0);
-gdouble nc_multiplicity_func_tinker_get_a0 (const NcMultiplicityFuncTinker *mulf_tinker);
-void nc_multiplicity_func_tinker_set_b0 (NcMultiplicityFuncTinker *mulf_tinker, gdouble b0);
-gdouble nc_multiplicity_func_tinker_get_b0 (const NcMultiplicityFuncTinker *mulf_tinker);
-void nc_multiplicity_func_tinker_set_c (NcMultiplicityFuncTinker *mulf_tinker, gdouble c);
-gdouble nc_multiplicity_func_tinker_get_c (const NcMultiplicityFuncTinker *mulf_tinker);
-void nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mulf_tinker, gdouble Delta);
-gdouble nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mulf_tinker);
+NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new (void);
+NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new_full (NcMultiplicityFuncMassDef mdef, gdouble Delta);
+NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_ref (NcMultiplicityFuncTinker *mt);
+
+void nc_multiplicity_func_tinker_free (NcMultiplicityFuncTinker *mt);
+void nc_multiplicity_func_tinker_clear (NcMultiplicityFuncTinker **mt);
+
+void nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Delta);
+gdouble nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mt);
 
 G_END_DECLS
 

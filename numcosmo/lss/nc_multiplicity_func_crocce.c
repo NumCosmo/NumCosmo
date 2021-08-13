@@ -43,7 +43,14 @@
 
 #include "lss/nc_multiplicity_func_crocce.h"
 
-G_DEFINE_TYPE (NcMultiplicityFuncCrocce, nc_multiplicity_func_crocce, NC_TYPE_MULTIPLICITY_FUNC);
+struct _NcMultiplicityFuncCroccePrivate
+{
+  NcMultiplicityFuncMassDef mdef;
+  gdouble A0;
+  gdouble a0;
+  gdouble b0;
+  gdouble c0;
+};
 
 enum
 {
@@ -52,223 +59,86 @@ enum
   PROP_A1,
   PROP_B0,
   PROP_C0,
+  PROP_SIZE,
 };
 
-/**
- * nc_multiplicity_func_crocce_new:
- * @A0: FIXME
- * @a0: FIXME 
- * @b0: FIXME
- * @c0: FIXME 
- *   
- * FIXME
- *
- * Returns: A new #NcMultiplicityFunc.
- */
-NcMultiplicityFunc *
-nc_multiplicity_func_crocce_new (gdouble A0, gdouble a0, gdouble b0, gdouble c0)
-{
-  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_CROCCE,
-                       "A0", A0,
-                       "a0", a0,
-                       "b0", b0,
-                       "c0", c0,
-                       NULL);
-}
-
-static gdouble
-_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   
-{
-  NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
-  const gdouble A = mulf_crocce->A0 * pow (1.0 + z, -0.13);
-  const gdouble a = mulf_crocce->a0 * pow (1.0 + z, -0.15);
-  const gdouble b = mulf_crocce->b0 * pow (1.0 + z, -0.084);
-  const gdouble c = mulf_crocce->c0 * pow (1.0 + z, -0.024);	
-  const gdouble f_crocce = A * (pow (sigma, -a) + b) * exp (- c / (sigma * sigma));	
-
-  NCM_UNUSED (cosmo);
-  
-  //	printf ("%.15g %.15g %.15g %.15g | %.15g %.15g %.15g %.15g\n", mulf_crocce->A0, mulf_crocce->a0, mulf_crocce->b0, mulf_crocce->c0,
-  //	        A, a, b, c);
-  return f_crocce;
-}
-
-/**
- * nc_multiplicity_func_crocce_set_A0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- * @A0: value of #NcMultiplicityFuncCrocce:A0.
- *
- * Sets the value @A0 to the #NcMultiplicityFuncCrocce:A0 property.
- *
- */
-void
-nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble A0)
-{
-  g_assert_cmpfloat (A0, >=, 0);
-  mulf_crocce->A0 = A0;
-}
-
-/**
- * nc_multiplicity_func_crocce_get_A0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- *
- * Returns: the value of #NcMultiplicityFuncCrocce:A0 property.
- */
-gdouble
-nc_multiplicity_func_crocce_get_A0 (const NcMultiplicityFuncCrocce *mulf_crocce)
-{
-  return mulf_crocce->A0;
-}
-
-/**
- * nc_multiplicity_func_crocce_set_a0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- * @a0: value of #NcMultiplicityFuncCrocce:a0.
- *
- * Sets the value @a0 to the #NcMultiplicityFuncCrocce:a0 property.
- *
- */
-void
-nc_multiplicity_func_crocce_set_a0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble a0)
-{
-  g_assert (a0 >= 0);
-  mulf_crocce->a0 = a0;
-}
-
-/**
- * nc_multiplicity_func_crocce_get_a0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- *
- * Returns: the value of #NcMultiplicityFuncCrocce:a0 property.
- */
-gdouble
-nc_multiplicity_func_crocce_get_a0 (const NcMultiplicityFuncCrocce *mulf_crocce)
-{
-  return mulf_crocce->a0;
-}
-
-/**
- * nc_multiplicity_func_crocce_set_b0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- * @b0: value of #NcMultiplicityFuncCrocce:b0.
- *
- * Sets the value @b0 to the #NcMultiplicityFuncCrocce:b0 property.
- *
- */
-void
-nc_multiplicity_func_crocce_set_b0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble b0)
-{
-  g_assert (b0 >= 0);
-  mulf_crocce->b0 = b0;
-}
-
-/**
- * nc_multiplicity_func_crocce_get_b0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- *
- * Returns: the value of #NcMultiplicityFuncCrocce:b0 property.
- */
-gdouble
-nc_multiplicity_func_crocce_get_b0 (const NcMultiplicityFuncCrocce *mulf_crocce)
-{
-  return mulf_crocce->b0;
-}
-
-/**
- * nc_multiplicity_func_crocce_set_c0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- * @c0: value of #NcMultiplicityFuncCrocce:c0.
- *
- * Sets the value @c0 to the #NcMultiplicityFuncCrocce:c0 property.
- *
- */
-void
-nc_multiplicity_func_crocce_set_c0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble c0)
-{
-  g_assert (c0 >= 0);
-  mulf_crocce->c0 = c0;
-}
-
-/**
- * nc_multiplicity_func_crocce_get_c0:
- * @mulf_crocce: a #NcMultiplicityFuncCrocce.
- *
- * Returns: the value of #NcMultiplicityFuncCrocce:c0 property.
- */
-gdouble
-nc_multiplicity_func_crocce_get_c0 (const NcMultiplicityFuncCrocce *mulf_crocce)
-{
-  return mulf_crocce->c0;
-}
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncCrocce, nc_multiplicity_func_crocce, NC_TYPE_MULTIPLICITY_FUNC);
 
 static void
-nc_multiplicity_func_crocce_init (NcMultiplicityFuncCrocce *mulf_crocce)
+nc_multiplicity_func_crocce_init (NcMultiplicityFuncCrocce *mc)
 {
-  mulf_crocce->A0 = 0.0;
-  mulf_crocce->a0 = 0.0;
-  mulf_crocce->b0 = 0.0;
-  mulf_crocce->c0 = 0.0;
-}
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv = nc_multiplicity_func_crocce_get_instance_private (mc);
 
-static void
-_nc_multiplicity_func_crocce_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_multiplicity_func_crocce_parent_class)->finalize (object);
+  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->A0 = 0.0;
+  self->a0 = 0.0;
+  self->b0 = 0.0;
+  self->c0 = 0.0;
 }
 
 static void
 _nc_multiplicity_func_crocce_set_property (GObject * object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (object);
+  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
 
-	switch (prop_id)
-	{
-		case PROP_A0:
-			mulf_crocce->A0 = g_value_get_double (value);
-			break;
-		case PROP_A1:
-			mulf_crocce->a0 = g_value_get_double (value);
-			break;
-		case PROP_B0:
-			mulf_crocce->b0 = g_value_get_double (value);
-			break;
-		case PROP_C0:
-			mulf_crocce->c0 = g_value_get_double (value);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-			break;
-	}
+  switch (prop_id)
+  {
+    case PROP_A0:
+      nc_multiplicity_func_crocce_set_A0 (mc, g_value_get_double (value));
+      break;
+    case PROP_A1:
+      nc_multiplicity_func_crocce_set_a0 (mc, g_value_get_double (value));
+      break;
+    case PROP_B0:
+      nc_multiplicity_func_crocce_set_b0 (mc, g_value_get_double (value));
+      break;
+    case PROP_C0:
+      nc_multiplicity_func_crocce_set_c0 (mc, g_value_get_double (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
 _nc_multiplicity_func_crocce_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (object);
+  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
 
-	switch (prop_id)
-	{
-		case PROP_A0:
-			g_value_set_double (value, mulf_crocce->A0);
-			break;
-		case PROP_A1:
-			g_value_set_double (value, mulf_crocce->a0);
-			break;
-		case PROP_B0:
-			g_value_set_double (value, mulf_crocce->b0);
-			break;
-		case PROP_C0:
-			g_value_set_double (value, mulf_crocce->c0);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-			break;
-	}
+  switch (prop_id)
+  {
+    case PROP_A0:
+      g_value_set_double (value, nc_multiplicity_func_crocce_get_A0 (mc));
+      break;
+    case PROP_A1:
+      g_value_set_double (value, nc_multiplicity_func_crocce_get_a0 (mc));
+      break;
+    case PROP_B0:
+      g_value_set_double (value, nc_multiplicity_func_crocce_get_b0 (mc));
+      break;
+    case PROP_C0:
+      g_value_set_double (value, nc_multiplicity_func_crocce_get_c0 (mc));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
+
+static void
+_nc_multiplicity_func_crocce_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_multiplicity_func_crocce_parent_class)->finalize (object);
+}
+
+static void _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static NcMultiplicityFuncMassDef _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
@@ -280,8 +150,6 @@ nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
   object_class->get_property = &_nc_multiplicity_func_crocce_get_property;
   object_class->finalize     = &_nc_multiplicity_func_crocce_finalize;
 
-  parent_class->eval = &_nc_multiplicity_func_crocce_eval;
-	
   /**
    * NcMultiplicityFuncCrocce:A0:
    *
@@ -331,6 +199,248 @@ nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
                                                         "c0",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.036,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- 
+  
+  parent_class->set_mdef = &_nc_multiplicity_func_crocce_set_mdef;
+  parent_class->get_mdef = &_nc_multiplicity_func_crocce_get_mdef;
+  parent_class->eval     = &_nc_multiplicity_func_crocce_eval;
+}
+
+static void 
+_nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
+{
+  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  switch (mdef)
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+      g_error ("NcMultiplicityFuncCrocce does not support critical mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+      g_error ("NcMultiplicityFuncCrocce does not support critical mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
+      g_error ("NcMultiplicityFuncCrocce does not support virial mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      /* nothing to do */
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  self->mdef = mdef;
+}
+
+static NcMultiplicityFuncMassDef 
+_nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  return self->mdef;
+}
+
+static gdouble
+_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   
+{
+  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+  
+  const gdouble A = self->A0 * pow (1.0 + z, -0.13);
+  const gdouble a = self->a0 * pow (1.0 + z, -0.15);
+  const gdouble b = self->b0 * pow (1.0 + z, -0.084);
+  const gdouble c = self->c0 * pow (1.0 + z, -0.024);    
+  const gdouble f_crocce = A * (pow (sigma, -a) + b) * exp (- c / (sigma * sigma));     
+
+  NCM_UNUSED (cosmo);
+  
+  return f_crocce;
+}
+
+/**
+ * nc_multiplicity_func_crocce_new:
+ *   
+ * FIXME
+ *
+ * Returns: A new #NcMultiplicityFuncCrocce.
+ */
+NcMultiplicityFuncCrocce *
+nc_multiplicity_func_crocce_new (void)
+{
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_CROCCE,
+                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
+                       NULL);
+}
+
+/**
+ * nc_multiplicity_func_crocce_ref:
+ * @mc: a #NcMultiplicityFuncCrocce
+ *
+ * Increases the reference count of @mc by one.
+ *
+ * Returns: (transfer full): @mc
+ */
+NcMultiplicityFuncCrocce *
+nc_multiplicity_func_crocce_ref (NcMultiplicityFuncCrocce *mc)
+{
+  return g_object_ref (mc);
+}
+
+/**
+ * nc_multiplicity_func_crocce_free:
+ * @mc: a #NcMultiplicityFuncCrocce
+ *
+ * Atomically decrements the reference count of @mc by one. If the reference count drops to 0,
+ * all memory allocated by @mc is released.
+ *
+ */
+void
+nc_multiplicity_func_crocce_free (NcMultiplicityFuncCrocce *mc)
+{
+  g_object_unref (mc);
+}
+
+/**
+ * nc_multiplicity_func_crocce_clear:
+ * @mc: a #NcMultiplicityFuncCrocce
+ *
+ * Atomically decrements the reference count of @mc by one. If the reference count drops to 0,
+ * all memory allocated by @mc is released. Set the pointer to NULL;
+ *
+ */
+void
+nc_multiplicity_func_crocce_clear (NcMultiplicityFuncCrocce **mc)
+{
+  g_clear_object (mc);
+}
+
+/**
+ * nc_multiplicity_func_crocce_set_A0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ * @A0: value of #NcMultiplicityFuncCrocce:A0.
+ *
+ * Sets the value @A0 to the #NcMultiplicityFuncCrocce:A0 property.
+ *
+ */
+void
+nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mc, gdouble A0)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  g_assert (A0 >= 0);
+
+  self->A0 = A0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_get_A0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ *
+ * Returns: the value of #NcMultiplicityFuncCrocce:A0 property.
+ */
+gdouble
+nc_multiplicity_func_crocce_get_A0 (const NcMultiplicityFuncCrocce *mc)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  return self->A0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_set_a0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ * @a0: value of #NcMultiplicityFuncCrocce:a0.
+ *
+ * Sets the value @a0 to the #NcMultiplicityFuncCrocce:a0 property.
+ *
+ */
+void
+nc_multiplicity_func_crocce_set_a0 (NcMultiplicityFuncCrocce *mc, gdouble a0)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  g_assert (a0 >= 0);
+
+  self->a0 = a0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_get_a0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ *
+ * Returns: the value of #NcMultiplicityFuncCrocce:a0 property.
+ */
+gdouble
+nc_multiplicity_func_crocce_get_a0 (const NcMultiplicityFuncCrocce *mc)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  return self->a0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_set_b0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ * @b0: value of #NcMultiplicityFuncCrocce:b0.
+ *
+ * Sets the value @b0 to the #NcMultiplicityFuncCrocce:b0 property.
+ *
+ */
+void
+nc_multiplicity_func_crocce_set_b0 (NcMultiplicityFuncCrocce *mc, gdouble b0)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  g_assert (b0 >= 0);
+
+  self->b0 = b0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_get_b0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ *
+ * Returns: the value of #NcMultiplicityFuncCrocce:b0 property.
+ */
+gdouble
+nc_multiplicity_func_crocce_get_b0 (const NcMultiplicityFuncCrocce *mc)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  return self->b0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_set_c0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ * @c0: value of #NcMultiplicityFuncCrocce:c0.
+ *
+ * Sets the value @c0 to the #NcMultiplicityFuncCrocce:c0 property.
+ *
+ */
+void
+nc_multiplicity_func_crocce_set_c0 (NcMultiplicityFuncCrocce *mc, gdouble c0)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  g_assert (c0 >= 0);
+
+  self->c0 = c0;
+}
+
+/**
+ * nc_multiplicity_func_crocce_get_c0:
+ * @mc: a #NcMultiplicityFuncCrocce.
+ *
+ * Returns: the value of #NcMultiplicityFuncCrocce:c0 property.
+ */
+gdouble
+nc_multiplicity_func_crocce_get_c0 (const NcMultiplicityFuncCrocce *mc)
+{
+  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+
+  return self->c0;
 }
 

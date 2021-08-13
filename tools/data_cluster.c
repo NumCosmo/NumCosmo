@@ -58,10 +58,12 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
     de_data_cluster->ps_type = g_strdup ("NcPowspecMLTransfer{'transfer' : <{'NcTransferFuncEH', @a{sv} {}}>}");
   }
 
+  /*
   if (de_data_cluster->multiplicity_name == NULL)
   {
     de_data_cluster->multiplicity_name = g_strdup ("NcMultiplicityFuncTinkerMean");
   }
+  */
 
   if (de_data_cluster->clusterm_ser == NULL)
   {
@@ -84,7 +86,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   {
     NcmPowspec *ps              = NCM_POWSPEC (ncm_serialize_global_from_string (de_data_cluster->ps_type));
     NcmPowspecFilter *psf       = ncm_powspec_filter_new (ps, filter_type);
-    NcMultiplicityFunc *mulf    = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
+    NcMultiplicityFunc *mulf    = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_ps_new ());
     NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
     NcClusterAbundance *cad     = nc_cluster_abundance_nodist_new (mfp, NULL);
     NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);

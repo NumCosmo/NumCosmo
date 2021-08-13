@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncPSClass NcMultiplicityFuncPSClass;
 typedef struct _NcMultiplicityFuncPS NcMultiplicityFuncPS;
+typedef struct _NcMultiplicityFuncPSPrivate NcMultiplicityFuncPSPrivate;
 
 struct _NcMultiplicityFuncPSClass
 {
@@ -53,14 +54,19 @@ struct _NcMultiplicityFuncPS
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance; 
-  gdouble delta_c;
+  NcMultiplicityFuncPSPrivate *priv;
 };
 
 GType nc_multiplicity_func_ps_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_ps_new (gdouble delta_c);
-void nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mulf_ps, gdouble delta_c);
-gdouble nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mulf_ps);
+NcMultiplicityFuncPS *nc_multiplicity_func_ps_new (void);
+NcMultiplicityFuncPS *nc_multiplicity_func_ps_ref (NcMultiplicityFuncPS *mps);
+
+void nc_multiplicity_func_ps_free (NcMultiplicityFuncPS *mps);
+void nc_multiplicity_func_ps_clear (NcMultiplicityFuncPS **mps);
+
+void nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, const gdouble delta_c);
+gdouble nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mps);
 
 G_END_DECLS
 

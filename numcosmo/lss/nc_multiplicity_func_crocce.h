@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncCrocceClass NcMultiplicityFuncCrocceClass;
 typedef struct _NcMultiplicityFuncCrocce NcMultiplicityFuncCrocce;
+typedef struct _NcMultiplicityFuncCroccePrivate NcMultiplicityFuncCroccePrivate;
 
 struct _NcMultiplicityFuncCrocceClass
 {
@@ -53,23 +54,25 @@ struct _NcMultiplicityFuncCrocce
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble A0;
-  gdouble a0;
-  gdouble b0;
-  gdouble c0;
+  NcMultiplicityFuncCroccePrivate *priv;
 };
 
 GType nc_multiplicity_func_crocce_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_crocce_new (gdouble A0, gdouble a0, gdouble b0, gdouble c0);
-void nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble A0);
-gdouble nc_multiplicity_func_crocce_get_A0 (const NcMultiplicityFuncCrocce *mulf_crocce);
-void nc_multiplicity_func_crocce_set_a0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble a0);
-gdouble nc_multiplicity_func_crocce_get_a0 (const NcMultiplicityFuncCrocce *mulf_crocce);
-void nc_multiplicity_func_crocce_set_b0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble b0);
-gdouble nc_multiplicity_func_crocce_get_b0 (const NcMultiplicityFuncCrocce *mulf_crocce);
-void nc_multiplicity_func_crocce_set_c0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble c0);
-gdouble nc_multiplicity_func_crocce_get_c0 (const NcMultiplicityFuncCrocce *mulf_crocce);
+NcMultiplicityFuncCrocce *nc_multiplicity_func_crocce_new (void);
+NcMultiplicityFuncCrocce *nc_multiplicity_func_crocce_ref (NcMultiplicityFuncCrocce *mc);
+
+void nc_multiplicity_func_crocce_free (NcMultiplicityFuncCrocce *mc);
+void nc_multiplicity_func_crocce_clear (NcMultiplicityFuncCrocce **mc);
+
+void nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mc, gdouble A0);
+gdouble nc_multiplicity_func_crocce_get_A0 (const NcMultiplicityFuncCrocce *mc);
+void nc_multiplicity_func_crocce_set_a0 (NcMultiplicityFuncCrocce *mc, gdouble a0);
+gdouble nc_multiplicity_func_crocce_get_a0 (const NcMultiplicityFuncCrocce *mc);
+void nc_multiplicity_func_crocce_set_b0 (NcMultiplicityFuncCrocce *mc, gdouble b0);
+gdouble nc_multiplicity_func_crocce_get_b0 (const NcMultiplicityFuncCrocce *mc);
+void nc_multiplicity_func_crocce_set_c0 (NcMultiplicityFuncCrocce *mc, gdouble c0);
+gdouble nc_multiplicity_func_crocce_get_c0 (const NcMultiplicityFuncCrocce *mc);
 
 G_END_DECLS
 

@@ -69,7 +69,9 @@ psf.set_best_lnr0 ()
 #
 # New multiplicity function 'NcMultiplicityFuncTinkerMean'
 #
-mulf = Nc.MultiplicityFunc.new_from_name ("NcMultiplicityFuncTinkerMean")
+mulf = Nc.MultiplicityFuncTinker.new ()
+mulf.set_mdef (Nc.MultiplicityFuncMassDef.MEAN)
+mulf.set_Delta (200.0)
 
 #
 # New mass function object using the objects defined above.
