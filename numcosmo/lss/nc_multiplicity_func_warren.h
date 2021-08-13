@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncWarrenClass NcMultiplicityFuncWarrenClass;
 typedef struct _NcMultiplicityFuncWarren NcMultiplicityFuncWarren;
+typedef struct _NcMultiplicityFuncWarrenPrivate NcMultiplicityFuncWarrenPrivate;
 
 struct _NcMultiplicityFuncWarrenClass
 {
@@ -53,23 +54,25 @@ struct _NcMultiplicityFuncWarren
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
-  gdouble A;
-  gdouble a;
-  gdouble b;
-  gdouble c;
+  NcMultiplicityFuncWarrenPrivate *priv;
 };
 
 GType nc_multiplicity_func_warren_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_warren_new (gdouble A, gdouble a, gdouble b, gdouble c);
-void nc_multiplicity_func_warren_set_A (NcMultiplicityFuncWarren *mulf_warren, gdouble A);
-gdouble nc_multiplicity_func_warren_get_A (const NcMultiplicityFuncWarren *mulf_warren);
-void nc_multiplicity_func_warren_set_a (NcMultiplicityFuncWarren *mulf_warren, gdouble a);
-gdouble nc_multiplicity_func_warren_get_a (const NcMultiplicityFuncWarren *mulf_warren);
-void nc_multiplicity_func_warren_set_b (NcMultiplicityFuncWarren *mulf_warren, gdouble b);
-gdouble nc_multiplicity_func_warren_get_b (const NcMultiplicityFuncWarren *mulf_warren);
-void nc_multiplicity_func_warren_set_c (NcMultiplicityFuncWarren *mulf_warren, gdouble c);
-gdouble nc_multiplicity_func_warren_get_c (const NcMultiplicityFuncWarren *mulf_warren);
+NcMultiplicityFuncWarren *nc_multiplicity_func_warren_new (void);
+NcMultiplicityFuncWarren *nc_multiplicity_func_warren_ref (NcMultiplicityFuncWarren *mw);
+
+void nc_multiplicity_func_warren_free (NcMultiplicityFuncWarren *mw);
+void nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw);
+
+void nc_multiplicity_func_warren_set_A (NcMultiplicityFuncWarren *mw, gdouble A);
+gdouble nc_multiplicity_func_warren_get_A (const NcMultiplicityFuncWarren *mw);
+void nc_multiplicity_func_warren_set_a (NcMultiplicityFuncWarren *mw, gdouble a);
+gdouble nc_multiplicity_func_warren_get_a (const NcMultiplicityFuncWarren *mw);
+void nc_multiplicity_func_warren_set_b (NcMultiplicityFuncWarren *mw, gdouble b);
+gdouble nc_multiplicity_func_warren_get_b (const NcMultiplicityFuncWarren *mw);
+void nc_multiplicity_func_warren_set_c (NcMultiplicityFuncWarren *mw, gdouble c);
+gdouble nc_multiplicity_func_warren_get_c (const NcMultiplicityFuncWarren *mw);
 
 G_END_DECLS
 

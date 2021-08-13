@@ -180,6 +180,20 @@ nc_multiplicity_func_clear (NcMultiplicityFunc **mulf)
 }
 
 /**
+ * nc_multiplicity_func_set_mdef: (virtual set_mdef)
+ * @mulf: a #NcMultiplicityFunc
+ * @mdef: a #NcMultiplicityFuncMassDef
+ *
+ * Sets the mass definition to mdef.
+ *
+ */
+void
+nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
+{
+  NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_mdef (mulf, mdef);
+}
+
+/**
  * nc_multiplicity_func_get_mdef: (virtual get_mdef)
  * @mulf: a #NcMultiplicityFunc
  *

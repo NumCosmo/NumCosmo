@@ -128,6 +128,7 @@ static void
 _nc_multiplicity_func_st_finalize (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_st_parent_class)->finalize (object);
 }
 
@@ -264,9 +265,9 @@ _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdoub
  *
  * FIXME
  *
- * Returns: A new #NcMultiplicityFunc.
+ * Returns: A new #NcMultiplicityFuncST.
  */
-NcMultiplicityFunc *
+NcMultiplicityFuncST *
 nc_multiplicity_func_st_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_ST,

@@ -100,6 +100,7 @@ static void
 _nc_multiplicity_func_ps_finalize (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_ps_parent_class)->finalize (object);
 }
 
@@ -172,7 +173,6 @@ _nc_multiplicity_func_ps_get_mdef (NcMultiplicityFunc *mulf)
   return self->mdef;
 }
 
-
 static gdouble
 _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)       /* f(\sigma) - Press \& Schechter (PS) */
 {
@@ -192,7 +192,7 @@ _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdoub
  *
  * FIXME
  *
- * Returns: A new #NcMultiplicityFunc.
+ * Returns: A new #NcMultiplicityFuncPS.
  */
 NcMultiplicityFuncPS *
 nc_multiplicity_func_ps_new (void)

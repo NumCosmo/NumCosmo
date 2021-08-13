@@ -59,7 +59,7 @@ struct _NcMultiplicityFuncST
 
 GType nc_multiplicity_func_st_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_st_new (void);
+NcMultiplicityFuncST *nc_multiplicity_func_st_new (void);
 NcMultiplicityFuncST *nc_multiplicity_func_st_ref (NcMultiplicityFuncST *mst);
 
 void nc_multiplicity_func_st_free (NcMultiplicityFuncST *mst);

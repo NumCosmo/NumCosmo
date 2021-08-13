@@ -119,6 +119,7 @@ static void
 _nc_multiplicity_func_jenkins_finalize (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_jenkins_parent_class)->finalize (object);
 }
 
@@ -221,13 +222,10 @@ _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf)
 static gdouble
 _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  NcMultiplicityFuncJenkins *mulf_jenkins = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-
-  mulf_jenkins->A = 0.315;
-  mulf_jenkins->B = 0.61;
-  mulf_jenkins->epsilon = 3.8;
-
-  gdouble f_Jenkins = mulf_jenkins->A * exp(-pow(fabs(-log(sigma) + mulf_jenkins->B), mulf_jenkins->epsilon));
+  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  
+  gdouble f_Jenkins = self->A * exp(-pow(fabs(-log(sigma) + self->B), self->epsilon));
 
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
@@ -240,9 +238,9 @@ _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
  *   
  * FIXME
  *
- * Returns: A new #NcMultiplicityFunc.
+ * Returns: A new #NcMultiplicityFuncJenkins.
  */
-NcMultiplicityFunc *
+NcMultiplicityFuncJenkins *
 nc_multiplicity_func_jenkins_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_JENKINS,
@@ -294,82 +292,97 @@ nc_multiplicity_func_jenkins_clear (NcMultiplicityFuncJenkins **mj)
 
 /**
  * nc_multiplicity_func_jenkins_set_A:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  * @A: value of #NcMultiplicityFuncJenkins:A.
  *
  * Sets the value @A to the #NcMultiplicityFuncJenkins:A property.
  *
  */
 void
-nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble A)
+nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mj, gdouble A)
 {
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
   g_assert (A >= 0);
-  mulf_jenkins->A = A;
+
+  self->A = A;
 }
 
 /**
  * nc_multiplicity_func_jenkins_get_A:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  *
  * Returns: the value of #NcMultiplicityFuncJenkins:A property.
  */
 gdouble
-nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mulf_jenkins)
+nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mj)
 {
-  return mulf_jenkins->A;
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
+  return self->A;
 }
 
 /**
  * nc_multiplicity_func_jenkins_set_B:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  * @B: value of #NcMultiplicityFuncJenkins:B.
  *
  * Sets the value @B to the #NcMultiplicityFuncJenkins:B property.
  *
  */
 void
-nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble B)
+nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mj, gdouble B)
 {
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
   g_assert (B >= 0);
-  mulf_jenkins->B = B;
+
+  self->B = B;
 }
 
 /**
  * nc_multiplicity_func_jenkins_get_B:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  *
  * Returns: the value of #NcMultiplicityFuncJenkins:B property.
  */
 gdouble
-nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mulf_jenkins)
+nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mj)
 {
-  return mulf_jenkins->B;
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
+  return self->B;
 }
 
 /**
  * nc_multiplicity_func_jenkins_set_epsilon:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  * @epsilon: value of #NcMultiplicityFuncJenkins:epsilon.
  *
  * Sets the value @epsilon to the #NcMultiplicityFuncJenkins:epsilon property.
  *
  */
 void
-nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mulf_jenkins, gdouble epsilon)
+nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mj, gdouble epsilon)
 {
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
   g_assert (epsilon >= 0);
-  mulf_jenkins->epsilon_tCDM = epsilon;
+
+  self->epsilon = epsilon;
 }
 
 /**
  * nc_multiplicity_func_jenkins_get_epsilon:
- * @mulf_jenkins: a #NcMultiplicityFuncJenkins.
+ * @mj: a #NcMultiplicityFuncJenkins.
  *
  * Returns: the value of #NcMultiplicityFuncJenkins:epsilon property.
  */
 gdouble
-nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mulf_jenkins)
+nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mj)
 {
-  return mulf_jenkins->epsilon;
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
+  return self->epsilon;
 }
 

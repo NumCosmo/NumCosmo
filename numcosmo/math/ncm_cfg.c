@@ -110,8 +110,6 @@
 #include "lss/nc_multiplicity_func_jenkins.h"
 #include "lss/nc_multiplicity_func_warren.h"
 #include "lss/nc_multiplicity_func_tinker.h"
-#include "lss/nc_multiplicity_func_tinker_mean.h"
-#include "lss/nc_multiplicity_func_tinker_crit.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
@@ -582,8 +580,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_JENKINS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WARREN);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
-  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
-  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   

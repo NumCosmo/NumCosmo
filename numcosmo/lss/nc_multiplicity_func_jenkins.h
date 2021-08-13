@@ -42,7 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcMultiplicityFuncJenkinsClass NcMultiplicityFuncJenkinsClass;
 typedef struct _NcMultiplicityFuncJenkins NcMultiplicityFuncJenkins;
-typedef struct _NcMultiplicityFuncJenkinsPrivate NcMultiplicityFuncJenkinsPrivate
+typedef struct _NcMultiplicityFuncJenkinsPrivate NcMultiplicityFuncJenkinsPrivate;
 
 struct _NcMultiplicityFuncJenkinsClass
 {
@@ -59,7 +59,7 @@ struct _NcMultiplicityFuncJenkins
 
 GType nc_multiplicity_func_jenkins_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_jenkins_new (void);
+NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_new (void);
 NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_ref (NcMultiplicityFuncJenkins *mj);
 
 void nc_multiplicity_func_jenkins_free (NcMultiplicityFuncJenkins *mj);
