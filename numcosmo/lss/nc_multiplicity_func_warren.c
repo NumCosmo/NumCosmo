@@ -214,13 +214,13 @@ _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
       /* nothing to do */
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-      g_error ("NcMultiplicityFuncPS does not support critical mass def");
+      g_error ("NcMultiplicityFuncWarren does not support critical mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      g_error ("NcMultiplicityFuncPS does not support virial mass def");
+      g_error ("NcMultiplicityFuncWarren does not support virial mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      g_error ("NcMultiplicityFuncPS does not support fof mass def");
+      g_error ("NcMultiplicityFuncWarren does not support fof mass def");
       break;
     default:
       g_assert_not_reached ();

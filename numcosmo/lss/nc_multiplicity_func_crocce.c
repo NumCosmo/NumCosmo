@@ -214,13 +214,13 @@ _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
   switch (mdef)
   {
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-      g_error ("NcMultiplicityFuncPS does not support critical mass def");
+      g_error ("NcMultiplicityFuncCrocce does not support critical mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-      g_error ("NcMultiplicityFuncPS does not support critical mass def");
+      g_error ("NcMultiplicityFuncCrocce does not support critical mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      g_error ("NcMultiplicityFuncPS does not support virial mass def");
+      g_error ("NcMultiplicityFuncCrocce does not support virial mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
       /* nothing to do */

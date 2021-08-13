@@ -60,6 +60,7 @@ struct _NcMultiplicityFuncTinker
 GType nc_multiplicity_func_tinker_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new (void);
+NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new_full (NcMultiplicityFuncMassDef mdef, gdouble Delta);
 NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_ref (NcMultiplicityFuncTinker *mt);
 
 void nc_multiplicity_func_tinker_free (NcMultiplicityFuncTinker *mt);

@@ -71,9 +71,7 @@ main (gint argc, gchar *argv[])
   /**************************************************************************** 
    * New multiplicity function 'NcMultiplicityFuncTinkerMean'
    ****************************************************************************/  
-  mulf = nc_multiplicity_func_tinker_new ();
-  nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mulf), NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN);
-  nc_multiplicity_func_set_Delta (200.0);
+  mulf = nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN, 200.0);
   
   /**************************************************************************** 
    * New mass function object using the objects defined above.

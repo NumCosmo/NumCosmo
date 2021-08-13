@@ -84,12 +84,25 @@ _nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, cons
 {
   NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
 
   switch (prop_id)
   {
     case PROP_DELTA:
       nc_multiplicity_func_tinker_set_Delta (mt, g_value_get_double (value));
       break;
+    case PROP_A0:
+      self->A0 = g_value_get_double (value);
+      break;
+    case PROP_A1:
+      self->a0 = g_value_get_double (value);
+      break;
+    case PROP_B0:
+      self->b0 = g_value_get_double (value);
+      break;
+    case PROP_C:
+      self->c = g_value_get_double (value);
+      break;        
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -101,12 +114,25 @@ _nc_multiplicity_func_tinker_get_property (GObject * object, guint prop_id, GVal
 {
   NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
 
   switch (prop_id)
   {
     case PROP_DELTA:
       g_value_set_double (value, nc_multiplicity_func_tinker_get_Delta (mt));
       break;
+    case PROP_A0:
+      g_value_set_double (value, self->A0);
+      break;
+    case PROP_A1:
+      g_value_set_double (value, self->a0);
+      break;
+    case PROP_B0:
+      g_value_set_double (value, self->b0);
+      break; 
+    case PROP_C:
+      g_value_set_double (value, self->c);
+      break;     
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -391,10 +417,10 @@ _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
       self->eval = &_nc_multiplicity_func_tinker_crit_eval;
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      g_error ("NcMultiplicityFuncPS does not support virial mass def");
+      g_error ("NcMultiplicityFuncTinker does not support virial mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      g_error ("NcMultiplicityFuncPS does not support fof mass def");
+      g_error ("NcMultiplicityFuncTinker does not support fof mass def");
       break;
     default:
       g_assert_not_reached ();
@@ -435,6 +461,25 @@ nc_multiplicity_func_tinker_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_TINKER,
                        "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
+                       NULL);
+}
+
+/**
+ * nc_multiplicity_func_tinker_new_full:
+ * @mdef: a #NcMultiplicityFuncMassDef
+ * @Delta: parameter that multiplies the background mass density (mean ou critical)   
+ * 
+ * FIXME
+ *
+ * Returns: A new #NcMultiplicityFuncTinker.
+ */
+NcMultiplicityFuncTinker *
+nc_multiplicity_func_tinker_new_full (NcMultiplicityFuncMassDef mdef, gdouble Delta)
+{
+  
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_TINKER,
+                       "mass-def", mdef,
+                       "Delta",    Delta,
                        NULL);
 }
 
