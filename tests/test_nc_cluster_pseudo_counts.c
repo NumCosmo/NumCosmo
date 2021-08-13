@@ -112,7 +112,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcTransferFunc *tf              = nc_transfer_func_new_from_name ("NcTransferFuncEH");
   NcPowspecML *ps_ml              = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   NcmPowspecFilter *psf           = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
-  NcMultiplicityFunc *mulf        = nc_multiplicity_func_new_from_name ("NcMultiplicityFuncTinkerCrit{'Delta':<500.0>}");
+  NcMultiplicityFunc *mulf        = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL, 500.0));
   NcHaloMassFunction *mfp         = nc_halo_mass_function_new (dist, psf, mulf);
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (1));
   NcClusterMass *clusterm         = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassPlCL"));

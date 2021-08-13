@@ -647,14 +647,7 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([arb.h acb.h])
 AC_CHECK_LIB([arb],[arb_set])
-if test "x$ac_cv_lib_arb_arb_set" = "x"; then
-  AC_CHECK_LIB([flint-arb],[arb_set])
-  if test "x$ac_cv_lib_flint_arb_arb_set" != "x"; then
-    HAVE_ARB=yes
-  fi
-else
-  HAVE_ARB=yes  
-fi
+AC_SEARCH_LIBS([arb_set],[arb flint-arb], [HAVE_ARB=yes])
 
 if test "x$HAVE_ARB" = "xyes"; then
   AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])

@@ -24,7 +24,7 @@
  */
 
 /**
- * SECTION: ncm_spline
+ * SECTION:ncm_spline
  * @title: NcmSpline
  * @short_description: Abstract class for implementing splines.
  * @stability: Stable
@@ -188,7 +188,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
    * NcmSpline:length:
    *
    * The spline length (total number of knots).
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
@@ -202,7 +202,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
    * NcmSpline:x:
    *
    * #NcmVector with the spline knots.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_X,
@@ -216,7 +216,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
    * NcmSpline:y:
    *
    * #NcmVector with the spline values.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_Y,
@@ -366,30 +366,30 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
   {
     if (s->xv != xv)
     {
+      ncm_vector_ref (xv);
       ncm_vector_free (s->xv);
       s->xv = xv;
-      ncm_vector_ref (xv);
     }
   }
   else
   {
-    s->xv = xv;
     ncm_vector_ref (xv);
+    s->xv = xv;
   }
   
   if (s->yv != NULL)
   {
     if (s->yv != yv)
     {
+      ncm_vector_ref (yv);
       ncm_vector_free (s->yv);
       s->yv = yv;
-      ncm_vector_ref (yv);
     }
   }
   else
   {
-    s->yv = yv;
     ncm_vector_ref (yv);
+    s->yv = yv;
   }
   
   s->len = ncm_vector_len (xv);

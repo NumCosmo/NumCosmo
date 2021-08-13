@@ -29,7 +29,7 @@
  * @short_description: Dark matter halo -- Warren multiplicity function.
  *
  * FIXME
- * 
+ * Reference: astro-ph/0506395 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,7 +39,14 @@
 
 #include "lss/nc_multiplicity_func_warren.h"
 
-G_DEFINE_TYPE (NcMultiplicityFuncWarren, nc_multiplicity_func_warren, NC_TYPE_MULTIPLICITY_FUNC);
+struct _NcMultiplicityFuncWarrenPrivate
+{
+  NcMultiplicityFuncMassDef mdef;
+  gdouble A;
+  gdouble a;
+  gdouble b;
+  gdouble c;
+};
 
 enum
 {
@@ -47,191 +54,44 @@ enum
   PROP_A,
   PROP_A1,
   PROP_B,
-  PROP_C
+  PROP_C,
+  PROP_SIZE,
 };
 
-/**
- * nc_multiplicity_func_warren_new:
- * @A: FIXME
- * @a: FIXME
- * @b: FIXME
- * @c: FIXME 
- *   
- * FIXME
- *
- * Returns: A new #NcMultiplicityFunc.
- */
-NcMultiplicityFunc *
-nc_multiplicity_func_warren_new (gdouble A, gdouble a, gdouble b, gdouble c)
-{
-  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_WARREN,
-                       "A", A,
-                       "a", a, 
-                       "b", b,
-                       "c", c,
-                       NULL);
-}
-
-static gdouble
-_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
-{
-  NcMultiplicityFuncWarren *mulf_warren = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  gdouble f_Warren = mulf_warren->A * (pow(sigma, - mulf_warren->a) + mulf_warren->b) * exp(-(mulf_warren->c)/ (sigma * sigma) );
-
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
-  
-  return f_Warren;
-}
-
-/**
- * nc_multiplicity_func_warren_set_A:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- * @A: value of #NcMultiplicityFuncWarren:A.
- *
- * Sets the value @A to the #NcMultiplicityFuncWarren:A property.
- *
- */
-void
-nc_multiplicity_func_warren_set_A (NcMultiplicityFuncWarren *mulf_warren, gdouble A)
-{
-  g_assert (A >= 0);
-  mulf_warren->A = A;
-}
-
-/**
- * nc_multiplicity_func_warren_get_A:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- *
- * Returns: the value of #NcMultiplicityFuncWarren:A property.
- */
-gdouble
-nc_multiplicity_func_warren_get_A (const NcMultiplicityFuncWarren *mulf_warren)
-{
-  return mulf_warren->A;
-}
-
-/**
- * nc_multiplicity_func_warren_set_a:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- * @a: value of #NcMultiplicityFuncWarren:a.
- *
- * Sets the value @a to the #NcMultiplicityFuncWarren:a property.
- *
- */
-void
-nc_multiplicity_func_warren_set_a (NcMultiplicityFuncWarren *mulf_warren, gdouble a)
-{
-  g_assert (a >= 0);
-  mulf_warren->a = a;
-}
-
-/**
- * nc_multiplicity_func_warren_get_a:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- *
- * Returns: the value of #NcMultiplicityFuncWarren:a property.
- */
-gdouble
-nc_multiplicity_func_warren_get_a (const NcMultiplicityFuncWarren *mulf_warren)
-{
-  return mulf_warren->a;
-}
-
-/**
- * nc_multiplicity_func_warren_set_b:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- * @b: value of #NcMultiplicityFuncWarren:b.
- *
- * Sets the value @b to the #NcMultiplicityFuncWarren:b property.
- *
- */
-void
-nc_multiplicity_func_warren_set_b (NcMultiplicityFuncWarren *mulf_warren, gdouble b)
-{
-  g_assert (b >= 0);
-  mulf_warren->b = b;
-}
-
-/**
- * nc_multiplicity_func_warren_get_b:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- *
- * Returns: the value of #NcMultiplicityFuncWarren:b property.
- */
-gdouble
-nc_multiplicity_func_warren_get_b (const NcMultiplicityFuncWarren *mulf_warren)
-{
-  return mulf_warren->b;
-}
-
-/**
- * nc_multiplicity_func_warren_set_c:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- * @c: value of #NcMultiplicityFuncWarren:c.
- *
- * Sets the value @c to the #NcMultiplicityFuncWarren:c property.
- *
- */
-void
-nc_multiplicity_func_warren_set_c (NcMultiplicityFuncWarren *mulf_warren, gdouble c)
-{
-  g_assert (c >= 0);
-  mulf_warren->c = c;
-}
-
-/**
- * nc_multiplicity_func_warren_get_c:
- * @mulf_warren: a #NcMultiplicityFuncWarren.
- *
- * Returns: the value of #NcMultiplicityFuncWarren:c property.
- */
-gdouble
-nc_multiplicity_func_warren_get_c (const NcMultiplicityFuncWarren *mulf_warren)
-{
-  return mulf_warren->c;
-}
-
-// _NC_MULTIPLICITY_FUNCTION_WARREN_DATASET_0506395 = {0.7234, 1.625, 0.2538, 1.1982};
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWarren, nc_multiplicity_func_warren, NC_TYPE_MULTIPLICITY_FUNC);
 
 static void
-nc_multiplicity_func_warren_init (NcMultiplicityFuncWarren *mulf_warren)
+nc_multiplicity_func_warren_init (NcMultiplicityFuncWarren *mw)
 {
-  /* TODO: Add initialization code here */
-  mulf_warren->A = 0.7234;
-  mulf_warren->a = 1.625;
-  mulf_warren->b = 0.2538;
-  mulf_warren->c = 1.1982;
-}
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv = nc_multiplicity_func_warren_get_instance_private (mw);
 
-static void
-_nc_multiplicity_func_warren_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_multiplicity_func_warren_parent_class)->finalize (object);
+  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->A = 0.0;
+  self->a = 0.0;
+  self->b = 0.0;
+  self->c = 0.0;
 }
 
 static void
 _nc_multiplicity_func_warren_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcMultiplicityFuncWarren *mulf_warren = NC_MULTIPLICITY_FUNC_WARREN (object);
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WARREN (object));
 
   switch (prop_id)
   {
-	case PROP_A:
-	  mulf_warren->A = g_value_get_double (value);
-	  break;
-	case PROP_A1:
-	  mulf_warren->a = g_value_get_double (value);
-	  break;
-	case PROP_B:
-	  mulf_warren->b = g_value_get_double (value);
-	  break;
-	case PROP_C:
-	  mulf_warren->c = g_value_get_double (value);
-	  break;
+    case PROP_A:
+      nc_multiplicity_func_warren_set_A (mw, g_value_get_double (value));
+      break;
+    case PROP_A1:
+      nc_multiplicity_func_warren_set_a (mw, g_value_get_double (value));
+      break;
+    case PROP_B:
+      nc_multiplicity_func_warren_set_b (mw, g_value_get_double (value));
+      break;
+    case PROP_C:
+      nc_multiplicity_func_warren_set_c (mw, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -241,22 +101,22 @@ _nc_multiplicity_func_warren_set_property (GObject *object, guint prop_id, const
 static void
 _nc_multiplicity_func_warren_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncWarren *mulf_warren = NC_MULTIPLICITY_FUNC_WARREN (object);
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WARREN (object));
 
   switch (prop_id)
   {
-	case PROP_A:
-	  g_value_set_double (value, mulf_warren->A);
-	  break;
-	case PROP_A1:
-	  g_value_set_double (value, mulf_warren->a);
-	  break;
-	case PROP_B:
-	  g_value_set_double (value, mulf_warren->b);
-	  break;
+    case PROP_A:
+      g_value_set_double (value, nc_multiplicity_func_warren_get_A (mw));
+      break;
+    case PROP_A1:
+      g_value_set_double (value, nc_multiplicity_func_warren_get_a (mw));
+      break;
+    case PROP_B:
+      g_value_set_double (value, nc_multiplicity_func_warren_get_b (mw));
+      break;
     case PROP_C:
-      g_value_set_double (value, mulf_warren->c);
+      g_value_set_double (value, nc_multiplicity_func_warren_get_c (mw));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -265,17 +125,29 @@ _nc_multiplicity_func_warren_get_property (GObject * object, guint prop_id, GVal
 }
 
 static void
+_nc_multiplicity_func_warren_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_multiplicity_func_warren_parent_class)->finalize (object);
+}
+
+// _NC_MULTIPLICITY_FUNCTION_WARREN_DATASET_0506395 = {0.7234, 1.625, 0.2538, 1.1982};
+
+static void _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static NcMultiplicityFuncMassDef _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
+static void
 nc_multiplicity_func_warren_class_init (NcMultiplicityFuncWarrenClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
-  parent_class->eval = &_nc_multiplicity_func_warren_eval;
-
-  object_class->finalize = _nc_multiplicity_func_warren_finalize;
-  object_class->set_property = _nc_multiplicity_func_warren_set_property;
-  object_class->get_property = _nc_multiplicity_func_warren_get_property;
-
+  object_class->set_property = &_nc_multiplicity_func_warren_set_property;
+  object_class->get_property = &_nc_multiplicity_func_warren_get_property;
+  object_class->finalize     = &_nc_multiplicity_func_warren_finalize;
+  
   /**
    * NcMultiplicityFuncWarren:A:
    *
@@ -324,5 +196,244 @@ nc_multiplicity_func_warren_class_init (NcMultiplicityFuncWarrenClass *klass)
                                                         "c",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.1982,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  parent_class->set_mdef = &_nc_multiplicity_func_warren_set_mdef;
+  parent_class->get_mdef = &_nc_multiplicity_func_warren_get_mdef;
+  parent_class->eval     = &_nc_multiplicity_func_warren_eval;
 }
 
+static void 
+_nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
+{
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  switch (mdef)
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+      /* nothing to do */
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+      g_error ("NcMultiplicityFuncWarren does not support critical mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
+      g_error ("NcMultiplicityFuncWarren does not support virial mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      g_error ("NcMultiplicityFuncWarren does not support fof mass def");
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  self->mdef = mdef;
+}
+
+static NcMultiplicityFuncMassDef 
+_nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  return self->mdef;
+}
+
+static gdouble
+_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
+{
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+  
+  gdouble f_Warren = self->A * (pow(sigma, - self->a) + self->b) * exp(-(self->c)/ (sigma * sigma) );
+
+  NCM_UNUSED (cosmo);
+  NCM_UNUSED (z);
+
+  return f_Warren;
+}
+
+/**
+ * nc_multiplicity_func_warren_new:
+ *   
+ * FIXME
+ *
+ * Returns: A new #NcMultiplicityFuncWarren.
+ */
+NcMultiplicityFuncWarren *
+nc_multiplicity_func_warren_new (void)
+{
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_WARREN,
+                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
+                       NULL);
+}
+
+/**
+ * nc_multiplicity_func_warren_ref:
+ * @mw: a #NcMultiplicityFuncWarren
+ *
+ * Increases the reference count of @mw by one.
+ *
+ * Returns: (transfer full): @mw
+ */
+NcMultiplicityFuncWarren *
+nc_multiplicity_func_warren_ref (NcMultiplicityFuncWarren *mw)
+{
+  return g_object_ref (mw);
+}
+
+/**
+ * nc_multiplicity_func_warren_free:
+ * @mw: a #NcMultiplicityFuncWarren
+ *
+ * Atomically decrements the reference count of @mw by one. If the reference count drops to 0,
+ * all memory allocated by @mw is released.
+ *
+ */
+void
+nc_multiplicity_func_warren_free (NcMultiplicityFuncWarren *mw)
+{
+  g_object_unref (mw);
+}
+
+/**
+ * nc_multiplicity_func_warren_clear:
+ * @mw: a #NcMultiplicityFuncWarren
+ *
+ * Atomically decrements the reference count of @mw by one. If the reference count drops to 0,
+ * all memory allocated by @mw is released. Set the pointer to NULL;
+ *
+ */
+void
+nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw)
+{
+  g_clear_object (mw);
+}
+
+/**
+ * nc_multiplicity_func_warren_set_A:
+ * @mw: a #NcMultiplicityFuncWarren.
+ * @A: value of #NcMultiplicityFuncWarren:A.
+ *
+ * Sets the value @A to the #NcMultiplicityFuncWarren:A property.
+ *
+ */
+void
+nc_multiplicity_func_warren_set_A (NcMultiplicityFuncWarren *mw, gdouble A)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  g_assert (A >= 0);
+
+  self->A = A;
+}
+
+/**
+ * nc_multiplicity_func_warren_get_A:
+ * @mw: a #NcMultiplicityFuncWarren.
+ *
+ * Returns: the value of #NcMultiplicityFuncWarren:A property.
+ */
+gdouble
+nc_multiplicity_func_warren_get_A (const NcMultiplicityFuncWarren *mw)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  return self->A;
+}
+
+/**
+ * nc_multiplicity_func_warren_set_a:
+ * @mw: a #NcMultiplicityFuncWarren.
+ * @a: value of #NcMultiplicityFuncWarren:a.
+ *
+ * Sets the value @a to the #NcMultiplicityFuncWarren:a property.
+ *
+ */
+void
+nc_multiplicity_func_warren_set_a (NcMultiplicityFuncWarren *mw, gdouble a)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  g_assert (a >= 0);
+
+  self->a = a;
+}
+
+/**
+ * nc_multiplicity_func_warren_get_a:
+ * @mw: a #NcMultiplicityFuncWarren.
+ *
+ * Returns: the value of #NcMultiplicityFuncWarren:a property.
+ */
+gdouble
+nc_multiplicity_func_warren_get_a (const NcMultiplicityFuncWarren *mw)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  return self->a;
+}
+
+/**
+ * nc_multiplicity_func_warren_set_b:
+ * @mw: a #NcMultiplicityFuncWarren.
+ * @b: value of #NcMultiplicityFuncWarren:b.
+ *
+ * Sets the value @b to the #NcMultiplicityFuncWarren:b property.
+ *
+ */
+void
+nc_multiplicity_func_warren_set_b (NcMultiplicityFuncWarren *mw, gdouble b)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  g_assert (b >= 0);
+
+  self->b = b;
+}
+
+/**
+ * nc_multiplicity_func_warren_get_b:
+ * @mw: a #NcMultiplicityFuncWarren.
+ *
+ * Returns: the value of #NcMultiplicityFuncWarren:b property.
+ */
+gdouble
+nc_multiplicity_func_warren_get_b (const NcMultiplicityFuncWarren *mw)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  return self->b;
+}
+
+/**
+ * nc_multiplicity_func_warren_set_c:
+ * @mw: a #NcMultiplicityFuncWarren.
+ * @c: value of #NcMultiplicityFuncWarren:c.
+ *
+ * Sets the value @c to the #NcMultiplicityFuncWarren:c property.
+ *
+ */
+void
+nc_multiplicity_func_warren_set_c (NcMultiplicityFuncWarren *mw, gdouble c)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  g_assert (c >= 0);
+
+  self->c = c;
+}
+
+/**
+ * nc_multiplicity_func_warren_get_c:
+ * @mw: a #NcMultiplicityFuncWarren.
+ *
+ * Returns: the value of #NcMultiplicityFuncWarren:c property.
+ */
+gdouble
+nc_multiplicity_func_warren_get_c (const NcMultiplicityFuncWarren *mw)
+{
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  return self->c;
+}

@@ -53,6 +53,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
+#include "math/ncm_powspec_sphere_proj.h"
 #include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
@@ -75,6 +76,8 @@
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_fftlog_sbessel_j.h"
+#include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -114,8 +117,6 @@
 #include "lss/nc_multiplicity_func_jenkins.h"
 #include "lss/nc_multiplicity_func_warren.h"
 #include "lss/nc_multiplicity_func_tinker.h"
-#include "lss/nc_multiplicity_func_tinker_mean.h"
-#include "lss/nc_multiplicity_func_tinker_crit.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
@@ -498,6 +499,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
   
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
@@ -528,9 +530,13 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 #ifdef NUMCOSMO_HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 #endif /* NUMCOSMO_HAVE_NLOPT */
+
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
   
+  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
+  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
+
   ncm_cfg_register_obj (NCM_TYPE_DATA);
   
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
@@ -590,8 +596,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_JENKINS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WARREN);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
-  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
-  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   
@@ -1300,7 +1304,7 @@ ncm_cfg_msg_sepa (void)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)

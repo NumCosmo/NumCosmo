@@ -116,8 +116,6 @@
 #include <numcosmo/lss/nc_multiplicity_func_jenkins.h>
 #include <numcosmo/lss/nc_multiplicity_func_warren.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker.h>
-#include <numcosmo/lss/nc_multiplicity_func_tinker_mean.h>
-#include <numcosmo/lss/nc_multiplicity_func_tinker_crit.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>

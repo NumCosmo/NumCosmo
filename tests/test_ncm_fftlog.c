@@ -38,7 +38,9 @@ typedef struct _TestNcmFftlogK
 {
   gsl_function Fk;
   gdouble lnr;
+  gdouble w;
   guint ell;
+  guint m;
   guint ntests;
 } TestNcmFftlogK;
 
@@ -55,6 +57,7 @@ typedef struct _TestNcmFftlog
 void test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata);
 
 void test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata);
@@ -62,6 +65,7 @@ void test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_invalid_st (TestNcmFftlog *test, gconstpointer pdata);
 
 gint
@@ -103,6 +107,20 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_j_traps,
               &test_ncm_fftlog_free);
   
+#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+  
+  g_test_add ("/ncm/fftlog/sbessel_jljm/eval", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_jljm_new,
+              &test_ncm_fftlog_eval,
+              &test_ncm_fftlog_free);
+  
+  g_test_add ("/ncm/fftlog/sbessel_jljm/traps", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_jljm_new,
+              &test_ncm_fftlog_sbessel_jljm_traps,
+              &test_ncm_fftlog_free);
+  
+#endif /* defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H) */
+  
 #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
@@ -114,6 +132,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_free);
   g_test_add ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_sbessel_j_new,
+              &test_ncm_fftlog_invalid_st,
+              &test_ncm_fftlog_free);
+  g_test_add ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_jljm_new,
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
 #endif
@@ -169,10 +191,24 @@ _test_ncm_fftlog_sbessel_j (gdouble lnk, gpointer user_data)
   return GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr);
 }
 
+static gdouble
+_test_ncm_fftlog_sbessel_jljm (gdouble lnk, gpointer user_data)
+{
+  TestNcmFftlogK *args = (TestNcmFftlogK *) user_data;
+  const gdouble kr     = exp (lnk + args->lnr);
+  const gdouble k      = exp (lnk);
+  
+/*
+ *  printf ("% 22.15g % 22.15g\n", k,
+ *       GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr * args->w) * ncm_sf_sbessel (args->m, kr / args->w));
+ */
+  return GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr * args->w) * ncm_sf_sbessel (args->m, kr / args->w);
+}
+
 void
 test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
 {
-  const guint N          = g_test_rand_int_range  (1000, 2000);
+  const guint N          = g_test_rand_int_range  (10000, 20000);
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
   TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
@@ -281,6 +317,51 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 }
 
 void
+test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata)
+{
+  const guint N          = 1 * g_test_rand_int_range  (1000, 2000);
+  const guint ell        = g_test_rand_int_range  (0, 10);
+  const gint dell        = g_test_rand_int_range  (-2, 2);
+  const gdouble lnw      = 1.0 / 4.0 * log (g_test_rand_double_range (0.1, 1.0));
+  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_jljm_new (ell, dell, lnw, 0.0, 0.0, 20.0, N));
+  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
+  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
+  gdouble Lk             = g_test_rand_double_range (log (1.0e+6), log (1.0e+7));
+  
+  test->fftlog       = fftlog;
+  test->Fk.function  = &_test_ncm_fftlog_plaw;
+  test->Fk.params    = arg;
+  test->KFk.function = &_test_ncm_fftlog_sbessel_jljm;
+  test->KFk.params   = argK;
+  test->argK         = argK;
+  
+  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
+  test->lnk_f = test->lnk_i + Lk;
+  
+  test->ntests = 20;
+  
+  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e-9));
+  arg->ns  = g_test_rand_double_range (0.92, 0.98);
+  
+  argK->lnr = 0.0;
+  argK->Fk  = test->Fk;
+  argK->ell = ell;
+  argK->m   = ell + dell;
+  argK->w   = exp (lnw);
+  
+  /*printf ("# %u %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ell, N, Lk, argK->w, gsl_pow_4 (argK->w), exp (test->lnk_i), exp (test->lnk_f));*/
+  
+  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_length (fftlog, Lk);
+  /*ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f) + 3.0); */
+  ncm_fftlog_sbessel_jljm_set_best_lnr0 (NCM_FFTLOG_SBESSEL_JLJM (fftlog));
+  
+  g_assert (fftlog != NULL);
+  g_assert (NCM_IS_FFTLOG (fftlog));
+  g_assert (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog));
+}
+
+void
 test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
@@ -302,7 +383,6 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
   
   ncm_fftlog_eval_by_gsl_function (fftlog, &test->Fk);
   ncm_fftlog_prepare_splines (fftlog);
-  
   lnr = ncm_fftlog_get_vector_lnr (NCM_FFTLOG (fftlog));
   len = ncm_vector_len (lnr);
   
@@ -348,6 +428,15 @@ test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+#endif
+}
+
+void
+test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata)
+{
+#if GLIB_CHECK_VERSION (2, 38, 0)
+  g_test_trap_subprocess ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

@@ -1215,6 +1215,35 @@ ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax)
 }
 
 /**
+ * ncm_vector_find_closest_index:
+ * @cv: a @NcmVector.
+ * @x: a gdouble $x$
+ *
+ * Assuming that @cv elements are in increasing order ($x_i < x_{i+1}$)
+ * finds the largest index $i$ such the $x_i < x$. It also assumes that
+ * $x_0 < x < x_{\mathrm{len} - 1}$.
+ *
+ */
+guint
+ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x)
+{
+  gsize ilo = 0;
+  gsize ihi = ncm_vector_len (cv) - 1;
+  
+  while (ihi > ilo + 1)
+  {
+    gsize i = (ihi + ilo) / 2;
+    
+    if (ncm_vector_get (cv, i) > x)
+      ihi = i;
+    else
+      ilo = i;
+  }
+  
+  return ilo;
+}
+
+/**
  * ncm_vector_set_from_variant:
  * @cv: a #NcmVector
  * @var: a #GVariant of type ad

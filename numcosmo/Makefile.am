@@ -115,6 +115,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c           \
 	math/ncm_powspec.c                    \
 	math/ncm_powspec_filter.c             \
+	math/ncm_powspec_sphere_proj.c       \
 	math/ncm_powspec_corr3d.c             \
 	math/ncm_hoaa.c                       \
 	math/ncm_csq1d.c                      \
@@ -128,6 +129,7 @@ ncm_sources = \
 	math/ncm_mpsf_0F1.c                   \
 	math/ncm_fftlog.c                     \
 	math/ncm_fftlog_sbessel_j.c           \
+	math/ncm_fftlog_sbessel_jljm.c       \
 	math/ncm_fftlog_tophatwin2.c          \
 	math/ncm_fftlog_gausswin2.c           \
 	math/ncm_sparam.c                     \
@@ -252,6 +254,7 @@ ncm_headers =                                 \
 	math/ncm_spline2d_bicubic.h           \
 	math/ncm_powspec.h                    \
 	math/ncm_powspec_filter.h             \
+	math/ncm_powspec_sphere_proj.h       \
 	math/ncm_powspec_corr3d.h             \
 	math/ncm_hoaa.h                       \
 	math/ncm_csq1d.h                      \
@@ -265,6 +268,7 @@ ncm_headers =                                 \
 	math/ncm_mpsf_0F1.h                   \
 	math/ncm_fftlog.h                     \
 	math/ncm_fftlog_sbessel_j.h           \
+	math/ncm_fftlog_sbessel_jljm.h       \
 	math/ncm_fftlog_tophatwin2.h          \
 	math/ncm_fftlog_gausswin2.h           \
 	math/ncm_sparam.h                     \
@@ -415,8 +419,6 @@ nc_headers = \
 	lss/nc_multiplicity_func_jenkins.h      \
 	lss/nc_multiplicity_func_warren.h       \
 	lss/nc_multiplicity_func_tinker.h       \
-	lss/nc_multiplicity_func_tinker_mean.h  \
-	lss/nc_multiplicity_func_tinker_crit.h  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_halo_mass_function.h            \
@@ -568,8 +570,6 @@ nc_sources = \
 	lss/nc_multiplicity_func_jenkins.c      \
 	lss/nc_multiplicity_func_warren.c       \
 	lss/nc_multiplicity_func_tinker.c       \
-	lss/nc_multiplicity_func_tinker_mean.c  \
-	lss/nc_multiplicity_func_tinker_crit.c  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
 	lss/nc_multiplicity_func_crocce.c      \
 	lss/nc_halo_mass_function.c            \

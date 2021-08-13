@@ -173,6 +173,7 @@ NCM_INLINE void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdoubl
 NCM_INLINE gboolean ncm_vector_is_finite (const NcmVector *cv);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
+guint ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x);
 
 NcmVector *ncm_vector_dup (const NcmVector *cv);
 
