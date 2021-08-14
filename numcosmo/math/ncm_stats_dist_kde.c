@@ -40,7 +40,7 @@
  * evaluated in these points. Some of these calculations are explained below.
  *
  * The #NcmStatsDistKDE class uses one covariance matrix for all the sample points. So, given $n$ points, there is only
- * one covariance matrix $\Sigma$ that is used for all the i$th$ kernels $\phi(|x-x_i|, \Sigma)$. After the covariance
+ * one covariance matrix $\Sigma$ that is used for all the $i$-th kernels $\phi(|x-x_i|, \Sigma)$. After the covariance
  * matrix is computed, the algorithm computes the Cholesky decomposition, that is
  * \begin{align}
  * \Sigma &= AA^T
@@ -50,22 +50,24 @@
  *
  *
  * The object also prepares the interpolation matrix to be implemented in the least-squares problem, that is, given the relation
+ *
  * $\left[\begin{array}{cccc}
- * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{1}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{1}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{1}\right\|\right) \\
- * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{2}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{2}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{2}\right\|\right) \\
- * \vdots & \vdots & & \vdots \\
+ * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{1}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{1}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{1}\right\|\right) \newline
+ * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{2}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{2}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{2}\right\|\right) \newline
+ * \vdots & \vdots & & \vdots \newline
  * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{n}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{n}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{n}\right\|\right)
  * \end{array}\right]\left[\begin{array}{c}
- * \lambda_{1} \\
- * \lambda_{2} \\
- * \vdots \\
+ * \lambda_{1} \newline
+ * \lambda_{2} \newline
+ * \vdots \newline
  * \lambda_{n}
  * \end{array}\right]=\left[\begin{array}{c}
- * g_{1} \\
- * g_{2} \\
- * \vdots \\
+ * g_{1} \newline
+ * g_{2} \newline
+ * \vdots \newline
  * g_{n}
  * ,\end{array}\right]$
+ *
  * which is explained in the #NcmStatsDist class, this object prepares the first matrix for all the $n$ points in the sample, using the covariance matrix and the defined kernel.
  * The #NcmStatsDist class implements the solution for this relation and then one can compute the distribution for a given
  * vector $\vec{x}$ using a method of the #NcmStatsDist class but that is implemented in this object.

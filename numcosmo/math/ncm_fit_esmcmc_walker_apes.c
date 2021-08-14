@@ -30,6 +30,34 @@
  *
  * Implementing apes move walker for #NcmFitESMCMC (affine invariant).
  *
+ * This object implements the Approximate Posterior Ensemble Sample (APES) step proposal for a walker.
+ * This proposal was developed by Sandro Dias Pinto Vitenti and implemented in this library. Below there is a description of the proposal.
+ *
+ * The APES proposal consists of using radial basis interpolation to generate an interpolant $\tilde{\pi}$ 
+ * from a target distribution $\pi$ and use this interpolant to propose new points for the walker. 
+ * By using a distribution $\tilde{\pi}$ that resembles the original target distribution, the APES proposal 
+ * generates samples that converge faster to the target distribution and are more independent when compared to other step proposals.
+ * 
+ * The APES step is implemented as follows: suppose that there are $L$ walkers. They are divided into two blocks $L_1$ and $L_2$,
+ * containing the first and the second half of the walkers respectively. When proposing new points $Y$ for the walkers in the $L_1$ block,
+ * we use the points in the $L_2$ block to generate an interpolant $\tilde{\pi}_{L_2}$ and then propose points $Y \sim \tilde{\pi}_{L_2}$ 
+ * for the $L_1$ block. These points are accepted or rejected based on an acceptance probability $A(Y|X)$, and after the points of the first 
+ * block are updated, we do the same procedure for the $L_2$ block using the $L_1$ block. This procedure can be seen in the pseudocode below.
+ *
+ * ![apes_sketch](apes.png)
+ *
+ * The user must provide the input the values: @nwalkers, @nparams, @method, @k\_@type, @over\_@smooth$ and @use\_@interp - ncm\_fit\_esmcmc\_walker\_apes\_new\_full().
+ * The user can also initialize the object with: @nwalkers, @nparams - ncm\_fit\_esmcmc\_walker\_apes\_new() and let the remaining parameters as default, 
+ * which are defined in the properties of the class.
+ * For more information about the algorithm, check the explanation below.
+ *
+ *		- This object shall be used in the #NcmFitESMCMC class to generate a Monte Carlo Markov Chain using an ensemble sampler. 
+ *                To see an example of its implementation, check the file example\_rosenbrock.py in NumCosmo/examples.
+ * 		
+ *		- Regarding the radial basis interpolation method is implemented, check the #NcmStatsDist class.
+ *		
+ *		- Regarding the types of kernel used in the interpolation method as the radial basis function, check the #NcmStatsDistKernel class.  
+ *
  */
 
 #ifdef HAVE_CONFIG_H
