@@ -40,8 +40,8 @@
  * If the function is complicated enough, it is not an easy task to compute the inverse and the norm of the distribution to sample from it, 
  * and that is when the MCMC method may be used. 
  *
- * The MCMC method consists of a point proposal $Y$ based on a kernel $K(Y|X)$, which depends on random variables and the current position $X$, 
- * and in an acceptance probability $A(Y|X)$, such that the accepted points are distributed by the target distribution $\pi(X)$. 
+ * The MCMC method consists of a point proposal $Y$ based on a kernel $K(Y|X)$, which depends on a step proposal and in an acceptance probability $A(Y|X)$, 
+ * such that the accepted points are distributed by the target distribution $\pi(X)$. 
  * This process of proposing one point in a time $t$ and acceptance or rejection based on the distribution may be viewed as one walker.
  * The ensemble sampler is defined as 
  * \begin{align}
@@ -59,9 +59,9 @@
  * .\end{align}
  * 
  * The user must provide the input the values: @nparams - ncm\_fit\_esmcmc\_walker\_set\_nparams(), @size - ncm\_fit\_esmcmc\_walker\_set\_size(),
- * @walker\_name - ncm\_fit\_esmcmc\_walker\_new\_from\_name(). For more information about the algorithm, see the description below.
+ * @walker\_@name - ncm\_fit\_esmcmc\_walker\_new\_from\_name(). For more information about the algorithm, see the description below.
  * 
- * 		- The #NcmFitESMCMCWalker class only has virtual methods, Therefore, to initialize this class, one must insert the @walker\_name, 
+ * 		- The #NcmFitESMCMCWalker class only has virtual methods, Therefore, to initialize this class, one must insert the @walker\_@name, 
  *                which defines from which child object the class will inherit its methods. 
  * 		
  * 		- This class has the tools to implement the following methods: the step of the walker, which defines how the point $Y$ is proposed and how it should be accepted; 
