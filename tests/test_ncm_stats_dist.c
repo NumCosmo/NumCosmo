@@ -720,6 +720,11 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
 
     g_assert_true (gsl_finite (rnorm));
     g_assert_true (sample_array->len == n);
+    
+    {
+      gdouble htest = ncm_stats_dist_kernel_get_rot_bandwidth (kernel, n);
+      ncm_assert_cmpdouble_e (htest, ==, ncm_stats_dist_get_href (test->sd) / ncm_stats_dist_get_over_smooth (test->sd), 1.0e-14, 0.0);
+    }
 
     for (i = 0; i < n; i++)
     {
@@ -735,7 +740,7 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
       ncm_assert_cmpdouble_e (n_i, ==, exp (lnnorm_i), 1.0e-14, 0.0);
       ncm_assert_cmpdouble_e (lnnorm_i, ==, lnnorm0_i + dim * log (href), 1.0e-14, 0.0);
       g_assert_true (w_i == ncm_vector_get (weights, i));
-
+       
       {
         NcmVector *y_i_dup = ncm_vector_dup (y_i);
         ncm_vector_cmp (y_i_dup, g_ptr_array_index (sample_array, i));
@@ -746,12 +751,12 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
       ncm_vector_free (y_i);
       ncm_matrix_free (cov_i);
     }
-
+    
     {
       gdouble *data         = g_new (gdouble, 2 * ntests);
       NcmVector *chi2_vec   = ncm_vector_new_full (data, ntests, 2, data, g_free);
       NcmVector *kernel_vec = ncm_vector_new (ntests);
-
+      
       for (i = 0; i < ntests; i++)
       {
         const gdouble chi2_i = g_test_rand_double_range (0.0, 1.0e2);

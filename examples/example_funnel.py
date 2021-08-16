@@ -27,7 +27,7 @@ Ncm.cfg_init ()
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
-mrb = Ncm.ModelFunnel.new (3)
+mrb = Ncm.ModelFunnel.new (9)
 
 #
 # New Model set object including slm with parameters
@@ -100,7 +100,8 @@ nwalkers = int (math.ceil (1500 * 2))
 ssize    = 20000000
 
 if sampler == 'aps':
-  walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
+  walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
+  Ncm.FitESMCMCWalkerAPES.set_over_smooth(walker, 5.0)
 elif sampler == "stretch":
   walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
