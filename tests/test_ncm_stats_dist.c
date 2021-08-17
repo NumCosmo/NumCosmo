@@ -720,7 +720,7 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
 
     g_assert_true (gsl_finite (rnorm));
     g_assert_true (sample_array->len == n);
-
+    
     for (i = 0; i < n; i++)
     {
       NcmMatrix *cov_decomp   = ncm_stats_dist_peek_cov_decomp (test->sd, i);
@@ -735,7 +735,7 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
       ncm_assert_cmpdouble_e (n_i, ==, exp (lnnorm_i), 1.0e-14, 0.0);
       ncm_assert_cmpdouble_e (lnnorm_i, ==, lnnorm0_i + dim * log (href), 1.0e-14, 0.0);
       g_assert_true (w_i == ncm_vector_get (weights, i));
-
+       
       {
         NcmVector *y_i_dup = ncm_vector_dup (y_i);
         ncm_vector_cmp (y_i_dup, g_ptr_array_index (sample_array, i));
@@ -746,12 +746,12 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
       ncm_vector_free (y_i);
       ncm_matrix_free (cov_i);
     }
-
+    
     {
       gdouble *data         = g_new (gdouble, 2 * ntests);
       NcmVector *chi2_vec   = ncm_vector_new_full (data, ntests, 2, data, g_free);
       NcmVector *kernel_vec = ncm_vector_new (ntests);
-
+      
       for (i = 0; i < ntests; i++)
       {
         const gdouble chi2_i = g_test_rand_double_range (0.0, 1.0e2);
@@ -773,6 +773,38 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
     ncm_stats_dist_kernel_free (kernel);
   }
 
+  {
+    gdouble n_error, gamma_error, lambda_error, href_error = 0.0, 0.0, 0.0, 0.0;
+    NcmMatrix *cov_error = NULL;
+    gdouble chi2_error = 0.0;
+    NcmVector *chi2_vecerror = NULL;
+    NcmVector *Ku_error = NULL;
+    NcmVector *weights_vecerror = NULL;
+    NcmVector *lnnorm_error = NULL;
+    NcmVector *mu_error = NULL; 
+    NcmRNG *rng_error = NULL;
+    
+    NcmStatsDistKernel *sdk = g_object_new (NCM_TYPE_STATS_DIST_KERNEL,
+                                             "dimension", 2,  
+                                              NULL);
+ 
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_get_rot_bandwidth (sdk, n_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_get_lnnorm (sdk, cov_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_eval_unnorm (sdk, chi2_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_eval_unnorm_vec (sdk, chi2_vecerror, Ku_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_eval_sum0_gamma_lambda (sdk, chi2_vecerror, weights_vecerror, lnnorm_error, gamma_error, lambda_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_eval_sum1_gamma_lambda (sdk, chi2_vecerror, weights_vecerror, lnnorm_error, gamma_error, lambda_error), ==, 0.0, 1.0e-15, 0.0);
+      ncm_assert_cmpdouble_e (ncm_stats_dist_kernel_sample (sdk, cov_error, href_error, mu_error, Ku_error, rng_error), ==, 0.0, 1.0e-15, 0.0);
+      
+      ncm_rng_free (rng_error);
+      ncm_vector_free (chi2_vecerror);
+      ncm_vector_free (Ku_error);
+      ncm_vector_free (weights_vecerror);
+      ncm_vector_free (mu_error);
+      ncm_vector_free (lnnorm_error);
+      ncm_matrix_free (cov_error);
+      ncm_stats_dist_kernel_free (sdk);
+  }
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
