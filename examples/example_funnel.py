@@ -23,7 +23,7 @@ from gi.repository import NumCosmoMath as Ncm
 #
 Ncm.cfg_init ()
 
-dim = 6
+dim = 10
 #
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
@@ -63,7 +63,7 @@ lh = Ncm.Likelihood.new (dset)
 #
 fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
 
-fit.run (Ncm.FitRunMsgs.SIMPLE)
+#fit.run (Ncm.FitRunMsgs.SIMPLE)
 
 #
 # Printing fitting informations.
@@ -87,7 +87,7 @@ Ncm.func_eval_log_pool_stats ()
 init_sampler = Ncm.MSetTransKernGauss.new (0)
 init_sampler.set_mset (mset)
 init_sampler.set_prior_from_mset ()
-init_sampler.set_cov_from_rescale (1.0e-1)
+init_sampler.set_cov_from_rescale (1.0)
 
 #
 # Creates the ESMCMC walker object, this object is responsible
@@ -97,12 +97,15 @@ init_sampler.set_cov_from_rescale (1.0e-1)
 # 
 sampler = 'apes'
 #sampler  = 'stretch'
-nwalkers = int (math.ceil (1501 * 2))
+nwalkers = int (math.ceil (3000 * 2))
 ssize    = 20000000
 
 if sampler == 'apes':
   walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
-  walker.set_over_smooth (0.15)
+  walker.set_over_smooth (0.5)
+  #sd0, sd1 = walker.peek_sds ()
+  #sd0.set_local_frac (0.03)
+  #sd1.set_local_frac (0.03)
 elif sampler == "stretch":
   walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
