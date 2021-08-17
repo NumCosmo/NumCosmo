@@ -102,7 +102,7 @@ ssize    = 20000000
 
 if sampler == 'apes':
   walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
-  walker.set_over_smooth (0.5)
+  walker.set_over_smooth (0.3)
   #sd0, sd1 = walker.peek_sds ()
   #sd0.set_local_frac (0.03)
   #sd1.set_local_frac (0.03)
