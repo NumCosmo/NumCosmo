@@ -1321,31 +1321,90 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
   ncm_memory_pool_return (fk_ptr);
 }
 
+static gint
+_ncm_fit_esmcmc_check_init_points (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  GArray *inrange   = g_array_new (FALSE, FALSE, sizeof (gint));
+  gdouble m2lnL_min = GSL_POSINF;
+  gdouble m2lnL_max = GSL_NEGINF;
+  const gdouble cut = 1.0e6;
+  gint i;
+
+  for (i = 0; i < self->nwalkers; i++)
+  {
+    NcmVector *full_theta_i = g_ptr_array_index (self->full_theta, i);
+    const gdouble m2lnL_i   = ncm_vector_get (full_theta_i, NCM_FIT_ESMCMC_M2LNL_ID);
+
+    m2lnL_min = MIN (m2lnL_min, m2lnL_i);
+    m2lnL_max = MAX (m2lnL_max, m2lnL_i);
+  }
+
+  if (m2lnL_max - m2lnL_min > -cut * GSL_LOG_DBL_EPSILON)
+  {
+    for (i = 0; i < self->nwalkers; i++)
+    {
+      NcmVector *full_theta_i = g_ptr_array_index (self->full_theta, i);
+      const gdouble m2lnL_i   = ncm_vector_get (full_theta_i, NCM_FIT_ESMCMC_M2LNL_ID);
+
+      if (m2lnL_i - m2lnL_min < -cut * GSL_LOG_DBL_EPSILON)
+        g_array_append_val (inrange, i);
+    }
+
+    if (inrange->len < self->nwalkers)
+    {
+      for (i = 0; i < inrange->len; i++)
+      {
+        const gint j = g_array_index (inrange, gint, i);
+        if (i != j)
+        {
+          NcmVector *full_theta_i = g_ptr_array_index (self->full_theta, i);
+          NcmVector *full_theta_j = g_ptr_array_index (self->full_theta, j);
+
+          ncm_vector_memcpy (full_theta_i, full_theta_j);
+        }
+      }
+    }
+  }
+  else
+    return self->nwalkers;
+
+  {
+    gint len = inrange->len;
+    g_array_unref (inrange);
+    return len;
+  }
+}
+
 static void
 _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc, const gboolean use_mpi)
 {
   NcmFitESMCMCPrivate * const self = esmcmc->priv;
+  gint len;
   
   if (self->cur_sample_id + 1 == self->nwalkers)
     return;
   else if (self->cur_sample_id + 1 > self->nwalkers)
     g_error ("_ncm_fit_esmcmc_gen_init_points: initial points already generated.");
   
-  if (self->nthreads > 1)
+  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+
+  len = self->cur_sample_id + 1;
+  do
   {
-    ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
-    
-    if (use_mpi)
-      _ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, self->cur_sample_id + 1, self->nwalkers);
+    if (self->nthreads > 1)
+    {
+      if (use_mpi)
+        _ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, len, self->nwalkers);
+      else
+        ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_gen_init_points_mt_eval, len, self->nwalkers, esmcmc);
+    }
     else
-      ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_gen_init_points_mt_eval, self->cur_sample_id + 1, self->nwalkers, esmcmc);
-  }
-  else
-  {
-    ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
-    _ncm_fit_esmcmc_gen_init_points_mt_eval (self->cur_sample_id + 1, self->nwalkers, esmcmc);
-  }
-  
+      _ncm_fit_esmcmc_gen_init_points_mt_eval (len, self->nwalkers, esmcmc);
+
+    len = _ncm_fit_esmcmc_check_init_points (esmcmc);
+  } while (len < self->nwalkers);
+
   _ncm_fit_esmcmc_update (esmcmc, self->cur_sample_id + 1, self->nwalkers);
   ncm_mset_catalog_sync (self->mcat, FALSE);
 }

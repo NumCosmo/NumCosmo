@@ -520,7 +520,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     gdouble gamma, lambda;
     
     ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, pself->chi2, ppself->weights, self->lnnorms, &gamma, &lambda);
-    
+
     return -2.0 * (gamma + log1p (lambda) - ppself->d * log (ppself->href));
   }
 }

@@ -147,6 +147,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->rnorm        = 0.0;
   self->n            = 0;
   self->alloc_n      = 0;
+  self->alloc_subs   = FALSE;
   self->d            = 0;
   self->sampling     = g_array_new (FALSE, FALSE, sizeof (guint));
   self->nnls         = NULL;
@@ -407,7 +408,9 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   if ((self->weights == NULL) || (self->n != ncm_vector_len (self->weights)))
   {
     ncm_vector_clear (&self->weights);
-    self->weights = ncm_vector_new (self->n);
+
+    self->weights    = ncm_vector_new (self->n);
+    self->alloc_subs = FALSE;
   }
   
   self->href = ncm_stats_dist_get_href (sd);
@@ -452,11 +455,18 @@ _ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols
     self->nnls = ncm_nnls_new (nrows, ncols);
     ncm_nnls_set_umethod (self->nnls, NCM_NNLS_UMETHOD_NORMAL);
 
+    self->alloc_subs = FALSE;
+  }
+
+  if (!self->alloc_subs)
+  {
     ncm_matrix_clear (&self->sub_IM);
     ncm_vector_clear (&self->sub_x);
 
     self->sub_IM = ncm_matrix_get_submatrix (self->IM, 0, 0, nrows, ncols);
     self->sub_x  = ncm_vector_get_subvector (self->weights, 0, ncols);
+
+    self->alloc_subs = TRUE;
   }
 }
 
@@ -470,22 +480,8 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class};
-    const gdouble dbl_limit     = 1.0;
+    const gdouble dbl_limit     = 2.0;
     gint i;
-
-    /*
-     * Preparing allocations
-     */
-    if (self->n != self->alloc_n)
-    {
-      ncm_matrix_clear (&self->IM);
-      ncm_vector_clear (&self->f);
-      
-      self->IM = ncm_matrix_new (self->n, self->n);
-      self->f  = ncm_vector_new (self->n);
-      
-      self->alloc_n = self->n;
-    }
     
     /*
      * Evaluating the right-hand-side
@@ -501,7 +497,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
     }
 
-    if (-0.5 * (self->max_m2lnp - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
+    if (self->max_m2lnp - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
     {
       gint n_cut = 0;
 
@@ -516,7 +512,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         gint p = g_array_index (self->m2lnp_sort, size_t, i);
         const gdouble m2lnp_p = ncm_vector_get (m2lnp, p);
 
-        if (-0.5 * (m2lnp_p - self->min_m2lnp) < dbl_limit * GSL_LOG_DBL_EPSILON)
+        if (m2lnp_p - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
         {
           n_cut = i;
           break;
@@ -557,6 +553,21 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       return;
     }
     
+    /*
+     * Preparing allocations
+     */
+    if (self->n != self->alloc_n)
+    {
+      ncm_matrix_clear (&self->IM);
+      ncm_vector_clear (&self->f);
+
+      self->IM = ncm_matrix_new (self->n, self->n);
+      self->f  = ncm_vector_new (self->n);
+
+      self->alloc_n    = self->n;
+      self->alloc_subs = FALSE;
+    }
+
     ncm_vector_set_zero (self->weights);
 
     for (i = 0; i < self->n; i++)

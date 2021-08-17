@@ -49,6 +49,7 @@ struct _NcmStatsDistPrivate
   gdouble rnorm;
   guint n;
   guint alloc_n;
+  gboolean alloc_subs;
   guint d;
   GArray *sampling;
   NcmNNLS *nnls;

@@ -23,11 +23,12 @@ from gi.repository import NumCosmoMath as Ncm
 #
 Ncm.cfg_init ()
 
+dim = 6
 #
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
-mrb = Ncm.ModelFunnel.new (3)
+mrb = Ncm.ModelFunnel.new (dim - 1)
 
 #
 # New Model set object including slm with parameters
@@ -86,7 +87,7 @@ Ncm.func_eval_log_pool_stats ()
 init_sampler = Ncm.MSetTransKernGauss.new (0)
 init_sampler.set_mset (mset)
 init_sampler.set_prior_from_mset ()
-init_sampler.set_cov_from_rescale (1.0)
+init_sampler.set_cov_from_rescale (1.0e-1)
 
 #
 # Creates the ESMCMC walker object, this object is responsible
@@ -94,13 +95,14 @@ init_sampler.set_cov_from_rescale (1.0)
 # is affine invariant and therefore gives good results even for
 # very correlated parametric space.
 # 
-sampler = 'aps'
+sampler = 'apes'
 #sampler  = 'stretch'
-nwalkers = int (math.ceil (1500 * 2))
+nwalkers = int (math.ceil (1501 * 2))
 ssize    = 20000000
 
-if sampler == 'aps':
-  walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
+if sampler == 'apes':
+  walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
+  walker.set_over_smooth (0.15)
 elif sampler == "stretch":
   walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
@@ -132,7 +134,7 @@ esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, walker, Ncm.FitRunMsgs
 #esmcmc.set_auto_trim_div (100)
 #esmcmc.set_max_runs_time (2.0 * 60.0)
 #esmcmc.set_nthreads (4)
-esmcmc.set_data_file ("example_funnel_%s_st_%d.fits" % (sampler, nwalkers))
+esmcmc.set_data_file ("example_funnel_%d_%s_st_%d.fits" % (dim, sampler, nwalkers))
 
 #
 # Running the esmcmc, it will first calculate 1000 points, after that
