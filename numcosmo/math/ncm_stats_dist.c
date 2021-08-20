@@ -389,6 +389,11 @@ _ncm_stats_dist_get_href (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = sd->priv;
   
+/*
+  printf ("base href % 22.15g % 22.15g % 22.15g | %d\n", self->over_smooth * ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n),
+      self->over_smooth, ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n), self->n);
+*/
+
   return self->over_smooth * ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n);
 }
 
@@ -480,7 +485,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class};
-    const gdouble dbl_limit     = 2.0;
+    const gdouble dbl_limit     = 4.0;
     gint i;
     
     /*
@@ -496,6 +501,8 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
       self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
     }
+
+    /*printf ("max % 22.15g min % 22.15g\n", self->max_m2lnp, self->min_m2lnp);*/
 
     if (self->max_m2lnp - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
     {

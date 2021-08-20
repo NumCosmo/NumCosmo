@@ -1103,7 +1103,7 @@ ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc)
 }
 
 void
-_ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
+_ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
 {
   NcmFitESMCMCPrivate * const self = esmcmc->priv;
   const guint step                 = self->nwalkers * ((self->n / self->interm_log) == 0 ? 1 : (self->n / self->interm_log));
@@ -1125,20 +1125,30 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
     self->cur_sample_id++;
     ncm_timer_task_increment (self->nt);
     
-    self->ntotal++;
-    self->ntotal_lup++;
+    if (!init)
+    {
+      self->ntotal++;
+      self->ntotal_lup++;
+    }
     
     if (g_array_index (self->accepted, gboolean, k))
     {
-      self->naccepted++;
-      self->naccepted_lup++;
+      if (!init)
+      {
+        self->naccepted++;
+        self->naccepted_lup++;
+      }
+
       g_array_index (self->accepted, gboolean, k) = FALSE;
     }
     
     if (g_array_index (self->offboard, gboolean, k))
     {
-      self->noffboard++;
-      self->noffboard_lup++;
+      if (!init)
+      {
+        self->noffboard++;
+        self->noffboard_lup++;
+      }
       g_array_index (self->offboard, gboolean, k) = FALSE;
     }
   }
@@ -1162,9 +1172,12 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (self->mcat);
         ncm_mset_catalog_log_current_chain_stats (self->mcat);
-        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
-                   ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
-                   ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        if (!init)
+        {
+          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
+              ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
+              ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        }
         g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n",
                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
                    2 * self->fparam_len,
@@ -1198,9 +1211,12 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         ncm_fit_log_state (self->fit);
         ncm_mset_catalog_log_current_stats (self->mcat);
         ncm_mset_catalog_log_current_chain_stats (self->mcat);
-        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
-                   ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
-                   ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        if (!init)
+        {
+          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
+              ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
+              ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+        }
         g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n",
                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
                    2 * self->fparam_len,
@@ -1405,7 +1421,7 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc, const gboolean use_mpi)
     len = _ncm_fit_esmcmc_check_init_points (esmcmc);
   } while (len < self->nwalkers);
 
-  _ncm_fit_esmcmc_update (esmcmc, self->cur_sample_id + 1, self->nwalkers);
+  _ncm_fit_esmcmc_update (esmcmc, self->cur_sample_id + 1, self->nwalkers, TRUE);
   ncm_mset_catalog_sync (self->mcat, FALSE);
 }
 
@@ -1927,7 +1943,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
     
     ncm_fit_esmcmc_walker_clean (self->walker, ki, self->nwalkers);
     
-    _ncm_fit_esmcmc_update (esmcmc, ki, self->nwalkers);
+    _ncm_fit_esmcmc_update (esmcmc, ki, self->nwalkers, FALSE);
     ncm_mset_catalog_timed_sync (self->mcat, FALSE);
     
     for (i = 1; i < self->n; i++)
@@ -1940,7 +1956,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
       
       ncm_fit_esmcmc_walker_clean (self->walker, 0, self->nwalkers);
       
-      _ncm_fit_esmcmc_update (esmcmc, 0, self->nwalkers);
+      _ncm_fit_esmcmc_update (esmcmc, 0, self->nwalkers, FALSE);
       ncm_mset_catalog_timed_sync (self->mcat, FALSE);
     }
   }
@@ -2212,17 +2228,14 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
       g_array_index (self->accepted, gboolean, 0) = FALSE;
       g_mutex_unlock (&self->update_lock);
     }
-    else if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    else if (self->mtype >= NCM_FIT_RUN_MSGS_FULL)
     {
       g_mutex_lock (&self->resample_lock);
       ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e, SUCCEEDED!\n",
                    k, row_m2lnL, m2lnL, diff);
       
-      if (self->mtype >= NCM_FIT_RUN_MSGS_FULL)
-      {
-        ncm_message ("# NcmFitESMCMC: row %5lu values:", k);
-        ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
-      }
+      ncm_message ("# NcmFitESMCMC: row %5lu values:", k);
+      ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
       
       g_mutex_unlock (&self->resample_lock);
     }
@@ -2362,6 +2375,14 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
     _ncm_fit_esmcmc_validade_mt_eval (pi, pf, esmcmc);
   }
   
+  if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+  {
+    if (g_array_index (self->accepted, gboolean, 0))
+      g_message ("# NcmFitESMCMC: samples rows [%lu, %lu) successfully validated.\n", pi, pf);
+    else
+      g_message ("# NcmFitESMCMC: some samples rows in [%lu, %lu) are invalid.\n", pi, pf);
+  }
+
   return g_array_index (self->accepted, gboolean, 0);
 }
 

@@ -297,6 +297,8 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
   /*
    * Computing the Cholesky decomposition of the total covariance.
    */
+  /*ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COVG: ", "%12.5g");*/
+
   _cholesky_decomp (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), pself->d, self->nearPD_maxiter);
   
   /*

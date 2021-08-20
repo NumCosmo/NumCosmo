@@ -97,15 +97,13 @@ init_sampler.set_cov_from_rescale (1.0)
 # 
 sampler = 'apes'
 #sampler  = 'stretch'
-nwalkers = int (math.ceil (3000 * 2))
+nwalkers = int (math.ceil (5000 * 2))
 ssize    = 20000000
 
 if sampler == 'apes':
   walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
-  walker.set_over_smooth (0.3)
-  #sd0, sd1 = walker.peek_sds ()
-  #sd0.set_local_frac (0.03)
-  #sd1.set_local_frac (0.03)
+  walker.set_over_smooth (0.1)
+  walker.use_interp (False)
 elif sampler == "stretch":
   walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
@@ -138,6 +136,33 @@ esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, walker, Ncm.FitRunMsgs
 #esmcmc.set_max_runs_time (2.0 * 60.0)
 #esmcmc.set_nthreads (4)
 esmcmc.set_data_file ("example_funnel_%d_%s_st_%d.fits" % (dim, sampler, nwalkers))
+
+if False:
+    mcat = esmcmc.peek_catalog ()
+
+    kernel   = Ncm.StatsDistKernelST.new (dim, 1.0)
+    sd_calib = Ncm.StatsDistVKDE.new (kernel, Ncm.StatsDistCV.SPLIT)
+    mcat_len = mcat.len ()
+
+    sd_calib.set_split_frac (0.5)
+
+    m2lnL = Ncm.Vector.new (nwalkers)
+
+    for i in range (nwalkers):
+        row_i = mcat.peek_row (mcat_len - 1 - i)
+    
+        m2lnL.set (i, row_i.get (0))
+    
+        row_i = row_i.get_subvector (1, dim)
+        sd_calib.add_obs (row_i)
+
+    print (sd_calib.get_over_smooth ())
+    
+    sd_calib.prepare_interp (m2lnL)
+
+    print (sd_calib.get_over_smooth (), 2.0 * sd_calib.get_over_smooth ())
+
+    walker.set_over_smooth (2.0 * sd_calib.get_over_smooth ())
 
 #
 # Running the esmcmc, it will first calculate 1000 points, after that
