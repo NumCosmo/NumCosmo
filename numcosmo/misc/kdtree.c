@@ -81,7 +81,7 @@ static inline void coord_passed_reset(struct kdtree *tree)
 {
         memset(tree->coord_passed, 0, tree->capacity);
 }
-
+#if 0
 static void coord_dump_all(struct kdtree *tree)
 {
         long i, j;
@@ -98,7 +98,8 @@ static void coord_dump_all(struct kdtree *tree)
                 }
         }
 }
-
+#endif
+#if 0
 static void coord_dump_by_indexes(struct kdtree *tree, long low, long high, int r)
 {
         long i;
@@ -113,7 +114,8 @@ static void coord_dump_by_indexes(struct kdtree *tree, long low, long high, int 
         }
         printf("\n");
 }
-
+#endif
+#if 0
 static void bubble_sort(struct kdtree *tree, long low, long high, int r)
 {
         long i, flag = high + 1;
@@ -129,6 +131,7 @@ static void bubble_sort(struct kdtree *tree, long low, long high, int r)
                 }
         }
 }
+#endif
 
 static void insert_sort(struct kdtree *tree, long low, long high, int r)
 {
@@ -219,7 +222,7 @@ static void kdnode_free(struct kdnode *node)
 static int coord_cmp(double *c1, double *c2, int dim)
 {
         int i;
-        double ret;
+        double ret = 0.0;
         for (i = 0; i < dim; i++) {
                 ret = *c1++ - *c2++;
                 if (fabs(ret) >= DBL_EPSILON) {
@@ -557,7 +560,7 @@ void kdtree_dump(struct kdtree *tree)
 {
         int level = 0;
         struct kdnode *node = tree->root;
-        struct kdnode_backlog nbl, *p_nbl = NULL;
+        struct kdnode_backlog *p_nbl = NULL;
         struct kdnode_backlog nbl_stack[KDTREE_MAX_LEVEL];
         struct kdnode_backlog *top = nbl_stack;
 
