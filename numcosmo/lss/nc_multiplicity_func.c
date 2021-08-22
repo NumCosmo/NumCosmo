@@ -120,6 +120,9 @@ _nc_multiplicity_func_finalize (GObject *object)
 static void _nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef) { g_error ("method set_mdef not implemented by %s.", G_OBJECT_TYPE_NAME (mulf)); }
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf) { g_error ("method get_mdef not implemented by %s.", G_OBJECT_TYPE_NAME (mulf)); return -1; }
 static gdouble _nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) { g_error ("method eval not implemented by %s.", G_OBJECT_TYPE_NAME (mulf)); return 0.0; }
+static gboolean _nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) { g_error ("method correction factor not implemented by %s.", G_OBJECT_TYPE_NAME (mulf)); return 0.0; } 
+
 
 static void
 nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
@@ -146,14 +149,23 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
                                                       "Mass definition",
                                                       NC_TYPE_MULTIPLICITY_FUNC_MASS_DEF, NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  klass->set_mdef = &_nc_multiplicity_func_set_mdef;
-  klass->get_mdef = &_nc_multiplicity_func_get_mdef;
-  klass->eval     = &_nc_multiplicity_func_eval; 
+  
+  klass->set_mdef              = &_nc_multiplicity_func_set_mdef;
+  klass->get_mdef              = &_nc_multiplicity_func_get_mdef;
+  klass->eval                  = &_nc_multiplicity_func_eval; 
+  klass->has_correction_factor = &_nc_multiplicity_func_has_correction_factor;
+  klass->correction_factor     = &_nc_multiplicity_func_correction_factor;
+}
+
+static gboolean 
+_nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf)
+{
+  return FALSE;
 }
 
 /**
  * nc_multiplicity_func_free:
- * @mulf: a #NcMultiplicityFunc.
+ * @mulf: a #NcMultiplicityFunc
  *
  * Atomically decrements the reference count of @mulf by one. If the reference count drops to 0,
  * all memory allocated by @mulf is released.
@@ -167,7 +179,7 @@ nc_multiplicity_func_free (NcMultiplicityFunc *mulf)
 
 /**
  * nc_multiplicity_func_clear:
- * @mulf: a #NcMultiplicityFunc.
+ * @mulf: a #NcMultiplicityFunc
  *
  * Atomically decrements the reference count of @mulf by one. If the reference count drops to 0,
  * all memory allocated by @mulf is released. Set pointer to NULL.
@@ -209,10 +221,10 @@ nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf)
 
 /**
  * nc_multiplicity_func_eval: (virtual eval)
- * @mulf: a #NcMultiplicityFunc.
- * @cosmo: a #NcHICosmo.
- * @sigma: standard fluctuation of the matter density contrast.
- * @z: redshift.
+ * @mulf: a #NcMultiplicityFunc
+ * @cosmo: a #NcHICosmo
+ * @sigma: standard fluctuation of the matter density contrast
+ * @z: redshift
  *
  * FIXME
  *
@@ -224,3 +236,35 @@ nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble s
   return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z);
 }
 
+/**
+ * nc_multiplicity_func_has_correction_factor: (virtual eval)
+ * @mulf: a #NcMultiplicityFunc
+ *
+ * Checks if the multiplicity function has a correction factor, e.g., NcMultiplicityFuncBocquet (when using 
+ * critical density).
+ *
+ * Returns: a gboolean
+*/
+gboolean
+nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf)
+{
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->has_correction_factor (mulf);
+}
+
+/**
+ * nc_multiplicity_func_correction_factor: (virtual eval)
+ * @mulf: a #NcMultiplicityFunc
+ * @cosmo: a #NcHICosmo
+ * @sigma: standard fluctuation of the matter density contrast
+ * @z: redshift
+ * @lnM: logarithm base e of the mass
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+*/
+gdouble
+nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+{
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->correction_factor (mulf, cosmo, sigma, z, lnM);
+}

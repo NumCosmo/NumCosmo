@@ -421,6 +421,7 @@ nc_headers = \
 	lss/nc_multiplicity_func_tinker.h       \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_multiplicity_func_crocce.h      \
+	lss/nc_multiplicity_func_bocquet.h     \
 	lss/nc_halo_mass_function.h            \
         lss/nc_halo_bias_type.h                \
         lss/nc_halo_bias_type_ps.h             \
@@ -572,6 +573,7 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker.c       \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
 	lss/nc_multiplicity_func_crocce.c      \
+	lss/nc_multiplicity_func_bocquet.c     \
 	lss/nc_halo_mass_function.c            \
 	lss/nc_halo_bias_type.c                \
 	lss/nc_halo_bias_type_ps.c             \
