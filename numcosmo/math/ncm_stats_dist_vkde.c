@@ -236,6 +236,8 @@ _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd)
   {
     NcmStatsDistVKDEPrivate * const self = NCM_STATS_DIST_VKDE (sd)->priv;
     
+    /*printf ("href % 22.15g % 22.15g % 22.15g\n", href_base / self->local_frac, href_base, self->local_frac);*/
+
     return href_base / self->local_frac;
   }
 }
@@ -311,6 +313,10 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
           
           kdtree_knn_search_clean (tree);
           kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
+
+          //printf ("points close to: \n");
+          //ncm_vector_log_vals (g_ptr_array_index (sample_array, i), "CE : ", "% 12.5g", TRUE);
+          //ncm_vector_log_vals (invUtheta_i, "CET: ", "% 12.5g", TRUE);
           
           ncm_stats_vec_reset (self->sample, TRUE);
           {
@@ -319,6 +325,8 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
             while (p != &tree->knn_list_head)
             {
               NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
+              //ncm_vector_log_vals (ni, "NI : ", "% 12.5g", TRUE);
+              //ncm_vector_log_vals (g_ptr_array_index (pself->invUsample, p->node->coord_index), "NIT: ", "% 12.5g", TRUE);
               
               ncm_stats_vec_append (self->sample, ni, FALSE);
               p = p->next;
@@ -520,7 +528,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     gdouble gamma, lambda;
     
     ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, pself->chi2, ppself->weights, self->lnnorms, &gamma, &lambda);
-    
+
     return -2.0 * (gamma + log1p (lambda) - ppself->d * log (ppself->href));
   }
 }

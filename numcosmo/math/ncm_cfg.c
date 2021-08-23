@@ -73,6 +73,9 @@
 #include "math/ncm_stats_dist1d_spline.h"
 #include "math/ncm_dataset.h"
 #include "math/ncm_fit.h"
+#include "math/ncm_fit_gsl_ls.h"
+#include "math/ncm_fit_gsl_mm.h"
+#include "math/ncm_fit_gsl_mms.h"
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
@@ -527,7 +530,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_DATA_FUNNEL);
   
   ncm_cfg_register_obj (NCM_TYPE_FIT);
-  
+
+  ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_LS);
+  ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
+  ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
+ 
 #ifdef NUMCOSMO_HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
 #endif /* NUMCOSMO_HAVE_NLOPT */

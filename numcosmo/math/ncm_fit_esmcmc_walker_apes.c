@@ -30,6 +30,34 @@
  *
  * Implementing apes move walker for #NcmFitESMCMC (affine invariant).
  *
+ * This object implements the Approximate Posterior Ensemble Sample (APES) step proposal for a walker.
+ * This proposal was developed by Sandro Dias Pinto Vitenti and implemented in this library. Below there is a description of the proposal.
+ *
+ * The APES proposal consists of using radial basis interpolation to generate an interpolant $\tilde{\pi}$ 
+ * from a target distribution $\pi$ and use this interpolant to propose new points for the walker. 
+ * By using a distribution $\tilde{\pi}$ that resembles the original target distribution, the APES proposal 
+ * generates samples that converge faster to the target distribution and are more independent when compared to other step proposals.
+ * 
+ * The APES step is implemented as follows: suppose that there are $L$ walkers. They are divided into two blocks $L_1$ and $L_2$,
+ * containing the first and the second half of the walkers respectively. When proposing new points $Y$ for the walkers in the $L_1$ block,
+ * we use the points in the $L_2$ block to generate an interpolant $\tilde{\pi}_{L_2}$ and then propose points $Y \sim \tilde{\pi}_{L_2}$ 
+ * for the $L_1$ block. These points are accepted or rejected based on an acceptance probability $A(Y|X)$, and after the points of the first 
+ * block are updated, we do the same procedure for the $L_2$ block using the $L_1$ block. This procedure can be seen in the pseudocode below.
+ *
+ * ![apes_sketch](apes.png)
+ *
+ * The user must provide the input the values: @nwalkers, @nparams, @method, @k\_@type, @over\_@smooth$ and @use\_@interp - ncm\_fit\_esmcmc\_walker\_apes\_new\_full().
+ * The user can also initialize the object with: @nwalkers, @nparams - ncm\_fit\_esmcmc\_walker\_apes\_new() and let the remaining parameters as default, 
+ * which are defined in the properties of the class.
+ * For more information about the algorithm, check the explanation below.
+ *
+ *		- This object shall be used in the #NcmFitESMCMC class to generate a Monte Carlo Markov Chain using an ensemble sampler. 
+ *                To see an example of its implementation, check the file example\_rosenbrock.py in NumCosmo/examples.
+ * 		
+ *		- Regarding the radial basis interpolation method is implemented, check the #NcmStatsDist class.
+ *		
+ *		- Regarding the types of kernel used in the interpolation method as the radial basis function, check the #NcmStatsDistKernel class.  
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,7 +76,6 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 
@@ -424,21 +451,13 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       /*ncm_stats_dist_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
     }
     
+
+    for (i = self->size_2; i < self->size; i++)
     {
-      const gint n = self->size - self->size_2;
-      size_t p[n];
-      
-      gsl_sort_index (p, ncm_vector_data (self->m2lnL_s0), ncm_vector_stride (self->m2lnL_s0), n);
-      
-      for (i = self->size_2; i < self->size; i++)
-      {
-        const gint j       = self->size_2 + p[(i - self->size_2)];
-        NcmVector *theta_j = g_ptr_array_index (theta, j);
-        
-        ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
-        ncm_stats_dist_add_obs (self->sd0, theta_j);
-        /*printf ("AddingA [%d %d %d] % 22.15g\n", i, n - 1 - (i-self->size_2), j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
-      }
+      NcmVector *theta_i = g_ptr_array_index (theta, i);
+
+      ncm_vector_set (self->m2lnL_s0, i - self->size_2, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
+      ncm_stats_dist_add_obs (self->sd0, theta_i);
     }
     
     if (self->use_interp)
@@ -449,10 +468,12 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     for (i = ki; i < self->size_2; i++)
     {
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
-      
+
       do {
         ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
       } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
+
+      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
   
@@ -467,23 +488,13 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       /*ncm_stats_dist_add_obs (self->dndg1, theta_i);*/
     }
     
+    for (i = 0; i < self->size_2; i++)
     {
-      const gint n = self->size_2;
-      size_t p[n];
-      
-      gsl_sort_index (p, ncm_vector_data (self->m2lnL_s1), ncm_vector_stride (self->m2lnL_s1), n);
-      
-      for (i = 0; i < self->size_2; i++)
-      {
-        const gint j       = p[i];
-        NcmVector *theta_j = g_ptr_array_index (theta, j);
-        
-        ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));
-        ncm_stats_dist_add_obs (self->sd1, theta_j);
-        /*printf ("AddingB [%d %d %d] % 22.15g\n", i, n - 1 - i, j, ncm_vector_get (g_ptr_array_index (m2lnL, j), 0));*/
-      }
+      NcmVector *theta_i = g_ptr_array_index (theta, i);
+
+      ncm_vector_set (self->m2lnL_s1, i, ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
+      ncm_stats_dist_add_obs (self->sd1, theta_i);
     }
-    
     
     if (self->use_interp)
       ncm_stats_dist_prepare_interp (self->sd1, self->m2lnL_s1);
@@ -497,6 +508,8 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       do {
         ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
       } while (!ncm_mset_fparam_validate_all (mset, thetastar_i));
+
+      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
 }
@@ -515,6 +528,8 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
     const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
     const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
     
+    g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
+
     ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
     /*printf ("%u % 22.15g | lnp_cur % 22.15g lnp_star % 22.15g\n", k, - 0.5 * (m2lnapes_cur - m2lnapes_star), - 0.5 * m2lnapes_cur, - 0.5 * m2lnapes_star);*/
@@ -524,7 +539,9 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
   {
     const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
     const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
-    
+
+    g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
+
     ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
     /*printf ("%u % 22.15g | lnp_cur % 22.15g lnp_star % 22.15g\n", k, - 0.5 * (m2lnapes_cur - m2lnapes_star), - 0.5 * m2lnapes_cur, - 0.5 * m2lnapes_star);*/
@@ -541,11 +558,15 @@ _ncm_fit_esmcmc_walker_apes_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
   NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
   const gdouble m2lnp_star                   = ncm_vector_get (self->m2lnp_star, k);
   const gdouble m2lnp_cur                    = ncm_vector_get (self->m2lnp_cur, k);
+
 /*
-  printf ("AAA m2lnL_star % 22.15g m2lnp_star % 22.15g m2lnL_cur % 22.15g m2lnp_cur % 22.15g L cur->star: %12.5g p star->cur: %12.5g | T %12.5g\n",
-         m2lnL_star, m2lnp_star, m2lnL_cur, m2lnp_cur,
-         exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)),
-         MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
+  if ((fabs (m2lnL_star) > 1.0e5) || (fabs (m2lnL_cur) > 1.0e5))
+  {
+    printf ("AAA m2lnL_star % 22.15g m2lnp_star % 22.15g m2lnL_cur % 22.15g m2lnp_cur % 22.15g L cur->star: %12.5g p star->cur: %12.5g | T %12.5g\n",
+        m2lnL_star, m2lnp_star, m2lnL_cur, m2lnp_cur,
+        exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)),
+        MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
+  }
 */
 
   return exp (-0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));

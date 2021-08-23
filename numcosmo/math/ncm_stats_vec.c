@@ -1081,7 +1081,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
 #ifdef NUMCOSMO_HAVE_FFTW3
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
   {
-    const guint aorder = (order == 0) ? GSL_MIN (svec->nitens - 1, floor (10 * log10 (svec->nitens))) : order;
+    const guint aorder = (order == 0) ? GSL_MIN (svec->nitens - 2, floor (10 * log10 (svec->nitens))) : order;
     NcmVector *M = ncm_vector_new (2 * aorder + 1);
     const gdouble dlev_tol = 1.0e-3;
     gboolean allocated_here[2] = {FALSE, FALSE}; 
@@ -1186,8 +1186,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
-            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
 
+            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
             crit = n * log (var) + 2.0 * n * (p + 1.0) / (n - p - 2.0);
 
             if (crit < min_crit)
@@ -1272,7 +1272,9 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
 
   spec0[0] = ivar;
   if (c_order[0] > 0)
+  {
     spec0[0] *= 1.0 / gsl_pow_2 (1.0 - ncm_vector_sum_cpts (rho));
+  }
 
   ncm_vector_clear (&rho);
   ncm_vector_clear (&pacf);
@@ -1643,7 +1645,7 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
           lwp     = k;
         }
       }
-      if (min_ess > max_t_ess)
+      if (min_ess >= max_t_ess)
       {
         max_t_ess   = min_ess;
         bindex[0]   = i;
