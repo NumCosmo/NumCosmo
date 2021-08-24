@@ -148,7 +148,7 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
                                                       NULL,
                                                       "Mass definition",
                                                       NC_TYPE_MULTIPLICITY_FUNC_MASS_DEF, NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   klass->set_mdef              = &_nc_multiplicity_func_set_mdef;
   klass->get_mdef              = &_nc_multiplicity_func_get_mdef;
@@ -237,7 +237,7 @@ nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble s
 }
 
 /**
- * nc_multiplicity_func_has_correction_factor: (virtual eval)
+ * nc_multiplicity_func_has_correction_factor: (virtual has_correction_factor)
  * @mulf: a #NcMultiplicityFunc
  *
  * Checks if the multiplicity function has a correction factor, e.g., NcMultiplicityFuncBocquet (when using 
@@ -252,7 +252,7 @@ nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf)
 }
 
 /**
- * nc_multiplicity_func_correction_factor: (virtual eval)
+ * nc_multiplicity_func_correction_factor: (virtual correction_factor)
  * @mulf: a #NcMultiplicityFunc
  * @cosmo: a #NcHICosmo
  * @sigma: standard fluctuation of the matter density contrast

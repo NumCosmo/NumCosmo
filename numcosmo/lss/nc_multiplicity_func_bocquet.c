@@ -199,7 +199,7 @@ nc_multiplicity_func_bocquet_class_init (NcMultiplicityFuncBocquetClass *klass)
                                                         NULL,
                                                         "Delta",
                                                         200.0, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcMultiplicityFuncBocquet:sim:
    *
@@ -211,7 +211,7 @@ nc_multiplicity_func_bocquet_class_init (NcMultiplicityFuncBocquetClass *klass)
                                                       NULL,
                                                       "Simulation type",
                                                       NC_TYPE_MULTIPLICITY_FUNC_BOCQUET_SIM, NC_MULTIPLICITY_FUNC_BOCQUET_SIM_DM,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
   parent_class->set_mdef = &_nc_multiplicity_func_bocquet_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_bocquet_get_mdef;
@@ -273,7 +273,7 @@ _nc_multiplicity_func_bocquet_set_all (NcMultiplicityFuncBocquet *mb)
           g_error ("NcMultiplicityFuncBocquet does not support virial or FOF mass def.");
           break;
         default:
-          g_error ("NcMultiplicityFuncMassDef does not have this option.");
+          g_error ("NcMultiplicityFuncMassDef does not have this option (%d).", self->mdef);
           break;  
       }
       break;
@@ -328,7 +328,7 @@ _nc_multiplicity_func_bocquet_set_all (NcMultiplicityFuncBocquet *mb)
       }
       break;
       default:
-        g_error ("NcMultiplicityFuncBocquetSim does not have this option.");
+        g_error ("NcMultiplicityFuncBocquetSim does not have this option (%d).", self->sim);
         break; 
   }  
 }
@@ -341,7 +341,7 @@ _nc_multiplicity_func_bocquet_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicity
   NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
 
   self->mdef = mdef;
-  if (!self->constructed)
+  if (self->constructed)
     _nc_multiplicity_func_bocquet_set_all (mb);  
 }
 
@@ -429,7 +429,6 @@ NcMultiplicityFuncBocquet *
 nc_multiplicity_func_bocquet_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET,
-                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
                        NULL);
 }
 
@@ -510,7 +509,7 @@ nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFuncBocquet *mb, gdouble D
   NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
 
   self->Delta = Delta;
-  if (!self->constructed)
+  if (self->constructed)
     _nc_multiplicity_func_bocquet_set_all (mb);
 }
 
@@ -543,7 +542,7 @@ nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplic
   NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
 
   self->sim = sim;
-  if (!self->constructed)
+  if (self->constructed)
     _nc_multiplicity_func_bocquet_set_all (mb);
 }
 

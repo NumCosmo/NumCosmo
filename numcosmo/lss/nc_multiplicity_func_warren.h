@@ -65,15 +65,6 @@ NcMultiplicityFuncWarren *nc_multiplicity_func_warren_ref (NcMultiplicityFuncWar
 void nc_multiplicity_func_warren_free (NcMultiplicityFuncWarren *mw);
 void nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw);
 
-void nc_multiplicity_func_warren_set_A (NcMultiplicityFuncWarren *mw, gdouble A);
-gdouble nc_multiplicity_func_warren_get_A (const NcMultiplicityFuncWarren *mw);
-void nc_multiplicity_func_warren_set_a (NcMultiplicityFuncWarren *mw, gdouble a);
-gdouble nc_multiplicity_func_warren_get_a (const NcMultiplicityFuncWarren *mw);
-void nc_multiplicity_func_warren_set_b (NcMultiplicityFuncWarren *mw, gdouble b);
-gdouble nc_multiplicity_func_warren_get_b (const NcMultiplicityFuncWarren *mw);
-void nc_multiplicity_func_warren_set_c (NcMultiplicityFuncWarren *mw, gdouble c);
-gdouble nc_multiplicity_func_warren_get_c (const NcMultiplicityFuncWarren *mw);
-
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_WARREN_H_ */
