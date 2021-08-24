@@ -248,7 +248,7 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
   
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
   ncm_vector_set_all (self->params_min, GSL_POSINF);
-  
+
   if (self->nchains > 1)
   {
     for (i = 0; i < self->nchains; i++)
@@ -5087,6 +5087,12 @@ ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gd
     ncm_message ("# NcmMSetCatalog: Calculating catalog effective sample size from chain %d => 0 using %u blocks:\n", last_t, ntests);
   }
   
+  if (last_t < 10)
+  {
+    ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
+    return last_t;
+  }
+
   esss = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
   
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
@@ -5154,8 +5160,24 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
   gint bindex = 0;
   guint wp = 0, wp_order = 0;
   gdouble wp_pvalue = 0.0;
-  NcmVector *pvals  = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
-  
+  NcmVector *pvals;
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    const guint last_t = ncm_stats_vec_nrows (pstats);
+
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# NcmMSetCatalog: Applying the Heidelberger and Welch's convergence diagnostic from chain %d => 0 using %u blocks:\n",
+                 last_t, ntests);
+    if (last_t < 10)
+    {
+      ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
+      return last_t;
+    }
+  }
+
+  pvals = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
+
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     const gchar *name = NULL;
@@ -5164,11 +5186,7 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
       name = g_ptr_array_index (self->add_vals_names, wp);
     else
       name = ncm_mset_fparam_full_name (self->mset, wp - self->nadd_vals);
-    
-    ncm_cfg_msg_sepa ();
-    ncm_message ("# NcmMSetCatalog: Applying the Heidelberger and Welch's convergence diagnostic from chain %d => 0 using %u blocks:\n",
-                 ncm_stats_vec_nrows (pstats), ntests);
-    
+
     if (bindex < 0)
     {
       if (ntests > 1)
@@ -5187,8 +5205,6 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
     ncm_message ("# NcmMSetCatalog: - target pvalue:            %5.2f%%\n", pvalue_lef * 100.0);
     ncm_vector_log_vals_func (pvals, "# NcmMSetCatalog: - pvalues:                  ", "%5.2f%%", &_fonempval, NULL);
   }
-  
-  ncm_vector_free (pvals);
   
   return (bindex >= 0) ? bindex : 0;
 }

@@ -1262,6 +1262,9 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
 
   g_assert_cmpuint (p, <, svec->len);
   
+  if (svec->nitens <= 1)
+    return svec->nitens;
+
   while (ncm_stats_vec_fit_ar_model (svec, p, order, ar_crit, &rho, &pacf, &ivar, c_order) && (2 * c_order[0] + 1 < svec->nitens))
   {
     ncm_vector_clear (&rho);
