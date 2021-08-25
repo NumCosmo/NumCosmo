@@ -117,7 +117,7 @@ _nc_multiplicity_func_bocquet_set_property (GObject * object, guint prop_id, con
       nc_multiplicity_func_bocquet_set_Delta (mb, g_value_get_double (value));
       break;
     case PROP_SIM:
-      nc_multiplicity_func_bocquet_set_sim (mb, g_value_get_int (value));
+      nc_multiplicity_func_bocquet_set_sim (mb, g_value_get_enum (value));
       break;  
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -137,7 +137,7 @@ _nc_multiplicity_func_bocquet_get_property (GObject * object, guint prop_id, GVa
       g_value_set_double (value, nc_multiplicity_func_bocquet_get_Delta (mb));
       break;
     case PROP_SIM:
-      g_value_set_double (value, nc_multiplicity_func_bocquet_get_sim (mb));
+      g_value_set_enum (value, nc_multiplicity_func_bocquet_get_sim (mb));
       break;  
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
