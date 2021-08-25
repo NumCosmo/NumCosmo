@@ -42,17 +42,11 @@
 struct _NcMultiplicityFuncJenkinsPrivate
 {
   NcMultiplicityFuncMassDef mdef;
-  gdouble A; 
-  gdouble B;
-  gdouble epsilon;
 };
 
 enum
 {
   PROP_0,
-  PROP_A,
-  PROP_B,
-  PROP_EPSILON,
   PROP_SIZE
 };
 
@@ -64,28 +58,16 @@ nc_multiplicity_func_jenkins_init (NcMultiplicityFuncJenkins *mj)
   NcMultiplicityFuncJenkinsPrivate * const self = mj->priv = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
-  self->A       = 0.0;
-  self->B       = 0.0;
-  self->epsilon = 0.0;
 }
 
 static void
 _nc_multiplicity_func_jenkins_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object);
+  /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_JENKINS (object));
 
   switch (prop_id)
   {
-    case PROP_A:
-      nc_multiplicity_func_jenkins_set_A (mj, g_value_get_double (value));
-      break;
-    case PROP_B:
-      nc_multiplicity_func_jenkins_set_B (mj, g_value_get_double (value));
-      break;
-    case PROP_EPSILON:
-      nc_multiplicity_func_jenkins_set_epsilon (mj, g_value_get_double (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -95,20 +77,11 @@ _nc_multiplicity_func_jenkins_set_property (GObject * object, guint prop_id, con
 static void
 _nc_multiplicity_func_jenkins_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object);
+  /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_JENKINS (object));
 
   switch (prop_id)
   {
-    case PROP_A:
-      g_value_set_double (value, nc_multiplicity_func_jenkins_get_A (mj));
-      break;
-    case PROP_B:
-      g_value_set_double (value, nc_multiplicity_func_jenkins_get_B (mj));
-      break;
-    case PROP_EPSILON:
-      g_value_set_double (value, nc_multiplicity_func_jenkins_get_epsilon (mj));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -138,44 +111,6 @@ nc_multiplicity_func_jenkins_class_init (NcMultiplicityFuncJenkinsClass *klass)
   object_class->set_property = _nc_multiplicity_func_jenkins_set_property;
   object_class->get_property = _nc_multiplicity_func_jenkins_get_property;
   object_class->finalize     = _nc_multiplicity_func_jenkins_finalize;
-
-  /**
-   * NcMultiplicityFuncJenkins:A:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("A",
-                                                        NULL,
-                                                        "A",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.315,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcMultiplicityFuncJenkins:B:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_B,
-                                   g_param_spec_double ("B",
-                                                        NULL,
-                                                        "B",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.61,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
- /**
-   * NcMultiplicityFuncJenkins:epsilon:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_EPSILON,
-                                   g_param_spec_double ("epsilon",
-                                                        NULL,
-                                                        "epsilon",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 3.8,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   parent_class->set_mdef = &_nc_multiplicity_func_jenkins_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_jenkins_get_mdef;
@@ -222,11 +157,12 @@ _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf)
 static gdouble
 _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */
   
-  gdouble f_Jenkins = self->A * exp(-pow(fabs(-log(sigma) + self->B), self->epsilon));
+  gdouble f_Jenkins = 0.315 * exp(-pow(fabs(-log(sigma) + 0.61), 3.8));
 
+  NCM_UNUSED (mulf);
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
 
@@ -288,101 +224,5 @@ void
 nc_multiplicity_func_jenkins_clear (NcMultiplicityFuncJenkins **mj)
 {
   g_clear_object (mj);
-}
-
-/**
- * nc_multiplicity_func_jenkins_set_A:
- * @mj: a #NcMultiplicityFuncJenkins.
- * @A: value of #NcMultiplicityFuncJenkins:A.
- *
- * Sets the value @A to the #NcMultiplicityFuncJenkins:A property.
- *
- */
-void
-nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mj, gdouble A)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  g_assert (A >= 0);
-
-  self->A = A;
-}
-
-/**
- * nc_multiplicity_func_jenkins_get_A:
- * @mj: a #NcMultiplicityFuncJenkins.
- *
- * Returns: the value of #NcMultiplicityFuncJenkins:A property.
- */
-gdouble
-nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mj)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  return self->A;
-}
-
-/**
- * nc_multiplicity_func_jenkins_set_B:
- * @mj: a #NcMultiplicityFuncJenkins.
- * @B: value of #NcMultiplicityFuncJenkins:B.
- *
- * Sets the value @B to the #NcMultiplicityFuncJenkins:B property.
- *
- */
-void
-nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mj, gdouble B)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  g_assert (B >= 0);
-
-  self->B = B;
-}
-
-/**
- * nc_multiplicity_func_jenkins_get_B:
- * @mj: a #NcMultiplicityFuncJenkins.
- *
- * Returns: the value of #NcMultiplicityFuncJenkins:B property.
- */
-gdouble
-nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mj)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  return self->B;
-}
-
-/**
- * nc_multiplicity_func_jenkins_set_epsilon:
- * @mj: a #NcMultiplicityFuncJenkins.
- * @epsilon: value of #NcMultiplicityFuncJenkins:epsilon.
- *
- * Sets the value @epsilon to the #NcMultiplicityFuncJenkins:epsilon property.
- *
- */
-void
-nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mj, gdouble epsilon)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  g_assert (epsilon >= 0);
-
-  self->epsilon = epsilon;
-}
-
-/**
- * nc_multiplicity_func_jenkins_get_epsilon:
- * @mj: a #NcMultiplicityFuncJenkins.
- *
- * Returns: the value of #NcMultiplicityFuncJenkins:epsilon property.
- */
-gdouble
-nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mj)
-{
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
-
-  return self->epsilon;
 }
 

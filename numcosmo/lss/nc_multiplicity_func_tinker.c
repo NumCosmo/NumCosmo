@@ -53,10 +53,6 @@ struct _NcMultiplicityFuncTinkerPrivate
 enum
 {
   PROP_0,
-  PROP_A0,
-  PROP_A1,
-  PROP_B0,
-  PROP_C,
   PROP_DELTA,
   PROP_SIZE,
 };
@@ -84,25 +80,13 @@ _nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, cons
 {
   NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  /*NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
 
   switch (prop_id)
   {
     case PROP_DELTA:
       nc_multiplicity_func_tinker_set_Delta (mt, g_value_get_double (value));
       break;
-    case PROP_A0:
-      self->A0 = g_value_get_double (value);
-      break;
-    case PROP_A1:
-      self->a0 = g_value_get_double (value);
-      break;
-    case PROP_B0:
-      self->b0 = g_value_get_double (value);
-      break;
-    case PROP_C:
-      self->c = g_value_get_double (value);
-      break;        
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -114,25 +98,13 @@ _nc_multiplicity_func_tinker_get_property (GObject * object, guint prop_id, GVal
 {
   NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  /* NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
 
   switch (prop_id)
   {
     case PROP_DELTA:
       g_value_set_double (value, nc_multiplicity_func_tinker_get_Delta (mt));
       break;
-    case PROP_A0:
-      g_value_set_double (value, self->A0);
-      break;
-    case PROP_A1:
-      g_value_set_double (value, self->a0);
-      break;
-    case PROP_B0:
-      g_value_set_double (value, self->b0);
-      break; 
-    case PROP_C:
-      g_value_set_double (value, self->c);
-      break;     
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -162,55 +134,6 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
   object_class->finalize = _nc_multiplicity_func_tinker_finalize;
 
   /**
-   * NcMultiplicityFuncTinker:A0:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_A0,
-                                   g_param_spec_double ("A0",
-                                                        NULL,
-                                                        "A0",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.186,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcMultiplicityFuncTinker:a0:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_A1,
-                                   g_param_spec_double ("a0",
-                                                        NULL,
-                                                        "a0",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.47,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcMultiplicityFuncTinker:b0:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_B0,
-                                   g_param_spec_double ("b0",
-                                                        NULL,
-                                                        "b0",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 2.57,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcMultiplicityFuncTinker:c:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_C,
-                                   g_param_spec_double ("c",
-                                                        NULL,
-                                                        "c",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.19,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
    * NcMultiplicityFuncTinker:Delta:
    *
    * FIXME Set correct values (limits)
@@ -221,7 +144,7 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
                                                         NULL,
                                                         "Delta",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   parent_class->set_mdef = &_nc_multiplicity_func_tinker_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_tinker_get_mdef;
@@ -460,7 +383,6 @@ NcMultiplicityFuncTinker *
 nc_multiplicity_func_tinker_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_TINKER,
-                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
                        NULL);
 }
 
