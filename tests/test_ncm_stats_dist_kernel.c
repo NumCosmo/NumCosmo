@@ -80,8 +80,8 @@ static TestNcmStatsDistKernelFunc tests[TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN] = 
   {"dim",		&test_ncm_stats_dist_kernel_dim},
   {"band",        &test_ncm_stats_dist_kernel_bandwidth},
   {"gauss/norm",        &test_ncm_stats_dist_kernel_norm},
-  {"gauss/sum",         &test_ncm_stats_dist_kernel_sum},
-  {"gauss/sample",      &test_ncm_stats_dist_kernel_sample},
+  {"sum",         &test_ncm_stats_dist_kernel_sum},
+  {"sample",      &test_ncm_stats_dist_kernel_sample},
 };
 
 gint
@@ -389,18 +389,19 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
 static void
 test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  gint i, ret, j;
+  gint i, j;
   NcmRNG *rng  = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmVector *x = ncm_vector_new (test->dim);
-  NcmVector *x_test = ncm_vector_new (test->dim);
   NcmMatrix *cov_decomp = ncm_matrix_new (test->dim, test->dim);
   gdouble href = g_test_rand_double_range (1.0, 200.0);
+  gdouble dif = 0.0;
   NcmVector *mu = ncm_vector_new (test->dim);
+  NcmStatsVec *test_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_VAR, FALSE);
+  const guint ntests = 300 * g_test_rand_int_range (1, 5);   
   
   for (i = 0; i < test->dim; i++)
   {
     const gdouble val1 = g_test_rand_double_range (1.0, 200.0);
-    ncm_vector_set (x, i, val1);
+    ncm_vector_set (mu, i, val1);
       
     for (j = 0; j < test->dim; j++)
     {
@@ -408,27 +409,47 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
       ncm_matrix_set (cov_decomp, i, j, val2);
     }
   }
+ 
   ncm_matrix_cholesky_decomp (cov_decomp, 'U');
 
-  ncm_stats_dist_kernel_sample (test->kernel, cov_decomp, href, mu, x, rng);
- 
-  ncm_vector_memcpy (x_test, x);
-  ncm_vector_sub (x_test, mu);
-   /* if (test->kernel_type == 1)
-    {NÃO SEI QUAL O VALOR DE RNG CERTO,  E COMO TESTAR NO FIM SE O VALOR VEIO DE FATO DA GAUSSIANA OU N?
-     gdouble chi_scale = sqrt (test->nu / gsl_ran_chisq (rng, test->nu));  
-     ncm_vector_scale (x, 1 / chi_scale);
-    }*/
-  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x_test));
-  ncm_vector_scale (x_test, 1 / href);
-    
-ncm_vector_free (mu);
-ncm_vector_free (x);
-ncm_vector_free (x_test);
-ncm_matrix_free (cov_decomp);
-ncm_rng_free (rng);
+  while(test->nfail < 20)
+    {
+      for (i = 0; i < ntests; i++)
+      {  
+        NcmVector *x_test = ncm_vector_new (test->dim);
 
+        ncm_stats_dist_kernel_sample (test->kernel, cov_decomp, href, mu, x_test, rng);
+ 
+        ncm_stats_vec_append (test_stats, x_test, FALSE);  
+      }
+    
+      for (i = 0; i < test->dim; i++)
+      {
+        gdouble dif_i;
+    
+        dif_i = abs ((ncm_stats_vec_get_mean (test_stats, i) - ncm_vector_get (mu, i)) / ncm_vector_get (mu, i));
+        dif = dif + dif_i;
+      }
+    
+      if (dif >= (test->dim * 0.2))
+      {
+        dif = 0.0;
+        test->nfail = test->nfail + 1;
+      }
+      
+      else
+      {
+      test->nfail = 20;
+      }
+    }
+  g_assert_cmpfloat (dif, <, (test->dim * 0.2));
+  
+  
+  
+  ncm_vector_free (mu);
+  ncm_matrix_free (cov_decomp);
+  ncm_rng_free (rng);
+  ncm_stats_vec_free (test_stats);
 }
 
 static void 
