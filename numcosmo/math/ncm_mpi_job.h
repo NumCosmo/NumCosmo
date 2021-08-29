@@ -184,6 +184,7 @@ void ncm_mpi_job_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
 
 void ncm_mpi_job_init_all_slaves (NcmMPIJob *mpi_job, NcmSerialize *ser);
 void ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array);
+void ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array);
 
 void ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job);
 

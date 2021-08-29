@@ -1262,7 +1262,7 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
     g_ptr_array_add (thetastar_out_a, thetastar_out_k);
   }
   
-  ncm_mpi_job_run_array (self->mj, thetastar_in_a, thetastar_out_a);
+  ncm_mpi_job_run_array_async (self->mj, thetastar_in_a, thetastar_out_a);
   
   k = i;
   
@@ -1797,7 +1797,7 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     }
   }
   
-  ncm_mpi_job_run_array (self->mj, thetastar_in_a, thetastar_out_a);
+  ncm_mpi_job_run_array_async (self->mj, thetastar_in_a, thetastar_out_a);
   
   for (k = i; k < f; k++)
   {
@@ -2271,7 +2271,7 @@ _ncm_fit_esmcmc_validate_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f
     g_ptr_array_add (thetastar_out_a, thetastar_out_j);
   }
   
-  ncm_mpi_job_run_array (self->mj, thetastar_in_a, thetastar_out_a);
+  ncm_mpi_job_run_array_async (self->mj, thetastar_in_a, thetastar_out_a);
   
   k = i;
   
