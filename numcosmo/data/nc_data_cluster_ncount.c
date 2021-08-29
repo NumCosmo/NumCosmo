@@ -1353,7 +1353,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     gboolean z_p   = ncm_model_check_impl_opt (NCM_MODEL (clusterz), NC_CLUSTER_REDSHIFT_P);
     gboolean lnM_p = ncm_model_check_impl_opt (NCM_MODEL (clusterm), NC_CLUSTER_MASS_P);
-    
+
     if (z_p && lnM_p)
     {
       _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
