@@ -1081,6 +1081,9 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
     }
   }
 
+  g_clear_pointer (&ret_req_array,  g_array_unref);
+  g_clear_pointer (&ret_buf_desc_a, g_array_unref);
+
   return NULL;
 }
 
