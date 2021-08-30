@@ -1140,6 +1140,7 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
     }
 
     g_thread_join (ctrl_thread);
+    g_async_queue_unref (jobs);
   }
   else
   {
