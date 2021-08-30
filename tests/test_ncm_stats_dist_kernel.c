@@ -190,6 +190,7 @@ test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointe
     else
     {
       ncm_assert_cmpdouble_e (0.0, ==, 1.0, 1.0e-14, 0.0);
+      /*Missing kernel*/
     }
    
    ncm_assert_cmpdouble_e (h_test, ==, h, 1.0e-14, 0.0); 
@@ -356,29 +357,43 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
       g_array_insert_val (t_array0, i, lnt_i0);
       g_array_insert_val (t_array1, i, lnt_i1);
     }
+
+    ncm_stats_dist_kernel_eval_sum0_gamma_lambda (test->kernel, chi2, weights, lnnorms_vec , &gamma0, &lambda0);
+    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (test->kernel, chi2, weights, lnnorm, &gamma1, &lambda1);    
     
     for (i = 0; i < i_max0; i++)
+    {
       lambda_test0 += exp(g_array_index (t_array0, gdouble, i) - lnt_max0);   
-   
+      ncm_assert_cmpdouble_e (g_array_index (t_array0, gdouble, i), <, gamma0, 1.0e-15, 0.0);
+    }
+    
     for (i = 0; i < i_max1; i++)
+    {
       lambda_test1 += exp(g_array_index (t_array1, gdouble, i) - lnt_max1);
-   
+      ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i) - lnnorm, <, gamma1, 1.0e-15, 0.0);
+    }
+    
     for (i = i_max0 + 1; i < n; i++) 
+    {
       lambda_test0 += exp(g_array_index (t_array0, gdouble, i) - lnt_max0);
-   
+      ncm_assert_cmpdouble_e (g_array_index (t_array0, gdouble, i), <, gamma0, 1.0e-15, 0.0);
+    }   
+    
     for (i = i_max1 + 1; i < n; i++)
+    { 
       lambda_test1 += exp(g_array_index (t_array1, gdouble, i) - lnt_max1);
-      
-  ncm_stats_dist_kernel_eval_sum0_gamma_lambda (test->kernel, chi2, weights, lnnorms_vec , &gamma0, &lambda0);
-  
-  ncm_stats_dist_kernel_eval_sum1_gamma_lambda (test->kernel, chi2, weights, lnnorm, &gamma1, &lambda1);
+      ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i) - lnnorm, <, gamma1, 1.0e-15, 0.0);
+    }  
       
   ncm_assert_cmpdouble_e (lnt_max0, ==, gamma0, 1.0e-15, 0.0);
   ncm_assert_cmpdouble_e (lnt_max1 - lnnorm, ==, gamma1, 1.0e-15, 0.0);
-    
+      
   ncm_assert_cmpdouble_e (lambda_test0, ==, lambda0, 1.0e-15, 0.0);
   ncm_assert_cmpdouble_e (lambda_test1, ==, lambda1, 1.0e-15, 0.0);
-  
+
+  ncm_assert_cmpdouble_e (lambda_test0 + exp (lnt_max0), ==, lambda0 + exp (gamma0), 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (lambda_test1 + exp (lnt_max1 - lnnorm), ==, lambda1 + exp (gamma1), 1.0e-15, 0.0);
+      
   ncm_vector_free (weights);
   ncm_vector_free (chi2);
   ncm_vector_free (lnnorms_vec);
