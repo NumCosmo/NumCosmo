@@ -948,6 +948,8 @@ struct buf_desc { gpointer obj;
                   enum buf_type t;
 };
 
+#ifdef HAVE_MPI
+
 static gpointer
 _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 {
@@ -1086,6 +1088,7 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 
   return NULL;
 }
+#endif /* HAVE_MPI */
 
 /**
  * ncm_mpi_job_run_array_async:
