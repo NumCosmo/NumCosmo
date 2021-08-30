@@ -156,7 +156,7 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   delta = (f - i) / nworkers;
   res = (f - i) % nworkers;
 
-  if (delta == 0)
+  if ((g_thread_pool_get_max_threads (_function_thread_pool) == 0) || (delta == 0))
   {
     lfunc (i, f, data);
   }
@@ -231,6 +231,7 @@ ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpoin
 
   g_assert_cmpuint (f, >, i);
 
+  if (g_thread_pool_get_max_threads (_function_thread_pool) > 0)
   {
     GError *err = NULL;
     glong l;
@@ -247,6 +248,8 @@ ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpoin
       g_thread_pool_push (_function_thread_pool, arg, &err);
     }
   }
+  else
+    lfunc (i, f, data);
 
   g_mutex_lock (&ctrl.update);
   while (ctrl.active_threads != 0)
