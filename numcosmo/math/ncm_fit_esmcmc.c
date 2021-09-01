@@ -1315,7 +1315,9 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
       g_mutex_unlock (&self->resample_lock);
       
       ncm_mset_fparams_set_vector (fit_k->mset, theta_k);
+
       ncm_fit_m2lnL_val (fit_k, m2lnL);
+
     } while (!gsl_finite (m2lnL[0]));
     
     if (fk_ptr[0]->funcs_array != NULL)

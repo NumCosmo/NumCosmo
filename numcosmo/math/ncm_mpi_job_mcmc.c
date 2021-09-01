@@ -42,6 +42,7 @@
 #include "ncm_enum_types.h"
 #include "math/ncm_mpi_job_mcmc.h"
 #include "math/ncm_fit_esmcmc.h"
+#include "math/ncm_timer.h"
 
 #ifndef HAVE_MPI
 #define MPI_DATATYPE_NULL (0)
@@ -54,6 +55,7 @@ struct _NcmMPIJobMCMCPrivate
   NcmObjArray *func_oa;
   gint fparam_len;
   gint nadd_vals;
+  NcmTimer *nt;
 };
 
 enum
@@ -76,6 +78,8 @@ ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
   
   self->fparam_len = 0;
   self->nadd_vals  = 0;
+
+  self->nt = ncm_timer_new ();
 }
 
 static void
@@ -163,6 +167,7 @@ _ncm_mpi_job_mcmc_dispose (GObject *object)
   
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
+  ncm_timer_clear (&self->nt);
   
   
   /* Chain up : end */
@@ -366,7 +371,7 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
   
   ncm_fit_params_set_vector (self->fit, input);
   ncm_fit_m2lnL_val (self->fit, m2lnL_star);
-  
+
   if (gsl_finite (m2lnL_star[0]))
   {
     if (jump >= 0.0)

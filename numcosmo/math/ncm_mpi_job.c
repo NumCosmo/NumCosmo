@@ -41,6 +41,7 @@
 
 #include "math/ncm_mpi_job.h"
 #include "math/ncm_memory_pool.h"
+#include "math/ncm_util.h"
 
 #ifndef HAVE_MPI
 #define MPI_DATATYPE_NULL (0)
@@ -1040,7 +1041,17 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
       gpointer input_buf;
       MPI_Request *request;
 
-      MPI_Waitany (ret_req_array->len, (MPI_Request *) ret_req_array->data, &index, &status);
+      while (TRUE)
+      {
+        gint flag = 0;
+        MPI_Iprobe (MPI_ANY_SOURCE, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+        if (flag)
+        {
+          MPI_Waitany (ret_req_array->len, (MPI_Request *) ret_req_array->data, &index, &status);
+          break;
+        }
+        ncm_util_sleep_ms (10);
+      }
 
       bd = &g_array_index (ret_buf_desc_a, struct buf_desc, index);
 
