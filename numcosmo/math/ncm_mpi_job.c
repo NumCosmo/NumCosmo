@@ -41,6 +41,7 @@
 
 #include "math/ncm_mpi_job.h"
 #include "math/ncm_memory_pool.h"
+#include "math/ncm_timer.h"
 #include "math/ncm_util.h"
 
 #ifndef HAVE_MPI
@@ -62,6 +63,7 @@ struct _NcmMPIJobPrivate
   NcmMemoryPool *return_buf_pool;
   GHashTable *input_buf_table;
   GHashTable *return_buf_table;
+  NcmTimer *nt;
 };
 
 enum
@@ -95,6 +97,7 @@ ncm_mpi_job_init (NcmMPIJob *mpi_job)
   self->return_buf_pool  = ncm_memory_pool_new (_ncm_mpi_job_create_return_buffer, mpi_job, _ncm_mpi_job_destroy_buffer);
   self->input_buf_table  = g_hash_table_new (g_direct_hash, g_direct_equal);
   self->return_buf_table = g_hash_table_new (g_direct_hash, g_direct_equal);
+  self->nt               = ncm_timer_new ();
 }
 
 static gpointer
@@ -182,6 +185,8 @@ _ncm_mpi_job_dispose (GObject *object)
   g_clear_pointer (&self->input_buf_table, g_hash_table_unref);
   g_clear_pointer (&self->return_buf_table, g_hash_table_unref);
   
+  ncm_timer_clear (&self->nt);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_parent_class)->dispose (object);
 }
@@ -944,9 +949,12 @@ enum buf_type
   msg_type,
 };
 
-struct buf_desc { gpointer obj;
-                  gpointer buf;
-                  enum buf_type t;
+struct buf_desc
+{
+  gpointer obj;
+  gpointer buf;
+  enum buf_type t;
+  gdouble t0;
 };
 
 #ifdef HAVE_MPI
@@ -974,6 +982,9 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
     {
       gint *cmd = g_new (gint, 1);
       MPI_Request request;
+#ifdef NCM_MPI_DEBUG
+      const gdouble t0 = ncm_timer_elapsed (self->nt);
+#endif /* NCM_MPI_DEBUG */
 
       NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Sending job %d to slave %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, j->id, i);
 
@@ -998,6 +1009,9 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 
       {
         struct buf_desc bd = {j->ret, ncm_mpi_job_get_return_buffer (ctrl_data->mpi_job, j->ret), ret_type};
+#ifdef NCM_MPI_DEBUG
+        bd.t0 = t0;
+#endif /* NCM_MPI_DEBUG */
 
         MPI_Irecv (bd.buf, self->return_len, self->input_dtype, i, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &request);
         g_array_append_val (ret_req_array, request);
@@ -1008,6 +1022,7 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Waiting for the first work messages to arrive (%u)!\n", _mpi_ctrl.size, _mpi_ctrl.rank, send_req_array->len);
   MPI_Waitall (send_req_array->len, (MPI_Request *) send_req_array->data, MPI_STATUSES_IGNORE);
+  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All first work messages received (%u)!\n", _mpi_ctrl.size, _mpi_ctrl.rank, send_req_array->len);
 
   for (i = 0; i < send_buf_desc_a->len; i++)
   {
@@ -1044,13 +1059,11 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
       while (TRUE)
       {
         gint flag = 0;
-        MPI_Iprobe (MPI_ANY_SOURCE, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+        MPI_Testany (ret_req_array->len, (MPI_Request *) ret_req_array->data, &index, &flag, &status);
         if (flag)
-        {
-          MPI_Waitany (ret_req_array->len, (MPI_Request *) ret_req_array->data, &index, &status);
           break;
-        }
-        ncm_util_sleep_ms (10);
+        else
+          ncm_util_sleep_ms (10);
       }
 
       bd = &g_array_index (ret_buf_desc_a, struct buf_desc, index);
@@ -1064,6 +1077,11 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
       input_buf = ncm_mpi_job_pack_input (ctrl_data->mpi_job, j->input);
 
       NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave %d has finished its job, sending another (%u)!\n", _mpi_ctrl.size, _mpi_ctrl.rank, slave_id, j->id);
+      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job %d took %fs.\n", _mpi_ctrl.size, _mpi_ctrl.rank, j->id, ncm_timer_elapsed (self->nt) - bd->t0);
+
+#ifdef NCM_MPI_DEBUG
+      bd->t0 = ncm_timer_elapsed (self->nt);
+#endif /* NCM_MPI_DEBUG */
 
       MPI_Send (&cmd, 1, MPI_INT, slave_id, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD);
       MPI_Send (input_buf, self->input_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD);
@@ -1117,6 +1135,9 @@ void
 ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array)
 {
 #ifdef HAVE_MPI
+#ifdef NCM_MPI_DEBUG
+  NcmMPIJobPrivate * const self = mpi_job->priv;
+#endif /* NCM_MPI_DEBUG */
   g_assert_cmpint (_mpi_ctrl.rank, ==, NCM_MPI_CTRL_MASTER_ID);
 
   if (_mpi_ctrl.size > 1)
@@ -1148,8 +1169,13 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
       NcmMPIJobJob *j;
       while ((j = g_async_queue_try_pop (jobs)))
       {
+#ifdef NCM_MPI_DEBUG
+        const gdouble t0 = ncm_timer_elapsed (self->nt);
+#endif /* NCM_MPI_DEBUG */
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Running job %d on master.\n", _mpi_ctrl.size, _mpi_ctrl.rank, j->id);
         ncm_mpi_job_run (mpi_job, j->input, j->ret);
+        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job %d took %fs.\n", _mpi_ctrl.size, _mpi_ctrl.rank, j->id,
+            ncm_timer_elapsed (self->nt) - t0);
       }
     }
 

@@ -892,15 +892,16 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           gint input_recv    = 0;
           MPI_Request wr_request;
           
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request, command %d.\n",
+              _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
 
           MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
           MPI_Get_count (&status, input_dtype, &input_recv);
-          
+
           NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
 
           g_assert_cmpint (input_recv, ==, input_len);
-          
+
           ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
           
           bd.obj = ncm_mpi_job_create_return (mpi_job);
@@ -908,10 +909,11 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           ncm_mpi_job_run (mpi_job, input, bd.obj);
           bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
           
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result, length %d!\n",
+              _mpi_ctrl.size, _mpi_ctrl.rank, return_len);
           
           MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
-          
+
           g_array_append_val (work_ret_request, wr_request);
           g_array_append_val (work_ret_bufs,    bd);
         }
@@ -934,7 +936,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
         gint done = 0;
         
         MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &status);
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n", _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
+        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n",
+            _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
         
         if (done)
         {
@@ -949,7 +952,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
       }
     }
     
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Finished command, %d requests left, %d%s\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len, cmd, end ? ", exiting!" : ".");
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Finished command %d, %d requests left%s\n",
+        _mpi_ctrl.size, _mpi_ctrl.rank, cmd, work_ret_request->len, end ? ", exiting!" : ".");
     
     if (end)
       break;
