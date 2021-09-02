@@ -370,7 +370,10 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
   gboolean accepted                 = FALSE;
   
   ncm_fit_params_set_vector (self->fit, input);
-  ncm_fit_m2lnL_val (self->fit, m2lnL_star);
+  if (!ncm_mset_params_valid (self->fit->mset))
+    m2lnL_star[0] = GSL_POSINF;
+  else
+    ncm_fit_m2lnL_val (self->fit, m2lnL_star);
 
   if (gsl_finite (m2lnL_star[0]))
   {

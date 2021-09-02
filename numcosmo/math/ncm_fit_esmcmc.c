@@ -1315,8 +1315,10 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
       g_mutex_unlock (&self->resample_lock);
       
       ncm_mset_fparams_set_vector (fit_k->mset, theta_k);
-
-      ncm_fit_m2lnL_val (fit_k, m2lnL);
+      if (!ncm_mset_params_valid (fit_k->mset) || !ncm_mset_params_valid_bounds (fit_k->mset))
+        m2lnL[0] = GSL_POSINF;
+      else
+        ncm_fit_m2lnL_val (fit_k, m2lnL);
 
     } while (!gsl_finite (m2lnL[0]));
     
@@ -1787,8 +1789,7 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     
     /*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "#  FULL IN: ", "% 22.15g", TRUE);*/
     
-    /*if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))*/
-    if (ncm_mset_fparam_validate_all (self->fit->mset, thetastar)) /* TEST! */
+    if (ncm_mset_fparam_valid_bounds (self->fit->mset, thetastar))
     {
       g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
       g_ptr_array_add (thetastar_out_a, thetastar_out_k);
@@ -1844,11 +1845,13 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     
     ncm_fit_esmcmc_walker_step (self->walker, self->theta, self->m2lnL, thetastar, k);
     
-    /*if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))*/
-    if (ncm_mset_fparam_validate_all (fit_k->mset, thetastar)) /* TEST! */
+    if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
     {
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-      ncm_fit_m2lnL_val (fit_k, m2lnL_star);
+      if (!ncm_mset_params_valid (fit_k->mset))
+        m2lnL_star[0] = GSL_POSINF;
+      else
+        ncm_fit_m2lnL_val (fit_k, m2lnL_star);
       
       if (gsl_finite (m2lnL_star[0]))
       {
