@@ -1386,7 +1386,7 @@ ncm_model_params_valid (NcmModel *model)
  * ncm_model_params_valid_bounds:
  * @model: a #NcmModel
  *
- * Check whenever the paremeters respect the bounds.
+ * Check whenever the parameters respect the bounds.
  *
  * Returns: if the parameter respect the bounds.
  */
@@ -1626,6 +1626,15 @@ ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
  * FIXME
  *
  * Returns: length of the n-th vector
+ */
+/**
+ * ncm_model_param_set0:
+ * @model: a #NcmModel
+ * @n: FIXME
+ * @val: FIXME
+ *
+ * FIXME
+ *
  */
 /**
  * ncm_model_param_set:
