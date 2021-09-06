@@ -40,6 +40,8 @@ struct _NcmStatsDistPrivate
   NcmStatsDistKernel *kernel;
   GPtrArray *sample_array;
   NcmVector *weights;
+  NcmVector *wcum;
+  gboolean wcum_ready;
   gdouble over_smooth;
   NcmStatsDistCV cv_type;
   gdouble split_frac;

@@ -167,6 +167,7 @@ NCM_INLINE NcmVector *ncm_model_orig_params_peek_vector (NcmModel *model);
 void ncm_model_orig_params_log_all (NcmModel *model);
 
 NCM_INLINE void ncm_model_param_set (NcmModel *model, guint n, gdouble val);
+NCM_INLINE void ncm_model_param_set0 (NcmModel *model, guint n, gdouble val);
 NCM_INLINE void ncm_model_param_set_default (NcmModel *model, guint n);
 NCM_INLINE void ncm_model_orig_param_set (NcmModel *model, guint n, gdouble val);
 NCM_INLINE void ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val);
@@ -486,6 +487,12 @@ NCM_INLINE guint
 ncm_model_vparam_len (NcmModel *model, guint n)
 {
   return g_array_index (model->vparam_len, guint, n);
+}
+
+NCM_INLINE void
+ncm_model_param_set0 (NcmModel *model, guint n, gdouble val)
+{
+  ncm_vector_set (model->p, n, val);
 }
 
 NCM_INLINE void

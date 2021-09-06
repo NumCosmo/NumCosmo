@@ -325,6 +325,16 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
   const gdouble p_M_Mobs = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs, obs_data->lnM_obs_params);
   gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, obs_data->cosmo, lnM, z);
 
+  if (FALSE)
+  {
+    const gdouble xl = ncm_vector_get (cad->mfp->d2NdzdlnM->xv, 0);
+    const gdouble xu = ncm_vector_get (cad->mfp->d2NdzdlnM->xv, ncm_vector_len (cad->mfp->d2NdzdlnM->xv) - 1);
+    const gdouble yl = ncm_vector_get (cad->mfp->d2NdzdlnM->yv, 0);
+    const gdouble yu = ncm_vector_get (cad->mfp->d2NdzdlnM->yv, ncm_vector_len (cad->mfp->d2NdzdlnM->yv) - 1);
+
+    printf ("p(% 22.15g, % 22.15g) = % 22.15g % 22.15g % 22.15g [% 22.15g % 22.15g % 22.15g % 22.15g]\n", lnM, z, p_z_zr, p_M_Mobs, d2NdzdlnM, xl, xu, yl, yu);
+  }
+
   return p_z_zr * p_M_Mobs * d2NdzdlnM;
 }
 
@@ -367,6 +377,8 @@ nc_cluster_abundance_z_p_lnM_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, N
 
   nc_cluster_redshift_p_limits (clusterz, z_obs, z_obs_params, &zl, &zu);
   nc_cluster_mass_p_limits (clusterm, cosmo, lnM_obs, lnM_obs_params, &lnMl, &lnMu);
+
+  /*printf ("Integrating [% 22.15g % 22.15g] [% 22.15g % 22.15g]\n", lnMl, lnMu, zl, zu);*/
 
   ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &d2N, &err);
 
