@@ -88,6 +88,8 @@ void ncm_util_print_bits (guint64 num);
 
 gulong ncm_util_fact_size (const gulong n);
 
+void ncm_util_sleep_ms (gint milliseconds);
+
 typedef struct _NcmComplex NcmComplex;
 
 struct _NcmComplex 
@@ -120,6 +122,8 @@ NCM_INLINE void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble
 
 NCM_INLINE gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
 NCM_INLINE gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+
+
 
 /* Macros */
 

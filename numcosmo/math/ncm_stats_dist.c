@@ -138,6 +138,8 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->kernel       = NULL;
   self->sample_array = g_ptr_array_new ();
   self->weights      = NULL;
+  self->wcum         = NULL;
+  self->wcum_ready   = FALSE;
   self->over_smooth  = 0.0;
   self->cv_type      = NCM_STATS_DIST_CV_LEN;
   self->split_frac   = 0.0;
@@ -233,6 +235,7 @@ _ncm_stats_dist_dispose (GObject *object)
   
   g_clear_pointer (&self->sample_array, g_ptr_array_unref);
   ncm_vector_clear (&self->weights);
+  ncm_vector_clear (&self->wcum);
   
   g_clear_pointer (&self->sampling, g_array_unref);
   
@@ -413,14 +416,17 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   if ((self->weights == NULL) || (self->n != ncm_vector_len (self->weights)))
   {
     ncm_vector_clear (&self->weights);
+    ncm_vector_clear (&self->wcum);
 
     self->weights    = ncm_vector_new (self->n);
+    self->wcum       = ncm_vector_new (self->n + 1);
     self->alloc_subs = FALSE;
   }
   
   self->href = ncm_stats_dist_get_href (sd);
   
   ncm_vector_set_all (self->weights, 1.0 / (1.0 * self->n));
+  self->wcum_ready = FALSE;
 }
 
 typedef struct _NcmStatsDistEval
@@ -984,6 +990,56 @@ ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
 }
 
 /**
+ * ncm_stats_dist_kernel_choose:
+ * @sd: a #NcmStatsDist
+ * @rng: a #NcmRNG
+ *
+ * Using the pseudo-random number generator @rng chooses
+ * a random kernel based on the computed weights.
+ *
+ */
+gint
+ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  const guint n                    = ncm_vector_len (self->weights);
+  gint i;
+
+  if (!self->wcum_ready)
+  {
+    gdouble cum = 0.0;
+    ncm_vector_set (self->wcum, 0, cum);
+
+    for (i = 0; i < n; i++)
+    {
+      cum += ncm_vector_get (self->weights, i);
+      ncm_vector_set (self->wcum, i + 1, cum);
+    }
+    ncm_vector_scale (self->wcum, 1.0 / cum);
+    self->wcum_ready = TRUE;
+  }
+
+  {
+    const gdouble p = ncm_rng_uniform_gen (rng, 0.0, 1.0);
+    gint ilo = 0;
+    gint ihi = n;
+
+    while (ihi > ilo + 1)
+    {
+      gint mi = (ihi + ilo) / 2;
+
+      if (ncm_vector_fast_get (self->wcum, mi) > p)
+        ihi = mi;
+      else
+        ilo = mi;
+    }
+    i = ilo;
+  }
+
+  return i;
+}
+
+/**
  * ncm_stats_dist_sample:
  * @sd: a #NcmStatsDist
  * @x: a #NcmVector
@@ -997,9 +1053,13 @@ void
 ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  const guint n                    = ncm_vector_len (self->weights);
-  gint i;
-  
+  const gint i     = ncm_stats_dist_kernel_choose (sd, rng);
+  NcmVector *x_i   = g_ptr_array_index (self->sample_array, i);
+  NcmMatrix *cov_U = ncm_stats_dist_peek_cov_decomp (sd, i);
+
+  ncm_stats_dist_kernel_sample (self->kernel, cov_U, self->href, x_i, x, rng);
+
+#if 0
   g_array_set_size (self->sampling, ncm_vector_len (self->weights));
   gsl_ran_multinomial (rng->r, n, 1, ncm_vector_data (self->weights), (guint *) self->sampling->data);
   
@@ -1015,6 +1075,7 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
       break;
     }
   }
+#endif
 }
 
 /**

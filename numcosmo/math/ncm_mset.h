@@ -84,6 +84,7 @@ struct _NcmMSet
   GHashTable *fpi_hash;
   GPtrArray *fullname_parray;
   GArray *pi_array;
+  GArray *mid_array;
   GRegex *fullname_regex;
   gboolean valid_map;
   guint total_len;
@@ -206,6 +207,7 @@ gboolean ncm_mset_params_valid_bounds (NcmMSet *mset);
 gboolean ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model);
 
 void ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x);
+void ncm_mset_param_set0 (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x);
 gdouble ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid);
 
