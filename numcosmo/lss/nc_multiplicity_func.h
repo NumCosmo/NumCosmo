@@ -76,6 +76,8 @@ struct _NcMultiplicityFuncClass
   void (*set_mdef) (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
   NcMultiplicityFuncMassDef (*get_mdef) (NcMultiplicityFunc *mulf);
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
+  gdouble (*correction_factor) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 };
 
 struct _NcMultiplicityFunc
@@ -94,6 +96,8 @@ void nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFunc
 NcMultiplicityFuncMassDef nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf);
 
 gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+gboolean nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf);
+gdouble nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 G_END_DECLS
 
