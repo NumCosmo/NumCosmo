@@ -159,8 +159,8 @@ _nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, gdouble *
 {
   NcmModel *model = NCM_MODEL (clusterz);
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble zl = GSL_MAX (pzg_global->pz_min - Z_BIAS - 10.0 * SIGMA0 * pzg_global->pz_min, 0.0);
-  const gdouble zu =          pzg_global->pz_max - Z_BIAS + 10.0 * SIGMA0 * pzg_global->pz_max;
+  const gdouble zl = GSL_MAX (pzg_global->pz_min - Z_BIAS - 10.0 * SIGMA0 * (1.0 + pzg_global->pz_min), 0.0);
+  const gdouble zu =          pzg_global->pz_max - Z_BIAS + 10.0 * SIGMA0 * (1.0 + pzg_global->pz_max);
 
   *z_lower = zl;
   *z_upper = zu;

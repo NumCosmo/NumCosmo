@@ -57,6 +57,11 @@
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#if _POSIX_C_SOURCE >= 199309L
+#include <time.h>   // for nanosleep
+#else
+#include <unistd.h> // for usleep
+#endif
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /**
@@ -1272,3 +1277,26 @@ _ncm_util_set_destroyed (gpointer b)
   gboolean *destroyed = b;
   *destroyed = TRUE;
 }
+
+/**
+ * ncm_util_sleep_ms:
+ * @milliseconds: sleep time in milliseconds
+ *
+ * Suspend the thread execution for @milliseconds.
+ *
+ */
+void
+ncm_util_sleep_ms (gint milliseconds)
+{
+#if _POSIX_C_SOURCE >= 199309L
+    struct timespec ts;
+    ts.tv_sec = milliseconds / 1000;
+    ts.tv_nsec = (milliseconds % 1000) * 1000000;
+    nanosleep (&ts, NULL);
+#else
+    if (milliseconds >= 1000)
+      sleep (milliseconds / 1000);
+    usleep ((milliseconds % 1000) * 1000);
+#endif
+}
+

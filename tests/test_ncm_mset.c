@@ -46,6 +46,7 @@ void test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_pushpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata);
+void test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
@@ -79,6 +80,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/fparams", TestNcmMSet, NULL,
               &test_ncm_mset_new,
               &test_ncm_mset_fparams,
+              &test_ncm_mset_free);
+  
+  g_test_add ("/ncm/mset/fparams/validate_all", TestNcmMSet, NULL,
+              &test_ncm_mset_new,
+              &test_ncm_mset_fparams_validate_all,
               &test_ncm_mset_free);
   
   g_test_add ("/ncm/mset/dup", TestNcmMSet, NULL,
@@ -301,6 +307,32 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
   
   nc_cluster_mass_free (mass);
   nc_cluster_mass_free (benson);
+}
+
+void
+test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata)
+{
+  test_ncm_mset_fparams (test, pdata);
+
+  ncm_mset_fparam_set (test->mset, 0, 1.0);  
+  ncm_mset_param_set_all_ftype (test->mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  
+  {
+    const gint ntests     = 100000;
+    const gint fparam_len = ncm_mset_fparam_len (test->mset);
+    NcmVector *theta      = ncm_vector_new (fparam_len);
+    gint i;
+    
+    ncm_mset_fparams_get_vector (test->mset, theta);
+  
+    for (i = 0; i < ntests; i++)
+    {
+      g_assert_true (ncm_mset_fparam_validate_all (test->mset, theta));
+    }
+  
+    ncm_vector_free (theta);
+  }
 }
 
 void

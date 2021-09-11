@@ -52,11 +52,11 @@ nc_hicosmo_de_reparam_cmb_constructed (GObject *object)
     NcHICosmoDEReparamCMB *reparam_cmb = NC_HICOSMO_DE_REPARAM_CMB (object);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (reparam_cmb), NC_HICOSMO_DE_OMEGA_C,
-                                     "omegac","\\omega_{c0}", 2.5e-3, 0.16, 1.0e-2,
+                                     "omegac","\\omega_{c0}", 7.5e-3, 0.25, 1.0e-2,
                                      NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (reparam_cmb), NC_HICOSMO_DE_OMEGA_B,
-                                     "omegab","\\omega_{b0}", 7.5e-3, 0.0384, 1.0e-2,
+                                     "omegab","\\omega_{b0}", 5.0e-3, 0.04, 1.0e-2,
                                      NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (reparam_cmb), NC_HICOSMO_DE_OMEGA_X,
