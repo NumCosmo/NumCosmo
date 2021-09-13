@@ -77,42 +77,43 @@ _nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *cente
 gint
 main (gint argc, gchar *argv[])
 {
-  gchar *cat_filename     = NULL;
-  gboolean auto_trim      = FALSE;
-  gboolean info           = FALSE;
-  gboolean info_scf       = FALSE;
-  gboolean evidence       = FALSE;
-  gboolean diag_chains    = FALSE;
-  gboolean chain_evol     = FALSE;
-  gboolean list_all       = FALSE;
-  gboolean list_hicosmo   = FALSE;
-  gboolean list_hicosmo_z = FALSE;
-  gboolean list_hiprim    = FALSE;
-  gboolean list_dist      = FALSE;
-  gboolean list_dist_z    = FALSE;
-  gboolean use_direct     = FALSE;
-  gboolean dump           = FALSE;
-  gint dump_chain         = -1;
-  gint trim               = -1;
-  gint thin               = -1;
-  gdouble zi              = 0.0;
-  gdouble zf              = 1.0;
-  gint nsteps             = 100;
-  gint burnin             = 0;
-  gint ntests             = 100;
-  gchar **funcs           = NULL;
-  gchar **distribs        = NULL;
-  gchar **dist_tab        = NULL;
-  gchar **params          = NULL;
-  gchar **params_evol     = NULL;
-  gchar **mode_errors     = NULL;
-  gchar **median_errors   = NULL;
-  gchar **bestfit_errors  = NULL;
-  gchar **funcs_pvalue    = NULL;
-  gchar **visual_hw       = NULL;
-  gchar **dump_param      = NULL;
-  gchar **pprob_gt        = NULL;
-  gchar **pprob_lt        = NULL;
+  gchar *cat_filename       = NULL;
+  gboolean auto_trim        = FALSE;
+  gboolean info             = FALSE;
+  gboolean info_scf         = FALSE;
+  gboolean evidence         = FALSE;
+  gboolean diag_chains      = FALSE;
+  gboolean chain_evol       = FALSE;
+  gboolean list_all         = FALSE;
+  gboolean list_hicosmo     = FALSE;
+  gboolean list_hicosmo_z   = FALSE;
+  gboolean list_hiprim      = FALSE;
+  gboolean list_dist        = FALSE;
+  gboolean list_dist_z      = FALSE;
+  gboolean use_direct       = FALSE;
+  gboolean dump             = FALSE;
+  gboolean calib_oversmooth = FALSE;
+  gint dump_chain           = -1;
+  gint trim                 = -1;
+  gint thin                 = -1;
+  gdouble zi                = 0.0;
+  gdouble zf                = 1.0;
+  gint nsteps               = 100;
+  gint burnin               = 0;
+  gint ntests               = 100;
+  gchar **funcs             = NULL;
+  gchar **distribs          = NULL;
+  gchar **dist_tab          = NULL;
+  gchar **params            = NULL;
+  gchar **params_evol       = NULL;
+  gchar **mode_errors       = NULL;
+  gchar **median_errors     = NULL;
+  gchar **bestfit_errors    = NULL;
+  gchar **funcs_pvalue      = NULL;
+  gchar **visual_hw         = NULL;
+  gchar **dump_param        = NULL;
+  gchar **pprob_gt          = NULL;
+  gchar **pprob_lt          = NULL;
   NcmRNG *rng;
   guint i;
   
@@ -120,42 +121,43 @@ main (gint argc, gchar *argv[])
   GOptionContext *context;
   GOptionEntry entries[] =
   {
-    { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,   "Catalog filename.", NULL },
-    { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,      "Auto trim the catalog.", NULL },
-    { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
-    { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,       "Calculates the selfcorrelation time using the full sample not the ensemble averages.", NULL },
-    { "evidence",       'E', 0, G_OPTION_ARG_NONE,         &evidence,       "Computes the ln-Bayesian evidence and the 1sigma parameter space ln-volume.", NULL },
-    { "diag-chains",      0, 0, G_OPTION_ARG_NONE,         &diag_chains,    "Applies diagnostics to all chains.", NULL },
-    { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,         "Number of tests to use in the diagnostics.", NULL },
-    { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
-    { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,       "Print all available functions.", NULL },
-    { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,   "Print available constant functions from NcHICosmo.", NULL },
-    { "list-hicosmo-z",   0, 0, G_OPTION_ARG_NONE,         &list_hicosmo_z, "Print available redshift functions from NcHICosmo.", NULL },
-    { "list-hiprim",      0, 0, G_OPTION_ARG_NONE,         &list_hiprim,    "Print available k or lnk functions from NcHIPrim.", NULL },
-    { "list-dist",        0, 0, G_OPTION_ARG_NONE,         &list_dist,      "Print available constant functions from NcDistance.", NULL },
-    { "list-dist-z",      0, 0, G_OPTION_ARG_NONE,         &list_dist_z,    "Print available redshift functions from NcDistance.", NULL },
-    { "use-direct",       0, 0, G_OPTION_ARG_NONE,         &use_direct,     "Whether to use the direct quantile algorithm (much more memory intensive but faster for small samples).", NULL },
-    { "burn-in",        'b', 0, G_OPTION_ARG_INT,          &burnin,         "Burn-in size (default 0).", NULL },
-    { "zi",               0, 0, G_OPTION_ARG_DOUBLE,       &zi,             "Initial redshift (default 0).", NULL },
-    { "zf",               0, 0, G_OPTION_ARG_DOUBLE,       &zf,             "Final redshift (default 1).", NULL },
-    { "nsteps",           0, 0, G_OPTION_ARG_INT,          &nsteps,         "Number of points in the functions grid (default 100).", NULL },
-    { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,          "R => R functions to be analyzed.", NULL},
-    { "distribution",   'd', 0, G_OPTION_ARG_STRING_ARRAY, &distribs,       "Function distributions to be analyzed.", NULL},
-    { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,         "Model parameters' to be analyzed.", NULL},
-    { "parameter-evol", 'P', 0, G_OPTION_ARG_STRING_ARRAY, &params_evol,    "Calculate the time evolution of the parameter.", NULL},
-    { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
-    { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
-    { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
-    { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
-    { "pprob-gt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_gt,       "Print the posterior probability of param > value.", NULL },
-    { "pprob-lt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_lt,       "Print the posterior probability of param < value.", NULL },
-    { "dist-tab",       'W', 0, G_OPTION_ARG_STRING_ARRAY, &dist_tab,       "Print a table with functions values for reach catalog point.", NULL },
-    { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,      "Print the points to the visual HW test.", NULL },
-    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved, if --dump-param not specified dump all columns.", NULL },
-    { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain, if --dump-param not specified dump all columns.", "N"},
-    { "dump-param",       0, 0, G_OPTION_ARG_STRING_ARRAY, &dump_param,     "Parameters to dump.", "param-name"},
-    { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
-    { "thin",           'T', 0, G_OPTION_ARG_INT,          &thin,           "Thin the catalog skipping every (T-1) rows.", "T" },
+    { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,     "Catalog filename.", NULL },
+    { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,        "Auto trim the catalog.", NULL },
+    { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,             "Print catalog information.", NULL },
+    { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,         "Calculates the autocorrelation time using the full sample not the ensemble averages.", NULL },
+    { "evidence",       'E', 0, G_OPTION_ARG_NONE,         &evidence,         "Computes the ln-Bayesian evidence and the 1sigma parameter space ln-volume.", NULL },
+    { "diag-chains",      0, 0, G_OPTION_ARG_NONE,         &diag_chains,      "Applies diagnostics to all chains.", NULL },
+    { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,           "Number of tests to use in the diagnostics.", NULL },
+    { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,       "Print chain evolution.", NULL },
+    { "calib-oversmooth", 0, 0, G_OPTION_ARG_NONE,         &calib_oversmooth, "Calibrate over-smooth for APES sampler.", NULL },
+    { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,         "Print all available functions.", NULL },
+    { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,     "Print available constant functions from NcHICosmo.", NULL },
+    { "list-hicosmo-z",   0, 0, G_OPTION_ARG_NONE,         &list_hicosmo_z,   "Print available redshift functions from NcHICosmo.", NULL },
+    { "list-hiprim",      0, 0, G_OPTION_ARG_NONE,         &list_hiprim,      "Print available k or lnk functions from NcHIPrim.", NULL },
+    { "list-dist",        0, 0, G_OPTION_ARG_NONE,         &list_dist,        "Print available constant functions from NcDistance.", NULL },
+    { "list-dist-z",      0, 0, G_OPTION_ARG_NONE,         &list_dist_z,      "Print available redshift functions from NcDistance.", NULL },
+    { "use-direct",       0, 0, G_OPTION_ARG_NONE,         &use_direct,       "Whether to use the direct quantile algorithm (much more memory intensive but faster for small samples).", NULL },
+    { "burn-in",        'b', 0, G_OPTION_ARG_INT,          &burnin,           "Burn-in size (default 0).", NULL },
+    { "zi",               0, 0, G_OPTION_ARG_DOUBLE,       &zi,               "Initial redshift (default 0).", NULL },
+    { "zf",               0, 0, G_OPTION_ARG_DOUBLE,       &zf,               "Final redshift (default 1).", NULL },
+    { "nsteps",           0, 0, G_OPTION_ARG_INT,          &nsteps,           "Number of points in the functions grid (default 100).", NULL },
+    { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,            "R => R functions to be analyzed.", NULL},
+    { "distribution",   'd', 0, G_OPTION_ARG_STRING_ARRAY, &distribs,         "Function distributions to be analyzed.", NULL},
+    { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,           "Model parameters' to be analyzed.", NULL},
+    { "parameter-evol", 'P', 0, G_OPTION_ARG_STRING_ARRAY, &params_evol,      "Calculate the time evolution of the parameter.", NULL},
+    { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,      "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,    "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors,   "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,     "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
+    { "pprob-gt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_gt,         "Print the posterior probability of param > value.", NULL },
+    { "pprob-lt",         0, 0, G_OPTION_ARG_STRING_ARRAY, &pprob_lt,         "Print the posterior probability of param < value.", NULL },
+    { "dist-tab",       'W', 0, G_OPTION_ARG_STRING_ARRAY, &dist_tab,         "Print a table with functions values for reach catalog point.", NULL },
+    { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,        "Print the points to the visual HW test.", NULL },
+    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,             "Print all chains intertwined, if --dump-param not specified dump all columns.", NULL },
+    { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,       "Print all points from the N-th chain, if --dump-param not specified dump all columns.", "N"},
+    { "dump-param",       0, 0, G_OPTION_ARG_STRING_ARRAY, &dump_param,       "Parameters to dump.", "param-name"},
+    { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,             "Trim the catalog at T.", "T" },
+    { "thin",           'T', 0, G_OPTION_ARG_INT,          &thin,             "Thin the catalog skipping every (T-1) rows.", "T" },
     { NULL }
   };
   
@@ -383,6 +385,45 @@ main (gint argc, gchar *argv[])
       }
     }
     
+    if (calib_oversmooth)
+    {
+      const guint last_t         = ncm_mset_catalog_max_time (mcat);
+      const guint nchains        = ncm_mset_catalog_nchains (mcat);
+      const gint i0              = (last_t - 2) * nchains;
+      const gint i1              = i0 + nchains;
+      const guint nadd_vals      = ncm_mset_catalog_nadd_vals (mcat);
+      const gint fparams_len     = ncm_mset_fparam_len (mset);
+      const gint m2lnL_i         = ncm_mset_catalog_get_m2lnp_var (mcat);
+      NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (fparams_len, 1.0));
+      NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
+      NcmVector *m2lnL           = ncm_vector_new (nchains);
+      gint i, j;
+
+      ncm_stats_dist_set_split_frac (sd, 0.5);
+
+      j = 0;
+      for (i = i0; i < i1; i++)
+      {
+        NcmVector *frow_i = ncm_mset_catalog_peek_row (mcat, i);
+        NcmVector *row_i  = ncm_vector_get_subvector (frow_i, nadd_vals, fparams_len);
+
+        ncm_vector_set (m2lnL, j, ncm_vector_get (frow_i, m2lnL_i));
+
+        ncm_stats_dist_add_obs (sd, row_i);
+        ncm_vector_free (row_i);
+        j++;
+      }
+
+      ncm_stats_dist_set_print_fit (sd, TRUE);
+      ncm_stats_dist_prepare_interp (sd, m2lnL);
+
+      ncm_message ("# Bestfit for VKDE:ST1 over-smooth = % 22.15g, rnorm = % 22.15g\n",
+          ncm_stats_dist_get_over_smooth (sd),
+          ncm_stats_dist_get_rnorm (sd));
+
+      ncm_vector_free (m2lnL);
+    }
+
     /*********************************************************************************************************
      *
      * Functions
