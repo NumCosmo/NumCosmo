@@ -93,6 +93,7 @@ main (gint argc, gchar *argv[])
   gboolean use_direct       = FALSE;
   gboolean dump             = FALSE;
   gboolean calib_oversmooth = FALSE;
+  gdouble calib_start_os    = 1.0;
   gint dump_chain           = -1;
   gint trim                 = -1;
   gint thin                 = -1;
@@ -130,6 +131,7 @@ main (gint argc, gchar *argv[])
     { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,           "Number of tests to use in the diagnostics.", NULL },
     { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,       "Print chain evolution.", NULL },
     { "calib-oversmooth", 0, 0, G_OPTION_ARG_NONE,         &calib_oversmooth, "Calibrate over-smooth for APES sampler.", NULL },
+    { "calib-start-os",   0, 0, G_OPTION_ARG_DOUBLE,       &calib_start_os,   "Calibrate over-smooth for APES sampler, start value, default=1.0.", NULL },
     { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,         "Print all available functions.", NULL },
     { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,     "Print available constant functions from NcHICosmo.", NULL },
     { "list-hicosmo-z",   0, 0, G_OPTION_ARG_NONE,         &list_hicosmo_z,   "Print available redshift functions from NcHICosmo.", NULL },
@@ -414,6 +416,7 @@ main (gint argc, gchar *argv[])
         j++;
       }
 
+      ncm_stats_dist_set_over_smooth (sd, calib_start_os);
       ncm_stats_dist_set_print_fit (sd, TRUE);
       ncm_stats_dist_prepare_interp (sd, m2lnL);
 
