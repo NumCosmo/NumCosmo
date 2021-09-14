@@ -568,7 +568,7 @@ _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_2d_density_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol);
+    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e1);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_2D_DENSITY);
@@ -616,8 +616,19 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
   
   dp2D->X = exp (lnX);
 
-  gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
-  dl_cyl_mass_X += dl_cyl_mass_X_i;
+  if (dp2D->X < 1.0)
+  {
+    gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
+    dl_cyl_mass_X += dl_cyl_mass_X_i;
+  }
+  else
+  {
+    gsl_integration_qag (dp2D->F, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
+    dl_cyl_mass_X += dl_cyl_mass_X_i;
+  
+    gsl_integration_qag (dp2D->F, 1.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
+    dl_cyl_mass_X += dl_cyl_mass_X_i;
+  }
   
   gsl_integration_qag (dp2D->F2, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
   dl_cyl_mass_X += gsl_pow_3 (dp2D->X) * dl_cyl_mass_X_i;
@@ -650,7 +661,7 @@ _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_cyl_mass_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol);
+    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e1);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_CYL_MASS);
