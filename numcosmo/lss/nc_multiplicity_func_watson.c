@@ -42,11 +42,13 @@
 struct _NcMultiplicityFuncWatsonPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+  gdouble Delta;
 };
 
 enum
 {
   PROP_0,
+  PROP_DELTA,
   PROP_SIZE
 };
 
@@ -126,7 +128,7 @@ _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
   switch (mdef)
   {
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-      g_error ("NcMultiplicityFuncWatson does not support fof mass def");
+      self->eval = &_nc_multiplicity_func_watson_mean_eval;
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
       g_error ("NcMultiplicityFuncWatson does not support critical mass def");
@@ -135,7 +137,7 @@ _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
       g_error ("NcMultiplicityFuncWatson does not support virial mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      /* nothing to do */
+      self->eval = &_nc_multiplicity_func_watson_fof_eval
       break;
     default:
       g_assert_not_reached ();
@@ -155,13 +157,59 @@ _nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  /* NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
+ /* NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf); */
+ /* NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
+  const gdouble A     = 0.282;
+  const gdouble alpha = 2.163;
+  const gdouble beta  = 1.406;
+  const gdouble gamma = 1.210;
   
-  gdouble f_Watson = 0.315 * exp(-pow(fabs(-log(sigma) + 0.61), 3.8));
+  gdouble   f_watson = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
+  
+  NCM_UNUSED (mulf);
+  NCM_UNUSED (cosmo);
+  NCM_UNUSED (z);
 
+  return f_Watson;
+}
+
+static gdouble
+_nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+{
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; 
+  const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
+  const Delta_178 = self->Delta / 178.0;
+  
+  const gdouble A, alpha, beta, gamma;
+  
+  if (z == 0)
+  {
+    A = 0.194;
+    alpha = 1.805;
+    beta = 2.267;
+    gamma = 1.287;
+  }
+  else if (z>=6)
+  {
+	 A = 0.563;
+	 alpha = 3.810;
+	 beta = 0.874;
+	 gamma = 1.453;
+  }
+  
+  else
+  {
+	  A = Omega_m * (1.097 * pow(1 + z, -3.216) + 0.074);
+	  alpha = Omega_m * (5.907 * pow(1 + z, -3.599) + 2.344)
+      beta = Omega_m * (3.136 * pow(1 + z, -3.058) + 2.349)
+	  
+  }
+  
+  gdouble   f_watson = self->A * ( pow(self->beta / sigma, self->alpha) + 1.0) * exp (- self->gamma / (sigma * sigma) );
+  
   NCM_UNUSED (mulf);
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
