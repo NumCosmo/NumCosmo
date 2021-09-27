@@ -533,9 +533,15 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
   const gdouble f           = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, z);
   const gdouble dn_dlnR     = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
   
-  /*printf ("Nc: f = %22.15g dlnsig_dlnm = %22.15g\n", f,  - 0.5 * dlnvar_dlnR * log(10.0) / 3.0); */
-  
-  return dn_dlnR;
+  if (nc_multiplicity_func_has_correction_factor (self->mulf))
+  {
+    const gdouble lnM = nc_halo_mass_function_lnR_to_lnM (mfp, cosmo, lnR);
+    return dn_dlnR * nc_multiplicity_func_correction_factor (self->mulf, cosmo, sigma, z, lnM);
+  }
+  else
+  {
+    return dn_dlnR;
+  }
 }
 
 /**

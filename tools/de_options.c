@@ -248,6 +248,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "esmcmc-apes",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_apes,      "Uses APES instead of stretch move in ESMCMC", NULL},
     { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box", NULL},
     { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step", NULL},
+    { "esmcmc-kde",       0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_kde,       "Uses density estimation instead of interpolation in APES", NULL},
     { "esmcmc-os",        0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->esmcmc_os,        "Uses over-smooth in the APES sampler", NULL},
     { "fisher",           0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_fisher_type, "Calculated the Fisher matrix, where T=E or T=O uses the expected or observed Fisher matrix", "=T"},
     { "fit-type",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_type,         "Fitting object to be used", NULL },

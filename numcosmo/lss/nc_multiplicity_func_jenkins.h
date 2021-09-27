@@ -65,13 +65,6 @@ NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_ref (NcMultiplicityFuncJ
 void nc_multiplicity_func_jenkins_free (NcMultiplicityFuncJenkins *mj);
 void nc_multiplicity_func_jenkins_clear (NcMultiplicityFuncJenkins **mj);
 
-void nc_multiplicity_func_jenkins_set_A (NcMultiplicityFuncJenkins *mj, gdouble A);
-gdouble nc_multiplicity_func_jenkins_get_A (const NcMultiplicityFuncJenkins *mj);
-void nc_multiplicity_func_jenkins_set_B (NcMultiplicityFuncJenkins *mj, gdouble B);
-gdouble nc_multiplicity_func_jenkins_get_B (const NcMultiplicityFuncJenkins *mj);
-void nc_multiplicity_func_jenkins_set_epsilon (NcMultiplicityFuncJenkins *mj, gdouble epsilon);
-gdouble nc_multiplicity_func_jenkins_get_epsilon (const NcMultiplicityFuncJenkins *mj);
-
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_JENKINS_H_ */

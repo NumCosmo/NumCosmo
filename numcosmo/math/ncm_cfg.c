@@ -122,6 +122,7 @@
 #include "lss/nc_multiplicity_func_tinker.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
+#include "lss/nc_multiplicity_func_bocquet.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_galaxy_redshift_spec.h"
@@ -605,6 +606,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
   
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
   

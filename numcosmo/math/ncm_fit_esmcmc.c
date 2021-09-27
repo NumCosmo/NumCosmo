@@ -1986,7 +1986,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   
   g_assert_cmpfloat (lre, >, 0.0);
   
-  prerun = GSL_MAX (prerun, 100);
+  prerun = GSL_MAX (prerun, 10);
   
   if (catlen < prerun)
   {

@@ -915,6 +915,7 @@ main (gint argc, gchar *argv[])
       NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
       
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, de_fit.esmcmc_os);
+      ncm_fit_esmcmc_walker_apes_use_interp (apes, !de_fit.esmcmc_kde);
 
       esmcmc = ncm_fit_esmcmc_new_funcs_array (fit, 
                                                de_fit.mc_nwalkers, 

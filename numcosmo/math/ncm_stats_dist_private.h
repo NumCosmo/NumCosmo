@@ -42,6 +42,7 @@ struct _NcmStatsDistPrivate
   NcmVector *weights;
   NcmVector *wcum;
   gboolean wcum_ready;
+  gboolean print_fit;
   gdouble over_smooth;
   NcmStatsDistCV cv_type;
   gdouble split_frac;

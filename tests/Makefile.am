@@ -244,7 +244,7 @@ test_ncm_stats_dist_LDADD = \
 test_ncm_stats_dist_kernel_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
-	$(GSL_LIBS) \ 
+	$(GSL_LIBS) \
 	$(COVLIBS)
 	
 test_ncm_spline_LDADD = \

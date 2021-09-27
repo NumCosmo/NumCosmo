@@ -126,6 +126,7 @@ enum
   PROP_OVER_SMOOTH,
   PROP_CV_TYPE,
   PROP_SPLIT_FRAC,
+  PROP_PRINT_FIT,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT);
@@ -140,6 +141,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->weights      = NULL;
   self->wcum         = NULL;
   self->wcum_ready   = FALSE;
+  self->print_fit    = FALSE;
   self->over_smooth  = 0.0;
   self->cv_type      = NCM_STATS_DIST_CV_LEN;
   self->split_frac   = 0.0;
@@ -188,6 +190,9 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_set_split_frac (sd, g_value_get_double (value));
       break;
+    case PROP_PRINT_FIT:
+      ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -218,6 +223,9 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_get_split_frac (sd));
+      break;
+    case PROP_PRINT_FIT:
+      g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -364,6 +372,13 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         "Fraction to use in the split cross-validation",
                                                         0.10, 0.95, 0.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PRINT_FIT,
+                                   g_param_spec_boolean ("print-fit",
+                                                         NULL,
+                                                         "Whether to print the fitting process",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   
   klass->set_dim            = &_ncm_stats_dist_set_dim;
@@ -447,7 +462,11 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
   
   eval->sd_class->compute_IM (eval->sd, eval->self->IM);
-  ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
+  {
+    const gdouble rnorm = ncm_nnls_solve (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f);
+    if (eval->self->print_fit)
+      printf ("# over-smooth: % 22.15g, rnorm = % 22.15g\n", eval->self->over_smooth, rnorm);
+  }
   
   res = ncm_nnls_get_residuals (eval->self->nnls);
   ncm_vector_memcpy (f, res);
@@ -852,6 +871,36 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = sd->priv;
   
   return self->split_frac;
+}
+
+/**
+ * ncm_stats_dist_set_print_fit:
+ * @sd: a #NcmStatsDist
+ * @print_fit: a boolean
+ *
+ * Whether to print steps during the fitting process.
+ *
+ */
+void
+ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  self->print_fit = print_fit;
+}
+
+/**
+ * ncm_stats_dist_get_print_fit:
+ * @sd: a #NcmStatsDist
+ *
+ * Returns: Whether it is going to print steps during the fitting process.
+ */
+gboolean
+ncm_stats_dist_get_print_fit (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  return self->print_fit;
 }
 
 /**

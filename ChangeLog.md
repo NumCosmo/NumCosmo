@@ -2,7 +2,323 @@ CHANGELOG
 ----------------------
 
 [Current]
+
+[v0.15.4]
+ * New minor version 0.15.4.
+
+ * Added missing ncm_cfg_register_obj call.
+
+ * Delete NC_CCL_Bocquet_Test-checkpoint.ipynb
+ * Delete .project
+ * test of execution time
+
+ * updates
+
+ * New option to use kde instead of interpolation in APES.
+
+ * Notebooks testing.
+
+ * Moved model validating to workers (slaves or threads).
+
+ * Improved fparam set methods.
+
+ * Faster kde sampling.
+
+ * Improved MPI debug messages added timming.
+
+ * Improved control thread avoinding aggressive pooling by MPI.
+
+ * Added conditional compilation of MPI dependent code.
+
+ * Using switch to choose between kernel types.
+
+ * Fixed memory leak.
+
+ * the hydro and dm functions of the CCL were included
+
+ * Finalized tests for kernel class.
+
+ * Better handling of the case where 0 threads are allowed. Fixed limits on
+     nc_cluster_photoz_gauss_global. Incresed lower limit in As in
+     nc_hiprim_power_law.
+
+ * Fixed leak.
+
+ * New mpi run jobs async (master - slaves).
+
+ * Added test for the kernel sample function.
+
+ * Implentationg of tests for the #NcmStatsDistKernel class.
+
+ * Configuration.
+
+ * More tweaks on omegab range.
+
+ * New notebook NC_CCL_Bocquet_Test has been created
+
+ * Increasing lower limit of Omega_bh^2.
+
+ * Fixed variable types for simulation (sim).
+
+ * Improved bounds on nc_hicosmo_de_reparam_cmb.
+
+ * Clean up Tinker: no need to set some parameters as properties. Delta -
+     CONSTRUCT and not CONSTRUCTED_ONLY
+
+ * Fixed bug in Bocquet multiplicity function, e.g., properties are CONSTRUCT not
+     CONSTRUCT_ONLY.
+
+     Clean up Crocce, Jenkins and Warren's multiplicity functions: no need to
+     set the parameters as properties.
+
+ * Fixing mcat_analize to work with small catalogs.
+
+ * Resolved conflict.
+
+ * Fixed minor warnings.
+
+ * Implemented Bocquet et al. 2016 multiplicity function. Two new functions in
+     NcMultiplicityFunc: has_correction_factor and correction_factor. Bocquet
+     provides fits for mean and critical mass definitions, but the latter
+     depends on the first.
+
+ * Fixed some edge cases in ncm_fit_esmcmc.c and ncm_fit_esmcmc_walker_apes.c.
+     Minor reorganization.
+
+ * Add files via upload
+ * Testing 10D.
+
+ * Added missing object registry.
+
+ * Removed incomplete tests.
+
+ * Fixed allocation problem in ncm_stats_dist.c. Fixed other minor bugs and
+     tweaks.
+
+ * Included tests for the error messages in stats_dist_kernel.c
+
+ * Test if kernel test is implemented right.
+
+ * Finished the documentation of ncm_fit_esmcmc_walker.c and
+     ncm_fit_esmcmc_walker_apes.c
+
+ * Implemented documentation of ncm_fit_esmcmc_Walker.c
+
+ * Updated automake file.
+
+ * uncrustify and more tweaks on test_ncm_diff.c removing edge cases.
+
+ * Fixed internal struct access.
+
+ * uncrustify.
+
+ * Updated test, and fixed minor issues.
+
+ * Fixed docs and set nc_multiplicity_func.c to abstract.
+
+ * Refactoring of the multiplicity function object is complete. Main difference:
+     included mass definition as a property. Examples were properly updated.
+
+ * Tweaked test_ncm_mset_catalog.c and test_ncm_diff.c. Solved APES offboard
+     sampling.
+
+ * Changed the size of figures in docs and improved the documentation of
+     StatsDistKernel objects.
+
+ * Improving coverage and fixed casting.
+
+ * Generating graphs with the notebooks.
+
+ * Included over-smooth option in APES. Added the same option to darkenergy's
+     command line interface. Improved documentation and coverage.
+
+ * Improved tests and coverage for NcmStatsDist* family.
+
+ * Improving NcmStatsDist* coverage.
+
+ * More tweaks on NcmDiff tests.
+
+ * Tweaking tests to avoid false positives.
+
+ * Improved unit tests for NcCBE, NcCBEPrecision and NcmVector.
+
+ * Improved interface to NcmFitESMCMCWalkerAPES. Included and tweaked unit tests.
+
+ * I am rewriting the multiplicity function objects. Including missing functions
+     (e.g., ref, free, clear...), put in the correct order. Add "mass
+     definition" as a property.
+
+ * Fix documentation glitches and solve warnings.
+
+ * Documentation for stats dist objects with image problems
+
+ * Unfinished stats dist objects documentation
+
+ * Removed whitespace following trailing backslash.
+
+ * Added missing include directory.
+
+ * Working on stats_dist.c documentation
+
+ * Uncrustify tests. Tweak mcmc tests.
+
+ * Fixed bug in ncm_mset_trans_kern_cat.c (re-preparing for each sampling). Added
+     missing files. Added new test to test_ncm_vector.c. Tweaking tests.
+
+ * uncrustify and rename APS to APES.
+
+ * Fixed wrong href when computing IM in VKDE. Fixed over_smooth tweak in
+     prepare_interp.
+
+ * Removed unecessary files. Added notebooks.
+
+ * Working version of ncm_stats_dist*. Not yet fully tested.
+
+ * First (incomplete) reorganized version of NcmStatsDist*. Updated mkenums
+     templates.
+
+ * Updated notebook. Halo profile uses log10(M) instead of M. Modifying
+     Multiplicity function objets: mass definition is a property. Work in
+     progress.
+
+ * Removed CNearTree.
+
+ * Working version of vbk.
+
+ * New script to use numcosmo without installing.
+
+ * Testing for fit with no free parameters bug. Fixed the same bug in fit impls.
+
+ * Fixed indentation.
+
+ * Removed unecessary files.
+
+ * vbk_studentt working on notebook. Memory error for rosenbrock. Check slack for
+     info.
+
+ * Adding support for non-adiabatic computation.
+
+ * vbk_studentt working for eval and evan_m2lnp. Copy of APS to work with vbk (not
+     included in makefile). Copy of gauss to gauss vbk(included in makefile)
+
+ * Missing files from last commit.
+
+ * Functions prepare_args and preapre_interp running. Starting to work on
+     eval_m2lnp. Interp.py is the test file.
+
+ * Added more precise delta_c.
+
+ * Working on the examples.
+
+ * Working on VBK.
+
+ * Updated autotools file and removed binnary.
+
+ * example_neartree is the example from documentation, test_neartree is build by
+     me and slightly documented.
+
+ * Fixed the includes for CNearTree, inserted a flag in Makefile.am and created a
+     test to check.
+
+ * Added gtk-doc to mac os build.
+
+ * removed azure.
+
+ * removed azure.
+
+ * Removed travis-ci.
+
+ * Updated autotools files and removed travis-ci.
+
+ * Added the required files for CNearTree.c library, created copies of stats dist
+     to work on, and added the necessary lines in the makefiles.
+
+ * Added gtk-doc to mac os build.
+
+ * Funnel example and notebook.
+
+ * New test likelihood Funnel.
+
+ * Included the RoT for the Student t distributions in
+     ncm_stats_dist_nd_kde_studentt (truncated for nu < 3.0 since it is not
+     defined for these values).
+
+ * Set default to aps with studentt (Cauchy dist) with no CV and over smooth 1.5.
+
+ * Fixed bug in ncm_stats_dist_nd (it didn't set weights vector to zero before
+     fitting).
+
+ * New notebook used to plot Rosenbrock MCMC evolution.
+
+ * New Rosenbrock model/likelihood to check MCMC convergence. New option to thin
+     chains. New example to run Rosenbrock MCMC.
+
+ * Typo fix.
+
+ * Working version of the reorganized code (NcmNNLS, NcmISet and NcmStatsDistNd).
+
+ * Working on ncm_stats_dist_nd + ncm_nnls. Working version, finishing code
+     reorganization.
+
+ * Working version (not organized yet, full of debug prints...).
+
+ * Added documentation and comentaries in the  notebook TestInterp.ipnb.
+
+ * Improved the description in the documentation of ncm_stats_dist_nd.c,
+     ncm_stats_dist_nd_studentt.c and ncm_stats_dist_nd_gauss.c.
+
+ * Moved headers to the right place.
+
+ * Missing Makefile.am.
+
+ * Moved external codes to a new (sub)library to remove these codes from the
+     coverage and to make the symbols invisible.
+
  * Minor release v0.15.3.
+
+ * Added interpolation case where only the most probable point is necessary.
+
+ * Added tests for KDEStudentt.
+
+ * Fixed a few documentation glitches.
+
+ * Reorganized ncm_stats_dist_nd* objects family. Testing different solvers to the
+     NNLS problem.
+
+ * Change on the file numcosmo-docs.sgml to include
+     ncm_stats_dist_nd_kde_studentt.c. Did not create a studentt HTML as I
+     expected.
+
+ * Reupdated m4 and automake stuff.
+
+ * Minor identation/positional tweaks.
+
+ * Implementation of the comentaries from the commit "New implementation of
+     studentt function for ncm_stats_nd_kde.".
+
+ * (Re)updated m4 macros and gtk-doc.make.
+
+ * Adding the updated Jupyter notebook
+
+ * New implementation of studentt function for ncm_stats_nd_kde.
+
+ * Updated private instance get function. Fixed doc issues.
+
+ * Better support for arb.
+
+ * New example.
+
+ * Missing file in branch.
+
+ * Testing
+
+ * First version of the ncm_powspec_sphere_proj and ncm_fftlog_sbessel_jljm.
+
+     Computing Cells without RSD is already working.
+
+     Several improvements and extensions in other objects.
+
+ * New FFTLog object to compute the integral with the kernel j_lj_m.
 
 
 [v0.15.3]
