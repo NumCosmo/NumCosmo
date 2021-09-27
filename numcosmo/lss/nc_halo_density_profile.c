@@ -350,7 +350,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_C_DELTA, "c_{\\Delta}", "cDelta",
-                              0.5,  10.0, 1.0e-1,
+                              2.5,  10.0, 1.0e-1,
                               NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   
@@ -538,13 +538,16 @@ _nc_halo_density_profile_prepare_dl_2d_density_X (gdouble lnX, gpointer userdata
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
   NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
-  gdouble err, dl_2d_density_X;
+  gdouble err, dl_2d_density_X0, dl_2d_density_X1, dl_2d_density_X2;
   gdouble abstol = 0.0;
   
   dp2D->X = exp (lnX);
-  gsl_integration_qagiu (dp2D->F, 0.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, dp2D->w, &dl_2d_density_X, &err);
   
-  return log (2.0 * dl_2d_density_X);
+  gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_2d_density_X0, &err);
+  gsl_integration_qag (dp2D->F, dp2D->X, 10.0 * dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_2d_density_X1, &err);
+  gsl_integration_qagiu (dp2D->F, 10.0 * dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, dp2D->w, &dl_2d_density_X2, &err);
+  
+  return log (2.0 * (dl_2d_density_X0 + dl_2d_density_X1 + dl_2d_density_X2));
 }
 
 static void
@@ -568,7 +571,7 @@ _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_2d_density_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e1);
+    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e2);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_2D_DENSITY);
@@ -661,7 +664,7 @@ _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_cyl_mass_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e1);
+    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e2);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_CYL_MASS);

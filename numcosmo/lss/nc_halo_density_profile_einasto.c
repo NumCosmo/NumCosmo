@@ -48,7 +48,8 @@
  * \end{equation}
  * where $c_{\Delta}$ is the concentration parameter.
  *
- * References: Einasto (1965), arXiv:1712.04512.
+ * References: Einasto (1965), arXiv:1712.04512. $\alpha$ parameter range values: Gao et al. (2008) https://ui.adsabs.harvard.edu/abs/2008MNRAS.387..536G/abstract, 
+ * Dutton \& Maccio (2014) https://academic.oup.com/mnras/article/441/4/3359/1209689. 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -143,7 +144,7 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA, "\\alpha", "alpha",
-                              0.155,  0.5, 0.01,
+                              0.12,  0.35, 0.01,
                               NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
   
