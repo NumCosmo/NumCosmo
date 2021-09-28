@@ -505,11 +505,12 @@ _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp)
     gsl_integration_workspace **w            = ncm_integral_get_workspace ();
     gsl_function F;
     gdouble err;
+    gint key = 6;
     
     F.function = &_nc_halo_density_profile_prepare_dl_spher_mass_int;
     F.params   = dp;
     
-    gsl_integration_qag (&F, 0.0, C_DELTA, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &self->dl_spher_mass, &err);
+    gsl_integration_qag (&F, 0.0, C_DELTA, 0.0, self->reltol, NCM_INTEGRAL_PARTITION, key, *w, &self->dl_spher_mass, &err);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_SPHER_MASS);
@@ -526,11 +527,12 @@ typedef struct _NcHaloDensityProfile2D
 } NcHaloDensityProfile2D;
 
 static gdouble
-_nc_halo_density_profile_prepare_dl_2d_density_X_u (gdouble u, gpointer userdata)
+_nc_halo_density_profile_prepare_dl_2d_density_X_u (gdouble lnu, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
+  const gdouble u = exp (lnu);
   
-  return nc_halo_density_profile_eval_dl_density (dp2D->dp, hypot (dp2D->X, u));
+  return nc_halo_density_profile_eval_dl_density (dp2D->dp, hypot (dp2D->X, u)) * u;
 }
 
 static gdouble
@@ -538,16 +540,29 @@ _nc_halo_density_profile_prepare_dl_2d_density_X (gdouble lnX, gpointer userdata
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
   NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
-  gdouble err, dl_2d_density_X0, dl_2d_density_X1, dl_2d_density_X2;
+  gdouble err, dl_2d_density_dX, dl_2d_density_X, lnx0, lnx1;
+  const gdouble dlnx = 2.0 * M_LN10;
   gdouble abstol = 0.0;
+  gint key = 6;
   
   dp2D->X = exp (lnX);
   
-  gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_2d_density_X0, &err);
-  gsl_integration_qag (dp2D->F, dp2D->X, 10.0 * dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_2d_density_X1, &err);
-  gsl_integration_qagiu (dp2D->F, 10.0 * dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, dp2D->w, &dl_2d_density_X2, &err);
+  dl_2d_density_X = 0.0;
+  lnx0 = lnX + GSL_LOG_DBL_EPSILON;
+  lnx1 = lnx0 + dlnx;
+  do
+  {
+    gsl_integration_qag (dp2D->F, lnx0, lnx1, abstol, self->reltol, NCM_INTEGRAL_PARTITION, key, dp2D->w, &dl_2d_density_dX, &err);
+    
+    dl_2d_density_X += dl_2d_density_dX;
+    abstol = dl_2d_density_X * self->reltol;
+    
+    lnx0 = lnx1;
+    lnx1 = lnx0 + dlnx;
+
+  } while (fabs (dl_2d_density_dX / dl_2d_density_X) > self->reltol);
   
-  return log (2.0 * (dl_2d_density_X0 + dl_2d_density_X1 + dl_2d_density_X2));
+  return log (2.0 * dl_2d_density_X);
 }
 
 static void
@@ -571,7 +586,7 @@ _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_2d_density_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e2);
+    ncm_spline_set_func (self->dl_2d_density_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_2D_DENSITY);
@@ -579,32 +594,23 @@ _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp)
 }
 
 static gdouble
-_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_1 (gdouble x, gpointer userdata)
+_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_1 (gdouble lnx, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
-  
-  if (x == 0.0)
-  {
-    return 0.0;
-  }
-  else
-  {
-    const gdouble x2 = x * x;
-    
-    return x2 * nc_halo_density_profile_eval_dl_density (dp2D->dp, x);
-  }
+  const gdouble x = exp (lnx);  
+  const gdouble x2 = x * x;
+     
+  return x2 * x * nc_halo_density_profile_eval_dl_density (dp2D->dp, x);
 }
 
 static gdouble
-_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_2 (gdouble mu, gpointer userdata)
+_nc_halo_density_profile_prepare_dl_cyl_mass_X_x_2 (gdouble lnmu, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
-  const gdouble mu2            = mu * mu;
+  const gdouble fa             = sqrt (fabs (expm1 (-2.0 * lnmu)));
+  const gdouble mu             = exp (lnmu);
 
-  if (mu == 0.0)
-    return 0.0;
-  else
-    return nc_halo_density_profile_eval_dl_density (dp2D->dp, dp2D->X / mu) / (mu2 * (1.0 + sqrt ((1.0 - mu) * (1.0 + mu))));
+  return nc_halo_density_profile_eval_dl_density (dp2D->dp, dp2D->X * mu) * mu / (1.0 + fa);
 }
 
 static gdouble
@@ -614,27 +620,30 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
   NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
   
   gdouble dl_cyl_mass_X = 0.0;
-  gdouble err, dl_cyl_mass_X_i;
+  gdouble err, dl_cyl_mass_X_i, X3;
   gdouble abstol = 0.0;
+  gint key = 6;
   
   dp2D->X = exp (lnX);
+  X3      = gsl_pow_3 (dp2D->X);
 
-  if (dp2D->X < 1.0)
-  {
-    gsl_integration_qag (dp2D->F, 0.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
-    dl_cyl_mass_X += dl_cyl_mass_X_i;
-  }
-  else
-  {
-    gsl_integration_qag (dp2D->F, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
-    dl_cyl_mass_X += dl_cyl_mass_X_i;
+  gsl_integration_qag (dp2D->F, 2.0 * GSL_LOG_DBL_EPSILON, lnX, abstol, self->reltol, NCM_INTEGRAL_PARTITION, key, dp2D->w, &dl_cyl_mass_X_i, &err);
+  dl_cyl_mass_X += dl_cyl_mass_X_i;
+
+  gsl_integration_qag (dp2D->F2, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, key, dp2D->w, &dl_cyl_mass_X_i, &err);
+  dl_cyl_mass_X += X3 * dl_cyl_mass_X_i;
   
-    gsl_integration_qag (dp2D->F, 1.0, dp2D->X, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
-    dl_cyl_mass_X += dl_cyl_mass_X_i;
-  }
+  abstol += dl_cyl_mass_X_i * self->reltol;
   
-  gsl_integration_qag (dp2D->F2, 0.0, 1.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, 6, dp2D->w, &dl_cyl_mass_X_i, &err);
-  dl_cyl_mass_X += gsl_pow_3 (dp2D->X) * dl_cyl_mass_X_i;
+  gsl_integration_qag (dp2D->F2, 1.0, 10.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, key, dp2D->w, &dl_cyl_mass_X_i, &err);
+  dl_cyl_mass_X += X3 * dl_cyl_mass_X_i;
+
+  abstol += dl_cyl_mass_X_i * self->reltol;
+
+  gsl_integration_qag (dp2D->F2, 10.0, GSL_LOG_DBL_MAX / 4.0, abstol, self->reltol, NCM_INTEGRAL_PARTITION, key, dp2D->w, &dl_cyl_mass_X_i, &err);
+  dl_cyl_mass_X += X3 * dl_cyl_mass_X_i;
+
+//printf ("% 22.15e\n", dl_cyl_mass_X_i);
 
   return log (2.0 * dl_cyl_mass_X);
 }
@@ -664,7 +673,7 @@ _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
     F2.function = &_nc_halo_density_profile_prepare_dl_cyl_mass_X;
     F2.params   = &dp2d;
     
-    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol * 1.0e2);
+    ncm_spline_set_func (self->dl_cyl_mass_s, NCM_SPLINE_FUNCTION_SPLINE, &F2, self->lnXi, self->lnXf, 0, self->reltol);
     
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_CYL_MASS);

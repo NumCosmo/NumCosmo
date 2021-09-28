@@ -167,7 +167,7 @@ _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, c
   const gdouble gamma_3_alpha = gsl_sf_gamma (3.0 / ALPHA);
   const gdouble arg_2         = 2.0 * pow (C_DELTA, ALPHA) / ALPHA;
   const gdouble gamma_inc_P   = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
-  
+
   return (pow (ALPHA / 2.0, 3.0 / ALPHA) * exp (2.0 / ALPHA) / ALPHA * gamma_3_alpha * gamma_inc_P);
 }
 
