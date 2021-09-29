@@ -377,7 +377,7 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
       /*fprintf (stderr, "retrying[%2d] %d %d\n", max_tries, run, (gint)(run * 2));*/
       run = run * 2;
 
-      /*ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_SIMPLE);*/
+      /*ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_NONE);*/
 
       ncm_fit_esmcmc_start_run (test->esmcmc);
       ncm_fit_esmcmc_run (test->esmcmc, run);
@@ -393,7 +393,7 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 void
 test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
-  const gint run      = test->dim * g_test_rand_int_range (1500, 2000) / test->nrun_div;
+  const gint run      = MAX (test->dim * g_test_rand_int_range (1500, 2000) / test->nrun_div, 100);
   NcmMatrix *data_cov = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
   gboolean ok         = FALSE;
   gint max_tries      = 15;
@@ -592,7 +592,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
 void
 test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
-  const gint run      = test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div;
+  const gint run      = MAX (test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div, 100);
   gdouble prec        = 1.0e-2;
   NcmMatrix *data_cov = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
   NcmMatrix *data_cor = ncm_matrix_dup (NCM_DATA_GAUSS_COV (test->data_mvnd)->cov);
@@ -660,7 +660,7 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
 void
 test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
-  const gint run = test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div;
+  const gint run = MAX (test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div, 100);
   gdouble prec   = 1.0e-2;
   gdouble lnnorm_sd, lnnorm;
   
