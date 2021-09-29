@@ -572,7 +572,7 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
   const gdouble dn_dz_z        = ncm_spline_eval (xclkg->dn_dz, z);
   const gdouble bias_z         = _nc_xcor_limber_kernel_gal_bias (xclkg, z);
   gdouble res                  = bias_z * dn_dz_z;
-  
+
   NCM_UNUSED (l);
   
   if (xclkg->domagbias)
@@ -581,7 +581,7 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
     
     res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5. * MAG_BIAS - 2.) * (1.0 + z) * g_z / xck->E_z;
   }
-  
+
   return res;
 }
 

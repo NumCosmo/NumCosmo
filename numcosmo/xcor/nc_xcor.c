@@ -695,7 +695,7 @@ void
 nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp)
 {
   const guint nell = ncm_vector_len (vp);
-  const gboolean isauto = (xclk2 == NULL);
+  const gboolean isauto = (xclk2 == xclk1);
   const gdouble cons_factor = ((isauto) ? gsl_pow_2 (xclk1->cons_factor) : xclk1->cons_factor * xclk2->cons_factor) / gsl_pow_3 (xc->RH);
   gdouble zmin, zmax;
   
