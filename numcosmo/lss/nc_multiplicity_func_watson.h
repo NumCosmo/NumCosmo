@@ -60,10 +60,13 @@ struct _NcMultiplicityFuncWatson
 GType nc_multiplicity_func_watson_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncWatson *nc_multiplicity_func_watson_new (void);
-NcMultiplicityFuncWatson *nc_multiplicity_func_watson_ref (NcMultiplicityFuncWatson *mj);
+NcMultiplicityFuncWatson *nc_multiplicity_func_watson_ref (NcMultiplicityFuncWatson *mwat);
 
-void nc_multiplicity_func_watson_free (NcMultiplicityFuncWatson *mj);
-void nc_multiplicity_func_watson_clear (NcMultiplicityFuncWatson **mj);
+void nc_multiplicity_func_watson_free (NcMultiplicityFuncWatson *mwat);
+void nc_multiplicity_func_watson_clear (NcMultiplicityFuncWatson **mwat);
+
+void nc_multiplicity_func_watson_set_Delta (NcMultiplicityFuncBocquet *mwat, gdouble Delta);
+gdouble nc_multiplicity_func_watson_get_Delta (const NcMultiplicityFuncBocquet *mwat);
 
 G_END_DECLS
 

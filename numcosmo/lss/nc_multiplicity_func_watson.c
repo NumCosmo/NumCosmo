@@ -27,10 +27,11 @@
  * SECTION:nc_multiplicity_func_watson
  * @title: NcMultiplicityFuncWatson
  * @short_description: Dark matter halo -- Watson multiplicity function.
+ * 
  *
  * FIXME
- * 
- */
+ * Reference: arXiv:1212.0095v4
+ */ 
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -117,6 +118,20 @@ nc_multiplicity_func_watson_class_init (NcMultiplicityFuncWatsonClass *klass)
   parent_class->set_mdef = &_nc_multiplicity_func_watson_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_watson_get_mdef;
   parent_class->eval     = &_nc_multiplicity_func_watson_eval;
+  
+  /**
+     * NcMultiplicityFuncWatson:Delta:
+     *
+     * FIXME Set correct values (limits)
+     */
+    g_object_class_install_property (object_class,
+                                     PROP_DELTA,
+                                     g_param_spec_double ("Delta",
+                                                          NULL,
+                                                          "Delta",
+                                                          200.0, G_MAXDOUBLE, 200.0,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    
 }
 
 static void 
@@ -184,6 +199,7 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   const Delta_178 = self->Delta / 178.0;
   
   const gdouble A, alpha, beta, gamma;
+          
   
   if (z == 0)
   {
@@ -205,6 +221,7 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 	  A = Omega_m * (1.097 * pow(1 + z, -3.216) + 0.074);
 	  alpha = Omega_m * (5.907 * pow(1 + z, -3.599) + 2.344)
       beta = Omega_m * (3.136 * pow(1 + z, -3.058) + 2.349)
+	  gamma = 1.318
 	  
   }
   
@@ -222,6 +239,7 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
  *   
  * FIXME
  *
+ 
  * Returns: A new #NcMultiplicityFuncWatson.
  */
 NcMultiplicityFuncWatson *
