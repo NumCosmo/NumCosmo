@@ -82,6 +82,7 @@
 #include <numcosmo/model/nc_hicosmo_de_cpl.h>
 #include <numcosmo/model/nc_hicosmo_de_jbp.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
+#include <numcosmo/model/nc_hicosmo_de_wspline.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>

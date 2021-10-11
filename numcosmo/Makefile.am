@@ -387,6 +387,7 @@ nc_headers = \
 	model/nc_hicosmo_de_cpl.h  \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
+	model/nc_hicosmo_de_wspline.h \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
@@ -539,6 +540,7 @@ nc_sources = \
 	model/nc_hicosmo_de_cpl.c  \
 	model/nc_hicosmo_de_jbp.c     \
 	model/nc_hicosmo_de_xcdm.c    \
+	model/nc_hicosmo_de_wspline.c \
 	model/nc_hicosmo_lcdm.c       \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
