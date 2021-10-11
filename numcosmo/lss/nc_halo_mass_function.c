@@ -322,7 +322,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("lnMi",
                                                         NULL,
                                                         "Lower mass",
-                                                        27.5, 36.84, 32.0,
+                                                        log (1.0e11), log (1.0e17), log (1.0e13),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -336,7 +336,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("lnMf",
                                                         NULL,
                                                         "Upper mass",
-                                                        27.5, 36.84, 36.0,
+                                                        log (1.0e11), log (1.0e17), log (1.0e16),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -675,10 +675,12 @@ nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo
   
   if ((lnMi != self->lnMi) || (self->lnMf != lnMf) || (self->zi != zi) || (self->zf != zf))
   {
-    self->lnMi = lnMi;
-    self->lnMf = lnMf;
-    self->zi   = zi;
-    self->zf   = zf;
+    g_object_set (G_OBJECT (mfp),
+        "lnMi", lnMi,
+        "lnMf", lnMf,
+        "zi", zi,
+        "zf", zf,
+        NULL);
     ncm_powspec_filter_require_zi (self->psf, self->zi);
     ncm_powspec_filter_require_zf (self->psf, self->zf);
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
