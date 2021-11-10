@@ -44,6 +44,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHICosmoDEWSplineClass NcHICosmoDEWSplineClass;
 typedef struct _NcHICosmoDEWSpline NcHICosmoDEWSpline;
+typedef struct _NcHICosmoDEWSplinePrivate NcHICosmoDEWSplinePrivate;
 
 /**
  * NcHICosmoDEWSplineSParams:
@@ -76,8 +77,6 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_VPARAMS >*/
 
 #define NC_HICOSMO_DE_WSPLINE_N (NC_HICOSMO_DE_WSPLINE_W + 1 - NC_HICOSMO_DE_BASE_N)
 
-
-
 struct _NcHICosmoDEWSplineClass
 {
   /*< private >*/
@@ -88,11 +87,14 @@ struct _NcHICosmoDEWSpline
 {
   /*< private >*/
   NcHICosmoDE parent_instance;
+  NcHICosmoDEWSplinePrivate *priv;
 };
 
 GType nc_hicosmo_de_wspline_get_type (void) G_GNUC_CONST;
 
-NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (void);
+NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f);
+
+NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
 
 G_END_DECLS
 
