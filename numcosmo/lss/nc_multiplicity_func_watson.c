@@ -181,7 +181,7 @@ _nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosm
   const gdouble beta  = 1.406;
   const gdouble gamma = 1.210;
   
-  gdouble   f_watson = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
+  gdouble   f_Watson = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
   
   NCM_UNUSED (mulf);
   NCM_UNUSED (cosmo);
@@ -199,39 +199,57 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   const Delta_178 = self->Delta / 178.0;
   
   const gdouble A, alpha, beta, gamma;
-          
+  const gdouble f_Watson
+   
   
   if (z == 0)
   {
-    A = 0.194;
-    alpha = 1.805;
-    beta = 2.267;
-    gamma = 1.287;
+	A = 0.194;
+	alpha = 1.805;
+	beta = 2.267;
+	gamma = 1.287;
   }
+  
   else if (z>=6)
   {
-	 A = 0.563;
-	 alpha = 3.810;
-	 beta = 0.874;
-	 gamma = 1.453;
+	A = 0.563;
+	alpha = 3.810;
+	beta = 0.874;
+	gamma = 1.453;
   }
   
   else
   {
-	  A = Omega_m * (1.097 * pow(1 + z, -3.216) + 0.074);
-	  alpha = Omega_m * (5.907 * pow(1 + z, -3.599) + 2.344)
-      beta = Omega_m * (3.136 * pow(1 + z, -3.058) + 2.349)
-	  gamma = 1.318
+	A = Omega_m * (1.097 * pow(1 + z, -3.216) + 0.074);
+	alpha = Omega_m * (5.907 * pow(1 + z, -3.058) + 2.349) ;
+	beta = Omega_m * (3.136 * pow(1 + z, -3.599) + 2.344);
+	gamma = 1.318;
 	  
   }
-  
-  gdouble   f_watson = self->A * ( pow(self->beta / sigma, self->alpha) + 1.0) * exp (- self->gamma / (sigma * sigma) );
-  
-  NCM_UNUSED (mulf);
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
 
-  return f_Watson;
+  if (self->Delta == 178) 
+  {
+    f_Watson = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
+ 	
+  }
+  
+  else
+  {
+	const gdouble f_Watson_178 = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
+ 		
+ 	const gdouble C = exp ( 0.023 * ( Delta_178  - 1.0 ) );
+	const gdouble d = - 0.456 * Omega_m - 0.139;
+	const gdouble p = 0.072;
+	const gdouble q = 2.130;
+ 		 	
+	const gdouble Gamma = (C * pow(Delta_178, d)* exp (p * (1 - Delta_178)/ pow( sigma, q));
+ 		  
+	f_Watson = f_Watson_178 * Gamma;
+	
+  }
+	
+	return f_Watson;
+  
 }
 
 /**
