@@ -128,7 +128,7 @@ nc_multiplicity_func_ps_class_init (NcMultiplicityFuncPSClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.6864701998411454502,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   parent_class->set_mdef = &_nc_multiplicity_func_ps_set_mdef;

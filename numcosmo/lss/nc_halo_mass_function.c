@@ -703,7 +703,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
   
   nc_distance_prepare_if_needed (self->dist, cosmo);
   ncm_powspec_filter_prepare_if_needed (self->psf, NCM_MODEL (cosmo));
-  
+
   if (mfp->d2NdzdlnM == NULL)
     _nc_halo_mass_function_generate_2Dspline_knots (mfp, cosmo, self->prec);
   
@@ -723,7 +723,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
       ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
     }
   }
-  
+
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
   
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
@@ -812,7 +812,7 @@ _encapsulated_z (gdouble z, gpointer p)
               nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
               nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
   
-  /*printf ("z   % 22.15g % 22.15g\n", z, A);*/
+  /*printf ("z   % 22.15g % 22.15g\n", z, A);fflush(stdout);*/
   return A;
 }
 
@@ -823,7 +823,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
   
   gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, lnM, args->z);
   
-  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);*/
+  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);fflush (stdout);*/
   return A;
 }
 

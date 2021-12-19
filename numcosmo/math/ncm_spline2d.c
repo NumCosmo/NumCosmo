@@ -769,7 +769,7 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
 {
   NcmSpline *s_x = ncm_spline_copy_empty (s2d->s);
   NcmSpline *s_y = ncm_spline_copy_empty (s2d->s);
-  
+
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
   

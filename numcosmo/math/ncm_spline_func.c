@@ -336,9 +336,9 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
         const gdouble ys      = ncm_spline_eval (s, x);
         const gdouble Iyc     = dx * (y1 + y0 + 4.0 * y) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * dx);
-        
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * dx);
+
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
                    "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).",
@@ -499,8 +499,8 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
         const gdouble delta   = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
         const gdouble Iyc     = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
         
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
@@ -631,8 +631,8 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
         const gdouble delta   = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
         const gdouble Iyc     = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
         
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
