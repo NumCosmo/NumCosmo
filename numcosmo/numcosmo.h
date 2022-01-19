@@ -192,5 +192,6 @@
 #include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_CMB_lensing.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_tSZ.h>
 
 #endif /* _NUMCOSMO_H */
