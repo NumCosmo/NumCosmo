@@ -56,15 +56,13 @@ enum
 {
   PROP_0,
   PROP_ZMAX,
-  PROP_NCHI,
   PROP_SIZE,
 };
 
 static void
 nc_xcor_limber_kernel_tsz_init (NcXcorLimberKerneltSZ *xclkl)
 {
-  xclkl->Zmax = 6.0;
-  xclkl->Nchi = 1024;
+  xclkl->Zmax = 0;
 }
 
 static void
@@ -79,11 +77,6 @@ _nc_xcor_limber_kernel_tsz_set_property (GObject *object, guint prop_id, const G
     case PROP_ZMAX:
       xclkl->Zmax = g_value_get_double(value);
       break;
-
-    case PROP_NCHI:
-      xclkl->Nchi = g_value_get_double (value);
-      break;
-
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -101,9 +94,6 @@ _nc_xcor_limber_kernel_tsz_get_property (GObject *object, guint prop_id, GValue 
   {
     case PROP_ZMAX:
       g_value_set_double (value, xclkl->Zmax);
-      break;
-    case PROP_NCHI:
-      g_value_set_double(value, xclkl->Nchi);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -145,7 +135,7 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
   model_class->get_property = &_nc_xcor_limber_kernel_tsz_get_property;
   
   ncm_model_class_set_name_nick (model_class, "Xcor with the thermal Sunyaev Zel'dovich Compton-y parameter", "Xcor-tSZ");
-  ncm_model_class_add_params (model_class, NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN, 0, PROP_SIZE);
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
   
   /**
    * NcXcorLimberKerneltSZ:Zmax:
@@ -154,28 +144,12 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
    */
   g_object_class_install_property (object_class,
                                    PROP_ZMAX,
-                                   g_param_spec_object ("Zmax",
+								   g_param_spec_double ("Zmax",
                                                         NULL,
                                                         "Maximum redshift up to which we define the kernel",
-                                                        NC_TYPE_XCOR,
+                                                        0,6.0, 6.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-
-
-  /**
-   * NcXcorLimberKerneltSZ:Nchi:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_NCHI,
-                                   g_param_spec_object ("Nchi",
-                                                        NULL,
-                                                        "Number of intervals in the radial comoving distance on which we sample the kernel",
-                                                        NC_TYPE_XCOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
@@ -192,7 +166,6 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
 /**
  * nc_xcor_limber_kernel_tsz_new:
  * @Zmax: a #Gdouble
- * @Nchi: a #Gdouble
  *
  * FIXME
  *
@@ -200,15 +173,28 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
  *
  */
 NcXcorLimberKerneltSZ *
-nc_xcor_limber_kernel_tsz_new (gdouble Zmax, gdouble Nchi)
+nc_xcor_limber_kernel_tsz_new (gdouble Zmax)
 {
   NcXcorLimberKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ,
                                                       "Zmax", Zmax,
-													  "Nchi", Nchi,
                                                       NULL);
   
   return xclkl;
 }
+
+/*NcmVector *ncm_vector_linear_space ( gdouble start, gdouble stop, gdouble value)
+{
+	NcmVector *LinearSpace = ncm_vector_new (stop - start);
+
+	gdouble mean = value / (stop - start);
+
+	for (int i=start;i<stop;i++){
+
+		 ncm_vector_set (LinearSpace, i, mean * i );
+	}
+
+	return LinearSpace;
+}*/
 
 static gdouble
 _nc_xcor_limber_kernel_tsz_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
@@ -217,11 +203,14 @@ _nc_xcor_limber_kernel_tsz_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
   NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (xclk);
 
   NCM_UNUSED (l);
-  NCM_UNUSED (cosmo);
 
   const gdouble nc_prefac = ncm_c_thomson_cs() / ( ncm_c_mass_e() * ncm_c_c() * ncm_c_c() );
 
-  return nc_prefac * 1.0 / (1+xclkl->Zmax);
+  if (nc_prefac * (1.0 / (1+ xclkl->Zmax)) < 0)
+	  return - nc_prefac * (1.0 / (1+ xclkl->Zmax));
+  else {
+	  return nc_prefac * (1.0 / (1+ xclkl->Zmax));
+  }
 }
 
 static void
@@ -237,13 +226,8 @@ _nc_xcor_limber_kernel_tsz_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, 
 {
   NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (xclk);
 
-  if (xclkl->Zmax <= 0){
-	  g_error ("nc_xcor_limber_kernel_tsz_noise_spec : Zmax Error.");
-  }
-  if (xclkl->Nchi == 0){
-  	  g_error ("N_chi Error: N_chi cannot be zero.");
-    }
   NCM_UNUSED (xclk);
+  NCM_UNUSED (xclkl);
 }
 
 static guint
@@ -261,4 +245,3 @@ _nc_xcor_limber_kernel_tsz_obs_params_len (NcXcorLimberKernel *xclk)
   
   return 0;
 }
-

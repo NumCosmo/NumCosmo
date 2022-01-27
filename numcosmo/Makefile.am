@@ -503,7 +503,8 @@ nc_headers = \
 	xcor/nc_xcor_limber_kernel.h              \
 	xcor/nc_xcor_limber_kernel_gal.h          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.h  \
-	xcor/nc_xcor_limber_kernel_weak_lensing.h
+	xcor/nc_xcor_limber_kernel_weak_lensing.h \
+	xcor/nc_xcor_limber_kernel_tSZ.h
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -655,7 +656,8 @@ nc_sources = \
 	xcor/nc_xcor_limber_kernel.c              \
 	xcor/nc_xcor_limber_kernel_gal.c          \
 	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
-	xcor/nc_xcor_limber_kernel_weak_lensing.c
+	xcor/nc_xcor_limber_kernel_weak_lensing.c \
+	xcor/nc_xcor_limber_kernel_tSZ.c
 
 libnumcosmo_la_includedir = \
 	$(pkgincludedir)

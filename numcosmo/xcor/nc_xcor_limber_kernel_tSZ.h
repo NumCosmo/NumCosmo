@@ -31,7 +31,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel.h>
 #include <numcosmo/math/ncm_c.h>
-
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_TSZ (nc_xcor_limber_kernel_tsz_get_type ())
@@ -63,8 +62,6 @@ struct _NcXcorLimberKerneltSZ
 
   gdouble Zmax;
 
-  gdouble Nchi;
-
 };
 
 struct _NcXcorLimberKerneltSZClass
@@ -73,15 +70,9 @@ struct _NcXcorLimberKerneltSZClass
   NcXcorLimberKernelClass parent_class;
 };
 
-#define NC_XCOR_LIMBER_KERNEL_TSZ_PREFAC_PARAMS (4.01710079e-06)
-
-#define NC_XCOR_LIMBER_KERNEL_TSZ_DEFAULT_Zmax (6.0)
-
-#define NC_XCOR_LIMBER_KERNEL_TSZ_DEFAULT_Nchi (1024)
-
 GType nc_xcor_limber_kernel_tsz_get_type (void) G_GNUC_CONST;
 
-NcXcorLimberKerneltSZ *nc_xcor_limber_kernel_tsz_new ( gdouble Zmax , gdouble Nchi);
+NcXcorLimberKerneltSZ *nc_xcor_limber_kernel_tsz_new ( gdouble Zmax);
 
 G_END_DECLS
 
