@@ -30,7 +30,7 @@
  *
  * The angular power spectrum between observables $A$ and $B$ with kernels $W^A$ and $W^B$ is
  * \begin{equation}
- * C_{\ell}^{AB} &= \int dz W^A(z) \int dz^\prime W^B (z^\prime) \times \int dk \frac{2}{\pi} k^2 P(k, z, z^\prime) j_{\ell}(k\chi(z)) j_{\ell} (k\chi(z^\prime)).
+ * C_{\ell}^{AB} = \int dz W^A(z) \int dz^\prime W^B (z^\prime) \times \int dk \frac{2}{\pi} k^2 P(k, z, z^\prime) j_{\ell}(k\chi(z)) j_{\ell} (k\chi(z^\prime)).
  * \end{equation}
  * In the Limber approximation, it reduces to
  * \begin{equation}

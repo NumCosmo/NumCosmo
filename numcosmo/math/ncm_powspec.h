@@ -51,6 +51,7 @@ struct _NcmPowspecClass
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+  gdouble (*deriv_z) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
 };
 
@@ -138,6 +139,12 @@ NCM_INLINE void
 ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
+}
+
+NCM_INLINE gdouble 
+ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->deriv_z (powspec, model, z, k);
 }
 
 G_END_DECLS

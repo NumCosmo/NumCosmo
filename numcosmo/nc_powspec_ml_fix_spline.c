@@ -131,6 +131,7 @@ static void _nc_powspec_ml_fix_spline_prepare (NcmPowspec *powspec, NcmModel *mo
 static gdouble _nc_powspec_ml_fix_spline_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_fix_spline_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 static void _nc_powspec_ml_fix_spline_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
+static gdouble _nc_powspec_ml_fix_spline_eval_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 
 static void
 nc_powspec_ml_fix_spline_class_init (NcPowspecMLFixSplineClass *klass)
@@ -164,6 +165,7 @@ nc_powspec_ml_fix_spline_class_init (NcPowspecMLFixSplineClass *klass)
   powspec_class->prepare    = &_nc_powspec_ml_fix_spline_prepare;
   powspec_class->eval       = &_nc_powspec_ml_fix_spline_eval;
   powspec_class->eval_vec   = &_nc_powspec_ml_fix_spline_eval_vec;
+  powspec_class->deriv_z    = &_nc_powspec_ml_fix_spline_eval_deriv_z;
   powspec_class->get_nknots = &_nc_powspec_ml_fix_spline_get_nknots;
 }
 
@@ -207,6 +209,20 @@ _nc_powspec_ml_fix_spline_eval_vec (NcmPowspec *powspec, NcmModel *model, const 
     
     ncm_vector_set (Pk, i, Pk_z);
   }
+}
+
+static gdouble
+_nc_powspec_ml_fix_spline_eval_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcHICosmo *cosmo            = NC_HICOSMO (model);
+  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
+  NcPowspecMLFixSpline *ps_fs = NC_POWSPEC_ML_FIX_SPLINE (powspec);
+  const gdouble growth        = nc_growth_func_eval (ps_fs->gf, cosmo, z);
+  const gdouble deriv_growth  = nc_growth_func_eval_deriv (ps_fs->gf, cosmo, z) * (-1.0 / gsl_pow_2(1.0 + z)); /* dD(z)/dz */
+
+  NCM_UNUSED (prim);
+
+  return ncm_spline_eval (ps_fs->Pk, k) * 2.0 * growth * deriv_growth;
 }
 
 static void

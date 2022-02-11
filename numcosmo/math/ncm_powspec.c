@@ -168,6 +168,14 @@ _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const 
   return 0.0;
 }
 
+static gdouble
+_ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  g_error ("_ncm_powspec_deriv_z: no default implementation, all children must implement it.");
+
+  return 0.0;
+}
+
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
 static void
@@ -236,6 +244,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   klass->prepare  = &_ncm_powspec_prepare;
   klass->eval     = &_ncm_powspec_eval;
   klass->eval_vec = &_ncm_powspec_eval_vec;
+  klass->deriv_z  = &_ncm_powspec_deriv_z;
 }
 
 static void
