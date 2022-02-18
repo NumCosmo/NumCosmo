@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: numcosmo
+Description: Cosmology numerical library
+Version: 0.15.4
+Requires: glib-2.0 >= 2.38.0
+Libs: -L${libdir} -lnumcosmo -lfftw3 -lgthread-2.0 -pthread -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lnlopt -lm -lgsl  -lm -lm  -lopenblas -lmpfr -lgmp -lm -Wl,-L/usr/lib/gcc/x86_64-linux-gnu/8,-L/usr/lib/gcc/x86_64-linux-gnu/8/../../../x86_64-linux-gnu,-L/usr/lib/gcc/x86_64-linux-gnu/8/../../../../lib,-L/lib/x86_64-linux-gnu,-L/lib/../lib,-L/usr/lib/x86_64-linux-gnu,-L/usr/lib/../lib,-L.,-L/home/cinthia/NumCosmo/build/numcosmo/.libs,-L/usr/lib/gcc/x86_64-linux-gnu/8/../../..,-lgfortran,-lm,-lquadmath 
+Cflags: -I${includedir}  -pthread -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/uuid -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include  

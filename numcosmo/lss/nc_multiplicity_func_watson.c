@@ -43,6 +43,7 @@
 struct _NcMultiplicityFuncWatsonPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z); 
   gdouble Delta;
 };
 
@@ -66,11 +67,14 @@ nc_multiplicity_func_watson_init (NcMultiplicityFuncWatson *mwat)
 static void
 _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  /* NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object); */
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)
   {
+    case PROP_DELTA:
+        nc_multiplicity_func_watson_set_Delta (mwat, g_value_get_double (value));
+        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -80,11 +84,14 @@ _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, cons
 static void
 _nc_multiplicity_func_watson_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  /* NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object); */
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)
   {
+    case PROP_DELTA:
+        g_value_set_double (value, nc_multiplicity_func_watson_get_Delta (mwat));
+        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -129,53 +136,16 @@ nc_multiplicity_func_watson_class_init (NcMultiplicityFuncWatsonClass *klass)
                                      g_param_spec_double ("Delta",
                                                           NULL,
                                                           "Delta",
-                                                          200.0, G_MAXDOUBLE, 200.0,
+														  -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
     
-}
-
-static void 
-_nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
-{
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
-
-  switch (mdef)
-  {
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-      self->eval = &_nc_multiplicity_func_watson_mean_eval;
-      break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-      g_error ("NcMultiplicityFuncWatson does not support critical mass def");
-      break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      g_error ("NcMultiplicityFuncWatson does not support virial mass def");
-      break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      self->eval = &_nc_multiplicity_func_watson_fof_eval
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-
-  self->mdef = mdef;
-}
-
-static NcMultiplicityFuncMassDef 
-_nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf)
-{
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
-
-  return self->mdef;
 }
 
 static gdouble
 _nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
- /* NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf); */
- /* NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
+  /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf); */
+  /*NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
   const gdouble A     = 0.282;
   const gdouble alpha = 2.163;
   const gdouble beta  = 1.406;
@@ -196,10 +166,10 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; 
   const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
-  const Delta_178 = self->Delta / 178.0;
+  const gdouble Delta_178 = self->Delta / 178.0;
   
-  const gdouble A, alpha, beta, gamma;
-  const gdouble f_Watson
+  gdouble A, alpha, beta, gamma;
+  gdouble f_Watson;
    
   
   if (z == 0)
@@ -235,14 +205,14 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   
   else
   {
-	const gdouble f_Watson_178 = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
+	gdouble f_Watson_178 = A * ( pow(beta / sigma, alpha) + 1.0) * exp (- gamma / (sigma * sigma) );
  		
  	const gdouble C = exp ( 0.023 * ( Delta_178  - 1.0 ) );
 	const gdouble d = - 0.456 * Omega_m - 0.139;
 	const gdouble p = 0.072;
 	const gdouble q = 2.130;
  		 	
-	const gdouble Gamma = (C * pow(Delta_178, d)* exp (p * (1 - Delta_178)/ pow( sigma, q));
+	const gdouble Gamma = (C * pow(Delta_178, d)* exp (p * (1 - Delta_178)/ pow( sigma, q)));
  		  
 	f_Watson = f_Watson_178 * Gamma;
 	
@@ -251,6 +221,53 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 	return f_Watson;
   
 }
+
+static void 
+_nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
+{
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+
+  switch (mdef)
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+      self->eval = &_nc_multiplicity_func_watson_mean_eval;
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+      g_error ("NcMultiplicityFuncWatson does not support critical mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
+      g_error ("NcMultiplicityFuncWatson does not support virial mass def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      self->eval = &_nc_multiplicity_func_watson_fof_eval;
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  self->mdef = mdef;
+}
+
+static NcMultiplicityFuncMassDef 
+_nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+
+  return self->mdef;
+}
+
+static gdouble
+_nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ watson: astro-ph/0803.2706 */
+{
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  
+  return self->eval(mulf, cosmo, sigma, z);
+}
+
 
 /**
  * nc_multiplicity_func_watson_new:
@@ -309,4 +326,37 @@ nc_multiplicity_func_watson_clear (NcMultiplicityFuncWatson **mwat)
 {
   g_clear_object (mwat);
 }
+
+/**
+ * nc_multiplicity_func_watson_set_Delta:
+ * @mwat: a #NcMultiplicityFuncWatson.
+ * @Delta: value of #NcMultiplicityFuncWatson:Delta.
+ *
+ * Sets the value @Delta to the #NcMultiplicityFuncWatson:Delta property.
+ *
+ */
+void
+nc_multiplicity_func_watson_set_Delta (NcMultiplicityFuncWatson *mwat, gdouble Delta)
+{
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+
+  g_assert (Delta >= 0);
+
+  self->Delta = Delta;
+}
+
+/**
+ * nc_multiplicity_func_watson_get_Delta:
+ * @mwat: a #NcMultiplicityFuncWatson.
+ *
+ * Returns: the value of #NcMultiplicityFuncWatson:Delta property.
+ */
+gdouble
+nc_multiplicity_func_watson_get_Delta (const NcMultiplicityFuncWatson *mwat)
+{
+  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  
+  return self->Delta;
+}
+
 
