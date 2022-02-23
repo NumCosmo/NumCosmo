@@ -29,7 +29,7 @@
  * @title: NcClusterMass
  * @short_description: Abstract class for cluster mass distributions.
  *
- * NcClusterMass is the abstract class designed to abrigde the functions
+ * NcClusterMass is the abstract class designed to abridge the functions
  * that any cluster mass distribution should implement, see NcClusterMassImpl.
  * Its parent_class is NcmModel.
  *
@@ -44,7 +44,54 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
+struct _NcClusterMassPrivate
+{
+  guint nbins;
+  GPtrArray *bin_knots;
+};
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
+
+static void
+nc_cluster_mass_init (NcClusterMass *clusterm)
+{
+  NcClusterMassPrivate * const self = clusterm->priv = nc_cluster_mass_get_instance_private (clusterm);
+
+  self->nbins = 0;
+  self->bin_knots = g_ptr_array_new ();
+
+  g_ptr_array_set_free_func (self->bin_knots, ncm_vector_free);
+}
+
+static void
+nc_cluster_mass_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
+}
+
+NCM_MSET_MODEL_REGISTER_ID (nc_cluster_mass, NC_TYPE_CLUSTER_MASS);
+
+static void
+nc_cluster_mass_class_init (NcClusterMassClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  object_class->finalize = nc_cluster_mass_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Cluster mass abstract class", "NcClusterMass");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_mset_model_register_id (model_class,
+                              "NcClusterMass",
+                              "Cluster mass observable relation models.",
+                              NULL,
+                              TRUE,
+                              NCM_MSET_MODEL_MAIN);
+  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
+}
 
 /**
  * nc_cluster_mass_new_from_name:
@@ -146,6 +193,84 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
 }
 
 /**
+ * nc_cluster_mass_set_bins:
+ * @clusterm: a #NcClusterMass
+ * @lnM_obs_knots: (array) (element-type NcmVector): An array of #NcmVector's containing the knots for each dimension.
+ *
+ * Receives an array of nc_cluster_mass_obs_len() dimension containing
+ * the bin knots for each dimension.
+ *
+ */
+void
+nc_cluster_mass_set_bins (NcClusterMass *clusterm, GPtrArray *lnM_obs_knots)
+{
+  NcClusterMassPrivate * const self = clusterm->priv;
+  const guint dim = nc_cluster_mass_obs_len (clusterm);
+  gint i;
+  guint nbins = 1;
+
+  g_assert_cmpuint (lnM_obs_knots->len, ==, dim);
+
+  g_ptr_array_set_size (self->bin_knots, 0);
+
+  for (i = 0; i < dim; i++)
+  {
+    NcmVector *knots_i = g_ptr_array_index (lnM_obs_knots, i);
+    const guint knots_i_len = ncm_vector_len (knots_i);
+
+    g_assert_cmpuint (knots_i_len, >, 1);
+
+    nbins *= knots_i_len - 1;
+
+    g_ptr_array_append (self->bin_knots, ncm_vector_dup (knots_i));
+  }
+
+  self->nbins = nbins;
+}
+
+/**
+ * nc_cluster_mass_peek_bins:
+ * @clusterm: a #NcClusterMass
+ *
+ * Provides the current binning returning the array of
+ * knots for each dimension.
+ *
+ * Returns: (transfer none): an array of #NcmVector's
+ */
+GPtrArray *
+nc_cluster_mass_peek_bins (NcClusterMass *clusterm)
+{
+  NcClusterMassPrivate * const self = clusterm->priv;
+
+  return self->bin_knots;
+}
+
+
+/**
+ * nc_cluster_mass_get_bin:
+ * @clusterm: a #NcClusterMass
+ * @bin_index: bin index
+ * @lnM_obs_lower: (out callee-allocates) (array) (element-type gdouble): bin lower bounds
+ * @lnM_obs_upper: (out callee-allocates) (array) (element-type gdouble): bin upper bounds
+ *
+ * FIXME
+ *
+ */
+void
+nc_cluster_mass_get_bin (NcClusterMass *clusterm, const guint bin_index, gdouble **lnM_obs_lower, gdouble **lnM_obs_upper)
+{
+  NcClusterMassPrivate * const self = clusterm->priv;
+
+  g_assert_cmpuint (bin_index, <, self->nbins);
+
+
+
+}
+
+gboolean nc_cluster_mass_has_bins (NcClusterMass *clusterm);
+
+
+/**
  * nc_cluster_mass_p:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
@@ -228,7 +353,7 @@ nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
  * @clusterm: a #NcClusterMass.
  * @cosmo: a #NcHICosmo.
  * @lnM_lower: (out): lower limit of the logarithm base e of the true mass.
- * @lnM_upper: (out): upper limit of the lgarithm base e of the true mass.
+ * @lnM_upper: (out): upper limit of the logarithm base e of the true mass.
  *
  * FIXME
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
@@ -272,40 +397,3 @@ nc_cluster_mass_log_all_models (void)
   g_message ("# Registred NcClusterMass:%s are:\n", g_type_name (NC_TYPE_CLUSTER_MASS));
   _nc_cluster_mass_log_all_models_go (NC_TYPE_CLUSTER_MASS, 0);
 }
-
-static void
-nc_cluster_mass_init (NcClusterMass *nc_cluster_mass)
-{
-  NCM_UNUSED (nc_cluster_mass);
-}
-
-static void
-nc_cluster_mass_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
-}
-
-NCM_MSET_MODEL_REGISTER_ID (nc_cluster_mass, NC_TYPE_CLUSTER_MASS);
-
-static void
-nc_cluster_mass_class_init (NcClusterMassClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  object_class->finalize = nc_cluster_mass_finalize;
-
-  ncm_model_class_set_name_nick (model_class, "Cluster mass abstract class", "NcClusterMass");
-  ncm_model_class_add_params (model_class, 0, 0, 1);
-
-  ncm_mset_model_register_id (model_class,
-                              "NcClusterMass",
-                              "Cluster mass observable relation models.",
-                              NULL,
-                              TRUE,
-                              NCM_MSET_MODEL_MAIN);
-  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
-}
-
