@@ -43,6 +43,7 @@
 #include "lss/nc_cluster_mass.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_vector.h"
 
 struct _NcClusterMassPrivate
 {
@@ -60,7 +61,7 @@ nc_cluster_mass_init (NcClusterMass *clusterm)
   self->nbins = 0;
   self->bin_knots = g_ptr_array_new ();
 
-  g_ptr_array_set_free_func (self->bin_knots, ncm_vector_free);
+  g_ptr_array_set_free_func (self->bin_knots, (GDestroyNotify)ncm_vector_free);
 }
 
 static void
@@ -192,83 +193,6 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
   return NC_CLUSTER_MASS_GET_CLASS (clusterm)->obs_params_len (clusterm);
 }
 
-/**
- * nc_cluster_mass_set_bins:
- * @clusterm: a #NcClusterMass
- * @lnM_obs_knots: (array) (element-type NcmVector): An array of #NcmVector's containing the knots for each dimension.
- *
- * Receives an array of nc_cluster_mass_obs_len() dimension containing
- * the bin knots for each dimension.
- *
- */
-void
-nc_cluster_mass_set_bins (NcClusterMass *clusterm, GPtrArray *lnM_obs_knots)
-{
-  NcClusterMassPrivate * const self = clusterm->priv;
-  const guint dim = nc_cluster_mass_obs_len (clusterm);
-  gint i;
-  guint nbins = 1;
-
-  g_assert_cmpuint (lnM_obs_knots->len, ==, dim);
-
-  g_ptr_array_set_size (self->bin_knots, 0);
-
-  for (i = 0; i < dim; i++)
-  {
-    NcmVector *knots_i = g_ptr_array_index (lnM_obs_knots, i);
-    const guint knots_i_len = ncm_vector_len (knots_i);
-
-    g_assert_cmpuint (knots_i_len, >, 1);
-
-    nbins *= knots_i_len - 1;
-
-    g_ptr_array_append (self->bin_knots, ncm_vector_dup (knots_i));
-  }
-
-  self->nbins = nbins;
-}
-
-/**
- * nc_cluster_mass_peek_bins:
- * @clusterm: a #NcClusterMass
- *
- * Provides the current binning returning the array of
- * knots for each dimension.
- *
- * Returns: (transfer none): an array of #NcmVector's
- */
-GPtrArray *
-nc_cluster_mass_peek_bins (NcClusterMass *clusterm)
-{
-  NcClusterMassPrivate * const self = clusterm->priv;
-
-  return self->bin_knots;
-}
-
-
-/**
- * nc_cluster_mass_get_bin:
- * @clusterm: a #NcClusterMass
- * @bin_index: bin index
- * @lnM_obs_lower: (out callee-allocates) (array) (element-type gdouble): bin lower bounds
- * @lnM_obs_upper: (out callee-allocates) (array) (element-type gdouble): bin upper bounds
- *
- * FIXME
- *
- */
-void
-nc_cluster_mass_get_bin (NcClusterMass *clusterm, const guint bin_index, gdouble **lnM_obs_lower, gdouble **lnM_obs_upper)
-{
-  NcClusterMassPrivate * const self = clusterm->priv;
-
-  g_assert_cmpuint (bin_index, <, self->nbins);
-
-
-
-}
-
-gboolean nc_cluster_mass_has_bins (NcClusterMass *clusterm);
-
 
 /**
  * nc_cluster_mass_p:
@@ -309,6 +233,30 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gd
 {
   return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP (clusterm, cosmo, lnM, z);
 }
+
+/**
+ * nc_cluster_mass_intp_bin:
+ * @clusterm: a #NcClusterMass
+ * @cosmo: a #NcHICosmo
+ * @lnM: logarithm base e of the true mass
+ * @z: true redshift
+ * @lnM_bin_lower: bin lower bound
+ * lnM_bin_upper: bin upper bound
+ * @lnM_obs_param: mass-observable parameters in the bin
+ *
+ * It computes the @clusterm probability distribution of @lnM lying
+ * in the range $[lnM_bin_Min, lnM_bin_Max]$, namely,
+ * $$ intp = \int_{\ln M^{obs}_{bin_lower}}^{\ln M^{obs}_{bin_upper}} p \, d\ln M^{obs},$$
+ * where $p$ is [nc_cluster_mass_p()].
+ *
+ * Returns: The probability distribution of @lnM lying within $[\ln M^{obs}_{lnM_bin_lower}, \ln M^{obs}_{lnM_bin_upper}]$.
+*/
+gdouble
+nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble lnM_bin_lower, gdouble lnM_bin_upper, const gdouble *lnM_obs_param)
+{
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP_bin (clusterm, cosmo, lnM, z, lnM_bin_lower, lnM_bin_upper,lnM_obs_param);
+}
+
 
 /**
  * nc_cluster_mass_resample:
