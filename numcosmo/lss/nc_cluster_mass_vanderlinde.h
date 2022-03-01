@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,7 +48,7 @@ typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
  * @NC_CLUSTER_MASS_VANDERLINDE_A_SZ: normalization of the mass-observable relation
  * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: FIXME
  * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: FIXME
- * @NC_CLUSTER_MASS_VANDERLINDE_D_SZ: standard deviation of the mass-observable relation 
+ * @NC_CLUSTER_MASS_VANDERLINDE_D_SZ: standard deviation of the mass-observable relation
  *
  * FIXME
  */
@@ -57,7 +57,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_VANDERLINDE_SPARAMS >*/
   NC_CLUSTER_MASS_VANDERLINDE_A_SZ = 0,
   NC_CLUSTER_MASS_VANDERLINDE_B_SZ,
   NC_CLUSTER_MASS_VANDERLINDE_C_SZ,
-  NC_CLUSTER_MASS_VANDERLINDE_D_SZ, 
+  NC_CLUSTER_MASS_VANDERLINDE_D_SZ,
   /* < private > */
   NC_CLUSTER_MASS_VANDERLINDE_SPARAM_LEN, /*< skip >*/
 } NcClusterMassVanderlindeSParams;
@@ -78,9 +78,9 @@ struct _NcClusterMassVanderlindeClass
 struct _NcClusterMassVanderlinde
 {
   /*< private >*/
-  NcClusterMass parent_instance; 
+  NcClusterMass parent_instance;
   gdouble signif_obs_min;
-  gdouble signif_obs_max;  
+  gdouble signif_obs_max;
   gdouble z0;
   gdouble M0;
 };
@@ -90,3 +90,4 @@ GType nc_cluster_mass_vanderlinde_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_VANDERLINDE_H_ */
+

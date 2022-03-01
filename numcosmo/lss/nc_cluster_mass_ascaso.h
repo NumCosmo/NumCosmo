@@ -45,8 +45,8 @@ typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
 
 /**
  * NcClusterMassAscasoSParams:
- * @NC_CLUSTER_MASS_ASCASO_P0: bias 
- * @NC_CLUSTER_MASS_ASCASO_P1: slope 
+ * @NC_CLUSTER_MASS_ASCASO_P0: bias
+ * @NC_CLUSTER_MASS_ASCASO_P1: slope
  * @NC_CLUSTER_MASS_ASCASO_P2: redshift dependency
  * @NC_CLUSTER_MASS_ASCASO_SIGMA: standard deviation of the log-normal distribution
  *
@@ -57,7 +57,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
   NC_CLUSTER_MASS_ASCASO_P0 = 0,
   NC_CLUSTER_MASS_ASCASO_P1,
   NC_CLUSTER_MASS_ASCASO_P2,
-  NC_CLUSTER_MASS_ASCASO_SIGMA,  
+  NC_CLUSTER_MASS_ASCASO_SIGMA,
   /* < private > */
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
 } NcClusterMassAscasoSParams;
@@ -89,3 +89,4 @@ GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_ASCASO_H_ */
+

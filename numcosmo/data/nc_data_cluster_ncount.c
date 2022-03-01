@@ -1140,7 +1140,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
       ncm_rng_unlock (rng);
 
-      if ( nc_cluster_redshift_resample (clusterz, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
+      if ( nc_cluster_redshift_resample (clusterz, cosmo, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
           nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
       {
         g_array_append_val (lnM_true_array, lnM_true);

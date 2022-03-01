@@ -30,6 +30,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 
@@ -42,19 +43,20 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterRedshiftClass NcClusterRedshiftClass;
 typedef struct _NcClusterRedshift NcClusterRedshift;
+typedef struct _NcClusterRedshiftPrivate NcClusterRedshiftPrivate;
 
 /**
  * NcClusterRedshiftImpl:
  * @NC_CLUSTER_REDSHIFT_P: probability density function of the true-measured cluster redshifts
  * @NC_CLUSTER_REDSHIFT_INTP: probability distribution (integration over the measured redshift)
- * @NC_CLUSTER_REDSHIFT_RESAMPLE: resample function to generate the cluster redshifts following 
+ * @NC_CLUSTER_REDSHIFT_RESAMPLE: resample function to generate the cluster redshifts following
  * the underlying cluster redshift distribution.
  * @NC_CLUSTER_REDSHIFT_P_LIMITS: function to set the lower and upper limits of the to compute
  * the integral of the cluster redshift distribution.
- * @NC_CLUSTER_REDSHIFT_N_LIMTS: function to set the lower and upper thresholds of 
+ * @NC_CLUSTER_REDSHIFT_N_LIMTS: function to set the lower and upper thresholds of
  * the observable cluster redshift to compute the normalization of the cluster redshift distribution.
- * 
- */ 
+ *
+ */
 typedef enum _NcClusterRedshiftImpl
 {
   NC_CLUSTER_REDSHIFT_P = 0,
@@ -70,11 +72,14 @@ struct _NcClusterRedshiftClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  gdouble (*P) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
-  gdouble (*intP) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
-  gboolean (*resample) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
-  void (*P_limits) (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-  void (*N_limits) (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
+  
+  gdouble (*P) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
+  gdouble (*intP) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
+  gdouble (*intP_bin) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
+  gboolean (*resample) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
+  void (*P_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+  void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+  void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
   guint (*obs_len) (NcClusterRedshift *clusterz);
   guint (*obs_params_len) (NcClusterRedshift *clusterz);
 };
@@ -83,6 +88,7 @@ struct _NcClusterRedshift
 {
   /*< private >*/
   NcmModel parent_instance;
+  NcClusterRedshiftPrivate *priv;
 };
 
 GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;
@@ -94,17 +100,20 @@ NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_free (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_clear (NcClusterRedshift **clusterz);
 
+gdouble nc_cluster_redshift_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
+gdouble nc_cluster_redshift_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
+gdouble nc_cluster_redshift_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
+gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
+void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+void nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+
 guint nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
 guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
-
-gdouble nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
-gdouble nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
-gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
-void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
 
 void nc_cluster_redshift_log_all_models (void);
 
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_REDSHIFT_H_ */
+

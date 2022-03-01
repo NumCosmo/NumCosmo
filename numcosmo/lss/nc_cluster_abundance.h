@@ -59,10 +59,10 @@ typedef struct _NcClusterAbundanceDataBin NcClusterAbundanceDataBin;
 typedef gdouble (*NcClusterAbundanceN) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 typedef gdouble (*NcClusterAbundanceIntPd2N) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z);
 
-#define nc_cluster_abundance_d2NdzdlnM_val(cad,cp,lnM,z) (cad)->d2NdzdlnM_val(cad,cp,lnM,z)
-#define nc_cluster_abundance_dNdz_val(cad,cp,lnMl,lnMu,z) (cad)->dNdz_val(cad,cp,lnMl,lnMu,z)
-#define nc_cluster_abundance_dNdlnM_val(cad,cp,lnM,zl,zu) (cad)->dNdlnM_val(cad,cp,lnM,zl,zu)
-#define nc_cluster_abundance_N_val(cad,cp,lnMl,lnMu,zl,zu) (cad)->N_val(cad,cp,lnMl,lnMu,zl,zu)
+#define nc_cluster_abundance_d2NdzdlnM_val(cad, cp, lnM, z) (cad)->d2NdzdlnM_val (cad, cp, lnM, z)
+#define nc_cluster_abundance_dNdz_val(cad, cp, lnMl, lnMu, z) (cad)->dNdz_val (cad, cp, lnMl, lnMu, z)
+#define nc_cluster_abundance_dNdlnM_val(cad, cp, lnM, zl, zu) (cad)->dNdlnM_val (cad, cp, lnM, zl, zu)
+#define nc_cluster_abundance_N_val(cad, cp, lnMl, lnMu, zl, zu) (cad)->N_val (cad, cp, lnMl, lnMu, zl, zu)
 
 struct _NcClusterAbundanceClass
 {
@@ -75,7 +75,7 @@ struct _NcClusterAbundance
   /*< private >*/
   GObject parent_instance;
   NcHaloMassFunction *mfp;
-  NcHaloBiasFunc *mbiasf;    /* new FIXME */
+  NcHaloBiasFunc *mbiasf; /* new FIXME */
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
   gdouble norma, log_norma;
@@ -84,7 +84,7 @@ struct _NcClusterAbundance
   gboolean optimize;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
-  NcmSpline2d *dbdlnM;    /* To compute the mean bias. FIXME*/
+  NcmSpline2d *dbdlnM; /* To compute the mean bias. FIXME*/
   NcmSpline *inv_z;
   NcmSpline *inv_lnM;
   NcmSpline2d *inv_lnM_z;
@@ -118,6 +118,7 @@ gdouble nc_cluster_abundance_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcC
 gdouble nc_cluster_abundance_true_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 gdouble nc_cluster_abundance_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 gdouble nc_cluster_abundance_intp_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z);
+gdouble nc_cluster_abundance_intp_bin_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
 
 void nc_bias_mean_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo);
 gdouble nc_bias_mean_val (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z);
@@ -152,7 +153,7 @@ nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosm
   const gboolean cosmo_up    = ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
   const gboolean clusterz_up = ncm_model_ctrl_model_update (cad->ctrl_z, NCM_MODEL (clusterz));
   const gboolean clusterm_up = ncm_model_ctrl_model_update (cad->ctrl_m, NCM_MODEL (clusterm));
-
+  
   if (cosmo_up || clusterz_up || clusterm_up)
     nc_cluster_abundance_prepare (cad, cosmo, clusterz, clusterm);
 }
@@ -162,3 +163,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_CLUSTER_ABUNDANCE_INLINE_H_ */
+

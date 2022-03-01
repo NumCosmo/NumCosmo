@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2015 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -54,8 +54,8 @@ typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
  * @NC_CLUSTER_MASS_PLCL_SD_SZ: standard deviation of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_A_L: slope of the mass-lensing relation
  * @NC_CLUSTER_MASS_PLCL_B_L: FIXME
- * @NC_CLUSTER_MASS_PLCL_SD_L: standard deviation of the mass-lensing relation 
- * @NC_CLUSTER_MASS_PLCL_COR: correlation coefficient between the SZ and lensing masses 
+ * @NC_CLUSTER_MASS_PLCL_SD_L: standard deviation of the mass-lensing relation
+ * @NC_CLUSTER_MASS_PLCL_COR: correlation coefficient between the SZ and lensing masses
  *
  * FIXME
  */
@@ -66,8 +66,8 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_PLCL_SPARAMS >*/
   NC_CLUSTER_MASS_PLCL_SD_SZ,
   NC_CLUSTER_MASS_PLCL_A_L,
   NC_CLUSTER_MASS_PLCL_B_L,
-  NC_CLUSTER_MASS_PLCL_SD_L, 
-  NC_CLUSTER_MASS_PLCL_COR, 
+  NC_CLUSTER_MASS_PLCL_SD_L,
+  NC_CLUSTER_MASS_PLCL_COR,
   /* < private > */
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassPlCLSParams;
@@ -115,3 +115,4 @@ gdouble nc_cluster_mass_plcl_Msz_Ml_p_ndetone (NcClusterMass *clusterm, gdouble 
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_PLCL_H_ */
+
