@@ -1,0 +1,25 @@
+
+*** These modified files were found in JOE when it aborted on Mon Feb  7 12:14:49 2022
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+.bashrc
+NC_CCL_Bocquet_Test.ipynb
+
+*** File '* Startup Log *'
+Processing '/etc/joe/joerc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/joerc
+
+*** These modified files were found in JOE when it aborted on Wed Feb 23 17:33:51 2022
+*** JOE was aborted because the terminal closed
