@@ -133,8 +133,10 @@ _nc_cluster_mass_lnnormal_obs_params_len (NcClusterMass *clusterm)
 
 static gdouble _nc_cluster_mass_lnnormal_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_lnnormal_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
+static gdouble _nc_cluster_mass_lnnormal_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
 static gboolean _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
 static void _nc_cluster_mass_lnnormal_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_lnnormal_p_limits_bin (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 
 static void
@@ -146,8 +148,10 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   
   parent_class->P              = &_nc_cluster_mass_lnnormal_p;
   parent_class->intP           = &_nc_cluster_mass_lnnormal_intp;
+  parent_class->intP_bin       = &_nc_cluster_mass_lnnormal_intp_bin;
   parent_class->resample       = &_nc_cluster_mass_lnnormal_resample;
   parent_class->P_limits       = &_nc_cluster_mass_lnnormal_p_limits;
+  parent_class->P_bin_limits   = &_nc_cluster_mass_lnnormal_p_limits_bin;
   parent_class->N_limits       = &_nc_cluster_mass_lnnormal_n_limits;
   parent_class->obs_len        = &_nc_cluster_mass_lnnormal_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_lnnormal_obs_params_len;
@@ -245,6 +249,28 @@ _nc_cluster_mass_lnnormal_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdou
     return (erf (x_min) - erf (x_max)) / 2.0;
 }
 
+
+
+static gdouble
+_nc_cluster_mass_lnnormal_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
+{
+NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
+const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
+const gdouble x_min = (lnM - lnM_obs_lower[0]) / sqrt2_sigma;
+const gdouble x_max = (lnM - lnM_obs_upper[0]) / sqrt2_sigma;
+
+NCM_UNUSED(cosmo);
+NCM_UNUSED(z);
+
+ if (x_max > 4.0)
+    return -(erfc (x_min) - erfc (x_max)) / 2.0;
+  else
+    return (erf (x_min) - erf (x_max)) / 2.0;
+}
+
+
+
+
 static gboolean
 _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
@@ -275,6 +301,23 @@ _nc_cluster_mass_lnnormal_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, 
   
   return;
 }
+
+static void
+_nc_cluster_mass_lnnormal_p_limits_bin(NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+{
+  NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
+  const gdouble lnMl          = lnM_obs_lower[0] - 7.0 * SIGMA;
+  const gdouble lnMu          = lnM_obs_upper[0] + 7.0 * SIGMA;
+
+  NCM_UNUSED (cosmo);
+
+  *lnM_lower = lnMl;
+  *lnM_upper = lnMu;
+
+}
+
+
+
 
 static void
 _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)

@@ -318,23 +318,18 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble l
  * nc_cluster_mass_intp_bin:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @lnM: logarithm base e of the true mass
- * @z: true redshift
- * @lnM_obs_lower: bin lower bound
- * lnM_obs_upper: bin upper bound
- * @lnM_obs_param: mass-observable parameters in the bin
+ * @lnM_obs_lower: (array) (element-type gdouble): FIXME
+ * @lnM_obs_upper: (array) (element-type gdouble): FIXME
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
  *
- * It computes the @clusterm probability distribution of @lnM lying
- * in the range $[lnM_obs_Min, lnM_obs_Max]$, namely,
- * $$ intp = \int_{\ln M^{obs}_{bin_lower}}^{\ln M^{obs}_{bin_upper}} p \, d\ln M^{obs},$$
- * where $p$ is [nc_cluster_mass_p()].
+ * FIXME
  *
- * Returns: The probability distribution of @lnM lying within $[\ln M^{obs}_{lnM_obs_lower}, \ln M^{obs}_{lnM_obs_upper}]$.
+ * Returns: FIXME
  */
 gdouble
-nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_param)
+nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP_bin (clusterm, cosmo, lnM, z, lnM_obs_lower, lnM_obs_upper, lnM_obs_param);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP_bin (clusterm, cosmo, lnM, z, lnM_obs_lower, lnM_obs_upper, lnM_obs_params);
 }
 
 /**
