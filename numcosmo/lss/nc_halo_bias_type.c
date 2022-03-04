@@ -45,9 +45,9 @@ G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
 
 /**
  * nc_halo_bias_type_new_from_name:
- * @bias_name: string which specifies the multiplicity function type.
+ * @bias_name: string which specifies the halo bias function type.
  *
- * This function returns a new #NcMultiplicityFunc whose type is defined by @multiplicity_name.
+ * This function returns a new #NcHaloBiasType whose type is defined by @bias_name.
  *
  * Returns: A new #NcHaloBiasType.
  */
