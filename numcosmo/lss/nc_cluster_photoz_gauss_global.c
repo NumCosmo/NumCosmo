@@ -127,8 +127,10 @@ _nc_cluster_photoz_gauss_global_finalize (GObject *object)
 
 static gdouble _nc_cluster_photoz_gauss_global_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
 static gdouble _nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
+static gdouble _nc_cluster_photoz_gauss_global_intp_bin(NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
 static gboolean _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
 static void _nc_cluster_photoz_gauss_global_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+static void _nc_cluster_photoz_gauss_global_p_bin_limits(NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
 static guint _nc_cluster_photoz_gauss_global_obs_len (NcClusterRedshift *clusterz);
 static guint _nc_cluster_photoz_gauss_global_obs_params_len (NcClusterRedshift *clusterz);
@@ -199,8 +201,10 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   
   parent_class->P              = &_nc_cluster_photoz_gauss_global_p;
   parent_class->intP           = &_nc_cluster_photoz_gauss_global_intp;
+  parent_class->intP_bin       = &_nc_cluster_photoz_gauss_global_intp_bin;
   parent_class->resample       = &_nc_cluster_photoz_gauss_global_resample;
   parent_class->P_limits       = &_nc_cluster_photoz_gauss_global_p_limits;
+  parent_class->P_bin_limits   = &_nc_cluster_photoz_gauss_global_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_photoz_gauss_global_n_limits;
   parent_class->obs_len        = &_nc_cluster_photoz_gauss_global_obs_len;
   parent_class->obs_params_len = &_nc_cluster_photoz_gauss_global_obs_params_len;
@@ -242,6 +246,27 @@ _nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, NcHICosmo *co
            (1.0 + erf (z_eff / sqrt2_sigma));
 }
 
+static gdouble _nc_cluster_photoz_gauss_global_intp_bin(NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
+{
+NcmModel *model                        = NCM_MODEL (clusterz);
+/*NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);*/
+const gdouble z_eff                    = z + Z_BIAS;
+const gdouble sqrt2_sigma              = M_SQRT2 * SIGMA0 *(1.0 + z);
+const gdouble x_min                    = (z_eff - z_obs_lower[0]) / sqrt2_sigma;
+const gdouble x_max                    = (z_eff - z_obs_upper[0]) / sqrt2_sigma;
+NCM_UNUSED (lnM);
+
+if (x_max > 4.0)
+    return -(erfc (x_min) - erfc (x_max)) /
+           (1.0 + erf (z_eff / sqrt2_sigma));
+  else
+    return (erf (x_min) - erf (x_max)) /
+           (1.0 + erf (z_eff / sqrt2_sigma)); 
+}
+
+
+
+
 static gboolean
 _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)
 {
@@ -275,6 +300,20 @@ _nc_cluster_photoz_gauss_global_p_limits (NcClusterRedshift *clusterz, NcHICosmo
   
   return;
 }
+
+static void
+_nc_cluster_photoz_gauss_global_p_bin_limits(NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+{
+NcmModel *model                        = NCM_MODEL (clusterz);
+/*NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);*/
+const gdouble zl                       = GSL_MAX (z_obs_lower[0] - Z_BIAS - 10.0 * SIGMA0 * (1.0 + z_obs_lower[0]),0.0);
+const gdouble zu                       = GSL_MAX (z_obs_upper[0] - Z_BIAS + 10.0 * SIGMA0 * (1.0 + z_obs_upper[0]),0.0);
+*z_lower = zl;
+*z_upper = zu;
+
+return;
+}
+
 
 static void
 _nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)

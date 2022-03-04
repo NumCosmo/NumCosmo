@@ -312,9 +312,9 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const g
  * @cosmo: a #NcHICosmo
  * @z: true redshift
  * @lnM: true mass
- * @z_obs_lower: FIXME
- * @z_obs_upper: FIXME
- * @z_obs_params: FIXME
+ * @z_obs_lower: (array) (element-type gdouble): FIXME
+ * @z_obs_upper: (array) (element-type gdouble): FIXME
+ * @z_obs_params:(array) (element-type gdouble) (allow-none): FIXME
  *
  * FIXME
  *

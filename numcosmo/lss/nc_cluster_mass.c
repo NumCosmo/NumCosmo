@@ -320,7 +320,7 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble l
  * @cosmo: a #NcHICosmo
  * @lnM_obs_lower: (array) (element-type gdouble): FIXME
  * @lnM_obs_upper: (array) (element-type gdouble): FIXME
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @lnM_obs_params:(array) (element-type gdouble) (allow-none): FIXME
  *
  * FIXME
  *
