@@ -15,7 +15,7 @@
 
 
 # aminclude_static.am generated automatically by Autoconf
-# from AX_AM_MACROS_STATIC on Tue Feb  1 15:50:57 -03 2022
+# from AX_AM_MACROS_STATIC on Fri Mar  4 17:03:56 -03 2022
 
 VPATH = ..
 am__is_gnu_make = { \
@@ -500,7 +500,7 @@ target_alias =
 top_build_prefix = 
 top_builddir = .
 top_srcdir = ..
-#GITIGNOREFILES = $(GITIGNOREFILES) $(CODE_COVERAGE_OUTPUT_FILE) $(CODE_COVERAGE_OUTPUT_DIRECTORY)
+#GITIGNOREFILES := $(GITIGNOREFILES) $(CODE_COVERAGE_OUTPUT_FILE) $(CODE_COVERAGE_OUTPUT_DIRECTORY)
 #code_coverage_v_lcov_cap = $(code_coverage_v_lcov_cap_$(V))
 #code_coverage_v_lcov_cap_ = $(code_coverage_v_lcov_cap_$(AM_DEFAULT_VERBOSITY))
 #code_coverage_v_lcov_cap_0 = @echo "  LCOV   --capture" $(CODE_COVERAGE_OUTPUT_FILE);
@@ -516,7 +516,7 @@ top_srcdir = ..
 
 # sanitizes the test-name: replaces with underscores: dashes and dots
 #code_coverage_sanitize = $(subst -,_,$(subst .,_,$(1)))
-#AM_DISTCHECK_CONFIGURE_FLAGS = $(AM_DISTCHECK_CONFIGURE_FLAGS) --disable-code-coverage
+#AM_DISTCHECK_CONFIGURE_FLAGS := $(AM_DISTCHECK_CONFIGURE_FLAGS) --disable-code-coverage
 
 # gcov support
 SUBDIRS = numcosmo tools data docs tests examples notebooks
