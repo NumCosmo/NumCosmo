@@ -121,22 +121,6 @@ _nc_cluster_mass_plcl_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_plcl_parent_class)->finalize (object);
 }
 
-guint
-_nc_cluster_mass_plcl_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 2;
-}
-
-guint
-_nc_cluster_mass_plcl_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 2;
-}
-
 static gdouble _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
 static gdouble _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gboolean _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng);
@@ -254,8 +238,8 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /*parent_class->P_limits       = &_nc_cluster_mass_plcl_p_limits; */
   parent_class->N_limits       = &_nc_cluster_mass_plcl_n_limits;
   parent_class->resample       = &_nc_cluster_mass_plcl_resample;
-  parent_class->obs_len        = &_nc_cluster_mass_plcl_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_plcl_obs_params_len;
+  parent_class->obs_len        = 2;
+  parent_class->obs_params_len = 2;
   
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }

@@ -133,22 +133,6 @@ _nc_cluster_mass_benson_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_benson_parent_class)->finalize (object);
 }
 
-guint
-_nc_cluster_mass_benson_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 1;
-}
-
-guint
-_nc_cluster_mass_benson_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 0;
-}
-
 static gdouble _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params);
 static gdouble _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z);
 static void _nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper);
@@ -161,20 +145,10 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   GObjectClass *object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
-  
-  parent_class->P              = &_nc_cluster_mass_benson_significance_m_p;
-  parent_class->intP           = &_nc_cluster_mass_benson_intp;
-  parent_class->P_limits       = &_nc_cluster_mass_benson_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_benson_n_limits;
-  parent_class->resample       = &_nc_cluster_mass_benson_resample;
-  parent_class->obs_len        = &_nc_cluster_mass_benson_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_benson_obs_params_len;
-  
-  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
-  
+
   model_class->set_property = &_nc_cluster_mass_benson_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_get_property;
-  object_class->finalize    = _nc_cluster_mass_benson_finalize;
+  object_class->finalize    = &_nc_cluster_mass_benson_finalize;
   
   ncm_model_class_set_name_nick (model_class, "Benson - SZ", "Benson_SZ");
   ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
@@ -279,6 +253,16 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
+
+  parent_class->P              = &_nc_cluster_mass_benson_significance_m_p;
+  parent_class->intP           = &_nc_cluster_mass_benson_intp;
+  parent_class->P_limits       = &_nc_cluster_mass_benson_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_benson_n_limits;
+  parent_class->resample       = &_nc_cluster_mass_benson_resample;
+  parent_class->obs_len        = 1;
+  parent_class->obs_params_len = 0;
+
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
 
 typedef struct _integrand_data

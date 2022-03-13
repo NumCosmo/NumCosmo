@@ -125,22 +125,6 @@ _nc_cluster_mass_ascaso_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_ascaso_parent_class)->finalize (object);
 }
 
-guint
-_nc_cluster_mass_ascaso_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 1;
-}
-
-guint
-_nc_cluster_mass_ascaso_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 0;
-}
-
 static gdouble _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gboolean _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
@@ -154,25 +138,13 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
   
-  parent_class->P              = &_nc_cluster_mass_ascaso_p;
-  parent_class->intP           = &_nc_cluster_mass_ascaso_intp;
-  parent_class->resample       = &_nc_cluster_mass_ascaso_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
-  parent_class->obs_len        = &_nc_cluster_mass_ascaso_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_ascaso_obs_params_len;
-  
-  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
-  
-  object_class->finalize = &_nc_cluster_mass_ascaso_finalize;
-  
   model_class->set_property = &_nc_cluster_mass_ascaso_set_property;
   model_class->get_property = &_nc_cluster_mass_ascaso_get_property;
+  object_class->finalize    = &_nc_cluster_mass_ascaso_finalize;
   
   ncm_model_class_set_name_nick (model_class, "Ascaso Ln-normal richness distribution", "Ascaso");
   ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-  
-  
+
   /**
    * NcClusterMassAscaso:M0:
    *
@@ -258,6 +230,16 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
+
+  parent_class->P              = &_nc_cluster_mass_ascaso_p;
+  parent_class->intP           = &_nc_cluster_mass_ascaso_intp;
+  parent_class->resample       = &_nc_cluster_mass_ascaso_resample;
+  parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
+  parent_class->obs_len        = 1;
+  parent_class->obs_params_len = 0;
+
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
 
 static gdouble

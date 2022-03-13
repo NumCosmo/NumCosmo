@@ -81,8 +81,8 @@ struct _NcClusterMassClass
   void (*P_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
   void (*P_bin_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
   void (*N_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
-  guint (*obs_len) (NcClusterMass *clusterm);
-  guint (*obs_params_len) (NcClusterMass *clusterm);
+  guint obs_len;
+  guint obs_params_len;
 };
 
 struct _NcClusterMass
@@ -95,6 +95,9 @@ struct _NcClusterMass
 GType nc_cluster_mass_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_mass);
+
+guint nc_cluster_mass_class_obs_len (NcClusterMassClass *clusterm_class);
+guint nc_cluster_mass_class_obs_params_len (NcClusterMassClass *clusterm_class);
 
 NcClusterMass *nc_cluster_mass_new_from_name (gchar *mass_name);
 NcClusterMass *nc_cluster_mass_ref (NcClusterMass *clusterm);
@@ -117,4 +120,3 @@ void nc_cluster_mass_log_all_models (void);
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_H_ */
-

@@ -202,22 +202,6 @@ _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model
   return (xi_obs_return && xi[1] >= mx->Yx_obs_min);
 }
 
-guint
-_nc_cluster_mass_benson_xray_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 2;
-}
-
-guint
-_nc_cluster_mass_benson_xray_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 0;
-}
-
 static void
 _nc_cluster_mass_benson_xray_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -295,19 +279,9 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
   NcClusterMassClass *grand_parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class             = NCM_MODEL_CLASS (klass);
   
-  grand_parent_class->P        = &_nc_cluster_mass_benson_xray_m_p;
-  grand_parent_class->intP     = &_nc_cluster_mass_benson_xray_intp;
-  grand_parent_class->P_limits = &_nc_cluster_mass_benson_xray_p_limits;
-  grand_parent_class->N_limits = &_nc_cluster_mass_benson_xray_n_limits;
-  grand_parent_class->resample = &_nc_cluster_mass_benson_xray_resample;
-  
-  grand_parent_class->obs_len        = &_nc_cluster_mass_benson_xray_obs_len;
-  grand_parent_class->obs_params_len = &_nc_cluster_mass_benson_xray_obs_params_len;
-  
-  object_class->finalize = _nc_cluster_mass_benson_xray_finalize;
-  
   model_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_xray_get_property;
+  object_class->finalize    = &_nc_cluster_mass_benson_xray_finalize;
   
   ncm_model_class_set_name_nick (model_class, "Benson- SZ and XRay", "Benson_SZ_XRay");
   ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
@@ -404,5 +378,15 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
   
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
+
+  grand_parent_class->P              = &_nc_cluster_mass_benson_xray_m_p;
+  grand_parent_class->intP           = &_nc_cluster_mass_benson_xray_intp;
+  grand_parent_class->P_limits       = &_nc_cluster_mass_benson_xray_p_limits;
+  grand_parent_class->N_limits       = &_nc_cluster_mass_benson_xray_n_limits;
+  grand_parent_class->resample       = &_nc_cluster_mass_benson_xray_resample;
+  grand_parent_class->obs_len        = 2;
+  grand_parent_class->obs_params_len = 0;
+
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
 

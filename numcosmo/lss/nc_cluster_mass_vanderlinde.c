@@ -79,6 +79,199 @@ typedef struct _integrand_data
   gdouble D2_2; /* 2.0 * D * D */
 } integrand_data;
 
+static void
+nc_cluster_mass_vanderlinde_init (NcClusterMassVanderlinde *msz)
+{
+  msz->signif_obs_min = 0.0;
+  msz->signif_obs_max = 0.0;
+  msz->z0             = 0.0;
+  msz->M0             = 0.0;
+}
+
+static void
+_nc_cluster_mass_vanderlinde_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (object);
+
+  g_return_if_fail (NC_IS_CLUSTER_MASS_VANDERLINDE (object));
+
+  switch (prop_id)
+  {
+    case PROP_SIGNIFICANCE_OBS_MIN:
+      msz->signif_obs_min = g_value_get_double (value);
+      break;
+    case PROP_SIGNIFICANCE_OBS_MAX:
+      msz->signif_obs_max = g_value_get_double (value);
+      break;
+    case PROP_Z0:
+      msz->z0 = g_value_get_double (value);
+      break;
+    case PROP_M0:
+      msz->M0 = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_vanderlinde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (object);
+
+  g_return_if_fail (NC_IS_CLUSTER_MASS_VANDERLINDE (object));
+
+  switch (prop_id)
+  {
+    case PROP_SIGNIFICANCE_OBS_MIN:
+      g_value_set_double (value, msz->signif_obs_min);
+      break;
+    case PROP_SIGNIFICANCE_OBS_MAX:
+      g_value_set_double (value, msz->signif_obs_max);
+      break;
+    case PROP_Z0:
+      g_value_set_double (value, msz->z0);
+      break;
+    case PROP_M0:
+      g_value_set_double (value, msz->M0);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_vanderlinde_finalize (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_mass_vanderlinde_parent_class)->finalize (object);
+}
+
+static gdouble _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params);
+static gdouble _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+static void _nc_cluster_mass_vanderlinde_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_vanderlinde_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
+static gboolean _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng);
+
+static void
+nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
+{
+  GObjectClass *object_class       = G_OBJECT_CLASS (klass);
+  NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
+
+  object_class->finalize = _nc_cluster_mass_vanderlinde_finalize;
+
+  model_class->set_property = &_nc_cluster_mass_vanderlinde_set_property;
+  model_class->get_property = &_nc_cluster_mass_vanderlinde_get_property;
+
+  ncm_model_class_set_name_nick (model_class, "Vanderlinde et al. 2010 - SZ", "Vanderlinde_SZ");
+  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
+
+  /**
+   * NcClusterMassVanderlinde:signif_obs_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MIN,
+                                   g_param_spec_double ("signif-obs-min",
+                                                        NULL,
+                                                        "Minimum observational significance",
+                                                        2.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassVanderlinde:signif_obs_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MAX,
+                                   g_param_spec_double ("signif-obs-max",
+                                                        NULL,
+                                                        "Maximum observational significance",
+                                                        2.0, G_MAXDOUBLE, 40.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassVanderlinde:z0:
+   *
+   * Reference redshift in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_Z0,
+                                   g_param_spec_double ("z0",
+                                                        NULL,
+                                                        "Reference redshift",
+                                                        0.0, G_MAXDOUBLE, 0.6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassVanderlinde:M0:
+   *
+   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_M0,
+                                   g_param_spec_double ("M0",
+                                                        NULL,
+                                                        "Reference mass",
+                                                        1.0e13, G_MAXDOUBLE, 5.0e14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /*
+   * SZ signal-mass scaling parameter: Asz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_A_SZ, "A_{SZ}", "Asz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * SZ signal-mass scaling parameter: Bsz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_B_SZ, "B_{SZ}", "Bsz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * SZ signal-mass scaling parameter: Csz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_C_SZ, "C_{SZ}", "Csz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * SZ signal-mass scaling parameter: Dsz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_D_SZ, "D_{SZ}", "Dsz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  parent_class->P              = &_nc_cluster_mass_vanderlinde_significance_m_p;
+  parent_class->intP           = &_nc_cluster_mass_vanderlinde_intp;
+  parent_class->P_limits       = &_nc_cluster_mass_vanderlinde_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_vanderlinde_n_limits;
+  parent_class->resample       = &_nc_cluster_mass_vanderlinde_resample;
+  parent_class->obs_len        = 1;
+  parent_class->obs_params_len = 0;
+
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
+
+}
+
 static gdouble
 _nc_cluster_mass_vanderlinde_significance_m_p_integrand (gdouble zeta, gpointer userdata)
 {
@@ -275,206 +468,3 @@ _nc_cluster_mass_vanderlinde_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo
   
   return;
 }
-
-guint
-_nc_cluster_mass_vanderlinde_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 1;
-}
-
-guint
-_nc_cluster_mass_vanderlinde_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 0;
-}
-
-static void
-_nc_cluster_mass_vanderlinde_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (object);
-  
-  g_return_if_fail (NC_IS_CLUSTER_MASS_VANDERLINDE (object));
-  
-  switch (prop_id)
-  {
-    case PROP_SIGNIFICANCE_OBS_MIN:
-      msz->signif_obs_min = g_value_get_double (value);
-      break;
-    case PROP_SIGNIFICANCE_OBS_MAX:
-      msz->signif_obs_max = g_value_get_double (value);
-      break;
-    case PROP_Z0:
-      msz->z0 = g_value_get_double (value);
-      break;
-    case PROP_M0:
-      msz->M0 = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_cluster_mass_vanderlinde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (object);
-  
-  g_return_if_fail (NC_IS_CLUSTER_MASS_VANDERLINDE (object));
-  
-  switch (prop_id)
-  {
-    case PROP_SIGNIFICANCE_OBS_MIN:
-      g_value_set_double (value, msz->signif_obs_min);
-      break;
-    case PROP_SIGNIFICANCE_OBS_MAX:
-      g_value_set_double (value, msz->signif_obs_max);
-      break;
-    case PROP_Z0:
-      g_value_set_double (value, msz->z0);
-      break;
-    case PROP_M0:
-      g_value_set_double (value, msz->M0);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_cluster_mass_vanderlinde_init (NcClusterMassVanderlinde *msz)
-{
-  msz->signif_obs_min = 0.0;
-  msz->signif_obs_max = 0.0;
-  msz->z0             = 0.0;
-  msz->M0             = 0.0;
-}
-
-static void
-_nc_cluster_mass_vanderlinde_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_vanderlinde_parent_class)->finalize (object);
-}
-
-static void
-nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
-{
-  GObjectClass *object_class       = G_OBJECT_CLASS (klass);
-  NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
-  
-  parent_class->P              = &_nc_cluster_mass_vanderlinde_significance_m_p;
-  parent_class->intP           = &_nc_cluster_mass_vanderlinde_intp;
-  parent_class->P_limits       = &_nc_cluster_mass_vanderlinde_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_vanderlinde_n_limits;
-  parent_class->resample       = &_nc_cluster_mass_vanderlinde_resample;
-  parent_class->obs_len        = &_nc_cluster_mass_vanderlinde_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_vanderlinde_obs_params_len;
-  
-  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
-  
-  object_class->finalize = _nc_cluster_mass_vanderlinde_finalize;
-  
-  model_class->set_property = &_nc_cluster_mass_vanderlinde_set_property;
-  model_class->get_property = &_nc_cluster_mass_vanderlinde_get_property;
-  
-  ncm_model_class_set_name_nick (model_class, "Vanderlinde et al. 2010 - SZ", "Vanderlinde_SZ");
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-  
-  /**
-   * NcClusterMassVanderlinde:signif_obs_min:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SIGNIFICANCE_OBS_MIN,
-                                   g_param_spec_double ("signif-obs-min",
-                                                        NULL,
-                                                        "Minimum obsevational significance",
-                                                        2.0, G_MAXDOUBLE, 5.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  /**
-   * NcClusterMassVanderlinde:signif_obs_max:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SIGNIFICANCE_OBS_MAX,
-                                   g_param_spec_double ("signif-obs-max",
-                                                        NULL,
-                                                        "Maximum obsevational significance",
-                                                        2.0, G_MAXDOUBLE, 40.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  /**
-   * NcClusterMassVanderlinde:z0:
-   *
-   * Reference redshift in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Z0,
-                                   g_param_spec_double ("z0",
-                                                        NULL,
-                                                        "Reference redshift",
-                                                        0.0, G_MAXDOUBLE, 0.6,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  /**
-   * NcClusterMassVanderlinde:M0:
-   *
-   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_M0,
-                                   g_param_spec_double ("M0",
-                                                        NULL,
-                                                        "Reference mass",
-                                                        1.0e13, G_MAXDOUBLE, 5.0e14,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  /*
-   * SZ signal-mass scaling parameter: Asz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_A_SZ, "A_{SZ}", "Asz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-  
-  /*
-   * SZ signal-mass scaling parameter: Bsz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_B_SZ, "B_{SZ}", "Bsz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-  
-  /*
-   * SZ signal-mass scaling parameter: Csz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_C_SZ, "C_{SZ}", "Csz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-  
-  /*
-   * SZ signal-mass scaling parameter: Dsz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_D_SZ, "D_{SZ}", "Dsz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-}
-

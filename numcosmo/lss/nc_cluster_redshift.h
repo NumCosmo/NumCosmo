@@ -80,8 +80,8 @@ struct _NcClusterRedshiftClass
   void (*P_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
-  guint (*obs_len) (NcClusterRedshift *clusterz);
-  guint (*obs_params_len) (NcClusterRedshift *clusterz);
+  guint obs_len;
+  guint obs_params_len;
 };
 
 struct _NcClusterRedshift
@@ -94,6 +94,9 @@ struct _NcClusterRedshift
 GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_redshift);
+
+guint nc_cluster_redshift_class_obs_len (NcClusterRedshiftClass *clusterz_class);
+guint nc_cluster_redshift_class_obs_params_len (NcClusterRedshiftClass *clusterz_class);
 
 NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);

@@ -52,6 +52,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcDataClusterNCountClass NcDataClusterNCountClass;
 typedef struct _NcDataClusterNCount NcDataClusterNCount;
+typedef struct _NcDataClusterNCountPrivate NcDataClusterNCountPrivate;
 
 /**
  * NcDataClusterAbundanceId:
@@ -78,45 +79,16 @@ struct _NcDataClusterNCount
 {
   /*< private >*/
   NcmData parent_instance;
-  NcClusterAbundance *cad;
-  NcmVector *lnM_true;
-  NcmVector *z_true;
-  NcmMatrix *z_obs;
-  NcmMatrix *z_obs_params;
-  NcmMatrix *lnM_obs;
-  NcmMatrix *lnM_obs_params;
-  GArray *m2lnL_a;
-  gdouble area_survey;
-  guint np;
-  guint n_z_obs;
-  guint n_z_obs_params;
-  guint n_M_obs;
-  guint n_M_obs_params;
-  gdouble log_np_fac;
-  gboolean use_true_data;
-  gboolean binned;
-  NcmVector *z_nodes;
-  NcmVector *lnM_nodes;
-  gsl_histogram2d *purity;
-  gsl_histogram2d *sd_lnM;
-  gsl_histogram2d *z_lnM;
-  gboolean fiducial;
-  guint64 seed;
-  gchar *rnd_name;
+  NcDataClusterNCountPrivate *priv;
 };
 
 GType nc_data_cluster_ncount_get_type (void) G_GNUC_CONST;
 
-NcDataClusterNCount *nc_data_cluster_ncount_new (NcClusterAbundance *cad);
+NcDataClusterNCount *nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type, const gchar *mass_type);
 
 NcDataClusterNCount *nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_free (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount);
-
-void nc_data_cluster_ncount_set_n_z_obs (NcDataClusterNCount *ncount, guint n_z_obs);
-void nc_data_cluster_ncount_set_n_z_obs_params (NcDataClusterNCount *ncount, guint n_z_obs_params);
-void nc_data_cluster_ncount_set_n_M_obs (NcDataClusterNCount *ncount, guint n_M_obs);
-void nc_data_cluster_ncount_set_n_M_obs_params (NcDataClusterNCount *ncount, guint n_M_obs_params);
 
 void nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v);
 void nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v);
@@ -131,7 +103,6 @@ gboolean nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount);
 guint nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount);
 guint nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount);
 guint nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount);
-
 guint nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount);
 guint nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount);
 
