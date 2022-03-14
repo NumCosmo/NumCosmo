@@ -45,28 +45,33 @@ typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
 
 /**
  * NcClusterMassAscasoSParams:
- * @NC_CLUSTER_MASS_ASCASO_P0: bias
- * @NC_CLUSTER_MASS_ASCASO_P1: slope
- * @NC_CLUSTER_MASS_ASCASO_P2: redshift dependency
- * @NC_CLUSTER_MASS_ASCASO_SIGMA: standard deviation of the log-normal distribution
- *
+ * @NC_CLUSTER_MASS_ASCASO_MU_P0: bias of the mean
+ * @NC_CLUSTER_MASS_ASCASO_MU_P1: slope on the mean
+ * @NC_CLUSTER_MASS_ASCASO_MU_P2: redshift dependency on the mean
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P0: bias of the standard deviation of the log-normal distribution
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P1: slope on the standard deviation of the log-normal distribution
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
+ * 
  * FIXME
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 {
-  NC_CLUSTER_MASS_ASCASO_P0 = 0,
-  NC_CLUSTER_MASS_ASCASO_P1,
-  NC_CLUSTER_MASS_ASCASO_P2,
-  NC_CLUSTER_MASS_ASCASO_SIGMA,
+  NC_CLUSTER_MASS_ASCASO_MU_P0,
+  NC_CLUSTER_MASS_ASCASO_MU_P1,
+  NC_CLUSTER_MASS_ASCASO_MU_P2,
+  NC_CLUSTER_MASS_ASCASO_SIGMA_P0,
+  NC_CLUSTER_MASS_ASCASO_SIGMA_P1,
+  NC_CLUSTER_MASS_ASCASO_SIGMA_P2,
   /* < private > */
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
 } NcClusterMassAscasoSParams;
 
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_P0  (0.0)
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_P1  (1.0)
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_P2  (1.0)
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA  (0.04)
-
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P0  (0.0)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P1  (1.0)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P2  (1.0)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P0  (0.04)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P1  (0.0)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2  (0.0)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL (0.0)
 
 struct _NcClusterMassAscasoClass
@@ -80,6 +85,7 @@ struct _NcClusterMassAscaso
   /*< private >*/
   NcClusterMass parent_instance;
   gdouble M0;
+  gdouble Z0; 
   gdouble lnRichness_max;
   gdouble lnRichness_min;
 };
