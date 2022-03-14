@@ -348,14 +348,17 @@ _nc_abc_summary_smooth (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, 
 {
   const gdouble rho2 = rho * rho;
   const gdouble onemrho2 = 1.0 - rho2;
-  const gdouble lognorma = log (2.0 * M_PI * sigma_z * sigma_lnM * sqrt (onemrho2));  
+  const gdouble lognorma = log (2.0 * M_PI * sigma_z * sigma_lnM * sqrt (onemrho2));
+  const guint np         = nc_data_cluster_ncount_get_len (ncount);
+  NcmMatrix *z_obs       = nc_data_cluster_ncount_get_z_obs (ncount);
+  NcmMatrix *lnM_obs     = nc_data_cluster_ncount_get_lnM_obs (ncount);
   gdouble res = 0.0;
   gsize i;
 
-  for (i = 0; i < ncount->np; i++)
+  for (i = 0; i < np; i++)
   {
-    const gdouble zi    = ncm_matrix_get (ncount->z_obs, i, 0);
-    const gdouble lnMi  = ncm_matrix_get (ncount->lnM_obs, i, 0);
+    const gdouble zi    = ncm_matrix_get (z_obs, i, 0);
+    const gdouble lnMi  = ncm_matrix_get (lnM_obs, i, 0);
     const gdouble dz    = (z - zi) / sigma_z;
     const gdouble dlnM  = (lnM - lnMi) / sigma_lnM;
     const gdouble dz2   = dz * dz;
@@ -363,29 +366,40 @@ _nc_abc_summary_smooth (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, 
     const gdouble chi2  = - (dz2 + dlnM2 - 2.0 * rho *  dlnM * dz) / (2.0 * onemrho2) - lognorma;
     res += exp (chi2);
   }
+
+  ncm_matrix_free (z_obs);
+  ncm_matrix_free (lnM_obs);
+
   return res;
 }
 
 static gdouble 
-_nc_abc_summary_distance (NcABCClusterNCount *abcnc, NcDataClusterNCount *model, NcDataClusterNCount *data)
+_nc_abc_summary_distance (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, NcDataClusterNCount *data)
 {
+  const guint np         = nc_data_cluster_ncount_get_len (ncount);
+  NcmMatrix *z_obs       = nc_data_cluster_ncount_get_z_obs (ncount);
+  NcmMatrix *lnM_obs     = nc_data_cluster_ncount_get_lnM_obs (ncount);
+
   gsize i;
   gdouble res = 0.0;
   gdouble te = 0.0;
 
-  if (model->np == 0)
+  if (np == 0)
     return 0.0;
 
-  te = model->np;
+  te = np;
   /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", abcnc->sigma_z, abcnc->sigma_lnM, abcnc->rho, te);*/
 
-  for (i = 0; i < data->np; i++)
+  for (i = 0; i < np; i++)
   {
-    const gdouble zi = ncm_matrix_get (data->z_obs, i, 0);
-    const gdouble lnMi = ncm_matrix_get (data->lnM_obs, i, 0);
-    const gdouble smooth  = _nc_abc_summary_smooth (abcnc, model, zi, lnMi, abcnc->sigma_z, abcnc->sigma_lnM, abcnc->rho);
+    const gdouble zi = ncm_matrix_get (z_obs, i, 0);
+    const gdouble lnMi = ncm_matrix_get (lnM_obs, i, 0);
+    const gdouble smooth  = _nc_abc_summary_smooth (abcnc, ncount, zi, lnMi, abcnc->sigma_z, abcnc->sigma_lnM, abcnc->rho);
     res += -log (smooth);
   }
+
+  ncm_matrix_free (z_obs);
+  ncm_matrix_free (lnM_obs);
 
   return 2.0 * (res + te);
 }
@@ -394,8 +408,10 @@ static gboolean
 _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
 {
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
+
   g_assert (abc->dset != NULL);
   g_assert_cmpuint (ncm_dataset_get_ndata (abc->dset), ==, 1);
+
   {
     NcmData *data = ncm_dataset_get_data (abc->dset, 0);
     NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
@@ -436,15 +452,15 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
       {
-        abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
-        abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
+        //abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM); FIXHERE
+        //abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
         break;
       }
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
       {
         guint i;
         ncm_stats_vec_reset (abcnc->z_lnM_stats, TRUE);
-
+/*FIXHERE
         for (i = 0; i < abcnc->ncount->np; i++)
         {
           const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
@@ -453,7 +469,7 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
           ncm_stats_vec_set (abcnc->z_lnM_stats, 1, lnMi);
           ncm_stats_vec_update (abcnc->z_lnM_stats);
         }
-        
+*/
         abcnc->sigma_z   = ncm_stats_vec_get_sd (abcnc->z_lnM_stats, 0) * abcnc->rbf_scale;
         abcnc->sigma_lnM = ncm_stats_vec_get_sd (abcnc->z_lnM_stats, 1) * abcnc->rbf_scale;
         abcnc->rho       = ncm_stats_vec_get_cor (abcnc->z_lnM_stats, 0, 1);
@@ -500,22 +516,22 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
         for (i = 0; i < total; i++)
         {
           pdf_data += abcnc->data_summary->bin[i];
-          pdf_mock += ncount->z_lnM->bin[i];
+          //pdf_mock += ncount->z_lnM->bin[i]; FIXHERE
 
           res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
         }
       }
       else
       {
-        gdouble mock_total = gsl_histogram2d_sum (ncount->z_lnM);
+        //gdouble mock_total = gsl_histogram2d_sum (ncount->z_lnM); FIXHERE
 
         for (i = 0; i < total; i++)
         {
           pdf_data += abcnc->data_summary->bin[i];
-          pdf_mock += ncount->z_lnM->bin[i];
+          //pdf_mock += ncount->z_lnM->bin[i]; FIXHERE
 
-          if (mock_total - pdf_mock <= 5.0)
-            break;
+          //if (mock_total - pdf_mock <= 5.0) FIXHERE
+          //  break;
 
           if (pdf_mock >= 5.0)
           {
@@ -532,7 +548,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
         for (; i < total; i++)
         {
           pdf_data += abcnc->data_summary->bin[i];
-          pdf_mock += ncount->z_lnM->bin[i];
+          //pdf_mock += ncount->z_lnM->bin[i]; FIXHERE
         }
         if (pdf_mock != 0.0)
         {
@@ -551,7 +567,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
     }
     case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
     {
-      res = (_nc_abc_summary_distance (abcnc, ncount, abcnc->ncount) - abcnc->data_total) / abcnc->ncount->np;
+      //res = (_nc_abc_summary_distance (abcnc, ncount, abcnc->ncount) - abcnc->data_total) / abcnc->ncount->np; FIXHERE
       break;
     }
     default:

@@ -71,8 +71,6 @@ static gboolean _nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHI
 static void _nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
-static guint _nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
-static guint _nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
 
 static void
 nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
@@ -103,8 +101,8 @@ nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
   klass->P_limits       = &_nc_cluster_redshift_p_limits;
   klass->P_bin_limits   = &_nc_cluster_redshift_p_bin_limits;
   klass->N_limits       = &_nc_cluster_redshift_n_limits;
-  klass->obs_len        = &_nc_cluster_redshift_obs_len;
-  klass->obs_params_len = &_nc_cluster_redshift_obs_params_len;
+  klass->obs_len        = 0;
+  klass->obs_params_len = 0;
 }
 
 static gdouble
@@ -157,20 +155,36 @@ _nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gd
   g_error ("_nc_cluster_redshift_n_limits: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
 }
 
-static guint
-_nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz)
+/**
+ * nc_cluster_redshift_class_obs_len:
+ * @clusterz_class: a #NcClusterRedshiftClass
+ *
+ * The number of observable redshifts of each cluster, e.g.,
+ * 1 - only photometric redshift,
+ * 1 - only spectroscopic redshift,
+ * 2 - both photometric and spectroscopic redshifts.
+ *
+ * Returns: The number of observable redshifts.
+ */
+guint
+nc_cluster_redshift_class_obs_len (NcClusterRedshiftClass *clusterz_class)
 {
-  g_error ("_nc_cluster_redshift_obs_len: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
-  
-  return 0;
+  return clusterz_class->obs_len;
 }
 
-static guint
-_nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
+/**
+ * nc_cluster_redshift_class_obs_params_len:
+ * @clusterz_class: a #NcClusterRedshiftClass
+ *
+ * The number of parameters related to the observable redshifts of each cluster, e.g.,
+ * 1 - measured error of the photometric redshift.
+ *
+ * Returns: The number of parameters related to the observable redshifts.
+ */
+guint
+nc_cluster_redshift_class_obs_params_len (NcClusterRedshiftClass *clusterz_class)
 {
-  g_error ("_nc_cluster_redshift_obs_params_len: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
-  
-  return 0;
+  return clusterz_class->obs_params_len;
 }
 
 /**
@@ -238,32 +252,28 @@ nc_cluster_redshift_clear (NcClusterRedshift **clusterz)
  * nc_cluster_redshift_obs_len:
  * @clusterz: a #NcClusterRedshift
  *
- * The number of observable redshifts of each cluster, e.g.,
- * 1 - only photometric redshift,
- * 1 - only spectroscopic redshift,
- * 2 - both photometric and spectroscopic redshifts.
+ * nc_cluster_redshift_obs_len().
  *
  * Returns: The number of observable redshifts.
  */
 guint
 nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz)
 {
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->obs_len (clusterz);
+  return nc_cluster_redshift_class_obs_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz));
 }
 
 /**
  * nc_cluster_redshift_obs_params_len:
  * @clusterz: a #NcClusterRedshift
  *
- * The number of parameters related to the observable redshifts of each cluster, e.g.,
- * 1 - measured error of the photometric redshift.
+ * See nc_cluster_redshift_class_obs_len().
  *
  * Returns: The number of parameters related to the observable redshifts.
  */
 guint
 nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
 {
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->obs_params_len (clusterz);
+  return nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz));
 }
 
 /**

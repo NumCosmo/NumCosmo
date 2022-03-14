@@ -182,7 +182,7 @@
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
-#include "data/nc_data_cluster_counts_box_poisson.h"
+#include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_wl.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
@@ -693,7 +693,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
   
-  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);

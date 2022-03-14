@@ -116,8 +116,6 @@ static gdouble _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, NcHIC
 static gboolean _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
 static void _nc_cluster_photoz_gauss_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
-static guint _nc_cluster_photoz_gauss_obs_len (NcClusterRedshift *clusterz);
-static guint _nc_cluster_photoz_gauss_obs_params_len (NcClusterRedshift *clusterz);
 
 static void
 nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
@@ -168,8 +166,8 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   parent_class->resample       = &_nc_cluster_photoz_gauss_resample;
   parent_class->P_limits       = &_nc_cluster_photoz_gauss_p_limits;
   parent_class->N_limits       = &_nc_cluster_photoz_gauss_n_limits;
-  parent_class->obs_len        = &_nc_cluster_photoz_gauss_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_photoz_gauss_obs_params_len;
+  parent_class->obs_len        = 1;
+  parent_class->obs_params_len = 2;
   
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_REDSHIFT_IMPL_ALL);
 }
@@ -246,18 +244,6 @@ _nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo
   *z_upper = zu;
   
   return;
-}
-
-static guint
-_nc_cluster_photoz_gauss_obs_len (NcClusterRedshift *clusterz)
-{
-  return 1;
-}
-
-static guint
-_nc_cluster_photoz_gauss_obs_params_len (NcClusterRedshift *clusterz)
-{
-  return 2;
 }
 
 /**

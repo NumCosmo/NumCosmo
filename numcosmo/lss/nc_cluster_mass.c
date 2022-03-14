@@ -76,8 +76,6 @@ static gboolean _nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *c
 static void _nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
-static guint _nc_cluster_mass_obs_len (NcClusterMass *clusterm);
-static guint _nc_cluster_mass_obs_params_len (NcClusterMass *clusterm);
 
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
@@ -105,8 +103,8 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
   klass->P_limits       = &_nc_cluster_mass_p_limits;
   klass->P_bin_limits   = &_nc_cluster_mass_p_bin_limits;
   klass->N_limits       = &_nc_cluster_mass_n_limits;
-  klass->obs_len        = &_nc_cluster_mass_obs_len;
-  klass->obs_params_len = &_nc_cluster_mass_obs_params_len;
+  klass->obs_len        = 0;
+  klass->obs_params_len = 0;
 }
 
 static gdouble
@@ -159,20 +157,41 @@ _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z
   g_error ("_nc_cluster_mass_n_limits: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
 }
 
-static guint
-_nc_cluster_mass_obs_len (NcClusterMass *clusterm)
+/**
+ * nc_cluster_mass_class_obs_len:
+ * @clusterm_class: a #NcClusterMassClass
+ *
+ * The number of observable masses (or just the observable which is related to the cluster mass)
+ * of each cluster, e.g.,
+ * 1 - SZ mass,
+ * 1 - X-ray mass,
+ * 1 - Lensing mass,
+ * 2 - SZ and X-ray masses,
+ * 3 - SZ, X-ray and lensing masses.
+ *
+ * Returns: The number of observable masses.
+ */
+guint
+nc_cluster_mass_class_obs_len (NcClusterMassClass *clusterm_class)
 {
-  g_error ("_nc_cluster_mass_obs_len: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
-  
-  return 0;
+  return clusterm_class->obs_len;
 }
 
-static guint
-_nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
+/**
+ * nc_cluster_mass_class_obs_params_len:
+ * @clusterm_class: a #NcClusterMassClass
+ *
+ * The number of parameters related to the observable masses of each cluster, e.g.,
+ * 1 - error of the SZ mass,
+ * 1 - error of the X-ray mass,
+ * 2 - errors of SZ and X-ray masses.
+ *
+ * Returns: The number of parameters related to the observable masses.
+ */
+guint
+nc_cluster_mass_class_obs_params_len (NcClusterMassClass *clusterm_class)
 {
-  g_error ("_nc_cluster_mass_obs_params_len: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
-  
-  return 0;
+  return clusterm_class->obs_params_len;
 }
 
 /**
@@ -241,37 +260,28 @@ nc_cluster_mass_clear (NcClusterMass **clusterm)
  * nc_cluster_mass_obs_len:
  * @clusterm: a #NcClusterMass
  *
- * The number of observable masses (or just the observable which is related to the cluster mass)
- * of each cluster, e.g.,
- * 1 - SZ mass,
- * 1 - X-ray mass,
- * 1 - Lensing mass,
- * 2 - SZ and X-ray masses,
- * 3 - SZ, X-ray and lensing masses.
+ * See nc_cluster_mass_class_obs_len().
  *
  * Returns: The number of observable masses.
  */
 guint
 nc_cluster_mass_obs_len (NcClusterMass *clusterm)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->obs_len (clusterm);
+  return nc_cluster_mass_class_obs_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
 }
 
 /**
  * nc_cluster_mass_obs_params_len:
  * @clusterm: a #NcClusterMass
  *
- * The number of parameters related to the observable masses of each cluster, e.g.,
- * 1 - error of the SZ mass,
- * 1 - error of the X-ray mass,
- * 2 - errors of SZ and X-ray masses.
+ * See nc_cluster_mass_class_obs_params_len().
  *
  * Returns: The number of parameters related to the observable masses.
  */
 guint
 nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->obs_params_len (clusterm);
+  return nc_cluster_mass_class_obs_params_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
 }
 
 /**

@@ -1,6 +1,10 @@
 
 # aminclude_static.am generated automatically by Autoconf
+<<<<<<< HEAD
 # from AX_AM_MACROS_STATIC on Wed Mar  9 13:12:25 -03 2022
+=======
+# from AX_AM_MACROS_STATIC on Sun Mar 13 15:24:57 -03 2022
+>>>>>>> e48e4bdde0ac964a5e91425ffd081068fdd370fb
 
 
 # Code coverage

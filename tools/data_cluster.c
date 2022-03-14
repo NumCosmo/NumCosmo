@@ -89,7 +89,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
     NcMultiplicityFunc *mulf    = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_ps_new ());
     NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
     NcClusterAbundance *cad     = nc_cluster_abundance_nodist_new (mfp, NULL);
-    NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
+    NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad, "NcClusterRedshiftNodist", "NcClusterMassNodist");
     
     ncm_powspec_clear (&ps);
     ncm_powspec_filter_clear (&psf);

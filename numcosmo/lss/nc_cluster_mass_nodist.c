@@ -127,8 +127,6 @@ static gboolean _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHIC
 static void _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_nodist_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnm_lower, gdouble *lnm_upper);
-static guint _nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm);
-static guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm);
 
 static void
 nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
@@ -178,8 +176,8 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
   parent_class->P_bin_limits   = &_nc_cluster_mass_nodist_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
-  parent_class->obs_len        = &_nc_cluster_mass_nodist_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_nodist_obs_params_len;
+  parent_class->obs_len        = 1;
+  parent_class->obs_params_len = 0;
   
   ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_MASS_N_LIMITS, NC_CLUSTER_MASS_RESAMPLE, -1);
 }
@@ -256,16 +254,3 @@ _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
   
   return;
 }
-
-static guint
-_nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm)
-{
-  return 1;
-}
-
-static guint
-_nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm)
-{
-  return 0;
-}
-
