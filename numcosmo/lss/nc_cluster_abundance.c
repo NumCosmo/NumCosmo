@@ -485,7 +485,7 @@ _nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
- * @lnM_obs_params: (array) (element-type gdouble): other information of the observed mass, such as its error
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): other information of the observed mass, such as its error
  * @z: redshift
  *
  * This function computes $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,

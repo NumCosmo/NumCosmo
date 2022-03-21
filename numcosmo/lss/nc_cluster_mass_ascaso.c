@@ -135,7 +135,6 @@ _nc_cluster_mass_ascaso_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_ascaso_parent_class)->finalize (object);
 }
 
-<<<<<<< HEAD
 guint
 _nc_cluster_mass_ascaso_obs_len (NcClusterMass *clusterm)
 {
@@ -152,12 +151,12 @@ _nc_cluster_mass_ascaso_obs_params_len (NcClusterMass *clusterm)
   return 0;
 } 
 
-=======
->>>>>>> e48e4bdde0ac964a5e91425ffd081068fdd370fb
 static gdouble _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
+static gdouble _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
 static gboolean _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
 static void _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 
 static void
@@ -172,14 +171,9 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   object_class->finalize    = &_nc_cluster_mass_ascaso_finalize;
   
   ncm_model_class_set_name_nick (model_class, "Ascaso Ln-normal richness distribution", "Ascaso");
-<<<<<<< HEAD
   ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
   
   
-=======
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-
->>>>>>> e48e4bdde0ac964a5e91425ffd081068fdd370fb
   /**
    * NcClusterMassAscaso:M0:
    *
@@ -218,7 +212,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-min",
                                                         NULL,
                                                         "Minimum LnRichness",
-                                                        11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
+                                                        10.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -306,8 +300,10 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
 
   parent_class->P              = &_nc_cluster_mass_ascaso_p;
   parent_class->intP           = &_nc_cluster_mass_ascaso_intp;
+  parent_class->intP_bin       = &_nc_cluster_mass_ascaso_intp_bin;
   parent_class->resample       = &_nc_cluster_mass_ascaso_resample;
   parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
+  parent_class->P_bin_limits   = &_nc_cluster_mass_ascaso_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
   parent_class->obs_len        = 1;
   parent_class->obs_params_len = 0;
@@ -319,14 +315,12 @@ static gdouble
 _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z, const gdouble *logM_obs, const gdouble *logM_obs_params)
 {
   NcClusterMassAscaso *ascaso    = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble logM0            = log10 (ascaso->M0);
+  const gdouble logM0            = log  (ascaso->M0);
   const gdouble  z0              = ascaso->Z0;
-  const gdouble logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log10 (1.0 + z) - log10 (1.0 + z0));
-  const gdouble SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log10 (1.0 + z) - log10 (1.0 + z0));
+  const gdouble logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log ((1.0 + z)/(1.0 + z0)));
+  const gdouble SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log ((1.0 + z)/(1.0 + z0)));
   const gdouble sqrt2_sigma      = M_SQRT2 * SIGMA;
   const gdouble x                = (logM_obs[0] - logRichness_true) / sqrt2_sigma;
-  
-  NCM_UNUSED (cosmo);
   
   return M_2_SQRTPI / (2.0 * M_SQRT2) * exp (-x * x) / (SIGMA);
 }
@@ -335,11 +329,11 @@ static gdouble
 _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z)
 {
   NcClusterMassAscaso *ascaso    = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble logM0            = log10 (ascaso->M0);
+  const gdouble logM0            = log (ascaso->M0);
   const gdouble z0               = ascaso->Z0;
-  const gdouble SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log10 (1.0 + z) - log10 (1.0 + z0));
+  const gdouble SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log ((1.0 + z) / (1.0 + z0)));
   const gdouble sqrt2_sigma      = M_SQRT2 * SIGMA;
-  const gdouble logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log10 (1.0 + z) - log10 (1.0 + z0) );
+  const gdouble logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log ((1.0 + z) / (1.0 + z0)));
   const gdouble x_min            = (logRichness_true - ascaso->lnRichness_min) / sqrt2_sigma;
   const gdouble x_max            = (logRichness_true - ascaso->lnRichness_max) / sqrt2_sigma;
   
@@ -351,20 +345,39 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
     return (erf (x_min) - erf (x_max)) / 2.0;
 }
 
+static gdouble 
+_nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble logM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
+{
+  NcClusterMassAscaso *ascaso    = NC_CLUSTER_MASS_ASCASO (clusterm);
+  const gdouble logM0            = log (ascaso->M0);
+  const gdouble z0               = ascaso->Z0;
+  const gdouble SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log ((1.0 + z) / (1.0 + z0)));
+  const gdouble sqrt2_sigma      = M_SQRT2 * SIGMA;
+  const gdouble logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log ((1.0 + z) / (1.0 + z0)));
+  const gdouble x_min            = (logRichness_true - lnM_obs_lower[0]) / sqrt2_sigma;
+  const gdouble x_max            = (logRichness_true - lnM_obs_upper[0]) / sqrt2_sigma;
+
+  if (x_max > 4.0)
+    return -(erfc (x_min) - erfc (x_max)) / 2.0;
+  else
+    return (erf (x_min) - erf (x_max)) / 2.0;
+}
+
+
 static gboolean
 _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
   gdouble logRichness_true;
   gdouble SIGMA;
-  const gdouble logM0 = log10 (ascaso->M0);
+  const gdouble logM0 = log (ascaso->M0);
   const gdouble z0    = ascaso->Z0;
 
   NCM_UNUSED (cosmo);
   
   ncm_rng_lock (rng);
-  logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log10 (1.0 + z) - log10(1.0+z0));
-  SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log10 (1.0 + z) - log10 (1.0 + z0));
+  logRichness_true = MU_P0 + MU_P1 * (logM - logM0) + MU_P2 * (log ((1.0 + z) / (1.0 + z0)));
+  SIGMA            = SIGMA_P0 + SIGMA_P1 * (logM - logM0) + SIGMA_P2 * (log ((1.0 + z) / (1.0 + z0)));
   lnM_obs[0]       =  logRichness_true + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
   
@@ -386,6 +399,23 @@ _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, co
   
   return;
 }
+
+static void 
+_nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+{
+  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  const gdouble lnMl          = lnM_obs_lower[0] - 7.0 * SIGMA_P0;
+  const gdouble lnMu          = lnM_obs_upper[0] + 7.0 * SIGMA_P0;
+  
+  NCM_UNUSED (cosmo);
+  
+  *lnM_lower = lnMl;
+  *lnM_upper = lnMu;
+
+
+}
+
+
 
 static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)

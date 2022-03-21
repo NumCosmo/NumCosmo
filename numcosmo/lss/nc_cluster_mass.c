@@ -288,15 +288,15 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * nc_cluster_mass_p:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @lnM:logarithm base e of the true mass
- * @z: true redshift
- * @lnM_obs: (array) (element-type double): logarithm base e of the observed mass
- * @lnM_obs_params: (array) (element-type double): observed mass paramaters
+ * @lnM: (element-type gdouble): FIXME
+ * @z:  (element-type gdouble): FIXME
+ * @lnM_obs: (array) (element-type gdouble): FIXME
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
  *
- * It computes the probability density function (pdf) of the cluster mass distribution @clusterm
- * given @cosmo, @lnM, @z and the observable cluster mass (or just the observable).
+ * 
+ * FIXME
  *
- * Returns: The pdf of @clusterm.
+ * Returns: FIXME
  */
 gdouble
 nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
