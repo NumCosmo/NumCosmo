@@ -48,6 +48,9 @@ struct _NcHICosmoDEWSplinePrivate
   guint size;
   gdouble z_1;
   gdouble z_f;
+  gdouble alpha_f;
+  gdouble w_f;
+  gdouble int_f;
   NcmSpline *w_alpha;
 };
 
@@ -69,6 +72,9 @@ nc_hicosmo_de_wspline_init (NcHICosmoDEWSpline *wspline)
   self->size    = 0;
   self->z_1     = 0.0;
   self->z_f     = 0.0;
+  self->alpha_f = 0.0;
+  self->w_f     = 0.0;
+  self->int_f   = 0.0;
   self->w_alpha = NULL;
 }
 
@@ -133,6 +139,7 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
 
     self->nknots = wz_size;
     self->size = model_class->sparam_len + self->nknots;
+    self->alpha_f = alphaf;
 
     g_assert_cmpuint (wz_size, >, 2);
 
@@ -252,6 +259,10 @@ _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
   if (!ncm_model_lstate_is_update (NCM_MODEL (wspline), 0))
   {
     ncm_spline_prepare (self->w_alpha);
+
+    self->w_f   = ncm_spline_eval (self->w_alpha, self->alpha_f);
+    self->int_f = ncm_spline_eval_integ (self->w_alpha, 0.0, self->alpha_f);
+
     ncm_model_lstate_set_update (NCM_MODEL (wspline), 0);
   }
   else
@@ -262,12 +273,18 @@ static gdouble
 _nc_hicosmo_de_wspline_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
   _nc_hicosmo_de_wspline_prepare (wspline);
-  {
-    NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-    const gdouble alpha = log1p (z);
 
+  if (z < self->z_f)
+  {
+    const gdouble alpha = log1p (z);
     return OMEGA_X * exp (3.0 * (alpha + ncm_spline_eval_integ (self->w_alpha, 0.0, alpha)));
+  }
+  else
+  {
+    const gdouble alpha = log1p (z);
+    return OMEGA_X * exp (3.0 * (alpha + self->int_f + self->w_f * (alpha - self->alpha_f)));
   }
 }
 
@@ -275,9 +292,12 @@ static gdouble
 _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
   _nc_hicosmo_de_wspline_prepare (wspline);
+
+  if (z < self->z_f)
   {
-    NcHICosmoDEWSplinePrivate * const self = wspline->priv;
     const gdouble alpha             = log1p (z);
     const gdouble w                 = ncm_spline_eval (self->w_alpha, alpha);
     const gdouble int_w             = ncm_spline_eval_integ (self->w_alpha, 0.0, alpha);
@@ -285,15 +305,23 @@ _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 
     return 3.0 * (1.0 + w) * exp_malpha_OmegaX;
   }
+  else
+  {
+    const gdouble alpha = log1p (z);
+    return OMEGA_X * 3.0 * (1.0 + self->w_f) * exp (2.0 * alpha + 3.0 * (self->int_f + self->w_f * (alpha - self->alpha_f)));
+  }
 }
 
 static gdouble
 _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 {
   NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
   _nc_hicosmo_de_wspline_prepare (wspline);
+
+  if (z < self->z_f)
   {
-    NcHICosmoDEWSplinePrivate * const self = wspline->priv;
     const gdouble alpha              = log1p (z);
     const gdouble w                  = ncm_spline_eval (self->w_alpha, alpha);
     const gdouble dw                 = ncm_spline_eval_deriv (self->w_alpha, alpha);
@@ -302,20 +330,32 @@ _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 
     return 3.0 * (2.0 + w * (5.0 + 3.0 * w) + dw) * exp_m2alpha_OmegaX;
   }
+  else
+  {
+    const gdouble alpha              = log1p (z);
+    const gdouble exp_m2alpha_OmegaX = OMEGA_X * exp (1.0 * alpha + 3.0 * (self->int_f + self->w_f * (alpha - self->alpha_f)));
+
+    return 3.0 * (2.0 + self->w_f * (5.0 + 3.0 * self->w_f)) * exp_m2alpha_OmegaX;
+  }
 }
 
 static gdouble
 _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
   _nc_hicosmo_de_wspline_prepare (wspline);
+
+  if (z < self->z_f)
   {
-    NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-    const gdouble alpha  = log1p (z);
+    const gdouble alpha  = z < self->z_f ? log1p (z) : log1p (self->z_f);
     const gdouble w      = ncm_spline_eval (self->w_alpha, alpha);
 
     return w;
   }
+  else
+    return self->w_f;
 }
 
 /**
