@@ -135,25 +135,6 @@ _nc_cluster_mass_ascaso_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_ascaso_parent_class)->finalize (object);
 }
 
-<<<<<<< HEAD
-guint
-_nc_cluster_mass_ascaso_obs_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 1;
-}
-
-guint
-_nc_cluster_mass_ascaso_obs_params_len (NcClusterMass *clusterm)
-{
-  NCM_UNUSED (clusterm);
-  
-  return 0;
-} 
-
-=======
->>>>>>> e48e4bdde0ac964a5e91425ffd081068fdd370fb
 static gdouble _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gboolean _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
@@ -172,14 +153,8 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   object_class->finalize    = &_nc_cluster_mass_ascaso_finalize;
   
   ncm_model_class_set_name_nick (model_class, "Ascaso Ln-normal richness distribution", "Ascaso");
-<<<<<<< HEAD
   ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
   
-  
-=======
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-
->>>>>>> e48e4bdde0ac964a5e91425ffd081068fdd370fb
   /**
    * NcClusterMassAscaso:M0:
    *
