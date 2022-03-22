@@ -212,7 +212,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-min",
                                                         NULL,
                                                         "Minimum LnRichness",
-                                                        10.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
+                                                        M_LN10 * log10(1), G_MAXDOUBLE, M_LN10 * log10(10e3),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -225,7 +225,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-max",
                                                         NULL,
                                                         "Maximum LnRichness",
-                                                        11.0 * M_LN10, G_MAXDOUBLE, 16.0 * M_LN10,
+                                                        M_LN10 * log10(10e3), G_MAXDOUBLE,  M_LN10 * log10(10e5),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -338,7 +338,6 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
   const gdouble x_max            = (logRichness_true - ascaso->lnRichness_max) / sqrt2_sigma;
   
   NCM_UNUSED (cosmo);
-  
   if (x_max > 4.0)
     return -(erfc (x_min) - erfc (x_max)) / 2.0;
   else
@@ -389,8 +388,8 @@ _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, co
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
   const gdouble mean          = lnM_obs[0] - MU_P0; /* - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? */
-  const gdouble logRichnessl  = mean - 7.0 * SIGMA_P0;
-  const gdouble logRichnessu  = mean + 7.0 * SIGMA_P0;
+  const gdouble logRichnessl  = M_LN10 * log10(1e13);
+  const gdouble logRichnessu  = M_LN10 * log10(1e15);
   
   NCM_UNUSED (cosmo);
   
@@ -416,13 +415,13 @@ _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo,
 }
 
 
-
+  
 static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMl          = ascaso->lnRichness_min - 7.0 * SIGMA_P0;
-  const gdouble lnMu          = ascaso->lnRichness_max + 7.0 * SIGMA_P0;
+  const gdouble lnMl          =  M_LN10 * log10(1e13);
+  const gdouble lnMu          =  M_LN10 * log10(1e15);  
   
   NCM_UNUSED (cosmo);
   
