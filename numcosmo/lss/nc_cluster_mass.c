@@ -288,8 +288,8 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * nc_cluster_mass_p:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @lnM: (element-type gdouble): FIXME
- * @z:  (element-type gdouble): FIXME
+ * @lnM: FIXME
+ * @z: FIXME
  * @lnM_obs: (array) (element-type gdouble): FIXME
  * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
  *

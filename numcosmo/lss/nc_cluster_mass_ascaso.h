@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterMassAscasoClass NcClusterMassAscasoClass;
 typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
+typedef struct _NcClusterMassAscasoPrivate NcClusterMassAscasoPrivate;
 
 /**
  * NcClusterMassAscasoSParams:
@@ -84,10 +85,7 @@ struct _NcClusterMassAscaso
 {
   /*< private >*/
   NcClusterMass parent_instance;
-  gdouble M0;
-  gdouble Z0; 
-  gdouble lnRichness_max;
-  gdouble lnRichness_min;
+  NcClusterMassAscasoPrivate *priv;
 };
 
 GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
