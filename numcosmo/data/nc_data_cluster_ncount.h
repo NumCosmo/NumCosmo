@@ -97,6 +97,10 @@ void nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, con
 void nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
 void nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m);
 
+void nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins);
+void nc_data_cluster_ncount_set_z_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins);
+void nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bin_count);
+
 gboolean nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount);
 gboolean nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount);
 
@@ -120,16 +124,14 @@ gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, gdouble area_survey, NcmRNG *rng);
 void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
-void nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes);
-void nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_nbins, guint lnM_nbins);
-void nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVector *z_quantiles, NcmVector *lnM_quantiles);
+void nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub);
 void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
+void nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);
 void nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
-
 
 G_END_DECLS
 

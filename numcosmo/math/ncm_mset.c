@@ -377,7 +377,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   }
   else
   {
-    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+    g_error ("This model or its parent is already registered, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
   }
 
   return;

@@ -41,6 +41,7 @@
 
 #include "math/ncm_func_eval.h"
 #include "math/ncm_serialize.h"
+#include "math/ncm_obj_array.h"
 #include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -68,8 +69,9 @@ enum
   PROP_SURVEY_AREA,
   PROP_USE_TRUE,
   PROP_BINNED,
-  PROP_Z_NODES,
-  PROP_LNM_NODES,
+  PROP_Z_OBS_BINS,
+  PROP_LNM_OBS_BINS,
+  PROP_BIN_COUNT,
   PROP_FIDUCIAL,
   PROP_SEED,
   PROP_RNG_NAME,
@@ -92,16 +94,16 @@ struct _NcDataClusterNCountPrivate
   guint np;
   guint z_obs_len;
   guint z_obs_params_len;
-  guint M_obs_len;
-  guint M_obs_params_len;
+  guint lnM_obs_len;
+  guint lnM_obs_params_len;
   gdouble log_np_fac;
   gboolean use_true_data;
   gboolean binned;
-  NcmVector *z_nodes;
-  NcmVector *lnM_nodes;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
-  gsl_histogram2d *z_lnM;
+  NcmObjArray *z_obs_bins;
+  NcmObjArray *lnM_obs_bins;
+  NcmVector *bin_count;
   gboolean fiducial;
   guint64 seed;
   gchar *rnd_name;
@@ -119,8 +121,8 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   self->redshift_type    = G_TYPE_INVALID;
   self->z_obs_len        = 0;
   self->z_obs_params_len = 0;
-  self->M_obs_len        = 0;
-  self->M_obs_params_len = 0;
+  self->lnM_obs_len        = 0;
+  self->lnM_obs_params_len = 0;
   self->lnM_true         = NULL;
   self->z_true           = NULL;
   self->z_obs            = NULL;
@@ -133,11 +135,11 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   self->log_np_fac       = 0.0;
   self->use_true_data    = FALSE;
   self->binned           = FALSE;
-  self->z_nodes          = NULL;
-  self->lnM_nodes        = NULL;
   self->purity           = NULL;
   self->sd_lnM           = NULL;
-  self->z_lnM            = NULL;
+  self->z_obs_bins       = ncm_obj_array_new ();
+  self->lnM_obs_bins     = ncm_obj_array_new ();
+  self->bin_count        = NULL;
   self->fiducial         = FALSE;
   self->seed             = 0;
   self->rnd_name         = NULL;
@@ -165,10 +167,10 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
         g_error ("nc_data_cluster_ncount_set_property: GType `%s' unregistered or invalid.", g_value_get_string (value));
 
       clusterm_class         = g_type_class_ref (self->mass_type);
-      self->M_obs_len        = nc_cluster_mass_class_obs_len (clusterm_class);
-      self->M_obs_params_len = nc_cluster_mass_class_obs_params_len (clusterm_class);
+      self->lnM_obs_len        = nc_cluster_mass_class_obs_len (clusterm_class);
+      self->lnM_obs_params_len = nc_cluster_mass_class_obs_params_len (clusterm_class);
 
-      g_assert (self->M_obs_len > 0);
+      g_assert (self->lnM_obs_len > 0);
 
       g_type_class_unref (clusterm_class);
       break;
@@ -217,22 +219,15 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
     case PROP_BINNED:
       nc_data_cluster_ncount_set_binned (ncount, g_value_get_boolean (value));
       break;
-    case PROP_Z_NODES:
-    {
-      ncm_vector_clear (&self->z_nodes);
-      self->z_nodes = g_value_dup_object (value);
-      if (self->z_nodes != NULL)
-        self->binned = FALSE;
+    case PROP_Z_OBS_BINS:
+      nc_data_cluster_ncount_set_z_obs_bins (ncount, g_value_get_boxed (value));
       break;
-    }
-    case PROP_LNM_NODES:
-    {
-      ncm_vector_clear (&self->lnM_nodes);
-      self->lnM_nodes = g_value_dup_object (value);
-      if (self->lnM_nodes != NULL)
-        self->binned = FALSE;
+    case PROP_LNM_OBS_BINS:
+      nc_data_cluster_ncount_set_lnM_obs_bins (ncount, g_value_get_boxed (value));
       break;
-    }
+    case PROP_BIN_COUNT:
+      nc_data_cluster_ncount_set_bin_count (ncount, g_value_get_object (value));
+      break;
     case PROP_FIDUCIAL:
       self->fiducial = g_value_get_boolean (value);
       break;
@@ -295,11 +290,14 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_BINNED:
       g_value_set_boolean (value, self->binned);
       break;
-    case PROP_Z_NODES:
-      g_value_set_object (value, self->z_nodes);
+    case PROP_Z_OBS_BINS:
+      g_value_set_boxed (value, self->z_obs_bins);
       break;
-    case PROP_LNM_NODES:
-      g_value_set_object (value, self->lnM_nodes);
+    case PROP_LNM_OBS_BINS:
+      g_value_set_boxed (value, self->lnM_obs_bins);
+      break;
+    case PROP_BIN_COUNT:
+      g_value_set_object (value, self->bin_count);
       break;
     case PROP_FIDUCIAL:
       g_value_set_boolean (value, self->fiducial);
@@ -332,8 +330,9 @@ nc_data_cluster_ncount_dispose (GObject *object)
   ncm_matrix_clear (&self->lnM_obs);
   ncm_matrix_clear (&self->lnM_obs_params);
 
-  ncm_vector_clear (&self->lnM_nodes);
-  ncm_vector_clear (&self->z_nodes);
+  ncm_obj_array_clear (&self->lnM_obs_bins);
+  ncm_obj_array_clear (&self->z_obs_bins);
+  ncm_vector_clear (&self->bin_count);
 
   g_clear_pointer (&self->m2lnL_a, g_array_unref);
 
@@ -350,7 +349,6 @@ nc_data_cluster_ncount_finalize (GObject *object)
   g_clear_pointer (&self->rnd_name, g_free);
   g_clear_pointer (&self->purity, gsl_histogram2d_free);
   g_clear_pointer (&self->sd_lnM, gsl_histogram2d_free);
-  g_clear_pointer (&self->z_lnM, gsl_histogram2d_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->finalize (object);
@@ -458,19 +456,26 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_Z_NODES,
-                                   g_param_spec_object ("z-nodes",
+                                   PROP_Z_OBS_BINS,
+                                   g_param_spec_boxed ("z-obs-bins",
                                                         NULL,
-                                                        "Clusters redshifts nodes for binning",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        "Clusters redshifts bins",
+                                                        NCM_TYPE_OBJ_ARRAY,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_LNM_NODES,
-                                   g_param_spec_object ("lnM-nodes",
+                                   PROP_LNM_OBS_BINS,
+                                   g_param_spec_boxed ("lnM-obs-bins",
                                                         NULL,
-                                                        "Clusters mass nodes for binning",
+                                                        "Clusters mass bins",
+                                                        NCM_TYPE_OBJ_ARRAY,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_COUNT,
+                                   g_param_spec_object ("bin-count",
+                                                        NULL,
+                                                        "Bin count",
                                                         NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_FIDUCIAL,
@@ -538,7 +543,6 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
   nc_cluster_abundance_prepare_if_needed (self->cad, cosmo, clusterz, clusterm);
 }
 
-void _nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 static gchar *_nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo);
 
 static void
@@ -562,8 +566,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   gdouble *zi_obs = g_new (gdouble, self->z_obs_len);
   gdouble *zi_obs_params = self->z_obs_params_len > 0 ? g_new (gdouble, self->z_obs_params_len) : NULL;
-  gdouble *lnMi_obs = g_new (gdouble, self->M_obs_len);
-  gdouble *lnMi_obs_params = self->M_obs_params_len > 0 ? g_new (gdouble, self->M_obs_params_len) : NULL;
+  gdouble *lnMi_obs = g_new (gdouble, self->lnM_obs_len);
+  gdouble *lnMi_obs_params = self->lnM_obs_params_len > 0 ? g_new (gdouble, self->lnM_obs_params_len) : NULL;
 
   g_assert (G_OBJECT_TYPE (clusterz) == self->redshift_type);
   g_assert (G_OBJECT_TYPE (clusterm) == self->mass_type);
@@ -579,13 +583,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_free (lnMi_obs);
     if (self->z_obs_params_len > 0)
       g_free (zi_obs_params);
-    if (self->M_obs_params_len > 0)
+    if (self->lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
-
-    if (self->binned)
-    {
-      _nc_data_cluster_ncount_bin_data (ncount);
-    }
 
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
@@ -598,9 +597,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   if (self->z_obs_params_len > 0)
     z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_params_len);
 
-  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->M_obs_len);
-  if (self->M_obs_params_len > 0)
-    lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->M_obs_params_len);
+  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_len);
+  if (self->lnM_obs_params_len > 0)
+    lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_params_len);
 
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
                                          cad->lnMi);
@@ -622,12 +621,12 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
         g_array_append_val (z_true_array, z_true);
 
         g_array_append_vals (z_obs_array, zi_obs, self->z_obs_len);
-        g_array_append_vals (lnM_obs_array, lnMi_obs, self->M_obs_len);
+        g_array_append_vals (lnM_obs_array, lnMi_obs, self->lnM_obs_len);
 
         if (self->z_obs_params_len > 0)
           g_array_append_vals (z_obs_params_array, zi_obs_params, self->z_obs_params_len);
-        if (self->M_obs_params_len > 0)
-          g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, self->M_obs_params_len);
+        if (self->lnM_obs_params_len > 0)
+          g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, self->lnM_obs_params_len);
       }
     }
   }
@@ -639,7 +638,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_free (lnMi_obs);
     if (self->z_obs_params_len > 0)
       g_free (zi_obs_params);
-    if (self->M_obs_params_len > 0)
+    if (self->lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
 
     ncm_vector_clear (&self->lnM_true);
@@ -650,11 +649,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_array_unref (z_obs_array);
     ncm_matrix_clear (&self->lnM_obs);
     g_array_unref (lnM_obs_array);
-
-    if (self->binned)
-    {
-      _nc_data_cluster_ncount_bin_data (ncount);
-    }
 
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
@@ -673,7 +667,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   g_array_unref (z_obs_array);
 
   ncm_matrix_clear (&self->lnM_obs);
-  self->lnM_obs = ncm_matrix_new_array (lnM_obs_array, self->M_obs_len);
+  self->lnM_obs = ncm_matrix_new_array (lnM_obs_array, self->lnM_obs_len);
   g_array_unref (lnM_obs_array);
 
   if (self->z_obs_params_len > 0)
@@ -683,10 +677,10 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_array_unref (z_obs_params_array);
   }
 
-  if (self->M_obs_params_len > 0)
+  if (self->lnM_obs_params_len > 0)
   {
     ncm_matrix_clear (&self->lnM_obs_params);
-    self->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, self->M_obs_params_len);
+    self->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, self->lnM_obs_params_len);
     g_array_unref (lnM_obs_params_array);
   }
 
@@ -699,11 +693,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   g_free (zi_obs_params);
   g_free (lnMi_obs);
   g_free (lnMi_obs_params);
-
-  if (self->binned)
-  {
-    _nc_data_cluster_ncount_bin_data (ncount);
-  }
 }
 
 /**
@@ -853,9 +842,9 @@ nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix
   else
     self->np = ncm_matrix_nrows (m);
 
-  if (self->M_obs_len != ncm_matrix_ncols (m))
+  if (self->lnM_obs_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, NcmClusterMass object has %u points per observation and the matrix has %u cols.",
-             self->M_obs_len, ncm_matrix_ncols (m));
+             self->lnM_obs_len, ncm_matrix_ncols (m));
   self->lnM_obs = ncm_matrix_dup (m);
 }
 
@@ -886,9 +875,9 @@ nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const Nc
   else
     self->np = ncm_matrix_nrows (m);
 
-  if (self->M_obs_params_len != ncm_matrix_ncols (m))
+  if (self->lnM_obs_params_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_lnM_obs_params: incompatible matrix, NcmClusterMass object has %u parameters per observation and the matrix has %u cols.",
-             self->M_obs_params_len, ncm_matrix_ncols (m));
+             self->lnM_obs_params_len, ncm_matrix_ncols (m));
   self->lnM_obs_params = ncm_matrix_dup (m);
 }
 
@@ -959,6 +948,59 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
 }
 
 /**
+ * nc_data_cluster_ncount_set_lnM_obs_bins:
+ * @ncount: a #NcDataClusterNCount
+ * @lnM_obs_bins: a #NcmObsArray
+ *
+ * Sets array of #NcmVector's representing the lower and upper bounds
+ * of each bin.
+ *
+ */
+void
+nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins)
+{
+  NcDataClusterNCountPrivate * const self = ncount->priv;
+
+  ncm_obj_array_clear (&self->lnM_obs_bins);
+  self->lnM_obs_bins = ncm_obj_array_ref (lnM_obs_bins);
+}
+
+/**
+ * nc_data_cluster_ncount_set_z_obs_bins:
+ * @ncount: a #NcDataClusterNCount
+ * @z_obs_bins: a #NcmObsArray
+ *
+ * Sets array of #NcmVector's representing the lower and upper bounds
+ * of each bin.
+ *
+ */
+void
+nc_data_cluster_ncount_set_z_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins)
+{
+  NcDataClusterNCountPrivate * const self = ncount->priv;
+
+  ncm_obj_array_clear (&self->z_obs_bins);
+  self->z_obs_bins = ncm_obj_array_ref (z_obs_bins);
+}
+
+/**
+ * nc_data_cluster_ncount_set_bin_count:
+ * @ncount: a #NcDataClusterNCount
+ * @bin_count: a #NcmVector
+ *
+ * Sets vector containing the bin counts.
+ *
+ */
+void
+nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bin_count)
+{
+  NcDataClusterNCountPrivate * const self = ncount->priv;
+
+  ncm_vector_clear (&self->bin_count);
+  self->bin_count = ncm_vector_ref (bin_count);
+}
+
+/**
  * nc_data_cluster_ncount_has_lnM_true:
  * @ncount: a #NcDataClusterNCount
  *
@@ -1018,7 +1060,7 @@ nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
-  return self->M_obs_len;
+  return self->lnM_obs_len;
 }
 
 /**
@@ -1035,7 +1077,7 @@ nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
-  return self->M_obs_params_len;
+  return self->lnM_obs_params_len;
 }
 
 /**
@@ -1322,7 +1364,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   *m2lnL = 0.0;
 
   if (self->binned)
+  {
     g_error ("_nc_data_cluster_ncount_m2lnL_val: don't support binned likelihood yet.");
+  }
 
   if (self->np == 0)
   {
@@ -1518,249 +1562,34 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
   gsl_histogram2d_free (h);
 }
 
-void
-_nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
-{
-  NcDataClusterNCountPrivate * const self = ncount->priv;
-
-  gsl_histogram2d_reset (self->z_lnM);
-
-  if (self->np == 0)
-    return;
-
-  if (self->use_true_data)
-  {
-    guint i;
-
-    for (i = 0; i < self->np; i++)
-    {
-      const gdouble lnM = ncm_vector_get (self->lnM_true, i);
-      const gdouble z   = ncm_vector_get (self->z_true, i);
-      gsl_histogram2d_increment (self->z_lnM, z, lnM);
-    }    
-  }
-  else
-  {
-    guint i;
-    
-    for (i = 0; i < self->np; i++)
-    {
-      const gdouble lnM = ncm_matrix_get (self->lnM_obs, i, 0);
-      const gdouble z   = ncm_matrix_get (self->z_obs, i, 0);
-      gsl_histogram2d_increment (self->z_lnM, z, lnM);
-    }
-  }
-}
-
-static void
-_nc_data_cluster_ncount_bin_alloc (NcDataClusterNCount *ncount, guint z_bins, guint lnM_bins)
-{
-  NcDataClusterNCountPrivate * const self = ncount->priv;
-
-  g_assert_cmpint (z_bins, >=, 1);
-  g_assert_cmpint (lnM_bins, >=, 1);
-
-  if (self->z_lnM != NULL)
-  {
-    if (self->z_lnM->nx != z_bins || self->z_lnM->ny != lnM_bins)
-    {
-      g_clear_pointer (&self->z_lnM, gsl_histogram2d_free);
-      self->z_lnM = gsl_histogram2d_alloc (z_bins, lnM_bins);
-    }
-  }
-  else
-    self->z_lnM = gsl_histogram2d_alloc (z_bins, lnM_bins);
-
-}
-
 /**
- * nc_data_cluster_ncount_set_bin_by_nodes:
+ * nc_data_cluster_ncount_add_bin:
  * @ncount: a #NcDataClusterNCount
- * @z_nodes: a #NcmVector
- * @lnM_nodes: a #NcmVector
+ * @lnM_obs_lb: a #NcmVector
+ * @lnM_obs_ub: a #NcmVector
+ * @z_obs_lb: a #NcmVector
+ * @z_obs_ub: a #NcmVector
  *
- * FIXME
- *
- */
-void
-nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes)
-{
-  NcDataClusterNCountPrivate * const self = ncount->priv;
-  guint z_bins   = ncm_vector_len (z_nodes) - 1;
-  guint lnM_bins = ncm_vector_len (lnM_nodes) - 1;
-  _nc_data_cluster_ncount_bin_alloc (ncount, z_bins, lnM_bins);
-
-  g_assert_cmpint (ncm_vector_stride (z_nodes), ==, 1);
-  g_assert_cmpint (ncm_vector_stride (lnM_nodes), ==, 1);
-  
-  gsl_histogram2d_set_ranges (self->z_lnM,
-                              ncm_vector_ptr (z_nodes, 0), z_bins + 1, 
-                              ncm_vector_ptr (lnM_nodes, 0), lnM_bins + 1);
-
-  _nc_data_cluster_ncount_bin_data (ncount);
-  self->binned = TRUE;
-/*
-  ncm_vector_log_vals (z_nodes,   "# z   ", "% 20.15g");
-  ncm_vector_log_vals (lnM_nodes, "# lnM ", "% 20.15g");
-*/  
-  if (self->z_nodes != z_nodes)
-  {
-    ncm_vector_clear (&self->z_nodes);
-    self->z_nodes = ncm_vector_ref (z_nodes);
-  }
-
-  if (self->lnM_nodes != lnM_nodes)
-  {
-    ncm_vector_clear (&self->lnM_nodes);
-    self->lnM_nodes = ncm_vector_ref (lnM_nodes);
-  }
-}
-
-/**
- * nc_data_cluster_ncount_set_bin_by_minmax:
- * @ncount: a #NcDataClusterNCount.
- * @z_nbins: number of bins in z.
- * @lnM_nbins: number of bins in $\ln(M)$. 
- *
- * Creates a uniform binning with @z_nbins and @lnM_nbins.
+ * Adds a new bin using the lower and upper bounds defined in
+ * (@lnM_obs_lb, @lnM_obs_ub), (@z_obs_lb @z_obs_ub).
  *
  */
 void
-nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_nbins, guint lnM_nbins)
+nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  gdouble z_min = 0.0, z_max = 0.0, lnM_min = 0.0, lnM_max = 0.0;
-  _nc_data_cluster_ncount_bin_alloc (ncount, z_nbins, lnM_nbins);
-  if (self->use_true_data)
-  {
-    gsl_vector_minmax (ncm_vector_gsl (self->z_true), &z_min, &z_max);
-    gsl_vector_minmax (ncm_vector_gsl (self->lnM_true), &lnM_min, &lnM_max);
-  }
-  else
-  {
-    gsl_matrix_minmax (ncm_matrix_gsl (self->z_obs), &z_min, &z_max);
-    gsl_matrix_minmax (ncm_matrix_gsl (self->lnM_obs), &lnM_min, &lnM_max);
-  }
 
-  z_min = 0.0;
-  z_max = z_max * 1.5;
+  g_assert_cmpuint (ncm_vector_len (lnM_obs_lb), ==, self->lnM_obs_len);
+  g_assert_cmpuint (ncm_vector_len (lnM_obs_ub), ==, self->lnM_obs_len);
 
-  lnM_min = lnM_min + (lnM_min > 0.0 ? -0.5 * lnM_min : 0.5 * lnM_min);
-  lnM_max = lnM_max + (lnM_max > 0.0 ? 0.5 * lnM_min : - 0.5 * lnM_min);
+  g_assert_cmpuint (ncm_vector_len (z_obs_ub), ==, self->z_obs_len);
+  g_assert_cmpuint (ncm_vector_len (z_obs_ub), ==, self->z_obs_len);
 
-  gsl_histogram2d_set_ranges_uniform (self->z_lnM, z_min, z_max, lnM_min, lnM_max);
-  _nc_data_cluster_ncount_bin_data (ncount);
-  self->binned = TRUE;
+  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (ncm_vector_dup (lnM_obs_lb)));
+  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (ncm_vector_dup (lnM_obs_ub)));
 
-  ncm_vector_clear (&self->z_nodes);
-  ncm_vector_clear (&self->lnM_nodes);
-  self->z_nodes   = ncm_vector_new_data_dup (self->z_lnM->xrange, self->z_lnM->nx + 1, 1);
-  self->lnM_nodes = ncm_vector_new_data_dup (self->z_lnM->yrange, self->z_lnM->ny + 1, 1);
-/*
-  ncm_vector_log_vals (self->z_nodes,   "minmax-z  ", "%8.4g");
-  ncm_vector_log_vals (self->lnM_nodes, "minmax-lnM", "%8.4g");
-*/
-}
-
-/**
- * nc_data_cluster_ncount_set_bin_by_quantile:
- * @ncount: a #NcDataClusterNCount.
- * @z_quantiles: FIXME
- * @lnM_quantiles: FIXME
- *
- * FIXME
- *
- */
-void 
-nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVector *z_quantiles, NcmVector *lnM_quantiles)
-{
-  NcDataClusterNCountPrivate * const self = ncount->priv;
-  guint z_bins   = ncm_vector_len (z_quantiles) + 1;
-  guint lnM_bins = ncm_vector_len (lnM_quantiles) + 1;
-  NcmVector *z_nodes = ncm_vector_new (z_bins + 1);
-  NcmVector *lnM_nodes = ncm_vector_new (lnM_bins + 1);
-  guint i;
-
-  if ((ncm_vector_get (z_quantiles, 0) == 0.0) || 
-      (ncm_vector_get (lnM_quantiles, 0) == 0.0) ||
-      (ncm_vector_get (z_quantiles, ncm_vector_len (z_quantiles) - 1) == 1.0) ||
-      (ncm_vector_get (lnM_quantiles, ncm_vector_len (lnM_quantiles) - 1) == 1.0))
-  {
-    g_error ("nc_data_cluster_ncount_set_bin_by_quantile: quantiles must be > 0.0 and < 1.0");
-  }
-
-
-  {
-    gdouble *z_data, *lnM_data;
-    guint z_stride, lnM_stride;
-    guint z_len, lnM_len;
-    NcmVector *z_dup = NULL;
-    NcmVector *lnM_dup = NULL;
-    gdouble z_min = 0.0, z_max = 0.0, lnM_min = 0.0, lnM_max = 0.0;
-    
-    if (self->use_true_data)
-    {
-      z_dup   = ncm_vector_dup (self->z_true);
-      lnM_dup = ncm_vector_dup (self->lnM_true);
-    }
-    else
-    {
-      NcmVector *col = ncm_matrix_get_col (self->z_obs, 0);
-
-      z_dup   = ncm_vector_dup (col);
-      ncm_vector_free (col);
-
-      col = ncm_matrix_get_col (self->lnM_obs, 0);
-      lnM_dup = ncm_vector_dup (col);
-      
-      ncm_vector_free (col);
-    }
-
-    z_data     = ncm_vector_ptr (z_dup, 0);
-    lnM_data   = ncm_vector_ptr (lnM_dup, 0);
-    z_stride   = ncm_vector_stride (z_dup);
-    lnM_stride = ncm_vector_stride (lnM_dup);
-    z_len      = ncm_vector_len (z_dup);
-    lnM_len    = ncm_vector_len (lnM_dup);
-
-    gsl_sort (z_data, z_stride, z_len);
-    gsl_sort (lnM_data, lnM_stride, lnM_len);
-    
-    z_min = 0.0;
-    z_max = z_data[z_stride * (z_len - 1)] * 1.5;
-
-    lnM_min = lnM_data[0];
-    lnM_max = lnM_data[lnM_stride * (lnM_len - 1)];
-    
-    lnM_min = lnM_min + (lnM_min > 0.0 ? -0.5 * lnM_min : 0.5 * lnM_min);
-    lnM_max = lnM_max + (lnM_max > 0.0 ? 0.5 * lnM_min : - 0.5 * lnM_min);    
-    
-    ncm_vector_set (z_nodes,   0, z_min);
-    ncm_vector_set (lnM_nodes, 0, lnM_min);
-
-    for (i = 1; i < z_bins; i++)
-    {
-      const gdouble z_node = gsl_stats_quantile_from_sorted_data (z_data, z_stride, z_len,
-                                                                  ncm_vector_get (z_quantiles, i - 1)); 
-      ncm_vector_set (z_nodes, i, z_node);
-    }
-    for (i = 1; i < lnM_bins; i++)
-    {
-      const gdouble lnM_node = gsl_stats_quantile_from_sorted_data (lnM_data, lnM_stride, lnM_len,
-                                                                    ncm_vector_get (lnM_quantiles, i - 1)); 
-      ncm_vector_set (lnM_nodes, i, lnM_node);
-    }
-
-    ncm_vector_set (z_nodes,   z_bins,   z_max);
-    ncm_vector_set (lnM_nodes, lnM_bins, lnM_max);
-    ncm_vector_free (z_dup);
-    ncm_vector_free (lnM_dup);
-  }
-
-  nc_data_cluster_ncount_set_bin_by_nodes (ncount, z_nodes, lnM_nodes);
-
-  ncm_vector_free (z_nodes);
-  ncm_vector_free (lnM_nodes);
+  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_lb)));
+  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_ub)));
 }
 
 /**
@@ -1771,29 +1600,65 @@ nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVect
  * FIXME
  *
  */
-void 
+void
 nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
-  if (on)
+  self->binned = on;
+}
+
+/**
+ * nc_data_cluster_ncount_bin_data:
+ * @ncount: a #NcDataClusterNCount
+ *
+ * Bin the current data present in @ncount. The bins must
+ * be already set.
+ *
+ */
+void
+nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
+{
+  NcDataClusterNCountPrivate * const self = ncount->priv;
+  const guint len = self->z_obs_bins->len;
+  guint i;
+
+  if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
+    g_error ("_nc_data_cluster_ncount_bin_data: cannot bin data, inconsistent bins (%u %u).",
+        len, self->lnM_obs_bins->len);
+
+  if (self->np == 0)
+    return;
+
+  ncm_vector_clear (&self->bin_count);
+  self->bin_count = ncm_vector_new (len / 2);
+
+  ncm_vector_set_zero (self->bin_count);
+
+  for (i = 0; i < self->np; i++)
   {
-    if (self->binned)
-      return;
-    else
+    NcmVector *lnM_obs_row = ncm_matrix_get_row (self->lnM_obs, i);
+    NcmVector *z_obs_row   = ncm_matrix_get_row (self->z_obs, i);
+    gint j;
+
+    for (j = 0; j < len; j += 2)
     {
-      if (self->z_nodes == NULL || self->lnM_nodes == NULL)
+      NcmVector *lnM_obs_lb = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 0));
+      NcmVector *lnM_obs_ub = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 1));
+      NcmVector *z_obs_lb   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 0));
+      NcmVector *z_obs_ub   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 1));
+      const gint bin_index  = j / 2;
+
+      if (ncm_vector_between (lnM_obs_row, lnM_obs_lb, lnM_obs_ub, 0) &&
+          ncm_vector_between (z_obs_row, z_obs_lb, z_obs_ub, 0))
       {
-        g_error ("nc_data_cluster_ncount_set_binned: cannot turn on, no nodes were defined.");
-      }
-      else
-      {
-        nc_data_cluster_ncount_set_bin_by_nodes (ncount, self->z_nodes, self->lnM_nodes);
+        ncm_vector_addto (self->bin_count, bin_index, 1.0);
       }
     }
+
+    ncm_vector_free (lnM_obs_row);
+    ncm_vector_free (z_obs_row);
   }
-  else
-    self->binned = FALSE;
 }
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
@@ -1832,7 +1697,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
   g_ptr_array_add (tunit_array, "REDSHIFT OBS");
 
   g_ptr_array_add (ttype_array, "LNM_OBS");
-  g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->M_obs_len));
+  g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->lnM_obs_len));
   g_ptr_array_add (tunit_array, "MASS OBS");
 
   if (self->z_true != NULL)
@@ -1856,10 +1721,10 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
     g_ptr_array_add (tunit_array, "REDSHIFT OBS PARAMS");
   }
 
-  if (self->M_obs_params_len > 0)
+  if (self->lnM_obs_params_len > 0)
   {
     g_ptr_array_add (ttype_array, "LNM_OBS_PARAMS");
-    g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->M_obs_params_len));
+    g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->lnM_obs_params_len));
     g_ptr_array_add (tunit_array, "LNM OBS PARAMS");
   }
 
@@ -1922,7 +1787,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
       NCM_FITS_ERROR (status);
     }
 
-    if (self->M_obs_params_len > 0)
+    if (self->lnM_obs_params_len > 0)
     {
       colnum++;
       fits_write_col (fptr, TDOUBLE, colnum, 1, 1, self->np, ncm_matrix_ptr (self->lnM_obs_params, 0, 0), &status);
@@ -2017,7 +1882,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
       g_error ("Column LNM_OBS info not found, invalid fits file.");
 
     g_assert (self->z_obs_len == z_obs_rp);
-    g_assert (self->M_obs_len == lnM_obs_rp);
+    g_assert (self->lnM_obs_len == lnM_obs_rp);
 
     ncm_matrix_clear (&self->z_obs);
     self->z_obs = ncm_matrix_new (self->np, z_obs_rp);
@@ -2058,14 +1923,14 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
     if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_PARAMS", &lnM_obs_params_i, &status))
     {
-      g_assert (self->M_obs_params_len == 0);
+      g_assert (self->lnM_obs_params_len == 0);
     }
     else
     {
       if (fits_get_coltype (fptr, lnM_obs_params_i, &lnM_obs_params_tc, &lnM_obs_params_rp, &lnM_obs_params_w, &status))
         g_error ("Column LNM_OBS_PARAMS info not found, invalid fits file.");
 
-      g_assert (self->M_obs_params_len == lnM_obs_params_rp);
+      g_assert (self->lnM_obs_params_len == lnM_obs_params_rp);
 
       ncm_matrix_clear (&self->lnM_obs_params);
       self->lnM_obs_params = ncm_matrix_new (self->np, lnM_obs_params_rp);
@@ -2105,7 +1970,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
   _nc_data_cluster_ncount_model_init (ncount);
 
   ncm_data_set_init (NCM_DATA (ncount), TRUE);
-  
+
   return;
 }
 

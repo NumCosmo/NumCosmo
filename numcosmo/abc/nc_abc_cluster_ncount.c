@@ -419,21 +419,6 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
 
     switch (abcnc->s_type)
     {
-      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM:
-      {
-        nc_data_cluster_ncount_set_bin_by_minmax (ncount, abcnc->z_bins, abcnc->lnM_bins);    
-        break;
-      }
-      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
-      {
-        nc_data_cluster_ncount_set_bin_by_quantile (ncount, abcnc->quantiles, abcnc->quantiles);
-        break;
-      }
-      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
-      {
-        nc_data_cluster_ncount_set_bin_by_nodes (ncount, abcnc->z_nodes, abcnc->lnM_nodes);
-        break;
-      }
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
         break;
       default:
@@ -458,7 +443,7 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
       }
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
       {
-        guint i;
+        /*guint i;*/
         ncm_stats_vec_reset (abcnc->z_lnM_stats, TRUE);
 /*FIXHERE
         for (i = 0; i < abcnc->ncount->np; i++)
@@ -490,8 +475,8 @@ static gdouble
 _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
   NcABCClusterNCount *abcnc   = NC_ABC_CLUSTER_NCOUNT (abc);
-  NcmData *data               = ncm_dataset_peek_data (dset, 0);
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  /*NcmData *data               = ncm_dataset_peek_data (dset, 0);*/
+  /*NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);*/
   gdouble res;
 
   switch (abcnc->s_type)
@@ -575,7 +560,8 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
       break;
   }
 
-  return res;
+  /*return res;*/
+  return 0.0;
 }
 
 static gdouble 
