@@ -415,7 +415,7 @@ static void
 _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMl          =  M_LN10 * log10(1e13);
+  const gdouble lnMl          = M_LN10 * log10(1e13);
   const gdouble lnMu          = M_LN10 * log10(1e15);
   
   *lnM_lower = lnMl;
