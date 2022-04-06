@@ -131,6 +131,7 @@ static gboolean _nc_cluster_redshift_nodist_resample (NcClusterRedshift *cluster
 static void _nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_nodist_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+static gdouble _nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz);
 
 static void
 nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
@@ -183,6 +184,7 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   parent_class->P_limits       = &_nc_cluster_redshift_nodist_p_limits;
   parent_class->P_bin_limits   = &_nc_cluster_redshift_nodist_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_redshift_nodist_n_limits;
+  parent_class->volume         = &_nc_cluster_redshift_nodist_volume;
   parent_class->obs_len        = 1;
   parent_class->obs_params_len = 0;
   
@@ -258,4 +260,13 @@ _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *co
   *z_upper = self->z_max;
   
   return;
+}
+
+static gdouble
+_nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz)
+{
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
+  return (self->z_max - self->z_min);
 }

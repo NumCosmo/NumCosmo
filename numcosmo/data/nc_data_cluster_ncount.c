@@ -689,6 +689,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   /* printf ("Generated %u, Expected %10.5g\n", self->np, nc_cluster_abundance_n (cad, cosmo)); */
   ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
 
+  if (self->binned)
+    nc_data_cluster_ncount_bin_data (ncount);
+
   g_free (zi_obs);
   g_free (zi_obs_params);
   g_free (lnMi_obs);
@@ -1238,10 +1241,10 @@ _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
   NcDataClusterNCountPrivate * const self = ncount->priv;
   NcClusterAbundance *cad = self->cad;
 
-  cad->purity        = self->purity;
-  cad->sd_lnM        = self->sd_lnM;
+  cad->purity = self->purity;
+  cad->sd_lnM = self->sd_lnM;
 
-  nc_halo_mass_function_set_area (cad->mfp, self->area_survey);
+  nc_cluster_abundance_set_area (cad, self->area_survey);
 }
 
 static gchar *
@@ -1269,6 +1272,7 @@ typedef struct
   NcClusterRedshift *clusterz;
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
+  gdouble v_pp;
 } _Evald2N;
 
 static void
@@ -1283,7 +1287,7 @@ _eval_z_p_lnM_p_d2n (glong i, glong f, gpointer data)
     gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->self->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params));
+    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params) * evald2n->v_pp);
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1299,7 +1303,7 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
     const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->self->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn_obs, zn_obs_params));
+    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn_obs, zn_obs_params) * evald2n->v_pp);
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1315,7 +1319,8 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
     const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn) * evald2n->v_pp);
+    /*printf ("%ld % 22.15g\n", n, -mlnLn);fflush (stdout);*/
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1330,7 +1335,7 @@ _eval_d2n (glong i, glong f, gpointer data)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
-    const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn) * evald2n->v_pp);
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1345,7 +1350,7 @@ _eval_intp_d2n (glong i, glong f, gpointer data)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
-    const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn) * evald2n->v_pp);
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1359,19 +1364,69 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  _Evald2N evald2n = {cad, self, clusterz, clusterm, cosmo};
+  const gdouble volume        = nc_cluster_mass_volume (clusterm) * nc_cluster_redshift_volume (clusterz);
+  _Evald2N evald2n = {cad, self, clusterz, clusterm, cosmo, volume / self->np};
   
   *m2lnL = 0.0;
 
   if (self->binned)
   {
-    g_error ("_nc_data_cluster_ncount_m2lnL_val: don't support binned likelihood yet.");
+    const guint len   = self->z_obs_bins->len;
+    const guint nbins = len / 2;
+    gdouble lambda = 0.0;
+    gint i;
+
+    if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
+      g_error ("_nc_data_cluster_ncount_m2lnL_val: cannot use bin data, inconsistent bins (%u %u).",
+          len, self->lnM_obs_bins->len);
+
+    g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
+
+    if ((self->lnM_obs_params > 0) || (self->z_obs_params > 0))
+      g_error ("_nc_data_cluster_ncount_m2lnL_val: binned distribution with parameters not supported yet.");
+
+    for (i = 0; i < nbins; i++)
+    {
+      const gint j = 2 * i;
+
+      NcmVector *lnM_obs_lb = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 0));
+      NcmVector *lnM_obs_ub = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 1));
+      NcmVector *z_obs_lb   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 0));
+      NcmVector *z_obs_ub   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 1));
+      const gdouble n_i     = ncm_vector_get (self->bin_count, i);
+
+      const gdouble lambda_i = nc_cluster_abundance_intp_bin_d2n (self->cad, cosmo, clusterz, clusterm,
+          ncm_vector_data (lnM_obs_lb),
+          ncm_vector_data (lnM_obs_ub),
+          NULL,
+          ncm_vector_data (z_obs_lb),
+          ncm_vector_data (z_obs_ub),
+          NULL);
+
+      if (n_i > 0.0)
+        *m2lnL += n_i * log (lambda_i / n_i);
+
+      lambda += lambda_i;
+      *m2lnL += -(lambda_i - n_i);
+    }
+
+/*
+    printf ("% 22.15g % 22.15g %e\n",
+        nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm),
+        lambda,
+        nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm) / lambda - 1.0);
+    fflush (stdout);
+*/
+
+    *m2lnL = -2.0 * (*m2lnL);
+
+    return;
   }
 
   if (self->np == 0)
   {
-    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);    
-    *m2lnL = 2.0 * (self->log_np_fac + n_th);
+    const gdouble lambda = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
+    *m2lnL = -2.0 * lambda;
     return;
   }
 
@@ -1381,7 +1436,8 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     g_assert (self->z_true);
     g_assert (self->lnM_true);
-    ncm_func_eval_threaded_loop_full (&_eval_intp_d2n, 0, self->np, &evald2n);
+    /*ncm_func_eval_threaded_loop_full (&_eval_intp_d2n, 0, self->np, &evald2n);*/
+    _eval_intp_d2n (0, self->np, &evald2n);
   }
   else
   {
@@ -1390,34 +1446,38 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
     if (z_p && lnM_p)
     {
-      ncm_func_eval_threaded_loop_full (&_eval_z_p_lnM_p_d2n, 0, self->np, &evald2n);
+      /*ncm_func_eval_threaded_loop_full (&_eval_z_p_lnM_p_d2n, 0, self->np, &evald2n);*/
+      _eval_z_p_lnM_p_d2n (0, self->np, &evald2n);
     }
     else if (z_p && !lnM_p)
     {
       g_assert (self->lnM_true);
-      ncm_func_eval_threaded_loop_full (&_eval_z_p_d2n, 0, self->np, &evald2n);
+      /*ncm_func_eval_threaded_loop_full (&_eval_z_p_d2n, 0, self->np, &evald2n);*/
+      _eval_z_p_d2n (0, self->np, &evald2n);
     }
     else if (!z_p && lnM_p)
     {
       g_assert (self->z_true);
-      ncm_func_eval_threaded_loop_full (&_eval_lnM_p_d2n, 0, self->np, &evald2n);
+      /*ncm_func_eval_threaded_loop_full (&_eval_lnM_p_d2n, 0, self->np, &evald2n);*/
+      _eval_lnM_p_d2n (0, self->np, &evald2n);
     }
     else
     {
       g_assert (self->z_true);
       g_assert (self->lnM_true);
-      ncm_func_eval_threaded_loop_full (&_eval_d2n, 0, self->np, &evald2n);
+      /*ncm_func_eval_threaded_loop_full (&_eval_d2n, 0, self->np, &evald2n);*/
+      _eval_d2n (0, self->np, &evald2n);
     }
   }
 
   {
-    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
+    const gdouble lambda = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
     guint i;
-    for (i = 0 ; i < self->np; i++)
+    for (i = 0; i < self->np; i++)
     { 
       *m2lnL += g_array_index (self->m2lnL_a, gdouble, i);
     }
-    *m2lnL += (self->log_np_fac + n_th);
+    *m2lnL += (lambda - self->np);
   }
 
   *m2lnL *= 2.0;
@@ -1591,6 +1651,25 @@ nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_
   ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_lb)));
   ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_ub)));
 }
+
+/**
+ * nc_data_cluster_ncount_del_bins:
+ * @ncount: a #NcDataClusterNCount
+ *
+ * Remove all bins in @ncount.
+ *
+ */
+void
+nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
+{
+  NcDataClusterNCountPrivate * const self = ncount->priv;
+
+  g_ptr_array_set_size (self->lnM_obs_bins, 0);
+  g_ptr_array_set_size (self->z_obs_bins, 0);
+
+  ncm_vector_clear (&self->bin_count);
+}
+
 
 /**
  * nc_data_cluster_ncount_set_binned:
@@ -1796,6 +1875,85 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
 
   }
 
+  {
+    const guint len   = self->z_obs_bins->len;
+    const guint nbins = len / 2;
+
+    if (len > 0)
+    {
+      guint colnum;
+      gint i;
+
+      if ((len != self->lnM_obs_bins->len) || (len % 2 == 1))
+        g_error ("nc_data_cluster_ncount_catalog_save: cannot save binning information, inconsistent bins (%u %u).",
+            len, self->lnM_obs_bins->len);
+      g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
+
+      g_ptr_array_set_size (ttype_array, 0);
+      g_ptr_array_set_size (tform_array, 0);
+      g_ptr_array_set_size (tunit_array, 0);
+
+      g_ptr_array_add (ttype_array, "Z_OBS_LB");
+      g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->z_obs_len));
+      g_ptr_array_add (tunit_array, "REDSHIFT OBS");
+
+      g_ptr_array_add (ttype_array, "Z_OBS_UB");
+      g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->z_obs_len));
+      g_ptr_array_add (tunit_array, "REDSHIFT OBS");
+
+      g_ptr_array_add (ttype_array, "LNM_OBS_LB");
+      g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->lnM_obs_len));
+      g_ptr_array_add (tunit_array, "MASS OBS");
+
+      g_ptr_array_add (ttype_array, "LNM_OBS_UB");
+      g_ptr_array_add (tform_array, g_strdup_printf ("%dD", self->lnM_obs_len));
+      g_ptr_array_add (tunit_array, "MASS OBS");
+
+      g_ptr_array_add (ttype_array, "BIN_COUNT");
+      g_ptr_array_add (tform_array, g_strdup ("1D"));
+      g_ptr_array_add (tunit_array, "COUNT");
+
+      tfields = ttype_array->len;
+
+      fits_create_tbl (fptr, BINARY_TBL, nbins, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
+                           (gchar **)tunit_array->pdata, extname, &status);
+      NCM_FITS_ERROR (status);
+
+      fits_write_key(fptr, TLOGICAL, "BINNED", &self->binned, "Whether to used binned data", &status);
+      NCM_FITS_ERROR (status);
+
+      for (i = 0; i < nbins; i++)
+      {
+        const gint j = 2 * i;
+        NcmVector *lnM_obs_lb = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 0));
+        NcmVector *lnM_obs_ub = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 1));
+        NcmVector *z_obs_lb   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 0));
+        NcmVector *z_obs_ub   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 1));
+
+        colnum = 1;
+
+        fits_write_col (fptr, TDOUBLE, colnum, i + 1, 1, 1, ncm_vector_data (z_obs_lb), &status);
+        NCM_FITS_ERROR (status);
+        colnum++;
+
+        fits_write_col (fptr, TDOUBLE, colnum, i + 1, 1, 1, ncm_vector_data (z_obs_ub), &status);
+        NCM_FITS_ERROR (status);
+        colnum++;
+
+        fits_write_col (fptr, TDOUBLE, colnum, i + 1, 1, 1, ncm_vector_data (lnM_obs_lb), &status);
+        NCM_FITS_ERROR (status);
+        colnum++;
+
+        fits_write_col (fptr, TDOUBLE, colnum, i + 1, 1, 1, ncm_vector_data (lnM_obs_ub), &status);
+        NCM_FITS_ERROR (status);
+        colnum++;
+      }
+
+      fits_write_col (fptr, TDOUBLE, colnum, 1, 1, nbins, ncm_vector_data (self->bin_count), &status);
+      NCM_FITS_ERROR (status);
+    }
+  }
+
   fits_close_file(fptr, &status);
   NCM_FITS_ERROR (status);
 
@@ -1906,6 +2064,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
     if (fits_get_colnum (fptr, CASESEN, "Z_OBS_PARAMS", &z_obs_params_i, &status))
     {
       g_assert (self->z_obs_params_len == 0);
+      status = 0;
     }
     else
     {
@@ -1924,6 +2083,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
     if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_PARAMS", &lnM_obs_params_i, &status))
     {
       g_assert (self->lnM_obs_params_len == 0);
+      status = 0;
     }
     else
     {
@@ -1944,7 +2104,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
     gint z_true_i, lnM_true_i;
     
     ncm_vector_clear (&self->z_true);
-    if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE", &z_true_i, &status))
+    if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE*", &z_true_i, &status))
     {
       self->z_true = ncm_vector_new (self->np);
       fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, self->np, NULL, ncm_vector_ptr (self->z_true, 0), NULL, &status);
@@ -1962,6 +2122,105 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
     }
     else
       status = 0;
+  }
+
+  {
+    gint hdunum;
+
+    fits_get_num_hdus (fptr, &hdunum, &status);
+    NCM_FITS_ERROR (status);
+
+    if (hdunum >= 3)
+    {
+      gint z_obs_lb_i, z_obs_ub_i, lnM_obs_lb_i, lnM_obs_ub_i, bin_count_i;
+      gint z_obs_lb_tc, z_obs_ub_tc, lnM_obs_lb_tc, lnM_obs_ub_tc, bin_count_tc;
+      glong z_obs_lb_rp, z_obs_ub_rp, lnM_obs_lb_rp, lnM_obs_ub_rp, bin_count_rp;
+      glong z_obs_lb_w, z_obs_ub_w, lnM_obs_lb_w, lnM_obs_ub_w, bin_count_w;
+      glong nbins;
+      gint i;
+
+      fits_movabs_hdu (fptr, 3, &hdutype, &status);
+      NCM_FITS_ERROR (status);
+
+      if (hdutype != BINARY_TBL)
+        g_error ("%s (%d): NcDataClusterNCount catalog binning information is not binary!", __FILE__, __LINE__);
+
+      fits_get_num_rows (fptr, &nbins, &status);
+      NCM_FITS_ERROR (status);
+
+      if (fits_read_key (fptr, TLOGICAL, "BINNED", &self->binned, comment, &status))
+        g_error ("Fits file does not contain BINNED in the header indicating whether to used binned data. Use [col #BINNED=...] to add this information.");
+
+      ncm_vector_clear (&self->bin_count);
+      self->bin_count = ncm_vector_new (nbins);
+
+      g_ptr_array_set_size (self->lnM_obs_bins, 0);
+      g_ptr_array_set_size (self->z_obs_bins, 0);
+
+      if (fits_get_colnum (fptr, CASESEN, "Z_OBS_LB", &z_obs_lb_i, &status))
+        g_error ("Column Z_OBS_LB not found, invalid fits file.");
+
+      if (fits_get_colnum (fptr, CASESEN, "Z_OBS_UB", &z_obs_ub_i, &status))
+        g_error ("Column Z_OBS_UB not found, invalid fits file.");
+
+      if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_LB", &lnM_obs_lb_i, &status))
+        g_error ("Column LNM_OBS_LB not found, invalid fits file.");
+
+      if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_UB", &lnM_obs_ub_i, &status))
+        g_error ("Column LNM_OBS_LB not found, invalid fits file.");
+
+      if (fits_get_colnum (fptr, CASESEN, "BIN_COUNT", &bin_count_i, &status))
+        g_error ("Column LNM_OBS_LB not found, invalid fits file.");
+
+      if (fits_get_coltype (fptr, z_obs_lb_i, &z_obs_lb_tc, &z_obs_lb_rp, &z_obs_lb_w, &status))
+        g_error ("Column Z_OBS_LB info not found, invalid fits file.");
+
+      if (fits_get_coltype (fptr, z_obs_ub_i, &z_obs_ub_tc, &z_obs_ub_rp, &z_obs_ub_w, &status))
+        g_error ("Column Z_OBS_UB info not found, invalid fits file.");
+
+      if (fits_get_coltype (fptr, lnM_obs_lb_i, &lnM_obs_lb_tc, &lnM_obs_lb_rp, &lnM_obs_lb_w, &status))
+        g_error ("Column LNM_OBS_LB info not found, invalid fits file.");
+
+      if (fits_get_coltype (fptr, lnM_obs_ub_i, &lnM_obs_ub_tc, &lnM_obs_ub_rp, &lnM_obs_ub_w, &status))
+        g_error ("Column LNM_OBS_UB info not found, invalid fits file.");
+
+      if (fits_get_coltype (fptr, bin_count_i, &bin_count_tc, &bin_count_rp, &bin_count_w, &status))
+        g_error ("Column LNM_OBS_UB info not found, invalid fits file.");
+
+      g_assert (self->z_obs_len == z_obs_lb_rp);
+      g_assert (self->z_obs_len == z_obs_ub_rp);
+      g_assert (self->lnM_obs_len == lnM_obs_lb_rp);
+      g_assert (self->lnM_obs_len == lnM_obs_ub_rp);
+
+      for (i = 0; i < nbins; i++)
+      {
+        NcmVector *z_obs_lb   = ncm_vector_new (self->z_obs_len);
+        NcmVector *z_obs_ub   = ncm_vector_new (self->z_obs_len);
+        NcmVector *lnM_obs_lb = ncm_vector_new (self->lnM_obs_len);
+        NcmVector *lnM_obs_ub = ncm_vector_new (self->lnM_obs_len);
+
+        fits_read_col (fptr, TDOUBLE, z_obs_lb_i, 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_lb), NULL, &status);
+        NCM_FITS_ERROR (status);
+
+        fits_read_col (fptr, TDOUBLE, z_obs_ub_i, 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_ub), NULL, &status);
+        NCM_FITS_ERROR (status);
+
+        fits_read_col (fptr, TDOUBLE, lnM_obs_lb_i, 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_lb), NULL, &status);
+        NCM_FITS_ERROR (status);
+
+        fits_read_col (fptr, TDOUBLE, lnM_obs_ub_i, 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_ub), NULL, &status);
+        NCM_FITS_ERROR (status);
+
+        ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (lnM_obs_lb));
+        ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (lnM_obs_ub));
+
+        ncm_obj_array_add (self->z_obs_bins, G_OBJECT (z_obs_lb));
+        ncm_obj_array_add (self->z_obs_bins, G_OBJECT (z_obs_ub));
+      }
+
+      fits_read_col (fptr, TDOUBLE, bin_count_i, 1, 1, nbins, NULL, ncm_vector_data (self->bin_count), NULL, &status);
+      NCM_FITS_ERROR (status);
+    }
   }
 
   fits_close_file (fptr, &status);

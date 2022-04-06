@@ -107,6 +107,8 @@ void nc_cluster_abundance_clear (NcClusterAbundance **cad);
 void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 NCM_INLINE void nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 
+void nc_cluster_abundance_set_area (NcClusterAbundance *cad, const gdouble area);
+
 void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi);
 void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi, gdouble z);
 

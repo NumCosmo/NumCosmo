@@ -161,6 +161,7 @@ static gboolean _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHI
 static void _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
+static gdouble _nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm);
 
 static void
 nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
@@ -215,7 +216,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-min",
                                                         NULL,
                                                         "Minimum LnRichness",
-                                                        M_LN10 * log10(1), G_MAXDOUBLE, M_LN10 * log10(10e3),
+                                                        0.0, G_MAXDOUBLE, M_LN10 * log10(10e3),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -228,7 +229,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-max",
                                                         NULL,
                                                         "Maximum LnRichness",
-                                                        M_LN10 * log10(10e3), G_MAXDOUBLE,  M_LN10 * log10(10e5),
+                                                        0.0, G_MAXDOUBLE,  M_LN10 * log10(10e5),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -238,7 +239,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P0, "mu_p0", "mup0",
-                              0.0,  10.0, 1.0e-2,
+                              0.0,  6.0, 1.0e-1,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P0,
                               NCM_PARAM_TYPE_FIXED);
   
@@ -249,7 +250,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P1, "mu_p1", "mup1",
-                              0.0,  10.0, 1.0e-2,
+                              -10.0,  10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P1,
                               NCM_PARAM_TYPE_FIXED);
   
@@ -260,7 +261,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P2, "mu_p2", "mup2",
-                              0.0,  10.0, 1.0e-2,
+                              -10.0,  10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_MU_P2,
                               NCM_PARAM_TYPE_FIXED);
   
@@ -271,7 +272,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA_P0, "\\sigma_p0", "sigmap0",
-                              1.0e-4,  10.0, 1.0e-2,
+                              1.0e-4, 10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P0,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -282,7 +283,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA_P1, "\\sigma_p1", "sigmap1",
-                              0,  10.0, 1.0e-2,
+                              -10.0, 10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P1,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -294,7 +295,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA_P2, "\\sigma_p2", "sigmap2",
-                              0,  10.0, 1.0e-2,
+                              -10.0,  10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2,
                               NCM_PARAM_TYPE_FIXED);
   
@@ -308,6 +309,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
   parent_class->P_bin_limits   = &_nc_cluster_mass_ascaso_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
+  parent_class->volume         = &_nc_cluster_mass_ascaso_volume;
   parent_class->obs_len        = 1;
   parent_class->obs_params_len = 0;
 
@@ -431,4 +433,13 @@ _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
   *lnM_upper = lnMu;
   
   return;
+}
+
+static gdouble
+_nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm)
+{
+  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+
+  return (self->lnR_max - self->lnR_min);
 }

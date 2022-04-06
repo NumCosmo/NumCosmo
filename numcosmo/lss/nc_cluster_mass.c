@@ -76,6 +76,7 @@ static gboolean _nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *c
 static void _nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+static gdouble _nc_cluster_mass_volume (NcClusterMass *clusterm);
 
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
@@ -103,6 +104,7 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
   klass->P_limits       = &_nc_cluster_mass_p_limits;
   klass->P_bin_limits   = &_nc_cluster_mass_p_bin_limits;
   klass->N_limits       = &_nc_cluster_mass_n_limits;
+  klass->volume         = &_nc_cluster_mass_volume;
   klass->obs_len        = 0;
   klass->obs_params_len = 0;
 }
@@ -155,6 +157,13 @@ static void
 _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
 {
   g_error ("_nc_cluster_mass_n_limits: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
+}
+
+static gdouble
+_nc_cluster_mass_volume (NcClusterMass *clusterm)
+{
+  g_error ("_nc_cluster_mass_volume: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
+  return 0.0;
 }
 
 /**
@@ -413,6 +422,20 @@ void
 nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NC_CLUSTER_MASS_GET_CLASS (clusterm)->N_limits (clusterm, cosmo, lnM_lower, lnM_upper);
+}
+
+/**
+ * nc_cluster_mass_volume:
+ * @clusterm: a #NcClusterMass.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_cluster_mass_volume (NcClusterMass *clusterm)
+{
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->volume (clusterm);
 }
 
 static void

@@ -1342,6 +1342,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                    cname, i + 1, cindex);
 
         g_array_index (self->porder, gint, i) = cindex;
+        g_free (asymbi);
       }
     }
     

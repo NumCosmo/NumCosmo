@@ -475,6 +475,8 @@ _nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
   const gdouble p_M_Mobs          = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, obs_data->z, obs_data->lnM_obs, obs_data->lnM_obs_params);
   const gdouble d2NdzdlnM         = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
   
+  /*printf ("POINT: % 22.15g % 22.15g % 22.15g\n", lnM, p_M_Mobs, d2NdzdlnM);*/
+
   return p_M_Mobs * d2NdzdlnM;
 }
 
@@ -647,8 +649,6 @@ _nc_cluster_abundance_lnM_intp_d2N (NcClusterAbundance *cad, NcHICosmo *cosmo, N
   const gdouble lnM_intp = nc_cluster_mass_intp (clusterm, cosmo, lnM, z);
   gdouble d2NdzdlnM      = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
   
-  NCM_UNUSED (clusterz);
-  
   return lnM_intp * d2NdzdlnM;
 }
 
@@ -727,10 +727,10 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
   _nc_cluster_abundance_funcs (cad, clusterz, clusterm);
   nc_cluster_redshift_n_limits (clusterz, cosmo, &cad->zi, &cad->zf);
   nc_cluster_mass_n_limits (clusterm, cosmo, &cad->lnMi, &cad->lnMf);
-  
+
   nc_halo_mass_function_set_eval_limits (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zi, cad->zf);
   nc_halo_mass_function_prepare_if_needed (cad->mfp, cosmo);
-  
+
   if (cad->zi == 0.0)
     cad->zi = 1.0e-6;
   
@@ -740,6 +740,22 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
   ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
   ncm_model_ctrl_update (cad->ctrl_z, NCM_MODEL (clusterz));
   ncm_model_ctrl_update (cad->ctrl_m, NCM_MODEL (clusterm));
+}
+
+/**
+ * nc_cluster_abundance_set_area:
+ * @cad: a #NcClusterAbundance
+ * @area: FIXME
+ *
+ * This function prepares ...
+ *
+ */
+void
+nc_cluster_abundance_set_area (NcClusterAbundance *cad, const gdouble area)
+{
+  nc_halo_mass_function_set_area (cad->mfp, area);
+  ncm_model_ctrl_force_update (cad->ctrl_cosmo);
+  ncm_model_ctrl_force_update (cad->ctrl_reion);
 }
 
 gdouble
@@ -1384,4 +1400,5 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
  * FIXME
  *
  */
+
 

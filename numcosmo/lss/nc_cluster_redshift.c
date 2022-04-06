@@ -71,6 +71,7 @@ static gboolean _nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHI
 static void _nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+static gdouble _nc_cluster_redshift_volume (NcClusterRedshift *clusterz);
 
 static void
 nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
@@ -101,6 +102,7 @@ nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
   klass->P_limits       = &_nc_cluster_redshift_p_limits;
   klass->P_bin_limits   = &_nc_cluster_redshift_p_bin_limits;
   klass->N_limits       = &_nc_cluster_redshift_n_limits;
+  klass->volume         = &_nc_cluster_redshift_volume;
   klass->obs_len        = 0;
   klass->obs_params_len = 0;
 }
@@ -153,6 +155,13 @@ static void
 _nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
 {
   g_error ("_nc_cluster_redshift_n_limits: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
+}
+
+static gdouble
+_nc_cluster_redshift_volume (NcClusterRedshift *clusterz)
+{
+  g_error ("_nc_cluster_redshift_volume: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
+  return 0.0;
 }
 
 /**
@@ -407,6 +416,20 @@ void
 nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
 {
   NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->N_limits (clusterz, cosmo, z_lower, z_upper);
+}
+
+/**
+ * nc_cluster_redshift_volume:
+ * @clusterz: a #NcClusterRedshift
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_cluster_redshift_volume (NcClusterRedshift *clusterz)
+{
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->volume (clusterz);
 }
 
 static void

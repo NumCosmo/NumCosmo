@@ -80,6 +80,7 @@ struct _NcClusterRedshiftClass
   void (*P_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+  gdouble (*volume) (NcClusterRedshift *clusterz);
   guint obs_len;
   guint obs_params_len;
 };
@@ -110,6 +111,7 @@ gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHICosmo *c
 void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 void nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+gdouble nc_cluster_redshift_volume (NcClusterRedshift *clusterz);
 
 guint nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
 guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);

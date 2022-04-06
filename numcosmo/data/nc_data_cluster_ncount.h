@@ -125,6 +125,7 @@ void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, Ncm
 void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
 void nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub);
+void nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
 void nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 
