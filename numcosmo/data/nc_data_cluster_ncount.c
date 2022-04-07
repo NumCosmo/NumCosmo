@@ -2199,16 +2199,16 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
         NcmVector *lnM_obs_lb = ncm_vector_new (self->lnM_obs_len);
         NcmVector *lnM_obs_ub = ncm_vector_new (self->lnM_obs_len);
 
-        fits_read_col (fptr, TDOUBLE, z_obs_lb_i, 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_lb), NULL, &status);
+        fits_read_col (fptr, TDOUBLE, z_obs_lb_i, i + 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_lb), NULL, &status);
         NCM_FITS_ERROR (status);
 
-        fits_read_col (fptr, TDOUBLE, z_obs_ub_i, 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_ub), NULL, &status);
+        fits_read_col (fptr, TDOUBLE, z_obs_ub_i, i + 1, 1, self->z_obs_len, NULL, ncm_vector_data (z_obs_ub), NULL, &status);
         NCM_FITS_ERROR (status);
 
-        fits_read_col (fptr, TDOUBLE, lnM_obs_lb_i, 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_lb), NULL, &status);
+        fits_read_col (fptr, TDOUBLE, lnM_obs_lb_i, i + 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_lb), NULL, &status);
         NCM_FITS_ERROR (status);
 
-        fits_read_col (fptr, TDOUBLE, lnM_obs_ub_i, 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_ub), NULL, &status);
+        fits_read_col (fptr, TDOUBLE, lnM_obs_ub_i, i + 1, 1, self->lnM_obs_len, NULL, ncm_vector_data (lnM_obs_ub), NULL, &status);
         NCM_FITS_ERROR (status);
 
         ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (lnM_obs_lb));
