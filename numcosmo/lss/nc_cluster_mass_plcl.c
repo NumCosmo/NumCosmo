@@ -269,16 +269,16 @@ static gdouble
 _SZ_lnmass_mean (NcClusterMassPlCL *mszl,  gdouble lnM)
 {
   const gdouble lnM0 = log (mszl->M0);
-  const gdouble lnMsz_M0_mean = log1p (- B_SZ) + A_SZ * (lnM - lnM0);
-  return lnMsz_M0_mean;
+  const gdouble lnMsz_M0_mean = log1p (- B_SZ) + A_SZ * (lnM - lnM0);/*Equação 1*/
+  return lnMsz_M0_mean; /* Retorna <ln M_sz| M_500> */
 }
 
 static gdouble
 _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
 {
   const gdouble lnM0 = log (mszl->M0);
-  const gdouble lnMlens_M0_mean = log1p (- B_L) + A_L * (lnM - lnM0);
-  return lnMlens_M0_mean;
+  const gdouble lnMlens_M0_mean = log1p (- B_L) + A_L * (lnM - lnM0);/*Equação 2*/
+  return lnMlens_M0_mean;/* Retorna <ln M_L|M_500>*/
 }
 
 /**
@@ -292,27 +292,27 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
  * Returns: $P(\ln M_{SZ}, \ln M_L | M_{500})$
 */
 gdouble 
-nc_cluster_mass_plcl_pdf_only_lognormal (NcClusterMass *clusterm, gdouble lnM, gdouble lnMsz_M0, gdouble lnMl_M0)
+nc_cluster_mass_plcl_pdf_only_lognormal (NcClusterMass *clusterm, gdouble lnM, gdouble lnMsz_M0, gdouble lnMl_M0) /*Calcula ultima prob da eq 3*/
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
 
-  const gdouble cor2     = COR * COR;
-  const gdouble norma    = 2.0 * M_PI * SD_SZ * SD_L * sqrt (1 - cor2);
-  const gdouble Msz_mean = _SZ_lnmass_mean (mszl, lnM);
-  const gdouble Ml_mean  = _Lens_lnmass_mean (mszl, lnM);
-  const gdouble ysz      = (lnMsz_M0 - Msz_mean) / SD_SZ;
+  const gdouble cor2     = COR * COR;/**Correalçaõ massa efeito zeldovitch e massa weak lens**/
+  const gdouble norma    = 2.0 * M_PI * SD_SZ * SD_L * sqrt (1 - cor2); /*Normalização */
+  const gdouble Msz_mean = _SZ_lnmass_mean (mszl, lnM); /* eq 1 do artigo*/
+  const gdouble Ml_mean  = _Lens_lnmass_mean (mszl, lnM);/* eq 2 do artigo  */
+  const gdouble ysz      = (lnMsz_M0 - Msz_mean) / SD_SZ;/* */
   const gdouble arg_ysz  = ysz * ysz;
   const gdouble yl       = (lnMl_M0 - Ml_mean) / SD_L;
   const gdouble arg_yl   = yl * yl;
   const gdouble arg_sz_l = 2.0 * COR * ysz * yl;
   
-  const gdouble exp_arg = - (arg_ysz + arg_yl - arg_sz_l) / (2.0 * (1.0 - cor2));
+  const gdouble exp_arg = - (arg_ysz + arg_yl - arg_sz_l) / (2.0 * (1.0 - cor2));/*Argumento da exponencial. Provavelmente calcula uma probabilidade gaussiana*/
 
   if (exp_arg < GSL_LOG_DBL_MIN)
     return exp (-200.0);
   else
   {
-    const gdouble result = exp (exp_arg) + exp (-200.0);
+    const gdouble result = exp (exp_arg) + exp (-200.0);/*Exponencial do argumento. Probabilidade gaussiana. Vai dividir pela norma no final*/
     //printf ("Msz = %.8g Ml = %.8g m_dist = %.8g\n", Msz, Ml, result);
     //printf ("M0 = %.2e lnM_M0 = %.5g\n", mszl->M0, lnM_M0);
     //printf ("Mpl = %.8g sd_pl = %.8g Mcl = %.8g sd_cl = %.8g\n", M_Pl, sd_Pl, M_CL, sd_CL);
@@ -353,8 +353,8 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
   const gdouble M_CL  = Mobs[NC_CLUSTER_MASS_PLCL_MCL];
   const gdouble sd_CL = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
 
-  const gdouble M1_mean   = (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (sqrt (1.0 - COR * COR) * w1 + COR * w2) * SD_SZ);
-  const gdouble M2_mean   = (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L);
+  const gdouble M1_mean   = (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (sqrt (1.0 - COR * COR) * w1 + COR * w2) * SD_SZ); /*Relacioando cmo a eq 1*/
+  const gdouble M2_mean   = (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L); /*Relacionado com a eq 2*/
   const gdouble ysz       = (M_Pl - M1_mean) / sd_Pl;
   const gdouble arg_ysz   = ysz * ysz / 2.0;
   const gdouble yl        = (M_CL - M2_mean) / sd_CL;
@@ -379,7 +379,7 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
 }
 
 static gdouble
-_nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpointer userdata)
+_nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpointer userdata)/*Calcula o integrando inteiro da eq 3. Tá escrito na mesma ordem da eq */
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
@@ -435,11 +435,11 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
  *
 */
 void
-nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)/*Coloca novas avriaveis na estrutura, provavelmente se vc tiver catálçogos diferentes*/
 {
   integrand_data data;
   const gdouble onemcor2  = sqrt (1.0 - COR * COR);
-  gdouble lnM500, M_PL, M_CL, sd_PL, sd_CL, w1_m, w1_p, w2_m, w2_p;
+  gdouble lnM500, M_PL, M_CL, sd_PL, sd_CL, w1_m, w1_p, w2_m, w2_p; /*Você da dados novos, e ele calcula essas quantidades */
   
   data.mszl =            mszl;
   data.lnM =             lnM;
