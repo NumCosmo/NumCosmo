@@ -78,6 +78,8 @@ static void _nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *c
 static void _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
 static gdouble _nc_cluster_mass_volume (NcClusterMass *clusterm);
 
+static void _nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
 {
@@ -105,6 +107,7 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
   klass->P_bin_limits   = &_nc_cluster_mass_p_bin_limits;
   klass->N_limits       = &_nc_cluster_mass_n_limits;
   klass->volume         = &_nc_cluster_mass_volume;
+  klass->P_vec_z_lnMobs = &_nc_cluster_mass_p_vec_z_lnMobs;
   klass->obs_len        = 0;
   klass->obs_params_len = 0;
 }
@@ -164,6 +167,12 @@ _nc_cluster_mass_volume (NcClusterMass *clusterm)
 {
   g_error ("_nc_cluster_mass_volume: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
   return 0.0;
+}
+
+static void
+_nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+{
+  g_error ("_nc_cluster_mass_p_vec_z_lnMobs: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
 }
 
 /**
@@ -436,6 +445,25 @@ gdouble
 nc_cluster_mass_volume (NcClusterMass *clusterm)
 {
   return NC_CLUSTER_MASS_GET_CLASS (clusterm)->volume (clusterm);
+}
+
+/**
+ * nc_cluster_mass_p_vec_z_lnMobs:
+ * @clusterm: a #NcClusterMass
+ * @cosmo: a #NcHICosmo
+ * @lnM: FIXME
+ * @z: a #NcmVector
+ * @lnM_obs: a #NcmMatrix
+ * @lnM_obs_params: a #NcmMatrix
+ * @res: (element-type gdouble): a #GArray
+ *
+ * FIXME
+ *
+ */
+void
+nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+{
+  NC_CLUSTER_MASS_GET_CLASS (clusterm)->P_vec_z_lnMobs (clusterm, cosmo, lnM, z, lnM_obs, lnM_obs_params, res);
 }
 
 static void

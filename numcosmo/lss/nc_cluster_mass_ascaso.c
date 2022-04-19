@@ -163,6 +163,8 @@ static void _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHIC
 static void _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 static gdouble _nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm);
 
+static void _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+
 static void
 nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
 {
@@ -310,6 +312,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   parent_class->P_bin_limits   = &_nc_cluster_mass_ascaso_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
   parent_class->volume         = &_nc_cluster_mass_ascaso_volume;
+  parent_class->P_vec_z_lnMobs = &_nc_cluster_mass_ascaso_p_vec_z_lnMobs;
   parent_class->obs_len        = 1;
   parent_class->obs_params_len = 0;
 
@@ -443,3 +446,52 @@ _nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm)
 
   return (self->lnR_max - self->lnR_min);
 }
+
+static void
+_nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+{
+  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+
+  const gdouble *lnM_obs_ptr = ncm_matrix_const_data (lnM_obs);
+  const gdouble *z_ptr       = ncm_vector_const_data (z);
+  const guint tda            = ncm_matrix_tda (lnM_obs);
+  const guint sz             = ncm_vector_stride (z);
+  const guint len            = ncm_vector_len (z);
+  const gdouble DlnM         = lnM - self->lnM0;
+  const gdouble sqrt_2pi     = ncm_c_sqrt_2pi ();
+  const gdouble lnR_pre      = MU_P0    + MU_P1    * DlnM;
+  const gdouble sigma_pre    = SIGMA_P0 + SIGMA_P1 * DlnM;
+  const gdouble mu_p2        = MU_P2;
+  const gdouble sigma_p2     = SIGMA_P2;
+  gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
+  gint i;
+
+  if ((tda == 1) && (sz == 1))
+  {
+    for (i = 0; i < len; i++)
+    {
+      const gdouble Dln1pz = log1p (z_ptr[i]) - self->ln1pz0;
+      const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
+      const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
+
+      const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
+
+      res_ptr[i] = exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+    }
+  }
+  else
+  {
+    for (i = 0; i < len; i++)
+    {
+      const gdouble Dln1pz = log1p (z_ptr[i * sz]) - self->ln1pz0;
+      const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
+      const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
+
+      const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
+
+      res_ptr[i] = exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+    }
+  }
+}
+

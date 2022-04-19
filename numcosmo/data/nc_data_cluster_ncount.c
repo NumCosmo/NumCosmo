@@ -44,6 +44,8 @@
 #include "math/ncm_obj_array.h"
 #include "math/ncm_cfg.h"
 
+#include "misc/cubature.h"
+
 #ifndef NUMCOSMO_GIR_SCAN
 #include <glib/gstdio.h>
 #include <gsl/gsl_randist.h>
@@ -90,6 +92,12 @@ struct _NcDataClusterNCountPrivate
   NcmMatrix *lnM_obs;
   NcmMatrix *lnM_obs_params;
   GArray *m2lnL_a;
+  GArray *m2lnL_err_a;
+  GArray *z_order;
+  GArray *lnM_order;
+  GArray *p_z;
+  GArray *p_lnM;
+  GArray *d2n;
   gdouble area_survey;
   guint np;
   guint z_obs_len;
@@ -130,6 +138,12 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   self->lnM_obs          = NULL;
   self->lnM_obs_params   = NULL;
   self->m2lnL_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->m2lnL_err_a      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->z_order          = g_array_new (FALSE, FALSE, sizeof (size_t));
+  self->lnM_order        = g_array_new (FALSE, FALSE, sizeof (size_t));
+  self->p_z              = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->p_lnM            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->d2n              = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->area_survey      = 0.0;
   self->np               = 0.0;
   self->log_np_fac       = 0.0;
@@ -335,6 +349,13 @@ nc_data_cluster_ncount_dispose (GObject *object)
   ncm_vector_clear (&self->bin_count);
 
   g_clear_pointer (&self->m2lnL_a, g_array_unref);
+  g_clear_pointer (&self->m2lnL_err_a, g_array_unref);
+  g_clear_pointer (&self->z_order, g_array_unref);
+  g_clear_pointer (&self->lnM_order, g_array_unref);
+
+  g_clear_pointer (&self->p_z, g_array_unref);
+  g_clear_pointer (&self->p_lnM, g_array_unref);
+  g_clear_pointer (&self->d2n, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
@@ -1292,6 +1313,26 @@ _eval_z_p_lnM_p_d2n (glong i, glong f, gpointer data)
   }
 }
 
+static gint
+func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
+{
+  _Evald2N *evald2n = (_Evald2N *) fdata;
+  NcClusterAbundance *cad = evald2n->cad;
+  gint n;
+
+  nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, NULL, evald2n->self->p_z);
+  ncm_spline2d_eval_vec_y (cad->mfp->d2NdzdlnM, x[0], evald2n->self->z_true, evald2n->self->z_order, evald2n->self->d2n);
+
+  for (n = 0; n < fdim; n++)
+  {
+    const gdouble d2NdzdlnM = g_array_index (evald2n->self->d2n, gdouble, n);
+    const gdouble p_M_Mobs  = g_array_index (evald2n->self->p_z, gdouble, n);
+    fval[n] = d2NdzdlnM * p_M_Mobs;
+  }
+
+  return 0;
+}
+
 static void
 _eval_z_p_d2n (glong i, glong f, gpointer data)
 {
@@ -1312,17 +1353,42 @@ static void
 _eval_lnM_p_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
+  const gboolean vec_int = TRUE;
   glong n;
 
-  for (n = i; n < f; n++)
+  if (!vec_int)
   {
-    const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
-    gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
-    gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn) * evald2n->v_pp);
-    /*printf ("%ld % 22.15g\n", n, -mlnLn);fflush (stdout);*/
-    g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
+    for (n = i; n < f; n++)
+    {
+      const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
+      gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
+      gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
+      const gdouble mlnLn = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn) * evald2n->v_pp);
+      g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
+    }
   }
+  else
+  {
+    gulong len = f - i;
+    gdouble *val = &g_array_index (evald2n->self->m2lnL_a, gdouble, 0);
+    gdouble *err = &g_array_index (evald2n->self->m2lnL_err_a, gdouble, 0);
+    gdouble lnMl, lnMu;
+    gint ret;
+
+    g_assert (i == 0);
+
+    nc_cluster_mass_n_limits (evald2n->clusterm, evald2n->cosmo, &lnMl, &lnMu);
+
+    gsl_sort_index ((size_t *)evald2n->self->z_order->data, ncm_vector_data (evald2n->self->z_true), 1, evald2n->self->np);
+    ret = pcubature (len, func_eval_lnM_p_d2n, evald2n, 1, &lnMl, &lnMu, 0, 0.0, 1.0e-7, ERROR_INDIVIDUAL, val, err);
+    g_assert (ret == 0);
+
+    for (i = 0; i < len; i++)
+    {
+      g_array_index (evald2n->self->m2lnL_a, gdouble, i) = -log (g_array_index (evald2n->self->m2lnL_a, gdouble, i) * evald2n->v_pp);
+    }
+  }
+
 }
 
 static void
@@ -1431,6 +1497,13 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   }
 
   g_array_set_size (self->m2lnL_a, self->np);
+  g_array_set_size (self->m2lnL_err_a, self->np);
+  g_array_set_size (self->z_order, self->np);
+  g_array_set_size (self->lnM_order, self->np);
+
+  g_array_set_size (self->p_z, self->np);
+  g_array_set_size (self->p_lnM, self->np);
+  g_array_set_size (self->d2n, self->np);
 
   if (self->use_true_data)
   {

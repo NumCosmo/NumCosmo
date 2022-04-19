@@ -1521,7 +1521,7 @@ ncm_mset_params_valid_bounds (NcmMSet *mset)
  * @mset1: a #NcmMSet
  * @cmp_model: whether to compare if the models correspond to the same objects
  *
- * Compares @mset0 and @mset1 and returns TRUE if both coitains the same models types.
+ * Compares @mset0 and @mset1 and returns TRUE if both contains the same models types.
  * If @cmp_model is TRUE compare also if the models correspond to the same objects.
  *
  * Returns: TRUE if @mset0 == @mset1.
