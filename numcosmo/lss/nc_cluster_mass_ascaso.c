@@ -190,7 +190,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("M0",
                                                         NULL,
                                                         "Pivot mass",
-                                                        11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
+                                                        11.0 * M_LN10, G_MAXDOUBLE, 3.0e14 / 0.71,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 /**
@@ -203,7 +203,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("z0",
                                                         NULL,
                                                         "Pivot redshift",
-                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        0.0, G_MAXDOUBLE, 0.6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
@@ -218,7 +218,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-min",
                                                         NULL,
                                                         "Minimum LnRichness",
-                                                        0.0, G_MAXDOUBLE, M_LN10 * log10(10e3),
+                                                        0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -231,7 +231,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-max",
                                                         NULL,
                                                         "Maximum LnRichness",
-                                                        0.0, G_MAXDOUBLE,  M_LN10 * log10(10e5),
+                                                        0.0, G_MAXDOUBLE,  2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
