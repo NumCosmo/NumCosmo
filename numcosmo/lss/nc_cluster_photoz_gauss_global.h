@@ -52,7 +52,7 @@ typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS >*/
 {
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS = 0,
-  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,  
+  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,
   /* < private > */
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAM_LEN, /*< skip >*/
 } NcClusterPhotozGaussGlobalSParams;
@@ -86,3 +86,4 @@ gdouble nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlo
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_H_ */
+

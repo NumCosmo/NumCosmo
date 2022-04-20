@@ -230,11 +230,11 @@ ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, 
 
 typedef struct _iCLIntegrand2dim
 {
-	NcmIntegrand2dim *integ;
-	gdouble xi;
-	gdouble xf;
-	gdouble yi;
-	gdouble yf;
+  NcmIntegrand2dim *integ;
+  gdouble xi;
+  gdouble xf;
+  gdouble yi;
+  gdouble yf;
   gint ldxgiven;
   NcmIntegralPeakfinder p;
 } iCLIntegrand2dim;
@@ -294,31 +294,32 @@ gboolean
 ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
 {
   gboolean ret = FALSE;
-	const gint mineval = 1;
-	const gint maxeval = 10000000;
-	const gint key = 13; /* 13 points rule */
+  const gint mineval = 1;
+  const gint maxeval = 10000000;
+  const gint key = 11; /* 13 points rule */
   iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
-	gint nregions, neval, fail;
-	gdouble prob;
+  gint nregions, neval, fail;
+  gdouble prob;
 
 #ifdef HAVE_LIBCUBA_3_1
-	Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
 #elif defined (HAVE_LIBCUBA_3_3)
-	Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
 #elif defined (HAVE_LIBCUBA_4_0)
-	Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
 #else
   Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
 #endif /* HAVE_LIBCUBA_3_1 */         
 
   if (neval >= maxeval)
-    g_warning ("ncm_integrate_2dim: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-  
-	*result *= (xf - xi) * (yf - yi);
-	*error *= (xf - xi) * (yf - yi);
+    g_warning ("ncm_integrate_2dim: number of evaluations %d >= maximum number of evaluations %d (nregions %d, fail %d, result % 22.15g, error % 22.15g).\n",
+        neval, maxeval, nregions, fail, *result, *error);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi);
+  *error *= (xf - xi) * (yf - yi);
+
+  ret = (fail == 0);
+  return ret;
 }
 
 typedef struct _iCLIntegrand3dim

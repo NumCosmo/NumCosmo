@@ -155,6 +155,7 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
 G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
+G_DEFINE_BOXED_TYPE (NcHIQG1DSQ,    nc_hiqg_1d_sq,    nc_hiqg_1d_sq_dup,    nc_hiqg_1d_sq_free);
 
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
@@ -665,6 +666,104 @@ nc_hiqg_1d_exp_eval_lnRS (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *lnRS)
 }
 
 /**
+ * nc_hiqg_1d_sq_new:
+ * @mu: $\mu$
+ * @V: Volume
+ * @pV: Volume momentum
+ *
+ * Creates a new fiducial semi-quantum wave function.
+ *
+ * Returns: (transfer full): a new #NcHIQG1DExp
+ */
+NcHIQG1DSQ *
+nc_hiqg_1d_sq_new (const gdouble mu, const gdouble V, const gdouble pV)
+{
+  NcHIQG1DSQ *qm_sq = g_new (NcHIQG1DSQ, 1);
+
+  qm_sq->mu = mu;
+  qm_sq->V  = V;
+  qm_sq->pV = pV;
+
+  g_assert_cmpfloat (mu, >, 0.0);
+  g_assert_cmpfloat (V, >, 0.0);
+
+  qm_sq->lnNorm = 0.5 * log (M_PI / mu);
+
+  return qm_sq;
+}
+
+/**
+ * nc_hiqg_1d_sq_dup:
+ * @qm_sq: a #NcHIQG1DSQ
+ *
+ * Duplicates @qm_sq.
+ *
+ * Returns: (transfer full): a duplicate of @qm_sq.
+ */
+NcHIQG1DSQ *
+nc_hiqg_1d_sq_dup (NcHIQG1DSQ *qm_sq)
+{
+  NcHIQG1DSQ *qm_sq_dup = g_new (NcHIQG1DSQ, 1);
+  qm_sq_dup[0] = qm_sq[0];
+
+  return qm_sq_dup;
+}
+
+/**
+ * nc_hiqg_1d_sq_free:
+ * @qm_sq: a #NcHIQG1DSQ
+ *
+ * Frees @qm_sq.
+ *
+ */
+void
+nc_hiqg_1d_sq_free (NcHIQG1DSQ *qm_sq)
+{
+  g_free (qm_sq);
+}
+
+/**
+ * nc_hiqg_1d_sq_eval:
+ * @qm_sq: a #NcHIQG1DSQ
+ * @x: the point where to evaluate $\psi(x)$
+ * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $psi$
+ *
+ * Evaluates @qm_sq at @x.
+ *
+ */
+void
+nc_hiqg_1d_sq_eval (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *psi)
+{
+  const gdouble xV      = x / qm_sq->V;
+  const gdouble lnxV    = log (xV);
+  complex double psi0c  = cexp (-0.5 * qm_sq->lnNorm - 0.5 * log (x) - 0.5 * qm_sq->mu * gsl_pow_2 (lnxV + 0.25 / qm_sq->mu) + I * qm_sq->pV * x);
+
+  psi[0] = creal (psi0c);
+  psi[1] = cimag (psi0c);
+}
+
+/**
+ * nc_hiqg_1d_sq_eval_lnRS:
+ * @qm_sq: a #NcHIQG1DSQ
+ * @x: the point where to evaluate $\psi(x)$
+ * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
+ *
+ * Evaluates @qm_sq at @x.
+ *
+ */
+void
+nc_hiqg_1d_sq_eval_lnRS (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *lnRS)
+{
+  const gdouble xV   = x / qm_sq->V;
+  const gdouble lnxV = log (xV);
+  const gdouble lnR  = -0.5 * qm_sq->lnNorm - 0.5 * log (x) - 0.5 * qm_sq->mu * gsl_pow_2 (lnxV + 0.25 / qm_sq->mu);
+  const gdouble S    = qm_sq->pV * x;
+
+  lnRS[0] = lnR;
+  lnRS[1] = S;
+}
+
+/**
  * nc_hiqg_1d_new:
  * 
  * Creates a new #NcHIQG1D object.
@@ -930,6 +1029,24 @@ nc_hiqg_1d_set_init_cond_exp (NcHIQG1D *qg1d, NcHIQG1DExp *qm_exp, const gdouble
   nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_exp_eval_lnRS, qm_exp, xi, xf);
 }
 
+/**
+ * nc_hiqg_1d_set_init_cond_sq:
+ * @qg1d: a #NcHIQG1D
+ * @qm_sq: Initial wave-function data
+ * @xi: initial point
+ * @xf: final point
+ *
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_sq_eval(),
+ * it calculates the best mesh for the initial condition using the real
+ * part of @psi0.
+ *
+ */
+void
+nc_hiqg_1d_set_init_cond_sq (NcHIQG1D *qg1d, NcHIQG1DSQ *qm_sq, const gdouble xi, const gdouble xf)
+{
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_sq_eval_lnRS, qm_sq, xi, xf);
+}
+
 gdouble
 _nc_hiqg_1d_basis (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
 {
@@ -1189,18 +1306,6 @@ _nc_hiqg_1d_If2 (const gdouble y1, const gdouble y2, const gdouble h, const gdou
   gint signp;
 
   return exp (-a1 + lgamma_r (0.5 + a, &signp)) * y1y2ha / h * (gsl_sf_hyperg_1F1 (0.5 + a, 0.5, gsl_pow_2 (y1 + y2)) - gsl_sf_hyperg_1F1 (0.5 + a, 0.5, gsl_pow_2 (y1 - y2)));
-}
-
-static gdouble
-_nc_hiqg_1d_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
-{
-  const gdouble h2     = h * h;
-  const gdouble ym12   = 0.5 * h * (y1 - y2);
-  const gdouble yp12   = 0.5 * h * (y1 + y2);
-  const gdouble ym12_2 = ym12 * ym12;
-  const gdouble yp12_2 = yp12 * yp12;
-
-  return (exp (-ym12_2) * yp12 * erf (yp12) - exp (-yp12_2) * ym12 * erf (ym12)) * ncm_c_sqrt_pi () / h2;
 }
 
 static void _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t);
@@ -1831,9 +1936,21 @@ _nc_hiqg_1d_xrho (gdouble x, NcHIQG1DPrivate * const self)
 }
 
 static gdouble
+_nc_hiqg_1d_x2rho (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return x * x * ncm_spline_eval (self->rho_s, x);
+}
+
+static gdouble
 _nc_hiqg_1d_mean_p_int (gdouble x, NcHIQG1DPrivate * const self)
 {
   return ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+}
+
+static gdouble
+_nc_hiqg_1d_mean_d_int (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return x * (ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x));
 }
 
 /**
@@ -1850,44 +1967,42 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
   NcHIQG1DPrivate * const self = qg1d->priv;
   gdouble int_xrho = 0.0;
 
-  if (FALSE)
-  {
-    gint i, j;
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
 
-    for (i = 0; i < self->nknots; i++)
-    {
-      const gdouble xi       = ncm_vector_get (self->knots, i);
-      const gdouble ReC_i    = ncm_vector_get (self->ReC, i);
-      const gdouble ImC_i    = ncm_vector_get (self->ImC, i);
-      const gdouble IKxixi_x = _nc_hiqg_1d_Ixf2 (xi, xi, self->h);
+  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_xrho;
+  F.params   = (gpointer) self;
 
-      int_xrho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
-
-      for (j = i + 1; j < self->nknots; j++)
-      {
-        const gdouble xj       = ncm_vector_get (self->knots, j);
-        const gdouble ReC_j    = ncm_vector_get (self->ReC, j);
-        const gdouble ImC_j    = ncm_vector_get (self->ImC, j);
-        const gdouble IKxixi_x = _nc_hiqg_1d_Ixf2 (xi, xj, self->h);
-        const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
-
-        int_xrho += IKxixi_x * CRij;
-      }
-    }
-  }
-  else
-  {
-    gsl_integration_workspace **w = ncm_integral_get_workspace ();
-    gsl_function F;
-    gdouble abserr;
-
-    F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_xrho;
-    F.params   = (gpointer) self;
-
-    gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_xrho, &abserr);
-  }
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_xrho, &abserr);
 
   return int_xrho;
+}
+
+/**
+ * nc_hiqg_1d_int_x2rho_0_inf:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble int_x2rho = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_x2rho;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_x2rho, &abserr);
+
+  return int_x2rho;
 }
 
 /**
@@ -1914,6 +2029,32 @@ nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_p, &abserr);
 
   return mean_p;
+}
+
+/**
+ * nc_hiqg_1d_expect_d:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble mean_d = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_mean_d_int;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_d, &abserr);
+
+  return mean_d;
 }
 
 /**

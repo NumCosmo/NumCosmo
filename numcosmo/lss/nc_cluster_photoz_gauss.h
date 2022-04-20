@@ -66,3 +66,4 @@ NcClusterRedshift *nc_cluster_photoz_gauss_new (void);
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_PHOTOZ_GAUSS_H_ */
+

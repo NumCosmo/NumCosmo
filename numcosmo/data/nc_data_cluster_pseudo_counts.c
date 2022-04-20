@@ -337,20 +337,11 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
       if (sel_u >= val_sel)
         continue;
 
-      if ( nc_cluster_redshift_resample (clusterz, lnM_true, z_true, zi_obs, NULL, rng) &&
+      if ( nc_cluster_redshift_resample (clusterz, cosmo, lnM_true, z_true, zi_obs, NULL, rng) &&
           nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
       {
         ncm_matrix_set (dcpc->true_data, i, 0, z_true);      
         ncm_matrix_set (dcpc->true_data, i, 1, lnM_true);
-/*
-        printf("# %d            [%.8g, %.8g, %.3g, %.8g, %.8g, %.8g, %.8g]\n", i, 
-               z_true, lnM_true, 
-               ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z),
-               ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL),
-               ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL),
-               ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL),
-               ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL));
-*/        
       }
       else
         continue;

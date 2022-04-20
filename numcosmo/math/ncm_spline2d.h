@@ -63,6 +63,7 @@ struct _NcmSpline2dClass
   gdouble (*int_dxdy) (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
   NcmSpline *(*int_dx_spline) (NcmSpline2d *s2d, gdouble xl, gdouble xu);
   NcmSpline *(*int_dy_spline) (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+  void (*eval_vec_y) (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res);
 };
 
 struct _NcmSpline2d
@@ -75,6 +76,10 @@ struct _NcmSpline2d
   NcmSpline *s;
   NcmVector *xv;
   NcmVector *yv;
+  guint x_interv;
+  guint y_interv;
+  gdouble *x_data;
+  gdouble *y_data;
   NcmMatrix *zm;
   gsl_interp_accel *acc_x;
   gsl_interp_accel *acc_y;
@@ -119,6 +124,8 @@ NCM_INLINE gdouble ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdoub
 NCM_INLINE gdouble ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y);
 
 NCM_INLINE gdouble ncm_spline2dim_integ_total (NcmSpline2d *s2d);
+
+NCM_INLINE void ncm_spline2d_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res);
 
 G_END_DECLS
 
@@ -191,6 +198,12 @@ ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
     ncm_spline2d_prepare (s2d);
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdy2 (s2d, x, y);
+}
+
+NCM_INLINE void
+ncm_spline2d_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res)
+{
+  NCM_SPLINE2D_GET_CLASS (s2d)->eval_vec_y (s2d, x, y, order, res);
 }
 
 G_END_DECLS
