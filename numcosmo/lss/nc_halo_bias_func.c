@@ -240,3 +240,15 @@ nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo, gdouble l
 
   return dn_dlnM * bias;
 }
+
+nc_halo_bias_func_int (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo)
+{
+
+gdouble d2N, zl, zu, lnMl, lnMu, err;
+NcClusterAbundanceInt obs_data;
+NcmIntegrand2dim integ;
+
+
+
+
+}

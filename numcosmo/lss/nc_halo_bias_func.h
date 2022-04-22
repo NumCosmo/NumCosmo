@@ -65,7 +65,8 @@ NcHaloBiasFunc *nc_halo_bias_func_copy (NcHaloBiasFunc *mbiasf);
 void nc_halo_bias_func_free (NcHaloBiasFunc *mbiasf);
 void nc_halo_bias_func_clear (NcHaloBiasFunc **mbiasf);
 
-gdouble nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+gdouble nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z); 
+gdouble nc_halo_bias_func_int (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo);
 
 G_END_DECLS
 
