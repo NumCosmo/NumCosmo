@@ -1823,6 +1823,9 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
   fits_write_key_str(fptr, "ZTYPE", g_type_name (self->redshift_type), "Redshift proxy type", &status);
   NCM_FITS_ERROR (status);
 
+  fits_write_key(fptr, TLOGICAL, "USETDATA", &self->use_true_data, "Whether to used true data", &status);
+  NCM_FITS_ERROR (status);
+
   {
     gdouble sarea_d = self->area_survey / gsl_pow_2 (M_PI / 180.0);
     fits_write_key(fptr, TDOUBLE, "AREA", &sarea_d, "Survey area in degree square", &status);
@@ -2009,6 +2012,9 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
     g_assert (g_type_from_name (redshift_type) == self->redshift_type);
   }
+
+  if (fits_read_key (fptr, TLOGICAL, "USETDATA", &self->use_true_data, comment, &status))
+    g_error ("Fits file does not contain USETDATA in the header indicating whether to used true data. Use [col #USETDATA=...] to add this information.");
 
   if (fits_read_key_dbl (fptr, "AREA", &self->area_survey, comment, &status))
     g_error ("Fits file does not contain AREA in the header indicating the survey area (degree square). Use [col #AREA=...] to add this information.");
