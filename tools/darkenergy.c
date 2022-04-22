@@ -1173,28 +1173,6 @@ main (gint argc, gchar *argv[])
     ncm_lh_ratio2d_region_clear (&rg_3sigma);
   }
 
-  if (de_data_cluster.print_mass_function == TRUE && ca_array != NULL)
-  {
-    gint i;
-    FILE *f_mf;
-    gchar *mfile = NULL;
-
-    f_mf = nc_de_open_dataout_file (cosmo, "MassFunction", &mfile);
-    for (i = 0; i < ca_array->len; i++)
-    {
-      NcDataClusterNCount *dca_unbinned = g_ptr_array_index (ca_array, i);
-      nc_data_cluster_ncount_print (dca_unbinned, cosmo, f_mf, full_cmd_line);
-      fprintf (f_mf, "\n\n");
-    }
-    fclose (f_mf);
-    g_ptr_array_free (ca_array, TRUE);
-    ca_array = NULL;
-
-    ncm_message ("# MassFunction file: %s \n", mfile);
-
-    g_free (mfile);
-  }
-
   if (ca_array != NULL)
   {
     g_ptr_array_free (ca_array, TRUE);
