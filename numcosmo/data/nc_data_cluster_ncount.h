@@ -122,7 +122,6 @@ NcmMatrix *nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
 void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data);
 gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, gdouble area_survey, NcmRNG *rng);
-void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
 void nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub);
 void nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount);
