@@ -1402,3 +1402,131 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
  */
 
 
+static gdouble
+nc_cluster_abundance_intp_d2n_bias_integrand (gdouble lnM, gdouble z, gpointer userdata)
+{
+  NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) userdata;
+  NcClusterAbundance *cad         = obs_data->cad;
+
+
+  const gdouble p_z_zr            = nc_cluster_redshift_p (obs_data->clusterz, obs_data->cosmo, lnM, z, obs_data->z_obs, obs_data->z_obs_params);
+  const gdouble p_M_Mobs          = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs, obs_data->lnM_obs_params);
+  const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
+  
+  return p_z_zr * p_M_Mobs * dbdlnM;
+}
+
+
+static gdouble
+nc_cluster_abundance_intp_bin_d2n_bias_integrand (gdouble lnM, gdouble z, gpointer userdata)
+{
+  NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) userdata;
+  NcClusterAbundance *cad         = obs_data->cad;
+
+
+const gdouble z_intp            = nc_cluster_redshift_intp_bin (obs_data->clusterz, obs_data->cosmo, lnM, z, obs_data->z_obs_lower, obs_data->z_obs_upper, obs_data->z_obs_params);
+const gdouble lnM_intp          = nc_cluster_mass_intp_bin (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs_lower, obs_data->lnM_obs_upper, obs_data->lnM_obs_params);
+const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
+  
+  return z_intp * lnM_intp * dbdlnM;
+}
+
+
+
+
+
+
+
+
+/**
+ * nc_cluster_abundance_intp_d2n_bias:
+ * @cad: a #NcClusterAbundance
+ * @cosmo: a #NcHICosmo
+ * @clusterz: a #NcClusterRedshift
+ * @clusterm: a #NcClusterMass
+ * @lnM: logarithm base e of the cluster mass
+ * @z: redshift
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+
+
+
+gdouble
+nc_cluster_abundance_intp_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
+{
+  gdouble d2N_bias, zl, zu, lnMl, lnMu, err;
+  NcClusterAbundanceInt obs_data;
+  NcmIntegrand2dim integ;
+  
+  obs_data.cad            = cad;
+  obs_data.cosmo          = cosmo;
+  obs_data.clusterz       = clusterz;
+  obs_data.clusterm       = clusterm;
+  obs_data.lnM_obs        = lnM_obs;
+  obs_data.lnM_obs_params = lnM_obs_params;
+  obs_data.z_obs          = z_obs;
+  obs_data.z_obs_params   = z_obs_params;
+  
+  integ.f        = nc_cluster_abundance_intp_d2n_bias_integrand;
+  integ.userdata = &obs_data;
+  
+  nc_cluster_redshift_p_limits (clusterz, cosmo, z_obs, z_obs_params, &zl, &zu);
+  nc_cluster_mass_p_limits (clusterm, cosmo, lnM_obs, lnM_obs_params, &lnMl, &lnMu);
+  
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &d2N_bias, &err);
+  
+  return d2N_bias;
+}
+
+
+
+/**
+ * nc_cluster_abundance_intp_bin_d2n_bias:
+ * @cad: a #NcClusterAbundance
+ * @cosmo: a #NcHICosmo
+ * @clusterz: a #NcClusterRedshift
+ * @clusterm: a #NcClusterMass
+ * @lnM_obs_lower: (array) (element-type gdouble): FIXME
+ * @lnM_obs_upper: (array) (element-type gdouble): FIXME
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @z_obs_lower: (array) (element-type gdouble): FIXME
+ * @z_obs_upper: (array) (element-type gdouble): FIXME
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+
+gdouble
+nc_cluster_abundance_intp_bin_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
+{
+  gdouble N_bias, zl, zu, lnMl, lnMu, err;
+  NcClusterAbundanceInt obs_data;
+  NcmIntegrand2dim integ;
+  
+  obs_data.cad            = cad;
+  obs_data.cosmo          = cosmo;
+  obs_data.clusterz       = clusterz;
+  obs_data.clusterm       = clusterm;
+  obs_data.lnM_obs_lower  = lnM_obs_lower;
+  obs_data.lnM_obs_upper  = lnM_obs_upper;
+  obs_data.lnM_obs_params = lnM_obs_params;
+  obs_data.z_obs_lower    = z_obs_lower;
+  obs_data.z_obs_upper    = z_obs_upper;
+  obs_data.z_obs_params   = z_obs_params;
+  
+  integ.f        = &nc_cluster_abundance_intp_bin_d2n_bias_integrand;
+  integ.userdata = &obs_data;
+  
+  nc_cluster_redshift_p_bin_limits (clusterz, cosmo, z_obs_lower, z_obs_upper, z_obs_params, &zl, &zu);
+  nc_cluster_mass_p_bin_limits (clusterm, cosmo, lnM_obs_lower, lnM_obs_upper, lnM_obs_params, &lnMl, &lnMu);
+  
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N_bias, &err);
+
+  return N_bias;
+}
+
