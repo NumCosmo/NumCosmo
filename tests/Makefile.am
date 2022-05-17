@@ -138,6 +138,9 @@ test_nc_data_cluster_ncount_SOURCES =  \
 test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
 
+test_nc_cluster_abundance_SOURCES =  \
+        test_nc_cluster_abundance.c
+
 test_nc_halo_density_profile_SOURCES =  \
         test_nc_halo_density_profile.c
 
@@ -185,6 +188,7 @@ test_programs =  \
 	test_nc_data_bao_dvdv           \
 	test_nc_data_cluster_ncount     \
 	test_nc_cluster_pseudo_counts   \
+	test_nc_cluster_abundance   \
 	test_nc_halo_density_profile    \
 	test_nc_wl_surface_mass_density \
 	test_nc_distance
@@ -408,6 +412,12 @@ test_nc_data_cluster_ncount_LDADD = \
 	$(COVLIBS)
 
 test_nc_cluster_pseudo_counts_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_nc_cluster_abundance_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
