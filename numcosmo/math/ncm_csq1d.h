@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_csq1d.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -51,6 +52,7 @@ struct _NcmCSQ1DClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  
   gdouble (*eval_xi)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_dxi)        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -94,13 +96,13 @@ struct _NcmCSQ1D
 
 /**
  * NcmCSQ1DSingFitUp:
- * 
+ *
  * Struct containig the $\Upsilon_+$ fitting model.
- * 
+ *
  */
 struct _NcmCSQ1DSingFitUp
 {
-  /*< private >*/  
+  /*< private >*/
   gint chi_dim;
   gint Up_dim;
   NcmVector *chi_c;
@@ -179,6 +181,7 @@ void ncm_csq1d_get_J_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
 void ncm_csq1d_get_H_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_Hadiab_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
+void ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x, gdouble *lny);
 
 void ncm_csq1d_get_H_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_Hadiab_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
@@ -190,6 +193,8 @@ gdouble ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d);
 void ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *chi, gdouble *Up);
 void ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up);
 
+void ncm_csq1d_alpha_gamma_circle (NcmCSQ1D *csq1d, NcmModel *model, const gdouble alpha, const gdouble gamma, const gdouble r, const gdouble theta, gdouble *alphap, gdouble *gammap);
+
 G_END_DECLS
 
 #endif /* _NCM_CSQ1D_H_ */
@@ -200,37 +205,37 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_dxi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_dxi (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu2 (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_m (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_1_m (csq1d, model, t, k);
@@ -260,25 +265,25 @@ ncm_csq1d_eval_dm (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdou
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_dm (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_F1 (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_F2 (csq1d, model, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_FN (csq1d, model, n, t, k);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_powspec_factor (csq1d, model, k);
@@ -289,3 +294,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_CSQ1D_INLINE_H_ */
+
