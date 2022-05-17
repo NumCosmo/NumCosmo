@@ -65,6 +65,8 @@ gdouble ncm_util_sinh3 (const gdouble x) G_GNUC_CONST;
 
 gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
 
+void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1);
+
 gsize ncm_mpfr_out_raw (FILE *stream, mpfr_t op);
 gsize ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream);
 gsize ncm_mpq_out_raw (FILE *f, mpq_t q);
