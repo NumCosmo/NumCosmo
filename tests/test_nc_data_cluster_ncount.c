@@ -36,7 +36,6 @@ typedef struct _TestNcDataClusterNCount
 {
   NcmMSet *mset;
   NcDataClusterNCount *ncdata;
-  NcDataClusterNCount *ncdata;
   NcClusterAbundance *cad;
   gdouble area;
   guint ntests;
