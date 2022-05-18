@@ -107,6 +107,8 @@ nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
   klass->obs_params_len = 0;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_cluster_redshift_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params)
 {
@@ -163,6 +165,8 @@ _nc_cluster_redshift_volume (NcClusterRedshift *clusterz)
   g_error ("_nc_cluster_redshift_volume: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterz));
   return 0.0;
 }
+
+/* LCOV_EXCL_END */
 
 /**
  * nc_cluster_redshift_class_obs_len:
