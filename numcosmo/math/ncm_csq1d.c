@@ -678,7 +678,7 @@ ncm_csq1d_sing_fit_up_new (const gint chi_dim, const gint Up_dim)
 NcmCSQ1DSingFitUp *
 ncm_csq1d_sing_fit_up_dup (NcmCSQ1DSingFitUp *sing_up)
 {
-  NcmCSQ1DSingFitUp *sing_up_dup = g_new0 (NcmCSQ1DSingFitUp, 0);
+  NcmCSQ1DSingFitUp *sing_up_dup = g_new0 (NcmCSQ1DSingFitUp, 1);
   
   sing_up_dup->chi_dim = sing_up->chi_dim;
   sing_up_dup->Up_dim  = sing_up->Up_dim;
@@ -2694,6 +2694,23 @@ ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gd
 #define _ALPHA_TO_THETA(alpha) (atan (sinh (alpha)))
 #define _THETA_TO_ALPHA(theta) (asinh (tan (theta)))
 
+static void
+_ncm_csq1d_ct_g0g2 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
+{
+  alphap[0] = alpha;
+  gammap[0] = gamma - p;
+}
+
+static void
+_ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
+{
+  const gdouble theta  = _ALPHA_TO_THETA (alpha);
+  gdouble thetap = 0.0;
+
+  ncm_util_mln_1mIexpzA_1pIexpmzA (gamma, theta, tanh (0.5 * p), gammap, &thetap);
+  alphap[0] = _THETA_TO_ALPHA (thetap);
+}
+
 /**
  * ncm_csq1d_get_poincare_hp_frame:
  * @csq1d: a #NcmCSQ1D
@@ -2751,6 +2768,71 @@ ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_f
 
       x[0]   = exp (-gammap) * tanh (alphap);
       lny[0] = -gammap - gsl_sf_lncosh (alphap);
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+}
+
+/**
+ * ncm_csq1d_get_minkowski_frame:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @adiab_frame: which adiabatic frame to use
+ * @t: time $t$
+ * @x1: (out): $x_1$
+ * @x2: (out): $x_2$
+ *
+ * Computes the complex structure matrix.
+ *
+ */
+void
+ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x1, gdouble *x2)
+{
+  NcmCSQ1DPrivate * const self = csq1d->priv;
+  const gdouble a_t            = asinh (t);
+
+  switch (adiab_frame)
+  {
+    case 0:
+    {
+      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
+      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
+      const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t, self->k) + dgamma;
+
+      x1[0] = + sinh (alpha);
+      x2[0] = - cosh (alpha) * sinh (gamma);
+      break;
+    }
+    case 1:
+    {
+      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
+      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
+
+      x1[0] = + sinh (alpha);
+      x2[0] = - cosh (alpha) * sinh (dgamma);
+      break;
+    }
+    case 2:
+    {
+      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
+      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
+      const gdouble theta  = _ALPHA_TO_THETA (alpha);
+      const gdouble F1     = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
+      const gdouble xi1    = atanh (-F1);
+
+      gdouble thetap = 0.0;
+      gdouble alphap = 0.0;
+      gdouble gammap = 0.0;
+
+      ncm_util_mln_1mIexpzA_1pIexpmzA (dgamma, theta, tanh (0.5 * xi1), &gammap, &thetap);
+
+      alphap = _THETA_TO_ALPHA (thetap);
+
+      x1[0] = + sinh (alphap);
+      x2[0] = - cosh (alphap) * sinh (gammap);
       break;
     }
     default:
@@ -3235,6 +3317,7 @@ ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  * @t: time $t$
+ * @frame: frame
  * @chi_i: $\chi_i$
  * @Up_i: $U_{+i}$
  * @chi: (out): $\chi$
@@ -3243,7 +3326,7 @@ ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
  *
  */
 void
-ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up)
+ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const guint frame, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up)
 {
   NcmCSQ1DPrivate * const self = csq1d->priv;
   const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t, self->k);
@@ -3262,8 +3345,46 @@ ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdo
   chi[0] = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * onepchi2 / exp_Up_i;
   Up[0]  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * onepchi2 / exp_Up_i);
   
-  chi[0] = (chi[0] + Up[0] * q);
-  Up[0]  = log (Up[0]);
+  switch (frame)
+  {
+    case 0:
+      chi[0] = (chi[0] + Up[0] * q);
+      Up[0]  = log (Up[0]);
+      break;
+    case 1:
+      Up[0]  = log (Up[0]);
+      break;
+    case 2:
+    {
+      const gdouble q1 = +ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t, self->k);
+      const gdouble p1 = -ncm_csq1d_eval_int_qmnu2 (csq1d, model, t, self->k);
+
+      /* q1 L2p */
+      chi[0] = (chi[0] + Up[0] * q1);
+      Up[0]  = log (Up[0]);
+
+      /* p1 g1 */
+      Up[0]  = Up[0] - 2.0 * p1;
+
+      /* r1 g2 */
+      {
+        const gdouble alpha = asinh (chi[0]);
+        const gdouble gamma = Up[0] - 0.5 * log1p (chi[0] * chi[0]);
+        const gdouble r1    = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t, self->k);
+
+        gdouble alphap, gammap;
+
+        _ncm_csq1d_ct_g0g1 (alpha, gamma, -2.0 * r1, &alphap, &gammap);
+
+        chi[0] = sinh (alphap);
+        Up[0]  = gammap + 0.5 * log1p (chi[0] * chi[0]);
+      }
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 }
 
 /**

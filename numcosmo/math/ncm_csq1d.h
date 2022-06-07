@@ -183,6 +183,8 @@ void ncm_csq1d_get_Hadiab_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const g
 void ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x, gdouble *lny);
 
+void ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x1, gdouble *x2);
+
 void ncm_csq1d_get_H_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_Hadiab_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
 void ncm_csq1d_get_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny);
@@ -191,7 +193,7 @@ void ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti,
 
 gdouble ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d);
 void ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *chi, gdouble *Up);
-void ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up);
+void ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const guint frame, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up);
 
 void ncm_csq1d_alpha_gamma_circle (NcmCSQ1D *csq1d, NcmModel *model, const gdouble alpha, const gdouble gamma, const gdouble r, const gdouble theta, gdouble *alphap, gdouble *gammap);
 
