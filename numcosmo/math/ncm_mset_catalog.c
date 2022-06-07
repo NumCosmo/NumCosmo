@@ -3678,6 +3678,23 @@ ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_get_bestfit_row:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer full): the current bestfit parameters.
+ */
+NcmVector *
+ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+
+  if (self->bestfit_row)
+    return ncm_vector_dup (self->bestfit_row);
+  else
+    return NULL;
+}
+
+/**
  * ncm_mset_catalog_get_mean:
  * @mcat: a #NcmMSetCatalog
  * @mean: (inout) (allow-none) (transfer full): a #NcmVector
