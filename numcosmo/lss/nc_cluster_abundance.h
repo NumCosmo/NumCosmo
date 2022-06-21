@@ -58,6 +58,7 @@ typedef struct _NcClusterAbundanceDataBin NcClusterAbundanceDataBin;
 
 typedef gdouble (*NcClusterAbundanceN) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 typedef gdouble (*NcClusterAbundanceIntPd2N) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z);
+typedef gdouble (*NcClusterAbundanceIntPd2NBias)  (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
 
 #define nc_cluster_abundance_d2NdzdlnM_val(cad, cp, lnM, z) (cad)->d2NdzdlnM_val (cad, cp, lnM, z)
 #define nc_cluster_abundance_dNdz_val(cad, cp, lnMl, lnMu, z) (cad)->dNdz_val (cad, cp, lnMl, lnMu, z)
@@ -78,6 +79,7 @@ struct _NcClusterAbundance
   NcHaloBiasFunc *mbiasf; /* new FIXME */
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
+  NcClusterAbundanceIntPd2NBias intp_d2N_bias;
   gdouble norma, log_norma;
   gdouble lnMi, lnMf, zi, zf;
   gdouble lnM_epsilon, z_epsilon;
