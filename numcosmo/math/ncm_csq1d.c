@@ -2559,8 +2559,6 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
   dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
   
-  /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, F1, F2, F3, F4);*/
-  
   alpha[0]  = +F1 + F1_3 / 3.0 - F3;
   dgamma[0] = -(1.0 + F1_2) * F2 + F4;
   
@@ -2569,6 +2567,45 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   
   if (dgamma_reltol != NULL)
     dgamma_reltol[0] = dgamma_reltol0;
+}
+
+/**
+ * ncm_csq1d_eval_nonadiab_at:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @nonadiab_frame: frame
+ * @t: time $t$
+ * @chi: (out): value of $\chi(t)$
+ * @Up: (out): value of $U_+$
+ *
+ * Computes the value of the non-adiabatic VDC order order two
+ * in the variables $\chi$ and $U$ at $t$. The VDC can be computed
+ * at different frames by choosing @nonadiab_frame.
+ *
+ */
+void ncm_csq1d_eval_nonadiab_at (NcmCSQ1D *csq1d, NcmModel *model, guint nonadiab_frame, const gdouble t, gdouble *chi, gdouble *Up)
+{
+  NcmCSQ1DPrivate * const self = csq1d->priv;
+  const gdouble q0 = ncm_csq1d_eval_int_1_m (csq1d, model, t, self->k);
+  const gdouble q1 = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t, self->k);
+  const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t, self->k);
+  const gdouble r1 = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t, self->k);
+
+  switch (nonadiab_frame)
+  {
+    case 0:
+      chi[0] = (2.0 * p1 - 1.0) * (q0 + q1) + 2.0 * r1;
+      Up[0]  = -2.0 * p1;
+      break;
+    case 1:
+      chi[0] = + 2.0 * r1;
+      Up[0]  = - 2.0 * p1;
+      break;
+    case 2:
+      chi[0] = 0.0;
+      Up[0] = 0.0;
+      break;
+  }
 }
 
 /**
@@ -2777,11 +2814,13 @@ ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_f
 }
 
 /**
- * ncm_csq1d_get_minkowski_frame:
+ * ncm_csq1d_alpha_dgamma_to_minkowski_frame:
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  * @adiab_frame: which adiabatic frame to use
  * @t: time $t$
+ * @alpha: $\alpha$
+ * @dgamma: $\delta\gamma$
  * @x1: (out): $x_1$
  * @x2: (out): $x_2$
  *
@@ -2789,17 +2828,14 @@ ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_f
  *
  */
 void
-ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x1, gdouble *x2)
+ncm_csq1d_alpha_dgamma_to_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, const gdouble alpha, const gdouble dgamma, gdouble *x1, gdouble *x2)
 {
   NcmCSQ1DPrivate * const self = csq1d->priv;
-  const gdouble a_t            = asinh (t);
 
   switch (adiab_frame)
   {
     case 0:
     {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
       const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t, self->k) + dgamma;
 
       x1[0] = + sinh (alpha);
@@ -2808,17 +2844,12 @@ ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_fra
     }
     case 1:
     {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-
       x1[0] = + sinh (alpha);
       x2[0] = - cosh (alpha) * sinh (dgamma);
       break;
     }
     case 2:
     {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
       const gdouble theta  = _ALPHA_TO_THETA (alpha);
       const gdouble F1     = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
       const gdouble xi1    = atanh (-F1);
@@ -2839,6 +2870,29 @@ ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_fra
       g_assert_not_reached ();
       break;
   }
+}
+
+/**
+ * ncm_csq1d_get_minkowski_frame:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @adiab_frame: which adiabatic frame to use
+ * @t: time $t$
+ * @x1: (out): $x_1$
+ * @x2: (out): $x_2$
+ *
+ * Computes the complex structure matrix.
+ *
+ */
+void
+ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x1, gdouble *x2)
+{
+  NcmCSQ1DPrivate * const self = csq1d->priv;
+  const gdouble a_t            = asinh (t);
+  const gdouble alpha          = ncm_spline_eval (self->alpha_s, a_t);
+  const gdouble dgamma         = ncm_spline_eval (self->dgamma_s, a_t);
+  
+  ncm_csq1d_alpha_dgamma_to_minkowski_frame (csq1d, model, adiab_frame, t, alpha, dgamma, x1, x2);
 }
 
 /**
@@ -3317,7 +3371,7 @@ ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  * @t: time $t$
- * @frame: frame
+ * @nonadiab_frame: frame
  * @chi_i: $\chi_i$
  * @Up_i: $U_{+i}$
  * @chi: (out): $\chi$
@@ -3326,11 +3380,12 @@ ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
  *
  */
 void
-ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const guint frame, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up)
+ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const guint nonadiab_frame, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up)
 {
   NcmCSQ1DPrivate * const self = csq1d->priv;
   const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t, self->k);
-  const gdouble q              = -int_1_m;
+  const gdouble q0             = int_1_m;
+  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t, self->k);
   const gdouble a              = ncm_spline_eval (self->R[0], t);
   const gdouble b              = ncm_spline_eval (self->R[1], t);
   const gdouble c              = ncm_spline_eval (self->R[2], t);
@@ -3345,26 +3400,27 @@ ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdo
   chi[0] = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * onepchi2 / exp_Up_i;
   Up[0]  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * onepchi2 / exp_Up_i);
   
-  switch (frame)
+  switch (nonadiab_frame)
   {
     case 0:
-      chi[0] = (chi[0] + Up[0] * q);
+      chi[0] = (chi[0] - Up[0] * q0);
       Up[0]  = log (Up[0]);
       break;
     case 1:
+      /* q1 L2p */
+      chi[0] = (chi[0] + Up[0] * q1);
       Up[0]  = log (Up[0]);
       break;
     case 2:
     {
-      const gdouble q1 = +ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t, self->k);
-      const gdouble p1 = -ncm_csq1d_eval_int_qmnu2 (csq1d, model, t, self->k);
+      const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t, self->k);
 
       /* q1 L2p */
       chi[0] = (chi[0] + Up[0] * q1);
       Up[0]  = log (Up[0]);
 
       /* p1 g1 */
-      Up[0]  = Up[0] - 2.0 * p1;
+      Up[0]  = Up[0] + 2.0 * p1;
 
       /* r1 g2 */
       {
