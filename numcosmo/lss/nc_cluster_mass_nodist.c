@@ -127,6 +127,7 @@ static gboolean _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHIC
 static void _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_nodist_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnm_lower, gdouble *lnm_upper);
+static gdouble _nc_cluster_mass_nodist_volume (NcClusterMass *clusterm);
 
 static void
 nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
@@ -176,6 +177,7 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
   parent_class->P_bin_limits   = &_nc_cluster_mass_nodist_p_bin_limits;
   parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
+  parent_class->volume         = &_nc_cluster_mass_nodist_volume;
   parent_class->obs_len        = 1;
   parent_class->obs_params_len = 0;
   
@@ -253,4 +255,10 @@ _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
   *lnm_upper = self->lnM_max;
   
   return;
+}
+
+static gdouble
+_nc_cluster_mass_nodist_volume (NcClusterMass *clusterm)
+{
+  return 1.0;
 }

@@ -2795,7 +2795,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
 
 
 /**
- * ncm_mset_load:
+ * ncm_mset_load: (constructor):
  * @filename: mset filename
  * @ser: a #NcmSerialize
  *
