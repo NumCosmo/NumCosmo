@@ -574,9 +574,9 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
  * @width_th: the true width
  * @colour_th: the true colour
  *
- * Computes the apparent magniture from model, width and colour.
+ * Computes the apparent magnitude from model, width and colour.
  *
- * Returns: the apparent magniture.
+ * Returns: the apparent magnitude.
  */
 gdouble
 nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, guint i, gdouble width_th, gdouble colour_th)
@@ -610,7 +610,7 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
  * @X: a #NcmMatrix
  * @colmajor: whether to fill the matrices in a col-major format
  *
- * Computes effective observed vector @obs, the first @snia_cov->mu_len params
+ * Computes effective observed vector @obs, the first @snia_cov->mu_len parameters
  * are set to the width colour combination using the values of the distance
  * modulus from the model @cosmo and the SNIa model @dcov, i.e.,
  * $-\alpha{}w_i+\beta{}c_i = m_{\mathrm{B},i} - \mu_{\mathrm{th},i}-\alpha-\mathcal{M}_i$.
