@@ -220,7 +220,6 @@
     <section>
       <title>Quantum Gravity Bounce</title>
       <xi:include href="xml/nc_hicosmo_qgrw.xml"/>
-      <xi:include href="xml/nc_hicosmo_Vexp.xml"/>
     </section>
     <section>
       <title>Kinematic Models</title>
