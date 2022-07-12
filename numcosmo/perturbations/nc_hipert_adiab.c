@@ -70,11 +70,6 @@
 
 G_DEFINE_INTERFACE (NcHIPertIAdiab, nc_hipert_iadiab, G_TYPE_OBJECT);
 
-static guint _nc_hipert_iadiab_nsing (NcHIPertIAdiab *iad, const gdouble k) { return 0; }
-static void _nc_hipert_iadiab_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st) { g_error ("_nc_hipert_iadiab_get_sing_info: no singularity implemented."); return; }
-static gdouble _nc_hipert_iadiab_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_iadiab_eval_sing_mnu: no singularity implemented."); return 0.0; }
-static gdouble _nc_hipert_iadiab_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_iadiab_eval_sing_dlnmnu: no singularity implemented."); return 0.0; }
-static void _nc_hipert_iadiab_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu) { g_error ("_nc_hipert_iadiab_eval_sing_system: no singularity implemented."); }
 static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 static void
@@ -84,12 +79,6 @@ nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
   iface->eval_nu             = NULL;
   iface->eval_dlnmnu         = NULL;
   iface->eval_system         = NULL;
-
-  iface->nsing               = &_nc_hipert_iadiab_nsing;
-  iface->get_sing_info       = &_nc_hipert_iadiab_get_sing_info;
-  iface->eval_sing_mnu       = &_nc_hipert_iadiab_eval_sing_mnu;
-  iface->eval_sing_dlnmnu    = &_nc_hipert_iadiab_eval_sing_dlnmnu;
-  iface->eval_sing_system    = &_nc_hipert_iadiab_eval_sing_system;
 
 	iface->eval_powspec_factor = &_nc_hipert_iadiab_eval_powspec_factor;
 }
@@ -162,11 +151,6 @@ static gdouble _nc_hipert_adiab_eval_nu (NcmHOAA *hoaa, NcmModel *model, const g
 static gdouble _nc_hipert_adiab_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
 static void _nc_hipert_adiab_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
-static guint _nc_hipert_adiab_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
-static void _nc_hipert_adiab_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
-static gdouble _nc_hipert_adiab_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
-static gdouble _nc_hipert_adiab_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
-static void _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
 static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
 
@@ -189,13 +173,6 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
   hoaa_class->eval_V      = NULL;
   hoaa_class->eval_system = &_nc_hipert_adiab_eval_system;
   hoaa_class->prepare     = &_nc_hipert_adiab_prepare;
-
-  hoaa_class->nsing            = &_nc_hipert_adiab_nsing;
-  hoaa_class->get_sing_info    = &_nc_hipert_adiab_get_sing_info;
-  hoaa_class->eval_sing_mnu    = &_nc_hipert_adiab_eval_sing_mnu;
-  hoaa_class->eval_sing_dlnmnu = &_nc_hipert_adiab_eval_sing_dlnmnu;
-  hoaa_class->eval_sing_V      = NULL;
-  hoaa_class->eval_sing_system = &_nc_hipert_adiab_eval_sing_system;
 
 	hoaa_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
 }
@@ -229,37 +206,6 @@ static void
 _nc_hipert_adiab_prepare (NcmHOAA *hoaa, NcmModel *model)
 {
   g_assert (NC_IS_HIPERT_IADIAB (model));
-}
-
-static guint 
-_nc_hipert_adiab_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
-{
-  return nc_hipert_iadiab_nsing (NC_HIPERT_IADIAB (model), k);
-}
-
-static void 
-_nc_hipert_adiab_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
-{
-  nc_hipert_iadiab_get_sing_info (NC_HIPERT_IADIAB (model), k, sing, ts, dts_i, dts_f, st);
-}
-
-static gdouble 
-_nc_hipert_adiab_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
-{
-  return nc_hipert_iadiab_eval_sing_mnu (NC_HIPERT_IADIAB (model), t_m_ts, k, sing);
-}
-
-static gdouble 
-_nc_hipert_adiab_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
-{
-  return nc_hipert_iadiab_eval_sing_dlnmnu (NC_HIPERT_IADIAB (model), t_m_ts, k, sing);
-}
-
-static void 
-_nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
-{
-  Vnu[0] = 0.0;
-  nc_hipert_iadiab_eval_sing_system (NC_HIPERT_IADIAB (model), t_m_ts, k, sing, nu, dlnmnu);
 }
 
 static gdouble
@@ -315,40 +261,6 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
  * @tau: $\tau$
  * @k: $k$
  * @nu: (out): $\nu$
- * @dlnmnu: (out): FIXME
- *
- * FIXME
- *
- */
-/**
- * nc_hipert_iadiab_eval_sing_mnu:
- * @iad: a #NcHIPertIAdiab
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- * 
- * FIXME
- *
- * Returns: FIXME.
- */
-/**
- * nc_hipert_iadiab_eval_sing_dlnmnu:
- * @iad: a #NcHIPertIAdiab
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- *
- * FIXME
- *
- * Returns: FIXME.
- */
-/**
- * nc_hipert_iadiab_eval_sing_system:
- * @iad: a #NcHIPertIAdiab
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- * @nu: (out): FIXME
  * @dlnmnu: (out): FIXME
  *
  * FIXME

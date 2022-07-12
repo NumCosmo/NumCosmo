@@ -395,7 +395,6 @@ nc_headers = \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qrbf.h       \
 	model/nc_hicosmo_qgrw.h       \
-	model/nc_hicosmo_Vexp.h       \
 	model/nc_hiprim_power_law.h   \
 	model/nc_hiprim_atan.h        \
 	model/nc_hiprim_expc.h        \
@@ -545,7 +544,6 @@ nc_sources = \
 	model/nc_hicosmo_qspline.c    \
 	model/nc_hicosmo_qrbf.c       \
 	model/nc_hicosmo_qgrw.c       \
-	model/nc_hicosmo_Vexp.c       \
 	model/nc_hiprim_power_law.c   \
 	model/nc_hiprim_atan.c        \
 	model/nc_hiprim_expc.c        \
