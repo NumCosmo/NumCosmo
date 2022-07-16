@@ -419,6 +419,10 @@ static gdouble _ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_nu2        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_mnu        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_dlnmnu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _ncm_csq1d_eval_V          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -501,6 +505,10 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_nu             = &_ncm_csq1d_eval_nu;
   klass->eval_nu2            = &_ncm_csq1d_eval_nu2;
   klass->eval_m              = &_ncm_csq1d_eval_m;
+  klass->eval_mnu            = &_ncm_csq1d_eval_mnu;
+  klass->eval_dlnmnu	     = &_ncm_csq1d_eval_dlnmnu;
+  klass->eval_V              = &_ncm_csq1d_eval_V;
+  klass->eval_system         = &_ncm_csq1d_eval_system;
   klass->eval_int_1_m        = &_ncm_csq1d_eval_int_1_m;
   klass->eval_int_mnu2       = &_ncm_csq1d_eval_int_mnu2;
   klass->eval_int_qmnu2      = &_ncm_csq1d_eval_int_qmnu2;
@@ -543,7 +551,37 @@ _ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gd
 static gdouble
 _ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  return exp (NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k)) / NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k);
+  return exp (NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k) / NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k));
+}
+
+static gdouble
+_ncm_csq1d_eval_mnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return exp (NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k));
+}
+
+static gdouble
+_ncm_csq1d_eval_dlnmnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_csq1d_eval_V (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+
+  return 0.0;
 }
 
 static gdouble

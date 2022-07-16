@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/math/ncm_hoaa.h>
+#include <numcosmo/math/ncm_csq1d.h>
 
 G_BEGIN_DECLS
 
@@ -67,7 +67,7 @@ typedef struct _NcHIPertAdiab NcHIPertAdiab;
 struct _NcHIPertAdiabClass
 {
   /*< private >*/
-  NcmHOAAClass parent_class;
+  NcmCSQ1DClass parent_class;
 };
 
 /**
@@ -91,7 +91,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ADIAB_VARS  >*/
 struct _NcHIPertAdiab
 {
   /*< private >*/
-  NcmHOAA parent_instance;
+  NcmCSQ1D parent_instance;
 };
 
 GType nc_hipert_iadiab_get_type (void) G_GNUC_CONST;
