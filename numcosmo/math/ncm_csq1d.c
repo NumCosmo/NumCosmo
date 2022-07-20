@@ -413,7 +413,7 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
   }
 }
-
+static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
 static gdouble _ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -421,7 +421,7 @@ static gdouble _ncm_csq1d_eval_nu2        (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_mnu        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_dlnmnu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static void    _ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 static gdouble _ncm_csq1d_eval_V          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -431,7 +431,6 @@ static gdouble _ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
-static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
 
 static void
 ncm_csq1d_class_init (NcmCSQ1DClass *klass)
@@ -576,12 +575,11 @@ _ncm_csq1d_eval_V (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdou
   return 0.0;
 }
 
-static gdouble
-_ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+static void
+_ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k,  gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
 {
   g_error ("_ncm_csq1d_eval_nu: not implemented.");
 
-  return 0.0;
 }
 
 static gdouble
@@ -648,11 +646,10 @@ _ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdoubl
   return 0.0;
 }
 
-static gdouble
-_ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k)
+static gdouble 
+_ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
 {
-  g_error ("_ncm_csq1d_eval_powspec_factor: not implemented.");
-  
+	g_error("Not Implemented");
   return 0.0;
 }
 
@@ -1423,14 +1420,6 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @model: (allow-none): a #NcmModel
  * @n: order $n$
  * @t: time $t$
- * @k: mode $k$
- *
- * Returns: $F_n$
- */
-/**
- * ncm_csq1d_eval_powspec_factor: (virtual eval_powspec_factor)
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
  * @k: mode $k$
  *
  * Returns: $F_n$

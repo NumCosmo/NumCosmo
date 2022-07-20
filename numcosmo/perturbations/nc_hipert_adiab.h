@@ -47,11 +47,12 @@ struct _NcHIPertIAdiabInterface
 {
   /*< private >*/
   GTypeInterface parent;
-  gdouble (*eval_mnu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-  gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-  gdouble (*eval_dlnmnu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-	gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad);
+  gdouble (*eval_mnu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_dlnmnu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_V) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+  gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad);
 };
 
 #define NC_TYPE_HIPERT_ADIAB             (nc_hipert_adiab_get_type ())
@@ -97,10 +98,10 @@ struct _NcHIPertAdiab
 GType nc_hipert_iadiab_get_type (void) G_GNUC_CONST;
 GType nc_hipert_adiab_get_type (void) G_GNUC_CONST;
 
-NCM_INLINE gdouble nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-NCM_INLINE gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-NCM_INLINE gdouble nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-NCM_INLINE void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
 NCM_INLINE gdouble nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
@@ -121,27 +122,27 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE gdouble
-nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
 {
-  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_mnu (iad, tau, k);
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_mnu (iad, t, k);
 }
 
 NCM_INLINE gdouble
-nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
 {
-  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_nu (iad, tau, k);
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_nu (iad, t, k);
 }
 
 NCM_INLINE gdouble
-nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
 {
-  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_dlnmnu (iad, tau, k);
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_dlnmnu (iad, t, k);
 }
 
 NCM_INLINE void
-nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu)
 {
-  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_system (iad, tau, k, nu, dlnmnu);
+  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_system (iad, t, k, nu, dlnmnu);
 }
 
 NCM_INLINE gdouble 

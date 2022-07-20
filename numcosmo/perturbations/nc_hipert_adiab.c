@@ -70,17 +70,20 @@
 
 G_DEFINE_INTERFACE (NcHIPertIAdiab, nc_hipert_iadiab, G_TYPE_OBJECT);
 
+static gdouble _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k){ g_error ("Not implemented"); return 0.0; }
+static gdouble _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k){ g_error ("Not implemented"); return 0.0; }
+static gdouble _nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k){ g_error ("Not implemented"); return 0.0; }
+static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu){ g_error ("Not implemented"); }
 static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 static void
 nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_mnu            = NULL;
-  iface->eval_nu             = NULL;
-  iface->eval_dlnmnu         = NULL;
-  iface->eval_system         = NULL;
-
-	iface->eval_powspec_factor = &_nc_hipert_iadiab_eval_powspec_factor;
+  iface->eval_mnu            = &_nc_hipert_iadiab_eval_mnu;
+  iface->eval_nu             = &_nc_hipert_iadiab_eval_nu;
+  iface->eval_dlnmnu         = &_nc_hipert_iadiab_eval_dlnmnu;
+  iface->eval_system         = &_nc_hipert_iadiab_eval_system;
+  iface->eval_powspec_factor = &_nc_hipert_iadiab_eval_powspec_factor;
 }
 
 G_DEFINE_TYPE (NcHIPertAdiab, nc_hipert_adiab, NCM_TYPE_CSQ1D);
@@ -146,15 +149,12 @@ _nc_hipert_adiab_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->finalize (object);
 }
 
-static gdouble _nc_hipert_adiab_eval_mnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_adiab_eval_dlnmnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static void _nc_hipert_adiab_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
-
-
-static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
-
+static gdouble _nc_hipert_adiab_eval_mnu            (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_hipert_adiab_eval_nu             (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_hipert_adiab_eval_dlnmnu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static void _nc_hipert_adiab_eval_system            (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 static void _nc_hipert_adiab_prepare (NcmCSQ1D *csq1d, NcmModel *model);
+static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
 nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
@@ -173,8 +173,7 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
   csq1d_class->eval_V      = NULL;
   csq1d_class->eval_system = &_nc_hipert_adiab_eval_system;
   csq1d_class->prepare     = &_nc_hipert_adiab_prepare;
-
-	csq1d_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
+  csq1d_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
 }
 
 static gdouble 
@@ -194,6 +193,7 @@ _nc_hipert_adiab_eval_dlnmnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t,
 {
   return nc_hipert_iadiab_eval_dlnmnu (NC_HIPERT_IADIAB (model), t, k);
 }
+
 
 static void 
 _nc_hipert_adiab_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
@@ -228,7 +228,7 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 /**
  * nc_hipert_iadiab_eval_mnu:
  * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
+ * @t: $t$
  * @k: $k$
  *
  * FIXME
@@ -238,7 +238,7 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 /**
  * nc_hipert_iadiab_eval_nu:
  * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
+ * @t: $t$
  * @k: $k$
  *
  * FIXME
@@ -248,7 +248,7 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 /**
  * nc_hipert_iadiab_eval_dlnmnu:
  * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
+ * @t: $t$
  * @k: $k$
  *
  * FIXME
@@ -258,7 +258,7 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 /**
  * nc_hipert_iadiab_eval_system:
  * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
+ * @t: $t$
  * @k: $k$
  * @nu: (out): $\nu$
  * @dlnmnu: (out): FIXME
@@ -278,7 +278,6 @@ NcHIPertAdiab *
 nc_hipert_adiab_new (void)
 {
   NcHIPertAdiab *pa = g_object_new (NC_TYPE_HIPERT_ADIAB,
-                                    "opt", NCM_CSQ1D_OPT_DLNMNU_ONLY,
                                     NULL);
   return pa;
 }
@@ -289,7 +288,7 @@ nc_hipert_adiab_new (void)
  *
  * Increases the reference count of @pa.
  *
- * Returns: (transfer full): @pa.
+ * Returns: (transfer full): @piad.
  */
 NcHIPertAdiab *
 nc_hipert_adiab_ref (NcHIPertAdiab *pa)
@@ -314,7 +313,7 @@ nc_hipert_adiab_free (NcHIPertAdiab *pa)
  * nc_hipert_adiab_clear:
  * @pa: a #NcHIPertAdiab.
  *
- * Decreases the reference count of *@pa and sets *@pa to NULL.
+ * Decreases the reference count of *@ad and sets *@pa to NULL.
  *
  */
 void
