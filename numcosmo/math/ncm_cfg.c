@@ -95,6 +95,7 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_sfb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hiprim_power_law.h"
