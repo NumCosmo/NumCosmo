@@ -26,15 +26,14 @@
 /**
  * SECTION:nc_hicosmo_sfb
  * @title: NcHICosmoSFB
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase model.
+ * @short_description:One $w$-fluid model with a bounce phase model.
  *
  * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
  * \begin{align}
- * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
- * c_s^2 &= \frac{w (1 + w) + 4R/9}{(1+w) + 4R/3}, \\\\
- * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
+ * m_\zeta &= 2 z^2 = 2\sqrt{\frac{3(1+w)}{2w}}a, \\\\
+ * c_s^2 &= w, \\\\
+ * \nu_\zeta^2 &= \frac {m_\zeta c_s^2 k^2}{a^2}.
  * \end{align}
- * where $$R \equiv \frac{\Omega_{r0} x}{\Omega_{w0} x^{3w}}.$$
  *
  */
 
@@ -82,9 +81,6 @@ static gdouble _nc_hicosmo_sfb_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_sfb_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_sfb_xb (NcHICosmo *cosmo);
 
-/* I must define here the functions that csq1d implements 
-  static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);*/
-/*static NcHIPertITwoFluidsTV *_nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);*/
 
 static void
 nc_hicosmo_sfb_class_init (NcHICosmoSFBClass *klass)
@@ -113,14 +109,20 @@ nc_hicosmo_sfb_class_init (NcHICosmoSFBClass *klass)
                                NCM_PARAM_TYPE_FREE);
   /* Set w param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_SFB_W, "w", "w",
-                               1e-50,  1.0, 1.0e-8,
+                               1e-50,  10.0, 1.0e-8,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_SFB_DEFAULT_W,
                                NCM_PARAM_TYPE_FIXED);
   /* Set xb param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_SFB_X_B, "x_b", "xb",
-                               1.0e10,  1.0e40, 1.0e25,
+                               1.0e-50,  1.0, 1.0e25,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_SFB_DEFAULT_X_B,
                                NCM_PARAM_TYPE_FIXED);
+  /* Set taub param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_SFB_TAU_B, "tau_b", "taub",
+                               1.0e-10,  1.0e50, 1.0e-25,
+                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_SFB_DEFAULT_TAU_B,
+                               NCM_PARAM_TYPE_FIXED);
+
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
@@ -136,15 +138,19 @@ nc_hicosmo_sfb_class_init (NcHICosmoSFBClass *klass)
 
   object_class->finalize = nc_hicosmo_sfb_finalize;
 }
+static gdouble _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+static gdouble _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+static gdouble _nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+
 
 static void
 nc_hipert_adiab_interface_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_mnu            = NULL;
-  iface->eval_nu             = NULL;
-  iface->eval_dlnmnu         = NULL;
-  iface->eval_system         = NULL;
-  iface->eval_powspec_factor = NULL;
+  iface->eval_mnu            = &_nc_hipert_iadiab_eval_mnu;
+  iface->eval_nu             = &_nc_hipert_iadiab_eval_nu;
+  iface->eval_dlnmnu         = &_nc_hipert_iadiab_eval_dlnmnu;
+  iface->eval_system         = &_nc_hipert_iadiab_eval_system;
 }
 
 #define VECTOR   (NCM_MODEL (cosmo)->params)
@@ -153,7 +159,7 @@ nc_hipert_adiab_interface_init (NcHIPertIAdiabInterface *iface)
 #define OMEGA_W  (ncm_vector_get (VECTOR, NC_HICOSMO_SFB_OMEGA_W))
 #define W        (ncm_vector_get (VECTOR, NC_HICOSMO_SFB_W))
 #define X_B      (ncm_vector_get (VECTOR, NC_HICOSMO_SFB_X_B))
-
+#define TAU_B      (ncm_vector_get (VECTOR, NC_HICOSMO_SFB_TAU_B))
 /****************************************************************************
  * Normalized Hubble function
  ****************************************************************************/
@@ -179,11 +185,50 @@ _nc_hicosmo_sfb_E2 (NcHICosmo *cosmo, gdouble z)
 
   return (OMEGA_R * (x4 - x6 / xb2) + OMEGA_W * (x3 * x3w - x6 * xb3w / xb3));
 }
+/****************************************************************************
+ * y function, the scale factor at a time \tau divided by the scale factor today
+ ****************************************************************************/
+ static gdouble
+ _nc_hicosmo_sfb_y (NcHICosmo *cosmo, gdouble tau)
+{
+ gdouble tau2 = tau * tau;
+ gdouble taub2 = TAU_B * TAU_B;
+ gdouble gamma = 0.25 * X_B * OMEGA_W;
+ gdouble s1 = pow( 1 + tau2 / taub2, 0.5);
+ return (tau2 * gamma + s1) / X_B;
+}
+
+/****************************************************************************
+ * \tau in terms of y
+ ****************************************************************************/
+ static gdouble
+ _nc_hicosmo_sfb_tau (NcHICosmo *cosmo, gdouble y)
+ {
+ gdouble taub2 = TAU_B * TAU_B;
+ gdouble gamma = 0.25 * X_B * OMEGA_W;
+ gdouble denom = (1.0 + 2.0 * X_B * y * gamma * taub2 + pow ((1.0 + 4.0 * gamma * taub2 * (X_B * y + gamma * taub2)), 0.5));
+ gdouble numer = (pow((X_B * y), 2) - 1.0) * 2.0 * taub2;
+ return pow (numer / denom, 0.5);
+ }
+
+/****************************************************************************
+ * Hubble function in time \tau
+ ****************************************************************************/
+ static gdouble
+ _nc_hicosmo_sfb_H (NcHICosmo *cosmo, gdouble tau)
+{
+ gdouble tau2 = tau * tau;
+ gdouble taub2 = TAU_B * TAU_B;
+ gdouble gamma = 0.25 * X_B * OMEGA_W;
+ gdouble s1 = pow( 1 + tau2 / taub2, 0.5);
+ gdouble y_xb  = tau2 * gamma + s1;
+ gdouble yp_xb = (2.0 * gamma + 1.0 / (taub2 * s1)) * tau;
+ return yp_xb / y_xb;
+}
 
 /****************************************************************************
  * Normalized Hubble function redshift derivative
  ****************************************************************************/
-
 static gdouble
 _nc_hicosmo_sfb_dE2_dz (NcHICosmo *cosmo, gdouble z)
 {
@@ -254,6 +299,48 @@ static gdouble _nc_hicosmo_sfb_H0 (NcHICosmo *cosmo) { return MACRO_H0 * (OMEGA_
 static gdouble _nc_hicosmo_sfb_Omega_t0 (NcHICosmo *cosmo) { return 1.0; }
 static gdouble _nc_hicosmo_sfb_Omega_c0 (NcHICosmo *cosmo) { return OMEGA_W; }
 static gdouble _nc_hicosmo_sfb_xb (NcHICosmo *cosmo) { return X_B; }
+
+/*****************************************************************************
+Interface functions
+******************************************************************************/
+static gdouble _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  gdouble w = W;
+  return pow(w, 0.5) * k;
+
+}
+
+static gdouble _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  NcHICosmoSFB *SFB = NC_HICOSMO_SFB (iad);
+  gdouble w = W;
+  gdouble nu = _nc_hipert_iadiab_eval_nu (iad, t, k);
+  gdouble z = pow( (3.0 * (1.0 + w)) / (2 * w), 0.5) * _nc_hicosmo_sfb_y (cosmo, t);
+  gdouble m = 2 * pow(z, 2);
+  return m * nu;
+
+}
+
+static gdouble _nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  NcHICosmoSFB *SFB = NC_HICOSMO_SFB (iad);
+  return 0.0;
+
+}
+
+static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  NcHICosmoSFB *SFB = NC_HICOSMO_SFB (iad);
+
+}
+
+
+
+
 
 
 /**
