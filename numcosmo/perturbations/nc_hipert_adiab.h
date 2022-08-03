@@ -49,7 +49,9 @@ struct _NcHIPertIAdiabInterface
   GTypeInterface parent;
   gdouble (*eval_mnu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
-  gdouble (*eval_dlnmnu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_xi) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_F1) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+  gdouble (*eval_F2) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_V) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   void (*eval_system) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
   gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad);
@@ -100,7 +102,9 @@ GType nc_hipert_adiab_get_type (void) G_GNUC_CONST;
 
 NCM_INLINE gdouble nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
-NCM_INLINE gdouble nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
+NCM_INLINE gdouble nc_hipert_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
 NCM_INLINE gdouble nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
@@ -134,9 +138,21 @@ nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
 }
 
 NCM_INLINE gdouble
-nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
 {
-  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_dlnmnu (iad, t, k);
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_xi (iad, t, k);
+}
+
+NCM_INLINE gdouble
+nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_F1 (iad, t, k);
+}
+
+NCM_INLINE gdouble
+nc_hipert_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_F2 (iad, t, k);
 }
 
 NCM_INLINE void

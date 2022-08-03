@@ -52,7 +52,6 @@ typedef struct _NcHICosmoSFB NcHICosmoSFB;
  * @NC_HICOSMO_SFB_W: $w$-fluid equation of state.
  * @NC_HICOSMO_SFB_X_B: Redshift at the bounce.
  *
- * Parameter of the Quantum Gravity Radiation W model.
  * 
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
