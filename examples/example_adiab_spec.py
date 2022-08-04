@@ -37,7 +37,7 @@ kf    = 1.0e9
 k_a   = np.geomspace (ki, kf, 4)
 
 csq1d.set_k (kf)
-(Found2, etafa) = csq1d.find_adiab_time_limit (cosmo, +1.0e-25, +1.0e15, 1.0e1)
+(Found2, etafa) = csq1d.find_adiab_time_limit (cosmo, -1.0e-4, +1.0e15, 1.0e1)
 
 print (Found2, etafa)
 

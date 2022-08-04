@@ -1925,7 +1925,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   
   ncm_csq1d_eval_adiab_at (csq1d, model, t0, &alpha0, &dgamma0, &alpha_reltol0, &dgamma_reltol0);
   ncm_csq1d_eval_adiab_at (csq1d, model, t1, &alpha1, &dgamma1, &alpha_reltol1, &dgamma_reltol1);
-  
+  printf("% 22.15g % 22.15g", alpha0, alpha1);  
   g_assert (gsl_finite (alpha0));
   g_assert (gsl_finite (alpha1));
   g_assert (gsl_finite (dgamma0));

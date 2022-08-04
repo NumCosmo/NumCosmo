@@ -193,9 +193,19 @@ _nc_hicosmo_sfb_E2 (NcHICosmo *cosmo, gdouble tau)
   gdouble w = W;
   gdouble x_3w = pow(x, 3 * (1+w));
   gdouble omega_w = OMEGA_W;
-  gdouble exp_t = exp(abs(tau));
-  gdouble et_3w = 1.0 - pow(exp_t, - 3 * (1 - w));
+  gdouble exp_t, et_3w;
   
+  if (fabs(tau) <= 1e-5)
+  {
+   exp_t = -expm1(tau) + 1.0;
+  }
+  else
+  {
+   exp_t = exp(fabs(tau));
+  }
+
+  et_3w = 1.0 - pow(exp_t, - 3 * (1 - w));
+
   return pow(omega_w * x_3w * et_3w, 0.5);
 }
 
@@ -213,10 +223,20 @@ _nc_hicosmo_sfb_N_dtau (NcHICosmo *cosmo, gdouble tau)
   gdouble w = W;
   gdouble x_3w = pow(x, 3 * (1+w));
   gdouble omega_w = OMEGA_W;
-  gdouble exp_t = exp(abs(tau));
-  gdouble e_3w =pow(exp_t, - 3 * (1 - w));
+  gdouble exp_t, e_3w;
   
-  return 1/2 * pow(N, 3) * omega_w * x_3w * tau / abs(tau) * (- 3 * (1 + w) + 6 * w * e_3w);
+  if (fabs(tau) <= 1e-5)
+  {
+   exp_t = -expm1(tau) + 1.0;
+  }
+  else
+  {
+   exp_t = exp(fabs(tau));
+  }
+
+  e_3w = pow(exp_t, - 3 * (1 - w));
+  
+  return 1/2 * pow(N, 3) * omega_w * x_3w * tau / fabs(tau) * (- 3 * (1 + w) + 6 * w * e_3w);
 }
 
 /****************************************************************************
@@ -233,9 +253,19 @@ _nc_hicosmo_sfb_N_dtau2 (NcHICosmo *cosmo, gdouble tau)
   gdouble w = W;
   gdouble x_3w = pow(x, 3 * (1+w));
   gdouble omega_w = OMEGA_W;
-  gdouble exp_t = exp(abs(tau));
-  gdouble e_3w =pow(exp_t, - 3 * (1 - w));
+  gdouble exp_t, e_3w;
 
+  if (fabs(tau) <= 1e-5)
+  {
+   exp_t = -expm1(tau) + 1.0;
+  }
+  else
+  {
+   exp_t = exp(fabs(tau));
+  }
+
+  e_3w = pow(exp_t, - 3 * (1 - w));
+  
   return 3/2 * pow(N, 2) * dNdtau + 1/2 * pow(N,3) * omega_w * x_3w * (9 * pow(1 + w, 2) - e_3w * 36.0);
 }
 
@@ -246,7 +276,21 @@ _nc_hicosmo_sfb_N_dtau2 (NcHICosmo *cosmo, gdouble tau)
  static gdouble
  _nc_hicosmo_sfb_y (NcHICosmo *cosmo, gdouble tau)
 {
- gdouble exp_t = exp(abs(tau));
+ gdouble exp_t;
+ gdouble tabs = fabs(tau); 
+  if (tabs <= 1.0e-2)
+  {
+   exp_t = -expm1(tau) + 1.0;
+  }
+  else
+  {
+   printf("tempo %.10f", tabs);
+   exp_t = exp(tabs);
+  }
+ printf("%.10f", exp_t);
+
+
+
  return (1.0 / X_B) * exp_t;
 }
 
@@ -262,9 +306,19 @@ _nc_hicosmo_sfb_dE2_dt (NcHICosmo *cosmo, gdouble tau)
   gdouble w = W;
   gdouble x_3w = pow(x, 3 * (1+w));
   gdouble omega_w = OMEGA_W;
-  gdouble exp_t = exp(abs(tau));
-  gdouble et_3w = 1.0 - pow(exp_t, -3 * (1 - w));
-  gdouble H_tau = tau / abs(tau);  
+  gdouble exp_t, et_3w;
+  gdouble H_tau = tau / fabs(tau);  
+  
+  if (fabs(tau) <= 1e-5)
+  {
+   exp_t = -expm1(tau) + 1.0;
+  }
+  else
+  {
+   exp_t = exp(fabs(tau));
+  }
+
+  et_3w = 1.0 - pow(exp_t, - 3 * (1 - w));
   
   return  3.0  * omega_w * x_3w * H_tau * et_3w - 3/2 * omega_w * (1.0 + w) * x_3w * H_tau;
 }
