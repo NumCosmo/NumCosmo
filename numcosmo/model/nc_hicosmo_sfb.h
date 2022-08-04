@@ -99,12 +99,12 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
  * 
  * Default $x_b$.
  */
-#define NC_HICOSMO_SFB_DEFAULT_X_B     (1.0e30)
+#define NC_HICOSMO_SFB_DEFAULT_X_B     (1.0e25)
 
 /**
- * NC_HICOSMO_SFB_DEFAULT_TAU_B: (value 1.0e-28 )
+ * NC_HICOSMO_SFB_DEFAULT_TAU_B: (value 0.0 )
  *
- * Default $x_b$.
+ * Default $tau_b$.
  */
 #define NC_HICOSMO_SFB_DEFAULT_TAU_B     (1 / (NC_HICOSMO_SFB_DEFAULT_X_B * pow(NC_HICOSMO_SFB_DEFAULT_OMEGA_R, 0.5)))
 
