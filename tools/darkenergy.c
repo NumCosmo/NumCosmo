@@ -371,10 +371,9 @@ main (gint argc, gchar *argv[])
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
-      NcmData *data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
+      NcDataSNIACov *snia_data = nc_data_snia_cov_new_from_cat_id (snia_id->value, de_data_simple.snia_use_det);
+      NcmData *data = NCM_DATA (snia_data);
       guint sigma_int_len;
-      
-      nc_data_snia_cov_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
 
       sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
 
