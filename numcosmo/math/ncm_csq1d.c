@@ -887,9 +887,7 @@ ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t
 {
   NcmCSQ1DPrivate * const self = csq1d->priv;
   gdouble alpha, dgamma;
-  
   ncm_csq1d_eval_adiab_at (csq1d, model, ti, &alpha, &dgamma, NULL, NULL);
-  
   if ((fabs (dgamma) > self->adiab_threshold) || (fabs (alpha) > self->adiab_threshold))
     g_error ("ncm_csq1d_set_init_cond_adiab: time ti == % 22.15g is not a valid adiabatic time alpha, dgamma == (% 22.15g, % 22.15g)",
              ti, alpha, dgamma);
@@ -1867,7 +1865,6 @@ ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
   gdouble s_t                  = 1.0e300;
   gint i;
-  
   for (i = 0; i < len; i++)
   {
     const gdouble t_i = sinh (ncm_vector_fast_get (asinh_t_v, i));
@@ -1936,14 +1933,13 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   
   adiab0 = ((fabs (alpha_reltol0) < reltol) && (fabs (dgamma_reltol0) < reltol));
   adiab1 = ((fabs (alpha_reltol1) < reltol) && (fabs (dgamma_reltol1) < reltol));
-  
   if ((adiab0 && adiab1) || (!adiab0 && !adiab1))
   {
     if (PRINT_EVOL)
       g_warning ("# Impossible to find the adiabatic limit: \n\tt0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n\tt1 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
                  t0, alpha0, alpha_reltol0, dgamma0, dgamma_reltol0,
                  t1, alpha1, alpha_reltol1, dgamma1, dgamma_reltol1);
-    
+    /*printf("loop false valores %.20f %.20f", alpha_reltol0, alpha_reltol1);   */ 
     return FALSE;
   }
   else
@@ -1955,7 +1951,6 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
     gsl_root_fsolver *s;
     gsl_function F;
     gint status;
-    
     ti[0] = 0.5 * (t0 + t1);
     
     F.function = &_ncm_csq1d_find_adiab_time_limit_f;
