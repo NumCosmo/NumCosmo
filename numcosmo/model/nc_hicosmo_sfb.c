@@ -141,6 +141,7 @@ nc_hicosmo_sfb_class_init (NcHICosmoSFBClass *klass)
   object_class->finalize = nc_hicosmo_sfb_finalize;
 }
 
+static gdouble _nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
@@ -151,6 +152,7 @@ static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble ta
 static void
 nc_hipert_adiab_interface_init (NcHIPertIAdiabInterface *iface)
 {
+  iface->eval_m    = &_nc_hipert_iadiab_eval_m;
   iface->eval_mnu    = &_nc_hipert_iadiab_eval_mnu;
   iface->eval_nu     = &_nc_hipert_iadiab_eval_nu;
   iface->eval_xi     = &_nc_hipert_iadiab_eval_xi;
@@ -218,6 +220,7 @@ _nc_hicosmo_sfb_dN_dtau (NcHICosmo *cosmo, gdouble tau)
   const gdouble N = 1.0 / E;
   const gdouble e_t3 = exp (-3.0 *(1.0 - w) * tabs);
   
+
   /*printf("dNdtau %.20f", 1/2 * pow(N, 3) * omega_w * x_3w * sign * (- 3 * (1 + w) + 6 * w * e_3w));*/
   return 1.0 / 2.0 * gsl_pow_3 (N) * Omega_w * x_3_1pw * sign * (-3.0 * (1.0 + w) + 6.0 * w * e_t3);
 }
@@ -293,15 +296,18 @@ _nc_hicosmo_sfb_bgp_cs2 (NcHICosmo *cosmo, gdouble tau)
   return w;
 }
 
+
 static gdouble
 _nc_hicosmo_sfb_eval_z (NcHICosmo *cosmo, gdouble tau)
 {
   gdouble x    = _nc_hicosmo_sfb_x (cosmo, tau);
   gdouble w    = W;
-  gdouble mult = sqrt (3.0 * (1.0 + w) / (2.0 * w));
+  gdouble mult = 3.0 * (1.0 + w) / (2.0 * w);
+  gdouble x3   = x * x * x;
+  gdouble E = sqrt (_nc_hicosmo_sfb_E2 (cosmo, tau));
+  gdouble N = 1.0 / E;
   
-  
-  return mult * 1 / x;
+  return mult * 1.0 / (x3 * N);
 }
 
 /****************************************************************************
@@ -335,6 +341,16 @@ _nc_hicosmo_sfb_xb (NcHICosmo *cosmo)
  *  Interface functions
  ******************************************************************************/
 static gdouble
+_nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  gdouble z2    = _nc_hicosmo_sfb_eval_z (cosmo, tau);
+
+  return z2 * 2.0;
+} 
+ 
+ 
+static gdouble
 _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmo *cosmo = NC_HICOSMO (iad);
@@ -351,8 +367,9 @@ _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdoubl
 {
   NcHICosmo *cosmo = NC_HICOSMO (iad);
   gdouble nu       = _nc_hipert_iadiab_eval_nu (iad, tau, k);
-  gdouble z        = _nc_hicosmo_sfb_eval_z (cosmo, tau);
-  gdouble m        = 2.0 *  z * z;
+  gdouble m 	   =_nc_hipert_iadiab_eval_m (iad, tau, k);
+/*  gdouble z2       = _nc_hicosmo_sfb_eval_z (cosmo, tau);
+  gdouble m        = 2.0 *  z2;*/
   
   
   return m * nu;
@@ -362,7 +379,6 @@ static gdouble
 _nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   gdouble mnu = _nc_hipert_iadiab_eval_mnu (iad, tau, k);
-  
   
   return log (mnu);
 }

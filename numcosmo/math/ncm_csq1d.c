@@ -550,7 +550,7 @@ _ncm_csq1d_eval_nu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gd
 static gdouble
 _ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  return exp (NCM_CSQ1D_GET_CLASS (csq1d)->eval_xi (csq1d, model, t, k) / NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu (csq1d, model, t, k));
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_m (csq1d, model, t, k);
 }
 
 static gdouble
@@ -1223,10 +1223,16 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t, self->k);
   const gdouble exp_Um    = exp (Um);
   const gdouble ch2_alpha = 1.0 + chi * chi;
+
   
   NV_Ith_S (ydot, 0) = +m * nu2 * exp_Um - ch2_alpha / (m * exp_Um);
   NV_Ith_S (ydot, 1) = -2.0 * chi / (m * exp_Um);
   
+/*printf ("evol % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, m, 
+NV_Ith_S (y, 0), NV_Ith_S (y, 1),
+NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1),
+Um, nu2
+);*/
   return 0;
 }
 
@@ -1824,7 +1830,6 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
   
   if (NCM_CSQ1D_GET_CLASS (csq1d)->prepare != NULL)
     NCM_CSQ1D_GET_CLASS (csq1d)->prepare (csq1d, model);
-
   g_assert (self->init_cond_set);
   g_assert_cmpfloat (self->tf, >, self->ti);
   
@@ -1859,17 +1864,18 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 GArray *
 ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
 {
+  printf("aq");
   NcmCSQ1DPrivate * const self = csq1d->priv;
   NcmVector *asinh_t_v         = ncm_spline_get_xv (self->alpha_s);
   const guint len              = ncm_vector_len (asinh_t_v);
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
   gdouble s_t                  = 1.0e300;
   gint i;
+  printf("aqui");
   for (i = 0; i < len; i++)
   {
     const gdouble t_i = sinh (ncm_vector_fast_get (asinh_t_v, i));
     const gdouble a_t = fabs (t_i);
-    
     g_array_append_val (t_a, t_i);
     s_t = MIN (a_t, s_t);
   }

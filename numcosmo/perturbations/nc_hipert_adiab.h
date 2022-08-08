@@ -47,6 +47,7 @@ struct _NcHIPertIAdiabInterface
 {
   /*< private >*/
   GTypeInterface parent;
+  gdouble (*eval_m) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_mnu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_xi) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
@@ -100,6 +101,7 @@ struct _NcHIPertAdiab
 GType nc_hipert_iadiab_get_type (void) G_GNUC_CONST;
 GType nc_hipert_adiab_get_type (void) G_GNUC_CONST;
 
+NCM_INLINE gdouble nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
@@ -124,6 +126,12 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
+
+NCM_INLINE gdouble
+nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_m (iad, t, k);
+}
 
 NCM_INLINE gdouble
 nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
