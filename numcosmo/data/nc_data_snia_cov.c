@@ -57,6 +57,9 @@
 #include <gsl/gsl_multifit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/*
+ * Data ordering of Version 0 (V0) data format.
+ */
 typedef enum _NcDataSNIACovData
 {
   NC_DATA_SNIA_COV_ZCMB = 0,
@@ -84,26 +87,8 @@ typedef enum _NcDataSNIACovData
   NC_DATA_SNIA_COV_TOTAL_LENGTH, /*< skip >*/
 } NcDataSNIACovData;
 
-/**
- * NcDataSNIACovDataV1:
- * @NC_DATA_SNIA_COV_V1_ZCMB: Redshift in the CMB frame.
- * @NC_DATA_SNIA_COV_V1_ZHE: Redshift in sun's frame.
- * @NC_DATA_SNIA_COV_V1_SIGMA_Z: Redshift error.
- * @NC_DATA_SNIA_COV_V1_MAG: Magnitude.
- * @NC_DATA_SNIA_COV_V1_WIDTH: Width (stretch).
- * @NC_DATA_SNIA_COV_V1_COLOUR: Colour.
- * @NC_DATA_SNIA_COV_V1_THIRDPAR: Third parameter.
- * @NC_DATA_SNIA_COV_V1_SIGMA_THIRDPAR: Error on third parameter.
- * @NC_DATA_SNIA_COV_V1_ABSMAG_SET: Data set index.
- * @NC_DATA_SNIA_COV_V1_MAG_MAG: Covariance mag-mag.
- * @NC_DATA_SNIA_COV_V1_MAG_WIDTH: Covariance mag-width.
- * @NC_DATA_SNIA_COV_V1_MAG_COLOUR: Covariance mag-colour.
- * @NC_DATA_SNIA_COV_V1_WIDTH_WIDTH: Covariance width-width.
- * @NC_DATA_SNIA_COV_V1_WIDTH_COLOUR: Covariance width-colour.
- * @NC_DATA_SNIA_COV_V1_COLOUR_COLOUR: Covariance colour-colour.
- *
+/*
  * Data ordering of Version 1 (V1) data format.
- *
  */
 typedef enum _NcDataSNIACovDataV1
 {
@@ -945,7 +930,7 @@ G_STMT_START { \
         ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
       break; \
     case 2: \
-      g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V01 element " #D " does not exists in version 2"); \
+      /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V01: element `" #D "' does not exists in version 2");*/ \
       break; \
     default: \
       g_assert_not_reached (); \
@@ -960,7 +945,7 @@ G_STMT_START { \
   { \
     case 0: \
     case 1: \
-      g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V2 element " #D " does not exists in version 1"); \
+      /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V2: element `" #D "' does not exists in version 1");*/ \
       break; \
     case 2: \
       data_bw = NC_DATA_SNIA_COV_V2_INIT (D); \
