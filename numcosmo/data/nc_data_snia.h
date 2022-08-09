@@ -52,8 +52,6 @@ G_BEGIN_DECLS
  * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, full covariance statistics and systematics
  * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, statistics covariance only
  *
- * FIXME
- *
  */
 typedef enum _NcDataSNIAId
 {

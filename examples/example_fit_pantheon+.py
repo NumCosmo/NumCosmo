@@ -29,35 +29,6 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 cosmo.omega_x2omega_k ()
 
 #
-#  Setting values for the cosmological model, those not set stay in the
-#  default values. Remeber to use the _orig_ version to set the original
-#  parameters in case when a reparametrization is used.
-#
-
-#
-# OO-like
-#
-cosmo.param_set_by_name ("H0",     70.0)
-cosmo.param_set_by_name ("Omegab",  0.05)
-cosmo.param_set_by_name ("Omegac",  0.25)
-cosmo.param_set_by_name ("Omegak",  0.0)
-cosmo.param_set_by_name ("w",      -1.0)
-
-#
-#  Setting parameters Omega_c and w to be fitted.
-#
-
-cosmo.props.H0_fit = True
-cosmo.props.Omegac_fit = True
-cosmo.props.w_fit = False
-
-#
-#  Creating a new Distance object optimized to redshift 3.
-#
-dist = Nc.Distance (zf = 3.0)
-
-
-#
 # Getting SNIa sample
 #
 if len (sys.argv) <= 1:
@@ -72,6 +43,32 @@ except GLib.Error as err:
     if err.matches (Nc.data_snia_cov_error_quark (), Nc.DataSNIACovError.ID_NOT_FOUND):
         Ncm.cfg_enum_print_all (Nc.DataSNIAId, "Invalid sample id `{snia_id}', the valid ids are:")
         exit (-1)
+
+#
+#  Setting values for the cosmological model.
+#
+
+cosmo.param_set_by_name ("H0",     70.0)
+cosmo.param_set_by_name ("Omegab",  0.05)
+cosmo.param_set_by_name ("Omegac",  0.25)
+cosmo.param_set_by_name ("Omegak",  0.0)
+cosmo.param_set_by_name ("w",      -1.0)
+
+#
+#  Setting parameters Omega_c and w to be fitted.
+#
+
+if snia_idval == Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT or snia_idval == Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_STAT:
+    cosmo.props.H0_fit = True
+cosmo.props.Omegac_fit = True
+cosmo.props.w_fit = False
+
+#
+#  Creating a new Distance object optimized to redshift 3.
+#
+dist = Nc.Distance (zf = 3.0)
+
+
 
 #
 # SNIa cov model

@@ -314,6 +314,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       gdouble lnsigma_int_data[4] = {lnsigma0, lnsigma0, lnsigma0, lnsigma0};
       NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
                            "alpha",              0.141,
                            "beta",               2.60,
                            "M1",                 -19.0497380934588,
@@ -337,6 +338,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       gdouble lnsigma_int_data[4] = {log (0.08), log (0.108), log (0.134), log (0.1)};
       NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
                            "alpha",              0.141,
                            "beta",               2.60,
                            "M1",                 -19.0497090404172,
@@ -360,6 +362,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       gdouble lnsigma_int_data[1] = {lnsigma0};
       NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 1, 1);
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
                            "alpha",              0.0,
                            "beta",               0.0,
                            "M1",                 -19.0497380934588,
@@ -381,6 +384,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
     case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
     {
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
                            "alpha",              0.0,
                            "beta",               0.0,
                            "M1",                 -19.25,
@@ -400,6 +404,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
     case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT:
     {
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
                            "alpha",              0.0,
                            "beta",               0.0,
                            "M1",                 -19.25,
