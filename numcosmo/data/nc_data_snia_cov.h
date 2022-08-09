@@ -42,6 +42,8 @@ G_BEGIN_DECLS
 #define NC_IS_DATA_SNIA_COV_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_SNIA_COV))
 #define NC_DATA_SNIA_COV_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_SNIA_COV, NcDataSNIACovClass))
 
+#define NC_DATA_SNIA_COV_ERROR (nc_data_snia_cov_error_quark())
+
 typedef struct _NcDataSNIACovClass NcDataSNIACovClass;
 typedef struct _NcDataSNIACov NcDataSNIACov;
 typedef struct _NcDataSNIACovPrivate NcDataSNIACovPrivate;
@@ -83,7 +85,17 @@ struct _NcDataSNIACov
   NcDataSNIACovPrivate *priv;
 };
 
+typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
+{
+  NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,
+  NC_DATA_SNIA_COV_ERROR_INVALID_ID,
+  NC_DATA_SNIA_COV_ERROR_INVALID_SAMPLE,
+  /* < private > */
+  NC_DATA_SNIA_COV_ERROR_LENGTH, /*< skip >*/
+} NcDataSNIACovError;
+
 GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;
+GQuark nc_data_snia_cov_error_quark (void) G_GNUC_CONST;
 
 NcDataSNIACov *nc_data_snia_cov_new (gboolean use_norma, guint cat_version);
 NcDataSNIACov *nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma);
@@ -140,10 +152,11 @@ NcmVector *nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSe
 NcmVector *nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
 
 gchar *nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size);
-gchar *nc_data_snia_cov_get_catalog (gchar *id);
+NcDataSNIAId nc_data_snia_cov_get_catalog_id (gchar *id, GError **err);
+gchar *nc_data_snia_cov_get_catalog (gchar *id, GError **err);
 gchar *nc_data_snia_cov_get_catalog_by_id (NcDataSNIAId id);
 
-NcDataSNIACov *nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_min, const gboolean use_calib);
+NcDataSNIACov *nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_min, const gboolean use_calib, GError **err);
 
 G_END_DECLS
 

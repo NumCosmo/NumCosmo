@@ -9,7 +9,9 @@ except:
 
 from math import *
 import os.path
+import sys
 import matplotlib.pyplot as plt
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
@@ -54,13 +56,27 @@ cosmo.props.w_fit = False
 #
 dist = Nc.Distance (zf = 3.0)
 
+
+#
+# Getting SNIa sample
+#
+if len (sys.argv) <= 1:
+    print (f"Usage {sys.argv[0]} sample_id")
+    exit (-1)
+
+snia_id = sys.argv[1]
+
+try:
+    snia_idval = Nc.DataSNIACov.get_catalog_id (snia_id)
+except GLib.Error as err:
+    if err.matches (Nc.data_snia_cov_error_quark (), Nc.DataSNIACovError.ID_NOT_FOUND):
+        Ncm.cfg_enum_print_all (Nc.DataSNIAId, "Invalid sample id `{snia_id}', the valid ids are:")
+        exit (-1)
+
 #
 # SNIa cov model
 #
-pantheon_id = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
-
-snia_model = Nc.SNIADistCov.new (dist, 0)
-snia_model.set_default_params_by_id (pantheon_id)
+snia_model = Nc.SNIADistCov.new_by_id (dist, snia_idval)
 
 #
 #  Creating a new Modelset and set cosmo as the HICosmo model to be used.
@@ -73,8 +89,13 @@ mset.set (snia_model)
 #
 #  Creating a new Data object from distance modulus catalogs.
 #
-snia = Nc.DataSNIACov.new_from_cat_id (pantheon_id, False)
-snia = snia.apply_filter_sh0es_z (0.01, True)
+snia = Nc.DataSNIACov.new_from_cat_id (snia_idval, False)
+try:
+    snia0 = snia.apply_filter_sh0es_z (0.01, True)
+    if snia0:
+        snia = snia0
+except:
+    pass
 
 #
 #  Creating a new Dataset and add snia to it.
@@ -150,30 +171,33 @@ init_sampler.set_cov_from_rescale (1.0)
 nwalkers = 300
 walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
 
-fitscat = "example_fit_pantheon+_nwalkers%d.fits" % (nwalkers)
+fitscat = "example_fit_{snia_id}_nwalkers%d.fits" % (nwalkers)
 
 if os.path.exists (fitscat):
     lmcat = Ncm.MSetCatalog.new_from_file_ro (fitscat, 0)
     mcat_len = lmcat.len ()
-    last_e = [lmcat.peek_row (mcat_len - nwalkers + i) for i in range (nwalkers)]
-    nadd_vals = lmcat.nadd_vals ()
-    ncols = lmcat.ncols ()
-    nvar = ncols - nadd_vals
     
-    k = Ncm.StatsDistKernelST.new (nvar, 1.0)
-    sd = Ncm.StatsDistVKDE.new (k, Ncm.StatsDistCV.SPLIT)
-    sd.reset ()
-    m2lnL = []
-    for row in last_e:
-        m2lnL.append (row.get (0))
-        sd.add_obs (row.get_subvector (nadd_vals, nvar))
+    if mcat_len > nwalkers * 50:
+    
+        last_e = [lmcat.peek_row (mcat_len - nwalkers + i) for i in range (nwalkers)]
+        nadd_vals = lmcat.nadd_vals ()
+        ncols = lmcat.ncols ()
+        nvar = ncols - nadd_vals
+    
+        k = Ncm.StatsDistKernelST.new (nvar, 1.0)
+        sd = Ncm.StatsDistVKDE.new (k, Ncm.StatsDistCV.SPLIT)
+        sd.reset ()
+        m2lnL = []
+        for row in last_e:
+            m2lnL.append (row.get (0))
+            sd.add_obs (row.get_subvector (nadd_vals, nvar))
 
-    m2lnL_v = Ncm.Vector.new_array (m2lnL)
-    sd.prepare_interp (m2lnL_v)
-    ovs = sd.get_over_smooth ()
-    walker.set_over_smooth (ovs)
-    print (f"Setting over smooth to {ovs}")
-    del lmcat
+        m2lnL_v = Ncm.Vector.new_array (m2lnL)
+        sd.prepare_interp (m2lnL_v)
+        ovs = sd.get_over_smooth ()
+        walker.set_over_smooth (ovs)
+        print (f"Setting over smooth to {ovs}")
+        del lmcat
 
 
 #

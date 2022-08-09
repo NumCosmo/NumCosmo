@@ -373,17 +373,13 @@ main (gint argc, gchar *argv[])
     {
       NcDataSNIACov *snia_data = nc_data_snia_cov_new_from_cat_id (snia_id->value, de_data_simple.snia_use_det);
       NcmData *data = NCM_DATA (snia_data);
-      guint sigma_int_len;
-
-      sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
 
       if (ncm_mset_peek (mset, nc_snia_dist_cov_id ()) == NULL)
       {
         NcSNIADistCov *dcov;
         if (de_data_simple.snia_objser == NULL)
         {
-          dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
-          nc_snia_dist_cov_set_default_params_by_id (dcov, snia_id->value);
+          dcov = nc_snia_dist_cov_new_by_id (dist, snia_id->value);
         }
         else
           dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));

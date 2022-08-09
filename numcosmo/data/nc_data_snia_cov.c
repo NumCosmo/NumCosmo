@@ -328,6 +328,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_QUARK(nc-data-snia-cov-error-quark, nc_data_snia_cov_error);
 
 enum
 {
@@ -834,8 +835,10 @@ _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
   {
     case 0:
     case 1:
+    {
       NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
       return nc_snia_dist_cov_calc (dcov, snia_cov, cov);
+    }
     case 2:
       ncm_matrix_memcpy (cov, self->cov_mbc_mbc);
       return FALSE;
@@ -3616,23 +3619,48 @@ static const gchar *_nc_data_snia_cats[] = {
 };
 
 /**
+ * nc_data_snia_cov_get_catalog_id:
+ * @id: string representation of the catalog id #NcDataSNIAId
+ * @err: return location for a #GError, or NULL
+ *
+ * Gets catalog id from the @id string.
+ *
+ * Returns: catalog id
+ */
+NcDataSNIAId
+nc_data_snia_cov_get_catalog_id (gchar *id, GError **err)
+{
+  const GEnumValue *snia_id =
+    ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_ID, id);
+
+  if (snia_id == NULL)
+  {
+    g_set_error (err,
+        NC_DATA_SNIA_COV_ERROR,
+        NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,
+        "nc_data_snia_cov_get_catalog: Cannot find id ``%s'' in catalogs.", id);
+    return -1;
+  }
+
+  return snia_id->value;
+}
+
+/**
  * nc_data_snia_cov_get_catalog:
  * @id: string representation of the catalog id #NcDataSNIAId
+ * @err: return location for a #GError, or NULL
  *
  * Gets catalog filename from the @id.
  *
  * Returns: (transfer full): Catalog filename.
  */
 gchar *
-nc_data_snia_cov_get_catalog (gchar *id)
+nc_data_snia_cov_get_catalog (gchar *id, GError **err)
 {
-  const GEnumValue *snia_id =
-    ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_ID, id);
+  NcDataSNIAId idval = nc_data_snia_cov_get_catalog_id (id, err);
+  g_return_val_if_fail (err == NULL, NULL);
 
-  if (snia_id == NULL)
-    g_error ("nc_data_snia_cov_get_catalog: Cannot find id ``%s'' in catalogs.", id);
-
-  return nc_data_snia_cov_get_catalog_by_id (snia_id->value);
+  return nc_data_snia_cov_get_catalog_by_id (idval);
 }
 
 /**
@@ -3681,7 +3709,7 @@ gchar *
 nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 {
   gchar *full_filename = ncm_cfg_get_fullpath (filename);
-  gchar *url_str       = g_strdup_printf ("http://download.savannah.gnu.org/releases/numcosmo/%s", filename);
+  gchar *url_str       = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/v"PACKAGE_VERSION"/%s", filename);
   GFile *local         = g_file_new_for_path (full_filename);
   GFile *remote        = g_file_new_for_uri (url_str);
   GError *error        = NULL;
@@ -3744,18 +3772,29 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
  * @snia_cov: a #NcDataSNIACov
  * @z_min: Minimum redshift
  * @use_calib: Whether to use calibrators
+ * @err: return location for a #GError, or NULL
  *
  * Apply SH0ES+z_min filter to data.
  *
  * Returns: (transfer full): the new #NcDataSNIACov with filtered data.
  */
 NcDataSNIACov *
-nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_min, const gboolean use_calib)
+nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_min, const gboolean use_calib, GError **err)
 {
   NcDataSNIACov *snia_cov_filter = NULL;
   NcDataSNIACovPrivate * const self = snia_cov->priv;
   NcmISet *is = ncm_iset_new (self->mu_len);
   gint i;
+
+  if (self->cat_version < 2)
+  {
+    g_set_error (err,
+        NC_DATA_SNIA_COV_ERROR,
+        NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,
+        "Filter not compatible with catalog version <2");
+    ncm_iset_free (is);
+    return NULL;
+  }
 
   for (i = 0; i < self->mu_len; i++)
   {

@@ -111,6 +111,7 @@ GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
 NCM_MSET_MODEL_DECLARE_ID (nc_snia_dist_cov);
 
 NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len);
+NcSNIADistCov *nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
@@ -130,8 +131,6 @@ void nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo
 gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i);
 
 void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta);
-
-void nc_snia_dist_cov_set_default_params_by_id (NcSNIADistCov *dcov, NcDataSNIAId snia_id);
 
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (0.145)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
