@@ -10,6 +10,8 @@ except:
 from math import *
 import os.path
 import sys
+import argparse
+
 import matplotlib.pyplot as plt
 from gi.repository import GLib
 from gi.repository import GObject
@@ -31,17 +33,22 @@ cosmo.omega_x2omega_k ()
 #
 # Getting SNIa sample
 #
-if len (sys.argv) <= 1:
-    print (f"Usage {sys.argv[0]} sample_id")
-    exit (-1)
+my_parser = argparse.ArgumentParser(description='Run SNIaCov data likelihoods')
 
-snia_id = sys.argv[1]
+my_parser.add_argument('snia_id', metavar='id', type=str, help='SNIa id')
+my_parser.add_argument('-r', '--run-mcmc', action='store_true', help='Whether to run MCMC')
+my_parser.add_argument('-f', '--filter-sh0es', action='store_true', help='Whether to run apply SH0ES filter')
+
+# Execute the parse_args() method
+args = my_parser.parse_args()
+
+snia_id = args.snia_id
 
 try:
     snia_idval = Nc.DataSNIACov.get_catalog_id (snia_id)
 except GLib.Error as err:
     if err.matches (Nc.data_snia_cov_error_quark (), Nc.DataSNIACovError.ID_NOT_FOUND):
-        Ncm.cfg_enum_print_all (Nc.DataSNIAId, "Invalid sample id `{snia_id}', the valid ids are:")
+        Ncm.cfg_enum_print_all (Nc.DataSNIAId, f"Invalid sample id `{snia_id}', the valid ids are:")
         exit (-1)
 
 #
@@ -87,12 +94,10 @@ mset.set (snia_model)
 #  Creating a new Data object from distance modulus catalogs.
 #
 snia = Nc.DataSNIACov.new_from_cat_id (snia_idval, False)
-try:
+if args.filter_sh0es:
     snia0 = snia.apply_filter_sh0es_z (0.01, True)
     if snia0:
         snia = snia0
-except:
-    pass
 
 #
 #  Creating a new Dataset and add snia to it.
@@ -132,6 +137,9 @@ fit.numdiff_m2lnL_covar ()
 # 
 fit.log_covar ()
 
+if not args.run_mcmc:
+    exit (0)
+
 #
 # Additional functions
 #
@@ -168,7 +176,7 @@ init_sampler.set_cov_from_rescale (1.0)
 nwalkers = 300
 walker = Ncm.FitESMCMCWalkerAPES.new (nwalkers, mset.fparams_len ())
 
-fitscat = "example_fit_{snia_id}_nwalkers%d.fits" % (nwalkers)
+fitscat = f"example_fit_{snia_id}_nwalkers{nwalkers}.fits"
 
 if os.path.exists (fitscat):
     lmcat = Ncm.MSetCatalog.new_from_file_ro (fitscat, 0)

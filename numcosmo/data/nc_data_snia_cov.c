@@ -1094,6 +1094,7 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
 
   if (self->cat_version == 0)
   {
+    printf ("AQUI\n");fflush (stdout);
     nc_data_snia_cov_load_V0 (snia_cov, fptr);
   }
   else if (self->cat_version == 1)
@@ -2853,7 +2854,7 @@ nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
   NcmVector *diag_mag_width    = ncm_vector_new (self->mu_len);
   NcmVector *diag_mag_colour   = ncm_vector_new (self->mu_len);
   NcmVector *diag_width_colour = ncm_vector_new (self->mu_len);
-  NcmVector *data[NC_DATA_SNIA_COV_V1_LENGTH];
+  NcmVector *data[NC_DATA_SNIA_COV_ABSMAG_SET];
   gint status = 0;
   gint i;
 
@@ -2872,7 +2873,7 @@ nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
   data[NC_DATA_SNIA_COV_DIAG_MAG_COLOUR]   = diag_mag_colour;
   data[NC_DATA_SNIA_COV_DIAG_WIDTH_COLOUR] = diag_width_colour;
 
-  for (i = 0; i < NC_DATA_SNIA_COV_V1_LENGTH; i++)
+  for (i = 0; i < NC_DATA_SNIA_COV_ABSMAG_SET; i++)
   {
     fits_read_col_dbl (fptr, i + 1, 1, 1, self->mu_len, GSL_NAN,
                        ncm_vector_ptr (data[i], 0), NULL,
