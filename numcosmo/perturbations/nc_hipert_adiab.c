@@ -244,7 +244,7 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 	{
 		NcHICosmo *cosmo    = NC_HICOSMO (iad);
 		const gdouble RH_lp = nc_hicosmo_RH_planck (cosmo);
-		return 4.0 / (3.0 * M_PI * gsl_pow_2 (RH_lp));
+		return 1.0 / (2.0 * gsl_pow_2 (M_PI) * gsl_pow_2 (RH_lp));
 	}
 }
 
