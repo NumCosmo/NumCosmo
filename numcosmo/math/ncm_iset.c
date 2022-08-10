@@ -449,7 +449,7 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 
   if (v_dup != NULL)
   {
-    g_assert_cmpuint (self->n, ==, ncm_vector_len (v_dup));
+    g_assert_cmpuint (nsub, <=, ncm_vector_len (v_dup));
     sub = ncm_vector_get_subvector (v_dup, 0, nsub);
   }
   else
@@ -471,6 +471,57 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 
   return sub;
 }
+
+/**
+ * ncm_iset_get_subarray: (skip)
+ * @iset: a #NcmISet
+ * @a: a #GArray
+ * @a_dup: a #GArray
+ *
+ * Construct a continuous array using the values from @a
+ * and the indexes in @iset. If @a_dup is not null use
+ * this array to build the subarray, otherwise, allocates
+ * a new array.
+ *
+ * Returns: (transfer full): the subarray.
+ */
+GArray *
+ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup)
+{
+  NcmISetPrivate *const self = iset->priv;
+  const guint nsub = g_queue_get_length (self->iq);
+  const guint esize = g_array_get_element_size (a);
+  GArray *sub;
+  GList *node;
+  gint i;
+
+  g_assert_cmpuint (self->n, ==, a->len);
+
+  if (a_dup != NULL)
+  {
+    g_assert_cmpuint (nsub, <=, a_dup->len);
+    g_assert_cmpuint (esize, ==, g_array_get_element_size (a_dup));
+    sub = a_dup;
+  }
+  else
+    sub = g_array_new (FALSE, FALSE, esize);
+
+  _ncm_iset_sort (iset);
+  node = g_queue_peek_head_link (self->iq);
+  i    = 0;
+
+  while (node != NULL)
+  {
+    const gint j = GPOINTER_TO_INT (node->data);
+    memcpy (&sub->data[i*esize], &a->data[j*esize], esize);
+
+    i++;
+    node = node->next;
+  }
+
+  return sub;
+}
+
 
 /**
  * ncm_iset_get_submatrix:
@@ -499,8 +550,8 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 
   if (M_dup != NULL)
   {
-    g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M_dup));
-    g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (nsub, <=, ncm_matrix_nrows (M_dup));
+    g_assert_cmpuint (nsub, <=, ncm_matrix_ncols (M_dup));
 
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nsub, nsub);
   }

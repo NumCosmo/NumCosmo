@@ -1342,6 +1342,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                    cname, i + 1, cindex);
 
         g_array_index (self->porder, gint, i) = cindex;
+        g_free (asymbi);
       }
     }
     
@@ -3674,6 +3675,23 @@ ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = mcat->priv;
   
   return self->bestfit;
+}
+
+/**
+ * ncm_mset_catalog_get_bestfit_row:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer full): the current bestfit parameters.
+ */
+NcmVector *
+ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+
+  if (self->bestfit_row)
+    return ncm_vector_dup (self->bestfit_row);
+  else
+    return NULL;
 }
 
 /**

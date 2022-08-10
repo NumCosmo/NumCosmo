@@ -607,7 +607,18 @@ TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GLIB_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GLIB_CFLAGS"
 
 # Setup GLIB_MKENUMS to use glib-mkenums even if GLib is uninstalled.
+AC_MSG_CHECKING([for glib-mkenums])
 GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
+AC_MSG_RESULT($GLIB_MKENUMS)
+
+AC_MSG_CHECKING([if glib-mkenums is working])
+AS_IF($GLIB_MKENUMS -v > /dev/null 2>&1, , GLIB_MKENUMS="")
+if test -z $GLIB_MKENUMS; then
+    AC_MSG_RESULT([ no, trying to find it on PATH ])
+    AC_PATH_PROG(GLIB_MKENUMS, glib-mkenums)
+else
+    AC_MSG_RESULT([ yes ])
+fi
 AC_SUBST(GLIB_MKENUMS)
 
 dnl ***************************************************************************

@@ -192,7 +192,7 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   parent_class->set_mdef = &_nc_multiplicity_func_st_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_st_get_mdef;

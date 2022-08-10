@@ -53,7 +53,7 @@ typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS >*/
 {
   NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
-  NC_CLUSTER_MASS_LNNORMAL_SIGMA,  
+  NC_CLUSTER_MASS_LNNORMAL_SIGMA,
   /* < private > */
   NC_CLUSTER_MASS_LNNORMAL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassLnnormalSParams;
@@ -82,3 +82,4 @@ GType nc_cluster_mass_lnnormal_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_LNNORMAL_H_ */
+

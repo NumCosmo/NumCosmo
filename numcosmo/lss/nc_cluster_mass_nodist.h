@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterMassNodistClass NcClusterMassNodistClass;
 typedef struct _NcClusterMassNodist NcClusterMassNodist;
+typedef struct _NcClusterMassNodistPrivate NcClusterMassNodistPrivate;
 
 struct _NcClusterMassNodistClass
 {
@@ -53,8 +54,7 @@ struct _NcClusterMassNodist
 {
   /*< private >*/
   NcClusterMass parent_instance;
-  gdouble lnM_min;
-  gdouble lnM_max;
+  NcClusterMassNodistPrivate *priv;
 };
 
 GType nc_cluster_mass_nodist_get_type (void) G_GNUC_CONST;
@@ -62,3 +62,4 @@ GType nc_cluster_mass_nodist_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_NODIST_H_ */
+

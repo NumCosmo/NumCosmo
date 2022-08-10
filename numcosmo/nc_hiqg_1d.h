@@ -46,6 +46,7 @@ typedef struct _NcHIQG1D NcHIQG1D;
 typedef struct _NcHIQG1DPrivate NcHIQG1DPrivate;
 typedef struct _NcHIQG1DGauss NcHIQG1DGauss;
 typedef struct _NcHIQG1DExp NcHIQG1DExp;
+typedef struct _NcHIQG1DSQ NcHIQG1DSQ;
 
 struct _NcHIQG1DClass
 {
@@ -78,15 +79,30 @@ struct _NcHIQG1DGauss
 
 /**
  * NcHIQG1DExp:
- * 
+ *
  * Exponential wave-function.
- * 
+ *
  */
 struct _NcHIQG1DExp
 {
   /*< private >*/
   gdouble n;
-  gdouble V; 
+  gdouble V;
+  gdouble pV;
+  gdouble lnNorm;
+};
+
+/**
+ * NcHIQG1DSQ:
+ *
+ * Semi-Quantum approximation fiducial wave-function.
+ *
+ */
+struct _NcHIQG1DSQ
+{
+  /*< private >*/
+  gdouble mu;
+  gdouble V;
   gdouble pV;
   gdouble lnNorm;
 };
@@ -105,6 +121,7 @@ typedef void (*NcHIQG1DPsi) (gpointer psi_data, const gdouble x, gdouble *psi);
 GType nc_hiqg_1d_get_type (void) G_GNUC_CONST;
 GType nc_hiqg_1d_gauss_get_type (void) G_GNUC_CONST;
 GType nc_hiqg_1d_exp_get_type (void) G_GNUC_CONST;
+GType nc_hiqg_1d_sq_get_type (void) G_GNUC_CONST;
 
 NcHIQG1DGauss *nc_hiqg_1d_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sigma, const gdouble Hi);
 NcHIQG1DGauss *nc_hiqg_1d_gauss_dup (NcHIQG1DGauss *qm_gauss);
@@ -121,6 +138,13 @@ void nc_hiqg_1d_exp_free (NcHIQG1DExp *qm_exp);
 void nc_hiqg_1d_exp_eval (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *psi);
 void nc_hiqg_1d_exp_eval_lnRS (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *lnRS);
 
+NcHIQG1DSQ *nc_hiqg_1d_sq_new (const gdouble mu, const gdouble V, const gdouble pV);
+NcHIQG1DSQ *nc_hiqg_1d_sq_dup (NcHIQG1DSQ *qm_sq);
+void nc_hiqg_1d_sq_free (NcHIQG1DSQ *qm_sq);
+
+void nc_hiqg_1d_sq_eval (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *psi);
+void nc_hiqg_1d_sq_eval_lnRS (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *lnRS);
+
 NcHIQG1D *nc_hiqg_1d_new (void);
 NcHIQG1D *nc_hiqg_1d_new_full (guint nknots, gdouble lambda);
 NcHIQG1D *nc_hiqg_1d_ref (NcHIQG1D *qg1d);
@@ -134,6 +158,7 @@ guint nc_hiqg_1d_get_nknots (NcHIQG1D *qg1d);
 void nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf);
 void nc_hiqg_1d_set_init_cond_gauss (NcHIQG1D *qg1d, NcHIQG1DGauss *qm_gauss, const gdouble xi, const gdouble xf);
 void nc_hiqg_1d_set_init_cond_exp (NcHIQG1D *qg1d, NcHIQG1DExp *qm_exp, const gdouble xi, const gdouble xf);
+void nc_hiqg_1d_set_init_cond_sq (NcHIQG1D *qg1d, NcHIQG1DSQ *qm_sq, const gdouble xi, const gdouble xf);
 
 gdouble nc_hiqg_1d_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
 gdouble nc_hiqg_1d_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a);
@@ -155,7 +180,9 @@ void nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi);
 gdouble nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x);
 gdouble nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_expect_p (NcHIQG1D *qg1d);
+gdouble nc_hiqg_1d_expect_d (NcHIQG1D *qg1d);
 
 gint nc_hiqg_1d_nBohm (NcHIQG1D *qg1d);
 gdouble nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i);
