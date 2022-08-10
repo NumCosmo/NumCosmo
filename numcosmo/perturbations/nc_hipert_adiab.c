@@ -32,7 +32,7 @@
  * perturbations. It solves the equation of motion for the gauge invariant variable
  * (see [Vitenti (2013)][XVitenti2013] for notation and details)
  * $$\zeta \equiv \Psi - \frac{2\bar{K}}{\kappa(\bar{\rho} + \bar{p})} + H\mathcal{V}.$$
- * Its conjugated momentum is give by
+ * Its conjugated momentum is given by
  * \begin{split}
  * P_\zeta &= \frac{2\bar{D}^2_\bar{K}\Psi}{x^3H},
  * \end{split}
@@ -51,6 +51,16 @@
  * $E^2 = H^2/H_0^2$ is the dimensionless Hubble function squared (nc_hicosmo_E2()), $c_s^2$ the speed of sound,
  * $N$ is the lapse function that in this case (using $\alpha$ as time variable) is $N \equiv \vert{}E\vert^{-1}$, $\rho_\text{crit0}$
  * is the critical density today defined by $\rho_\text{crit0} \equiv 3H_0^2/\kappa$ and $$\Delta_\bar{K} \equiv \frac{k^2}{k^2 + \Omega_{k0}}.$$
+ * This object is meant to be used with dimensionless variables.
+ *
+ * This object defines the interface #NcHIPertIAdiab with the methods from ncm\_csq1d.c. To have access to these methods, a #NcmModel that implements
+ * this interface is needed. Therefore this object just organizeS the functions into an interface and implements only simple functions
+ * that shall be common to all the models, such as the power spectrum dimension factor. The remaining methods must be implemented by the 
+ * model.
+ *
+ * The user can initialize this object with ncm\_stats\_dist\_kernel\_gauss\_new(). Once this object is initialized,
+ * the user can use the methods in the #NcmCSQ1D class with this object as long as a #NcmModel is provided. For an 
+ * example of how this object can be used, check NumCosmo/examples/example\_adiab\_spec.py.
  *
  */
 

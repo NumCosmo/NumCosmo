@@ -27,14 +27,29 @@
  * SECTION:nc_hicosmo_sfb
  * @title: NcHICosmoSFB
  * @short_description:One $w$-fluid model with a bounce phase model.
- *
- * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
+ * 
+ * This model implements the methods from the interface #NcHIPertIAdiab. It is a cosmological model to solve the complex harmonic
+ * oscillator problem defined in #NcmCSQ1D, such that the action that described this problem is given by
+ * 
  * \begin{align}
- * m_\zeta &= 2 z^2 = 2\sqrt{\frac{3(1+w)}{2w}}a, \\\\
- * c_s^2 &= w, \\\\
- * \nu_\zeta^2 &= \frac {m_\zeta c_s^2 k^2}{a^2}.
+ * S &= \int d^3x d\tau \left[ \Pi_\zeta \frac{\partial\zeta}{\partial \tau} - \frac{\Pi_\zeta^2}{4 z^2} + 2 c_s^2 z^2 N \zeta D^2 \zeta   \right]
  * \end{align}
+ * ,where $\tau$ is the time defined by $x(\tau) = x_b e^{-|\tau|}$, $x = \frac{a_0}{a}, 
+ * $N$ is the lapse function given by $E^{-1}$ for our time choice, $\zeta$ is the curvature perturbation,
+ * $\Pi_\zeta$ is its conjugated momentum and $D^2$ is the laplacian operator. Bear in mind that this is
+ * the dimensionless action and all the variables are also dimensionless.
  *
+ * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency squared $\nu_\zeta^2$ given by
+ * \begin{align}
+ * m_\zeta &= 2 z^2 = \frac{(1 + w)}{c_s^2 N x^3}, \\\\
+ * c_s^2 &= w, \\\\
+ * \nu_\zeta^2 &= m_\zeta c_s^2 k^2 N^2 x^2.
+ * ,\end{align}
+ * where $k$ is from the Fourier expansion of the field.
+ *
+ * The model is implemented for a universe with null curvature and containing only cold dark matter,
+ * such that $w = 0.3$. This model shall be used as the argument of the #NcmCSQ1D class methods.
+ * For an example, check NumCosmo/examples/example\_adiab\_spec.py.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -193,7 +208,6 @@ _nc_hicosmo_sfb_E2 (NcHICosmo *cosmo, gdouble tau)
 {
   const gdouble lnX_B = log (X_B);
   const gdouble tabs = fabs (tau);
-  const gdouble x = exp (-tabs + lnX_B);
   const gdouble w = W;
   const gdouble x_3_1pw = exp (3.0 * (1.0 + w) * (-tabs + lnX_B));
   const gdouble Omega_w = OMEGA_W;
@@ -212,7 +226,6 @@ _nc_hicosmo_sfb_dN_dtau (NcHICosmo *cosmo, gdouble tau)
   const gdouble sign = GSL_SIGN (tau);
   const gdouble lnX_B = log (X_B);
   const gdouble tabs = fabs (tau);
-  const gdouble x = exp (-tabs + lnX_B);
   const gdouble w = W;
   const gdouble x_3_1pw = exp (3.0 * (1.0 + w) * (-tabs + lnX_B));
   const gdouble Omega_w = OMEGA_W;
@@ -232,10 +245,8 @@ _nc_hicosmo_sfb_dN_dtau (NcHICosmo *cosmo, gdouble tau)
 static gdouble
 _nc_hicosmo_sfb_dN_dtau2 (NcHICosmo *cosmo, gdouble tau)
 {  
-  const gdouble sign = GSL_SIGN (tau);
   const gdouble lnX_B = log (X_B);
   const gdouble tabs = fabs (tau);
-  const gdouble x = exp (-tabs + lnX_B);
   const gdouble w = W;
   const gdouble x_3_1pw = exp (3.0 * (1.0 + w) * (-tabs + lnX_B));
   const gdouble Omega_w = OMEGA_W;
@@ -272,12 +283,9 @@ _nc_hicosmo_sfb_dE2_dt (NcHICosmo *cosmo, gdouble tau)
   const gdouble sign = GSL_SIGN (tau);
   const gdouble lnX_B = log (X_B);
   const gdouble tabs = fabs (tau);
-  const gdouble x = exp (-tabs + lnX_B);
   const gdouble w = W;
   const gdouble x_3_1pw = exp (3.0 * (1.0 + w) * (-tabs + lnX_B));
   const gdouble Omega_w = OMEGA_W;
-  const gdouble E = sqrt (_nc_hicosmo_sfb_E2 (cosmo, tau));
-  const gdouble N = 1.0 / E;
   const gdouble e_t3 = exp (-3.0 *(1.0 - w) * tabs);
 
   
@@ -365,7 +373,6 @@ _nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble
 static gdouble
 _nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (iad);
   gdouble nu       = _nc_hipert_iadiab_eval_nu (iad, tau, k);
   gdouble m 	   =_nc_hipert_iadiab_eval_m (iad, tau, k);
 /*  gdouble z2       = _nc_hicosmo_sfb_eval_z2 (cosmo, tau);

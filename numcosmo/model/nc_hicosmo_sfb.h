@@ -78,14 +78,14 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
  * 
  * Default $\Omega_{r0}$.
  */
-#define NC_HICOSMO_SFB_DEFAULT_OMEGA_R (1.0e-5)
+#define NC_HICOSMO_SFB_DEFAULT_OMEGA_R (0.0)
 
 /**
- * NC_HICOSMO_SFB_DEFAULT_OMEGA_W: (value 0.9999)
+ * NC_HICOSMO_SFB_DEFAULT_OMEGA_W: (value 1.0)
  * 
  * Default $\Omega_{w0}$.
  */
-#define NC_HICOSMO_SFB_DEFAULT_OMEGA_W (1 - NC_HICOSMO_SFB_DEFAULT_OMEGA_R)
+#define NC_HICOSMO_SFB_DEFAULT_OMEGA_W (1.0)
 
 /**
  * NC_HICOSMO_SFB_DEFAULT_W: (value 0.33)
@@ -95,7 +95,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
 #define NC_HICOSMO_SFB_DEFAULT_W       (0.33)
 
 /**
- * NC_HICOSMO_SFB_DEFAULT_OMEGA_X_B: (value 1.0e30)
+ * NC_HICOSMO_SFB_DEFAULT_OMEGA_X_B: (value 1.0e25)
  * 
  * Default $x_b$.
  */
@@ -106,7 +106,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
  *
  * Default $tau_b$.
  */
-#define NC_HICOSMO_SFB_DEFAULT_TAU_B     (1 / (NC_HICOSMO_SFB_DEFAULT_X_B * pow(NC_HICOSMO_SFB_DEFAULT_OMEGA_R, 0.5)))
+#define NC_HICOSMO_SFB_DEFAULT_TAU_B     (0.0)
 
 
 struct _NcHICosmoSFBClass
