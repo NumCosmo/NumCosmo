@@ -1422,6 +1422,72 @@ ncm_vector_reciprocal (NcmVector *cv)
 }
 
 /**
+ * ncm_vector_square:
+ * @cv: a #NcmVector
+ *
+ * Calculates the square of @cv.
+ *
+ */
+void
+ncm_vector_square (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+
+    ncm_vector_set (cv, i, x_i * x_i);
+  }
+}
+
+/**
+ * ncm_vector_ax2py:
+ * @cv1: a #NcmVector
+ * @a: a constant gdouble
+ * @cv2: a constant #NcmVector
+ *
+ * Performs the operation: @cv1$=$ @a $\times($ @cv2 $)^2+$ @cv1.
+ *
+ */
+void
+ncm_vector_ax2py (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  gint i;
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv2, i);
+    ncm_vector_addto (cv1, i, alpha * x_i * x_i);
+  }
+}
+
+/**
+ * ncm_vector_sqrt:
+ * @cv: a #NcmVector
+ *
+ * Calculates the square-root of @cv.
+ *
+ */
+void
+ncm_vector_sqrt (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+
+    ncm_vector_set (cv, i, sqrt (x_i));
+  }
+}
+
+/**
  * ncm_vector_sum_cpts:
  * @cv: a constant #NcmVector
  *

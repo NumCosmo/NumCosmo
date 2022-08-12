@@ -123,6 +123,9 @@ void ncm_vector_axpy (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
 void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
+void ncm_vector_square (NcmVector *cv);
+void ncm_vector_sqrt (NcmVector *cv);
+void ncm_vector_ax2py (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
 
 NCM_INLINE gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 NCM_INLINE gdouble ncm_vector_mean (const NcmVector *cv);
