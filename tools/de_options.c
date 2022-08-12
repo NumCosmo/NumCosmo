@@ -175,7 +175,6 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
     { "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
     { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times", "catalog.dat"},
     { "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },
-    { "print_mf",      0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->print_mass_function,   "Create a file and print the mass function from the used FITS catalog and the theoretical one", NULL },
     { NULL }
   };
   GOptionGroup *data_cluster_group = g_option_group_new ("cluster", " - Include cluster number counts\n\t - Use --cluster-id 0 and --catalog to use a fit file catalog\n\t - Use --cluster-id 1 and --catalog to use a text file catalog (plain two columns redshift and ln mass)\n\t - Use --cluster-id 2 to make a mock catalog from theory\n", "Show help options related to cluster", NULL, NULL);

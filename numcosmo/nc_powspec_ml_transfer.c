@@ -50,6 +50,10 @@
 enum
 {
   PROP_0,
+  PROP_ZI,
+  PROP_ZF,
+  PROP_KMIN,
+  PROP_KMAX,
   PROP_TRANSFER,
   PROP_GROWTH,
   PROP_SIZE
@@ -69,11 +73,24 @@ static void
 _nc_powspec_ml_transfer_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (object);
+  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
   
   g_return_if_fail (NC_IS_POWSPEC_ML_TRANSFER (object));
   
   switch (prop_id)
   {
+    case PROP_ZI:
+      ncm_powspec_set_zi (ps, g_value_get_double (value));
+      break;
+    case PROP_ZF:
+      ncm_powspec_set_zf (ps, g_value_get_double (value));
+      break;
+    case PROP_KMIN:
+      ncm_powspec_set_kmin (ps, g_value_get_double (value));
+      break;
+    case PROP_KMAX:
+      ncm_powspec_set_kmax (ps, g_value_get_double (value));
+      break;
     case PROP_TRANSFER:
       nc_powspec_ml_transfer_set_tf (ps_mlt, g_value_get_object (value));
       break;
@@ -90,11 +107,24 @@ static void
 _nc_powspec_ml_transfer_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (object);
+  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
   
   g_return_if_fail (NC_IS_POWSPEC_ML_TRANSFER (object));
   
   switch (prop_id)
   {
+    case PROP_ZI:
+      g_value_set_double (value, ncm_powspec_get_zi (ps));
+      break;
+    case PROP_ZF:
+      g_value_set_double (value, ncm_powspec_get_zf (ps));
+      break;
+    case PROP_KMIN:
+      g_value_set_double (value, ncm_powspec_get_kmin (ps));
+      break;
+    case PROP_KMAX:
+      g_value_set_double (value, ncm_powspec_get_kmax (ps));
+      break;
     case PROP_TRANSFER:
       g_value_set_object (value, nc_powspec_ml_transfer_peek_tf (ps_mlt));
       break;
@@ -157,7 +187,59 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   
   object_class->dispose  = &_nc_powspec_ml_transfer_dispose;
   object_class->finalize = &_nc_powspec_ml_transfer_finalize;
+
+  /**
+   * NcPowspecMLTransfer:zi:
+   *
+   * The initial time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZI,
+                                   g_param_spec_double ("zi",
+                                                        NULL,
+                                                        "Initial redshift",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecMLTransfer:zf:
+   *
+   * The final time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZF,
+                                   g_param_spec_double ("zf",
+                                                        NULL,
+                                                        "Final redshift",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecMLTransfer:kmin:
+   *
+   * The minimum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMIN,
+                                   g_param_spec_double ("kmin",
+                                                        NULL,
+                                                        "Minimum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  /**
+   * NcPowspecMLTransfer:kmax:
+   *
+   * The maximum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMAX,
+                                   g_param_spec_double ("kmax",
+                                                        NULL,
+                                                        "Maximum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcPowspecMLTransfer:transfer:
    *
@@ -223,7 +305,7 @@ _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   const gdouble tfz           = growth * tf;
   const gdouble tfz2          = tfz * tfz;
   const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
-  
+
   return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
 }
 

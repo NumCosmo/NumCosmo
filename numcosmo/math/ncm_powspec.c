@@ -210,7 +210,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:kmin:
    *
-   * The minimum mode (wavenumber) value to compute $P(k,z)$.
+   * The minimum mode (wave-number) value to compute $P(k,z)$.
    */
   g_object_class_install_property (object_class,
                                    PROP_KMIN,
@@ -223,7 +223,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:kmax:
    *
-   * The maximum mode (wavenumber) value to compute $P(k,z)$.
+   * The maximum mode (wave-number) value to compute $P(k,z)$.
    */
   g_object_class_install_property (object_class,
                                    PROP_KMAX,

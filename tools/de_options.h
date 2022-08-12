@@ -113,10 +113,9 @@ struct _NcDEDataClusterEntries
   gint n_bins;
   gchar **cata_file;
   gchar *save_cata;
-  gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 

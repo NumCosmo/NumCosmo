@@ -106,6 +106,7 @@ static gdouble _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdoubl
 static gdouble _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
 static NcmSpline *_ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu);
 static NcmSpline *_ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+static void _ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res);
 
 static void
 ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
@@ -127,6 +128,7 @@ ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
   parent_class->int_dxdy      = &_ncm_spline2d_bicubic_int_dxdy;
   parent_class->int_dx_spline = &_ncm_spline2d_bicubic_int_dx_spline;
   parent_class->int_dy_spline = &_ncm_spline2d_bicubic_int_dy_spline;
+  parent_class->eval_vec_y    = &_ncm_spline2d_bicubic_eval_vec_y;
   
   object_class->dispose  = &_ncm_spline2d_bicubic_dispose;
   object_class->finalize = &_ncm_spline2d_bicubic_finalize;
@@ -266,7 +268,9 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
   
   s2dbc->optimize_dx.init = FALSE;
   s2dbc->optimize_dy.init = FALSE;
-  
+
+  g_assert (s2d->no_stride);
+
   /* First calculate z and dzdy in all knots and save in NCM_SPLINE2D_BICUBIC_COEFF (s2d, i, j) */
   /* First column */
   
@@ -577,23 +581,23 @@ static gdouble
 _ncm_spline2d_bicubic_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
-  
+
   if (!s2d->use_acc)
   {
-    const gsize j    = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
-    const gsize i    = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
-    const gdouble x0 = ncm_vector_get (s2d->xv, j);
-    const gdouble y0 = ncm_vector_get (s2d->yv, i);
-    
+    const gsize j    = gsl_interp_bsearch (s2d->x_data, x, 0, s2d->x_interv);
+    const gsize i    = gsl_interp_bsearch (s2d->y_data, y, 0, s2d->y_interv);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
     return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
   }
   else
   {
-    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
-    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, s2d->x_data, s2d->x_interv + 1, x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, s2d->y_data, s2d->y_interv + 1, y);
     const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
     const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
-    
+
     return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
   }
 }
@@ -1175,5 +1179,61 @@ _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdoubl
   }
   
   return result;
+}
+
+static void
+_ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res)
+{
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+  const gsize j    = gsl_interp_bsearch (s2d->x_data, x, 0, s2d->x_interv);
+  const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+  const gdouble dx = x - x0;
+  const guint len  = ncm_vector_len (y);
+  NcmSpline2dBicubicCoeffs *sa;
+  gint k, i;
+  size_t l;
+  gdouble y0, y_l, a0, a1, a2, a3;
+
+  g_assert_cmpuint (len, ==, order->len);
+  g_assert_cmpuint (len, ==, res->len);
+
+  l   = g_array_index (order, size_t, 0);
+  y_l = ncm_vector_get (y, l);
+  i   = gsl_interp_bsearch (s2d->y_data, y_l, 0, s2d->y_interv);
+  y0  = ncm_vector_fast_get (s2d->yv, i);
+  sa  = &NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j);
+
+  a0 = (sa->ij[0][0] + dx * (sa->ij[1][0] + dx * (sa->ij[2][0] + dx * sa->ij[3][0])));
+  a1 = (sa->ij[0][1] + dx * (sa->ij[1][1] + dx * (sa->ij[2][1] + dx * sa->ij[3][1])));
+  a2 = (sa->ij[0][2] + dx * (sa->ij[1][2] + dx * (sa->ij[2][2] + dx * sa->ij[3][2])));
+  a3 = (sa->ij[0][3] + dx * (sa->ij[1][3] + dx * (sa->ij[2][3] + dx * sa->ij[3][3])));
+
+  for (k = 0; k < len; k++)
+  {
+    l   = g_array_index (order, size_t, k);
+    y_l = ncm_vector_get (y, l);
+
+    if (y_l > ncm_vector_fast_get (s2d->yv, i + 1))
+    {
+      do {
+        i++;
+      } while (y_l > ncm_vector_fast_get (s2d->yv, i + 1));
+
+      y0 = ncm_vector_fast_get (s2d->yv, i);
+      sa = &NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j);
+
+      a0 = (sa->ij[0][0] + dx * (sa->ij[1][0] + dx * (sa->ij[2][0] + dx * sa->ij[3][0])));
+      a1 = (sa->ij[0][1] + dx * (sa->ij[1][1] + dx * (sa->ij[2][1] + dx * sa->ij[3][1])));
+      a2 = (sa->ij[0][2] + dx * (sa->ij[1][2] + dx * (sa->ij[2][2] + dx * sa->ij[3][2])));
+      a3 = (sa->ij[0][3] + dx * (sa->ij[1][3] + dx * (sa->ij[2][3] + dx * sa->ij[3][3])));
+    }
+
+    {
+      const gdouble dy    = y_l - y0;
+      const gdouble res_l = a0 + dy * (a1 + dy * (a2 + dy * a3));
+
+      g_array_index (res, gdouble, l) = res_l;
+    }
+  }
 }
 

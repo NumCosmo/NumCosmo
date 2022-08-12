@@ -377,7 +377,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   }
   else
   {
-    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+    g_error ("This model or its parent is already registered, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
   }
 
   return;
@@ -1521,7 +1521,7 @@ ncm_mset_params_valid_bounds (NcmMSet *mset)
  * @mset1: a #NcmMSet
  * @cmp_model: whether to compare if the models correspond to the same objects
  *
- * Compares @mset0 and @mset1 and returns TRUE if both coitains the same models types.
+ * Compares @mset0 and @mset1 and returns TRUE if both contains the same models types.
  * If @cmp_model is TRUE compare also if the models correspond to the same objects.
  *
  * Returns: TRUE if @mset0 == @mset1.
@@ -2795,7 +2795,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
 
 
 /**
- * ncm_mset_load:
+ * ncm_mset_load: (constructor):
  * @filename: mset filename
  * @ser: a #NcmSerialize
  *

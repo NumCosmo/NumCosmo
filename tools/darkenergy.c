@@ -371,20 +371,15 @@ main (gint argc, gchar *argv[])
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
-      NcmData *data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
-      guint sigma_int_len;
-      
-      nc_data_snia_cov_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
-
-      sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
+      NcDataSNIACov *snia_data = nc_data_snia_cov_new_from_cat_id (snia_id->value, de_data_simple.snia_use_det);
+      NcmData *data = NCM_DATA (snia_data);
 
       if (ncm_mset_peek (mset, nc_snia_dist_cov_id ()) == NULL)
       {
         NcSNIADistCov *dcov;
         if (de_data_simple.snia_objser == NULL)
         {
-          dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
-          nc_snia_dist_cov_set_default_params_by_id (dcov, snia_id->value);
+          dcov = nc_snia_dist_cov_new_by_id (dist, snia_id->value);
         }
         else
           dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
@@ -1171,28 +1166,6 @@ main (gint argc, gchar *argv[])
     ncm_lh_ratio2d_region_clear (&rg_1sigma);
     ncm_lh_ratio2d_region_clear (&rg_2sigma);
     ncm_lh_ratio2d_region_clear (&rg_3sigma);
-  }
-
-  if (de_data_cluster.print_mass_function == TRUE && ca_array != NULL)
-  {
-    gint i;
-    FILE *f_mf;
-    gchar *mfile = NULL;
-
-    f_mf = nc_de_open_dataout_file (cosmo, "MassFunction", &mfile);
-    for (i = 0; i < ca_array->len; i++)
-    {
-      NcDataClusterNCount *dca_unbinned = g_ptr_array_index (ca_array, i);
-      nc_data_cluster_ncount_print (dca_unbinned, cosmo, f_mf, full_cmd_line);
-      fprintf (f_mf, "\n\n");
-    }
-    fclose (f_mf);
-    g_ptr_array_free (ca_array, TRUE);
-    ca_array = NULL;
-
-    ncm_message ("# MassFunction file: %s \n", mfile);
-
-    g_free (mfile);
   }
 
   if (ca_array != NULL)

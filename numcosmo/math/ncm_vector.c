@@ -1188,6 +1188,41 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  */
 
 /**
+ * ncm_vector_lt:
+ * @cv1: a constant #NcmVector
+ * @cv2: a constant #NcmVector
+ *
+ * Compare @cv1 and @cv2 and returns TRUE if all components
+ * of @cv1 are less than @cv2's.
+ *
+ * Returns: whether @cv1 < @cv2.
+ */
+/**
+ * ncm_vector_lteq:
+ * @cv1: a constant #NcmVector
+ * @cv2: a constant #NcmVector
+ *
+ * Compare @cv1 and @cv2 and returns TRUE if all components
+ * of @cv1 are less than or equal to @cv2's.
+ *
+ * Returns: whether @cv1 <= @cv2.
+ */
+/**
+ * ncm_vector_between:
+ * @cv: a constant #NcmVector
+ * @cv_lb: a constant #NcmVector
+ * @cv_ub: a constant #NcmVector
+ * @type: an int
+ *
+ * Check whether all components of @cv are between components
+ * of @cv_lb and @cv_ub.
+ * If type == 0, compare using @cv_lb <= @cv <  @cv_ub;
+ * If type == 1, compare using @cv_lb <  @cv <= @cv_ub;
+ *
+ * Returns: whether @cv is between @cv_lb and @cv_ub.
+ */
+
+/**
  * ncm_vector_get_absminmax:
  * @cv: a constant #NcmVector
  * @absmin: (out): minimum component absolute value of @cv

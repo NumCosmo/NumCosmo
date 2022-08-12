@@ -134,7 +134,13 @@ IGNORE_HFILES= \
               libqp.h                         \
               libqp_splx.c                    \
               kdtree.h                        \
-              kdtree.c
+              kdtree.c                        \
+              clencurt.h                      \
+              converged.h                     \
+              vwrapper.h                      \
+              cubature.h                      \
+              hcubature.c                     \
+              pcubature.c
 
 
 # Images to copy into HTML directory.

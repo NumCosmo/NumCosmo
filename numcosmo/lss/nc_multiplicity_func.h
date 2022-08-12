@@ -99,6 +99,8 @@ gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 gboolean nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf);
 gdouble nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
+#define NC_MULTIPLICITY_FUNC_DELTA_C0 (1.6864701998411454502)
+
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_H_ */

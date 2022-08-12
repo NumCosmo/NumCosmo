@@ -53,6 +53,7 @@ enum
   PROP_LNMF,
   PROP_ZI,
   PROP_ZF,
+  PROP_MF_LB,
   PROP_SIZE,
 };
 
@@ -67,6 +68,7 @@ struct _NcHaloMassFunctionPrivate
   gdouble zi;
   gdouble zf;
   gdouble prec;
+  gdouble mf_lb;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
   gboolean constructed;
@@ -88,6 +90,7 @@ nc_halo_mass_function_init (NcHaloMassFunction *mfp)
   self->mulf        = NULL;
   self->psf         = NULL;
   self->prec        = 0.0;
+  self->mf_lb       = 0.0;
   self->ctrl_cosmo  = ncm_model_ctrl_new (NULL);
   self->ctrl_reion  = ncm_model_ctrl_new (NULL);
   self->constructed = FALSE;
@@ -178,7 +181,10 @@ _nc_halo_mass_function_set_property (GObject *object, guint prop_id, const GValu
     case PROP_ZF:
       self->zf = g_value_get_double (value);
       if (self->constructed)
-    	ncm_powspec_filter_require_zf (self->psf, self->zf);
+        ncm_powspec_filter_require_zf (self->psf, self->zf);
+      break;
+    case PROP_MF_LB:
+      self->mf_lb = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -222,6 +228,9 @@ _nc_halo_mass_function_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_ZF:
       g_value_set_double (value, self->zf);
       break;
+    case PROP_MF_LB:
+      g_value_set_double (value, self->mf_lb);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -258,7 +267,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   /**
    * NcHaloMassFunction:powerspectrum-filtered:
    *
-   * This property keeps the filtered powerspectrum.
+   * This property keeps the filtered power spectrum.
    *
    */
   g_object_class_install_property (object_class,
@@ -322,7 +331,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("lnMi",
                                                         NULL,
                                                         "Lower mass",
-                                                        27.5, 36.84, 32.0,
+                                                        log (1.0e11), log (1.0e17), log (1.0e13),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -336,7 +345,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("lnMf",
                                                         NULL,
                                                         "Upper mass",
-                                                        27.5, 36.84, 36.0,
+                                                        log (1.0e11), log (1.0e17), log (1.0e16),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -350,7 +359,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("zi",
                                                         NULL,
                                                         "Lower redshift",
-                                                        0.0, 2.0, 0.0,
+                                                        0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
@@ -364,7 +373,20 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    g_param_spec_double ("zf",
                                                         NULL,
                                                         "Upper redshift",
-                                                        0.0, 2.0, 1.4,
+                                                        0.0, G_MAXDOUBLE, 1.4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloMassFunction:mf-lb:
+   *
+   * Mass function lower bound.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MF_LB,
+                                   g_param_spec_double ("mf-lb",
+                                                        NULL,
+                                                        "Upper redshift",
+                                                        0.0, G_MAXDOUBLE, 1.0e-30,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -616,6 +638,9 @@ nc_halo_mass_function_set_area (NcHaloMassFunction *mfp, gdouble area)
   {
     self->area_survey = area;
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
+
+    ncm_model_ctrl_force_update (self->ctrl_cosmo);
+    ncm_model_ctrl_force_update (self->ctrl_reion);
   }
 }
 
@@ -635,6 +660,9 @@ nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec)
   {
     self->prec = prec;
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
+
+    ncm_model_ctrl_force_update (self->ctrl_cosmo);
+    ncm_model_ctrl_force_update (self->ctrl_reion);
   }
 }
 
@@ -675,13 +703,19 @@ nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo
   
   if ((lnMi != self->lnMi) || (self->lnMf != lnMf) || (self->zi != zi) || (self->zf != zf))
   {
-    self->lnMi = lnMi;
-    self->lnMf = lnMf;
-    self->zi   = zi;
-    self->zf   = zf;
+    g_object_set (G_OBJECT (mfp),
+        "lnMi", lnMi,
+        "lnMf", lnMf,
+        "zi", zi,
+        "zf", zf,
+        NULL);
     ncm_powspec_filter_require_zi (self->psf, self->zi);
     ncm_powspec_filter_require_zf (self->psf, self->zf);
+
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
+
+    ncm_model_ctrl_force_update (self->ctrl_cosmo);
+    ncm_model_ctrl_force_update (self->ctrl_reion);
   }
 }
 
@@ -701,7 +735,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
   
   nc_distance_prepare_if_needed (self->dist, cosmo);
   ncm_powspec_filter_prepare_if_needed (self->psf, NCM_MODEL (cosmo));
-  
+
   if (mfp->d2NdzdlnM == NULL)
     _nc_halo_mass_function_generate_2Dspline_knots (mfp, cosmo, self->prec);
   
@@ -718,10 +752,10 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
     {
       const gdouble lnM          = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
       const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnM (mfp, cosmo, lnM, z));
-      ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
+      ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, GSL_MAX (d2NdzdlnM_ij, self->mf_lb));
     }
   }
-  
+
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
   
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
@@ -810,7 +844,7 @@ _encapsulated_z (gdouble z, gpointer p)
               nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
               nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
   
-  /*printf ("z   % 22.15g % 22.15g\n", z, A);*/
+  /*printf ("z   % 22.15g % 22.15g\n", z, A);fflush(stdout);*/
   return A;
 }
 
@@ -821,7 +855,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
   
   gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, lnM, args->z);
   
-  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);*/
+  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);fflush (stdout);*/
   return A;
 }
 
