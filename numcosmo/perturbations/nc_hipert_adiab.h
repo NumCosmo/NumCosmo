@@ -55,7 +55,7 @@ struct _NcHIPertIAdiabInterface
   gdouble (*eval_F2) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_H) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
   gdouble (*eval_x) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
-  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
   gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad);
 };
 
@@ -113,7 +113,7 @@ NCM_INLINE gdouble nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble 
 NCM_INLINE gdouble nc_hipert_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_H (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble t, const gdouble k);
-NCM_INLINE void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+NCM_INLINE void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
 NCM_INLINE gdouble nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
@@ -180,9 +180,9 @@ nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble t, const gdouble k)
   return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_x (iad, t, k);
 }
 NCM_INLINE void
-nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1)
 {
-  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_system (iad, t, k, nu, dlnmnu);
+  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_system (iad, t, k, nu, xi, F1);
 }
 
 NCM_INLINE gdouble 

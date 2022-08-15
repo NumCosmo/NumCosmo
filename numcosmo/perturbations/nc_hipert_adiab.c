@@ -89,7 +89,7 @@ static gdouble _nc_hipert_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble t, 
 static gdouble _nc_hipert_iadiab_eval_H (NcHIPertIAdiab *iad, const gdouble t, const gdouble k){ g_error ("Not implemented"); return 0.0; }
 static gdouble _nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble t, const gdouble k){ g_error ("Not implemented"); return 0.0; }
 
-static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu){ g_error ("Not implemented"); }
+static void _nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1){ g_error ("Not implemented"); }
 static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 static void
@@ -177,7 +177,7 @@ static gdouble _nc_hipert_adiab_eval_nu             (NcmCSQ1D *csq1d, NcmModel *
 static gdouble _nc_hipert_adiab_eval_xi             (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _nc_hipert_adiab_eval_F1             (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _nc_hipert_adiab_eval_F2             (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static void _nc_hipert_adiab_eval_system            (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+static void _nc_hipert_adiab_eval_system            (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
 static gdouble _nc_hipert_adiab_eval_H              (NcHIPertAdiab *iad, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _nc_hipert_adiab_eval_x              (NcHIPertAdiab *iad, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _nc_hipert_adiab_eval_powspec_factor (NcHIPertAdiab *iad, NcmModel *model);
@@ -255,9 +255,9 @@ _nc_hipert_adiab_eval_x (NcHIPertAdiab *iad, NcmModel *model, const gdouble t, c
 }
 
 static void 
-_nc_hipert_adiab_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+_nc_hipert_adiab_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1)
 {
-  nc_hipert_iadiab_eval_system (NC_HIPERT_IADIAB (model), t, k, nu, dlnmnu);
+  nc_hipert_iadiab_eval_system (NC_HIPERT_IADIAB (model), t, k, nu, xi, F1);
 }
 
 static gdouble
@@ -320,8 +320,8 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
  * @t: $t$
  * @k: $k$
  * @nu: (out): $\nu$
- * @dlnmnu: (out): FIXME
- *
+ * @xi: (out): FIXME
+ * @F1: (out): FIXME
  * FIXME
  *
  */

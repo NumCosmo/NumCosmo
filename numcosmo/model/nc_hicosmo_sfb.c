@@ -153,7 +153,7 @@ static gdouble _nc_hicosmo_sfb_iadiab_eval_F1  (NcHIPertIAdiab *iad, const gdoub
 static gdouble _nc_hicosmo_sfb_iadiab_eval_F2  (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_sfb_iadiab_eval_H   (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_sfb_iadiab_eval_x   (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static void _nc_hicosmo_sfb_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+static void _nc_hicosmo_sfb_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
 
 static void
 nc_hipert_adiab_interface_init (NcHIPertIAdiabInterface *iface)
@@ -466,7 +466,7 @@ _nc_hicosmo_sfb_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gd
   const gdouble nu = sqrt (w) * k * N * x;
   const gdouble dN_dtau = 1.0 / 2.0 * gsl_pow_3 (N) * Omega_w * x_3_1pw * sign * (-3.0 * (1.0 + w) + 6.0 * w * e_t3);
 
-  return 1.0 / ( 2.0 * nu * N) * dN_dtau;
+  return (1.0 / ( 2.0 * nu * N)) * dN_dtau;
  }
 static gdouble
 _nc_hicosmo_sfb_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -494,9 +494,32 @@ _nc_hicosmo_sfb_iadiab_eval_F2 (NcHIPertIAdiab *iad, const gdouble tau, const gd
 }
 
 static void
-_nc_hicosmo_sfb_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+_nc_hicosmo_sfb_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1)
 {
-  printf ("Not Implemented.");
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  const gdouble sign = GSL_SIGN(tau);
+  const gdouble lnX_B = log (X_B);
+  const gdouble tabs = fabs (tau);
+  const gdouble w = W;
+  const gdouble x_3_1pw = exp (3.0 * (1.0 + w) * (-tabs + lnX_B));
+  const gdouble Omega_w = OMEGA_W;
+  const gdouble e_t3 = exp (-3.0 *(1.0 - w) * tabs);
+  const gdouble e_3t_1mw = expm1 (-3.0 *(1.0 - w) * tabs);
+  const gdouble E2 = -Omega_w *x_3_1pw * e_3t_1mw;
+  const gdouble E = sqrt (E2);
+  const gdouble N = 1.0 / E;
+  const gdouble x = exp(lnX_B - tabs);
+  const gdouble dN_dtau = 1.0 / 2.0 * gsl_pow_3 (N) * Omega_w * x_3_1pw * sign * (-3.0 * (1.0 + w) + 6.0 * w * e_t3);
+  const gdouble mult = 3.0 * (1.0 + w) / (2.0 * w);
+  const gdouble x3   = x * x * x;
+  const gdouble z2 = mult * 1.0 / (x3 * N);
+  const gdouble m = 2.0 * z2;
+  const gdouble _nu = sqrt (w) * k * N * x;
+  const gdouble mnu =  m * _nu;
+  
+  xi[0] = log(mnu); 
+  F1[0] = 1.0 / ( 2.0 * _nu * N) * dN_dtau;
+  nu[0] = _nu;
 }
 
 /**
