@@ -44,6 +44,7 @@ struct _NcmDiffPrivate
 {
   guint maxorder;
   gdouble rs;
+  gdouble terr_pad;
   gdouble roff_pad;
   gdouble ini_h;
   GPtrArray *central_tables;
@@ -67,6 +68,7 @@ enum
   PROP_MAXORDER,
   PROP_RS,
   PROP_ROFF_PAD,
+  PROP_TERR_PAD,
   PROP_INI_H,
   PROP_SIZE,
 };
@@ -79,13 +81,14 @@ ncm_diff_init (NcmDiff *diff)
   diff->priv           = ncm_diff_get_instance_private (diff);
   diff->priv->maxorder = 0;
   diff->priv->rs       = 0.0;
+  diff->priv->terr_pad = 0.0;
   diff->priv->roff_pad = 0.0;
   diff->priv->ini_h    = 0.0;
-  
+
   diff->priv->central_tables  = g_ptr_array_new ();
   diff->priv->forward_tables  = g_ptr_array_new ();
   diff->priv->backward_tables = g_ptr_array_new ();
-  
+
   g_ptr_array_set_free_func (diff->priv->central_tables,  &_ncm_diff_table_free);
   g_ptr_array_set_free_func (diff->priv->forward_tables,  &_ncm_diff_table_free);
   g_ptr_array_set_free_func (diff->priv->backward_tables, &_ncm_diff_table_free);
@@ -95,10 +98,10 @@ static void
 _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDiff *diff = NCM_DIFF (object);
-  
-  
+
+
   g_return_if_fail (NCM_IS_DIFF (object));
-  
+
   switch (prop_id)
   {
     case PROP_MAXORDER:
@@ -109,6 +112,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       break;
     case PROP_ROFF_PAD:
       ncm_diff_set_round_off_pad (diff, g_value_get_double (value));
+      break;
+    case PROP_TERR_PAD:
+      ncm_diff_set_trunc_error_pad (diff, g_value_get_double (value));
       break;
     case PROP_INI_H:
       ncm_diff_set_ini_h (diff, g_value_get_double (value));
@@ -123,10 +129,10 @@ static void
 _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmDiff *diff = NCM_DIFF (object);
-  
-  
+
+
   g_return_if_fail (NCM_IS_DIFF (object));
-  
+
   switch (prop_id)
   {
     case PROP_MAXORDER:
@@ -137,6 +143,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       break;
     case PROP_ROFF_PAD:
       g_value_set_double (value, ncm_diff_get_round_off_pad (diff));
+      break;
+    case PROP_TERR_PAD:
+      g_value_set_double (value, ncm_diff_get_trunc_error_pad (diff));
       break;
     case PROP_INI_H:
       g_value_set_double (value, ncm_diff_get_ini_h (diff));
@@ -156,8 +165,8 @@ _ncm_diff_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_diff_parent_class)->constructed (object);
   {
     NcmDiff *diff = NCM_DIFF (object);
-    
-    
+
+
     _ncm_diff_build_diff_tables (diff);
   }
 }
@@ -166,12 +175,12 @@ static void
 _ncm_diff_dispose (GObject *object)
 {
   NcmDiff *diff = NCM_DIFF (object);
-  
-  
+
+
   g_clear_pointer (&diff->priv->central_tables,  g_ptr_array_unref);
   g_clear_pointer (&diff->priv->forward_tables,  g_ptr_array_unref);
   g_clear_pointer (&diff->priv->backward_tables, g_ptr_array_unref);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_diff_parent_class)->dispose (object);
 }
@@ -187,14 +196,14 @@ static void
 ncm_diff_class_init (NcmDiffClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
-  
+
+
   object_class->set_property = &_ncm_diff_set_property;
   object_class->get_property = &_ncm_diff_get_property;
   object_class->constructed  = &_ncm_diff_constructed;
   object_class->dispose      = &_ncm_diff_dispose;
   object_class->finalize     = &_ncm_diff_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_MAXORDER,
                                    g_param_spec_uint ("max-order",
@@ -214,6 +223,13 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                    g_param_spec_double ("round-off-pad",
                                                         NULL,
                                                         "Round off padding",
+                                                        1.01, G_MAXDOUBLE, 1.0e2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TERR_PAD,
+                                   g_param_spec_double ("terr-pad",
+                                                        NULL,
+                                                        "Truncation error padding",
                                                         1.1, G_MAXDOUBLE, 1.0e2,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -229,11 +245,11 @@ NcmDiffTable *
 _ncm_diff_table_new (const guint n)
 {
   NcmDiffTable *dtable = g_new (NcmDiffTable, 1);
-  
-  
+
+
   dtable->h      = ncm_vector_new (n);
   dtable->lambda = ncm_vector_new (n);
-  
+
   return dtable;
 }
 
@@ -242,11 +258,11 @@ _ncm_diff_table_dup (NcmDiffTable *dtable)
 {
   const guint n            = ncm_vector_len (dtable->h);
   NcmDiffTable *dtable_dup = _ncm_diff_table_new (n);
-  
-  
+
+
   ncm_vector_memcpy (dtable_dup->h,      dtable->h);
   ncm_vector_memcpy (dtable_dup->lambda, dtable->lambda);
-  
+
   return dtable_dup;
 }
 
@@ -254,8 +270,8 @@ void
 _ncm_diff_table_free (gpointer dtable_ptr)
 {
   NcmDiffTable *dtable = (NcmDiffTable *) dtable_ptr;
-  
-  
+
+
   ncm_vector_free (dtable->h);
   ncm_vector_free (dtable->lambda);
   g_free (dtable);
@@ -265,7 +281,9 @@ static void
 _ncm_diff_build_diff_table (NcmDiff *diff, GPtrArray *tables, const guint maxorder, gdouble (*g) (const guint, gpointer), gpointer user_data)
 {
   if (tables->len == maxorder)
+  {
     return;
+  }
   else if (tables->len > maxorder)
   {
     g_ptr_array_set_size (tables, maxorder);
@@ -273,26 +291,26 @@ _ncm_diff_build_diff_table (NcmDiff *diff, GPtrArray *tables, const guint maxord
   else
   {
     guint k;
-    
-    
+
+
     for (k = tables->len; k < maxorder; k++)
     {
       const guint n = k + 2;
-      
-      
+
+
       if (k == 0)
       {
         const gdouble g0     = g (0, user_data);
         const gdouble g1     = g (1, user_data);
         NcmDiffTable *dtable = _ncm_diff_table_new (n);
-        
-        
+
+
         ncm_vector_set (dtable->h, 0, 1.0 / g0);
         ncm_vector_set (dtable->h, 1, 1.0 / g1);
-        
+
         ncm_vector_set (dtable->lambda, 0, g0 / (g0 - g1));
         ncm_vector_set (dtable->lambda, 1, g1 / (g1 - g0));
-        
+
         g_ptr_array_add (tables, dtable);
       }
       else
@@ -303,24 +321,24 @@ _ncm_diff_build_diff_table (NcmDiff *diff, GPtrArray *tables, const guint maxord
         NcmDiffTable *dtable  = _ncm_diff_table_new (n);
         gdouble lambda_l      = 1.0;
         guint i;
-        
-        
+
+
         for (i = 0; i < l; i++)
         {
           const gdouble gi       = g (i, user_data);
           const gdouble hi       = ncm_vector_get (ldtable->h, i);
           const gdouble lambda_i = ncm_vector_get (ldtable->lambda, i) / (1.0 - gl / gi);
-          
-          
+
+
           ncm_vector_set (dtable->h,      i, hi);
           ncm_vector_set (dtable->lambda, i, lambda_i);
-          
+
           lambda_l *= 1.0 / (1.0 - gi / gl);
         }
-        
+
         ncm_vector_set (dtable->h,      l, 1.0 / gl);
         ncm_vector_set (dtable->lambda, l, lambda_l);
-        
+
         g_ptr_array_add (tables, dtable);
       }
     }
@@ -332,8 +350,8 @@ _ncm_diff_central_g (const guint k, gpointer user_data)
 {
   NcmDiff *diff   = NCM_DIFF (user_data);
   const gdouble g = pow (diff->priv->rs, 2 * k);
-  
-  
+
+
   return +g;
 }
 
@@ -342,8 +360,8 @@ _ncm_diff_forward_g (const guint k, gpointer user_data)
 {
   NcmDiff *diff   = NCM_DIFF (user_data);
   const gdouble g = pow (diff->priv->rs, k);
-  
-  
+
+
   return +g;
 }
 
@@ -352,8 +370,8 @@ _ncm_diff_backward_g (const guint k, gpointer user_data)
 {
   NcmDiff *diff   = NCM_DIFF (user_data);
   const gdouble g = pow (diff->priv->rs, k);
-  
-  
+
+
   return -g;
 }
 
@@ -377,8 +395,8 @@ ncm_diff_new (void)
 {
   NcmDiff *diff = g_object_new (NCM_TYPE_DIFF,
                                 NULL);
-  
-  
+
+
   return diff;
 }
 
@@ -465,6 +483,21 @@ ncm_diff_get_round_off_pad (NcmDiff *diff)
   return diff->priv->roff_pad;
 }
 
+
+/**
+ * ncm_diff_get_trunc_error_pad:
+ * @diff: a #NcmDiff
+ *
+ * Gets the current truncation error padding used in calculations.
+ *
+ * Returns: the truncation error padding.
+ */
+gdouble
+ncm_diff_get_trunc_error_pad (NcmDiff *diff)
+{
+  return diff->priv->terr_pad;
+}
+
 /**
  * ncm_diff_get_ini_h:
  * @diff: a #NcmDiff
@@ -491,15 +524,13 @@ void
 ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
 {
   g_assert_cmpuint (maxorder, >, 0);
-  
+
   if (maxorder != diff->priv->maxorder)
   {
     diff->priv->maxorder = maxorder;
-    
+
     if (diff->priv->central_tables->len > 0)
-    {
       _ncm_diff_build_diff_tables (diff);
-    }
   }
 }
 
@@ -515,15 +546,13 @@ void
 ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 {
   g_assert_cmpfloat (rs, >, 1.1);
-  
+
   if (rs != diff->priv->rs)
   {
     diff->priv->rs = rs;
-    
+
     if (diff->priv->central_tables->len > 0)
-    {
       _ncm_diff_build_diff_tables (diff);
-    }
   }
 }
 
@@ -538,8 +567,23 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 void
 ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
 {
-  g_assert_cmpfloat (roff_pad, >, 1.1);
+  g_assert_cmpfloat (roff_pad, >, 1.01);
   diff->priv->roff_pad = roff_pad;
+}
+
+/**
+ * ncm_diff_set_trunc_error_pad:
+ * @diff: a #NcmDiff
+ * @terr_pad: the new truncation error padding
+ *
+ * Sets the truncation error padding used in the calculations.
+ *
+ */
+void
+ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad)
+{
+  g_assert_cmpfloat (terr_pad, >, 1.01);
+  diff->priv->terr_pad = terr_pad;
 }
 
 /**
@@ -568,13 +612,13 @@ void
 ncm_diff_log_central_tables (NcmDiff *diff)
 {
   guint i;
-  
-  
+
+
   for (i = 0; i < diff->priv->central_tables->len; i++)
   {
     NcmDiffTable *dtable = g_ptr_array_index (diff->priv->central_tables, i);
-    
-    
+
+
     ncm_message ("# NcmDiff[central]  order: %u\n", i + 1);
     ncm_vector_log_vals (dtable->h,      "# NcmDiff[central]  h:      ", "% 22.15g", TRUE);
     ncm_vector_log_vals (dtable->lambda, "# NcmDiff[central]  lambda: ", "% 22.15g", TRUE);
@@ -592,13 +636,13 @@ void
 ncm_diff_log_forward_tables (NcmDiff *diff)
 {
   guint i;
-  
-  
+
+
   for (i = 0; i < diff->priv->forward_tables->len; i++)
   {
     NcmDiffTable *dtable = g_ptr_array_index (diff->priv->forward_tables, i);
-    
-    
+
+
     ncm_message ("# NcmDiff[forward]  order: %u\n", i + 1);
     ncm_vector_log_vals (dtable->h,      "# NcmDiff[forward]  h:      ", "% 22.15g", TRUE);
     ncm_vector_log_vals (dtable->lambda, "# NcmDiff[forward]  lambda: ", "% 22.15g", TRUE);
@@ -616,13 +660,13 @@ void
 ncm_diff_log_backward_tables (NcmDiff *diff)
 {
   guint i;
-  
-  
+
+
   for (i = 0; i < diff->priv->backward_tables->len; i++)
   {
     NcmDiffTable *dtable = g_ptr_array_index (diff->priv->backward_tables, i);
-    
-    
+
+
     ncm_message ("# NcmDiff[backward] order: %u\n", i + 1);
     ncm_vector_log_vals (dtable->h,      "# NcmDiff[backward] h:      ", "% 22.15g", TRUE);
     ncm_vector_log_vals (dtable->lambda, "# NcmDiff[backward] lambda: ", "% 22.15g", TRUE);
@@ -637,24 +681,24 @@ _ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
 {
   /*ncm_vector_log_vals (x_v,  "x_v  ", "% 22.15g", TRUE);*/
   ncm_vector_addto (x_v, a, h);
-  
+
   /*ncm_vector_log_vals (x_v,  "xh_v ", "% 22.15g", TRUE);*/
   /*ncm_vector_log_vals (f_v,  "f_v  ", "% 22.15g", TRUE);*/
   f (x_v, df, user_data);
-  
+
   /*ncm_vector_log_vals (yh_v, "yh_v ", "% 22.15g", TRUE);*/
-  
+
   ncm_vector_memcpy (roff, df);
   ncm_vector_sub_round_off (roff, f_v);
-  
+
   ncm_vector_sub   (df, f_v);
   ncm_vector_scale (df, 1.0 / h);
-  
+
   ncm_vector_mul (roff, df);
-  
+
   NCM_UNUSED (yh1_v);
   NCM_UNUSED (yh2_v);
-  
+
   /*
    *  printf ("# t = %u\n", t);
    *  ncm_vector_log_vals (df,   "df   ", "% 22.15g", TRUE);
@@ -666,21 +710,21 @@ static void
 _ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
 {
   ncm_vector_addto (x_v, a, h);
-  
+
   f (x_v, df, user_data);
-  
+
   ncm_vector_set (x_v, a, x - h);
-  
+
   f (x_v, yh1_v, user_data);
-  
+
   ncm_vector_memcpy (roff, df);
   ncm_vector_sub_round_off (roff, yh1_v);
-  
+
   ncm_vector_sub   (df, yh1_v);
   ncm_vector_scale (df, 0.5 / h);
-  
+
   ncm_vector_mul (roff, df);
-  
+
   NCM_UNUSED (yh2_v);
 }
 
@@ -688,24 +732,24 @@ static void
 _ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
 {
   ncm_vector_addto (x_v, a, h);
-  
+
   f (x_v, df, user_data);
-  
+
   ncm_vector_set (x_v, a, x - h);
-  
+
   f (x_v, yh1_v, user_data);
-  
+
   ncm_vector_add (df, yh1_v);
   ncm_vector_scale (df, 0.5);
-  
+
   ncm_vector_memcpy (roff, df);
   ncm_vector_sub_round_off (roff, f_v);
-  
+
   ncm_vector_sub   (df, f_v);
   ncm_vector_scale (df, 2.0 / (h * h));
-  
+
   ncm_vector_mul (roff, df);
-  
+
   NCM_UNUSED (yh2_v);
 }
 
@@ -713,112 +757,118 @@ void
 _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *df, gdouble *roff)
 {
   gdouble f_hx, f_hy, f_hxhy;
-  
-  
+
+
   ncm_vector_addto (x_v, a, hx);
   f_hx = f (x_v, user_data);
-  
+
   ncm_vector_set (x_v, a, x);
   ncm_vector_addto (x_v, b, hy);
   f_hy = f (x_v, user_data);
-  
+
   ncm_vector_addto (x_v, a, hx);
   f_hxhy = f (x_v, user_data);
-  
+
   df[0] = ((fval + f_hxhy) - (f_hx + f_hy)) / (hx * hy);
-  
+
   {
     const gdouble s1 = fval + f_hxhy;
     const gdouble s2 = f_hx + f_hy;
-    
+
     const gdouble d1 = s1 - s2;
-    
-    
+
+
     if (G_UNLIKELY (d1 == 0.0))
+    {
       roff[0] = 1.0;
+    }
     else
     {
       const gdouble abs_s1  = fabs (s1);
       const gdouble abs_s2  = fabs (s2);
       const gdouble max_s12 = GSL_MAX (abs_s1, abs_s2);
-      
-      
+
+
       roff[0] = fabs (max_s12 * GSL_DBL_EPSILON / d1);
     }
   }
 }
 
+#define NCM_DIFF_ERR_PAD (1.0e3)
+
 static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
-  GPtrArray *tables  = NULL;
-  GPtrArray *dfs     = g_ptr_array_new ();
-  GPtrArray *roffs   = g_ptr_array_new ();
-  GArray *f_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *yh_a       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  NcmVector *x_v     = NULL;
-  NcmVector *f_v     = NULL;
-  NcmVector *yh1_v   = NULL;
-  NcmVector *yh2_v   = NULL;
-  NcmVector *dfb     = NULL;
-  NcmVector *dfr     = NULL;
-  NcmVector *roffb   = NULL;
-  NcmVector *roffr   = NULL;
-  NcmVector *err     = NULL;
-  NcmVector *err_err = NULL;
-  NcmVector *ferr    = NULL;
-  NcmVector *df_best = NULL;
-  GArray *df         = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *not_conv   = g_array_new (FALSE, FALSE, sizeof (guchar));
-  const guint nvar   = x_a->len;
-  NcmMatrix *Eerr_m  = NULL;
+  GPtrArray *tables       = NULL;
+  GPtrArray *dfs          = g_ptr_array_new ();
+  GPtrArray *roffs        = g_ptr_array_new ();
+  GArray *f_a             = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *yh_a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x_v          = NULL;
+  NcmVector *f_v          = NULL;
+  NcmVector *yh1_v        = NULL;
+  NcmVector *yh2_v        = NULL;
+  NcmVector *df_last      = NULL;
+  NcmVector *df_curr      = NULL;
+  NcmVector *df_best      = NULL;
+  NcmVector *roff_last    = NULL;
+  NcmVector *roff_curr    = NULL;
+  NcmVector *err_trunc    = NULL;
+  NcmVector *err_best     = NULL;
+  NcmVector *err_last_max = NULL;
+  NcmVector *err_err      = NULL;
+  GArray *df              = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *not_conv        = g_array_new (FALSE, FALSE, sizeof (guchar));
+  const guint nvar        = x_a->len;
+  NcmMatrix *Eerr_m       = NULL;
   NcmMatrix *df_m;
   guint a;
-  
-  
+
+
   g_array_set_size (df, dim * nvar);
   df_m = ncm_matrix_new_array (df, dim);
-  
+
   if (po == 0)
     tables = diff->priv->forward_tables;
   else
     tables = diff->priv->central_tables;
-  
+
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, dim * nvar);
     Eerr_m = ncm_matrix_new_array (*Eerr, dim);
   }
-  
+
   g_ptr_array_set_free_func (dfs,   (GDestroyNotify) ncm_vector_free);
   g_ptr_array_set_free_func (roffs, (GDestroyNotify) ncm_vector_free);
-  
+
   g_array_set_size (f_a,      dim);
   g_array_set_size (yh_a,     dim);
   g_array_set_size (not_conv, dim);
-  
+
   x_v   = ncm_vector_new_array (x_a);
   f_v   = ncm_vector_new_array (f_a);
   yh1_v = ncm_vector_new_array (yh_a);
   yh2_v = ncm_vector_new_array (yh_a);
-  
-  dfb = ncm_vector_new (dim);
-  dfr = ncm_vector_new (dim);
-  
-  roffb = ncm_vector_new (dim);
-  roffr = ncm_vector_new (dim);
-  
-  err     = ncm_vector_new (dim);
-  err_err = ncm_vector_new (dim);
-  ferr    = ncm_vector_new (dim);
+
+  df_last = ncm_vector_new (dim);
+  df_curr = ncm_vector_new (dim);
   df_best = ncm_vector_new (dim);
-  
+
+  roff_last = ncm_vector_new (dim);
+  roff_curr = ncm_vector_new (dim);
+
+  err_trunc    = ncm_vector_new (dim);
+  err_err      = ncm_vector_new (dim);
+  err_best     = ncm_vector_new (dim);
+  err_last_max = ncm_vector_new (dim);
+
   g_array_unref (f_a);
   g_array_unref (yh_a);
-  
+
   f (x_v, f_v, user_data);
-  
+
   for (a = 0; a < x_a->len; a++)
   {
     const gdouble x       = g_array_index (x_a, gdouble, a);
@@ -828,216 +878,207 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
     NcmDiffTable *ldtable = NULL;
     guint order_index;
     guint t = 0;
-    
-    
-    ncm_vector_set_all (ferr, GSL_POSINF);
+
+
+    ncm_vector_set_all (err_best, GSL_POSINF);
     g_ptr_array_set_size (dfs, 0);
     g_ptr_array_set_size (roffs, 0);
-    
+
     memset (not_conv->data, ntry_conv, not_conv->len);
-    
+    ncm_vector_set_zero (err_last_max);
+
     for (order_index = 0; order_index < diff->priv->maxorder; order_index++)
     {
       const guint nt       = order_index + 2;
       NcmDiffTable *dtable = g_ptr_array_index (tables, order_index);
       guint i;
-      
-      
+
+
       for ( ; t < nt; t++)
       {
         const gdouble ho      = h0 * ((po == 0) ? ncm_vector_get (dtable->h, t) : sqrt (ncm_vector_get (dtable->h, t)));
         volatile gdouble temp = x + ho;
         const gdouble h       = temp - x;
-        
+
         NcmVector *df_t   = ncm_vector_new (dim);
         NcmVector *roff_t = ncm_vector_new (dim);
-        
-        
+
+
         step_algo (diff, f, user_data, a, x, h, x_v, f_v, yh1_v, yh2_v, df_t, roff_t);
-        
+
         g_ptr_array_add (dfs,   df_t);
         g_ptr_array_add (roffs, roff_t);
-        
+
         ncm_vector_set (x_v, a, x);
       }
-      
+
       if (ldtable == NULL)
       {
-        ncm_vector_memcpy (dfb, g_ptr_array_index (dfs, 0));
-        ncm_vector_memcpy (dfr, g_ptr_array_index (dfs, 0));
-        
-        ncm_vector_memcpy (roffb, g_ptr_array_index (roffs, 0));
-        ncm_vector_memcpy (roffr, g_ptr_array_index (roffs, 0));
-        
-        ncm_vector_memcpy (df_best, dfb);
-        
-        ncm_vector_scale (dfr, ncm_vector_get (dtable->lambda, 0));
-        ncm_vector_axpy  (dfr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (dfs, 1));
-        
-        if (FALSE)
-        {
-          ncm_vector_scale (roffr, ncm_vector_get (dtable->lambda, 0));
-          ncm_vector_axpy  (roffr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (roffs, 1));
-        }
-        else
-        {
-          ncm_vector_scale (roffr, ncm_vector_get (dtable->lambda, 0));
-          ncm_vector_square (roffr);
-          
-          ncm_vector_ax2py  (roffr, gsl_pow_2 (ncm_vector_get (dtable->lambda, 1)), g_ptr_array_index (roffs, 1));
-          ncm_vector_sqrt (roffr);
-        }
+        ncm_vector_memcpy (df_last, g_ptr_array_index (dfs, 0));
+        ncm_vector_memcpy (df_curr, g_ptr_array_index (dfs, 0));
+
+        ncm_vector_memcpy (roff_last, g_ptr_array_index (roffs, 0));
+        ncm_vector_memcpy (roff_curr, g_ptr_array_index (roffs, 0));
+
+        ncm_vector_memcpy (df_best, df_last);
+
+        ncm_vector_scale (df_curr, ncm_vector_get (dtable->lambda, 0));
+        ncm_vector_axpy  (df_curr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (dfs, 1));
+
+        ncm_vector_scale (roff_curr, ncm_vector_get (dtable->lambda, 0));
+        ncm_vector_hypot  (roff_curr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (roffs, 1));
       }
       else
       {
-        ncm_vector_memcpy (dfr, g_ptr_array_index (dfs, 0));
-        ncm_vector_scale (dfr, ncm_vector_get (dtable->lambda, 0));
-        
-        if (FALSE)
+        ncm_vector_memcpy (df_curr, g_ptr_array_index (dfs, 0));
+        ncm_vector_scale (df_curr, ncm_vector_get (dtable->lambda, 0));
+
+        ncm_vector_memcpy (roff_curr, g_ptr_array_index (roffs, 0));
+        ncm_vector_scale (roff_curr, ncm_vector_get (dtable->lambda, 0));
+
+        for (i = 1; i < nt; i++)
         {
-          ncm_vector_memcpy (roffr, g_ptr_array_index (roffs, 0));
-          ncm_vector_scale (roffr, ncm_vector_get (dtable->lambda, 0));
-          
-          for (i = 1; i < nt; i++)
-          {
-            ncm_vector_axpy (dfr,   ncm_vector_get (dtable->lambda,  i), g_ptr_array_index (dfs, i));
-            ncm_vector_axpy (roffr, ncm_vector_get (dtable->lambda,  i), g_ptr_array_index (roffs, i));
-          }
-        }
-        else
-        {
-          ncm_vector_memcpy (roffr, g_ptr_array_index (roffs, 0));
-          ncm_vector_scale (roffr, ncm_vector_get (dtable->lambda, 0));
-          ncm_vector_square (roffr);
-          
-          for (i = 1; i < nt; i++)
-          {
-            ncm_vector_axpy (dfr,   ncm_vector_get (dtable->lambda,  i), g_ptr_array_index (dfs, i));
-            ncm_vector_ax2py (roffr, gsl_pow_2 (ncm_vector_get (dtable->lambda,  i)), g_ptr_array_index (roffs, i));
-          }
-          
-          ncm_vector_sqrt (roffr);
+          ncm_vector_axpy (df_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (dfs, i));
+          ncm_vector_hypot (roff_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (roffs, i));
         }
       }
-      
-      ncm_vector_memcpy (err, dfr);
-      ncm_vector_memcpy (err_err, dfr);
-      
-      ncm_vector_sub (err, dfb);
-      ncm_vector_cmp (err_err, dfb);
+
+      ncm_vector_memcpy (err_trunc, df_curr);
+      ncm_vector_memcpy (err_err, df_curr);
+
+      ncm_vector_sub (err_trunc, df_last);
+      ncm_vector_cmp (err_err, df_last);
+
       {
         gboolean improve = FALSE;
-        
-        
+
         for (i = 0; i < dim; i++)
         {
-          const gdouble err_i   = fabs (ncm_vector_get (err, i));
-          const gdouble ferr_i  = ncm_vector_get (ferr, i);
-          const gdouble roffb_i = fabs (ncm_vector_get (roffb, i)) * diff->priv->roff_pad;
-          const gdouble roffr_i = fabs (ncm_vector_get (roffr, i)) * diff->priv->roff_pad;
-          
-          const gdouble terr_i    = GSL_MAX (err_i, GSL_MAX (roffb_i, roffr_i));
-          const gdouble err_err_i = ncm_vector_get (err_err, i);
-          
-          gdouble df_best_i = ncm_vector_get (df_best, i);
-          gdouble cerr_i    = ferr_i;
-          
+          const gdouble err_trunc_i = fabs (ncm_vector_get (err_trunc, i)) * diff->priv->terr_pad;
+          const gdouble roff_last_i = fabs (ncm_vector_get (roff_last, i)) * diff->priv->roff_pad;
+          const gdouble roff_curr_i = fabs (ncm_vector_get (roff_curr, i)) * diff->priv->roff_pad;
+          const gdouble err_best_i  = ncm_vector_get (err_best, i);
+
+          const gdouble err_curr_max_i = GSL_MAX (err_trunc_i, GSL_MAX (roff_last_i, roff_curr_i));
+          const gdouble err_err_i      = ncm_vector_get (err_err, i);
+
+          gdouble df_best_i       = ncm_vector_get (df_best, i);
+          gdouble err_curr_best_i = err_best_i;
+
 #define NOT_CONV (g_array_index (not_conv, guchar, i))
-          
+#define CONV (!(g_array_index (not_conv, guchar, i)))
+
+          /*
+           * Estimates fluctuate in the beginning. Thus we only
+           * start checking for convergence after they agree at
+           * 1.0e-3.
+           */
           if (NOT_CONV && (err_err_i < 1.0e-3))
+          {
             NOT_CONV--;
+          }
           else
           {
             if (err_err_i > 1.0e-3)
             {
               NOT_CONV = ntry_conv;
-              
+
               if (err_err_i > 1.0)
-                ncm_vector_set (ferr, i, GSL_POSINF);
+                ncm_vector_set (err_best, i, GSL_POSINF);
             }
           }
-          
-          if ((terr_i < ferr_i) && !NOT_CONV)
+
+          /*
+           * If the current maximum error is smaller than
+           * the best error estimate improve it again.
+           * It also sets the best error estimate to the
+           * average of the last two to avoid fake convergence
+           * due to fluctuations on error estimates.
+           */
+          if ((err_curr_max_i < err_best_i) && CONV)
           {
-            df_best_i = ncm_vector_get (dfr, i);
+            const gdouble err_last_max_i = ncm_vector_get (err_last_max, i);
+            df_best_i = ncm_vector_get (df_curr, i);
             ncm_vector_set (df_best, i, df_best_i);
-            ncm_vector_set (ferr, i, terr_i);
-            cerr_i = terr_i;
-            
+
+            err_curr_best_i = 0.5 * (err_curr_max_i + err_last_max_i);
+            ncm_vector_set (err_best, i, err_curr_best_i);
+
             improve = TRUE;
           }
-          
-          if (NOT_CONV || (roffr_i < cerr_i))
+
+          if (NOT_CONV || (roff_curr_i < err_curr_best_i))
             improve = TRUE;
-          
-          printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
-                  nt, i, a, NOT_CONV, ferr_i, err_i, roffb_i, roffr_i,
-                  err_err_i, improve ? "T" : "F");
+/*
+          if ((i == 0) && (a == 0))
+            printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
+                nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
+                err_err_i, improve ? "T" : "F");
+*/
+
+          ncm_vector_set (err_last_max, i, err_curr_max_i);
         }
-        
+
         if (!improve)
           break;
       }
-      
+
 /*
- *     ncm_vector_log_vals (dfb,     "dfb  ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (dfr,     "dfr  ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (err,     "err  ", "% 22.15e", TRUE);
- *
- *     ncm_vector_log_vals (df_best, "df   ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (ferr,    "ferr ", "% 22.15e", TRUE);
+ *     ncm_vector_log_vals (df_last,   "df_last   ", "% 22.15g", TRUE);
+ *     ncm_vector_log_vals (df_curr,   "df_curr   ", "% 22.15g", TRUE);
+ *     ncm_vector_log_vals (df_best,   "df_best   ", "% 22.15g", TRUE);
+ *     ncm_vector_log_vals (err_trunc, "err_trunc ", "% 22.15e", TRUE);
+ *     ncm_vector_log_vals (err_best,  "err_best  ", "% 22.15e", TRUE);
  */
-      
-      ncm_vector_memcpy (dfb, dfr);
-      ncm_vector_memcpy (roffb, roffr);
+
+      ncm_vector_memcpy (df_last, df_curr);
+      ncm_vector_memcpy (roff_last, roff_curr);
       ldtable = dtable;
     }
-    
+
     {
       NcmVector *df_a = ncm_matrix_get_row (df_m, a);
       ncm_vector_memcpy (df_a, df_best);
       ncm_vector_free (df_a);
-      
+
       if (Eerr_m != NULL)
       {
         NcmVector *Eerr_a = ncm_matrix_get_row (Eerr_m, a);
-        ncm_vector_memcpy (Eerr_a, ferr);
+        ncm_vector_memcpy (Eerr_a, err_best);
         ncm_vector_free (Eerr_a);
       }
     }
   }
-  
+
   if (Eerr_m != NULL)
-  {
     ncm_matrix_scale (Eerr_m, NCM_DIFF_ERR_PAD);
-  }
-  
+
   {
     g_array_unref (not_conv);
-    
+
     g_ptr_array_unref (dfs);
     g_ptr_array_unref (roffs);
-    
+
     ncm_vector_clear (&x_v);
     ncm_vector_clear (&f_v);
     ncm_vector_clear (&yh1_v);
     ncm_vector_clear (&yh2_v);
-    
-    ncm_vector_clear (&dfb);
-    ncm_vector_clear (&dfr);
-    
-    ncm_vector_clear (&roffb);
-    ncm_vector_clear (&roffr);
-    
-    ncm_vector_clear (&err);
-    ncm_vector_clear (&err_err);
-    
-    ncm_vector_clear (&ferr);
+
+    ncm_vector_clear (&df_last);
+    ncm_vector_clear (&df_curr);
     ncm_vector_clear (&df_best);
-    
+
+    ncm_vector_clear (&roff_last);
+    ncm_vector_clear (&roff_curr);
+
+    ncm_vector_clear (&err_trunc);
+    ncm_vector_clear (&err_best);
+    ncm_vector_clear (&err_last_max);
+    ncm_vector_clear (&err_err);
+
     ncm_matrix_clear (&df_m);
     ncm_matrix_clear (&Eerr_m);
-    
+
     return df;
   }
 }
@@ -1055,32 +1096,32 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
   NcmMatrix *Eerr_m = NULL;
   NcmMatrix *df_m;
   guint a;
-  
-  
+
+
   g_array_set_size (df, nvar * nvar);
   df_m = ncm_matrix_new_array (df, nvar);
-  
+
   if (po == 0)
     tables = diff->priv->forward_tables;
   else
     tables = diff->priv->central_tables;
-  
+
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, nvar * nvar);
     Eerr_m = ncm_matrix_new_array (*Eerr, nvar);
   }
-  
+
   x_v = ncm_vector_new_array (x_a);
-  
+
   fval = f (x_v, user_data);
-  
+
   for (a = 0; a < x_a->len; a++)
   {
     guint b;
-    
-    
+
+
     for (b = a + 1; b < x_a->len; b++)
     {
       const guint ntry_conv = 3;
@@ -1091,29 +1132,30 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
       const gdouble hx0     = diff->priv->ini_h * scale_x;
       const gdouble hy0     = diff->priv->ini_h * scale_y;
       NcmDiffTable *ldtable = NULL;
-      gdouble ferr          = GSL_POSINF;
-      gdouble err           = 0.0;
+      gdouble err_best      = GSL_POSINF;
+      gdouble err_trunc     = 0.0;
       gdouble err_err       = 0.0;
+      gdouble err_last_max  = 0.0;
       gdouble df_best       = 0.0;
-      gdouble dfb           = 0.0;
-      gdouble dfr           = 0.0;
-      gdouble roffb         = 0.0;
-      gdouble roffr         = 0.0;
+      gdouble df_last       = 0.0;
+      gdouble df_curr       = 0.0;
+      gdouble roff_last     = 0.0;
+      gdouble roff_curr     = 0.0;
       guint t               = 0;
       guint not_converging  = ntry_conv;
       guint order_index;
-      
-      
+
+
       g_array_set_size (dfs, 0);
       g_array_set_size (roffs, 0);
-      
+
       for (order_index = 0; order_index < diff->priv->maxorder; order_index++)
       {
         const guint nt       = order_index + 2;
         NcmDiffTable *dtable = g_ptr_array_index (tables, order_index);
         guint i;
-        
-        
+
+
         for ( ; t < nt; t++)
         {
           const gdouble hxo    = hx0 * ((po == 0) ? ncm_vector_get (dtable->h, t) : sqrt (ncm_vector_get (dtable->h, t)));
@@ -1122,133 +1164,132 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
           const gdouble hx     = t_x - x;
           volatile gdouble t_y = y + hyo;
           const gdouble hy     = t_y - y;
-          
+
           gdouble df_t   = 0.0;
           gdouble roff_t = 0.0;
-          
-          
+
+
           Hstep_algo (diff, f, user_data, a, x, hx, b, y, hy, x_v, fval, &df_t, &roff_t);
-          
+
           g_array_append_val (dfs,   df_t);
           g_array_append_val (roffs, roff_t);
-          
+
           ncm_vector_set (x_v, a, x);
           ncm_vector_set (x_v, b, y);
         }
-        
+
         if (ldtable == NULL)
         {
           const gdouble lambda0 = ncm_vector_get (dtable->lambda, 0);
           const gdouble lambda1 = ncm_vector_get (dtable->lambda, 1);
-          
-          
-          dfb = g_array_index (dfs, gdouble, 0);
-          dfr = dfb * lambda0 + g_array_index (dfs, gdouble, 1) * lambda1;
-          
-          roffb = g_array_index (roffs, gdouble, 0);
-          roffr = roffb * lambda0 + g_array_index (roffs, gdouble, 1) * lambda1;
-          
-          df_best = dfb;
+
+
+          df_last = g_array_index (dfs, gdouble, 0);
+          df_curr = df_last * lambda0 + g_array_index (dfs, gdouble, 1) * lambda1;
+
+          roff_last = fabs (g_array_index (roffs, gdouble, 0));
+          roff_curr = hypot (roff_last * lambda0, g_array_index (roffs, gdouble, 1) * lambda1);
+
+          df_best = df_curr;
         }
         else
         {
-          dfr   = 0.0;
-          roffr = 0.0;
-          
+          df_curr   = 0.0;
+          roff_curr = 0.0;
+
           for (i = 0; i < nt; i++)
           {
             const gdouble lambda_i = ncm_vector_get (dtable->lambda,  i);
             const gdouble df_i     = g_array_index (dfs, gdouble, i);
             const gdouble roff_i   = g_array_index (roffs, gdouble, i);
-            
-            
-            dfr   += lambda_i * df_i;
-            roffr += lambda_i * roff_i;
+
+            df_curr += lambda_i * df_i;
+            roff_curr = hypot (roff_curr, lambda_i * roff_i);
           }
         }
-        
-        err     = fabs (dfr - dfb);
-        err_err = (dfr == 0.0) ? ((dfb == 0.0) ? 0.0 : fabs (dfb)) : ((dfb == 0.0) ? fabs (dfr) : fabs ((dfr - dfb) / GSL_MIN (fabs (dfr), fabs (dfb))));
-        
+
+        err_trunc = fabs (df_curr - df_last) * diff->priv->terr_pad;
+        err_err   = (df_curr == 0.0) ? ((df_last == 0.0) ? 0.0 : fabs (df_last)) : ((df_last == 0.0) ? fabs (df_curr) : fabs ((df_curr - df_last) / GSL_MIN (fabs (df_curr), fabs (df_last))));
+
         {
           gboolean improve = FALSE;
-          
-          const gdouble Eroffb = fabs (roffb) * diff->priv->roff_pad;
-          const gdouble Eroffr = fabs (roffr) * diff->priv->roff_pad;
-          const gdouble terr   = GSL_MAX (err, GSL_MAX (Eroffb, Eroffr));
-          gdouble cerr         = ferr;
-          
-          
+
+          const gdouble Eroff_last   = fabs (roff_last) * diff->priv->roff_pad;
+          const gdouble Eroff_curr   = fabs (roff_curr) * diff->priv->roff_pad;
+          const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
+          gdouble err_curr_best      = err_best;
+
+
           if (not_converging && (err_err < 1.0e-3))
+          {
             not_converging--;
+          }
           else
           {
             if (err_err > 1.0e-3)
             {
               not_converging = ntry_conv;
-              
+
               if (err_err > 1.0)
-                ferr = GSL_POSINF;
+                err_best = GSL_POSINF;
             }
           }
-          
+
+
 /*
- *         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
- *                 nt, a, b, not_converging, ferr, err, Eroffb, Eroffr, terr, err_err);
- */
-          if ((terr < ferr) && !not_converging)
+         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
+                 nt, a, b, not_converging, df_best, err_best, err_trunc, Eroff_last, Eroff_curr, err_curr_max, err_err);
+*/
+
+          if ((err_curr_max < err_best) && !not_converging)
           {
-            df_best = dfr;
-            ferr    = terr;
-            cerr    = terr;
-            improve = TRUE;
-            
+            df_best       = df_curr;
+            err_best      = 0.5 * (err_curr_max + err_last_max);
+            err_curr_best = err_best;
+            improve       = TRUE;
+
             /*printf (" -UP-");*/
           }
-          
-/*
- *         else
- *           printf ("     ");
- */
-          if (not_converging || (Eroffr < cerr))
+
+          if (not_converging || (Eroff_curr < err_curr_best))
             improve = TRUE;
-          
+
           /*printf (" improve: %s\n", improve ? "T" : "F");*/
-          
+
           if (!improve)
             break;
+
+          err_last_max = err_curr_max;
         }
-        
-        dfb     = dfr;
-        roffb   = roffr;
-        ldtable = dtable;
+
+        df_last   = df_curr;
+        roff_last = roff_curr;
+        ldtable   = dtable;
       }
-      
+
       ncm_matrix_set (df_m, a, b, df_best);
       ncm_matrix_set (df_m, b, a, df_best);
-      
+
       if (Eerr_m != NULL)
       {
-        ncm_matrix_set (Eerr_m, a, b, ferr);
-        ncm_matrix_set (Eerr_m, b, a, ferr);
+        ncm_matrix_set (Eerr_m, a, b, err_best);
+        ncm_matrix_set (Eerr_m, b, a, err_best);
       }
     }
   }
-  
+
   if (Eerr_m != NULL)
-  {
     ncm_matrix_scale (Eerr_m, NCM_DIFF_ERR_PAD);
-  }
-  
+
   {
     g_array_unref (dfs);
     g_array_unref (roffs);
-    
+
     ncm_vector_clear (&x_v);
-    
+
     ncm_matrix_clear (&df_m);
     ncm_matrix_clear (&Eerr_m);
-    
+
     return df;
   }
 }
@@ -1328,8 +1369,8 @@ static void
 _ncm_diff_trans_1_to_M (NcmVector *x, NcmVector *y, gpointer user_data)
 {
   NcmDiffFuncParams *fp = (NcmDiffFuncParams *) user_data;
-  
-  
+
+
   fp->f_1_to_M (ncm_vector_get (x, 0), y, fp->user_data);
 }
 
@@ -1337,8 +1378,8 @@ static void
 _ncm_diff_trans_N_to_1 (NcmVector *x, NcmVector *y, gpointer user_data)
 {
   NcmDiffFuncParams *fp = (NcmDiffFuncParams *) user_data;
-  
-  
+
+
   ncm_vector_set (y, 0, fp->f_N_to_1 (x, fp->user_data));
 }
 
@@ -1346,8 +1387,8 @@ static void
 _ncm_diff_trans_1_to_1 (NcmVector *x, NcmVector *y, gpointer user_data)
 {
   NcmDiffFuncParams *fp = (NcmDiffFuncParams *) user_data;
-  
-  
+
+
   ncm_vector_set (y, 0, fp->f_1_to_1 (ncm_vector_get (x, 0), fp->user_data));
 }
 
@@ -1372,15 +1413,15 @@ ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
   NcmDiffFuncParams fp = {f, NULL, NULL, user_data};
   GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *df_a;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a =  ncm_diff_by_step_algo (diff, _ncm_diff_rf_d1_step, 0, x_a, dim, &_ncm_diff_trans_1_to_M, &fp, Eerr);
-  
+
   g_array_unref (x_a);
-  
+
   return df_a;
 }
 
@@ -1405,14 +1446,14 @@ ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
   NcmDiffFuncParams fp = {f, NULL, NULL, user_data};
   GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *df_a;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d1_step, 1, x_a, dim, &_ncm_diff_trans_1_to_M, &fp, Eerr);
   g_array_unref (x_a);
-  
+
   return df_a;
 }
 
@@ -1437,14 +1478,14 @@ ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
   NcmDiffFuncParams fp = {f, NULL, NULL, user_data};
   GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *df_a;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d2_step, 1, x_a, dim, &_ncm_diff_trans_1_to_M, &fp, Eerr);
   g_array_unref (x_a);
-  
+
   return df_a;
 }
 
@@ -1466,8 +1507,8 @@ GArray *
 ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
-  
-  
+
+
   return ncm_diff_by_step_algo (diff, _ncm_diff_rf_d1_step, 0, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, Eerr);
 }
 
@@ -1489,8 +1530,8 @@ GArray *
 ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
-  
-  
+
+
   return ncm_diff_by_step_algo (diff, _ncm_diff_rc_d1_step, 1, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, Eerr);
 }
 
@@ -1512,8 +1553,8 @@ GArray *
 ncm_diff_rc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
-  
-  
+
+
   return ncm_diff_by_step_algo (diff, _ncm_diff_rc_d2_step, 1, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, Eerr);
 }
 
@@ -1536,28 +1577,26 @@ ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpoin
 {
   NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
   GArray *dEerr        = NULL;
-  
+
   GArray *diag = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d2_step, 1, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, &dEerr);
   GArray *res  = ncm_diff_Hessian_by_step_algo (diff, _ncm_diff_rf_Hessian_step, 0, x_a, f, user_data, Eerr);
-  
+
   guint i;
-  
-  
+
+
   g_assert_cmpuint (diag->len * diag->len, ==, res->len);
-  
+
   for (i = 0; i < diag->len; i++)
   {
     g_array_index (res, gdouble, i * diag->len + i) = g_array_index (diag, gdouble, i);
-    
+
     if (Eerr != NULL)
-    {
       g_array_index (*Eerr, gdouble, i * diag->len + i) = g_array_index (dEerr, gdouble, i);
-    }
   }
-  
+
   g_array_unref (dEerr);
   g_array_unref (diag);
-  
+
   return res;
 }
 
@@ -1582,23 +1621,23 @@ ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
   GArray *Eerr         = NULL;
   GArray *df_a;
   gdouble df;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rf_d1_step, 0, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
-  
+
   df = g_array_index (df_a, gdouble, 0);
-  
+
   g_array_unref (x_a);
   g_array_unref (df_a);
-  
+
   if (err != NULL)
     *err = g_array_index (Eerr, gdouble, 0);
-  
+
   g_array_unref (Eerr);
-  
+
   return df;
 }
 
@@ -1623,23 +1662,23 @@ ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
   GArray *Eerr         = NULL;
   GArray *df_a;
   gdouble df;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d1_step, 1, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
-  
+
   df = g_array_index (df_a, gdouble, 0);
-  
+
   g_array_unref (x_a);
   g_array_unref (df_a);
-  
+
   if (err != NULL)
     *err = g_array_index (Eerr, gdouble, 0);
-  
+
   g_array_unref (Eerr);
-  
+
   return df;
 }
 
@@ -1664,23 +1703,23 @@ ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
   GArray *Eerr         = NULL;
   GArray *df_a;
   gdouble df;
-  
-  
+
+
   g_array_set_size (x_a, 1);
   g_array_index (x_a, gdouble, 0) = x;
-  
+
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d2_step, 1, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
-  
+
   df = g_array_index (df_a, gdouble, 0);
-  
+
   g_array_unref (x_a);
   g_array_unref (df_a);
-  
+
   if (err != NULL)
     *err = g_array_index (Eerr, gdouble, 0);
-  
+
   g_array_unref (Eerr);
-  
+
   return df;
 }
 
