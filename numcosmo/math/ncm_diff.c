@@ -223,14 +223,14 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                    g_param_spec_double ("round-off-pad",
                                                         NULL,
                                                         "Round off padding",
-                                                        1.01, G_MAXDOUBLE, 1.0e2,
+                                                        1.01, G_MAXDOUBLE, 3.0e4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_TERR_PAD,
                                    g_param_spec_double ("terr-pad",
                                                         NULL,
                                                         "Truncation error padding",
-                                                        1.1, G_MAXDOUBLE, 1.0e2,
+                                                        1.1, G_MAXDOUBLE, 3.0e4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_INI_H,
@@ -794,7 +794,7 @@ _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data,
   }
 }
 
-#define NCM_DIFF_ERR_PAD (1.0e3)
+#define NCM_DIFF_ERR_PAD (1.0e0)
 
 static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -1009,11 +1009,11 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
 
           if (NOT_CONV || (roff_curr_i < err_curr_best_i))
             improve = TRUE;
+
 /*
-          if ((i == 0) && (a == 0))
-            printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
-                nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
-                err_err_i, improve ? "T" : "F");
+          printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
+              nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
+              err_err_i, improve ? "T" : "F");
 */
 
           ncm_vector_set (err_last_max, i, err_curr_max_i);
