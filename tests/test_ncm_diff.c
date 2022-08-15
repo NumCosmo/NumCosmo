@@ -270,8 +270,6 @@ test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata)
 {
   NcmDiff *diff = ncm_diff_new ();
   
-  ncm_diff_set_round_off_pad (diff, 1.0e4);
-  ncm_diff_set_trunc_error_pad (diff, 1.0e4);
   test->diff = diff;
   
   g_assert_true (diff != NULL);

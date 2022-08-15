@@ -180,6 +180,7 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
@@ -688,6 +689,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DTR_DHR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
   
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);

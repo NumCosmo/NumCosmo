@@ -472,6 +472,7 @@ nc_headers = \
 	data/nc_data_bao_empirical_fit.h       \
 	data/nc_data_bao_empirical_fit_2d.h    \
 	data/nc_data_bao_dhr_dar.h             \
+	data/nc_data_bao_dtr_dhr.h             \
 	data/nc_data_bao_dmr_hr.h              \
 	data/nc_data_bao.h                     \
 	data/nc_data_cmb_shift_param.h         \
@@ -623,6 +624,7 @@ nc_sources = \
 	data/nc_data_bao_empirical_fit.c       \
 	data/nc_data_bao_empirical_fit_2d.c    \
 	data/nc_data_bao_dhr_dar.c             \
+	data/nc_data_bao_dtr_dhr.c             \
 	data/nc_data_bao_dmr_hr.c              \
 	data/nc_data_bao.c                     \
 	data/nc_data_cmb_shift_param.c         \

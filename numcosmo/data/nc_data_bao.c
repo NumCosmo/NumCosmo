@@ -47,6 +47,7 @@
 #include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 
 /**
  * nc_data_bao_create:
@@ -95,6 +96,15 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       break;
     case NC_DATA_BAO_DMR_HR_SDSS_DR12_2016:
       data = NCM_DATA (nc_data_bao_dmr_hr_new_from_id (dist, id));
+      break;
+    case NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE:
+      data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
+      break;
+    case NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021:
+      data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
+      break;
+    case NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021:
+      data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
       break;
     default:
       g_assert_not_reached ();
