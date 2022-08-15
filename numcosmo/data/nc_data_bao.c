@@ -85,9 +85,12 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:  
+    case NC_DATA_BAO_EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021:
       data = NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_2D_BAUTISTA2017:
+    case NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021:
+    case NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021:
       data = NCM_DATA (nc_data_bao_empirical_fit_2d_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015: 
@@ -98,11 +101,7 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       data = NCM_DATA (nc_data_bao_dmr_hr_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE:
-      data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
-      break;
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021:
-      data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
-      break;
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021:
       data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
       break;

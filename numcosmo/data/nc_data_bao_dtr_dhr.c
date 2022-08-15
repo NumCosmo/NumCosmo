@@ -177,7 +177,7 @@ _nc_data_bao_dtr_dhr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
       const gdouble z1      = ncm_vector_get (dhdt->x, i);
       const gdouble z2      = ncm_vector_get (dhdt->x, i + 1);
       const gdouble DH_r    = nc_distance_DH_r (dhdt->dist, cosmo, z1);
-      const gdouble Dt_r    = nc_distance_DA_r (dhdt->dist, cosmo, z2);
+      const gdouble Dt_r    = nc_distance_Dt_r (dhdt->dist, cosmo, z2);
 
       ncm_vector_set (vp, i, Dt_r);
       ncm_vector_set (vp, i + 1, DH_r);
