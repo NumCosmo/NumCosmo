@@ -722,6 +722,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 /**
  * nc_data_cluster_ncount_new:
  * @cad: a #NcClusterAbundance
+ * @redshift_type: #NcClusterRedshift class string
+ * @mass_type: #NcClusterMass class string
  *
  * FIXME
  * 
@@ -974,7 +976,7 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
 /**
  * nc_data_cluster_ncount_set_lnM_obs_bins:
  * @ncount: a #NcDataClusterNCount
- * @lnM_obs_bins: a #NcmObsArray
+ * @lnM_obs_bins: a #NcmObjArray
  *
  * Sets array of #NcmVector's representing the lower and upper bounds
  * of each bin.
@@ -992,7 +994,7 @@ nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArra
 /**
  * nc_data_cluster_ncount_set_z_obs_bins:
  * @ncount: a #NcDataClusterNCount
- * @z_obs_bins: a #NcmObsArray
+ * @z_obs_bins: a #NcmObjArray
  *
  * Sets array of #NcmVector's representing the lower and upper bounds
  * of each bin.

@@ -46,20 +46,6 @@ typedef struct _NcHICosmoDEWSplineClass NcHICosmoDEWSplineClass;
 typedef struct _NcHICosmoDEWSpline NcHICosmoDEWSpline;
 typedef struct _NcHICosmoDEWSplinePrivate NcHICosmoDEWSplinePrivate;
 
-/**
- * NcHICosmoDEWSplineSParams:
- * @NC_HICOSMO_DE_WSPLINE_W: constant parameter
- *
- * Dark Energy equation of state: $w(z) = w$.
- * 
- */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_SPARAMS >*/
-{
-  /*NC_HICOSMO_DE_WSPLINE_W = NC_HICOSMO_DE_SPARAM_LEN,*/
-  /* < private > */
-  NC_HICOSMO_DE_WSPLINE_SPARAM_LEN = NC_HICOSMO_DE_SPARAM_LEN,                   /*< skip >*/
-} NcHICosmoDEWSplineSParams;
-
 
 /**
  * NcHICosmoDEWSplineVParams:

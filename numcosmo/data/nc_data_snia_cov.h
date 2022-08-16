@@ -85,6 +85,15 @@ struct _NcDataSNIACov
   NcDataSNIACovPrivate *priv;
 };
 
+/**
+ * NcDataSNIACovError:
+ * @NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND: id not found
+ * @NC_DATA_SNIA_COV_ERROR_INVALID_ID: invalid id
+ * @NC_DATA_SNIA_COV_ERROR_INVALID_SAMPLE: invalid sample
+ *
+ * #NcDataSNIACov error messages.
+ *
+ */
 typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
 {
   NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,

@@ -219,8 +219,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   object_class->finalize    = &_nc_hicosmo_de_wspline_finalize;
 
   ncm_model_class_set_name_nick (model_class, "XCDM - Constant EOS", "XCDM");
-  ncm_model_class_add_params (model_class,
-                              NC_HICOSMO_DE_WSPLINE_SPARAM_LEN - NC_HICOSMO_DE_SPARAM_LEN,
+  ncm_model_class_add_params (model_class, 0,
                               NC_HICOSMO_DE_WSPLINE_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);
 
@@ -368,6 +367,8 @@ _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 
 /**
  * nc_hicosmo_de_wspline_new:
+ * @nknots: number of knots in the $w(z)$ spline
+ * @z_f: redshift $z_f$ of the last knot.
  *
  * This function instantiates a new object of type #NcHICosmoDEWSpline.
  *
