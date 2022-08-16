@@ -45,7 +45,8 @@ typedef struct _TestNcHIPertAdiab
 void test_nc_hipert_adiab_new (TestNcHIPertAdiab *test, gconstpointer pdata);
 void test_nc_hipert_adiab_free (TestNcHIPertAdiab *test, gconstpointer pdata);
 void test_nc_hipert_adiab_sanity (TestNcHIPertAdiab *test, gconstpointer pdata);
-static gdouble _test_nc_hipert_iadiab_eval_N (const gdouble x, gpointer userdata);
+void test_nc_hipert_adiab_F (TestNcHIPertAdiab *test, gconstpointer pdata);
+static gdouble _test_nc_hipert_iadiab_eval_nu (const gdouble x, gpointer userdata);
 static gdouble _test_nc_hipert_iadiab_eval_xi (const gdouble x, gpointer userdata);
 
 gint
@@ -60,7 +61,11 @@ main (gint argc, gchar *argv[])
               &test_nc_hipert_adiab_sanity,
               &test_nc_hipert_adiab_free);
  
- 
+  g_test_add ("/nc/hipert_adiab/F", TestNcHIPertAdiab, NULL,
+              &test_nc_hipert_adiab_new,
+              &test_nc_hipert_adiab_F,
+              &test_nc_hipert_adiab_free);
+               
   g_test_run ();
 }
 
@@ -86,61 +91,77 @@ test_nc_hipert_adiab_sanity (TestNcHIPertAdiab *test, gconstpointer pdata)
 {
  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
  gdouble tau = ncm_rng_uniform_gen(rng, -50.0, -10.0);
- gdouble k, F1, F2, testF1, testF2, N, Ntest;
- gboolean found;
- gint i;
- gdouble *tauf = malloc(sizeof *tauf);
+ gdouble k;
  gdouble *taua = malloc(sizeof *taua);
  gdouble *taui = malloc(sizeof *taui);
  gdouble *J11 = malloc(sizeof *J11);
  gdouble *J12 = malloc(sizeof *J12);
  gdouble *J22 = malloc(sizeof *J22);  
- gdouble w    = g_test_rand_double_range (1.0e-3, 1.0e2);  
- gdouble err       = 0.0;
  gdouble *nut = malloc(sizeof *nut);
  gdouble *xit = malloc(sizeof *xit);
  gdouble *F1t = malloc(sizeof *F1t);
- 
- k    = 1.0e5;
+
+ k    = 1.0e9;
  ncm_csq1d_set_k (test->pa, k);
- ncm_csq1d_find_adiab_time_limit (test->pa, test->model, -100.0, 20.0, 1.0e-2, taui);
+ ncm_csq1d_set_reltol (test->pa, 1.0e-5);
+ ncm_csq1d_find_adiab_time_limit (test->pa, test->model, -1.0e2, 20.0, 1.0e-5, taui);
  ncm_csq1d_set_ti (test->pa, *taui);
+ ncm_csq1d_set_tf (test->pa, 0.0);
  ncm_csq1d_set_init_cond_adiab (test->pa, test->model, *taui);
  ncm_csq1d_prepare(test->pa, test->model);
-  
  GArray *t_array = ncm_csq1d_get_time_array (test->pa, taua);
  ncm_csq1d_get_J_at(test->pa, test->model, tau, J11, J12, J22);
- F1 = nc_hipert_iadiab_eval_F1(NC_HIPERT_IADIAB(test->model), tau, k);
- F2 = nc_hipert_iadiab_eval_F2(NC_HIPERT_IADIAB(test->model), tau, k);
- Ntest = _test_nc_hipert_iadiab_eval_N (tau, &w);
- N = 1.0 / nc_hipert_iadiab_eval_H (NC_HIPERT_IADIAB(test->model), tau, k); 
  nc_hipert_iadiab_eval_system(NC_HIPERT_IADIAB(test->model), tau, k, nut, xit, F1t);
- ncm_assert_cmpdouble_e (N, ==, Ntest, 0.0, err);
+ 
  {
-  NcmDiff *diff = ncm_diff_new();
-  const gdouble df  = ncm_diff_rc_d1_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_N, &w, &err);
-  const gdouble dl  = ncm_diff_rc_d1_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_xi, &w, &err);
-  const gdouble d2l  = ncm_diff_rc_d2_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_N, &w, &err);
-  const gdouble nu = nc_hipert_iadiab_eval_nu (NC_HIPERT_IADIAB(test->model), tau, k);
-  const gdouble F1Test = 1.0 * df/ (2.0 * nu * N ); 
-  const gdouble F1lTest = 1.0 * dl/ (2.0 * nu);
-  const gdouble F2Test = 1.0  / (4.0 * nu * nu * N) * (d2l - 2.0 * pow(dl, 2) / N - dl);
-  ncm_assert_cmpdouble_e (F1Test, ==, F1, 0.0, 1.0e0);
-  ncm_assert_cmpdouble_e (F1lTest, ==, F1, 0.0, 1.0e0);
-  ncm_assert_cmpdouble_e (F2Test, ==, F2, 0.0, 1.0e-2);
- }
-
+  const gdouble nur = nc_hipert_iadiab_eval_nu(NC_HIPERT_IADIAB(test->model), tau, k); 
+  const gdouble xir = nc_hipert_iadiab_eval_xi(NC_HIPERT_IADIAB(test->model), tau, k);
+  const gdouble F1r = nc_hipert_iadiab_eval_F1(NC_HIPERT_IADIAB(test->model), tau, k);
+  const gdouble m   = nc_hipert_iadiab_eval_m(NC_HIPERT_IADIAB(test->model), tau, k);
   
-
- printf("% 22.15g", N);
+  ncm_assert_cmpdouble_e (*xit, ==, xir, 0.0, 0.0);
+  ncm_assert_cmpdouble_e (*nut, ==, nur, 0.0, 0.0);
+  ncm_assert_cmpdouble_e (*F1t, ==, F1r, 0.0, 0.0);
+  ncm_assert_cmpdouble_e (xir, ==, log (m * nur), 0.0, 0.0);
+ }
  g_clear_pointer (&t_array, g_array_unref);
  ncm_rng_free (rng);
 }
 
+void
+test_nc_hipert_adiab_F (TestNcHIPertAdiab *test, gconstpointer pdata)
+{
+ NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+ gdouble tau = ncm_rng_uniform_gen(rng, -50.0, -10.0);
+ gdouble k, F1, F2;
+ gdouble w    = g_test_rand_double_range (1.0e-3, 1.0e2);
+ gdouble err       = 0.0;
+ k = 1.0e9;
+ F1 = nc_hipert_iadiab_eval_F1(NC_HIPERT_IADIAB(test->model), tau, k);
+ F2 = nc_hipert_iadiab_eval_F2(NC_HIPERT_IADIAB(test->model), tau, k);
+
+ {
+  NcmDiff *diff = ncm_diff_new();
+  const gdouble dnu  = ncm_diff_rc_d1_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_nu, &w, &err);
+  const gdouble dxi  = ncm_diff_rc_d1_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_xi, &w, &err);
+  const gdouble d2xi  = ncm_diff_rc_d2_1_to_1 (diff, tau, &_test_nc_hipert_iadiab_eval_xi, &w, &err);
+  const gdouble nu = nc_hipert_iadiab_eval_nu (NC_HIPERT_IADIAB(test->model), tau, k);
+  const gdouble F1lTest = 1.0 * dxi/ (2.0 * nu);
+  const gdouble F2Test = 1.0  / (4.0 * nu * nu) * (d2xi - dxi * dnu / nu);
+  
+  
+  ncm_assert_cmpdouble_e ((F1lTest - F1) / F1, ==, 0.0, 0.0, 1.0e-3);
+  ncm_assert_cmpdouble_e ((F2Test - F2) / F2, ==, 0.0, 0.0, 1.0e-3);
+  
+  ncm_diff_free (diff);
+ }
+ 
+ncm_rng_free (rng);
+}
 static gdouble
 _test_nc_hipert_iadiab_eval_xi (const gdouble x, gpointer userdata)
 {
-  const gdouble k = 1.0e5;
+  const gdouble k = 1.0e9;
   const gdouble X_B = 1.0e25;
   const gdouble w = 0.33;
   const gdouble lnX_B = log (X_B);
@@ -163,9 +184,9 @@ _test_nc_hipert_iadiab_eval_xi (const gdouble x, gpointer userdata)
 }
 
 static gdouble
-_test_nc_hipert_iadiab_eval_N (const gdouble x, gpointer userdata)
+_test_nc_hipert_iadiab_eval_nu (const gdouble x, gpointer userdata)
 {
-  const gdouble k = 1.0e5;
+  const gdouble k = 1.0e9;
   const gdouble X_B = 1.0e25;
   const gdouble w = 0.33;
   const gdouble lnX_B = log (X_B);
@@ -175,6 +196,6 @@ _test_nc_hipert_iadiab_eval_N (const gdouble x, gpointer userdata)
   const gdouble e_3t_1mw = expm1 (-3.0 *(1.0 - w) * tabs);
   const gdouble E2 = -Omega_w *x_3_1pw * e_3t_1mw;
   const gdouble E = sqrt (E2);
-  
-  return 1.0 / E;
+  const gdouble _x = exp(lnX_B - tabs);
+  return sqrt(w) * _x * k * 1.0 / E;
 }

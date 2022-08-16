@@ -54,17 +54,17 @@ for k in k_a:
   csq1d.set_k (k)
   csq1d.set_reltol (1.0e-5)
 
-  (Found1, etai)  = csq1d.find_adiab_time_limit (cosmo, -100.0, 20.0, 1.0e-2)
-  (Found2, etafa) = csq1d.find_adiab_time_limit (cosmo, -20.0, 100.0, 1.0e0)
-  etaf = etafa 
-  csq1d.set_ti (etai)
-  csq1d.set_tf (etaf)
-  csq1d.set_init_cond_adiab (cosmo, etai)
-  csq1d.prepare(cosmo)
-  min_etai = min (etai, min_etai)
-  max_etaf = max (etaf, max_etaf)
+#  (Found1, etai)  = csq1d.find_adiab_time_limit (cosmo, -100.0, 20.0, 1.0e-2)
+  #(Found2, etafa) = csq1d.find_adiab_time_limit (cosmo, -20.0, 100.0, 1.0e0)
+  #etaf = etafa 
+  #csq1d.set_ti (etai)
+  #csq1d.set_tf (etaf)
+  #csq1d.set_init_cond_adiab (cosmo, etai)
+  #csq1d.prepare(cosmo)
+ # min_etai = min (etai, min_etai)
+#  max_etaf = max (etaf, max_etaf)
 #Check if the derivatives are right with sympy and then check why is init_cond_adiab crashing for some momentum. Find a good interval that does not crack also the get time array.
-  eta_a, eta_s = csq1d.get_time_array ()
+#  eta_a, eta_s = csq1d.get_time_array ()
   print(csq1d.do_eval_powspec_factor(csq1d, cosmo))
   print(csq1d.do_eval_H(csq1d, cosmo, 2, 2))
   print(csq1d.do_eval_x(csq1d, cosmo, 2, 2))
