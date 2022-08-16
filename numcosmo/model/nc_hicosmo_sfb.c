@@ -525,9 +525,9 @@ _nc_hicosmo_sfb_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, cons
 /**
  * nc_hicosmo_sfb_new:
  *
- * FIXME
+ * Creates a new #NcHICosmoSFB object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a #NcHICosmoSFB model object.
  */
 NcHICosmoSFB *
 nc_hicosmo_sfb_new (void)

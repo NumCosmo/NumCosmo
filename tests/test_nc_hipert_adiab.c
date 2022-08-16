@@ -125,9 +125,8 @@ test_nc_hipert_adiab_sanity (TestNcHIPertAdiab *test, gconstpointer pdata)
   const gdouble F1Test = 1.0 * df/ (2.0 * nu * N ); 
   const gdouble F1lTest = 1.0 * dl/ (2.0 * nu);
   const gdouble F2Test = 1.0  / (4.0 * nu * nu * N) * (d2l - 2.0 * pow(dl, 2) / N - dl);
-  /*ncm_assert_cmpdouble_e (d2f, ==, F2, 0.0, 1.0e-7);*/
-  /*ncm_assert_cmpdouble_e (F1Test, ==, -F1, 0.0, 1.0e0);
-  ncm_assert_cmpdouble_e (F1lTest, ==, -F1, 0.0, 1.0e0);*/
+  ncm_assert_cmpdouble_e (F1Test, ==, F1, 0.0, 1.0e0);
+  ncm_assert_cmpdouble_e (F1lTest, ==, F1, 0.0, 1.0e0);
   ncm_assert_cmpdouble_e (F2Test, ==, F2, 0.0, 1.0e-2);
  }
 

@@ -277,52 +277,56 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 /**
  * nc_hipert_iadiab_eval_m:
  * @iad: a #NcHIPertIAdiab
- * @t: $t$
- * @k: $k$
+ * @t: $t$, time variable.
+ * @k: $k$, Fourier momentum.
  *
- * FIXME
+ * Computes the mass related to the #NcmCSQ1D 
+ * dynamic equations.
  *
- * Returns: FIXME.
+ * Returns: @m.
  */
 /**
  * nc_hipert_iadiab_eval_mnu:
  * @iad: a #NcHIPertIAdiab
- * @t: $t$
- * @k: $k$
+ * @t: $t$, time variable.
+ * @k: $k$, Fourier momentum.
+ * 
+ * Computes the mass @m times the Laplacian
+ * eigenvalue @nu related to the #NcmCSQ1D
+ * dynamic equations. 
  *
- * FIXME
- *
- * Returns: FIXME.
+ * Returns: @m times @\\nu.
  */
 /**
  * nc_hipert_iadiab_eval_nu:
  * @iad: a #NcHIPertIAdiab
- * @t: $t$
- * @k: $k$
+ * @t: $t$, time variable.
+ * @k: $k$, Fourier momentum. 
+ * 
+ * Computes the Laplacian eigenvalue 
+ * @nu related to the #NcmCSQ1D
+ * dynamic equations.
  *
- * FIXME
- *
- * Returns: FIXME.
+ * Returns: @\nu.
  */
 /**
  * nc_hipert_iadiab_eval_xi:
  * @iad: a #NcHIPertIAdiab
- * @t: $t$
- * @k: $k$
+ * @t: $t$, time variable.
+ * @k: $k$, Fourier momentum. 
+ * 
+ * Computes @xi, the log of the product @mnu.
  *
- * FIXME
- *
- * Returns: FIXME.
+ * Returns: @xi.
  */
 /**
  * nc_hipert_iadiab_eval_system:
  * @iad: a #NcHIPertIAdiab
- * @t: $t$
- * @k: $k$
- * @nu: (out): $\nu$
- * @xi: (out): FIXME
- * @F1: (out): FIXME
- * FIXME
+ * @t: $t$, time variable.
+ * @k: $k$, Fourier momentum.
+ * @nu: (out): $\\nu$, the Laplacian eigenvalue.
+ * @xi: (out): $\\xi$, $log(mnu)$.
+ * @F1: (out): $F1$, $1/(2 \\nu) * dxi/dt$.
  *
  */
 
