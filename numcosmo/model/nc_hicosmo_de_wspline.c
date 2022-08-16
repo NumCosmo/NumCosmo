@@ -140,7 +140,7 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
 
     self->nknots = wz_size;
     self->size = model_class->sparam_len + self->nknots;
-    self->alpha_f = alphaf;
+    self->alpha_f = alphaf * (1.0 - GSL_DBL_EPSILON);
 
     g_assert_cmpuint (wz_size, >, 2);
 

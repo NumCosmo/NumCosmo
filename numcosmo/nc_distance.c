@@ -1249,7 +1249,7 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble Dv   = nc_distance_dilation_scale (dist, cosmo, z);
-  
+
   return r_zd / Dv;
 }
 
