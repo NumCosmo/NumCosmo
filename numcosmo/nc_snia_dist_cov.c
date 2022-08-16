@@ -810,7 +810,7 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
  * @X: a #NcmMatrix
  * @colmajor: whether to fill the matrices in a col-major format
  *
- * Computes effective observed vector @obs, the first @snia_cov->mu_len params
+ * Computes effective observed vector @obs, the first @snia_cov->mu_len parameters
  * are set to the width colour combination using the values of the distance
  * modulus from the model @cosmo and the SNIa model @dcov, i.e.,
  * $-\alpha{}w_i+\beta{}c_i = m_{\mathrm{B},i} - \mu_{\mathrm{th},i}-\alpha-\mathcal{M}_i$.

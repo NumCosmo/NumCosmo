@@ -1249,7 +1249,7 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble Dv   = nc_distance_dilation_scale (dist, cosmo, z);
-  
+
   return r_zd / Dv;
 }
 
@@ -1291,6 +1291,26 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   gdouble DA   = nc_distance_angular_diameter (dist, cosmo, z);
   
   return DA / r_zd;
+}
+
+/**
+ * nc_distance_Dt_r:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
+ *
+ * Computes the ratio between the transverse distance and the sound horizon at the drag epoch,
+ * $$\frac{D_t(z)}{c \, r_s(z_d)}.$$
+ *
+ * Returns: $D_t(z) / (c \, r_d)$.
+ */
+gdouble
+nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
+{
+  gdouble r_zd = nc_distance_r_zd (dist, cosmo);
+  gdouble Dt   = nc_distance_transverse (dist, cosmo, z);
+
+  return Dt / r_zd;
 }
 
 /* Distances from z to infinity */

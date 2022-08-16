@@ -82,6 +82,7 @@
 #include <numcosmo/model/nc_hicosmo_de_cpl.h>
 #include <numcosmo/model/nc_hicosmo_de_jbp.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
+#include <numcosmo/model/nc_hicosmo_de_wspline.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
@@ -168,6 +169,7 @@
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
+#include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>

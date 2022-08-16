@@ -205,7 +205,7 @@ ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
 void
 ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
 {
-  NCM_STATS_DIST2D_GET_CLASS (sd2)->xbounds (sd2, yi, yf);
+  NCM_STATS_DIST2D_GET_CLASS (sd2)->ybounds (sd2, yi, yf);
 }
 
 /**

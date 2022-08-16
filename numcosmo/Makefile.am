@@ -389,6 +389,7 @@ nc_headers = \
 	model/nc_hicosmo_de_cpl.h  \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
+	model/nc_hicosmo_de_wspline.h \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
@@ -471,6 +472,7 @@ nc_headers = \
 	data/nc_data_bao_empirical_fit.h       \
 	data/nc_data_bao_empirical_fit_2d.h    \
 	data/nc_data_bao_dhr_dar.h             \
+	data/nc_data_bao_dtr_dhr.h             \
 	data/nc_data_bao_dmr_hr.h              \
 	data/nc_data_bao.h                     \
 	data/nc_data_cmb_shift_param.h         \
@@ -539,6 +541,7 @@ nc_sources = \
 	model/nc_hicosmo_de_cpl.c  \
 	model/nc_hicosmo_de_jbp.c     \
 	model/nc_hicosmo_de_xcdm.c    \
+	model/nc_hicosmo_de_wspline.c \
 	model/nc_hicosmo_lcdm.c       \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
@@ -621,6 +624,7 @@ nc_sources = \
 	data/nc_data_bao_empirical_fit.c       \
 	data/nc_data_bao_empirical_fit_2d.c    \
 	data/nc_data_bao_dhr_dar.c             \
+	data/nc_data_bao_dtr_dhr.c             \
 	data/nc_data_bao_dmr_hr.c              \
 	data/nc_data_bao.c                     \
 	data/nc_data_cmb_shift_param.c         \
