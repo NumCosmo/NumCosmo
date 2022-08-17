@@ -65,6 +65,5 @@ for k in k_a:
 #  max_etaf = max (etaf, max_etaf)
 #Check if the derivatives are right with sympy and then check why is init_cond_adiab crashing for some momentum. Find a good interval that does not crack also the get time array.
 #  eta_a, eta_s = csq1d.get_time_array ()
-  print(csq1d.do_eval_powspec_factor(csq1d, cosmo))
-  print(csq1d.do_eval_H(csq1d, cosmo, 2, 2))
-  print(csq1d.do_eval_x(csq1d, cosmo, 2, 2))
+
+print(Nc.HICosmo.dE2_dz (cosmo, 4.0))

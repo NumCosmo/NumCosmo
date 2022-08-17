@@ -182,15 +182,11 @@ _nc_hicosmo_sfb_dE2_dz (NcHICosmo *cosmo, gdouble z)
   const gdouble x = z + 1.0;
   const gdouble lnx = log(x);
   const gdouble w = W;
-  const gdouble x_3_1pw = pow (x, 3.0 * (1.0 + w));
   const gdouble x_2_p3w = pow (x, 2.0 + 3.0 * w);
   const gdouble Omega_w = OMEGA_W;
-  const gdouble e_3t_1mw = expm1 (-3.0 *(1.0 - w) * (lnx - lnX_B));
-  const gdouble E2 = -Omega_w *x_3_1pw * e_3t_1mw;
-  const gdouble E = sqrt(E2);
-  const gdouble e_3t1w = exp (-3.0 *(1.0 - w) * (lnx - lnX_B));
+  const gdouble e_3t1w = exp (3.0 *(1.0 - w) * (lnx - lnX_B));
 
-  return 2.0 * E * Omega_w * x_2_p3w * (3.0 * (1.0 + w) - 6.0 * w * e_3t1w);
+  return Omega_w * x_2_p3w * (3.0 * (1.0 + w) - 6.0 * e_3t1w);
 
 }
 
@@ -201,18 +197,11 @@ _nc_hicosmo_sfb_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
   const gdouble x = z + 1.0;
   const gdouble lnx = log(x);
   const gdouble w = W;
-  const gdouble x_3_1pw = pow (x, 3.0 * (1.0 + w));
-  const gdouble x_2_p3w = pow (x, 2.0 + 3.0 * w);
-  const gdouble x_1_p3w = pow (x, 1.0 + 3.0 * w);
   const gdouble Omega_w = OMEGA_W;
-  const gdouble e_3t_1mw = expm1 (-3.0 *(1.0 - w) * (lnx - lnX_B));
-  const gdouble E2 = -Omega_w *x_3_1pw * e_3t_1mw;
-  const gdouble E = sqrt(E2);
-  const gdouble e_3t1w = exp (-3.0 *(1.0 - w) * (lnx - lnX_B));
-  const gdouble dEdz = Omega_w * x_2_p3w * (3.0 * (1.0 + w) - 6.0 * w * e_3t1w);
-  const gdouble dEdz2 = Omega_w * x_1_p3w * (3.0 * (1.0 + w) * (3.0 * w + 2.0) - 6.0 * w * (6.0 * w + 1.0) * e_3t1w);
+  const gdouble x_1_p3w = pow (x, 1.0 + 3.0 * w);
+  const gdouble e_3t1w = exp (3.0 *(1.0 - w) * (lnx - lnX_B));
   
-  return 2.0 * dEdz * dEdz + 2.0 * E * dEdz2; 
+  return Omega_w * x_1_p3w * (3.0 * (2.0 + 3.0 * w) * (1.0 + w) - 30.0 * e_3t1w); 
 }
 
 /****************************************************************************
@@ -228,7 +217,7 @@ _nc_hicosmo_sfb_E2 (NcHICosmo *cosmo, gdouble z)
   const gdouble w = W;
   const gdouble x_3_1pw = pow (x, 3.0 * (1.0 + w));
   const gdouble Omega_w = OMEGA_W;
-  const gdouble e_3t_1mw = expm1 (-3.0 *(1.0 - w) * (lnx - lnX_B));
+  const gdouble e_3t_1mw = expm1 (3.0 *(1.0 - w) * (lnx - lnX_B));
 
   return -Omega_w *x_3_1pw * e_3t_1mw;
 }
