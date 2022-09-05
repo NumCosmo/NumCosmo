@@ -901,3 +901,89 @@ ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist 
   sd0[0] = self->sd0;
   sd1[0] = self->sd1;
 }
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_local_frac:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @local_frac: a double determining the local fraction to use in VKDE.
+ *
+ * Sets the local fraction to use in VKDE.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble local_frac)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  if (self->method != NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE)
+    g_error ("ncm_fit_esmcmc_walker_apes_set_local_frac: cannot set local fraction for a non-VKDE method.");
+
+  ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd0), local_frac);
+  ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd1), local_frac);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @mset: a #NcmMSet to get the covariance from.
+ *
+ * Sets the fixed covariance to the KDE interpolation using
+ * the scales set into @mset.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset (NcmFitESMCMCWalkerAPES *apes, NcmMSet *mset)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+  NcmMatrix *cov_fixed = ncm_matrix_new (self->nparams, self->nparams);
+  guint i;
+
+  ncm_matrix_set_identity (cov_fixed);
+  for (i = 0; i < self->nparams; i++)
+  {
+    const gdouble scale = ncm_mset_fparam_get_scale (mset, i);
+    ncm_matrix_set (cov_fixed, i, i, scale * scale);
+  }
+
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd0), NCM_STATS_DIST_KDE_COV_TYPE_FIXED);
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd1), NCM_STATS_DIST_KDE_COV_TYPE_FIXED);
+
+  ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (self->sd0), cov_fixed);
+  ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (self->sd1), cov_fixed);
+
+  ncm_matrix_free (cov_fixed);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_cov_robust_diag:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Sets the fixed covariance to the KDE interpolation using
+ * robust estimates of scale.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd0), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG);
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd1), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_cov_robust:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Sets the fixed covariance to the KDE interpolation using
+ * robust estimates of scale.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd0), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd1), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
+}

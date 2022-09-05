@@ -27,7 +27,7 @@
 /**
  * SECTION:nc_hipert_comp
  * @title: NcHIPertComp
- * @short_description: Abstract class describing a general perturbation compoment.
+ * @short_description: Abstract class describing a general perturbation component.
  *
  * FIXME
  *

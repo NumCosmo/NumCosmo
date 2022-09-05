@@ -1580,7 +1580,7 @@ ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym)
  * @u: a #NcmVector to store the result
  *
  * Computes the matrix - vector product $u = \alpha M v + \beta u$
- * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
+ * if @NT == 'N' or $u = \alpha M^\intercal v + u$ if @NT == 'T'
  * and stores the result in @u.
  */
 void

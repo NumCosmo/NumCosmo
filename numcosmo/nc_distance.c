@@ -1013,7 +1013,7 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
   
   const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
   const gdouble bgp_cs2 = nc_hicosmo_bgp_cs2 (cosmo, z);
-  
+  /*printf ("% 22.15g % 22.15g % 22.15g\n", z, bgp_cs2, E2);*/
   return sqrt (bgp_cs2 / E2);
 }
 

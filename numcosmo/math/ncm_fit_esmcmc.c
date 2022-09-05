@@ -2219,7 +2219,7 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
     ncm_fit_m2lnL_val (fit_k, &m2lnL);
     
     diff = fabs ((row_m2lnL - m2lnL) / row_m2lnL);
-    
+
     if (diff > 1.0e-3)
     {
       if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)

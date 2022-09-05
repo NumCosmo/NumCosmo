@@ -114,7 +114,7 @@ ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, 
 
 /**
  * ncm_integral_locked_a_inf: (skip)
- * @F: a gsl_function wich is the integrand.
+ * @F: a gsl_function which is the integrand.
  * @a: lower integration limit.
  * @abstol: absolute tolerance.
  * @reltol: relative tolerance.
@@ -136,8 +136,9 @@ ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble r
   
   if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
   {
-    g_warning ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
+    g_error ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
     *result = GSL_POSINF;
+
   }
 
   return error_code;
@@ -151,7 +152,7 @@ ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble r
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function searchs for the nearest x_near value previously chosed as the upper integration limit
+ * This function searches for the nearest x_near value previously chosen as the upper integration limit
  * and perform the integration at [x_near, x] interval. This result is summed to that obtained at [0, x_near]
  * and then it is saved in the cache.
  *
@@ -161,13 +162,11 @@ gint
 ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
-  NcmVector *p_result;
+  NcmVector *p_result = NULL;
   gint error_code = GSL_SUCCESS;
 
-//printf ("[%p]SEARCH! -> %g\n", g_thread_self (), x);
   if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
   {
-//printf ("[%p]Found out %g %g [%p]\n", g_thread_self (), x_found, ncm_vector_get (p_result, 0), p_result);
     if (x == x_found)
       *result = ncm_vector_get (p_result, 0);
     else
@@ -176,6 +175,7 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
       *result += ncm_vector_get (p_result, 0);
       ncm_function_cache_insert (cache, x, *result);
     }
+    ncm_vector_clear (&p_result);
   }
   else
   {
@@ -203,7 +203,7 @@ gint
 ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
-  NcmVector *p_result;
+  NcmVector *p_result = NULL;
   gint error_code = GSL_SUCCESS;
 
   if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
@@ -219,6 +219,7 @@ ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, 
 
       ncm_function_cache_insert (cache, x, *result);
     }
+    ncm_vector_clear (&p_result);
   }
   else
   {

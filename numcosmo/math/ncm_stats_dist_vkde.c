@@ -68,6 +68,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_sort.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include "misc/kdtree.h"
@@ -169,7 +170,7 @@ _ncm_stats_dist_vkde_finalize (GObject *object)
 
 static void _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd);
-static void _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
+static void _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp);
 static void _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM);
 static NcmMatrix *_ncm_stats_dist_vkde_peek_cov_decomp (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_vkde_get_lnnorm (NcmStatsDist *sd, guint i);
@@ -268,10 +269,10 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 }
 
 static void
-_ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
+_ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp)
 {
   /* Chain up : start */
-  NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->prepare_kernel (sd, sample_array);
+  NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->prepare_kernel (sd, sample_array, m2lnp);
   {
     NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
     NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
@@ -282,6 +283,7 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
     /*
      * Creates a near tree object and add all transformed vector.
      */
+    if (m2lnp == NULL || FALSE)
     {
       struct kdtree *tree = kdtree_init (ppself->d);
       
@@ -310,6 +312,7 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
         for (i = 0; i < ppself->n; i++)
         {
           NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample, i);
+          NcmVector *theta_i = g_ptr_array_index (sample_array, i);
           
           kdtree_knn_search_clean (tree);
           kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
@@ -319,18 +322,48 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
           //ncm_vector_log_vals (invUtheta_i, "CET: ", "% 12.5g", TRUE);
           
           ncm_stats_vec_reset (self->sample, TRUE);
+          ncm_matrix_set_zero (self->tmp_cov);
           {
             struct knn_list *p = tree->knn_list_head.next;
+            gdouble norma = 0.0;
             
+            /*ncm_message ("#-----------------------------------------\n");*/
             while (p != &tree->knn_list_head)
             {
               NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
+              gint l;
+              /*ncm_message ("dist: % 22.15g: ", sqrt (p->distance));*/
+
               //ncm_vector_log_vals (ni, "NI : ", "% 12.5g", TRUE);
               //ncm_vector_log_vals (g_ptr_array_index (pself->invUsample, p->node->coord_index), "NIT: ", "% 12.5g", TRUE);
               
               ncm_stats_vec_append (self->sample, ni, FALSE);
+
+              for (l = 0; l < ppself->d; l++)
+              {
+                const gdouble dx_l = ncm_vector_get (ni, l) - ncm_vector_get (theta_i, l);
+                gint m;
+                /*ncm_message ("% 12.5g ", p->node->coord[l] - ncm_vector_get (invUtheta_i, l));*/
+
+                ncm_matrix_addto (self->tmp_cov, l, l, dx_l * dx_l);
+                for (m = l + 1; m < ppself->d; m++)
+                {
+                  const gdouble dx_m   = ncm_vector_get (ni, m) - ncm_vector_get (theta_i, m);
+                  const gdouble cov_lm = dx_l * dx_m;
+
+                  ncm_matrix_addto (self->tmp_cov, l, m, cov_lm);
+                  ncm_matrix_addto (self->tmp_cov, m, l, cov_lm);
+                }
+              }
+              /*ncm_vector_log_vals (ni, "V: ", "% 12.5g", TRUE);*/
+
+              /*ncm_message ("\n");*/
+
+
               p = p->next;
+              norma++;
             }
+            ncm_matrix_scale (self->tmp_cov, 1.0 / norma);
           }
           
           /*
@@ -339,6 +372,11 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
           {
             NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
             
+            //ncm_matrix_log_vals (sample_cov, "S1", "% 12.5e");
+            //ncm_matrix_log_vals (self->tmp_cov, "S2", "% 12.5e");
+            
+            ncm_matrix_memcpy (sample_cov, self->tmp_cov);
+
             g_ptr_array_add (self->cov_array, sample_cov);
           }
         }
@@ -351,6 +389,104 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
         }
       }
       kdtree_destroy (tree);
+    }
+    else /* Uses m2lnp as distances to determine the closest points*/
+    {
+      const size_t k = self->local_frac * sample_array->len;
+      glong i;
+
+      g_array_set_size (ppself->m2lnp_sort, ppself->n);
+      gsl_sort_index (&g_array_index (ppself->m2lnp_sort, size_t, 0),
+          ncm_vector_data (m2lnp),
+          ncm_vector_stride (m2lnp),
+          ncm_vector_len (m2lnp));
+
+      g_ptr_array_set_size (self->cov_array, ppself->n);
+
+      for (i = 0; i < ppself->n; i++)
+      {
+        const glong l        = g_array_index (ppself->m2lnp_sort, size_t, i);
+        const gdouble m2lnp_l = ncm_vector_get (m2lnp, l);
+        glong up = 1;
+        glong down = 1;
+        glong count = 0;
+
+        ncm_stats_vec_reset (self->sample, TRUE);
+
+        ncm_stats_vec_append (self->sample, g_ptr_array_index (sample_array, l), FALSE);
+        /*printf ("# Preparing kernel %ld, m2lnp = % 22.15g\n", l, m2lnp_l);*/
+
+        while (TRUE)
+        {
+          const glong i_up   = i + up;
+          const glong i_down = i - down;
+
+          if ((i_up < ppself->n) && (i_down >= 0))
+          {
+            const glong l_up        = g_array_index (ppself->m2lnp_sort, size_t, i_up);
+            const glong l_down      = g_array_index (ppself->m2lnp_sort, size_t, i_down);
+            const gdouble m2lnp_up   = ncm_vector_get (m2lnp, l_up);
+            const gdouble m2lnp_down = ncm_vector_get (m2lnp, l_down);
+
+/*
+            printf ("# Testing up and down (%ld %ld) (%ld, %ld) (% 22.15g % 22.15g)\n",
+                i_up, i_down, l_up, l_down,
+                fabs (m2lnp_up - m2lnp_l), fabs (m2lnp_down - m2lnp_l));
+*/
+
+            if (fabs (m2lnp_up - m2lnp_l) < fabs (m2lnp_down - m2lnp_l))
+            {
+              NcmVector *n_l_up = g_ptr_array_index (sample_array, l_up);
+              ncm_stats_vec_append (self->sample, n_l_up, FALSE);
+              /*printf ("# Up smaller, adding it! (%ld %ld)\n", up, count);*/
+
+              up++;
+              count++;
+            }
+            else
+            {
+              NcmVector *n_l_down = g_ptr_array_index (sample_array, l_down);
+              ncm_stats_vec_append (self->sample, n_l_down, FALSE);
+              /*printf ("# Down smaller, adding it! (%ld %ld)\n", down, count);*/
+
+              down++;
+              count++;
+            }
+          }
+          else if (i_down < 0)
+          {
+            const glong l_up = g_array_index (ppself->m2lnp_sort, size_t, i_up);
+            NcmVector *n_l_up = g_ptr_array_index (sample_array, l_up);
+            ncm_stats_vec_append (self->sample, n_l_up, FALSE);
+
+            /*printf ("# Up smaller, adding it! (%ld %ld)\n", up, count);*/
+
+            up++;
+            count++;
+          }
+          else if (i_up >= ppself->n)
+          {
+            const glong l_down = g_array_index (ppself->m2lnp_sort, size_t, i_down);
+            NcmVector *n_l_down = g_ptr_array_index (sample_array, l_down);
+            ncm_stats_vec_append (self->sample, n_l_down, FALSE);
+
+            /*printf ("# Down smaller, adding it! (%ld %ld)\n", down, count);*/
+            down++;
+            count++;
+          }
+          else
+            g_assert_not_reached ();
+
+          if (count >= k)
+            break;
+        }
+
+        {
+          NcmMatrix *sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+          g_ptr_array_index (self->cov_array, l) = sample_cov;
+        }
+
+      }
     }
     
     {
@@ -367,6 +503,13 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
         NcmMatrix *cov_i = g_ptr_array_index (self->cov_array, i);
         gdouble lnnorm_i;
         
+        if (i < 10)
+        {
+          ncm_cfg_msg_sepa ();
+          ncm_vector_log_vals (g_ptr_array_index (sample_array, i), "THETA: ", "% 12.5g", TRUE);
+          ncm_matrix_log_vals (cov_i, "COV:   ", "% 12.5g");
+        }
+
         ncm_matrix_memcpy (self->tmp_cov, cov_i);
         
         _cholesky_decomp (cov_i, self->tmp_cov, ppself->d, pself->nearPD_maxiter);

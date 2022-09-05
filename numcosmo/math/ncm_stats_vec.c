@@ -1312,7 +1312,8 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
     
     gsl_multifit_robust_maxiter (100000, w);
     status = gsl_multifit_robust (ncm_matrix_gsl (X), ncm_vector_gsl (y), ncm_vector_gsl (c), ncm_matrix_gsl (cov), w);
-    g_assert (status == GSL_SUCCESS);
+    if ((status != GSL_SUCCESS) && (status != GSL_EMAXITER))
+      g_error ("_ncm_stats_vec_estimate_const_break_int: error %d computing gsl_multifit_robust\n", status);
 
     stats = gsl_multifit_robust_statistics (w);
 

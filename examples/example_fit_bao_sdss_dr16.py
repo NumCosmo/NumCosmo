@@ -56,7 +56,7 @@ cosmo.param_set_by_name ("w",      -1.0)
 #
 cosmo.props.H0_fit = False
 cosmo.props.Omegac_fit = True
-cosmo.props.w_fit = True
+cosmo.props.w_fit = False
 
 #
 #  Creating a new Distance object optimized to redshift 3.
@@ -74,9 +74,16 @@ mset.set (cosmo)
 #  Creating a new Data object from distance BAO catalogs.
 #
 
-bao_samples = [Nc.DataBaoId.RDV_BEUTLER2011,
-               Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
-               Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
+#bao_samples = [Nc.DataBaoId.RDV_BEUTLER2011,
+#               Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
+#               Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
+#               Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
+#               Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
+#               Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,
+#               Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
+#               Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021]
+
+bao_samples = [Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
                Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
                Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
                Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,

@@ -68,7 +68,7 @@ cosmo.param_set_by_name ("w",      -1.0)
 if snia_idval == Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT or snia_idval == Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_STAT:
     cosmo.props.H0_fit = True
 cosmo.props.Omegac_fit = True
-cosmo.props.w_fit = False
+cosmo.props.w_fit = True
 
 #
 #  Creating a new Distance object optimized to redshift 3.

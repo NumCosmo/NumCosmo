@@ -188,6 +188,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
     g_ptr_array_add (mp->slices, slice);
   }
   mp->slices_in_use++;
+
   g_mutex_unlock (&mp->update);
 
   return slice;

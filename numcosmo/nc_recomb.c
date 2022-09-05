@@ -1159,8 +1159,10 @@ _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdoub
   gint iter = 0, max_iter = 1000000;
   const gdouble prec = GSL_MIN (recomb->prec, 1e-1);
   gdouble lx = 0.0, lx0 = 0.0, lx1 = 0.0;
+  gint ret;
 
-  gsl_min_fminimizer_set (recomb->fmin, F, x, x0, x1);
+  ret = gsl_min_fminimizer_set (recomb->fmin, F, x, x0, x1);
+  NCM_TEST_GSL_RESULT ("_nc_recomb_min", ret);
 
   do {
     iter++;

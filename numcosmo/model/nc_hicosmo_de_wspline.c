@@ -241,7 +241,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
 
   /* Set w_0 param info */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WSPLINE_W, 6, "w", "w",
-                               -5.0, 0.0, 1.0e-2,
+                               -5.0, 1.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WSPLINE_DEFAULT_W0,
                                NCM_PARAM_TYPE_FREE);
                                
