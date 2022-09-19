@@ -103,7 +103,6 @@ NcmStatsDistKernel *ncm_stats_dist_get_kernel (NcmStatsDist *sd);
 
 guint ncm_stats_dist_get_dim (NcmStatsDist *sd);
 guint ncm_stats_dist_get_sample_size (NcmStatsDist *sd);
-guint ncm_stats_dist_get_n_kern (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_href (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth);
@@ -111,9 +110,6 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
-
-void ncm_stats_dist_set_const_kernel (NcmStatsDist *sd, NcmMatrix *limits);
-NcmMatrix *ncm_stats_dist_peek_const_kernel (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
 gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
@@ -139,7 +135,6 @@ GPtrArray *ncm_stats_dist_peek_sample_array (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i);
 gdouble ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i);
 NcmVector *ncm_stats_dist_peek_weights (NcmStatsDist *sd);
-NcmVector *ncm_stats_dist_peek_weights_full (NcmStatsDist *sd);
 
 void ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i);
 
