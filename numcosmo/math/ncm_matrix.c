@@ -1835,6 +1835,9 @@ ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
     
     ncm_vector_scale (row_i, w_i);
     ncm_vector_scale (col_i, w_i);
+
+    ncm_vector_free (row_i);
+    ncm_vector_free (col_i);
   }
 }
 

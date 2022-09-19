@@ -340,14 +340,14 @@ _ncm_cfg_exit (void)
 {
 #ifdef HAVE_MPI
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying [%d]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.initialized);
-  
+
   if (_mpi_ctrl.initialized)
   {
     ncm_cfg_mpi_kill_all_slaves ();
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Finalize ();
   }
-  
+
 #endif /* HAVE_MPI */
 }
 

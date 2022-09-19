@@ -38,8 +38,12 @@ struct _NcmStatsDistPrivate
 {
   /*< private >*/
   NcmStatsDistKernel *kernel;
+  NcmMatrix *limits;
+  gdouble ckern_norm;
+  gdouble ckern_lnnorm;
   GPtrArray *sample_array;
   NcmVector *weights;
+  NcmVector *weights_full;
   NcmVector *wcum;
   gboolean wcum_ready;
   gboolean print_fit;
@@ -51,16 +55,18 @@ struct _NcmStatsDistPrivate
   gdouble href;
   gdouble rnorm;
   guint n;
+  guint n_kern;
   guint alloc_n;
   gboolean alloc_subs;
   guint d;
   GArray *sampling;
   NcmNNLS *nnls;
   NcmMatrix *IM;
+  NcmMatrix *IM_full;
   NcmMatrix *sub_IM;
   NcmVector *sub_x;
   NcmVector *f;
-  NcmVector *f_full;
+  NcmVector *f1;
   gdouble *levmar_workz;
   guint levmar_n;
   GArray *m2lnp_sort;

@@ -591,7 +591,7 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
  * @M: a #NcmMatrix
  * @M_dup: a #NcmMatrix
  *
- * Construct a continuous matrix retangular $S$ using the columns
+ * Construct a continuous matrix rectangular $S$ using the columns
  * from the rectangular matrix @M and the indexes in @iset. If
  * @M_dup is not null use this matrix to build the submatrix,
  * otherwise, allocates a new matrix.
@@ -633,6 +633,9 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 
     ncm_vector_memcpy (col_i, col_k);
 
+    ncm_vector_free (col_i);
+    ncm_vector_free (col_k);
+
     i++;
     node = node->next;
   }
@@ -640,6 +643,65 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
   return sub;
 }
 
+/**
+ * ncm_iset_get_submatrix_colmajor_cols:
+ * @iset: a #NcmISet
+ * @M: a #NcmMatrix
+ * @M_dup: a #NcmMatrix
+ *
+ * Construct a continuous matrix rectangular $S$ using the columns
+ * from the rectangular matrix @M and the indexes in @iset. If
+ * @M_dup is not null use this matrix to build the submatrix,
+ * otherwise, allocates a new matrix. It writes the columns in $S$
+ * using a colmajor memory scheme. This is useful when using
+ * the output matrix into Lapack routines.
+ *
+ * Returns: (transfer full): the matrix $S$.
+ */
+NcmMatrix *
+ncm_iset_get_submatrix_colmajor_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
+{
+  NcmISetPrivate *const self = iset->priv;
+  const guint nsub  = g_queue_get_length (self->iq);
+  const guint nrows = ncm_matrix_nrows (M);
+  const guint ncols = ncm_matrix_ncols (M);
+  NcmMatrix *sub;
+  GList *node;
+  gint i;
+
+  g_assert_cmpuint (self->n, ==, ncols);
+
+  if (M_dup != NULL)
+  {
+    g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (M_dup));
+
+    sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nrows, nsub);
+  }
+  else
+    sub = ncm_matrix_new (nrows, nsub);
+
+  _ncm_iset_sort (iset);
+  node = g_queue_peek_head_link (self->iq);
+  i    = 0;
+
+  while (node != NULL)
+  {
+    const gint k = GPOINTER_TO_INT (node->data);
+    gint j;
+
+    for (j = 0; j < nrows; j++)
+    {
+      const gdouble M_jk = ncm_matrix_get (M, j, k);
+      ncm_matrix_set_colmajor (sub, j, i, M_jk);
+    }
+
+    i++;
+    node = node->next;
+  }
+
+  return sub;
+}
 
 /**
  * ncm_iset_get_sym_submatrix:

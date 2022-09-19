@@ -490,7 +490,7 @@ ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
  * solution to a double precision system of linear equations A * X = B, where A
  * is an N-by-N symmetric matrix and X and B are N-by-NRHS matrices.
  *
- * If requested, both normwise and maximum componentwise error bounds
+ * If requested, both norm-wise and maximum component-wise error bounds
  * are returned. DSYSVXX will return a solution with a tiny
  * guaranteed error (O(eps) where eps is the working machine
  * precision) unless the matrix is very ill-conditioned, in which
@@ -618,8 +618,8 @@ ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint
   gdouble lwork_size;
 
   uplo        = _NCM_LAPACK_CONV_UPLO (uplo);
-	
-	dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, &lwork_size, &lwork, &liwork_size, &liwork, &info);
+
+  dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, &lwork_size, &lwork, &liwork_size, &liwork, &info);
   if (ws->work->len < lwork_size)
     g_array_set_size (ws->work, lwork_size);
   if (ws->iwork->len < liwork_size)
@@ -627,10 +627,10 @@ ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint
   lwork  = lwork_size;
   liwork = liwork_size;
   dsyevr_ (&jobz, &range, &uplo, &n, a, &lda, &vl, &vu, &il, &iu, &abstol, m, w, z, &ldz, isuppz, &g_array_index (ws->work, gdouble, 0), &lwork, &g_array_index (ws->iwork, gint, 0), &liwork, &info);
-  
-	return info;
+
+  return info;
 #else /* No fall back */
-	g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
+  g_error ("ncm_lapack_dsyevr: lapack not present, no fallback implemented.");
 #endif
 }
 
@@ -1276,3 +1276,101 @@ ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdou
 #endif
 }
 
+/**
+ * ncm_lapack_dgelsd:
+ * @m: is an integer. The number of rows of the matrix A.  M >= 0
+ * @n: is an integer. The number of columns of the matrix A.  N >= 0
+ * @nrhs: is an integer. The number of right hand sides, i.e., the number of columns of the matrices B and X. NRHS >=0
+ * @a: array of doubles with dimension (@n, @lda)
+ * On entry, the M-by-N matrix A.
+ * On exit,
+ *   if M >= N, A is overwritten by details of its QR factorization as returned by DGEQRF
+ *   if M <  N, A is overwritten by details of its LQ factorization as returned by DGELQF
+ * @lda: The leading dimension of the array @a, @lda >= max (1,@n)
+ * @b: array of doubles with dimension (@n, @ldb)
+ * On entry, the matrix B of right hand side vectors, stored
+ * columnwise; B is M-by-NRHS if TRANS = 'N', or N-by-NRHS
+ * if TRANS = 'T'.
+ * On exit, if INFO = 0, B is overwritten by the solution
+ * vectors, stored columnwise:
+ * if TRANS = 'N' and m >= n, rows 1 to n of B contain the least
+ * squares solution vectors; the residual sum of squares for the
+ * solution in each column is given by the sum of squares of
+ * elements N+1 to M in that column;
+ * if TRANS = 'N' and m < n, rows 1 to N of B contain the
+ * minimum norm solution vectors;
+ * if TRANS = 'T' and m >= n, rows 1 to M of B contain the
+ * minimum norm solution vectors;
+ * if TRANS = 'T' and m < n, rows 1 to M of B contain the
+ * least squares solution vectors; the residual sum of squares
+ * for the solution in each column is given by the sum of
+ * squares of elements M+1 to N in that column.
+ * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ * @s: S is DOUBLE PRECISION array, dimension (min(M,N))
+ * The singular values of A in decreasing order.
+ * The condition number of A in the 2-norm = S(1)/S(min(m,n)).
+ * @rcond: RCOND is DOUBLE PRECISION
+ * RCOND is used to determine the effective rank of A.
+ * Singular values S(i) <= RCOND*S(1) are treated as zero.
+ * If RCOND < 0, machine precision is used instead.
+ * @rank: RANK is INTEGER
+ * The effective rank of A, i.e., the number of singular values
+ * which are greater than RCOND*S(1).
+ *
+ * DGELSD computes the minimum-norm solution to a real linear least
+ * squares problem:
+ *     minimize 2-norm(| b - A*x |)
+ * using the singular value decomposition (SVD) of A. A is an M-by-N
+ * matrix which may be rank-deficient.
+ *
+ * Several right hand side vectors b and solution vectors x can be
+ * handled in a single call; they are stored as the columns of the
+ * M-by-NRHS right hand side matrix B and the N-by-NRHS solution
+ * matrix X.
+ *
+ * The problem is solved in three steps:
+ * (1) Reduce the coefficient matrix A to bidiagonal form with
+ *     Householder transformations, reducing the original problem
+ *     into a "bidiagonal least squares problem" (BLS)
+ * (2) Solve the BLS using a divide and conquer approach.
+ * (3) Apply back all the Householder transformations to solve
+ *     the original least squares problem.
+ *
+ * The effective rank of A is determined by treating as zero those
+ * singular values which are less than RCOND times the largest singular
+ * value.
+ *
+ * The divide and conquer algorithm makes very mild assumptions about
+ * floating point arithmetic. It will work on machines with a guard
+ * digit in add/subtract, or on those binary machines without guard
+ * digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
+ * Cray-2. It could conceivably fail on hexadecimal or decimal machines
+ * without guard digits, but we know of none.
+ */
+gint
+ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, gdouble *s, gdouble *rcond, gint *rank, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACK) && defined (HAVE_DGELS_)
+  gint lwork  = -1;
+  gint info   = 0;
+  gint liwork_size;
+  gdouble lwork_size;
+
+  printf ("#!!! %d %d %d %d %d\n", m, n, nrhs, lda, ldb);
+  dgelsd_ (&m, &n, &nrhs, a, &lda, b, &ldb, s, rcond, rank, &lwork_size, &lwork, &liwork_size, &info);
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+  if (ws->iwork->len < liwork_size)
+    g_array_set_size (ws->iwork, liwork_size);
+  lwork  = lwork_size;
+  dgelsd_ (&m, &n, &nrhs, a, &lda, b, &ldb, s, rcond, rank,
+      &g_array_index (ws->work, gdouble, 0),
+      &lwork,
+      &g_array_index (ws->iwork, gint, 0),
+      &info);
+
+  return info;
+#else /* No fall back */
+    g_error ("ncm_lapack_dgelsd: lapack not present, no fallback implemented.");
+#endif
+}

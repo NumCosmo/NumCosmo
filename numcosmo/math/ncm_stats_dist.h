@@ -57,7 +57,7 @@ struct _NcmStatsDistClass
   
   void (*set_dim) (NcmStatsDist *sd, const guint dim);
   gdouble (*get_href) (NcmStatsDist *sd);
-  void (*prepare_kernel) (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp);
+  void (*prepare_kernel) (NcmStatsDist *sd, GPtrArray *sample_array);
   void (*prepare) (NcmStatsDist *sd);
   void (*prepare_interp) (NcmStatsDist *sd, NcmVector *m2lnp);
   void (*compute_IM) (NcmStatsDist *sd, NcmMatrix *IM);
@@ -79,7 +79,6 @@ struct _NcmStatsDist
  * NcmStatsDistCV:
  * @NCM_STATS_DIST_CV_NONE: No cross validation
  * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
- * @NCM_STATS_DIST_CV_SPLIT_EXCLUDING: Sample split cross validation excluding extra points
  *
  * Cross-validation method to be applied.
  *
@@ -88,7 +87,6 @@ typedef enum _NcmStatsDistCV
 {
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,
-  NCM_STATS_DIST_CV_SPLIT_EXCLUDING,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
@@ -105,6 +103,7 @@ NcmStatsDistKernel *ncm_stats_dist_get_kernel (NcmStatsDist *sd);
 
 guint ncm_stats_dist_get_dim (NcmStatsDist *sd);
 guint ncm_stats_dist_get_sample_size (NcmStatsDist *sd);
+guint ncm_stats_dist_get_n_kern (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_href (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth);
@@ -113,13 +112,16 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_const_kernel (NcmStatsDist *sd, NcmMatrix *limits);
+NcmMatrix *ncm_stats_dist_peek_const_kernel (NcmStatsDist *sd);
+
 void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
 gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type);
 NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 
-void ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp);
+void ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
 void ncm_stats_dist_prepare (NcmStatsDist *sd);
 void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
 
@@ -137,6 +139,7 @@ GPtrArray *ncm_stats_dist_peek_sample_array (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i);
 gdouble ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i);
 NcmVector *ncm_stats_dist_peek_weights (NcmStatsDist *sd);
+NcmVector *ncm_stats_dist_peek_weights_full (NcmStatsDist *sd);
 
 void ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i);
 

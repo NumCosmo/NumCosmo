@@ -86,6 +86,7 @@ enum
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
   PROP_USE_INTERP,
+  PROP_USE_CKERN,
 };
 
 struct _NcmFitESMCMCWalkerAPESPrivate
@@ -108,6 +109,7 @@ struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
   gboolean use_interp;
+  gboolean use_ckern;
   gboolean constructed;
   GMutex eval_lock;
 };
@@ -139,6 +141,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->k_type      = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
   self->over_smooth = 0.0;
   self->use_interp  = FALSE;
+  self->use_ckern   = FALSE;
   self->constructed = FALSE;
   
   g_mutex_init (&self->eval_lock);
@@ -167,6 +170,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
       break;
+    case PROP_USE_CKERN:
+      ncm_fit_esmcmc_walker_apes_use_ckern (apes, g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -193,6 +199,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
+      break;
+    case PROP_USE_CKERN:
+      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_ckern (apes));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -300,6 +309,13 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                          NULL,
                                                          "Whether to use interpolation to build the posterior approximation",
                                                          TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_CKERN,
+                                   g_param_spec_boolean ("use-ckern",
+                                                         NULL,
+                                                         "Whether to use interpolation with a constant kernel",
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_apes_set_size;
@@ -577,6 +593,10 @@ _ncm_fit_esmcmc_walker_apes_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
         MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
   }
 */
+
+  ncm_message ("AAA Dchi % 12.5f (% 12.5f - % 12.5f) DAchi % 12.5f (% 12.5f - % 12.5f) L cur->star: %12.5g p star->cur: %12.5g | ",
+      m2lnL_star - m2lnL_cur, m2lnL_star, m2lnL_cur, m2lnp_star - m2lnp_cur, m2lnp_star, m2lnp_cur,
+      exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)));
 
   return exp (-0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
 }
@@ -881,6 +901,38 @@ ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes)
 
   return self->use_interp;
 }
+
+/**
+ * ncm_fit_esmcmc_walker_apes_use_ckern:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @use_ckern: whether to use interpolation constant kernel
+ *
+ * Enables/Disables the use of a constant kernel during
+ * interpolation.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_use_ckern (NcmFitESMCMCWalkerAPES *apes, gboolean use_ckern)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  self->use_interp = use_ckern;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_ckern:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: whether interpolation is being used for posterior approximation.
+ */
+gboolean
+ncm_fit_esmcmc_walker_apes_ckern (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  return self->use_interp;
+}
+
 
 /**
  * ncm_fit_esmcmc_walker_apes_peek_sds:

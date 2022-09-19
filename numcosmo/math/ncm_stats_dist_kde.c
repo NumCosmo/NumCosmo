@@ -212,7 +212,7 @@ _ncm_stats_dist_kde_finalize (GObject *object)
 }
 
 static void _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim);
-static void _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp);
+static void _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
 static void _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM);
 static NcmMatrix *_ncm_stats_dist_kde_peek_cov_decomp (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i);
@@ -277,7 +277,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->sample_matrix);
     ncm_vector_clear (&self->v);
     
-    self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
+    self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
     self->cov_decomp = ncm_matrix_new (dim, dim);
     self->v          = ncm_vector_new (dim);
   }
@@ -309,7 +309,7 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 }
 
 static void
-_ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, NcmVector *m2lnp)
+_ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
   NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
@@ -333,161 +333,34 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array, N
    */
   /*ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COVG: ", "%12.5g");*/
 
-  printf ("# AQUI! %d\n", self->cov_type); fflush (stdout);
   switch (self->cov_type)
   {
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
-      _cholesky_decomp (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), pself->d, self->nearPD_maxiter);
+    {
+      NcmMatrix *cov = ncm_stats_vec_peek_cov_matrix (self->sample, 0);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
       break;
+    }
     case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
+    {
       if (self->cov_fixed == NULL)
         g_error ("_ncm_stats_dist_kde_prepare_kernel: cov_type is FIXED but a fixed covariance matrix was not provided, use ncm_stats_dist_kde_set_cov_fixed to set one.");
+
       break;
+    }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
     {
-      GArray *data = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      GArray *work = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
-      NcmMatrix *tmp_cov = ncm_matrix_dup (self->cov_decomp);
-      gint j;
+      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_diag (self->sample);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
+      ncm_matrix_free (cov);
 
-      g_array_set_size (data, pself->n);
-      g_array_set_size (work, pself->n * 3);
-      g_array_set_size (work_int, pself->n * 5);
-
-      ncm_matrix_set_zero (tmp_cov);
-      for (j = 0; j < pself->d; j++)
-      {
-        for (i = 0; i < pself->n; i++)
-        {
-          NcmVector *theta_i = g_ptr_array_index (sample_array, i);
-          const gdouble theta_ij = ncm_vector_get (theta_i, j);
-
-          g_array_index (data, gdouble, i) = theta_ij;
-        }
-
-        gsl_sort (&g_array_index (data, gdouble, 0), 1, pself->n);
-        {
-          gdouble var_jj = gsl_stats_Qn_from_sorted_data (
-              &g_array_index (data, gdouble, 0),
-              1, pself->n,
-              &g_array_index (work, gdouble, 0),
-              &g_array_index (work_int, gint, 0)
-          );
-          var_jj = gsl_pow_2 (var_jj);
-          ncm_matrix_set (tmp_cov, j, j, var_jj);
-          printf ("% 12.5g ", var_jj);
-        }
-      }
-      printf ("\n");
-      fflush (stdout);
-
-      g_array_unref (work);
-      g_array_unref (work_int);
-
-      _cholesky_decomp (self->cov_decomp, tmp_cov, pself->d, self->nearPD_maxiter);
-
-      ncm_matrix_free (tmp_cov);
+      break;
     }
-    break;
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
     {
-      GArray *data = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      GArray *work = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
-      NcmMatrix *tmp_cov = ncm_matrix_dup (self->cov_decomp);
-      gint j;
-
-      g_array_set_size (data, pself->n);
-      g_array_set_size (work, pself->n * 3);
-      g_array_set_size (work_int, pself->n * 5);
-
-      ncm_matrix_set_zero (tmp_cov);
-      for (j = 0; j < pself->d; j++)
-      {
-        gint k;
-        for (i = 0; i < pself->n; i++)
-        {
-          NcmVector *theta_i = g_ptr_array_index (sample_array, i);
-          const gdouble theta_ij = ncm_vector_get (theta_i, j);
-
-          g_array_index (data, gdouble, i) = theta_ij;
-        }
-
-        gsl_sort (&g_array_index (data, gdouble, 0), 1, pself->n);
-        {
-          gdouble var_jj = gsl_stats_Qn_from_sorted_data (
-              &g_array_index (data, gdouble, 0),
-              1, pself->n,
-              &g_array_index (work, gdouble, 0),
-              &g_array_index (work_int, gint, 0)
-          );
-          var_jj = gsl_pow_2 (var_jj);
-          ncm_matrix_set (tmp_cov, j, j, var_jj);
-        }
-
-        for (k = j + 1; k < pself->d; k++)
-        {
-          gdouble cov_jk, s_jpk, s_jmk;
-          for (i = 0; i < pself->n; i++)
-          {
-            NcmVector *theta_i = g_ptr_array_index (sample_array, i);
-            const gdouble theta_ij = ncm_vector_get (theta_i, j);
-            const gdouble theta_ik = ncm_vector_get (theta_i, k);
-
-            g_array_index (data, gdouble, i) = theta_ij + theta_ik;
-          }
-
-          gsl_sort (&g_array_index (data, gdouble, 0), 1, pself->n);
-          s_jpk = gsl_stats_Qn_from_sorted_data (
-              &g_array_index (data, gdouble, 0),
-              1, pself->n,
-              &g_array_index (work, gdouble, 0),
-              &g_array_index (work_int, gint, 0)
-          );
-          s_jpk = gsl_pow_2 (s_jpk);
-
-          for (i = 0; i < pself->n; i++)
-          {
-            NcmVector *theta_i = g_ptr_array_index (sample_array, i);
-            const gdouble theta_ij = ncm_vector_get (theta_i, j);
-            const gdouble theta_ik = ncm_vector_get (theta_i, k);
-
-            g_array_index (data, gdouble, i) = theta_ij - theta_ik;
-          }
-
-          gsl_sort (&g_array_index (data, gdouble, 0), 1, pself->n);
-          s_jmk = gsl_stats_Qn_from_sorted_data (
-              &g_array_index (data, gdouble, 0),
-              1, pself->n,
-              &g_array_index (work, gdouble, 0),
-              &g_array_index (work_int, gint, 0)
-          );
-          s_jmk = gsl_pow_2 (s_jmk);
-
-          cov_jk = 0.25 * (s_jpk - s_jmk);
-
-          ncm_matrix_set (tmp_cov, j, k, cov_jk);
-          ncm_matrix_set (tmp_cov, k, j, cov_jk);
-        }
-      }
-      fflush (stdout);
-
-      g_array_unref (work);
-      g_array_unref (work_int);
-
-      ncm_matrix_log_vals (tmp_cov, "COV_ROBUST0: ", "% 12.5g");
-      ncm_matrix_nearPD (tmp_cov, 'U', TRUE, 1000000);
-      ncm_matrix_log_vals (tmp_cov, "COV_ROBUST1: ", "% 12.5g");
-
-
-      ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COV_NORMAL0: ", "% 12.5g");
-
-      _cholesky_decomp (self->cov_decomp, tmp_cov, pself->d, self->nearPD_maxiter);
-
-
-
-      ncm_matrix_free (tmp_cov);
+      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
+      ncm_matrix_free (cov);
     }
     break;
     default:
@@ -545,7 +418,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     NcmVector *row_i = g_ptr_array_index (self->invUsample, i);
     gint j;
     
-    ncm_matrix_set (IM, i, i, 1.0);
+    ncm_matrix_set (IM, i, i, 0.0);
     
     for (j = i + 1; j < pself->n; j++)
     {
@@ -564,16 +437,15 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       ncm_matrix_set (IM, j, i, chi2_ij);
     }
   }
-  
-  {
-    NcmVector *IMv = ncm_matrix_as_vector (IM);
-    
-    ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, IMv, IMv);
-    
-    ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
 
-    ncm_vector_free (IMv);
+  for (i = 0; i < pself->n; i++)
+  {
+    NcmVector *row_i = ncm_matrix_get_row (IM, i);
+    ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, row_i, row_i);
+    ncm_vector_free (row_i);
   }
+
+  ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
 }
 
 static NcmMatrix *
