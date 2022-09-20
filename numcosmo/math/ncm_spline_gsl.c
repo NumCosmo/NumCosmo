@@ -192,8 +192,8 @@ _ncm_spline_gsl_prepare (NcmSpline *s)
 {
   NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
 
-	g_assert_cmpint (ncm_vector_stride (s->xv), ==, 1);
-	g_assert_cmpint (ncm_vector_stride (s->yv), ==, 1);
+  g_assert_cmpint (ncm_vector_stride (s->xv), ==, 1);
+  g_assert_cmpint (ncm_vector_stride (s->yv), ==, 1);
 
   gsl_interp_init (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), s->len);
 }

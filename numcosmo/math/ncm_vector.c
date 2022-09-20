@@ -1457,6 +1457,75 @@ ncm_vector_reciprocal (NcmVector *cv)
 }
 
 /**
+ * ncm_vector_square:
+ * @cv: a #NcmVector
+ *
+ * Calculates the term-wise square of @cv.
+ *
+ */
+void
+ncm_vector_square (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+
+    ncm_vector_set (cv, i, x_i * x_i);
+  }
+}
+
+/**
+ * ncm_vector_sqrt:
+ * @cv: a #NcmVector
+ *
+ * Calculates the term-wise square-root of @cv.
+ *
+ */
+void
+ncm_vector_sqrt (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+
+    ncm_vector_set (cv, i, sqrt (x_i));
+  }
+}
+
+/**
+ * ncm_vector_hypot:
+ * @cv1: a #NcmVector
+ * @a: a constant gdouble
+ * @cv2: a constant #NcmVector
+ *
+ * Performs the operation: $x^i_1 = \sqrt{(x^i_1)^2+(\alpha x^i_2)^2}$
+ * where $x_1^i$ and $x_2^i$ are the components of @cv1 and @cv2
+ * respectively.
+ *
+ */
+void
+ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  gint i;
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x1_i = ncm_vector_get (cv1, i);
+    const gdouble x2_i = ncm_vector_get (cv2, i);
+    ncm_vector_set (cv1, i, hypot (x1_i, alpha * x2_i));
+  }
+}
+
+/**
  * ncm_vector_sum_cpts:
  * @cv: a constant #NcmVector
  *

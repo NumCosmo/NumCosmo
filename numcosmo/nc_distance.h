@@ -159,6 +159,7 @@ gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, const
 gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 
