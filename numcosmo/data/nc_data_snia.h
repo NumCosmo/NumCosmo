@@ -46,9 +46,11 @@ G_BEGIN_DECLS
  * @NC_DATA_SNIA_SIMPLE_SDSS_EMILLE: FIXME
  * @NC_DATA_SNIA_COV_SNLS3_SYS_STAT: FIXME
  * @NC_DATA_SNIA_COV_SNLS3_STAT_ONLY: FIXME
- * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT: JLA SNIa compilation, reduced covariance already includes intrisic, redshift and peculiar velocity variances. 
- * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: JLA SNIa compilation, complete covariance does *not* include intrisic, redshift and peculiar velocity variances.
- * @NC_DATA_SNIA_COV_PANTHEON: Pantheon SNIa compilation, reduced covariance already includes intrisic, redshift and peculiar velocity variances.
+ * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT: JLA SNIa compilation, reduced covariance already includes intrinsic, redshift and peculiar velocity variances.
+ * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: JLA SNIa compilation, complete covariance does *not* include intrinsic, redshift and peculiar velocity variances.
+ * @NC_DATA_SNIA_COV_PANTHEON: Pantheon SNIa compilation, reduced covariance already includes intrinsic, redshift and peculiar velocity variances.
+ * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, full covariance statistics and systematics
+ * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, statistics covariance only
  * 
  * FIXME
  * 
@@ -65,23 +67,26 @@ typedef enum _NcDataSNIAId
   NC_DATA_SNIA_SIMPLE_UNION2,
   NC_DATA_SNIA_SIMPLE_UNION2_1,
   NC_DATA_SNIA_SIMPLE_SDSS_EMILLE,
-  NC_DATA_SNIA_COV_SNLS3_SYS_STAT, 
+  NC_DATA_SNIA_COV_SNLS3_SYS_STAT,
   NC_DATA_SNIA_COV_SNLS3_STAT_ONLY,
   NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT,
-  NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL, 
-  NC_DATA_SNIA_COV_PANTHEON,   
+  NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL,
+  NC_DATA_SNIA_COV_PANTHEON,
+  NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+  NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT,
   /* < private > */
   NC_DATA_SNIA_LEN, /*< skip >*/
 } NcDataSNIAId;
 
 #define NC_DATA_SNIA_SIMPLE_START NC_DATA_SNIA_SIMPLE_GOLD_157
 #define NC_DATA_SNIA_SIMPLE_END NC_DATA_SNIA_SIMPLE_SDSS_EMILLE
-#define NC_DATA_SNIA_SIMPLE_LEN ((NC_DATA_SNIA_SIMPLE_END) - (NC_DATA_SNIA_SIMPLE_START) + 1)
+#define NC_DATA_SNIA_SIMPLE_LEN ((NC_DATA_SNIA_SIMPLE_END) -(NC_DATA_SNIA_SIMPLE_START) +1)
 
 #define NC_DATA_SNIA_COV_START NC_DATA_SNIA_COV_SNLS3_SYS_STAT
-#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_PANTHEON
-#define NC_DATA_SNIA_COV_LEN ((NC_DATA_SNIA_COV_END) - (NC_DATA_SNIA_COV_START) + 1)
+#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT
+#define NC_DATA_SNIA_COV_LEN ((NC_DATA_SNIA_COV_END) -(NC_DATA_SNIA_COV_START) +1)
 
 G_END_DECLS
 
 #endif /* _NC_DATA_SNIA_H_ */
+

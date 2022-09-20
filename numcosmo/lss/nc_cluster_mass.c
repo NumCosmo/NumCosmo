@@ -346,6 +346,8 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble l
  * nc_cluster_mass_intp_bin:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
+ * @lnM: logarithm base e of the true mass
+ * @z: true redshift
  * @lnM_obs_lower: (array) (element-type gdouble): FIXME
  * @lnM_obs_upper: (array) (element-type gdouble): FIXME
  * @lnM_obs_params:(array) (element-type gdouble) (allow-none): FIXME
@@ -364,8 +366,8 @@ nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
  * nc_cluster_mass_resample:
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @z: true redshift
  * @lnM: logarithm base e of the true mass
+ * @z: true redshift
  * @lnM_obs: (out): logarithm base e of the observed mass
  * @lnM_obs_params: (out): observed mass params
  * @rng: a #NcmRNG
