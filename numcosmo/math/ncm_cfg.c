@@ -613,6 +613,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
   
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
   
