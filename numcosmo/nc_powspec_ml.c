@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_powspec_ml
  * @title: NcPowspecML
- * @short_description: Abstrac class for linear matter power spectrum implementation.
+ * @short_description: Abstract class for linear matter power spectrum implementation.
  * @stability: Stable
  * @include: numcosmo/nc_powspec_ml.h
  *

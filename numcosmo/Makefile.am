@@ -106,6 +106,7 @@ ncm_sources = \
 	math/ncm_spline_gsl.c                 \
 	math/ncm_spline_cubic.c               \
 	math/ncm_spline_cubic_notaknot.c      \
+	math/ncm_spline_cubic_d2.c            \
 	math/ncm_spline_rbf.c                 \
 	math/ncm_spline_func.c                \
 	math/ncm_spline_func_test.c           \
@@ -245,6 +246,7 @@ ncm_headers =                                 \
 	math/ncm_spline_gsl.h                 \
 	math/ncm_spline_cubic.h               \
 	math/ncm_spline_cubic_notaknot.h      \
+	math/ncm_spline_cubic_d2.h            \
 	math/ncm_spline_rbf.h                 \
 	math/ncm_spline_func.h                \
 	math/ncm_spline_func_test.h           \
@@ -387,6 +389,7 @@ nc_headers = \
 	model/nc_hicosmo_de_cpl.h  \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
+	model/nc_hicosmo_de_wspline.h \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
@@ -470,14 +473,13 @@ nc_headers = \
 	data/nc_data_bao_empirical_fit.h       \
 	data/nc_data_bao_empirical_fit_2d.h    \
 	data/nc_data_bao_dhr_dar.h             \
+	data/nc_data_bao_dtr_dhr.h             \
 	data/nc_data_bao_dmr_hr.h              \
 	data/nc_data_bao.h                     \
 	data/nc_data_cmb_shift_param.h         \
 	data/nc_data_cmb_dist_priors.h         \
 	data/nc_data_cmb.h                     \
 	data/nc_data_cluster_ncount.h          \
-	data/nc_data_cluster_poisson.h         \
-	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
 	data/nc_data_cluster_wl.h                 \
 	data/nc_data_reduced_shear_cluster_mass.h \
@@ -540,6 +542,7 @@ nc_sources = \
 	model/nc_hicosmo_de_cpl.c  \
 	model/nc_hicosmo_de_jbp.c     \
 	model/nc_hicosmo_de_xcdm.c    \
+	model/nc_hicosmo_de_wspline.c \
 	model/nc_hicosmo_lcdm.c       \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
@@ -623,14 +626,13 @@ nc_sources = \
 	data/nc_data_bao_empirical_fit.c       \
 	data/nc_data_bao_empirical_fit_2d.c    \
 	data/nc_data_bao_dhr_dar.c             \
+	data/nc_data_bao_dtr_dhr.c             \
 	data/nc_data_bao_dmr_hr.c              \
 	data/nc_data_bao.c                     \
 	data/nc_data_cmb_shift_param.c         \
 	data/nc_data_cmb_dist_priors.c         \
 	data/nc_data_cmb.c                     \
 	data/nc_data_cluster_ncount.c          \
-	data/nc_data_cluster_poisson.c         \
-	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
 	data/nc_data_cluster_wl.c                 \
 	data/nc_data_reduced_shear_cluster_mass.c \

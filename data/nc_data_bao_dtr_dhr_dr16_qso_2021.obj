@@ -1,0 +1,14 @@
+{
+  'NcDataBaoDtrDHr', 
+  {
+    'desc'      : <'SDSS DR16 -- Alam et al., PRD 103, 083533 (2021); BAO QSO Sample(D_t / r_sd, DH / r_sd)'>, 
+    'init'      : <true>, 
+    'n-points'  : <2>, 
+    'mean'      : <[30.6876, 13.2609]>, 
+    'cov'       : <[
+                     [ 0.63731604, 0.1706891], 
+                     [ 0.1706891,  0.30468415]
+                   ]>, 
+    'z'         : <[1.48, 1.48]>
+  }
+}

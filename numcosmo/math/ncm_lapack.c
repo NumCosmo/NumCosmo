@@ -36,8 +36,6 @@
  * 
  */
 
-/*#define NUMCOSMO_PREFER_LAPACKE 1*/
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -52,18 +50,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
 
-#ifdef HAVE_MKL_LAPACKE_H
-#  include <mkl_lapacke.h>
-#elif defined HAVE_LAPACKE
-#  include <lapacke.h>
-#elif defined HAVE_CLAPACK_H
-#  include <clapack.h>
-#endif
-
-#ifdef HAVE_MKL_LAPACK_H
-#  include <mkl_lapack.h>
-#elif HAVE_LAPACKE
-#elif HAVE_LAPACK
+#ifdef HAVE_LAPACK
 #include "math/ncm_flapack.h"
 #endif /* HAVE_LAPACK */
 #endif /* NUMCOSMO_GIR_SCAN */

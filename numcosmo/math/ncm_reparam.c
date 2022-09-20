@@ -349,6 +349,7 @@ ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
       GVariant *sp_var_i = ncm_serialize_global_to_variant (G_OBJECT (sp_i));
       GVariant *entry_i = g_variant_new_dict_entry (i_var, sp_var_i);
       g_variant_builder_add_value (&builder, entry_i);
+      g_variant_unref (sp_var_i);
     }
   }
 

@@ -61,6 +61,10 @@ ncm_spline2d_init (NcmSpline2d *s2d)
 {
   s2d->xv        = NULL;
   s2d->yv        = NULL;
+  s2d->x_interv  = 0;
+  s2d->y_interv  = 0;
+  s2d->x_data    = NULL;
+  s2d->y_data    = NULL;
   s2d->zm        = NULL;
   s2d->s         = NULL;
   s2d->empty     = TRUE;
@@ -201,6 +205,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   klass->int_dxdy      = NULL;
   klass->int_dx_spline = NULL;
   klass->int_dy_spline = NULL;
+  klass->eval_vec_y    = NULL;
   
   /**
    * NcmSpline2d:spline:
@@ -291,7 +296,11 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
     g_assert_cmpuint (ncm_vector_len (s2d->xv), >=, ncm_spline2d_min_size (s2d));
     g_assert_cmpuint (ncm_vector_len (s2d->yv), >=, ncm_spline2d_min_size (s2d));
     
-    s2d->empty = FALSE;
+    s2d->empty    = FALSE;
+    s2d->x_interv = ncm_vector_len (s2d->xv) - 1;
+    s2d->y_interv = ncm_vector_len (s2d->yv) - 1;
+    s2d->x_data   = ncm_vector_data (s2d->xv);
+    s2d->y_data   = ncm_vector_data (s2d->yv);
     
     if ((ncm_vector_stride (s2d->xv) == 1) && (ncm_vector_stride (s2d->yv) == 1))
       s2d->no_stride = TRUE;
@@ -735,6 +744,18 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  * over the entire valid ranges of x and y coordinates.
  */
 
+/**
+ * ncm_spline2d_eval_vec_y:
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: a #NcmVector
+ * @order: (element-type size_t) (allow-none): FIXME
+ * @res: (element-type gdouble): a #NcmVector
+ *
+ * FIXME
+ *
+ */
+
 /*******************************************************************************
  * Autoknots
  *******************************************************************************/
@@ -769,7 +790,7 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
 {
   NcmSpline *s_x = ncm_spline_copy_empty (s2d->s);
   NcmSpline *s_y = ncm_spline_copy_empty (s2d->s);
-  
+
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
   

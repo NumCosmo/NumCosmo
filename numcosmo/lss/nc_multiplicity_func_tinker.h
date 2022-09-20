@@ -69,6 +69,9 @@ void nc_multiplicity_func_tinker_clear (NcMultiplicityFuncTinker **mt);
 void nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Delta);
 gdouble nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mt);
 
+void nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gboolean lin_interp);
+
+
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_TINKER_H_ */

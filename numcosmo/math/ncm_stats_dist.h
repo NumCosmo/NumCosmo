@@ -111,6 +111,9 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
+gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
+
 void ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type);
 NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 

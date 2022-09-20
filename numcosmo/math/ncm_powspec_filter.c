@@ -591,6 +591,9 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+
+      ncm_vector_free (var_z);
+      ncm_vector_free (dvar_z);
     }
 
     ncm_spline2d_prepare (psf->var);

@@ -62,6 +62,7 @@
 #else
 #include <unistd.h> // for usleep
 #endif
+#include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /**
@@ -809,6 +810,56 @@ ncm_util_sinhx_m_xcoshx_x3 (const gdouble x)
 	{
 		return (shx - x * sqrt (1.0 + shx * shx)) / gsl_pow_3 (x);
 	}
+}
+
+/**
+ * ncm_util_mln_1mIexpzA_1pIexpmzA:
+ * @rho: a double $\rho$
+ * @theta: a double $\theta$
+ * @A: a double $A$
+ * @rho1: (out): a double $\rho_1$
+ * @theta1: (out): a double $\theta_1$
+ *
+ * Computes $$z_1 = z - \ln\left(\frac{1-i e^{+z} A}{1+i e^{-z} A}\right),$$ where $z = \rho + i\theta$
+ * and return the new $z_1 = \rho_1 + i\theta_1$ into @rho1 and $\theta1$.
+ *
+ */
+void
+ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1)
+{
+  const double complex z = rho + I * theta;
+  double complex zp;
+
+  if (exp (fabs (rho)) * fabs (A) < 0.1)
+  {
+    const gdouble A2     = A * A;
+    gdouble Apow_two_ip1 = A;
+    gint i;
+
+    zp = 0.0;
+    for (i = 0; ; i++)
+    {
+      const gdouble two_ip1 = (2.0 * i + 1.0);
+      const gdouble ip1     = (i + 1.0);
+      double complex dz     = (2.0 * I * ccosh (two_ip1 * z) / two_ip1 - csinh (2.0 * ip1 * z) * A / ip1) *
+          ((i % 2 == 0) ? 1.0 : -1.0) * Apow_two_ip1;
+
+      Apow_two_ip1 *= A2;
+
+      zp += dz;
+
+      if (cabs (dz / zp) < GSL_DBL_EPSILON * 1.0e-0)
+        break;
+    }
+    zp = z + zp;
+  }
+  else
+  {
+    zp = z - clog ((1.0 - I * A * cexp (z)) / (1.0 + I * A * cexp (-z)));
+  }
+
+  rho1[0]   = creal (zp);
+  theta1[0] = cimag (zp);
 }
 
 /**
