@@ -874,17 +874,6 @@ nc_cluster_abundance_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClus
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 static void
 _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {

@@ -56,7 +56,6 @@ struct _NcMultiplicityFuncTinkerMeanNormalizedPrivate
 enum
 {
   PROP_0,
-  PROP_DELTA,
   PROP_SIZE,
 };
 
@@ -85,9 +84,6 @@ _nc_multiplicity_func_tinker_mean_normalized_set_property (GObject * object, gui
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      nc_multiplicity_func_tinker_mean_normalized_set_Delta (mt10, g_value_get_double (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -102,9 +98,6 @@ _nc_multiplicity_func_tinker_mean_normalized_get_property (GObject *object, guin
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      g_value_set_double (value, nc_multiplicity_func_tinker_mean_normalized_get_Delta (mt10));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -119,8 +112,10 @@ _nc_multiplicity_func_tinker_mean_normalized_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_tinker_mean_normalized_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_tinker_mean_normalized_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_tinker_mean_normalized_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_mean_normalized_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_tinker_mean_normalized_get_Delta (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
@@ -133,21 +128,12 @@ nc_multiplicity_func_tinker_mean_normalized_class_init (NcMultiplicityFuncTinker
   object_class->get_property = &_nc_multiplicity_func_tinker_mean_normalized_get_property;
   object_class->finalize     = &_nc_multiplicity_func_tinker_mean_normalized_finalize;
 
-  /**
-   * NcMultiplicityFuncTinkerMeanNormalized:Delta:
-   *
-   * Spherical overdensity mass (SO): spherical region Delta times denser than the mean matter density of the universe. 
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Delta",
-                                                        200.0, 3200.0, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 
   parent_class->set_mdef = &_nc_multiplicity_func_tinker_mean_normalized_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_tinker_mean_normalized_set_Delta;
   parent_class->get_mdef = &_nc_multiplicity_func_tinker_mean_normalized_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_tinker_mean_normalized_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_tinker_mean_normalized_eval;
 }
 
@@ -283,9 +269,10 @@ nc_multiplicity_func_tinker_mean_normalized_clear (NcMultiplicityFuncTinkerMeanN
  * Sets the value @Delta to the #NcMultiplicityFuncTinkerMeanNormalized:Delta property.
  *
  */
-void
-nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mt10, gdouble Delta)
+static void
+_nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
+  NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
   NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
   
   const guint int_Delta = Delta;
@@ -373,9 +360,10 @@ nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerM
  *
  * Returns: the value of #NcMultiplicityFuncTinkerMeanNormalized:Delta property.
  */
-gdouble
-nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mt10)
+static gdouble
+_nc_multiplicity_func_tinker_mean_normalized_get_Delta (NcMultiplicityFunc *mulf)
 {
+  NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
   NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
 
   return self->Delta;

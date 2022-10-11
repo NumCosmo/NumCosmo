@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_halo_bias_type.h
+ *            nc_halo_bias.h
  *
  *  Tue June 28 15:41:57 2011
  *  Copyright  2011  Mariana Penna Lima
@@ -23,44 +23,44 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_HALO_BIAS_TYPE_H_
-#define _NC_HALO_BIAS_TYPE_H_
+#ifndef _NC_HALO_BIAS_H_
+#define _NC_HALO_BIAS_H_
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HALO_BIAS_TYPE             (nc_halo_bias_type_get_type ())
-#define NC_HALO_BIAS_TYPE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_BIAS_TYPE, NcHaloBiasType))
-#define NC_HALO_BIAS_TYPE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_BIAS_TYPE, NcHaloBiasTypeClass))
-#define NC_IS_HALO_BIAS_TYPE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_BIAS_TYPE))
-#define NC_IS_HALO_BIAS_TYPE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_BIAS_TYPE))
-#define NC_HALO_BIAS_TYPE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_BIAS_TYPE, NcHaloBiasTypeClass))
+#define NC_TYPE_HALO_BIAS             (nc_halo_bias_get_type ())
+#define NC_HALO_BIAS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_BIAS, NcHaloBias))
+#define NC_HALO_BIAS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_BIAS, NcHaloBiasClass))
+#define NC_IS_HALO_BIAS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_BIAS))
+#define NC_IS_HALO_BIAS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_BIAS))
+#define NC_HALO_BIAS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_BIAS, NcHaloBiasClass))
 
-typedef struct _NcHaloBiasTypeClass NcHaloBiasTypeClass;
-typedef struct _NcHaloBiasType NcHaloBiasType;
+typedef struct _NcHaloBiasClass NcHaloBiasClass;
+typedef struct _NcHaloBias NcHaloBias;
 
-struct _NcHaloBiasTypeClass
+struct _NcHaloBiasClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*eval) (NcHaloBiasType *biasf, gdouble sigma, gdouble z); 
+  gdouble (*eval) (NcHaloBias *bias, gdouble sigma, gdouble z); 
 };
 
-struct _NcHaloBiasType
+struct _NcHaloBias
 {
   /*< private >*/
   GObject parent_instance;
 };
 
-GType nc_halo_bias_type_get_type (void) G_GNUC_CONST;
+GType nc_halo_bias_get_type (void) G_GNUC_CONST;
 
-NcHaloBiasType *nc_halo_bias_type_new_from_name (gchar *bias_name);
-gdouble nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z);
-void nc_halo_bias_type_free (NcHaloBiasType *biasf);
-void nc_halo_bias_type_clear (NcHaloBiasType **biasf);
+NcHaloBias *nc_halo_bias_new_from_name (gchar *bias_name);
+gdouble nc_halo_bias_eval (NcHaloBias *bias, gdouble sigma, gdouble z);
+void nc_halo_bias_free (NcHaloBias *bias);
+void nc_halo_bias_clear (NcHaloBias **bias);
 
 G_END_DECLS
 
-#endif /* _NC_HALO_BIAS_TYPE_H_ */
+#endif /* _NC_HALO_BIAS_H_ */

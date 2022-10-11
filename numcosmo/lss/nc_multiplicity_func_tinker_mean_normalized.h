@@ -65,8 +65,6 @@ NcMultiplicityFuncTinkerMeanNormalized *nc_multiplicity_func_tinker_mean_normali
 void nc_multiplicity_func_tinker_mean_normalized_free (NcMultiplicityFuncTinkerMeanNormalized *mt10);
 void nc_multiplicity_func_tinker_mean_normalized_clear (NcMultiplicityFuncTinkerMeanNormalized **mt10);
 
-void nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mt10, gdouble Delta);
-gdouble nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mt10);
 
 G_END_DECLS
 

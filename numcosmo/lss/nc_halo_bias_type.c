@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_halo_bias_type.c
+ *            nc_halo_bias.c
  *
  *  Tue June 28 15:41:57 2011
  *  Copyright  2011  Mariana Penna Lima
@@ -24,8 +24,8 @@
  */
 
 /**
- * SECTION:nc_halo_bias_type
- * @title: NcHaloBiasType
+ * SECTION:nc_halo_bias
+ * @title: NcHaloBias
  * @short_description: Abstract class for halo bias function type.
  *
  * FIXME
@@ -36,35 +36,125 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_halo_bias_type.h"
+#include "lss/nc_halo_bias.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT);
+
+
+static void
+nc_halo_bias_init (NcHaloBias *mbias)
+{
+  mbias->mfp = NULL;
+  mbias->bias = NULL;
+}
+
+static void
+_nc_halo_bias_dispose (GObject *object)
+{
+  NcHaloBias *mbias = nc_halo_bias (object);
+  
+  nc_halo_mass_function_clear (&mbias->mfp);
+  nc_halo_bias_clear (&mbias->bias);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_halo_bias_parent_class)->dispose (object);
+}
+
+static void
+_nc_halo_bias_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_halo_bias_parent_class)->finalize (object);
+}
+
+static void
+_nc_halo_bias_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcHaloBias *mbias = NC_HALO_BIAS (object);
+  g_return_if_fail (NC_IS_HALO_BIAS (object));
+
+  switch (prop_id)
+  {
+	case PROP_MASS_FUNCTION:
+	  mbias->mfp = g_value_dup_object (value);
+	  break;
+	default:
+	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+	  break;
+  }
+}
+
+static void
+_nc_halo_bias_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHaloBias *mbias = NC_HALO_BIAS (object);
+  g_return_if_fail (NC_IS_HALO_BIAS (object));
+
+  switch (prop_id)
+  {
+	case PROP_MASS_FUNCTION:
+	  g_value_set_object (value, mbias->mfp);
+	  break;
+	default:
+	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+	  break;
+  }
+}
+
+static void
+nc_halo_bias_class_init (NcHaloBiasClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
+
+  object_class->dispose = _nc_halo_bias_func_dispose;
+  object_class->finalize = _nc_halo_bias_func_finalize;
+  object_class->set_property = _nc_halo_bias_func_set_property;
+  object_class->get_property = _nc_halo_bias_func_get_property;
+
+  /**
+   * NcHaloBias:mass-function:
+   *
+   * This property keeps the mass function object.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MASS_FUNCTION,
+                                   g_param_spec_object ("mass-function",
+                                                        NULL,
+                                                        "Mass Function.",
+                                                        NC_TYPE_HALO_MASS_FUNCTION,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+
+}
+
 
 /**
- * nc_halo_bias_type_new_from_name:
+ * nc_halo_bias_new_from_name:
  * @bias_name: string which specifies the multiplicity function type.
  *
  * This function returns a new #NcMultiplicityFunc whose type is defined by @multiplicity_name.
  *
- * Returns: A new #NcHaloBiasType.
+ * Returns: A new #NcHaloBIas.
  */
-NcHaloBiasType *
-nc_halo_bias_type_new_from_name (gchar *bias_name)
+NcHaloBias *
+nc_halo_bias_new_from_name (gchar *bias_name)
 {
   GObject *obj = ncm_serialize_global_from_string (bias_name);
   GType bias_type = G_OBJECT_TYPE (obj);
 
-  if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS_TYPE))
-	g_error ("nc_halo_bias_type_new_from_name: NcHaloBiasType %s do not descend from %s.", bias_name, g_type_name (NC_TYPE_HALO_BIAS_TYPE));
-  return NC_HALO_BIAS_TYPE (obj);
+  if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS))
+	  g_error ("nc_halo_bias_new_from_name: NcHaloBias %s do not descend from %s.", bias_name, g_type_name (NC_TYPE_HALO_BIAS));
+  return NC_HALO_BIAS (obj);
 }
 
 /**
- * nc_halo_bias_type_eval:
- * @biasf: a #NcHaloBiasType.
+ * nc_halo_bias_eval:
+ * @bias: a #NcHaloBias.
  * @sigma: FIXME
  * @z: redshift.
  *
@@ -73,59 +163,35 @@ nc_halo_bias_type_new_from_name (gchar *bias_name)
  * Returns: FIXME
 */
 gdouble
-nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z)
+nc_halo_bias_eval (NcHaloBias *bias, gdouble sigma, gdouble z)
 {
-  return NC_HALO_BIAS_TYPE_GET_CLASS (biasf)->eval (biasf, sigma, z);
+  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, sigma, z);
 }
 
 /**
- * nc_halo_bias_type_free:
- * @biasf: a #NcHaloBiasType.
+ * nc_halo_bias_free:
+ * @bias: a #NcHaloBias.
  *
- * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0,
- * all memory allocated by @biasf is released.
+ * Atomically decrements the reference count of @bias by one. If the reference count drops to 0,
+ * all memory allocated by @bias is released.
  *
  */
 void
-nc_halo_bias_type_free (NcHaloBiasType *biasf)
+nc_halo_bias_free (NcHaloBias *bias)
 {
-  g_object_unref (biasf);
+  g_object_unref (bias);
 }
 
 /**
- * nc_halo_bias_type_clear:
- * @biasf: a #NcHaloBiasType.
+ * nc_halo_bias_clear:
+ * @bias: a #NcHaloBias.
  *
- * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0,
- * all memory allocated by @biasf is released. Set pointer to NULL.
+ * Atomically decrements the reference count of @bias by one. If the reference count drops to 0,
+ * all memory allocated by @bias is released. Set pointer to NULL.
  *
  */
 void
-nc_halo_bias_type_clear (NcHaloBiasType **biasf)
+nc_halo_bias_clear (NcHaloBias **bias)
 {
-  g_clear_object (biasf);
+  g_clear_object (bias);
 }
-
-static void
-nc_halo_bias_type_init (NcHaloBiasType *nc_halo_bias_type)
-{
-  NCM_UNUSED (nc_halo_bias_type);
-}
-
-static void
-_nc_halo_bias_type_finalize (GObject *object)
-{
-  
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_halo_bias_type_parent_class)->finalize (object);
-}
-
-static void
-nc_halo_bias_type_class_init (NcHaloBiasTypeClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
-
-  object_class->finalize = _nc_halo_bias_type_finalize;
-}
-

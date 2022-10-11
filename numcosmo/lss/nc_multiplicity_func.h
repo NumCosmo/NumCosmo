@@ -74,6 +74,9 @@ struct _NcMultiplicityFuncClass
   /*< private >*/
   GObjectClass parent_class;
   void (*set_mdef) (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+  void (*set_Delta) (NcMultiplicityFunc *mulf, gdouble Delta);
+  gdouble (*get_Delta) (NcMultiplicityFunc *mulf);
+  gdouble (*get_critical_Delta) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
   NcMultiplicityFuncMassDef (*get_mdef) (NcMultiplicityFunc *mulf);
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
   gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
@@ -93,6 +96,9 @@ void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
 void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
 
 void nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+void nc_multiplicity_func_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
+gdouble nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf);
+gdouble nc_multiplicity_func_get_critical_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
 NcMultiplicityFuncMassDef nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf);
 
 gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);

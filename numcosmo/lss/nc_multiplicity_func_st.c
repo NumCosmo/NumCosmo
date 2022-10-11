@@ -46,6 +46,7 @@ struct _NcMultiplicityFuncSTPrivate
   gdouble b;
   gdouble p;
   gdouble delta_c;
+  gdouble Delta;
 };
 
 enum
@@ -70,6 +71,7 @@ nc_multiplicity_func_st_init (NcMultiplicityFuncST *mst)
   self->b       = 0.0;
   self->p       = 0.0;
   self->delta_c = 0.0;
+  self->Delta = 0.0;
 }
 
 static void
@@ -132,8 +134,10 @@ _nc_multiplicity_func_st_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_st_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf); 
 static gdouble _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
@@ -195,7 +199,9 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   parent_class->set_mdef = &_nc_multiplicity_func_st_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_st_set_Delta;
   parent_class->get_mdef = &_nc_multiplicity_func_st_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_st_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_st_eval;
 }
 
@@ -445,3 +451,37 @@ nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst)
   return self->delta_c;
 }
 
+
+/**
+ * nc_multiplicity_func_st_set_Delta:
+ * @mt: a #NcMultiplicityFuncST.
+ * @Delta: value of #NcMultiplicityFuncST:Delta.
+ *
+ * Sets the value @Delta to the #NcMultiplicityFuncST:Delta property.
+ *
+ */
+static void
+_nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
+{
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+
+  self->Delta = Delta;
+
+}
+
+/**
+ * nc_multiplicity_func_st_get_Delta:
+ * @mt: a #NcMultiplicityFuncST.
+ *
+ * Returns: the value of #NcMultiplicityFuncST:Delta property.
+ */
+static gdouble
+_nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+  
+  return self->Delta;
+}

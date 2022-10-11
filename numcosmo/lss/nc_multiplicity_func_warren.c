@@ -42,6 +42,7 @@
 struct _NcMultiplicityFuncWarrenPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+  gdouble Delta;
 };
 
 enum
@@ -58,6 +59,7 @@ nc_multiplicity_func_warren_init (NcMultiplicityFuncWarren *mw)
   NcMultiplicityFuncWarrenPrivate * const self = mw->priv = nc_multiplicity_func_warren_get_instance_private (mw);
 
   self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->Delta = 0.0;
 }
 
 static void
@@ -96,8 +98,10 @@ _nc_multiplicity_func_warren_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_warren_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf); 
 static gdouble _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
@@ -111,7 +115,9 @@ nc_multiplicity_func_warren_class_init (NcMultiplicityFuncWarrenClass *klass)
   object_class->finalize     = &_nc_multiplicity_func_warren_finalize;
   
   parent_class->set_mdef = &_nc_multiplicity_func_warren_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_warren_set_Delta;
   parent_class->get_mdef = &_nc_multiplicity_func_warren_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_warren_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_warren_eval;
 }
 
@@ -225,3 +231,34 @@ nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw)
 }
 
 
+/**
+ * nc_multiplicity_func_warren_set_Delta:
+ * @mt: a #NcMultiplicityFuncWarren.
+ * @Delta: value of #NcMultiplicityFuncWarren:Delta.
+ *
+ * Sets the value @Delta to the #NcMultiplicityFuncWarren:Delta property.
+ *
+ */
+static void
+_nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
+{
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+
+  self->Delta = Delta;
+}
+
+/**
+ * nc_multiplicity_func_warren_get_Delta:
+ * @mt: a #NcMultiplicityFuncWarren.
+ *
+ * Returns: the value of #NcMultiplicityFuncWarren:Delta property.
+ */
+gdouble
+_nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+  
+  return self->Delta;
+}
