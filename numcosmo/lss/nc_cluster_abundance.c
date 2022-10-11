@@ -154,7 +154,7 @@ _nc_cluster_abundance_dispose (GObject *object)
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (object);
   
   nc_halo_mass_function_clear (&cad->mfp);
-  nc_halo_bias_func_clear (&cad->mbiasf);
+  nc_halo_bias_clear (&cad->mbiasf);
   
   ncm_spline_clear (&cad->inv_z);
   ncm_spline_clear (&cad->inv_lnM);
@@ -252,7 +252,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
                                    g_param_spec_object ("mean-bias",
                                                         NULL,
                                                         "Mean Halo Bias Function",
-                                                        NC_TYPE_HALO_BIAS_FUNC,
+                                                        NC_TYPE_HALO_BIAS,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -267,7 +267,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
  * Returns: A new #NcClusterAbundance.
  */
 NcClusterAbundance *
-nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf)
 {
   NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
                                           "halo-mass-function", mfp,
@@ -288,7 +288,7 @@ nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf)
  * Returns: A new #NcClusterAbundance.
  */
 NcClusterAbundance *
-nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf)
 {
   NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
                                           "halo-mass-function", mfp,
@@ -733,7 +733,7 @@ _nc_cluster_abundance_z_intp_lnM_intp_d2N_bias_integrand (gdouble lnM, gdouble z
 
   const gdouble p_z_zr            = nc_cluster_redshift_p (obs_data->clusterz, obs_data->cosmo, lnM, z, obs_data->z_obs, obs_data->z_obs_params);
   const gdouble p_M_Mobs          = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs, obs_data->lnM_obs_params);
-  const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
+  const gdouble dbdlnM            = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
   
   return p_z_zr * p_M_Mobs * dbdlnM;
 }
@@ -779,7 +779,7 @@ NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) userdata;
 
 
   const gdouble p_z_zr            = nc_cluster_redshift_p (obs_data->clusterz, obs_data->cosmo, obs_data->lnM, z, obs_data->z_obs, obs_data->z_obs_params);
-  const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, obs_data->lnM, z);
+  const gdouble dbdlnM            = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, obs_data->lnM, z);
   
   return p_z_zr * dbdlnM;
 
@@ -825,7 +825,7 @@ NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) userdata;
 
 
   const gdouble p_M_Mobs          = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, obs_data->z, obs_data->lnM_obs, obs_data->lnM_obs_params);
-  const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, obs_data->z);
+  const gdouble dbdlnM            = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, obs_data->z);
   
   return p_M_Mobs * dbdlnM;
 
@@ -866,7 +866,7 @@ static gdouble
 nc_cluster_abundance_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
 {
 
-  const gdouble dbdlnM  = nc_halo_bias_func_integrand (cad->mbiasf, cosmo, *lnM_obs, *z_obs);
+  const gdouble dbdlnM  = nc_halo_bias_integrand (cad->mbiasf, cosmo, *lnM_obs, *z_obs);
   
   return dbdlnM;
 }
@@ -1390,7 +1390,7 @@ _nc_ca_mean_bias_numerator_integrand (gdouble lnM, gpointer params)
   NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) params;
   NcClusterAbundance *cad         = obs_data->cad;
   
-  gdouble dbdlnM = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, obs_data->z);
+  gdouble dbdlnM = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, obs_data->z);
   
   return dbdlnM;
 }
@@ -1489,7 +1489,7 @@ _nc_ca_mean_bias_Mobs_numerator_integrand (gdouble lnMobs, gpointer params)
   
   /* In this case zp is the true redshift, i.e., without uncertainty. */
   gdouble p_M_Mobs = 0.0; /*_nc_cluster_abundance_lognormal_mass_dist (obs_data, lnMobs); */
-  gdouble dbdlnM   = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnMobs, obs_data->z);
+  gdouble dbdlnM   = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnMobs, obs_data->z);
   
   g_assert_not_reached ();
   
@@ -1609,7 +1609,7 @@ nc_cluster_abundance_intp_bin_d2n_bias_integrand (gdouble lnM, gdouble z, gpoint
 
 const gdouble z_intp            = nc_cluster_redshift_intp_bin (obs_data->clusterz, obs_data->cosmo, lnM, z, obs_data->z_obs_lower, obs_data->z_obs_upper, obs_data->z_obs_params);
 const gdouble lnM_intp          = nc_cluster_mass_intp_bin (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs_lower, obs_data->lnM_obs_upper, obs_data->lnM_obs_params);
-const gdouble dbdlnM            = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
+const gdouble dbdlnM            = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
   
   return z_intp * lnM_intp * dbdlnM;
 }
@@ -1671,7 +1671,7 @@ _nc_cluster_abundance_mean_bias_integrand (gdouble lnM, gdouble z, gpointer user
   NcClusterAbundance *cad         = obs_data->cad;
   const gdouble z_intp   = nc_cluster_redshift_intp (obs_data->clusterz, obs_data->cosmo, lnM, z);
   const gdouble lnM_intp = nc_cluster_mass_intp (obs_data->clusterm, obs_data->cosmo, lnM, z);
-  const gdouble dbdlnM   = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
+  const gdouble dbdlnM   = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, z);
   
   return z_intp * lnM_intp * dbdlnM;
 }

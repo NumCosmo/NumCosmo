@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_halo_bias_type_ps.c
+ *            nc_halo_bias_ps.c
  *
  *  Tue June 28 15:41:57 2011
  *  Copyright  2011  Mariana Penna Lima
@@ -24,8 +24,8 @@
  */
 
 /**
- * SECTION:nc_halo_bias_type_ps
- * @title: NcHaloBiasTypePS
+ * SECTION:nc_halo_bias_ps
+ * @title: NcHaloBiasPS
  * @short_description: Press-Schechter halo bias function type.
  *
  * FIXME
@@ -37,11 +37,11 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_halo_bias_type_ps.h"
+#include "lss/nc_halo_bias_ps.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcHaloBiasTypePS, nc_halo_bias_type_ps, NC_TYPE_HALO_BIAS_TYPE);
+G_DEFINE_TYPE (NcHaloBiasPS, nc_halo_bias_ps, NC_TYPE_HALO_BIAS);
 
 enum
 {
@@ -50,25 +50,25 @@ enum
 };
 
 /**
- * nc_halo_bias_type_ps_new:
+ * nc_halo_bias_ps_new:
  * @delta_c: FIXME
  *
  * FIXME
  *
- * Returns: A new #NcHaloBiasType.
+ * Returns: A new #NcHaloBias.
  */
-NcHaloBiasType *
-nc_halo_bias_type_ps_new (gdouble delta_c)
+NcHaloBias *
+nc_halo_bias_ps_new (gdouble delta_c)
 {
-  return g_object_new (NC_TYPE_HALO_BIAS_TYPE_PS,
+  return g_object_new (NC_TYPE_HALO_BIAS_PS,
                        "critical-delta", delta_c,
                        NULL);
 }
 
 static gdouble
-_nc_halo_bias_type_ps_eval (NcHaloBiasType*biasf, gdouble sigma, gdouble z)
+_nc_halo_bias_ps_eval (NcHaloBias*biasf, gdouble sigma, gdouble z)
 {
-  NcHaloBiasTypePS *bias_ps = NC_HALO_BIAS_TYPE_PS (biasf);
+  NcHaloBiasPS *bias_ps = NC_HALO_BIAS_PS (biasf);
   gdouble x = bias_ps->delta_c / sigma;        /* \delta_c \sigma^{-1} */
   gdouble x2 = x * x;
   gdouble b_PS = 1.0 + (x2 - 1.0) / bias_ps->delta_c;
@@ -79,52 +79,52 @@ _nc_halo_bias_type_ps_eval (NcHaloBiasType*biasf, gdouble sigma, gdouble z)
 }
 
 /**
- * nc_halo_bias_type_ps_set_delta_c:
- * @biasf_ps: a #NcHaloBiasTypePS.
- * @delta_c: value of #NcHaloBiasTypePS:critical-delta.
+ * nc_halo_bias_ps_set_delta_c:
+ * @biasf_ps: a #NcHaloBiasPS.
+ * @delta_c: value of #NcHaloBiasPS:critical-delta.
  *
- * Sets the value @delta_c to the #NcHaloBiasTypePS:critical-delta property.
+ * Sets the value @delta_c to the #NcHaloBiasPS:critical-delta property.
  *
  */
 void
-nc_halo_bias_type_ps_set_delta_c (NcHaloBiasTypePS *biasf_ps, gdouble delta_c)
+nc_halo_bias_ps_set_delta_c (NcHaloBiasPS *biasf_ps, gdouble delta_c)
 {
   g_assert (delta_c >= 0);
   biasf_ps->delta_c = delta_c;
 }
 
 /**
- * nc_halo_bias_type_ps_get_delta_c:
- * @biasf_ps: a #NcHaloBiasTypePS.
+ * nc_halo_bias_ps_get_delta_c:
+ * @biasf_ps: a #NcHaloBiasPS.
  *
- * Returns: the value of #NcHaloBiasTypePS:critical_delta property.
+ * Returns: the value of #NcHaloBiasPS:critical_delta property.
  */
 gdouble
-nc_halo_bias_type_ps_get_delta_c (const NcHaloBiasTypePS *biasf_ps)
+nc_halo_bias_ps_get_delta_c (const NcHaloBiasPS *biasf_ps)
 {
   return biasf_ps->delta_c;
 }
 
 static void
-nc_halo_bias_type_ps_init (NcHaloBiasTypePS *biasf_ps)
+nc_halo_bias_ps_init (NcHaloBiasPS *biasf_ps)
 {
   /* TODO: Add initialization code here */
   biasf_ps->delta_c = 1.686;
 }
 
 static void
-_nc_halo_bias_type_ps_finalize (GObject *object)
+_nc_halo_bias_ps_finalize (GObject *object)
 {
   /* TODO: Add deinitalization code here */
 
-  G_OBJECT_CLASS (nc_halo_bias_type_ps_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_halo_bias_ps_parent_class)->finalize (object);
 }
 
 static void
-_nc_halo_bias_type_ps_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_halo_bias_ps_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcHaloBiasTypePS *biasf_ps = NC_HALO_BIAS_TYPE_PS (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_TYPE_PS (object));
+  NcHaloBiasPS *biasf_ps = NC_HALO_BIAS_PS (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_PS (object));
 
   switch (prop_id)
   {
@@ -138,10 +138,10 @@ _nc_halo_bias_type_ps_set_property (GObject * object, guint prop_id, const GValu
 }
 
 static void
-_nc_halo_bias_type_ps_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_halo_bias_ps_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloBiasTypePS *biasf_ps = NC_HALO_BIAS_TYPE_PS (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_TYPE_PS (object));
+  NcHaloBiasPS *biasf_ps = NC_HALO_BIAS_PS (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_PS (object));
 
   switch (prop_id)
   {
@@ -155,19 +155,19 @@ _nc_halo_bias_type_ps_get_property (GObject *object, guint prop_id, GValue *valu
 }
 
 static void
-nc_halo_bias_type_ps_class_init (NcHaloBiasTypePSClass *klass)
+nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHaloBiasTypeClass* parent_class = NC_HALO_BIAS_TYPE_CLASS (klass);
+  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
 
-  parent_class->eval = &_nc_halo_bias_type_ps_eval;
+  parent_class->eval = &_nc_halo_bias_ps_eval;
 
-  object_class->finalize = _nc_halo_bias_type_ps_finalize;
-  object_class->set_property = _nc_halo_bias_type_ps_set_property;
-  object_class->get_property = _nc_halo_bias_type_ps_get_property;
+  object_class->finalize = _nc_halo_bias_ps_finalize;
+  object_class->set_property = _nc_halo_bias_ps_set_property;
+  object_class->get_property = _nc_halo_bias_ps_get_property;
 
   /**
-   * NcHaloBiasTypePS:critical_delta:
+   * NcHaloBiasPS:critical_delta:
    *
    * FIXME
    */

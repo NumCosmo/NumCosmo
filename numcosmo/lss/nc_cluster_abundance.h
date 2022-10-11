@@ -30,7 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 
@@ -76,7 +76,7 @@ struct _NcClusterAbundance
   /*< private >*/
   GObject parent_instance;
   NcHaloMassFunction *mfp;
-  NcHaloBiasFunc *mbiasf; /* new FIXME */
+  NcHaloBias *mbiasf; /* new FIXME */
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
   NcClusterAbundanceIntPd2NBias intp_d2N_bias;
@@ -99,8 +99,8 @@ struct _NcClusterAbundance
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
-NcClusterAbundance *nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
-NcClusterAbundance *nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 
 void nc_cluster_abundance_free (NcClusterAbundance *cad);

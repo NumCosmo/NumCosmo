@@ -298,7 +298,7 @@ nc_multiplicity_func_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
       NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_Delta (mulf, Delta);
       break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_MATTER:
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
       NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_Delta (mulf, Delta);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:

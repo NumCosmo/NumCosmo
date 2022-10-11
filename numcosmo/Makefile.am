@@ -427,12 +427,11 @@ nc_headers = \
 	lss/nc_multiplicity_func_bocquet.h     \
 	lss/nc_multiplicity_func_watson.h      \
 	lss/nc_halo_mass_function.h            \
-        lss/nc_halo_bias_type.h                \
-        lss/nc_halo_bias_type_ps.h             \
-        lss/nc_halo_bias_type_st_spher.h       \
-        lss/nc_halo_bias_type_st_ellip.h       \
-        lss/nc_halo_bias_type_tinker.h         \
-        lss/nc_halo_bias_func.h                \
+        lss/nc_halo_bias.h                     \
+        lss/nc_halo_bias_ps.h                  \
+        lss/nc_halo_bias_st_spher.h            \
+        lss/nc_halo_bias_st_ellip.h            \
+        lss/nc_halo_bias_tinker.h              \
         lss/nc_cluster_redshift.h              \
         lss/nc_cluster_redshift_nodist.h       \
         lss/nc_cluster_photoz_gauss.h          \
@@ -580,12 +579,11 @@ nc_sources = \
 	lss/nc_multiplicity_func_bocquet.c     \
 	lss/nc_multiplicity_func_watson.c      \
 	lss/nc_halo_mass_function.c            \
-	lss/nc_halo_bias_type.c                \
-	lss/nc_halo_bias_type_ps.c             \
-	lss/nc_halo_bias_type_st_spher.c       \
-	lss/nc_halo_bias_type_st_ellip.c       \
-	lss/nc_halo_bias_type_tinker.c         \
-	lss/nc_halo_bias_func.c                \
+	lss/nc_halo_bias.c                     \
+	lss/nc_halo_bias_ps.c                  \
+	lss/nc_halo_bias_st_spher.c            \
+	lss/nc_halo_bias_st_ellip.c            \
+	lss/nc_halo_bias_tinker.c              \
 	lss/nc_cluster_redshift.c              \
 	lss/nc_cluster_redshift_nodist.c       \
 	lss/nc_cluster_photoz_gauss.c          \

@@ -43,21 +43,25 @@
 
 G_DEFINE_ABSTRACT_TYPE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT);
 
+enum
+{
+  PROP_0,
+  PROP_MASS_FUNCTION,
+  PROP_SIZE,
+};
 
 static void
-nc_halo_bias_init (NcHaloBias *mbias)
+nc_halo_bias_init (NcHaloBias *bias)
 {
-  mbias->mfp = NULL;
-  mbias->bias = NULL;
+  bias->mfp = NULL;
 }
 
 static void
 _nc_halo_bias_dispose (GObject *object)
 {
-  NcHaloBias *mbias = nc_halo_bias (object);
+  NcHaloBias *bias = NC_HALO_BIAS   (object);
   
-  nc_halo_mass_function_clear (&mbias->mfp);
-  nc_halo_bias_clear (&mbias->bias);
+  nc_halo_mass_function_clear (&bias->mfp);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_parent_class)->dispose (object);
@@ -74,13 +78,14 @@ _nc_halo_bias_finalize (GObject *object)
 static void
 _nc_halo_bias_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloBias *mbias = NC_HALO_BIAS (object);
+  NcHaloBias *bias = NC_HALO_BIAS (object);
   g_return_if_fail (NC_IS_HALO_BIAS (object));
 
   switch (prop_id)
   {
 	case PROP_MASS_FUNCTION:
-	  mbias->mfp = g_value_dup_object (value);
+	  bias->mfp = g_value_dup_object (value);
+    g_assert (bias->mfp != NULL);
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -91,13 +96,13 @@ _nc_halo_bias_set_property (GObject *object, guint prop_id, const GValue *value,
 static void
 _nc_halo_bias_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloBias *mbias = NC_HALO_BIAS (object);
+  NcHaloBias *bias = NC_HALO_BIAS (object);
   g_return_if_fail (NC_IS_HALO_BIAS (object));
 
   switch (prop_id)
   {
 	case PROP_MASS_FUNCTION:
-	  g_value_set_object (value, mbias->mfp);
+	  g_value_set_object (value, bias->mfp);
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -111,10 +116,10 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = _nc_halo_bias_func_dispose;
-  object_class->finalize = _nc_halo_bias_func_finalize;
-  object_class->set_property = _nc_halo_bias_func_set_property;
-  object_class->get_property = _nc_halo_bias_func_get_property;
+  object_class->dispose      = &_nc_halo_bias_dispose;
+  object_class->finalize     = &_nc_halo_bias_finalize;
+  object_class->set_property = &_nc_halo_bias_set_property;
+  object_class->get_property = &_nc_halo_bias_get_property;
 
   /**
    * NcHaloBias:mass-function:
@@ -132,25 +137,6 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
 
 }
 
-
-/**
- * nc_halo_bias_new_from_name:
- * @bias_name: string which specifies the multiplicity function type.
- *
- * This function returns a new #NcMultiplicityFunc whose type is defined by @multiplicity_name.
- *
- * Returns: A new #NcHaloBIas.
- */
-NcHaloBias *
-nc_halo_bias_new_from_name (gchar *bias_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (bias_name);
-  GType bias_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS))
-	  g_error ("nc_halo_bias_new_from_name: NcHaloBias %s do not descend from %s.", bias_name, g_type_name (NC_TYPE_HALO_BIAS));
-  return NC_HALO_BIAS (obj);
-}
 
 /**
  * nc_halo_bias_eval:
@@ -194,4 +180,33 @@ void
 nc_halo_bias_clear (NcHaloBias **bias)
 {
   g_clear_object (bias);
+}
+
+
+
+/**
+ * nc_halo_bias_integrand:
+ * @mbiasf: a #NcHaloBias.
+ * @cosmo: a #NcHICosmo.
+ * @lnM: logarithm base e of the mass.
+ * @z: redshift.
+ *
+ * This function is the integrand of the mean bias, i.e., the product of the mass function with the bias function.
+ * As both functions depend on the standard deviation of the matter density contrast, we implement this function to
+ * compute \f$ \sigma (M, z) \f$ just once.
+   *
+ * It is worth noting that the multiplicity function must be compatible with the bias function.
+ *
+ * Returns: a double which corresponds to the mean bias integrand for lnM and at redshift z.
+ */
+gdouble
+nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+{
+  gdouble sigma, dn_dlnM, bias;
+
+  nc_halo_mass_function_dn_dlnM_sigma (mbiasf->mfp, cosmo, lnM, z, &sigma, &dn_dlnM);
+
+  bias = nc_halo_bias_eval (mbiasf, sigma, z);
+
+  return dn_dlnM * bias;
 }
