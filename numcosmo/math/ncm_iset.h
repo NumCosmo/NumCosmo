@@ -81,6 +81,7 @@ NcmVector *ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup
 GArray *ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup);
 NcmMatrix *ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
 NcmMatrix *ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
+NcmMatrix *ncm_iset_get_submatrix_colmajor_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
 NcmMatrix *ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_dup);
 void ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdouble tol);
 void ncm_iset_remove_subset (NcmISet *iset, NcmISet *target);

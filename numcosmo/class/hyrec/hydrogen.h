@@ -98,7 +98,7 @@ void populateTS_2photon(double Trr[2][2], double *Trv[2], double *Tvr[2], double
                         double sr[2], double sv[NVIRT], double Dtau[NVIRT],
                         double xe, double TM, double TR, double nH, double H, HRATEEFF *rate_table,
                         TWO_PHOTON_PARAMS *twog, double fplus[NVIRT], double fplus_Ly[], 
-                        double Alpha[], double Beta[], double z);
+                        double Alpha[2], double Beta[2], double z);
 void solveTXeqB(double *diag, double *updiag, double *dndiag, double *X, double *B, unsigned N);
 void solve_real_virt(double xr[2], double xv[NVIRT], double Trr[2][2], double *Trv[2], double *Tvr[2], 
                      double *Tvv[3], double sr[2], double sv[NVIRT]);

@@ -60,6 +60,7 @@ struct _NcmStatsDistPrivate
   NcmMatrix *sub_IM;
   NcmVector *sub_x;
   NcmVector *f;
+  NcmVector *f1;
   gdouble *levmar_workz;
   guint levmar_n;
   GArray *m2lnp_sort;

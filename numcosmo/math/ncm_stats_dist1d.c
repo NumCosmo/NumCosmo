@@ -510,11 +510,15 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   gint status;
   gint iter = 0, max_iter = 1000000;
   gsl_function F;
-  gdouble x0      = sd1->xi;
-  gdouble x1      = sd1->xf;
-  gdouble x       = 0.5 * (sd1->xf + sd1->xi);
-  gdouble last_x0 = x0;
-  gdouble last_x1 = x1;
+  const gdouble reltol = sqrt (sd1->reltol);
+  gdouble x0           = sd1->xi;
+  gdouble x1           = sd1->xf;
+  gdouble x            = 0.5 * (sd1->xf + sd1->xi);
+  gdouble last_x0      = x0;
+  gdouble last_x1      = x1;
+  gdouble fmin;
+
+  gint ret;
   
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi;
@@ -522,8 +526,23 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   F.params   = sd1;
   F.function = &_ncm_stats_dist1d_m2lnp;
   
-  gsl_min_fminimizer_set (sd1->fmin, &F, x, x0, x1);
-  
+  fmin = GSL_POSINF;
+  for (iter = 0; iter < 1000; iter++)
+  {
+    const gdouble x_try = sd1->xi + (sd1->xf - sd1->xi) / 999.0 * iter;
+    const gdouble f_try = ncm_stats_dist1d_eval_m2lnp (sd1, x_try);
+    
+    if (f_try < fmin)
+    {
+      fmin = f_try;
+      x = x_try;
+    }
+  }
+  iter = 0;
+
+  ret = gsl_min_fminimizer_set (sd1->fmin, &F, x, x0, x1);
+  NCM_TEST_GSL_RESULT ("ncm_stats_dist1d_eval_mode", ret);
+
   do {
     iter++;
     status = gsl_min_fminimizer_iterate (sd1->fmin);
@@ -535,7 +554,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
     x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
     
-    status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
+    status = gsl_min_test_interval (x0, x1, sd1->abstol, reltol);
     
     if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {

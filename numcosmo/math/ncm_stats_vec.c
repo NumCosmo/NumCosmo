@@ -79,6 +79,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_stats_vec.h"
+#include "math/ncm_lapack.h"
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
@@ -1312,7 +1313,8 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
     
     gsl_multifit_robust_maxiter (100000, w);
     status = gsl_multifit_robust (ncm_matrix_gsl (X), ncm_vector_gsl (y), ncm_vector_gsl (c), ncm_matrix_gsl (cov), w);
-    g_assert (status == GSL_SUCCESS);
+    if ((status != GSL_SUCCESS) && (status != GSL_EMAXITER))
+      g_error ("_ncm_stats_vec_estimate_const_break_int: error %d computing gsl_multifit_robust\n", status);
 
     stats = gsl_multifit_robust_statistics (w);
 
@@ -1701,6 +1703,245 @@ ncm_stats_vec_dup_saved_x (NcmStatsVec *svec)
   else
     return NULL;
 }
+
+/**
+ * ncm_stats_vec_compute_cov_robust_diag:
+ * @svec: a #NcmStatsVec
+ *
+ * Compute the covariance using the saved data applying a
+ * a robust scale estimator for each degree of freedom.
+ *
+ *
+ * Returns: (transfer full): A diagonal #NcmMatrix $D$ containing the estimated variances.
+ */
+NcmMatrix *
+ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
+{
+  NcmMatrix *cov   = ncm_matrix_new (svec->len, svec->len);
+  GArray *data     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
+  gint i;
+
+  if (svec->nitens < 4)
+    g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
+        svec->nitens);
+  if (!svec->save_x)
+    g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
+
+  g_array_set_size (data, svec->nitens);
+  g_array_set_size (work, svec->nitens * 3);
+  g_array_set_size (work_int, svec->nitens * 5);
+
+  ncm_matrix_set_zero (cov);
+  for (i = 0; i < svec->len; i++)
+  {
+    gdouble var_ii;
+    gint a;
+    for (a = 0; a < svec->nitens; a++)
+    {
+      NcmVector *theta_a = ncm_stats_vec_peek_row (svec, a);
+      const gdouble theta_a_i = ncm_vector_get (theta_a, i);
+
+      g_array_index (data, gdouble, i) = theta_a_i;
+    }
+
+    gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
+    var_ii = gsl_stats_Qn_from_sorted_data (
+        &g_array_index (data, gdouble, 0),
+        1, svec->nitens,
+        &g_array_index (work, gdouble, 0),
+        &g_array_index (work_int, gint, 0)
+    );
+    var_ii = gsl_pow_2 (var_ii);
+    ncm_matrix_set (cov, i, i, var_ii);
+  }
+
+  g_array_unref (data);
+  g_array_unref (work);
+  g_array_unref (work_int);
+
+  return cov;
+}
+
+/**
+ * ncm_stats_vec_compute_cov_robust_ogk:
+ * @svec: a #NcmStatsVec
+ *
+ * Compute the covariance using the OGK method FIXME.
+ *
+ *
+ * Returns: (transfer full): A diagonal #NcmMatrix $V$ containing the estimated covariance.
+ */
+NcmMatrix *
+ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
+{
+  NcmMatrix *cov     = ncm_matrix_new (svec->len, svec->len);
+  NcmMatrix *E       = ncm_matrix_new (svec->len, svec->len);
+  NcmMatrix *y       = ncm_matrix_new (svec->nitens, svec->len);
+  NcmMatrix *z       = ncm_matrix_new (svec->len, svec->nitens);
+  NcmVector *sigma_x = ncm_vector_new (svec->len);
+  NcmVector *sigma_z = ncm_vector_new (svec->len);
+  GArray *data       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work_int   = g_array_new (FALSE, FALSE, sizeof (gint));
+  gint a, i;
+
+  if (svec->nitens < 4)
+    g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
+        svec->nitens);
+  if (!svec->save_x)
+    g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
+
+  g_array_set_size (data, svec->nitens);
+  g_array_set_size (work, svec->nitens * 3);
+  g_array_set_size (work_int, svec->nitens * 5);
+
+  for (a = 0; a < svec->nitens; a++)
+  {
+    NcmVector *theta_a = ncm_stats_vec_peek_row (svec, a);
+    ncm_matrix_set_row (y, a, theta_a);
+  }
+
+  for (i = 0; i < svec->len; i++)
+  {
+    gdouble sigma_i;
+    for (a = 0; a < svec->nitens; a++)
+    {
+      NcmVector *theta_a = ncm_stats_vec_peek_row (svec, a);
+      const gdouble theta_a_i = ncm_vector_get (theta_a, i);
+
+      g_array_index (data, gdouble, a) = theta_a_i;
+    }
+
+    gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
+    sigma_i = gsl_stats_Qn_from_sorted_data (
+        &g_array_index (data, gdouble, 0),
+        1, svec->nitens,
+        &g_array_index (work, gdouble, 0),
+        &g_array_index (work_int, gint, 0)
+    );
+
+    ncm_vector_set (sigma_x, i, sigma_i);
+    ncm_matrix_mul_col (y, i, 1.0 / sigma_i);
+  }
+
+  ncm_matrix_set_identity (cov);
+  for (i = 0; i < svec->len; i++)
+  {
+    gint j;
+    for (j = i + 1; j < svec->len; j++)
+    {
+      gdouble s_ipj, s_imj;
+      for (a = 0; a < svec->nitens; a++)
+      {
+        const gdouble y_a_i = ncm_matrix_get (y, a, i);
+        const gdouble y_a_j = ncm_matrix_get (y, a, j);
+
+        g_array_index (data, gdouble, a) = y_a_i + y_a_j;
+      }
+      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
+      s_ipj = gsl_stats_Qn_from_sorted_data (
+          &g_array_index (data, gdouble, 0),
+          1, svec->nitens,
+          &g_array_index (work, gdouble, 0),
+          &g_array_index (work_int, gint, 0)
+      );
+
+      for (a = 0; a < svec->nitens; a++)
+      {
+        const gdouble y_a_i = ncm_matrix_get (y, a, i);
+        const gdouble y_a_j = ncm_matrix_get (y, a, j);
+
+        g_array_index (data, gdouble, a) = y_a_i - y_a_j;
+      }
+      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
+      s_imj = gsl_stats_Qn_from_sorted_data (
+          &g_array_index (data, gdouble, 0),
+          1, svec->nitens,
+          &g_array_index (work, gdouble, 0),
+          &g_array_index (work_int, gint, 0)
+      );
+      ncm_matrix_set (cov, i, j, 0.25 * (s_ipj * s_ipj - s_imj * s_imj));
+    }
+  }
+
+  {
+    NcmLapackWS *lapack_work = ncm_lapack_ws_new ();
+    gint neval;
+    gint info;
+
+    info = ncm_lapack_dsyevr ('V', 'A', 'U', svec->len,
+        ncm_matrix_data (cov), ncm_matrix_tda (cov),
+        0.0, 0.0, 0.0, 0.0,
+        0.0, &neval, &g_array_index (data, gdouble, 0),
+        ncm_matrix_data (E), ncm_matrix_tda (E),
+        &g_array_index (work_int, gint, 0),
+        lapack_work);
+
+    NCM_LAPACK_CHECK_INFO ("dsyevr", info);
+
+    ncm_lapack_ws_free (lapack_work);
+  }
+
+  {
+    gint ret;
+    ret = gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, ncm_matrix_gsl (E), ncm_matrix_gsl (y), 0.0, ncm_matrix_gsl (z));
+    NCM_TEST_GSL_RESULT ("ncm_stats_vec_compute_cov_robust_ogk", ret);
+
+    for (i = 0; i < svec->len; i++)
+    {
+      gdouble sigma_z_i;
+      for (a = 0; a < svec->nitens; a++)
+      {
+        const gdouble z_a_i = ncm_matrix_get (z, i, a);
+        g_array_index (data, gdouble, a) = z_a_i;
+      }
+
+      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
+      sigma_z_i = gsl_stats_Qn_from_sorted_data (
+          &g_array_index (data, gdouble, 0),
+          1, svec->nitens,
+          &g_array_index (work, gdouble, 0),
+          &g_array_index (work_int, gint, 0)
+      );
+
+      ncm_vector_set (sigma_z, i, sigma_z_i);
+    }
+  }
+
+  for (i = 0; i < svec->len; i++)
+  {
+    const gdouble sigma_z_i = ncm_vector_get (sigma_z, i);
+    gint j;
+    for (j = 0; j < svec->len; j++)
+    {
+      const gdouble sigma_x_j = ncm_vector_get (sigma_x, j);
+      const gdouble E_ij      = ncm_matrix_get (E, i, j);
+      const gdouble V_ij      = sigma_z_i * E_ij * sigma_x_j;
+
+      ncm_matrix_set (E, i, j, V_ij);
+    }
+  }
+
+  {
+    gint ret;
+    ret = gsl_blas_dsyrk (CblasUpper, CblasTrans, 1.0, ncm_matrix_gsl (E), 0.0, ncm_matrix_gsl (cov));
+    NCM_TEST_GSL_RESULT ("ncm_stats_vec_compute_cov_robust_ogk", ret);
+  }
+
+  g_array_unref (data);
+  g_array_unref (work);
+  g_array_unref (work_int);
+  ncm_matrix_free (y);
+  ncm_matrix_free (z);
+  ncm_matrix_free (E);
+  ncm_vector_free (sigma_x);
+  ncm_vector_free (sigma_z);
+
+  return cov;
+}
+
 
 /**
  * ncm_stats_vec_get_autocorr_tau:

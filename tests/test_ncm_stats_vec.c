@@ -58,6 +58,7 @@ void test_ncm_stats_vec_autocorr_new (TestNcmStatsVec *test, gconstpointer pdata
 void test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
@@ -86,6 +87,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/stats_vec/cov", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_cov_new,
               &test_ncm_stats_vec_cov_test,
+              &test_ncm_stats_vec_free);
+  g_test_add ("/ncm/stats_vec/cov/robust", TestNcmStatsVec, NULL,
+              &test_ncm_stats_vec_cov_new,
+              &test_ncm_stats_vec_cov_robust_test,
               &test_ncm_stats_vec_free);
   g_test_add ("/ncm/stats_vec/autocorr", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_autocorr_new,
@@ -150,7 +155,7 @@ test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata)
 {
   test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
   test->ntests = g_test_rand_int_range (_TEST_NCM_STATS_VEC_NTEST_MIN, _TEST_NCM_STATS_VEC_NTEST_MAX);
-  test->svec   = ncm_stats_vec_new (test->v_size, NCM_STATS_VEC_COV, FALSE);
+  test->svec   = ncm_stats_vec_new (test->v_size, NCM_STATS_VEC_COV, TRUE);
   test->xs     = ncm_matrix_new (test->ntests, test->v_size);
   test->mu     = ncm_vector_new (test->v_size);
   test->w      = ncm_vector_new (test->ntests);
@@ -350,11 +355,99 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
           ncm_assert_cmpdouble_e (gsl_cov_kl + 1.0, ==, svec_cov_kl + 1.0, _TEST_NCM_STATS_VEC_COV_PREC, 0.0);
         }
       }
-    }
+    }    
   }
   
   ncm_rng_free (rng);
 }
+
+void
+test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  NcmRNG *rng         = ncm_rng_pool_get ("test_ncm_stats_vec");
+  const gdouble sigma = fabs (g_test_rand_double ()) + 1.0e-1;
+  guint i;
+  
+  for (i = 0; i < test->ntests; i++)
+  {
+    guint j;
+    gdouble x_0;
+    
+    for (j = 0; j < test->v_size; j++)
+    {
+      gdouble x_j = sigma * gsl_ran_ugaussian (rng->r);
+      
+      if (j == 0)
+      {
+        x_0 = x_j;
+      }
+      else
+      {
+        x_j = (x_0 + x_j) / M_SQRT2;
+      }
+  
+      ncm_stats_vec_set (test->svec, j, x_j);
+    }
+    
+    ncm_stats_vec_update (test->svec);    
+  }
+
+  for (i = 0; i < (gint)(test->ntests * 0.2); i++)
+  {
+    guint j;
+    gdouble x_0;
+    
+    for (j = 0; j < test->v_size; j++)
+    {
+      gdouble x_j = 1.0 + sigma * gsl_ran_ugaussian (rng->r) / 10.0;
+      
+      if (j == 0)
+      {
+        x_0 = x_j;
+      }
+      else
+      {
+        x_j += x_0;
+        x_j = x_j / sqrt (2.0);
+      }
+  
+      ncm_stats_vec_set (test->svec, j, x_j);
+    }
+    
+    ncm_stats_vec_update (test->svec);    
+  }
+
+
+  {
+    NcmMatrix *cov_n = ncm_stats_vec_peek_cov_matrix (test->svec, 0);
+    NcmMatrix *cor_n = ncm_matrix_cov_dup_cor (cov_n);
+    NcmVector *var_n = ncm_vector_new (test->v_size);
+    NcmMatrix *cov_r = ncm_stats_vec_compute_cov_robust_ogk (test->svec);
+    NcmMatrix *cor_r = ncm_matrix_cov_dup_cor (cov_r);
+    NcmVector *var_r = ncm_vector_new (test->v_size);
+
+    ncm_matrix_get_diag (cov_n, var_n);
+    ncm_matrix_get_diag (cov_r, var_r);
+
+    /*
+    ncm_message ("Original sigma = % 22.15g, var = % 22.15g\n", sigma, sigma * sigma);
+    ncm_vector_log_vals (var_n, "VAR_NORMAL: ", "% 12.5g", TRUE);
+    ncm_vector_log_vals (var_r, "VAR_ROBUST: ", "% 12.5g", TRUE);
+    ncm_matrix_log_vals (cor_n, "COR_NORMAL: ", "% 12.5g");
+    ncm_matrix_log_vals (cor_r, "COR_ROBUST: ", "% 12.5g");
+    */
+    
+
+    ncm_vector_free (var_n);
+    ncm_vector_free (var_r);
+    ncm_matrix_free (cor_n);
+    ncm_matrix_free (cov_r);
+    ncm_matrix_free (cor_r);
+  }
+  
+  ncm_rng_free (rng);
+}
+
 
 void
 test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)

@@ -37,6 +37,8 @@ struct _NcmStatsDistKDEPrivate
 {
   /*< private >*/
   NcmStatsVec *sample;
+  NcmStatsDistKDECovType cov_type;
+  NcmMatrix *cov_fixed;
   NcmMatrix *cov_decomp;
   NcmMatrix *sample_matrix;
   GPtrArray *invUsample;

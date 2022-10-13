@@ -2429,11 +2429,13 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   guint iter               = 0;
   gint status;
   gsl_function F;
+  gint ret;
   
   F.params   = &ws;
   F.function = &_ncm_csq1d_abs_F1_logt;
   
-  gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
+  ret = gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
+  NCM_TEST_GSL_RESULT ("ncm_csq1d_find_adiab_max", ret);
   
   do {
     iter++;
@@ -2731,12 +2733,14 @@ ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gd
 #define _ALPHA_TO_THETA(alpha) (atan (sinh (alpha)))
 #define _THETA_TO_ALPHA(theta) (asinh (tan (theta)))
 
+/*
 static void
 _ncm_csq1d_ct_g0g2 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
 {
   alphap[0] = alpha;
   gammap[0] = gamma - p;
 }
+*/
 
 static void
 _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)

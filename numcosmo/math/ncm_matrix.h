@@ -127,6 +127,7 @@ NCM_INLINE void ncm_matrix_set (NcmMatrix *cm, const guint i, const guint j, con
 NCM_INLINE void ncm_matrix_set_colmajor (NcmMatrix *cm, const guint i, const guint j, gdouble val);
 NCM_INLINE void ncm_matrix_addto (NcmMatrix *cm, const guint i, const guint j, const gdouble val);
 NCM_INLINE void ncm_matrix_transpose (NcmMatrix *cm);
+NCM_INLINE void ncm_matrix_transpose_memcpy (NcmMatrix *cm, NcmMatrix *src);
 NCM_INLINE void ncm_matrix_set_identity (NcmMatrix *cm);
 NCM_INLINE void ncm_matrix_set_zero (NcmMatrix *cm);
 NCM_INLINE void ncm_matrix_set_all (NcmMatrix *cm, const gdouble val);
@@ -264,6 +265,14 @@ ncm_matrix_transpose (NcmMatrix *cm)
 {
   const gint ret = gsl_matrix_transpose (ncm_matrix_gsl (cm));
   
+  NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
+}
+
+NCM_INLINE void
+ncm_matrix_transpose_memcpy (NcmMatrix *cm, NcmMatrix *src)
+{
+  const gint ret = gsl_matrix_transpose_memcpy (ncm_matrix_gsl (cm), ncm_matrix_gsl (src));
+
   NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
 }
 

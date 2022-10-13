@@ -96,6 +96,8 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_sort.h>
+#include <gsl/gsl_statistics_double.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -106,6 +108,8 @@ enum
 {
   PROP_0,
   PROP_NEARPD_MAXITER,
+  PROP_COV_TYPE,
+  PROP_COV_FIXED,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM_TYPE_STATS_DIST);
@@ -116,6 +120,8 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   NcmStatsDistKDEPrivate * const self = sdkde->priv = ncm_stats_dist_kde_get_instance_private (sdkde);
   
   self->sample         = NULL;
+  self->cov_type       = NCM_STATS_DIST_KDE_COV_TYPE_LEN;
+  self->cov_fixed      = NULL;
   self->cov_decomp     = NULL;
   self->sample_matrix  = NULL;
   self->invUsample     = g_ptr_array_new ();
@@ -139,6 +145,12 @@ _ncm_stats_dist_kde_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_NEARPD_MAXITER:
       ncm_stats_dist_kde_set_nearPD_maxiter (sdkde, g_value_get_uint (value));
       break;
+    case PROP_COV_TYPE:
+      ncm_stats_dist_kde_set_cov_type (sdkde, g_value_get_enum (value));
+      break;
+    case PROP_COV_FIXED:
+      ncm_stats_dist_kde_set_cov_fixed (sdkde, g_value_get_object (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -158,6 +170,12 @@ _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_NEARPD_MAXITER:
       g_value_set_uint (value, ncm_stats_dist_kde_get_nearPD_maxiter (sdkde));
       break;
+    case PROP_COV_TYPE:
+      g_value_set_enum (value, ncm_stats_dist_kde_get_cov_type (sdkde));
+      break;
+    case PROP_COV_FIXED:
+      g_value_set_object (value, ncm_stats_dist_kde_peek_cov_fixed (sdkde));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -171,11 +189,12 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
   
   ncm_stats_vec_clear (&self->sample);
+  ncm_matrix_clear (&self->cov_fixed);
   ncm_matrix_clear (&self->cov_decomp);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_vector_clear (&self->v);
   ncm_vector_clear (&self->chi2);
-  
+
   g_clear_pointer (&self->invUsample, g_ptr_array_unref);
   
   /* Chain up : end */
@@ -218,6 +237,21 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
                                                       "Maximum number of iterations in the nearPD call",
                                                       1, G_MAXUINT, 200,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_COV_TYPE,
+                                   g_param_spec_enum ("cov-type",
+                                                      NULL,
+                                                      "Covariance type",
+                                                      NCM_TYPE_STATS_DIST_KDE_COV_TYPE, NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_COV_FIXED,
+                                   g_param_spec_object ("cov-fixed",
+                                                        NULL,
+                                                        "Fixed covariance matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   
   sd_class->set_dim            = &_ncm_stats_dist_kde_set_dim;
   sd_class->prepare_kernel     = &_ncm_stats_dist_kde_prepare_kernel;
@@ -243,7 +277,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->sample_matrix);
     ncm_vector_clear (&self->v);
     
-    self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
+    self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
     self->cov_decomp = ncm_matrix_new (dim, dim);
     self->v          = ncm_vector_new (dim);
   }
@@ -299,7 +333,40 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
    */
   /*ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COVG: ", "%12.5g");*/
 
-  _cholesky_decomp (self->cov_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), pself->d, self->nearPD_maxiter);
+  switch (self->cov_type)
+  {
+    case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
+    {
+      NcmMatrix *cov = ncm_stats_vec_peek_cov_matrix (self->sample, 0);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
+      break;
+    }
+    case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
+    {
+      if (self->cov_fixed == NULL)
+        g_error ("_ncm_stats_dist_kde_prepare_kernel: cov_type is FIXED but a fixed covariance matrix was not provided, use ncm_stats_dist_kde_set_cov_fixed to set one.");
+
+      break;
+    }
+    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
+    {
+      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_diag (self->sample);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
+      ncm_matrix_free (cov);
+
+      break;
+    }
+    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
+    {
+      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample);
+      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
+      ncm_matrix_free (cov);
+    }
+    break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
   
   /*
    * Getting kernel normalization
@@ -351,7 +418,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     NcmVector *row_i = g_ptr_array_index (self->invUsample, i);
     gint j;
     
-    ncm_matrix_set (IM, i, i, 1.0);
+    ncm_matrix_set (IM, i, i, 0.0);
     
     for (j = i + 1; j < pself->n; j++)
     {
@@ -370,16 +437,15 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       ncm_matrix_set (IM, j, i, chi2_ij);
     }
   }
-  
-  {
-    NcmVector *IMv = ncm_matrix_as_vector (IM);
-    
-    ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, IMv, IMv);
-    
-    ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
 
-    ncm_vector_free (IMv);
+  for (i = 0; i < pself->n; i++)
+  {
+    NcmVector *row_i = ncm_matrix_get_row (IM, i);
+    ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, row_i, row_i);
+    ncm_vector_free (row_i);
   }
+
+  ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
 }
 
 static NcmMatrix *
@@ -568,3 +634,89 @@ ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
   return self->nearPD_maxiter;
 }
 
+/**
+ * ncm_stats_dist_kde_set_cov_type:
+ * @sdkde: a #NcmStatsDistKDE
+ * @cov_type: covariance type
+ *
+ * Sets the covariance type to use in kernel interpolation.
+ *
+ */
+void
+ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType cov_type)
+{
+  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+
+  self->cov_type = cov_type;
+  if ((self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED) && (self->cov_fixed != NULL))
+  {
+    ncm_matrix_memcpy (self->cov_decomp, self->cov_fixed);
+    if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
+    {
+      g_error ("ncm_stats_dist_kde_set_cov_fixed: matrix cov_fixed is not positive definite.");
+    }
+  }
+}
+
+/**
+ * ncm_stats_dist_kde_get_cov_type:
+ * @sdkde: a #NcmStatsDistKDE
+ *
+ * Returns: the covariance type #NcmStatsDistKDECovType.
+ */
+NcmStatsDistKDECovType
+ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde)
+{
+  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+
+  return self->cov_type;
+}
+
+/**
+ * ncm_stats_dist_kde_set_cov_fixed:
+ * @sdkde: a #NcmStatsDistKDE
+ * @cov_fixed: the fixed covariance matrix #NcmMatrix
+ *
+ * Sets the covariance matrix to be used when #NcmStatsDistKDECovType is
+ * set to #NCM_STATS_DIST_KDE_COV_TYPE_FIXED. A copy of the matrix
+ * @cov_fixed is made and saved into the object.
+ *
+ */
+void
+ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
+{
+  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistPrivate * const pself = NCM_STATS_DIST (sdkde)->priv;
+
+  g_assert_cmpuint (ncm_matrix_ncols (cov_fixed), ==, pself->d);
+  g_assert_cmpuint (ncm_matrix_nrows (cov_fixed), ==, pself->d);
+
+  ncm_matrix_clear (&self->cov_fixed);
+
+  self->cov_fixed = ncm_matrix_dup (cov_fixed);
+
+  if (self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
+  {
+    ncm_matrix_memcpy (self->cov_decomp, self->cov_fixed);
+    if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
+    {
+      g_error ("ncm_stats_dist_kde_set_cov_fixed: matrix cov_fixed is not positive definite.");
+    }
+  }
+}
+
+/**
+ * ncm_stats_dist_kde_peek_cov_fixed:
+ * @sdkde: a #NcmStatsDistKDE
+ *
+ * Gets the currently used fixed covariance matrix.
+ *
+ * Returns: (transfer none) (allow-none): the fixed covariance matrix
+ */
+NcmMatrix *
+ncm_stats_dist_kde_peek_cov_fixed (NcmStatsDistKDE *sdkde)
+{
+  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+
+  return self->cov_fixed;
+}
