@@ -1858,14 +1858,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
         prob = ncm_fit_esmcmc_walker_prob (self->walker, self->theta, self->m2lnL, thetastar, k, m2lnL_cur[0], m2lnL_star[0]);
         prob = GSL_MIN (prob, 1.0);
       }
-      else
-      {
-        ncm_message ("computed m2lnL_star not finite: ");
-      }
     }
     else
     {
-      ncm_vector_log_vals (thetastar, "thetastar", "% 12.5g", TRUE);
       g_array_index (self->offboard, gboolean, k) = TRUE;
     }
     
@@ -1886,13 +1881,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       
       ncm_vector_memcpy (full_theta_k, full_thetastar);
       g_array_index (self->accepted, gboolean, k) = TRUE;
-      ncm_message ("accepted %f %f: ", jump, prob);
     }
-    else
-    {
-      ncm_message ("rejected %f %f: ", jump, prob);
-    }
-    ncm_vector_log_vals (thetastar, "thetastar", "% 12.5g", TRUE);
 
     k++;
   }

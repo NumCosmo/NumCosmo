@@ -420,7 +420,10 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   NcmStatsDistPrivate * const self = sd->priv;
   
-  self->n = self->sample_array->len;
+  if (self->cv_type == NCM_STATS_DIST_CV_SPLIT)
+    self->n = ceil (self->sample_array->len * self->split_frac);
+  else
+    self->n = self->sample_array->len;
   
   if (self->n < self->d)
     g_error ("_ncm_stats_dist_prepare: sample too small.");
@@ -463,6 +466,7 @@ typedef struct _NcmStatsDistEval
   NcmStatsDistPrivate * const self;
   NcmStatsDistClass *sd_class;
   NcmVector *residuals;
+  NcmVector *m2lnp;
 } NcmStatsDistEval;
 
 static void
@@ -470,19 +474,27 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
 {
   NcmStatsDistEval *eval = adata;
   NcmVector *f           = ncm_vector_new_data_static (hx, n, 1);
-  NcmVector *res;
   gdouble rnorm = 0.0;
+  gint i;
   
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
 
   _ncm_stats_dist_compute_IM_full (eval->sd);
   rnorm = NCM_NNLS_SOLVE (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f1);
-  if (eval->self->print_fit)
-    printf ("# over-smooth: % 22.15g, rnorm = % 22.15g\n", eval->self->over_smooth, rnorm);
 
-  res = ncm_nnls_get_residuals (eval->self->nnls);
-  ncm_vector_memcpy (f, res);
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *x_i        = g_ptr_array_index (eval->self->sample_array, i);
+    const gdouble m2lnpt_i = ncm_vector_get (eval->m2lnp, i) - eval->self->min_m2lnp;
+    const gdouble m2lnpi_i = ncm_stats_dist_eval_m2lnp (eval->sd, x_i);
+
+    /*printf ("%d %d % 22.15g % 22.15g\n", eval->self->n, i, m2lnpt_i, m2lnpi_i);*/
+    ncm_vector_set (f, i, m2lnpt_i - m2lnpi_i);
+  }
+
+  if (eval->self->print_fit || TRUE)
+    printf ("# over-smooth: % 22.15g, rnorm = % 22.15g, fnorm = % 22.15g\n", eval->self->over_smooth, rnorm, ncm_vector_dnrm2 (f));
 
   ncm_vector_free (f);
 }
@@ -519,10 +531,10 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   NcmStatsDistPrivate * const self = sd->priv;
   
   _ncm_stats_dist_prepare (sd);
-  g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n);
+  g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->sample_array->len);
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
-    NcmStatsDistEval eval       = {sd, self, sd_class};
+    NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
     const gdouble dbl_limit     = 4.0;
     gint i;
     
@@ -539,8 +551,6 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       self->min_m2lnp = MIN (self->min_m2lnp, m2lnp_i);
       self->max_m2lnp = MAX (self->max_m2lnp, m2lnp_i);
     }
-
-    /*printf ("max % 22.15g min % 22.15g\n", self->max_m2lnp, self->min_m2lnp);*/
 
     if (self->max_m2lnp - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
     {
@@ -634,20 +644,21 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       case NCM_STATS_DIST_CV_SPLIT:
       {
         const gint nrows = self->n;
-        const gint ncols = ceil (self->n * self->split_frac);
+        const gint ncols = self->n;
+        const gint nfitp = self->sample_array->len;
         gdouble info[LM_INFO_SZ];
         gdouble opts[LM_OPTS_SZ];
         gdouble cov, ln_os;
 
-        g_assert_cmpuint (nrows, >=, ncols);
+        g_assert_cmpint (nfitp, >, 0);
         _ncm_stats_dist_alloc_nnls (sd, nrows, ncols);
 
-        if (self->levmar_n != self->n)
+        if (self->levmar_n != nfitp)
         {
           g_clear_pointer (&self->levmar_workz, g_free);
 
-          self->levmar_workz = g_new0 (gdouble, LM_DIF_WORKSZ (self->d, self->n));
-          self->levmar_n     = self->n;
+          self->levmar_workz = g_new0 (gdouble, LM_DIF_WORKSZ (self->d, nfitp));
+          self->levmar_n     = nfitp;
         }
         
         opts[0] = LM_INIT_MU;
@@ -659,7 +670,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         ln_os = log (self->over_smooth);
         
         dlevmar_dif (&_ncm_stats_dist_prepare_interp_fit_nnls_f,
-                     &ln_os, NULL, 1, self->n,
+                     &ln_os, NULL, 1, nfitp,
                      10000, opts, info, self->levmar_workz, &cov, &eval);
 
         self->over_smooth = exp (ln_os);

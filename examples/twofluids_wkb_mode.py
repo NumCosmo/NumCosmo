@@ -109,7 +109,7 @@ for alpha in tqdm (alpha_a[1:]):
   Ps_S1.append     (math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     0.0*v.get (Nc.HIPertITwoFluidsVars.S_I))**2)
   Ps_Pzeta1.append (math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), 0.0*v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2)
   Ps_PS1.append    (math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    0.0*v.get (Nc.HIPertITwoFluidsVars.PS_I))**2)
-  print ("norm = % 8.2e % 21.15f [%8.2e]" % (pert.get_state_mod () - 1.0, alpha, cosmo.x_alpha (alpha)))
+  #print ("norm = % 8.2e % 21.15f [%8.2e]" % (pert.get_state_mod () - 1.0, alpha, cosmo.x_alpha (alpha)))
 
 """
 alphai = alpha_mode2main 

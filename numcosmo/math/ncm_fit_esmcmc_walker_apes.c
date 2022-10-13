@@ -577,10 +577,11 @@ _ncm_fit_esmcmc_walker_apes_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
         MIN (exp (- 0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur))), 1.0));
   }
 */
-
+/*
   ncm_message ("AAA Dchi % 12.5f (% 12.5f - % 12.5f) DAchi % 12.5f (% 12.5f - % 12.5f) L cur->star: %12.5g p star->cur: %12.5g | ",
       m2lnL_star - m2lnL_cur, m2lnL_star, m2lnL_cur, m2lnp_star - m2lnp_cur, m2lnp_star, m2lnp_cur,
       exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)));
+*/
 
   return exp (-0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
 }

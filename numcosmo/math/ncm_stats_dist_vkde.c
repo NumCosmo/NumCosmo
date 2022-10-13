@@ -304,7 +304,7 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
        * vector location.
        */
       {
-        const size_t k = self->local_frac * sample_array->len;
+        const size_t k = self->local_frac * ppself->n;
         
         g_ptr_array_set_size (self->cov_array, 0);
         
