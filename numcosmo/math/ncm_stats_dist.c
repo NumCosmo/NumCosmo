@@ -493,7 +493,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
     ncm_vector_set (f, i, m2lnpt_i - m2lnpi_i);
   }
 
-  if (eval->self->print_fit || TRUE)
+  if (eval->self->print_fit)
     printf ("# over-smooth: % 22.15g, rnorm = % 22.15g, fnorm = % 22.15g\n", eval->self->over_smooth, rnorm, ncm_vector_dnrm2 (f));
 
   ncm_vector_free (f);
