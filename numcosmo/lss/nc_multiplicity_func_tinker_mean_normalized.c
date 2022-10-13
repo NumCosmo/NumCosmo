@@ -79,7 +79,7 @@ nc_multiplicity_func_tinker_mean_normalized_init (NcMultiplicityFuncTinkerMeanNo
 static void
 _nc_multiplicity_func_tinker_mean_normalized_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object);
+  /*NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object));
 
   switch (prop_id)
@@ -93,7 +93,7 @@ _nc_multiplicity_func_tinker_mean_normalized_set_property (GObject * object, gui
 static void
 _nc_multiplicity_func_tinker_mean_normalized_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object);
+  /*NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (object));
 
   switch (prop_id)

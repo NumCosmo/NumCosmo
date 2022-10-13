@@ -66,7 +66,7 @@ nc_multiplicity_func_watson_init (NcMultiplicityFuncWatson *mwat)
 static void
 _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
+  /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)
@@ -80,7 +80,7 @@ _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, cons
 static void
 _nc_multiplicity_func_watson_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
+  /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)

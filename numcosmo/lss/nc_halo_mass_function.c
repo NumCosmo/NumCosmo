@@ -922,6 +922,21 @@ nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp)
 }
 
 /**
+ * nc_halo_mass_function_peek_multiplicity_function:
+ * @mfp: a #NcHaloMassFunction
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcMultiplicityFunc *
+nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
+{
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+  return self->mulf;
+}
+
+/**
  * nc_halo_mass_function_d2n_dzdlnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo

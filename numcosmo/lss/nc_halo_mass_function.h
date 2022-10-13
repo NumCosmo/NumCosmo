@@ -89,6 +89,7 @@ void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 
 NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
+NcMultiplicityFunc *nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
