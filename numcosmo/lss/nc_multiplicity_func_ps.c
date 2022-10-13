@@ -293,12 +293,7 @@ nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mps)
 static void
 _nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
-  g_assert (Delta >= 0);
-  g_assert (Delta <= 3200.0);
-
-  self->Delta = Delta;
+  g_error ("NcMultiplicityFuncMassPS does not need a Delta");
 }
 
 /**
@@ -310,8 +305,7 @@ _nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 gdouble
 _nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf)
 {
-   NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (mulf);
-   NcMultiplicityFuncPSPrivate * const self = mps->priv;
+   g_error ("NcMultiplicityFuncMassPS does not need a Delta");;
   
-  return self->Delta;
+  return 0.0;
 }

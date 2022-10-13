@@ -49,7 +49,7 @@ enum
   PROP_B0,
   PROP_B1,
   PROP_C,
-  PROP_DELTA
+  PROP_SIZE
 };
 
 /**
@@ -58,21 +58,19 @@ enum
  * @B: FIXME
  * @b: FIXME
  * @c: FIXME
- * @Delta: FIXME
  *
  * FIXME
  *
  * Returns: A new #NcHaloBias.
  */
 NcHaloBias *
-nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c, gdouble Delta)
+nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c)
 {
   return g_object_new (NC_TYPE_HALO_BIAS_TINKER,
                        "critical-delta", delta_c,
                        "B", B,
                        "b", b,
                        "c", c,
-                       "Delta", Delta,
                        NULL);
 }
 
@@ -80,7 +78,10 @@ static gdouble
 _nc_halo_bias_tinker_eval (NcHaloBias *biasf, gdouble sigma, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
-  const gdouble y = log10(bias_tinker->Delta);
+  NcHaloMassFunction *mfp = NC_HALO_MASS_FUNCTION (biasf->mfp);
+
+  const gdouble Delta = nc_multiplicity_func_get_matter_Delta (mfp->mulf, mfp->cosmo, z);
+  const gdouble y = log10(Delta);
   const gdouble u = exp(- pow ( 4.0 / y, 4.0));
   const gdouble A = 1.0 + 0.24 * y * u;
   const gdouble a = 0.44 * y - 0.88;
@@ -90,8 +91,6 @@ _nc_halo_bias_tinker_eval (NcHaloBias *biasf, gdouble sigma, gdouble z)
   const gdouble c = bias_tinker->c;
   gdouble x = bias_tinker->delta_c / sigma;
   gdouble b_Tinker = 1.0  - A * pow(x, a) / (pow(x, a) + pow(bias_tinker->delta_c, a)) + B * pow(x, b) + C * pow(x, c);
-
-  NCM_UNUSED (z);
 //  printf ("A = %.5g, a=%.5g, B=%.5g, b=%.5g, C=%.5g, c=%.5g, delta_c= %.5g Delta=%.5g\n", A, a, B, b, C, c, bias_tinker->delta_c, log10(x));
 
   return b_Tinker;
@@ -205,32 +204,6 @@ nc_halo_bias_tinker_get_c (const NcHaloBiasTinker *biasf_tinker)
   return biasf_tinker->c;
 }
 
-/**
- * nc_halo_bias_tinker_set_Delta:
- * @biasf_tinker: a #NcHaloBiasTinker.
- * @Delta: value of #NcHaloBiasTinker:Delta.
- *
- * Sets the value @Delta to the #NcHaloBiasTinker:Delta property.
- *
- */
-void
-nc_halo_bias_tinker_set_Delta (NcHaloBiasTinker *biasf_tinker, gdouble Delta)
-{
-  g_assert (Delta >= 0);
-  biasf_tinker->Delta = Delta;
-}
-
-/**
- * nc_halo_bias_tinker_get_Delta:
- * @biasf_tinker: a #NcHaloBiasTinker.
- *
- * Returns: the value of #NcHaloBiasTinker:Delta property.
- */
-gdouble
-nc_halo_bias_tinker_get_Delta (const NcHaloBiasTinker *biasf_tinker)
-{
-  return biasf_tinker->Delta;
-}
 
 // _NC_BIAS_FUNCTION_TINKER_DATASET_1001_3162_DELTA = {1.686, 0.183, 1.5, 2.4, 200.0};
 
@@ -242,7 +215,6 @@ nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
   biasf_tinker->B = 0.183;
   biasf_tinker->b = 1.5;
   biasf_tinker->c = 2.4;
-  biasf_tinker->Delta = 200.0;
 }
 
 static void
@@ -273,9 +245,6 @@ _nc_halo_bias_tinker_set_property (GObject * object, guint prop_id, const GValue
 	case PROP_C:
       biasf_tinker->c = g_value_get_double (value);
       break;
-	case PROP_DELTA:
-      biasf_tinker->Delta = g_value_get_double (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -301,9 +270,6 @@ _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value
       break;
 	case PROP_C:
       g_value_set_double (value, biasf_tinker->c);
-      break;
-	case PROP_DELTA:
-      g_value_set_double (value, biasf_tinker->Delta);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -371,17 +337,6 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
                                                         "c",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 2.4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasTinker:Delta:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
 

@@ -56,13 +56,12 @@ struct _NcHaloBiasTinker
   gdouble delta_c;
   gdouble B;
   gdouble b;
-  gdouble c;
-  gdouble Delta;   
+  gdouble c;  
 };
 
 GType nc_halo_bias_tinker_get_type (void) G_GNUC_CONST;
 
-NcHaloBias *nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c, gdouble Delta);
+NcHaloBias *nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c);
 void nc_halo_bias_tinker_set_delta_c (NcHaloBiasTinker *biasf_tinker, gdouble delta_c);
 gdouble nc_halo_bias_tinker_get_delta_c (const NcHaloBiasTinker *biasf_tinker);
 void nc_halo_bias_tinker_set_B (NcHaloBiasTinker *biasf_tinker, gdouble B);
@@ -71,8 +70,6 @@ void nc_halo_bias_tinker_set_b (NcHaloBiasTinker *biasf_tinker, gdouble b);
 gdouble nc_halo_bias_tinker_get_b (const NcHaloBiasTinker *biasf_tinker);
 void nc_halo_bias_tinker_set_c (NcHaloBiasTinker *biasf_tinker, gdouble c);
 gdouble nc_halo_bias_tinker_get_c (const NcHaloBiasTinker *biasf_tinker);
-void nc_halo_bias_tinker_set_Delta (NcHaloBiasTinker *biasf_tinker, gdouble Delta);
-gdouble nc_halo_bias_tinker_get_Delta (const NcHaloBiasTinker *biasf_tinker);
 
 G_END_DECLS
 

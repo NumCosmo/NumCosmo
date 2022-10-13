@@ -242,10 +242,7 @@ nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw)
 static void
 _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
-
-  self->Delta = Delta;
+  g_error ("NcMultiplicityFuncMassPS does not need a Delta");
 }
 
 /**
@@ -257,8 +254,7 @@ _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 gdouble
 _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+  g_error ("NcMultiplicityFuncMassPS does not need a Delta");
   
-  return self->Delta;
+  return 0.0;
 }

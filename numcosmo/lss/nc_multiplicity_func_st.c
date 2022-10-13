@@ -463,11 +463,7 @@ nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst)
 static void
 _nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
-  NcMultiplicityFuncSTPrivate * const self = mst->priv;
-
-
-  self->Delta = Delta;
+  g_error ("NcMultiplicityFuncMassST does not need a Delta");
 
 }
 
@@ -480,8 +476,7 @@ _nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 static gdouble
 _nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
-  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+  g_error ("NcMultiplicityFuncMassST does not need a Delta");
   
-  return self->Delta;
+  return 0.0;
 }
