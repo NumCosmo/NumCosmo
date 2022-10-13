@@ -149,9 +149,9 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
  * Returns: FIXME
 */
 gdouble
-nc_halo_bias_eval (NcHaloBias *bias, gdouble sigma, gdouble z)
+nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, sigma, z);
+  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z);
 }
 
 /**
@@ -206,7 +206,7 @@ nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdoub
 
   nc_halo_mass_function_dn_dlnM_sigma (mbiasf->mfp, cosmo, lnM, z, &sigma, &dn_dlnM);
 
-  bias = nc_halo_bias_eval (mbiasf, sigma, z);
+  bias = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
 
   return dn_dlnM * bias;
 }

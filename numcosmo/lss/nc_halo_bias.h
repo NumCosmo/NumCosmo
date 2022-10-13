@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 
@@ -46,7 +47,7 @@ struct _NcHaloBiasClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*eval) (NcHaloBias *bias, gdouble sigma, gdouble z); 
+  gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z); 
 };
 
 struct _NcHaloBias
@@ -58,7 +59,7 @@ struct _NcHaloBias
 
 GType nc_halo_bias_get_type (void) G_GNUC_CONST;
 
-gdouble nc_halo_bias_eval (NcHaloBias *bias, gdouble sigma, gdouble z);
+gdouble nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 void nc_halo_bias_free (NcHaloBias *bias);
 void nc_halo_bias_clear (NcHaloBias **bias);
 

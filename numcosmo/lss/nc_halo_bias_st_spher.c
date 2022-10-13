@@ -71,7 +71,7 @@ nc_halo_bias_st_spher_new (gdouble delta_c, gdouble a, gdouble p)
 }
 
 static gdouble
-_nc_halo_bias_st_spher_eval (NcHaloBias *biasf, gdouble sigma, gdouble z)
+_nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasSTSpher *bias_st_spher = NC_HALO_BIAS_ST_SPHER (biasf);
   const gdouble a = bias_st_spher->a;

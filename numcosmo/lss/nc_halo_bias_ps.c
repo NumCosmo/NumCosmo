@@ -66,7 +66,7 @@ nc_halo_bias_ps_new (gdouble delta_c)
 }
 
 static gdouble
-_nc_halo_bias_ps_eval (NcHaloBias*biasf, gdouble sigma, gdouble z)
+_nc_halo_bias_ps_eval (NcHaloBias*biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasPS *bias_ps = NC_HALO_BIAS_PS (biasf);
   gdouble x = bias_ps->delta_c / sigma;        /* \delta_c \sigma^{-1} */

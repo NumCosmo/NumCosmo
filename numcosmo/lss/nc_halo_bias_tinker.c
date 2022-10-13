@@ -80,7 +80,7 @@ _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo ,gdouble sigma, g
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
   NcMultiplicityFunc *mulf = nc_halo_mass_function_peek_multiplicity_function(biasf->mfp);
 
-  const gdouble Delta = nc_multiplicity_func_get_matter_Delta (mulf, cosmo , z);
+  const gdouble Delta = nc_multiplicity_func_get_matter_Delta (mulf, cosmo, z);
   const gdouble y = log10(Delta);
   const gdouble u = exp(- pow ( 4.0 / y, 4.0));
   const gdouble A = 1.0 + 0.24 * y * u;

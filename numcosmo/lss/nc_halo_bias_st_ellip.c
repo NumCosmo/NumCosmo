@@ -74,7 +74,7 @@ nc_halo_bias_st_ellip_new (gdouble delta_c, gdouble a, gdouble b, gdouble c)
 }
 
 static gdouble
-_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, gdouble sigma, gdouble z)
+_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasSTEllip *bias_st_ellip = NC_HALO_BIAS_ST_ELLIP (biasf);
   const gdouble a = bias_st_ellip->a;
