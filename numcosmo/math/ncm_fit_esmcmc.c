@@ -1453,7 +1453,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Monte Carlo.\n");
+      g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
       g_message ("#   Number of threads: %.4d.\n", self->nthreads);
       
@@ -1467,7 +1467,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Monte Carlo.\n");
+      g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
       g_message ("#   Number of threads: %.4d.\n", self->nthreads);
       
@@ -1861,7 +1861,6 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     }
     else
     {
-      /*ncm_vector_log_vals (thetastar, "thetastar", "% 22.15g", TRUE);*/
       g_array_index (self->offboard, gboolean, k) = TRUE;
     }
     
@@ -1883,7 +1882,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       ncm_vector_memcpy (full_theta_k, full_thetastar);
       g_array_index (self->accepted, gboolean, k) = TRUE;
     }
-    
+
     k++;
   }
   
@@ -2219,7 +2218,7 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
     ncm_fit_m2lnL_val (fit_k, &m2lnL);
     
     diff = fabs ((row_m2lnL - m2lnL) / row_m2lnL);
-    
+
     if (diff > 1.0e-3)
     {
       if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)

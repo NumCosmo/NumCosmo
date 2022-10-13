@@ -1580,7 +1580,7 @@ ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym)
  * @u: a #NcmVector to store the result
  *
  * Computes the matrix - vector product $u = \alpha M v + \beta u$
- * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
+ * if @NT == 'N' or $u = \alpha M^\intercal v + u$ if @NT == 'T'
  * and stores the result in @u.
  */
 void
@@ -1835,6 +1835,9 @@ ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
     
     ncm_vector_scale (row_i, w_i);
     ncm_vector_scale (col_i, w_i);
+
+    ncm_vector_free (row_i);
+    ncm_vector_free (col_i);
   }
 }
 

@@ -492,9 +492,8 @@ _nc_hicosmo_de_E2 (NcHICosmo *cosmo, gdouble z)
   const gdouble x4          = x3 * x;
   const gdouble E2Omega_de  = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z);
   const gdouble E2Omega_mnu = _nc_hicosmo_de_E2Omega_mnu (cosmo, z);
-  
   const gdouble E2          = OMEGA_R * x4 + OMEGA_M * x3 + Omega_k * x2 + E2Omega_de + E2Omega_mnu;
-  
+
   return E2;
 }
 
@@ -906,37 +905,35 @@ _nc_hicosmo_de_valid (NcmModel *model)
       gint iter = 0;
       gint status;
       gdouble a, b;
+      gint ret;
 
       F.function = &min_E2;
       F.params   = model;
 
-      gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
-
-      do
+      ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
+      if (ret == GSL_SUCCESS)
       {
-        iter++;
-        status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
-        z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
-        a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
-        b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+        do
+        {
+          iter++;
+          status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
+          z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
+          a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
+          b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
 
-        status = gsl_min_test_interval (a, b, 0.01, 0.0);        
+          status = gsl_min_test_interval (a, b, 0.01, 0.0);
+        }
+        while (status == GSL_CONTINUE && iter < max_iter);
       }
-      while (status == GSL_CONTINUE && iter < max_iter);
-
-      /*printf ("### % 22.15g % 22.15g\n", z_min, _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min));*/
-/*
-      if (_nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min) <= 0.0)
-        printf ("FOUND % 22.15g % 22.15g % 22.15g\n", 
-                z_min, 
-                nc_hicosmo_Omega_k0 (NC_HICOSMO (model)), 
-                _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min));
-*/      
-      return _nc_hicosmo_de_E2 (NC_HICOSMO (model), z_min) > 0.0;
+      {
+        const gboolean E2_pos  = nc_hicosmo_E2 (NC_HICOSMO (model), z_min) > 0.0;
+        const gboolean Ode_pos = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (model), 0.0) > 0.0;
+        return E2_pos && Ode_pos;
+      }
     }
   }
   else
-    return TRUE;
+    return (nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (model), 0.0) > 0.0);
 }
 
 void
@@ -1126,6 +1123,14 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  */
 
 static void 
+_nc_hicosmo_de_flist_Omega_x0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  g_assert (NC_IS_HICOSMO_DE (cosmo_de));
+  f[0] = nc_hicosmo_de_E2Omega_de (cosmo_de, 0.0);
+}
+
+static void
 _nc_hicosmo_de_flist_w0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
@@ -1152,6 +1157,7 @@ _nc_hicosmo_de_flist_BBN (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
 void
 _nc_hicosmo_de_register_functions (void)
 {
-  ncm_mset_func_list_register ("wDE", "\\omega_\\mathrm{de}", "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0, 0, 1);
-  ncm_mset_func_list_register ("BBN", "BBN", "NcHICosmoDE", "BBN", G_TYPE_NONE, _nc_hicosmo_de_flist_BBN, 0, 1);
+  ncm_mset_func_list_register ("Omega_x0", "\\Omega_{x0}",         "NcHICosmoDE", "Darkenergy density today",           G_TYPE_NONE, _nc_hicosmo_de_flist_Omega_x0, 0, 1);
+  ncm_mset_func_list_register ("wDE",      "\\omega_\\mathrm{de}", "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0,       0, 1);
+  ncm_mset_func_list_register ("BBN",      "BBN",                  "NcHICosmoDE", "BBN",                                G_TYPE_NONE, _nc_hicosmo_de_flist_BBN,      0, 1);
 }

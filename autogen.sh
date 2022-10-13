@@ -99,15 +99,6 @@ if test "$DIE" -eq 1; then
   exit 1
 fi
 
-if test x$NOCONFIGURE = x; then
-  if test -z "$*"; then
-    echo "**Warning**: I am going to run \`configure' with no arguments."
-    echo "If you wish to pass any to it, please specify them on the"
-    echo \`$0\'" command line."
-    echo
-  fi
-fi
-
 case $CC in
 xlc )
   am_opt=--include-deps;;
@@ -130,12 +121,3 @@ do
   fi
 done
 
-conf_flags="--enable-maintainer-mode"
-
-if test x$NOCONFIGURE = x; then
-  echo Running $srcdir/configure $conf_flags "$@" ...
-  $srcdir/configure $conf_flags "$@" \
-  && echo Now type \`make\' to compile. || exit 1
-else
-  echo Skipping configure process.
-fi

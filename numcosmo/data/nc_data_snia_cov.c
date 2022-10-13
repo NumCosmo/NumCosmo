@@ -1445,10 +1445,10 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       self->inv_cov_mm    = ncm_matrix_new (mu_len, mu_len);
       self->inv_cov_mm_LU = ncm_matrix_new (mu_len, mu_len);
 
-      self->is_calib      = g_array_sized_new (FALSE, FALSE, sizeof (guint32), mu_len);
-      self->used_in_sh0es = g_array_sized_new (FALSE, FALSE, sizeof (guint32), mu_len);
+      self->is_calib      = g_array_sized_new (FALSE, TRUE, sizeof (guint32), mu_len);
+      self->used_in_sh0es = g_array_sized_new (FALSE, TRUE, sizeof (guint32), mu_len);
 
-      self->dataset      = g_array_sized_new (FALSE, FALSE, sizeof (guint32), mu_len);
+      self->dataset      = g_array_sized_new (FALSE, TRUE, sizeof (guint32), mu_len);
       self->dataset_size = g_array_new (FALSE, TRUE, sizeof (guint32));
       self->dataset_len  = 0;
 
@@ -3832,10 +3832,10 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
 
       for (i = 0; i < 34; i++)
       {
-        ncm_iset_get_subvector (is, vec_from[i], vec_to[i]);
+        ncm_vector_free (ncm_iset_get_subvector (is, vec_from[i], vec_to[i]));
       }
 
-      ncm_iset_get_submatrix (is, self->cov_mbc_mbc, selff->cov_mbc_mbc);
+      ncm_matrix_free (ncm_iset_get_submatrix (is, self->cov_mbc_mbc, selff->cov_mbc_mbc));
       ncm_iset_get_subarray (is, self->is_calib, selff->is_calib);
       ncm_iset_get_subarray (is, self->used_in_sh0es, selff->used_in_sh0es);
       ncm_iset_get_subarray (is, self->dataset, selff->dataset);
