@@ -58,7 +58,8 @@ struct _NcHaloBiasPS
 
 GType nc_halo_bias_ps_get_type (void) G_GNUC_CONST;
 
-NcHaloBias *nc_halo_bias_ps_new (gdouble delta_c);
+NcHaloBiasPS *nc_halo_bias_ps_new (NcHaloMassFunction *mfp);
+NcHaloBiasPS *nc_halo_bias_ps_new_full (gdouble delta_c, NcHaloMassFunction *mfp);
 void nc_halo_bias_ps_set_delta_c (NcHaloBiasPS *biasf_ps, gdouble delta_c);
 gdouble nc_halo_bias_ps_get_delta_c (const NcHaloBiasPS *biasf_ps);
 

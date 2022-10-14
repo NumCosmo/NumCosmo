@@ -111,7 +111,7 @@ _nc_multiplicity_func_get_property (GObject *object, guint prop_id, GValue *valu
       g_value_set_enum (value, nc_multiplicity_func_get_mdef (mulf));
       break;
     case PROP_DELTA:
-      g_value_set_enum (value, nc_multiplicity_func_get_Delta (mulf));
+      g_value_set_double (value, nc_multiplicity_func_get_Delta (mulf));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -218,7 +218,7 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
                                    g_param_spec_double ("Delta",
                                                         NULL,
                                                         "Delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
+                                                        1.0, G_MAXDOUBLE, 200.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 

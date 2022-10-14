@@ -61,7 +61,9 @@ struct _NcHaloBiasSTEllip
 
 GType nc_halo_bias_st_ellip_get_type (void) G_GNUC_CONST;
 
-NcHaloBias *nc_halo_bias_st_ellip_new (gdouble delta_c, gdouble a, gdouble b, gdouble c);
+NcHaloBiasSTEllip *nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp);
+NcHaloBiasSTEllip *nc_halo_bias_st_ellip_new_full (gdouble delta_c, gdouble a, gdouble b, gdouble c, NcHaloMassFunction *mfp);
+
 void nc_halo_bias_st_ellip_set_delta_c (NcHaloBiasSTEllip *biasf_st_ellip, gdouble delta_c);
 gdouble nc_halo_bias_st_ellip_get_delta_c (const NcHaloBiasSTEllip *biasf_st_ellip);
 void nc_halo_bias_st_ellip_set_a (NcHaloBiasSTEllip *biasf_st_ellip, gdouble a);
