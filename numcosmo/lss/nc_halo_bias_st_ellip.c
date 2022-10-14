@@ -51,26 +51,138 @@ enum
   PROP_C
 };
 
-/**
- * nc_halo_bias_st_ellip_new:
- * @delta_c: FIXME
- * @a: FIXME
- * @b: FIXME
- * @c: FIXME
- *
- * FIXME
- *
- * Returns: A new #NcHaloBias.
- */
-NcHaloBias *
-nc_halo_bias_st_ellip_new (gdouble delta_c, gdouble a, gdouble b, gdouble c)
+
+static void
+nc_halo_bias_st_ellip_init (NcHaloBiasSTEllip *biasf_st_ellip)
 {
-  return g_object_new (NC_TYPE_HALO_BIAS_ST_ELLIP,
-                       "critical-delta", delta_c,
-                       "a", a,
-                       "b", b,
-                       "c", c,
-                       NULL);
+  biasf_st_ellip->delta_c = 0.0;
+  biasf_st_ellip->a       = 0.0;
+  biasf_st_ellip->b       = 0.0;
+  biasf_st_ellip->c       = 0.0;
+}
+
+static void
+_nc_halo_bias_st_ellip_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_halo_bias_st_ellip_parent_class)->finalize (object);
+}
+
+static void
+_nc_halo_bias_st_ellip_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  NcHaloBiasSTEllip *biasf_st_ellip = NC_HALO_BIAS_ST_ELLIP (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_ST_ELLIP (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA_C:
+      biasf_st_ellip->delta_c = g_value_get_double (value);
+      break;
+    case PROP_A:
+      biasf_st_ellip->a = g_value_get_double (value);
+      break;
+    case PROP_B:
+      biasf_st_ellip->b = g_value_get_double (value);
+      break;
+    case PROP_C:
+      biasf_st_ellip->c = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_halo_bias_st_ellip_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHaloBiasSTEllip *biasf_st_ellip = NC_HALO_BIAS_ST_ELLIP (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_ST_ELLIP (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA_C:
+      g_value_set_double (value, biasf_st_ellip->delta_c);
+      break;
+    case PROP_A:
+      g_value_set_double (value, biasf_st_ellip->a);
+      break;
+    case PROP_B:
+      g_value_set_double (value, biasf_st_ellip->b);
+      break;
+    case PROP_C:
+      g_value_set_double (value, biasf_st_ellip->c);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, gdouble sigma, gdouble z);
+
+static void
+nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
+
+  parent_class->eval = &_nc_halo_bias_st_ellip_eval;
+
+  object_class->finalize = _nc_halo_bias_st_ellip_finalize;
+  object_class->set_property = _nc_halo_bias_st_ellip_set_property;
+  object_class->get_property = _nc_halo_bias_st_ellip_get_property;
+
+  /**
+   * NcHaloBiasSTEllip:critical_delta:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DELTA_C,
+                                   g_param_spec_double ("critical-delta",
+                                                        NULL,
+                                                        "Critical delta",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasSTEllip:a:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_A,
+                                   g_param_spec_double ("a",
+                                                        NULL,
+                                                        "a",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.707,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasSTEllip:b:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_B,
+                                   g_param_spec_double ("b",
+                                                        NULL,
+                                                        "b",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasSTEllip:c:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_C,
+                                   g_param_spec_double ("c",
+                                                        NULL,
+                                                        "c",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static gdouble
@@ -86,8 +198,50 @@ _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma
   gdouble b_ST_ellip = 1.0  + (a * x2 + b * pow(a * x2, (1.0 - c)) - ax2_c / (sqrt(a) * (ax2_c + b * (1.0 - c) * (1.0 - c/2.0)))) / bias_st_ellip->delta_c;
 
   NCM_UNUSED (z);
-  
+
   return b_ST_ellip;
+}
+
+
+/**
+ * nc_halo_bias_st_ellip_new: (constructor)
+ * @mfp: a #NcHaloMassFunction
+ *
+ * FIXME
+ *
+ * Returns: A new #NcHaloBias.
+ */
+NcHaloBiasSTEllip *
+nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp)
+{
+  return g_object_new (NC_TYPE_HALO_BIAS_ST_ELLIP,
+                       "mass-function", mfp,
+                       NULL);
+}
+
+/**
+ * nc_halo_bias_st_ellip_new_full: (constructor)
+ * @delta_c: FIXME
+ * @a: FIXME
+ * @b: FIXME
+ * @c: FIXME
+ * @mfp: a #NcHaloMassFunction
+ *
+ *
+ * FIXME
+ *
+ * Returns: A new #NcHaloBias.
+ */
+NcHaloBiasSTEllip *
+nc_halo_bias_st_ellip_new_full (gdouble delta_c, gdouble a, gdouble b, gdouble c, NcHaloMassFunction *mfp)
+{
+  return g_object_new (NC_TYPE_HALO_BIAS_ST_ELLIP,
+                       "critical-delta", delta_c,
+                       "a", a,
+                       "b", b,
+                       "c", c,
+                       "mass-function", mfp,
+                       NULL);
 }
 
 /**
@@ -199,136 +353,3 @@ nc_halo_bias_st_ellip_get_c (const NcHaloBiasSTEllip *biasf_st_ellip)
 }
 
 // _NC_BIAS_FUNCTION_ST_ELLIP_DATASET_1001_3162 = {1.686, 0.707, 0.5, 0.6};
-
-static void
-nc_halo_bias_st_ellip_init (NcHaloBiasSTEllip *biasf_st_ellip)
-{
-  /* TODO: Add initialization code here */
-  biasf_st_ellip->delta_c = 1.686;
-  biasf_st_ellip->a = 0.707;
-  biasf_st_ellip->b = 0.5;
-  biasf_st_ellip->c = 0.6;
-}
-
-static void
-_nc_halo_bias_st_ellip_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_halo_bias_st_ellip_parent_class)->finalize (object);
-}
-
-static void
-_nc_halo_bias_st_ellip_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
-{
-  NcHaloBiasSTEllip *biasf_st_ellip = NC_HALO_BIAS_ST_ELLIP (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_ST_ELLIP (object));
-
-  switch (prop_id)
-  {
-    case PROP_DELTA_C:
-      biasf_st_ellip->delta_c = g_value_get_double (value);
-      break;
-	case PROP_A:
-      biasf_st_ellip->a = g_value_get_double (value);
-      break;
-	case PROP_B:
-      biasf_st_ellip->b = g_value_get_double (value);
-      break;
-	case PROP_C:
-      biasf_st_ellip->c = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_halo_bias_st_ellip_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcHaloBiasSTEllip *biasf_st_ellip = NC_HALO_BIAS_ST_ELLIP (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_ST_ELLIP (object));
-
-  switch (prop_id)
-  {
-    case PROP_DELTA_C:
-      g_value_set_double (value, biasf_st_ellip->delta_c);
-      break;
-	case PROP_A:
-      g_value_set_double (value, biasf_st_ellip->a);
-      break;
-	case PROP_B:
-      g_value_set_double (value, biasf_st_ellip->b);
-      break;
-	case PROP_C:
-      g_value_set_double (value, biasf_st_ellip->c);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
-
-  parent_class->eval = &_nc_halo_bias_st_ellip_eval;
-
-  object_class->finalize = _nc_halo_bias_st_ellip_finalize;
-  object_class->set_property = _nc_halo_bias_st_ellip_set_property;
-  object_class->get_property = _nc_halo_bias_st_ellip_get_property;
-
-  /**
-   * NcHaloBiasSTEllip:critical_delta:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA_C,
-                                   g_param_spec_double ("critical-delta",
-                                                        NULL,
-                                                        "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasSTEllip:a:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("a",
-                                                        NULL,
-                                                        "a",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.707,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasSTEllip:b:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_B,
-                                   g_param_spec_double ("b",
-                                                        NULL,
-                                                        "b",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.5,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasSTEllip:c:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_C,
-                                   g_param_spec_double ("c",
-                                                        NULL,
-                                                        "c",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.6,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
