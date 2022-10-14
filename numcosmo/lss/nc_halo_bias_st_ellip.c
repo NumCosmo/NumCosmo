@@ -121,7 +121,7 @@ _nc_halo_bias_st_ellip_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
@@ -215,17 +215,17 @@ NcHaloBiasSTEllip *
 nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp)
 {
   return g_object_new (NC_TYPE_HALO_BIAS_ST_ELLIP,
-                       "mass-function", mfp,
+                       "mass-function", mfp,  
                        NULL);
 }
 
 /**
  * nc_halo_bias_st_ellip_new_full: (constructor)
+ * @mfp: a #NcHaloMassFunction
  * @delta_c: FIXME
  * @a: FIXME
  * @b: FIXME
  * @c: FIXME
- * @mfp: a #NcHaloMassFunction
  *
  *
  * FIXME
@@ -233,7 +233,7 @@ nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp)
  * Returns: A new #NcHaloBias.
  */
 NcHaloBiasSTEllip *
-nc_halo_bias_st_ellip_new_full (gdouble delta_c, gdouble a, gdouble b, gdouble c, NcHaloMassFunction *mfp)
+nc_halo_bias_st_ellip_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble a, gdouble b, gdouble c)
 {
   return g_object_new (NC_TYPE_HALO_BIAS_ST_ELLIP,
                        "critical-delta", delta_c,

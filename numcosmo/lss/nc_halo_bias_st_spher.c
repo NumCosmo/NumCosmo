@@ -50,124 +50,7 @@ enum
   PROP_P
 };
 
-/**
- * nc_halo_bias_st_spher_new:
- * @delta_c: FIXME
- * @a: FIXME
- * @p: FIXME
- *
- * FIXME
- *
- * Returns: A new #NcHaloBias.
- */
-NcHaloBias *
-nc_halo_bias_st_spher_new (gdouble delta_c, gdouble a, gdouble p)
-{
-  return g_object_new (NC_TYPE_HALO_BIAS_ST_SPHER,
-                       "critical-delta", delta_c,
-                       "a", a,
-                       "p", p,
-                       NULL);
-}
 
-static gdouble
-_nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
-{
-  NcHaloBiasSTSpher *bias_st_spher = NC_HALO_BIAS_ST_SPHER (biasf);
-  const gdouble a = bias_st_spher->a;
-  const gdouble p = bias_st_spher->p;
-  gdouble x = bias_st_spher->delta_c / sigma;
-  gdouble x2 = x * x;
-  gdouble b_ST_spher = 1.0  + ((a * x2 - 1.0) + (2.0 * p) / (1.0 + pow (a * x2, p))) / bias_st_spher->delta_c;
-
-  NCM_UNUSED (z);
-//  printf ("a = %.5g, p=%.5g, delta_c= %.5g\n", a, p, bias_st_spher->delta_c);
-
-  return b_ST_spher;
-}
-
-/**
- * nc_halo_bias_st_spher_set_delta_c:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- * @delta_c: value of #NcHaloBiasSTSpher:critical-delta.
- *
- * Sets the value @delta_c to the #NcHaloBiasSTSpher:critical-delta property.
- *
- */
-void
-nc_halo_bias_st_spher_set_delta_c (NcHaloBiasSTSpher *biasf_st_spher, gdouble delta_c)
-{
-  g_assert (delta_c >= 0);
-  biasf_st_spher->delta_c = delta_c;
-}
-
-/**
- * nc_halo_bias_st_spher_get_delta_c:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- *
- * Returns: the value of #NcHaloBiasSTSpher:critical_delta property.
- */
-gdouble
-nc_halo_bias_st_spher_get_delta_c (const NcHaloBiasSTSpher *biasf_st_spher)
-{
-  return biasf_st_spher->delta_c;
-}
-
-/**
- * nc_halo_bias_st_spher_set_a:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- * @a: value of #NcHaloBiasSTSpher:a.
- *
- * Sets the value @a to the #NcHaloBiasSTSpher:a property.
- *
- */
-void
-nc_halo_bias_st_spher_set_a (NcHaloBiasSTSpher *biasf_st_spher, gdouble a)
-{
-  g_assert (a >= 0);
-  biasf_st_spher->a = a;
-}
-
-/**
- * nc_halo_bias_st_spher_get_a:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- *
- * Returns: the value of #NcHaloBiasSTSpher:a property.
- */
-gdouble
-nc_halo_bias_st_spher_get_a (const NcHaloBiasSTSpher *biasf_st_spher)
-{
-  return biasf_st_spher->a;
-}
-
-/**
- * nc_halo_bias_st_spher_set_p:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- * @p: value of #NcHaloBiasSTSpher:p.
- *
- * Sets the value @p to the #NcHaloBiasSTSpher:p property.
- *
- */
-void
-nc_halo_bias_st_spher_set_p (NcHaloBiasSTSpher *biasf_st_spher, gdouble p)
-{
-  g_assert (p >= 0);
-  biasf_st_spher->p = p;
-}
-
-/**
- * nc_halo_bias_st_spher_get_p:
- * @biasf_st_spher: a #NcHaloBiasSTSpher.
- *
- * Returns: the value of #NcHaloBiasSTSpher:p property.
- */
-gdouble
-nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher)
-{
-  return biasf_st_spher->p;
-}
-
-// _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.686, 0.75, 0.3};
 
 static void
 nc_halo_bias_st_spher_init (NcHaloBiasSTSpher *biasf_st_spher)
@@ -232,6 +115,9 @@ _nc_halo_bias_st_spher_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
+
+static gdouble _nc_halo_bias_st_spher_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
 static void
 nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
 {
@@ -282,3 +168,151 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
+
+
+static gdouble
+_nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
+{
+  NcHaloBiasSTSpher *bias_st_spher = NC_HALO_BIAS_ST_SPHER (biasf);
+  const gdouble a = bias_st_spher->a;
+  const gdouble p = bias_st_spher->p;
+  gdouble x = bias_st_spher->delta_c / sigma;
+  gdouble x2 = x * x;
+  gdouble b_ST_spher = 1.0  + ((a * x2 - 1.0) + (2.0 * p) / (1.0 + pow (a * x2, p))) / bias_st_spher->delta_c;
+
+  NCM_UNUSED (z);
+//  printf ("a = %.5g, p=%.5g, delta_c= %.5g\n", a, p, bias_st_spher->delta_c);
+
+  return b_ST_spher;
+}
+
+
+/**
+ * nc_halo_bias_st_spher_new: (constructor)
+ * @mfp: a #NcHaloMassFunction
+ *
+ * FIXME
+ *
+ * Returns: A new #NcHaloBias.
+ */
+NcHaloBias *
+nc_halo_bias_st_spher_new (NcHaloMassFunction *mfp)
+{
+  return g_object_new (NC_TYPE_HALO_BIAS_ST_SPHER,
+                       "mass-function", mfp,
+                       NULL);
+}
+
+
+
+/**
+ * nc_halo_bias_st_spher_new_full:
+ * @mfp: a #NcHaloMassFunction
+ * @delta_c: FIXME
+ * @a: FIXME
+ * @p: FIXME
+ *
+ * FIXME
+ *
+ * Returns: A new #NcHaloBias.
+ */
+NcHaloBias *
+nc_halo_bias_st_spher_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble a, gdouble p)
+{
+  return g_object_new (NC_TYPE_HALO_BIAS_ST_SPHER,
+                       "mass-function", mfp,
+                       "critical-delta", delta_c,
+                       "a", a,
+                       "p", p,
+                       NULL);
+}
+
+
+/**
+ * nc_halo_bias_st_spher_set_delta_c:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ * @delta_c: value of #NcHaloBiasSTSpher:critical-delta.
+ *
+ * Sets the value @delta_c to the #NcHaloBiasSTSpher:critical-delta property.
+ *
+ */
+
+
+void
+nc_halo_bias_st_spher_set_delta_c (NcHaloBiasSTSpher *biasf_st_spher, gdouble delta_c)
+{
+  g_assert (delta_c >= 0);
+  biasf_st_spher->delta_c = delta_c;
+}
+
+/**
+ * nc_halo_bias_st_spher_get_delta_c:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ *
+ * Returns: the value of #NcHaloBiasSTSpher:critical_delta property.
+ */
+
+
+gdouble
+nc_halo_bias_st_spher_get_delta_c (const NcHaloBiasSTSpher *biasf_st_spher)
+{
+  return biasf_st_spher->delta_c;
+}
+
+/**
+ * nc_halo_bias_st_spher_set_a:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ * @a: value of #NcHaloBiasSTSpher:a.
+ *
+ * Sets the value @a to the #NcHaloBiasSTSpher:a property.
+ *
+ */
+void
+nc_halo_bias_st_spher_set_a (NcHaloBiasSTSpher *biasf_st_spher, gdouble a)
+{
+  g_assert (a >= 0);
+  biasf_st_spher->a = a;
+}
+
+/**
+ * nc_halo_bias_st_spher_get_a:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ *
+ * Returns: the value of #NcHaloBiasSTSpher:a property.
+ */
+
+
+gdouble
+nc_halo_bias_st_spher_get_a (const NcHaloBiasSTSpher *biasf_st_spher)
+{
+  return biasf_st_spher->a;
+}
+
+/**
+ * nc_halo_bias_st_spher_set_p:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ * @p: value of #NcHaloBiasSTSpher:p.
+ *
+ * Sets the value @p to the #NcHaloBiasSTSpher:p property.
+ *
+ */
+void
+nc_halo_bias_st_spher_set_p (NcHaloBiasSTSpher *biasf_st_spher, gdouble p)
+{
+  g_assert (p >= 0);
+  biasf_st_spher->p = p;
+}
+
+/**
+ * nc_halo_bias_st_spher_get_p:
+ * @biasf_st_spher: a #NcHaloBiasSTSpher.
+ *
+ * Returns: the value of #NcHaloBiasSTSpher:p property.
+ */
+gdouble
+nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher)
+{
+  return biasf_st_spher->p;
+}
+
+// _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.686, 0.75, 0.3};

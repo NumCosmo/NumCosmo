@@ -60,7 +60,9 @@ struct _NcHaloBiasSTSpher
 
 GType nc_halo_bias_st_spher_get_type (void) G_GNUC_CONST;
 
-NcHaloBias *nc_halo_bias_st_spher_new (gdouble delta_c, gdouble a, gdouble p);
+NcHaloBias *nc_halo_bias_st_spher_new (NcHaloMassFunction *mfp);
+NcHaloBias *nc_halo_bias_st_spher_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble a, gdouble p);
+
 void nc_halo_bias_st_spher_set_delta_c (NcHaloBiasSTSpher *biasf_st_spher, gdouble delta_c);
 gdouble nc_halo_bias_st_spher_get_delta_c (const NcHaloBiasSTSpher *biasf_st_spher);
 void nc_halo_bias_st_spher_set_a (NcHaloBiasSTSpher *biasf_st_spher, gdouble a);

@@ -52,8 +52,162 @@ enum
   PROP_SIZE
 };
 
+static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo ,gdouble sigma, gdouble z);
+
+static void
+nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
+{
+  /* TODO: Add initialization code here */
+  biasf_tinker->delta_c = 1.686;
+  biasf_tinker->B = 0.183;
+  biasf_tinker->b = 1.5;
+  biasf_tinker->c = 2.4;
+}
+
+static void
+_nc_halo_bias_tinker_finalize (GObject *object)
+{
+  /* TODO: Add deinitalization code here */
+
+  G_OBJECT_CLASS (nc_halo_bias_tinker_parent_class)->finalize (object);
+}
+
+static void
+_nc_halo_bias_tinker_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA_C:
+      biasf_tinker->delta_c = g_value_get_double (value);
+      break;
+	case PROP_B0:
+      biasf_tinker->B = g_value_get_double (value);
+      break;
+	case PROP_B1:
+      biasf_tinker->b = g_value_get_double (value);
+      break;
+	case PROP_C:
+      biasf_tinker->c = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
+  g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
+
+  switch (prop_id)
+  {
+    case PROP_DELTA_C:
+      g_value_set_double (value, biasf_tinker->delta_c);
+      break;
+	case PROP_B0:
+      g_value_set_double (value, biasf_tinker->B);
+      break;
+	case PROP_B1:
+      g_value_set_double (value, biasf_tinker->b);
+      break;
+	case PROP_C:
+      g_value_set_double (value, biasf_tinker->c);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
+
+  parent_class->eval = &_nc_halo_bias_tinker_eval;
+
+  object_class->finalize = _nc_halo_bias_tinker_finalize;
+  object_class->set_property = _nc_halo_bias_tinker_set_property;
+  object_class->get_property = _nc_halo_bias_tinker_get_property;
+
+  /**
+   * NcHaloBiasTinker:critical_delta:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DELTA_C,
+                                   g_param_spec_double ("critical-delta",
+                                                        NULL,
+                                                        "Critical delta",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasTinker:B:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_B0,
+                                   g_param_spec_double ("B",
+                                                        NULL,
+                                                        "B",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.183,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasTinker:b:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_B1,
+                                   g_param_spec_double ("b",
+                                                        NULL,
+                                                        "b",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcHaloBiasTinker:c:
+   *
+   * FIXME (check limits values)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_C,
+                                   g_param_spec_double ("c",
+                                                        NULL,
+                                                        "c",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 2.4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+}
+
+
 /**
  * nc_halo_bias_tinker_new:
+ * @mfp: a #NcHaloMassFunction
+ *
+ * FIXME
+ *
+ * Returns: A new #NcHaloBias.
+ */
+NcHaloBiasTinker *
+nc_halo_bias_tinker_new (NcHaloMassFunction *mfp)
+{
+  return g_object_new (NC_TYPE_HALO_BIAS_TINKER,
+                       "mass-function", mfp,
+                       NULL);
+}
+
+
+/**
+ * nc_halo_bias_tinker_new_full:
+ * @mfp: a #NcHaloMassFunction
  * @delta_c: FIXME
  * @B: FIXME
  * @b: FIXME
@@ -63,10 +217,11 @@ enum
  *
  * Returns: A new #NcHaloBias.
  */
-NcHaloBias *
-nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c)
+NcHaloBiasTinker *
+nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble B, gdouble b, gdouble c)
 {
   return g_object_new (NC_TYPE_HALO_BIAS_TINKER,
+                       "mass-function", mfp,
                        "critical-delta", delta_c,
                        "B", B,
                        "b", b,
@@ -206,137 +361,3 @@ nc_halo_bias_tinker_get_c (const NcHaloBiasTinker *biasf_tinker)
 
 
 // _NC_BIAS_FUNCTION_TINKER_DATASET_1001_3162_DELTA = {1.686, 0.183, 1.5, 2.4, 200.0};
-
-static void
-nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
-{
-  /* TODO: Add initialization code here */
-  biasf_tinker->delta_c = 1.686;
-  biasf_tinker->B = 0.183;
-  biasf_tinker->b = 1.5;
-  biasf_tinker->c = 2.4;
-}
-
-static void
-_nc_halo_bias_tinker_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_halo_bias_tinker_parent_class)->finalize (object);
-}
-
-static void
-_nc_halo_bias_tinker_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
-{
-  NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
-
-  switch (prop_id)
-  {
-    case PROP_DELTA_C:
-      biasf_tinker->delta_c = g_value_get_double (value);
-      break;
-	case PROP_B0:
-      biasf_tinker->B = g_value_get_double (value);
-      break;
-	case PROP_B1:
-      biasf_tinker->b = g_value_get_double (value);
-      break;
-	case PROP_C:
-      biasf_tinker->c = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
-  g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
-
-  switch (prop_id)
-  {
-    case PROP_DELTA_C:
-      g_value_set_double (value, biasf_tinker->delta_c);
-      break;
-	case PROP_B0:
-      g_value_set_double (value, biasf_tinker->B);
-      break;
-	case PROP_B1:
-      g_value_set_double (value, biasf_tinker->b);
-      break;
-	case PROP_C:
-      g_value_set_double (value, biasf_tinker->c);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
-
-  parent_class->eval = &_nc_halo_bias_tinker_eval;
-
-  object_class->finalize = _nc_halo_bias_tinker_finalize;
-  object_class->set_property = _nc_halo_bias_tinker_set_property;
-  object_class->get_property = _nc_halo_bias_tinker_get_property;
-
-  /**
-   * NcHaloBiasTinker:critical_delta:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA_C,
-                                   g_param_spec_double ("critical-delta",
-                                                        NULL,
-                                                        "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasTinker:B:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_B0,
-                                   g_param_spec_double ("B",
-                                                        NULL,
-                                                        "B",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.183,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasTinker:b:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_B1,
-                                   g_param_spec_double ("b",
-                                                        NULL,
-                                                        "b",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.5,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcHaloBiasTinker:c:
-   *
-   * FIXME (check limits values)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_C,
-                                   g_param_spec_double ("c",
-                                                        NULL,
-                                                        "c",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 2.4,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-}
-

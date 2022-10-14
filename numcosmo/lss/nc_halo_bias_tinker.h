@@ -61,7 +61,8 @@ struct _NcHaloBiasTinker
 
 GType nc_halo_bias_tinker_get_type (void) G_GNUC_CONST;
 
-NcHaloBias *nc_halo_bias_tinker_new (gdouble delta_c, gdouble B, gdouble b, gdouble c);
+NcHaloBiasTinker *nc_halo_bias_tinker_new (NcHaloMassFunction *mfp);
+NcHaloBiasTinker *nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble B, gdouble b, gdouble c);
 void nc_halo_bias_tinker_set_delta_c (NcHaloBiasTinker *biasf_tinker, gdouble delta_c);
 gdouble nc_halo_bias_tinker_get_delta_c (const NcHaloBiasTinker *biasf_tinker);
 void nc_halo_bias_tinker_set_B (NcHaloBiasTinker *biasf_tinker, gdouble B);
