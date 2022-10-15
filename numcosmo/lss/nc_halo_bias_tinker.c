@@ -52,30 +52,29 @@ enum
   PROP_SIZE
 };
 
-static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo ,gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
 {
-  /* TODO: Add initialization code here */
-  biasf_tinker->delta_c = 1.686;
-  biasf_tinker->B = 0.183;
-  biasf_tinker->b = 1.5;
-  biasf_tinker->c = 2.4;
+  biasf_tinker->delta_c = 0.0;
+  biasf_tinker->B       = 0.0;
+  biasf_tinker->b       = 0.0;
+  biasf_tinker->c       = 0.0;
 }
 
 static void
 _nc_halo_bias_tinker_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_tinker_parent_class)->finalize (object);
 }
 
 static void
-_nc_halo_bias_tinker_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_halo_bias_tinker_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
+
   g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
 
   switch (prop_id)
@@ -83,13 +82,13 @@ _nc_halo_bias_tinker_set_property (GObject * object, guint prop_id, const GValue
     case PROP_DELTA_C:
       biasf_tinker->delta_c = g_value_get_double (value);
       break;
-	case PROP_B0:
+    case PROP_B0:
       biasf_tinker->B = g_value_get_double (value);
       break;
-	case PROP_B1:
+    case PROP_B1:
       biasf_tinker->b = g_value_get_double (value);
       break;
-	case PROP_C:
+    case PROP_C:
       biasf_tinker->c = g_value_get_double (value);
       break;
     default:
@@ -102,6 +101,7 @@ static void
 _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHaloBiasTinker *biasf_tinker = NC_HALO_BIAS_TINKER (object);
+
   g_return_if_fail (NC_IS_HALO_BIAS_TINKER (object));
 
   switch (prop_id)
@@ -109,13 +109,13 @@ _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_DELTA_C:
       g_value_set_double (value, biasf_tinker->delta_c);
       break;
-	case PROP_B0:
+    case PROP_B0:
       g_value_set_double (value, biasf_tinker->B);
       break;
-	case PROP_B1:
+    case PROP_B1:
       g_value_set_double (value, biasf_tinker->b);
       break;
-	case PROP_C:
+    case PROP_C:
       g_value_set_double (value, biasf_tinker->c);
       break;
     default:
@@ -127,12 +127,12 @@ _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value
 static void
 nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHaloBiasClass* parent_class = NC_HALO_BIAS_CLASS (klass);
+  GObjectClass *object_class    = G_OBJECT_CLASS (klass);
+  NcHaloBiasClass *parent_class = NC_HALO_BIAS_CLASS (klass);
 
   parent_class->eval = &_nc_halo_bias_tinker_eval;
 
-  object_class->finalize = _nc_halo_bias_tinker_finalize;
+  object_class->finalize     = _nc_halo_bias_tinker_finalize;
   object_class->set_property = _nc_halo_bias_tinker_set_property;
   object_class->get_property = _nc_halo_bias_tinker_get_property;
 
@@ -146,8 +146,9 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        0.0, G_MAXDOUBLE, 1.686,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcHaloBiasTinker:B:
    *
@@ -158,8 +159,9 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
                                    g_param_spec_double ("B",
                                                         NULL,
                                                         "B",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.183,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        0.0, G_MAXDOUBLE, 0.183,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcHaloBiasTinker:b:
    *
@@ -170,8 +172,9 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
                                    g_param_spec_double ("b",
                                                         NULL,
                                                         "b",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.5,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        0.0, G_MAXDOUBLE, 1.5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcHaloBiasTinker:c:
    *
@@ -182,11 +185,9 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
                                    g_param_spec_double ("c",
                                                         NULL,
                                                         "c",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 2.4,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                                        0.0, G_MAXDOUBLE, 2.4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
-
 
 /**
  * nc_halo_bias_tinker_new:
@@ -203,7 +204,6 @@ nc_halo_bias_tinker_new (NcHaloMassFunction *mfp)
                        "mass-function", mfp,
                        NULL);
 }
-
 
 /**
  * nc_halo_bias_tinker_new_full:
@@ -230,23 +230,22 @@ nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble 
 }
 
 static gdouble
-_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo ,gdouble sigma, gdouble z)
+_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
-  NcMultiplicityFunc *mulf = nc_halo_mass_function_peek_multiplicity_function(biasf->mfp);
+  NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
 
   const gdouble Delta = nc_multiplicity_func_get_matter_Delta (mulf, cosmo, z);
-  const gdouble y = log10(Delta);
-  const gdouble u = exp(- pow ( 4.0 / y, 4.0));
-  const gdouble A = 1.0 + 0.24 * y * u;
-  const gdouble a = 0.44 * y - 0.88;
-  const gdouble B = bias_tinker->B;
-  const gdouble b = bias_tinker->b;
-  const gdouble C = 0.019 + 0.107 * y + 0.19 * u;
-  const gdouble c = bias_tinker->c;
-  gdouble x = bias_tinker->delta_c / sigma;
-  gdouble b_Tinker = 1.0  - A * pow(x, a) / (pow(x, a) + pow(bias_tinker->delta_c, a)) + B * pow(x, b) + C * pow(x, c);
-//  printf ("A = %.5g, a=%.5g, B=%.5g, b=%.5g, C=%.5g, c=%.5g, delta_c= %.5g Delta=%.5g\n", A, a, B, b, C, c, bias_tinker->delta_c, log10(x));
+  const gdouble y     = log10 (Delta);
+  const gdouble u     = exp (-pow (4.0 / y, 4.0));
+  const gdouble A     = 1.0 + 0.24 * y * u;
+  const gdouble a     = 0.44 * y - 0.88;
+  const gdouble B     = bias_tinker->B;
+  const gdouble b     = bias_tinker->b;
+  const gdouble C     = 0.019 + 0.107 * y + 0.19 * u;
+  const gdouble c     = bias_tinker->c;
+  gdouble x           = bias_tinker->delta_c / sigma;
+  gdouble b_Tinker    = 1.0  - A * pow (x, a) / (pow (x, a) + pow (bias_tinker->delta_c, a)) + B * pow (x, b) + C * pow (x, c);
 
   return b_Tinker;
 }
@@ -359,5 +358,5 @@ nc_halo_bias_tinker_get_c (const NcHaloBiasTinker *biasf_tinker)
   return biasf_tinker->c;
 }
 
+/* _NC_BIAS_FUNCTION_TINKER_DATASET_1001_3162_DELTA = {1.686, 0.183, 1.5, 2.4, 200.0}; */
 
-// _NC_BIAS_FUNCTION_TINKER_DATASET_1001_3162_DELTA = {1.686, 0.183, 1.5, 2.4, 200.0};

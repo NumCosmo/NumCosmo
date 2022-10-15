@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -47,7 +47,8 @@ struct _NcHaloBiasClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z); 
+
+  gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 };
 
 struct _NcHaloBias
@@ -68,3 +69,4 @@ gdouble nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble ln
 G_END_DECLS
 
 #endif /* _NC_HALO_BIAS_H_ */
+

@@ -60,7 +60,7 @@ static void
 _nc_halo_bias_dispose (GObject *object)
 {
   NcHaloBias *bias = NC_HALO_BIAS   (object);
-  
+
   nc_halo_mass_function_clear (&bias->mfp);
 
   /* Chain up : end */
@@ -70,7 +70,6 @@ _nc_halo_bias_dispose (GObject *object)
 static void
 _nc_halo_bias_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_parent_class)->finalize (object);
 }
@@ -79,17 +78,18 @@ static void
 _nc_halo_bias_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHaloBias *bias = NC_HALO_BIAS (object);
+
   g_return_if_fail (NC_IS_HALO_BIAS (object));
 
   switch (prop_id)
   {
-	case PROP_MASS_FUNCTION:
-	  bias->mfp = g_value_dup_object (value);
-    g_assert (bias->mfp != NULL);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_MASS_FUNCTION:
+      bias->mfp = g_value_dup_object (value);
+      g_assert (bias->mfp != NULL);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -97,24 +97,26 @@ static void
 _nc_halo_bias_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHaloBias *bias = NC_HALO_BIAS (object);
+
   g_return_if_fail (NC_IS_HALO_BIAS (object));
 
   switch (prop_id)
   {
-	case PROP_MASS_FUNCTION:
-	  g_value_set_object (value, bias->mfp);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_MASS_FUNCTION:
+      g_value_set_object (value, bias->mfp);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
 static void
 nc_halo_bias_class_init (NcHaloBiasClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  /*GObjectClass* parent_class = G_OBJECT_CLASS (klass); */
 
   object_class->dispose      = &_nc_halo_bias_dispose;
   object_class->finalize     = &_nc_halo_bias_finalize;
@@ -133,10 +135,7 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
                                                         "Mass Function.",
                                                         NC_TYPE_HALO_MASS_FUNCTION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
 }
-
 
 /**
  * nc_halo_bias_eval:
@@ -147,7 +146,7 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
  * FIXME
  *
  * Returns: FIXME
-*/
+ */
 gdouble
 nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
@@ -182,8 +181,6 @@ nc_halo_bias_clear (NcHaloBias **bias)
   g_clear_object (bias);
 }
 
-
-
 /**
  * nc_halo_bias_integrand:
  * @mbiasf: a #NcHaloBias.
@@ -194,7 +191,7 @@ nc_halo_bias_clear (NcHaloBias **bias)
  * This function is the integrand of the mean bias, i.e., the product of the mass function with the bias function.
  * As both functions depend on the standard deviation of the matter density contrast, we implement this function to
  * compute \f$ \sigma (M, z) \f$ just once.
-   *
+ *
  * It is worth noting that the multiplicity function must be compatible with the bias function.
  *
  * Returns: a double which corresponds to the mean bias integrand for lnM and at redshift z.
@@ -210,3 +207,4 @@ nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdoub
 
   return dn_dlnM * bias;
 }
+
