@@ -732,22 +732,12 @@ ncm_stats_dist1d_epdf_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 }
 
 static void
-ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
+_ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
 {
   NcmStatsDist1d *sd1    = NCM_STATS_DIST1D (epdf1d);
-  const gdouble lnNorma2 = 2.0 * log (1.0 * epdf1d->WT) + log (M_PI) + 2.0 * log (epdf1d->h);
-  const gdouble exp_b    = -2.0 * NCM_STATS_DIST1D (epdf1d)->reltol - lnNorma2;
   
-  if (exp_b < 0.0)
-  {
-    sd1->xi = epdf1d->min;
-    sd1->xf = epdf1d->max;
-  }
-  else
-  {
-    sd1->xi = epdf1d->min - sqrt (exp_b) * epdf1d->h;
-    sd1->xf = epdf1d->max + sqrt (exp_b) * epdf1d->h;
-  }
+  sd1->xi = epdf1d->min;
+  sd1->xf = epdf1d->max;
   
   return;
 }
@@ -766,7 +756,7 @@ ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
   if (G_UNLIKELY (epdf1d->min == epdf1d->max))
     sd1->xi = sd1->xf = epdf1d->min;
   else
-    ncm_stats_dist1d_epdf_update_limits (epdf1d);
+    _ncm_stats_dist1d_epdf_update_limits (epdf1d);
   
   if (FALSE)
   {

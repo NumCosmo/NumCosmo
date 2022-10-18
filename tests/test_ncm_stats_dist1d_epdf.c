@@ -39,10 +39,14 @@
 typedef struct _TestNcmStatsDist1dEPDF
 {
   NcmStatsDist1dEPDF *sd1;
+  gdouble scale;
 } TestNcmStatsDist1dEPDF;
 
 static void test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+static void test_ncm_stats_dist1d_epdf_new_small (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+static void test_ncm_stats_dist1d_epdf_new_large (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+static void test_ncm_stats_dist1d_epdf_gauss_reset (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_beta (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_isampling (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_free (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
@@ -65,12 +69,37 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_dist1d_epdf_new,
               &test_ncm_stats_dist1d_epdf_gauss,
               &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/gauss/reset", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new,
+              &test_ncm_stats_dist1d_epdf_gauss_reset,
+              &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/small/gauss", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new_small,
+              &test_ncm_stats_dist1d_epdf_gauss,
+              &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/large/gauss", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new_large,
+              &test_ncm_stats_dist1d_epdf_gauss,
+              &test_ncm_stats_dist1d_epdf_free);
   
   g_test_add ("/ncm/stats_dist1d/epdf/beta", TestNcmStatsDist1dEPDF, NULL,
               &test_ncm_stats_dist1d_epdf_new,
               &test_ncm_stats_dist1d_epdf_beta,
               &test_ncm_stats_dist1d_epdf_free);
   
+  g_test_add ("/ncm/stats_dist1d/epdf/small/beta", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new_small,
+              &test_ncm_stats_dist1d_epdf_beta,
+              &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/large/beta", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new_large,
+              &test_ncm_stats_dist1d_epdf_beta,
+              &test_ncm_stats_dist1d_epdf_free);
+
   g_test_add ("/ncm/stats_dist1d/epdf/isampling", TestNcmStatsDist1dEPDF, NULL,
               &test_ncm_stats_dist1d_epdf_new,
               &test_ncm_stats_dist1d_epdf_isampling,
@@ -104,8 +133,8 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint ntest   = 100000;
-  const gdouble mu    = g_test_rand_double_range (-100.0, 100.0);
-  const gdouble sigma = pow (10.0, g_test_rand_double_range (-2.0, 3.0));
+  const gdouble mu    = g_test_rand_double_range (-100.0, 100.0) * test->scale;
+  const gdouble sigma = pow (10.0, g_test_rand_double_range (-2.0, 3.0)) * test->scale;
   const gdouble xl    = mu - 3.0 * sigma;
   const gdouble xu    = mu + 3.0 * sigma;
   guint i;
@@ -166,6 +195,84 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
 }
 
 static void
+test_ncm_stats_dist1d_epdf_gauss_reset (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
+{
+  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint ntest   = 100000;
+  const gdouble mu    = g_test_rand_double_range (-100.0, 100.0) * test->scale;
+  const gdouble sigma = pow (10.0, g_test_rand_double_range (-2.0, 3.0)) * test->scale;
+  const gdouble xl    = mu - 3.0 * sigma;
+  const gdouble xu    = mu + 3.0 * sigma;
+  guint i;
+
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble x = ncm_rng_uniform_gen (rng, 0.0, 1.0);
+
+    ncm_stats_dist1d_epdf_add_obs (test->sd1, x);
+  }
+
+  ncm_stats_dist1d_prepare (sd1);
+
+  ncm_stats_dist1d_epdf_reset (NCM_STATS_DIST1D_EPDF (sd1));
+
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble x = ncm_rng_gaussian_gen (rng, mu, sigma);
+
+    ncm_stats_dist1d_epdf_add_obs (test->sd1, x);
+  }
+
+  ncm_stats_dist1d_prepare (sd1);
+
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble xi = xl + (xu - xl) / (1.0 * ntest - 1.0) * i;
+
+    const gdouble ep_i = ncm_stats_dist1d_eval_p (sd1, xi);
+    const gdouble ap_i = gsl_ran_gaussian_pdf (xi - mu, sigma);
+
+    const gdouble epdf_i = ncm_stats_dist1d_eval_pdf (sd1, xi);
+    const gdouble apdf_i = gsl_cdf_gaussian_P (xi - mu, sigma);
+
+    /*printf ("% 22.15g % 22.15g % 22.15g %e % 22.15g % 22.15g %e\n", xi, ep_i, ap_i, fabs (ep_i / ap_i - 1.0), epdf_i, apdf_i, fabs (epdf_i / apdf_i - 1.0));*/
+    ncm_assert_cmpdouble_e (epdf_i, ==, apdf_i, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
+    ncm_assert_cmpdouble_e (ep_i,   ==, ap_i,   TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
+  }
+
+  {
+    const gdouble xi          = ncm_stats_dist1d_get_xi (NCM_STATS_DIST1D (test->sd1));
+    const gdouble xf          = ncm_stats_dist1d_get_xf (NCM_STATS_DIST1D (test->sd1));
+    const gdouble cdf_minf_xl = gsl_cdf_gaussian_P (xi - mu, sigma);
+    const gdouble cdf_minf_xu = gsl_cdf_gaussian_P (xf - mu, sigma);
+    const gdouble isize       = xf - xi;
+
+    g_assert_cmpfloat (isize, >, 0.0);
+
+    for (i = 0; i < ntest; i++)
+    {
+      const gdouble ui       = 0.0 + 1.0 / (1.0 * ntest - 1.0) * i;
+      const gdouble ui_gauss = cdf_minf_xl + (cdf_minf_xu - cdf_minf_xl) * ui;
+
+      const gdouble einv_cdf_i = ncm_stats_dist1d_eval_inv_pdf (sd1, ui);
+      const gdouble ainv_cdf_i = mu + gsl_cdf_gaussian_Pinv (ui_gauss, sigma);
+
+      const gdouble einv_cdft_i = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, ui);
+      const gdouble ainv_cdft_i = mu + gsl_cdf_gaussian_Qinv (ui_gauss, sigma);
+
+      /*printf ("[% 22.15g % 22.15g] (% 22.15g % 22.15g) <% 22.15g>: % 22.15g % 22.15g | % 22.15g % 22.15g\n", mu, sigma, ui, ui_gauss, isize * TEST_NCM_STATS_DIST1D_EPDF_RELTOL, einv_cdf_i, ainv_cdf_i, einv_cdft_i, ainv_cdft_i);*/
+
+      ncm_assert_cmpdouble_e (einv_cdf_i,  ==, ainv_cdf_i,  TEST_NCM_STATS_DIST1D_EPDF_RELTOL, isize * TEST_NCM_STATS_DIST1D_EPDF_RELTOL);
+      ncm_assert_cmpdouble_e (einv_cdft_i, ==, ainv_cdft_i, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, isize * TEST_NCM_STATS_DIST1D_EPDF_RELTOL);
+    }
+  }
+
+
+  NCM_TEST_FREE (ncm_rng_free, rng);
+}
+
+static void
 test_ncm_stats_dist1d_epdf_beta_meta (TestNcmStatsDist1dEPDF *test, gconstpointer pdata, const gdouble a, const gdouble b, const gdouble xl, const gdouble xu)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
@@ -175,7 +282,7 @@ test_ncm_stats_dist1d_epdf_beta_meta (TestNcmStatsDist1dEPDF *test, gconstpointe
   
   for (i = 0; i < ntest; i++)
   {
-    const gdouble x = ncm_rng_beta_gen (rng, a, b);
+    const gdouble x = ncm_rng_beta_gen (rng, a, b) * test->scale;
     
     ncm_stats_dist1d_epdf_add_obs (test->sd1, x);
   }
@@ -186,10 +293,10 @@ test_ncm_stats_dist1d_epdf_beta_meta (TestNcmStatsDist1dEPDF *test, gconstpointe
   {
     const gdouble xi = xl + (xu - xl) / (1.0 * ntest - 1.0) * i;
     
-    const gdouble ep_i = ncm_stats_dist1d_eval_p (sd1, xi);
+    const gdouble ep_i = ncm_stats_dist1d_eval_p (sd1, xi * test->scale) * test->scale;
     const gdouble ap_i = gsl_ran_beta_pdf (xi, a, b);
     
-    const gdouble epdf_i = ncm_stats_dist1d_eval_pdf (sd1, xi);
+    const gdouble epdf_i = ncm_stats_dist1d_eval_pdf (sd1, xi * test->scale);
     const gdouble apdf_i = gsl_cdf_beta_P (xi, a, b);
     
     /*printf ("% 22.15g % 22.15g % 22.15g %e % 22.15g % 22.15g %e\n", xi, ep_i, ap_i, fabs (ep_i / ap_i - 1.0), epdf_i, apdf_i, fabs (epdf_i / apdf_i - 1.0));*/
@@ -255,9 +362,9 @@ test_ncm_stats_dist1d_epdf_isampling (TestNcmStatsDist1dEPDF *test, gconstpointe
     
     const gdouble epdf_i = ncm_stats_dist1d_eval_pdf (sd1, xi);
     const gdouble apdf_i = gsl_cdf_beta_P (xi, a, b);
-    
+
     /*printf ("% 22.15g % 22.15g % 22.15g %e % 22.15g % 22.15g %e\n", xi, ep_i, ap_i, fabs (ep_i / ap_i - 1.0), epdf_i, apdf_i, fabs (epdf_i / apdf_i - 1.0));*/
-    
+
     if (apdf_i == 0.0)
       g_assert_cmpfloat (fabs (epdf_i), <, TEST_NCM_STATS_DIST1D_EPDF_RELTOL);
     else if (epdf_i == 0.0)
@@ -280,7 +387,28 @@ static void
 test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
   test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
+  test->scale = 1.0;
   
+  g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
+  g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
+}
+
+static void
+test_ncm_stats_dist1d_epdf_new_small (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
+{
+  test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
+  test->scale = 1.0e-10;
+
+  g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
+  g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
+}
+
+static void
+test_ncm_stats_dist1d_epdf_new_large (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
+{
+  test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
+  test->scale = 1.0e-10;
+
   g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
   g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
 }
