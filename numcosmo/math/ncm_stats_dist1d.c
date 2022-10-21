@@ -507,17 +507,18 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
 gdouble
 ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 {
-  gint status;
-  gint iter = 0, max_iter = 1000000;
+  const gdouble reltol     = sqrt (sd1->reltol);
+  const gint max_iter      = 1000000;
+  const gint linear_search = 1000;
+  gdouble x0               = sd1->xi;
+  gdouble x1               = sd1->xf;
+  gdouble x                = 0.5 * (sd1->xf + sd1->xi);
+  gdouble last_x0          = x0;
+  gdouble last_x1          = x1;
+  gint iter = 0;
   gsl_function F;
-  const gdouble reltol = sqrt (sd1->reltol);
-  gdouble x0           = sd1->xi;
-  gdouble x1           = sd1->xf;
-  gdouble x            = 0.5 * (sd1->xf + sd1->xi);
-  gdouble last_x0      = x0;
-  gdouble last_x1      = x1;
   gdouble fmin;
-
+  gint status;
   gint ret;
 
   if (G_UNLIKELY (sd1->xi == sd1->xf))
@@ -528,9 +529,9 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
   fmin = GSL_POSINF;
 
-  for (iter = 0; iter < 1000; iter++)
+  for (iter = 0; iter < linear_search; iter++)
   {
-    const gdouble x_try = sd1->xi + (sd1->xf - sd1->xi) / 999.0 * iter;
+    const gdouble x_try = sd1->xi + (sd1->xf - sd1->xi) / (linear_search - 1.0) * iter;
     const gdouble f_try = ncm_stats_dist1d_eval_m2lnp (sd1, x_try);
 
     if (f_try < fmin)
@@ -566,7 +567,11 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
     last_x0 = x0;
     last_x1 = x1;
-  } while (status == GSL_CONTINUE && iter < max_iter);
+  } while ((status == GSL_CONTINUE) && (iter < max_iter));
+
+  if (status != GSL_SUCCESS)
+    g_warning ("ncm_stats_dist1d_eval_mode: minimization tolerance not achieved"
+        " in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", max_iter, x, x0, x1);
 
   return x;
 }
