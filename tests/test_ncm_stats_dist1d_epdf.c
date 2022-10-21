@@ -212,10 +212,11 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
       test_ncm_stats_dist1d_epdf_gauss (test, pdata);
     }
     else
+    {
       ncm_assert_cmpdouble_e (mode, ==, mu, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
+      NCM_TEST_FREE (ncm_rng_free, rng);
+    }
   }
-
-  NCM_TEST_FREE (ncm_rng_free, rng);
 }
 
 static void
@@ -481,7 +482,7 @@ test_ncm_stats_dist1d_epdf_gen (TestNcmStatsDist1dEPDF *test, gconstpointer pdat
     ncm_stats_vec_update_weight (svec, 1.0);
   }
 
-  if ((ncm_cmp (ncm_stats_vec_get_mean (svec, 0), mu, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0) != 0) && test->max_tries--)
+  if ((ncm_cmp (ncm_stats_vec_get_mean (svec, 0), mu, 1.0e-2, 0.0) != 0) && test->max_tries--)
   {
     ncm_rng_free (rng);
     ncm_stats_vec_free (svec);
@@ -489,10 +490,11 @@ test_ncm_stats_dist1d_epdf_gen (TestNcmStatsDist1dEPDF *test, gconstpointer pdat
     test_ncm_stats_dist1d_epdf_gen (test, pdata);
   }
   else
+  {
     ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (svec, 0), ==, mu, 1.0e-2, 0.0);
-
-  ncm_rng_free (rng);
-  ncm_stats_vec_free (svec);
+    ncm_rng_free (rng);
+    ncm_stats_vec_free (svec);
+  }
 }
 
 static void
@@ -500,7 +502,7 @@ test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdat
 {
   test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
   test->scale = 1.0;
-  test->max_tries = 10;
+  test->max_tries = 5;
   
   g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
   g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
@@ -511,7 +513,7 @@ test_ncm_stats_dist1d_epdf_new_small (TestNcmStatsDist1dEPDF *test, gconstpointe
 {
   test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
   test->scale = 1.0e-10;
-  test->max_tries = 10;
+  test->max_tries = 5;
 
   g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
   g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
@@ -522,7 +524,7 @@ test_ncm_stats_dist1d_epdf_new_large (TestNcmStatsDist1dEPDF *test, gconstpointe
 {
   test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
   test->scale = 1.0e-10;
-  test->max_tries = 10;
+  test->max_tries = 5;
 
   g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
   g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));

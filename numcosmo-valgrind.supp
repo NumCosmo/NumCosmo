@@ -1,0 +1,42 @@
+{
+   <NumCosmo_PMPI_Init>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:PMPI_Init
+   fun:ncm_cfg_init_full_ptr.part.0
+   fun:main
+}
+{
+   <libhwloc>
+   Memcheck:Leak
+   ...
+   obj:/usr/*lib*/libhwloc*
+}
+{
+   <libopen-rte>
+   Memcheck:Leak
+   ...
+   obj:/usr/*lib*/libopen-rte*
+}
+{
+   <PMPI_Init>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:PMPI_Init
+}
+{
+   <g_test_trap_subprocess>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:g_test_trap_subprocess
+}
+{
+   <event_process_active_single_queue>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:event_process_active_single_queue
+}
