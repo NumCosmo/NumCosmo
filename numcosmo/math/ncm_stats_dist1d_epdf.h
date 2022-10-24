@@ -83,7 +83,6 @@ struct _NcmStatsDist1dEPDF
   guint np_obs;
   gdouble WT;
   GArray *obs;
-  GSequence *obs_seq;
   gdouble min;
   gdouble max;
   gboolean list_sorted;
