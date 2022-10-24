@@ -584,11 +584,11 @@ static void
 test_ncm_stats_dist1d_epdf_traps (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/neg_weight/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/neg_weight/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*invalid observation*");
 
-  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/infinite_obs/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/infinite_obs/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*invalid observation*");
 #endif
