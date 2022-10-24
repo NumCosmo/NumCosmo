@@ -483,7 +483,6 @@ ncm_diff_get_round_off_pad (NcmDiff *diff)
   return diff->priv->roff_pad;
 }
 
-
 /**
  * ncm_diff_get_trunc_error_pad:
  * @diff: a #NcmDiff
@@ -1011,10 +1010,10 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
             improve = TRUE;
 
 /*
-          printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
-              nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
-              err_err_i, improve ? "T" : "F");
-*/
+ *         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
+ *             nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
+ *             err_err_i, improve ? "T" : "F");
+ */
 
           ncm_vector_set (err_last_max, i, err_curr_max_i);
         }
@@ -1203,7 +1202,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
             const gdouble df_i     = g_array_index (dfs, gdouble, i);
             const gdouble roff_i   = g_array_index (roffs, gdouble, i);
 
-            df_curr += lambda_i * df_i;
+            df_curr  += lambda_i * df_i;
             roff_curr = hypot (roff_curr, lambda_i * roff_i);
           }
         }
@@ -1237,9 +1236,9 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
 
 
 /*
-         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
-                 nt, a, b, not_converging, df_best, err_best, err_trunc, Eroff_last, Eroff_curr, err_curr_max, err_err);
-*/
+ *        printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
+ *                nt, a, b, not_converging, df_best, err_best, err_trunc, Eroff_last, Eroff_curr, err_curr_max, err_err);
+ */
 
           if ((err_curr_max < err_best) && !not_converging)
           {
