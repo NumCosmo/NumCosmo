@@ -142,9 +142,9 @@ ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_MAX_PROB:
       sd1->max_prob = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,9 +175,9 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_MAX_PROB:
       g_value_set_double (value, sd1->max_prob);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -551,7 +551,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     status = gsl_min_fminimizer_iterate (sd1->fmin);
 
     if (status)
-      g_error ("ncm_stats_dist1d_mode: Cannot find minimum (%s)", gsl_strerror (status));
+      g_error ("ncm_stats_dist1d_mode: Cannot find minimum (%s)", gsl_strerror (status)); /* LCOV_EXCL_LINE */
 
     x  = gsl_min_fminimizer_x_minimum (sd1->fmin);
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
@@ -561,8 +561,8 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
     if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {
-      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up. (% 22.15g) [% 22.15g % 22.15g]", x, x0, x1);
-      break;
+      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up. (% 22.15g) [% 22.15g % 22.15g]", x, x0, x1); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
     }
 
     last_x0 = x0;
@@ -570,8 +570,8 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   } while ((status == GSL_CONTINUE) && (iter < max_iter));
 
   if (status != GSL_SUCCESS)
-    g_warning ("ncm_stats_dist1d_eval_mode: minimization tolerance not achieved"
-        " in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", max_iter, x, x0, x1);
+    g_warning ("ncm_stats_dist1d_eval_mode: minimization tolerance not achieved"              /* LCOV_EXCL_LINE */
+        " in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", max_iter, x, x0, x1); /* LCOV_EXCL_LINE */
 
   return x;
 }

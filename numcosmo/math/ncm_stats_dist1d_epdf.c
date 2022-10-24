@@ -71,12 +71,6 @@ typedef struct _NcmStatsDist1dEPDFObs
 } NcmStatsDist1dEPDFObs;
 
 static void
-_ncm_stats_dist1d_epdf_free_double_slice (gpointer d)
-{
-  g_slice_free (NcmStatsDist1dEPDFObs, d);
-}
-
-static void
 ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
 {
   epdf1d->obs_stats          = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
@@ -90,7 +84,6 @@ ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
   epdf1d->np_obs             = 0;
   epdf1d->WT                 = 0.0;
   epdf1d->obs                = NULL;
-  epdf1d->obs_seq            = g_sequence_new (_ncm_stats_dist1d_epdf_free_double_slice);
   epdf1d->min                = GSL_POSINF;
   epdf1d->max                = GSL_NEGINF;
 
@@ -149,9 +142,9 @@ ncm_stats_dist1d_epdf_set_property (GObject *object, guint prop_id, const GValue
     case PROP_OUTLIERS_THRESHOLD:
       epdf1d->outliers_threshold = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -182,9 +175,9 @@ ncm_stats_dist1d_epdf_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_OUTLIERS_THRESHOLD:
       g_value_set_double (value, epdf1d->outliers_threshold);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -217,7 +210,6 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 
   g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
   g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
-  g_clear_pointer (&epdf1d->obs_seq, g_sequence_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -305,15 +297,7 @@ _ncm_stats_dist1d_epdf_cmp_double (gconstpointer a,
 #define _NCM_STATS_DIST1D_EPDF_OBS_N(obs, epdf1d, sd) \
   0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
 
-static gdouble ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x);
-
-static gdouble
-ncm_stats_dist1d_epdf_p_gk_func (gdouble x, gpointer epdf1d)
-{
-  const gdouble p = ncm_stats_dist1d_epdf_p_gk (epdf1d, x);
-
-  return p;
-}
+static gdouble _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x);
 
 static void
 _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
@@ -360,49 +344,6 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
 
   g_array_set_size (epdf1d->obs, obs_len);
   epdf1d->list_sorted = TRUE;
-}
-
-static void
-_ncm_stats_dist1d_epdf_trim_outliers (NcmStatsDist1dEPDF *epdf1d)
-{
-  const gdouble obs_mean = ncm_stats_vec_get_mean (epdf1d->obs_stats, 0);
-  const gdouble obs_sd = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
-  const gdouble max_dist = obs_sd * epdf1d->outliers_threshold;
-  gint obs_len = epdf1d->obs->len;
-  gdouble min = GSL_POSINF;
-  gdouble max = GSL_NEGINF;
-  register guint i, j;
-
-  ncm_stats_vec_reset (epdf1d->obs_stats, TRUE);
-  g_array_sort (epdf1d->obs, _ncm_stats_dist1d_epdf_cmp_double);
-
-  j = 0;
-
-  for (i = 0; i < epdf1d->obs->len; i++)
-  {
-    NcmStatsDist1dEPDFObs *obs_c = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-
-    if (fabs (obs_c->x - obs_mean) < max_dist)
-    {
-      if (i != j)
-        g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j) = obs_c[0];
-
-      min = GSL_MIN (min, obs_c->x);
-      max = GSL_MAX (max, obs_c->x);
-      ncm_stats_vec_set (epdf1d->obs_stats, 0, obs_c->x);
-      ncm_stats_vec_update_weight (epdf1d->obs_stats, obs_c->w);
-      j++;
-    }
-    else
-    {
-      ncm_message ("# discarding outlier % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g...\n", obs_c->x, obs_c->w, obs_mean, obs_sd, max_dist);
-      obs_len--;
-    }
-  }
-
-  epdf1d->min = min;
-  epdf1d->max = max;
-  g_array_set_size (epdf1d->obs, obs_len);
 }
 
 static guint
@@ -576,7 +517,7 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
       j++;
 
       if (j >= 10000)
-        g_error ("_ncm_stats_dist1d_epdf_autobw: too many steps to find bandwidth.");
+        g_error ("_ncm_stats_dist1d_epdf_autobw: too many steps to find bandwidth."); /* LCOV_EXCL_LINE */
     }
 
     epdf1d->h = sqrt (t) * delta_l;
@@ -644,9 +585,9 @@ _ncm_stats_dist1d_epdf_set_bw (NcmStatsDist1dEPDF *epdf1d)
       case NCM_STATS_DIST1D_EPDF_BW_AUTO:
         _ncm_stats_dist1d_epdf_autobw (epdf1d);
         break;
-      default:
-        g_assert_not_reached ();
-        break;
+      default: /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break; /* LCOV_EXCL_LINE */
     }
 
     epdf1d->bw_set = TRUE;
@@ -654,7 +595,7 @@ _ncm_stats_dist1d_epdf_set_bw (NcmStatsDist1dEPDF *epdf1d)
 }
 
 static gdouble
-ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
+_ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (epdf1d);
   gdouble res         = 0.0;
@@ -720,7 +661,7 @@ ncm_stats_dist1d_epdf_p (NcmStatsDist1d *sd1, gdouble x)
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (sd1);
 
   /*return fabs (ncm_spline_eval (epdf1d->p_spline, x));*/
-  return ncm_stats_dist1d_epdf_p_gk (epdf1d, x);
+  return _ncm_stats_dist1d_epdf_p_gk (epdf1d, x);
 }
 
 static gdouble
@@ -750,23 +691,10 @@ ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
   _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
-  if (FALSE)
-    _ncm_stats_dist1d_epdf_trim_outliers (epdf1d);
-
   if (G_UNLIKELY (epdf1d->min == epdf1d->max))
     sd1->xi = sd1->xf = epdf1d->min;
   else
     _ncm_stats_dist1d_epdf_update_limits (epdf1d);
-
-  if (FALSE)
-  {
-    gsl_function F;
-
-    F.function = ncm_stats_dist1d_epdf_p_gk_func;
-    F.params   = epdf1d;
-
-    ncm_spline_set_func (epdf1d->p_spline, NCM_SPLINE_FUNCTION_SPLINE, &F, epdf1d->min, epdf1d->max, 0, 1.0e-7);
-  }
 
   return;
 }
@@ -834,8 +762,7 @@ ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble 
 
   if (!gsl_finite (x) || (w < 0.0))
   {
-    g_warning ("ncm_stats_dist1d_epdf_add_obs_weight: invalid observation %u [x = %g, w = %g], skipping...\n", epdf1d->n_obs, x, w);
-
+    g_warning ("ncm_stats_dist1d_epdf_add_obs_weight: invalid observation %u [x = %g, w = %g], skipping...\n", epdf1d->n_obs, x, w); /* LCOV_EXCL_LINE */
     return;
   }
 
@@ -905,7 +832,8 @@ ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d)
  * @epdf1d: a #NcmStatsDist1dEPDF
  * @min: sets min observation value
  *
- * Empty the object @epdf1d discarding all observations.
+ * Sets the lower bound for the distribution. It may be updated if a observation
+ * with value smaller than @min is added.
  *
  */
 void
@@ -919,7 +847,8 @@ ncm_stats_dist1d_epdf_set_min (NcmStatsDist1dEPDF *epdf1d, const gdouble min)
  * @epdf1d: a #NcmStatsDist1dEPDF
  * @max: sets max observation value
  *
- * Empty the object @epdf1d discarding all observations.
+ * Sets the upper bound for the distribution. It may be updated if a observation
+ * with value larger than @max is added.
  *
  */
 void

@@ -44,6 +44,7 @@ typedef struct _TestNcmStatsDist1dEPDF
 } TestNcmStatsDist1dEPDF;
 
 static void test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+static void test_ncm_stats_dist1d_epdf_new_rot (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_new_small (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_new_large (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
@@ -70,6 +71,11 @@ main (gint argc, gchar *argv[])
   
   g_test_add ("/ncm/stats_dist1d/epdf/gauss", TestNcmStatsDist1dEPDF, NULL,
               &test_ncm_stats_dist1d_epdf_new,
+              &test_ncm_stats_dist1d_epdf_gauss,
+              &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/rot/gauss", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new_rot,
               &test_ncm_stats_dist1d_epdf_gauss,
               &test_ncm_stats_dist1d_epdf_free);
 
@@ -159,6 +165,17 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
     ncm_stats_dist1d_epdf_add_obs (test->sd1, x);
   }
   
+  {
+    guint nobs = 0;
+    guint nobs0 = 0;
+    g_object_get (test->sd1, "n-obs", &nobs, NULL);
+    g_assert_cmpint (nobs, >, 0);
+
+    ncm_stats_dist1d_epdf_add_obs_weight (test->sd1, 0.0, 0.0);
+    g_object_get (test->sd1, "n-obs", &nobs0, NULL);
+    g_assert_cmpint (nobs, ==, nobs0);
+  }
+
   ncm_stats_dist1d_prepare (sd1);
   
   for (i = 0; i < ntest; i++)
@@ -216,6 +233,13 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
       ncm_assert_cmpdouble_e (mode, ==, mu, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
       NCM_TEST_FREE (ncm_rng_free, rng);
     }
+  }
+
+  {
+    gdouble norma = 0.0;
+    g_object_get (sd1, "norma", &norma, NULL);
+    ncm_assert_cmpdouble_e (norma, !=, 0.0, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
+    ncm_assert_cmpdouble_e (norma, ==, ncm_stats_dist1d_eval_norma (sd1), 1.0e-14, 0.0);
   }
 }
 
@@ -500,10 +524,21 @@ test_ncm_stats_dist1d_epdf_gen (TestNcmStatsDist1dEPDF *test, gconstpointer pdat
 static void
 test_ncm_stats_dist1d_epdf_new (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
-  test->sd1 = ncm_stats_dist1d_epdf_new (1.0e-2);
+  test->sd1 = ncm_stats_dist1d_epdf_new_full (50000, NCM_STATS_DIST1D_EPDF_BW_AUTO, 0.1, 1.0e-2);
   test->scale = 1.0;
   test->max_tries = 5;
-  
+
+  g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
+  g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
+}
+
+static void
+test_ncm_stats_dist1d_epdf_new_rot (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
+{
+  test->sd1 = ncm_stats_dist1d_epdf_new_full (50000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
+  test->scale = 1.0;
+  test->max_tries = 5;
+
   g_assert_true (NCM_IS_STATS_DIST1D (test->sd1));
   g_assert_true (NCM_IS_STATS_DIST1D_EPDF (test->sd1));
 }
@@ -549,11 +584,13 @@ static void
 test_ncm_stats_dist1d_epdf_traps (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
 #if GLIB_CHECK_VERSION (2, 38, 0)
-  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/neg_weight/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/neg_weight/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_failed ();
-  
-  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/infinite_obs/subprocess", 0, 0);
+  g_test_trap_assert_stderr ("*invalid observation*");
+
+  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/add/infinite_obs/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*invalid observation*");
 #endif
 }
 
