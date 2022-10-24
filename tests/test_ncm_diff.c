@@ -43,6 +43,9 @@ typedef struct _TestNcmDiff
 void test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata);
 
+void test_ncm_diff_misc (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_log_tables (TestNcmDiff *test, gconstpointer pdata);
+
 void test_ncm_diff_rf_d1_1_to_1_sin (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d1_1_to_1_sin (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d2_1_to_1_sin (TestNcmDiff *test, gconstpointer pdata);
@@ -96,6 +99,16 @@ main (gint argc, gchar *argv[])
   
   g_test_set_nonfatal_assertions ();
   
+  g_test_add ("/ncm/diff/misc", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_misc,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/log_tables", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_log_tables,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rf/d1/1_to_1/sin", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_rf_d1_1_to_1_sin,
@@ -271,9 +284,9 @@ test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata)
   NcmDiff *diff = ncm_diff_new ();
   
   test->diff = diff;
-  
-  g_assert_true (diff != NULL);
-  g_assert_true (NCM_IS_DIFF (diff));
+
+  g_assert_true (test->diff != NULL);
+  g_assert_true (NCM_IS_DIFF (test->diff));
 }
 
 void
@@ -282,6 +295,58 @@ test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata)
   NcmDiff *diff = test->diff;
   
   NCM_TEST_FREE (ncm_diff_free, diff);
+}
+
+void
+test_ncm_diff_misc (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmDiff *diff = NULL;
+
+  g_assert_true (test->diff != NULL);
+  g_assert_true (NCM_IS_DIFF (test->diff));
+
+  diff = NCM_DIFF (ncm_serialize_dup_obj (ser, G_OBJECT (test->diff)));
+  ncm_diff_ref (diff);
+  ncm_diff_free (diff);
+  ncm_diff_clear (&diff);
+
+  ncm_serialize_free (ser);
+
+  {
+    guint max_order = ncm_diff_get_max_order (test->diff);
+    ncm_diff_set_max_order (test->diff, max_order);
+    ncm_diff_set_max_order (test->diff, max_order + 2);
+    ncm_diff_set_max_order (test->diff, max_order - 2);
+  }
+
+  {
+    const gdouble rs = ncm_diff_get_richardson_step (test->diff);
+    guint max_order = ncm_diff_get_max_order (test->diff);
+
+    ncm_diff_set_richardson_step (test->diff, rs * 2.0);
+    ncm_diff_set_richardson_step (test->diff, rs * 1.1);
+    ncm_diff_set_max_order (test->diff, max_order);
+    ncm_diff_set_max_order (test->diff, max_order + 2);
+    ncm_diff_set_max_order (test->diff, max_order - 2);
+  }
+
+  test_ncm_diff_rf_d1_1_to_1_sin (test, pdata);
+}
+
+void
+test_ncm_diff_log_tables (TestNcmDiff *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    ncm_diff_log_central_tables (test->diff);
+    ncm_diff_log_forward_tables (test->diff);
+    ncm_diff_log_backward_tables (test->diff);
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
 }
 
 /*

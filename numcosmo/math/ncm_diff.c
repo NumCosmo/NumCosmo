@@ -59,7 +59,6 @@ typedef struct _NcmDiffTable
 } NcmDiffTable;
 
 NcmDiffTable *_ncm_diff_table_new (const guint n);
-NcmDiffTable *_ncm_diff_table_dup (NcmDiffTable *dtable);
 void _ncm_diff_table_free (gpointer dtable_ptr);
 
 enum
@@ -119,9 +118,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_INI_H:
       ncm_diff_set_ini_h (diff, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -150,9 +149,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_INI_H:
       g_value_set_double (value, ncm_diff_get_ini_h (diff));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -251,19 +250,6 @@ _ncm_diff_table_new (const guint n)
   dtable->lambda = ncm_vector_new (n);
 
   return dtable;
-}
-
-NcmDiffTable *
-_ncm_diff_table_dup (NcmDiffTable *dtable)
-{
-  const guint n            = ncm_vector_len (dtable->h);
-  NcmDiffTable *dtable_dup = _ncm_diff_table_new (n);
-
-
-  ncm_vector_memcpy (dtable_dup->h,      dtable->h);
-  ncm_vector_memcpy (dtable_dup->lambda, dtable->lambda);
-
-  return dtable_dup;
 }
 
 void
