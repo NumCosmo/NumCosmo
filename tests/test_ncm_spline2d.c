@@ -414,6 +414,7 @@ void
 test_ncm_spline2d_free_empty (TestNcmSpline2d *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_spline2d_free, test->s2d_base);
+
   if (test->s_base != NULL)
     NCM_TEST_FREE (ncm_spline_free, test->s_base);
 }
@@ -422,6 +423,7 @@ void
 test_ncm_spline2d_new_sanity (NcmSpline2d *s2d)
 {
   NcmSpline2d *s2d_ref = ncm_spline2d_ref (s2d);
+
   ncm_spline2d_clear (&s2d_ref);
 
   g_assert (s2d_ref == NULL);
@@ -432,9 +434,9 @@ void
 test_ncm_spline2d_new (TestNcmSpline2d *test, gconstpointer pdata)
 {
   {
-    NcmVector *xv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *yv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *zm     = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
+    NcmVector *xv    = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
+    NcmVector *yv    = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
+    NcmMatrix *zm    = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
     NcmSpline2d *s2d = ncm_spline2d_new (test->s2d_base, xv, yv, zm, FALSE);
 
     test_ncm_spline2d_new_sanity (s2d);
@@ -524,7 +526,6 @@ test_ncm_spline2d_copy (TestNcmSpline2d *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, zm);
 }
 
-
 void
 test_ncm_spline2d_serialize (TestNcmSpline2d *test, gconstpointer pdata)
 {
@@ -566,7 +567,6 @@ test_ncm_spline2d_serialize (TestNcmSpline2d *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, zm);
 }
 
-
 void
 test_ncm_spline2d_serialize_init (TestNcmSpline2d *test, gconstpointer pdata)
 {
@@ -579,8 +579,10 @@ test_ncm_spline2d_serialize_init (TestNcmSpline2d *test, gconstpointer pdata)
 
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
     ncm_vector_set (xv, i, 1.0 * i);
+
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_Y; i++)
     ncm_vector_set (yv, i, 1.0e-2 * i);
+
   ncm_matrix_set_identity (zm);
 
   {
@@ -622,11 +624,10 @@ test_ncm_spline2d_serialize_init (TestNcmSpline2d *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, zm);
 }
 
-
 void
 test_ncm_spline2d_no_stride (TestNcmSpline2d *test, gconstpointer pdata)
 {
-  NcmSpline2d *s2d  = ncm_spline2d_copy_empty (test->s2d_base);
+  NcmSpline2d *s2d = ncm_spline2d_copy_empty (test->s2d_base);
   gdouble xv_buf[2 * _NCM_SPLINE2D_TEST_NKNOTS_X];
   NcmVector *xv     = ncm_vector_new_full (xv_buf, _NCM_SPLINE2D_TEST_NKNOTS_X, 2, NULL, NULL);
   NcmVector *yv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
@@ -636,6 +637,7 @@ test_ncm_spline2d_no_stride (TestNcmSpline2d *test, gconstpointer pdata)
 
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
     ncm_vector_set (xv, i, 1.0 * i);
+
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_Y; i++)
     ncm_vector_set (yv, i, 1.0e-2 * i);
 
@@ -668,7 +670,6 @@ test_ncm_spline2d_no_stride (TestNcmSpline2d *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_vector_free, yv);
   NCM_TEST_FREE (ncm_matrix_free, zm);
 }
-
 
 void
 test_ncm_spline2d_eval (TestNcmSpline2d *test, gconstpointer pdata)
@@ -981,6 +982,7 @@ test_ncm_spline2d_eval_acc (TestNcmSpline2d *test, gconstpointer pdata)
     NCM_TEST_FREE (ncm_spline2d_free, s2d);
   }
 }
+
 void
 test_ncm_spline2d_deriv (TestNcmSpline2d *test, gconstpointer pdata)
 {
@@ -1067,7 +1069,6 @@ test_ncm_spline2d_deriv (TestNcmSpline2d *test, gconstpointer pdata)
     NCM_TEST_FREE (ncm_matrix_free, zm);
   }
 }
-
 
 void
 test_ncm_spline2d_eval_integ_dx (TestNcmSpline2d *test, gconstpointer pdata)

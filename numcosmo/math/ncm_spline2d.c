@@ -82,9 +82,9 @@ static void
 _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  
+
   g_return_if_fail (NCM_IS_SPLINE2D (object));
-  
+
   switch (prop_id)
   {
     case PROP_SPLINE:
@@ -105,7 +105,7 @@ _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_INIT:
     {
       s2d->to_init = g_value_get_boolean (value);
-      
+
       if (s2d->to_init && (s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
         ncm_spline2d_prepare (s2d);
 
@@ -114,9 +114,9 @@ _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_USE_ACC:
       ncm_spline2d_use_acc (s2d, g_value_get_boolean (value));
       break;
-    default: /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break; /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -124,9 +124,9 @@ static void
 _ncm_spline2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  
+
   g_return_if_fail (NCM_IS_SPLINE2D (object));
-  
+
   switch (prop_id)
   {
     case PROP_SPLINE:
@@ -147,9 +147,9 @@ _ncm_spline2d_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_USE_ACC:
       g_value_set_boolean (value, s2d->use_acc);
       break;
-    default: /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break; /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -157,14 +157,14 @@ static void
 ncm_spline2d_dispose (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  
+
   ncm_vector_clear (&s2d->xv);
   ncm_vector_clear (&s2d->yv);
   ncm_matrix_clear (&s2d->zm);
   ncm_spline_clear (&s2d->s);
 
   s2d->empty = TRUE;
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_parent_class)->dispose (object);
 }
@@ -173,10 +173,10 @@ static void
 ncm_spline2d_finalize (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  
+
   g_clear_pointer (&s2d->acc_x, gsl_interp_accel_free);
   g_clear_pointer (&s2d->acc_y, gsl_interp_accel_free);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_parent_class)->finalize (object);
 }
@@ -185,12 +185,12 @@ static void
 ncm_spline2d_class_init (NcmSpline2dClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_spline2d_set_property;
   object_class->get_property = &_ncm_spline2d_get_property;
   object_class->dispose      = &ncm_spline2d_dispose;
   object_class->finalize     = &ncm_spline2d_finalize;
-  
+
   klass->copy_empty    = NULL;
   klass->reset         = NULL;
   klass->prepare       = NULL;
@@ -206,7 +206,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   klass->int_dx_spline = NULL;
   klass->int_dy_spline = NULL;
   klass->eval_vec_y    = NULL;
-  
+
   /**
    * NcmSpline2d:spline:
    *
@@ -219,7 +219,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "Spline",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmSpline2d:xv:
    *
@@ -232,7 +232,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "x vector",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmSpline2d:yv:
    *
@@ -245,7 +245,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "y vector",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmSpline2d:zm:
    *
@@ -258,7 +258,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                         "z matrix",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmSpline2d:init:
    *
@@ -271,7 +271,7 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                          "init",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmSpline2d:use_acc:
    *
@@ -295,30 +295,30 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
     g_assert_cmpuint (ncm_vector_len (s2d->yv), ==, ncm_matrix_col_len (s2d->zm));
     g_assert_cmpuint (ncm_vector_len (s2d->xv), >=, ncm_spline2d_min_size (s2d));
     g_assert_cmpuint (ncm_vector_len (s2d->yv), >=, ncm_spline2d_min_size (s2d));
-    
+
     s2d->empty    = FALSE;
     s2d->x_interv = ncm_vector_len (s2d->xv) - 1;
     s2d->y_interv = ncm_vector_len (s2d->yv) - 1;
     s2d->x_data   = ncm_vector_data (s2d->xv);
     s2d->y_data   = ncm_vector_data (s2d->yv);
-    
+
     if ((ncm_vector_stride (s2d->xv) == 1) && (ncm_vector_stride (s2d->yv) == 1))
       s2d->no_stride = TRUE;
     else
       s2d->no_stride = FALSE;
-    
+
     if (s2d->use_acc && !s2d->no_stride)
     {
       g_warning ("_ncm_spline2d_makeup: use-acc true but strided knots vectors, disabling use-add.");
       s2d->use_acc = FALSE;
     }
-    
+
     NCM_SPLINE2D_GET_CLASS (s2d)->reset (s2d);
-    
+
     if (s2d->to_init)
       ncm_spline2d_prepare (s2d);
   }
-  
+
   return;
 }
 
@@ -339,6 +339,7 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
   NcmVector *old_xv = s2d->xv;
   NcmVector *old_yv = s2d->yv;
   NcmMatrix *old_zm = s2d->zm;
+
   g_assert ((xv != NULL) && (yv != NULL) && (zm != NULL));
 
   s2d->xv = ncm_vector_ref (xv);
@@ -351,7 +352,7 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
 
   s2d->to_init = init;
   _ncm_spline2d_makeup (s2d);
-  
+
   return;
 }
 
@@ -383,7 +384,7 @@ NcmSpline2d *
 ncm_spline2d_copy (NcmSpline2d *s2d)
 {
   NcmSpline2d *new_s2d = ncm_spline2d_copy_empty (s2d);
-  
+
   if (!s2d->empty)
   {
     NcmVector *xv = ncm_vector_dup (s2d->xv);
@@ -418,9 +419,9 @@ NcmSpline2d *
 ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init)
 {
   NcmSpline2d *s2d_new = ncm_spline2d_copy_empty (s2d);
-  
+
   ncm_spline2d_set (s2d_new, xv, yv, zm, init);
-  
+
   return s2d_new;
 }
 
@@ -503,7 +504,7 @@ void
 ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc)
 {
   s2d->use_acc = use_acc;
-  
+
   if ((s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
   {
     if (s2d->use_acc && !s2d->no_stride)
@@ -530,8 +531,8 @@ gdouble
 ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dx (s2d, xl, xu, y);
 }
 
@@ -551,8 +552,8 @@ gdouble
 ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dy (s2d, x, yl, yu);
 }
 
@@ -573,8 +574,8 @@ gdouble
 ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dxdy (s2d, xl, xu, yl, yu);
 }
 
@@ -593,10 +594,10 @@ NcmSpline *
 ncm_spline2d_integ_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 {
   g_assert (!s2d->empty);
-  
+
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu));
 }
 
@@ -615,8 +616,8 @@ NcmSpline *
 ncm_spline2d_integ_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu));
 }
 
@@ -636,8 +637,8 @@ gdouble
 ncm_spline2d_integ_dx_spline_val (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), y);
 }
 
@@ -657,8 +658,8 @@ gdouble
 ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), x);
 }
 
@@ -679,8 +680,8 @@ gdouble
 ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), yl, yu);
 }
 
@@ -701,8 +702,8 @@ gdouble
 ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), xl, xu);
 }
 
@@ -818,7 +819,7 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
 
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
-  
+
 /*
  *  printf ("x % 22.15g % 22.15g %u | y % 22.15g % 22.15g %u\n", xl, xu, ncm_vector_len (s_y->xv), yl, yu, ncm_vector_len (s_x->xv));
  *  ncm_vector_log_vals (s_y->xv, "XV", "% 22.15g", TRUE);
@@ -826,14 +827,14 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
  */
   {
     NcmMatrix *s_z = ncm_matrix_new (ncm_vector_len (s_y->xv), ncm_vector_len (s_x->xv));
-    
+
     ncm_spline2d_set (s2d, s_x->xv, s_y->xv, s_z, FALSE);
     ncm_matrix_free (s_z);
   }
-  
+
   ncm_spline_free (s_x);
   ncm_spline_free (s_y);
-  
+
   return;
 }
 
