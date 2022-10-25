@@ -48,44 +48,110 @@
 
 G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D);
 
-/**
- * ncm_spline2d_gsl_new:
- * @s: a #NcmSplineGsl derived #NcmSpline
- *
- * This function initializes a #NcmSpline2d of
- * [GSL](https://www.gnu.org/software/gsl/) type given in @s.
- *
- * Returns: A new #NcmSpline2d.
- */
-NcmSpline2d *
-ncm_spline2d_gsl_new (NcmSpline *s)
+static void
+ncm_spline2d_gsl_init (NcmSpline2dGsl *s2dgsl)
 {
-  NcmSpline2d *s2d;
-  
-  g_assert (NCM_IS_SPLINE_GSL (s));
-  
-  s2d = g_object_new (NCM_TYPE_SPLINE2D_GSL, "spline", s, NULL);
-  
-  return s2d;
+  s2dgsl->zdiff       = NULL;
+  s2dgsl->vertv       = NULL;
+  s2dgsl->vertintv    = NULL;
+  s2dgsl->s_hor       = NULL;
+  s2dgsl->s_dzdy      = NULL;
+  s2dgsl->s_ver       = NULL;
+  s2dgsl->s_ver_integ = NULL;
+  s2dgsl->s_hor_len   = 0;
 }
 
-/**
- * ncm_spline2d_gsl_natural_new:
- *
- * This function initializes a #NcmSpline2d of [GSL](https://www.gnu.org/software/gsl/)
- * type [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline).
- *
- * Returns: A new #NcmSpline2d.
- */
-NcmSpline2d *
-ncm_spline2d_gsl_natural_new ()
+static void
+_ncm_spline2d_gsl_clear (NcmSpline2dGsl *s2dgsl)
 {
-  NcmSpline *s     = ncm_spline_gsl_new (gsl_interp_cspline);
-  NcmSpline2d *s2d = ncm_spline2d_gsl_new (s);
+  guint i;
+
+  ncm_matrix_clear (&s2dgsl->zdiff);
+  ncm_vector_clear (&s2dgsl->vertv);
+  ncm_vector_clear (&s2dgsl->vertintv);
+
+  for (i = 0; i < s2dgsl->s_hor_len; i++)
+    ncm_spline_clear (&s2dgsl->s_hor[i]);
+
+  for (i = 0; i < s2dgsl->s_hor_len; i++)
+    ncm_spline_clear (&s2dgsl->s_dzdy[i]);
+
+  ncm_spline_clear (&s2dgsl->s_ver);
+  ncm_spline_clear (&s2dgsl->s_ver_integ);
+}
+
+static void
+_ncm_spline2d_gsl_dispose (GObject *object)
+{
+  NcmSpline2d *s2d       = NCM_SPLINE2D (object);
+  NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
+
+  _ncm_spline2d_gsl_clear (s2dgsl);
+  s2d->init = FALSE;
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->dispose (object);
+}
+
+static void
+_ncm_spline2d_gsl_finalize (GObject *object)
+{
+  NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
+
+  if (s2dgsl->s_hor != NULL)
+  {
+    g_free (s2dgsl->s_hor);
+    s2dgsl->s_hor = NULL;
+  }
   
-  ncm_spline_free (s);
+  if (s2dgsl->s_dzdy != NULL)
+  {
+    g_free (s2dgsl->s_dzdy);
+    s2dgsl->s_dzdy = NULL;
+  }
   
-  return s2d;
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->finalize (object);
+}
+
+NcmSpline2d *_ncm_spline2d_gsl_copy_empty (const NcmSpline2d *s2d);
+static void _ncm_spline2d_gsl_reset (NcmSpline2d *s2d);
+static void _ncm_spline2d_gsl_prepare (NcmSpline2d *s2d);
+static gdouble _ncm_spline2d_gsl_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_gsl_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
+static gdouble _ncm_spline2d_gsl_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);
+static gdouble _ncm_spline2d_gsl_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
+static NcmSpline *_ncm_spline2d_gsl_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu);
+static NcmSpline *_ncm_spline2d_gsl_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+
+static void
+ncm_spline2d_gsl_class_init (NcmSpline2dGslClass *klass)
+{
+  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  NcmSpline2dClass *parent_class = NCM_SPLINE2D_CLASS (klass);
+  
+  object_class->dispose  = &_ncm_spline2d_gsl_dispose;
+  object_class->finalize = &_ncm_spline2d_gsl_finalize;
+
+  parent_class->copy_empty    = &_ncm_spline2d_gsl_copy_empty;
+  parent_class->reset         = &_ncm_spline2d_gsl_reset;
+  parent_class->prepare       = &_ncm_spline2d_gsl_prepare;
+  parent_class->eval          = &_ncm_spline2d_gsl_eval;
+  parent_class->dzdx          = &_ncm_spline2d_gsl_dzdx;
+  parent_class->dzdy          = &_ncm_spline2d_gsl_dzdy;
+  parent_class->d2zdxy        = &_ncm_spline2d_gsl_d2zdxy;
+  parent_class->d2zdx2        = &_ncm_spline2d_gsl_d2zdx2;
+  parent_class->d2zdy2        = &_ncm_spline2d_gsl_d2zdy2;
+  parent_class->int_dx        = &_ncm_spline2d_gsl_int_dx;
+  parent_class->int_dy        = &_ncm_spline2d_gsl_int_dy;
+  parent_class->int_dxdy      = &_ncm_spline2d_gsl_int_dxdy;
+  parent_class->int_dx_spline = &_ncm_spline2d_gsl_int_dx_spline;
+  parent_class->int_dy_spline = &_ncm_spline2d_gsl_int_dy_spline;
 }
 
 NcmSpline2d *
@@ -128,21 +194,6 @@ _ncm_spline2d_gsl_alloc (NcmSpline2dGsl *s2dgsl)
     s2dgsl->s_dzdy[i] = ncm_spline_new (s2d->s, s2d->xv, zdiff_row_i, s2d->init);
     ncm_vector_free (zdiff_row_i);
   }
-}
-
-static void
-_ncm_spline2d_gsl_clear (NcmSpline2dGsl *s2dgsl)
-{
-  guint i;
-  
-  for (i = 0; i < s2dgsl->s_hor_len; i++)
-    ncm_spline_clear (&s2dgsl->s_hor[i]);
-  
-  for (i = 0; i < s2dgsl->s_hor_len; i++)
-    ncm_spline_clear (&s2dgsl->s_dzdy[i]);
-  
-  ncm_spline_clear (&s2dgsl->s_ver);
-  ncm_spline_clear (&s2dgsl->s_ver_integ);
 }
 
 static void
@@ -682,93 +733,61 @@ _ncm_spline2d_gsl_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl
   return result;
 }
 
+/* LCOV_EXCL_START */
+
 static NcmSpline *
 _ncm_spline2d_gsl_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 {
-  NCM_UNUSED (s2d);
-  NCM_UNUSED (xl);
-  NCM_UNUSED (xu);
   g_assert_not_reached ();
+  return NULL;
 }
 
 static NcmSpline *
 _ncm_spline2d_gsl_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 {
-  NCM_UNUSED (s2d);
-  NCM_UNUSED (yl);
-  NCM_UNUSED (yu);
   g_assert_not_reached ();
+  return NULL;
 }
 
-static void
-ncm_spline2d_gsl_init (NcmSpline2dGsl *s2dgsl)
+/* LCOV_EXCL_STOP */
+
+/**
+ * ncm_spline2d_gsl_new:
+ * @s: a #NcmSplineGsl derived #NcmSpline
+ *
+ * This function initializes a #NcmSpline2d of
+ * [GSL](https://www.gnu.org/software/gsl/) type given in @s.
+ *
+ * Returns: A new #NcmSpline2d.
+ */
+NcmSpline2d *
+ncm_spline2d_gsl_new (NcmSpline *s)
 {
-  s2dgsl->zdiff       = NULL;
-  s2dgsl->vertv       = NULL;
-  s2dgsl->vertintv    = NULL;
-  s2dgsl->s_hor       = NULL;
-  s2dgsl->s_dzdy      = NULL;
-  s2dgsl->s_ver       = NULL;
-  s2dgsl->s_ver_integ = NULL;
-  s2dgsl->s_hor_len   = 0;
+  NcmSpline2d *s2d;
+
+  g_assert (NCM_IS_SPLINE_GSL (s));
+
+  s2d = g_object_new (NCM_TYPE_SPLINE2D_GSL, "spline", s, NULL);
+
+  return s2d;
 }
 
-static void
-ncm_spline2d_gsl_dispose (GObject *object)
+/**
+ * ncm_spline2d_gsl_natural_new:
+ *
+ * This function initializes a #NcmSpline2d of [GSL](https://www.gnu.org/software/gsl/)
+ * type [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline).
+ *
+ * Returns: A new #NcmSpline2d.
+ */
+NcmSpline2d *
+ncm_spline2d_gsl_natural_new ()
 {
-  NcmSpline2d *s2d       = NCM_SPLINE2D (object);
-  NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
-  
-  _ncm_spline2d_gsl_clear (s2dgsl);
-  s2d->init = FALSE;
-  
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->dispose (object);
-}
+  NcmSpline *s     = ncm_spline_gsl_new (gsl_interp_cspline);
+  NcmSpline2d *s2d = ncm_spline2d_gsl_new (s);
 
-static void
-ncm_spline2d_gsl_finalize (GObject *object)
-{
-  NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
-  
-  if (s2dgsl->s_hor != NULL)
-  {
-    g_free (s2dgsl->s_hor);
-    s2dgsl->s_hor = NULL;
-  }
-  
-  if (s2dgsl->s_dzdy != NULL)
-  {
-    g_free (s2dgsl->s_dzdy);
-    s2dgsl->s_dzdy = NULL;
-  }
-  
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->finalize (object);
-}
+  ncm_spline_free (s);
 
-static void
-ncm_spline2d_gsl_class_init (NcmSpline2dGslClass *klass)
-{
-  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
-  NcmSpline2dClass *parent_class = NCM_SPLINE2D_CLASS (klass);
-  
-  parent_class->copy_empty    = &_ncm_spline2d_gsl_copy_empty;
-  parent_class->reset         = &_ncm_spline2d_gsl_reset;
-  parent_class->prepare       = &_ncm_spline2d_gsl_prepare;
-  parent_class->eval          = &_ncm_spline2d_gsl_eval;
-  parent_class->dzdx          = &_ncm_spline2d_gsl_dzdx;
-  parent_class->dzdy          = &_ncm_spline2d_gsl_dzdy;
-  parent_class->d2zdxy        = &_ncm_spline2d_gsl_d2zdxy;
-  parent_class->d2zdx2        = &_ncm_spline2d_gsl_d2zdx2;
-  parent_class->d2zdy2        = &_ncm_spline2d_gsl_d2zdy2;
-  parent_class->int_dx        = &_ncm_spline2d_gsl_int_dx;
-  parent_class->int_dy        = &_ncm_spline2d_gsl_int_dy;
-  parent_class->int_dxdy      = &_ncm_spline2d_gsl_int_dxdy;
-  parent_class->int_dx_spline = &_ncm_spline2d_gsl_int_dx_spline;
-  parent_class->int_dy_spline = &_ncm_spline2d_gsl_int_dy_spline;
-  
-  object_class->dispose  = ncm_spline2d_gsl_dispose;
-  object_class->finalize = ncm_spline2d_gsl_finalize;
+  return s2d;
 }
 

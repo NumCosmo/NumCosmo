@@ -5,7 +5,6 @@
  *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
-
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
@@ -263,9 +262,21 @@ ncm_spline_copy_empty (const NcmSpline *s)
 NcmSpline *
 ncm_spline_copy (const NcmSpline *s)
 {
+  NcmVector *xv;
+  NcmVector *yv;
+  NcmSpline *s_cpy;
+
   g_assert (s->xv != NULL && s->yv != NULL);
   
-  return ncm_spline_new (s, ncm_vector_dup (s->xv), ncm_vector_dup (s->yv), TRUE);
+  xv = ncm_vector_dup (s->xv);
+  yv = ncm_vector_dup (s->yv);
+
+  s_cpy = ncm_spline_new (s, xv, yv, TRUE);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+
+  return s_cpy;
 }
 
 /**

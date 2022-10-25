@@ -98,7 +98,7 @@ NcmSpline2d *ncm_spline2d_copy_empty (const NcmSpline2d *s2d);
 NcmSpline2d *ncm_spline2d_copy (NcmSpline2d *s2d);
 
 NcmSpline2d *ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init);
-
+NcmSpline2d *ncm_spline2d_ref (NcmSpline2d *s2d);
 void ncm_spline2d_free (NcmSpline2d *s2d);
 void ncm_spline2d_clear (NcmSpline2d **s2d);
 
@@ -159,7 +159,7 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdx (s2d, x, y);
 }
@@ -168,7 +168,7 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdy (s2d, x, y);
 }
@@ -177,7 +177,7 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdxy (s2d, x, y);
 }
@@ -186,7 +186,7 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdx2 (s2d, x, y);
 }
@@ -195,7 +195,7 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d); /* LCOV_EXCL_LINE */
   
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdy2 (s2d, x, y);
 }

@@ -114,6 +114,9 @@ ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcmSpline2dClass *parent_class = NCM_SPLINE2D_CLASS (klass);
 
+  object_class->dispose  = &_ncm_spline2d_bicubic_dispose;
+  object_class->finalize = &_ncm_spline2d_bicubic_finalize;
+
   parent_class->copy_empty    = &_ncm_spline2d_bicubic_copy_empty;
   parent_class->reset         = &_ncm_spline2d_bicubic_reset;
   parent_class->prepare       = &_ncm_spline2d_bicubic_prepare;
@@ -129,9 +132,6 @@ ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
   parent_class->int_dx_spline = &_ncm_spline2d_bicubic_int_dx_spline;
   parent_class->int_dy_spline = &_ncm_spline2d_bicubic_int_dy_spline;
   parent_class->eval_vec_y    = &_ncm_spline2d_bicubic_eval_vec_y;
-
-  object_class->dispose  = &_ncm_spline2d_bicubic_dispose;
-  object_class->finalize = &_ncm_spline2d_bicubic_finalize;
 }
 
 /**
@@ -157,7 +157,7 @@ ncm_spline2d_bicubic_new (NcmSpline *s)
 /**
  * ncm_spline2d_bicubic_notaknot_new:
  *
- * This function initializes a #NcmSpline2d of bicubic notaknot type
+ * This function initializes a #NcmSpline2d of bi-cubic not-a-knot type
  * (See #NcmSplineCubicNotaknot).
  *
  * Returns: A new #NcmSpline2d.
