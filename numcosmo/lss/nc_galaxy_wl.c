@@ -312,23 +312,25 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
     {
       NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
       NcGalaxyWLReducedShearGauss *wl_gauss = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist);
-
-      NcmVector *z_vec = nc_galaxy_redshift_spec_peek_z (z_spec);
-      NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
-
-      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (10000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-4);
+      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-4);
       NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (s_kde);
+      NcmVector *z_vec  = nc_galaxy_redshift_spec_peek_z (z_spec);
+      NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
+      NcmVector *g_vec  = ncm_vector_new (self->len);
+      int j = 0;
 
       for (gal_i = 0; gal_i < self->len; gal_i++)
       {
         const gdouble z_i = ncm_vector_get (z_vec, gal_i);
         const gdouble r_i = ncm_matrix_get (wl_obs, gal_i, 0);
-        // const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
+        const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
         const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
 
-        if (/*g_i > 0 && g_i < 0.05 && */s_i > 0.0 && s_i < 0.05)
+        if (g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05)
         {
+          ncm_vector_set (g_vec, j, g_i);
           ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
+          j++;
         }
       }
 
@@ -342,19 +344,14 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
         ncm_stats_dist1d_prepare (sd1);
       }
 
-      for (gal_i = 0; gal_i < self->len; gal_i++)
+      for (gal_i = 0; gal_i < j; gal_i++)
       {
-        const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
-        if (g_i > 0 && g_i < 0.05)
-        {
-          const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
-          if (p != 0)
-          {
-            res += - 2 * log (p);
-          }
-        }
+        const gdouble g_i = ncm_vector_get (g_vec, gal_i);
+        const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
+        res += - 2 * log (p);
       }
       ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
+      ncm_vector_free (g_vec);
     }
   }
   
