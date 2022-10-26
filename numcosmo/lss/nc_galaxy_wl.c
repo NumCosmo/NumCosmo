@@ -45,14 +45,19 @@
 #include "lss/nc_galaxy_wl.h"
 #include "lss/nc_galaxy_wl_dist.h"
 #include "lss/nc_galaxy_redshift.h"
+#include "lss/nc_galaxy_redshift_spec.h"
+#include "lss/nc_galaxy_wl_reduced_shear_gauss.h"
+#include "math/ncm_stats_dist1d_epdf.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
+
 
 struct _NcGalaxyWLPrivate
 {
   NcGalaxyWLDist *wl_dist;
   NcGalaxyRedshift *gz_dist;
   guint len;
+  gboolean no_kde;
 };
 
 enum
@@ -72,6 +77,7 @@ nc_galaxy_wl_init (NcGalaxyWL *gwl)
   self->gz_dist = NULL;
   self->wl_dist = NULL;
   self->len     = 0;
+  self->no_kde  = FALSE;
 }
 
 static void
@@ -290,11 +296,66 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
   gdouble res                    = 0.0;
   gint gal_i;
   
-  for (gal_i = 0; gal_i < self->len; gal_i++)
+  if (self->no_kde)
   {
-    gwleval.gal_i = gal_i;
-    nc_galaxy_wl_dist_m2lnP_prep (self->wl_dist, cosmo, dp, smd, z_cluster, gal_i);
-    res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
+
+    for (gal_i = 0; gal_i < self->len; gal_i++)
+    {
+      gwleval.gal_i = gal_i;
+      nc_galaxy_wl_dist_m2lnP_prep (self->wl_dist, cosmo, dp, smd, z_cluster, gal_i);
+      res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
+    }
+  }
+  else /*Lets do KDE*/
+  {
+    // g_assert (NC_IS_GALAXY_REDSHIFT_SPEC (self->gz_dist)); 
+    g_assert (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist)); 
+    {
+      NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
+      NcGalaxyWLReducedShearGauss *wl_gauss = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist);
+
+      NcmVector *z_vec = nc_galaxy_redshift_spec_peek_z (z_spec);
+      NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
+
+      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (10000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-4);
+      NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (s_kde);
+
+      for (gal_i = 0; gal_i < self->len; gal_i++)
+      {
+        const gdouble z_i = ncm_vector_get (z_vec, gal_i);
+        const gdouble r_i = ncm_matrix_get (wl_obs, gal_i, 0);
+        // const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
+        const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
+
+        if (/*g_i > 0 && g_i < 0.05 && */s_i > 0 && s_i < 0.05)
+        {
+          ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
+        }
+      }
+
+      // const gdouble sd    = ncm_stats_vec_get_sd (s_kde->obs_stats, 0);
+      // const gdouble iqr   = ncm_stats_vec_get_quantile_spread (s_kde->obs_stats, 0);
+      // const gdouble h     = 0.9 * fmin (sd, iqr/1.43) * pow(self->len, -0.2);
+      const gdouble h = gsl_hypot (s_kde->h_fixed, ncm_matrix_get (wl_obs, 0, 2));
+
+      s_kde->bw = NCM_STATS_DIST1D_EPDF_BW_FIXED;
+      s_kde->h_fixed = h;
+
+      ncm_stats_dist1d_prepare (sd1);
+
+      for (gal_i = 0; gal_i < self->len; gal_i++)
+      {
+        const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
+        if (g_i > 0 && g_i < 0.05)
+        {
+          const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
+          if (p != 0)
+          {
+            res += - 2 * log (p);
+          }
+        }
+      }
+    }
   }
   
   return res;
