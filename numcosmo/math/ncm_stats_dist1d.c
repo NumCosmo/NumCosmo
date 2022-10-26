@@ -237,8 +237,9 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                         0.0, 1.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->p       = NULL;
-  klass->prepare = NULL;
+  klass->p             = NULL;
+  klass->prepare       = NULL;
+  klass->get_current_h = NULL;
 }
 
 /**
@@ -339,6 +340,19 @@ gdouble
 ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
 {
   return sd1->xf;
+}
+
+/**
+ * ncm_stats_dist1d_get_current_h: (virtual get_current_h)
+ * @sd1: a #NcmStatsDist1d
+ *
+ * Returns: the current value of the bandwidth h.
+ */
+gdouble
+ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1)
+{
+  NcmStatsDist1dClass *sd1_class = NCM_STATS_DIST1D_GET_CLASS (sd1);
+  return sd1_class->get_current_h (sd1);
 }
 
 /**

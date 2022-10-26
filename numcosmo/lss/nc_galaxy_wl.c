@@ -298,7 +298,6 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
   
   if (self->no_kde)
   {
-
     for (gal_i = 0; gal_i < self->len; gal_i++)
     {
       gwleval.gal_i = gal_i;
@@ -306,9 +305,9 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
       res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
     }
   }
-  else /*Lets do KDE*/
+  else
   {
-    // g_assert (NC_IS_GALAXY_REDSHIFT_SPEC (self->gz_dist)); 
+    g_assert (NC_IS_GALAXY_REDSHIFT_SPEC (self->gz_dist));
     g_assert (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist)); 
     {
       NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
@@ -327,21 +326,21 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
         // const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
         const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
 
-        if (/*g_i > 0 && g_i < 0.05 && */s_i > 0 && s_i < 0.05)
+        if (/*g_i > 0 && g_i < 0.05 && */s_i > 0.0 && s_i < 0.05)
         {
           ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
         }
       }
 
-      // const gdouble sd    = ncm_stats_vec_get_sd (s_kde->obs_stats, 0);
-      // const gdouble iqr   = ncm_stats_vec_get_quantile_spread (s_kde->obs_stats, 0);
-      // const gdouble h     = 0.9 * fmin (sd, iqr/1.43) * pow(self->len, -0.2);
-      const gdouble h = gsl_hypot (s_kde->h_fixed, ncm_matrix_get (wl_obs, 0, 2));
-
-      s_kde->bw = NCM_STATS_DIST1D_EPDF_BW_FIXED;
-      s_kde->h_fixed = h;
-
       ncm_stats_dist1d_prepare (sd1);
+      {
+        const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
+        const gdouble hp = gsl_hypot (h, ncm_matrix_get (wl_obs, 0, 2));
+
+        ncm_stats_dist1d_epdf_set_bw_type (s_kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
+        s_kde->h_fixed = hp;
+        ncm_stats_dist1d_prepare (sd1);
+      }
 
       for (gal_i = 0; gal_i < self->len; gal_i++)
       {
@@ -355,6 +354,7 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
           }
         }
       }
+      ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
     }
   }
   
