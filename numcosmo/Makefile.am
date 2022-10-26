@@ -124,9 +124,7 @@ ncm_sources = \
 	math/ncm_mpsf_trig_int.c              \
 	math/ncm_mpsf_sbessel.c               \
 	math/ncm_sf_sbessel.c                 \
-	math/ncm_sf_sbessel_int.c             \
 	math/ncm_sf_spherical_harmonics.c     \
-	math/ncm_mpsf_sbessel_int.c           \
 	math/ncm_mpsf_0F1.c                   \
 	math/ncm_fftlog.c                     \
 	math/ncm_fftlog_sbessel_j.c           \
@@ -193,15 +191,8 @@ ncm_sources = \
 	math/ncm_quaternion.c                 \
 	math/ncm_sphere_map.c                 \
 	math/ncm_function_cache.c             \
-	math/poly.c               \
 	math/integral.c           \
-	math/quadrature.c         \
-	math/matrix_exp.c         \
-	math/magnus_iserles_ode.c \
 	math/binsplit.c           \
-	math/mpq_tree.c           \
-	math/grid_one.c           \
-	math/dividedifference.c   \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = 
@@ -264,9 +255,7 @@ ncm_headers =                                 \
 	math/ncm_mpsf_trig_int.h              \
 	math/ncm_mpsf_sbessel.h               \
 	math/ncm_sf_sbessel.h                 \
-	math/ncm_sf_sbessel_int.h             \
 	math/ncm_sf_spherical_harmonics.h     \
-	math/ncm_mpsf_sbessel_int.h           \
 	math/ncm_mpsf_0F1.h                   \
 	math/ncm_fftlog.h                     \
 	math/ncm_fftlog_sbessel_j.h           \
@@ -334,14 +323,7 @@ ncm_headers =                                 \
 	math/ncm_sphere_map.h                 \
 	math/ncm_function_cache.h             \
 	math/integral.h           \
-	math/magnus_iserles_ode.h \
-	math/matrix_exp.h         \
-	math/poly.h               \
-	math/quadrature.h         \
 	math/binsplit.h           \
-	math/mpq_tree.h           \
-	math/grid_one.h           \
-	math/dividedifference.h   \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \

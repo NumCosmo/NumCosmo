@@ -81,12 +81,9 @@
 #include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>
-#include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
 #include <numcosmo/math/ncm_mpsf_sbessel.h>
-#include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
-#include <numcosmo/math/ncm_sf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
@@ -167,14 +164,8 @@
 
 /* Utilities */
 #include <numcosmo/math/ncm_memory_pool.h>
-#include <numcosmo/math/mpq_tree.h>
 #include <numcosmo/math/integral.h>
-#include <numcosmo/math/poly.h>
-#include <numcosmo/math/quadrature.h>
-#include <numcosmo/math/matrix_exp.h>
-#include <numcosmo/math/magnus_iserles_ode.h>
 #include <numcosmo/math/binsplit.h>
-#include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/math/ncm_sphere_map.h>

@@ -93,9 +93,7 @@
       <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
       <xi:include href="xml/ncm_mpsf_0F1.xml"/>
       <xi:include href="xml/ncm_mpsf_sbessel.xml"/>
-      <xi:include href="xml/ncm_mpsf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_sbessel.xml"/>
-      <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_spherical_harmonics.xml"/>
     </section>
     <section>
@@ -449,14 +447,7 @@
   
   <chapter>
     <title>Mathematical Utilities</title>
-    <xi:include href="xml/dividedifference.xml"/>
     <xi:include href="xml/binsplit.xml"/>
-    <xi:include href="xml/poly.xml"/>
-    <xi:include href="xml/matrix_exp.xml"/>
-    <xi:include href="xml/mpq_tree.xml"/>
-    <xi:include href="xml/magnus_iserles_ode.xml"/>
-    <xi:include href="xml/grid_one.xml"/>
-    <xi:include href="xml/quadrature.xml"/>
     <xi:include href="xml/ncm_function_cache.xml"/>
     <xi:include href="xml/ncm_memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>
