@@ -49,6 +49,7 @@ enum
   PROP_RELTOL,
   PROP_ABSTOL,
   PROP_MAX_PROB,
+  PROP_COMPUTE_CDF,
   PROP_SIZE,
 };
 
@@ -78,14 +79,15 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
   NcmSpline *s2 = ncm_spline_cubic_notaknot_new ();
   NcmSpline *s3 = ncm_spline_cubic_notaknot_new ();
 
-  sd1->xi       = 0.0;
-  sd1->xf       = 0.0;
-  sd1->norma    = 0.0;
-  sd1->reltol   = 0.0;
-  sd1->max_prob = 0.0;
-  sd1->inv_cdf  = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
-  sd1->pdf      = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
-  sd1->fmin     = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+  sd1->xi          = 0.0;
+  sd1->xf          = 0.0;
+  sd1->norma       = 0.0;
+  sd1->reltol      = 0.0;
+  sd1->max_prob    = 0.0;
+  sd1->inv_cdf     = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
+  sd1->pdf         = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
+  sd1->fmin        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+  sd1->compute_cdf = FALSE;
 
   /* hnil is not an error in this case */
   /*sd1->inv_pdf->stop_hnil = FALSE;*/
@@ -142,6 +144,9 @@ ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_MAX_PROB:
       sd1->max_prob = g_value_get_double (value);
       break;
+    case PROP_COMPUTE_CDF:
+      ncm_stats_dist1d_set_compute_cdf (sd1, g_value_get_boolean (value));
+      break;
     default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break; /* LCOV_EXCL_LINE */
@@ -175,6 +180,10 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_MAX_PROB:
       g_value_set_double (value, sd1->max_prob);
       break;
+    case PROP_COMPUTE_CDF:
+      g_value_set_boolean (value, ncm_stats_dist1d_get_compute_cdf (sd1));
+      break;
+
     default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break; /* LCOV_EXCL_LINE */
@@ -236,6 +245,13 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                         "Maximal probability considered",
                                                         0.0, 1.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_COMPUTE_CDF,
+                                   g_param_spec_boolean ("compute-cdf",
+                                                         NULL,
+                                                         "Whether to compute CDF and inverse CDF",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->p             = NULL;
   klass->prepare       = NULL;
@@ -296,7 +312,7 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
   if (sd1_class->prepare != NULL)
     sd1_class->prepare (sd1);
 
-  if (G_LIKELY (sd1->xi != sd1->xf))
+  if (G_LIKELY (sd1->xi != sd1->xf) && sd1->compute_cdf)
   {
     ncm_ode_spline_set_reltol (sd1->inv_cdf, sd1->reltol);
     ncm_ode_spline_set_reltol (sd1->pdf, sd1->reltol);
@@ -316,6 +332,8 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
     ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
   }
+  else
+    sd1->norma = 1.0;
 }
 
 /**
@@ -353,6 +371,32 @@ ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dClass *sd1_class = NCM_STATS_DIST1D_GET_CLASS (sd1);
   return sd1_class->get_current_h (sd1);
+}
+
+/**
+ * ncm_stats_dist1d_set_compute_cdf:
+ * @sd1: a #NcmStatsDist1d
+ * @compute_cdf: a boolean
+ *
+ * Enable/Disable the computation of the CDF and inverse CDF
+ * whenever @compute_cdf is TRUE/FALSE.
+ */
+void
+ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf)
+{
+  sd1->compute_cdf = compute_cdf;
+}
+
+/**
+ * ncm_stats_dist1d_get_compute_cdf:
+ * @sd1: a #NcmStatsDist1d
+ *
+ * Returns: If the @sd1 is computing the CDF and inverse CDF.
+ */
+gboolean
+ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1)
+{
+  return sd1->compute_cdf;
 }
 
 /**

@@ -69,6 +69,7 @@ struct _NcmStatsDist1d
   gdouble reltol;
   gdouble abstol;
   gdouble max_prob;
+  gboolean compute_cdf;
   NcmOdeSpline *inv_cdf;
   NcmOdeSpline *pdf;
   gsl_min_fminimizer *fmin;
@@ -82,6 +83,9 @@ void ncm_stats_dist1d_clear (NcmStatsDist1d **sd1);
 
 void ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1);
 gdouble ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1);
+
+void ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf);
+gboolean ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1);
 
 gdouble ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1);
 gdouble ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1);

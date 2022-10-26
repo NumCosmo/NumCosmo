@@ -312,12 +312,16 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
     {
       NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
       NcGalaxyWLReducedShearGauss *wl_gauss = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist);
-      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-4);
+      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
       NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (s_kde);
       NcmVector *z_vec  = nc_galaxy_redshift_spec_peek_z (z_spec);
       NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
       NcmVector *g_vec  = ncm_vector_new (self->len);
+      gdouble min_g_i = GSL_POSINF;
+      gdouble max_g_i = GSL_NEGINF;
       int j = 0;
+
+      ncm_stats_dist1d_set_compute_cdf (sd1, FALSE);
 
       for (gal_i = 0; gal_i < self->len; gal_i++)
       {
@@ -326,7 +330,10 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
         const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
         const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
 
-        if (g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05)
+        max_g_i = MAX (max_g_i, g_i);
+        min_g_i = MIN (min_g_i, g_i);
+        /*if ((g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05))*/
+        //if (r_i > 0.07)
         {
           ncm_vector_set (g_vec, j, g_i);
           ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
@@ -334,6 +341,8 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
         }
       }
 
+      ncm_stats_dist1d_epdf_set_max (s_kde, max_g_i*1.01);
+      ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
       ncm_stats_dist1d_prepare (sd1);
       {
         const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
@@ -348,6 +357,10 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
       {
         const gdouble g_i = ncm_vector_get (g_vec, gal_i);
         const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
+
+        if (p <= 0.0)
+          printf ("% 22.15g % 22.15g\n", g_i, p);
+
         res += - 2 * log (p);
       }
       ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
