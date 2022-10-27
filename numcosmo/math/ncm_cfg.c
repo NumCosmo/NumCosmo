@@ -349,6 +349,9 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_forget_wisdom ();
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
