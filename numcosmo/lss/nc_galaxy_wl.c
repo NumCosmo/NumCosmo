@@ -342,7 +342,10 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
       }
 
       ncm_stats_dist1d_epdf_set_max (s_kde, max_g_i*1.01);
-      ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
+      if (min_g_i > 0)
+        ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
+      else
+        ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*1.01);
       ncm_stats_dist1d_prepare (sd1);
       {
         const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
