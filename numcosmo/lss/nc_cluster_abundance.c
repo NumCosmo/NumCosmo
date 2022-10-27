@@ -799,6 +799,7 @@ NcClusterAbundanceInt obs_data;
   obs_data.clusterz     = clusterz;
   obs_data.clusterm     = clusterm;
   obs_data.lnM_obs      = lnM_obs;
+  obs_data.lnM          = *lnM_obs;
   obs_data.lnM_obs_params = lnM_obs_params;
   obs_data.z_obs        = z_obs;
   obs_data.z_obs_params = z_obs_params;
@@ -828,7 +829,6 @@ NcClusterAbundanceInt *obs_data = (NcClusterAbundanceInt *) userdata;
   const gdouble dbdlnM            = nc_halo_bias_integrand (cad->mbiasf, obs_data->cosmo, lnM, obs_data->z);
   
   return p_M_Mobs * dbdlnM;
-
 }
 
 
@@ -846,7 +846,8 @@ NcClusterAbundanceInt obs_data;
   obs_data.clusterz     = clusterz;
   obs_data.clusterm     = clusterm;
   obs_data.z_obs        = z_obs;
-  obs_data.z_obs_params   = z_obs_params;
+  obs_data.z            = *z_obs;
+  obs_data.z_obs_params = z_obs_params; 
   obs_data.lnM_obs      = lnM_obs;
   obs_data.lnM_obs_params = lnM_obs_params;
   
@@ -858,16 +859,15 @@ NcClusterAbundanceInt obs_data;
   gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &d2N_bias, &err);
   
   ncm_memory_pool_return (w);
-  
   return d2N_bias;
+ //colocar um teste para verificar se o z_Verdadeiro foi colocado 
 }
 
 static gdouble 
-nc_cluster_abundance_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_abundance_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
 {
 
   const gdouble dbdlnM  = nc_halo_bias_integrand (cad->mbiasf, cosmo, *lnM_obs, *z_obs);
-  
   return dbdlnM;
 }
 
@@ -902,7 +902,7 @@ _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *cluster
   {
     cad->N        = &nc_cluster_abundance_true_n;
     cad->intp_d2N = &nc_cluster_abundance_d2n;
-    cad->intp_d2N_bias = &nc_cluster_abundance_d2n_bias;
+    cad->intp_d2N_bias = &_nc_cluster_abundance_d2n_bias;
   }
 }
 

@@ -202,11 +202,11 @@ nc_halo_bias_clear (NcHaloBias **bias)
 gdouble
 nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  gdouble sigma, dn_dlnM, bias;
+  gdouble sigma, dn_dlnM, bias, dv_dzdomega;
 
+  dv_dzdomega = nc_halo_mass_function_dv_dzdomega (mbiasf->mfp, cosmo, z);
   nc_halo_mass_function_dn_dlnM_sigma (mbiasf->mfp, cosmo, lnM, z, &sigma, &dn_dlnM);
 
-  bias = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
-
-  return dn_dlnM * bias;
+  bias = nc_halo_bias_eval (mbiasf, cosmo, sigma, z); 
+  return dv_dzdomega * dn_dlnM * bias;
 }

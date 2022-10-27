@@ -616,7 +616,6 @@ nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gd
   const gdouble E     = sqrt (nc_hicosmo_E2 (cosmo, z));
   gdouble dc          = nc_distance_comoving (self->dist, cosmo, z);
   gdouble dV_dzdOmega = VH * gsl_pow_2 (dc) / E;
-  
   return dV_dzdOmega;
 }
 
