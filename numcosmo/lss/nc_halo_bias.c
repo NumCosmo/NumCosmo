@@ -199,19 +199,9 @@ nc_halo_bias_clear (NcHaloBias **bias)
 gdouble
 nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  gdouble sigma, dn_dlnM, bias, dv_dzdomega;
+  const gdouble d2n_dzdlnM = nc_halo_mass_function_d2n_dzdlnM (mbiasf->mfp, cosmo, lnM, z);
+  const gdouble sigma      = nc_halo_mass_function_sigma_lnM (mbiasf->mfp, cosmo, lnM, z);
+  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
 
-  dv_dzdomega = nc_halo_mass_function_dv_dzdomega (mbiasf->mfp, cosmo, z);
-  nc_halo_mass_function_dn_dlnM_sigma (mbiasf->mfp, cosmo, lnM, z, &sigma, &dn_dlnM);
-
-<<<<<<< HEAD
-  bias = nc_halo_bias_eval (mbiasf, cosmo, sigma, z); 
-  return dv_dzdomega * dn_dlnM * bias;
+  return d2n_dzdlnM * bias;
 }
-=======
-  bias = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
-
-  return dn_dlnM * bias;
-}
-
->>>>>>> 9beff81aea735cf2e533a17e1e81c5fcdefafea5
