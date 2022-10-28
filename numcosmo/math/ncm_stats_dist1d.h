@@ -52,7 +52,7 @@ struct _NcmStatsDist1dClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   gdouble (*p) (NcmStatsDist1d *sd1, gdouble x);
   gdouble (*m2lnp) (NcmStatsDist1d *sd1, gdouble x);
   void (*prepare) (NcmStatsDist1d *sd1);
