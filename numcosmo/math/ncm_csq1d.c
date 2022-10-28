@@ -2040,11 +2040,13 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   guint iter               = 0;
   gint status;
   gsl_function F;
+  gint ret;
   
   F.params   = &ws;
   F.function = &_ncm_csq1d_abs_F1_logt;
   
-  gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
+  ret = gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
+  NCM_TEST_GSL_RESULT ("ncm_csq1d_find_adiab_max", ret);
   
   do {
     iter++;
@@ -2342,12 +2344,14 @@ ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gd
 #define _ALPHA_TO_THETA(alpha) (atan (sinh (alpha)))
 #define _THETA_TO_ALPHA(theta) (asinh (tan (theta)))
 
+/*
 static void
 _ncm_csq1d_ct_g0g2 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
 {
   alphap[0] = alpha;
   gammap[0] = gamma - p;
 }
+*/
 
 static void
 _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
@@ -3071,10 +3075,15 @@ ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdo
 void
 ncm_csq1d_alpha_gamma_circle (NcmCSQ1D *csq1d, NcmModel *model, const gdouble alpha, const gdouble gamma, const gdouble r, const gdouble theta, gdouble *alphap, gdouble *gammap)
 {
-  const gdouble t1 = cosh (r) * sinh (alpha) + cos (theta) * cosh (alpha) * sinh (r);
-  const gdouble t2 = (sin (theta) / cosh (alpha) + cos (theta) * tanh (alpha)) * tanh (r);
+  const gdouble ct = cos (theta);
+  const gdouble st = sin (theta);
+  const gdouble tr = tanh (r);
+  const gdouble ca = cosh (alpha);
+  const gdouble sa = sinh (alpha);
+  const gdouble t1 = cosh (r) * sa + ct * ca * sinh (r);
+  const gdouble t2 = -(2.0 * st * tr / (ca + tr * (st + ct * sa)));
   
   alphap[0] = asinh (t1);
-  gammap[0] = gamma - gsl_sf_lncosh (alpha) - gsl_sf_lncosh (r) - log1p (t2) + 0.5 * log1p (t1 * t1);
+  gammap[0] = gamma + 0.5 * log1p (t2);
 }
 

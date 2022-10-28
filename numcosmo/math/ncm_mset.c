@@ -2384,6 +2384,34 @@ ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
 }
 
 /**
+ * ncm_mset_fparam_get_bound_matrix:
+ * @mset: a #NcmMSet
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmMatrix *
+ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
+{
+  NcmMatrix *bounds = ncm_matrix_new (mset->fparam_len, 2);
+  gint i;
+  g_assert (mset->valid_map);
+
+  for (i = 0; i < mset->fparam_len; i++)
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, i);
+    const gdouble ub_i     = ncm_mset_param_get_upper_bound (mset, pi.mid, pi.pid);
+    const gdouble lb_i     = ncm_mset_param_get_lower_bound (mset, pi.mid, pi.pid);
+
+    ncm_matrix_set (bounds, i, 0, lb_i);
+    ncm_matrix_set (bounds, i, 1, ub_i);
+  }
+
+  return bounds;
+}
+
+/**
  * ncm_mset_fparam_get_abstol:
  * @mset: a #NcmMSet
  * @n: free parameter index

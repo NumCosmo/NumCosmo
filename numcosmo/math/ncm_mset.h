@@ -246,6 +246,7 @@ NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *full
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
+NcmMatrix *ncm_mset_fparam_get_bound_matrix (NcmMSet *mset);
 gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
 gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);

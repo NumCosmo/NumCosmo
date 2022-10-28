@@ -15,6 +15,7 @@ examples_DATA = \
 	example_cbe.py                \
 	example_recomb.py             \
 	example_fit_snia.py           \
+	example_fit_snia_cov.py       \
 	example_rg_snia_bao.py        \
 	example_ca_sampling.py        \
 	example_ode_spline.py         \

@@ -51,7 +51,7 @@ nc_hicosmo_de_reparam_ok_constructed (GObject *object)
   {
     NcHICosmoDEReparamOk *reparam_Ok = NC_HICOSMO_DE_REPARAM_OK (object);
     ncm_reparam_set_param_desc_full (NCM_REPARAM (reparam_Ok), NC_HICOSMO_DE_OMEGA_X,
-                                     "Omegak","\\Omega_{k0}", -5.0e-1, 5.0e-1, 1.0e-2,
+                                     "Omegak","\\Omega_{k0}", -3.0e-1, 3.0e-1, 1.0e-2,
                                      NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
     NCM_REPARAM (reparam_Ok)->compat_type = NC_TYPE_HICOSMO_DE;
   }
@@ -102,6 +102,7 @@ _nc_hicosmo_de_reparam_ok_new2old (NcmReparam *reparam, NcmModel *model)
   {
     NcHICosmo *cosmo = NC_HICOSMO (model);
     const gdouble Omega_x0 = 1.0 - (nc_hicosmo_Omega_m0 (cosmo) + nc_hicosmo_Omega_r0 (cosmo) + ncm_vector_get (reparam->new_params, NC_HICOSMO_DE_OMEGA_X));
+
     ncm_vector_set (params, NC_HICOSMO_DE_OMEGA_X, Omega_x0);
   }
   return TRUE;

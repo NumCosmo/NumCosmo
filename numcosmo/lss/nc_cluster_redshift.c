@@ -166,7 +166,7 @@ _nc_cluster_redshift_volume (NcClusterRedshift *clusterz)
   return 0.0;
 }
 
-/* LCOV_EXCL_END */
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_cluster_redshift_class_obs_len:

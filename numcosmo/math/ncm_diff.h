@@ -14,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -64,9 +64,9 @@ struct _NcmDiff
  * @x: function argument
  * @y: function value
  * @user_data: (nullable): user data
- * 
+ *
  * Functon $f(x)$ call back.
- * 
+ *
  */
 typedef void (*NcmDiffFuncNtoM) (NcmVector *x, NcmVector *y, gpointer user_data);
 typedef void (*NcmDiffFunc1toM) (const gdouble x, NcmVector *y, gpointer user_data);
@@ -84,11 +84,13 @@ void ncm_diff_clear (NcmDiff **diff);
 guint ncm_diff_get_max_order (NcmDiff *diff);
 gdouble ncm_diff_get_richardson_step (NcmDiff *diff);
 gdouble ncm_diff_get_round_off_pad (NcmDiff *diff);
+gdouble ncm_diff_get_trunc_error_pad (NcmDiff *diff);
 gdouble ncm_diff_get_ini_h (NcmDiff *diff);
 
 void ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder);
 void ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs);
 void ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad);
+void ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad);
 void ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h);
 
 void ncm_diff_log_central_tables (NcmDiff *diff);
@@ -113,8 +115,7 @@ gdouble ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f
 gdouble ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
 gdouble ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
 
-#define NCM_DIFF_ERR_PAD (1.0e4)
-
 G_END_DECLS
 
 #endif /* _NCM_DIFF_H_ */
+

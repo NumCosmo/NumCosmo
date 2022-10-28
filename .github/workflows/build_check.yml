@@ -59,7 +59,7 @@ jobs:
     - name: make check
       run: make check -j8
     - name: make code-coverage-capture
-      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info
+      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info CODE_COVERAGE_LCOV_SHOPTS_DEFAULT="--config-file lcovrc"
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
@@ -83,7 +83,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install prereq
       run: |
-        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc
+        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib
+        brew ls glib
+        brew ls glib-utils
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure

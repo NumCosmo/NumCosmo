@@ -168,6 +168,9 @@ NcmVector *ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, c
 
 GPtrArray *ncm_stats_vec_dup_saved_x (NcmStatsVec *svec);
 
+NcmMatrix *ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec);
+NcmMatrix *ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec);
+
 NCM_INLINE NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 NCM_INLINE void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);
 NCM_INLINE gdouble ncm_stats_vec_get (NcmStatsVec *svec, guint i);

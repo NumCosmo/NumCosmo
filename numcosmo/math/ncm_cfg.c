@@ -92,6 +92,7 @@
 #include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_de_wspline.h"
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
@@ -124,6 +125,7 @@
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_multiplicity_func_bocquet.h"
+#include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_galaxy_redshift_spec.h"
@@ -179,6 +181,7 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
@@ -338,14 +341,14 @@ _ncm_cfg_exit (void)
 {
 #ifdef HAVE_MPI
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying [%d]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.initialized);
-  
+
   if (_mpi_ctrl.initialized)
   {
     ncm_cfg_mpi_kill_all_slaves ();
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Finalize ();
   }
-  
+
 #endif /* HAVE_MPI */
 }
 
@@ -561,6 +564,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
@@ -609,6 +613,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
   
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
   
@@ -686,6 +691,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DTR_DHR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
   
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);

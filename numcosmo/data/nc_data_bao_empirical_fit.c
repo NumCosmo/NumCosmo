@@ -311,6 +311,9 @@ nc_data_bao_empirical_fit_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_ross2015.obj", TRUE);
       break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_1d_dvr_sdss_dr16_elg_2021.obj", TRUE);
+      break;
     default:
       g_error ("nc_data_bao_empirical_fit_new_from_id: id %d not recognized.", id);
       break;
