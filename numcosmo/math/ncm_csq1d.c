@@ -29,22 +29,31 @@
  * SECTION:ncm_csq1d
  * @title: NcmCSQ1D
  * @short_description: Abstract class for Harmonic Oscillator calculation through complex structure quantization.
+ * 
  *
- *
- * The system:
+ * This class shall be used to solve the system:
  * \begin{align}
  * q^\prime &= \frac{\Pi_q}{m},
  * \Pi_q^\prime &= m\nu^2q.
- * \end{align}
+ * ,\end{align}
+ * where $m$ is the oscillator's mass, $nu$ is the eigenvalue of the laplacian operator in the Fourier space
+ * and $\Pi_q$ is the conjugated momentum related to the variable $q$. Using the variable
  *
  * \begin{equation}
  * \xi = \ln (m\nu)
  * \end{equation}
- *
+ * and the derivatives
  * \begin{equation}
- * F^n = \left(\frac{1}{2\nu}\frac{\partial}{\partial t}\right)^n \xi.
- * \end{equation}
+ * F^n = \left(\frac{1}{2\nu}\frac{\partial}{\partial t}\right)^n \xi
+ * ,\end{equation}
+ * this class returns the two-point functions in the Fourier space for any given time, that is, $\left\<q_k q_k \right\>$,
+ * $\left\<\Pi_{qk}\Pi_{qk} \right\>$ and $\left\<q_k \Pi_{qk} \right\>$. These objects are computed by
+ * ncm\_csq1d\_get\_J\_at(). Besides the use in Field Theory, this object can be used for general
+ * complex Harmonic oscillator problems. Be aware that all the variables computed by this object are dimensionless.
  *
+ * This abstract class has the numerical tools to find the Fourier modes given the above equations and variables,
+ * but since this is an abstract class, a child object that implements the equations above and a $NcmModel are needed. To use
+ * this class, check nc\_hipert\_adiab.c. 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -413,7 +422,6 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
   }
 }
-static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
 static gdouble _ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -421,8 +429,7 @@ static gdouble _ncm_csq1d_eval_nu2        (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_mnu        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_dlnmnu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static void    _ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
-static gdouble _ncm_csq1d_eval_V          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static void    _ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
 static gdouble _ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 static gdouble _ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -506,7 +513,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_m              = &_ncm_csq1d_eval_m;
   klass->eval_mnu            = &_ncm_csq1d_eval_mnu;
   klass->eval_dlnmnu	     = &_ncm_csq1d_eval_dlnmnu;
-  klass->eval_V              = &_ncm_csq1d_eval_V;
   klass->eval_system         = &_ncm_csq1d_eval_system;
   klass->eval_int_1_m        = &_ncm_csq1d_eval_int_1_m;
   klass->eval_int_mnu2       = &_ncm_csq1d_eval_int_mnu2;
@@ -516,7 +522,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_F1             = &_ncm_csq1d_eval_F1;
   klass->eval_F2             = &_ncm_csq1d_eval_F2;
   klass->eval_FN             = &_ncm_csq1d_eval_FN;
-  klass->eval_powspec_factor = &_ncm_csq1d_eval_powspec_factor;
 }
 
 static gdouble
@@ -562,23 +567,13 @@ _ncm_csq1d_eval_mnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gd
 static gdouble
 _ncm_csq1d_eval_dlnmnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  g_error ("_ncm_csq1d_eval_nu: not implemented.");
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_csq1d_eval_V (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
-{
-  g_error ("_ncm_csq1d_eval_nu: not implemented.");
-
-  return 0.0;
+  return 2.0 * NCM_CSQ1D_GET_CLASS (csq1d)->eval_nu(csq1d, model, t, k) * NCM_CSQ1D_GET_CLASS (csq1d)->eval_F1(csq1d, model, t, k);
 }
 
 static void
-_ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k,  gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
+_ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k,  gdouble *nu, gdouble *xi, gdouble *F1)
 {
-  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+  g_error ("_ncm_csq1d_eval_system: not implemented.");
 
 }
 
@@ -643,13 +638,6 @@ _ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdoubl
 {
   g_error ("_ncm_csq1d_eval_FN: not implemented.");
   
-  return 0.0;
-}
-
-static gdouble 
-_ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
-{
-	g_error("Not Implemented");
   return 0.0;
 }
 
@@ -1228,11 +1216,6 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   NV_Ith_S (ydot, 0) = +m * nu2 * exp_Um - ch2_alpha / (m * exp_Um);
   NV_Ith_S (ydot, 1) = -2.0 * chi / (m * exp_Um);
   
-/*printf ("evol % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", t, m, 
-NV_Ith_S (y, 0), NV_Ith_S (y, 1),
-NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1),
-Um, nu2
-);*/
   return 0;
 }
 
@@ -1864,14 +1847,12 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 GArray *
 ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
 {
-  printf("aq");
   NcmCSQ1DPrivate * const self = csq1d->priv;
   NcmVector *asinh_t_v         = ncm_spline_get_xv (self->alpha_s);
   const guint len              = ncm_vector_len (asinh_t_v);
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
   gdouble s_t                  = 1.0e300;
   gint i;
-  printf("aqui");
   for (i = 0; i < len; i++)
   {
     const gdouble t_i = sinh (ncm_vector_fast_get (asinh_t_v, i));
@@ -1945,7 +1926,6 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
       g_warning ("# Impossible to find the adiabatic limit: \n\tt0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n\tt1 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
                  t0, alpha0, alpha_reltol0, dgamma0, dgamma_reltol0,
                  t1, alpha1, alpha_reltol1, dgamma1, dgamma_reltol1);
-    /*printf("loop false valores %.20f %.20f", alpha_reltol0, alpha_reltol1);   */ 
     return FALSE;
   }
   else

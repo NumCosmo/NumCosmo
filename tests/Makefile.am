@@ -147,9 +147,12 @@ test_nc_halo_density_profile_SOURCES =  \
 test_nc_wl_surface_mass_density_SOURCES =  \
         test_nc_wl_surface_mass_density.c
 
+test_nc_hipert_adiab_SOURCES = \
+        test_nc_hipert_adiab.c
+        
 test_nc_distance_SOURCES =  \
         test_nc_distance.c
-        
+	        
 test_programs =  \
 	test_ncm_vector                 \
 	test_ncm_matrix                 \
@@ -188,9 +191,10 @@ test_programs =  \
 	test_nc_data_bao_dvdv           \
 	test_nc_data_cluster_ncount     \
 	test_nc_cluster_pseudo_counts   \
-	test_nc_cluster_abundance   \
+	test_nc_cluster_abundance       \
 	test_nc_halo_density_profile    \
 	test_nc_wl_surface_mass_density \
+	test_nc_hipert_adiab            \
 	test_nc_distance
 
 # TEST_PROGS += $(check_programs)
@@ -434,7 +438,13 @@ test_nc_wl_surface_mass_density_LDADD = \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
         $(COVLIBS)
-
+        
+test_nc_hipert_adiab_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS) \
+        $(COVLIBS)
+        
 test_nc_distance_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \

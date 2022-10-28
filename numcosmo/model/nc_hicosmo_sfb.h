@@ -1,14 +1,15 @@
 /***************************************************************************
  *            nc_hicosmo_sfb.h
  *
- *  Wed June 04 10:04:37 2014
- *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>>
+ *  Thu August 04 08:28:24 2022
+ *  Copyright  2022  Eduardo José Barroso and Sandro Dias Pinto Vitenti
+ *  <eduardo.jsbarroso@uel.br> <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * nc_hicosmo_sfb.h
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- *
+ * Copyright (C) 2022 Eduardo José Barroso and Sandro Dias Pinto Vitenti  
+ * <eduardo.jsbarroso@uel.br> <sandro@isoftware.com.br>
+ * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -52,17 +53,16 @@ typedef struct _NcHICosmoSFB NcHICosmoSFB;
  * @NC_HICOSMO_SFB_W: $w$-fluid equation of state.
  * @NC_HICOSMO_SFB_X_B: Redshift at the bounce.
  *
+ * Parameters of Parameter of the Single Fluib Bounce model.
  * 
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
 {
   NC_HICOSMO_SFB_H0 = 0,
-  NC_HICOSMO_SFB_OMEGA_R,
   NC_HICOSMO_SFB_OMEGA_W,
   NC_HICOSMO_SFB_W,  
-  NC_HICOSMO_SFB_X_B,    
-  NC_HICOSMO_SFB_TAU_B,
-  /* < private > */
+  NC_HICOSMO_SFB_X_B,  
+  /* < private > */  
   NC_HICOSMO_SFB_SPARAM_LEN, /*< skip >*/
 } NcHICosmoSFBSParams;
 
@@ -72,13 +72,6 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
  * Default value for $H_0$.
  */ 
 #define NC_HICOSMO_SFB_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
-
-/**
- * NC_HICOSMO_SFB_DEFAULT_OMEGA_R: (value 1.0e-5)
- * 
- * Default $\Omega_{r0}$.
- */
-#define NC_HICOSMO_SFB_DEFAULT_OMEGA_R (0.0)
 
 /**
  * NC_HICOSMO_SFB_DEFAULT_OMEGA_W: (value 1.0)
@@ -101,26 +94,15 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SFB_SPARAMS >*/
  */
 #define NC_HICOSMO_SFB_DEFAULT_X_B     (1.0e25)
 
-/**
- * NC_HICOSMO_SFB_DEFAULT_TAU_B: (value 0.0 )
- *
- * Default $tau_b$.
- */
-#define NC_HICOSMO_SFB_DEFAULT_TAU_B     (0.0)
-
 
 struct _NcHICosmoSFBClass
 {
   NcHICosmoClass parent_class;
-  /*< private >*/
 };
 
 struct _NcHICosmoSFB
 {
   NcHICosmo parent_instance;
-  /*< private >*/
-  /*NcHIPertITwoFluidsEOM eom_two_fluids;
-  NcHIPertITwoFluidsTV tv_two_fluids;*/
 };
 
 GType nc_hicosmo_sfb_get_type (void) G_GNUC_CONST;
