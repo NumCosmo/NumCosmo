@@ -8,6 +8,7 @@ Intel/*
 Optimized/*
 Profiling/*
 *.in
+*.log
 !numcosmo.pc.in
 configure
 compile
@@ -36,6 +37,8 @@ docs/references.dvi
 docs/references.log
 docs/references.out
 scripts/*.pyc
+__pycache__
+.ipynb_checkpoints
 *~
 *.la
 *.lo
@@ -122,6 +125,7 @@ autom4te.cache
 
 # http://www.gnu.org/software/m4/
 
+aminclude_static.am
 m4/libtool.m4
 m4/ltoptions.m4
 m4/ltsugar.m4
@@ -134,7 +138,7 @@ m4/lt~obsolete.m4
 # (which is called by configure script))
 Makefile
 
-# Docs
+# Docs and images
 *.pdf
 
 # Datafile
@@ -151,3 +155,4 @@ Makefile
 Optimized/
 BDocs/
 Coverage/
+MPI/
