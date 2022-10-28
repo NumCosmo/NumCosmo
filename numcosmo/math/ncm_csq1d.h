@@ -58,6 +58,9 @@ struct _NcmCSQ1DClass
   gdouble (*eval_nu)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu2)        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_m)          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+  gdouble (*eval_mnu)        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+  gdouble (*eval_dlnmnu)     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+  void    (*eval_system)     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1);
   gdouble (*eval_int_1_m)    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_int_mnu2)   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_int_qmnu2)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -66,7 +69,6 @@ struct _NcmCSQ1DClass
   gdouble (*eval_F1)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_FN)         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
-  gdouble (*eval_powspec_factor) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 };
 
@@ -94,35 +96,7 @@ struct _NcmCSQ1D
   NcmCSQ1DPrivate *priv;
 };
 
-/**
- * NcmCSQ1DSingFitUp:
- *
- * Struct containig the $\Upsilon_+$ fitting model.
- *
- */
-struct _NcmCSQ1DSingFitUp
-{
-  /*< private >*/
-  gint chi_dim;
-  gint Up_dim;
-  NcmVector *chi_c;
-  NcmVector *Up_c;
-};
-
-GType ncm_csq1d_sing_fit_up_get_type (void) G_GNUC_CONST;
 GType ncm_csq1d_get_type (void) G_GNUC_CONST;
-
-NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_new (const gint chi_dim, const gint Up_dim);
-NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_dup (NcmCSQ1DSingFitUp *sing_up);
-void ncm_csq1d_sing_fit_up_free (NcmCSQ1DSingFitUp *sing_up);
-
-void ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, NcmVector *t, NcmVector *chim_t, NcmVector *exp_Up);
-
-gdouble ncm_csq1d_sing_fit_up_eval_chi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-gdouble ncm_csq1d_sing_fit_up_eval_exp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-
-gdouble ncm_csq1d_sing_fit_up_eval_dchi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-gdouble ncm_csq1d_sing_fit_up_eval_dexp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
 NcmCSQ1D *ncm_csq1d_ref (NcmCSQ1D *csq1d);
 void ncm_csq1d_free (NcmCSQ1D *csq1d);
@@ -136,7 +110,6 @@ void ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf);
 void ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold);
 void ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold);
 void ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, const gboolean save);
-void ncm_csq1d_set_sing_detect (NcmCSQ1D *csq1d, const gboolean enable);
 void ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmCSQ1DEvolState state, const gdouble ti, const gdouble x, const gdouble y);
 void ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti);
 
@@ -148,13 +121,15 @@ gdouble ncm_csq1d_get_tf (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_adiab_threshold (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_prop_threshold (NcmCSQ1D *csq1d);
 gboolean ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d);
-gboolean ncm_csq1d_get_sing_detect (NcmCSQ1D *csq1d);
 
 NCM_INLINE gdouble ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_nu2        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_m          (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+NCM_INLINE gdouble ncm_csq1d_eval_mnu        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+NCM_INLINE gdouble ncm_csq1d_eval_dlnmnu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+NCM_INLINE void    ncm_csq1d_eval_system     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k,  gdouble *nu, gdouble *xi, gdouble *F1);
 NCM_INLINE gdouble ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -163,8 +138,6 @@ NCM_INLINE gdouble ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
-NCM_INLINE gdouble ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
-
 void ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
 GArray *ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t);
@@ -240,6 +213,24 @@ ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdoub
 }
 
 NCM_INLINE gdouble
+ncm_csq1d_eval_mnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_mnu (csq1d, model, t, k);
+}
+
+NCM_INLINE gdouble
+ncm_csq1d_eval_dlnmnu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_dlnmnu (csq1d, model, t, k);
+}
+
+NCM_INLINE void
+ncm_csq1d_eval_system (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *xi, gdouble *F1)
+{
+  NCM_CSQ1D_GET_CLASS (csq1d)->eval_system (csq1d, model, t, k, nu, xi, F1);
+}
+
+NCM_INLINE gdouble
 ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_1_m (csq1d, model, t, k);
@@ -285,12 +276,6 @@ NCM_INLINE gdouble
 ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_FN (csq1d, model, n, t, k);
-}
-
-NCM_INLINE gdouble
-ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k)
-{
-  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_powspec_factor (csq1d, model, k);
 }
 
 G_END_DECLS

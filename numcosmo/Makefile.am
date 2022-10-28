@@ -116,7 +116,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c           \
 	math/ncm_powspec.c                    \
 	math/ncm_powspec_filter.c             \
-	math/ncm_powspec_sphere_proj.c       \
+	math/ncm_powspec_sphere_proj.c        \
 	math/ncm_powspec_corr3d.c             \
 	math/ncm_hoaa.c                       \
 	math/ncm_csq1d.c                      \
@@ -130,7 +130,7 @@ ncm_sources = \
 	math/ncm_mpsf_0F1.c                   \
 	math/ncm_fftlog.c                     \
 	math/ncm_fftlog_sbessel_j.c           \
-	math/ncm_fftlog_sbessel_jljm.c       \
+	math/ncm_fftlog_sbessel_jljm.c        \
 	math/ncm_fftlog_tophatwin2.c          \
 	math/ncm_fftlog_gausswin2.c           \
 	math/ncm_sparam.c                     \
@@ -256,7 +256,7 @@ ncm_headers =                                 \
 	math/ncm_spline2d_bicubic.h           \
 	math/ncm_powspec.h                    \
 	math/ncm_powspec_filter.h             \
-	math/ncm_powspec_sphere_proj.h       \
+	math/ncm_powspec_sphere_proj.h        \
 	math/ncm_powspec_corr3d.h             \
 	math/ncm_hoaa.h                       \
 	math/ncm_csq1d.h                      \
@@ -270,7 +270,7 @@ ncm_headers =                                 \
 	math/ncm_mpsf_0F1.h                   \
 	math/ncm_fftlog.h                     \
 	math/ncm_fftlog_sbessel_j.h           \
-	math/ncm_fftlog_sbessel_jljm.h       \
+	math/ncm_fftlog_sbessel_jljm.h        \
 	math/ncm_fftlog_tophatwin2.h          \
 	math/ncm_fftlog_gausswin2.h           \
 	math/ncm_sparam.h                     \
@@ -386,7 +386,7 @@ nc_headers = \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_reparam_cmb.h \
-	model/nc_hicosmo_de_cpl.h  \
+	model/nc_hicosmo_de_cpl.h     \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
 	model/nc_hicosmo_de_wspline.h \
@@ -394,9 +394,9 @@ nc_headers = \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qspline.h    \
+	model/nc_hicosmo_sfb.h	      \
 	model/nc_hicosmo_qrbf.h       \
 	model/nc_hicosmo_qgrw.h       \
-	model/nc_hicosmo_Vexp.h       \
 	model/nc_hiprim_power_law.h   \
 	model/nc_hiprim_atan.h        \
 	model/nc_hiprim_expc.h        \
@@ -547,9 +547,9 @@ nc_sources = \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
 	model/nc_hicosmo_qspline.c    \
+	model/nc_hicosmo_sfb.c	      \
 	model/nc_hicosmo_qrbf.c       \
 	model/nc_hicosmo_qgrw.c       \
-	model/nc_hicosmo_Vexp.c       \
 	model/nc_hiprim_power_law.c   \
 	model/nc_hiprim_atan.c        \
 	model/nc_hiprim_expc.c        \
