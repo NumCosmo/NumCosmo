@@ -295,7 +295,7 @@ ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const gchar
  * gets from all namespaces, @nvar and/or @dim equals to -1 selects
  * any value. The contained strings must not be freed.
  * 
- * Returns: (transfer full) (element-type NcmMSetFuncListStruct): NcmMSetFuncListStruct array.
+ * Returns: (transfer container) (element-type NcmMSetFuncListStruct): NcmMSetFuncListStruct array.
  */
 GArray *
 ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
@@ -309,7 +309,7 @@ ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
     for (i = 0; i < flist_class->func_array->len; i++)
     {
       NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, i);
-      gboolean in_ns   = (ns == NULL) || g_strcmp0 (fdata->ns, ns) == 0;
+      gboolean in_ns   = (ns == NULL) || g_str_has_prefix (fdata->ns, ns);
       gboolean in_nvar = (nvar == -1) || nvar == fdata->nvar;
       gboolean in_dim  = (dim  == -1) || dim  == fdata->dim;
       
@@ -319,7 +319,7 @@ ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
       }
     }
   }
-  
+
   G_UNLOCK (insert_lock);
   
   g_type_class_unref (flist_class);
@@ -359,13 +359,41 @@ ncm_mset_func_list_new (const gchar *full_name, GObject *obj)
 NcmMSetFuncList *
 ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj)
 {
-  gchar *full_name = g_strdup_printf ("%s:%s", ns, name);
+  NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
+  const gchar *full_ns = NULL;
+
+  G_LOCK (insert_lock);
+  {
+    gint i;
+    for (i = 0; i < flist_class->func_array->len; i++)
+    {
+      NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, i);
+      if (g_str_has_prefix (fdata->ns, ns))
+      {
+        GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, fdata->ns);
+        if ((func_hash != NULL) && g_hash_table_lookup_extended (func_hash, name, NULL, NULL))
+        {
+          full_ns = fdata->ns;
+          break;
+        }
+      }
+    }
+  }
+  G_UNLOCK (insert_lock);
+  g_type_class_unref (flist_class);
+
+  if (full_ns == NULL)
+    g_error ("ncm_mset_func_list_new_ns_name: namespace `%s' not found.", ns);
+
+  {
+  gchar *full_name = g_strdup_printf ("%s:%s", full_ns, name);
   NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,
                                          "full-name", full_name,
                                          "object", obj,
                                          NULL);
   g_free (full_name);
   return flist;
+  }
 }
 
 /**
@@ -385,9 +413,17 @@ ncm_mset_func_list_has_ns_name (const gchar *ns, const gchar *name)
   G_LOCK (insert_lock);
 
   {
-    GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns);
-    if ((func_hash != NULL) && g_hash_table_lookup_extended (func_hash, name, NULL, NULL))
-      has_func = TRUE;
+    gint i;
+    for (i = 0; i < flist_class->func_array->len; i++)
+    {
+      NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, i);
+      if (g_str_has_prefix (fdata->ns, ns))
+      {
+        GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, fdata->ns);
+        if ((func_hash != NULL) && g_hash_table_lookup_extended (func_hash, name, NULL, NULL))
+          has_func = TRUE;
+      }
+    }
   }
 
   G_UNLOCK (insert_lock);
