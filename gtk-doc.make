@@ -136,7 +136,7 @@ scan-build.stamp: setup-build.stamp $(HFILE_GLOB) $(CFILE_GLOB)
 	gtkdoc-scan --module=$(DOC_MODULE) --ignore-headers="$(IGNORE_HFILES)" $${_source_dir} $(SCAN_OPTIONS) $(EXTRA_HFILES)
 	$(GTK_DOC_V_INTROSPECT)if grep -l '^..*$$' $(DOC_MODULE).types > /dev/null 2>&1 ; then \
 	  scanobj_options=""; \
-	  gtkdoc-scangobj 2>&1 --help | grep  >/dev/null "\-\-verbose"; \
+	  gtkdoc-scangobj 2>&1 --help | grep  >/dev/null "\--verbose"; \
 	  if test "$$?" = "0"; then \
 	    if test "x$(V)" = "x1"; then \
 	      scanobj_options="--verbose"; \
@@ -198,13 +198,13 @@ GTK_DOC_V_XREF_0=@echo "  DOC   Fixing cross-references";
 html-build.stamp: sgml.stamp $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_content_files)
 	$(GTK_DOC_V_HTML)rm -rf html && mkdir html && \
 	mkhtml_options=""; \
-	gtkdoc-mkhtml 2>&1 --help | grep  >/dev/null "\-\-verbose"; \
+	gtkdoc-mkhtml 2>&1 --help | grep  >/dev/null "\--verbose"; \
 	if test "$$?" = "0"; then \
 	  if test "x$(V)" = "x1"; then \
 	    mkhtml_options="$$mkhtml_options --verbose"; \
 	  fi; \
 	fi; \
-	gtkdoc-mkhtml 2>&1 --help | grep  >/dev/null "\-\-path"; \
+	gtkdoc-mkhtml 2>&1 --help | grep  >/dev/null "\--path"; \
 	if test "$$?" = "0"; then \
 	  mkhtml_options="$$mkhtml_options --path=\"$(abs_srcdir)\""; \
 	fi; \
@@ -227,7 +227,7 @@ GTK_DOC_V_PDF_0=@echo "  DOC   Building PDF";
 pdf-build.stamp: sgml.stamp $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_content_files)
 	$(GTK_DOC_V_PDF)rm -f $(DOC_MODULE).pdf && \
 	mkpdf_options=""; \
-	gtkdoc-mkpdf 2>&1 --help | grep  >/dev/null "\-\-verbose"; \
+	gtkdoc-mkpdf 2>&1 --help | grep  >/dev/null "\--verbose"; \
 	if test "$$?" = "0"; then \
 	  if test "x$(V)" = "x1"; then \
 	    mkpdf_options="$$mkpdf_options --verbose"; \
@@ -236,7 +236,7 @@ pdf-build.stamp: sgml.stamp $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_cont
 	if test "x$(HTML_IMAGES)" != "x"; then \
 	  for img in $(HTML_IMAGES); do \
 	    part=`dirname $$img`; \
-	    echo $$mkpdf_options | grep >/dev/null "\-\-imgdir=$$part "; \
+	    echo $$mkpdf_options | grep >/dev/null "\--imgdir=$$part "; \
 	    if test $$? != 0; then \
 	      mkpdf_options="$$mkpdf_options --imgdir=$$part"; \
 	    fi; \
@@ -250,10 +250,10 @@ pdf-build.stamp: sgml.stamp $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_cont
 clean-local:
 	@rm -f *~ *.bak
 	@rm -rf .libs
-	@if echo $(SCAN_OPTIONS) | grep -q "\-\-rebuild-types" ; then \
+	@if echo $(SCAN_OPTIONS) | grep -q "\--rebuild-types" ; then \
 	  rm -f $(DOC_MODULE).types; \
 	fi
-	@if echo $(SCAN_OPTIONS) | grep -q "\-\-rebuild-sections" ; then \
+	@if echo $(SCAN_OPTIONS) | grep -q "\--rebuild-sections" ; then \
 	  rm -f $(DOC_MODULE)-sections.txt; \
 	fi
 

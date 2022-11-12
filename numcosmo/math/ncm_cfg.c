@@ -1766,7 +1766,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftw_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftw_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
   
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
@@ -1775,7 +1784,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftwf_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftwf_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
 #endif
   
   g_free (file);

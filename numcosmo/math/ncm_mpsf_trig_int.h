@@ -37,6 +37,7 @@
 G_BEGIN_DECLS
 
 void ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
+gdouble ncm_sf_sin_int (gdouble x);
 
 G_END_DECLS
 

@@ -1,5 +1,4 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_stats_dist_kde.h
  *
@@ -66,8 +65,10 @@ struct _NcmStatsDistKDE
 
 /**
  * NcmStatsDistKDECovType:
- * NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: Use sample covariance.
- * NCM_STATS_DIST_KDE_COV_TYPE_FIXED: Use a fixed covariance matrix.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: Use sample covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_FIXED: Use a fixed covariance matrix.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG: Use an 1D robust estimator to build a diagonal covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST: Use the OGK method to build a covariance.
  *
  * Selects the covariance type to use in the kernel interpolation.
  *

@@ -36,9 +36,11 @@
 
 G_BEGIN_DECLS
 
-void ncm_mpsf_0F1_q (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd);
+void ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
 void ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
 gdouble ncm_sf_0F1 (gdouble b, gdouble x);
+
+void ncm_mpsf_0F1_free_cache (void);
 
 G_END_DECLS
 

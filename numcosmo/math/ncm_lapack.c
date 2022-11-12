@@ -1316,6 +1316,7 @@ ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdou
  * @rank: RANK is INTEGER
  * The effective rank of A, i.e., the number of singular values
  * which are greater than RCOND*S(1).
+ * @ws: a Lapack workspace object #NcmLapackWS
  *
  * DGELSD computes the minimum-norm solution to a real linear least
  * squares problem:

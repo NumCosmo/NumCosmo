@@ -76,8 +76,11 @@ _besselj_bs_free (gpointer p)
   /* Leak we dont have a free function for binsplit FIXME:LEAK */
 }
 
+static NcmMemoryPool *__mp = NULL;
+G_LOCK_DEFINE_STATIC (__create_lock);
+
 /**
- * ncm_mpsf_0F1: (skip)
+ * _ncm_mpsf_0F1_get_bs: (skip)
  *
  * FIXME
  *
@@ -86,15 +89,12 @@ _besselj_bs_free (gpointer p)
 NcmBinSplit **
 _ncm_mpsf_0F1_get_bs (void)
 {
-  G_LOCK_DEFINE_STATIC (create_lock);
-  static NcmMemoryPool *mp = NULL;
+  G_LOCK (__create_lock);
+  if (__mp == NULL)
+    __mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
+  G_UNLOCK (__create_lock);
 
-  G_LOCK (create_lock);
-  if (mp == NULL)
-	mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
-  G_UNLOCK (create_lock);
-
-  return ncm_memory_pool_get (mp);
+  return ncm_memory_pool_get (__mp);
 }
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_0F1_taylor
@@ -157,27 +157,27 @@ _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_0F1_q: (skip)
- * @b: FIXME
- * @x: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @b: ${}_0F_1$ hypergeometric parameters as a rational number $b = q_b$
+ * @q: argument as a rational number $x = q_x$
+ * @res: mpfr variable containing the result ${}_0F_1(b;x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
+ * Computes the Hypergeometric function ${}_0F_1(b;x)$.
  */
 void
-ncm_mpsf_0F1_q (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
+ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  _taylor_0F1 (b, x, res, rnd);
+  _taylor_0F1 (b, q, res, rnd);
 }
 
 /**
  * ncm_mpsf_0F1_d: (skip)
- * @b: FIXME
- * @x: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @b: ${}_0F_1$ hypergeometric parameters $b$
+ * @x: argument $x$
+ * @res: mpfr variable containing the result ${}_0F_1(b;x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
+ * Computes the Hypergeometric function ${}_0F_1(b;x)$.
  */
 void
 ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -193,18 +193,38 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 }
 
 /**
- * ncm_sf_0F1:
- * @b: FIXME
- * @x: FIXME
+ * ncm_sf_0F1: (skip)
+ * @b: ${}_0F_1$ hypergeometric parameters $b$
+ * @x: argument $x$
  *
- * FIXME
+ * Computes the Hypergeometric function ${}_0F_1(b;x)$.
+ *
+ * Returns: the value of ${}_0F_1(b;x)$.
  */
 gdouble
 ncm_sf_0F1 (gdouble b, gdouble x)
 {
-  MPFR_DECL_INIT (res, 53); /* Should it be 53? FIXME */
+  MPFR_DECL_INIT (res, 53);
   gdouble res_d;
   ncm_mpsf_0F1_d (b, x, res, GMP_RNDN);
   res_d = mpfr_get_d (res, GMP_RNDN);
   return res_d;
+}
+
+/**
+ * ncm_mpsf_0F1_free_cache:
+ *
+ * Frees all buffers created to compute ncm_mpsf_0F1.
+ *
+ */
+void
+ncm_mpsf_0F1_free_cache (void)
+{
+  G_LOCK (__create_lock);
+  if (__mp != NULL)
+  {
+    ncm_memory_pool_free (__mp, TRUE);
+    __mp = NULL;
+  }
+  G_UNLOCK (__create_lock);
 }

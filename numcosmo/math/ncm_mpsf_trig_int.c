@@ -140,7 +140,6 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
   mpfr_set_q (res, q, rnd);
   mprec = res->_mpfr_exp;
-//  printf ("%ld %ld | %ld\n", prec, mprec, prec - mprec);
 
   if ((prec - mprec) > 0)
   {
@@ -194,31 +193,59 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sin_int_mpfr: (skip)
- * @q: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @q: argument as a rational number $x = q$
+ * @res: mpfr variable containing the result $\mathrm{Si}(x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
- * 
+ * Computes the sine integral
+ * $$\mathrm{Si}(x) = \int_0^x \frac{\sin x'}{x'}\mathrm{d}x.$$
+ *
  */
 void
 ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  gdouble x = mpq_get_d (q);
-  gdouble dnmax = 1.0 / 4.0 * (-5.0 + sqrt (1.0 + 4.0 * x * x));
-  gdouble nmax = (dnmax > 0) ? ceil (dnmax) : 0;
-  gulong prec = mpfr_get_prec (res);
+  const gdouble x     = mpq_get_d (q);
+  const gdouble dnmax = 1.0 / 4.0 * (-5.0 + sqrt (1.0 + 4.0 * x * x));
+  const gdouble nmax  = (dnmax > 0) ? ceil (dnmax) : 0;
+  const gulong prec   = mpfr_get_prec (res);
   //printf ("# dnmax %g nmax %g\n", dnmax, nmax);
 
   if (nmax == 0)
     _taylor_mpfr (q, res, rnd);
   else
   {
-    gdouble maxsize = ((2.0 * nmax + 0.0) * log (x) - lgamma (1.0 + 2.0 * nmax)) / M_LN2;
-    //printf ("# maxsize %f\n", maxsize);
+    const gdouble maxsize = ((2.0 * nmax + 0.0) * log (x) - lgamma (1.0 + 2.0 * nmax)) / M_LN2;
+
     if (maxsize > prec)
       _assym_mpfr (q, res, rnd);
     else
       _taylor_mpfr (q, res, rnd);
   }
 }
+
+/**
+ * ncm_sf_sin_int:
+ * @x: value of the argument $x$
+ *
+ * Computes the sine integral
+ * $$\mathrm{Si}(x) = \int_0^x \frac{\sin x'}{x'}\mathrm{d}x.$$
+ *
+ * Returns: the value of $\mathrm{Si}(x)$.
+ */
+gdouble
+ncm_sf_sin_int (gdouble x)
+{
+  MPFR_DECL_INIT (res, 53);
+  mpq_t xq;
+  gdouble res_d;
+
+  mpq_init (xq);
+
+  ncm_rational_coarce_double (x, xq);
+  ncm_mpsf_sin_int_mpfr (xq, res, GMP_RNDN);
+  mpq_clear (xq);
+
+  res_d = mpfr_get_d (res, GMP_RNDN);
+  return res_d;
+}
+

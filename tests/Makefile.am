@@ -65,6 +65,12 @@ test_ncm_integral1d_SOURCES =  \
 test_ncm_sf_sbessel_SOURCES =  \
 	test_ncm_sf_sbessel.c
 
+test_ncm_mpsf_0F1_SOURCES =  \
+	test_ncm_mpsf_0F1.c
+
+test_ncm_mpsf_trig_int_SOURCES =  \
+	test_ncm_mpsf_trig_int.c
+
 test_ncm_model_SOURCES =  \
         test_ncm_model.c \
 	ncm_model_test.c \
@@ -161,6 +167,8 @@ test_programs =  \
 	test_ncm_spline2d               \
 	test_ncm_integral1d             \
 	test_ncm_sf_sbessel             \
+	test_ncm_mpsf_0F1               \
+	test_ncm_mpsf_trig_int           \
 	test_ncm_func_eval              \
 	test_ncm_sparam                 \
 	test_ncm_diff                   \
@@ -274,6 +282,18 @@ test_ncm_integral1d_LDADD = \
 	$(COVLIBS)
 
 test_ncm_sf_sbessel_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_mpsf_0F1_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_mpsf_trig_int_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

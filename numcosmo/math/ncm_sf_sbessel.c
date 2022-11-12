@@ -50,12 +50,12 @@
 
 /**
  * ncm_sf_sbessel:
- * @l: FIXME
- * @x: FIXME
+ * @l: Spherical Bessel order $\ell$
+ * @x: Spherical Bessel argument $x$
  *
- * FIXME
+ * Computes Spherical Bessel function $j_\ell(x)$.
  *
- * Returns: FIXME
+ * Returns: the value of $j_\ell(x)$.
 */
 gdouble
 ncm_sf_sbessel (gulong l, gdouble x)
@@ -71,7 +71,7 @@ static void
 _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, const gdouble jl, const gdouble jlp1, gdouble *deriv)
 {
   const gdouble llm1 = l * (l - 1.0);
-  const gdouble llm1lm2 = llm1 * (l - 2);
+  const gdouble llm1lm2 = llm1 * (l - 2.0);
 
   deriv[0] = jl;
   deriv[1] = (l * jl - x * jlp1) / x;
@@ -83,9 +83,11 @@ _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, 
  * ncm_sf_sbessel_taylor:
  * @l: Spherical Bessel order $\ell$
  * @x: Spherical Bessel argument $x$
- * @djl: (out) (array fixed-size=4): Output derivatives
+ * @djl: (out) (array fixed-size=4): Output power series coefficients
  *
- * Computes Spherical Bessel function derivatives up to order three.
+ * Computes Spherical Bessel function power series
+ * coefficients up to order three, i.e.,
+ * $$\left(j_\ell(x),\; j'_\ell(x), \frac{j''_\ell(x)}{2!}, \frac{j'''_\ell(x)}{3!}\right).$$
 */
 void
 ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl)
@@ -96,96 +98,6 @@ ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl)
   const gdouble x3 = x2 * x;
 
   _taylor_jl (l, x, x2, x3, jl, jlp1, djl);
-  return;
-}
-
-/**
- * ncm_sf_sbessel_deriv:
- * @l: Spherical Bessel order $\ell$
- * @x: Spherical Bessel argument $x$
- * @jl: FIXME
- * @jlp1: FIXME
- * @djl: FIXME
- *
- * FIXME
-*/
-void
-ncm_sf_sbessel_deriv (gulong l, gdouble x, gdouble jl, gdouble jlp1, gdouble *djl)
-{
-  const gdouble x2 = x * x;
-  const gdouble x3 = x2 * x;
-  const gdouble x4 = x2 * x2;
-  const gdouble x5 = x3 * x2;
-  const gdouble llm1 = l * (l - 1.0);
-  const gdouble llm1lm2 = llm1 * (l - 2);
-  const gdouble llm1lm2lm3 = llm1lm2 * (l - 3);
-  const gdouble llm1lm2lm3lm4 = llm1lm2lm3 * (l - 4);
-
-  if (x != 0.0)
-  {
-    djl[0] = jl;
-    djl[1] = (l * jl - x * jlp1) / x;
-    djl[2] = ((llm1 - x2) * jl + 2.0 * x * jlp1) / x2;
-    djl[3] = ((llm1lm2 - (l - 2.0) * x2) * jl - x * (l * (l + 1.0) + 6.0 - x2) * jlp1) / x3;
-    djl[4] = ((llm1lm2lm3 - 2.0 * (4.0 + llm1) * x2 + x4) * jl + (4.0 * x * (6.0 + 2.0 * l * (l + 1.0) - x2)) * jlp1) / x4;
-    djl[5] = ((llm1lm2lm3lm4 - 2.0 * (l * (2.0 + (l - 7.0) * l) - 20.0) * x2 + (l - 4.0) * x4) * jl - (x * (l * (l + 1) * (58.0 + l * (1.0 + l)) - 2.0 * l * (l + 1.0) * x2 + x4 - 20.0 * (x2 - 6.0))) * jlp1) / x5;
-  }
-  else if (l > 5)
-    djl[0] = djl[1] = djl[2] = djl[3] = djl[4] = djl[5] = 0.0;
-  else
-  {
-    switch (l)
-    {
-      case 0:
-        djl[0] = 1.0;
-        djl[1] = 0.0;
-        djl[2] = -1.0 / 3.0;
-        djl[3] = 0.0;
-        djl[4] = 1.0 / 5.0;
-        djl[5] = 0.0;
-        break;
-      case 1:
-        djl[0] = 0.0;
-        djl[1] = 1.0 / 3.0;
-        djl[2] = 0.0;
-        djl[3] = -1.0 / 5.0;
-        djl[4] = 0.0;
-        djl[5] = 1.0 / 7.0;
-        break;
-      case 2:
-        djl[0] = 0.0;
-        djl[1] = 0.0;
-        djl[2] = 2.0 / 15.0;
-        djl[3] = 0.0;
-        djl[4] = -4.0 / 35.0;
-        djl[5] = 0.0;
-        break;
-      case 3:
-        djl[0] = 0.0;
-        djl[1] = 0.0;
-        djl[2] = 0.0;
-        djl[3] = 2.0 / 35.0;
-        djl[4] = 0.0;
-        djl[5] = -4.0 / 63.0;
-        break;
-      case 4:
-        djl[0] = 0.0;
-        djl[1] = 0.0;
-        djl[2] = 0.0;
-        djl[3] = 0.0;
-        djl[4] = 8.0 / 315.0;
-        djl[5] = 0.0;
-        break;
-      case 5:
-        djl[0] = 0.0;
-        djl[1] = 0.0;
-        djl[2] = 0.0;
-        djl[3] = 0.0;
-        djl[4] = 0.0;
-        djl[5] = 8.0 / 693.0;
-        break;
-    }
-  }
   return;
 }
 
@@ -203,19 +115,20 @@ _ncm_sf_sbessel_spline_calc (gdouble x, gpointer data)
  * @xf: Spherical Bessel interval lower-bound $x_f$.
  * @reltol: Interpolation error tolerance.
  *
- * Computes a spline approximation of the Spherical Bessel in the interval $[x_i, x_f]$.
+ * Computes a spline approximation of the Spherical Bessel
+ * $j_\ell$ in the interval $[x_i, x_f]$.
  *
  * Returns: (transfer full): A #NcmSpline with the Spherical Bessel approximation.
  */
 NcmSpline *
 ncm_sf_sbessel_spline (gulong l, gdouble xi, gdouble xf, gdouble reltol)
 {
-	NcmSpline *s = ncm_spline_cubic_notaknot_new ();
-	gsl_function F;
+  NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+  gsl_function F;
 
-	F.function = &_ncm_sf_sbessel_spline_calc;
-	F.params = &l;
+  F.function = &_ncm_sf_sbessel_spline_calc;
+  F.params = &l;
 
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, xi, xf, 0, reltol);
-	return s;
+  ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, xi, xf, 0, reltol);
+  return s;
 }

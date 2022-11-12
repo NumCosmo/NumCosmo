@@ -57,16 +57,7 @@ struct _NcmMpsfSBesselRecur
 
 void ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
 void ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
-
-NcmMpsfSBesselRecur *ncm_mpsf_sbessel_recur_new (gulong prec);
-NcmMpsfSBesselRecur *ncm_mpsf_sbessel_recur_read (FILE *f);
-void ncm_mpsf_sbessel_recur_free (NcmMpsfSBesselRecur *jlrec);
-void ncm_mpsf_sbessel_recur_set_q (NcmMpsfSBesselRecur *jlrec, glong l, mpq_ptr q, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_set_d (NcmMpsfSBesselRecur *jlrec, glong l, gdouble x, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_next (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_previous (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_goto (NcmMpsfSBesselRecur *jlrec, glong l, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_write (NcmMpsfSBesselRecur *jlrec, FILE *f);
+void ncm_mpsf_sbessel_free_cache (void);
 
 G_END_DECLS
 

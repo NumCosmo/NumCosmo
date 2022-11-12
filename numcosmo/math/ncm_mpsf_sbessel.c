@@ -42,201 +42,6 @@
 #include "math/binsplit.h"
 #include "math/ncm_memory_pool.h"
 
-/**
- * ncm_mpsf_sbessel_recur_new: (skip)
- * @prec: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmMpsfSBesselRecur *
-ncm_mpsf_sbessel_recur_new (gulong prec)
-{
-  NcmMpsfSBesselRecur *jlrec = g_slice_new (NcmMpsfSBesselRecur);
-  jlrec->prec = prec;
-
-  mpq_init (jlrec->q);
-  mpfr_inits2 (prec, jlrec->x, jlrec->jl[0], jlrec->jl[1], jlrec->temp, NULL);
-
-  return jlrec;
-}
-
-/**
- * ncm_mpsf_sbessel_recur_set_q: (skip)
- * @jlrec: a #NcmMpsfSBesselRecur
- * @l: FIXME
- * @q: FIXME
- * @rnd: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_set_q (NcmMpsfSBesselRecur *jlrec, glong l, mpq_ptr q, mp_rnd_t rnd)
-{
-  jlrec->l = l;
-
-  mpq_set (jlrec->q, q);
-  mpfr_set_q (jlrec->x, q, rnd);
-
-  ncm_mpsf_sbessel (l + 0, q, jlrec->jl[0], rnd);
-  ncm_mpsf_sbessel (l + 1, q, jlrec->jl[1], rnd);
-}
-
-/**
- * ncm_mpsf_sbessel_recur_set_d: (skip)
- * @jlrec: a #NcmMpsfSBesselRecur
- * @l: FIXME
- * @x: FIXME
- * @rnd: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_set_d (NcmMpsfSBesselRecur *jlrec, glong l, gdouble x, mp_rnd_t rnd)
-{
-  jlrec->l = l;
-
-  ncm_rational_coarce_double (x, jlrec->q);
-  mpfr_set_q (jlrec->x, jlrec->q, rnd);
-
-  ncm_mpsf_sbessel (l + 0, jlrec->q, jlrec->jl[0], rnd);
-  ncm_mpsf_sbessel (l + 1, jlrec->q, jlrec->jl[1], rnd);
-}
-
-/**
- * ncm_mpsf_sbessel_recur_free:
- * @jlrec: a #NcmMpsfSBesselRecur
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_free (NcmMpsfSBesselRecur *jlrec)
-{
-  mpfr_clears (jlrec->x, jlrec->jl[0], jlrec->jl[1], jlrec->temp, NULL);
-  mpq_clear (jlrec->q);
-
-  g_slice_free (NcmMpsfSBesselRecur, jlrec);
-}
-
-/**
- * ncm_mpsf_sbessel_recur_next: (skip)
- * @jlrec: a #NcmMpsfSBesselRecur
- * @rnd: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_next (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd)
-{
-  if (mpfr_sgn (jlrec->x) != 0)
-  {
-    mpfr_mul_ui (jlrec->temp, jlrec->jl[1], 2 * jlrec->l + 3, rnd);
-    mpfr_div (jlrec->temp, jlrec->temp, jlrec->x, rnd);
-    mpfr_sub (jlrec->temp, jlrec->temp, jlrec->jl[0], rnd);
-
-    mpfr_swap (jlrec->jl[0], jlrec->jl[1]);
-    mpfr_set (jlrec->jl[1], jlrec->temp, rnd);
-  }
-  jlrec->l++;
-}
-
-/**
- * ncm_mpsf_sbessel_recur_previous: (skip)
- * @jlrec: a #NcmMpsfSBesselRecur
- * @rnd: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_previous (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd)
-{
-  if (mpfr_sgn (jlrec->x) != 0)
-  {
-    mpfr_mul_ui (jlrec->temp, jlrec->jl[0], 2 * jlrec->l + 1, rnd);
-    mpfr_div (jlrec->temp, jlrec->temp, jlrec->x, rnd);
-    mpfr_sub (jlrec->temp, jlrec->temp, jlrec->jl[1], rnd);
-
-    mpfr_swap (jlrec->jl[0], jlrec->jl[1]);
-    mpfr_set (jlrec->jl[0], jlrec->temp, rnd);
-  }
-
-  jlrec->l--;
-}
-
-/**
- * ncm_mpsf_sbessel_recur_goto: (skip)
- * @jlrec: a #NcmMpsfSBesselRecur
- * @l: FIXME
- * @rnd: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_goto (NcmMpsfSBesselRecur *jlrec, glong l, mp_rnd_t rnd)
-{
-  glong sign = GSL_SIGN (l - jlrec->l);
-  glong sub = labs(l - jlrec->l);
-  glong i;
-  if (sub == 0)
-    return;
-  if (sign == 1)
-    for (i = 0; i < sub; i++)
-      ncm_mpsf_sbessel_recur_next (jlrec, rnd);
-  else
-    for (i = 0; i < sub; i++)
-      ncm_mpsf_sbessel_recur_previous (jlrec, rnd);
-}
-
-/**
- * ncm_mpsf_sbessel_recur_write:
- * @jlrec: a #NcmMpsfSBesselRecur
- * @f: FIXME
- *
- * FIXME
- *
-*/
-void
-ncm_mpsf_sbessel_recur_write (NcmMpsfSBesselRecur *jlrec, FILE *f)
-{
-  NCM_WRITE_UINT32(f, jlrec->prec);
-  NCM_WRITE_INT32(f, jlrec->l);
-  ncm_mpq_out_raw (f, jlrec->q);
-  ncm_mpfr_out_raw (f, jlrec->x);
-  ncm_mpfr_out_raw (f, jlrec->jl[0]);
-  ncm_mpfr_out_raw (f, jlrec->jl[1]);
-}
-
-/**
- * ncm_mpsf_sbessel_recur_read: (skip)
- * @f: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
-*/
-NcmMpsfSBesselRecur *
-ncm_mpsf_sbessel_recur_read (FILE *f)
-{
-  guint32 prec;
-  NcmMpsfSBesselRecur *jlrec;
-  NCM_READ_UINT32 (f, prec);
-  jlrec = ncm_mpsf_sbessel_recur_new (prec);
-  NCM_READ_INT32 (f, jlrec->l);
-  ncm_mpq_inp_raw (jlrec->q, f);
-  ncm_mpfr_inp_raw (jlrec->x, f);
-  ncm_mpfr_inp_raw (jlrec->jl[0], f);
-  ncm_mpfr_inp_raw (jlrec->jl[1], f);
-
-  return jlrec;
-}
-
 typedef struct __binsplit_spherical_bessel
 {
   gulong l;
@@ -271,18 +76,18 @@ _besselj_bs_free (gpointer p)
   /* Leak we dont have a free function for binsplit FIXME:LEAK */
 }
 
+G_LOCK_DEFINE_STATIC (__create_lock);
+static NcmMemoryPool *__mp = NULL;
+
 NcmBinSplit **
 _ncm_mpsf_sbessel_get_bs (void)
 {
-  G_LOCK_DEFINE_STATIC (create_lock);
-  static NcmMemoryPool *mp = NULL;
+  G_LOCK (__create_lock);
+  if (__mp == NULL)
+    __mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
+  G_UNLOCK (__create_lock);
 
-  G_LOCK (create_lock);
-  if (mp == NULL)
-    mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
-  G_UNLOCK (create_lock);
-
-  return ncm_memory_pool_get (mp);
+  return ncm_memory_pool_get (__mp);
 }
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_spherical_bessel_taylor
@@ -456,12 +261,13 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sbessel: (skip)
- * @l: FIXME
- * @q: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @l: $\ell$ Spherical Bessel $j_\ell$ parameters as a rational number $\ell = q_\ell$
+ * @q: argument as a rational number $x = q_x$
+ * @res: mpfr variable containing the result $j_\ell(x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
+ * Computes the Spherical Bessel function $j_\ell(x)$.
+ *
 */
 void
 ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
@@ -484,12 +290,12 @@ ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sbessel_d: (skip)
- * @l: FIXME
- * @x: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @l: $\ell$ Spherical Bessel $j_\ell$ parameters
+ * @x: function argument $x$
+ * @res: mpfr variable containing the result $j_\ell(x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
+ * Computes the Spherical Bessel function $j_\ell(x)$.
  */
 void
 ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -499,4 +305,23 @@ ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
   ncm_rational_coarce_double (x, q);
   ncm_mpsf_sbessel (l, q, res, rnd);
   mpq_clear (q);
+}
+
+/**
+ * ncm_mpsf_sbessel_free_cache:
+ *
+ * Frees all buffers created to compute
+ * ncm_mpsf_sbessel functions.
+ *
+ */
+void
+ncm_mpsf_sbessel_free_cache (void)
+{
+  G_LOCK (__create_lock);
+  if (__mp != NULL)
+  {
+    ncm_memory_pool_free (__mp, TRUE);
+    __mp = NULL;
+  }
+  G_UNLOCK (__create_lock);
 }
