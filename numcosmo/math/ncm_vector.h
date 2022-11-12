@@ -3,7 +3,7 @@
  *
  *  Thu Nov  6 12:19:03 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*

@@ -3,11 +3,11 @@
  *
  *  Wed Aug 13 20:38:13 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti and Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <vitenti@uel.br>, <pennalima@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or

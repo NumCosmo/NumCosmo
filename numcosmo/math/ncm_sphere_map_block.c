@@ -4,7 +4,7 @@
  *
  *  Fri January 19 13:12:06 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_sphere_map_block.c

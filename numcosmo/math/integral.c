@@ -3,7 +3,7 @@
  *
  *  Wed Aug 13 20:35:59 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo

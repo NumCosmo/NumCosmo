@@ -3,7 +3,7 @@
  *
  *  Mon Nov 23 10:05:14 2009
  *  Copyright  2009  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo

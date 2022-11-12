@@ -3,13 +3,13 @@
  *
  *  Mon Oct 11 16:22:12 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  *  Copyright  2021  Sanderson Carlos Ribeiro
  *  <sander23.ribeiro@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2021 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2021 <vitenti@uel.br>
  * Copyright (C) Sanderson Carlos Ribeiro 2021 <sander23.ribeiro@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

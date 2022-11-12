@@ -3,7 +3,7 @@
  *
  *  Wed January 23 16:23:21 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_private.h

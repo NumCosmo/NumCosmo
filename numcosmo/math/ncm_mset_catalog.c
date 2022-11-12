@@ -3,11 +3,11 @@
  *
  *  Tue February 18 10:49:26 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti & Mariana Penna Lima (January 2017)
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * ncm_mset_catalog.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br> & Mariana Penna Lima
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br> & Mariana Penna Lima
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

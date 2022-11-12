@@ -3,7 +3,7 @@
  *
  *  Tue Apr 20 10:59:01 2010
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
- *  <pennalima@gmail.com> & <sandro@isoftware.com.br>
+ *  <pennalima@gmail.com> & <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo

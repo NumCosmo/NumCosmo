@@ -3,7 +3,7 @@
  *
  *  Wed July 26 12:04:44 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * test_ncm_diff.c

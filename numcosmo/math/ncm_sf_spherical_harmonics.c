@@ -4,11 +4,11 @@
  *
  *  Thu December 14 11:18:00 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_sf_spherical_harmonics.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * NumCosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
