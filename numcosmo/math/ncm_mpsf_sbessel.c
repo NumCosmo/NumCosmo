@@ -28,7 +28,7 @@
  * @short_description: Multiple precision spherical bessel implementation.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,18 +57,20 @@ _besselj_bs_alloc (gpointer userdata)
   _binsplit_spherical_bessel *bs_data = g_slice_new (_binsplit_spherical_bessel);
 
   NCM_UNUSED (userdata);
-  
+
   mpq_init (bs_data->mq2_2);
   mpfr_init (bs_data->sin);
   mpfr_init (bs_data->cos);
-  return ncm_binsplit_alloc ((gpointer)bs_data);
+
+  return ncm_binsplit_alloc ((gpointer) bs_data);
 }
 
 static void
 _besselj_bs_free (gpointer p)
 {
-  NcmBinSplit *bs = (NcmBinSplit *)p;
-  _binsplit_spherical_bessel *bs_data = (_binsplit_spherical_bessel *)bs->userdata;
+  NcmBinSplit *bs                     = (NcmBinSplit *) p;
+  _binsplit_spherical_bessel *bs_data = (_binsplit_spherical_bessel *) bs->userdata;
+
   mpq_clear (bs_data->mq2_2);
   mpfr_clear (bs_data->sin);
   mpfr_clear (bs_data->cos);
@@ -83,18 +85,20 @@ NcmBinSplit **
 _ncm_mpsf_sbessel_get_bs (void)
 {
   G_LOCK (__create_lock);
+
   if (__mp == NULL)
     __mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
+
   G_UNLOCK (__create_lock);
 
   return ncm_memory_pool_get (__mp);
 }
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_spherical_bessel_taylor
-#define _mq2_2 (((_binsplit_spherical_bessel *)data)->mq2_2)
-#define _l (((_binsplit_spherical_bessel *)data)->l)
+#define _mq2_2 (((_binsplit_spherical_bessel *) data)->mq2_2)
+#define _l (((_binsplit_spherical_bessel *) data)->l)
 
-NCM_BINSPLIT_DECL(binsplit_spherical_bessel_taylor_p,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_spherical_bessel_taylor_p, v, u, n, data)
 {
   if (n == 0)
     mpz_set (v, u);
@@ -103,14 +107,16 @@ NCM_BINSPLIT_DECL(binsplit_spherical_bessel_taylor_p,v,u,n,data)
 }
 #define _BINSPLIT_FUNC_P binsplit_spherical_bessel_taylor_p
 
-NCM_BINSPLIT_DECL(binsplit_spherical_bessel_taylor_q,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_spherical_bessel_taylor_q, v, u, n, data)
 {
   if (n == 0)
+  {
     mpz_set (v, u);
+  }
   else
   {
     mpz_mul_ui (v, u, n * (2L * (n + _l) + 1L));
-    mpz_mul (v, v, mpq_denref(_mq2_2));
+    mpz_mul (v, v, mpq_denref (_mq2_2));
   }
 }
 #define _BINSPLIT_FUNC_Q binsplit_spherical_bessel_taylor_q
@@ -124,31 +130,35 @@ NCM_BINSPLIT_DECL(binsplit_spherical_bessel_taylor_q,v,u,n,data)
 /* Assymptotic expansion 4F1 */
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_spherical_bessel_assympt
-#define _mq2_2 (((_binsplit_spherical_bessel *)data)->mq2_2)
-#define _l (((_binsplit_spherical_bessel *)data)->l)
-#define _sincos (((_binsplit_spherical_bessel *)data)->sincos)
+#define _mq2_2 (((_binsplit_spherical_bessel *) data)->mq2_2)
+#define _l (((_binsplit_spherical_bessel *) data)->l)
+#define _sincos (((_binsplit_spherical_bessel *) data)->sincos)
 
-NCM_BINSPLIT_DECL(binsplit_spherical_bessel_assympt_p,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_spherical_bessel_assympt_p, v, u, n, data)
 {
   if (n == 0)
+  {
     mpz_set (v, u);
+  }
   else
   {
-    mpz_mul_ui (v, u, (_sincos - _l + 2L * n - 2L) * (_sincos - _l + 2L* n - 1L));
-    mpz_mul_ui (v, v, (_sincos + 1L + _l + 2L * n - 2L) * (_sincos + 1L + _l + 2L* n - 1L));
+    mpz_mul_ui (v, u, (_sincos - _l + 2L * n - 2L) * (_sincos - _l + 2L * n - 1L));
+    mpz_mul_ui (v, v, (_sincos + 1L + _l + 2L * n - 2L) * (_sincos + 1L + _l + 2L * n - 1L));
     mpz_mul (v, v, mpq_numref (_mq2_2));
   }
 }
 #define _BINSPLIT_FUNC_P binsplit_spherical_bessel_assympt_p
 
-NCM_BINSPLIT_DECL(binsplit_spherical_bessel_assympt_q,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_spherical_bessel_assympt_q, v, u, n, data)
 {
   if (n == 0)
+  {
     mpz_set (v, u);
+  }
   else
   {
-    mpz_mul_ui (v, u, (_sincos + 1L + 2L * n - 2L) * (_sincos + 1L + 2L* n - 1L));
-    mpz_mul (v, v, mpq_denref(_mq2_2));
+    mpz_mul_ui (v, u, (_sincos + 1L + 2L * n - 2L) * (_sincos + 1L + 2L * n - 1L));
+    mpz_mul (v, v, mpq_denref (_mq2_2));
   }
 }
 #define _BINSPLIT_FUNC_Q binsplit_spherical_bessel_assympt_q
@@ -162,8 +172,8 @@ NCM_BINSPLIT_DECL(binsplit_spherical_bessel_assympt_q,v,u,n,data)
 static void
 _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  NcmBinSplit **bs_ptr = _ncm_mpsf_sbessel_get_bs ();
-  NcmBinSplit *bs = *bs_ptr;
+  NcmBinSplit **bs_ptr             = _ncm_mpsf_sbessel_get_bs ();
+  NcmBinSplit *bs                  = *bs_ptr;
   _binsplit_spherical_bessel *data = (_binsplit_spherical_bessel *) bs->userdata;
   gulong n;
 
@@ -172,11 +182,11 @@ _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
   mpq_neg (data->mq2_2, data->mq2_2);
   mpq_div_2exp (data->mq2_2, data->mq2_2, 1);
 
-  //mpfr_printf ("# Taylor %ld %Qd | %Qd\n", l, q, data->mq2_2);
+  /*mpfr_printf ("# Taylor %ld %Qd | %Qd\n", l, q, data->mq2_2); */
 
   ncm_binsplit_eval_prec (bs, binsplit_spherical_bessel_taylor, 10, mpfr_get_prec (res));
 
-  //mpfr_printf ("# Taylor %ld %Qd | %Zd %Zd\n", l, q, bs->T, bs->Q);
+  /*mpfr_printf ("# Taylor %ld %Qd | %Zd %Zd\n", l, q, bs->T, bs->Q); */
 
   mpfr_set_q (res, q, rnd);
   mpfr_pow_ui (res, res, l, rnd);
@@ -187,16 +197,18 @@ _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
     mpfr_div_ui (res, res, 2L * n + 1, rnd);
 
   ncm_memory_pool_return (bs_ptr);
+
   return;
 }
 
 static void
 _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  NcmBinSplit **bs_ptr = _ncm_mpsf_sbessel_get_bs ();
-  NcmBinSplit *bs = *bs_ptr;
+  NcmBinSplit **bs_ptr             = _ncm_mpsf_sbessel_get_bs ();
+  NcmBinSplit *bs                  = *bs_ptr;
   _binsplit_spherical_bessel *data = (_binsplit_spherical_bessel *) bs->userdata;
-  gulong prec = mpfr_get_prec (res);
+  gulong prec                      = mpfr_get_prec (res);
+
 #define sin_x data->sin
 #define cos_x data->cos
   mpfr_set_prec (sin_x, prec);
@@ -245,6 +257,7 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
   mpfr_div_z (sin_x, sin_x, bs->Q, rnd);
 
   data->sincos = 1;
+
   if (l > 0)
   {
     binsplit_spherical_bessel_assympt (bs, 0, l / 2 + l % 2);
@@ -253,9 +266,12 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
     mpfr_add (res, sin_x, cos_x, rnd);
   }
   else
+  {
     mpfr_set (res, sin_x, rnd);
+  }
 
   ncm_memory_pool_return (bs_ptr);
+
   return;
 }
 
@@ -268,21 +284,23 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
  *
  * Computes the Spherical Bessel function $j_\ell(x)$.
  *
-*/
+ */
 void
 ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
   gdouble x = mpq_get_d (q);
+
   if (x == 0)
   {
     if (l == 0)
       mpfr_set_ui (res, 1, rnd);
     else
       mpfr_set_ui (res, 0, rnd);
+
     return;
   }
 
-  if (fabs(x) < l)
+  if (fabs (x) < l)
     _taylor_mpfr (l, q, res, rnd);
   else
     _assympt_mpfr (l, q, res, rnd);
@@ -301,6 +319,7 @@ void
 ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 {
   mpq_t q;
+
   mpq_init (q);
   ncm_rational_coarce_double (x, q);
   ncm_mpsf_sbessel (l, q, res, rnd);
@@ -318,10 +337,13 @@ void
 ncm_mpsf_sbessel_free_cache (void)
 {
   G_LOCK (__create_lock);
+
   if (__mp != NULL)
   {
     ncm_memory_pool_free (__mp, TRUE);
     __mp = NULL;
   }
+
   G_UNLOCK (__create_lock);
 }
+

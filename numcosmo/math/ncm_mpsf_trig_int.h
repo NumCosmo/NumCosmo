@@ -42,3 +42,4 @@ gdouble ncm_sf_sin_int (gdouble x);
 G_END_DECLS
 
 #endif /* _NCM_MPSF_TRIG_INT_H */
+

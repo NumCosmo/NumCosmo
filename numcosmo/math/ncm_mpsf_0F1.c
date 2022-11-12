@@ -28,7 +28,7 @@
  * @short_description: Multiple precision implementation of the hypergeometric 0F1.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -55,19 +55,21 @@ _besselj_bs_alloc (gpointer userdata)
   _binsplit_0F1 *bs_data = g_slice_new (_binsplit_0F1);
 
   NCM_UNUSED (userdata);
-  
+
   mpq_init (bs_data->b);
   mpz_init (bs_data->xn_bd);
   mpz_init (bs_data->xd);
   mpz_init (bs_data->tmp);
-  return ncm_binsplit_alloc ((gpointer)bs_data);
+
+  return ncm_binsplit_alloc ((gpointer) bs_data);
 }
 
 static void
 _besselj_bs_free (gpointer p)
 {
-  NcmBinSplit *bs = (NcmBinSplit *)p;
-  _binsplit_0F1 *bs_data = (_binsplit_0F1 *)bs->userdata;
+  NcmBinSplit *bs        = (NcmBinSplit *) p;
+  _binsplit_0F1 *bs_data = (_binsplit_0F1 *) bs->userdata;
+
   mpq_clear (bs_data->b);
   mpz_clear (bs_data->xn_bd);
   mpz_clear (bs_data->xd);
@@ -90,39 +92,43 @@ NcmBinSplit **
 _ncm_mpsf_0F1_get_bs (void)
 {
   G_LOCK (__create_lock);
+
   if (__mp == NULL)
     __mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
+
   G_UNLOCK (__create_lock);
 
   return ncm_memory_pool_get (__mp);
 }
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_0F1_taylor
-#define _xn_bd (((_binsplit_0F1 *)data)->xn_bd)
-#define _xd (((_binsplit_0F1 *)data)->xd)
-#define _b (((_binsplit_0F1 *)data)->b)
-#define _tmp (((_binsplit_0F1 *)data)->tmp)
+#define _xn_bd (((_binsplit_0F1 *) data)->xn_bd)
+#define _xd (((_binsplit_0F1 *) data)->xd)
+#define _b (((_binsplit_0F1 *) data)->b)
+#define _tmp (((_binsplit_0F1 *) data)->tmp)
 
-NCM_BINSPLIT_DECL(binsplit_0F1_taylor_p,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_0F1_taylor_p, v, u, n, data)
 {
   if (n == 0)
-	mpz_set (v, u);
+    mpz_set (v, u);
   else
-	mpz_mul (v, u, _xn_bd);
+    mpz_mul (v, u, _xn_bd);
 }
 #define _BINSPLIT_FUNC_P binsplit_0F1_taylor_p
 
-NCM_BINSPLIT_DECL(binsplit_0F1_taylor_q,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_0F1_taylor_q, v, u, n, data)
 {
   if (n == 0)
-	mpz_set (v, u);
+  {
+    mpz_set (v, u);
+  }
   else
   {
-	mpz_set (_tmp, mpq_numref(_b));
-	mpz_addmul_ui (_tmp, mpq_denref(_b), n - 1L);
-	mpz_mul (v, u, _tmp);
-	mpz_mul_ui (v, v, n);
-	mpz_mul (v, v, _xd);
+    mpz_set (_tmp, mpq_numref (_b));
+    mpz_addmul_ui (_tmp, mpq_denref (_b), n - 1L);
+    mpz_mul (v, u, _tmp);
+    mpz_mul_ui (v, v, n);
+    mpz_mul (v, v, _xd);
   }
 }
 #define _BINSPLIT_FUNC_Q binsplit_0F1_taylor_q
@@ -134,13 +140,12 @@ NCM_BINSPLIT_DECL(binsplit_0F1_taylor_q,v,u,n,data)
 #undef _x
 #undef _b
 
-
 static void
 _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
 {
   NcmBinSplit **bs_ptr = _ncm_mpsf_0F1_get_bs ();
-  NcmBinSplit *bs = *bs_ptr;
-  _binsplit_0F1 *data = (_binsplit_0F1 *) bs->userdata;
+  NcmBinSplit *bs      = *bs_ptr;
+  _binsplit_0F1 *data  = (_binsplit_0F1 *) bs->userdata;
 
   mpq_set (data->b, b);
   mpz_set (data->xd, mpq_denref (x));
@@ -152,6 +157,7 @@ _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
   mpfr_div_z (res, res, bs->Q, rnd);
 
   ncm_memory_pool_return (bs_ptr);
+
   return;
 }
 
@@ -183,6 +189,7 @@ void
 ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 {
   mpq_t xq, bq;
+
   mpq_init (xq);
   mpq_init (bq);
   ncm_rational_coarce_double (b, bq);
@@ -205,9 +212,12 @@ gdouble
 ncm_sf_0F1 (gdouble b, gdouble x)
 {
   MPFR_DECL_INIT (res, 53);
+
   gdouble res_d;
+
   ncm_mpsf_0F1_d (b, x, res, GMP_RNDN);
   res_d = mpfr_get_d (res, GMP_RNDN);
+
   return res_d;
 }
 
@@ -221,10 +231,13 @@ void
 ncm_mpsf_0F1_free_cache (void)
 {
   G_LOCK (__create_lock);
+
   if (__mp != NULL)
   {
     ncm_memory_pool_free (__mp, TRUE);
     __mp = NULL;
   }
+
   G_UNLOCK (__create_lock);
 }
+
