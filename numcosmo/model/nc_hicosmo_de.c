@@ -1154,10 +1154,20 @@ _nc_hicosmo_de_flist_BBN (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
   f[0] = 1.0 / sqrt (1.0 - Omega_de);
 }
 
+static void
+_nc_hicosmo_de_flist_w (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  g_assert (NC_IS_HICOSMO_DE (cosmo_de));
+  f[0] = nc_hicosmo_de_w_de (cosmo_de, x[0]);
+}
+
 void
 _nc_hicosmo_de_register_functions (void)
 {
-  ncm_mset_func_list_register ("Omega_x0", "\\Omega_{x0}",         "NcHICosmoDE", "Darkenergy density today",           G_TYPE_NONE, _nc_hicosmo_de_flist_Omega_x0, 0, 1);
-  ncm_mset_func_list_register ("wDE",      "\\omega_\\mathrm{de}", "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0,       0, 1);
-  ncm_mset_func_list_register ("BBN",      "BBN",                  "NcHICosmoDE", "BBN",                                G_TYPE_NONE, _nc_hicosmo_de_flist_BBN,      0, 1);
+  ncm_mset_func_list_register ("Omega_x0", "\\Omega_{x0}",            "NcHICosmoDE", "Darkenergy density today",           G_TYPE_NONE, _nc_hicosmo_de_flist_Omega_x0, 0, 1);
+  ncm_mset_func_list_register ("wDE",      "\\omega_\\mathrm{de}",    "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0,       0, 1);
+  ncm_mset_func_list_register ("BBN",      "BBN",                     "NcHICosmoDE", "BBN",                                G_TYPE_NONE, _nc_hicosmo_de_flist_BBN,      0, 1);
+
+  ncm_mset_func_list_register ("wDE_z",    "\\omega_\\mathrm{de}(z)", "NcHICosmoDE", "Darkenergy equation of state",       G_TYPE_NONE, _nc_hicosmo_de_flist_w,        1, 1);
 }
