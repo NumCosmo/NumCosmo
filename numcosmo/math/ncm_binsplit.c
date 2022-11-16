@@ -27,7 +27,7 @@
  * @title: NcmBinSplit
  * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
  * @stability: Stable
- * @include: numcosmo/math/binsplit.h
+ * @include: numcosmo/math/ncm_binsplit.h
  *
  * FIXME
  * 
@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_cfg.h"
 
 static gboolean one_init = FALSE;

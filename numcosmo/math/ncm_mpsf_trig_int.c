@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mpsf_trig_int.h"
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
@@ -77,7 +77,7 @@ NCM_BINSPLIT_DECL (binsplit_sin_integral_taylor_b, v, u, n, data)
 
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _mx2
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_assym
@@ -110,7 +110,7 @@ NCM_BINSPLIT_DECL (binsplit_sin_integral_assym_q, v, u, n, data)
 #define _BINSPLIT_FUNC_B NCM_BINSPLIT_DENC_NULL
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _m2x2
 
 static void

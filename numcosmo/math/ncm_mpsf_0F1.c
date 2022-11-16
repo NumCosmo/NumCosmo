@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mpsf_0F1.h"
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_util.h"
 
@@ -136,7 +136,7 @@ NCM_BINSPLIT_DECL (binsplit_0F1_taylor_q, v, u, n, data)
 #define _BINSPLIT_FUNC_B NCM_BINSPLIT_DENC_NULL
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _x
 #undef _b
 

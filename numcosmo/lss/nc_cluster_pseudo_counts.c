@@ -39,7 +39,7 @@
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

@@ -191,8 +191,8 @@ ncm_sources = \
 	math/ncm_quaternion.c                 \
 	math/ncm_sphere_map.c                 \
 	math/ncm_function_cache.c             \
-	math/integral.c           \
-	math/binsplit.c           \
+	math/ncm_integrate.c                  \
+	math/ncm_binsplit.c                   \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = 
@@ -322,8 +322,8 @@ ncm_headers =                                 \
 	math/ncm_quaternion.h                 \
 	math/ncm_sphere_map.h                 \
 	math/ncm_function_cache.h             \
-	math/integral.h           \
-	math/binsplit.h           \
+	math/ncm_integrate.h                  \
+	math/ncm_binsplit.h                   \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
@@ -749,7 +749,7 @@ nobase_libnumcosmo_la_include_HEADERS = \
 	$(ncm_headers_nogi)       \
 	$(nc_headers)             \
 	$(ncm_cond_headers)       \
-	math/binsplit_eval.c      \
+	math/ncm_binsplit_eval.c  \
 	numcosmo-math.h           \
 	numcosmo.h
 

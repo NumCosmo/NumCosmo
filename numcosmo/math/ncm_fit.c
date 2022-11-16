@@ -40,7 +40,7 @@
 #include "math/ncm_fit.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_fit_gsl_ls.h"
 #include "math/ncm_fit_gsl_mm.h"

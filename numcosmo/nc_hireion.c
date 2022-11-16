@@ -54,7 +54,7 @@
 #include "nc_recomb.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_mset_func_list.h"
 

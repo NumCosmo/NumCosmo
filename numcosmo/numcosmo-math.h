@@ -163,9 +163,9 @@
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
+#include <numcosmo/math/ncm_binsplit.h>
 #include <numcosmo/math/ncm_memory_pool.h>
-#include <numcosmo/math/integral.h>
-#include <numcosmo/math/binsplit.h>
+#include <numcosmo/math/ncm_integrate.h>
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/math/ncm_sphere_map.h>

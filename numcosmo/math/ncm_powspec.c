@@ -51,7 +51,7 @@
 #include "math/ncm_powspec.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
-#include "math/integral.h"
+#include "math/ncm_integral1d_ptr.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_c.h"
@@ -71,6 +71,10 @@ enum
 
 G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT);
 
+static gdouble _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight);
+static gdouble _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight);
+static gdouble _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight);
+
 static void
 ncm_powspec_init (NcmPowspec *powspec)
 {
@@ -78,7 +82,11 @@ ncm_powspec_init (NcmPowspec *powspec)
   powspec->zf   = 0.0;
   powspec->kmin = 0.0;
   powspec->kmax = 0.0;
-  
+
+  powspec->var_tophat_R = ncm_integral1d_ptr_new (&_ncm_powspec_var_tophat_R_integ, NULL);
+  powspec->corr3D       = ncm_integral1d_ptr_new (&_ncm_powspec_corr3D_integ, NULL);
+  powspec->sproj        = ncm_integral1d_ptr_new (&_ncm_powspec_sproj_integ, NULL);
+
   powspec->ctrl = ncm_model_ctrl_new (NULL);
 }
 
@@ -88,6 +96,9 @@ _ncm_powspec_dispose (GObject *object)
   NcmPowspec *powspec = NCM_POWSPEC (object);
   
   ncm_model_ctrl_clear (&powspec->ctrl);
+  ncm_integral1d_ptr_clear (&powspec->var_tophat_R);
+  ncm_integral1d_ptr_clear (&powspec->corr3D);
+  ncm_integral1d_ptr_clear (&powspec->sproj);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_parent_class)->dispose (object);
@@ -553,7 +564,7 @@ typedef struct _NcmPowspecInt
 } NcmPowspecInt;
 
 static gdouble
-_ncm_powspec_var_tophat_R_integ (gdouble lnk, gpointer user_data)
+_ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight)
 {
   NcmPowspecInt *data = (NcmPowspecInt *) user_data;
   const gdouble k     = exp (lnk);
@@ -587,7 +598,6 @@ _ncm_powspec_var_tophat_R_integ (gdouble lnk, gpointer user_data)
 gdouble
 ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
 {
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
   NcmPowspecInt data = {z, R, ps, model};
   const gdouble kmin = ncm_powspec_get_kmin (ps);
   const gdouble kmax = ncm_powspec_get_kmax (ps);
@@ -595,17 +605,14 @@ ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol,
   const gdouble lnkmax = log (kmax);
   const gdouble one_2pi2 = 1.0 / ncm_c_2_pi_2 ();
   gdouble error, sigma2_2pi2;
-  gsl_function F;
   
   ncm_powspec_prepare_if_needed (ps, model);
   
-  F.function = &_ncm_powspec_var_tophat_R_integ;
-  F.params   = &data;
-  
-  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &sigma2_2pi2, &error);
-  
-  ncm_memory_pool_return (w);
-  
+  ncm_integral1d_ptr_set_userdata (ps->var_tophat_R, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->var_tophat_R), reltol);
+
+  sigma2_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->var_tophat_R), lnkmin, lnkmax, &error);
+
   return sigma2_2pi2 * one_2pi2;
 }
 
@@ -628,7 +635,7 @@ ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble relto
 }
 
 static gdouble
-_ncm_powspec_corr3D_integ (gdouble lnk, gpointer user_data)
+_ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight)
 {
   NcmPowspecInt *data = (NcmPowspecInt *) user_data;
   const gdouble k     = exp (lnk);
@@ -658,7 +665,6 @@ _ncm_powspec_corr3D_integ (gdouble lnk, gpointer user_data)
 gdouble
 ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)
 {
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
   NcmPowspecInt data = {z, r, ps, model};
   const gdouble kmin = ncm_powspec_get_kmin (ps);
   const gdouble kmax = ncm_powspec_get_kmax (ps);
@@ -666,22 +672,19 @@ ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const
   const gdouble lnkmax = log (kmax);
   const gdouble one_2pi2 = 1.0 / ncm_c_2_pi_2 ();
   gdouble error, xi_2pi2;
-  gsl_function F;
   
   ncm_powspec_prepare_if_needed (ps, model);
-  
-  F.function = &_ncm_powspec_corr3D_integ;
-  F.params   = &data;
-  
-  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &xi_2pi2, &error);
-  
-  ncm_memory_pool_return (w);
+
+  ncm_integral1d_ptr_set_userdata (ps->corr3D, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->corr3D), reltol);
+
+  xi_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->corr3D), lnkmin, lnkmax, &error);
   
   return xi_2pi2 * one_2pi2;
 }
 
 static gdouble
-_ncm_powspec_sproj_integ (gdouble lnk, gpointer user_data)
+_ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
 {
   NcmPowspecInt *data = (NcmPowspecInt *) user_data;
   const gdouble k     = exp (lnk);
@@ -710,7 +713,6 @@ _ncm_powspec_sproj_integ (gdouble lnk, gpointer user_data)
 gdouble
 ncm_powspec_sproj (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)
 {
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
   NcmPowspecInt data = {z1, 0.0, ps, model, z2, xi1, xi2, ell};
   const gdouble kmin = ncm_powspec_get_kmin (ps);
   const gdouble kmax = ncm_powspec_get_kmax (ps);
@@ -718,16 +720,13 @@ ncm_powspec_sproj (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const 
   const gdouble lnkmax = log (kmax);
   const gdouble two_pi = 2.0 / ncm_c_pi ();
   gdouble error, xi_two_pi;
-  gsl_function F;
   
   ncm_powspec_prepare_if_needed (ps, model);
   
-  F.function = &_ncm_powspec_sproj_integ;
-  F.params   = &data;
-  
-  gsl_integration_qag (&F, lnkmin, lnkmax, 0.0, reltol, NCM_INTEGRAL_PARTITION, 6, *w, &xi_two_pi, &error);
-  
-  ncm_memory_pool_return (w);
+  ncm_integral1d_ptr_set_userdata (ps->sproj, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->sproj), reltol);
+
+  xi_two_pi = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->sproj), lnkmin, lnkmax, &error);
   
   return xi_two_pi * two_pi;
 }

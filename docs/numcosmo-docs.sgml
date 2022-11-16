@@ -448,10 +448,10 @@
   
   <chapter>
     <title>Mathematical Utilities</title>
-    <xi:include href="xml/binsplit.xml"/>
+    <xi:include href="xml/ncm_binsplit.xml"/>
     <xi:include href="xml/ncm_function_cache.xml"/>
     <xi:include href="xml/ncm_memory_pool.xml"/>
-    <xi:include href="xml/integral.xml"/>
+    <xi:include href="xml/ncm_integrate.xml"/>
   </chapter>
 
   <chapter>
