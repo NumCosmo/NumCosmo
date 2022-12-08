@@ -236,7 +236,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    *
    * FIXME
    */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "Omega_t0", "Omegat",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "\\Omega_{t0}", "Omegat",
                               0.05, 2.0, 1.0e-1,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T,
                               NCM_PARAM_TYPE_FIXED);
