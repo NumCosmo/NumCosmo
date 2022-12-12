@@ -21,7 +21,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib || cat config.log
+      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
     - name: make
       run: make -j8
     - name: Test example compilation
@@ -53,7 +53,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure 'CFLAGS=-Wall -g -O0' 'FCFLAGS=-O0 -Wall' --enable-maintainer-mode --disable-gtk-doc --prefix=/usr --enable-code-coverage || cat config.log
+      run: ./configure 'CFLAGS=-Wall -g -O0' 'FCFLAGS=-O0 -Wall' --enable-maintainer-mode --disable-gtk-doc --prefix=/usr --enable-code-coverage
     - name: make
       run: make -j8
     - name: make check
@@ -70,10 +70,10 @@ jobs:
 
     runs-on: macos-latest
     env:
-      CC: gcc-10
-      FC: gfortran-10
-      F77: gfortran-10
-      F90: gfortran-10
+      CC: gcc-11
+      FC: gfortran-11
+      F77: gfortran-11
+      F90: gfortran-11
       LIBRARY_PATH: /usr/local/lib
       LD_LIBRARY_PATH: /usr/local/lib
       DYLD_LIBRARY_PATH: /usr/local/lib
@@ -89,7 +89,7 @@ jobs:
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
-      run: ./configure  || cat config.log
+      run: ./configure
     - name: make
       run: make -j8
     - name: make check
