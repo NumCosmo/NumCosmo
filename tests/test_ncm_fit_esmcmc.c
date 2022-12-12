@@ -86,11 +86,12 @@ TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 gint
 main (gint argc, gchar *argv[])
 {
+  gint i, j;
+
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   /*g_test_set_nonfatal_assertions ();*/
-  gint i, j;
 
   for (i = 0; i < TEST_NCM_FIT_ESMCMC_NWALKERS; i++)
   {

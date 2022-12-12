@@ -333,8 +333,6 @@ _nc_powspec_mnl_halofit_var_moment_integrand (gdouble kR, gpointer params)
   const gdouble kR2         = kR * kR;
   const gdouble W2          = exp (-kR2);
   
-/*	printf ("NC: % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %i % 22.15g % 22.15g\n", k, ts->R, ts->z, matter_P, kR2, ts->n, W2,
- *         matter_P * gsl_pow_int (kR2, ts->n + 1) * W2 / (gsl_pow_3 (ts->R) * (gdouble)ncm_c_2_pi_2 ()));*/
   return matter_P * gsl_pow_int (kR2, ts->n + 1) * W2;
 }
 
@@ -376,12 +374,7 @@ _nc_powspec_mnl_halofit_varm1 (gdouble lnR, gpointer params)
 {
   var_params *vps                         = (var_params *) params;
   NcPowspecMNLHaloFitPrivate * const self = vps->pshf->priv;
-  
-  /*
-   *  const gdouble R = gsl_sf_exp (lnR);
-   *  const gdouble sigma2_0 = _nc_powspec_mnl_halofit_var_moment (vps->self->psml, vps->cosmo, R, vps->z, 0);
-   *  return sigma2_0 - 1.0;
-   */
+
   return ncm_powspec_filter_eval_lnvar_lnr (self->psml_gauss, vps->z, lnR);
 }
 
@@ -390,12 +383,6 @@ _nc_powspec_mnl_halofit_varm1_deriv (gdouble lnR, gpointer params)
 {
   var_params *vps                         = (var_params *) params;
   NcPowspecMNLHaloFitPrivate * const self = vps->pshf->priv;
-  
-  /*
-   *  const gdouble R = gsl_sf_exp (lnR);
-   *  const gdouble sigma2_1 = _nc_powspec_mnl_halofit_var_moment (vps->pshf->psml, vps->cosmo, R, vps->z, 1);
-   *  return -2.0 * sigma2_1;
-   */
   
   return ncm_powspec_filter_eval_dlnvar_dlnr (self->psml_gauss, vps->z, lnR);
 }
@@ -406,11 +393,6 @@ _nc_powspec_mnl_halofit_varm1_fdf (gdouble lnR, gpointer params, gdouble *varm1,
   var_params *vps                         = (var_params *) params;
   NcPowspecMNLHaloFitPrivate * const self = vps->pshf->priv;
   
-  /*
-   *  const gdouble R = gsl_sf_exp (lnR);
-   *  const gdouble sigma2_0 = _nc_powspec_mnl_halofit_var_moment (vps->pshf->psml, vps->cosmo, R, vps->z, 0);
-   *  const gdouble sigma2_1 = _nc_powspec_mnl_halofit_var_moment (vps->pshf->psml, vps->cosmo, R, vps->z, 1);
-   */
   *varm1  = ncm_powspec_filter_eval_lnvar_lnr (self->psml_gauss, vps->z, lnR);
   *dvarm1 = ncm_powspec_filter_eval_dlnvar_dlnr (self->psml_gauss, vps->z, lnR);
 }
@@ -426,12 +408,14 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosm
 {
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
   
-  gdouble lnR0         = 0.0;
-  gdouble lnR          = (-z / 2.0 < NC_POWSPEC_MNL_HALOFIT_LOGRMIN) ? NC_POWSPEC_MNL_HALOFIT_LOGRMIN : -z / 2.0 + NCM_DEFAULT_PRECISION;
-  const gdouble reltol = self->reltol / 10.0;
-  gdouble res          = 0.0;
-  gint max_iter        = 20000;
-  gint iter            = 0;
+  const gdouble reltol  = self->reltol / 10.0;
+  const gdouble lnR_min = log (ncm_powspec_filter_get_r_min (self->psml_gauss));
+  const gdouble lnR_max = log (ncm_powspec_filter_get_r_max (self->psml_gauss));
+  gdouble lnR           = 0.5 * (lnR_min + lnR_max);
+  gdouble lnR0          = 0.0;
+  gdouble res           = 0.0;
+  gint max_iter         = 20000;
+  gint iter             = 0;
   gint status;
   
   gsl_function_fdf FDF;
@@ -443,21 +427,33 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosm
   FDF.fdf    = &_nc_powspec_mnl_halofit_varm1_fdf;
   FDF.params = &vps;
   
+  /*  Check if f(lnR_min) f(lnR_max) are both positive/negative. */
+  if (_nc_powspec_mnl_halofit_varm1 (lnR_min, &vps) * _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps) > 0.0)
+    g_error ("_nc_powspec_mnl_halofit_linear_scale: cannot find linear scale. "
+        "The lnR-interval (% 22.15g, % 22.15g) with lnVar (% 22.15g, % 22.15g) "
+        "does not seem to include lnVar == 0.0. This interval can be increased by increasing "
+        "the lnk-interval for the linear power spectrum.",
+        lnR_min, lnR_max,
+        _nc_powspec_mnl_halofit_varm1 (lnR_min, &vps),
+        _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps));
+
   gsl_root_fdfsolver_set (self->linear_scale_solver, &FDF, lnR);
   
   do {
     iter++;
     status = gsl_root_fdfsolver_iterate (self->linear_scale_solver);
+    if (status != GSL_CONTINUE)
+      NCM_TEST_GSL_RESULT ("_nc_powspec_mnl_halofit_linear_scale", status);
     
     lnR0 = lnR;
     lnR  = gsl_root_fdfsolver_root (self->linear_scale_solver);
     
     res = gsl_expm1 (lnR0 - lnR);
     
-    status = gsl_root_test_residual (res, reltol); /*Compares R vs R0 ! */
+    status = gsl_root_test_residual (res, reltol);
   } while (status == GSL_CONTINUE && iter < max_iter);
   
-  res = exp (lnR); /* Now res is the result */
+  res = exp (lnR);
   
   if (iter >= max_iter)
     g_warning ("_nc_powspec_mnl_halofit_linear_scale: maximum number of iteration reached (%u), non-linear scale found R(z=%.3f).", max_iter, z);
@@ -532,7 +528,12 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
   
   ncm_powspec_filter_set_best_lnr0 (self->psml_gauss);
   ncm_powspec_filter_prepare_if_needed (self->psml_gauss, model);
-  
+
+  /* Avoid imposing a relative tolerance on the interpolation error
+   * smaller then the computation error.
+   */
+  ncm_powspec_set_reltol_spline (NCM_POWSPEC (pshf), self->reltol);
+
   {
     const gdouble R_min = ncm_powspec_filter_get_r_min (self->psml_gauss);
     var_params vps      = {pshf, cosmo, 0.0, R_min};
@@ -622,15 +623,6 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
         
         ncm_vector_set (neffv, i, -3.0 - d1);
         ncm_vector_set (Curv, i, -d2);
-        
-/*
- *       printf ("# z = % 20.15g, R = % 20.15g | % 20.15g % 20.15g % 20.15g | %e %e %e\n",
- *               z, R,
- *               sigma2_0, d1, d2,
- *               fabs ((ncm_powspec_filter_eval_var (self->psml_gauss, z, R) - sigma2_0) / sigma2_0),
- *               fabs ((ncm_powspec_filter_eval_dlnvar_dlnr (self->psml_gauss, z, log (R)) - d1) / d1),
- *               fabs ((ncm_powspec_filter_eval_dnlnvar_dlnrn (self->psml_gauss, z, log (R), 2) - d2) / d2));
- */
       }
       else
       {
@@ -679,14 +671,11 @@ _nc_powspec_mnl_halofit_xi_cmp (gdouble w, gpointer params)
   NcPowspecMNLHaloFitPrivate * const self = vps->pshf->priv;
   
   ncm_model_orig_param_set (NCM_MODEL (vps->cosmo), NC_HICOSMO_DE_CPL_W0, w);
-  /*ncm_model_params_log_all (NCM_MODEL (vps->cosmo));*/
   
   {
     gdouble zdrag = nc_distance_drag_redshift (self->cpl_dist, vps->cosmo);
     gdouble xi    = nc_distance_comoving (self->cpl_dist, vps->cosmo, zdrag) - nc_distance_comoving (self->cpl_dist, vps->cosmo, vps->z);
-    
-    /*printf ("CMP % 22.15g % 22.15g | % 22.15g % 22.15g\n", vps->z, zdrag, xi, vps->R_min);*/
-    
+
     return xi / vps->R_min - 1.0;
   }
 }
@@ -712,19 +701,12 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo, co
   
   gdouble Omega_de_onepw = 0.0;
   
-/*
- *  printf ("#NC:  z % 22.15g E2 % 22.15g Rsigma % 22.15g neff % 22.15g Cur % 22.15g Omega_m % 22.15g fnu % 22.15g frac % 22.15g | % 22.15g\n",
- *         z, E2, Rsigma, neff, Cur, Omega_m, fnu, frac,
- *         _nc_powspec_mnl_halofit_var_moment (self->psml, cosmo, Rsigma, z, 0)
- *         );
- */
   if (NC_IS_HICOSMO_DE (cosmo))
   {
     gdouble wa;
     
     if (self->pkequal && NC_IS_HICOSMO_DE_CPL (cosmo) && ((wa = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1)) != 0.0))
     {
-      /*printf ("Using pkequal!\n");*/
       if (self->cpl == NULL)
       {
         self->cpl      = NC_HICOSMO (nc_hicosmo_de_cpl_new ());
@@ -771,20 +753,12 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo, co
           if (iter >= max_iter)
             g_warning ("_nc_powspec_mnl_halofit_preeval: maximum number of iteration reached (%u), giving up.", max_iter);
           
-/*
- *         printf ("# for z = % 22.15g, using wequiv = % 22.15g vs (w0 = % 22.15g, w1 = % 22.15g)\n",
- *                 z, wfinal,
- *                 ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0),
- *                 ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1)
- *                 );
- */
           Omega_de_onepw = nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (self->cpl), z) / nc_hicosmo_E2 (self->cpl, z);
         }
       }
     }
     else
     {
-      /*printf ("Not using pkequal!\n");*/
       Omega_de_onepw = nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2;
     }
   }

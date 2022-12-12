@@ -819,12 +819,6 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
 
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
-
-/*
- *  printf ("x % 22.15g % 22.15g %u | y % 22.15g % 22.15g %u\n", xl, xu, ncm_vector_len (s_y->xv), yl, yu, ncm_vector_len (s_x->xv));
- *  ncm_vector_log_vals (s_y->xv, "XV", "% 22.15g", TRUE);
- *  ncm_vector_log_vals (s_x->xv, "XV", "% 22.15g", TRUE);
- */
   {
     NcmMatrix *s_z = ncm_matrix_new (ncm_vector_len (s_y->xv), ncm_vector_len (s_x->xv));
 
