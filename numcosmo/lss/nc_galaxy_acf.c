@@ -38,7 +38,7 @@
 
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_window_tophat.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

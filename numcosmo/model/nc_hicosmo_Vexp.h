@@ -55,7 +55,7 @@ struct _NcHICosmoVexpClass
  * @NC_HICOSMO_VEXP_OMEGA_L: scalar field energy density when in a dark energy-like phase
  * @NC_HICOSMO_VEXP_SIGMA_PHI: standard deviation of the scalar field wave function
  * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
- * @NC_HICOSMO_VEXP_ALPHA_B: lorgarithm base e of the scale factor at the bounce
+ * @NC_HICOSMO_VEXP_ALPHA_B: logarithm base e of the scale factor at the bounce
  * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce 
  *
  * FIXME

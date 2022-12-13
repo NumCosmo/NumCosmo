@@ -1,5 +1,5 @@
 /***************************************************************************
- *            integral.c
+ *            ncm_integrate.c
  *
  *  Wed Aug 13 20:35:59 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti & Mariana Penna Lima
@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@lapsandro>, <pennalima@gmail.com>
+ * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <vitenti@uel.br>, <pennalima@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -23,11 +23,11 @@
  */
 
 /**
- * SECTION:integral
+ * SECTION:ncm_integrate
  * @title: NcmIntegral
  * @short_description: Numerical integration helpers.
  * @stability: Stable
- * @include: numcosmo/math/integral.h
+ * @include: numcosmo/math/ncm_integrate.h
  *
  * FIXME
  * 
@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_util.h"
 
@@ -66,7 +66,7 @@ _integral_ws_free (gpointer p)
  * This function provides a workspace to be used by numerical integration
  * functions of GSL. It keeps a internal pool of workspaces and allocate a
  * new one if the function is called and the pool is empty. It is designed
- * to be used in a multithread enviroment. The workspace must be unlocked
+ * to be used in a multi-thread environment. The workspace must be unlocked
  * in order to return to the pool. This must be done using the #ncm_memory_pool_return.
  *
  * Returns: a pointer to #gsl_integration_workspace structure.

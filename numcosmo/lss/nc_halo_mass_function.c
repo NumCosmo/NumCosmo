@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_mass_function.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_cfg.h"
 

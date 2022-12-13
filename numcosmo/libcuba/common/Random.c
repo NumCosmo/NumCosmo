@@ -102,7 +102,10 @@ static inline void SobolIni(This *t)
     int inibits = -1, bit;
     for( j = powers; j; j >>= 1 ) ++inibits;
 
-    memcpy(pv, pini, inibits*sizeof *pini);
+    {
+      unsigned int len = (inibits * sizeof (*pini));
+      memcpy(pv, pini, len);
+    }
     pini += 8;
 
     for( bit = inibits; bit <= nbits; ++bit ) {

@@ -59,7 +59,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_diff.h"
 #include "math/ncm_c.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

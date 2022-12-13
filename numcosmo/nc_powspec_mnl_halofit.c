@@ -49,7 +49,7 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "nc_distance.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
@@ -353,9 +353,9 @@ _nc_powspec_mnl_halofit_var_moment (NcPowspecML *ps, NcHICosmo *cosmo, const gdo
   /*gsl_integration_qagiu (&F, NCM_DEFAULT_PRECISION, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, &result, &error); */
   
   gsl_integration_qag (&F, 7.1972528136862e-06 * R, 57.2224908217619 * R, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
-  
-  
-  
+
+
+
   gsl_integration_workspace_free (w);
   
   return result / (gsl_pow_3 (R) * ncm_c_2_pi_2 ());

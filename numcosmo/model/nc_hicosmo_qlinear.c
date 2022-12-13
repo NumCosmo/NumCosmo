@@ -41,7 +41,7 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qlinear.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

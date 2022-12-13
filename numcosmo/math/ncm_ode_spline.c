@@ -8,7 +8,7 @@
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -38,7 +38,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_ode_spline.h"
-#include "math/integral.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
@@ -544,7 +543,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
   
-  flag = CVodeSetMaxNumSteps (self->cvode, NCM_INTEGRAL_PARTITION);
+  flag = CVodeSetMaxNumSteps (self->cvode, 100000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */

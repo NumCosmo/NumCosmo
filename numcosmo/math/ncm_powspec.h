@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_integral1d_ptr.h>
 #include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
@@ -64,6 +65,9 @@ struct _NcmPowspec
   gdouble zf;
   gdouble kmin;
   gdouble kmax;
+  NcmIntegral1dPtr *var_tophat_R;
+  NcmIntegral1dPtr *corr3D;
+  NcmIntegral1dPtr *sproj;
   gdouble reltol_spline;
   NcmModelCtrl *ctrl;
 };

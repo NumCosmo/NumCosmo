@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -39,7 +39,7 @@
 #include "math/ncm_mpsf_sbessel.h"
 #include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_memory_pool.h"
 
 typedef struct __binsplit_spherical_bessel
@@ -124,7 +124,7 @@ NCM_BINSPLIT_DECL (binsplit_spherical_bessel_taylor_q, v, u, n, data)
 #define _BINSPLIT_FUNC_B NCM_BINSPLIT_DENC_NULL
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _mq2_2
 
 /* Assymptotic expansion 4F1 */
@@ -166,7 +166,7 @@ NCM_BINSPLIT_DECL (binsplit_spherical_bessel_assympt_q, v, u, n, data)
 #define _BINSPLIT_FUNC_B NCM_BINSPLIT_DENC_NULL
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _mq2_2
 
 static void
