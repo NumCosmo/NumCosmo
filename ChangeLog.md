@@ -2,6 +2,307 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * New minor release v0.16.0.
+
+ * 40 numcosmo unit test coverage (#68)
+
+     * Fixed e-mail addresses.
+     
+     * Updated file/object names. Fixed warnings in libcuba.
+     
+     * Fixed symbol
+     
+     * Fixed minor documentation issues.
+ * Added new method to set model parameter fit types to their default values.
+
+ * Missing semicolon.
+
+ * Minor changes on NcDistance initialization order.
+
+ * Updated gcc version for macos ci.
+
+ * Better debug messages in GHA.
+
+ * Added more robust testing for power-spectra.
+
+ * Updating e-mails.
+
+ * Updated e-mail in copyright notices.
+
+ * uncrustify code.
+
+ * Minor fixes in documentation. Finished coverage and tests for special
+     functions. Removed old code.
+
+ * Added support for namespace search in ncm_mset_func_list. Added plot_corner
+     helper script.
+
+ * More cleaning and adding more files to .gitignore.
+
+ * Cleaning autotools files and old unused tools. (#67)
+
+
+ * Removed old and unused code.
+
+ * Uncrustify sources.
+
+ * Reorganized all ncm_spline2d objects and improved unit testing and coverage.
+
+ * Uncrustify ncm_spline2d_bicubic.
+
+ * Improved coverage of NcmDiff.
+
+ * Uncrustify ncm_diff.c.
+
+ * 60 statsdist1d error (#63)
+
+     * Removed old code causing a bug in ncm_stats_dist1d_epdf_reset. Updated
+     autotools. Included more tests in test_ncm_stats_dist1d_epdf.
+     
+     * Uncrustify sources.
+     
+     * Adding more tests to test_ncm_stats_dist1d_epdf.
+     
+     * Fixed retry leak and decreased max_retries.
+     
+     * More updates in coverage support.
+     
+     * Removed wrong macro in g_test_trap_subprocess
+ * Removed old code causing a bug in ncm_stats_dist1d_epdf_reset.  (#62)
+
+     * Removed old code causing a bug in ncm_stats_dist1d_epdf_reset. Updated
+     autotools. Included more tests in test_ncm_stats_dist1d_epdf.
+     
+     * Uncrustify sources.
+     
+     * Adding more tests to test_ncm_stats_dist1d_epdf.
+     
+     * Fixed retry leak and decreased max_retries.
+     
+     * More updates in coverage support.
+     
+     * Removed wrong macro in g_test_trap_subprocess
+ * Fixed unimportant warnings in class.
+
+ * Removed debug message.
+
+ * Minor fixes in twofluids framework. Updating StatsDist to use only a fraction
+     of the sample when computing the bandwidth using a split cross-validation.
+
+ * Multiplicity watson (#59)
+
+     * The files of Watson et al. multiplicity function (.c and .h) has been
+     created and included in the files makefile.am, math/ncm_cfg.c and
+     numcosmo.h
+     
+     * watson multiplicity function updated
+     
+     * complementing the watson et al. multiplicity function
+     
+     * Fixed bugs and added tests.
+     
+     * Fixed bugs.
+     
+     * uptade libtool files
+     
+     * removed extra files
+     
+     * missing files
+     
+     * multiplicity_watson_install
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+     Henrique Lettieri <henrique.cnl@hotmail.com>
+ * Removed ckern algo.
+
+ * Debug version, do not use it. Version containing the constant kernel option in
+     NcmStatsDist.
+
+ * Several minor improvements.
+
+     - Removed configure call from autogen.sh.
+     - Updated dataset in examples/example_fit_bao_sdss_dr16.py.
+     - Fitting w in examples/example_fit_snia_cov.py.
+     - Updating example in examples/pydata_simple.
+     - Fixed reading of uninitalized memory in numcosmo/data/nc_data_snia_cov.c.
+     - Fixed leak in numcosmo/math/integral.c.
+     - Added error testing in numcosmo/math/ncm_csq1d.c.
+     - Working in progress in APES and related objects.
+
+ * Removed old CLAPACK and LAPACKE support.
+
+ * W reconstruction (#58)
+
+     * new object WSpline.
+     
+     * Better support for extrapolation for large redshifts in wspline object.
+     
+     * New Cosmic Chronometers data objects.
+     
+     * Added options to use polynomial interpolation for nknots < 6.
+     
+     * Improving error handling in NcmDiff.
+     
+     * Adding SDSS DR16 samples.
+     
+     * Added SDSS DR16 empirical fit objects.
+     
+     * New examples fitting BAO and Hz data.
+     
+     * Fixed gsl spline border problem.
+     
+     * Minor tweaks on documentation.
+      Co-authored-by: Sander23 <sander23.ribeiro@uel.br>
+ * Trying to find correct path due to broken glib in brew.
+
+ * Debugging missing prereq.
+
+ * New dependency resulting from split package in homebrew.
+
+ * 56 lastest pantheon (#57)
+
+     * Filter implementation for SNIa.
+     * New SNIaCov example.
+     * Improvements on SNIa constructors and example.
+     * Updated autotools.
+ * Minor updates in the figures of VacuumStudy and VacuumStudyAdiabatic.
+
+ * Added volume method to nc_cluster_mass_nodist.
+
+ * Adding Minkowski functions to CSQ1D.
+
+ * Cleaning notebooks.
+
+ * Added constructor annotation to ncm_mset_load(). New Vacuum study notebooks.
+
+ * Added method to get the best fit from catalogs.
+
+ * Included more frames for CSQ1D
+
+ * Testing coverage tweaking.
+
+ * Halo bias (#53)
+
+     * halo bias branch
+     
+     * mean bias in the unbinned and binned case with proxies
+     
+     * Added the tests to the makefile. Updated the redshift object to one that
+     implements p(z).
+      Co-authored-by: Henrique Lettieri <henrique.cnl@hotmail.com>
+ * Updated autotools.
+
+ * Implementing frames in csq1d.
+
+ * More tests for nc_data_cluster_ncount.c.
+
+ * Removed option to print the mass function (old code).
+
+ * Removed old method nc_data_cluster_ncount_print.
+
+ * More tests for test_nc_data_cluster_ncount.c.
+
+ * Removed inclusion of removed objects documentation.
+
+ * Adding new integration routines to the ignore list in docs.
+
+ * New integration code. Now vector integration used in nc_data_cluster_ncount.
+     Fixed bug in NcmFitMC (it was using the bestfit from catalog instead of
+     fiducial model to resample). Fixed typos.
+
+ * Added a full corner plot comparing all outputs.
+
+ * Updated generate_corner.ipynb to use ChainConsumer.
+
+ * Fixed bug in catalog_load nc_data_cluster_ncount. New corner plot notebook.
+
+ * Fixed minor leaks in ncm_reparam.c ncm_powspec_filter.c ncm_mset_catalog.c.
+     Improved sampling in ncm_fit_esmcmc_walker_apes (now the second half use
+     the updated first half when moving the walkers). Support for binning in
+     nc_data_cluster_ncount. New notebooks comparing binning vs unbinning.
+
+ * Inclusion of the time function to compare the effiency between CCL and Numcosmo
+
+ * Reorganized binning options in NcDataClusterNCount.
+
+ * Unbinned and binned analisys in the ascaso proxy
+
+ * Reorganizing cluster mass ascaso object.
+
+ * CCL- Numcosmo comparison using a mass proxy, both binned and unbinned analysis
+
+ * Tests with de cluster abundance with a mass proxy
+
+ * Proxy comparation
+
+ * Fixed conflict leftovers.
+
+ * Ascasp changes
+
+ * Removed old data objects all binned versions now reside in NcDataNCount.
+     NcABCClusterNCount needs updating. Now lenghts of cluster mass and redshift
+     and class properties. Cluster abundance must be instantiated with both mass
+     and redshift proxies defined. NcClusterMass/Redshift objects reorganized.
+
+ * New helpers scripts with new tools: a function create pairs of NumCosmo/CCL
+     objects, increase CCL precision and notebook plots with comparison between
+     NumCosmo and CCL outputs. Updated notebooks to use helper functions.
+
+ * Inclusion of the Cluster Number as a function of mass in the binned case both
+     for CosmoSim and Numcosmo
+
+ * Implementation of the inp_bin and p_bin_limits function in the
+     gauss_global_photoz redshift proxy
+
+ * Removed checkpoints and output files.
+
+ * Implementation of binning in the lnnormal mass-observable relation
+
+ * Binned and unbinned comparison between Numcosmo and CCL cluster abundace
+     objects with no mass or redshift proxies
+
+ * binned and unbinned comparison between CCL and Numcosmo cluster abundance with
+     no mass or redshift proxies
+
+ * Working version for binning proxies in NcCluster* family.
+
+ * notebook on cluster mass comparison between CCL and Numcosmo update
+
+ * addition of  binning in cluster_mass.c and cluster_mass.h and unbinning
+     comparison between CCL and Numcosmo cluster mass objects(not ready yet)
+
+ * Old modifications on hiqg and updates on NumCosmo vs CCL tests. Starting the
+     implementation of binning for cluster mass and redshift.
+
+ * Comparison between numcosmo and ccl cluster abundance objects
+
+ * New spline object for functions with known second derivative. Updated
+     nc_multiplicity_func_tinker to use interpolation objects, added option to
+     use linear interpolation. Removed old notebook NC_CCL_Bocquet_Test2.ipynb.
+     Updated NC_CCL_mass_function.ipynb (fixed bugs).
+
+ * Mass functions comparisons notebook.
+
+ * Updated version to match new interface.
+
+ * Better limits for nc_halo_mass_function. Setting properties through gobject to
+     catch out-of-bounds values.
+
+ * Adjusted esmcmc run_lre minimum runs in tests.
+
+ * Calibrated integrals to work on any point of the allowed parametric space.
+     Added mores tests.
+
+ * Modified ranges of concentration and alpha (Einasto) parameters.
+
+ * Improved stability in nc_halo_density_profile.c.
+
+ * Smaller lower bounds for ncm_fit_esmcmc_run_lre. Added option for starting
+     value of over-smooth in mcat_analize calibration.
+
+ * Option to calibrate over-smooth.
+
+ * New minor version 0.15.4.
+
 
 [v0.15.4]
  * New minor version 0.15.4.
