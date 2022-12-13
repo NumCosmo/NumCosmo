@@ -1,5 +1,5 @@
 /***************************************************************************
- *            integral.c
+ *            ncm_integrate.c
  *
  *  Wed Aug 13 20:35:59 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti & Mariana Penna Lima
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:integral
+ * SECTION:ncm_integrate
  * @title: NcmIntegral
  * @short_description: Numerical integration helpers.
  * @stability: Stable

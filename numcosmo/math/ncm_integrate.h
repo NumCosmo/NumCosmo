@@ -1,5 +1,5 @@
 /***************************************************************************
- *            integral.h
+ *            ncm_integrate.h
  *
  *  Wed Aug 13 20:38:13 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti and Mariana Penna Lima

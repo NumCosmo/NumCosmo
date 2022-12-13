@@ -1,5 +1,5 @@
 /***************************************************************************
- *            binsplit.h
+ *            ncm_binsplit.c
  *
  *  Tue Jan 19 18:28:16 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:binsplit
+ * SECTION:ncm_binsplit
  * @title: NcmBinSplit
  * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
  * @stability: Stable

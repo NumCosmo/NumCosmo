@@ -654,6 +654,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 /**
  * ncm_powspec_get_spline_2d:
  * @powspec: a #NcmPowspec
+ * @model: a #NcmModel compatible with @powspec
  *
  * Compute a 2D spline for the power spectrum.
  *
