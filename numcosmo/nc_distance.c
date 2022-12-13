@@ -371,7 +371,7 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
   if (zf > dist->zf)
   {
-    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf)
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
     dist->zf = zf;
 
     ncm_model_ctrl_force_update (dist->ctrl);
