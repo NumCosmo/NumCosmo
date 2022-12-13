@@ -53,6 +53,8 @@ libnumcosmo_misc_la_SOURCES = \
 	pcubature.c     \
 	cubature.h      \
 	vwrapper.h      \
+	converged.h     \
+	clencurt.h      \
 	initial_point.h
 
 EXTRA_DIST =
