@@ -221,6 +221,7 @@ void ncm_model_param_set_lower_bound (NcmModel *model, guint n, const gdouble lb
 void ncm_model_param_set_upper_bound (NcmModel *model, guint n, const gdouble ub);
 void ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol);
 void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype);
+void ncm_model_params_set_default_ftype (NcmModel *model);
 
 void ncm_model_reparam_df (NcmModel *model, NcmVector *fv, NcmVector *v);
 void ncm_model_reparam_J (NcmModel *model, NcmMatrix *fJ, NcmMatrix *J);

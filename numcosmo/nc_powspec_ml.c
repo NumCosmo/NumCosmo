@@ -47,11 +47,77 @@
 
 #include "nc_powspec_ml.h"
 
+enum
+{
+  PROP_0,
+  PROP_ZI,
+  PROP_ZF,
+  PROP_KMIN,
+  PROP_KMAX,
+  PROP_SIZE
+};
+
 G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC);
 
 static void
 nc_powspec_ml_init (NcPowspecML *nc_powspec_ml)
 {
+}
+
+static void
+_nc_powspec_ml_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
+  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
+
+  g_return_if_fail (NC_IS_POWSPEC_ML (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZI:
+      ncm_powspec_set_zi (ps, g_value_get_double (value));
+      break;
+    case PROP_ZF:
+      ncm_powspec_set_zf (ps, g_value_get_double (value));
+      break;
+    case PROP_KMIN:
+      ncm_powspec_set_kmin (ps, g_value_get_double (value));
+      break;
+    case PROP_KMAX:
+      ncm_powspec_set_kmax (ps, g_value_get_double (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_powspec_ml_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
+  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
+
+  g_return_if_fail (NC_IS_POWSPEC_ML (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZI:
+      g_value_set_double (value, ncm_powspec_get_zi (ps));
+      break;
+    case PROP_ZF:
+      g_value_set_double (value, ncm_powspec_get_zf (ps));
+      break;
+    case PROP_KMIN:
+      g_value_set_double (value, ncm_powspec_get_kmin (ps));
+      break;
+    case PROP_KMAX:
+      g_value_set_double (value, ncm_powspec_get_kmax (ps));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
@@ -66,7 +132,63 @@ nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   
-  object_class->finalize = &_nc_powspec_ml_finalize;
+  object_class->set_property = &_nc_powspec_ml_set_property;
+  object_class->get_property = &_nc_powspec_ml_get_property;
+  object_class->finalize     = &_nc_powspec_ml_finalize;
+
+  /**
+   * NcPowspecML:zi:
+   *
+   * The initial time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZI,
+                                   g_param_spec_double ("zi",
+                                                        NULL,
+                                                        "Initial redshift",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:zf:
+   *
+   * The final time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZF,
+                                   g_param_spec_double ("zf",
+                                                        NULL,
+                                                        "Final redshift",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:kmin:
+   *
+   * The minimum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMIN,
+                                   g_param_spec_double ("kmin",
+                                                        NULL,
+                                                        "Minimum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:kmax:
+   *
+   * The maximum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMAX,
+                                   g_param_spec_double ("kmax",
+                                                        NULL,
+                                                        "Maximum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+
 }
 
 /**

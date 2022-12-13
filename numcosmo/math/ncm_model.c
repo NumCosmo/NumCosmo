@@ -1952,6 +1952,25 @@ ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype)
 }
 
 /**
+ * ncm_model_params_set_default_ftype:
+ * @model: a #NcmModel
+ *
+ * Sets all parameters #NcmParamType to their default values.
+ *
+ */
+void
+ncm_model_params_set_default_ftype (NcmModel *model)
+{
+  guint i;
+  
+  for (i = 0; i < model->total_len; i++)
+  {
+    const NcmSParam *p = ncm_model_param_peek_desc (model, i);
+    g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (p);
+  }
+}
+
+/**
  * ncm_model_orig_param_get_name:
  * @model: a #NcmModel
  * @n: parameter index

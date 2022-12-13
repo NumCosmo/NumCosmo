@@ -207,12 +207,19 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
   }
 }
 
+static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
+
 static void
 _nc_distance_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
+    NcDistance *dist = NC_DISTANCE (object);
+    NcmSpline *s = ncm_spline_cubic_notaknot_new ();      
+    dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
+    ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
+    ncm_spline_free (s);
   }
 }
 
@@ -364,9 +371,9 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
   if (zf > dist->zf)
   {
-    ncm_ode_spline_clear (&dist->comoving_distance_spline);
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
     dist->zf = zf;
-    
+
     ncm_model_ctrl_force_update (dist->ctrl);
   }
 }
@@ -410,7 +417,6 @@ nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi)
   }
 }
 
-static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
  * nc_distance_prepare:
@@ -438,17 +444,6 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   }
   else
   {
-    if (dist->comoving_distance_spline == NULL)
-    {
-      NcmSpline *s = ncm_spline_cubic_notaknot_new ();
-      
-      dist->comoving_distance_spline =
-        ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
-      
-      ncm_spline_free (s);
-    }
-    
-    ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
   }
@@ -575,8 +570,6 @@ _dcddz (gdouble cd, const gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-  
-  NCM_UNUSED (cd);
   
   return 1.0 / sqrt (E2);
 }

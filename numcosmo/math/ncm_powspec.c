@@ -55,6 +55,7 @@
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_c.h"
+#include "math/ncm_spline2d_bicubic.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_bessel.h>
@@ -66,7 +67,8 @@ enum
   PROP_ZI,
   PROP_ZF,
   PROP_KMIN,
-  PROP_KMAX
+  PROP_KMAX,
+  PROP_RELTOL_SPLINE,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT);
@@ -78,10 +80,11 @@ static gdouble _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdoubl
 static void
 ncm_powspec_init (NcmPowspec *powspec)
 {
-  powspec->zi   = 0.0;
-  powspec->zf   = 0.0;
-  powspec->kmin = 0.0;
-  powspec->kmax = 0.0;
+  powspec->zi            = 0.0;
+  powspec->zf            = 0.0;
+  powspec->kmin          = 0.0;
+  powspec->kmax          = 0.0;
+  powspec->reltol_spline = 0.0;
 
   powspec->var_tophat_R = ncm_integral1d_ptr_new (&_ncm_powspec_var_tophat_R_integ, NULL);
   powspec->corr3D       = ncm_integral1d_ptr_new (&_ncm_powspec_corr3D_integ, NULL);
@@ -132,6 +135,9 @@ _ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_KMAX:
       ncm_powspec_set_kmax (powspec, g_value_get_double (value));
       break;
+    case PROP_RELTOL_SPLINE:
+      ncm_powspec_set_reltol_spline (powspec, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -159,6 +165,9 @@ _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_KMAX:
       g_value_set_double (value, powspec->kmax);
       break;
+    case PROP_RELTOL_SPLINE:
+      g_value_set_double (value, powspec->reltol_spline);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -180,6 +189,71 @@ _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const 
 }
 
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+
+typedef struct __NcmPowspecSplineData
+{
+  NcmPowspec *powspec;
+  NcmModel *model;
+  gdouble z_m;
+  gdouble k_m;
+} _NcmPowspecSplineData;
+
+static gdouble
+__P_z (gdouble z, gpointer p)
+{
+  _NcmPowspecSplineData *data = (_NcmPowspecSplineData *) p;
+  return ncm_powspec_eval (data->powspec, data->model, z, data->k_m);
+}
+
+static gdouble
+__P_k (gdouble k, gpointer p)
+{
+  _NcmPowspecSplineData *data = (_NcmPowspecSplineData *) p;
+  return ncm_powspec_eval (data->powspec, data->model, data->z_m, k);
+}
+
+static NcmSpline2d *
+_ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
+{
+  NcmSpline2d *pk_s2d = ncm_spline2d_bicubic_notaknot_new ();
+  _NcmPowspecSplineData data = {powspec, model,
+      0.5 * (powspec->zi + powspec->zf),
+      exp (0.5 * (log (powspec->kmin) + log(powspec->kmax)))};
+  gsl_function Fx, Fy;
+  gint i, j;
+
+  Fx.function = __P_z;
+  Fx.params   = &data;
+
+  Fy.function = __P_k;
+  Fy.params   = &data;
+
+  ncm_spline2d_set_function (pk_s2d,
+                             NCM_SPLINE_FUNCTION_SPLINE,
+                             &Fx, &Fy,
+                             powspec->zi, powspec->zf,
+                             powspec->kmin, powspec->kmax,
+                             powspec->reltol_spline);
+  {
+    const guint nz = ncm_vector_len (pk_s2d->xv);
+    const guint nk = ncm_vector_len (pk_s2d->yv);
+
+    for (i = 0; i < nk; i++)
+    {
+      const gdouble k = ncm_vector_get (pk_s2d->yv, i);
+      for (j = 0; j < nz; j++)
+      {
+        const gdouble z   = ncm_vector_get (pk_s2d->xv, j);
+        const gdouble Pkz = ncm_powspec_eval (powspec, model, z, k);
+
+        ncm_matrix_set (pk_s2d->zm, i, j, Pkz);
+      }
+    }
+  }
+  ncm_spline2d_prepare (pk_s2d);
+
+  return pk_s2d;
+}
 
 static void
 ncm_powspec_class_init (NcmPowspecClass *klass)
@@ -243,10 +317,23 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         "Maximum mode value",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  klass->prepare  = &_ncm_powspec_prepare;
-  klass->eval     = &_ncm_powspec_eval;
-  klass->eval_vec = &_ncm_powspec_eval_vec;
+  /**
+   * NcmPowspec:reltol:
+   *
+   * The relative tolerance on the interpolation error.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RELTOL_SPLINE,
+                                   g_param_spec_double ("reltol",
+                                                        NULL,
+                                                        "Relative tolerance on the interpolation error",
+                                                        GSL_DBL_EPSILON, 1.0, sqrt (GSL_DBL_EPSILON),
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->prepare       = &_ncm_powspec_prepare;
+  klass->eval          = &_ncm_powspec_eval;
+  klass->eval_vec      = &_ncm_powspec_eval_vec;
+  klass->get_spline_2d = &_ncm_powspec_get_spline_2d;
 }
 
 static void
@@ -381,6 +468,20 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
     powspec->kmax = kmax;
     ncm_model_ctrl_force_update (powspec->ctrl);
   }
+}
+
+/**
+ * ncm_powspec_set_reltol_spline:
+ * @powspec: a #NcmPowspec
+ * @reltol: relative tolerance for interpolation errors
+ *
+ * Sets the relative tolerance for interpolation errors to @reltol.
+ *
+ */
+void
+ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol)
+{
+  powspec->reltol_spline = reltol;
 }
 
 /**
@@ -549,6 +650,14 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * Evaluates the power spectrum @powspec at $z$ and in the knots
  * contained in @k and puts the result in @Pk.
  *
+ */
+/**
+ * ncm_powspec_get_spline_2d:
+ * @powspec: a #NcmPowspec
+ *
+ * Compute a 2D spline for the power spectrum.
+ *
+ * Returns: (transfer full): a #NcmSpline2d interpolating spline as a function of $(z, k)$.
  */
 
 typedef struct _NcmPowspecInt
