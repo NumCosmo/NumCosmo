@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
+#include <numcosmo/math/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 
@@ -76,6 +77,10 @@ void ncm_model_builder_add_sparam (NcmModelBuilder *mb, const gchar *symbol, con
 void ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 
 GType ncm_model_builder_create (NcmModelBuilder *mb);
+
+void ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams);
+NcmObjArray *ncm_model_builder_get_sparams (NcmModelBuilder *mb);
+
 
 G_END_DECLS
 
