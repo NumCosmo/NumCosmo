@@ -377,7 +377,7 @@ ncm_dataset_all_init (NcmDataset *dset)
   for (i = 0; i < dset->oa->len; i++)
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
-    if (!data->init)
+    if (!ncm_data_is_init (data))
       return FALSE;
   }
   return TRUE;
@@ -595,7 +595,9 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       for (i = 0; i < dset->oa->len; i++)
       {
         NcmData *data = ncm_dataset_peek_data (dset, i);
-        ncm_bootstrap_set_bsize (data->bstrap, data->bstrap->fsize);
+        NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
+        ncm_bootstrap_set_bsize (bstrap, bstrap->fsize);
         ncm_data_bootstrap_resample (data, rng);
       }
       break;
@@ -612,8 +614,10 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       for (i = 0; i < dset->oa->len; i++)
       {
         NcmData *data = ncm_dataset_peek_data (dset, i);
+        NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
         guint bsize = g_array_index (dset->bstrap, guint, i);
-        ncm_bootstrap_set_bsize (data->bstrap, bsize);
+        ncm_bootstrap_set_bsize (bstrap, bsize);
         if (bsize > 0)
           ncm_data_bootstrap_resample (data, rng);
       }

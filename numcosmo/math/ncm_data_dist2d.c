@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2017 Mariana Penna Lima <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@
  * @short_description: Abstract class for two-variables distribution data.
  *
  * This object is designate to data that is described by a bivariate and arbitrary distribution.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,7 +46,7 @@ enum
   PROP_NPOINTS,
   PROP_MATRIX,
   PROP_SIZE,
- };
+};
 
 G_DEFINE_ABSTRACT_TYPE (NcmDataDist2d, ncm_data_dist2d, NCM_TYPE_DATA);
 
@@ -68,6 +68,7 @@ static void
 _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDataDist2d *dist2d = NCM_DATA_DIST2D (object);
+
   g_return_if_fail (NCM_IS_DATA_DIST2D (object));
 
   switch (prop_id)
@@ -119,7 +120,6 @@ ncm_data_dist2d_dispose (GObject *object)
 static void
 ncm_data_dist2d_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_dist2d_parent_class)->finalize (object);
 }
@@ -141,8 +141,8 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   object_class->set_property = &_ncm_data_dist2d_set_property;
   object_class->get_property = &_ncm_data_dist2d_get_property;
 
-  object_class->dispose      = &ncm_data_dist2d_dispose;
-  object_class->finalize     = &ncm_data_dist2d_finalize;
+  object_class->dispose  = &ncm_data_dist2d_dispose;
+  object_class->finalize = &ncm_data_dist2d_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
@@ -155,17 +155,17 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_MATRIX,
                                    g_param_spec_object ("matrix",
-                                                         NULL,
-                                                         "Data matrix",
-                                                         NCM_TYPE_MATRIX,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        NULL,
+                                                        "Data matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = TRUE;
   data_class->get_length = &_ncm_data_dist2d_get_length;
   data_class->begin      = NULL;
 
-  data_class->resample   = &_ncm_data_dist2d_resample;
-  data_class->m2lnL_val  = &_ncm_data_dist2d_m2lnL_val;
+  data_class->resample  = &_ncm_data_dist2d_resample;
+  data_class->m2lnL_val = &_ncm_data_dist2d_m2lnL_val;
 
   dist2d_class->m2lnL_val = NULL;
   dist2d_class->inv_pdf   = NULL;
@@ -173,48 +173,55 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   dist2d_class->get_size  = &_ncm_data_dist2d_get_size;
 }
 
-static guint 
+static guint
 _ncm_data_dist2d_get_length (NcmData *data)
-{ 
+{
   NcmDataDist2d *dist2d = NCM_DATA_DIST2D (data);
-  return dist2d->np; 
+
+  return dist2d->np;
 }
 
 static void
 _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (data);
+  NcmDataDist2d *dist2d            = NCM_DATA_DIST2D (data);
   NcmDataDist2dClass *dist2d_class = NCM_DATA_DIST2D_GET_CLASS (data);
   guint i;
-  
+
   *m2lnL = 0.0;
+
   if (!ncm_data_bootstrap_enabled (data))
   {
     for (i = 0; i < dist2d->np; i++)
     {
       const gdouble x_i = ncm_matrix_get (dist2d->m, i, 0);
       const gdouble y_i = ncm_matrix_get (dist2d->m, i, 1);
+
       *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
     }
   }
   else
   {
-    const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
+
     for (i = 0; i < bsize; i++)
     {
-      guint k = ncm_bootstrap_get (data->bstrap, i);
+      guint k           = ncm_bootstrap_get (bstrap, i);
       const gdouble x_i = ncm_matrix_get (dist2d->m, k, 0);
       const gdouble y_i = ncm_matrix_get (dist2d->m, k, 1);
+
       *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
-    }    
+    }
   }
+
   return;
 }
 
 static void
 _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (data);
+  NcmDataDist2d *dist2d            = NCM_DATA_DIST2D (data);
   NcmDataDist2dClass *dist2d_class = NCM_DATA_DIST2D_GET_CLASS (data);
   guint i;
 
@@ -222,43 +229,52 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_error ("_ncm_data_dist2d_resample: This object do not implement the inverse of the pdf.");
 
   ncm_rng_lock (rng);
+
   for (i = 0; i < dist2d->np; i++)
   {
     gdouble x_i;
     gdouble y_i;
     const gdouble u_i = gsl_rng_uniform (rng->r);
     const gdouble v_i = gsl_rng_uniform (rng->r);
+
     dist2d_class->inv_pdf (dist2d, mset, u_i, v_i, &x_i, &y_i);
     ncm_matrix_set (dist2d->m, i, 0, x_i);
     ncm_matrix_set (dist2d->m, i, 1, y_i);
   }
+
   ncm_rng_unlock (rng);
 }
 
-static void 
+static void
 _ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np)
 {
   NcmData *data = NCM_DATA (dist2d);
+
   if ((np == 0) || (np != dist2d->np))
   {
     dist2d->np = 0;
     ncm_matrix_clear (&dist2d->m);
-    data->init = FALSE;
+    ncm_data_set_init (data, FALSE);
   }
+
   if ((np != 0) && (np != dist2d->np))
   {
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
     dist2d->np = np;
     dist2d->m  = ncm_matrix_new (dist2d->np, 2);
+
     if (ncm_data_bootstrap_enabled (data))
     {
-      ncm_bootstrap_set_fsize (data->bstrap, np);
-      ncm_bootstrap_set_bsize (data->bstrap, np);
+      ncm_bootstrap_set_fsize (bstrap, np);
+      ncm_bootstrap_set_bsize (bstrap, np);
     }
-    data->init = FALSE;
+
+    ncm_data_set_init (data, FALSE);
   }
 }
 
-static guint 
+static guint
 _ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
 {
   return dist2d->np;
@@ -270,9 +286,9 @@ _ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
  * @np: data size.
  *
  * Sets the data size to @np.
- * 
+ *
  */
-void 
+void
 ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np)
 {
   NCM_DATA_DIST2D_GET_CLASS (dist2d)->set_size (dist2d, np);
@@ -283,11 +299,11 @@ ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np)
  * @dist2d: a #NcmDataDist2d
  *
  * Gets the data size.
- * 
+ *
  * Returns: Data size.
- * 
+ *
  */
-guint 
+guint
 ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
 {
   return NCM_DATA_DIST2D_GET_CLASS (dist2d)->get_size (dist2d);
@@ -298,8 +314,8 @@ ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
  * @dist2d: a #NcmDataDist2d
  *
  * Gets the data #NcmMatrix.
- * 
- * Returns: (transfer full): Data matrix. 
+ *
+ * Returns: (transfer full): Data matrix.
  */
 NcmMatrix *
 ncm_data_dist2d_get_data (NcmDataDist2d *dist2d)

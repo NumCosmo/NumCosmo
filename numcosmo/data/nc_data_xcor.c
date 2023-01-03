@@ -981,7 +981,8 @@ void
 nc_data_xcor_set_5 (NcDataXcor* dxc)
 {
   NcmData *data = NCM_DATA (dxc);
-  data->init = TRUE;
+
+  ncm_data_set_init (data, TRUE);
 }
 
 /**

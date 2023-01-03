@@ -38,15 +38,8 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA             (ncm_data_get_type ())
-#define NCM_DATA(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA, NcmData))
-#define NCM_DATA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA, NcmDataClass))
-#define NCM_IS_DATA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA))
-#define NCM_IS_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA))
-#define NCM_DATA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA, NcmDataClass))
-
-typedef struct _NcmDataClass NcmDataClass;
-typedef struct _NcmData NcmData;
+#define NCM_TYPE_DATA (ncm_data_get_type ())
+G_DECLARE_DERIVABLE_TYPE (NcmData, ncm_data, NCM, DATA, GObject)
 
 /**
  * NcmDataFisherMatrix:
@@ -65,16 +58,16 @@ typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **I
  * @get_length: return the length associated to the #NcmData object.
  * @get_dof: return the effective degrees of freedom related to the #NcmData
  * statistics (likelihood or $\chi^2$) this number does not represent 
- * necessarely the number of data points.
- * @begin: perform any model independent precalculation.
- * @prepare: perform any model dependent precalculation.
+ * necessarily the number of data points.
+ * @begin: perform any model independent pre-calculation.
+ * @prepare: perform any model dependent pre-calculation.
  * @resample: resample data from the models in #NcmMSet.
  * @leastsquares_f: calculates the least squares $\vec{f}$ vector, i.e., 
  * $\chi^2 \equiv \vec{f}\cdot\vec{f}$.
  * @leastsquares_J: calculates the least squares $\vec{f}$ vector derivatives
  * with respect to the free parameter of @mset.
  * @leastsquares_f_J: calculates both least squares vector and its derivatives.
- * @m2lnL_val: evaluate the minus two times the natural logarithim of the 
+ * @m2lnL_val: evaluate the minus two times the natural logarithm of the
  * likelihood, i.e., $-2\ln(L)$.
  * @m2lnL_grad: evaluate the gradient of $-2\ln(L)$ with respect to the free
  * parameters in @mset.
@@ -92,7 +85,6 @@ struct _NcmDataClass
   /*< private >*/
   GObjectClass parent_class;
   gchar *name;
-  /*< public >*/
   gboolean bootstrap;
   guint (*get_length) (NcmData *data);
   guint (*get_dof) (NcmData *data);
@@ -108,21 +100,9 @@ struct _NcmDataClass
   void (*mean_vector) (NcmData *data, NcmMSet *mset, NcmVector *mu);
   void (*inv_cov_UH) (NcmData *data, NcmMSet *mset, NcmMatrix *H);
   NcmDataFisherMatrix fisher_matrix;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[2];
 };
-
-struct _NcmData
-{
-  /*< private >*/
-  GObject parent_instance;
-  gchar *desc;
-  gchar *long_desc;
-  gboolean init;
-  gboolean begin;
-  NcmBootstrap *bstrap;
-  NcmDiff *diff;
-};
-
-GType ncm_data_get_type (void) G_GNUC_CONST;
 
 NcmData *ncm_data_ref (NcmData *data);
 void ncm_data_free (NcmData *data);
@@ -134,6 +114,7 @@ NcmData *ncm_data_new_from_file (const gchar *filename);
 guint ncm_data_get_length (NcmData *data);
 guint ncm_data_get_dof (NcmData *data);
 void ncm_data_set_init (NcmData *data, gboolean state);
+gboolean ncm_data_is_init (NcmData *data);
 
 void ncm_data_set_desc (NcmData *data, const gchar *desc);
 void ncm_data_take_desc (NcmData *data, gchar *desc);
@@ -148,6 +129,7 @@ void ncm_data_bootstrap_remove (NcmData *data);
 void ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap);
 void ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng);
 gboolean ncm_data_bootstrap_enabled (NcmData *data);
+NcmBootstrap *ncm_data_peek_bootstrap (NcmData *data);
 
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 void ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J);

@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2017 Mariana Penna Lima <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,8 +48,9 @@ struct _NcmDataDist2dClass
 {
   /*< private >*/
   NcmDataClass parent_class;
+
   gdouble (*m2lnL_val) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y);
-  void (*inv_pdf) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);  
+  void (*inv_pdf) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);
   void (*set_size) (NcmDataDist2d *dist2d, guint np);
   guint (*get_size) (NcmDataDist2d *dist2d);
 };

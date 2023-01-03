@@ -38,29 +38,8 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_C             (ncm_c_get_type ())
-#define NCM_C(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_C, NcmC))
-#define NCM_C_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_C, NcmCClass))
-#define NCM_IS_C(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_C))
-#define NCM_IS_C_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_C))
-#define NCM_C_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_C, NcmCClass))
-
-typedef struct _NcmCClass NcmCClass;
-typedef struct _NcmC NcmC;
-
-struct _NcmCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmC
-{
-  /*< private >*/
-  GObject parent_instance;
-};
-
-GType ncm_c_get_type (void) G_GNUC_CONST;
+#define NCM_TYPE_C (ncm_c_get_type ())
+G_DECLARE_FINAL_TYPE (NcmC, ncm_c, NCM, C, GObject)
 
 /*******************************************************************************
  * Mathematical constants

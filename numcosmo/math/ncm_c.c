@@ -50,7 +50,7 @@
  * resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived constants.
  * See also [Luzum 2011][XLuzum2011].
  *
- * - Atomic Specra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
+ * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
  * Standard Reference Database 78 - Version 5.7 (October 2018).
  *
  */
@@ -63,6 +63,11 @@
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+
+struct _NcmC
+{
+  GObject parent_instance;
+};
 
 G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT);
 

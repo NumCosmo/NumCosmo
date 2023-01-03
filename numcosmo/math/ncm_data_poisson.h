@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -63,6 +63,7 @@ struct _NcmDataPoissonClass
 {
   /* < private > */
   NcmDataClass parent_class;
+
   gdouble (*mean_func) (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
   void (*set_size) (NcmDataPoisson *poisson, guint nbins);
   guint (*get_size) (NcmDataPoisson *poisson);
@@ -78,7 +79,7 @@ struct _NcmDataPoisson
   /* < private > */
   NcmData parent_instance;
   gsl_histogram *h;
-	NcmVector *means;
+  NcmVector *means;
   NcmVector *log_Nfac;
   guint nbins;
 };

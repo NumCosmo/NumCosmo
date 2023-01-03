@@ -400,7 +400,7 @@ AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
-GLIB_REQUIRED_VERSION=2.38.0
+GLIB_REQUIRED_VERSION=2.44.0
 GSL_REQUIRED_VERSION=2.0
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2

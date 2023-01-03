@@ -85,6 +85,7 @@ static void
 _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
 
   switch (prop_id)
@@ -98,6 +99,7 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_MEAN:
     {
       NcmVector *v = g_value_get_object (value);
+
       ncm_vector_substitute (&gauss->y, v, TRUE);
       break;
     }
@@ -114,6 +116,7 @@ static void
 _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
 
   switch (prop_id)
@@ -153,12 +156,12 @@ _ncm_data_gauss_cov_dispose (GObject *object)
 static void
 _ncm_data_gauss_cov_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->finalize (object);
 }
 
 static guint _ncm_data_gauss_cov_get_length (NcmData *data);
+
 /* static void _ncm_data_gauss_cov_begin (NcmData *data); */
 static void _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
@@ -174,8 +177,8 @@ static void _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *ms
 static void
 ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
 {
-  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class       = NCM_DATA_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class              = NCM_DATA_CLASS (klass);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
   object_class->constructed  = &_ncm_data_gauss_cov_constructed;
@@ -216,25 +219,25 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->bootstrap          = TRUE;
+  data_class->bootstrap = TRUE;
 
-  data_class->get_length         = &_ncm_data_gauss_cov_get_length;
-  data_class->get_dof            = NULL;
-  data_class->begin              = NULL;
+  data_class->get_length = &_ncm_data_gauss_cov_get_length;
+  data_class->get_dof    = NULL;
+  data_class->begin      = NULL;
 
-  data_class->resample           = &_ncm_data_gauss_cov_resample;
-  data_class->m2lnL_val          = &_ncm_data_gauss_cov_m2lnL_val;
-  data_class->leastsquares_f     = &_ncm_data_gauss_cov_leastsquares_f;
+  data_class->resample       = &_ncm_data_gauss_cov_resample;
+  data_class->m2lnL_val      = &_ncm_data_gauss_cov_m2lnL_val;
+  data_class->leastsquares_f = &_ncm_data_gauss_cov_leastsquares_f;
 
-  data_class->mean_vector        = &_ncm_data_gauss_cov_mean_vector;
-  data_class->inv_cov_UH         = &_ncm_data_gauss_cov_inv_cov_UH;
+  data_class->mean_vector = &_ncm_data_gauss_cov_mean_vector;
+  data_class->inv_cov_UH  = &_ncm_data_gauss_cov_inv_cov_UH;
 
-  gauss_cov_class->mean_func    = NULL;
-  gauss_cov_class->cov_func     = NULL;
-  gauss_cov_class->lnNorma2     = &_ncm_data_gauss_cov_lnNorma2;
-  gauss_cov_class->lnNorma2_bs  = &_ncm_data_gauss_cov_lnNorma2_bs;
-  gauss_cov_class->set_size     = &_ncm_data_gauss_cov_set_size;
-  gauss_cov_class->get_size     = &_ncm_data_gauss_cov_get_size;
+  gauss_cov_class->mean_func   = NULL;
+  gauss_cov_class->cov_func    = NULL;
+  gauss_cov_class->lnNorma2    = &_ncm_data_gauss_cov_lnNorma2;
+  gauss_cov_class->lnNorma2_bs = &_ncm_data_gauss_cov_lnNorma2_bs;
+  gauss_cov_class->set_size    = &_ncm_data_gauss_cov_set_size;
+  gauss_cov_class->get_size    = &_ncm_data_gauss_cov_get_size;
 }
 
 static guint
@@ -255,22 +258,25 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
     ncm_matrix_memcpy (gauss->LLT, gauss->cov);
 
   ret = ncm_matrix_cholesky_decomp (gauss->LLT, 'U');
+
   if (ret != 0) /* if different from 0, something went wrong in the Cholesky decomposition */
   {
-    // g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+    /* g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret); */
     g_warning ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
     gauss->prepared_LLT = FALSE;
   }
   else
+  {
     gauss->prepared_LLT = TRUE;
+  }
 }
 
 static void
 _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss                = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
-  gboolean cov_update = FALSE;
+  gboolean cov_update                   = FALSE;
   gint ret;
   guint i;
 
@@ -281,11 +287,14 @@ _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     _ncm_data_gauss_cov_prepare_LLT (data);
 
   ncm_rng_lock (rng);
+
   for (i = 0; i < gauss->np; i++)
   {
     const gdouble u_i = gsl_ran_ugaussian (rng->r);
+
     ncm_vector_set (gauss->v, i, u_i);
   }
+
   ncm_rng_unlock (rng);
 
   /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
@@ -317,14 +326,18 @@ _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBoots
     const guint k       = ncm_bootstrap_get (bstrap, i);
     const gdouble Lii   = ncm_matrix_get (gauss->LLT, k, k);
     const gdouble ndetL = detL * Lii;
+
     if (G_UNLIKELY ((ndetL < lb) || (ndetL > ub)))
     {
       gint exponent_i = 0;
-      detL = frexp (ndetL, &exponent_i);
+
+      detL      = frexp (ndetL, &exponent_i);
       exponent += exponent_i;
     }
     else
+    {
       detL = ndetL;
+    }
   }
 
   *m2lnL += gauss->np * ncm_c_ln2pi () + 2.0 * (log (detL) + exponent * M_LN2);
@@ -333,9 +346,9 @@ _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBoots
 static void
 _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss                = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
-  gboolean cov_update = FALSE;
+  gboolean cov_update                   = FALSE;
   gint ret;
 
   *m2lnL = 0.0;
@@ -353,6 +366,7 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   if (!gauss->prepared_LLT) /* that means that the Cholesky decomposition has not worked */
   {
     *m2lnL = GSL_POSINF;
+
     return;
   }
 
@@ -369,33 +383,35 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
     if (gauss->use_norma)
-    {
       gauss_cov_class->lnNorma2 (gauss, mset, m2lnL);
-    }
   }
   else
   {
-    const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
     guint i;
-    g_assert (ncm_bootstrap_is_init (data->bstrap));
+
+    g_assert (ncm_bootstrap_is_init (bstrap));
 
     for (i = 0; i < bsize; i++)
     {
-      guint k = ncm_bootstrap_get (data->bstrap, i);
+      guint k           = ncm_bootstrap_get (bstrap, i);
       const gdouble u_i = ncm_vector_get (gauss->v, k);
+
       *m2lnL += u_i * u_i;
     }
+
     if (gauss->use_norma)
-      gauss_cov_class->lnNorma2_bs (gauss, mset, data->bstrap, m2lnL);
+      gauss_cov_class->lnNorma2_bs (gauss, mset, bstrap, m2lnL);
   }
 }
 
 static void
 _ncm_data_gauss_cov_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss                = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
-  gboolean cov_update = FALSE;
+  gboolean cov_update                   = FALSE;
   gint ret;
 
   if (ncm_data_bootstrap_enabled (data))
@@ -425,12 +441,12 @@ _ncm_data_gauss_cov_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
   gauss_cov_class->mean_func (gauss, mset, mu);
 }
 
-static void 
+static void
 _ncm_data_gauss_cov_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss                = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
-  gboolean cov_update = FALSE;
+  gboolean cov_update                   = FALSE;
   gint ret;
 
   if (gauss_cov_class->cov_func != NULL)
@@ -439,9 +455,9 @@ _ncm_data_gauss_cov_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
   if (cov_update || !gauss->prepared_LLT)
     _ncm_data_gauss_cov_prepare_LLT (data);
 
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 
+  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
                         1.0, ncm_matrix_gsl (gauss->LLT), ncm_matrix_gsl (H));
-  
+
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_inv_cov_UH", ret);
 }
 
@@ -449,6 +465,7 @@ static void
 _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcmData *data = NCM_DATA (gauss);
+
   if ((np == 0) || (np != gauss->np))
   {
     gauss->np = 0;
@@ -456,20 +473,26 @@ _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
     ncm_vector_clear (&gauss->v);
     ncm_matrix_clear (&gauss->cov);
     ncm_matrix_clear (&gauss->LLT);
-    data->init = FALSE;
+
+    ncm_data_set_init (data, FALSE);
   }
+
   if ((np != 0) && (np != gauss->np))
   {
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
     gauss->np  = np;
     gauss->y   = ncm_vector_new (gauss->np);
     gauss->v   = ncm_vector_new (gauss->np);
     gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
+
     if (ncm_data_bootstrap_enabled (data))
     {
-      ncm_bootstrap_set_fsize (data->bstrap, np);
-      ncm_bootstrap_set_bsize (data->bstrap, np);
+      ncm_bootstrap_set_fsize (bstrap, np);
+      ncm_bootstrap_set_bsize (bstrap, np);
     }
-    data->init = FALSE;
+
+    ncm_data_set_init (data, FALSE);
   }
 }
 
@@ -487,7 +510,7 @@ _ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
  * Sets the data size to @np.
  *
  */
-void 
+void
 ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NCM_DATA_GAUSS_COV_GET_CLASS (gauss)->set_size (gauss, np);
@@ -502,7 +525,7 @@ ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
  * Returns: Data size.
  *
  */
-guint 
+guint
 ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
 {
   return NCM_DATA_GAUSS_COV_GET_CLASS (gauss)->get_size (gauss);
@@ -516,8 +539,9 @@ ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
  * Sets whether the value of $-2\ln(L)$ will be properly normalized.
  *
  */
-void 
+void
 ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma)
 {
   gauss->use_norma = use_norma;
 }
+

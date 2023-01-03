@@ -574,7 +574,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   gboolean needs_update        = FALSE;
   register guint i, j, ij;
 
-  g_assert (NCM_DATA (snia_cov)->init);
+  g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
 
   if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) > dataset_len)
     g_warning ("nc_snia_dist_cov_calc: model dataset is larger then the used by the data: %u > %u.",
@@ -702,7 +702,7 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
     const gdouble Mcal2 = ABSMAG2 + 5.0 * log10 (DH);
     guint i;
 
-    g_assert (NCM_DATA (snia_cov)->init);
+    g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
 
     for (i = 0; i < cat_mu_len; i++)
     {
@@ -745,7 +745,7 @@ nc_snia_dist_cov_mean_V2 (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *
   GArray *is_calib             = nc_data_snia_cov_peek_is_calib (snia_cov);
   guint i;
 
-  g_assert (NCM_DATA (snia_cov)->init);
+  g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
   g_assert (mu_len == 0);
 
   for (i = 0; i < cat_mu_len; i++)
@@ -788,7 +788,7 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
   const NcmVector *v_z_he     = nc_data_snia_cov_peek_z_he (snia_cov);
   const NcmVector *v_thirdpar = nc_data_snia_cov_peek_thirdpar (snia_cov);
 
-  g_assert (NCM_DATA (snia_cov)->init);
+  g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
 
   {
     const gdouble z_cmb    = ncm_vector_get (v_z_cmb, i);
@@ -838,7 +838,7 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
 
   guint i;
 
-  g_assert (NCM_DATA (snia_cov)->init);
+  g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
 
   ncm_matrix_set_zero (X);
 
@@ -897,7 +897,7 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
  * @i: the distance index
  *
  * Computes the total variance of the @i-th distance, not related to the
- * magnitute, width or colour errors.
+ * magnitude, width or colour errors.
  *
  * Returns: the variance
  */
@@ -905,7 +905,8 @@ gdouble
 nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i)
 {
   NcmModel *model = NCM_MODEL (dcov);
-  g_assert (NCM_DATA (snia_cov)->init);
+
+  g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));
 
   {
     const GArray *dataset        = nc_data_snia_cov_peek_dataset (snia_cov);

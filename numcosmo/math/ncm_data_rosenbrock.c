@@ -14,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -70,7 +70,6 @@ ncm_data_rosenbrock_constructed (GObject *object)
 static void
 ncm_data_rosenbrock_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_rosenbrock_parent_class)->finalize (object);
 }
@@ -93,40 +92,50 @@ ncm_data_rosenbrock_class_init (NcmDataRosenbrockClass *klass)
   data_class->m2lnL_val  = &_ncm_data_rosenbrock_m2lnL_val;
 }
 
-static guint _ncm_data_rosenbrock_get_length (NcmData *data) { return 10; }
-static guint _ncm_data_rosenbrock_get_dof (NcmData *data) { return 10; }
+static guint
+_ncm_data_rosenbrock_get_length (NcmData *data)
+{
+  return 10;
+}
+
+static guint
+_ncm_data_rosenbrock_get_dof (NcmData *data)
+{
+  return 10;
+}
 
 static void
 _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcmModelRosenbrock *mrb = NCM_MODEL_ROSENBROCK (ncm_mset_peek (mset, ncm_model_rosenbrock_id ()));
-  const gdouble x1 = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1);
-  const gdouble x2 = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2);
+  const gdouble x1        = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1);
+  const gdouble x2        = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2);
 
   m2lnL[0] = (100.0 * gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1)) * 1.0e-1;
 }
 
 /**
  * ncm_data_rosenbrock_new:
- * 
+ *
  * Creates a new @dim-dimensional MVND.
- * 
+ *
  * Returns: the newly created object.
- */ 
+ */
 NcmDataRosenbrock *
 ncm_data_rosenbrock_new (void)
 {
   NcmDataRosenbrock *drb = g_object_new (NCM_TYPE_DATA_ROSENBROCK,
                                          NULL);
+
   return drb;
 }
 
 /**
  * ncm_data_rosenbrock_ref:
  * @drb: a #NcmDataRosenbrock
- * 
+ *
  * Increases the reference count of @drb by one.
- * 
+ *
  * Returns: (transfer full): @drb
  */
 NcmDataRosenbrock *
@@ -138,11 +147,11 @@ ncm_data_rosenbrock_ref (NcmDataRosenbrock *drb)
 /**
  * ncm_data_rosenbrock_free:
  * @drb: a #NcmDataRosenbrock
- * 
+ *
  * Decreases the reference count of @drb by one.
- * 
+ *
  */
-void 
+void
 ncm_data_rosenbrock_free (NcmDataRosenbrock *drb)
 {
   g_object_unref (drb);
@@ -151,13 +160,14 @@ ncm_data_rosenbrock_free (NcmDataRosenbrock *drb)
 /**
  * ncm_data_rosenbrock_clear:
  * @drb: a #NcmDataRosenbrock
- * 
+ *
  * If @drb is different from NULL, decreases the reference count of
  * @drb by one and sets @drb to NULL.
- * 
+ *
  */
-void 
+void
 ncm_data_rosenbrock_clear (NcmDataRosenbrock **drb)
 {
   g_clear_object (drb);
 }
+

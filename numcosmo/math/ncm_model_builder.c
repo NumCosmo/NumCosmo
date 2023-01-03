@@ -295,7 +295,7 @@ ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const g
 /**
  * ncm_model_builder_add_sparams:
  * @mb: a #NcmModelBuilder
- * @sparams: (element-type NcmSParam): an array of #NcmSParam objects
+ * @sparams: an array of #NcmSParam objects
  *
  * Adds all #NcmSParam objects in @sparams to @mb.
  *
