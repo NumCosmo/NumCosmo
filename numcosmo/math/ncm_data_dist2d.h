@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_data_dist2d.h
  *
@@ -34,15 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_DIST2D             (ncm_data_dist2d_get_type ())
-#define NCM_DATA_DIST2D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_DIST2D, NcmDataDist2d))
-#define NCM_DATA_DIST2D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_DIST2D, NcmDataDist2dClass))
-#define NCM_IS_DATA_DIST2D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_DIST2D))
-#define NCM_IS_DATA_DIST2D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_DIST2D))
-#define NCM_DATA_DIST2D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_DIST2D, NcmDataDist2dClass))
+#define NCM_TYPE_DATA_DIST2D (ncm_data_dist2d_get_type ())
 
-typedef struct _NcmDataDist2dClass NcmDataDist2dClass;
-typedef struct _NcmDataDist2d NcmDataDist2d;
+G_DECLARE_DERIVABLE_TYPE (NcmDataDist2d, ncm_data_dist2d, NCM, DATA_DIST2D, NcmData)
 
 struct _NcmDataDist2dClass
 {
@@ -53,17 +48,10 @@ struct _NcmDataDist2dClass
   void (*inv_pdf) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);
   void (*set_size) (NcmDataDist2d *dist2d, guint np);
   guint (*get_size) (NcmDataDist2d *dist2d);
-};
 
-struct _NcmDataDist2d
-{
-  /*< private >*/
-  NcmData parent_instance;
-  guint np;
-  NcmMatrix *m;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[14];
 };
-
-GType ncm_data_dist2d_get_type (void) G_GNUC_CONST;
 
 void ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np);
 guint ncm_data_dist2d_get_size (NcmDataDist2d *dist2d);

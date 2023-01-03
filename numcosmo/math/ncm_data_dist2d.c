@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_data_dist2d.c
  *
@@ -48,13 +49,21 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmDataDist2d, ncm_data_dist2d, NCM_TYPE_DATA);
+typedef struct _NcmDataDist2dPrivate
+{
+  guint np;
+  NcmMatrix *m;
+} NcmDataDist2dPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist2d, ncm_data_dist2d, NCM_TYPE_DATA);
 
 static void
 ncm_data_dist2d_init (NcmDataDist2d *dist2d)
 {
-  dist2d->np = 0;
-  dist2d->m  = NULL;
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+
+  self->np = 0;
+  self->m  = NULL;
 }
 
 static void
@@ -67,7 +76,8 @@ _ncm_data_dist2d_constructed (GObject *object)
 static void
 _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (object);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (object);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
   g_return_if_fail (NCM_IS_DATA_DIST2D (object));
 
@@ -77,7 +87,7 @@ _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *val
       ncm_data_dist2d_set_size (dist2d, g_value_get_uint (value));
       break;
     case PROP_MATRIX:
-      ncm_matrix_substitute (&dist2d->m, g_value_get_object (value), TRUE);
+      ncm_matrix_substitute (&self->m, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -88,7 +98,8 @@ _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _ncm_data_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (object);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (object);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
   g_return_if_fail (NCM_IS_DATA_DIST2D (object));
 
@@ -98,7 +109,7 @@ _ncm_data_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_uint (value, ncm_data_dist2d_get_size (dist2d));
       break;
     case PROP_MATRIX:
-      g_value_set_object (value, dist2d->m);
+      g_value_set_object (value, self->m);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -109,9 +120,10 @@ _ncm_data_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GP
 static void
 ncm_data_dist2d_dispose (GObject *object)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (object);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (object);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
-  ncm_matrix_clear (&dist2d->m);
+  ncm_matrix_clear (&self->m);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_dist2d_parent_class)->dispose (object);
@@ -176,26 +188,28 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
 static guint
 _ncm_data_dist2d_get_length (NcmData *data)
 {
-  NcmDataDist2d *dist2d = NCM_DATA_DIST2D (data);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (data);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
-  return dist2d->np;
+  return self->np;
 }
 
 static void
 _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataDist2d *dist2d            = NCM_DATA_DIST2D (data);
-  NcmDataDist2dClass *dist2d_class = NCM_DATA_DIST2D_GET_CLASS (data);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (data);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+  NcmDataDist2dClass *dist2d_class  = NCM_DATA_DIST2D_GET_CLASS (data);
   guint i;
 
   *m2lnL = 0.0;
 
   if (!ncm_data_bootstrap_enabled (data))
   {
-    for (i = 0; i < dist2d->np; i++)
+    for (i = 0; i < self->np; i++)
     {
-      const gdouble x_i = ncm_matrix_get (dist2d->m, i, 0);
-      const gdouble y_i = ncm_matrix_get (dist2d->m, i, 1);
+      const gdouble x_i = ncm_matrix_get (self->m, i, 0);
+      const gdouble y_i = ncm_matrix_get (self->m, i, 1);
 
       *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
     }
@@ -208,8 +222,8 @@ _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     for (i = 0; i < bsize; i++)
     {
       guint k           = ncm_bootstrap_get (bstrap, i);
-      const gdouble x_i = ncm_matrix_get (dist2d->m, k, 0);
-      const gdouble y_i = ncm_matrix_get (dist2d->m, k, 1);
+      const gdouble x_i = ncm_matrix_get (self->m, k, 0);
+      const gdouble y_i = ncm_matrix_get (self->m, k, 1);
 
       *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
     }
@@ -221,8 +235,9 @@ _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 static void
 _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataDist2d *dist2d            = NCM_DATA_DIST2D (data);
-  NcmDataDist2dClass *dist2d_class = NCM_DATA_DIST2D_GET_CLASS (data);
+  NcmDataDist2d *dist2d             = NCM_DATA_DIST2D (data);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+  NcmDataDist2dClass *dist2d_class  = NCM_DATA_DIST2D_GET_CLASS (data);
   guint i;
 
   if (dist2d_class->inv_pdf == NULL)
@@ -230,7 +245,7 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   ncm_rng_lock (rng);
 
-  for (i = 0; i < dist2d->np; i++)
+  for (i = 0; i < self->np; i++)
   {
     gdouble x_i;
     gdouble y_i;
@@ -238,8 +253,8 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     const gdouble v_i = gsl_rng_uniform (rng->r);
 
     dist2d_class->inv_pdf (dist2d, mset, u_i, v_i, &x_i, &y_i);
-    ncm_matrix_set (dist2d->m, i, 0, x_i);
-    ncm_matrix_set (dist2d->m, i, 1, y_i);
+    ncm_matrix_set (self->m, i, 0, x_i);
+    ncm_matrix_set (self->m, i, 1, y_i);
   }
 
   ncm_rng_unlock (rng);
@@ -248,21 +263,22 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 static void
 _ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np)
 {
-  NcmData *data = NCM_DATA (dist2d);
+  NcmData *data                     = NCM_DATA (dist2d);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
-  if ((np == 0) || (np != dist2d->np))
+  if ((np == 0) || (np != self->np))
   {
-    dist2d->np = 0;
-    ncm_matrix_clear (&dist2d->m);
+    self->np = 0;
+    ncm_matrix_clear (&self->m);
     ncm_data_set_init (data, FALSE);
   }
 
-  if ((np != 0) && (np != dist2d->np))
+  if ((np != 0) && (np != self->np))
   {
     NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
 
-    dist2d->np = np;
-    dist2d->m  = ncm_matrix_new (dist2d->np, 2);
+    self->np = np;
+    self->m  = ncm_matrix_new (self->np, 2);
 
     if (ncm_data_bootstrap_enabled (data))
     {
@@ -277,7 +293,9 @@ _ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np)
 static guint
 _ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
 {
-  return dist2d->np;
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+
+  return self->np;
 }
 
 /**
@@ -320,6 +338,8 @@ ncm_data_dist2d_get_size (NcmDataDist2d *dist2d)
 NcmMatrix *
 ncm_data_dist2d_get_data (NcmDataDist2d *dist2d)
 {
-  return ncm_matrix_ref (dist2d->m);
+  NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+
+  return ncm_matrix_ref (self->m);
 }
 

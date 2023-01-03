@@ -610,8 +610,9 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       {
         NcmData *data        = ncm_dataset_peek_data (dset, i);
         NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+        const guint fsize    = ncm_bootstrap_get_fsize (bstrap);
 
-        ncm_bootstrap_set_bsize (bstrap, bstrap->fsize);
+        ncm_bootstrap_set_bsize (bstrap, fsize);
         ncm_data_bootstrap_resample (data, rng);
       }
 
