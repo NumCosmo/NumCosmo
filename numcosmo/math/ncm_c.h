@@ -748,7 +748,7 @@ ncm_c_H_bind (const gdouble n, const gdouble j)
   const gdouble f_nj_m_one  = -ncm_util_sqrt1px_m1 (f_arg) / sqrt (1.0 + f_arg); /*(1.0 - sqrt (1.0 + f_arg))*/
   const gdouble r           = ncm_c_mass_ratio_e_p ();
   const gdouble E_binding   = ncm_c_H_reduced_energy () * f_nj_m_one * (1.0 - 0.5 * f_nj_m_one * r / gsl_pow_2 (1.0 + r));
-  
+
   return -E_binding;
 }
 

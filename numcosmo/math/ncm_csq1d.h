@@ -36,6 +36,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_CSQ1D (ncm_csq1d_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (NcmCSQ1D, ncm_csq1d, NCM, CSQ1D, GObject)
 
 struct _NcmCSQ1DClass
@@ -58,6 +59,7 @@ struct _NcmCSQ1DClass
   gdouble (*eval_FN)         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
   gdouble (*eval_powspec_factor) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[3];
 };

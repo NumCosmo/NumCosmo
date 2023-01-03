@@ -55,9 +55,9 @@ typedef enum _NcmDatasetBStrapType
 {
   NCM_DATASET_BSTRAP_DISABLE = 0,
   NCM_DATASET_BSTRAP_PARTIAL,
-  NCM_DATASET_BSTRAP_TOTAL, 
+  NCM_DATASET_BSTRAP_TOTAL,
   /* < private > */
-  NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
+  NCM_DATASET_BSTRAP_LEN, /*< skip >*/
 } NcmDatasetBStrapType;
 
 struct _NcmDatasetClass
@@ -134,3 +134,4 @@ void ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
 G_END_DECLS
 
 #endif /* _NCM_DATASET_H_ */
+
