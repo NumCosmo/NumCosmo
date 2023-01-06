@@ -870,7 +870,16 @@ _nc_data_xcor_set_by_oa (NcDataXcor *dxc, NcmObjArray *oa)
 void
 nc_data_xcor_set_3 (NcDataXcor *dxc)
 {
-  const guint ctr = dxc->xcidx_ctr;
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (dxc);
+  const guint ctr        = dxc->xcidx_ctr;
+  const guint np         = ctr / NC_DATA_XCOR_DL;
+  NcmVector *y           = NULL;
+
+  ncm_data_gauss_cov_set_size (gauss, np);
+
+  y = ncm_data_gauss_cov_peek_mean (gauss);
+  ncm_vector_set_zero (y);
+  ncm_matrix_set_zero (ncm_data_gauss_cov_peek_cov (gauss));
 
   dxc->X1 = ncm_matrix_new (ctr, ctr);
   ncm_matrix_set_all (dxc->X1, 0.);
@@ -882,66 +891,55 @@ nc_data_xcor_set_3 (NcDataXcor *dxc)
   dxc->pcov = ncm_matrix_new (ctr, ctr);
   ncm_matrix_set_all (dxc->pcov, 0.0);
 
-  /* Set the parent instance : size, model vector and data vector*/
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (dxc);
-  const guint np         = ctr / NC_DATA_XCOR_DL;
-
-  gauss->np  = np;
-  gauss->v   = ncm_vector_new (np);
-  gauss->cov = ncm_matrix_new (np, np);
-  gauss->y   = ncm_vector_new (np);
-  ncm_vector_set_zero (gauss->v);
-  ncm_vector_set_zero (gauss->y);
-  ncm_matrix_set_zero (gauss->cov);
-
   /* ncm_data_gauss_cov_set_size (gauss, np); */
-
-  gint ell_idx;
-  guint a, b;
-  guint nobs = dxc->nobs;
-
-  /* Put the binned mean value (temporarilly borrowing pcl), find max of ell_lik_max */
-  guint max_ell_lik_max = 0;
-
-  for (a = 0; a < nobs; a++)
   {
-    for (b = a; b < nobs; b++)
+    guint nobs = dxc->nobs;
+    guint a, b;
+    gint ell_idx;
+
+    /* Put the binned mean value (temporarily borrowing pcl), find max of ell_lik_max */
+    guint max_ell_lik_max = 0;
+
+    for (a = 0; a < nobs; a++)
     {
-      ell_idx = dxc->xcidx[a][b];
-
-      if (ell_idx > -1)
+      for (b = a; b < nobs; b++)
       {
-        NcXcorAB *xcab = dxc->xcab[a][b];
+        ell_idx = dxc->xcidx[a][b];
 
-        ncm_vector_memcpy2 (dxc->pcl,
-                            xcab->cl_obs,
-                            ell_idx,
-                            xcab->ell_lik_min,
-                            xcab->nell_lik);
+        if (ell_idx > -1)
+        {
+          NcXcorAB *xcab = dxc->xcab[a][b];
 
-        max_ell_lik_max = GSL_MAX (max_ell_lik_max, xcab->ell_lik_max);
+          ncm_vector_memcpy2 (dxc->pcl,
+              xcab->cl_obs,
+              ell_idx,
+              xcab->ell_lik_min,
+              xcab->nell_lik);
+
+          max_ell_lik_max = GSL_MAX (max_ell_lik_max, xcab->ell_lik_max);
+        }
       }
     }
-  }
 
-  /* Create missing xcab that may be used in the covariance, and check that for the other xcab, ell_th_cut_off >= max_ell_lik_max */
-  for (a = 0; a < nobs; a++)
-  {
-    for (b = a; b < nobs; b++)
+    /* Create missing xcab that may be used in the covariance, and check that for the other xcab, ell_th_cut_off >= max_ell_lik_max */
+    for (a = 0; a < nobs; a++)
     {
-      ell_idx = dxc->xcidx[a][b];
+      for (b = a; b < nobs; b++)
+      {
+        ell_idx = dxc->xcidx[a][b];
 
-      if (ell_idx > -1)
-        g_assert_cmpuint (dxc->xcab[a][b]->ell_th_cut_off, >=, max_ell_lik_max);
-      else /* C_l^{a,b} not used */
+        if (ell_idx > -1)
+          g_assert_cmpuint (dxc->xcab[a][b]->ell_th_cut_off, >=, max_ell_lik_max);
+        else /* C_l^{a,b} not used */
 
-        dxc->xcab[a][b] = nc_xcor_AB_new (a, b, max_ell_lik_max, 0, 0, NULL, NULL, 0);
+          dxc->xcab[a][b] = nc_xcor_AB_new (a, b, max_ell_lik_max, 0, 0, NULL, NULL, 0);
+      }
     }
+
+    _nc_data_xcor_bin_vector (dxc->pcl, y, NC_DATA_XCOR_DL);
+
+    ncm_vector_set_zero (dxc->pcl);
   }
-
-  _nc_data_xcor_bin_vector (dxc->pcl, gauss->y, NC_DATA_XCOR_DL);
-
-  ncm_vector_set_zero (dxc->pcl);
 }
 
 /**

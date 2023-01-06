@@ -45,17 +45,16 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmDataGaussCovMVNDPrivate
+struct _NcmDataGaussCovMVND
 {
-  gint unused;
+  NcmDataGaussCov parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV);
 
 static void
 ncm_data_gauss_cov_mvnd_init (NcmDataGaussCovMVND *gauss_mvnd)
 {
-  gauss_mvnd->priv = ncm_data_gauss_cov_mvnd_get_instance_private (gauss_mvnd);
 }
 
 static void
@@ -191,23 +190,29 @@ void
 ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, const gdouble mean_min, const gdouble mean_max, NcmRNG *rng)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  NcmVector *y   = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmMatrix *cov = ncm_data_gauss_cov_peek_cov (gcov);
+  const guint np = ncm_data_gauss_cov_get_size (gcov);
   gint i;
 
   g_assert_cmpfloat (mean_min, <=, mean_max);
+  g_assert_cmpint (np, >, 0);
+  g_assert (y != NULL);
+  g_assert (cov != NULL);
 
-  ncm_matrix_fill_rand_cov (gcov->cov, sigma_min, sigma_max, cor_level, rng);
+  ncm_matrix_fill_rand_cov (cov, sigma_min, sigma_max, cor_level, rng);
 
   if (mean_min == mean_max)
   {
-    ncm_vector_set_all (gcov->y, mean_min);
+    ncm_vector_set_all (y, mean_min);
   }
   else
   {
-    for (i = 0; i < gcov->np; i++)
+    for (i = 0; i < np; i++)
     {
       const gdouble mean = ncm_rng_uniform_gen (rng, mean_min, mean_max);
 
-      ncm_vector_set (gcov->y, i, mean);
+      ncm_vector_set (y, i, mean);
     }
   }
 
@@ -227,12 +232,16 @@ void
 ncm_data_gauss_cov_mvnd_set_cov_mean (NcmDataGaussCovMVND *data_mvnd, NcmVector *mean, NcmMatrix *cov)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  NcmVector *cy         = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmMatrix *ccov       = ncm_data_gauss_cov_peek_cov (gcov);
 
   g_assert_cmpuint (ncm_vector_len (mean), ==, ncm_matrix_nrows (cov));
   g_assert_cmpuint (ncm_vector_len (mean), ==, ncm_matrix_ncols (cov));
+  g_assert (cy != NULL);
+  g_assert (cov != NULL);
 
-  ncm_matrix_memcpy (gcov->cov, cov);
-  ncm_vector_memcpy (gcov->y, mean);
+  ncm_matrix_memcpy (ccov, cov);
+  ncm_vector_memcpy (cy, mean);
 
   ncm_data_set_init (NCM_DATA (gcov), TRUE);
 }
@@ -249,8 +258,9 @@ NcmVector *
 ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (gcov);
 
-  return gcov->y;
+  return y;
 }
 
 /**
@@ -270,9 +280,10 @@ ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
 NcmVector *
 ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, NcmRNG *rng, gulong *N)
 {
-  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (data_mvnd);
-  NcmData *data        = NCM_DATA (data_mvnd);
-  gulong maxiter       = 100000000;
+  NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  NcmData *data         = NCM_DATA (data_mvnd);
+  NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
+  gulong maxiter        = 100000000;
 
   N[0] = 0;
 
@@ -287,14 +298,14 @@ ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpoi
         g_error ("ncm_data_gauss_cov_mvnd_gen: too many interations, cannot find a valid realization!");
         break;
       }
-    } while (!bound (obj, cov->y));
+    } while (!bound (obj, y));
   }
   else
   {
     ncm_data_resample (data, mset, rng);
   }
 
-  return cov->y;
+  return y;
 }
 
 /**
@@ -367,8 +378,13 @@ void
 ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmMatrix *cov       = ncm_data_gauss_cov_peek_cov (gcov);
 
-  ncm_vector_log_vals (gcov->y,   "# NcmDataGaussCovMVND data mean: ", "% 12.5g", TRUE);
-  ncm_matrix_log_vals (gcov->cov, "# NcmDataGaussCovMVND data cov: ", "% 12.5g");
+  g_assert (y != NULL);
+  g_assert (cov != NULL);
+
+  ncm_vector_log_vals (y,   "# NcmDataGaussCovMVND data mean: ", "% 12.5g", TRUE);
+  ncm_matrix_log_vals (cov, "# NcmDataGaussCovMVND data cov: ", "% 12.5g");
 }
 

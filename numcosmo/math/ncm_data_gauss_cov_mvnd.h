@@ -34,33 +34,10 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_GAUSS_COV_MVND             (ncm_data_gauss_cov_mvnd_get_type ())
-#define NCM_DATA_GAUSS_COV_MVND(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_GAUSS_COV_MVND, NcmDataGaussCovMVND))
-#define NCM_DATA_GAUSS_COV_MVND_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_GAUSS_COV_MVND, NcmDataGaussCovMVNDClass))
-#define NCM_IS_DATA_GAUSS_COV_MVND(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_GAUSS_COV_MVND))
-#define NCM_IS_DATA_GAUSS_COV_MVND_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_GAUSS_COV_MVND))
-#define NCM_DATA_GAUSS_COV_MVND_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_GAUSS_COV_MVND, NcmDataGaussCovMVNDClass))
-
-typedef struct _NcmDataGaussCovMVNDClass NcmDataGaussCovMVNDClass;
-typedef struct _NcmDataGaussCovMVND NcmDataGaussCovMVND;
-typedef struct _NcmDataGaussCovMVNDPrivate NcmDataGaussCovMVNDPrivate;
-
-struct _NcmDataGaussCovMVNDClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
-
-struct _NcmDataGaussCovMVND
-{
-  /*< private >*/
-  NcmDataGaussCov parent_instance;
-  NcmDataGaussCovMVNDPrivate *priv;
-};
+#define NCM_TYPE_DATA_GAUSS_COV_MVND (ncm_data_gauss_cov_mvnd_get_type ())
+G_DECLARE_FINAL_TYPE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM, DATA_GAUSS_COV_MVND, NcmDataGaussCov)
 
 typedef gboolean (*NcmDataGaussCovMVNDBound) (gpointer obj, NcmVector *y);
-
-GType ncm_data_gauss_cov_mvnd_get_type (void) G_GNUC_CONST;
 
 NcmDataGaussCovMVND *ncm_data_gauss_cov_mvnd_new (const guint dim);
 NcmDataGaussCovMVND *ncm_data_gauss_cov_mvnd_new_full (const guint dim, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, const gdouble mean_min, const gdouble mean_max, NcmRNG *rng);

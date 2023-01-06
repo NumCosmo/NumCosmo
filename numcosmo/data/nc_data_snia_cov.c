@@ -1306,6 +1306,7 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
   {
     NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
     NcDataSNIACovPrivate * const self = snia_cov->priv;
+    NcmVector *y = ncm_data_gauss_cov_peek_mean (gauss);
 
     if ((mu_len == 0) || (mu_len != self->mu_len))
     {
@@ -1379,18 +1380,18 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       self->mu_len       = mu_len;
       self->uppertri_len = (mu_len * (mu_len + 1)) / 2;
 
-      g_assert_cmpuint (ncm_vector_len (gauss->y), ==, mu_len);
+      g_assert_cmpuint (ncm_vector_len (y), ==, mu_len);
 
       switch (self->cat_version)
       {
         case 0:
         case 1:
-          self->mag        = ncm_vector_ref (gauss->y);
+          self->mag        = ncm_vector_ref (y);
           self->mag_b_corr = ncm_vector_new (mu_len);
           break;
         case 2:
           self->mag        = ncm_vector_new (mu_len);
-          self->mag_b_corr = ncm_vector_ref (gauss->y);
+          self->mag_b_corr = ncm_vector_ref (y);
           break;
         default:
           g_assert_not_reached ();
@@ -1840,12 +1841,13 @@ nc_data_snia_cov_set_mag (NcDataSNIACov *snia_cov, NcmVector *mag)
   NcDataSNIACovPrivate * const self = snia_cov->priv;
   if (mag != self->mag)
   {
+    NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (snia_cov);
     g_assert_cmpuint (self->mu_len, ==, ncm_vector_len (mag));
     ncm_vector_free (self->mag);
     self->mag = ncm_vector_ref (mag);
 
     if (self->cat_version != 2)
-      ncm_vector_substitute (&NCM_DATA_GAUSS_COV (snia_cov)->y, mag, TRUE);
+      ncm_data_gauss_cov_replace_mean (gauss, mag);
   }
 
   _NC_DATA_SNIA_COV_SET_DATA_INIT (MAG);
@@ -1865,12 +1867,13 @@ nc_data_snia_cov_set_mag_b_corr (NcDataSNIACov *snia_cov, NcmVector *mag_b_corr)
   NcDataSNIACovPrivate * const self = snia_cov->priv;
   if (mag_b_corr != self->mag_b_corr)
   {
+    NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (snia_cov);
     g_assert_cmpuint (self->mu_len, ==, ncm_vector_len (mag_b_corr));
     ncm_vector_free (self->mag_b_corr);
     self->mag_b_corr = ncm_vector_ref (mag_b_corr);
 
     if (self->cat_version == 2)
-      ncm_vector_substitute (&NCM_DATA_GAUSS_COV (snia_cov)->y, mag_b_corr, TRUE);
+      ncm_data_gauss_cov_replace_mean (gauss, mag_b_corr);
   }
 
   _NC_DATA_SNIA_COV_SET_DATA_INIT_V2 (MAG_B_CORR);
