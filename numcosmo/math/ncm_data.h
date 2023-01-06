@@ -39,6 +39,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA (ncm_data_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (NcmData, ncm_data, NCM, DATA, GObject)
 
 /**

@@ -177,10 +177,11 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  const gdouble f_lnRH  = 5.0 * log10 (nc_hicosmo_RH_Mpc (cosmo));  
+  const gdouble f_lnRH  = 5.0 * log10 (nc_hicosmo_RH_Mpc (cosmo));
+  const guint np        = ncm_data_gauss_diag_get_size (diag);
   guint i;
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z   = ncm_vector_get (dist_mu->x, i);
     const gdouble dmu = nc_distance_dmodulus (dist_mu->dist, cosmo, z);
@@ -192,11 +193,12 @@ static void
 _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
+  const guint cnp       = ncm_data_gauss_diag_get_size (diag);
 
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&dist_mu->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     dist_mu->x = ncm_vector_new (np);
   
   /* Chain up : end */

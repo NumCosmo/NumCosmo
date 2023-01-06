@@ -162,10 +162,11 @@ static void
 _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np       = ncm_data_gauss_diag_get_size (diag);
   guint i;
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z = ncm_vector_get (hubble->x, i);
     const gdouble H = nc_hicosmo_H (cosmo, z); 
@@ -177,11 +178,12 @@ void
 _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
+  const guint cnp      = ncm_data_gauss_diag_get_size (diag);
   
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&hubble->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     hubble->x = ncm_vector_new (np);
   
   /* Chain up : end */

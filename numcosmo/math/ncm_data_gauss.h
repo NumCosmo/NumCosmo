@@ -34,14 +34,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA_GAUSS             (ncm_data_gauss_get_type ())
-#define NCM_DATA_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_GAUSS, NcmDataGauss))
-#define NCM_DATA_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_GAUSS, NcmDataGaussClass))
-#define NCM_IS_DATA_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_GAUSS))
-#define NCM_IS_DATA_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_GAUSS))
-#define NCM_DATA_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_GAUSS, NcmDataGaussClass))
-
-typedef struct _NcmDataGaussClass NcmDataGaussClass;
-typedef struct _NcmDataGauss NcmDataGauss;
+G_DECLARE_DERIVABLE_TYPE (NcmDataGauss, ncm_data_gauss, NCM, DATA_GAUSS, NcmData)
 
 struct _NcmDataGaussClass
 {
@@ -52,21 +45,10 @@ struct _NcmDataGaussClass
   gboolean (*inv_cov_func) (NcmDataGauss *gauss, NcmMSet *mset, NcmMatrix *inv_cov);
   void (*set_size) (NcmDataGauss *gauss, guint np);
   guint (*get_size) (NcmDataGauss *gauss);
-};
 
-struct _NcmDataGauss
-{
-  /*< private >*/
-  NcmData parent_instance;
-  guint np;
-  NcmVector *y;
-  NcmVector *v;
-  NcmMatrix *inv_cov;
-  NcmMatrix *LLT;
-  gboolean prepared_LLT;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[14];
 };
-
-GType ncm_data_gauss_get_type (void) G_GNUC_CONST;
 
 void ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
 guint ncm_data_gauss_get_size (NcmDataGauss *gauss);

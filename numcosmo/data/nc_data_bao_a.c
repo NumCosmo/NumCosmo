@@ -172,10 +172,11 @@ static void
 _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np    = ncm_data_gauss_diag_get_size (diag);
   guint i;
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z = ncm_vector_get (bao_a->x, i);
     const gdouble A = nc_distance_bao_A_scale (bao_a->dist, cosmo, z);
@@ -236,11 +237,12 @@ static void
 _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
+  const guint cnp   = ncm_data_gauss_diag_get_size (diag);
 
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&bao_a->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     bao_a->x = ncm_vector_new (np);
 
   /* Chain up : end */

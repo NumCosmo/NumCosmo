@@ -33,15 +33,8 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_GAUSS_DIAG             (ncm_data_gauss_diag_get_type ())
-#define NCM_DATA_GAUSS_DIAG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_GAUSS_DIAG, NcmDataGaussDiag))
-#define NCM_DATA_GAUSS_DIAG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_GAUSS_DIAG, NcmDataGaussDiagClass))
-#define NCM_IS_DATA_GAUSS_DIAG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_GAUSS_DIAG))
-#define NCM_IS_DATA_GAUSS_DIAG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_GAUSS_DIAG))
-#define NCM_DATA_GAUSS_DIAG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_GAUSS_DIAG, NcmDataGaussDiagClass))
-
-typedef struct _NcmDataGaussDiagClass NcmDataGaussDiagClass;
-typedef struct _NcmDataGaussDiag NcmDataGaussDiag;
+#define NCM_TYPE_DATA_GAUSS_DIAG (ncm_data_gauss_diag_get_type ())
+G_DECLARE_DERIVABLE_TYPE (NcmDataGaussDiag, ncm_data_gauss_diag, NCM, DATA_GAUSS_DIAG, NcmData)
 
 struct _NcmDataGaussDiagClass
 {
@@ -54,24 +47,11 @@ struct _NcmDataGaussDiagClass
   guint (*get_size) (NcmDataGaussDiag *diag);
 };
 
-struct _NcmDataGaussDiag
-{
-  /*< private >*/
-  NcmData parent_instance;
-  guint np;
-  NcmVector *y;
-  NcmVector *v;
-  NcmVector *sigma;
-  NcmVector *weight;
-  gdouble wt;
-  gboolean prepared_w;
-  gboolean wmean;
-};
-
-GType ncm_data_gauss_diag_get_type (void) G_GNUC_CONST;
-
 void ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np);
 guint ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag);
+
+NcmVector *ncm_data_gauss_diag_peek_mean (NcmDataGaussDiag *diag);
+NcmVector *ncm_data_gauss_diag_peek_std (NcmDataGaussDiag *diag);
 
 G_END_DECLS
 
