@@ -28,7 +28,25 @@
  * @title: NcHaloBiasPS
  * @short_description: Press-Schechter halo bias function type.
  *
- * FIXME
+ * Object implementation to compute the halo bias function given
+ * the Press-Schechter mass function. A description of the mechanism
+ * is given below. Check nc_halo_bias.c for a description
+ * of halo biases and nc_multiplicity_func_ps.c for the Press-Schechter
+ * mass function.
+ *
+ * By performing a perturbative expansion around $\delta_b$ in
+ * the Press-Schechter mass function, the bias function is deduced
+ * to be
+ * \begin{align}
+ * b(\nu) &= 1 + \frac{\nu^2 - 1}{\delta_c}
+ * , \end{align}
+ * where $b(\nu)$ is the Press-Schechter bias, $\delta_c$ is the 
+ * critical threshold and $\nu = \frac{\delta_c}{\sigma}$. Also,
+ * sigma is the variance of the gaussian random field $\delta_b$,
+ * which can be computed with the density contrast power spectrum.
+ *
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c  - nc_halo_bias_ps_new_full().
+ * The first is the Halo mass function object and the second is a scalar threshold.
  *
  */
 
@@ -113,7 +131,7 @@ nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
   /**
    * NcHaloBiasPS:critical_delta:
    *
-   * FIXME
+   * Critical threshold for halo formation.
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -143,7 +161,7 @@ _nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdoub
  * nc_halo_bias_ps_new:  (constructor)
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Creates a new #NcHaloBiasPS object with undefined critical threshold.
  *
  * Returns: A new #NcHaloBias.
  */
@@ -158,9 +176,9 @@ nc_halo_bias_ps_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_ps_new_full: (constructor)
  * @mfp: a #NcHaloMassFunction
- * @delta_c: FIXME
+ * @delta_c: Critical threshold
  *
- * FIXME
+ * Creates a new #NcHaloBiasPS object with @delta_c critical threshold.
  *
  * Returns: A new #NcHaloBias.
  */

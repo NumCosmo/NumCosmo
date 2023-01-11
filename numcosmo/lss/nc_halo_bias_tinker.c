@@ -28,7 +28,22 @@
  * @title: NcHaloBiasTinker
  * @short_description: Tinker halo bias function type.
  *
- * FIXME
+ * Object implementation to compute the halo bias function given
+ * the Tinker mass function. A description of the mechanism
+ * is given below. Check nc_halo_bias.c for a description
+ * of halo biases and nc_multiplicity_func_tinker.c for the Tinker
+ * mass function.
+ *
+ * The Tinker bias was obtained empirically and is given by
+ * \begin{align}
+ * b(\nu) &= 1 - A \frac{\nu^a}{\nu^a + \delta_c^a} + B \nu^b + C \nu^c
+ * , \end{align}
+ * where $b(\nu)$ is the Tinker bias, $\delta_c$ is the
+ * critical threshold, $\nu = \frac{\delta_c}{\sigma}$ and the free parameters
+ * $(A,a,B,b,C,c)$ depend on the value of the overdensity chosen.
+ *
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c, @B, @b and @c @delta_c  - nc_halo_bias_ps_new_full().
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -139,7 +154,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
   /**
    * NcHaloBiasTinker:critical_delta:
    *
-   * FIXME (check limits values)
+   * Critical threshold for halo formation. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -152,7 +167,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
   /**
    * NcHaloBiasTinker:B:
    *
-   * FIXME (check limits values)
+   * Empirical parameters for Tinker bias function. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_B0,
@@ -165,7 +180,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
   /**
    * NcHaloBiasTinker:b:
    *
-   * FIXME (check limits values)
+   * Empirical parameters for Tinker bias function. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_B1,
@@ -178,7 +193,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
   /**
    * NcHaloBiasTinker:c:
    *
-   * FIXME (check limits values)
+   * Empirical parameters for Tinker bias function. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_C,
@@ -193,7 +208,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
  * nc_halo_bias_tinker_new:
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Creates a new #NcHaloBiasTinker object with undefined parameters.
  *
  * Returns: A new #NcHaloBias.
  */
@@ -208,12 +223,12 @@ nc_halo_bias_tinker_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_tinker_new_full:
  * @mfp: a #NcHaloMassFunction
- * @delta_c: FIXME
- * @B: FIXME
- * @b: FIXME
- * @c: FIXME
+ * @delta_c: Critical threshold
+ * @B: Empirical parameter for Tinker bias function.
+ * @b: Empirical parameter for Tinker bias function.
+ * @c: Empirical parameter for Tinker bias function.
  *
- * FIXME
+ * Creates a new #NcHaloBiasTinker object with the input parameters.
  *
  * Returns: A new #NcHaloBias.
  */

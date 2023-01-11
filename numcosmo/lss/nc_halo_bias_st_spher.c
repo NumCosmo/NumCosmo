@@ -28,7 +28,26 @@
  * @title: NcHaloBiasSTSpher
  * @short_description: Sheth-Tormen spherical halo bias function type.
  *
- * FIXME
+ * Object implementation to compute the halo bias function given
+ * the Sheth-Tormen mass function for spherical collapse. A description 
+ * of the function is given below. Check nc_halo_bias.c for a description
+ * of halo biases and nc_multiplicity_func_st.c for the Sheth-Tormen
+ * mass function.
+ *
+ * The Sheth-Tormen bias can be obtained in the same way as the Press-Schechter bias
+ * by performing a perturbative expansion in the mass function around the background
+ * density contrast. This bias has a significant impact on less massive halos, and  for
+ * a spherical collapse is given by
+ * \begin{align}
+ * b(\nu)=1+\frac{a \nu^2-1}{\delta_c}+\frac{2 p}{\delta_c\left[1+\left(a_c \nu^2\right)^p\right]}
+ * \end{align}
+ * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold, 
+ * $\nu = \frac{\delta_c}{\sigma}$, and $(a, p)$ are free parameters
+ * determined by the number of massive halos in the simulations and 
+ * by the shape of the mass function at the low-mass end, respectively.
+ *
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c, @a, @p - nc_halo_bias_st_spher_new_full().
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -130,7 +149,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
   /**
    * NcHaloBiasSTSpher:critical_delta:
    *
-   * FIXME (check limits values)
+   * Critical threshold for halo formation. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -143,7 +162,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
   /**
    * NcHaloBiasSTSpher:a:
    *
-   * FIXME (check limits values)
+   * Bias parameter determined by the number of massive halos in the simulations. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_A,
@@ -156,7 +175,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
   /**
    * NcHaloBiasSTSpher:p:
    *
-   * FIXME (check limits values)
+   * Bias parameter determined by the shape of the mass function at the low-mass end. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_P,
@@ -184,7 +203,7 @@ _nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma
  * nc_halo_bias_st_spher_new: (constructor)
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Creates a new #NcHaloBiasSTSpher object with undefined parameters.
  *
  * Returns: A new #NcHaloBias.
  */
@@ -199,11 +218,11 @@ nc_halo_bias_st_spher_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_st_spher_new_full:
  * @mfp: a #NcHaloMassFunction
- * @delta_c: FIXME
- * @a: FIXME
- * @p: FIXME
+ * @delta_c: Critical threshold
+ * @a: Bias function parameter
+ * @p: Bias function parameter
  *
- * FIXME
+ * Creates a new #NcHaloBiasSTSpher object with the input values.
  *
  * Returns: A new #NcHaloBias.
  */

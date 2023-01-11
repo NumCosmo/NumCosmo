@@ -28,7 +28,46 @@
  * @title: NcHaloBias
  * @short_description: Abstract class for halo bias function type.
  *
- * FIXME
+ * Abstract object to compute the halo bias function given
+ * a mass function. The bias function is given by the
+ * eval function, which should be implemented by the child
+ * objects of the #NcHaloBias class. Below there is a quick
+ * review about dark matter halo bias.
+ *
+ * Dark Matter Halos are tracers of the Large Scale Structure (LSS)
+ * of the universe. On sufficient large scales, the correlations
+ * are weak and these objects are expected to be well described by
+ * perturbation theory. Given the background matter distribution, 
+ * $\rho$, one can assume that the mass distribution in the universe
+ * is given by a small perturbation around this value. In this context, 
+ * we define the density contrast $\delta$ as 
+ * 
+ * \begin{align}
+ * \delta_b &= \frac{\delta \rho}{\rho}
+ * ,\end{align}  
+ * which represents this perturbation around the background quantity. 
+ *
+ * The halos are formed when the density contrast passes a certain
+ * critical limit, that is, $\delta_b > \delta_c$. Even though
+ * $\delta_b$ is a gaussian random field, the real cluster formation
+ * is a rare event that involves non-linear mechanisms that cannot
+ * be explained perturbatively, and thus we must consider Peak-Background split
+ * effects. To connect the theory to observations, we introduce "bias parameters"
+ * in the observed halos distributions.
+ *
+ * These bias parameters are linear corrections to the density contrast
+ * field, such that 
+ * \begin{align}
+ * \delta &= [1 + b(z, M)] \delta_b
+ * ,\end{align}
+ * where $\delta$ is the new density contrast that accounts for the bias and
+ * $b(z, M)$ is the bias. There different biases for each mass function
+ * used in the cosmological computations. Check the child objects
+ * for their definitions.
+ *
+ * Since this is an abstract class implementation, there is no initialization
+ * function of the object.  
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -140,12 +179,12 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
 /**
  * nc_halo_bias_eval:
  * @bias: a #NcHaloBias.
- * @sigma: FIXME
+ * @sigma: density constrast variance
  * @z: redshift.
  *
- * FIXME
+ * Computes the Halo Bias at a given redshift.
  *
- * Returns: FIXME
+ * Returns: a double, the halo bias.
  */
 gdouble
 nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
