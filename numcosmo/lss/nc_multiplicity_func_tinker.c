@@ -59,7 +59,6 @@ struct _NcMultiplicityFuncTinkerPrivate
 enum
 {
   PROP_0,
-  PROP_DELTA,
   PROP_SIZE,
 };
 
@@ -80,6 +79,7 @@ static gdouble _nc_multiplicity_func_tinker_eval_error (NcMultiplicityFunc *mulf
 static void
 nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
 {
+
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
@@ -89,7 +89,6 @@ nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
   self->b0    = 0.0;
   self->c     = 0.0;
   self->Delta = 0.0;
-
   self->A_s = NULL;
   self->a_s = NULL;
   self->b_s = NULL;
@@ -101,15 +100,11 @@ nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
 static void
 _nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
   /*NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      nc_multiplicity_func_tinker_set_Delta (mt, g_value_get_double (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -119,15 +114,11 @@ _nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, cons
 static void
 _nc_multiplicity_func_tinker_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
   /* NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      g_value_set_double (value, nc_multiplicity_func_tinker_get_Delta (mt));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -157,8 +148,10 @@ _nc_multiplicity_func_tinker_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_tinker_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf); 
 static gdouble _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
@@ -172,21 +165,11 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
   object_class->dispose      = &_nc_multiplicity_func_tinker_dispose;
   object_class->finalize     = &_nc_multiplicity_func_tinker_finalize;
 
-  /**
-   * NcMultiplicityFuncTinker:Delta:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   parent_class->set_mdef = &_nc_multiplicity_func_tinker_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_tinker_set_Delta;
   parent_class->get_mdef = &_nc_multiplicity_func_tinker_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_tinker_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_tinker_eval;
 }
 
@@ -385,9 +368,10 @@ nc_multiplicity_func_tinker_clear (NcMultiplicityFuncTinker **mt)
  * Sets the value @Delta to the #NcMultiplicityFuncTinker:Delta property.
  *
  */
-void
-nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Delta)
+static void
+_nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
+  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
   const gdouble log10_Delta = log10 (Delta);
   g_assert (Delta >= 0);
@@ -408,8 +392,9 @@ nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Del
  * Returns: the value of #NcMultiplicityFuncTinker:Delta property.
  */
 gdouble
-nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mt)
+_nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf)
 {
+  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
   
   return self->Delta;
@@ -417,7 +402,7 @@ nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mt)
 
 /**
  * nc_multiplicity_func_tinker_set_linear_interp:
- * @mt: a #NcMultiplicityFuncTinker.
+ * @mulf: a #NcMultiplicityFuncTinker.
  * @lin_interp: a @gboolean
  *
  * If @lin_interp is true uses linear interpolation to compute the
@@ -429,6 +414,8 @@ void
 nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gboolean lin_interp)
 {
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (mt);
+  const gdouble Delta = nc_multiplicity_func_get_Delta (mulf);
 
   gdouble log10_delta[9] = {log10_200, log10_300,  log10_400,  log10_600, log10_800, log10_1200, log10_1600, log10_2400, log10_3200};
   gdouble coeff_A[9]     = {0.186, 0.200, 0.212, 0.218, 0.248, 0.255, 0.260, 0.260, 0.260};
@@ -482,5 +469,5 @@ nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gbo
   ncm_vector_free (d2f_c_v);
 
   if (self->Delta > 0.0)
-    nc_multiplicity_func_tinker_set_Delta (mt, self->Delta);
+     _nc_multiplicity_func_tinker_set_Delta (mulf,Delta);
 }

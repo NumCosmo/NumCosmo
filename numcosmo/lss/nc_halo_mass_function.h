@@ -89,12 +89,13 @@ void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 
 NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
+NcMultiplicityFunc *nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
 
-void nc_halo_mass_function_dn_dlnR_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnR_ptr);
-void nc_halo_mass_function_dn_dlnM_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnM_ptr);
+gdouble nc_halo_mass_function_sigma_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
+gdouble nc_halo_mass_function_sigma_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 
 gdouble nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
 gdouble nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);

@@ -125,14 +125,13 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
   NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassAscaso"));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (nc_cluster_redshift_new_from_name ("NcClusterPhotozGaussGlobal{'pz-min':<0.1>, 'pz-max':<1.0>, 'z-bias':<0.0>, 'sigma0':<1.0e-2>}"));
-  NcHaloBiasType *hbias_ps    = nc_halo_bias_type_ps_new (200);
-  NcHaloBiasFunc *mbiasf      = nc_halo_bias_func_new (mfp, hbias_ps);
+  NcHaloBias *hbias           = NC_HALO_BIAS (nc_halo_bias_ps_new (mfp));
   
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
   
   test->cosmo    = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-  test->cad      = nc_cluster_abundance_new (mfp, mbiasf);
+  test->cad      = nc_cluster_abundance_new (mfp, hbias);
   test->mset     = ncm_mset_new (cosmo, clusterm, clusterz, NULL);
   test->ncdata   = nc_data_cluster_ncount_new (test->cad, "NcClusterPhotozGaussGlobal", "NcClusterMassAscaso");
   test->clusterm = clusterm;
@@ -148,7 +147,7 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
   ncm_powspec_filter_free (psf);
   nc_powspec_ml_free (ps_ml);
   nc_transfer_func_free (tf);
-  nc_halo_bias_func_free (mbiasf);
+  nc_halo_bias_free (hbias);
   nc_distance_free (dist);
 }
 
