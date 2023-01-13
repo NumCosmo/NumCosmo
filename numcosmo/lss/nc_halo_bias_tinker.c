@@ -154,7 +154,7 @@ nc_halo_bias_tinker_class_init (NcHaloBiasTinkerClass *klass)
   /**
    * NcHaloBiasTinker:critical_delta:
    *
-   * Critical threshold for halo formation. (check limits values)
+   * Density contrast critical threshold for halo formation. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -223,7 +223,7 @@ nc_halo_bias_tinker_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_tinker_new_full:
  * @mfp: a #NcHaloMassFunction
- * @delta_c: Critical threshold
+ * @delta_c: Density contrast critical threshold
  * @B: Empirical parameter for Tinker bias function.
  * @b: Empirical parameter for Tinker bias function.
  * @c: Empirical parameter for Tinker bias function.

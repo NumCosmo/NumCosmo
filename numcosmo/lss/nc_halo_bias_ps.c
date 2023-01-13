@@ -131,7 +131,7 @@ nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
   /**
    * NcHaloBiasPS:critical_delta:
    *
-   * Critical threshold for halo formation.
+   * Density contrast critical threshold for halo formation.
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -176,7 +176,7 @@ nc_halo_bias_ps_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_ps_new_full: (constructor)
  * @mfp: a #NcHaloMassFunction
- * @delta_c: Critical threshold
+ * @delta_c: Density contrast critical threshold
  *
  * Creates a new #NcHaloBiasPS object with @delta_c critical threshold.
  *

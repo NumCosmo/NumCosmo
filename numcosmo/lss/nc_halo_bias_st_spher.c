@@ -149,7 +149,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
   /**
    * NcHaloBiasSTSpher:critical_delta:
    *
-   * Critical threshold for halo formation. (check limits values)
+   * Density contrast critical threshold for halo formation. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -218,7 +218,7 @@ nc_halo_bias_st_spher_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_st_spher_new_full:
  * @mfp: a #NcHaloMassFunction
- * @delta_c: Critical threshold
+ * @delta_c: Density contrast critical threshold
  * @a: Bias function parameter
  * @p: Bias function parameter
  *

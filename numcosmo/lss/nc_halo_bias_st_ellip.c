@@ -27,8 +27,26 @@
  * SECTION:nc_halo_bias_st_ellip
  * @title: NcHaloBiasSTEllip
  * @short_description: Sheth-Tormen elliptical halo bias function type.
+ * 
+ * Object implementation to compute the halo bias function given
+ * the Sheth-Tormen mass function for elliptical collapse. A description
+ * of the function is given below. Check nc_halo_bias.c for a description
+ * of halo biases and nc_multiplicity_func_st.c for the Sheth-Tormen
+ * mass function.
  *
- * FIXME
+ * The Sheth-Tormen bias can be obtained by considering an approximation where
+ * the fluctuations around the background density contrats are described 
+ * by a constant barrier that depends on the collapse. For an elliptical collapse,
+ * the bias is given by
+ * \begin{align}
+ * b(\nu)=1+\frac{1}{\delta_{\mathrm{sc}}(z)} \left[a \nu^2+ b\left(a \nu^2\right)^{1-c} -\frac{\left(a \nu^2\right)^c}{\sqrt{a}\left(a \nu^2\right)^c+b(1-c)(1-c / 2)}\right]
+ * \end{align}
+ * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold,
+ * $\nu = \frac{\delta_c}{\sigma}$ and $(a, b, c)$ are free parameters
+ * of the mass function that dictates the shape of the barrier.
+ *  
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c, @a, @p - nc_halo_bias_st_spher_new_full().
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -138,7 +156,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
   /**
    * NcHaloBiasSTEllip:critical_delta:
    *
-   * FIXME (check limits values)
+   * Density contrast critical threshold (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -151,7 +169,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
   /**
    * NcHaloBiasSTEllip:a:
    *
-   * FIXME (check limits values)
+   * Parameter that dictates the shape of the barrier. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_A,
@@ -164,7 +182,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
   /**
    * NcHaloBiasSTEllip:b:
    *
-   * FIXME (check limits values)
+   * Parameter that dictates the shape of the barrier. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_B,
@@ -177,7 +195,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
   /**
    * NcHaloBiasSTEllip:c:
    *
-   * FIXME (check limits values)
+   * Parameter that dictates the shape of the barrier. (check limits values)
    */
   g_object_class_install_property (object_class,
                                    PROP_C,
@@ -209,7 +227,7 @@ _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma
  * nc_halo_bias_st_ellip_new: (constructor)
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Creates a new #NcHaloBiasSTEllip object with undefined parameters.
  *
  * Returns: A new #NcHaloBias.
  */
@@ -224,13 +242,13 @@ nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_st_ellip_new_full: (constructor)
  * @mfp: a #NcHaloMassFunction
- * @delta_c: FIXME
- * @a: FIXME
- * @b: FIXME
- * @c: FIXME
+ * @delta_c: Density contrast critical threshold
+ * @a: Parameter that dictates the shape of the barrier.
+ * @b: Parameter that dictates the shape of the barrier.
+ * @c: Parameter that dictates the shape of the barrier.
  *
  *
- * FIXME
+ * Creates a new #NcHaloBiasSTEllip object with the input values.
  *
  * Returns: A new #NcHaloBias.
  */
