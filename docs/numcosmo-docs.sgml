@@ -352,13 +352,12 @@
     <xi:include href="xml/nc_halo_mass_function.xml"/>
     <section>
       <title>Halo Bias Function Type</title>
-      <xi:include href="xml/nc_halo_bias_type.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_ps.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_st_spher.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_st_ellip.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_tinker.xml"/>
+      <xi:include href="xml/nc_halo_bias.xml"/>
+      <xi:include href="xml/nc_halo_bias_ps.xml"/>
+      <xi:include href="xml/nc_halo_bias_st_spher.xml"/>
+      <xi:include href="xml/nc_halo_bias_st_ellip.xml"/>
+      <xi:include href="xml/nc_halo_bias_tinker.xml"/>
     </section>
-    <xi:include href="xml/nc_halo_bias_func.xml"/>
     <xi:include href="xml/nc_galaxy_acf.xml"/>
     <section>
       <title>Cluster Redshift</title>

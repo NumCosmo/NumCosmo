@@ -81,8 +81,6 @@ NcMultiplicityFuncBocquet *nc_multiplicity_func_bocquet_ref (NcMultiplicityFuncB
 void nc_multiplicity_func_bocquet_free (NcMultiplicityFuncBocquet *mb);
 void nc_multiplicity_func_bocquet_clear (NcMultiplicityFuncBocquet **mb);
 
-void nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFuncBocquet *mb, gdouble Delta);
-gdouble nc_multiplicity_func_bocquet_get_Delta (const NcMultiplicityFuncBocquet *mb);
 void nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplicityFuncBocquetSim sim);
 NcMultiplicityFuncBocquetSim nc_multiplicity_func_bocquet_get_sim (const NcMultiplicityFuncBocquet *mb);
 
