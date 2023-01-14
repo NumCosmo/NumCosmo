@@ -28,7 +28,7 @@
  * @title: NcmDataset
  * @short_description: A set of NcmData objects
  *
- * FIXME
+ * This Class define a set of NcmData objects.
  *
  */
 
@@ -47,6 +47,16 @@ enum
   PROP_BSTYPE,
   PROP_OA,
   PROP_SIZE,
+};
+
+struct _NcmDataset
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmObjArray *oa;
+  NcmDatasetBStrapType bstype;
+  GArray *data_prob;
+  GArray *bstrap;
 };
 
 G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);
@@ -712,9 +722,9 @@ ncm_dataset_get_info (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a leastsquares_f() method.
  *
- * Returns: FIXME
+ * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f (NcmDataset *dset)
@@ -743,9 +753,9 @@ ncm_dataset_has_leastsquares_f (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_J:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a leastsquares_J() method.
  *
- * Returns: FIXME
+ * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_J (NcmDataset *dset)
@@ -774,9 +784,9 @@ ncm_dataset_has_leastsquares_J (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f_J:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a leastsquares_f_J() method.
  *
- * Returns: FIXME
+ * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
@@ -805,10 +815,9 @@ ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a m2lnL_val() method.
  *
- * Returns: FIXME
- *
+ * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val() method.
  */
 gboolean
 ncm_dataset_has_m2lnL_val (NcmDataset *dset)
@@ -837,9 +846,9 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_grad:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a m2lnL_grad() method.
  *
- * Returns: FIXME
+ * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_grad() method.
  *
  */
 gboolean
@@ -869,9 +878,9 @@ ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val_grad:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Whether all the #NcmData in @dset have a m2lnL_val_grad() method.
  *
- * Returns: FIXME
+ * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val_grad() method.
  *
  */
 gboolean
@@ -903,7 +912,10 @@ ncm_dataset_has_m2lnL_val_grad (NcmDataset *dset)
  * @mset: a #NcmMSet.
  * @f: a #NcmVector.
  *
- * FIXME
+ * Computes the leastsquares vector f for the data @data.
+ * The vector @f must be allocated with the correct size.
+ * The vector @f is filled with the values of the leastsquares vector f.
+ * 
  */
 void
 ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
@@ -939,7 +951,9 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
  * @mset: a #NcmMSet.
  * @J: a #NcmMatrix.
  *
- * FIXME
+ * Computes the leastsquares matrix J for the data @data.
+ * The matrix @J must be allocated with the correct size.
+ * The matrix @J is filled with the values of the leastsquares matrix J.
  *
  */
 void
@@ -979,7 +993,12 @@ ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J)
  * @f: a #NcmVector.
  * @J: a #NcmMatrix.
  *
- * FIXME
+ * Computes the leastsquares vector f and matrix J for the data @data.
+ * The vector @f must be allocated with the correct size.
+ * The matrix @J must be allocated with the correct size.
+ * The vector @f is filled with the values of the leastsquares vector f.
+ * The matrix @J is filled with the values of the leastsquares matrix J.
+ * 
  */
 void
 ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
@@ -1019,9 +1038,11 @@ ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, Ncm
  * ncm_dataset_m2lnL_val:
  * @dset: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): a pointer to a double.
  *
- * FIXME
+ * Computes the value of the m2lnL for the data @data.
+ * The value of the m2lnL is stored in @m2lnL.
+ * 
  */
 void
 ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
@@ -1057,7 +1078,8 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
  * @mset: a #NcmMSet.
  * @m2lnL_v: a #NcmVector
  *
- * FIXME
+ * Computes the value of $-2\ln L$ for every element in the @dset.
+ * The values of $-2\ln L$ are stored in the #NcmVector @m2lnL_v.
  *
  */
 void
@@ -1094,7 +1116,9 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
  * @mset: a #NcmMSet.
  * @grad: a #NcmVector.
  *
- * FIXME
+ * Computes the gradient of the m2lnL for the data @data.
+ * The gradient of the m2lnL is stored in @grad.
+ * 
  */
 void
 ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
@@ -1130,10 +1154,13 @@ ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
  * ncm_dataset_m2lnL_val_grad:
  * @dset: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): a pointer to a double.
  * @grad: a #NcmVector.
  *
- * FIXME
+ * Computes the value of the m2lnL for the data @data.
+ * The value of the m2lnL is stored in @m2lnL.
+ * The gradient of the m2lnL is stored in @grad.
+ * The #NcmVector @grad must be previously allocated.
  */
 void
 ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
@@ -1178,7 +1205,7 @@ ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, Ncm
  * @dset: a #NcmLikelihood
  * @mset: a #NcmMSet
  * @i: an integer
- * @m2lnL_i: (out): FIXME
+ * @m2lnL_i: (out): a pointer to a double
  *
  * Get the value of the @i-th data in the dataset.
  *
@@ -1214,6 +1241,8 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
  *
  * Calculates the Fisher-information matrix @I adding
  * the individual ones from each #NcmData in @dset.
+ * If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix 
+ * will be allocated otherwise *@IM will be used.
  *
  */
 void

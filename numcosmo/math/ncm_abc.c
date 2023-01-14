@@ -28,7 +28,7 @@
  * @title: NcmABC
  * @short_description: Abstract class for Approximate Bayesian Computation (ABC).
  *
- * FIXME
+ * Base class for Approximate Bayesian Computation (ABC) methods.
  *
  */
 
@@ -325,7 +325,7 @@ ncm_abc_class_init (NcmABCClass *klass)
  * ncm_abc_free:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Decreases the reference count of @abc by one.
  *
  */
 void
@@ -338,7 +338,10 @@ ncm_abc_free (NcmABC *abc)
  * ncm_abc_clear:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Decreases the reference count of *@abc by one, and sets the pointer *@abc to NULL.
+ * If @abc is NULL, this function does nothing.
+ * See also: ncm_abc_free()
+ * 
  */
 void
 ncm_abc_clear (NcmABC **abc)
@@ -440,7 +443,7 @@ ncm_abc_log_info (NcmABC *abc)
  * @abc: a #NcmFitMC
  * @mtype: a #NcmFitRunMsgs
  *
- * FIXME
+ * Sets the message type to be used by the ABC algorithm.
  *
  */
 void
@@ -456,7 +459,7 @@ ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype)
  * @abc: a #NcmABC
  * @filename: a filename
  *
- * FIXME
+ * Sets the data file to be used by the ABC algorithm.
  *
  */
 void
@@ -482,7 +485,7 @@ ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
  * @abc: a #NcmABC
  * @nthreads: number of threads
  *
- * FIXME
+ * Sets the number of threads to be used by the ABC algorithm.
  *
  */
 void
@@ -498,7 +501,7 @@ ncm_abc_set_nthreads (NcmABC *abc, guint nthreads)
  * @abc: a #NcmABC
  * @rng: a #NcmRNG
  *
- * FIXME
+ * Sets the random number generator to be used by the ABC algorithm.
  *
  */
 void
@@ -517,7 +520,7 @@ ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng)
  * @abc: a #NcmABC
  * @tkern: a #NcmMSetTransKern
  *
- * FIXME
+ * Sets the transition kernel to be used by the ABC algorithm.
  *
  */
 void
@@ -546,9 +549,9 @@ _compare (gconstpointer a, gconstpointer b)
 /**
  * ncm_abc_get_dist_quantile:
  * @abc: a #NcmABC
- * @p: FIXME
+ * @p: a probability
  *
- * FIXME
+ * Sets the probability @p of the distance distribution.
  *
  */
 gdouble
@@ -575,9 +578,9 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
  * ncm_abc_get_accept_ratio:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Computes the acceptance ratio of the ABC algorithm.
  *
- * Returns: FIXME
+ * Returns: the acceptance ratio.
  */
 gdouble
 ncm_abc_get_accept_ratio (NcmABC *abc)
@@ -592,7 +595,7 @@ ncm_abc_get_accept_ratio (NcmABC *abc)
  * @abc: a #NcmABC
  * @epsilon: new epsilon.
  *
- * FIXME
+ * Sets the new epsilon value.
  *
  */
 void
@@ -633,9 +636,9 @@ ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon)
  * ncm_abc_get_epsilon:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Gets the current epsilon value.
  *
- * Returns: FIXME
+ * Returns: the current epsilon value.
  */
 gdouble
 ncm_abc_get_epsilon (NcmABC *abc)
@@ -649,9 +652,9 @@ ncm_abc_get_epsilon (NcmABC *abc)
  * ncm_abc_get_depsilon:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Gets the current delta epsilon value.
  *
- * Returns: FIXME
+ * Returns: the current delta epsilon value.
  */
 gdouble
 ncm_abc_get_depsilon (NcmABC *abc)
@@ -665,9 +668,9 @@ ncm_abc_get_depsilon (NcmABC *abc)
  * ncm_abc_get_mtype:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Gets the current #NcmFitRunMsgs value.
  *
- * Returns: FIXME
+ * Returns: the current #NcmFitRunMsgs value.
  */
 NcmFitRunMsgs
 ncm_abc_get_mtype (NcmABC *abc)
@@ -681,9 +684,9 @@ ncm_abc_get_mtype (NcmABC *abc)
  * ncm_abc_peek_catalog:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Peeks the #NcmMSetCatalog used to store the sample points.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmMSetCatalog.
  */
 NcmMSetCatalog *
 ncm_abc_peek_catalog (NcmABC *abc)
@@ -697,9 +700,9 @@ ncm_abc_peek_catalog (NcmABC *abc)
  * ncm_abc_peek_dataset:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Peek the #NcmDataset containing the dataset.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmDataset.
  */
 NcmDataset *
 ncm_abc_peek_dataset (NcmABC *abc)
@@ -713,9 +716,9 @@ ncm_abc_peek_dataset (NcmABC *abc)
  * ncm_abc_peek_covar:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Gets the covariance matrix of the sample points.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the covariance matrix.
  */
 NcmMatrix *
 ncm_abc_peek_covar (NcmABC *abc)
@@ -729,9 +732,9 @@ ncm_abc_peek_covar (NcmABC *abc)
  * ncm_abc_peek_trans_kern:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Peeks the #NcmMSetTransKern used to generate the sample points.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmMSetTransKern.
  */
 NcmMSetTransKern *
 ncm_abc_peek_trans_kern (NcmABC *abc)
@@ -803,7 +806,7 @@ static void ncm_abc_intern_skip (NcmABC *abc, guint n);
  * ncm_abc_start_run:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Starts the ABC run.
  *
  */
 void
@@ -906,7 +909,7 @@ ncm_abc_start_run (NcmABC *abc)
  * ncm_abc_end_run:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Ends the ABC run.
  *
  */
 void
@@ -954,7 +957,7 @@ ncm_abc_end_run (NcmABC *abc)
  * ncm_abc_reset:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Resets the ABC run.
  *
  */
 void
@@ -1223,10 +1226,10 @@ _ncm_abc_run_mt (NcmABC *abc)
 /**
  * ncm_abc_run_lre:
  * @abc: a #NcmABC
- * @prerun: FIXME
+ * @prerun: Number of samples to run before checking the largest relative error
  * @lre: largest relative error
  *
- * FIXME
+ * Runs the ABC algorithm until the largest relative error is less than @lre.
  *
  */
 void
@@ -1287,7 +1290,7 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
  * @abc: a #NcmABC
  * @fit: a #NcmFit
  *
- * FIXME
+ * Calculates the mean and covariance matrix of the accepted samples.
  *
  */
 void
@@ -1307,7 +1310,7 @@ ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
  * ncm_abc_start_update:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Starts the update of the transition kernel.
  *
  */
 void
@@ -1415,7 +1418,7 @@ ncm_abc_start_update (NcmABC *abc)
  * ncm_abc_end_update:
  * @abc: a #NcmABC
  *
- * FIXME
+ * Ends the ABC update.
  *
  */
 void

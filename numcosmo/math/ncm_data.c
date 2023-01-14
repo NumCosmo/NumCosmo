@@ -355,7 +355,7 @@ ncm_data_free (NcmData *data)
  * @data: a #NcmData.
  *
  * Decrease the reference count of *@data and sets the pointer *@data to NULL.
- *
+ * 
  */
 void 
 ncm_data_clear (NcmData **data)

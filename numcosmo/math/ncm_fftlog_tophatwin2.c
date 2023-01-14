@@ -76,6 +76,11 @@
 #endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcmFftlogTophatwin2
+{
+  NcmFftlog parent_instance;
+};
+
 G_DEFINE_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM_TYPE_FFTLOG);
 
 static void

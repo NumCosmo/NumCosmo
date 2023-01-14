@@ -80,7 +80,7 @@ typedef struct _NcmFftlogSBesselJLJMInt
   gdouble arp12_ai2;
 } NcmFftlogSBesselJLJMInt;
 
-struct _NcmFftlogSBesselJLJMPrivate
+typedef struct _NcmFftlogSBesselJLJMPrivate
 {
   gint ell;
   gint dell;
@@ -94,6 +94,11 @@ struct _NcmFftlogSBesselJLJMPrivate
   gpointer cvode;
   gboolean cvode_init;
   NcmFftlogSBesselJLJMInt int_data;
+} NcmFftlogSBesselJLJMPrivate;
+
+struct _NcmFftlogSBesselJLJM
+{
+  NcmFftlog parent_instance;
 };
 
 enum
@@ -110,7 +115,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_T
 static void
 ncm_fftlog_sbessel_jljm_init (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   self->ell        = 0;
   self->dell       = 0;
@@ -183,7 +188,7 @@ static void
 _ncm_fftlog_sbessel_jljm_finalize (GObject *object)
 {
   NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (object);
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   if (self->cvode != NULL)
   {
@@ -503,7 +508,7 @@ static void
 _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
 {
   NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   complex double res = _ncm_fftlog_sbessel_jljm_cpu_2f1 (self, ncm_fftlog_get_full_length (fftlog), 1000, 2.0);
   
@@ -517,7 +522,7 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
 #if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
   NcmFftlogSBesselJLJM *fftlog_jljm = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   const guint maxprec = 64 * 64;
   guint prec = 64 * 2;
   const gint Nf = ncm_fftlog_get_full_size (fftlog);
@@ -850,7 +855,7 @@ ncm_fftlog_sbessel_jljm_new (gint ell, gint dell, gdouble lnw, gdouble lnr0, gdo
 void
 ncm_fftlog_sbessel_jljm_set_ell (NcmFftlogSBesselJLJM *fftlog_jljm, const gint ell)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   if (self->ell != ell)
   {
@@ -872,7 +877,7 @@ ncm_fftlog_sbessel_jljm_set_ell (NcmFftlogSBesselJLJM *fftlog_jljm, const gint e
 gint
 ncm_fftlog_sbessel_jljm_get_ell (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   return self->ell;
 }
@@ -888,7 +893,7 @@ ncm_fftlog_sbessel_jljm_get_ell (NcmFftlogSBesselJLJM *fftlog_jljm)
 void
 ncm_fftlog_sbessel_jljm_set_dell (NcmFftlogSBesselJLJM *fftlog_jljm, const gint dell)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   if (self->dell != dell)
   {
@@ -908,7 +913,7 @@ ncm_fftlog_sbessel_jljm_set_dell (NcmFftlogSBesselJLJM *fftlog_jljm, const gint 
 gint
 ncm_fftlog_sbessel_jljm_get_dell (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   return self->dell;
 }
@@ -924,7 +929,7 @@ ncm_fftlog_sbessel_jljm_get_dell (NcmFftlogSBesselJLJM *fftlog_jljm)
 void
 ncm_fftlog_sbessel_jljm_set_q (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble q)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   if (self->q != q)
   {
@@ -944,7 +949,7 @@ ncm_fftlog_sbessel_jljm_set_q (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble 
 gdouble
 ncm_fftlog_sbessel_jljm_get_q (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   return self->q;
 }
@@ -960,7 +965,7 @@ ncm_fftlog_sbessel_jljm_get_q (NcmFftlogSBesselJLJM *fftlog_jljm)
 void
 ncm_fftlog_sbessel_jljm_set_lnw (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble lnw)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   if (self->lnw != lnw)
   {
@@ -986,7 +991,7 @@ ncm_fftlog_sbessel_jljm_set_lnw (NcmFftlogSBesselJLJM *fftlog_jljm, const gdoubl
 gdouble
 ncm_fftlog_sbessel_jljm_get_lnw (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   
   return self->lnw;
 }
@@ -1004,7 +1009,7 @@ ncm_fftlog_sbessel_jljm_get_lnw (NcmFftlogSBesselJLJM *fftlog_jljm)
 void
 ncm_fftlog_sbessel_jljm_set_best_lnr0 (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   NcmFftlog *fftlog                        = NCM_FFTLOG (fftlog_jljm);
   
   const gdouble lnk0      = ncm_fftlog_get_lnk0 (fftlog);
@@ -1031,7 +1036,7 @@ ncm_fftlog_sbessel_jljm_set_best_lnr0 (NcmFftlogSBesselJLJM *fftlog_jljm)
 void
 ncm_fftlog_sbessel_jljm_set_best_lnk0 (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
-  NcmFftlogSBesselJLJMPrivate * const self = fftlog_jljm->priv;
+  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   NcmFftlog *fftlog                        = NCM_FFTLOG (fftlog_jljm);
   
   const gdouble lnr0 = ncm_fftlog_get_lnr0 (fftlog);

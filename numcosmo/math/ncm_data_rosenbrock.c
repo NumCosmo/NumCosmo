@@ -29,7 +29,7 @@
  * @title: NcmDataRosenbrock
  * @short_description: Rosenbrock distribution.
  *
- * FIXME
+ * Class to handle Rosenbrock distribution.
  *
  */
 
@@ -45,17 +45,16 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmDataRosenbrockPrivate
+struct _NcmDataRosenbrock
 {
-  gint unused;
+  NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA);
 
 static void
 ncm_data_rosenbrock_init (NcmDataRosenbrock *drb)
 {
-  drb->priv = ncm_data_rosenbrock_get_instance_private (drb);
 }
 
 static void

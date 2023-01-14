@@ -35,30 +35,8 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA_ROSENBROCK             (ncm_data_rosenbrock_get_type ())
-#define NCM_DATA_ROSENBROCK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_ROSENBROCK, NcmDataRosenbrock))
-#define NCM_DATA_ROSENBROCK_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_ROSENBROCK, NcmDataRosenbrockClass))
-#define NCM_IS_DATA_ROSENBROCK(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_ROSENBROCK))
-#define NCM_IS_DATA_ROSENBROCK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_ROSENBROCK))
-#define NCM_DATA_ROSENBROCK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_ROSENBROCK, NcmDataRosenbrockClass))
 
-typedef struct _NcmDataRosenbrockClass NcmDataRosenbrockClass;
-typedef struct _NcmDataRosenbrock NcmDataRosenbrock;
-typedef struct _NcmDataRosenbrockPrivate NcmDataRosenbrockPrivate;
-
-struct _NcmDataRosenbrockClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-struct _NcmDataRosenbrock
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcmDataRosenbrockPrivate *priv;
-};
-
-GType ncm_data_rosenbrock_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM, DATA_ROSENBROCK, NcmData)
 
 NcmDataRosenbrock *ncm_data_rosenbrock_new (void);
 NcmDataRosenbrock *ncm_data_rosenbrock_ref (NcmDataRosenbrock *drb);
