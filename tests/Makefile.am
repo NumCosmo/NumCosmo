@@ -110,6 +110,9 @@ test_ncm_sf_spherical_harmonics_SOURCES =  \
 
 test_ncm_sphere_map_SOURCES =  \
 	test_ncm_sphere_map.c
+	
+test_nc_halo_bias_SOURCES =  \
+        test_nc_halo_bias.c
 
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
@@ -188,6 +191,7 @@ test_programs =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
+	test_nc_halo_bias		\
 	test_nc_hiqg_1d                 \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
@@ -374,6 +378,12 @@ test_ncm_sphere_map_LDADD = \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
 	$(COVLIBS)
+	
+test_nc_halo_bias_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS) \
+        $(COVLIBS)
 
 test_nc_hicosmo_de_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
