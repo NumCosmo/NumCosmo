@@ -27,7 +27,8 @@
  * @title: NcHaloMassFunction
  * @short_description: Clusters mass function.
  *
- * FIXME
+ * Class that implements the mass function of clusters
+ * dark matter halos.
  *
  */
 
@@ -337,7 +338,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   /**
    * NcHaloMassFunction:lnMf:
    *
-   * This property sets the maximum halo mass (logarithm base e).
+   * This property sets the maximum halo mass (logarithm base e) $\ln M_f$.
    *
    */
   g_object_class_install_property (object_class,
@@ -351,7 +352,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   /**
    * NcHaloMassFunction:zi:
    *
-   * This property sets the initial redshift.
+   * This property sets the initial redshift $z_i$.
    *
    */
   g_object_class_install_property (object_class,
@@ -365,7 +366,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   /**
    * NcHaloMassFunction:zf:
    *
-   * This property sets the final redshift.
+   * This property sets the final redshift $z_f$.
    *
    */
   g_object_class_install_property (object_class,
@@ -445,7 +446,7 @@ nc_halo_mass_function_clear (NcHaloMassFunction **mfp)
  * nc_halo_mass_function_lnM_to_lnR:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnM: logarithm base $e$ of the mass enclosed in the filter volume
+ * @lnM: logarithm base $e$ of the mass enclosed in the filter volume $\ln M$
  *
  * This function computes the ln-radius of related to the ln-mass $\ln(M / M_\odot)$.
  *
@@ -464,7 +465,7 @@ nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
  * nc_halo_mass_function_lnR_to_lnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnR: ln-radius of the related volume
+ * @lnR: ln-radius of the related volume $\ln R$
  *
  * This function computes the ln-mass of the mass enclosed in the filter volume.
  *
@@ -484,10 +485,10 @@ nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
  * nc_halo_mass_function_sigma_lnR:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnR: logarithm base e of the radius $R$
- * @z: redshift
+ * @lnR: logarithm base e of the radius $\ln R$
+ * @z: redshift $z$
  *
- * This function computes the matter variance for $\ln(R)$ = @lnR
+ * This function computes the matter variance for $\ln R$ = @lnR
  * at redshift @z.
  *
  */
@@ -503,10 +504,10 @@ nc_halo_mass_function_sigma_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdou
  * nc_halo_mass_function_sigma_lnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnM: logarithm base e of mass
- * @z: redshift
+ * @lnM: logarithm base e of mass enclosed in the filter volume $\ln M$
+ * @z: redshift $z$
  *
- * This function computes the matter variance for $\ln(R)$ = @lnR
+ * This function computes the matter variance for $\ln R$ = @lnR
  * at redshift @z.
  *
  */
@@ -524,8 +525,8 @@ nc_halo_mass_function_sigma_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdou
  * nc_halo_mass_function_dn_dlnR:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnR: logarithm base e of the radius $R$
- * @z: redshift
+ * @lnR: logarithm base e of the radius $\ln R$
+ * @z: redshift $z$
  *
  * This function computes the comoving number density of dark matter halos per redshift @z and
  * volume with ln-radius @lnR.
@@ -557,11 +558,11 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
  * nc_halo_mass_function_dn_dlnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnM: logarithm base e of mass
- * @z: redshift
+ * @lnM: logarithm base e of mass enclosed in the filter volume $\ln M$
+ * @z: redshift $z$
  *
  * This function computes the comoving number density of dark matter halos at redshift @z and
- * mass M.
+ * mass $M$.
  *
  * Returns: $\frac{\mathrm{d}n}{\mathrm{d}\ln(M)}$.
  */
@@ -586,7 +587,7 @@ typedef struct _nc_ca_integ
  * nc_halo_mass_function_dv_dzdomega:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @z: redshift
+ * @z: redshift $z$
  *
  * This function computes the comoving volume (flat universe) element per unit solid angle $d\Omega$
  * given @z, namely, $$\frac{\mathrm{d}^2V}{\mathrm{d}z\mathrm{d}\Omega} = \frac{c}{H(z)} D_c^2(z),$$
@@ -613,7 +614,7 @@ static void _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *
  * @mfp: a #NcHaloMassFunction
  * @area: area in steradian
  *
- * FIXME
+ * Sets the area of the survey in steradian.
  *
  */
 void
@@ -635,7 +636,7 @@ nc_halo_mass_function_set_area (NcHaloMassFunction *mfp, gdouble area)
  * @mfp: a #NcHaloMassFunction
  * @prec: precision
  *
- * FIXME
+ * Sets the precision of the integration.
  *
  */
 void
@@ -657,7 +658,7 @@ nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec)
  * @mfp: a #NcHaloMassFunction
  * @area_sd: area in square degree
  *
- * FIXME
+ * Sets the area of the survey in square degree.
  *
  */
 void
@@ -677,7 +678,7 @@ nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd)
  * @zi: minimum redshift
  * @zf: maximum redshift
  *
- * FIXME
+ * Sets the limits of the integration.
  *
  */
 void
@@ -710,7 +711,7 @@ nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the halo mass function object.
  *
  */
 void
@@ -751,14 +752,14 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
  * nc_halo_mass_function_dn_dz:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnMl: logarithm base e of mass, lower threshold
- * @lnMu: logarithm base e of mass, upper threshold
- * @z: redshift
+ * @lnMl: logarithm base e of mass, lower threshold $\ln M_l$
+ * @lnMu: logarithm base e of mass, upper threshold $\ln M_u$
+ * @z: redshift $z$
  * @spline: whenever to create an intermediary spline of the mass integration
  *
- * FIXME
+ * Computes the number density of halos in the mass range $[M_l, M_u]$ at redshift $z$.
  *
- * Returns: FIXME
+ * Returns: the number density of halos in the mass range $[M_l, M_u]$
  */
 gdouble
 nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline)
@@ -777,8 +778,8 @@ nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble 
  * nc_halo_mass_function_n:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnMl: logarithm base e of mass, lower threshold
- * @lnMu: logarithm base e of mass, upper threshold
+ * @lnMl: logarithm base e of mass, lower threshold $\ln M_l$
+ * @lnMu: logarithm base e of mass, upper threshold $\ln M_u$
  * @zl: minimum redshift
  * @zu: maximum redshift
  * @spline: whenever to create an intermediary spline of the integration
@@ -879,7 +880,7 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepare the object if necessary.
  *
  */
 void
@@ -896,9 +897,9 @@ nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cos
  * nc_halo_mass_function_peek_psf:
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Peeks the power spectrum filter.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the power spectrum filter.
  */
 NcmPowspecFilter *
 nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp)
@@ -911,9 +912,9 @@ nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp)
  * nc_halo_mass_function_peek_multiplicity_function:
  * @mfp: a #NcHaloMassFunction
  *
- * FIXME
+ * Peeks the multiplicity function.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the multiplicity function.
  */
 NcMultiplicityFunc *
 nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
@@ -926,11 +927,11 @@ nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
  * nc_halo_mass_function_d2n_dzdlnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
- * @lnM: logarithm base e of mass
+ * @lnM: logarithm base e of mass $\ln M$
  * @z: redshift
  *
- * FIXME
+ * Computes the halo mass function $d^2 N / d\ln M d z$.
  *
- * Returns: FIXME
+ * Returns: $d^2 N / d\ln M d z$.
  */
 

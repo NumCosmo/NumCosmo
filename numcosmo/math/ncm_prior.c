@@ -26,7 +26,9 @@
 /**
  * SECTION:ncm_prior
  * @title: NcmPrior
- * @short_description: A prior for NcmLikelihood
+ * @short_description: A prior for NcmLikelihood.
+ *
+ * This object implements a prior for NcmLikelihood.
  *
  * FIXME
  * 
