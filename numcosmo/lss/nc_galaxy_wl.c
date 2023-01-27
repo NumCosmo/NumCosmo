@@ -46,7 +46,8 @@
 #include "lss/nc_galaxy_wl_dist.h"
 #include "lss/nc_galaxy_redshift.h"
 #include "lss/nc_galaxy_redshift_spec.h"
-#include "lss/nc_galaxy_wl_reduced_shear_gauss.h"
+#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
+#include "lss/nc_galaxy_wl_ellipticity_kde.h"
 #include "math/ncm_stats_dist1d_epdf.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -295,81 +296,83 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
   NcGalaxyWLEval gwleval         = {self->wl_dist, cosmo, dp, smd, z_cluster, 0};
   gdouble res                    = 0.0;
   gint gal_i;
+
+  nc_galaxy_wl_dist_m2lnP_initial_prep (self->wl_dist, self->gz_dist, cosmo, dp, smd, z_cluster);
   
-  if (self->no_kde)
+  // if (self->no_kde)
+  // {
+  for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    for (gal_i = 0; gal_i < self->len; gal_i++)
-    {
-      gwleval.gal_i = gal_i;
-      nc_galaxy_wl_dist_m2lnP_prep (self->wl_dist, cosmo, dp, smd, z_cluster, gal_i);
-      res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
-    }
+    gwleval.gal_i = gal_i;
+    // nc_galaxy_wl_dist_m2lnP_prep (self->wl_dist, cosmo, dp, smd, z_cluster, gal_i);
+    res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
   }
-  else
-  {
-    g_assert (NC_IS_GALAXY_REDSHIFT_SPEC (self->gz_dist));
-    g_assert (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist)); 
-    {
-      NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
-      NcGalaxyWLReducedShearGauss *wl_gauss = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist);
-      NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
-      NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (s_kde);
-      NcmVector *z_vec  = nc_galaxy_redshift_spec_peek_z (z_spec);
-      NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
-      NcmVector *g_vec  = ncm_vector_new (self->len);
-      gdouble min_g_i = GSL_POSINF;
-      gdouble max_g_i = GSL_NEGINF;
-      int j = 0;
+  // }
+  // else
+  // {
+  //   g_assert (NC_IS_GALAXY_REDSHIFT_SPEC (self->gz_dist));
+  //   g_assert (NC_IS_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist)); 
+  //   {
+  //     NcGalaxyRedshiftSpec *z_spec = NC_GALAXY_REDSHIFT_SPEC (self->gz_dist);
+  //     NcGalaxyWLReducedShearGauss *wl_gauss = NC_GALAXY_WL_REDUCED_SHEAR_GAUSS (self->wl_dist);
+  //     NcmStatsDist1dEPDF *s_kde = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
+  //     NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (s_kde);
+  //     NcmVector *z_vec  = nc_galaxy_redshift_spec_peek_z (z_spec);
+  //     NcmMatrix *wl_obs = nc_galaxy_wl_reduced_shear_gauss_peek_obs (wl_gauss);
+  //     NcmVector *g_vec  = ncm_vector_new (self->len);
+  //     gdouble min_g_i = GSL_POSINF;
+  //     gdouble max_g_i = GSL_NEGINF;
+  //     int j = 0;
 
-      ncm_stats_dist1d_set_compute_cdf (sd1, FALSE);
+  //     ncm_stats_dist1d_set_compute_cdf (sd1, FALSE);
 
-      for (gal_i = 0; gal_i < self->len; gal_i++)
-      {
-        const gdouble z_i = ncm_vector_get (z_vec, gal_i);
-        const gdouble r_i = ncm_matrix_get (wl_obs, gal_i, 0);
-        const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
-        const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
+  //     for (gal_i = 0; gal_i < self->len; gal_i++)
+  //     {
+  //       const gdouble z_i = ncm_vector_get (z_vec, gal_i);
+  //       const gdouble r_i = ncm_matrix_get (wl_obs, gal_i, 0);
+  //       const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
+  //       const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
 
-        max_g_i = MAX (max_g_i, g_i);
-        min_g_i = MIN (min_g_i, g_i);
-        /*if ((g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05))*/
-        //if (r_i > 0.07)
-        {
-          ncm_vector_set (g_vec, j, g_i);
-          ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
-          j++;
-        }
-      }
+  //       max_g_i = MAX (max_g_i, g_i);
+  //       min_g_i = MIN (min_g_i, g_i);
+  //       /*if ((g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05))*/
+  //       //if (r_i > 0.07)
+  //       {
+  //         ncm_vector_set (g_vec, j, g_i);
+  //         ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
+  //         j++;
+  //       }
+  //     }
 
-      ncm_stats_dist1d_epdf_set_max (s_kde, max_g_i*1.01);
-      if (min_g_i > 0)
-        ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
-      else
-        ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*1.01);
-      ncm_stats_dist1d_prepare (sd1);
-      {
-        const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
-        const gdouble hp = gsl_hypot (h, ncm_matrix_get (wl_obs, 0, 2));
+  //     ncm_stats_dist1d_epdf_set_max (s_kde, max_g_i*1.01);
+  //     if (min_g_i > 0)
+  //       ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
+  //     else
+  //       ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*1.01);
+  //     ncm_stats_dist1d_prepare (sd1);
+  //     {
+  //       const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
+  //       const gdouble hp = gsl_hypot (h, ncm_matrix_get (wl_obs, 0, 2));
 
-        ncm_stats_dist1d_epdf_set_bw_type (s_kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
-        s_kde->h_fixed = hp;
-        ncm_stats_dist1d_prepare (sd1);
-      }
+  //       ncm_stats_dist1d_epdf_set_bw_type (s_kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
+  //       s_kde->h_fixed = hp;
+  //       ncm_stats_dist1d_prepare (sd1);
+  //     }
 
-      for (gal_i = 0; gal_i < j; gal_i++)
-      {
-        const gdouble g_i = ncm_vector_get (g_vec, gal_i);
-        const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
+  //     for (gal_i = 0; gal_i < j; gal_i++)
+  //     {
+  //       const gdouble g_i = ncm_vector_get (g_vec, gal_i);
+  //       const gdouble p = ncm_stats_dist1d_eval_p (sd1, g_i);
 
-        if (p <= 0.0)
-          printf ("% 22.15g % 22.15g\n", g_i, p);
+  //       if (p <= 0.0)
+  //         printf ("% 22.15g % 22.15g\n", g_i, p);
 
-        res += - 2 * log (p);
-      }
-      ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
-      ncm_vector_free (g_vec);
-    }
-  }
+  //       res += - 2 * log (p);
+  //     }
+  //     ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
+  //     ncm_vector_free (g_vec);
+  //   }
+  // }
   
   return res;
 }

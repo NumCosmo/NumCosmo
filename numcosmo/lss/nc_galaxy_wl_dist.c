@@ -43,6 +43,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_galaxy_wl_dist.h"
+#include "lss/nc_galaxy_redshift.h"
+
 
 struct _NcGalaxyWLDistPrivate
 {
@@ -141,6 +143,16 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
   g_clear_object (gwld);
 }
 
+/**
+* nc_galaxy_wl_dist_m2lnP_initial_prep: (virtual m2lnP_initial_prep)
+* @gwld: a #NcGalaxyWLDist
+* @gz: a #NcGalaxyRedshift
+* @cosmo: a #NcHICosmo
+* @dp: a #NcHaloDensityProfile
+* @smd: a #NcWLSurfaceMassDensity
+* @z_cluster: cluster redshift $z_\mathrm{cl}$
+*
+*/
 /**
  * nc_galaxy_wl_dist_m2lnP_prep: (virtual m2lnP_prep)
  * @gwld: a #NcGalaxyWLDist
