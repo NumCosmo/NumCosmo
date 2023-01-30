@@ -133,7 +133,7 @@ _nc_galaxy_wl_ellipticity_kde_finalize (GObject *object)
 }
 
 static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld,NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
-static void _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i);
+// static void _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i);
 static gdouble _nc_galaxy_wl_ellipticity_kde_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z);
 static gdouble _nc_galaxy_wl_ellipticity_kde_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng);
 static guint _nc_galaxy_wl_ellipticity_kde_len (NcGalaxyWLDist *gwld);
@@ -164,7 +164,7 @@ nc_galaxy_wl_ellipticity_kde_class_init (NcGalaxyWLEllipticityKDEClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   wl_dist_class->m2lnP_initial_prep = &_nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep;
-  wl_dist_class->m2lnP_prep         = &_nc_galaxy_wl_ellipticity_kde_m2lnP_prep;
+  // wl_dist_class->m2lnP_prep         = &_nc_galaxy_wl_ellipticity_kde_m2lnP_prep;
   wl_dist_class->m2lnP              = &_nc_galaxy_wl_ellipticity_kde_m2lnP;
   wl_dist_class->gen                = &_nc_galaxy_wl_ellipticity_kde_gen;
   wl_dist_class->len                = &_nc_galaxy_wl_ellipticity_kde_len;
@@ -176,7 +176,6 @@ static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gw
   NcGalaxyWLEllipticityKDEPrivate * const self = gkde->priv;
   NcmStatsDist1dEPDF *s_kde                    = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
   NcmStatsDist1d *sd1                          = NCM_STATS_DIST1D (s_kde);
-  // const gdouble R                              = ncm_matrix_get (self->obs, gal_i, 0);
   NcmVector *g_vec                             = ncm_vector_new (self->len);
   NcmMatrix *wl_obs                            = nc_galaxy_wl_ellipticity_kde_peek_obs (NC_GALAXY_WL_ELLIPTICITY_KDE (gwld));
   NcmVector *z_vec                             = nc_galaxy_redshift_spec_peek_z (NC_GALAXY_REDSHIFT_SPEC (gz));
@@ -226,13 +225,15 @@ static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gw
   self->kde   = sd1;
   self->e_vec = g_vec;
 
+  ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
+  ncm_vector_free (g_vec);
 }
 
-static void
-_nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
-{
+// static void
+// _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
+// {
   
-}
+// }
 
 static gdouble
 _nc_galaxy_wl_ellipticity_kde_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
@@ -245,7 +246,7 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcH
   const gdouble e_i = ncm_vector_get (self->e_vec, gal_i);
   const gdouble p = ncm_stats_dist1d_eval_p (self->kde, e_i);
   res += - 2 * log (p);
-
+  
   return res;
 }
 
