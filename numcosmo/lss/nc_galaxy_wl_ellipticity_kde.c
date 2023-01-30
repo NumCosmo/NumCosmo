@@ -225,8 +225,8 @@ static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gw
   self->kde   = sd1;
   self->e_vec = g_vec;
 
-  ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
-  ncm_vector_free (g_vec);
+// ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
+// ncm_vector_free (g_vec);
 }
 
 // static void
