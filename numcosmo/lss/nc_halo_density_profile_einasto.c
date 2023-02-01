@@ -60,7 +60,7 @@
 #include "lss/nc_halo_density_profile_einasto.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>

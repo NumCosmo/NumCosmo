@@ -40,7 +40,7 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "misc/Faddeeva.h"
 

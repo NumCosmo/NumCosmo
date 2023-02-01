@@ -3,11 +3,11 @@
  *
  *  Fri November 06 12:18:27 2015
  *  Copyright  2013  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_model_builder.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -292,6 +292,50 @@ ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const g
   ncm_vparam_free (vparam);
 }
 
+/**
+ * ncm_model_builder_add_sparams:
+ * @mb: a #NcmModelBuilder
+ * @sparams: (element-type NcmSParam): an array of #NcmSParam objects
+ *
+ * Adds all #NcmSParam objects in @sparams to @mb.
+ *
+ */
+void 
+ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams)
+{
+  gint i;
+  
+  for (i = 0; i < sparams->len; i++)
+  {
+    NcmSParam *sparam = NCM_SPARAM (ncm_obj_array_get (sparams, i));
+    g_assert (NCM_IS_SPARAM (sparam));  
+    ncm_model_builder_add_sparam_obj (mb, sparam);
+  }
+}
+
+/**
+ * ncm_model_builder_get_sparams:
+ * @mb: a #NcmModelBuilder
+ *
+ * Returns: (transfer full): a #NcmObjArray containing all #NcmSParam objects in @mb.
+ */
+NcmObjArray *
+ncm_model_builder_get_sparams (NcmModelBuilder *mb)
+{
+  NcmObjArray *oa = ncm_obj_array_new ();
+  gint i;
+  
+  for (i = 0; i < mb->sparams->len; i++)
+  {
+    NcmSParam *sparam = NCM_SPARAM (g_ptr_array_index (mb->sparams, i));
+    GObject *obj      = G_OBJECT (ncm_sparam_ref (sparam));
+    
+    ncm_obj_array_add (oa, obj);
+  }
+  
+  return oa;
+}
+
 void
 _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
 {
@@ -368,7 +412,6 @@ ncm_model_builder_create (NcmModelBuilder *mb)
 
   }
 
-
-
   return mb->type;
 }
+

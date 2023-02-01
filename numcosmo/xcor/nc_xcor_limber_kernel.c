@@ -35,7 +35,7 @@
  * \end{equation}
  * where $\delta$ is the matter density field.
  *
- * Kernels also implement the nosie power spectrum.
+ * Kernels also implement the noise power spectrum.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,7 +43,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"

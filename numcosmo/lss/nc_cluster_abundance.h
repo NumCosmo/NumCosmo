@@ -3,7 +3,7 @@
  *
  *  Tue Apr 20 10:59:01 2010
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
- *  <pennalima@gmail.com> & <sandro@isoftware.com.br>
+ *  <pennalima@gmail.com> & <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
@@ -30,7 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 
@@ -58,6 +58,7 @@ typedef struct _NcClusterAbundanceDataBin NcClusterAbundanceDataBin;
 
 typedef gdouble (*NcClusterAbundanceN) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 typedef gdouble (*NcClusterAbundanceIntPd2N) (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z);
+typedef gdouble (*NcClusterAbundanceIntPd2NBias)  (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
 
 #define nc_cluster_abundance_d2NdzdlnM_val(cad, cp, lnM, z) (cad)->d2NdzdlnM_val (cad, cp, lnM, z)
 #define nc_cluster_abundance_dNdz_val(cad, cp, lnMl, lnMu, z) (cad)->dNdz_val (cad, cp, lnMl, lnMu, z)
@@ -75,9 +76,10 @@ struct _NcClusterAbundance
   /*< private >*/
   GObject parent_instance;
   NcHaloMassFunction *mfp;
-  NcHaloBiasFunc *mbiasf; /* new FIXME */
+  NcHaloBias *mbiasf; /* new FIXME */
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
+  NcClusterAbundanceIntPd2NBias intp_d2N_bias;
   gdouble norma, log_norma;
   gdouble lnMi, lnMf, zi, zf;
   gdouble lnM_epsilon, z_epsilon;
@@ -97,8 +99,8 @@ struct _NcClusterAbundance
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
-NcClusterAbundance *nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
-NcClusterAbundance *nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 
 void nc_cluster_abundance_free (NcClusterAbundance *cad);

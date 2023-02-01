@@ -5,11 +5,11 @@
  *
  *  Tue April 17 14:26:11 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_redshift_spec.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Copyright (C) 2018 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it

@@ -4,11 +4,11 @@
  *
  *  Thu February 15 14:44:56 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hiqg_1d.c
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -40,7 +40,7 @@
 
 #include "nc_hiqg_1d.h"
 #include "math/ncm_matrix.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral1d_ptr.h"
@@ -1976,6 +1976,7 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
 
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_xrho, &abserr);
 
+  ncm_memory_pool_return (w);
   return int_xrho;
 }
 
@@ -2002,6 +2003,7 @@ nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
 
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_x2rho, &abserr);
 
+  ncm_memory_pool_return (w);
   return int_x2rho;
 }
 
@@ -2028,6 +2030,7 @@ nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
 
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_p, &abserr);
 
+  ncm_memory_pool_return (w);
   return mean_p;
 }
 
@@ -2054,6 +2057,7 @@ nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
 
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_d, &abserr);
 
+  ncm_memory_pool_return (w);
   return mean_d;
 }
 

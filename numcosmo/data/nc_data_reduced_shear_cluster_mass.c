@@ -47,7 +47,7 @@
 #include "lss/nc_galaxy_redshift_spline.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

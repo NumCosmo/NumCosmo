@@ -1,13 +1,13 @@
 /***************************************************************************
- *            binsplit.h
+ *            ncm_binsplit.c
  *
  *  Tue Jan 19 18:28:16 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -23,11 +23,11 @@
  */
 
 /**
- * SECTION:binsplit
+ * SECTION:ncm_binsplit
  * @title: NcmBinSplit
  * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
  * @stability: Stable
- * @include: numcosmo/math/binsplit.h
+ * @include: numcosmo/math/ncm_binsplit.h
  *
  * FIXME
  * 
@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_cfg.h"
 
 static gboolean one_init = FALSE;

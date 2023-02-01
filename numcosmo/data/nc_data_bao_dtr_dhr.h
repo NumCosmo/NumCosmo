@@ -3,11 +3,11 @@
  *
  *  Mon Ago 15 14:38:40 2022
  *  Copyright  2022  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_data_bao_dtr_dhr.h
- * Copyright (C) 2022 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2022 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

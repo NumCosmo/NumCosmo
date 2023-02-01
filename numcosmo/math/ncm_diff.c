@@ -4,11 +4,11 @@
  *
  *  Fri July 21 12:59:36 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_diff.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +59,6 @@ typedef struct _NcmDiffTable
 } NcmDiffTable;
 
 NcmDiffTable *_ncm_diff_table_new (const guint n);
-NcmDiffTable *_ncm_diff_table_dup (NcmDiffTable *dtable);
 void _ncm_diff_table_free (gpointer dtable_ptr);
 
 enum
@@ -119,9 +118,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_INI_H:
       ncm_diff_set_ini_h (diff, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -150,9 +149,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_INI_H:
       g_value_set_double (value, ncm_diff_get_ini_h (diff));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default: /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -251,19 +250,6 @@ _ncm_diff_table_new (const guint n)
   dtable->lambda = ncm_vector_new (n);
 
   return dtable;
-}
-
-NcmDiffTable *
-_ncm_diff_table_dup (NcmDiffTable *dtable)
-{
-  const guint n            = ncm_vector_len (dtable->h);
-  NcmDiffTable *dtable_dup = _ncm_diff_table_new (n);
-
-
-  ncm_vector_memcpy (dtable_dup->h,      dtable->h);
-  ncm_vector_memcpy (dtable_dup->lambda, dtable->lambda);
-
-  return dtable_dup;
 }
 
 void
@@ -482,7 +468,6 @@ ncm_diff_get_round_off_pad (NcmDiff *diff)
 {
   return diff->priv->roff_pad;
 }
-
 
 /**
  * ncm_diff_get_trunc_error_pad:
@@ -1011,10 +996,10 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
             improve = TRUE;
 
 /*
-          printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
-              nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
-              err_err_i, improve ? "T" : "F");
-*/
+ *         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g improve: %s\n",
+ *             nt, i, a, NOT_CONV, df_best_i, ncm_vector_get (df_curr, i), err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
+ *             err_err_i, improve ? "T" : "F");
+ */
 
           ncm_vector_set (err_last_max, i, err_curr_max_i);
         }
@@ -1203,7 +1188,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
             const gdouble df_i     = g_array_index (dfs, gdouble, i);
             const gdouble roff_i   = g_array_index (roffs, gdouble, i);
 
-            df_curr += lambda_i * df_i;
+            df_curr  += lambda_i * df_i;
             roff_curr = hypot (roff_curr, lambda_i * roff_i);
           }
         }
@@ -1237,9 +1222,9 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
 
 
 /*
-         printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
-                 nt, a, b, not_converging, df_best, err_best, err_trunc, Eroff_last, Eroff_curr, err_curr_max, err_err);
-*/
+ *        printf ("[%3u, %3u, %3u] !conv %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g",
+ *                nt, a, b, not_converging, df_best, err_best, err_trunc, Eroff_last, Eroff_curr, err_curr_max, err_err);
+ */
 
           if ((err_curr_max < err_best) && !not_converging)
           {

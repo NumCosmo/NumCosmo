@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_mass_function.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_cfg.h"
 
@@ -479,58 +479,45 @@ nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
   return (3.0 * lnR + log (omega_m0 * ncm_powspec_filter_volume_rm3 (self->psf) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
 }
 
+
 /**
- * nc_halo_mass_function_dn_dlnR_sigma:
+ * nc_halo_mass_function_sigma_lnR:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  * @lnR: logarithm base e of the radius $R$
  * @z: redshift
- * @sigma_ptr: (out): matter variance for $\ln(R)$
- * @dn_dlnR_ptr: (out): $\frac{\mathrm{d}n}{\mathrm{d}\ln(R)}$
  *
- * This function computes the comoving number density of dark matter halos per redshift @z and
- * volume with ln-radius @lnR.
+ * This function computes the matter variance for $\ln(R)$ = @lnR
+ * at redshift @z.
  *
  */
-void
-nc_halo_mass_function_dn_dlnR_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnR_ptr)
+gdouble
+nc_halo_mass_function_sigma_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
-  const gdouble V           = ncm_powspec_filter_volume_rm3 (self->psf) * exp (3.0 * lnR);
   const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
-  const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (self->psf, z, lnR);
-  const gdouble f           = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, z);
-  const gdouble dn_dlnR     = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
-  
-  sigma_ptr[0]   = sigma;
-  dn_dlnR_ptr[0] = dn_dlnR;
-  
-  return;
+  return sigma;
 }
 
 /**
- * nc_halo_mass_function_dn_dlnM_sigma:
+ * nc_halo_mass_function_sigma_lnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass
  * @z: redshift
- * @sigma_ptr: (out): matter variance for $\ln(M)$
- * @dn_dlnM_ptr: (out): $\frac{\mathrm{d}n}{\mathrm{d}\ln(M)}$
  *
- * This function computes the comoving number density of dark matter halos at redshift @z and
- * mass M.
+ * This function computes the matter variance for $\ln(R)$ = @lnR
+ * at redshift @z.
  *
  */
-void
-nc_halo_mass_function_dn_dlnM_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnM_ptr)
+gdouble
+nc_halo_mass_function_sigma_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  const gdouble lnR = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
-  
-  nc_halo_mass_function_dn_dlnR_sigma (mfp, cosmo, lnR, z, sigma_ptr, dn_dlnM_ptr);
-  
-  dn_dlnM_ptr[0] = dn_dlnM_ptr[0] / 3.0;
-  
-  return;
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+  const gdouble lnR   = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
+  const gdouble sigma = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
+
+  return sigma;
 }
 
 /**
@@ -616,7 +603,6 @@ nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gd
   const gdouble E     = sqrt (nc_hicosmo_E2 (cosmo, z));
   gdouble dc          = nc_distance_comoving (self->dist, cosmo, z);
   gdouble dV_dzdOmega = VH * gsl_pow_2 (dc) / E;
-  
   return dV_dzdOmega;
 }
 
@@ -919,6 +905,21 @@ nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   return self->psf;
+}
+
+/**
+ * nc_halo_mass_function_peek_multiplicity_function:
+ * @mfp: a #NcHaloMassFunction
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcMultiplicityFunc *
+nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
+{
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+  return self->mulf;
 }
 
 /**

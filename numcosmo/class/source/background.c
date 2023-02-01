@@ -478,6 +478,7 @@ int background_w_fld(
   double d2Omega_ede_over_da2 = 0.;
   double a_eq, Omega_r, Omega_m;
 
+  a_eq = 0.0;
   /** - first, define the function w(a) */
   switch (pba->fluid_equation_of_state) {
   case CLP:

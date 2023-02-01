@@ -3,11 +3,11 @@
  *
  *  Sun May  6 17:20:29 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -122,12 +122,11 @@
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_halo_bias_type.h>
-#include <numcosmo/lss/nc_halo_bias_type_ps.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_spher.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_ellip.h>
-#include <numcosmo/lss/nc_halo_bias_type_tinker.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
+#include <numcosmo/lss/nc_halo_bias_ps.h>
+#include <numcosmo/lss/nc_halo_bias_st_spher.h>
+#include <numcosmo/lss/nc_halo_bias_st_ellip.h>
+#include <numcosmo/lss/nc_halo_bias_tinker.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_redshift_nodist.h>
 #include <numcosmo/lss/nc_cluster_photoz_gauss.h>

@@ -50,7 +50,6 @@ struct _NcMultiplicityFuncWatsonPrivate
 enum
 {
   PROP_0,
-  PROP_DELTA,
   PROP_SIZE
 };
 
@@ -67,14 +66,11 @@ nc_multiplicity_func_watson_init (NcMultiplicityFuncWatson *mwat)
 static void
 _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
+  /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-        nc_multiplicity_func_watson_set_Delta (mwat, g_value_get_double (value));
-        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -84,14 +80,11 @@ _nc_multiplicity_func_watson_set_property (GObject * object, guint prop_id, cons
 static void
 _nc_multiplicity_func_watson_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
 {
-  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);
+  /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (object);*/
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WATSON (object));
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-        g_value_set_double (value, nc_multiplicity_func_watson_get_Delta (mwat));
-        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -106,8 +99,10 @@ _nc_multiplicity_func_watson_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_watson_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_watson_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_watson_get_Delta (NcMultiplicityFunc *mulf); 
 static gdouble _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 // _NC_MULTIPLICITY_FUNCTION_WATSON_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0};
@@ -123,21 +118,10 @@ nc_multiplicity_func_watson_class_init (NcMultiplicityFuncWatsonClass *klass)
   object_class->finalize     = _nc_multiplicity_func_watson_finalize;
 
   parent_class->set_mdef = &_nc_multiplicity_func_watson_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_watson_set_Delta;
   parent_class->get_mdef = &_nc_multiplicity_func_watson_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_watson_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_watson_eval;
-  
-  /**
-     * NcMultiplicityFuncWatson:Delta:
-     *
-     * FIXME Set correct values (limits)
-     */
-    g_object_class_install_property (object_class,
-                                     PROP_DELTA,
-                                     g_param_spec_double ("Delta",
-                                                          NULL,
-                                                          "Delta",
-														  -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
     
 }
 
@@ -336,8 +320,9 @@ nc_multiplicity_func_watson_clear (NcMultiplicityFuncWatson **mwat)
  *
  */
 void
-nc_multiplicity_func_watson_set_Delta (NcMultiplicityFuncWatson *mwat, gdouble Delta)
+_nc_multiplicity_func_watson_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
 
   g_assert (Delta >= 0);
@@ -352,8 +337,9 @@ nc_multiplicity_func_watson_set_Delta (NcMultiplicityFuncWatson *mwat, gdouble D
  * Returns: the value of #NcMultiplicityFuncWatson:Delta property.
  */
 gdouble
-nc_multiplicity_func_watson_get_Delta (const NcMultiplicityFuncWatson *mwat)
+_nc_multiplicity_func_watson_get_Delta (NcMultiplicityFunc *mulf)
 {
+  NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
   
   return self->Delta;

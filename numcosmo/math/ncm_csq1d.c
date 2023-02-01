@@ -5,11 +5,11 @@
  *
  *  Mon September 09 13:56:19 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_csq1d.c
- * Copyright (C) 2019 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2019 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +59,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_diff.h"
 #include "math/ncm_c.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

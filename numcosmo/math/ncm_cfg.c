@@ -3,11 +3,11 @@
  *
  *  Wed Aug 13 20:59:22 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -146,11 +146,10 @@
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
-#include "lss/nc_halo_bias_func.h"
-#include "lss/nc_halo_bias_type_ps.h"
-#include "lss/nc_halo_bias_type_st_ellip.h"
-#include "lss/nc_halo_bias_type_st_spher.h"
-#include "lss/nc_halo_bias_type_tinker.h"
+#include "lss/nc_halo_bias_ps.h"
+#include "lss/nc_halo_bias_st_ellip.h"
+#include "lss/nc_halo_bias_st_spher.h"
+#include "lss/nc_halo_bias_tinker.h"
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
@@ -350,6 +349,9 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_forget_wisdom ();
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
@@ -638,14 +640,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_FUNC);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_PS);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_TINKER);
+   
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TINKER);
   
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
   
@@ -1766,7 +1766,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftw_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftw_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
   
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
@@ -1775,7 +1784,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftwf_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftwf_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
 #endif
   
   g_free (file);

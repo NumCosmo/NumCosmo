@@ -3,12 +3,12 @@
  *
  *  Thu January 05 20:18:45 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -2135,6 +2135,15 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * This function returns the array of @cv. It is only applied if the matrix @cm was created with ncm_matrix_new_array().
  *
  * Returns: (transfer container) (element-type double): A pointer to a double GArray.
+ */
+
+/**
+ * ncm_matrix_dup_array:
+ * @cm: a #NcmMatrix
+ *
+ * This function returns an #GArray containing a copy of its elements..
+ *
+ * Returns: (transfer full) (element-type double): A pointer to a double #GArray.
  */
 
 /**

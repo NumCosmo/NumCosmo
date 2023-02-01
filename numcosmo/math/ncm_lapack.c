@@ -3,11 +3,11 @@
  *
  *  Sun March 18 22:33:15 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -1316,6 +1316,7 @@ ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdou
  * @rank: RANK is INTEGER
  * The effective rank of A, i.e., the number of singular values
  * which are greater than RCOND*S(1).
+ * @ws: a Lapack workspace object #NcmLapackWS
  *
  * DGELSD computes the minimum-norm solution to a real linear least
  * squares problem:

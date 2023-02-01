@@ -20,7 +20,7 @@
 /*
  * Author:  G. Jungman
  * 
- * Modified by Sandro Vitenti <sandro@isoftware.com.br> to make compatible with
+ * Modified by Sandro Vitenti <vitenti@uel.br> to make compatible with
  * other blas headers.
  */
 /* Based on draft BLAST C interface specification  [Jul 7 1998]

@@ -4,7 +4,7 @@
  *
  *  Fri November 01 14:17:49 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hicosmo_qrbf.h

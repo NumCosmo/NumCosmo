@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_mass_vanderlinde.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 

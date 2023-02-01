@@ -34,7 +34,7 @@
 #include <numcosmo/lss/nc_growth_func.h>
 //#include <numcosmo/lss/nc_mass_function.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/math/ncm_spline2d.h>

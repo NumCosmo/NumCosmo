@@ -1,0 +1,79 @@
+/***************************************************************************
+ *            nc_halo_bias_st_ellip.h
+ *
+ *  Tue June 28 15:41:57 2011
+ *  Copyright  2011  Mariana Penna Lima
+ *  <pennalima@gmail.com>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
+ *
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _NC_HALO_BIAS_ST_ELLIP_H_
+#define _NC_HALO_BIAS_ST_ELLIP_H_
+
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/build_cfg.h>
+#include <numcosmo/lss/nc_halo_bias.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_HALO_BIAS_ST_ELLIP             (nc_halo_bias_st_ellip_get_type ())
+#define NC_HALO_BIAS_ST_ELLIP(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_BIAS_ST_ELLIP, NcHaloBiasSTEllip))
+#define NC_HALO_BIAS_ST_ELLIP_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_BIAS_ST_ELLIP, NcHaloBiasSTEllipClass))
+#define NC_IS_HALO_BIAS_ST_ELLIP(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_BIAS_ST_ELLIP))
+#define NC_IS_HALO_BIAS_ST_ELLIP_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_BIAS_ST_ELLIP))
+#define NC_HALO_BIAS_ST_ELLIP_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_BIAS_ST_ELLIP, NcHaloBiasSTEllipClass))
+
+typedef struct _NcHaloBiasSTEllipClass NcHaloBiasSTEllipClass;
+typedef struct _NcHaloBiasSTEllip NcHaloBiasSTEllip;
+
+struct _NcHaloBiasSTEllipClass
+{
+  /*< private >*/
+  NcHaloBiasClass parent_class;
+};
+
+struct _NcHaloBiasSTEllip
+{
+  /*< private >*/
+  NcHaloBias parent_instance;
+  gdouble delta_c;
+  gdouble a;
+  gdouble b;
+  gdouble c;
+};
+
+GType nc_halo_bias_st_ellip_get_type (void) G_GNUC_CONST;
+
+NcHaloBiasSTEllip *nc_halo_bias_st_ellip_new (NcHaloMassFunction *mfp);
+NcHaloBiasSTEllip *nc_halo_bias_st_ellip_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble a, gdouble b, gdouble c);
+
+void nc_halo_bias_st_ellip_set_delta_c (NcHaloBiasSTEllip *biasf_st_ellip, gdouble delta_c);
+gdouble nc_halo_bias_st_ellip_get_delta_c (const NcHaloBiasSTEllip *biasf_st_ellip);
+void nc_halo_bias_st_ellip_set_a (NcHaloBiasSTEllip *biasf_st_ellip, gdouble a);
+gdouble nc_halo_bias_st_ellip_get_a (const NcHaloBiasSTEllip *biasf_st_ellip);
+void nc_halo_bias_st_ellip_set_b (NcHaloBiasSTEllip *biasf_st_ellip, gdouble b);
+gdouble nc_halo_bias_st_ellip_get_b (const NcHaloBiasSTEllip *biasf_st_ellip);
+void nc_halo_bias_st_ellip_set_c (NcHaloBiasSTEllip *biasf_st_ellip, gdouble c);
+gdouble nc_halo_bias_st_ellip_get_c (const NcHaloBiasSTEllip *biasf_st_ellip);
+
+G_END_DECLS
+
+#endif /* _NC_HALO_BIAS_ST_ELLIP_H_ */
+

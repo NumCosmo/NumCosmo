@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_nc_halo_density_profile_nfw.c
+ *            test_nc_halo_density_profile.c
  *
  *  Mon Feb 12 23:04:16 2017
  *  Copyright  2017  Mariana Penna Lima

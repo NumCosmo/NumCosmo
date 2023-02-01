@@ -65,8 +65,6 @@ NcMultiplicityFuncWatson *nc_multiplicity_func_watson_ref (NcMultiplicityFuncWat
 void nc_multiplicity_func_watson_free (NcMultiplicityFuncWatson *mwat);
 void nc_multiplicity_func_watson_clear (NcMultiplicityFuncWatson **mwat);
 
-void nc_multiplicity_func_watson_set_Delta (NcMultiplicityFuncWatson *mwat, gdouble Delta);
-gdouble nc_multiplicity_func_watson_get_Delta (const NcMultiplicityFuncWatson *mwat);
 
 G_END_DECLS
 

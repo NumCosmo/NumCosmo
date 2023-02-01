@@ -3,11 +3,11 @@
  *
  *  Sun May  6 17:20:29 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -81,12 +81,9 @@
 #include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>
-#include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
 #include <numcosmo/math/ncm_mpsf_sbessel.h>
-#include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
-#include <numcosmo/math/ncm_sf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
@@ -166,15 +163,9 @@
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
+#include <numcosmo/math/ncm_binsplit.h>
 #include <numcosmo/math/ncm_memory_pool.h>
-#include <numcosmo/math/mpq_tree.h>
-#include <numcosmo/math/integral.h>
-#include <numcosmo/math/poly.h>
-#include <numcosmo/math/quadrature.h>
-#include <numcosmo/math/matrix_exp.h>
-#include <numcosmo/math/magnus_iserles_ode.h>
-#include <numcosmo/math/binsplit.h>
-#include <numcosmo/math/dividedifference.h>
+#include <numcosmo/math/ncm_integrate.h>
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/math/ncm_sphere_map.h>

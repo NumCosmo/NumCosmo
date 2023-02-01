@@ -3,11 +3,11 @@
  *
  *  Mon August 26 13:37:39 2013
  *  Copyright  2013  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_serialize.h
- * Copyright (C) 2013 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2013 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
