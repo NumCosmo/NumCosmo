@@ -86,22 +86,22 @@ def create_nc_obj(ccl_cosmo, prec = 1.0e-7, dist_z_max = 15.0, ps_nln_z_max = 10
 
 
 def ccl_cosmo_set_high_prec(ccl_cosmo):
-    ccl_cosmo.cosmo.gsl_params.INTEGRATION_EPSREL        = 1.0e-13
-    ccl_cosmo.cosmo.gsl_params.ODE_GROWTH_EPSREL         = 1.0e-13
-    ccl_cosmo.cosmo.gsl_params.N_ITERATION               = 10000
-    ccl_cosmo.cosmo.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NLOG          = 1000
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NA            = 1000
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NA_PK         = 1000
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NLOG_PK       = 1000
-    ccl_cosmo.cosmo.spline_params.N_K                    = 1000
-    ccl_cosmo.cosmo.spline_params.K_MIN                  = 1.0e-6
-    ccl_cosmo.cosmo.spline_params.K_MAX                  = 1.0e3
+    pyccl.gsl_params.INTEGRATION_EPSREL        = 1.0e-13
+    pyccl.gsl_params.ODE_GROWTH_EPSREL         = 1.0e-13
+    pyccl.gsl_params.N_ITERATION               = 10000
+    pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
+    pyccl.spline_params.A_SPLINE_NLOG          = 1000
+    pyccl.spline_params.A_SPLINE_NA            = 1000
+    pyccl.spline_params.A_SPLINE_NA_PK         = 1000
+    pyccl.spline_params.A_SPLINE_NLOG_PK       = 1000
+    pyccl.spline_params.N_K                    = 1000
+    pyccl.spline_params.K_MIN                  = 1.0e-6
+    pyccl.spline_params.K_MAX                  = 1.0e3
     
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NLOG_SM       = 100
-    ccl_cosmo.cosmo.spline_params.A_SPLINE_NA_SM         = 100
-    ccl_cosmo.cosmo.spline_params.LOGM_SPLINE_N          = 300
- 
+    pyccl.spline_params.A_SPLINE_NLOG_SM       = 100
+    pyccl.spline_params.A_SPLINE_NA_SM         = 100
+    pyccl.spline_params.LOGM_SPLINE_NM         = 300
+
 if __name__ == "__main__":
     
     Omega_c = 0.25
