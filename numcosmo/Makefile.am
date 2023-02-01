@@ -124,9 +124,7 @@ ncm_sources = \
 	math/ncm_mpsf_trig_int.c              \
 	math/ncm_mpsf_sbessel.c               \
 	math/ncm_sf_sbessel.c                 \
-	math/ncm_sf_sbessel_int.c             \
 	math/ncm_sf_spherical_harmonics.c     \
-	math/ncm_mpsf_sbessel_int.c           \
 	math/ncm_mpsf_0F1.c                   \
 	math/ncm_fftlog.c                     \
 	math/ncm_fftlog_sbessel_j.c           \
@@ -193,15 +191,8 @@ ncm_sources = \
 	math/ncm_quaternion.c                 \
 	math/ncm_sphere_map.c                 \
 	math/ncm_function_cache.c             \
-	math/poly.c               \
-	math/integral.c           \
-	math/quadrature.c         \
-	math/matrix_exp.c         \
-	math/magnus_iserles_ode.c \
-	math/binsplit.c           \
-	math/mpq_tree.c           \
-	math/grid_one.c           \
-	math/dividedifference.c   \
+	math/ncm_integrate.c                  \
+	math/ncm_binsplit.c                   \
 	math/ncm_memory_pool.c
 
 ncm_sources_nogi = 
@@ -264,9 +255,7 @@ ncm_headers =                                 \
 	math/ncm_mpsf_trig_int.h              \
 	math/ncm_mpsf_sbessel.h               \
 	math/ncm_sf_sbessel.h                 \
-	math/ncm_sf_sbessel_int.h             \
 	math/ncm_sf_spherical_harmonics.h     \
-	math/ncm_mpsf_sbessel_int.h           \
 	math/ncm_mpsf_0F1.h                   \
 	math/ncm_fftlog.h                     \
 	math/ncm_fftlog_sbessel_j.h           \
@@ -333,15 +322,8 @@ ncm_headers =                                 \
 	math/ncm_quaternion.h                 \
 	math/ncm_sphere_map.h                 \
 	math/ncm_function_cache.h             \
-	math/integral.h           \
-	math/magnus_iserles_ode.h \
-	math/matrix_exp.h         \
-	math/poly.h               \
-	math/quadrature.h         \
-	math/binsplit.h           \
-	math/mpq_tree.h           \
-	math/grid_one.h           \
-	math/dividedifference.h   \
+	math/ncm_integrate.h                  \
+	math/ncm_binsplit.h                   \
 	math/ncm_memory_pool.h
 
 ncm_headers_nogi = \
@@ -389,6 +371,7 @@ nc_headers = \
 	model/nc_hicosmo_de_cpl.h  \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
+	model/nc_hicosmo_de_wspline.h \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
@@ -424,13 +407,13 @@ nc_headers = \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_multiplicity_func_bocquet.h     \
+	lss/nc_multiplicity_func_watson.h      \
 	lss/nc_halo_mass_function.h            \
-        lss/nc_halo_bias_type.h                \
-        lss/nc_halo_bias_type_ps.h             \
-        lss/nc_halo_bias_type_st_spher.h       \
-        lss/nc_halo_bias_type_st_ellip.h       \
-        lss/nc_halo_bias_type_tinker.h         \
-        lss/nc_halo_bias_func.h                \
+        lss/nc_halo_bias.h                     \
+        lss/nc_halo_bias_ps.h                  \
+        lss/nc_halo_bias_st_spher.h            \
+        lss/nc_halo_bias_st_ellip.h            \
+        lss/nc_halo_bias_tinker.h              \
         lss/nc_cluster_redshift.h              \
         lss/nc_cluster_redshift_nodist.h       \
         lss/nc_cluster_photoz_gauss.h          \
@@ -471,14 +454,13 @@ nc_headers = \
 	data/nc_data_bao_empirical_fit.h       \
 	data/nc_data_bao_empirical_fit_2d.h    \
 	data/nc_data_bao_dhr_dar.h             \
+	data/nc_data_bao_dtr_dhr.h             \
 	data/nc_data_bao_dmr_hr.h              \
 	data/nc_data_bao.h                     \
 	data/nc_data_cmb_shift_param.h         \
 	data/nc_data_cmb_dist_priors.h         \
 	data/nc_data_cmb.h                     \
 	data/nc_data_cluster_ncount.h          \
-	data/nc_data_cluster_poisson.h         \
-	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h      \
 	data/nc_data_cluster_wl.h                 \
 	data/nc_data_reduced_shear_cluster_mass.h \
@@ -541,6 +523,7 @@ nc_sources = \
 	model/nc_hicosmo_de_cpl.c  \
 	model/nc_hicosmo_de_jbp.c     \
 	model/nc_hicosmo_de_xcdm.c    \
+	model/nc_hicosmo_de_wspline.c \
 	model/nc_hicosmo_lcdm.c       \
 	model/nc_hicosmo_qconst.c     \
 	model/nc_hicosmo_qlinear.c    \
@@ -576,13 +559,13 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
 	lss/nc_multiplicity_func_crocce.c      \
 	lss/nc_multiplicity_func_bocquet.c     \
+	lss/nc_multiplicity_func_watson.c      \
 	lss/nc_halo_mass_function.c            \
-	lss/nc_halo_bias_type.c                \
-	lss/nc_halo_bias_type_ps.c             \
-	lss/nc_halo_bias_type_st_spher.c       \
-	lss/nc_halo_bias_type_st_ellip.c       \
-	lss/nc_halo_bias_type_tinker.c         \
-	lss/nc_halo_bias_func.c                \
+	lss/nc_halo_bias.c                     \
+	lss/nc_halo_bias_ps.c                  \
+	lss/nc_halo_bias_st_spher.c            \
+	lss/nc_halo_bias_st_ellip.c            \
+	lss/nc_halo_bias_tinker.c              \
 	lss/nc_cluster_redshift.c              \
 	lss/nc_cluster_redshift_nodist.c       \
 	lss/nc_cluster_photoz_gauss.c          \
@@ -623,14 +606,13 @@ nc_sources = \
 	data/nc_data_bao_empirical_fit.c       \
 	data/nc_data_bao_empirical_fit_2d.c    \
 	data/nc_data_bao_dhr_dar.c             \
+	data/nc_data_bao_dtr_dhr.c             \
 	data/nc_data_bao_dmr_hr.c              \
 	data/nc_data_bao.c                     \
 	data/nc_data_cmb_shift_param.c         \
 	data/nc_data_cmb_dist_priors.c         \
 	data/nc_data_cmb.c                     \
 	data/nc_data_cluster_ncount.c          \
-	data/nc_data_cluster_poisson.c         \
-	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c      \
 	data/nc_data_cluster_wl.c                 \
 	data/nc_data_reduced_shear_cluster_mass.c \
@@ -765,7 +747,7 @@ nobase_libnumcosmo_la_include_HEADERS = \
 	$(ncm_headers_nogi)       \
 	$(nc_headers)             \
 	$(ncm_cond_headers)       \
-	math/binsplit_eval.c      \
+	math/ncm_binsplit_eval.c  \
 	numcosmo-math.h           \
 	numcosmo.h
 

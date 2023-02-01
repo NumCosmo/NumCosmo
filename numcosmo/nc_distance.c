@@ -3,12 +3,12 @@
  *
  *  Tue May  8 11:05:35 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -110,7 +110,7 @@
 #include "build_cfg.h"
 
 #include "nc_distance.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_cubic_notaknot.h"
@@ -207,12 +207,19 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
   }
 }
 
+static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
+
 static void
 _nc_distance_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
+    NcDistance *dist = NC_DISTANCE (object);
+    NcmSpline *s = ncm_spline_cubic_notaknot_new ();      
+    dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
+    ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
+    ncm_spline_free (s);
   }
 }
 
@@ -364,9 +371,9 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
   if (zf > dist->zf)
   {
-    ncm_ode_spline_clear (&dist->comoving_distance_spline);
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
     dist->zf = zf;
-    
+
     ncm_model_ctrl_force_update (dist->ctrl);
   }
 }
@@ -410,7 +417,6 @@ nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi)
   }
 }
 
-static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
  * nc_distance_prepare:
@@ -438,17 +444,6 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   }
   else
   {
-    if (dist->comoving_distance_spline == NULL)
-    {
-      NcmSpline *s = ncm_spline_cubic_notaknot_new ();
-      
-      dist->comoving_distance_spline =
-        ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
-      
-      ncm_spline_free (s);
-    }
-    
-    ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
   }
@@ -575,8 +570,6 @@ _dcddz (gdouble cd, const gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-  
-  NCM_UNUSED (cd);
   
   return 1.0 / sqrt (E2);
 }
@@ -1013,7 +1006,7 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
   
   const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
   const gdouble bgp_cs2 = nc_hicosmo_bgp_cs2 (cosmo, z);
-  
+  /*printf ("% 22.15g % 22.15g % 22.15g\n", z, bgp_cs2, E2);*/
   return sqrt (bgp_cs2 / E2);
 }
 
@@ -1249,7 +1242,7 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble Dv   = nc_distance_dilation_scale (dist, cosmo, z);
-  
+
   return r_zd / Dv;
 }
 
@@ -1291,6 +1284,26 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   gdouble DA   = nc_distance_angular_diameter (dist, cosmo, z);
   
   return DA / r_zd;
+}
+
+/**
+ * nc_distance_Dt_r:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
+ *
+ * Computes the ratio between the transverse distance and the sound horizon at the drag epoch,
+ * $$\frac{D_t(z)}{c \, r_s(z_d)}.$$
+ *
+ * Returns: $D_t(z) / (c \, r_d)$.
+ */
+gdouble
+nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
+{
+  gdouble r_zd = nc_distance_r_zd (dist, cosmo);
+  gdouble Dt   = nc_distance_transverse (dist, cosmo, z);
+
+  return Dt / r_zd;
 }
 
 /* Distances from z to infinity */
@@ -1388,7 +1401,7 @@ nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
  *
  *  Wed Nov 12 17:06:27 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 static gdouble

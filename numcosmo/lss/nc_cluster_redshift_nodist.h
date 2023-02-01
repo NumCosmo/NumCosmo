@@ -3,11 +3,11 @@
  *
  *  Fri June 22 13:45:04 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterRedshiftNodistClass NcClusterRedshiftNodistClass;
 typedef struct _NcClusterRedshiftNodist NcClusterRedshiftNodist;
+typedef struct _NcClusterRedshiftNodistPrivate NcClusterRedshiftNodistPrivate;
 
 struct _NcClusterRedshiftNodistClass
 {
@@ -53,8 +54,7 @@ struct _NcClusterRedshiftNodist
 {
   /*< private >*/
   NcClusterRedshift parent_instance;
-  gdouble z_min;
-  gdouble z_max;
+  NcClusterRedshiftNodistPrivate *priv;
 };
 
 GType nc_cluster_redshift_nodist_get_type (void) G_GNUC_CONST;
@@ -62,3 +62,4 @@ GType nc_cluster_redshift_nodist_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_REDSHIFT_NODIST_H_ */
+

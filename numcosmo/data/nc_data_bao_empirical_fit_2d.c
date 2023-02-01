@@ -237,6 +237,12 @@ _nc_data_bao_empirical_fit_2d_m2lnL_val (NcmDataDist2d *dist2d, NcmMSet *mset, g
   ncm_stats_dist2d_xbounds (bao_ef->p, &xl, &xu);
   ncm_stats_dist2d_ybounds (bao_ef->p, &yl, &yu);
 
+/*
+  printf ("x, y = % 22.15g, % 22.15g | m2lnL = % 22.15g (% 22.15g % 22.15g) (% 22.15g % 22.15g)\n",
+      alphax, alphay, m2lnL,
+      xl, xu, yl, yu);
+*/
+
   if (((alphax < xl) || (alphax > xu)) || ((alphay < yl) || (alphay > yu)))
     return GSL_POSINF;
   else
@@ -321,6 +327,12 @@ nc_data_bao_empirical_fit_2d_new_from_id (NcDistance *dist, NcDataBaoId id)
   {
     case NC_DATA_BAO_EMPIRICAL_FIT_2D_BAUTISTA2017:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_2d_bautista2017.obj", TRUE);
+      break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_2d_sdss_dr16_lyauto_2021.obj", TRUE);
+      break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_2d_sdss_dr16_lyxqso_2021.obj", TRUE);
       break;
     default:
       g_error ("nc_data_bao_empirical_fit_2d_new_from_id: id %d not recognized.", id);

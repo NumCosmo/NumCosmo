@@ -3,11 +3,11 @@
  *
  *  Sat December 01 17:19:10 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -539,7 +539,7 @@ _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 void 
 ncm_fit_mc_start_run (NcmFitMC *mc)
 {
-  const guint param_len  = ncm_mset_total_len (mc->fit->mset);
+  const guint param_len  = ncm_mset_total_len (mc->fiduc);
   const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
   NcmRNG *mcat_rng       = ncm_mset_catalog_peek_rng (mc->mcat);
 
@@ -548,7 +548,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
 
   ncm_vector_clear (&mc->bf);
   mc->bf = ncm_vector_new (param_len);
-  ncm_mset_param_get_vector (mc->fit->mset, mc->bf);
+  ncm_mset_param_get_vector (mc->fiduc, mc->bf);
 
   switch (mc->mtype)
   {

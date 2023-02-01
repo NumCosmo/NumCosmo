@@ -4,11 +4,11 @@
  *
  *  Sun April 10 10:06:36 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_nnls.c
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -45,6 +45,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include "misc/libqp.h"
+#include <gsl/gsl_multifit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmNNLSPrivate
@@ -73,6 +74,8 @@ struct _NcmNNLSPrivate
   gboolean QR_alloc;
   GArray *ipiv;
   GArray *work;
+  NcmLapackWS *lapack_ws;
+  gsl_multifit_linear_workspace *work_gsl;
 };
 
 enum
@@ -114,6 +117,8 @@ ncm_nnls_init (NcmNNLS *nnls)
   self->QR_alloc      = FALSE;
   self->ipiv          = g_array_new (FALSE, FALSE, sizeof (gint));
   self->work          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->lapack_ws     = ncm_lapack_ws_new ();
+  self->work_gsl      = NULL;
 }
 
 static void _ncm_nnls_set_nrows (NcmNNLS *nnls, const guint nrows);
@@ -216,6 +221,8 @@ _ncm_nnls_dispose (GObject *object)
   ncm_iset_clear (&self->Pset);
   ncm_iset_clear (&self->Pset_try);
   ncm_iset_clear (&self->invalid);
+
+  ncm_lapack_ws_clear (&self->lapack_ws);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_nnls_parent_class)->dispose (object);
@@ -445,6 +452,7 @@ ncm_nnls_get_ncols (NcmNNLS *nnls)
 static void
 _ncm_nnls_prepare_usys_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
 {
+  NcmVector *base_x = NULL;
   self->uncols = ncm_iset_get_len (Pset);
 
   if (G_UNLIKELY (!self->QR_alloc))
@@ -452,6 +460,11 @@ _ncm_nnls_prepare_usys_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
     self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
     self->QR_alloc = TRUE;
   }
+
+  if (self->uncols > self->nrows)
+    base_x = self->b;
+  else
+    base_x = self->residuals;
 
   if (self->uncols == self->ncols)
   {
@@ -461,7 +474,7 @@ _ncm_nnls_prepare_usys_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
     ncm_vector_clear (&self->sub_x_tmp);
 
     self->sub_A_QR = ncm_matrix_ref (self->A_QR);
-    self->sub_x_tmp = ncm_vector_get_subvector (self->residuals, 0, self->uncols);
+    self->sub_x_tmp = ncm_vector_get_subvector (base_x, 0, self->uncols);
   }
   else
   {
@@ -469,12 +482,50 @@ _ncm_nnls_prepare_usys_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
     ncm_vector_clear (&self->sub_x_tmp);
 
     self->sub_A_QR = ncm_iset_get_submatrix_cols (Pset, A, self->A_QR);
-    self->sub_x_tmp = ncm_vector_get_subvector (self->residuals, 0, self->uncols);
+    self->sub_x_tmp = ncm_vector_get_subvector (base_x, 0, self->uncols);
   }
 
-  ncm_vector_memcpy (self->residuals, f);
+  ncm_vector_memcpy2 (base_x, f, 0, 0, self->nrows);
 }
 
+static void
+_ncm_nnls_prepare_usys_DGELSD (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  NcmVector *base_x = NULL;
+  self->uncols = ncm_iset_get_len (Pset);
+
+  if (G_UNLIKELY (!self->QR_alloc))
+  {
+    self->A_QR     = ncm_matrix_new (self->nrows, self->ncols);
+    self->QR_alloc = TRUE;
+  }
+
+  if (self->uncols > self->nrows)
+    base_x = self->b;
+  else
+    base_x = self->residuals;
+
+  if (self->uncols == self->ncols)
+  {
+    ncm_matrix_memcpy_to_colmajor (self->A_QR, A);
+
+    ncm_matrix_clear (&self->sub_A_QR);
+    ncm_vector_clear (&self->sub_x_tmp);
+
+    self->sub_A_QR = ncm_matrix_ref (self->A_QR);
+    self->sub_x_tmp = ncm_vector_get_subvector (base_x, 0, self->uncols);
+  }
+  else
+  {
+    ncm_matrix_clear (&self->sub_A_QR);
+    ncm_vector_clear (&self->sub_x_tmp);
+
+    self->sub_A_QR = ncm_iset_get_submatrix_colmajor_cols (Pset, A, self->A_QR);
+    self->sub_x_tmp = ncm_vector_get_subvector (base_x, 0, self->uncols);
+  }
+
+  ncm_vector_memcpy2 (base_x, f, 0, 0, self->nrows);
+}
 
 static void
 _ncm_nnls_prepare_usys_normal (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -503,6 +554,7 @@ _ncm_nnls_prepare_usys_normal (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMat
 }
 
 static void _ncm_nnls_solve_normal_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f);
+static void _ncm_nnls_solve_normal_DGELSD (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f);
 
 static void
 _ncm_nnls_solve_normal_LU (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -540,8 +592,10 @@ static void
 _ncm_nnls_solve_normal_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
 {
   gint ret, lwork;
+  gint ldb;
 
   _ncm_nnls_prepare_usys_QR (self, Pset, A, x, f);
+  ldb = GSL_MAX (self->uncols, self->nrows);
 
   if (self->work->len == 0)
     g_array_set_size (self->work, self->ncols);
@@ -549,7 +603,7 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
   lwork = -1;
   ret = ncm_lapack_dgels ('N', self->nrows, self->uncols, 1,
                           ncm_matrix_data (self->sub_A_QR), ncm_matrix_tda (self->sub_A_QR),
-                          ncm_vector_data (self->residuals), self->nrows,
+                          ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
   g_assert_cmpint (ret, ==, 0);
 
@@ -559,10 +613,26 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix 
 
   ret = ncm_lapack_dgels ('N', self->nrows, self->uncols, 1,
                           ncm_matrix_data (self->sub_A_QR), ncm_matrix_tda (self->sub_A_QR),
-                          ncm_vector_data (self->residuals), self->nrows,
+                          ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
   g_assert_cmpint (ret, ==, 0);
 }
+
+static void
+_ncm_nnls_solve_normal_DGELSD (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
+{
+  gdouble rcond;
+  gint ret, ldb, rank;
+
+  _ncm_nnls_prepare_usys_DGELSD (self, Pset, A, x, f);
+  ldb = GSL_MAX (self->uncols, self->nrows);
+
+  ret = ncm_lapack_dgelsd (self->nrows, self->uncols, 1,
+                          ncm_matrix_data (self->sub_A_QR), ncm_matrix_nrows (self->sub_A_QR),
+                          ncm_vector_data (self->sub_x_tmp), ldb, ncm_vector_data (self->mgrad), &rcond, &rank, self->lapack_ws);
+  g_assert_cmpint (ret, ==, 0);
+}
+
 
 static void
 _ncm_nnls_solve_normal_cholesky (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -590,10 +660,35 @@ _ncm_nnls_solve_unconstrained (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMat
     case NCM_NNLS_UMETHOD_QR:
       _ncm_nnls_solve_normal_QR (self, Pset, A, x, f);
       break;
+    case NCM_NNLS_UMETHOD_DGELSD:
+      _ncm_nnls_solve_normal_DGELSD (self, Pset, A, x, f);
+      break;
+    case NCM_NNLS_UMETHOD_GSL:
+    {
+      gdouble chi2 = 0.0;
+      size_t rank = 0;
+      gint ret;
+
+      _ncm_nnls_prepare_usys_QR (self, Pset, A, x, f);
+
+      ret = gsl_multifit_linear_tsvd (
+          ncm_matrix_gsl (self->sub_A_QR),
+          ncm_vector_gsl (f),
+          1.0e-65,
+          ncm_vector_gsl (self->sub_x_tmp),
+          ncm_matrix_gsl (self->M),
+          &chi2, &rank, self->work_gsl);
+
+      NCM_TEST_GSL_RESULT ("_ncm_nnls_solve_unconstrained", ret);
+      break;
+    }
     default:
       g_assert_not_reached ();
       break;
   }
+  /*printf ("# Method: %d: ", self->umethod);*/
+  /*ncm_vector_log_vals (self->sub_x_tmp, "X: ", "% 12.5g", TRUE);*/
+  /*printf ("NHOCA % 22.15g\n", ncm_vector_get (x, ncm_vector_len (x) - 1));*/
 }
 
 static gdouble
@@ -617,6 +712,7 @@ _ncm_nnls_compute_mgrad (NcmNNLSPrivate *const self, NcmMatrix *A, NcmVector *x,
 static void
 _ncm_nnls_solve_feasible (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f, guint max_remove)
 {
+  /*ncm_iset_log_vals (Pset, "Pset: ");*/
   _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
 
   ncm_vector_set_zero (x);
@@ -628,6 +724,7 @@ _ncm_nnls_solve_feasible (NcmNNLSPrivate *const self, NcmISet *Pset, NcmMatrix *
   {
     ncm_iset_remove_smallest_subset (self->invalid, Pset, x, max_remove);
 
+    /*ncm_iset_log_vals (Pset, "Pset: ");*/
     _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
 
     ncm_vector_set_zero (x);
@@ -657,6 +754,7 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
   NcmNNLSPrivate *const self = nnls->priv;
   gdouble rnorm;
 
+  /*ncm_vector_log_vals (f, "f:   ", "% 12.5g", TRUE);*/
   g_assert_cmpuint (ncm_matrix_nrows (A), ==, self->nrows);
   g_assert_cmpuint (ncm_matrix_ncols (A), ==, self->ncols);
 
@@ -678,7 +776,20 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
       break;
     }
     case NCM_NNLS_UMETHOD_QR:
+    case NCM_NNLS_UMETHOD_DGELSD:
       break;
+    case NCM_NNLS_UMETHOD_GSL:
+    {
+      if (G_UNLIKELY (!self->LU_alloc))
+      {
+        self->M   = ncm_matrix_new (self->ncols, self->ncols);
+        self->M_U = ncm_matrix_new (self->ncols, self->ncols);
+        self->LU_alloc = TRUE;
+      }
+      g_clear_pointer (&self->work_gsl, gsl_multifit_linear_free);
+      self->work_gsl = gsl_multifit_linear_alloc (self->nrows, self->ncols);
+      break;
+    }
     default:
       g_assert_not_reached ();
       break;
@@ -686,12 +797,12 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
 
   ncm_iset_reset (self->Pset);
 
-  /*ncm_iset_add (self->Pset, ncm_vector_get_max_index (self->b));*/
   ncm_iset_add_range (self->Pset, 0, self->ncols);
 
   _ncm_nnls_solve_feasible (self, self->Pset, A, x, f, self->ncols);
   rnorm = _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
   _ncm_nnls_compute_mgrad (self, A, x, f, self->residuals, self->mgrad);
+
 
   while (TRUE)
   {

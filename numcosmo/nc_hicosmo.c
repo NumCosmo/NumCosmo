@@ -3,11 +3,11 @@
  *
  *  Tue May 29 19:23:52 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -798,7 +798,7 @@ _nc_hicosmo_log_all_models_go (GType model_type, guint n)
 void
 nc_hicosmo_log_all_models (GType parent)
 {
-  g_message ("# Registred NcHICosmo:%s are:\n", g_type_name (parent));
+  g_message ("# Registered NcHICosmo:%s are:\n", g_type_name (parent));
   _nc_hicosmo_log_all_models_go (parent, 0);
 }
 
@@ -928,6 +928,7 @@ nc_hicosmo_mqE2_max (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble
   gsl_function F;
   zt_params params;
   gdouble zm_0, qE2_0, zi;
+  gint ret;
 
   params.cosmo = cosmo;
 
@@ -957,7 +958,8 @@ nc_hicosmo_mqE2_max (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble
   if ((zm_0 <= z_lo) || (zm_0 >= z_hi))
     zm_0 = 0.5 * (z_lo + z_hi);
   
-  gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  ret = gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  NCM_TEST_GSL_RESULT ("nc_hicosmo_mqE2_max", ret);
 
   do
   {
@@ -1023,6 +1025,7 @@ nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble 
   gsl_function F;
   zt_params params;
   gdouble zm_0, dec_0, zi;
+  gint ret;
 
   params.cosmo = cosmo;
 
@@ -1052,7 +1055,8 @@ nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble 
   if ((zm_0 <= z_lo) || (zm_0 >= z_hi))
     zm_0 = 0.5 * (z_lo + z_hi);
   
-  gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  ret = gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  NCM_TEST_GSL_RESULT ("nc_hicosmo_dec_min", ret);
 
   do
   {
@@ -1118,6 +1122,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
   gsl_function F;
   zt_params params;
   gdouble zm_0, q_0, zi;
+  gint ret;
 
   params.cosmo = cosmo;
 
@@ -1147,7 +1152,8 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
   if ((zm_0 <= z_lo) || (zm_0 >= z_hi))
     zm_0 = 0.5 * (z_lo + z_hi);
   
-  gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  ret = gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+  NCM_TEST_GSL_RESULT ("nc_hicosmo_q_min", ret);
 
   do
   {
@@ -2012,5 +2018,5 @@ _nc_hicosmo_register_functions (void)
 
   ncm_mset_func_list_register ("mqE2_max",    "\\mathrm{max}(-qE^2)",            "NcHICosmo", "Maximum of mqE2",                           G_TYPE_NONE, _nc_hicosmo_flist_mqE2_max,  1, 2);
   ncm_mset_func_list_register ("q_min",       "\\mathrm{min}(q)",                "NcHICosmo", "Minimum of q",                              G_TYPE_NONE, _nc_hicosmo_flist_q_min,     1, 2);
-  ncm_mset_func_list_register ("dec_min",     "\\mathrm{min}(dec)",              "NcHICosmo", "Minimum of dec",                            G_TYPE_NONE, _nc_hicosmo_flist_dec_min,   1, 2);
+  ncm_mset_func_list_register ("dec_min",     "\\mathrm{min}(dec)",              "NcHICosmo", "Minimum of DEC",                            G_TYPE_NONE, _nc_hicosmo_flist_dec_min,   1, 2);
 }

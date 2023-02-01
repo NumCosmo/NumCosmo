@@ -3,7 +3,7 @@
  *
  *  Fri June 17 10:12:06 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /* excerpt from: */
 
@@ -23,7 +23,7 @@
  ****************************************************************************/
 /*
  * ncm_powspec_filter.c
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -591,6 +591,9 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+
+      ncm_vector_free (var_z);
+      ncm_vector_free (dvar_z);
     }
 
     ncm_spline2d_prepare (psf->var);

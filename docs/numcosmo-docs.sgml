@@ -93,9 +93,7 @@
       <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
       <xi:include href="xml/ncm_mpsf_0F1.xml"/>
       <xi:include href="xml/ncm_mpsf_sbessel.xml"/>
-      <xi:include href="xml/ncm_mpsf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_sbessel.xml"/>
-      <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_spherical_harmonics.xml"/>
     </section>
     <section>
@@ -214,6 +212,7 @@
       <xi:include href="xml/nc_hicosmo_de_reparam_ok.xml"/>
       <xi:include href="xml/nc_hicosmo_de_reparam_cmb.xml"/>
       <xi:include href="xml/nc_hicosmo_de_xcdm.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_wspline.xml"/>
       <xi:include href="xml/nc_hicosmo_de_cpl.xml"/>
       <xi:include href="xml/nc_hicosmo_de_jbp.xml"/>
     </section>
@@ -348,17 +347,17 @@
       <xi:include href="xml/nc_multiplicity_func_tinker_mean_normalized.xml"/>
       <xi:include href="xml/nc_multiplicity_func_crocce.xml"/>
       <xi:include href="xml/nc_multiplicity_func_bocquet.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_watson.xml"/>
     </section>
     <xi:include href="xml/nc_halo_mass_function.xml"/>
     <section>
       <title>Halo Bias Function Type</title>
-      <xi:include href="xml/nc_halo_bias_type.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_ps.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_st_spher.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_st_ellip.xml"/>
-      <xi:include href="xml/nc_halo_bias_type_tinker.xml"/>
+      <xi:include href="xml/nc_halo_bias.xml"/>
+      <xi:include href="xml/nc_halo_bias_ps.xml"/>
+      <xi:include href="xml/nc_halo_bias_st_spher.xml"/>
+      <xi:include href="xml/nc_halo_bias_st_ellip.xml"/>
+      <xi:include href="xml/nc_halo_bias_tinker.xml"/>
     </section>
-    <xi:include href="xml/nc_halo_bias_func.xml"/>
     <xi:include href="xml/nc_galaxy_acf.xml"/>
     <section>
       <title>Cluster Redshift</title>
@@ -429,14 +428,13 @@
     <xi:include href="xml/nc_data_bao_empirical_fit.xml"/>
     <xi:include href="xml/nc_data_bao_empirical_fit_2d.xml"/>
     <xi:include href="xml/nc_data_bao_dhr_dar.xml"/>
+    <xi:include href="xml/nc_data_bao_dtr_dhr.xml"/>
     <xi:include href="xml/nc_data_bao_dmr_hr.xml"/>
     <xi:include href="xml/nc_data_snia.xml"/>
     <xi:include href="xml/nc_data_dist_mu.xml"/>
     <xi:include href="xml/nc_data_snia_cov.xml"/>
     <xi:include href="xml/nc_data_cluster_ncount.xml"/>
-    <xi:include href="xml/nc_data_cluster_poisson.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
-    <xi:include href="xml/nc_data_cluster_counts_box_poisson.xml"/>
     <xi:include href="xml/nc_data_cluster_wl.xml"/>
     <xi:include href="xml/nc_data_reduced_shear_cluster_mass.xml"/>
     <xi:include href="xml/nc_data_planck_lkl.xml"/>
@@ -449,17 +447,10 @@
   
   <chapter>
     <title>Mathematical Utilities</title>
-    <xi:include href="xml/dividedifference.xml"/>
-    <xi:include href="xml/binsplit.xml"/>
-    <xi:include href="xml/poly.xml"/>
-    <xi:include href="xml/matrix_exp.xml"/>
-    <xi:include href="xml/mpq_tree.xml"/>
-    <xi:include href="xml/magnus_iserles_ode.xml"/>
-    <xi:include href="xml/grid_one.xml"/>
-    <xi:include href="xml/quadrature.xml"/>
+    <xi:include href="xml/ncm_binsplit.xml"/>
     <xi:include href="xml/ncm_function_cache.xml"/>
     <xi:include href="xml/ncm_memory_pool.xml"/>
-    <xi:include href="xml/integral.xml"/>
+    <xi:include href="xml/ncm_integrate.xml"/>
   </chapter>
 
   <chapter>

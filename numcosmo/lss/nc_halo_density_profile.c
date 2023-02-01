@@ -165,7 +165,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_ode_spline.h"
 #include "math/ncm_memory_pool.h"

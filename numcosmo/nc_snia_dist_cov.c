@@ -3,11 +3,11 @@
  *
  *  Mon December 03 19:34:29 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -286,6 +286,150 @@ nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len)
 }
 
 /**
+ * nc_snia_dist_cov_new_by_id: (constructor)
+ * @dist: a #NcDistance
+ * @snia_id: a #NcDataSNIAId
+ *
+ * Creates a new SNIa model using the default values for the sample
+ * defined by @snia_id.
+ *
+ * Returns: (transfer full): a new #NcSNIADistCov
+ */
+NcSNIADistCov *
+nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
+{
+  NcSNIADistCov *dcov = NULL;
+  const gdouble lnsigma0 = -15.0 * M_LN10;
+
+  switch (snia_id)
+  {
+    case NC_DATA_SNIA_COV_SNLS3_SYS_STAT:
+      g_error ("nc_snia_dist_cov_new_by_id: sample SNLS3_SYS_STAT not supported");
+      break;
+    case NC_DATA_SNIA_COV_SNLS3_STAT_ONLY:
+      g_error ("nc_snia_dist_cov_new_by_id: sample SNLS3_STAT_ONLY not supported");
+      break;
+    case NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT:
+    {
+      gdouble lnsigma_int_data[4] = {lnsigma0, lnsigma0, lnsigma0, lnsigma0};
+      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.141,
+                           "beta",               2.60,
+                           "M1",                 -19.0497380934588,
+                           "M2",                 -19.1196618476607,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int",        lnsigma_int,
+                           "lnsigma_int-length", 4,
+                           "alpha-fit",          TRUE,
+                           "beta-fit",           TRUE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             TRUE,
+                           NULL
+      );
+      ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL:
+    {
+      gdouble lnsigma_int_data[4] = {log (0.08), log (0.108), log (0.134), log (0.1)};
+      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.141,
+                           "beta",               2.60,
+                           "M1",                 -19.0497090404172,
+                           "M2",                 -19.1196499780362,
+                           "lnsigma_pecz",       log (150000.0 / ncm_c_c ()),
+                           "lnsigma_lens",       log (0.055),
+                           "lnsigma_int",        lnsigma_int,
+                           "lnsigma_int-length", 4,
+                           "alpha-fit",          TRUE,
+                           "beta-fit",           TRUE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             TRUE,
+                           NULL
+      );
+      ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_PANTHEON:
+    {
+      gdouble lnsigma_int_data[1] = {lnsigma0};
+      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 1, 1);
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.0497380934588,
+                           "M2",                 -19.1196618476607,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int",        lnsigma_int,
+                           "lnsigma_int-length", 1,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+      );
+      ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
+    {
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.25,
+                           "M2",                 -19.25,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int-length", 0,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+      );
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT:
+    {
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.25,
+                           "M2",                 -19.25,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int-length", 0,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+      );
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  return dcov;
+}
+
+/**
  * nc_snia_dist_cov_ref:
  * @dcov: a #NcSNIADistCov
  *
@@ -421,18 +565,23 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   const gdouble lnsigma_lens   = LNSIGMA_LENS;
   const gdouble var_pecz       = exp (2.0 * lnsigma_pecz);
   const gdouble var_lens       = exp (2.0 * lnsigma_lens);
-  const guint mu_len           = snia_cov->mu_len;
+  const guint mu_len           = nc_data_snia_cov_snia_len (snia_cov);
+  const guint dataset_len      = nc_data_snia_cov_sigma_int_len (snia_cov);
+  const NcmVector *cov_packed  = nc_data_snia_cov_peek_cov_packed (snia_cov);
+  const GArray *dataset        = nc_data_snia_cov_peek_dataset (snia_cov);
+  const NcmVector *v_z_cmb     = nc_data_snia_cov_peek_z_cmb (snia_cov);
+  const NcmVector *v_sigma_z   = nc_data_snia_cov_peek_sigma_z (snia_cov);
   gboolean needs_update        = FALSE;
   register guint i, j, ij;
 
   g_assert (NCM_DATA (snia_cov)->init);
 
-  if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) > snia_cov->dataset_len)
+  if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) > dataset_len)
     g_warning ("nc_snia_dist_cov_calc: model dataset is larger then the used by the data: %u > %u.",
-               ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), snia_cov->dataset_len);
-  else if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) < snia_cov->dataset_len)
+               ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), dataset_len);
+  else if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) < dataset_len)
     g_error ("nc_snia_dist_cov_calc: model dataset is smaller then the used by the data: %u < %u.",
-             ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), snia_cov->dataset_len);
+             ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), dataset_len);
   ij = 0;
 
   for (i = 0; i < dcov->var_int->len; i++)
@@ -457,12 +606,12 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   {
     for (j = i; j < mu_len; j++)
     {
-      const gdouble mag_mag       = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_MAG);
-      const gdouble mag_width     = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_WIDTH);
-      const gdouble mag_colour    = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_COLOUR);
-      const gdouble width_width   = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH);
-      const gdouble width_colour  = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR);
-      const gdouble colour_colour = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR);
+      const gdouble mag_mag       = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_MAG);
+      const gdouble mag_width     = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_WIDTH);
+      const gdouble mag_colour    = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_COLOUR);
+      const gdouble width_width   = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH);
+      const gdouble width_colour  = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR);
+      const gdouble colour_colour = ncm_vector_fast_get (cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR);
       ncm_matrix_set (cov, i, j,
                       mag_mag
                       + alpha2 * width_width
@@ -475,10 +624,10 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
     }
 
     {
-      const guint dset_id      = g_array_index (snia_cov->dataset, guint32, i);
+      const guint dset_id      = g_array_index (dataset, guint32, i);
       const gdouble var_int    = g_array_index (dcov->var_int, gdouble, dset_id);
-      const gdouble z_cmb      = ncm_vector_get (snia_cov->z_cmb, i);
-      const gdouble sigma_z    = ncm_vector_get (snia_cov->sigma_z, i);
+      const gdouble z_cmb      = ncm_vector_get (v_z_cmb, i);
+      const gdouble sigma_z    = ncm_vector_get (v_sigma_z, i);
       const gdouble emptyfac   = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
       const gdouble var_z_tot  = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac;
       const gdouble var_lens_z = var_lens * z_cmb * z_cmb;
@@ -510,14 +659,20 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
 void
 nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y)
 {
-  NcmModel *model       = NCM_MODEL (dcov);
-  const gdouble mag_cut = nc_data_snia_cov_get_mag_cut (snia_cov);
-  const guint mu_len    = ncm_model_vparam_len (model, NC_SNIA_DIST_COV_MU);
+  NcmModel *model             = NCM_MODEL (dcov);
+  const gdouble mag_cut       = nc_data_snia_cov_get_mag_cut (snia_cov);
+  const guint mu_len          = ncm_model_vparam_len (model, NC_SNIA_DIST_COV_MU);
+  const guint cat_mu_len      = nc_data_snia_cov_snia_len (snia_cov);
+  const NcmVector *v_z_cmb    = nc_data_snia_cov_peek_z_cmb (snia_cov);
+  const NcmVector *v_z_he     = nc_data_snia_cov_peek_z_he (snia_cov);
+  const NcmVector *v_width    = nc_data_snia_cov_peek_width (snia_cov);
+  const NcmVector *v_colour   = nc_data_snia_cov_peek_colour (snia_cov);
+  const NcmVector *v_thirdpar = nc_data_snia_cov_peek_thirdpar (snia_cov);
 
   if (mu_len > 0)
   {
-    if (mu_len != snia_cov->mu_len)
-      g_error ("nc_snia_dist_cov_mean: number of distance modulus variables in NcSNIADistCov don't match NcDataSNIACov %u != %u", mu_len, snia_cov->mu_len);
+    if (mu_len != cat_mu_len)
+      g_error ("nc_snia_dist_cov_mean: number of distance modulus variables in NcSNIADistCov don't match NcDataSNIACov %u != %u", mu_len, cat_mu_len);
     else
     {
       guint i;
@@ -529,9 +684,9 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
 
       for (i = 0; i < mu_len; i++)
       {
-        const gdouble width    = ncm_vector_get (snia_cov->width, i);
-        const gdouble colour   = ncm_vector_get (snia_cov->colour, i);
-        const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
+        const gdouble width    = ncm_vector_get (v_width, i);
+        const gdouble colour   = ncm_vector_get (v_colour, i);
+        const gdouble thirdpar = ncm_vector_get (v_thirdpar, i);
         const gdouble mu = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_MU, i);
         const gdouble mag_th = mu - alpha * (width - 1.0) + beta * colour + ((thirdpar < mag_cut) ? Mcal1 : Mcal2);
         ncm_vector_set (y, i, mag_th);
@@ -549,19 +704,61 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
 
     g_assert (NCM_DATA (snia_cov)->init);
 
-    for (i = 0; i < snia_cov->mu_len; i++)
+    for (i = 0; i < cat_mu_len; i++)
     {
-      const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
-      const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
-      const gdouble width    = ncm_vector_get (snia_cov->width, i);
-      const gdouble colour   = ncm_vector_get (snia_cov->colour, i);
-      const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
+      const gdouble z_cmb    = ncm_vector_get (v_z_cmb, i);
+      const gdouble z_he     = ncm_vector_get (v_z_he, i);
+      const gdouble width    = ncm_vector_get (v_width, i);
+      const gdouble colour   = ncm_vector_get (v_colour, i);
+      const gdouble thirdpar = ncm_vector_get (v_thirdpar, i);
       const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
       const gdouble mag_th   = dmu - alpha * (width - 1.0) + beta * colour + ((thirdpar < mag_cut) ? Mcal1 : Mcal2);
       const gdouble y_i      = mag_th;
 
       ncm_vector_set (y, i, y_i);
     }
+  }
+}
+
+/**
+ * nc_snia_dist_cov_mean_V2:
+ * @dcov: a #NcSNIADistCov
+ * @cosmo: a #NcHICosmo
+ * @snia_cov: a #NcDataSNIACov
+ * @y: a #NcmVector
+ *
+ * FIXME
+ *
+ */
+void
+nc_snia_dist_cov_mean_V2 (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y)
+{
+  NcmModel *model              = NCM_MODEL (dcov);
+  const guint mu_len           = ncm_model_vparam_len (model, NC_SNIA_DIST_COV_MU);
+  const guint cat_mu_len       = nc_data_snia_cov_snia_len (snia_cov);
+  const NcmVector *v_z_hd      = nc_data_snia_cov_peek_z_hd (snia_cov);
+  const NcmVector *v_z_he      = nc_data_snia_cov_peek_z_he (snia_cov);
+  const NcmVector *v_ceph_dist = nc_data_snia_cov_peek_ceph_dist (snia_cov);
+  const gdouble DH             = nc_distance_hubble (dcov->dist, cosmo);
+  const gdouble five_log10DH   = 5.0 * log10 (DH);
+  const gdouble M              = ABSMAG1;
+  GArray *is_calib             = nc_data_snia_cov_peek_is_calib (snia_cov);
+  guint i;
+
+  g_assert (NCM_DATA (snia_cov)->init);
+  g_assert (mu_len == 0);
+
+  for (i = 0; i < cat_mu_len; i++)
+  {
+    const gboolean cal     = (g_array_index (is_calib, guint32, i) > 0);
+    const gdouble z_hd     = ncm_vector_get (v_z_hd, i);
+    const gdouble z_he     = ncm_vector_get (v_z_he, i);
+    const gdouble dmu      = cal ? ncm_vector_get (v_ceph_dist, i) : nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_hd) + five_log10DH;
+    const gdouble mbc_th   = dmu + M;
+
+    /*printf ("Is calib %d %d % 22.15g % 22.15g\n", i, cal, dmu, mbc_th);*/
+
+    ncm_vector_set (y, i, mbc_th);
   }
 }
 
@@ -574,26 +771,29 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
  * @width_th: the true width
  * @colour_th: the true colour
  *
- * Computes the apparent magniture from model, width and colour.
+ * Computes the apparent magnitude from model, width and colour.
  *
- * Returns: the apparent magniture.
+ * Returns: the apparent magnitude.
  */
 gdouble
 nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, guint i, gdouble width_th, gdouble colour_th)
 {
-  const gdouble alpha   = ALPHA;
-  const gdouble beta    = BETA;
-  const gdouble DH      = nc_distance_hubble (dcov->dist, cosmo);
-  const gdouble Mcal1   = ABSMAG1 + 5.0 * log10 (DH);
-  const gdouble Mcal2   = ABSMAG2 + 5.0 * log10 (DH);
-  const gdouble mag_cut = nc_data_snia_cov_get_mag_cut (snia_cov);
+  const gdouble alpha         = ALPHA;
+  const gdouble beta          = BETA;
+  const gdouble DH            = nc_distance_hubble (dcov->dist, cosmo);
+  const gdouble Mcal1         = ABSMAG1 + 5.0 * log10 (DH);
+  const gdouble Mcal2         = ABSMAG2 + 5.0 * log10 (DH);
+  const gdouble mag_cut       = nc_data_snia_cov_get_mag_cut (snia_cov);
+  const NcmVector *v_z_cmb    = nc_data_snia_cov_peek_z_cmb (snia_cov);
+  const NcmVector *v_z_he     = nc_data_snia_cov_peek_z_he (snia_cov);
+  const NcmVector *v_thirdpar = nc_data_snia_cov_peek_thirdpar (snia_cov);
 
   g_assert (NCM_DATA (snia_cov)->init);
 
   {
-    const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
-    const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
-    const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
+    const gdouble z_cmb    = ncm_vector_get (v_z_cmb, i);
+    const gdouble z_he     = ncm_vector_get (v_z_he, i);
+    const gdouble thirdpar = ncm_vector_get (v_thirdpar, i);
     const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
     const gdouble mag_th   = dmu - alpha * (width_th - 1.0) + beta * colour_th + ((thirdpar < mag_cut) ? Mcal1 : Mcal2);
 
@@ -610,7 +810,7 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
  * @X: a #NcmMatrix
  * @colmajor: whether to fill the matrices in a col-major format
  *
- * Computes effective observed vector @obs, the first @snia_cov->mu_len params
+ * Computes effective observed vector @obs, the first @snia_cov->mu_len parameters
  * are set to the width colour combination using the values of the distance
  * modulus from the model @cosmo and the SNIa model @dcov, i.e.,
  * $-\alpha{}w_i+\beta{}c_i = m_{\mathrm{B},i} - \mu_{\mathrm{th},i}-\alpha-\mathcal{M}_i$.
@@ -622,13 +822,20 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
 void
 nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *obs, NcmMatrix *X, gboolean colmajor)
 {
-  const gdouble alpha   = ALPHA;
-  const gdouble beta    = BETA;
-  const gdouble DH      = nc_distance_hubble (dcov->dist, cosmo);
-  const gdouble Mcal1   = ABSMAG1 + 5.0 * log10 (DH);
-  const gdouble Mcal2   = ABSMAG2 + 5.0 * log10 (DH);
-  const gdouble mag_cut = nc_data_snia_cov_get_mag_cut (snia_cov);
-  const guint mu_len    = snia_cov->mu_len;
+  const gdouble alpha         = ALPHA;
+  const gdouble beta          = BETA;
+  const gdouble DH            = nc_distance_hubble (dcov->dist, cosmo);
+  const gdouble Mcal1         = ABSMAG1 + 5.0 * log10 (DH);
+  const gdouble Mcal2         = ABSMAG2 + 5.0 * log10 (DH);
+  const gdouble mag_cut       = nc_data_snia_cov_get_mag_cut (snia_cov);
+  const guint mu_len          = nc_data_snia_cov_snia_len (snia_cov);
+  const NcmVector *v_z_cmb    = nc_data_snia_cov_peek_z_cmb (snia_cov);
+  const NcmVector *v_z_he     = nc_data_snia_cov_peek_z_he (snia_cov);
+  const NcmVector *v_mag      = nc_data_snia_cov_peek_mag (snia_cov);
+  const NcmVector *v_width    = nc_data_snia_cov_peek_width (snia_cov);
+  const NcmVector *v_colour   = nc_data_snia_cov_peek_colour (snia_cov);
+  const NcmVector *v_thirdpar = nc_data_snia_cov_peek_thirdpar (snia_cov);
+
   guint i;
 
   g_assert (NCM_DATA (snia_cov)->init);
@@ -639,14 +846,14 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
   {
     for (i = 0; i < mu_len; i++)
     {
-      const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
-      const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
-      const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
+      const gdouble z_cmb    = ncm_vector_get (v_z_cmb, i);
+      const gdouble z_he     = ncm_vector_get (v_z_he, i);
+      const gdouble thirdpar = ncm_vector_get (v_thirdpar, i);
       const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
       const gdouble M        = ((thirdpar < mag_cut) ? Mcal1 : Mcal2);
-      const gdouble m_obs_i  = ncm_vector_get (snia_cov->mag, i);
-      const gdouble w_obs_i  = ncm_vector_get (snia_cov->width, i);
-      const gdouble c_obs_i  = ncm_vector_get (snia_cov->colour, i);
+      const gdouble m_obs_i  = ncm_vector_get (v_mag, i);
+      const gdouble w_obs_i  = ncm_vector_get (v_width, i);
+      const gdouble c_obs_i  = ncm_vector_get (v_colour, i);
 
       ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - dmu - alpha - M);
       ncm_vector_set (obs, i + 1 * mu_len, w_obs_i);
@@ -662,14 +869,14 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
   {
     for (i = 0; i < mu_len; i++)
     {
-      const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
-      const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
-      const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
+      const gdouble z_cmb    = ncm_vector_get (v_z_cmb, i);
+      const gdouble z_he     = ncm_vector_get (v_z_he, i);
+      const gdouble thirdpar = ncm_vector_get (v_thirdpar, i);
       const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
       const gdouble M        = ((thirdpar < mag_cut) ? Mcal1 : Mcal2);
-      const gdouble m_obs_i  = ncm_vector_get (snia_cov->mag, i);
-      const gdouble w_obs_i  = ncm_vector_get (snia_cov->width, i);
-      const gdouble c_obs_i  = ncm_vector_get (snia_cov->colour, i);
+      const gdouble m_obs_i  = ncm_vector_get (v_mag, i);
+      const gdouble w_obs_i  = ncm_vector_get (v_width, i);
+      const gdouble c_obs_i  = ncm_vector_get (v_colour, i);
 
       ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - dmu - alpha - M);
       ncm_vector_set (obs, i + 1 * mu_len, w_obs_i);
@@ -701,11 +908,15 @@ nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint 
   g_assert (NCM_DATA (snia_cov)->init);
 
   {
-    const guint dset_id       = g_array_index (snia_cov->dataset, guint32, i);
+    const GArray *dataset        = nc_data_snia_cov_peek_dataset (snia_cov);
+    const NcmVector *v_z_cmb     = nc_data_snia_cov_peek_z_cmb (snia_cov);
+    const NcmVector *v_sigma_z   = nc_data_snia_cov_peek_sigma_z (snia_cov);
+
+    const guint dset_id       = g_array_index (dataset, guint32, i);
     const gdouble lnsigma_int = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_LNSIGMA_INT, dset_id);
     const gdouble var_int     = exp (2.0 * lnsigma_int);
-    const gdouble z_cmb       = ncm_vector_get (snia_cov->z_cmb, i);
-    const gdouble sigma_z     = ncm_vector_get (snia_cov->sigma_z, i);
+    const gdouble z_cmb       = ncm_vector_get (v_z_cmb, i);
+    const gdouble sigma_z     = ncm_vector_get (v_sigma_z, i);
     const gdouble emptyfac    = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
     const gdouble var_pecz    = exp (2.0 * LNSIGMA_PECZ);
     const gdouble var_lens    = exp (2.0 * LNSIGMA_LENS);
@@ -732,97 +943,4 @@ nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta)
 {
   *alpha = ALPHA;
   *beta  = BETA;
-}
-
-/**
- * nc_snia_dist_cov_set_default_params_by_id:
- * @dcov: a #NcSNIADistCov
- * @snia_id: a #NcDataSNIAId
- *
- * Sets the default parameters appropriated to the sample defined by @snia_id.
- *
- */
-void 
-nc_snia_dist_cov_set_default_params_by_id (NcSNIADistCov *dcov, NcDataSNIAId snia_id)
-{
-  const gdouble lnsigma0 = -15.0 * M_LN10;
-  
-  switch (snia_id)
-  {
-    case NC_DATA_SNIA_COV_SNLS3_SYS_STAT:
-      g_assert_not_reached ();
-      break;
-    case NC_DATA_SNIA_COV_SNLS3_STAT_ONLY:
-      g_assert_not_reached ();
-      break;
-    case NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT:
-    {
-      gdouble lnsigma_int_data[4] = {lnsigma0, lnsigma0, lnsigma0, lnsigma0};
-      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
-      g_object_set (dcov, 
-                    "alpha",        0.141,
-                    "beta",         2.60,
-                    "M1",           -19.0497380934588,
-                    "M2",           -19.1196618476607,
-                    "lnsigma_pecz", lnsigma0,
-                    "lnsigma_lens", lnsigma0,
-                    "lnsigma_int",  lnsigma_int,
-                    "alpha-fit",    TRUE,
-                    "beta-fit",     TRUE,
-                    "M1-fit",       TRUE,
-                    "M2-fit",       TRUE,
-                    NULL
-                    );
-      ncm_vector_free (lnsigma_int);
-      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
-      break;
-    }
-    case NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL:
-    {
-      gdouble lnsigma_int_data[4] = {log (0.08), log (0.108), log (0.134), log (0.1)};
-      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 4, 1);
-      g_object_set (dcov, 
-                    "alpha",        0.141,
-                    "beta",         2.60,
-                    "M1",           -19.0497090404172,
-                    "M2",           -19.1196499780362,
-                    "lnsigma_pecz", log (150000.0 / ncm_c_c ()),
-                    "lnsigma_lens", log (0.055),
-                    "lnsigma_int",  lnsigma_int,
-                    "alpha-fit",    TRUE,
-                    "beta-fit",     TRUE,
-                    "M1-fit",       TRUE,
-                    "M2-fit",       TRUE,
-                    NULL
-                    );
-      ncm_vector_free (lnsigma_int);
-      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
-      break;
-    }
-    case NC_DATA_SNIA_COV_PANTHEON:
-    {
-      gdouble lnsigma_int_data[1] = {lnsigma0};
-      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 1, 1);
-      g_object_set (dcov, 
-                    "alpha",        0.0,
-                    "beta",         0.0,
-                    "M1",           -19.0497380934588,
-                    "M2",           -19.1196618476607,
-                    "lnsigma_pecz", lnsigma0,
-                    "lnsigma_lens", lnsigma0,
-                    "lnsigma_int",  lnsigma_int,
-                    "alpha-fit",    FALSE,
-                    "beta-fit",     FALSE,
-                    "M1-fit",       TRUE,
-                    "M2-fit",       FALSE,
-                    NULL
-                    );
-      ncm_vector_free (lnsigma_int);
-      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-      break;      
-  }
 }

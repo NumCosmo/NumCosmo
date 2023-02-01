@@ -3,11 +3,11 @@
  *
  *  Fri October 28 13:27:25 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2016 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2016 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -55,7 +55,7 @@ struct _NcHICosmoVexpClass
  * @NC_HICOSMO_VEXP_OMEGA_L: scalar field energy density when in a dark energy-like phase
  * @NC_HICOSMO_VEXP_SIGMA_PHI: standard deviation of the scalar field wave function
  * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
- * @NC_HICOSMO_VEXP_ALPHA_B: lorgarithm base e of the scale factor at the bounce
+ * @NC_HICOSMO_VEXP_ALPHA_B: logarithm base e of the scale factor at the bounce
  * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce 
  *
  * FIXME

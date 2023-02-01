@@ -3,11 +3,11 @@
  *
  *  Sat Apr 24 14:29:17 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -89,7 +89,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
     NcMultiplicityFunc *mulf    = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_ps_new ());
     NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
     NcClusterAbundance *cad     = nc_cluster_abundance_nodist_new (mfp, NULL);
-    NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
+    NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad, "NcClusterRedshiftNodist", "NcClusterMassNodist");
     
     ncm_powspec_clear (&ps);
     ncm_powspec_filter_clear (&psf);

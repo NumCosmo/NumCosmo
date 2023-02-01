@@ -65,6 +65,12 @@ test_ncm_integral1d_SOURCES =  \
 test_ncm_sf_sbessel_SOURCES =  \
 	test_ncm_sf_sbessel.c
 
+test_ncm_mpsf_0F1_SOURCES =  \
+	test_ncm_mpsf_0F1.c
+
+test_ncm_mpsf_trig_int_SOURCES =  \
+	test_ncm_mpsf_trig_int.c
+
 test_ncm_model_SOURCES =  \
         test_ncm_model.c \
 	ncm_model_test.c \
@@ -104,6 +110,9 @@ test_ncm_sf_spherical_harmonics_SOURCES =  \
 
 test_ncm_sphere_map_SOURCES =  \
 	test_ncm_sphere_map.c
+	
+test_nc_halo_bias_SOURCES =  \
+        test_nc_halo_bias.c
 
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
@@ -132,14 +141,23 @@ test_nc_data_bao_rdv_SOURCES =  \
 test_nc_data_bao_dvdv_SOURCES =  \
         test_nc_data_bao_dvdv.c
         
+test_nc_data_cluster_ncount_SOURCES =  \
+        test_nc_data_cluster_ncount.c
+        
 test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
+
+test_nc_cluster_abundance_SOURCES =  \
+        test_nc_cluster_abundance.c
 
 test_nc_halo_density_profile_SOURCES =  \
         test_nc_halo_density_profile.c
 
 test_nc_wl_surface_mass_density_SOURCES =  \
         test_nc_wl_surface_mass_density.c
+
+test_nc_powspec_SOURCES =  \
+        test_nc_powspec.c
 
 test_nc_distance_SOURCES =  \
         test_nc_distance.c
@@ -155,6 +173,8 @@ test_programs =  \
 	test_ncm_spline2d               \
 	test_ncm_integral1d             \
 	test_ncm_sf_sbessel             \
+	test_ncm_mpsf_0F1               \
+	test_ncm_mpsf_trig_int           \
 	test_ncm_func_eval              \
 	test_ncm_sparam                 \
 	test_ncm_diff                   \
@@ -171,6 +191,7 @@ test_programs =  \
 	test_ncm_fit_esmcmc             \
 	test_ncm_sf_spherical_harmonics \
 	test_ncm_sphere_map             \
+	test_nc_halo_bias		\
 	test_nc_hiqg_1d                 \
 	test_nc_hicosmo_de              \
 	test_nc_window                  \
@@ -179,11 +200,14 @@ test_programs =  \
 	test_nc_recomb                  \
 	test_nc_cbe                     \
 	test_nc_data_bao_rdv            \
-        test_nc_data_bao_dvdv           \
-        test_nc_cluster_pseudo_counts   \
-        test_nc_halo_density_profile    \
-        test_nc_wl_surface_mass_density \
-        test_nc_distance
+	test_nc_data_bao_dvdv           \
+	test_nc_data_cluster_ncount     \
+	test_nc_cluster_pseudo_counts   \
+	test_nc_cluster_abundance       \
+	test_nc_halo_density_profile    \
+	test_nc_wl_surface_mass_density \
+	test_nc_powspec                 \
+	test_nc_distance
 
 # TEST_PROGS += $(check_programs)
 
@@ -271,6 +295,18 @@ test_ncm_sf_sbessel_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_ncm_mpsf_0F1_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_mpsf_trig_int_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_ncm_model_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
@@ -342,6 +378,12 @@ test_ncm_sphere_map_LDADD = \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
 	$(COVLIBS)
+	
+test_nc_halo_bias_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS) \
+        $(COVLIBS)
 
 test_nc_hicosmo_de_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -397,13 +439,31 @@ test_nc_data_bao_dvdv_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_nc_data_cluster_ncount_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_nc_cluster_pseudo_counts_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_nc_cluster_abundance_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_nc_halo_density_profile_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS) \
+        $(COVLIBS)	
+
+test_nc_powspec_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \

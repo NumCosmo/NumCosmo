@@ -3,11 +3,11 @@
  *
  *  Wed November 07 17:57:28 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2018 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2018 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -75,10 +75,10 @@ typedef struct _TestNcmStatsDistFunc
 #define TEST_NCM_STATS_DIST_TESTS_LEN 8
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
-  {"kde/gauss",     &test_ncm_stats_dist_new_kde_gauss},
-  {"kde/studentt",  &test_ncm_stats_dist_new_kde_studentt},
-  {"vkde/gauss",    &test_ncm_stats_dist_new_vkde_gauss},
-  {"vkde/studentt", &test_ncm_stats_dist_new_vkde_studentt}
+    {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss},
+    {"kde/studentt",        &test_ncm_stats_dist_new_kde_studentt},
+    {"vkde/gauss",          &test_ncm_stats_dist_new_vkde_gauss},
+    {"vkde/studentt",       &test_ncm_stats_dist_new_vkde_studentt},
 };
 
 static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
@@ -193,6 +193,7 @@ test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdat
   }
 }
 
+
 static void
 test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
 {
@@ -225,6 +226,7 @@ test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
   
   ncm_stats_dist_set_over_smooth (test->sd, 0.2);
 }
+
 
 static void
 test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pdata)
@@ -393,11 +395,10 @@ test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer 
   const guint np                 = TESTMULT * test->dim;
   const guint ntests             = 10000000;
   NcmVector *m2lnp_v             = ncm_vector_new (np);
-  NcmVector *cum                 = ncm_vector_new (np);
   gulong N                       = 0;
-  NcmVector *weights;
+  NcmVector *weights, *cum;
   gdouble sum_weights;
-  guint i;
+  guint i, n;
   
   ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
   
@@ -413,13 +414,16 @@ test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer 
   
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
   
+  n   = ncm_stats_dist_get_sample_size (test->sd);
+  cum = ncm_vector_new (n);
+
   ncm_vector_set_zero (cum);
   
   for (i = 0; i < ntests; i++)
   {
     const gint k_i = ncm_stats_dist_kernel_choose (test->sd, rng);
     
-    g_assert_true (k_i < np);
+    g_assert_true (k_i < n);
     ncm_vector_addto (cum, k_i, 1.0);
   }
   
@@ -459,6 +463,7 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
   NcmVector *m2lnp_v             = ncm_vector_new (np);
   gdouble dm2lnL_mean            = 0.0;
   gulong N                       = 0;
+  /*GPtrArray *sample_array;*/
   guint ntests_fail;
   guint i;
   
@@ -477,15 +482,25 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_SPLIT);
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
   
+/*
+  sample_array = ncm_stats_dist_peek_sample_array (test->sd);
+  for (i = 0; i < sample_array->len; i++)
+  {
+    NcmVector *y = g_ptr_array_index (sample_array, i);
+    const gdouble m2lnp = ncm_stats_dist_eval_m2lnp (test->sd, y);
+
+    printf ("#A % 22.15g % 22.15g % 22.15g\n", m2lnp, ncm_vector_get (m2lnp_v, i), ncm_vector_get (m2lnp_v, i) - m2lnp);
+  }
+*/
+
   for (i = 0; i < ntests; i++)
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble p_s  = ncm_stats_dist_eval (test->sd, y);
+    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
     gdouble m2lnL;
     
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    
-    dm2lnL_mean += (-2.0 * log (p_s) - m2lnL);
+    dm2lnL_mean += (m2lnp_s - m2lnL);
   }
   
   dm2lnL_mean = dm2lnL_mean / ntests;
@@ -495,12 +510,13 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
   for (i = 0; i < ntests; i++)
   {
     NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble p_s  = ncm_stats_dist_eval (test->sd, y);
+    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
     gdouble m2lnL;
     
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    
-    if (fabs (p_s / exp (-0.5 * (m2lnL + dm2lnL_mean)) - 1.0) > 0.5)
+
+    /*printf ("test % 22.15g\n", fabs (m2lnp_s / (m2lnL + dm2lnL_mean) - 1.0));*/
+    if (fabs (m2lnp_s / (m2lnL + dm2lnL_mean) - 1.0) > 0.2)
       ntests_fail++;
   }
   
@@ -728,7 +744,7 @@ test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata)
   
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
   ncm_stats_dist_prepare_interp (sd_dup, m2lnp_v);
-  
+
   for (i = 0; i < ntests; i++)
   {
     NcmVector *y     = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);

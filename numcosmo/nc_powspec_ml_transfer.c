@@ -3,11 +3,11 @@
  *
  *  Thu March 17 14:57:40 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_powspec_ml_transfer.c
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -157,7 +157,7 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   
   object_class->dispose  = &_nc_powspec_ml_transfer_dispose;
   object_class->finalize = &_nc_powspec_ml_transfer_finalize;
-  
+
   /**
    * NcPowspecMLTransfer:transfer:
    *
@@ -223,7 +223,7 @@ _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   const gdouble tfz           = growth * tf;
   const gdouble tfz2          = tfz * tfz;
   const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
-  
+
   return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
 }
 

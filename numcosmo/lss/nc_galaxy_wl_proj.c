@@ -5,11 +5,11 @@
  *
  *  Sun Aug 02 11:12:53 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_proj.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it

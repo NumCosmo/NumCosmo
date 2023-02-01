@@ -3,7 +3,7 @@
  *
  *  Wed October 16 11:04:01 2013
  *  Copyright  2013  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_obj_array.c

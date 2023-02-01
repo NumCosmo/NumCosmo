@@ -3,11 +3,11 @@
  *
  *  Mon Jul 16 18:03:42 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -64,7 +64,7 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_Omega_t0: Total density today $\Omega_{t0}$
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
  * @NC_HICOSMO_IMPL_Yp_4He: Primordial Helium mass fraction 
- * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
+ * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scattering surface
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
  * @NC_HICOSMO_IMPL_xb: Maximum redshift
  * @NC_HICOSMO_IMPL_E2Omega_b: Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$

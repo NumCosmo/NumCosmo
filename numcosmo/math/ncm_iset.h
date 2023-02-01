@@ -4,11 +4,11 @@
  *
  *  Sun April 7 16:59:36 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_iset.h
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -78,8 +78,10 @@ guint ncm_iset_get_max_size (NcmISet *iset);
 guint ncm_iset_get_len (NcmISet *iset);
 gdouble ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i);
 NcmVector *ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup);
+GArray *ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup);
 NcmMatrix *ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
 NcmMatrix *ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
+NcmMatrix *ncm_iset_get_submatrix_colmajor_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup);
 NcmMatrix *ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_dup);
 void ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdouble tol);
 void ncm_iset_remove_subset (NcmISet *iset, NcmISet *target);

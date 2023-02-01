@@ -3,12 +3,12 @@
  *
  *  Thu January 05 20:18:45 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -123,10 +123,12 @@ NCM_INLINE gdouble ncm_matrix_get_colmajor (const NcmMatrix *cm, const guint i, 
 NCM_INLINE gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE const gdouble *ncm_matrix_const_ptr (const NcmMatrix *cm, const guint i, const guint j);
 NCM_INLINE GArray *ncm_matrix_get_array (NcmMatrix *cm);
+NCM_INLINE GArray *ncm_matrix_dup_array (NcmMatrix *cm);
 NCM_INLINE void ncm_matrix_set (NcmMatrix *cm, const guint i, const guint j, const gdouble val);
 NCM_INLINE void ncm_matrix_set_colmajor (NcmMatrix *cm, const guint i, const guint j, gdouble val);
 NCM_INLINE void ncm_matrix_addto (NcmMatrix *cm, const guint i, const guint j, const gdouble val);
 NCM_INLINE void ncm_matrix_transpose (NcmMatrix *cm);
+NCM_INLINE void ncm_matrix_transpose_memcpy (NcmMatrix *cm, NcmMatrix *src);
 NCM_INLINE void ncm_matrix_set_identity (NcmMatrix *cm);
 NCM_INLINE void ncm_matrix_set_zero (NcmMatrix *cm);
 NCM_INLINE void ncm_matrix_set_all (NcmMatrix *cm, const gdouble val);
@@ -264,6 +266,14 @@ ncm_matrix_transpose (NcmMatrix *cm)
 {
   const gint ret = gsl_matrix_transpose (ncm_matrix_gsl (cm));
   
+  NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
+}
+
+NCM_INLINE void
+ncm_matrix_transpose_memcpy (NcmMatrix *cm, NcmMatrix *src)
+{
+  const gint ret = gsl_matrix_transpose_memcpy (ncm_matrix_gsl (cm), ncm_matrix_gsl (src));
+
   NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
 }
 
@@ -443,6 +453,29 @@ ncm_matrix_get_array (NcmMatrix *cm)
   g_assert (cm->type == NCM_MATRIX_GARRAY);
   
   return g_array_ref (cm->pdata);
+}
+
+NCM_INLINE GArray *
+ncm_matrix_dup_array (NcmMatrix *cm)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  const guint total = nrows * ncols;
+  GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total);
+  register guint i;
+  register guint j;
+  register guint k;
+
+  g_array_set_size (a, total);
+
+  k = 0;
+  for (i = 0; i < nrows; i++)
+    for (j = 0; j < ncols; j++)
+      g_array_index (a, gdouble, k++) = ncm_matrix_get (cm, i, j);
+
+  g_assert (k == total);
+
+  return a;
 }
 
 NCM_INLINE gdouble

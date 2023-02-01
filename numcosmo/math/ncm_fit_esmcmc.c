@@ -3,11 +3,11 @@
  *
  *  Tue January 20 16:59:36 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti & Mariana Penna-Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1453,7 +1453,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Monte Carlo.\n");
+      g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
       g_message ("#   Number of threads: %.4d.\n", self->nthreads);
       
@@ -1467,7 +1467,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Monte Carlo.\n");
+      g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
       g_message ("#   Number of threads: %.4d.\n", self->nthreads);
       
@@ -1773,7 +1773,7 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
   GPtrArray *thetastar_in_a        = g_ptr_array_new ();
   GPtrArray *thetastar_out_a       = g_ptr_array_new ();
   glong k;
-  
+
   for (k = i; k < f; k++)
   {
     NcmVector *full_theta_k    = g_ptr_array_index (self->full_theta, k);
@@ -1831,7 +1831,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
   NcmFitESMCMCWorker **fk_ptr      = ncm_memory_pool_get (self->walker_pool);
   NcmFit *fit_k                    = fk_ptr[0]->fit;
   guint k                          = i;
-  
+
   while (k < f)
   {
     NcmVector *full_thetastar = g_ptr_array_index (self->full_thetastar, k);
@@ -1861,7 +1861,6 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     }
     else
     {
-      /*ncm_vector_log_vals (thetastar, "thetastar", "% 22.15g", TRUE);*/
       g_array_index (self->offboard, gboolean, k) = TRUE;
     }
     
@@ -1883,7 +1882,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       ncm_vector_memcpy (full_theta_k, full_thetastar);
       g_array_index (self->accepted, gboolean, k) = TRUE;
     }
-    
+
     k++;
   }
   
@@ -1934,15 +1933,17 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
   if (self->n > 0)
   {
     _ncm_fit_esmcmc_get_jumps (esmcmc, ki, self->nwalkers);
-    ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, ki, self->nwalkers, rng);
     
     if (ki < nwalkers_2)
     {
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, ki, nwalkers_2, rng);
       run (esmcmc, ki, nwalkers_2);
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, nwalkers_2, self->nwalkers, rng);
       run (esmcmc, nwalkers_2, self->nwalkers);
     }
     else
     {
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, ki, self->nwalkers, rng);
       run (esmcmc, ki, self->nwalkers);
     }
     
@@ -1954,9 +1955,10 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
     for (i = 1; i < self->n; i++)
     {
       _ncm_fit_esmcmc_get_jumps (esmcmc, 0, self->nwalkers);
-      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, 0, self->nwalkers, rng);
-      
+
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, 0, nwalkers_2, rng);
       run (esmcmc, 0, nwalkers_2);
+      ncm_fit_esmcmc_walker_setup (self->walker, self->fit->mset, self->theta, self->m2lnL, nwalkers_2, self->nwalkers, rng);
       run (esmcmc, nwalkers_2, self->nwalkers);
       
       ncm_fit_esmcmc_walker_clean (self->walker, 0, self->nwalkers);
@@ -2216,7 +2218,7 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
     ncm_fit_m2lnL_val (fit_k, &m2lnL);
     
     diff = fabs ((row_m2lnL - m2lnL) / row_m2lnL);
-    
+
     if (diff > 1.0e-3)
     {
       if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)

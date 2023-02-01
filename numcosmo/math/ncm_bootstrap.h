@@ -3,11 +3,11 @@
  *
  *  Fri August 16 11:09:19 2013
  *  Copyright  2013  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_bootstrap.h
- * Copyright (C) 2013 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2013 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

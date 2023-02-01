@@ -3,12 +3,12 @@
  *
  *  Thu January 05 20:18:45 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -1580,7 +1580,7 @@ ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym)
  * @u: a #NcmVector to store the result
  *
  * Computes the matrix - vector product $u = \alpha M v + \beta u$
- * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
+ * if @NT == 'N' or $u = \alpha M^\intercal v + u$ if @NT == 'T'
  * and stores the result in @u.
  */
 void
@@ -1835,6 +1835,9 @@ ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
     
     ncm_vector_scale (row_i, w_i);
     ncm_vector_scale (col_i, w_i);
+
+    ncm_vector_free (row_i);
+    ncm_vector_free (col_i);
   }
 }
 
@@ -2132,6 +2135,15 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * This function returns the array of @cv. It is only applied if the matrix @cm was created with ncm_matrix_new_array().
  *
  * Returns: (transfer container) (element-type double): A pointer to a double GArray.
+ */
+
+/**
+ * ncm_matrix_dup_array:
+ * @cm: a #NcmMatrix
+ *
+ * This function returns an #GArray containing a copy of its elements..
+ *
+ * Returns: (transfer full) (element-type double): A pointer to a double #GArray.
  */
 
 /**

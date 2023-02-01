@@ -3,7 +3,7 @@
  *
  *  Thu October 27 10:31:13 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * mcat_join.c

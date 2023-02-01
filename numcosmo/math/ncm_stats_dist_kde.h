@@ -1,15 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_stats_dist_kde.h
  *
  *  Wed November 07 16:02:25 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_kde.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -64,6 +63,26 @@ struct _NcmStatsDistKDE
   NcmStatsDistKDEPrivate *priv;
 };
 
+/**
+ * NcmStatsDistKDECovType:
+ * @NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: Use sample covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_FIXED: Use a fixed covariance matrix.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG: Use an 1D robust estimator to build a diagonal covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST: Use the OGK method to build a covariance.
+ *
+ * Selects the covariance type to use in the kernel interpolation.
+ *
+ */
+typedef enum _NcmStatsDistKDECovType
+{
+  NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE,
+  NCM_STATS_DIST_KDE_COV_TYPE_FIXED,
+  NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG,
+  NCM_STATS_DIST_KDE_COV_TYPE_ROBUST,
+  /* < private > */
+  NCM_STATS_DIST_KDE_COV_TYPE_LEN, /*< skip >*/
+} NcmStatsDistKDECovType;
+
 GType ncm_stats_dist_kde_get_type (void) G_GNUC_CONST;
 
 NcmStatsDistKDE *ncm_stats_dist_kde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type);
@@ -73,6 +92,12 @@ void ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde);
 
 void ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxiter);
 guint ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde);
+
+void ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType cov_type);
+NcmStatsDistKDECovType ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde);
+
+void ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed);
+NcmMatrix *ncm_stats_dist_kde_peek_cov_fixed (NcmStatsDistKDE *sdkde);
 
 G_END_DECLS
 

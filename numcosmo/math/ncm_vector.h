@@ -3,12 +3,12 @@
  *
  *  Thu Nov  6 12:19:03 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -123,6 +123,9 @@ void ncm_vector_axpy (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
 void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
+void ncm_vector_square (NcmVector *cv);
+void ncm_vector_sqrt (NcmVector *cv);
+void ncm_vector_hypot (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
 
 NCM_INLINE gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 NCM_INLINE gdouble ncm_vector_mean (const NcmVector *cv);
@@ -171,6 +174,10 @@ NCM_INLINE gsize ncm_vector_get_min_index (const NcmVector *cv);
 NCM_INLINE void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
 
 NCM_INLINE gboolean ncm_vector_is_finite (const NcmVector *cv);
+
+NCM_INLINE gboolean ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2);
+NCM_INLINE gboolean ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2);
+NCM_INLINE gboolean ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector *cv_ub, gint type);
 
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 guint ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x);
@@ -504,6 +511,76 @@ ncm_vector_is_finite (const NcmVector *cv)
   
   return TRUE;
 }
+
+NCM_INLINE gboolean
+ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  gint i;
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < len; i++)
+  {
+    if (ncm_vector_get (cv1, i) >= ncm_vector_get (cv2, i))
+      return FALSE;
+  }
+  return TRUE;
+}
+
+NCM_INLINE gboolean
+ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  gint i;
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < len; i++)
+  {
+    if (ncm_vector_get (cv1, i) > ncm_vector_get (cv2, i))
+      return FALSE;
+  }
+  return TRUE;
+}
+
+NCM_INLINE gboolean
+ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector *cv_ub, gint type)
+{
+  const guint len = ncm_vector_len (cv);
+  gint i;
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv_lb));
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv_ub));
+
+  switch (type)
+  {
+    case 0:
+      for (i = 0; i < len; i++)
+      {
+        const gdouble cv_i    = ncm_vector_get (cv, i);
+        const gdouble cv_lb_i = ncm_vector_get (cv_lb, i);
+        const gdouble cv_ub_i = ncm_vector_get (cv_ub, i);
+        if ((cv_i < cv_lb_i) || (cv_ub_i <= cv_i))
+          return FALSE;
+      }
+      break;
+    case 1:
+      for (i = 0; i < len; i++)
+      {
+        const gdouble cv_i    = ncm_vector_get (cv, i);
+        const gdouble cv_lb_i = ncm_vector_get (cv_lb, i);
+        const gdouble cv_ub_i = ncm_vector_get (cv_ub, i);
+        if ((cv_i <= cv_lb_i) || (cv_ub_i < cv_i))
+          return FALSE;
+      }
+      break;
+    default:
+      g_error ("ncm_vector_between: unknown comparison type `%d'", type);
+      break;
+  }
+
+  return TRUE;
+}
+
 
 G_END_DECLS
 

@@ -3,11 +3,11 @@
  *
  *  Sun Oct  5 20:40:30 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -144,7 +144,6 @@
 #include "build_cfg.h"
 
 #include "nc_recomb.h"
-#include "math/integral.h"
 #include "math/ncm_util.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
@@ -1159,8 +1158,10 @@ _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdoub
   gint iter = 0, max_iter = 1000000;
   const gdouble prec = GSL_MIN (recomb->prec, 1e-1);
   gdouble lx = 0.0, lx0 = 0.0, lx1 = 0.0;
+  gint ret;
 
-  gsl_min_fminimizer_set (recomb->fmin, F, x, x0, x1);
+  ret = gsl_min_fminimizer_set (recomb->fmin, F, x, x0, x1);
+  NCM_TEST_GSL_RESULT ("_nc_recomb_min", ret);
 
   do {
     iter++;

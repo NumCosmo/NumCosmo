@@ -3,11 +3,11 @@
  *
  *  Fri May 25 09:38:14 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -246,6 +246,7 @@ NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *full
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
+NcmMatrix *ncm_mset_fparam_get_bound_matrix (NcmMSet *mset);
 gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
 gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);

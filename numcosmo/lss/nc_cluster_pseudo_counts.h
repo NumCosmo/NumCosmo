@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima 2015 <pennalima@gmail.com> 
+ * Copyright (C) Mariana Penna Lima 2015 <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,15 +59,15 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
  * @NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT: standard deviation of mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_ZMIN: minimum redshift
  * @NC_CLUSTER_PSEUDO_COUNTS_DELTAZ: redshift interval size
- * 
+ *
  * FIXME
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_PSEUDO_COUNTS_SPARAMS >*/
 {
-  NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0, 
-  NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, 
-  NC_CLUSTER_PSEUDO_COUNTS_ZMIN, 
-  NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, 
+  NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0,
+  NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT,
+  NC_CLUSTER_PSEUDO_COUNTS_ZMIN,
+  NC_CLUSTER_PSEUDO_COUNTS_DELTAZ,
   /* < private > */
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
 } NcClusterPseudoCountsSParams;
@@ -116,3 +116,4 @@ gdouble nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_PSEUDO_COUNTS_H_ */
+

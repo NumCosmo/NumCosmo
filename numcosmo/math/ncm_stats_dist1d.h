@@ -3,11 +3,11 @@
  *
  *  Thu February 12 15:37:22 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist1d.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,7 +52,7 @@ struct _NcmStatsDist1dClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   gdouble (*p) (NcmStatsDist1d *sd1, gdouble x);
   gdouble (*m2lnp) (NcmStatsDist1d *sd1, gdouble x);
   void (*prepare) (NcmStatsDist1d *sd1);

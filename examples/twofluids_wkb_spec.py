@@ -81,7 +81,7 @@ for lnk in tqdm (lnk_a):
 
   alphai = -cosmo.abs_alpha (start_alpha1 * k**2)
   pert.get_init_cond_zetaS (cosmo, alphai, 1, 0.25 * math.pi, ci)
-  pert.set_init_cond (cosmo, alphai, False, ci)
+  pert.set_init_cond (cosmo, alphai, 1, False, ci)
   
   print ("# Mode 1 k % 21.15e, state module %f" % (k, pert.get_state_mod ()))
 

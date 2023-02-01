@@ -3,11 +3,11 @@
  *
  *  Thu Apr 22 14:35:37 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -57,6 +57,8 @@ typedef struct _NcDataHubble NcDataHubble;
  * @NC_DATA_HUBBLE_RIESS2008_HST: FIXME
  * @NC_DATA_HUBBLE_ZHANG2012: FIXME
  * @NC_DATA_HUBBLE_RIESS2016_HST_WFC3: FIXME
+ * @NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018: [Gomez-Valent et al. (2018)][XGomez-Valent2018]
+ * @NC_DATA_HUBBLE_RIESS2018: FIXME
  * 
  * FIXME
  */
@@ -74,6 +76,8 @@ typedef enum _NcDataHubbleId
   NC_DATA_HUBBLE_RIESS2008_HST,
   NC_DATA_HUBBLE_ZHANG2012,
   NC_DATA_HUBBLE_RIESS2016_HST_WFC3, 
+  NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018,
+  NC_DATA_HUBBLE_RIESS2018,
   /* < private > */
   NC_DATA_HUBBLE_NSAMPLES,           /*< skip >*/
 } NcDataHubbleId;

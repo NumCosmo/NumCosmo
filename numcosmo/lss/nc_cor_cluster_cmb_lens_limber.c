@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
@@ -88,7 +88,7 @@ typedef struct _integrand_data_1h_m
   NcClusterAbundance *cad;
   NcHICosmo *cosmo;
   NcDistance *dist;
-  NcHaloBiasFunc *hbf;
+  NcHaloBias *hbf;
   NcHaloDensityProfile *dp;
   NcClusterMass *clusterm;
   gdouble z;
@@ -189,7 +189,7 @@ typedef struct _integrand_data_1h_z
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
   NcDistance *dist;
-  NcHaloBiasFunc *hbf;
+  NcHaloBias *hbf;
   NcHaloDensityProfile *dp;
   gint l;
   gdouble z;
@@ -289,7 +289,7 @@ typedef struct _integrand_data_2h_mass1
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
-  NcHaloBiasFunc *hbf;
+  NcHaloBias *hbf;
   gdouble *lnMobs_params;
   gdouble z;
 } integrand_data_2h_mass1;
@@ -298,7 +298,7 @@ static gdouble
 _integrand_mass_2h_first (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass1 *int_data = (integrand_data_2h_mass1 *) userdata;
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM_times_b = nc_halo_bias_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
   gdouble integrand_mass_2h_first = dn_dlnM_times_b * nc_cluster_mass_intp (int_data->clusterm, int_data->cosmo, lnM, int_data->z);
 
   return integrand_mass_2h_first;
@@ -352,7 +352,7 @@ typedef struct _integrand_data_2h_mass2
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
-  NcHaloBiasFunc *hbf;
+  NcHaloBias *hbf;
   NcHaloDensityProfile *dp;
   gdouble z;
   gdouble k;
@@ -366,7 +366,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 
   const gdouble lnR                   = nc_halo_mass_function_lnM_to_lnR (int_data->hbf->mfp, int_data->cosmo, lnM);
   const gdouble V                     = ncm_powspec_filter_volume_rm3 (nc_halo_mass_function_peek_psf (int_data->hbf->mfp)) * exp (3.0 * lnR);
-  const gdouble dn_dlnM_times_b       = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  const gdouble dn_dlnM_times_b       = nc_halo_bias_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
   const  gdouble integrand_powspec_2h = V * dn_dlnM_times_b;
 
   return integrand_powspec_2h;
@@ -444,7 +444,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM_times_b = nc_halo_bias_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
   gdouble u = 1.0; //nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble integrand_mass_2h_second = M * dn_dlnM_times_b * u;
 
@@ -505,7 +505,7 @@ typedef struct _integrand_data_2hz
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
   NcDistance *dist;
-  NcHaloBiasFunc *hbf;
+  NcHaloBias *hbf;
   NcHaloDensityProfile *dp;
   gint l;
   gdouble dc_zdec; /* comoving distance at z decoupling */

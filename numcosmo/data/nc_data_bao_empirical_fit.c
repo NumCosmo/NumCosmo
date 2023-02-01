@@ -3,11 +3,11 @@
  *
  *  Wed February 11 13:03:03 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_data_bao_empirical_fit.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -310,6 +310,9 @@ nc_data_bao_empirical_fit_new_from_id (NcDistance *dist, NcDataBaoId id)
   {
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_ross2015.obj", TRUE);
+      break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_1d_dvr_sdss_dr16_elg_2021.obj", TRUE);
       break;
     default:
       g_error ("nc_data_bao_empirical_fit_new_from_id: id %d not recognized.", id);

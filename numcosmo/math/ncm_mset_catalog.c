@@ -3,11 +3,11 @@
  *
  *  Tue February 18 10:49:26 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti & Mariana Penna Lima (January 2017)
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * ncm_mset_catalog.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br> & Mariana Penna Lima
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br> & Mariana Penna Lima
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1342,6 +1342,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                    cname, i + 1, cindex);
 
         g_array_index (self->porder, gint, i) = cindex;
+        g_free (asymbi);
       }
     }
     
@@ -3674,6 +3675,23 @@ ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = mcat->priv;
   
   return self->bestfit;
+}
+
+/**
+ * ncm_mset_catalog_get_bestfit_row:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer full): the current bestfit parameters.
+ */
+NcmVector *
+ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+
+  if (self->bestfit_row)
+    return ncm_vector_dup (self->bestfit_row);
+  else
+    return NULL;
 }
 
 /**
