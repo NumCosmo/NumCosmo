@@ -70,10 +70,10 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityGauss, nc_galaxy_wl_ellipticity_gauss, NC_TYPE_GALAXY_WL_DIST);
 
 static void
-nc_galaxy_wl_ellipticity_gauss_init (NcGalaxyWLEllipticityGauss *grsg)
+nc_galaxy_wl_ellipticity_gauss_init (NcGalaxyWLEllipticityGauss *gegauss)
 {
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv = nc_galaxy_wl_ellipticity_gauss_get_instance_private (grsg);
-  
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv = nc_galaxy_wl_ellipticity_gauss_get_instance_private (gegauss);
+
   self->obs    = NULL;
   self->pos    = NC_GALAXY_WL_ELLIPTICITY_GAUSS_POS_LEN;
   self->norma  = 0.0;
@@ -85,17 +85,17 @@ nc_galaxy_wl_ellipticity_gauss_init (NcGalaxyWLEllipticityGauss *grsg)
 static void
 _nc_galaxy_wl_ellipticity_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLEllipticityGauss *grsg = NC_GALAXY_WL_ELLIPTICITY_GAUSS (object);
-  
+  NcGalaxyWLEllipticityGauss *gegauss = NC_GALAXY_WL_ELLIPTICITY_GAUSS (object);
+
   g_return_if_fail (NC_IS_GALAXY_WL_ELLIPTICITY_GAUSS (object));
-  
+
   switch (prop_id)
   {
     case PROP_POS:
-      nc_galaxy_wl_ellipticity_gauss_set_pos (grsg, g_value_get_enum (value));
+      nc_galaxy_wl_ellipticity_gauss_set_pos (gegauss, g_value_get_enum (value));
       break;
     case PROP_OBS:
-      nc_galaxy_wl_ellipticity_gauss_set_obs (grsg, g_value_get_object (value));
+      nc_galaxy_wl_ellipticity_gauss_set_obs (gegauss, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -106,17 +106,17 @@ _nc_galaxy_wl_ellipticity_gauss_set_property (GObject *object, guint prop_id, co
 static void
 _nc_galaxy_wl_ellipticity_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLEllipticityGauss *grsg = NC_GALAXY_WL_ELLIPTICITY_GAUSS (object);
-  
+  NcGalaxyWLEllipticityGauss *gegauss = NC_GALAXY_WL_ELLIPTICITY_GAUSS (object);
+
   g_return_if_fail (NC_IS_GALAXY_WL_ELLIPTICITY_GAUSS (object));
-  
+
   switch (prop_id)
   {
     case PROP_POS:
-      g_value_set_enum (value, nc_galaxy_wl_ellipticity_gauss_get_pos (grsg));
+      g_value_set_enum (value, nc_galaxy_wl_ellipticity_gauss_get_pos (gegauss));
       break;
     case PROP_OBS:
-      g_value_set_object (value, nc_galaxy_wl_ellipticity_gauss_peek_obs (grsg));
+      g_value_set_object (value, nc_galaxy_wl_ellipticity_gauss_peek_obs (gegauss));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -148,12 +148,12 @@ nc_galaxy_wl_ellipticity_gauss_class_init (NcGalaxyWLEllipticityGaussClass *klas
 {
   NcGalaxyWLDistClass *wl_dist_class = NC_GALAXY_WL_DIST_CLASS (klass);
   GObjectClass *object_class         = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_galaxy_wl_ellipticity_gauss_set_property;
   object_class->get_property = &_nc_galaxy_wl_ellipticity_gauss_get_property;
   object_class->dispose      = &_nc_galaxy_wl_ellipticity_gauss_dispose;
   object_class->finalize     = &_nc_galaxy_wl_ellipticity_gauss_finalize;
-  
+
   /**
    * NcGalaxyWLEllipticityGauss:pos:
    *
@@ -167,7 +167,7 @@ nc_galaxy_wl_ellipticity_gauss_class_init (NcGalaxyWLEllipticityGaussClass *klas
                                                       "Observable position type",
                                                       NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS_POS, NC_GALAXY_WL_ELLIPTICITY_GAUSS_POS_R,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcGalaxyWLEllipticityGauss:obs:
    *
@@ -181,7 +181,7 @@ nc_galaxy_wl_ellipticity_gauss_class_init (NcGalaxyWLEllipticityGaussClass *klas
                                                         "Galaxy observables",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   wl_dist_class->m2lnP_prep = &_nc_galaxy_wl_ellipticity_gauss_m2lnP_prep;
   wl_dist_class->m2lnP      = &_nc_galaxy_wl_ellipticity_gauss_m2lnP;
   wl_dist_class->gen        = &_nc_galaxy_wl_ellipticity_gauss_gen;
@@ -191,41 +191,41 @@ nc_galaxy_wl_ellipticity_gauss_class_init (NcGalaxyWLEllipticityGaussClass *klas
 static void
 _nc_galaxy_wl_ellipticity_gauss_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
 {
-  NcGalaxyWLEllipticityGauss *grsg               = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  const gdouble R                                 = ncm_matrix_get (self->obs, gal_i, 0);
-  
+  NcGalaxyWLEllipticityGauss *gegauss            = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+  const gdouble R                                = ncm_matrix_get (self->obs, gal_i, 0);
+
   nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, R, z_cluster, z_cluster, &self->optzs);
 }
 
 static gdouble
 _nc_galaxy_wl_ellipticity_gauss_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
 {
-  NcGalaxyWLEllipticityGauss *grsg               = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  const gdouble g_mean                            = ncm_matrix_get (self->obs, gal_i, 1);
-  const gdouble sigma_g                           = ncm_matrix_get (self->obs, gal_i, 2);
-  const gdouble g_th                              = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cluster, &self->optzs); /*nc_wl_surface_mass_density_ellipticity (smd, dp, cosmo, R, z, z_cluster, z_cluster); */
-  
+  NcGalaxyWLEllipticityGauss *gegauss            = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+  const gdouble g_mean                           = ncm_matrix_get (self->obs, gal_i, 1);
+  const gdouble sigma_g                          = ncm_matrix_get (self->obs, gal_i, 2);
+  const gdouble g_th                             = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cluster, &self->optzs); /*nc_wl_surface_mass_density_ellipticity (smd, dp, cosmo, R, z, z_cluster, z_cluster); */
+
   return gsl_pow_2 ((g_th - g_mean) / sigma_g); /* + self->twolnN; */
 }
 
 static gdouble
 _nc_galaxy_wl_ellipticity_gauss_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng)
 {
-  NcGalaxyWLEllipticityGauss *grsg               = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  const gdouble sigma_g                           = ncm_matrix_get (self->obs, 0, 2);
-  
+  NcGalaxyWLEllipticityGauss *gegauss            = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+  const gdouble sigma_g                          = ncm_matrix_get (self->obs, 0, 2);
+
   return ncm_rng_gaussian_gen (rng, g_true, sigma_g);
 }
 
 static guint
 _nc_galaxy_wl_ellipticity_gauss_len (NcGalaxyWLDist *gwld)
 {
-  NcGalaxyWLEllipticityGauss *grsg               = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityGauss *gegauss            = NC_GALAXY_WL_ELLIPTICITY_GAUSS (gwld);
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+
   return self->len;
 }
 
@@ -241,119 +241,119 @@ _nc_galaxy_wl_ellipticity_gauss_len (NcGalaxyWLDist *gwld)
 NcGalaxyWLEllipticityGauss *
 nc_galaxy_wl_ellipticity_gauss_new (NcGalaxyWLEllipticityGaussPos pos)
 {
-  NcGalaxyWLEllipticityGauss *grsg = g_object_new (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS,
-                                                    "pos", pos,
-                                                    NULL);
-  
-  return grsg;
+  NcGalaxyWLEllipticityGauss *gegauss = g_object_new (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS,
+                                                      "pos", pos,
+                                                      NULL);
+
+  return gegauss;
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_ref:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  *
- * Increase the reference of @grsg by one.
+ * Increase the reference of @gegauss by one.
  *
- * Returns: (transfer full): @grsg.
+ * Returns: (transfer full): @gegauss.
  */
 NcGalaxyWLEllipticityGauss *
-nc_galaxy_wl_ellipticity_gauss_ref (NcGalaxyWLEllipticityGauss *grsg)
+nc_galaxy_wl_ellipticity_gauss_ref (NcGalaxyWLEllipticityGauss *gegauss)
 {
-  return g_object_ref (grsg);
+  return g_object_ref (gegauss);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_free:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  *
- * Decrease the reference count of @grsg by one.
+ * Decrease the reference count of @gegauss by one.
  *
  */
 void
-nc_galaxy_wl_ellipticity_gauss_free (NcGalaxyWLEllipticityGauss *grsg)
+nc_galaxy_wl_ellipticity_gauss_free (NcGalaxyWLEllipticityGauss *gegauss)
 {
-  g_object_unref (grsg);
+  g_object_unref (gegauss);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_clear:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  *
- * Decrease the reference count of @grsg by one, and sets the pointer *@grsg to
+ * Decrease the reference count of @gegauss by one, and sets the pointer *@gegauss to
  * NULL.
  *
  */
 void
-nc_galaxy_wl_ellipticity_gauss_clear (NcGalaxyWLEllipticityGauss **grsg)
+nc_galaxy_wl_ellipticity_gauss_clear (NcGalaxyWLEllipticityGauss **gegauss)
 {
-  g_clear_object (grsg);
+  g_clear_object (gegauss);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_set_pos:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  * @pos: a #NcGalaxyWLEllipticityGaussPos
  *
  * Sets the position observable type.
  */
 void
-nc_galaxy_wl_ellipticity_gauss_set_pos (NcGalaxyWLEllipticityGauss *grsg, NcGalaxyWLEllipticityGaussPos pos)
+nc_galaxy_wl_ellipticity_gauss_set_pos (NcGalaxyWLEllipticityGauss *gegauss, NcGalaxyWLEllipticityGaussPos pos)
 {
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+
   self->pos = pos;
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_get_pos:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  *
  * Gets the position observable type.
  *
  * Returns: the position observable type.
  */
 NcGalaxyWLEllipticityGaussPos
-nc_galaxy_wl_ellipticity_gauss_get_pos (NcGalaxyWLEllipticityGauss *grsg)
+nc_galaxy_wl_ellipticity_gauss_get_pos (NcGalaxyWLEllipticityGauss *gegauss)
 {
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+
   return self->pos;
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_set_obs:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  * @obs: a #NcmMatrix
  *
- * Sets the observables matrix @obs.
+ * Sets the observable matrix @obs.
  */
 void
-nc_galaxy_wl_ellipticity_gauss_set_obs (NcGalaxyWLEllipticityGauss *grsg, NcmMatrix *obs)
+nc_galaxy_wl_ellipticity_gauss_set_obs (NcGalaxyWLEllipticityGauss *gegauss, NcmMatrix *obs)
 {
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+
   g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
   g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
-  
+
   ncm_matrix_clear (&self->obs);
-  
+
   self->len = ncm_matrix_nrows (obs);
   self->obs = ncm_matrix_ref (obs);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_gauss_peek_obs:
- * @grsg: a #NcGalaxyWLEllipticityGauss
+ * @gegauss: a #NcGalaxyWLEllipticityGauss
  *
- * Gets the observables matrix.
+ * Gets the observable matrix.
  *
  * Returns: (transfer none): the observables matrix.
  */
 NcmMatrix *
-nc_galaxy_wl_ellipticity_gauss_peek_obs (NcGalaxyWLEllipticityGauss *grsg)
+nc_galaxy_wl_ellipticity_gauss_peek_obs (NcGalaxyWLEllipticityGauss *gegauss)
 {
-  NcGalaxyWLEllipticityGaussPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityGaussPrivate * const self = gegauss->priv;
+
   return self->obs;
 }
 

@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -53,9 +53,9 @@ typedef struct _NcmData NcmData;
  * @data: a #NcmData
  * @mset: a #NcmMSet
  * @IM: (out): The fisher matrix
- * 
+ *
  * Calculates the Fisher-information matrix @I.
- * 
+ *
  */
 typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
 
@@ -64,28 +64,28 @@ typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **I
  * @bootstrap: sets whenever the #NcmData implementations supports bootstrap.
  * @get_length: return the length associated to the #NcmData object.
  * @get_dof: return the effective degrees of freedom related to the #NcmData
- * statistics (likelihood or $\chi^2$) this number does not represent 
+ * statistics (likelihood or $\chi^2$) this number does not represent
  * necessarely the number of data points.
  * @begin: perform any model independent precalculation.
  * @prepare: perform any model dependent precalculation.
  * @resample: resample data from the models in #NcmMSet.
- * @leastsquares_f: calculates the least squares $\vec{f}$ vector, i.e., 
+ * @leastsquares_f: calculates the least squares $\vec{f}$ vector, i.e.,
  * $\chi^2 \equiv \vec{f}\cdot\vec{f}$.
  * @leastsquares_J: calculates the least squares $\vec{f}$ vector derivatives
  * with respect to the free parameter of @mset.
  * @leastsquares_f_J: calculates both least squares vector and its derivatives.
- * @m2lnL_val: evaluate the minus two times the natural logarithim of the 
+ * @m2lnL_val: evaluate the minus two times the natural logarithim of the
  * likelihood, i.e., $-2\ln(L)$.
  * @m2lnL_grad: evaluate the gradient of $-2\ln(L)$ with respect to the free
  * parameters in @mset.
  * @m2lnL_val_grad: evaluate the value and the gradient of $-2\ln(L)$.
  * @mean_vector: evaluate the Gaussian mean (approximation or not)
  * @inv_cov_UH: evaluate the Gaussian inverse covariance matrix (approximation or not)
- * @fisher_matrix: calculates the Fisher matrix (based on a Gaussian approximation when it is the case) 
- * 
+ * @fisher_matrix: calculates the Fisher matrix (based on a Gaussian approximation when it is the case)
+ *
  * Virtual table for the #NcmData abstract class.
- * 
- * 
+ *
+ *
  */
 struct _NcmDataClass
 {
@@ -94,6 +94,7 @@ struct _NcmDataClass
   gchar *name;
   /*< public >*/
   gboolean bootstrap;
+
   guint (*get_length) (NcmData *data);
   guint (*get_dof) (NcmData *data);
   void (*begin) (NcmData *data);
@@ -107,6 +108,7 @@ struct _NcmDataClass
   void (*m2lnL_val_grad) (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
   void (*mean_vector) (NcmData *data, NcmMSet *mset, NcmVector *mu);
   void (*inv_cov_UH) (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+
   NcmDataFisherMatrix fisher_matrix;
 };
 

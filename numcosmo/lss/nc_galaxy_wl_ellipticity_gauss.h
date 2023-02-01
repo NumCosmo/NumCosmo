@@ -81,16 +81,16 @@ typedef enum _NcGalaxyWLEllipticityGaussPos
 GType nc_galaxy_wl_ellipticity_gauss_get_type (void) G_GNUC_CONST;
 
 NcGalaxyWLEllipticityGauss *nc_galaxy_wl_ellipticity_gauss_new (NcGalaxyWLEllipticityGaussPos pos);
-NcGalaxyWLEllipticityGauss *nc_galaxy_wl_ellipticity_gauss_ref (NcGalaxyWLEllipticityGauss *grsg);
+NcGalaxyWLEllipticityGauss *nc_galaxy_wl_ellipticity_gauss_ref (NcGalaxyWLEllipticityGauss *gegauss);
 
-void nc_galaxy_wl_ellipticity_gauss_free (NcGalaxyWLEllipticityGauss *grsg);
-void nc_galaxy_wl_ellipticity_gauss_clear (NcGalaxyWLEllipticityGauss **grsg);
+void nc_galaxy_wl_ellipticity_gauss_free (NcGalaxyWLEllipticityGauss *gegauss);
+void nc_galaxy_wl_ellipticity_gauss_clear (NcGalaxyWLEllipticityGauss **gegauss);
 
-void nc_galaxy_wl_ellipticity_gauss_set_pos (NcGalaxyWLEllipticityGauss *grsg, NcGalaxyWLEllipticityGaussPos pos);
-NcGalaxyWLEllipticityGaussPos nc_galaxy_wl_ellipticity_gauss_get_pos (NcGalaxyWLEllipticityGauss *grsg);
+void nc_galaxy_wl_ellipticity_gauss_set_pos (NcGalaxyWLEllipticityGauss *gegauss, NcGalaxyWLEllipticityGaussPos pos);
+NcGalaxyWLEllipticityGaussPos nc_galaxy_wl_ellipticity_gauss_get_pos (NcGalaxyWLEllipticityGauss *gegauss);
 
-void nc_galaxy_wl_ellipticity_gauss_set_obs (NcGalaxyWLEllipticityGauss *grsg, NcmMatrix *obs);
-NcmMatrix *nc_galaxy_wl_ellipticity_gauss_peek_obs (NcGalaxyWLEllipticityGauss *grsg);
+void nc_galaxy_wl_ellipticity_gauss_set_obs (NcGalaxyWLEllipticityGauss *gegauss, NcmMatrix *obs);
+NcmMatrix *nc_galaxy_wl_ellipticity_gauss_peek_obs (NcGalaxyWLEllipticityGauss *gegauss);
 
 G_END_DECLS
 

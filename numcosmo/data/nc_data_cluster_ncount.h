@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -64,7 +64,7 @@ typedef enum _NcDataClusterAbundanceId
 {
   NC_DATA_CLUSTER_ABUNDANCE_FIT,
   NC_DATA_CLUSTER_ABUNDANCE_TXT,
-  NC_DATA_CLUSTER_ABUNDANCE_SAMPLING, 
+  NC_DATA_CLUSTER_ABUNDANCE_SAMPLING,
   /* < private > */
   NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
 } NcDataClusterAbundanceId;
@@ -131,6 +131,7 @@ void nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);
 void nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename);
+
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 G_END_DECLS

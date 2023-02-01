@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,13 +29,13 @@
  * @short_description: Abstract class for implementing data objects.
  *
  * The #NcmData object represent generic data. This is the root object used when
- * building a statistical analysis. Every implementation of #NcmData envolves 
+ * building a statistical analysis. Every implementation of #NcmData envolves
  * the methods described in #NcmDataClass.
- * 
- * A #NcmData must implement, at least, the method #NcmDataClass.m2lnL_val or 
+ *
+ * A #NcmData must implement, at least, the method #NcmDataClass.m2lnL_val or
  * #NcmDataClass.leastsquares_f to perform respectively likelihood or least
  * squares analysis.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -73,6 +73,7 @@ static void
 _ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmData *data = NCM_DATA (object);
+
   g_return_if_fail (NCM_IS_DATA (object));
 
   switch (prop_id)
@@ -90,6 +91,7 @@ _ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_BSTRAP:
     {
       NcmBootstrap *bstrap = g_value_get_object (value);
+
       ncm_data_bootstrap_set (data, bstrap);
       break;
     }
@@ -102,7 +104,7 @@ _ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 static void
 _ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmData *data = NCM_DATA (object);
+  NcmData *data            = NCM_DATA (object);
   NcmDataClass *data_class = NCM_DATA_GET_CLASS (object);
 
   g_return_if_fail (NCM_IS_DATA (object));
@@ -139,7 +141,7 @@ _ncm_data_dispose (GObject *object)
 
   ncm_bootstrap_clear (&data->bstrap);
   ncm_diff_clear (&data->diff);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_parent_class)->dispose (object);
 }
@@ -161,8 +163,8 @@ static void _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **I
 static void
 ncm_data_class_init (NcmDataClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass* data_class = NCM_DATA_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->set_property = &_ncm_data_set_property;
   object_class->get_property = &_ncm_data_get_property;
@@ -173,8 +175,8 @@ ncm_data_class_init (NcmDataClass *klass)
    * NcmData:name:
    *
    * Name of the data object.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -182,13 +184,13 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         "Data type name",
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmData:desc:
    *
    * Description of the data object.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_DESC,
                                    g_param_spec_string ("desc",
@@ -201,8 +203,8 @@ ncm_data_class_init (NcmDataClass *klass)
    * NcmData:long-desc:
    *
    * Description of the data object.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LONG_DESC,
                                    g_param_spec_string ("long-desc",
@@ -210,12 +212,13 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         "Data detailed description",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcmData:initialized:
    *
    * Whether the #NcmData is initialized.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_INIT,
                                    g_param_spec_boolean ("init",
@@ -228,8 +231,8 @@ ncm_data_class_init (NcmDataClass *klass)
    * NcmData:bootstrap:
    *
    * The #NcmData bootstrap object if any.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_BSTRAP,
                                    g_param_spec_object ("bootstrap",
@@ -251,10 +254,10 @@ ncm_data_class_init (NcmDataClass *klass)
   data_class->m2lnL_grad       = NULL;
   data_class->m2lnL_val_grad   = NULL;
 
-  data_class->mean_vector      = NULL;
-  data_class->inv_cov_UH       = NULL;
-  
-  data_class->fisher_matrix    = &_ncm_data_fisher_matrix;
+  data_class->mean_vector = NULL;
+  data_class->inv_cov_UH  = NULL;
+
+  data_class->fisher_matrix = &_ncm_data_fisher_matrix;
 }
 
 typedef struct _NcmDataDiffArg
@@ -263,15 +266,16 @@ typedef struct _NcmDataDiffArg
   NcmData *data;
 } NcmDataDiffArg;
 
-void 
+void
 _ncm_data_diff_f (NcmVector *x, NcmVector *y, gpointer user_data)
 {
   NcmDataDiffArg *arg = (NcmDataDiffArg *) user_data;
-  ncm_mset_fparams_set_vector (arg->mset, x);  
+
+  ncm_mset_fparams_set_vector (arg->mset, x);
   ncm_data_mean_vector (arg->data, arg->mset, y);
 }
 
-static void 
+static void
 _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 {
   const guint fparams_len = ncm_mset_fparams_len (mset);
@@ -298,7 +302,7 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
     ncm_data_inv_cov_UH (data, mset, dmu);
 
     ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
-    
+
     g_array_unref (dmu_a);
     g_array_unref (x_a);
   }
@@ -311,7 +315,7 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
  * @data: a #NcmData.
  *
  * Increase the reference count of @data.
- * 
+ *
  * Returns: (transfer full): @data.
  */
 NcmData *
@@ -327,7 +331,7 @@ ncm_data_ref (NcmData *data)
  * Decrease the reference count of @data.
  *
  */
-void 
+void
 ncm_data_free (NcmData *data)
 {
   g_object_unref (data);
@@ -340,7 +344,7 @@ ncm_data_free (NcmData *data)
  * Decrease the reference count of *@data and sets the pointer *@data to NULL.
  *
  */
-void 
+void
 ncm_data_clear (NcmData **data)
 {
   g_clear_object (data);
@@ -352,7 +356,7 @@ ncm_data_clear (NcmData **data)
  * @ser_obj: a #NcmSerialize.
  *
  * Duplicate the @data object.
- * 
+ *
  * Returns: (transfer full): a duplicate of @data.
  */
 NcmData *
@@ -364,15 +368,16 @@ ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 /**
  * ncm_data_new_from_file:
  * @filename: file containing a serialized #NcmData child.
- * 
+ *
  * Creates a new #NcmData from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcmData.
  */
 NcmData *
 ncm_data_new_from_file (const gchar *filename)
 {
   NcmData *data = NCM_DATA (ncm_serialize_global_from_file (filename));
+
   g_assert (NCM_IS_DATA (data));
 
   return data;
@@ -383,13 +388,14 @@ ncm_data_new_from_file (const gchar *filename)
  * @data: a #NcmData.
  *
  * Return a integer representing the number of data points.
- * 
+ *
  * Returns: number of data points.
  */
 guint
 ncm_data_get_length (NcmData *data)
 {
   g_assert (NCM_DATA_GET_CLASS (data)->get_length != NULL);
+
   return NCM_DATA_GET_CLASS (data)->get_length (data);
 }
 
@@ -398,7 +404,7 @@ ncm_data_get_length (NcmData *data)
  * @data: a #NcmData.
  *
  * Calculates the degrees of freedom associated with the data.
- * 
+ *
  * Returns: degrees of freedom of the data.
  */
 guint
@@ -406,7 +412,7 @@ ncm_data_get_dof (NcmData *data)
 {
   g_assert ((NCM_DATA_GET_CLASS (data)->get_dof != NULL) ||
             (NCM_DATA_GET_CLASS (data)->get_length != NULL));
-  
+
   if (NCM_DATA_GET_CLASS (data)->get_dof != NULL)
     return NCM_DATA_GET_CLASS (data)->get_dof (data);
   else
@@ -418,8 +424,8 @@ ncm_data_get_dof (NcmData *data)
  * @data: a #NcmData
  * @state: a boolean
  *
- * Sets the @data to initialized or not @state. 
- * 
+ * Sets the @data to initialized or not @state.
+ *
  */
 void
 ncm_data_set_init (NcmData *data, gboolean state)
@@ -428,16 +434,16 @@ ncm_data_set_init (NcmData *data, gboolean state)
   {
     if (!state)
     {
-      data->init           = FALSE;
-      data->begin          = FALSE;
+      data->init  = FALSE;
+      data->begin = FALSE;
     }
   }
   else
   {
     if (state)
     {
-      data->init           = TRUE;
-      data->begin          = FALSE;
+      data->init  = TRUE;
+      data->begin = FALSE;
     }
   }
 }
@@ -448,9 +454,9 @@ ncm_data_set_init (NcmData *data, gboolean state)
  * @desc: description.
  *
  * Sets the @data description. It gets a copy of desc.
- * 
+ *
  */
-void 
+void
 ncm_data_set_desc (NcmData *data, const gchar *desc)
 {
   g_clear_pointer (&data->desc, g_free);
@@ -464,9 +470,9 @@ ncm_data_set_desc (NcmData *data, const gchar *desc)
  *
  * Sets the @data description @desc without copying it, the @desc memory will
  * be freed (g_free()) when the object is freed.
- * 
+ *
  */
-void 
+void
 ncm_data_take_desc (NcmData *data, gchar *desc)
 {
   g_clear_pointer (&data->desc, g_free);
@@ -477,9 +483,9 @@ ncm_data_take_desc (NcmData *data, gchar *desc)
  * ncm_data_peek_desc:
  * @data: a #NcmData.
  *
- * Gets @data description. 
- * 
- * Returns: (transfer none): internal @data description. 
+ * Gets @data description.
+ *
+ * Returns: (transfer none): internal @data description.
  */
 const gchar *
 ncm_data_peek_desc (NcmData *data)
@@ -487,11 +493,13 @@ ncm_data_peek_desc (NcmData *data)
   if (data->desc == NULL)
   {
     NcmDataClass *data_class = NCM_DATA_GET_CLASS (data);
+
     if (data_class->name == NULL)
       data->desc = g_strdup (G_OBJECT_TYPE_NAME (data));
     else
       data->desc = g_strdup (data_class->name);
   }
+
   return data->desc;
 }
 
@@ -499,9 +507,9 @@ ncm_data_peek_desc (NcmData *data)
  * ncm_data_get_desc:
  * @data: a #NcmData.
  *
- * Gets @data description.  
- * 
- * Returns: (transfer full): copy of the @data description. 
+ * Gets @data description.
+ *
+ * Returns: (transfer full): copy of the @data description.
  */
 gchar *
 ncm_data_get_desc (NcmData *data)
@@ -512,7 +520,7 @@ ncm_data_get_desc (NcmData *data)
 static void
 _ncm_data_prepare (NcmData *data, NcmMSet *mset)
 {
-  if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
+  if ((NCM_DATA_GET_CLASS (data)->begin != NULL) && !data->begin)
   {
     NCM_DATA_GET_CLASS (data)->begin (data);
     data->begin = TRUE;
@@ -522,14 +530,13 @@ _ncm_data_prepare (NcmData *data, NcmMSet *mset)
     NCM_DATA_GET_CLASS (data)->prepare (data, mset);
 }
 
-
 /**
  * ncm_data_prepare: (virtual prepare)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  *
  * Prepare all models in @data necessary for the statistical calculations.
- * 
+ *
  */
 void
 ncm_data_prepare (NcmData *data, NcmMSet *mset)
@@ -545,27 +552,27 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
  * @rng: a #NcmRNG
  *
  * Resample data in @data from the models contained in @mset.
- * 
+ *
  */
 void
 ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
-    g_error ("ncm_data_resample: The data (%s) does not implement resample.", 
+    g_error ("ncm_data_resample: The data (%s) does not implement resample.",
              ncm_data_get_desc (data));
 
-	data->begin = TRUE;
+  data->begin = TRUE;
   _ncm_data_prepare (data, mset);
-  
+
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
   data->begin = FALSE;
 
-  if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
+  if ((NCM_DATA_GET_CLASS (data)->begin != NULL) && !data->begin)
   {
     NCM_DATA_GET_CLASS (data)->begin (data);
     data->begin = TRUE;
   }
-	
+
   ncm_data_set_init (data, TRUE);
 }
 
@@ -574,7 +581,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
  * @data: a #NcmData.
  *
  * Creates a bootstrap object inside of @data. Uses the default bsize == fsize.
- * 
+ *
  */
 void
 ncm_data_bootstrap_create (NcmData *data)
@@ -582,10 +589,13 @@ ncm_data_bootstrap_create (NcmData *data)
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_create: The data (%s) does not implement bootstrap.",
              ncm_data_get_desc (data));
+
   g_assert (data->init);
 
   if (data->bstrap == NULL)
+  {
     data->bstrap = ncm_bootstrap_sized_new (ncm_data_get_length (data));
+  }
   else
   {
     ncm_bootstrap_set_fsize (data->bstrap, ncm_data_get_length (data));
@@ -598,7 +608,7 @@ ncm_data_bootstrap_create (NcmData *data)
  * @data: a #NcmData.
  *
  * Removes a bootstrap object inside of @data if any.
- * 
+ *
  */
 void
 ncm_data_bootstrap_remove (NcmData *data)
@@ -612,14 +622,15 @@ ncm_data_bootstrap_remove (NcmData *data)
  * @bstrap: a #NcmBootstrap.
  *
  * Sets the @bstrap object in @data checking if they are compatible.
- * 
+ *
  */
 void
 ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
-    g_error ("ncm_data_bootstrap_set: The data (%s) does not implement bootstrap.", 
+    g_error ("ncm_data_bootstrap_set: The data (%s) does not implement bootstrap.",
              ncm_data_get_desc (data));
+
   g_assert (data->init);
   g_assert (bstrap != NULL);
 
@@ -635,16 +646,17 @@ ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
  * @rng: a #NcmRNG.
  *
  * Perform one bootstrap, i.e., resample the data with replacement.
- * 
+ *
  */
 void
 ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
-    g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.", 
+    g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.",
              ncm_data_get_desc (data));
+
   if (data->bstrap == NULL)
-    g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.", 
+    g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.",
              ncm_data_get_desc (data));
 
   ncm_bootstrap_resample (data->bstrap, rng);
@@ -655,13 +667,13 @@ ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng)
  * @data: a #NcmData.
  *
  * Checks whether bootstrap is enabled in @data.
- * 
+ *
  * Returns: if bootstrap is enabled in @data.
  */
 gboolean
 ncm_data_bootstrap_enabled (NcmData *data)
 {
-  if (NCM_DATA_GET_CLASS (data)->bootstrap && data->bstrap != NULL)
+  if (NCM_DATA_GET_CLASS (data)->bootstrap && (data->bstrap != NULL))
     return TRUE;
   else
     return FALSE;
@@ -675,15 +687,15 @@ ncm_data_bootstrap_enabled (NcmData *data)
  *
  * Calculates the least squares vector $\vec{f}$ using the models contained in
  * @mset and set the results in @f.
- * 
+ *
  */
-void 
+void
 ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_f == NULL)
-    g_error ("ncm_data_leastsquares_f: The data (%s) does not implement leastsquares_f.", 
+    g_error ("ncm_data_leastsquares_f: The data (%s) does not implement leastsquares_f.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f);
@@ -697,16 +709,16 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
  *
  * Calculates the least squares jacobian matrix $$J_{ij} = \frac{df_i}{dx_j},$$
  * where $f_i$ is the component of the least squares vector $\vec{f}$ and $x_j$
- * is the j-th parameter.  
- * 
+ * is the j-th parameter.
+ *
  */
-void 
+void
 ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_J == NULL)
-    g_error ("ncm_data_leastsquares_J: The data (%s) does not implement leastsquares_J.", 
+    g_error ("ncm_data_leastsquares_J: The data (%s) does not implement leastsquares_J.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J);
@@ -721,15 +733,15 @@ ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
  *
  * Calculates both least squares vector and matrix as in ncm_data_leastsquares_f()
  * and ncm_data_leastsquares_J().
- * 
+ *
  */
-void 
+void
 ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_f_J == NULL)
-    g_error ("ncm_data_leastsquares_f_J: The data (%s) does not implement leastsquares_f_J.", 
+    g_error ("ncm_data_leastsquares_f_J: The data (%s) does not implement leastsquares_f_J.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_f_J (data, mset, f, J);
@@ -743,15 +755,15 @@ ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix
  *
  * Calculates the value of $-2\ln(L)$, where $L$ represents the likelihood of
  * the data given the models in @mset. The result is stored in @m2lnL.
- * 
+ *
  */
-void 
+void
 ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val == NULL)
-    g_error ("ncm_data_m2lnL_val: The data (%s) does not implement m2lnL_val.", 
+    g_error ("ncm_data_m2lnL_val: The data (%s) does not implement m2lnL_val.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);
@@ -763,18 +775,18 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
  * @mset: a #NcmMSet.
  * @grad: a #NcmVector.
  *
- * Calculates the gradient of $-2\ln(L)$, i.e., $$g_i = -2\frac{d\ln(L)}{dx_i}.$$ 
- * where $L$ represents the likelihood of the data given the models in @mset. 
+ * Calculates the gradient of $-2\ln(L)$, i.e., $$g_i = -2\frac{d\ln(L)}{dx_i}.$$
+ * where $L$ represents the likelihood of the data given the models in @mset.
  * The result is stored in @grad.
- * 
+ *
  */
-void 
+void
 ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_grad == NULL)
-    g_error ("ncm_data_m2lnL_grad: The data (%s) does not implement m2lnL_grad.", 
+    g_error ("ncm_data_m2lnL_grad: The data (%s) does not implement m2lnL_grad.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_grad (data, mset, grad);
@@ -789,14 +801,15 @@ ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
  *
  * Calculates both the value and the gradient of $-2\ln(L)$ as in ncm_data_m2lnL_val() and
  * ncm_data_m2lnL_grad().
- * 
+ *
  */
-void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
+void
+ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val_grad == NULL)
-    g_error ("ncm_data_m2lnL_val_grad: The data (%s) does not implement m2lnL_val_grad.", 
+    g_error ("ncm_data_m2lnL_val_grad: The data (%s) does not implement m2lnL_val_grad.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, m2lnL, grad);
@@ -809,20 +822,20 @@ void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmV
  * @mu: the mean output #NcmVector
  *
  * Calculates the Gaussian mean vector (for non-Gaussian distribution
- * it should calculate the Gaussian approximated mean of the actual 
+ * it should calculate the Gaussian approximated mean of the actual
  * distribution).
- * 
+ *
  */
-void 
+void
 ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->mean_vector == NULL)
-    g_error ("ncm_data_mean_vector: The data (%s) does not implement mean_vector.", 
+    g_error ("ncm_data_mean_vector: The data (%s) does not implement mean_vector.",
              ncm_data_get_desc (data));
 
-  NCM_DATA_GET_CLASS (data)->mean_vector (data, mset, mu);  
+  NCM_DATA_GET_CLASS (data)->mean_vector (data, mset, mu);
 }
 
 /**
@@ -830,22 +843,22 @@ ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
  * @data: a #NcmData
  * @mset: a #NcmMSet
  * @H: a #NcmMatrix
- * 
- * 
+ *
+ *
  * Given the Cholesky decomposition of the inverse covariance $C^{-1} = L\cdotU$
  * this function returns in-place the product $U\cdotH$.
- * 
+ *
  */
-void 
+void
 ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->inv_cov_UH == NULL)
-    g_error ("ncm_data_inv_cov_UH: The data (%s) does not implement inv_cov_UH.", 
+    g_error ("ncm_data_inv_cov_UH: The data (%s) does not implement inv_cov_UH.",
              ncm_data_get_desc (data));
 
-  NCM_DATA_GET_CLASS (data)->inv_cov_UH (data, mset, H);  
+  NCM_DATA_GET_CLASS (data)->inv_cov_UH (data, mset, H);
 }
 
 /**
@@ -855,16 +868,17 @@ ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
  * @IM: (out): The fisher matrix
  *
  * Calculates the Fisher-information matrix @I.
- * 
+ *
  */
-void 
+void
 ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 {
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->fisher_matrix == NULL)
-    g_error ("ncm_data_fisher_matrix: The data (%s) does not implement fisher_matrix.", 
+    g_error ("ncm_data_fisher_matrix: The data (%s) does not implement fisher_matrix.",
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->fisher_matrix (data, mset, IM);
 }
+

@@ -62,34 +62,16 @@ struct _NcGalaxyWLEllipticityKDE
   NcGalaxyWLEllipticityKDEPrivate *priv;
 };
 
-/**
- * NcGalaxyWLEllipticityKDEPos:
- * @NC_GALAXY_WL_ELLIPTICITY_KDE_POS_ANG: FIXME
- * @NC_GALAXY_WL_ELLIPTICITY_KDE_POS_R: FIXME
- *
- * FIXME
- *
- */
-// typedef enum _NcGalaxyWLEllipticityKDEPos
-// {
-//   NC_GALAXY_WL_ELLIPTICITY_KDE_POS_ANG,
-//   NC_GALAXY_WL_ELLIPTICITY_KDE_POS_R,
-//   /* < private > */
-//   NC_GALAXY_WL_ELLIPTICITY_KDE_POS_LEN, /*< skip >*/
-// } NcGalaxyWLEllipticityKDEPos;
-
 GType nc_galaxy_wl_ellipticity_kde_get_type (void) G_GNUC_CONST;
 
 NcGalaxyWLEllipticityKDE *nc_galaxy_wl_ellipticity_kde_new ();
-NcGalaxyWLEllipticityKDE *nc_galaxy_wl_ellipticity_kde_ref (NcGalaxyWLEllipticityKDE *grsg);
+NcGalaxyWLEllipticityKDE *nc_galaxy_wl_ellipticity_kde_ref (NcGalaxyWLEllipticityKDE *gekde);
 
-void nc_galaxy_wl_ellipticity_kde_free (NcGalaxyWLEllipticityKDE *grsg);
-void nc_galaxy_wl_ellipticity_kde_clear (NcGalaxyWLEllipticityKDE **grsg);
+void nc_galaxy_wl_ellipticity_kde_free (NcGalaxyWLEllipticityKDE *gekde);
+void nc_galaxy_wl_ellipticity_kde_clear (NcGalaxyWLEllipticityKDE **gekde);
 
-
-
-void nc_galaxy_wl_ellipticity_kde_set_obs (NcGalaxyWLEllipticityKDE *grsg, NcmMatrix *obs);
-NcmMatrix *nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *grsg);
+void nc_galaxy_wl_ellipticity_kde_set_obs (NcGalaxyWLEllipticityKDE *gekde, NcmMatrix *obs);
+NcmMatrix *nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *gekde);
 
 G_END_DECLS
 

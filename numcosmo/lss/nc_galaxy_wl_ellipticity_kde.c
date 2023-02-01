@@ -29,7 +29,7 @@
 /**
  * SECTION:nc_galaxy_wl_ellipticity_kde
  * @title: NcGalaxyWLEllipticityKDE
- * @short_description: Abstract class describing galaxy weak lensing ellipticity with Kernel Density Estimation
+ * @short_description: Class describing galaxy weak lensing ellipticity with Kernel Density Estimation
  * @stability: Unstable
  *
  *
@@ -54,7 +54,7 @@
 struct _NcGalaxyWLEllipticityKDEPrivate
 {
   NcmMatrix *obs;
-  NcmStatsDist1d *kde;
+  NcmStatsDist1dEPDF *kde;
   NcmVector *e_vec;
   gdouble r;
   gdouble twolnN;
@@ -70,29 +70,31 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST);
 
 static void
-nc_galaxy_wl_ellipticity_kde_init (NcGalaxyWLEllipticityKDE *grsg)
+nc_galaxy_wl_ellipticity_kde_init (NcGalaxyWLEllipticityKDE *gekde)
 {
-  NcGalaxyWLEllipticityKDEPrivate * const self = grsg->priv = nc_galaxy_wl_ellipticity_kde_get_instance_private (grsg);
-  
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv = nc_galaxy_wl_ellipticity_kde_get_instance_private (gekde);
+
   self->obs    = NULL;
-  self->kde    = NULL;
+  self->kde    = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
   self->e_vec  = NULL;
   self->r      = 0.0;
   self->twolnN = 0.0;
   self->len    = 0;
+
+  ncm_stats_dist1d_set_compute_cdf (NCM_STATS_DIST1D (self->kde), FALSE);
 }
 
 static void
 _nc_galaxy_wl_ellipticity_kde_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLEllipticityKDE *grsg = NC_GALAXY_WL_ELLIPTICITY_KDE (object);
-  
+  NcGalaxyWLEllipticityKDE *gekde = NC_GALAXY_WL_ELLIPTICITY_KDE (object);
+
   g_return_if_fail (NC_IS_GALAXY_WL_ELLIPTICITY_KDE (object));
-  
+
   switch (prop_id)
   {
     case PROP_OBS:
-      nc_galaxy_wl_ellipticity_kde_set_obs (grsg, g_value_get_object (value));
+      nc_galaxy_wl_ellipticity_kde_set_obs (gekde, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -103,14 +105,14 @@ _nc_galaxy_wl_ellipticity_kde_set_property (GObject *object, guint prop_id, cons
 static void
 _nc_galaxy_wl_ellipticity_kde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLEllipticityKDE *grsg = NC_GALAXY_WL_ELLIPTICITY_KDE (object);
-  
+  NcGalaxyWLEllipticityKDE *gekde = NC_GALAXY_WL_ELLIPTICITY_KDE (object);
+
   g_return_if_fail (NC_IS_GALAXY_WL_ELLIPTICITY_KDE (object));
-  
+
   switch (prop_id)
   {
     case PROP_OBS:
-      g_value_set_object (value, nc_galaxy_wl_ellipticity_kde_peek_obs (grsg));
+      g_value_set_object (value, nc_galaxy_wl_ellipticity_kde_peek_obs (gekde));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -121,6 +123,12 @@ _nc_galaxy_wl_ellipticity_kde_get_property (GObject *object, guint prop_id, GVal
 static void
 _nc_galaxy_wl_ellipticity_kde_dispose (GObject *object)
 {
+  NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (object);
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
+  ncm_matrix_clear (&self->obs);
+  ncm_stats_dist1d_epdf_clear (&self->kde);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_ellipticity_kde_parent_class)->dispose (object);
 }
@@ -132,8 +140,9 @@ _nc_galaxy_wl_ellipticity_kde_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_wl_ellipticity_kde_parent_class)->finalize (object);
 }
 
-static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld,NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
-// static void _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i);
+static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+
+/* static void _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i); */
 static gdouble _nc_galaxy_wl_ellipticity_kde_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z);
 static gdouble _nc_galaxy_wl_ellipticity_kde_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng);
 static guint _nc_galaxy_wl_ellipticity_kde_len (NcGalaxyWLDist *gwld);
@@ -143,16 +152,16 @@ nc_galaxy_wl_ellipticity_kde_class_init (NcGalaxyWLEllipticityKDEClass *klass)
 {
   NcGalaxyWLDistClass *wl_dist_class = NC_GALAXY_WL_DIST_CLASS (klass);
   GObjectClass *object_class         = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_galaxy_wl_ellipticity_kde_set_property;
   object_class->get_property = &_nc_galaxy_wl_ellipticity_kde_get_property;
   object_class->dispose      = &_nc_galaxy_wl_ellipticity_kde_dispose;
   object_class->finalize     = &_nc_galaxy_wl_ellipticity_kde_finalize;
-  
+
   /**
    * NcGalaxyWLEllipticityKDE:obs:
    *
-   * FIXME
+   * Galaxy ellipticity observable matrix.
    *
    */
   g_object_class_install_property (object_class,
@@ -162,32 +171,29 @@ nc_galaxy_wl_ellipticity_kde_class_init (NcGalaxyWLEllipticityKDEClass *klass)
                                                         "Galaxy observables",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   wl_dist_class->m2lnP_initial_prep = &_nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep;
-  // wl_dist_class->m2lnP_prep         = &_nc_galaxy_wl_ellipticity_kde_m2lnP_prep;
-  wl_dist_class->m2lnP              = &_nc_galaxy_wl_ellipticity_kde_m2lnP;
-  wl_dist_class->gen                = &_nc_galaxy_wl_ellipticity_kde_gen;
-  wl_dist_class->len                = &_nc_galaxy_wl_ellipticity_kde_len;
+  /* wl_dist_class->m2lnP_prep         = &_nc_galaxy_wl_ellipticity_kde_m2lnP_prep; */
+  wl_dist_class->m2lnP = &_nc_galaxy_wl_ellipticity_kde_m2lnP;
+  wl_dist_class->gen   = &_nc_galaxy_wl_ellipticity_kde_gen;
+  wl_dist_class->len   = &_nc_galaxy_wl_ellipticity_kde_len;
 }
 
-static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+static void
+_nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
-  NcGalaxyWLEllipticityKDE *gkde               = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
-  NcGalaxyWLEllipticityKDEPrivate * const self = gkde->priv;
-  NcmStatsDist1dEPDF *s_kde                    = ncm_stats_dist1d_epdf_new_full (20000, NCM_STATS_DIST1D_EPDF_BW_RoT, 0.1, 1.0e-2);
-  NcmStatsDist1d *sd1                          = NCM_STATS_DIST1D (s_kde);
+  NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
   NcmVector *g_vec                             = ncm_vector_new (self->len);
   NcmMatrix *wl_obs                            = nc_galaxy_wl_ellipticity_kde_peek_obs (NC_GALAXY_WL_ELLIPTICITY_KDE (gwld));
   NcmVector *z_vec                             = nc_galaxy_redshift_spec_peek_z (NC_GALAXY_REDSHIFT_SPEC (gz));
   gdouble min_g_i                              = GSL_POSINF;
   gdouble max_g_i                              = GSL_NEGINF;
-  int j = 0;
+  int j                                        = 0;
   gint gal_i;
 
-  ncm_stats_dist1d_free (self->kde);
+  ncm_stats_dist1d_epdf_reset (self->kde);
   ncm_vector_free (self->e_vec);
-
-  ncm_stats_dist1d_set_compute_cdf (sd1, FALSE);
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
@@ -199,79 +205,78 @@ static void _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gw
     max_g_i = MAX (max_g_i, g_i);
     min_g_i = MIN (min_g_i, g_i);
     /*if ((g_i > 0.0 && g_i < 0.05 && s_i > 0.0 && s_i < 0.05))*/
-    //if (r_i > 0.07)
+    /*if (r_i > 0.07) */
     {
       ncm_vector_set (g_vec, j, g_i);
-      ncm_stats_dist1d_epdf_add_obs (s_kde, s_i);
+      ncm_stats_dist1d_epdf_add_obs (self->kde, s_i);
       j++;
     }
   }
 
-  ncm_stats_dist1d_epdf_set_max (s_kde, max_g_i*1.01);
+  ncm_stats_dist1d_epdf_set_max (self->kde, max_g_i * 1.01);
+
   if (min_g_i > 0)
-    ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*0.99);
+    ncm_stats_dist1d_epdf_set_min (self->kde, min_g_i * 0.99);
   else
-    ncm_stats_dist1d_epdf_set_min (s_kde, min_g_i*1.01);
-  ncm_stats_dist1d_prepare (sd1);
+    ncm_stats_dist1d_epdf_set_min (self->kde, min_g_i * 1.01);
+
+  ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (self->kde));
   {
-    const gdouble h = ncm_stats_dist1d_get_current_h (sd1);
+    const gdouble h  = ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (self->kde));
     const gdouble hp = gsl_hypot (h, ncm_matrix_get (wl_obs, 0, 2));
 
-    ncm_stats_dist1d_epdf_set_bw_type (s_kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
-    s_kde->h_fixed = hp;
-    ncm_stats_dist1d_prepare (sd1);
+    ncm_stats_dist1d_epdf_set_bw_type (self->kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
+    self->kde->h_fixed = hp;
+    ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (self->kde));
   }
 
-  self->kde   = sd1;
   self->e_vec = g_vec;
 
-// ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde));
-// ncm_vector_free (g_vec);
+/* ncm_stats_dist1d_free (NCM_STATS_DIST1D (s_kde)); */
+/* ncm_vector_free (g_vec); */
 }
 
-// static void
-// _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i)
-// {
-  
-// }
+/* static void */
+/* _nc_galaxy_wl_ellipticity_kde_m2lnP_prep (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i) */
+/* { */
+
+/* } */
 
 static gdouble
 _nc_galaxy_wl_ellipticity_kde_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
 {
-  NcGalaxyWLEllipticityKDE *gkde               = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
-  NcGalaxyWLEllipticityKDEPrivate * const self = gkde->priv;
+  NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+  const gdouble e_i                            = ncm_vector_get (self->e_vec, gal_i);
+  const gdouble p                              = ncm_stats_dist1d_eval_p (NCM_STATS_DIST1D (self->kde), e_i);
   gdouble res                                  = 0.0;
 
+  res += -2 * log (p);
 
-  const gdouble e_i = ncm_vector_get (self->e_vec, gal_i);
-  const gdouble p = ncm_stats_dist1d_eval_p (self->kde, e_i);
-  res += - 2 * log (p);
-  
   return res;
 }
 
 static gdouble
 _nc_galaxy_wl_ellipticity_kde_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng)
 {
-  NcGalaxyWLEllipticityKDE *grsg               = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
-  NcGalaxyWLEllipticityKDEPrivate * const self = grsg->priv;
+  NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
   const gdouble sigma_g                        = ncm_matrix_get (self->obs, 0, 2);
-  
+
   return ncm_rng_gaussian_gen (rng, g_true, sigma_g);
 }
 
 static guint
 _nc_galaxy_wl_ellipticity_kde_len (NcGalaxyWLDist *gwld)
 {
-  NcGalaxyWLEllipticityKDE *grsg               = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
-  NcGalaxyWLEllipticityKDEPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
   return self->len;
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_new:
- * @pos: a #NcGalaxyWLEllipticityKDEPos
  *
  * Creates a new #NcGalaxyWLEllipticityKDE using
  * @pos as the position type.
@@ -281,87 +286,87 @@ _nc_galaxy_wl_ellipticity_kde_len (NcGalaxyWLDist *gwld)
 NcGalaxyWLEllipticityKDE *
 nc_galaxy_wl_ellipticity_kde_new ()
 {
-  NcGalaxyWLEllipticityKDE *grsg = g_object_new (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE,
-                                                    NULL);
-  
-  return grsg;
+  NcGalaxyWLEllipticityKDE *gekde = g_object_new (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE,
+                                                  NULL);
+
+  return gekde;
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_ref:
- * @grsg: a #NcGalaxyWLEllipticityKDE
+ * @gekde: a #NcGalaxyWLEllipticityKDE
  *
- * Increase the reference of @grsg by one.
+ * Increase the reference of @gekde by one.
  *
- * Returns: (transfer full): @grsg.
+ * Returns: (transfer full): @gekde.
  */
 NcGalaxyWLEllipticityKDE *
-nc_galaxy_wl_ellipticity_kde_ref (NcGalaxyWLEllipticityKDE *grsg)
+nc_galaxy_wl_ellipticity_kde_ref (NcGalaxyWLEllipticityKDE *gekde)
 {
-  return g_object_ref (grsg);
+  return g_object_ref (gekde);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_free:
- * @grsg: a #NcGalaxyWLEllipticityKDE
+ * @gekde: a #NcGalaxyWLEllipticityKDE
  *
- * Decrease the reference count of @grsg by one.
+ * Decrease the reference count of @gekde by one.
  *
  */
 void
-nc_galaxy_wl_ellipticity_kde_free (NcGalaxyWLEllipticityKDE *grsg)
+nc_galaxy_wl_ellipticity_kde_free (NcGalaxyWLEllipticityKDE *gekde)
 {
-  g_object_unref (grsg);
+  g_object_unref (gekde);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_clear:
- * @grsg: a #NcGalaxyWLEllipticityKDE
+ * @gekde: a #NcGalaxyWLEllipticityKDE
  *
- * Decrease the reference count of @grsg by one, and sets the pointer *@grsg to
+ * Decrease the reference count of @gekde by one, and sets the pointer *@gekde to
  * NULL.
  *
  */
 void
-nc_galaxy_wl_ellipticity_kde_clear (NcGalaxyWLEllipticityKDE **grsg)
+nc_galaxy_wl_ellipticity_kde_clear (NcGalaxyWLEllipticityKDE **gekde)
 {
-  g_clear_object (grsg);
+  g_clear_object (gekde);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_set_obs:
- * @grsg: a #NcGalaxyWLEllipticityKDE
+ * @gekde: a #NcGalaxyWLEllipticityKDE
  * @obs: a #NcmMatrix
  *
- * Sets the observables matrix @obs.
+ * Sets the observable matrix @obs.
  */
 void
-nc_galaxy_wl_ellipticity_kde_set_obs (NcGalaxyWLEllipticityKDE *grsg, NcmMatrix *obs)
+nc_galaxy_wl_ellipticity_kde_set_obs (NcGalaxyWLEllipticityKDE *gekde, NcmMatrix *obs)
 {
-  NcGalaxyWLEllipticityKDEPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
   g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
   g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
-  
+
   ncm_matrix_clear (&self->obs);
-  
+
   self->len = ncm_matrix_nrows (obs);
   self->obs = ncm_matrix_ref (obs);
 }
 
 /**
  * nc_galaxy_wl_ellipticity_kde_peek_obs:
- * @grsg: a #NcGalaxyWLEllipticityKDE
+ * @gekde: a #NcGalaxyWLEllipticityKDE
  *
- * Gets the observables matrix.
+ * Gets the observable matrix.
  *
  * Returns: (transfer none): the observables matrix.
  */
 NcmMatrix *
-nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *grsg)
+nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *gekde)
 {
-  NcGalaxyWLEllipticityKDEPrivate * const self = grsg->priv;
-  
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
   return self->obs;
 }
 

@@ -142,9 +142,9 @@ ncm_stats_dist1d_epdf_set_property (GObject *object, guint prop_id, const GValue
     case PROP_OUTLIERS_THRESHOLD:
       epdf1d->outliers_threshold = g_value_get_double (value);
       break;
-    default: /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break; /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,9 +175,9 @@ ncm_stats_dist1d_epdf_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_OUTLIERS_THRESHOLD:
       g_value_set_double (value, epdf1d->outliers_threshold);
       break;
-    default: /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break; /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -519,7 +519,7 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
       j++;
 
       if (j >= 10000)
-        g_error ("_ncm_stats_dist1d_epdf_autobw: too many steps to find bandwidth."); /* LCOV_EXCL_LINE */
+        g_error ("_ncm_stats_dist1d_epdf_autobw: too many steps to find bandwidth.");  /* LCOV_EXCL_LINE */
     }
 
     epdf1d->h = sqrt (t) * delta_l;
@@ -587,9 +587,9 @@ _ncm_stats_dist1d_epdf_set_bw (NcmStatsDist1dEPDF *epdf1d)
       case NCM_STATS_DIST1D_EPDF_BW_AUTO:
         _ncm_stats_dist1d_epdf_autobw (epdf1d);
         break;
-      default: /* LCOV_EXCL_LINE */
+      default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
-        break; /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
     }
 
     epdf1d->bw_set = TRUE;
@@ -705,6 +705,7 @@ static gdouble
 _ncm_stats_dist1d_epdf_get_current_h (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (sd1);
+
   return epdf1d->h;
 }
 
@@ -753,6 +754,48 @@ ncm_stats_dist1d_epdf_new (gdouble sd_min_scale)
 }
 
 /**
+ * ncm_stats_dist1d_epdf_ref:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ *
+ * Increases the reference count of @epdf1d by one.
+ *
+ * Returns: (transfer full): @epdf1d.
+ */
+NcmStatsDist1dEPDF *
+ncm_stats_dist1d_epdf_ref (NcmStatsDist1dEPDF *epdf1d)
+{
+  return g_object_ref (epdf1d);
+}
+
+/**
+ * ncm_stats_dist1d_epdf_free:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ *
+ * Atomically decrements the reference count of @epdf1d by one. If the reference count drops to 0,
+ * all memory allocated by @epdf1d is released.
+ *
+ */
+void
+ncm_stats_dist1d_epdf_free (NcmStatsDist1dEPDF *epdf1d)
+{
+  g_object_unref (epdf1d);
+}
+
+/**
+ * ncm_stats_dist1d_epdf_clear:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ *
+ * Atomically decrements the reference count of @epdf1d by one. If the reference count drops to 0,
+ * all memory allocated by @epdf1d is released. Set the pointer to NULL;
+ *
+ */
+void
+ncm_stats_dist1d_epdf_clear (NcmStatsDist1dEPDF **epdf1d)
+{
+  g_clear_object (epdf1d);
+}
+
+/**
  * ncm_stats_dist1d_epdf_set_bw_type:
  * @epdf1d: a #NcmStatsDist1dEPDF
  * @bw: a #NcmStatsDist1dEPDFBw
@@ -764,7 +807,7 @@ ncm_stats_dist1d_epdf_new (gdouble sd_min_scale)
 void
 ncm_stats_dist1d_epdf_set_bw_type (NcmStatsDist1dEPDF *epdf1d, NcmStatsDist1dEPDFBw bw)
 {
-  epdf1d->bw = bw;
+  epdf1d->bw     = bw;
   epdf1d->bw_set = FALSE;
 }
 
@@ -800,6 +843,7 @@ ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble 
   if (!gsl_finite (x) || (w < 0.0))
   {
     g_warning ("ncm_stats_dist1d_epdf_add_obs_weight: invalid observation %u [x = %g, w = %g], skipping...\n", epdf1d->n_obs, x, w); /* LCOV_EXCL_LINE */
+
     return;
   }
 
