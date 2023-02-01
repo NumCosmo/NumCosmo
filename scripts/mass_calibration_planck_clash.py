@@ -10,6 +10,8 @@ from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
+Tinker_lin_interp = True
+
 Ncm.cfg_init ()
 
 NT = 3           # Number of threads
@@ -27,7 +29,10 @@ tf    = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
 # Linear matter power spectrum
 ps_ml = Nc.PowspecMLTransfer.new (tf)
 psf   = Ncm.PowspecFilter.new (ps_ml, Ncm.PowspecFilterType.TOPHAT)
-mulf = Nc.MultiplicityFunc.new_from_name ("NcMultiplicityFuncTinkerCrit{'Delta':<500.0>}")
+mulf = Nc.MultiplicityFuncTinker.new ()
+mulf.set_linear_interp (Tinker_lin_interp)
+mulf.set_mdef (Nc.MultiplicityFuncMassDef.MEAN)
+mulf.set_Delta (500.0)
 mf = Nc.HaloMassFunction.new (dist, psf, mulf)
 cad   = Nc.ClusterAbundance.new (mf, None)
 clusterz = Nc.ClusterRedshift.new_from_name ("NcClusterRedshiftNodist{'z-min':<0.0>, 'z-max':<2.0>}")
