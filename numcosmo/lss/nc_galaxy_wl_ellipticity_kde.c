@@ -5,11 +5,11 @@
  *
  *  Mon July 27 11:12:53 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_ellipticity_kde.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -185,7 +185,6 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
   NcGalaxyWLEllipticityKDE *gekde              = NC_GALAXY_WL_ELLIPTICITY_KDE (gwld);
   NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
   NcmVector *g_vec                             = ncm_vector_new (self->len);
-  NcmMatrix *wl_obs                            = nc_galaxy_wl_ellipticity_kde_peek_obs (NC_GALAXY_WL_ELLIPTICITY_KDE (gwld));
   NcmVector *z_vec                             = nc_galaxy_redshift_spec_peek_z (NC_GALAXY_REDSHIFT_SPEC (gz));
   gdouble min_g_i                              = GSL_POSINF;
   gdouble max_g_i                              = GSL_NEGINF;
@@ -198,8 +197,8 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
     const gdouble z_i = ncm_vector_get (z_vec, gal_i);
-    const gdouble r_i = ncm_matrix_get (wl_obs, gal_i, 0);
-    const gdouble g_i = ncm_matrix_get (wl_obs, gal_i, 1);
+    const gdouble r_i = ncm_matrix_get (self->obs, gal_i, 0);
+    const gdouble g_i = ncm_matrix_get (self->obs, gal_i, 1);
     const gdouble s_i = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r_i, z_i, z_cluster, z_cluster);
 
     max_g_i = MAX (max_g_i, g_i);
@@ -223,7 +222,7 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
   ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (self->kde));
   {
     const gdouble h  = ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (self->kde));
-    const gdouble hp = gsl_hypot (h, ncm_matrix_get (wl_obs, 0, 2));
+    const gdouble hp = gsl_hypot (h, ncm_matrix_get (self->obs, 0, 2));
 
     ncm_stats_dist1d_epdf_set_bw_type (self->kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
     self->kde->h_fixed = hp;
