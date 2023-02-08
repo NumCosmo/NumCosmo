@@ -1,11 +1,41 @@
+#
+# tools.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# tools.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""NumCosmo's plotting tools."""
+
+import math
+import numpy as np
+
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
 import matplotlib.pyplot as plt
-import numpy as np
-import math
 
 
+# pylint:disable-next=invalid-name
 def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
+    """Adds a confidence ellipse to the given axis based on the given
+    covariance matrix.
+    """
     pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
     # Using a special case to obtain the eigenvalues of this
     # two-dimensionl dataset.
@@ -16,7 +46,7 @@ def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
         width=ell_radius_x * 2,
         height=ell_radius_y * 2,
         facecolor=facecolor,
-        **kwargs
+        **kwargs,
     )
 
     # Calculating the stdandard deviation of x from
@@ -40,25 +70,27 @@ def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
     return ax.add_patch(ellipse)
 
 
-def latex_float(f):
-    float_str = "{0:.2g}".format(f)
+def latex_float(value: float):
+    """Convert a float to a string with a fixed number of decimal places."""
+    float_str = f"{value:.2g}"
     if "e" in float_str:
         base, exponent = float_str.split("e")
         if base == 1.0:
             if exponent == 0.0:
                 return r"1"
             else:
-                return r"10^{{{1}}}".format(int(exponent))
+                return f"10^{{{int(exponent)}}}"
         elif exponent == 0.0:
-            return r"{0}".format(base)
+            return f"{base}"
         else:
-            return r"{0} \times 10^{{{1}}}".format(base, int(exponent))
+            return f"{base} \times 10^{{{int(exponent)}}}"
     else:
         return float_str
 
 
 def set_rc_params_article(column_width: float = 246.0, ncol: int = 2):
-    fig_width_pt = column_width * ncol  # Get this from LaTeX using \showthe\columnwidth
+    """Set matplotlib rcParams for a LaTeX article."""
+    fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
     golden_mean = (math.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
     fig_width = fig_width_pt * inches_per_pt  # width in inches
