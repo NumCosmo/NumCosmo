@@ -123,7 +123,6 @@ if __name__ == "__main__":
     
     create_nc_obj (ccl_cosmo)
 
-
 # Missing function in CCL
 
 def dsigmaM_dlnM(cosmo, M, a):

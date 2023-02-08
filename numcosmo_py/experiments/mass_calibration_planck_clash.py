@@ -124,20 +124,3 @@ esmcmc.end_run ()
 
 esmcmc.mean_covar ()
 fit.log_covar ()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
