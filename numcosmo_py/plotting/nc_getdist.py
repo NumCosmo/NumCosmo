@@ -1,27 +1,64 @@
-import gi
+#
+# nc_getdist.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# nc_getdist.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-gi.require_version('NumCosmo', '1.0')
-gi.require_version('NumCosmoMath', '1.0')
+"""NumCosmoPy getdist utilities."""
 
-from gi.repository import NumCosmoMath as Ncm
-
+from typing import List
 import numpy as np
 
-from getdist import plots, MCSamples
-import getdist
+import gi
+from getdist import MCSamples
+
+gi.require_version("NumCosmo", "1.0")
+gi.require_version("NumCosmoMath", "1.0")
+
+# pylint:disable-next=wrong-import-position
+from gi.repository import NumCosmoMath as Ncm  # noqa: E402
+
 
 def mcat_to_mcsamples(mcat: Ncm.MSetCatalog, name: str) -> MCSamples:
-    nchains = mcat.nchains()
-    rows = np.array ([mcat.peek_row (i).dup_array () for i in range (0, mcat.len ())])
-    params = [mcat.col_symb (i) for i in range (mcat.ncols ())]
-    m2lnL = mcat.get_m2lnp_var ()
-    posterior = 0.5 * rows[:,m2lnL]
-    rows   = np.delete (rows,   m2lnL, 1)
-    params = np.delete (params, m2lnL, 0)
-    
-    split_chains = [rows[n::nchains] for n in range(nchains)]
-    split_posterior = [posterior[n::nchains] for n in range(nchains)]
-    
-    mcsample = MCSamples(samples=split_chains, loglikes=split_posterior, names = params, labels = params, label = name)
+    """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
+
+    nchains: int = mcat.nchains()
+    rows: np.ndarray = np.array(
+        [mcat.peek_row(i).dup_array() for i in range(0, mcat.len())]
+    )
+    params: List[str] = [mcat.col_symb(i) for i in range(mcat.ncols())]
+    m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
+    posterior: np.ndarray = 0.5 * rows[:, m2lnL]
+
+    rows = np.delete(rows, m2lnL, 1)
+    params = list(np.delete(params, m2lnL, 0))
+
+    split_chains = np.array([rows[n::nchains] for n in range(nchains)])
+    split_posterior = np.array([posterior[n::nchains] for n in range(nchains)])
+
+    mcsample = MCSamples(
+        samples=split_chains,
+        loglikes=split_posterior,
+        names=params,
+        labels=params,
+        label=name,
+    )
 
     return mcsample, rows, posterior

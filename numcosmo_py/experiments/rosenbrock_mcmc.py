@@ -1,13 +1,12 @@
-#!/usr/bin/env python
 #
-# example_rosenbrock.py
+# rosenbrock_mcmc.py
 #
 # Wed Feb 8 10:00:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# example_rosenbrock.py
-# Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# rosenbrock_mcmc.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -35,14 +34,13 @@ from gi.repository import NumCosmoMath as Ncm  # noqa: E402
 
 
 def run_rosenbrock_mcmc(
-    sampler: str = "apes", nwalkers: int = 320, ssize: int = 5000000,
-    verbose: bool = False
+    sampler: str = "apes",
+    nwalkers: int = 320,
+    ssize: int = 5000000,
+    verbose: bool = False,
+    nthreads: int = 4,
 ):
     """Runs the Rosenbrock MCMC example."""
-
-    #  Initializing the library objects, this must be called before
-    #  any other library function.
-    Ncm.cfg_init()
 
     # New Rosenbrock model object.
     mrb = Ncm.ModelRosenbrock()
@@ -54,18 +52,14 @@ def run_rosenbrock_mcmc(
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
 
-    # Creating a new data set object using the Rosenbrock function.
+    # Create a new data set object using the Rosenbrock function.
     drb = Ncm.DataRosenbrock.new()
 
-    #
-    # New data set object with sld added.
-    #
+    # Create a data set object and append the data.
     dset = Ncm.Dataset.new()
     dset.append_data(drb)
 
-    #
     # New likelihood object using dset.
-    #
     likelihood = Ncm.Likelihood.new(dset)
 
     # Creating a Fit object of type NLOPT using the fitting algorithm
@@ -73,19 +67,21 @@ def run_rosenbrock_mcmc(
     # and using a numerical differentiation algorithm (NUMDIFF_FORWARD)
     # to obtain the gradient (if needed).
     fit = Ncm.Fit.new(
-        Ncm.FitType.NLOPT, "ln-neldermead", likelihood, mset,
-        Ncm.FitGradType.NUMDIFF_FORWARD
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        likelihood,
+        mset,
+        Ncm.FitGradType.NUMDIFF_FORWARD,
     )
 
-    #
     # Printing fitting informations.
-    #
-    fit.log_info()
+    if verbose:
+        fit.log_info()
 
     #
     # Setting single thread calculation.
     #
-    Ncm.func_eval_set_max_threads(0)
+    Ncm.func_eval_set_max_threads(nthreads)
     Ncm.func_eval_log_pool_stats()
 
     #
@@ -123,14 +119,12 @@ def run_rosenbrock_mcmc(
     else:
         message_level = Ncm.FitRunMsgs.NONE
 
-    esmcmc = Ncm.FitESMCMC.new(
-        fit, nwalkers, init_sampler, walker, message_level
-    )
+    esmcmc = Ncm.FitESMCMC.new(fit, nwalkers, init_sampler, walker, message_level)
 
     # Setting the number of threads to use.
-    esmcmc.set_nthreads(4)
-    # Setting the file name to save the chain.
-    esmcmc.set_data_file(f"example_rosenbrock_{sampler}_{nwalkers}.fits")
+    esmcmc.set_nthreads(nthreads)
+    # Setting the file name to save the chains.
+    esmcmc.set_data_file(f"rosenbrock_chains_{sampler}_{nwalkers}.fits")
 
     # Running the esmcmc.
     esmcmc.start_run()
@@ -142,8 +136,3 @@ def run_rosenbrock_mcmc(
     if verbose:
         esmcmc.mean_covar()
         fit.log_covar()
-
-
-if __name__ == "__main__":
-    run_rosenbrock_mcmc("apes")
-    run_rosenbrock_mcmc("stretch")
