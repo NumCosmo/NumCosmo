@@ -1,154 +1,149 @@
 #!/usr/bin/env python
+#
+# example_rosenbrock.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# example_rosenbrock.py
+# Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-import os.path
+"""Example of using the Rosenbrock function to test the MCMC sampler.
+"""
 
-try:
-  import gi
-  gi.require_version('NumCosmo', '1.0')
-  gi.require_version('NumCosmoMath', '1.0')
-except:
-  pass
+import gi
 
-from gi.repository import GObject
-from gi.repository import NumCosmo as Nc
-from gi.repository import NumCosmoMath as Ncm
+gi.require_version("NumCosmo", "1.0")
+gi.require_version("NumCosmoMath", "1.0")
 
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
+# pylint:disable-next=wrong-import-position
+from gi.repository import NumCosmoMath as Ncm  # noqa: E402
 
-#
-# Instantiating a new SLine model object and setting
-# some values for its parameters.
-#
-mrb = Ncm.ModelRosenbrock ()
 
-#
-# New Model set object including slm with parameters
-# set as free.
-#
-mset = Ncm.MSet.empty_new ()
-mset.set (mrb)
-mset.param_set_all_ftype (Ncm.ParamType.FREE)
-mset.prepare_fparam_map ()
+def run_rosenbrock_mcmc(
+    sampler: str = "apes", nwalkers: int = 320, ssize: int = 5000000,
+    verbose: bool = False
+):
+    """Runs the Rosenbrock MCMC example."""
 
-#
-# Creating a new Serialization object, and load
-# the data file.
-#
-drb = Ncm.DataRosenbrock.new ()
+    #  Initializing the library objects, this must be called before
+    #  any other library function.
+    Ncm.cfg_init()
 
-#
-# New data set object with sld added.
-#
-dset = Ncm.Dataset.new ()
-dset.append_data (drb)
+    # New Rosenbrock model object.
+    mrb = Ncm.ModelRosenbrock()
 
-#
-# New likelihood object using dset.
-#
-lh = Ncm.Likelihood.new (dset)
+    # New Model set object including slm with parameters
+    # set as free.
+    mset = Ncm.MSet.empty_new()
+    mset.set(mrb)
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
 
-#
-#  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
-#  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
-#  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
-#
-fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
+    # Creating a new data set object using the Rosenbrock function.
+    drb = Ncm.DataRosenbrock.new()
 
-#
-# Printing fitting informations.
-#
-fit.log_info ()
+    #
+    # New data set object with sld added.
+    #
+    dset = Ncm.Dataset.new()
+    dset.append_data(drb)
 
-#
-# Setting single thread calculation.
-#
-Ncm.func_eval_set_max_threads (0)
-Ncm.func_eval_log_pool_stats ()
+    #
+    # New likelihood object using dset.
+    #
+    likelihood = Ncm.Likelihood.new(dset)
 
-#
-# New Gaussian prior to provide the initial points for the chain.
-# It was created with size 0 (number of parameters), but once 
-# initialized with mset the correct size is assigned. 
-#
-# The initial sampler will use a diagonal covariance with the
-# diagonal terms being the parameters scale set by each model.
-#
-init_sampler = Ncm.MSetTransKernGauss.new (0)
-init_sampler.set_mset (mset)
-init_sampler.set_prior_from_mset ()
-init_sampler.set_cov_from_rescale (100.0)
+    # Creating a Fit object of type NLOPT using the fitting algorithm
+    # ln-neldermead to fit the Modelset mset using the Likelihood lh
+    # and using a numerical differentiation algorithm (NUMDIFF_FORWARD)
+    # to obtain the gradient (if needed).
+    fit = Ncm.Fit.new(
+        Ncm.FitType.NLOPT, "ln-neldermead", likelihood, mset,
+        Ncm.FitGradType.NUMDIFF_FORWARD
+    )
 
-#
-# Creates the ESMCMC walker object, this object is responsible
-# for moving the walkers in each interation, the stretch move
-# is affine invariant and therefore gives good results even for
-# very correlated parametric space.
-# 
-sampler = 'aps'
-#sampler  = 'stretch'
-nwalkers = int (math.ceil (1510))
-ssize    = 8000000
+    #
+    # Printing fitting informations.
+    #
+    fit.log_info()
 
-if sampler == 'aps':
-  walker = Ncm.FitESMCMCWalkerAPS.new (nwalkers, mset.fparams_len ())
-elif sampler == "stretch":
-  walker = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
+    #
+    # Setting single thread calculation.
+    #
+    Ncm.func_eval_set_max_threads(0)
+    Ncm.func_eval_log_pool_stats()
 
-#
-# The methods below set the walk scale, which controls the size of the
-# step done between two walkers and circumscribe the walkers inside
-# the box defined by the parameters inside the mset object.
-#
-#walker.set_scale (3.0)
-#walker.set_box_mset (mset)
+    #
+    # New Gaussian prior to provide the initial points for the chain.
+    # It was created with size 0 (number of parameters), but once
+    # initialized with mset the correct size is assigned.
+    #
+    # The initial sampler will use a diagonal covariance with the
+    # diagonal terms being the parameters scale set by each model.
+    #
+    init_sampler = Ncm.MSetTransKernGauss.new(0)
+    init_sampler.set_mset(mset)
+    init_sampler.set_prior_from_mset()
+    init_sampler.set_cov_from_rescale(100.0)
 
-#
-# Initialize the ESMCMC object using the objects above. It will
-# use 50 walkers, i.e., each point in the MCMC chain contains
-# 50 points in the parametric space. Each step uses the last point
-# in the chain (the last 50 parametric points) to calculate the
-# proposal points.
-#
-esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, walker, Ncm.FitRunMsgs.SIMPLE)
+    #
+    # Creates the ESMCMC walker object, this object is responsible
+    # for moving the walkers in each interation, the stretch move
+    # is affine invariant and therefore gives good results even for
+    # very correlated parametric space.
+    #
 
-#
-# These methods enable the auto-trim options on ESMCMC. This option 
-# makes the sampler check the chains' health and trim any unnecessary 
-# burn-in part. We set the number of divisions to 100 so we test the
-# chains in blocks of n/100. The last method asserts that each 2min
-# the catalog will be checked.
-#
-#esmcmc.set_auto_trim (True)
-#esmcmc.set_auto_trim_div (100)
-#esmcmc.set_max_runs_time (2.0 * 60.0)
-#esmcmc.set_nthreads (4)
-esmcmc.set_data_file ("example_rosenbrock_%s_st_%d.fits" % (sampler, nwalkers))
+    if sampler == "apes":
+        walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
+        # Sets the calibrated over-smoothing factor.
+        walker.set_over_smooth(0.2)
+    elif sampler == "stretch":
+        walker = Ncm.FitESMCMCWalkerStretch.new(nwalkers, mset.fparams_len())
+    else:
+        raise ValueError(f"Unknown sampler {sampler}")
 
-#
-# Running the esmcmc, it will first calculate 1000 points, after that
-# it will estimate the error in the parameters mean. Using the current
-# errors the algorithm tries to calculated how many extra steps are 
-# necessary to obtain the required error `10^-3' in every parameters,
-# and it will run such extra steps. It will repeat this procedure
-# until it attains the required error in every parameter.
-# 
-#
-esmcmc.start_run ()
-esmcmc.run (ssize / nwalkers)
-#esmcmc.run (10)
-esmcmc.end_run ()
+    # Initialize the ESMCMC object using the objects above.
+    if verbose:
+        message_level = Ncm.FitRunMsgs.SIMPLE
+    else:
+        message_level = Ncm.FitRunMsgs.NONE
 
-#
-# Calculates the parameter means and covariance and set it into 
-# the fit object and then print.
-# 
-esmcmc.mean_covar ()
-fit.log_covar ()
+    esmcmc = Ncm.FitESMCMC.new(
+        fit, nwalkers, init_sampler, walker, message_level
+    )
+
+    # Setting the number of threads to use.
+    esmcmc.set_nthreads(4)
+    # Setting the file name to save the chain.
+    esmcmc.set_data_file(f"example_rosenbrock_{sampler}_{nwalkers}.fits")
+
+    # Running the esmcmc.
+    esmcmc.start_run()
+    esmcmc.run(ssize // nwalkers)
+    esmcmc.end_run()
+
+    # Calculates the parameter means and covariance and set it into
+    # the fit object and then print.
+    if verbose:
+        esmcmc.mean_covar()
+        fit.log_covar()
+
+
+if __name__ == "__main__":
+    run_rosenbrock_mcmc("apes")
+    run_rosenbrock_mcmc("stretch")
