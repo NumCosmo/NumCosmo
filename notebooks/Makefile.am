@@ -11,9 +11,9 @@ notebooks_DATA = \
 	primordial_perturbations/BounceVecPert.ipynb                  \
 	extern_lib_comparisons/NC_CCL_Colossus_density_profiles.ipynb \
 	FisherMatrixExample.ipynb                                     \
-	kde/TestInterp.ipynb                                          \
-	kde/TestInterp-Rosenbrock.ipynb
+	stats_dist_tests/stats_dist_gauss.ipynb                       \
+	stats_dist_tests/stats_dist_rosenbrock.ipynb
 
 EXTRA_DIST = \
 	$(notebooks_DATA)
- 
+

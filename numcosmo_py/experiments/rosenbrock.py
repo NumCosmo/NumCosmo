@@ -118,7 +118,7 @@ def run_rosenbrock_mcmc(
     # Setting the number of threads to use.
     esmcmc.set_nthreads(nthreads)
     # Setting the file name to save the chains.
-    filename = f"rosenbrock_chains_{sampler}_{nwalkers}.fits"
+    filename = f"rosenbrock_mcmc_catalog_{sampler}_{nwalkers}.fits"
     esmcmc.set_data_file(filename)
 
     # Running the esmcmc.
