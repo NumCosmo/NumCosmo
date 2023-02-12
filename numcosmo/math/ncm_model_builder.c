@@ -71,6 +71,7 @@ static void
 ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelBuilder *mb = NCM_MODEL_BUILDER (object);
+
   g_return_if_fail (NCM_IS_MODEL_BUILDER (object));
 
   switch (prop_id)
@@ -96,6 +97,7 @@ static void
 ncm_model_builder_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelBuilder *mb = NCM_MODEL_BUILDER (object);
+
   g_return_if_fail (NCM_IS_MODEL_BUILDER (object));
 
   switch (prop_id)
@@ -142,7 +144,7 @@ ncm_model_builder_finalize (GObject *object)
 static void
 ncm_model_builder_class_init (NcmModelBuilderClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = ncm_model_builder_set_property;
   object_class->get_property = ncm_model_builder_get_property;
@@ -170,7 +172,6 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                         "Model's description",
                                                         "no-description",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 }
 
 /**
@@ -295,20 +296,21 @@ ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const g
 /**
  * ncm_model_builder_add_sparams:
  * @mb: a #NcmModelBuilder
- * @sparams: (element-type NcmSParam): an array of #NcmSParam objects
+ * @sparams: an array of #NcmSParam objects
  *
  * Adds all #NcmSParam objects in @sparams to @mb.
  *
  */
-void 
+void
 ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams)
 {
   gint i;
-  
+
   for (i = 0; i < sparams->len; i++)
   {
     NcmSParam *sparam = NCM_SPARAM (ncm_obj_array_get (sparams, i));
-    g_assert (NCM_IS_SPARAM (sparam));  
+
+    g_assert (NCM_IS_SPARAM (sparam));
     ncm_model_builder_add_sparam_obj (mb, sparam);
   }
 }
@@ -324,15 +326,15 @@ ncm_model_builder_get_sparams (NcmModelBuilder *mb)
 {
   NcmObjArray *oa = ncm_obj_array_new ();
   gint i;
-  
+
   for (i = 0; i < mb->sparams->len; i++)
   {
     NcmSParam *sparam = NCM_SPARAM (g_ptr_array_index (mb->sparams, i));
     GObject *obj      = G_OBJECT (ncm_sparam_ref (sparam));
-    
+
     ncm_obj_array_add (oa, obj);
   }
-  
+
   return oa;
 }
 
@@ -340,13 +342,11 @@ void
 _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
 {
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_class);
-  NcmModelBuilder *mb = NCM_MODEL_BUILDER (class_data);
+  NcmModelBuilder *mb        = NCM_MODEL_BUILDER (class_data);
   guint i;
 
   if (model_class->main_model_id == -1)
-  {
     ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, FALSE, -1);
-  }
 
   ncm_model_class_set_name_nick (model_class, mb->desc, mb->name);
   ncm_model_class_add_params (model_class, mb->sparams->len, mb->vparams->len, 1);
@@ -354,12 +354,14 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   for (i = 0; i < mb->sparams->len; i++)
   {
     NcmSParam *sparam = NCM_SPARAM (g_ptr_array_index (mb->sparams, i));
+
     ncm_model_class_set_sparam_obj (model_class, i, sparam);
   }
 
   for (i = 0; i < mb->vparams->len; i++)
   {
     NcmVParam *vparam = NCM_VPARAM (g_ptr_array_index (mb->vparams, i));
+
     ncm_model_class_set_vparam_obj (model_class, i, vparam);
   }
 
@@ -369,7 +371,6 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
 void
 _ncm_model_builder_instance_init (GTypeInstance *instance, gpointer g_class)
 {
-
 }
 
 /**
@@ -401,7 +402,7 @@ ncm_model_builder_create (NcmModelBuilder *mb)
     info.instance_init  = _ncm_model_builder_instance_init;
     info.value_table    = NULL;
 
-    mb->type = g_type_register_static (mb->ptype, mb->name, &info, 0);
+    mb->type    = g_type_register_static (mb->ptype, mb->name, &info, 0);
     mb->created = TRUE;
 
     {
@@ -409,7 +410,6 @@ ncm_model_builder_create (NcmModelBuilder *mb)
 
       g_type_class_unref (object_class);
     }
-
   }
 
   return mb->type;
