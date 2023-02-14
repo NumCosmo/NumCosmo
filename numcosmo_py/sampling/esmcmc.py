@@ -24,7 +24,11 @@
 """Create a new ensemble sampler object."""
 
 from enum import Enum
-from numcosmo_py import Ncm, GEnum
+from numcosmo_py import Ncm
+from numcosmo_py.interpolation.stats_dist import (
+    InterpolationMethod,
+    InterpolationKernel,
+)
 
 
 class WalkerTypes(str, Enum):
@@ -32,21 +36,6 @@ class WalkerTypes(str, Enum):
 
     APES = "apes"
     STRECTCH = "stretch"
-
-
-class InterpolationMethod(GEnum):
-    """Possible interpolation methods for APES walkers."""
-    # pylint: disable=no-member
-    KDE = Ncm.FitESMCMCWalkerAPESMethod.KDE
-    VKDE = Ncm.FitESMCMCWalkerAPESMethod.VKDE
-
-
-class InterpolationKernel(GEnum):
-    """Possible interpolation kernels for APES walkers."""
-    # pylint: disable=no-member
-    CAUCHY = Ncm.FitESMCMCWalkerAPESKType.CAUCHY
-    ST3 = Ncm.FitESMCMCWalkerAPESKType.ST3
-    GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
 
 
 def create_esmcmc(
