@@ -1,23 +1,35 @@
-try:
-    import gi
+#
+# comparison.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# comparison.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    gi.require_version("NumCosmo", "1.0")
-    gi.require_version("NumCosmoMath", "1.0")
-except:
-    pass
+"""Compare CCL and NumCosmo results."""
 
-from gi.repository import GObject
-from gi.repository import NumCosmo as Nc
-from gi.repository import NumCosmoMath as Ncm
-
-import pyccl
-import math
 import numpy as np
 import pylab as plt
 
 
+# pylint: disable-next=dangerous-default-value
 def compare_ccl_nc_func(
-    x,
+    x,  # pylint: disable=invalid-name
     y_ccl,
     y_nc,
     x_name="x",
@@ -26,8 +38,9 @@ def compare_ccl_nc_func(
     xscale="linear",
     yscale="log",
 ):
+    """Compare CCL and NumCosmo results for a function."""
 
-    ccl_name, nc_name = "%s^\\mathrm{ccl}" % y_name, "%s^\\mathrm{nc}" % y_name
+    ccl_name, nc_name = f"{y_name}^\\mathrm{{ccl}}", f"{y_name}^\\mathrm{{nc}}"
 
     x = np.array(x)
     y_ccl = np.array(y_ccl)
@@ -39,8 +52,8 @@ def compare_ccl_nc_func(
     diff[non_zind] = y_nc[non_zind] / y_ccl[non_zind] - 1.0
     diff[zind] = y_nc[zind] - y_ccl[zind]
     print(
-        "[%10s]: rel diff min: %e\trel diff max: %e"
-        % (y_name, min(abs(diff)), max(abs(diff)))
+        f"[{y_name:10}]: rel diff min: {min(abs(diff)):.e}\t"
+        f"rel diff max: {max(abs(diff)):.e}"
     )
 
     fig, axs = plt.subplots(2, sharex=True, **subplots_pars)
@@ -53,8 +66,8 @@ def compare_ccl_nc_func(
     axs[1].set_yscale(yscale)
 
     axs[0].legend()
-    axs[0].set_ylabel("$%s$" % y_name)
-    axs[1].set_xlabel("$%s$" % x_name)
-    axs[1].set_ylabel("$%s/%s-1$" % (nc_name, ccl_name))
+    axs[0].set_ylabel(f"${y_name}$")
+    axs[1].set_xlabel(f"${x_name}$")
+    axs[1].set_ylabel(f"${nc_name}/{ccl_name}-1$")
 
     return fig, axs

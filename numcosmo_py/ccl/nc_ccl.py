@@ -1,18 +1,33 @@
-try:
-    import gi
+#
+# comparison.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# comparison.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    gi.require_version("NumCosmo", "1.0")
-    gi.require_version("NumCosmoMath", "1.0")
-except:
-    pass
+"""NumCosmo and CCL comparison functions."""
 
-from gi.repository import GObject
-from gi.repository import NumCosmo as Nc
-from gi.repository import NumCosmoMath as Ncm
-
-import pyccl
 import math
 import numpy as np
+import pyccl
+
+from numcosmo_py import Ncm, Nc
 
 
 def create_nc_obj(
@@ -23,8 +38,8 @@ def create_nc_obj(
     k_min=1.0e-6,
     k_max=1.0e3,
 ):
+    """Create a NumCosmo object from a CCL cosmology."""
 
-    # Creates the base HI object
     cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDECpl{'massnu-length':<0>}")
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
@@ -42,8 +57,7 @@ def create_nc_obj(
 
     cosmo.add_submodel(hiprim)
 
-    # Creates the distance object optimized up to z = 15.0
-    dist = Nc.Distance.new(15.0)
+    dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)
 
     # Checking if neutrinos are compatible
@@ -56,24 +70,30 @@ def create_nc_obj(
             raise ValueError("Massive neutrinos are not supported")
 
     # Creating the transfer/linear power spectrum
-    tf = None
+    tf = None  # pylint: disable=invalid-name
     ps_lin = None
 
+    # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
-        tf = Nc.TransferFuncEH.new()
+        tf = Nc.TransferFuncEH.new()  # pylint: disable=invalid-name
         tf.props.CCL_comp = True
 
         ps_lin = Nc.PowspecMLTransfer.new(tf)
-        ps_lin.prepare(cosmo)
     else:
         raise ValueError(
-            "Transfer function type `' not supported"
-            % (ccl_cosmo._config_init_kwargs["transfer_function"])
+            "Transfer function type `"
+            + ccl_cosmo._config_init_kwargs["transfer_function"]
+            + "` not supported"
         )
+
+    ps_lin.set_kmin(k_min)
+    ps_lin.set_kmax(k_max)
+    ps_lin.prepare(cosmo)
 
     if not math.isnan(ccl_cosmo["A_s"]):
         hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * ccl_cosmo["A_s"]))
     else:
+        # pylint: disable-next=invalid-name
         A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
@@ -93,14 +113,17 @@ def create_nc_obj(
         psf.set_best_lnr0()
 
         if ccl_cosmo._config_init_kwargs["mass_function"] == "tinker10":
+            # pylint: disable-next=invalid-name
             hmf_T10 = Nc.MultiplicityFuncTinkerMeanNormalized.new()
             hmfunc = Nc.HaloMassFunction.new(dist, psf, hmf_T10)
             hmfunc.prepare(cosmo)
 
+    # pylint: enable=protected-access
     return cosmo, dist, ps_lin, ps_nln, hmfunc
 
 
-def ccl_cosmo_set_high_prec(ccl_cosmo):
+def ccl_cosmo_set_high_prec():
+    """Set CCL cosmology to high precision."""
     pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
     pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-13
     pyccl.gsl_params.N_ITERATION = 10000
@@ -118,47 +141,20 @@ def ccl_cosmo_set_high_prec(ccl_cosmo):
     pyccl.spline_params.LOGM_SPLINE_NM = 300
 
 
-if __name__ == "__main__":
-
-    Omega_c = 0.25
-    Omega_b = 0.05
-    Omega_k = 0.0
-    h = 0.7
-    A_s = 2.1e-9
-    n_s = 0.96
-    Neff = 3.046
-    w0 = -1.0
-    wa = 0.0
-
-    ccl_cosmo = pyccl.Cosmology(
-        Omega_c=Omega_c,
-        Omega_b=Omega_b,
-        Neff=Neff,
-        h=h,
-        A_s=A_s,
-        n_s=n_s,
-        Omega_k=Omega_k,
-        w0=w0,
-        wa=wa,
-        transfer_function="eisenstein_hu",
-    )
-
-    Ncm.cfg_init()
-
-    create_nc_obj(ccl_cosmo)
-
 # Missing function in CCL
-
-
-def dsigmaM_dlnM(cosmo, M, a):
+def dsigmaM_dlnM(cosmo, M, a):  # pylint: disable=invalid-name
+    """Derivative of the mass variance with respect to the logarithm of the
+    mass."""
 
     cosmo.compute_sigma()
 
-    logM = np.log10(np.atleast_1d(M))
+    logM = np.log10(np.atleast_1d(M))  # pylint: disable=invalid-name
     status = 0
+    # pylint: disable-next=invalid-name
     dsigMdlnM, status = pyccl.lib.dlnsigM_dlogM_vec(
         cosmo.cosmo, a, logM, len(logM), status
     )
     if np.ndim(M) == 0:
+        # pylint: disable-next=invalid-name
         dsigMdlnM = dsigMdlnM[0]
     return dsigMdlnM

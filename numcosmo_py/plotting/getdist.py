@@ -26,14 +26,8 @@
 from typing import List
 import numpy as np
 
-import gi
 from getdist import MCSamples
-
-gi.require_version("NumCosmo", "1.0")
-gi.require_version("NumCosmoMath", "1.0")
-
-# pylint:disable-next=wrong-import-position
-from gi.repository import NumCosmoMath as Ncm  # noqa: E402
+from numcosmo_py import Ncm
 
 
 def mcat_to_mcsamples(mcat: Ncm.MSetCatalog, name: str) -> MCSamples:
