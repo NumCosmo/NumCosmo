@@ -18,6 +18,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install prereq
       run: sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
@@ -41,8 +43,6 @@ jobs:
       with:
         name: release
         path: numcosmo-*.tar.gz
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
 
   coveralls-gcc-ubuntu:
 
@@ -88,6 +88,8 @@ jobs:
         brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib
         brew ls glib
         brew ls glib-utils
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
@@ -96,5 +98,3 @@ jobs:
       run: make -j8
     - name: make check
       run: make check -j8
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
