@@ -23,14 +23,14 @@ extern_lib_comparisons_DATA = \
 
 likelihood_cluster_ncountdir = $(nbs_datadir)/likelihood_cluster_ncount
 likelihood_cluster_ncount_DATA = \
-	likelihood_cluster_ncount/DC2_Datancount.ipynb                  \
-	likelihood_cluster_ncount/NumCosmo_abundance_skysim.ipynb       \
 	likelihood_cluster_ncount/cmp_cluster_ccl_numcosmo.ipynb        \
-	likelihood_cluster_ncount/cmp_cluster_ccl_numcosmo_proxyZ.ipynb \
+	likelihood_cluster_ncount/cmp_cluster_ccl_numcosmo_proxyz.ipynb \
+	likelihood_cluster_ncount/dc2_datancount.ipynb                  \
 	likelihood_cluster_ncount/dc2_fof.ipynb                         \
 	likelihood_cluster_ncount/generate_corner.ipynb                 \
 	likelihood_cluster_ncount/generate_mcmc_data.ipynb              \
 	likelihood_cluster_ncount/mean_bias_ascaso.ipynb                \
+	likelihood_cluster_ncount/numcosmo_abundance_skysim.ipynb       \
 	likelihood_cluster_ncount/run_ascaso_mc_binned.ipynb            \
 	likelihood_cluster_ncount/run_ascaso_mc_unbinned.ipynb          \
 	likelihood_cluster_ncount/run_ascaso_mcmc_binned.ipynb          \
