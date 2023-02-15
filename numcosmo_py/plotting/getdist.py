@@ -24,13 +24,16 @@
 """NumCosmoPy getdist utilities."""
 
 from typing import List
+import re
 import numpy as np
 
 from getdist import MCSamples
 from numcosmo_py import Ncm
 
 
-def mcat_to_mcsamples(mcat: Ncm.MSetCatalog, name: str) -> MCSamples:
+def mcat_to_mcsamples(
+    mcat: Ncm.MSetCatalog, name: str, asinh_transform: List[int] = []
+) -> MCSamples:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
 
     nchains: int = mcat.nchains()
@@ -43,6 +46,13 @@ def mcat_to_mcsamples(mcat: Ncm.MSetCatalog, name: str) -> MCSamples:
 
     rows = np.delete(rows, m2lnL, 1)
     params = list(np.delete(params, m2lnL, 0))
+    names = [re.sub("[^A-Za-z0-9_]", "", param) for param in params]
+
+    if len(asinh_transform) > 0:
+        rows[:, asinh_transform] = np.arcsinh(rows[:, asinh_transform])
+        for i in asinh_transform:
+            params[i] = f"\\mathrm{{sinh}}^{{-1}}({params[i]})"
+            names[i] = f"asinh_{names[i]}"
 
     split_chains = np.array([rows[n::nchains] for n in range(nchains)])
     split_posterior = np.array([posterior[n::nchains] for n in range(nchains)])
@@ -50,7 +60,7 @@ def mcat_to_mcsamples(mcat: Ncm.MSetCatalog, name: str) -> MCSamples:
     mcsample = MCSamples(
         samples=split_chains,
         loglikes=split_posterior,
-        names=params,
+        names=names,
         labels=params,
         label=name,
     )
