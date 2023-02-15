@@ -37,10 +37,10 @@ likelihood_cluster_ncount_DATA = \
 	likelihood_cluster_ncount/run_ascaso_mcmc_unbinned.ipynb       
 
 
-likelihood_cluster_ncount_cases_comparisondir = $(nbs_datadir)/likelihood_cluster_ncount/Cases_comparison
+likelihood_cluster_ncount_cases_comparisondir = $(nbs_datadir)/likelihood_cluster_ncount/cases_comparison
 likelihood_cluster_ncount_cases_comparison_DATA = \
-	likelihood_cluster_ncount/Cases_comparison/comparisons.ipynb        \
-	likelihood_cluster_ncount/Cases_comparison/corner_comparisons.ipynb
+	likelihood_cluster_ncount/cases_comparison/comparisons.ipynb        \
+	likelihood_cluster_ncount/cases_comparison/corner_comparisons.ipynb
 
 
 primordial_perturbationsdir = $(nbs_datadir)/primordial_perturbations
