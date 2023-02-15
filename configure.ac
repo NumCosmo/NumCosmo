@@ -1092,7 +1092,6 @@ examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
 notebooks/Makefile
-notebooks/tutorials/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])
