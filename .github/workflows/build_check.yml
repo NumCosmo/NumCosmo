@@ -41,6 +41,8 @@ jobs:
       with:
         name: release
         path: numcosmo-*.tar.gz
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
 
   coveralls-gcc-ubuntu:
 
@@ -94,3 +96,5 @@ jobs:
       run: make -j8
     - name: make check
       run: make check -j8
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
