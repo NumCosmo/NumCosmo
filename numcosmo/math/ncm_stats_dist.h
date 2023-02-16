@@ -54,7 +54,7 @@ struct _NcmStatsDistClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*set_dim) (NcmStatsDist *sd, const guint dim);
   gdouble (*get_href) (NcmStatsDist *sd);
   void (*prepare_kernel) (NcmStatsDist *sd, GPtrArray *sample_array);
@@ -103,6 +103,7 @@ NcmStatsDistKernel *ncm_stats_dist_get_kernel (NcmStatsDist *sd);
 
 guint ncm_stats_dist_get_dim (NcmStatsDist *sd);
 guint ncm_stats_dist_get_sample_size (NcmStatsDist *sd);
+guint ncm_stats_dist_get_n_kernels (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_href (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth);

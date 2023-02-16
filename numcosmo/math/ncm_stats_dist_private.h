@@ -50,8 +50,10 @@ struct _NcmStatsDistPrivate
   gdouble max_m2lnp;
   gdouble href;
   gdouble rnorm;
-  guint n;
-  guint alloc_n;
+  guint n_obs;
+  guint n_kernels;
+  guint alloc_n_obs;
+  guint alloc_n_kernels;
   gboolean alloc_subs;
   guint d;
   GArray *sampling;
@@ -64,6 +66,7 @@ struct _NcmStatsDistPrivate
   gdouble *levmar_workz;
   guint levmar_n;
   GArray *m2lnp_sort;
+  NcmRNG *rng;
 };
 
 G_END_DECLS
