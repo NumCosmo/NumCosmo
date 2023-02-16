@@ -156,6 +156,7 @@ ncm_sources = \
 	math/ncm_data_poisson.c               \
 	math/ncm_data_gauss_cov_mvnd.c        \
 	math/ncm_data_rosenbrock.c            \
+	math/ncm_data_gaussmix2d.c            \
 	math/ncm_data_funnel.c                \
 	math/ncm_dataset.c                    \
 	math/ncm_likelihood.c                 \
@@ -287,6 +288,7 @@ ncm_headers =                                 \
 	math/ncm_data_poisson.h               \
 	math/ncm_data_gauss_cov_mvnd.h        \
 	math/ncm_data_rosenbrock.h            \
+	math/ncm_data_gaussmix2d.h            \
 	math/ncm_data_funnel.h                \
 	math/ncm_dataset.h                    \
 	math/ncm_likelihood.h                 \

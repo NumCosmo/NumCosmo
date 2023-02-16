@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,7 +28,9 @@
  * @title: NcMultiplicityFuncJenkins
  * @short_description: Dark matter halo -- Jenkins multiplicity function.
  *
- * FIXME
+ * Computes the multiplicity function of dark matter halos using the Jenkins et al. (2001) model.
+ * Jenkins et al. (2001) [arXiv:astro-ph/0005260] is a parametrization of the Press-Schechter multiplicity function.
+ *
  * Reference: astro-ph/0005260
  */
 
@@ -42,6 +44,7 @@
 struct _NcMultiplicityFuncJenkinsPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+  gdouble Delta;
 };
 
 enum
@@ -57,11 +60,11 @@ nc_multiplicity_func_jenkins_init (NcMultiplicityFuncJenkins *mj)
 {
   NcMultiplicityFuncJenkinsPrivate * const self = mj->priv = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
-  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->mdef = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
 }
 
 static void
-_nc_multiplicity_func_jenkins_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_jenkins_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_JENKINS (object));
@@ -75,7 +78,7 @@ _nc_multiplicity_func_jenkins_set_property (GObject * object, guint prop_id, con
 }
 
 static void
-_nc_multiplicity_func_jenkins_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_jenkins_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (object); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_JENKINS (object));
@@ -91,36 +94,39 @@ _nc_multiplicity_func_jenkins_get_property (GObject * object, guint prop_id, GVa
 static void
 _nc_multiplicity_func_jenkins_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_jenkins_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf);
+static void _nc_multiplicity_func_jenkins_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
+static double _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
-// _NC_MULTIPLICITY_FUNCTION_JENKINS_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0};
+/* _NC_MULTIPLICITY_FUNCTION_JENKINS_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0}; */
 
 static void
 nc_multiplicity_func_jenkins_class_init (NcMultiplicityFuncJenkinsClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass *parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
   object_class->set_property = _nc_multiplicity_func_jenkins_set_property;
   object_class->get_property = _nc_multiplicity_func_jenkins_get_property;
   object_class->finalize     = _nc_multiplicity_func_jenkins_finalize;
 
-  parent_class->set_mdef = &_nc_multiplicity_func_jenkins_set_mdef;
-  parent_class->get_mdef = &_nc_multiplicity_func_jenkins_get_mdef;
-  parent_class->eval     = &_nc_multiplicity_func_jenkins_eval;
+  parent_class->set_mdef  = &_nc_multiplicity_func_jenkins_set_mdef;
+  parent_class->get_mdef  = &_nc_multiplicity_func_jenkins_get_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_jenkins_set_Delta;
+  parent_class->get_Delta = &_nc_multiplicity_func_jenkins_get_Delta;
+  parent_class->eval      = &_nc_multiplicity_func_jenkins_eval;
 }
 
-static void 
+static void
 _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
   NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
 
   switch (mdef)
@@ -145,22 +151,40 @@ _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicity
   self->mdef = mdef;
 }
 
-static NcMultiplicityFuncMassDef 
+static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
   NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
 
   return self->mdef;
+}
+
+static void
+_nc_multiplicity_func_jenkins_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
+{
+  NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
+  self->Delta = Delta;
+}
+
+static gdouble
+_nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
+  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+
+  return self->Delta;
 }
 
 static gdouble
 _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */
-  
-  gdouble f_Jenkins = 0.315 * exp(-pow(fabs(-log(sigma) + 0.61), 3.8));
+   *  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */
+
+  gdouble f_Jenkins = 0.315 * exp (-pow (fabs (-log (sigma) + 0.61), 3.8));
 
   NCM_UNUSED (mulf);
   NCM_UNUSED (cosmo);
@@ -171,7 +195,7 @@ _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
 
 /**
  * nc_multiplicity_func_jenkins_new:
- *   
+ *
  * FIXME
  *
  * Returns: A new #NcMultiplicityFuncJenkins.

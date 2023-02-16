@@ -185,6 +185,7 @@
       <xi:include href="xml/ncm_data_gauss_cov_mvnd.xml"/>
       <xi:include href="xml/ncm_model_rosenbrock.xml"/>
       <xi:include href="xml/ncm_data_rosenbrock.xml"/>
+      <xi:include href="xml/ncm_data_gaussmix2d.xml"/>
       <xi:include href="xml/ncm_model_funnel.xml"/>
       <xi:include href="xml/ncm_data_funnel.xml"/>
     </section>   
