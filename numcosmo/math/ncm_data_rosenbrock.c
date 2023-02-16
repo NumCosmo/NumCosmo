@@ -29,7 +29,7 @@
  * @title: NcmDataRosenbrock
  * @short_description: Rosenbrock distribution.
  *
- * Class to handle Rosenbrock distribution.
+ * Data object describing the Rosenbrock distribution.
  *
  */
 
@@ -116,7 +116,7 @@ _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 /**
  * ncm_data_rosenbrock_new:
  *
- * Creates a new @dim-dimensional MVND.
+ * Creates a new Rosenbrock distribution object.
  *
  * Returns: the newly created object.
  */

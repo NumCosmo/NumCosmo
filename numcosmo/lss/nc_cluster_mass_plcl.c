@@ -390,7 +390,7 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
 }
 
 static gdouble
-_nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpointer userdata)
+_nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpointer userdata)/*Calcula o integrando inteiro da eq 3. Tá escrito na mesma ordem da eq */
 {
   integrand_data *data    = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
@@ -450,7 +450,7 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
  *
  */
 void
-nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)/*Coloca novas avriaveis na estrutura, provavelmente se vc tiver catálçogos diferentes*/
 {
   integrand_data data;
   const gdouble onemcor2 = sqrt (1.0 - COR * COR);

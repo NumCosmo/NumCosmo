@@ -115,6 +115,7 @@
 #include <numcosmo/math/ncm_data_poisson.h>
 #include <numcosmo/math/ncm_data_gauss_cov_mvnd.h>
 #include <numcosmo/math/ncm_data_rosenbrock.h>
+#include <numcosmo/math/ncm_data_gaussmix2d.h>
 #include <numcosmo/math/ncm_data_funnel.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
@@ -171,3 +172,4 @@
 #include <numcosmo/math/ncm_sphere_map.h>
 
 #endif /* _NUMCOSMO_MATH_H */
+

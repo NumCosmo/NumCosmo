@@ -1,16 +1,39 @@
-#!/usr/bin/env python
+#
+# plot_corner.py
+#
+# Wed Feb 8 10:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# plot_corner.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""NumCosmoPy corner plot utilities."""
 
 import argparse
 import numpy as np
-from chainconsumer import ChainConsumer
 
+from chainconsumer import ChainConsumer
 import gi
 
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
 
-# from gi.repository import NumCosmo as Nc  # noqa: E402
-from gi.repository import NumCosmoMath as Ncm  # noqa: E402
+# pylint:disable-next=wrong-import-position
+from gi.repository import NumCosmoMath as Ncm
 
 parser = argparse.ArgumentParser(description="Process mset catalogs")
 
@@ -24,33 +47,16 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-B",
-    "--burnin",
-    metavar="N",
-    help="catalog burnin",
-    type=int,
-    action="append"
+    "-B", "--burnin", metavar="N", help="catalog burnin", type=int, action="append"
 )
 
 parser.add_argument(
-    "--kde",
-    help="whether to use kde interpolation",
-    action="store_true"
+    "--kde", help="whether to use kde interpolation", action="store_true"
 )
 
-parser.add_argument(
-    "--col",
-    type=int,
-    nargs="*",
-    help="Columns to include"
-    )
+parser.add_argument("--col", type=int, nargs="*", help="Columns to include")
 
-parser.add_argument(
-    "--truth",
-    type=float,
-    nargs="*",
-    help="Columns to include"
-    )
+parser.add_argument("--truth", type=float, nargs="*", help="Columns to include")
 
 parser.add_argument(
     "--sigma",
@@ -60,17 +66,9 @@ parser.add_argument(
     help="Sigmas to compute the confidence regions",
 )
 
-parser.add_argument(
-    "--out",
-    default="corner.pdf",
-    help="Output filename"
-    )
+parser.add_argument("--out", default="corner.pdf", help="Output filename")
 
-parser.add_argument(
-    "--mode",
-    choices=["corner", "walks"],
-    default="corner"
-    )
+parser.add_argument("--mode", choices=["corner", "walks"], default="corner")
 
 args = parser.parse_args()
 
@@ -80,26 +78,24 @@ c = ChainConsumer()
 
 for cat in args.catalog:
 
-    bin = 0
+    burnin = 0
     if args.burnin and (len(args.burnin) > 0):
-        bin = args.burnin.pop(0)
+        burnin = args.burnin.pop(0)
 
-    print(f"# Adding {cat} with burnin {bin}")
+    print(f"# Adding {cat} with burnin {burnin}")
 
-    mcat = Ncm.MSetCatalog.new_from_file_ro(cat, bin)
+    mcat = Ncm.MSetCatalog.new_from_file_ro(cat, burnin)
     nwalkers = mcat.nchains()
 
     m2lnL = mcat.get_m2lnp_var()
 
     rows = np.array([mcat.peek_row(i).dup_array() for i in range(mcat.len())])
-    params = np.array(
-        ["$" + mcat.col_symb(i) + "$" for i in range(mcat.ncols())]
-        )
+    params = ["$" + mcat.col_symb(i) + "$" for i in range(mcat.ncols())]
 
     posterior = -0.5 * rows[:, m2lnL]
 
     rows = np.delete(rows, m2lnL, 1)
-    params = np.delete(params, m2lnL, 0)
+    params = list(np.delete(params, m2lnL, 0))
 
     if args.col:
         assert max(args.col) < mcat.ncols()
@@ -108,11 +104,8 @@ for cat in args.catalog:
         rows = rows[:, indices]
         params = params[indices]
 
-    # c.add_chain(rows, posterior = posterior, parameters=list(params),
-    # plot_point = True, name = cat.replace ("_", "-"))
     c.add_chain(
-        rows, posterior=posterior, parameters=list(params),
-        name=cat.replace("_", "-")
+        rows, posterior=posterior, parameters=list(params), name=cat.replace("_", "-")
     )
 
 c.configure(
