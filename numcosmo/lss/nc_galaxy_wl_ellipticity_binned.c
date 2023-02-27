@@ -355,8 +355,8 @@ nc_galaxy_wl_ellipticity_binned_set_bin (NcGalaxyWLEllipticityBinned *gebin, Ncm
     for (bin_i = 0; bin_i < ncm_vector_len (bins) - 1; bin_i++)
     {
       NcmMatrix *bin_data = ncm_matrix_new (0, 3);
-      gint bin_min       = ncm_vector_get (bins, bin_i);
-      gint bin_max       = ncm_vector_get (bins, bin_i+1);
+      gint bin_min        = ncm_vector_get (bins, bin_i);
+      gint bin_max        = ncm_vector_get (bins, bin_i+1);
 
       for (gal_i = 0;  gal_i < self->len; gal_i ++)
       {
@@ -369,14 +369,14 @@ nc_galaxy_wl_ellipticity_binned_set_bin (NcGalaxyWLEllipticityBinned *gebin, Ncm
           NcmMatrix data = ncm_matrix_new (ncm_matrix_nrows (bin_data)+1, 3);
 
           ncm_matrix_set (data, ncm_matrix_nrows (data)-1, 0, r_i);
-          ncm_matrix_set (data, ncm_matrix_nrows (data)-1, 1, 3_i);
+          ncm_matrix_set (data, ncm_matrix_nrows (data)-1, 1, e_i);
           ncm_matrix_set (data, ncm_matrix_nrows (data)-1, 2, err_i);
 
           if (ncm_matrix_size (bin_data) == 0)
             *bin_data = data;
           else
           {
-            for (i = 0; i < ncm_vector_len (data); i++)
+            for (i = 0; i < ncm_matrix_nrows (data)-1; i++)
             {
               ncm_matrix_set (data, i, 0, ncm_matrix_get (bin_data, i, 0));
               ncm_matrix_set (data, i, 1, ncm_matrix_get (bin_data, i, 1));
@@ -386,11 +386,11 @@ nc_galaxy_wl_ellipticity_binned_set_bin (NcGalaxyWLEllipticityBinned *gebin, Ncm
           }
         }
       }
-      ncm_obj_array_set (bin_obs, bin_i, bin_data)
+      ncm_obj_array_set (bin_obs, bin_i, bin_data);
     }
   }
-  self->bins    = bins
-  self->bin_obs = bin_obs
+  self->bins    = bins;
+  self->bin_obs = bin_obs;
 }
 
 /**
