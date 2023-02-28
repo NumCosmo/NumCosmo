@@ -33,7 +33,6 @@
 #include <glib-object.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics_double.h>
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
 
 
 typedef struct _TestNcGalaxyWLEllipticityKDE
@@ -161,34 +160,39 @@ test_nc_galaxy_wl_ellipticity_kde_reset (TestNcGalaxyWLEllipticityKDE *test, gco
 static void 
 test_nc_galaxy_wl_ellipticity_kde_e_vec (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
+  NcGalaxyWLEllipticityKDE *gekde = test->gekde;
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
   const guint nruns = 100000;
+  const guint ndata = 10000;
   gint i;
 
   for (i = 0; i < nruns; i++)
   {
-    nc_galaxy_wl_dist_m2lnP_initial_prep (NC_GALAXY_WL_DIST (gekde), NC_GALAXY_REDSHIFT (gzs), cosmo, dp, smd, z_cluster);
+    nc_galaxy_wl_dist_m2lnP_initial_prep (NC_GALAXY_WL_DIST (test->gekde), test->gz, test->cosmo, test->dp, test->smd, test->z_cluster);
 
-    g_assert_cmpfloat (ncm_vector_len (test->gekde->e_vec), <=, ndata);
+    g_assert_cmpfloat (ncm_vector_len (self->e_vec), <=, ndata);
   }
 }
 
 static void 
 test_nc_galaxy_wl_ellipticity_kde_m2lnP (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
+  NcGalaxyWLEllipticityKDE *gekde = test->gekde;
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
   const guint nruns = 100000;
   gint i;
 
   for (i = 0; i < nruns; i++)
   {
     const gdouble p;
-    const gint gal_i;
     const gdouble e_i;
+    gint gal_i;
 
-    nc_galaxy_wl_dist_m2lnP_initial_prep (NC_GALAXY_WL_DIST (gekde), NC_GALAXY_REDSHIFT (gzs), cosmo, dp, smd, z_cluster);
+    nc_galaxy_wl_dist_m2lnP_initial_prep (NC_GALAXY_WL_DIST (test->gekde), test->gz, test->cosmo, test->dp, test->smd, test->z_cluster);
     gal_i = g_test_rand_int_range (0, 10000);
-    e_i = ncm_vector_get (test->gekde->e_vec, gal_i);
+    e_i = ncm_vector_get (self->e_vec, gal_i);
 
-    p = ncm_stats_dist1d_eval_p (NCM_STATS_DIST1D (test->gekde->kde), e_i);
+    p = ncm_stats_dist1d_eval_p (NCM_STATS_DIST1D (self->kde), e_i);
 
     g_assert_cmpfloat (p, >, 0);
   }
