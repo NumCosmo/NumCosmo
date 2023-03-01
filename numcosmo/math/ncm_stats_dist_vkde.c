@@ -310,9 +310,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample, i);
       rb_knn_list_table_t *table;
 
-      printf ("Searching! [%6d]\n", i);
       table = kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
-
       ncm_stats_vec_reset (self->sample, TRUE);
       ncm_matrix_set_zero (self->tmp_cov);
       {

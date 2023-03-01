@@ -35,7 +35,6 @@ typedef struct kdtree
   unsigned char *coord_deleted;
   unsigned char *coord_passed;
   int dim;
-  int knn_num;
   double knn_distance;
 } kdtree_t;
 
