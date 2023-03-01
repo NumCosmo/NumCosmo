@@ -3,14 +3,14 @@
 /***************************************************************************
  *            nc_galaxy_wl_ellipticity_kde.h
  *
- *  Mon July 27 11:13:56 2020
+ *  Wed March 1 12:53:13 2023
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
  *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_ellipticity_kde.h
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,6 +34,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_stats_dist1d_epdf.h>
 #include <numcosmo/lss/nc_galaxy_wl_dist.h>
 
 G_BEGIN_DECLS
@@ -72,6 +73,10 @@ void nc_galaxy_wl_ellipticity_kde_clear (NcGalaxyWLEllipticityKDE **gekde);
 
 void nc_galaxy_wl_ellipticity_kde_set_obs (NcGalaxyWLEllipticityKDE *gekde, NcmMatrix *obs);
 NcmMatrix *nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *gekde);
+
+NcmStatsDist1dEPDF *nc_galaxy_wl_ellipticity_kde_peek_kde (NcGalaxyWLEllipticityKDE *gekde);
+
+NcmVector *nc_galaxy_wl_ellipticity_kde_peek_e_vec (NcGalaxyWLEllipticityKDE *gekde);
 
 G_END_DECLS
 
