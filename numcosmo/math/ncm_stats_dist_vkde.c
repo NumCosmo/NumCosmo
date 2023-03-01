@@ -311,29 +311,21 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       rb_knn_list_table_t *table;
 
       printf ("Searching! [%6d]\n", i);
-      kdtree_knn_search_clean (tree);
       table = kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
 
       ncm_stats_vec_reset (self->sample, TRUE);
       ncm_matrix_set_zero (self->tmp_cov);
       {
-        struct knn_list *p = tree->knn_list_head.next;
         rb_knn_list_traverser_t trav;
-        knn_list_t *p0;
+        knn_list_t *p;
 
-        p0 = rb_knn_list_t_first (&trav, table);
+        p = rb_knn_list_t_first (&trav, table);
 
-        while (p != &tree->knn_list_head)
-        {
+        do {
           NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
 
-          g_assert (p->distance == p0->distance);
-          g_assert (p->node->coord_index == p0->node->coord_index);
           ncm_stats_vec_append (self->sample, ni, FALSE);
-
-          p  = p->next;
-          p0 = rb_knn_list_t_next (&trav);
-        }
+        } while ((p = rb_knn_list_t_next (&trav)) != NULL);
       }
       rb_knn_list_destroy (table);
 

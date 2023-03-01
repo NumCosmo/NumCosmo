@@ -13,8 +13,6 @@ typedef struct knn_list
 {
   struct kdnode *node;
   double distance;
-  struct knn_list *prev;
-  struct knn_list *next;
 } knn_list_t;
 
 typedef struct kdnode
@@ -36,16 +34,15 @@ typedef struct kdtree
   long *coord_indexes;
   unsigned char *coord_deleted;
   unsigned char *coord_passed;
-  struct knn_list knn_list_head;
   int dim;
   int knn_num;
+  double knn_distance;
 } kdtree_t;
 
 struct kdtree *kdtree_init (int dim);
 void kdtree_insert (struct kdtree *tree, double *coord);
 void kdtree_rebuild (struct kdtree *tree);
 void *kdtree_knn_search (struct kdtree *tree, double *coord, int k);
-void kdtree_knn_search_clean (struct kdtree *tree);
 void kdtree_destroy (struct kdtree *tree);
 void kdtree_dump (struct kdtree *tree);
 
