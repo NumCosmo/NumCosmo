@@ -55,6 +55,8 @@ libnumcosmo_misc_la_SOURCES = \
 	vwrapper.h      \
 	converged.h     \
 	clencurt.h      \
+	rb_knn_list.c   \
+	rb_knn_list.h   \
 	initial_point.h
 
 EXTRA_DIST =

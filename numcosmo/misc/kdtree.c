@@ -7,8 +7,10 @@
 #include <string.h>
 #include <float.h>
 #include <math.h>
+#include <glib.h>
 
 #include "kdtree.h"
+#include "rb_knn_list.h"
 
 static inline int
 is_leaf (struct kdnode *node)
@@ -348,7 +350,7 @@ knn_list_add (struct kdtree *tree, struct kdnode *node, double distance)
 
   if ((p == head) || coord_cmp (p->node->coord, node->coord, tree->dim))
   {
-    struct knn_list *log = malloc (sizeof (*log));
+    struct knn_list *log = g_slice_new (knn_list_t);
 
     if (log != NULL)
     {
@@ -414,7 +416,7 @@ knn_list_clear (struct kdtree *tree)
     struct knn_list *prev = p;
 
     p = p->next;
-    free (prev);
+    g_slice_free (knn_list_t, prev);
   }
 
   tree->knn_num = 0;
@@ -483,46 +485,137 @@ kdtree_insert (struct kdtree *tree, double *coord)
 }
 
 static void
-knn_pickup (struct kdtree *tree, struct kdnode *node, double *target, int k)
+knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *target, int k, double *min_shift, int p)
 {
   double dist = distance (node->coord, target, tree->dim);
+
+  double min_dist2 = 0.0;
+  int i;
+
+  for (i = 0; i < tree->dim; i++)
+  {
+    min_dist2 += square (min_shift[i]);
+  }
+
+  /*printf ("Picking up dist % 22.15g min dist % 22.15g max dist % 22.15g %s %s prune %d ", dist, min_dist2, knn_max (tree),
+   *       dist >= min_dist2 ? "d >= min" : "d <  min", min_dist2 > knn_max (tree) ? "min >  dmax" : "min <= dmax", p);
+   */
 
   if (tree->knn_num < k)
   {
     knn_list_add (tree, node, dist);
+    {
+      struct knn_list *log = g_slice_new (knn_list_t);
+
+      log->node     = node;
+      log->distance = dist;
+
+      rb_knn_list_insert (table, log);
+    }
+
+    if (p)
+    {
+      printf ("prune error\n");
+      exit (0);
+    }
   }
   else
   {
+    {
+      knn_list_t *log = g_slice_new (knn_list_t);
+      rb_knn_list_traverser_t trav;
+      knn_list_t *last;
+
+      log->node     = node;
+      log->distance = dist;
+
+      rb_knn_list_insert (table, log);
+      last = rb_knn_list_t_last (&trav, table);
+
+      rb_knn_list_delete (table, last);
+
+      g_slice_free (knn_list_t, last);
+    }
+
+
     if (dist < knn_max (tree))
+    {
       knn_list_adjust (tree, node, dist);
+
+      if (p)
+      {
+        printf ("prune error\n");
+        exit (0);
+      }
+    }
     else if (fabs (dist - knn_max (tree)) < DBL_EPSILON)
+    {
       knn_list_add (tree, node, dist);
+
+      if (p)
+      {
+        printf ("prune error\n");
+        exit (0);
+      }
+    }
   }
 }
 
 static void
-kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, double *target, int k, int *pickup)
+kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *target, int k, int *pickup, double *min_shift, int p)
 {
   if ((node == NULL) || kdnode_passed (tree, node))
     return;
 
-
-
   int r = node->r;
+  double min_shift_new[tree->dim];
+  double *min_shift_r;
+  double *min_shift_l;
+
+  memcpy (min_shift_new, min_shift, tree->dim * sizeof (double));
+  min_shift_new[r] = node->coord[r] - target[r];
+
+  if (node->coord[r] >= target[r])
+  {
+    min_shift_r = min_shift_new;
+    min_shift_l = min_shift;
+  }
+  else
+  {
+    min_shift_r = min_shift;
+    min_shift_l = min_shift_new;
+  }
 
   if (!knn_search_on (tree, k, node->coord[r], target[r]))
     return;
 
+  if (tree->knn_num >= k)
+  {
+    double min_dist2 = 0.0;
+    int i;
+
+    for (i = 0; i < tree->dim; i++)
+    {
+      min_dist2 += square (min_shift[i]);
+    }
+
+    if (min_dist2 > knn_max (tree))
+      /*printf ("min_dist2 > knn_max (tree)!\n"); */
+      /*return; */
+      p = 1;
+  }
 
   if (*pickup)
   {
     tree->coord_passed[node->coord_index] = 1;
-    knn_pickup (tree, node, target, k);
-    kdtree_search_recursive (tree, node->left, target, k, pickup);
-    kdtree_search_recursive (tree, node->right, target, k, pickup);
+    knn_pickup (tree, node, table, target, k, min_shift, p);
+    kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, p);
+    kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, p);
   }
   else
   {
+    /*printf ("Else!\n"); */
+
     if (is_leaf (node))
     {
       *pickup = 1;
@@ -531,13 +624,13 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, double *targe
     {
       if (target[r] <= node->coord[r])
       {
-        kdtree_search_recursive (tree, node->left, target, k, pickup);
-        kdtree_search_recursive (tree, node->right, target, k, pickup);
+        kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, p);
+        kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, p);
       }
       else
       {
-        kdtree_search_recursive (tree, node->right, target, k, pickup);
-        kdtree_search_recursive (tree, node->left, target, k, pickup);
+        kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, p);
+        kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, p);
       }
     }
 
@@ -545,20 +638,29 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, double *targe
     if (*pickup)
     {
       tree->coord_passed[node->coord_index] = 1;
-      knn_pickup (tree, node, target, k);
+      knn_pickup (tree, node, table, target, k, min_shift, p);
     }
   }
 }
 
-void
+void *
 kdtree_knn_search (struct kdtree *tree, double *target, int k)
 {
   if (k > 0)
   {
-    int pickup = 0;
+    rb_knn_list_table_t *table = rb_knn_list_create (NULL);
 
-    kdtree_search_recursive (tree, tree->root, target, k, &pickup);
+    int pickup = 0;
+    double min_shift[tree->dim];
+
+    memset (min_shift, 0, sizeof (double) * tree->dim);
+
+    kdtree_search_recursive (tree, tree->root, table, target, k, &pickup, min_shift, 0);
+
+    return table;
   }
+
+  return NULL;
 }
 
 void
@@ -637,6 +739,7 @@ kdnode_build (struct kdtree *tree, struct kdnode **nptr, int r, long low, long h
     struct kdnode *node = *nptr = kdnode_alloc (tree->coord_table[median_index], median_index, r);
 
     r = (r + 1) % tree->dim;
+
     kdnode_build (tree, &node->left, r, low, median - 1);
     kdnode_build (tree, &node->right, r, median + 1, high);
   }

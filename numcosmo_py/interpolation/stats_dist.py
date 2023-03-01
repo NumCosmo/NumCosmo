@@ -23,6 +23,8 @@
 
 """Create a new ensemble sampler object."""
 
+from typing import Optional
+
 from numcosmo_py import Ncm, GEnum
 
 
@@ -43,15 +45,41 @@ class InterpolationKernel(GEnum):
     GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
 
 
+class CrossValidationMethod(GEnum):
+    """Cross validation methods for Ncm.StatsDist."""
+
+    # pylint: disable=no-member
+    NONE = Ncm.StatsDistCV.NONE
+    SPLIT = Ncm.StatsDistCV.SPLIT
+    SPLIT_NOFIT = Ncm.StatsDistCV.SPLIT_NOFIT
+
+
 def create_stats_dist(
     *,
     robust: bool = False,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
+    cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
     dim: int = 2,
     over_smooth: float = 1.0,
+    split_fraction: Optional[float] = None,
+    local_fraction: Optional[float] = None,
+    verbose: bool = False,
 ):
-    """Create a new interpolation object."""
+    """Create a new interpolation object.
+
+    :param robust: Use robust covariance matrix estimation.
+    :param interpolation_method: Interpolation method.
+    :param interpolation_kernel: Interpolation kernel.
+    :param cv_method: Cross validation method.
+    :param dim: Dimension of the interpolation.
+    :param over_smooth: Oversmoothing factor.
+    :param split_fraction: Split fraction.
+    :param local_fraction: Local fraction.
+    :param verbose: Verbose output.
+
+    :return: A new Ncm.StatsDist object.
+    """
 
     if interpolation_kernel == InterpolationKernel.CAUCHY:
         kernel = Ncm.StatsDistKernelST.new(dim, 1.0)
@@ -63,12 +91,21 @@ def create_stats_dist(
         raise RuntimeError(f"Kernel {interpolation_kernel} not supported")
 
     if interpolation_method == InterpolationMethod.KDE:
-        sdist = Ncm.StatsDistKDE.new(kernel, Ncm.StatsDistCV.NONE)
+        sdist = Ncm.StatsDistKDE.new(kernel, cv_method.genum)
+        if local_fraction is not None:
+            raise RuntimeError("local_fraction not supported for KDE")
     elif interpolation_method == InterpolationMethod.VKDE:
-        sdist = Ncm.StatsDistVKDE.new(kernel, Ncm.StatsDistCV.NONE)
+        sdist = Ncm.StatsDistVKDE.new(kernel, cv_method.genum)
+        if local_fraction is not None:
+            sdist.set_local_frac(local_fraction)
 
     sdist.set_over_smooth(over_smooth)
     if robust:
         sdist.set_cov_type(Ncm.StatsDistKDECovType.ROBUST)
+
+    if split_fraction is not None:
+        sdist.set_split_frac(split_fraction)
+
+    sdist.set_print_fit(verbose)
 
     return sdist

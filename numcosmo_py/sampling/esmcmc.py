@@ -23,6 +23,7 @@
 
 """Create a new ensemble sampler object."""
 
+from typing import Optional
 from enum import Enum
 from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
@@ -53,7 +54,9 @@ def create_esmcmc(
     nwalkers: int = 320,
     nthreads: int = 4,
     over_smooth: float = 1.0,
+    local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0e-1,
+    start_mcat: Optional[Ncm.MSetCatalog] = None,
 ):
     """Create a new ensemble sampler object."""
 
@@ -76,10 +79,16 @@ def create_esmcmc(
     if fit_first:
         fit.run(message_level)
 
-    init_sampler = Ncm.MSetTransKernGauss.new(0)
-    init_sampler.set_mset(mset)
-    init_sampler.set_prior_from_mset()
-    init_sampler.set_cov_from_rescale(init_sampling_scale)
+    if start_mcat is not None:
+        init_sampler = Ncm.MSetTransKernCat.new(start_mcat, None)
+        init_sampler.set_sampling(Ncm.MSetTransKernCatSampling.CHOOSE)
+        init_sampler.set_mset(mset)
+        init_sampler.set_prior_from_mset()
+    else:
+        init_sampler = Ncm.MSetTransKernGauss.new(0)
+        init_sampler.set_mset(mset)
+        init_sampler.set_prior_from_mset()
+        init_sampler.set_cov_from_rescale(init_sampling_scale)
 
     #
     # Creates the ESMCMC walker object, this object is responsible
@@ -92,6 +101,7 @@ def create_esmcmc(
         walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
         # Sets the calibrated over-smoothing factor.
         walker.set_over_smooth(over_smooth)
+        walker.set_local_frac(local_fraction)
         if robust:
             walker.set_cov_robust()
         walker.use_interp(use_apes_interpolation)
@@ -113,3 +123,29 @@ def create_esmcmc(
     esmcmc.set_data_file(filename)
 
     return esmcmc
+
+
+def mcat_print_info(mcat, *, ntests=100):
+    """Print information about the MSet catalog.
+
+    This includes the number of chains, the number of additional values,
+    the number of parameters, the number of samples, the number of
+    effective samples, the autocorrelation time, the maximum
+    autocorrelation time, the maximum effective sample size, the
+    maximum effective sample size time, the Heidelberger-Welch
+    statistic, the maximum Heidelberger-Welch statistic."""
+    mset = mcat.peek_mset()
+    mcat.estimate_autocorrelation_tau(False)
+
+    Ncm.cfg_msg_sepa()
+    print(f"# Catalog run type: `{mcat.get_run_type()}`")
+    print(f"# Catalog size:      {mcat.len()}.")
+    print(f"# Catalog n-chains:  {mcat.nchains()}.")
+    print(f"# Catalog nadd-vals: {mcat.nadd_vals()}.")
+    print(f"# Catalog weighted:  {mcat.weighted()}")
+    mcat.log_current_chain_stats()
+    mcat.calc_max_ess_time(ntests, Ncm.FitRunMsgs.FULL)
+    mcat.calc_heidel_diag(ntests, 0.0, Ncm.FitRunMsgs.FULL)
+    mset.pretty_log()
+    mcat.log_full_covar()
+    mcat.log_current_stats()
