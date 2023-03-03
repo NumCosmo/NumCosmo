@@ -529,8 +529,9 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
           status = gsl_multimin_test_size (self->fmin->size, 1.0e-4);
         } while (status == GSL_CONTINUE && iter < 1000);
 
-        printf ("# iter: %d, over-smooth: % 22.15g, m2lnp = % 22.15g\n",
-                iter, self->over_smooth, self->fmin->fval);
+        if (self->print_fit)
+          printf ("# iter: %d, over-smooth: % 22.15g, m2lnp = % 22.15g, gsl status (%d)\n",
+                  iter, self->over_smooth, self->fmin->fval, status);
       }
 
       break;

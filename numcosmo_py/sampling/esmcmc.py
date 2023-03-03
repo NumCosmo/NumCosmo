@@ -101,7 +101,8 @@ def create_esmcmc(
         walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
         # Sets the calibrated over-smoothing factor.
         walker.set_over_smooth(over_smooth)
-        walker.set_local_frac(local_fraction)
+        if local_fraction is not None:
+            walker.set_local_frac(local_fraction)
         if robust:
             walker.set_cov_robust()
         walker.use_interp(use_apes_interpolation)
