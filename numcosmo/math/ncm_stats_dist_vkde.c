@@ -420,6 +420,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
   NcmStatsDistPrivate * const ppself   = sd->priv;
   const gdouble href2                  = ppself->href * ppself->href;
+  const gdouble one_href2              = 1.0 / href2;
 
   gint i, j;
 
@@ -449,7 +450,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j);
       gdouble chi2_ij;
 
-      chi2_ij = ncm_vector_dot (theta_j, theta_j) / href2;
+      chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2;
 
       ncm_matrix_set (IM, j, i, chi2_ij);
     }
@@ -506,6 +507,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
   NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
   NcmStatsDistPrivate * const ppself = sd->priv;
   const gdouble href2 = ppself->href * ppself->href;
+  const gdouble one_href2 = 1.0 / href2;
   gdouble s = 0.0;
   gint i, ret;
 
@@ -515,13 +517,13 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
     NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
     ncm_vector_memcpy (self->delta_x, x);
-    ncm_vector_sub (self->delta_x, theta_i);
+    ncm_vector_axpy (self->delta_x, -1.0, theta_i);
 
     ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
     NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
 
     {
-      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
+      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) * one_href2;
 
       ncm_vector_fast_set (pself->chi2, i, chi2_i);
     }
@@ -549,6 +551,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
   NcmStatsDistPrivate * const ppself = sd->priv;
   const gdouble href2 = ppself->href * ppself->href;
+  const gdouble one_href2 = 1.0 / href2;
   gint i, ret;
 
   for (i = 0; i < ppself->n_kernels; i++)
@@ -557,13 +560,13 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
     ncm_vector_memcpy (self->delta_x, x);
-    ncm_vector_sub (self->delta_x, theta_i);
+    ncm_vector_axpy (self->delta_x, -1.0, theta_i);
 
     ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
     NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
 
     {
-      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
+      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) * one_href2;
 
       ncm_vector_fast_set (pself->chi2, i, chi2_i);
     }
