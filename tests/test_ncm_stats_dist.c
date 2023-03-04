@@ -169,7 +169,7 @@ test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
       break;
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-      test->np *= 2;
+      test->np *= 4;
       break;
     default:
       g_assert_not_reached ();
@@ -218,7 +218,7 @@ test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdat
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
       break;
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-      test->np *= 2;
+      test->np *= 4;
       break;
     default:
       g_assert_not_reached ();
@@ -266,7 +266,7 @@ test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
       break;
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-      test->np *= 2;
+      test->np *= 4;
       break;
     default:
       g_assert_not_reached ();
@@ -316,7 +316,7 @@ test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pda
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
       break;
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-      test->np *= 2;
+      test->np *= 4;
       break;
     default:
       g_assert_not_reached ();
