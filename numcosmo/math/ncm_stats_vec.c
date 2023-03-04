@@ -1115,7 +1115,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
 #ifdef NUMCOSMO_HAVE_FFTW3
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
   {
-    const guint aorder         = (order == 0) ? GSL_MIN (svec->nitens - 2, floor (10 * log10 (svec->nitens))) : order;
+    const guint aorder         = (order == 0) ? GSL_MIN (GSL_MAX (svec->nitens - 2, 1), floor (10 * log10 (svec->nitens))) : order;
     NcmVector *M               = ncm_vector_new (2 * aorder + 1);
     const gdouble dlev_tol     = 1.0e-3;
     gboolean allocated_here[2] = {FALSE, FALSE};
