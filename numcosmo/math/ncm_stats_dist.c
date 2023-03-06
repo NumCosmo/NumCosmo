@@ -635,9 +635,9 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
-    const gdouble dbl_limit     = 10.0;
+    const gdouble dbl_limit     = 6.0;
     gint i;
-
+    
     /*
      * Evaluating the right-hand-side
      */
@@ -811,16 +811,17 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
       case NCM_STATS_DIST_CV_NONE:
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
-
         _ncm_stats_dist_compute_IM_full (sd);
         self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
+
         break;
       default:
         g_assert_not_reached ();
         break;
     }
   }
-  /*ncm_vector_log_vals (self->weights_full, "W: ", "% 22.15e", TRUE);*/
+
+  /* ncm_vector_log_vals (self->weights, "W: ", "% 22.15e", TRUE); */
 }
 
 static void

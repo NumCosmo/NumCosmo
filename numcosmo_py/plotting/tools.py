@@ -120,7 +120,7 @@ def plot_m2lnp(
     *,
     plotn: int = 150,
     vmin: float = 1.0e-12,
-    vmax: float = 1.0
+    vmax: float = 1.0,
 ):
     """Plot the -2lnp."""
 
