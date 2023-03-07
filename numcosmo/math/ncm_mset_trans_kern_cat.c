@@ -516,7 +516,17 @@ _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern)
     ncm_stats_dist_reset (self->sd);
 
   self->cur_choose_nsigma = self->choose_nsigma;
+
+#if GLIB_CHECK_VERSION(2,70,0)
   g_tree_remove_all (self->m2lnL_tree);
+#else
+  g_tree_destroy (self->m2lnL_tree);
+  self->m2lnL_tree = g_tree_new_full (gdouble_compare,
+                                      &self->m2lnL_reltol,
+                                      g_free,
+                                      NULL);
+#endif /* GLIB_CHECK_VERSION(2,70,0) */
+
 }
 
 static const gchar *

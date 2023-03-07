@@ -106,7 +106,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  /*g_test_set_nonfatal_assertions (); */
+  g_test_set_nonfatal_assertions ();
 
   for (i = 0; i < TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN; i++)
   {

@@ -454,9 +454,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
   
-  ncm_cfg_set_openmp_nthreads (1);
-  ncm_cfg_set_openblas_nthreads (1);
-  ncm_cfg_set_mkl_nthreads (1);
+  //ncm_cfg_set_openmp_nthreads (1);
+  //ncm_cfg_set_openblas_nthreads (1);
+  //ncm_cfg_set_mkl_nthreads (1);
   
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
