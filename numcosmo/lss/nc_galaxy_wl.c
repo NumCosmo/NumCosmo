@@ -60,7 +60,6 @@ struct _NcGalaxyWLPrivate
   NcGalaxyWLDist *wl_dist;
   NcGalaxyRedshift *gz_dist;
   guint len;
-  gboolean no_kde;
 };
 
 enum
@@ -80,7 +79,6 @@ nc_galaxy_wl_init (NcGalaxyWL *gwl)
   self->gz_dist = NULL;
   self->wl_dist = NULL;
   self->len     = 0;
-  self->no_kde  = FALSE;
 }
 
 static void

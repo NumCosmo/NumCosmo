@@ -3,14 +3,14 @@
 /***************************************************************************
  *            nc_galaxy_wl_ellipticity_kde.c
  *
- *  Mon July 27 11:12:53 2020
- *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
+ *  Wed March 1 12:51:22 2023
+ *  Copyright  2023  Sandro Dias Pinto Vitenti & Mariana Penna Lima
  *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_ellipticity_kde.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,10 +43,10 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
 #include "nc_enum_types.h"
-#include "math/ncm_stats_dist1d_epdf.h"
+#include "lss/nc_galaxy_wl_ellipticity_kde.h"
 #include "lss/nc_galaxy_redshift_spec.h"
+#include "math/ncm_stats_dist1d_epdf.h"
 
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -65,6 +65,8 @@ enum
 {
   PROP_0,
   PROP_OBS,
+  PROP_KDE,
+  PROP_E_VEC,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST);
@@ -113,6 +115,12 @@ _nc_galaxy_wl_ellipticity_kde_get_property (GObject *object, guint prop_id, GVal
   {
     case PROP_OBS:
       g_value_set_object (value, nc_galaxy_wl_ellipticity_kde_peek_obs (gekde));
+      break;
+    case PROP_KDE:
+      g_value_set_object (value, nc_galaxy_wl_ellipticity_kde_peek_kde (gekde));
+      break;
+    case PROP_E_VEC:
+      g_value_set_object (value, nc_galaxy_wl_ellipticity_kde_peek_e_vec (gekde));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -190,7 +198,7 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
 
   ncm_stats_dist1d_epdf_reset (self->kde);
   ncm_stats_dist1d_epdf_set_bw_type (self->kde, NCM_STATS_DIST1D_EPDF_BW_RoT);
-  ncm_vector_free (self->e_vec);
+  ncm_vector_clear (&self->e_vec);
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
@@ -352,3 +360,34 @@ nc_galaxy_wl_ellipticity_kde_peek_obs (NcGalaxyWLEllipticityKDE *gekde)
   return self->obs;
 }
 
+/**
+ * nc_galaxy_wl_ellipticity_kde_peek_kde:
+ * @gekde: a #NcGalaxyWLEllipticityKDE
+ *
+ * Gets the KDE.
+ *
+ * Returns: (transfer none): the KDE.
+ */
+NcmStatsDist1dEPDF *
+nc_galaxy_wl_ellipticity_kde_peek_kde (NcGalaxyWLEllipticityKDE *gekde)
+{
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
+  return self->kde;
+}
+
+/**
+ * nc_galaxy_wl_ellipticity_kde_peek_e_vec:
+ * @gekde: a #NcGalaxyWLEllipticityKDE
+ *
+ * Gets the e_vec.
+ *
+ * Returns: (transfer none): the e_vec.
+ */
+NcmVector *
+nc_galaxy_wl_ellipticity_kde_peek_e_vec (NcGalaxyWLEllipticityKDE *gekde)
+{
+  NcGalaxyWLEllipticityKDEPrivate * const self = gekde->priv;
+
+  return self->e_vec;
+}
