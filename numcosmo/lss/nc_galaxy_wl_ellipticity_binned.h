@@ -65,13 +65,14 @@ struct _NcGalaxyWLEllipticityBinned
 GType nc_galaxy_wl_ellipticity_binned_get_type (void) G_GNUC_CONST;
 
 NcGalaxyWLEllipticityBinned *nc_galaxy_wl_ellipticity_binned_new ();
-NcGalaxyWLEllipticityBinned *nc_galaxy_wl_ellipticity_binned_ref (NcGalaxyWLEllipticityBinned *gekde);
+NcGalaxyWLEllipticityBinned *nc_galaxy_wl_ellipticity_binned_ref (NcGalaxyWLEllipticityBinned *gebin);
 
-void nc_galaxy_wl_ellipticity_binned_free (NcGalaxyWLEllipticityBinned *gekde);
-void nc_galaxy_wl_ellipticity_binned_clear (NcGalaxyWLEllipticityBinned **gekde);
+void nc_galaxy_wl_ellipticity_binned_free (NcGalaxyWLEllipticityBinned *gebin);
+void nc_galaxy_wl_ellipticity_binned_clear (NcGalaxyWLEllipticityBinned **gebin);
 
-void nc_galaxy_wl_ellipticity_binned_set_obs (NcGalaxyWLEllipticityBinned *gekde, NcmMatrix *obs);
-NcmMatrix *nc_galaxy_wl_ellipticity_binned_peek_obs (NcGalaxyWLEllipticityBinned *gekde);
+void nc_galaxy_wl_ellipticity_binned_set_bin_obs (NcGalaxyWLEllipticityBinned *gebin, NcmMatrix *obs, NcmVector *bins);
+NcmObjArray *nc_galaxy_wl_ellipticity_binned_peek_bin_obs (NcGalaxyWLEllipticityBinned *gebin);
+NcmVector *nc_galaxy_wl_ellipticity_binned_peek_bins (NcGalaxyWLEllipticityBinned *gebin);
 
 G_END_DECLS
 
