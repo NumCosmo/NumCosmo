@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Mariana Penna Lima <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -124,46 +124,47 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv = nc_data_cluster_ncount_get_instance_private (ncount);
 
-  self->cad              = NULL;
-  self->mass_type        = G_TYPE_INVALID;
-  self->redshift_type    = G_TYPE_INVALID;
-  self->z_obs_len        = 0;
-  self->z_obs_params_len = 0;
+  self->cad                = NULL;
+  self->mass_type          = G_TYPE_INVALID;
+  self->redshift_type      = G_TYPE_INVALID;
+  self->z_obs_len          = 0;
+  self->z_obs_params_len   = 0;
   self->lnM_obs_len        = 0;
   self->lnM_obs_params_len = 0;
-  self->lnM_true         = NULL;
-  self->z_true           = NULL;
-  self->z_obs            = NULL;
-  self->z_obs_params     = NULL;
-  self->lnM_obs          = NULL;
-  self->lnM_obs_params   = NULL;
-  self->m2lnL_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->m2lnL_err_a      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->z_order          = g_array_new (FALSE, FALSE, sizeof (size_t));
-  self->lnM_order        = g_array_new (FALSE, FALSE, sizeof (size_t));
-  self->p_z              = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->p_lnM            = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->d2n              = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->area_survey      = 0.0;
-  self->np               = 0.0;
-  self->log_np_fac       = 0.0;
-  self->use_true_data    = FALSE;
-  self->binned           = FALSE;
-  self->purity           = NULL;
-  self->sd_lnM           = NULL;
-  self->z_obs_bins       = ncm_obj_array_new ();
-  self->lnM_obs_bins     = ncm_obj_array_new ();
-  self->bin_count        = NULL;
-  self->fiducial         = FALSE;
-  self->seed             = 0;
-  self->rnd_name         = NULL;
+  self->lnM_true           = NULL;
+  self->z_true             = NULL;
+  self->z_obs              = NULL;
+  self->z_obs_params       = NULL;
+  self->lnM_obs            = NULL;
+  self->lnM_obs_params     = NULL;
+  self->m2lnL_a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->m2lnL_err_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->z_order            = g_array_new (FALSE, FALSE, sizeof (size_t));
+  self->lnM_order          = g_array_new (FALSE, FALSE, sizeof (size_t));
+  self->p_z                = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->p_lnM              = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->d2n                = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->area_survey        = 0.0;
+  self->np                 = 0.0;
+  self->log_np_fac         = 0.0;
+  self->use_true_data      = FALSE;
+  self->binned             = FALSE;
+  self->purity             = NULL;
+  self->sd_lnM             = NULL;
+  self->z_obs_bins         = ncm_obj_array_new ();
+  self->lnM_obs_bins       = ncm_obj_array_new ();
+  self->bin_count          = NULL;
+  self->fiducial           = FALSE;
+  self->seed               = 0;
+  self->rnd_name           = NULL;
 }
 
 static void
 nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
   NcDataClusterNCountPrivate * const self = ncount->priv;
+
   g_return_if_fail (NC_IS_DATA_CLUSTER_NCOUNT (object));
 
   switch (prop_id)
@@ -177,10 +178,11 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       NcClusterMassClass *clusterm_class;
 
       self->mass_type = g_type_from_name (g_value_get_string (value));
+
       if (self->mass_type == G_TYPE_INVALID)
         g_error ("nc_data_cluster_ncount_set_property: GType `%s' unregistered or invalid.", g_value_get_string (value));
 
-      clusterm_class         = g_type_class_ref (self->mass_type);
+      clusterm_class           = g_type_class_ref (self->mass_type);
       self->lnM_obs_len        = nc_cluster_mass_class_obs_len (clusterm_class);
       self->lnM_obs_params_len = nc_cluster_mass_class_obs_params_len (clusterm_class);
 
@@ -194,6 +196,7 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       NcClusterRedshiftClass *clusterz_class;
 
       self->redshift_type = g_type_from_name (g_value_get_string (value));
+
       if (self->redshift_type == G_TYPE_INVALID)
         g_error ("nc_data_cluster_ncount_set_property: GType `%s' unregistered or invalid.", g_value_get_string (value));
 
@@ -261,7 +264,7 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
 static void
 nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
   g_return_if_fail (NC_IS_DATA_CLUSTER_NCOUNT (object));
@@ -331,7 +334,7 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
 static void
 nc_data_cluster_ncount_dispose (GObject *object)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
   nc_cluster_abundance_clear (&self->cad);
@@ -364,7 +367,7 @@ nc_data_cluster_ncount_dispose (GObject *object)
 static void
 nc_data_cluster_ncount_finalize (GObject *object)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
   g_clear_pointer (&self->rnd_name, g_free);
@@ -419,7 +422,7 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                         NULL,
                                                         "Clusters true masses",
                                                         NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z_TRUE,
                                    g_param_spec_object ("z-true",
@@ -479,17 +482,17 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_Z_OBS_BINS,
                                    g_param_spec_boxed ("z-obs-bins",
-                                                        NULL,
-                                                        "Clusters redshifts bins",
-                                                        NCM_TYPE_OBJ_ARRAY,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Clusters redshifts bins",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNM_OBS_BINS,
                                    g_param_spec_boxed ("lnM-obs-bins",
-                                                        NULL,
-                                                        "Clusters mass bins",
-                                                        NCM_TYPE_OBJ_ARRAY,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Clusters mass bins",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_BIN_COUNT,
                                    g_param_spec_object ("bin-count",
@@ -528,10 +531,10 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
   data_class->m2lnL_val  = &_nc_data_cluster_ncount_m2lnL_val;
 }
 
-static guint 
-_nc_data_cluster_ncount_get_length (NcmData *data) 
-{ 
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+static guint
+_nc_data_cluster_ncount_get_length (NcmData *data)
+{
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
 
   return self->np;
@@ -540,9 +543,9 @@ _nc_data_cluster_ncount_get_length (NcmData *data)
 static void
 _nc_data_cluster_ncount_begin (NcmData *data)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  gint signp = 0;
+  gint signp                              = 0;
 
   self->log_np_fac = lgamma_r (self->np + 1, &signp);
 }
@@ -550,11 +553,11 @@ _nc_data_cluster_ncount_begin (NcmData *data)
 static void
 _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
-  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
   g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL));
 
@@ -569,12 +572,12 @@ static gchar *_nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICos
 static void
 _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcClusterAbundance *cad      = self->cad;
-  NcHICosmo *cosmo             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz  = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
-  NcClusterMass *clusterm      = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterAbundance *cad                 = self->cad;
+  NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
   GArray *lnM_true_array       = NULL;
   GArray *z_true_array         = NULL;
@@ -585,9 +588,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   guint total_np;
   guint i;
 
-  gdouble *zi_obs = g_new (gdouble, self->z_obs_len);
-  gdouble *zi_obs_params = self->z_obs_params_len > 0 ? g_new (gdouble, self->z_obs_params_len) : NULL;
-  gdouble *lnMi_obs = g_new (gdouble, self->lnM_obs_len);
+  gdouble *zi_obs          = g_new (gdouble, self->z_obs_len);
+  gdouble *zi_obs_params   = self->z_obs_params_len > 0 ? g_new (gdouble, self->z_obs_params_len) : NULL;
+  gdouble *lnMi_obs        = g_new (gdouble, self->lnM_obs_len);
   gdouble *lnMi_obs_params = self->lnM_obs_params_len > 0 ? g_new (gdouble, self->lnM_obs_params_len) : NULL;
 
   g_assert (G_OBJECT_TYPE (clusterz) == self->redshift_type);
@@ -602,12 +605,15 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     self->np = 0;
     g_free (zi_obs);
     g_free (lnMi_obs);
+
     if (self->z_obs_params_len > 0)
       g_free (zi_obs_params);
+
     if (self->lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
 
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
+
     return;
   }
 
@@ -615,10 +621,12 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   z_true_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
 
   z_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_len);
+
   if (self->z_obs_params_len > 0)
     z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_params_len);
 
   lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_len);
+
   if (self->lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_params_len);
 
@@ -629,14 +637,15 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   {
     ncm_rng_lock (rng);
     {
-      const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
-      const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
-      const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
+      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
+      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
+      const gdouble z_true   = ncm_spline_eval (cad->inv_z, u1);
       const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
+
       ncm_rng_unlock (rng);
 
-      if ( nc_cluster_redshift_resample (clusterz, cosmo, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
-          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
+      if (nc_cluster_redshift_resample (clusterz, cosmo, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
+          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng))
       {
         g_array_append_val (lnM_true_array, lnM_true);
         g_array_append_val (z_true_array, z_true);
@@ -646,19 +655,22 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
         if (self->z_obs_params_len > 0)
           g_array_append_vals (z_obs_params_array, zi_obs_params, self->z_obs_params_len);
+
         if (self->lnM_obs_params_len > 0)
           g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, self->lnM_obs_params_len);
       }
     }
   }
 
-  if (z_obs_array->len == 0 || lnM_obs_array->len == 0)
+  if ((z_obs_array->len == 0) || (lnM_obs_array->len == 0))
   {
     self->np = 0;
     g_free (zi_obs);
     g_free (lnMi_obs);
+
     if (self->z_obs_params_len > 0)
       g_free (zi_obs_params);
+
     if (self->lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
 
@@ -672,6 +684,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_array_unref (lnM_obs_array);
 
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
+
     return;
   }
 
@@ -726,7 +739,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
  * @mass_type: #NcClusterMass class string
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 NcDataClusterNCount *
@@ -746,7 +759,7 @@ nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type,
  * @ncount: a #NcDataClusterNCount
  *
  * FIXME
- * 
+ *
  * Returns: (transfer full): FIXME
  */
 NcDataClusterNCount *
@@ -760,7 +773,7 @@ nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
  * @ncount: a #NcDataClusterNCount
  *
  * FIXME
- * 
+ *
  */
 void
 nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
@@ -773,7 +786,7 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
  * @ncount: a #NcDataClusterNCount
  *
  * FIXME
- * 
+ *
  */
 void
 nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount)
@@ -787,9 +800,9 @@ nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount)
  * @v: a #NcmVector
  *
  * Sets the vector @v containing the values of the clusters true masses.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -799,6 +812,7 @@ nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVecto
     if (ncm_vector_len (v) != self->np)
       g_error ("nc_data_cluster_ncount_set_lnM_true: incompatible vector, the data has %u clusters and the vector length is %u.",
                self->np, ncm_vector_len (v));
+
     if (self->lnM_true != NULL)
       ncm_vector_memcpy (self->lnM_true, v);
     else
@@ -806,7 +820,7 @@ nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVecto
   }
   else
   {
-    self->np = ncm_vector_len (v);
+    self->np       = ncm_vector_len (v);
     self->lnM_true = ncm_vector_dup (v);
   }
 }
@@ -814,12 +828,12 @@ nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVecto
 /**
  * nc_data_cluster_ncount_set_z_true:
  * @ncount: a #NcDataClusterNCount
- * @v: a #NcmVector 
+ * @v: a #NcmVector
  *
  * Sets the vector @v containing the true redshift values of the clusters.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -829,6 +843,7 @@ nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector 
     if (ncm_vector_len (v) != self->np)
       g_error ("nc_data_cluster_ncount_set_z_true: incompatible vector, the data has %u clusters and the vector length is %u.",
                self->np, ncm_vector_len (v));
+
     if (self->z_true != NULL)
       ncm_vector_memcpy (self->z_true, v);
     else
@@ -836,7 +851,7 @@ nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector 
   }
   else
   {
-    self->np = ncm_vector_len (v);
+    self->np     = ncm_vector_len (v);
     self->z_true = ncm_vector_dup (v);
   }
 }
@@ -847,9 +862,9 @@ nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector 
  * @m: a #NcmMatrix
  *
  * Sets the matrix @m representing the cluster mass observables.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -859,18 +874,23 @@ nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix
     if (ncm_matrix_nrows (m) != self->np)
       g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
                self->np, ncm_matrix_nrows (m));
+
     if (self->lnM_obs != NULL)
     {
       ncm_matrix_memcpy (self->lnM_obs, m);
+
       return;
     }
   }
   else
+  {
     self->np = ncm_matrix_nrows (m);
+  }
 
   if (self->lnM_obs_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, NcmClusterMass object has %u points per observation and the matrix has %u cols.",
              self->lnM_obs_len, ncm_matrix_ncols (m));
+
   self->lnM_obs = ncm_matrix_dup (m);
 }
 
@@ -880,9 +900,9 @@ nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix
  * @m: a #NcmMatrix
  *
  * Sets the matrix @m representing the cluster mass-observable parameters.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -892,18 +912,23 @@ nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const Nc
     if (ncm_matrix_nrows (m) != self->np)
       g_error ("nc_data_cluster_ncount_set_lnM_obs_params: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
                self->np, ncm_matrix_nrows (m));
+
     if (self->lnM_obs_params != NULL)
     {
       ncm_matrix_memcpy (self->lnM_obs_params, m);
+
       return;
     }
   }
   else
+  {
     self->np = ncm_matrix_nrows (m);
+  }
 
   if (self->lnM_obs_params_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_lnM_obs_params: incompatible matrix, NcmClusterMass object has %u parameters per observation and the matrix has %u cols.",
              self->lnM_obs_params_len, ncm_matrix_ncols (m));
+
   self->lnM_obs_params = ncm_matrix_dup (m);
 }
 
@@ -913,9 +938,9 @@ nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const Nc
  * @m: a #NcmMatrix
  *
  * Sets the matrix @m representing the cluster redshift observables.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -925,18 +950,23 @@ nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *
     if (ncm_matrix_nrows (m) != self->np)
       g_error ("nc_data_cluster_ncount_set_z_obs: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
                self->np, ncm_matrix_nrows (m));
+
     if (self->z_obs != NULL)
     {
       ncm_matrix_memcpy (self->z_obs, m);
+
       return;
     }
   }
   else
+  {
     self->np = ncm_matrix_nrows (m);
+  }
 
   if (self->z_obs_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_z_obs: incompatible matrix, NcmClusterRedshift object has %u points per observation and the matrix has %u cols.",
              self->z_obs_len, ncm_matrix_ncols (m));
+
   self->z_obs = ncm_matrix_dup (m);
 }
 
@@ -946,9 +976,9 @@ nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *
  * @m: a #NcmMatrix
  *
  * Sets the matrix @m representing the cluster redshift observable parameters.
- * 
+ *
  */
-void 
+void
 nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -958,18 +988,23 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
     if (ncm_matrix_nrows (m) != self->np)
       g_error ("nc_data_cluster_ncount_set_z_obs_params: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
                self->np, ncm_matrix_nrows (m));
+
     if (self->z_obs_params != NULL)
     {
       ncm_matrix_memcpy (self->z_obs_params, m);
+
       return;
     }
   }
   else
+  {
     self->np = ncm_matrix_nrows (m);
+  }
 
   if (self->z_obs_params_len != ncm_matrix_ncols (m))
     g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, NcmClusterRedshift object has %u parameters per observation and the matrix has %u cols.",
              self->z_obs_params_len, ncm_matrix_ncols (m));
+
   self->z_obs_params = ncm_matrix_dup (m);
 }
 
@@ -1031,9 +1066,9 @@ nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bi
  * @ncount: a #NcDataClusterNCount
  *
  * Returns: TRUE if it contains the lnM truth table.
- * 
+ *
  */
-gboolean 
+gboolean
 nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1046,9 +1081,9 @@ nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
  * @ncount: a #NcDataClusterNCount
  *
  * Returns: TRUE if it contains the redshift truth table.
- * 
+ *
  */
-gboolean 
+gboolean
 nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1059,12 +1094,12 @@ nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_len:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the total number of objects.
- * 
+ *
  * Returns: Number of objects in @ncount.
  */
-guint 
+guint
 nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1075,13 +1110,13 @@ nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_lnM_obs_len:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Number of doubles to describe the observational data related to the mass
  * of each object.
- * 
+ *
  * Returns: Length of each row describing the mass proxy.
  */
-guint 
+guint
 nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1092,13 +1127,13 @@ nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_lnM_obs_params_len:
  * @ncount: a #NcDataClusterNCount
- * 
- * Number of doubles to describe the observational data parameters related 
+ *
+ * Number of doubles to describe the observational data parameters related
  * mass to each object.
- * 
+ *
  * Returns: Length of each row describing the mass proxy, it can be zero.
  */
-guint 
+guint
 nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1109,13 +1144,13 @@ nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_z_obs_len:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Number of doubles to describe the observational data related to
  * the redshift of each object.
- * 
+ *
  * Returns: Length of each row describing the mass proxy.
  */
-guint 
+guint
 nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1126,13 +1161,13 @@ nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_z_params_len:
  * @ncount: a #NcDataClusterNCount
- * 
- * Number of doubles to describe the observational data parameters related 
+ *
+ * Number of doubles to describe the observational data parameters related
  * to the redshift of each object.
- * 
+ *
  * Returns: Length of each row describing the mass proxy, it can be zero.
  */
-guint 
+guint
 nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1143,9 +1178,9 @@ nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_lnM_true:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the vector containing the true values of the masses.
- * 
+ *
  * Returns: (transfer full): True masses #NcmVector.
  */
 NcmVector *
@@ -1162,9 +1197,9 @@ nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_z_true:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the vector containing the true values of the redshifts.
- * 
+ *
  * Returns: (transfer full): True redshift #NcmVector.
  */
 NcmVector *
@@ -1181,9 +1216,9 @@ nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_lnM_obs:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the matrix containing the mass observables.
- * 
+ *
  * Returns: (transfer full): Mass observable #NcmMatrix.
  */
 NcmMatrix *
@@ -1200,9 +1235,9 @@ nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_lnM_obs_params:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the matrix containing the mass observables parameters.
- * 
+ *
  * Returns: (transfer full): Mass observable parameters #NcmMatrix.
  */
 NcmMatrix *
@@ -1219,9 +1254,9 @@ nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_z_obs:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the matrix containing the redshift observables.
- * 
+ *
  * Returns: (transfer full): Redshift observable #NcmMatrix.
  */
 NcmMatrix *
@@ -1238,9 +1273,9 @@ nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_get_z_obs_params:
  * @ncount: a #NcDataClusterNCount
- * 
+ *
  * Gets the matrix containing the redshift observables parameters.
- * 
+ *
  * Returns: (transfer full): Redshift observable parameters #NcmMatrix.
  */
 NcmMatrix *
@@ -1262,7 +1297,7 @@ static void
 _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcClusterAbundance *cad = self->cad;
+  NcClusterAbundance *cad                 = self->cad;
 
   cad->purity = self->purity;
   cad->sd_lnM = self->sd_lnM;
@@ -1274,7 +1309,7 @@ static gchar *
 _nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcClusterAbundance *cad = self->cad;
+  NcClusterAbundance *cad                 = self->cad;
 
   return g_strdup_printf ("Cluster NCount resample %s. Generated %u from mean %10.5g (full). "
                           "Mass proxy type `%s', redshift proxy type `%s'. "
@@ -1283,8 +1318,8 @@ _nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo)
                           self->np, cad->norma,
                           g_type_name (self->mass_type),
                           g_type_name (self->redshift_type),
-                          cad->zi, cad->zf, 
-                          exp (cad->lnMi), exp (cad->lnMf), 
+                          cad->zi, cad->zf,
+                          exp (cad->lnMi), exp (cad->lnMf),
                           self->area_survey / gsl_pow_2 (M_PI / 180.0));
 }
 
@@ -1303,14 +1338,15 @@ _eval_z_p_lnM_p_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  
+
   for (n = i; n < f; n++)
   {
-    gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
+    gdouble *lnMn_obs        = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
-    gdouble *zn_obs = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
-    gdouble *zn_obs_params = evald2n->self->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params) * evald2n->v_pp);
+    gdouble *zn_obs          = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
+    gdouble *zn_obs_params   = evald2n->self->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->z_obs_params, n, 0) : NULL;
+    const gdouble mlnLn      = -log (nc_cluster_abundance_z_p_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params) * evald2n->v_pp);
+
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1318,7 +1354,7 @@ _eval_z_p_lnM_p_d2n (glong i, glong f, gpointer data)
 static gint
 func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
 {
-  _Evald2N *evald2n = (_Evald2N *) fdata;
+  _Evald2N *evald2n       = (_Evald2N *) fdata;
   NcClusterAbundance *cad = evald2n->cad;
   gint n;
 
@@ -1329,6 +1365,7 @@ func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim,
   {
     const gdouble d2NdzdlnM = g_array_index (evald2n->self->d2n, gdouble, n);
     const gdouble p_M_Mobs  = g_array_index (evald2n->self->p_z, gdouble, n);
+
     fval[n] = d2NdzdlnM * p_M_Mobs;
   }
 
@@ -1343,10 +1380,11 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
 
   for (n = i; n < f; n++)
   {
-    const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
-    gdouble *zn_obs = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
+    const gdouble lnMn     = ncm_vector_get (evald2n->self->lnM_true, n);
+    gdouble *zn_obs        = ncm_matrix_ptr (evald2n->self->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->self->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn_obs, zn_obs_params) * evald2n->v_pp);
+    const gdouble mlnLn    = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn_obs, zn_obs_params) * evald2n->v_pp);
+
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1354,7 +1392,7 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
 static void
 _eval_lnM_p_d2n (glong i, glong f, gpointer data)
 {
-  _Evald2N *evald2n = (_Evald2N *) data;
+  _Evald2N *evald2n      = (_Evald2N *) data;
   const gboolean vec_int = TRUE;
   glong n;
 
@@ -1362,10 +1400,11 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
   {
     for (n = i; n < f; n++)
     {
-      const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
-      gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
+      const gdouble zn         = ncm_vector_get (evald2n->self->z_true, n);
+      gdouble *lnMn_obs        = ncm_matrix_ptr (evald2n->self->lnM_obs, n, 0);
       gdouble *lnMn_obs_params = evald2n->self->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->self->lnM_obs_params, n, 0) : NULL;
-      const gdouble mlnLn = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn) * evald2n->v_pp);
+      const gdouble mlnLn      = -log (nc_cluster_abundance_lnM_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn) * evald2n->v_pp);
+
       g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
     }
   }
@@ -1381,7 +1420,7 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
 
     nc_cluster_mass_n_limits (evald2n->clusterm, evald2n->cosmo, &lnMl, &lnMu);
 
-    gsl_sort_index ((size_t *)evald2n->self->z_order->data, ncm_vector_data (evald2n->self->z_true), 1, evald2n->self->np);
+    gsl_sort_index ((size_t *) evald2n->self->z_order->data, ncm_vector_data (evald2n->self->z_true), 1, evald2n->self->np);
     ret = pcubature (len, func_eval_lnM_p_d2n, evald2n, 1, &lnMl, &lnMu, 0, 0.0, 1.0e-7, ERROR_INDIVIDUAL, val, err);
     g_assert (ret == 0);
 
@@ -1390,7 +1429,6 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
       g_array_index (evald2n->self->m2lnL_a, gdouble, i) = -log (g_array_index (evald2n->self->m2lnL_a, gdouble, i) * evald2n->v_pp);
     }
   }
-
 }
 
 static void
@@ -1401,9 +1439,10 @@ _eval_d2n (glong i, glong f, gpointer data)
 
   for (n = i; n < f; n++)
   {
-    const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
-    const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
+    const gdouble lnMn  = ncm_vector_get (evald2n->self->lnM_true, n);
+    const gdouble zn    = ncm_vector_get (evald2n->self->z_true, n);
     const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn) * evald2n->v_pp);
+
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1416,9 +1455,10 @@ _eval_intp_d2n (glong i, glong f, gpointer data)
 
   for (n = i; n < f; n++)
   {
-    const gdouble lnMn = ncm_vector_get (evald2n->self->lnM_true, n);
-    const gdouble zn = ncm_vector_get (evald2n->self->z_true, n);
+    const gdouble lnMn  = ncm_vector_get (evald2n->self->lnM_true, n);
+    const gdouble zn    = ncm_vector_get (evald2n->self->z_true, n);
     const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn) * evald2n->v_pp);
+
     g_array_index (evald2n->self->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1426,27 +1466,27 @@ _eval_intp_d2n (glong i, glong f, gpointer data)
 static void
 _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcClusterAbundance *cad     = self->cad;
-  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
-  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  const gdouble volume        = nc_cluster_mass_volume (clusterm) * nc_cluster_redshift_volume (clusterz);
-  _Evald2N evald2n = {cad, self, clusterz, clusterm, cosmo, volume / self->np};
-  
+  NcClusterAbundance *cad                 = self->cad;
+  NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  const gdouble volume                    = nc_cluster_mass_volume (clusterm) * nc_cluster_redshift_volume (clusterz);
+  _Evald2N evald2n                        = {cad, self, clusterz, clusterm, cosmo, volume / self->np};
+
   *m2lnL = 0.0;
 
   if (self->binned)
   {
     const guint len   = self->z_obs_bins->len;
     const guint nbins = len / 2;
-    gdouble lambda = 0.0;
+    gdouble lambda    = 0.0;
     gint i;
 
     if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
       g_error ("_nc_data_cluster_ncount_m2lnL_val: cannot use bin data, inconsistent bins (%u %u).",
-          len, self->lnM_obs_bins->len);
+               len, self->lnM_obs_bins->len);
 
     g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
 
@@ -1464,12 +1504,12 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       const gdouble n_i     = ncm_vector_get (self->bin_count, i);
 
       const gdouble lambda_i = nc_cluster_abundance_intp_bin_d2n (self->cad, cosmo, clusterz, clusterm,
-          ncm_vector_data (lnM_obs_lb),
-          ncm_vector_data (lnM_obs_ub),
-          NULL,
-          ncm_vector_data (z_obs_lb),
-          ncm_vector_data (z_obs_ub),
-          NULL);
+                                                                  ncm_vector_data (lnM_obs_lb),
+                                                                  ncm_vector_data (lnM_obs_ub),
+                                                                  NULL,
+                                                                  ncm_vector_data (z_obs_lb),
+                                                                  ncm_vector_data (z_obs_ub),
+                                                                  NULL);
 
       if (n_i > 0.0)
         *m2lnL += n_i * log (lambda_i / n_i);
@@ -1479,12 +1519,12 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     }
 
 /*
-    printf ("% 22.15g % 22.15g %e\n",
-        nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm),
-        lambda,
-        nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm) / lambda - 1.0);
-    fflush (stdout);
-*/
+ *   printf ("% 22.15g % 22.15g %e\n",
+ *       nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm),
+ *       lambda,
+ *       nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm) / lambda - 1.0);
+ *   fflush (stdout);
+ */
 
     *m2lnL = -2.0 * (*m2lnL);
 
@@ -1494,7 +1534,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   if (self->np == 0)
   {
     const gdouble lambda = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
+
     *m2lnL = -2.0 * lambda;
+
     return;
   }
 
@@ -1548,10 +1590,12 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     const gdouble lambda = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
     guint i;
+
     for (i = 0; i < self->np; i++)
-    { 
+    {
       *m2lnL += g_array_index (self->m2lnL_a, gdouble, i);
     }
+
     *m2lnL += (lambda - self->np);
   }
 
@@ -1576,6 +1620,7 @@ nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true
     g_assert (self->lnM_true != NULL);
     g_assert (self->z_true != NULL);
   }
+
   self->use_true_data = use_true_data;
 }
 
@@ -1585,7 +1630,7 @@ nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true
  *
  * Returns: if it is using true data.
  */
-gboolean 
+gboolean
 nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
@@ -1665,7 +1710,6 @@ nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
   ncm_vector_clear (&self->bin_count);
 }
 
-
 /**
  * nc_data_cluster_ncount_set_binned:
  * @ncount: a #NcDataClusterNCount.
@@ -1694,12 +1738,12 @@ void
 nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  const guint len = self->z_obs_bins->len;
+  const guint len                         = self->z_obs_bins->len;
   guint i;
 
   if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
     g_error ("_nc_data_cluster_ncount_bin_data: cannot bin data, inconsistent bins (%u %u).",
-        len, self->lnM_obs_bins->len);
+             len, self->lnM_obs_bins->len);
 
   if (self->np == 0)
     return;
@@ -1725,9 +1769,7 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
 
       if (ncm_vector_between (lnM_obs_row, lnM_obs_lb, lnM_obs_ub, 0) &&
           ncm_vector_between (z_obs_row, z_obs_lb, z_obs_ub, 0))
-      {
         ncm_vector_addto (self->bin_count, bin_index, 1.0);
-      }
     }
 
     ncm_vector_free (lnM_obs_row);
@@ -1753,17 +1795,17 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
   /*******************************************************************/
   /* Create a binary table extension                                 */
   /*******************************************************************/
-  fitsfile *fptr;       /* pointer to the FITS file, defined in fitsio.h */
+  fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
   gint status;
   gint tfields;
 
-  gchar extname[] = "ClusterAbundance";   /* extension name */
+  gchar extname[]        = "ClusterAbundance"; /* extension name */
   GPtrArray *ttype_array = g_ptr_array_sized_new (10);
   GPtrArray *tform_array = g_ptr_array_sized_new (10);
   GPtrArray *tunit_array = g_ptr_array_sized_new (10);
 
   g_assert (self->np > 0);
-  
+
   g_ptr_array_set_free_func (tform_array, g_free);
 
   g_ptr_array_add (ttype_array, "Z_OBS");
@@ -1815,27 +1857,29 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
   NCM_FITS_ERROR (status);
 
   /* append a new empty binary table onto the FITS file */
-  fits_create_tbl (fptr, BINARY_TBL, self->np, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
-                       (gchar **)tunit_array->pdata, extname, &status);
+  fits_create_tbl (fptr, BINARY_TBL, self->np, tfields, (gchar **) ttype_array->pdata, (gchar **) tform_array->pdata,
+                   (gchar **) tunit_array->pdata, extname, &status);
   NCM_FITS_ERROR (status);
 
-  fits_write_key_str(fptr, "MTYPE", g_type_name (self->mass_type), "Mass proxy type", &status);
+  fits_write_key_str (fptr, "MTYPE", g_type_name (self->mass_type), "Mass proxy type", &status);
   NCM_FITS_ERROR (status);
 
-  fits_write_key_str(fptr, "ZTYPE", g_type_name (self->redshift_type), "Redshift proxy type", &status);
+  fits_write_key_str (fptr, "ZTYPE", g_type_name (self->redshift_type), "Redshift proxy type", &status);
   NCM_FITS_ERROR (status);
 
-  fits_write_key(fptr, TLOGICAL, "USETDATA", &self->use_true_data, "Whether to used true data", &status);
+  fits_write_key (fptr, TLOGICAL, "USETDATA", &self->use_true_data, "Whether to used true data", &status);
   NCM_FITS_ERROR (status);
 
   {
     gdouble sarea_d = self->area_survey / gsl_pow_2 (M_PI / 180.0);
-    fits_write_key(fptr, TDOUBLE, "AREA", &sarea_d, "Survey area in degree square", &status);
+
+    fits_write_key (fptr, TDOUBLE, "AREA", &sarea_d, "Survey area in degree square", &status);
     NCM_FITS_ERROR (status);
   }
 
   {
     guint colnum = 1;
+
     fits_write_col (fptr, TDOUBLE, colnum, 1, 1, self->np, ncm_matrix_ptr (self->z_obs, 0, 0), &status);
     NCM_FITS_ERROR (status);
 
@@ -1870,7 +1914,6 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
       fits_write_col (fptr, TDOUBLE, colnum, 1, 1, self->np, ncm_matrix_ptr (self->lnM_obs_params, 0, 0), &status);
       NCM_FITS_ERROR (status);
     }
-
   }
 
   {
@@ -1884,7 +1927,8 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
 
       if ((len != self->lnM_obs_bins->len) || (len % 2 == 1))
         g_error ("nc_data_cluster_ncount_catalog_save: cannot save binning information, inconsistent bins (%u %u).",
-            len, self->lnM_obs_bins->len);
+                 len, self->lnM_obs_bins->len);
+
       g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
 
       g_ptr_array_set_size (ttype_array, 0);
@@ -1913,16 +1957,16 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
 
       tfields = ttype_array->len;
 
-      fits_create_tbl (fptr, BINARY_TBL, nbins, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
-                           (gchar **)tunit_array->pdata, extname, &status);
+      fits_create_tbl (fptr, BINARY_TBL, nbins, tfields, (gchar **) ttype_array->pdata, (gchar **) tform_array->pdata,
+                       (gchar **) tunit_array->pdata, extname, &status);
       NCM_FITS_ERROR (status);
 
-      fits_write_key(fptr, TLOGICAL, "BINNED", &self->binned, "Whether to used binned data", &status);
+      fits_write_key (fptr, TLOGICAL, "BINNED", &self->binned, "Whether to used binned data", &status);
       NCM_FITS_ERROR (status);
 
       for (i = 0; i < nbins; i++)
       {
-        const gint j = 2 * i;
+        const gint j          = 2 * i;
         NcmVector *lnM_obs_lb = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 0));
         NcmVector *lnM_obs_ub = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 1));
         NcmVector *z_obs_lb   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 0));
@@ -1952,7 +1996,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
     }
   }
 
-  fits_close_file(fptr, &status);
+  fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
 
   g_ptr_array_unref (ttype_array);
@@ -1991,9 +2035,10 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   if (hdutype != BINARY_TBL)
     g_error ("%s (%d): NcDataClusterNCount catalog is not binary!", __FILE__, __LINE__);
-  
+
   {
     glong nrows;
+
     fits_get_num_rows (fptr, &nrows, &status);
     NCM_FITS_ERROR (status);
     self->np = nrows;
@@ -2001,6 +2046,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   {
     gchar mass_type[FLEN_VALUE];
+
     if (fits_read_key_str (fptr, "MTYPE", mass_type, NULL, &status))
       g_error ("Fits file does not contain MTYPE in the header indicating the mass proxy object type. Use [col #ZTYPE=...] to add this information.");
 
@@ -2009,6 +2055,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   {
     gchar redshift_type[FLEN_VALUE];
+
     if (fits_read_key_str (fptr, "ZTYPE", redshift_type, NULL, &status))
       g_error ("Fits file does not contain ZTYPE in the header indicating the redshift proxy object type. Use [col #ZTYPE=...] to add this information.");
 
@@ -2020,6 +2067,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   if (fits_read_key_dbl (fptr, "AREA", &self->area_survey, comment, &status))
     g_error ("Fits file does not contain AREA in the header indicating the survey area (degree square). Use [col #AREA=...] to add this information.");
+
   self->area_survey *= gsl_pow_2 (M_PI / 180.0);
 
   {
@@ -2103,8 +2151,9 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   {
     gint z_true_i, lnM_true_i;
-    
+
     ncm_vector_clear (&self->z_true);
+
     if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE*", &z_true_i, &status))
     {
       self->z_true = ncm_vector_new (self->np);
@@ -2112,9 +2161,12 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
       NCM_FITS_ERROR (status);
     }
     else
+    {
       status = 0;
+    }
 
     ncm_vector_clear (&self->lnM_true);
+
     if (!fits_get_colnum (fptr, CASESEN, "LNM_TRUE", &lnM_true_i, &status))
     {
       self->lnM_true = ncm_vector_new (self->np);
@@ -2122,7 +2174,9 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
       NCM_FITS_ERROR (status);
     }
     else
+    {
       status = 0;
+    }
   }
 
   {
@@ -2235,3 +2289,4 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 }
 
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+

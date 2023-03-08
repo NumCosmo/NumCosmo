@@ -368,9 +368,9 @@ nc_headers = \
 	model/nc_hicosmo_idem2.h      \
 	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
-	model/nc_hicosmo_de_reparam_ok.h \
+	model/nc_hicosmo_de_reparam_ok.h  \
 	model/nc_hicosmo_de_reparam_cmb.h \
-	model/nc_hicosmo_de_cpl.h  \
+	model/nc_hicosmo_de_cpl.h     \
 	model/nc_hicosmo_de_jbp.h     \
 	model/nc_hicosmo_de_xcdm.h    \
 	model/nc_hicosmo_de_wspline.h \
@@ -399,13 +399,13 @@ nc_headers = \
 	lss/nc_halo_density_profile_einasto.h   \
 	lss/nc_halo_density_profile_dk14.h      \
 	lss/nc_halo_density_profile_hernquist.h \
-	lss/nc_galaxy_acf.h           \
-	lss/nc_multiplicity_func.h    \
-	lss/nc_multiplicity_func_ps.h           \
-	lss/nc_multiplicity_func_st.h           \
-	lss/nc_multiplicity_func_jenkins.h      \
-	lss/nc_multiplicity_func_warren.h       \
-	lss/nc_multiplicity_func_tinker.h       \
+	lss/nc_galaxy_acf.h                    \
+	lss/nc_multiplicity_func.h             \
+	lss/nc_multiplicity_func_ps.h          \
+	lss/nc_multiplicity_func_st.h          \
+	lss/nc_multiplicity_func_jenkins.h     \
+	lss/nc_multiplicity_func_warren.h      \
+	lss/nc_multiplicity_func_tinker.h      \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_multiplicity_func_bocquet.h     \
@@ -436,7 +436,8 @@ nc_headers = \
         lss/nc_galaxy_redshift_gauss.h         \
         lss/nc_galaxy_wl.h                     \
         lss/nc_galaxy_wl_dist.h                \
-        lss/nc_galaxy_wl_reduced_shear_gauss.h \
+        lss/nc_galaxy_wl_ellipticity_gauss.h   \
+        lss/nc_galaxy_wl_ellipticity_kde.h     \
         lss/nc_galaxy_wl_proj.h                \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
@@ -520,9 +521,9 @@ nc_sources = \
 	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
-	model/nc_hicosmo_de_reparam_ok.c \
+	model/nc_hicosmo_de_reparam_ok.c  \
 	model/nc_hicosmo_de_reparam_cmb.c \
-	model/nc_hicosmo_de_cpl.c  \
+	model/nc_hicosmo_de_cpl.c     \
 	model/nc_hicosmo_de_jbp.c     \
 	model/nc_hicosmo_de_xcdm.c    \
 	model/nc_hicosmo_de_wspline.c \
@@ -551,8 +552,8 @@ nc_sources = \
 	lss/nc_halo_density_profile_einasto.c   \
 	lss/nc_halo_density_profile_dk14.c      \
 	lss/nc_halo_density_profile_hernquist.c \
-	lss/nc_galaxy_acf.c           \
-	lss/nc_multiplicity_func.c    \
+	lss/nc_galaxy_acf.c                     \
+	lss/nc_multiplicity_func.c              \
 	lss/nc_multiplicity_func_ps.c           \
 	lss/nc_multiplicity_func_st.c           \
 	lss/nc_multiplicity_func_jenkins.c      \
@@ -588,7 +589,8 @@ nc_sources = \
 	lss/nc_galaxy_redshift_gauss.c         \
 	lss/nc_galaxy_wl.c                     \
 	lss/nc_galaxy_wl_dist.c                \
-	lss/nc_galaxy_wl_reduced_shear_gauss.c \
+	lss/nc_galaxy_wl_ellipticity_gauss.c   \
+	lss/nc_galaxy_wl_ellipticity_kde.c     \
 	lss/nc_galaxy_wl_proj.c                \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
