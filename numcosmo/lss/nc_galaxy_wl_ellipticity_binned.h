@@ -70,8 +70,8 @@ NcGalaxyWLEllipticityBinned *nc_galaxy_wl_ellipticity_binned_ref (NcGalaxyWLElli
 void nc_galaxy_wl_ellipticity_binned_free (NcGalaxyWLEllipticityBinned *gebin);
 void nc_galaxy_wl_ellipticity_binned_clear (NcGalaxyWLEllipticityBinned **gebin);
 
-void nc_galaxy_wl_ellipticity_binned_set_bin_obs (NcGalaxyWLEllipticityBinned *gebin, NcmMatrix *obs, NcmVector *bins);
-NcmObjArray *nc_galaxy_wl_ellipticity_binned_peek_bin_obs (NcGalaxyWLEllipticityBinned *gebin);
+void nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, NcmMatrix *obs, NcmVector *bins);
+NcmObjArray *nc_galaxy_wl_ellipticity_binned_peek_binobs (NcGalaxyWLEllipticityBinned *gebin);
 NcmVector *nc_galaxy_wl_ellipticity_binned_peek_bins (NcGalaxyWLEllipticityBinned *gebin);
 
 G_END_DECLS
