@@ -60,8 +60,8 @@ struct _NcmMSetTransKernCatPrivate
   gboolean sd_prep;
   gdouble m2lnL_reltol;
   GTree *m2lnL_tree;
-  gdouble choose_nsigma;
-  gdouble cur_choose_nsigma;
+  gboolean choose_cut;
+  gdouble choose_percentile;
 };
 
 enum
@@ -71,7 +71,8 @@ enum
   PROP_SD,
   PROP_STYPE,
   PROP_M2LNL_RELTOL,
-  PROP_CHOOSE_NSIGMA,
+  PROP_CHOOSE_CUT,
+  PROP_CHOOSE_PERCENTILE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN);
@@ -83,17 +84,17 @@ ncm_mset_trans_kern_cat_init (NcmMSetTransKernCat *tcat)
 {
   NcmMSetTransKernCatPrivate * const self = tcat->priv = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
-  self->mcat         = NULL;
-  self->stype        = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;
-  self->sd           = NULL;
-  self->sd_prep      = FALSE;
-  self->m2lnL_reltol = 0.0;
-  self->m2lnL_tree   = g_tree_new_full (gdouble_compare,
-                                        &self->m2lnL_reltol,
-                                        g_free,
-                                        NULL);
-  self->choose_nsigma     = 0.0;
-  self->cur_choose_nsigma = 0.0;
+  self->mcat              = NULL;
+  self->stype             = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;
+  self->sd                = NULL;
+  self->sd_prep           = FALSE;
+  self->m2lnL_reltol      = 0.0;
+  self->choose_cut        = FALSE;
+  self->choose_percentile = 0.0;
+  self->m2lnL_tree        = g_tree_new_full (gdouble_compare,
+                                             &self->m2lnL_reltol,
+                                             g_free,
+                                             NULL);
 }
 
 static void
@@ -122,9 +123,13 @@ _ncm_mset_trans_kern_cat_set_property (GObject *object, guint prop_id, const GVa
     case PROP_M2LNL_RELTOL:
       self->m2lnL_reltol = g_value_get_double (value);
       break;
-    case PROP_CHOOSE_NSIGMA:
-      self->choose_nsigma     = g_value_get_double (value);
-      self->cur_choose_nsigma = self->choose_nsigma;
+    case PROP_CHOOSE_CUT:
+      self->choose_cut = g_value_get_boolean (value);
+      break;
+    case PROP_CHOOSE_PERCENTILE:
+      self->choose_percentile = g_value_get_double (value);
+      g_assert_cmpfloat (self->choose_percentile, >, 0.01);
+      g_assert_cmpfloat (self->choose_percentile, <, 1.0);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -154,8 +159,11 @@ _ncm_mset_trans_kern_cat_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_M2LNL_RELTOL:
       g_value_set_double (value, self->m2lnL_reltol);
       break;
-    case PROP_CHOOSE_NSIGMA:
-      g_value_set_double (value, self->choose_nsigma);
+    case PROP_CHOOSE_CUT:
+      g_value_set_boolean (value, self->choose_cut);
+      break;
+    case PROP_CHOOSE_PERCENTILE:
+      g_value_set_double (value, self->choose_percentile);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -235,13 +243,20 @@ ncm_mset_trans_kern_cat_class_init (NcmMSetTransKernCatClass *klass)
                                                         "Relative tolerance for m2lnL",
                                                         GSL_DBL_EPSILON, 1.0e-3, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CHOOSE_CUT,
+                                   g_param_spec_boolean ("choose-cut",
+                                                         NULL,
+                                                         "Whether to cut the catalog at the choose-percentile before choosing",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_CHOOSE_NSIGMA,
-                                   g_param_spec_double ("choose-nsigma",
+                                   PROP_CHOOSE_PERCENTILE,
+                                   g_param_spec_double ("choose-percentile",
                                                         NULL,
-                                                        "Max number of sigmas to use when choosing rows",
-                                                        1.0e-1, G_MAXDOUBLE, 3.0,
+                                                        "Max percentile to choose from",
+                                                        1.0e-2, 1.0, 0.9,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   tkern_class->set_mset = &_ncm_mset_trans_kern_cat_set_mset;
@@ -277,17 +292,25 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
   NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  guint nth                               = 0;
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
   const guint cat_len                     = ncm_mset_catalog_len (self->mcat);
   const guint theta_size                  = ncm_mset_fparams_len (mcat_mset);
-  const gdouble m2lnL_bestfit             = ncm_mset_catalog_get_bestfit_m2lnL (self->mcat);
-  const gdouble m2lnL_sigma               = sqrt (2.0 * theta_size);
+  const gdouble m2lnL_cut                 = ncm_mset_catalog_get_nth_m2lnL_percentile (self->mcat, self->choose_percentile, &nth);
   const guint m2lnL_index                 = ncm_mset_catalog_get_m2lnp_var (self->mcat);
   const guint max_iter                    = 100000;
-  guint under                             = 0;
   guint iter                              = 0;
 
   g_assert_cmpuint (theta_size, ==, ncm_vector_len (theta));
+
+  if (self->choose_cut)
+    nth++;
+  else
+    nth = cat_len;
+
+  if (g_tree_height (self->m2lnL_tree) >= nth)
+    g_error ("_ncm_mset_trans_kern_cat_generate_choose: cannot choose from %u points, only %u available.",
+             nth, nth - g_tree_height (self->m2lnL_tree));
 
   ncm_rng_lock (rng);
 
@@ -297,21 +320,8 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
     NcmVector *row  = ncm_mset_catalog_peek_row (self->mcat, i);
     gdouble m2lnL_i = ncm_vector_get (row, m2lnL_index);
 
-    if (m2lnL_i > m2lnL_bestfit + self->cur_choose_nsigma * m2lnL_sigma)
-    {
-      under++;
-
-      if (under > 100)
-      {
-        under                    = 0;
-        self->cur_choose_nsigma += 1.0;
-      }
-
-      /*g_message ("# Too far % 22.15g <=> % 22.15g\n", m2lnL_i, m2lnL_bestfit + self->choose_nsigma * m2lnL_sigma); */
+    if (self->choose_cut && (m2lnL_i > m2lnL_cut))
       continue;
-    }
-
-    under = 0;
 
     ncm_vector_memcpy2 (thetastar, row, 0, ncm_mset_catalog_nadd_vals (self->mcat), theta_size);
 
@@ -515,9 +525,7 @@ _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern)
   if (self->sd != NULL)
     ncm_stats_dist_reset (self->sd);
 
-  self->cur_choose_nsigma = self->choose_nsigma;
-
-#if GLIB_CHECK_VERSION(2,70,0)
+#if GLIB_CHECK_VERSION (2, 70, 0)
   g_tree_remove_all (self->m2lnL_tree);
 #else
   g_tree_destroy (self->m2lnL_tree);
@@ -526,7 +534,6 @@ _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern)
                                       g_free,
                                       NULL);
 #endif /* GLIB_CHECK_VERSION(2,70,0) */
-
 }
 
 static const gchar *

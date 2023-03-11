@@ -637,7 +637,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
     const gdouble dbl_limit     = 6.0;
     gint i;
-    
+
     /*
      * Evaluating the right-hand-side
      */
@@ -819,6 +819,13 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         g_assert_not_reached ();
         break;
     }
+  }
+
+  {
+    const gdouble total_weight = ncm_vector_sum_cpts (self->weights);
+
+    g_assert (total_weight > 0.0);
+    ncm_vector_scale (self->weights, 1.0 / total_weight);
   }
 
   /* ncm_vector_log_vals (self->weights, "W: ", "% 22.15e", TRUE); */
@@ -1176,11 +1183,8 @@ ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
  * @sd: a #NcmStatsDist
  * @x: a #NcmVector
  *
- * Evaluate the distribution at $\vec{x}=$@x. If the distribution
- * was prepared using ncm_stats_dist_prepare_interp(), the
- * results will follow the interpolation and may not be properly
- * normalized. In this case the method ncm_stats_dist_eval_m2lnp()
- * should be used to avoid underflow.
+ * Evaluate the distribution at $\vec{x}=$@x. The method ncm_stats_dist_eval_m2lnp()
+ * can be used to avoid underflow.
  *
  * Returns: $P(\vec{x})$.
  */
@@ -1198,10 +1202,9 @@ ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x)
  * @sd: a #NcmStatsDist
  * @x: a #NcmVector
  *
- * Evaluate the distribution at $\vec{x}=$@x. If the distribution
- * was prepared using ncm_stats_dist_prepare_interp(), the
- * results will follow the interpolation and may not be properly
- * normalized.
+ * Evaluate the distribution at $\vec{x}=$@x. This method is more
+ * stable than ncm_stats_dist_eval() since it avoids underflows
+ * and overflows.
  *
  * Returns: $P(\vec{x})$.
  */

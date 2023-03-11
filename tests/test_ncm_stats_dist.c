@@ -35,6 +35,7 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_sf_trig.h>
 
 typedef struct _TestNcmStatsDist
 {
@@ -44,6 +45,7 @@ typedef struct _TestNcmStatsDist
   guint dim;
   guint nfail;
   guint np;
+  guint ntests;
 } TestNcmStatsDist;
 
 static void test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata);
@@ -56,7 +58,6 @@ static void test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpoint
 static void test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpointer pdata);
-static void test_ncm_stats_dist_dens_interp_unormalized (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata);
@@ -74,7 +75,7 @@ typedef struct _TestNcmStatsDistFunc
 } TestNcmStatsDistFunc;
 
 #define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 9
+#define TEST_NCM_STATS_DIST_TESTS_LEN 8
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -89,7 +90,6 @@ static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
   {"gauss/dens/interp/sampling",       &test_ncm_stats_dist_dens_interp_sampling},
   {"gauss/dens/interp/cv_split",       &test_ncm_stats_dist_dens_interp_cv_split},
   {"gauss/dens/interp/cv_split_nofit", &test_ncm_stats_dist_dens_interp_cv_split_nofit},
-  {"gauss/dens/interp/unormalized",    &test_ncm_stats_dist_dens_interp_unormalized},
   {"gauss/sampling",                   &test_ncm_stats_dist_sampling},
   {"gauss/serialize",                  &test_ncm_stats_dist_serialize},
   {"gauss/get_kernel_info",            &test_ncm_stats_dist_get_kernel_info},
@@ -147,6 +147,7 @@ main (gint argc, gchar *argv[])
 }
 
 #define TESTMULT 200
+#define NTESTS 2000
 
 static void
 test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
@@ -161,6 +162,7 @@ test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
   test->sd     = NCM_STATS_DIST (sdkde);
   test->nfail  = 0;
   test->np     = TESTMULT * test->dim;
+  test->ntests = NTESTS;
 
   switch (cov_type)
   {
@@ -210,6 +212,7 @@ test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdat
   test->sd     = NCM_STATS_DIST (sdkde);
   test->nfail  = 0;
   test->np     = TESTMULT * test->dim;
+  test->ntests = NTESTS;
 
   switch (cov_type)
   {
@@ -258,6 +261,7 @@ test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
   test->sd     = NCM_STATS_DIST (sdvkde);
   test->nfail  = 0;
   test->np     = TESTMULT * test->dim;
+  test->ntests = NTESTS;
 
   switch (cov_type)
   {
@@ -308,6 +312,7 @@ test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pda
   test->sd     = NCM_STATS_DIST (sdvkde);
   test->nfail  = 0;
   test->np     = TESTMULT * test->dim;
+  test->ntests = NTESTS;
 
   switch (cov_type)
   {
@@ -352,16 +357,57 @@ test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata)
 }
 
 static void
+test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, NcmRNG *rng)
+{
+  NcmStatsVec *err_stats = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
+  gulong N               = 0;
+  gint i;
+
+  for (i = 0; i < test->ntests; i++)
+  {
+    NcmVector *y;
+    gdouble m2lnL, m2lnp_s, alpha;
+
+    y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
+
+    /* Measuring the Kullback-Leibler divergence */
+    alpha = 0.25 * (m2lnp_s - m2lnL);
+    ncm_stats_vec_set (err_stats, 0, log1p (tanh (alpha)));
+
+    ncm_stats_dist_sample (test->sd, y, rng);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
+
+    alpha = 0.25 * (m2lnL - m2lnp_s);
+    ncm_stats_vec_set (err_stats, 1, log1p (tanh (alpha)));
+
+    ncm_stats_vec_update (err_stats);
+  }
+
+  /* Measuring the Jensen-Shannon divergence */
+  {
+    gdouble KL_P_M  = ncm_stats_vec_get_mean (err_stats, 0);
+    gdouble KL_PS_M = ncm_stats_vec_get_mean (err_stats, 1);
+    gdouble JS_P_PS = 0.5 * (KL_P_M + KL_PS_M);
+
+    g_assert_cmpfloat (JS_P_PS, <, 0.5);
+    /*printf ("KL % 22.15g % 22.15g JS % 22.15g\n", KL_P_M, KL_PS_M, JS_P_PS); */
+  }
+
+  ncm_stats_vec_free (err_stats);
+}
+
+static void
 test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
 {
   NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 400 * g_test_rand_int_range (1, 5);
-  NcmStatsVec *err_stats          = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
-  gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
+  gulong N                        = 0;
   guint i;
 
   switch (cov_type)
@@ -391,24 +437,9 @@ test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
   }
 
   ncm_stats_dist_prepare (test->sd);
-  ncm_stats_vec_reset (err_stats, TRUE);
 
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    const gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    gdouble m2lnL, err;
+  test_ncm_stats_dist_cmp_dist (test, data_mvnd, mset, rng);
 
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    err = fabs (expm1 (-0.5 * (m2lnp_s - m2lnL)));
-    ncm_stats_vec_set (err_stats, 0, err);
-    ncm_stats_vec_update (err_stats);
-  }
-
-  g_assert_cmpfloat (ncm_stats_vec_get_mean (err_stats, 0), <, 0.5);
-
-  ncm_stats_vec_free (err_stats);
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
@@ -418,16 +449,13 @@ test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
 static void
 test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
 {
-  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
-  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
-  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests             = 100 * g_test_rand_int_range (1, 5);
-  NcmVector *m2lnp_v             = ncm_vector_new (test->np);
-  gdouble dm2lnL_mean            = 0.0;
-  gulong N                       = 0;
-  guint ntests_fail;
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
+  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmVector *m2lnp_v              = ncm_vector_new (test->np);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
+  gulong N                        = 0;
   guint i;
 
   switch (cov_type)
@@ -448,6 +476,7 @@ test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
   }
 
   ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+  ncm_data_gauss_cov_use_norma (NCM_DATA_GAUSS_COV (data_mvnd), TRUE);
 
   for (i = 0; i < test->np; i++)
   {
@@ -461,36 +490,7 @@ test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
 
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
 
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble p_s  = ncm_stats_dist_eval (test->sd, y);
-    gdouble m2lnL;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    dm2lnL_mean += (-2.0 * log (p_s) - m2lnL);
-  }
-
-  dm2lnL_mean = dm2lnL_mean / ntests;
-
-  ntests_fail = 0;
-
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble p_s  = ncm_stats_dist_eval (test->sd, y);
-    gdouble m2lnL;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    if (fabs (p_s / exp (-0.5 * (m2lnL + dm2lnL_mean)) - 1.0) > 0.5)
-      ntests_fail++;
-  }
-
-  /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
-
-  g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
+  test_ncm_stats_dist_cmp_dist (test, data_mvnd, mset, rng);
 
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
@@ -589,12 +589,9 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
-  gdouble dm2lnL_mean             = 0.0;
   gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
-  guint ntests_fail;
   guint i;
 
   switch (cov_type)
@@ -629,47 +626,7 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_SPLIT);
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
 
-/*
- *  sample_array = ncm_stats_dist_peek_sample_array (test->sd);
- *  for (i = 0; i < sample_array->len; i++)
- *  {
- *   NcmVector *y = g_ptr_array_index (sample_array, i);
- *   const gdouble m2lnp = ncm_stats_dist_eval_m2lnp (test->sd, y);
- *
- *   printf ("#A % 22.15g % 22.15g % 22.15g\n", m2lnp, ncm_vector_get (m2lnp_v, i), ncm_vector_get (m2lnp_v, i) - m2lnp);
- *  }
- */
-
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    gdouble m2lnL;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    dm2lnL_mean += (m2lnp_s - m2lnL);
-  }
-
-  dm2lnL_mean = dm2lnL_mean / ntests;
-
-  ntests_fail = 0;
-
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    gdouble m2lnL;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    /*printf ("test % 22.15g\n", fabs (m2lnp_s / (m2lnL + dm2lnL_mean) - 1.0));*/
-    if (fabs (m2lnp_s / (m2lnL + dm2lnL_mean) - 1.0) > 0.2)
-      ntests_fail++;
-  }
-
-  /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
-
-  g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
+  test_ncm_stats_dist_cmp_dist (test, data_mvnd, mset, rng);
 
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
@@ -685,7 +642,6 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
   gdouble dm2lnL_mean             = 0.0;
   gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
@@ -736,7 +692,7 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
  *  }
  */
 
-  for (i = 0; i < ntests; i++)
+  for (i = 0; i < test->ntests; i++)
   {
     NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
@@ -746,11 +702,11 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
     dm2lnL_mean += (m2lnp_s - m2lnL);
   }
 
-  dm2lnL_mean = dm2lnL_mean / ntests;
+  dm2lnL_mean = dm2lnL_mean / test->ntests;
 
   ntests_fail = 0;
 
-  for (i = 0; i < ntests; i++)
+  for (i = 0; i < test->ntests; i++)
   {
     NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
@@ -765,112 +721,13 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
 
   /*printf ("%u %u %u %f\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests);*/
 
-  g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
+  g_assert_cmpfloat (ntests_fail * 1.0 / test->ntests, <, 0.5);
 
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
   ncm_mset_free (mset);
-}
-
-static void
-test_ncm_stats_dist_dens_interp_unormalized (TestNcmStatsDist *test, gconstpointer pdata)
-{
-  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
-  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
-  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
-  NcmStatsVec *cmp_stats          = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
-  gdouble dm2lnL_mean             = 0.0;
-  gulong N                        = 0;
-  NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
-  NcmVector *m2lnp_v              = ncm_vector_new (test->np);
-  guint ntests_fail;
-  guint i;
-
-  switch (cov_type)
-  {
-    case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
-    {
-      NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
-
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
-      break;
-    }
-    case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
-    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-      break;
-    default:
-      g_assert_not_reached ();
-  }
-
-  m2lnp_v = ncm_vector_new (test->np);
-  ncm_data_gauss_cov_use_norma (NCM_DATA_GAUSS_COV (data_mvnd), FALSE);
-  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
-
-  for (i = 0; i < test->np; i++)
-  {
-    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble m2lnL;
-
-    ncm_stats_dist_add_obs (test->sd, y);
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    ncm_vector_set (m2lnp_v, i, m2lnL);
-  }
-
-  ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
-
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    gdouble m2lnL;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    dm2lnL_mean += (m2lnp_s - m2lnL);
-  }
-
-  dm2lnL_mean = dm2lnL_mean / ntests;
-
-  ntests_fail = 0;
-
-  for (i = 0; i < ntests; i++)
-  {
-    NcmVector *y    = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    gdouble m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    gdouble m2lnL;
-    gdouble cmp;
-
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-
-    cmp = fabs (expm1 (-0.5 * (m2lnp_s - m2lnL - dm2lnL_mean)));
-
-    ncm_stats_vec_set (cmp_stats, 0, cmp);
-    ncm_stats_vec_update (cmp_stats);
-
-    /*printf ("# CMP % 22.15g % 22.15g % 22.15g % 22.15g\n", cmp, m2lnp_s, m2lnL, dm2lnL_mean);*/
-
-    if (cmp > 0.50)
-      ntests_fail++;
-  }
-
-/*
- *  printf ("%u %u %u %f | % 22.15g % 22.15g\n", test->dim, ntests, ntests_fail, ntests_fail * 1.0 / ntests,
- *         ncm_stats_vec_get_mean (cmp_stats, 0), ncm_stats_vec_get_sd (cmp_stats, 0));
- */
-
-  g_assert_cmpfloat (ntests_fail * 1.0 / ntests, <, 0.5);
-
-  ncm_model_mvnd_free (model_mvnd);
-  ncm_data_gauss_cov_mvnd_free (data_mvnd);
-  ncm_rng_free (rng);
-  ncm_vector_free (m2lnp_v);
-  ncm_mset_free (mset);
-  ncm_stats_vec_clear (&cmp_stats);
 }
 
 static void
@@ -880,7 +737,6 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
   NcmVector *y                    = ncm_vector_new (test->dim);
   NcmStatsVec *test_stats         = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
   gulong N                        = 0;
@@ -920,7 +776,7 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
 
   ncm_stats_dist_prepare (test->sd);
 
-  for (i = 0; i < ntests; i++)
+  for (i = 0; i < test->ntests; i++)
   {
     ncm_stats_dist_sample (test->sd, y, rng);
     ncm_stats_vec_append (test_stats, y, FALSE);
@@ -995,7 +851,6 @@ test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata)
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
   NcmStatsVec *cmp_stats          = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
@@ -1044,7 +899,7 @@ test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata)
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
   ncm_stats_dist_prepare_interp (sd_dup, m2lnp_v);
 
-  for (i = 0; i < ntests; i++)
+  for (i = 0; i < test->ntests; i++)
   {
     NcmVector *y     = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     gdouble m2lnp_s0 = ncm_stats_dist_eval_m2lnp (test->sd, y);
@@ -1073,7 +928,6 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
-  const guint ntests              = 100 * g_test_rand_int_range (1, 5);
   gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   guint i;
@@ -1154,11 +1008,11 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
     }
 
     {
-      gdouble *data         = g_new (gdouble, 2 * ntests);
-      NcmVector *chi2_vec   = ncm_vector_new_full (data, ntests, 2, data, g_free);
-      NcmVector *kernel_vec = ncm_vector_new (ntests);
+      gdouble *data         = g_new (gdouble, 2 * test->ntests);
+      NcmVector *chi2_vec   = ncm_vector_new_full (data, test->ntests, 2, data, g_free);
+      NcmVector *kernel_vec = ncm_vector_new (test->ntests);
 
-      for (i = 0; i < ntests; i++)
+      for (i = 0; i < test->ntests; i++)
       {
         const gdouble chi2_i = g_test_rand_double_range (0.0, 1.0e2);
 
@@ -1167,7 +1021,7 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
 
       ncm_stats_dist_kernel_eval_unnorm_vec (kernel, chi2_vec, kernel_vec);
 
-      for (i = 0; i < ntests; i++)
+      for (i = 0; i < test->ntests; i++)
       {
         ncm_assert_cmpdouble_e (ncm_vector_get (kernel_vec, i), ==, ncm_stats_dist_kernel_eval_unnorm (kernel, ncm_vector_get (chi2_vec, i)),
                                 1.0e-15, 0.0);
