@@ -354,6 +354,16 @@ fi
 AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 
 dnl ***************************************************************************
+dnl check for python
+dnl ***************************************************************************
+
+AM_PATH_PYTHON([3.8], [
+AX_PYTHON_MODULE([gi])
+AX_PYTHON_MODULE([pytest])
+],[:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+
+dnl ***************************************************************************
 dnl check for gtk-doc
 dnl ***************************************************************************
 m4_ifdef([GTK_DOC_CHECK], [
@@ -1136,6 +1146,22 @@ if [ test "x$HAVE_ARB" = xyes ]; then
        echo "Building with ARB support: ......................................YES"
 else
        echo "Building with ARB support: .......................................NO"
+fi
+if [ test "x$PYTHON_VERSION" != x ]; then
+       echo "Building with Python support: ...................................$PYTHON"
+       echo "Building with Python version: ...................................$PYTHON_VERSION"
+  if [test "x$HAVE_PYMOD_GI" = xyes]; then
+       echo "Building with Python gi support .................................YES"
+  else
+       echo "Building with Python gi support ..................................NO"
+  fi
+  if [test "x$HAVE_PYMOD_PYTEST" = xyes]; then
+       echo "Building with Python pytest support .............................YES"
+  else
+       echo "Building with Python pytest support ..............................NO"
+  fi
+else
+       echo "Building with Python support: ....................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"
