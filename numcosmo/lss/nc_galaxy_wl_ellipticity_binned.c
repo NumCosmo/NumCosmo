@@ -72,11 +72,11 @@ nc_galaxy_wl_ellipticity_binned_init (NcGalaxyWLEllipticityBinned *gebin)
 {
   NcGalaxyWLEllipticityBinnedPrivate * const self = gebin->priv = nc_galaxy_wl_ellipticity_binned_get_instance_private (gebin);
 
-  self->bins    = NULL;
-  self->binobs = NULL;
-  self->r       = 0.0;
-  self->twolnN  = 0.0;
-  self->len     = 0;
+  self->bins   = NULL;
+  self->binobs = ncm_obj_array_new ();
+  self->r      = 0.0;
+  self->twolnN = 0.0;
+  self->len    = 0;
 }
 
 static void
@@ -266,14 +266,13 @@ void
 nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, NcmMatrix *obs, NcmVector *bins)
 {
   NcGalaxyWLEllipticityBinnedPrivate * const self = gebin->priv;
-  NcmObjArray *binobs                            = ncm_obj_array_sized_new (ncm_vector_len (bins));
   gint bin_i;
 
   for (bin_i = 0; bin_i < ncm_vector_len (bins) - 1; bin_i++)
   {
     NcmMatrix *bin_data = ncm_matrix_new (0, 3);
-    gint bin_ll        = ncm_vector_get(bins, bin_i);
-    gint bin_ul        = ncm_vector_get(bins, bin_i+1);
+    gint bin_ll         = ncm_vector_get (bins, bin_i);
+    gint bin_ul         = ncm_vector_get (bins, bin_i+1);
     gint gal_i;
     gint i;
 
@@ -306,12 +305,11 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
       }
     }
 
-    ncm_obj_array_add (binobs, G_OBJECT (bin_data));
+    ncm_obj_array_add (self->binobs, G_OBJECT (bin_data));
   }
 
-  self->bins    = bins;
-  self->len     = ncm_matrix_nrows (obs);
-  self->binobs  = binobs;
+  self->bins = bins;
+  self->len  = ncm_matrix_nrows (obs);
 
 }
 

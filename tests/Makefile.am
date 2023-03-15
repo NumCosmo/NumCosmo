@@ -165,53 +165,58 @@ test_nc_distance_SOURCES =  \
 test_nc_galaxy_wl_ellipticity_kde_SOURCES =  \
         test_nc_galaxy_wl_ellipticity_kde.c
 
+test_nc_galaxy_wl_ellipticity_binned_SOURCES =  \
+        test_nc_galaxy_wl_ellipticity_binned.c
+
 test_programs =  \
-	test_ncm_vector                   \
-	test_ncm_matrix                   \
-	test_ncm_stats_vec                \
-	test_ncm_stats_dist1d_epdf        \
-	test_ncm_stats_dist               \
-	test_ncm_stats_dist_kernel        \
-	test_ncm_spline                   \
-	test_ncm_spline2d                 \
-	test_ncm_integral1d               \
-	test_ncm_sf_sbessel               \
-	test_ncm_mpsf_0F1                 \
-	test_ncm_mpsf_trig_int            \
-	test_ncm_func_eval                \
-	test_ncm_sparam                   \
-	test_ncm_diff                     \
-	test_ncm_ode                      \
-	test_ncm_fftlog                   \
-	test_ncm_model                    \
-	test_ncm_model_ctrl               \
-	test_ncm_serialize                \
-	test_ncm_mset                     \
-	test_ncm_mset_catalog             \
-	test_ncm_obj_array                \
-	test_ncm_data_gauss_cov           \
-	test_ncm_fit                      \
-	test_ncm_fit_esmcmc               \
-	test_ncm_sf_spherical_harmonics   \
-	test_ncm_sphere_map               \
-	test_nc_halo_bias                 \
-	test_nc_hiqg_1d                   \
-	test_nc_hicosmo_de                \
-	test_nc_window                    \
-	test_nc_transfer_func             \
-	test_nc_galaxy_acf                \
-	test_nc_recomb                    \
-	test_nc_cbe                       \
-	test_nc_data_bao_rdv              \
-	test_nc_data_bao_dvdv             \
-	test_nc_data_cluster_ncount       \
-	test_nc_cluster_pseudo_counts     \
-	test_nc_cluster_abundance         \
-	test_nc_halo_density_profile      \
-	test_nc_wl_surface_mass_density   \
-	test_nc_powspec                   \
-	test_nc_distance                  \
-	test_nc_galaxy_wl_ellipticity_kde
+	test_ncm_vector                          \
+	test_ncm_matrix                          \
+	test_ncm_stats_vec                       \
+	test_ncm_stats_dist1d_epdf               \
+	test_ncm_stats_dist                      \
+	test_ncm_stats_dist_kernel               \
+	test_ncm_spline                          \
+	test_ncm_spline2d                        \
+	test_ncm_integral1d                      \
+	test_ncm_sf_sbessel                      \
+	test_ncm_mpsf_0F1                        \
+	test_ncm_mpsf_trig_int                   \
+	test_ncm_func_eval                       \
+	test_ncm_sparam                          \
+	test_ncm_diff                            \
+	test_ncm_ode                             \
+	test_ncm_fftlog                          \
+	test_ncm_model                           \
+	test_ncm_model_ctrl                      \
+	test_ncm_serialize                       \
+	test_ncm_mset                            \
+	test_ncm_mset_catalog                    \
+	test_ncm_obj_array                       \
+	test_ncm_data_gauss_cov                  \
+	test_ncm_fit                             \
+	test_ncm_fit_esmcmc                      \
+	test_ncm_sf_spherical_harmonics          \
+	test_ncm_sphere_map                      \
+	test_nc_halo_bias                        \
+	test_nc_hiqg_1d                          \
+	test_nc_hicosmo_de                       \
+	test_nc_window                           \
+	test_nc_transfer_func                    \
+	test_nc_galaxy_acf                       \
+	test_nc_recomb                           \
+	test_nc_cbe                              \
+	test_nc_data_bao_rdv                     \
+	test_nc_data_bao_dvdv                    \
+	test_nc_data_cluster_ncount              \
+	test_nc_cluster_pseudo_counts            \
+	test_nc_cluster_abundance                \
+	test_nc_halo_density_profile             \
+	test_nc_wl_surface_mass_density          \
+	test_nc_powspec                          \
+	test_nc_distance                         \
+	test_nc_galaxy_wl_ellipticity_kde        \
+	test_nc_galaxy_wl_ellipticity_binned 
+
 
 # TEST_PROGS += $(check_programs)
 
@@ -486,6 +491,12 @@ test_nc_distance_LDADD = \
         $(COVLIBS)
 
 test_nc_galaxy_wl_ellipticity_kde_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS) \
+        $(COVLIBS)
+
+test_nc_galaxy_wl_ellipticity_binned_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
