@@ -87,15 +87,13 @@ test_nc_galaxy_wl_ellipticity_binned_new (TestNcGalaxyWLEllipticityBinned *test,
   NcDistance *dist                   = nc_distance_new (3.0);
   NcWLSurfaceMassDensity *smd        = nc_wl_surface_mass_density_new (dist);
   NcmRNG *rng                        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const gint ndata                   = 10;
   const gdouble n                    = 10000;
   NcmMatrix *data                    = ncm_matrix_new (n, 3);
   NcmVector *z_vec                   = ncm_vector_new (n);
   NcGalaxyRedshiftSpec *gzs          = nc_galaxy_redshift_spec_new ();
   const gdouble rl                   = g_test_rand_double_range (0.0002, 0.1300);
   const gdouble ru                   = g_test_rand_double_range (5.55, 5.65);
-  // const gint bin_n                   = g_test_rand_int_range (10, 100);
-  const gdouble bin_n                = 10.;
+  const gint bin_n                   = g_test_rand_int_range (10, 100);
   NcmVector *bin_vector              = ncm_vector_new (bin_n+1);
   const gdouble bin_size             = (ru - rl)/bin_n;
   const gdouble mu_e                 = g_test_rand_double_range (0.015, 0.020);
@@ -112,7 +110,7 @@ test_nc_galaxy_wl_ellipticity_binned_new (TestNcGalaxyWLEllipticityBinned *test,
     ncm_vector_set (bin_vector, j, rl + j*bin_size);
   }
 
-  for (i = 0; i < ndata; i++)
+  for (i = 0; i < n; i++)
   {
     const gdouble r = g_test_rand_double_range (rl, ru);
     const gdouble e = ncm_rng_gaussian_gen (rng, mu_e, sigma_e);
@@ -137,17 +135,7 @@ test_nc_galaxy_wl_ellipticity_binned_new (TestNcGalaxyWLEllipticityBinned *test,
 
   nc_galaxy_wl_ellipticity_binned_set_binobs (test->gebin, data, bin_vector);
 
-  // g_assert_true (NC_IS_GALAXY_WL_ELLIPTICITY_BINNED (test->gebin));
-
-  // ncm_model_free (NCM_MODEL (cosmo));
-  // ncm_model_free (NCM_MODEL (dp));
-
-  // nc_cluster_redshift_free (NC_CLUSTER_REDSHIFT (gzs));
-  // nc_distance_free (dist);
-  // ncm_vector_free (bin_vector);
-  // ncm_vector_free (z_vec);
-  // ncm_matrix_free (data);
-  // ncm_rng_free (rng);
+  g_assert_true (NC_IS_GALAXY_WL_ELLIPTICITY_BINNED (test->gebin));
 }
 
 static void
@@ -157,7 +145,6 @@ test_nc_galaxy_wl_ellipticity_binned_rep (TestNcGalaxyWLEllipticityBinned *test,
   NcmVector *bins = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
   gint i;
 
-  // printf("%d, %d", ncm_vector_len (bins), ncm_obj_array_len (bin_obs));
 
   for (i = 0; i < ncm_vector_len (bins)-1; i++)
   {
@@ -182,10 +169,6 @@ test_nc_galaxy_wl_ellipticity_binned_rep (TestNcGalaxyWLEllipticityBinned *test,
             gdouble gal_l[3] = {ncm_matrix_get (bin_data_k, l, 0), ncm_matrix_get (bin_data_k, l, 1), ncm_matrix_get (bin_data_k, l, 2)};
 
             g_assert_true (!((gal_j[0] == gal_l[0]) && (gal_j[1] == gal_l[1]) && (gal_j[2] == gal_l[2])));
-            // g_assert_cmpfloat (gal_j[0], !=, gal_l[0]);
-            // g_assert_cmpfloat (gal_j[1], !=, gal_l[2]);
-            // g_assert_cmpfloat (gal_j[2], !=, gal_l[2]);
-
           }
         }
       }
@@ -218,18 +201,15 @@ test_nc_galaxy_wl_ellipticity_binned_binning (TestNcGalaxyWLEllipticityBinned *t
     for (j = 0; j < ncm_matrix_nrows (bin_data); j++)
     {
       gdouble gal_r = ncm_matrix_get (bin_data, j, 0);
-      printf ("gal_r = %f, bin_i = %d, bin_ll = %f, bin_ul = %f\n", gal_r, bin_i, ncm_vector_get (bins, bin_i), ncm_vector_get (bins, bin_i+1));
-      // g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r < ncm_vector_get (bins, bin_i+1)));
 
-      // if (bin_i == ncm_obj_array_len (bin_obs)-1)
-      // {
-      //   g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r <= ncm_vector_get (bins, bin_i+1)));
-      // }
-      // else
-      // {
-      //   g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r < ncm_vector_get (bins, bin_i+1)));
-      // }
-
+      if (bin_i == ncm_obj_array_len (bin_obs)-1)
+      {
+        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r <= ncm_vector_get (bins, bin_i+1)));
+      }
+      else
+      {
+        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r < ncm_vector_get (bins, bin_i+1)));
+      }
     }
   }
 }

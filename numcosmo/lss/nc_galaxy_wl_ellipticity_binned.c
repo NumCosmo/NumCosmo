@@ -271,8 +271,8 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
   for (bin_i = 0; bin_i < ncm_vector_len (bins) - 1; bin_i++)
   {
     NcmMatrix *bin_data = ncm_matrix_new (0, 3);
-    gint bin_ll         = ncm_vector_get (bins, bin_i);
-    gint bin_ul         = ncm_vector_get (bins, bin_i+1);
+    gdouble bin_ll         = ncm_vector_get (bins, bin_i);
+    gdouble bin_ul         = ncm_vector_get (bins, bin_i+1);
     gint gal_i;
     gint i;
 
@@ -282,8 +282,7 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
       gdouble e_i   = ncm_matrix_get (obs, gal_i, 1);
       gdouble err_i = ncm_matrix_get (obs, gal_i, 2);
 
-      // if ((r_i >= bin_ll && r_i < bin_ul && bin_i != ncm_vector_len (bins) - 2) || (r_i >= bin_ll && r_i <= bin_ul && bin_i == ncm_vector_len (bins) - 2))
-      if (r_i >= bin_ll && r_i < bin_ul)
+      if ((r_i >= bin_ll && r_i < bin_ul && bin_i != ncm_vector_len (bins) - 2) || (r_i >= bin_ll && r_i <= bin_ul && bin_i == ncm_vector_len (bins) - 2))
       {
         NcmMatrix *data = ncm_matrix_new (ncm_matrix_nrows (bin_data)+1, 3);
 
