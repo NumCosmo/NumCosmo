@@ -282,7 +282,8 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
       gdouble e_i   = ncm_matrix_get (obs, gal_i, 1);
       gdouble err_i = ncm_matrix_get (obs, gal_i, 2);
 
-      if ((r_i >= bin_ll && r_i < bin_ul && bin_i != ncm_vector_len (bins) - 2) || (r_i >= bin_ll && r_i <= bin_ul && bin_i == ncm_vector_len (bins) - 2))
+      // if ((r_i >= bin_ll && r_i < bin_ul && bin_i != ncm_vector_len (bins) - 2) || (r_i >= bin_ll && r_i <= bin_ul && bin_i == ncm_vector_len (bins) - 2))
+      if (r_i >= bin_ll && r_i < bin_ul)
       {
         NcmMatrix *data = ncm_matrix_new (ncm_matrix_nrows (bin_data)+1, 3);
 
