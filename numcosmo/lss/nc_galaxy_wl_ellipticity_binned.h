@@ -4,13 +4,12 @@
  *            nc_galaxy_wl_ellipticity_binned.h
  *
  *  Fri February 24 10:19:37 2023
- *  Copyright  2023  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <vitenti@uel.br>, <pennalima@gmail.com>
+ *  Copyright  2023  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_ellipticity_binned.h
- * Copyright (C) 2023 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -2,12 +2,12 @@
  *            test_ncm_stats_dist1d_epdf.c
  *
  *  Mon February 27 11:01:27 2023
- *  Copyright  2023  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <vitenti@uel.br> & <pennalima@gmail.com>
+ *  Copyright  2023  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2023 <vitenti@uel.br>
+ * Copyright (C) Caio Lima de Oliveira 2023 <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
