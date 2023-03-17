@@ -32,14 +32,22 @@ from numcosmo_py import Ncm
 
 
 def mcat_to_mcsamples(
-    mcat: Ncm.MSetCatalog, name: str, asinh_transform: List[int] = []
+    mcat: Ncm.MSetCatalog, name: str, asinh_transform: List[int] = [], thin: int = 1
 ) -> MCSamples:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
 
     nchains: int = mcat.nchains()
+    max_time: int = mcat.max_time()
+
+    assert thin >= 1
     rows: np.ndarray = np.array(
-        [mcat.peek_row(i).dup_array() for i in range(0, mcat.len())]
+        [
+            mcat.peek_row(i * nchains + j).dup_array()
+            for i in range(0, max_time, thin)
+            for j in range(nchains)
+        ]
     )
+
     params: List[str] = [mcat.col_symb(i) for i in range(mcat.ncols())]
     m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
     posterior: np.ndarray = 0.5 * rows[:, m2lnL]

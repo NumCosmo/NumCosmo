@@ -23,6 +23,7 @@
 
 """NumCosmoPy APES calibration script."""
 
+from typing import Optional
 from pathlib import Path
 import math
 import numpy as np
@@ -35,6 +36,7 @@ from numcosmo_py.interpolation.stats_dist import (
     create_stats_dist,
     InterpolationMethod,
     InterpolationKernel,
+    CrossValidationMethod
 )
 
 
@@ -49,11 +51,30 @@ def calibrate_catalog(
     robust: bool = False,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
+    cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
     over_smooth: float = 1.0,
+    split_fraction: Optional[float] = None,
+    local_fraction: Optional[float] = None,
     interpolate: bool = True,
     ntries: int = 100,
+    use_half: bool = True,
+    verbose: bool = False,
 ):
-    """Calibrate the APES sampler using a given catalog."""
+    """Calibrate the APES sampler using a given catalog.
+
+    :param catalog: Path to the catalog file.
+    :param robust: Use robust statistics.
+    :param interpolation_method: Interpolation method.
+    :param interpolation_kernel: Interpolation kernel.
+    :param cv_method: Cross validation method.
+    :param over_smooth: Oversmoothing factor.
+    :param split_fraction: Split fraction.
+    :param local_fraction: Local fraction.
+    :param interpolate: Interpolate the catalog.
+    :param ntries: Number of tries.
+    :param use_half: Use only half of the walkers.
+    :param verbose: Verbose output.
+    """
 
     if not catalog.exists() or not catalog.is_file():
         raise typer.BadParameter(f"Catalog {catalog} does not exist.")
@@ -64,8 +85,11 @@ def calibrate_catalog(
     nadd_vals = mcat.nadd_vals()
     m2lnL_id = mcat.get_m2lnp_var()  # pylint: disable-msg=invalid-name
 
+    if use_half:
+        nwalkers = nwalkers // 2
+
     assert mcat_len > nwalkers
-    assert over_smooth != 0.0
+    assert over_smooth > 0.0
 
     last_e = [mcat.peek_row(mcat_len - nwalkers + i) for i in range(nwalkers)]
     ncols = mcat.ncols()
@@ -76,12 +100,13 @@ def calibrate_catalog(
         robust=robust,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
+        cv_method=cv_method,
         dim=nvar,
         over_smooth=math.fabs(over_smooth),
+        split_fraction=split_fraction,
+        local_fraction=local_fraction,
+        verbose=verbose,
     )
-
-    if over_smooth < 0.0:
-        sdist.set_cv_type(Ncm.StatsDistCV.SPLIT)
 
     m2lnL = []  # pylint: disable-msg=invalid-name
     for row in last_e:
@@ -117,6 +142,7 @@ def calibrate_catalog(
     print(f"# === Mean weight: {np.mean(weights[np.nonzero(weights)])}")
     print(f"# === Median weight: {np.median(weights[np.nonzero(weights)])}")
     print(f"# === Non-zero weights: {np.count_nonzero(weights)}")
+    print(f"# === Final bandwidth: {sdist.get_href()}")
 
     for a in range(nvar):  # pylint: disable-msg=invalid-name
         for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name

@@ -215,8 +215,7 @@ test_programs =  \
 	test_nc_powspec                          \
 	test_nc_distance                         \
 	test_nc_galaxy_wl_ellipticity_kde        \
-	test_nc_galaxy_wl_ellipticity_binned 
-
+	test_nc_galaxy_wl_ellipticity_binned
 
 # TEST_PROGS += $(check_programs)
 

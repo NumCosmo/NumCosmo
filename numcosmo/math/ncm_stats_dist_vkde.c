@@ -72,6 +72,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include "misc/kdtree.h"
+#include "misc/rb_knn_list.h"
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -269,6 +270,94 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 }
 
 static void
+_ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample_array)
+{
+  NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
+  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
+  NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
+  NcmStatsDistPrivate * const ppself   = sd->priv;
+
+  /*
+   * Creates a near tree object and add all transformed vector.
+   */
+  struct kdtree *tree = kdtree_init (ppself->d);
+  gint i;
+
+  for (i = 0; i < ppself->n_obs; i++)
+  {
+    NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample_array, i);
+
+    /*
+     * Inserting the transformed vector in the tree, saving also the index.
+     */
+    kdtree_insert (tree, ncm_vector_data (invUtheta_i));
+  }
+
+  kdtree_rebuild (tree);
+
+  /*
+   * Lets find the k nearest neighbors of each vector in the
+   * sample and use them to define the local covariance at each
+   * vector location.
+   */
+  {
+    const size_t k = self->local_frac * ppself->n_obs;
+
+    g_ptr_array_set_size (self->cov_array, 0);
+
+    for (i = 0; i < ppself->n_obs; i++)
+    {
+      NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample_array, i);
+      rb_knn_list_table_t *table;
+
+      table = kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
+      ncm_stats_vec_reset (self->sample, TRUE);
+      ncm_matrix_set_zero (self->tmp_cov);
+      {
+        rb_knn_list_traverser_t trav;
+        knn_list_t *p;
+
+        p = rb_knn_list_t_first (&trav, table);
+
+        do {
+          NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
+
+          ncm_stats_vec_append (self->sample, ni, FALSE);
+        } while ((p = rb_knn_list_t_next (&trav)) != NULL);
+      }
+      rb_knn_list_destroy (table);
+
+      /*
+       * Saving the covariance for each vector.
+       */
+      {
+        NcmMatrix *sample_cov = NULL;
+
+        switch (pself->cov_type)
+        {
+          case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
+          case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
+            sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
+            break;
+          case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
+            sample_cov = ncm_stats_vec_compute_cov_robust_diag (self->sample); /* */
+            break;
+          case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
+            sample_cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample); /* */
+            break;
+          default:
+            g_assert_not_reached ();
+            break;
+        }
+
+        g_ptr_array_add (self->cov_array, sample_cov);
+      }
+    }
+  }
+  kdtree_destroy (tree);
+}
+
+static void
 _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
   /* Chain up : start */
@@ -280,85 +369,7 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
     NcmStatsDistPrivate * const ppself   = sd->priv;
     gint i;
 
-    /*
-     * Creates a near tree object and add all transformed vector.
-     */
-    {
-      struct kdtree *tree = kdtree_init (ppself->d);
-
-      for (i = 0; i < ppself->n_obs; i++)
-      {
-        NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample, i);
-
-        /*
-         * Inserting the transformed vector in the tree, saving also the index.
-         */
-        kdtree_insert (tree, ncm_vector_data (invUtheta_i));
-      }
-
-      kdtree_rebuild (tree);
-
-      /*
-       * Lets find the k nearest neighbors of each vector in the
-       * sample and use them to define the local covariance at each
-       * vector location.
-       */
-      {
-        const size_t k = self->local_frac * ppself->n_obs;
-
-        g_ptr_array_set_size (self->cov_array, 0);
-
-        for (i = 0; i < ppself->n_obs; i++)
-        {
-          NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample, i);
-
-          kdtree_knn_search_clean (tree);
-          kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
-
-          ncm_stats_vec_reset (self->sample, TRUE);
-          ncm_matrix_set_zero (self->tmp_cov);
-          {
-            struct knn_list *p = tree->knn_list_head.next;
-
-            while (p != &tree->knn_list_head)
-            {
-              NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
-
-              ncm_stats_vec_append (self->sample, ni, FALSE);
-
-              p = p->next;
-            }
-          }
-
-          /*
-           * Saving the covariance for each vector.
-           */
-          {
-            NcmMatrix *sample_cov = NULL;
-
-            switch (pself->cov_type)
-            {
-              case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
-              case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
-                sample_cov = ncm_matrix_dup (ncm_stats_vec_peek_cov_matrix (self->sample, 0));
-                break;
-              case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-                sample_cov = ncm_stats_vec_compute_cov_robust_diag (self->sample); /* */
-                break;
-              case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-                sample_cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample); /* */
-                break;
-              default:
-                g_assert_not_reached ();
-                break;
-            }
-
-            g_ptr_array_add (self->cov_array, sample_cov);
-          }
-        }
-      }
-      kdtree_destroy (tree);
-    }
+    _ncm_stats_dist_vkde_build_cov_array_kdtree (sd, sample_array);
 
     {
       NcmStatsDistKernel *kernel = ncm_stats_dist_peek_kernel (sd);
@@ -406,30 +417,40 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 {
   NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
   NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
-  /*NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;*/
-  NcmStatsDistPrivate * const ppself = sd->priv;
-  const gdouble href2                = ppself->href * ppself->href;
+  NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
+  NcmStatsDistPrivate * const ppself   = sd->priv;
+  const gdouble href2                  = ppself->href * ppself->href;
+  const gdouble one_href2              = 1.0 / href2;
 
-  gint i, j, res;
+  gint i, j;
 
   for (i = 0; i < ppself->n_kernels; i++)
   {
     NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
     NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+    gint ret;
+
+    ncm_matrix_memcpy (pself->invUsample_matrix, pself->sample_matrix);
 
     for (j = 0; j < ppself->n_obs; j++)
     {
-      NcmVector *theta_j = g_ptr_array_index (ppself->sample_array, j);
+      NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j);
+
+      ncm_vector_axpy (theta_j, -1.0, theta_i);
+    }
+
+    ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                          1.0, ncm_matrix_gsl (cov_decomp_i),
+                          ncm_matrix_gsl (pself->invUsample_matrix));
+    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", ret);
+
+
+    for (j = 0; j < ppself->n_obs; j++)
+    {
+      NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j);
       gdouble chi2_ij;
 
-      ncm_vector_memcpy (self->delta_x, theta_i);
-      ncm_vector_sub (self->delta_x, theta_j);
-
-      res = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
-      NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", res);
-
-      chi2_ij = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
-      /*p_ij = _ncm_stats_dist_nd_vbk_studentt_f (self, d, m2lnp_ij) / norm_i;*/
+      chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2;
 
       ncm_matrix_set (IM, j, i, chi2_ij);
     }
@@ -486,6 +507,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
   NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
   NcmStatsDistPrivate * const ppself = sd->priv;
   const gdouble href2 = ppself->href * ppself->href;
+  const gdouble one_href2 = 1.0 / href2;
   gdouble s = 0.0;
   gint i, ret;
 
@@ -495,13 +517,13 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
     NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
     ncm_vector_memcpy (self->delta_x, x);
-    ncm_vector_sub (self->delta_x, theta_i);
+    ncm_vector_axpy (self->delta_x, -1.0, theta_i);
 
     ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
     NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
 
     {
-      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
+      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) * one_href2;
 
       ncm_vector_fast_set (pself->chi2, i, chi2_i);
     }
@@ -529,6 +551,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   NcmStatsDistKDEPrivate * const pself = NCM_STATS_DIST_KDE (sd)->priv;
   NcmStatsDistPrivate * const ppself = sd->priv;
   const gdouble href2 = ppself->href * ppself->href;
+  const gdouble one_href2 = 1.0 / href2;
   gint i, ret;
 
   for (i = 0; i < ppself->n_kernels; i++)
@@ -537,13 +560,13 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
     ncm_vector_memcpy (self->delta_x, x);
-    ncm_vector_sub (self->delta_x, theta_i);
+    ncm_vector_axpy (self->delta_x, -1.0, theta_i);
 
     ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (self->delta_x));
     NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
 
     {
-      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) / href2;
+      const gdouble chi2_i = ncm_vector_dot (self->delta_x, self->delta_x) * one_href2;
 
       ncm_vector_fast_set (pself->chi2, i, chi2_i);
     }

@@ -41,7 +41,8 @@ struct _NcmStatsDistKDEPrivate
   NcmMatrix *cov_fixed;
   NcmMatrix *cov_decomp;
   NcmMatrix *sample_matrix;
-  GPtrArray *invUsample;
+  NcmMatrix *invUsample_matrix;
+  GPtrArray *invUsample_array;
   NcmVector *v;
   NcmVector *chi2;
   gdouble kernel_lnnorm;

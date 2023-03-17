@@ -16,23 +16,23 @@ SUNDIALS_INCL = $(top_srcdir)/numcosmo/sundials/include
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS)       \
+	 -I$(top_srcdir)      \
+	 -I$(SUNDIALS_INCL)   \
+	 $(LIBCUBA_INCDIR)    \
+	 -I$(PLC_DIR)         \
+	 -I$(PLC_DIR)/cldf    \
+	 -I$(PLC_DIR)/minipmc \
+	 -I$(PLC_DIR)/plik    \
 	 $(SUNDIALS_CFLAGS)   \
+	 $(GLIB_CFLAGS)       \
 	 $(GSL_CFLAGS)        \
 	 $(FFTW3_CFLAGS)      \
 	 $(FFTW3F_CFLAGS)     \
 	 $(CFITSIO_CFLAGS)    \
 	 $(NLOPT_CFLAGS)      \
-	 $(LIBCUBA_INCDIR)    \
 	 $(OPENMP_CFLAGS)     \
 	 $(HDF5_CPPFLAGS)     \
-	 $(HDF5_CFLAGS)       \
-	 -I$(PLC_DIR)         \
-	 -I$(PLC_DIR)/cldf    \
-	 -I$(PLC_DIR)/minipmc \
-	 -I$(PLC_DIR)/plik    \
-	 -I$(top_srcdir)      \
-	 -I$(SUNDIALS_INCL)
+	 $(HDF5_CFLAGS)
 
 AM_CFLAGS = \
 	 -Wall        \
@@ -46,24 +46,24 @@ lib_LTLIBRARIES = libnumcosmo.la
 libnumcosmo_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) $(NOUNDEFINED_FLAG)
 
-libnumcosmo_la_LIBADD =         \
-	$(SUNDIALS_LIBS)        \
-	$(FFTW3_LIBS)           \
-	$(FFTW3F_LIBS)          \
-	$(GLIB_LIBS)            \
-	$(NLOPT_LIBS)           \
-	$(GSL_LIBS)             \
-	$(CFITSIO_LIBS)         \
-	$(LIBCUBA_PLACE)        \
-	$(HDF5_LDFLAGS)         \
-	$(HDF5_LIBS)            \
-	$(CODE_COVERAGE_LIBS)   \
-	plc/libclik.la          \
-	levmar/liblevmar.la     \
-	class/libclass.la       \
-	sundials/libsundials.la \
-	toeplitz/libtoeplitz.la \
-	misc/libnumcosmo_misc.la
+libnumcosmo_la_LIBADD = \
+	plc/libclik.la           \
+	levmar/liblevmar.la      \
+	class/libclass.la        \
+	sundials/libsundials.la  \
+	toeplitz/libtoeplitz.la  \
+	misc/libnumcosmo_misc.la \
+	$(SUNDIALS_LIBS)         \
+	$(FFTW3_LIBS)            \
+	$(FFTW3F_LIBS)           \
+	$(GLIB_LIBS)             \
+	$(NLOPT_LIBS)            \
+	$(GSL_LIBS)              \
+	$(CFITSIO_LIBS)          \
+	$(LIBCUBA_PLACE)         \
+	$(HDF5_LDFLAGS)          \
+	$(HDF5_LIBS)             \
+	$(CODE_COVERAGE_LIBS)
 
 ncm_sources = \
 	ncm_build_inline.c                    \

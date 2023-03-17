@@ -72,15 +72,15 @@ static void
 _ncm_vector_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmVector *cv = NCM_VECTOR (object);
-  
+
   g_return_if_fail (NCM_IS_VECTOR (object));
-  
+
   switch (prop_id)
   {
     case PROP_VALS:
     {
       GVariant *var = ncm_vector_get_variant (cv);
-      
+
       g_value_take_variant (value, var);
       break;
     }
@@ -94,15 +94,15 @@ static void
 _ncm_vector_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmVector *cv = NCM_VECTOR (object);
-  
+
   g_return_if_fail (NCM_IS_VECTOR (object));
-  
+
   switch (prop_id)
   {
     case PROP_VALS:
     {
       GVariant *var = g_value_get_variant (value);
-      
+
       ncm_vector_set_from_variant (cv, var);
       break;
     }
@@ -116,7 +116,7 @@ static void
 _ncm_vector_dispose (GObject *object)
 {
   NcmVector *cv = NCM_VECTOR (object);
-  
+
   if (cv->pdata != NULL)
   {
     g_assert (cv->pfree != NULL);
@@ -124,7 +124,7 @@ _ncm_vector_dispose (GObject *object)
     cv->pdata = NULL;
     cv->pfree = NULL;
   }
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->dispose (object);
 }
@@ -133,7 +133,7 @@ static void
 _ncm_vector_finalize (GObject *object)
 {
   NcmVector *cv = NCM_VECTOR (object);
-  
+
   switch (cv->type)
   {
     case NCM_VECTOR_SLICE:
@@ -148,9 +148,9 @@ _ncm_vector_finalize (GObject *object)
       g_assert_not_reached ();
       break;
   }
-  
+
   cv->vv.vector.data = NULL;
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->finalize (object);
 }
@@ -159,12 +159,12 @@ static void
 ncm_vector_class_init (NcmVectorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_vector_set_property;
   object_class->get_property = &_ncm_vector_get_property;
   object_class->dispose      = &_ncm_vector_dispose;
   object_class->finalize     = &_ncm_vector_finalize;
-  
+
   /**
    * NcmVector:values:
    *
@@ -190,7 +190,7 @@ NcmVector *
 ncm_vector_new (gsize n)
 {
   gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
-  
+
   return ncm_vector_new_data_slice (d, n, 1);
 }
 
@@ -212,21 +212,21 @@ NcmVector *
 ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  
+
   g_assert (d != NULL);
   g_assert_cmpuint (size,   >, 0);
   g_assert_cmpuint (stride, >, 0);
-  
+
   if (stride != 1)
     cv->vv = gsl_vector_view_array_with_stride (d, stride, size);
   else
     cv->vv = gsl_vector_view_array (d, size);
-  
+
   cv->type = NCM_VECTOR_DERIVED;
   g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
   cv->pdata = pdata;
   cv->pfree = pfree;
-  
+
   return cv;
 }
 
@@ -245,9 +245,9 @@ ncm_vector_new_fftw (guint size)
 {
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
-  
+
   cv->type = NCM_VECTOR_MALLOC;
-  
+
   return cv;
 }
 
@@ -264,9 +264,9 @@ NcmVector *
 ncm_vector_new_gsl (gsl_vector *gv)
 {
   NcmVector *cv = ncm_vector_new_full (gv->data, gv->size, gv->stride, gv, (GDestroyNotify) gsl_vector_free);
-  
+
   cv->type = NCM_VECTOR_GSL_VECTOR;
-  
+
   return cv;
 }
 
@@ -283,9 +283,9 @@ NcmVector *
 ncm_vector_new_gsl_static (gsl_vector *gv)
 {
   NcmVector *cv = ncm_vector_new_full (gv->data, gv->size, gv->stride, NULL, NULL);
-  
+
   cv->type = NCM_VECTOR_GSL_VECTOR;
-  
+
   return cv;
 }
 
@@ -305,9 +305,9 @@ ncm_vector_new_array (GArray *a)
   {
     NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1,
                                          g_array_ref (a), (GDestroyNotify) & g_array_unref);
-    
+
     cv->type = NCM_VECTOR_ARRAY;
-    
+
     return cv;
   }
 }
@@ -330,9 +330,9 @@ ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = ncm_vector_new_full (d, size, stride,
                                        NULL, NULL);
-  
+
   cv->type = NCM_VECTOR_SLICE;
-  
+
   return cv;
 }
 
@@ -353,9 +353,9 @@ ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = ncm_vector_new_full (d, size, stride,
                                        d, &g_free);
-  
+
   cv->type = NCM_VECTOR_MALLOC;
-  
+
   return cv;
 }
 
@@ -376,9 +376,9 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = ncm_vector_new_full (d, size, stride,
                                        NULL, NULL);
-  
+
   cv->type = NCM_VECTOR_DERIVED;
-  
+
   return cv;
 }
 
@@ -398,9 +398,9 @@ ncm_vector_new_data_dup (gdouble *d, const gsize size, const gsize stride)
 {
   NcmVector *s   = ncm_vector_new_data_static (d, size, stride);
   NcmVector *dup = ncm_vector_dup (s);
-  
+
   ncm_vector_free (s);
-  
+
   return dup;
 }
 
@@ -419,7 +419,7 @@ ncm_vector_new_variant (GVariant *var)
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR,
                                 "values", var,
                                 NULL);
-  
+
   return cv;
 }
 
@@ -439,17 +439,17 @@ const NcmVector *
 ncm_vector_const_new_data (const gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  
+
   if (stride != 1)
     cv->vv = gsl_vector_view_array_with_stride ((gdouble *) d, stride, size);
   else
     cv->vv = gsl_vector_view_array ((gdouble *) d, size);
-  
+
   cv->pdata = NULL;
   cv->pfree = NULL;
-  
+
   cv->type = NCM_VECTOR_DERIVED;
-  
+
   return cv;
 }
 
@@ -496,10 +496,10 @@ ncm_vector_const_new_variant (GVariant *var)
   gsize n             = g_variant_n_children (var);
   gconstpointer data  = g_variant_get_data (var);
   const NcmVector *cv = ncm_vector_const_new_data (data, n, 1);
-  
+
   NCM_VECTOR (cv)->pdata = g_variant_ref_sink (var);
   NCM_VECTOR (cv)->pfree = (GDestroyNotify) & g_variant_unref;
-  
+
   return cv;
 }
 
@@ -557,9 +557,9 @@ NcmVector *
 ncm_vector_dup (const NcmVector *cv)
 {
   NcmVector *cv_cp = ncm_vector_new (ncm_vector_len (cv));
-  
+
   gsl_vector_memcpy (ncm_vector_gsl (cv_cp), ncm_vector_const_gsl (cv));
-  
+
   return cv_cp;
 }
 
@@ -579,15 +579,15 @@ ncm_vector_substitute (NcmVector **cv1, NcmVector *cv2, gboolean check_size)
 {
   if (*cv1 == cv2)
     return;
-  
+
   if (*cv1 != NULL)
   {
     if ((cv2 != NULL) && check_size)
       g_assert_cmpuint (ncm_vector_len (*cv1), ==, ncm_vector_len (cv2));
-    
+
     ncm_vector_clear (cv1);
   }
-  
+
   if (cv2 != NULL)
     *cv1 = ncm_vector_ref (cv2);
 }
@@ -608,15 +608,15 @@ NcmVector *
 ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 {
   NcmVector *scv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  
+
   g_assert_cmpuint (size, >, 0);
   g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
-  
+
   scv->vv    = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
   scv->type  = NCM_VECTOR_DERIVED;
   scv->pdata = ncm_vector_ref (cv);
   scv->pfree = (GDestroyNotify) & ncm_vector_free;
-  
+
   return scv;
 }
 
@@ -641,13 +641,13 @@ ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size,
   {
     NcmVector *scv  = ncm_vector_new_data_static (ncm_vector_ptr (cv, k), size, stride);
     const gsize len = ncm_vector_len (cv);
-    
+
     g_assert_cmpuint ((size - 1) * stride + k, <, len);
-    
+
     scv->type  = NCM_VECTOR_DERIVED;
     scv->pdata = ncm_vector_ref (cv);
     scv->pfree = (GDestroyNotify) & ncm_vector_free;
-    
+
     return scv;
   }
 }
@@ -668,15 +668,15 @@ ncm_vector_get_variant (const NcmVector *cv)
   GVariantBuilder builder;
   GVariant *var;
   guint i;
-  
+
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("ad"));
-  
+
   for (i = 0; i < n; i++)
     g_variant_builder_add (&builder, "d", ncm_vector_get (cv, i));
-  
+
   var = g_variant_builder_end (&builder);
   g_variant_ref_sink (var);
-  
+
   return var;
 }
 
@@ -707,7 +707,7 @@ ncm_vector_peek_variant (const NcmVector *cv)
                                                   TRUE,
                                                   (GDestroyNotify) & ncm_vector_const_free,
                                                   NCM_VECTOR (ncm_vector_const_ref (cv)));
-    
+
     return g_variant_ref_sink (vvar);
   }
 }
@@ -727,17 +727,17 @@ ncm_vector_log_vals (const NcmVector *cv, const gchar *prestr, const gchar *form
 {
   guint i         = 0;
   const guint len = ncm_vector_len (cv);
-  
+
   g_message ("%s", prestr);
-  
+
   g_message (format, ncm_vector_get (cv, i));
-  
+
   for (i = 1; i < len; i++)
   {
     g_message (" ");
     g_message (format, ncm_vector_get (cv, i));
   }
-  
+
   if (cr)
     g_message ("\n");
 }
@@ -758,17 +758,17 @@ ncm_vector_log_vals_avpb (const NcmVector *cv, const gchar *prestr, const gchar 
 {
   guint i         = 0;
   const guint len = ncm_vector_len (cv);
-  
+
   g_message ("%s", prestr);
-  
+
   g_message (format, a * ncm_vector_get (cv, i) + b);
-  
+
   for (i = 1; i < len; i++)
   {
     g_message (" ");
     g_message (format, a * ncm_vector_get (cv, i) + b);
   }
-  
+
   g_message ("\n");
 }
 
@@ -788,17 +788,17 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
 {
   guint i         = 0;
   const guint len = ncm_vector_len (cv);
-  
+
   g_message ("%s", prestr);
-  
+
   g_message (format, f (ncm_vector_get (cv, i), i, user_data));
-  
+
   for (i = 1; i < len; i++)
   {
     g_message (" ");
     g_message (format, f (ncm_vector_get (cv, i), i, user_data));
   }
-  
+
   g_message ("\n");
 }
 
@@ -1236,14 +1236,14 @@ ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax)
 {
   guint size = ncm_vector_len (cv);
   guint i;
-  
+
   *absmin = HUGE_VAL;
   *absmax = 0.0;
-  
+
   for (i = 0; i < size; i++)
   {
     const gdouble v = fabs (ncm_vector_get (cv, i));
-    
+
     *absmin = GSL_MIN (*absmin, v);
     *absmax = GSL_MAX (*absmax, v);
   }
@@ -1264,17 +1264,17 @@ ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x)
 {
   gsize ilo = 0;
   gsize ihi = ncm_vector_len (cv) - 1;
-  
+
   while (ihi > ilo + 1)
   {
     gsize i = (ihi + ilo) / 2;
-    
+
     if (ncm_vector_get (cv, i) > x)
       ihi = i;
     else
       ilo = i;
   }
-  
+
   return ilo;
 }
 
@@ -1292,16 +1292,16 @@ ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
 {
   gsize n;
   guint i;
-  
+
   if (!g_variant_is_of_type (var, G_VARIANT_TYPE ("ad")))
     g_error ("ncm_vector_set_from_variant: Cannot convert `%s' variant to an array of doubles", g_variant_get_type_string (var));
-  
+
   n = g_variant_n_children (var);
-  
+
   if (ncm_vector_len (cv) == 0)
   {
     gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
-    
+
     cv->vv    = gsl_vector_view_array (d, n);
     cv->pdata = NULL;
     cv->pfree = NULL;
@@ -1311,11 +1311,11 @@ ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
   {
     g_error ("set_property: cannot set vector values, variant contains %zu childs but vector dimension is %u", n, ncm_vector_len (cv));
   }
-  
+
   for (i = 0; i < n; i++)
   {
     gdouble val = 0.0;
-    
+
     g_variant_get_child (var, i, "d", &val);
     ncm_vector_set (cv, i, val);
   }
@@ -1341,19 +1341,19 @@ ncm_vector_dnrm2 (const NcmVector *cv)
 /**
  * ncm_vector_axpy:
  * @cv1: a #NcmVector
- * @a: a constant gdouble
+ * @alpha: a constant double $\alpha$
  * @cv2: a constant #NcmVector
  *
- * Performs the operation: @cv1$=$ @a $\times$ @cv2 $+$ @cv1.
+ * Performs the operation: @cv1$=\alpha\times$ @cv2 $+$ @cv1.
  *
  */
 void
 ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  
+
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
-  
+
   cblas_daxpy (len, alpha, ncm_vector_const_data (cv2), ncm_vector_stride (cv2), ncm_vector_data (cv1), ncm_vector_stride (cv1));
 }
 
@@ -1371,12 +1371,12 @@ ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble x1_i = ncm_vector_get (cv1, i);
     const gdouble x2_i = ncm_vector_get (cv2, i);
-    
+
     if (G_UNLIKELY (x1_i == 0.0))
     {
       if (G_UNLIKELY (x2_i == 0.0))
@@ -1393,7 +1393,7 @@ ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
       const gdouble abs_x1_i  = fabs (x1_i);
       const gdouble abs_x2_i  = fabs (x2_i);
       const gdouble max_x12_i = GSL_MIN (abs_x1_i, abs_x2_i);
-      
+
       ncm_vector_set (cv1, i, fabs ((x1_i - x2_i) / max_x12_i));
     }
   }
@@ -1413,7 +1413,7 @@ ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble x1_i        = ncm_vector_get (cv1, i);
@@ -1421,7 +1421,7 @@ ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
     const gdouble abs_x1_i    = fabs (x1_i);
     const gdouble abs_x2_i    = fabs (x2_i);
     const gdouble x2_i_m_x1_i = fabs (x2_i - x1_i);
-    
+
     if (G_UNLIKELY (x2_i_m_x1_i == 0.0))
     {
       ncm_vector_set (cv1, i, 1.0);
@@ -1429,7 +1429,7 @@ ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
     else
     {
       const gdouble max_x12_i = GSL_MAX (abs_x1_i, abs_x2_i);
-      
+
       ncm_vector_set (cv1, i, max_x12_i * GSL_DBL_EPSILON / x2_i_m_x1_i);
     }
   }
@@ -1447,11 +1447,11 @@ ncm_vector_reciprocal (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble x_i = ncm_vector_get (cv, i);
-    
+
     ncm_vector_set (cv, i, 1.0 / x_i);
   }
 }
@@ -1521,6 +1521,7 @@ ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
   {
     const gdouble x1_i = ncm_vector_get (cv1, i);
     const gdouble x2_i = ncm_vector_get (cv2, i);
+
     ncm_vector_set (cv1, i, hypot (x1_i, alpha * x2_i));
   }
 }
