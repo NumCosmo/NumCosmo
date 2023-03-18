@@ -259,7 +259,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
 /**
  * nc_cluster_abundance_new:
  * @mfp: a #NcHaloMassFunction
- * @mbiasf: (allow-none): a #NcHaloBiasFunc
+ * @mbiasf: (allow-none): a #NcHaloBias
  *
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
  * the input arguments.
@@ -279,8 +279,8 @@ nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBias *mbiasf)
 
 /**
  * nc_cluster_abundance_nodist_new:
- * @mfp: a #NcHaloMassFunction.
- * @mbiasf: (allow-none): a #NcHaloBiasFunc.
+ * @mfp: a #NcHaloMassFunction
+ * @mbiasf: (allow-none): a #NcHaloBias
  *
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
  * the input arguments.

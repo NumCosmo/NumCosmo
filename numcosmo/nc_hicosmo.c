@@ -31,6 +31,12 @@
  *
  */
 
+/**
+ * NcHICosmo:
+ *
+ * `NcHICosmo` is the base class for all Homogeneous and Isotropic Cosmological models.
+ */
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */

@@ -360,8 +360,10 @@ dnl ***************************************************************************
 AM_PATH_PYTHON([3.8], [
 AX_PYTHON_MODULE([gi])
 AX_PYTHON_MODULE([pytest])
+AX_PYTHON_MODULE([pytest_tap])
 ],[:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+AM_CONDITIONAL([HAVE_PYTEST_TAP], [test "x$HAVE_PYMOD_PYTEST_TAP" = xyes])
 
 dnl ***************************************************************************
 dnl check for gtk-doc
@@ -371,23 +373,6 @@ GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 ],[
 AM_CONDITIONAL([ENABLE_GTK_DOC], false)
 ])
-
-AC_ARG_ENABLE(man,
-              [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
-              enable_man=no)
-
-if test "${enable_man}" != no; then
-
-dnl ***************************************************************************
-dnl Check for xsltproc
-dnl ***************************************************************************
-AC_PATH_PROG([XSLTPROC], [xsltproc])
-  if test -z "$XSLTPROC"; then
-    enable_man=no
-  fi
-fi
-
-AM_CONDITIONAL(ENABLE_MAN, test x$enable_man != xno)
 
 dnl ***************************************************************************
 dnl Set PACKAGE_DATA_DIR in config.h.
@@ -1053,6 +1038,18 @@ fi
 AC_SUBST(PLC_DEFINES)
 
 dnl ***************************************************************************
+dnl libfyaml
+dnl ***************************************************************************
+
+PKG_CHECK_MODULES(LIBFYAML, [ libfyaml ], HAVE_LIBFYAML=1, HAVE_LIBFYAML=0)
+
+AC_SUBST(HAVE_LIBFYAML)
+AC_SUBST(LIBFYAML_CFLAGS)
+AC_SUBST(LIBFYAML_LIBS)
+AC_DEFINE_UNQUOTED([HAVE_LIBFYAML], [$HAVE_LIBFYAML], [Define to 1 if you have libfyaml available])
+AM_CONDITIONAL([HAVE_LIBFYAML], [ test x$HAVE_LIBFYAML = x1 ])
+
+dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 
@@ -1147,6 +1144,11 @@ if [ test "x$HAVE_ARB" = xyes ]; then
 else
        echo "Building with ARB support: .......................................NO"
 fi
+if [ test "x$HAVE_LIBFYAML" = x1 ]; then
+       echo "Building with libfyaml support: .................................YES"
+else
+       echo "Building with libfyaml support: ..................................NO"
+fi
 if [ test "x$PYTHON_VERSION" != x ]; then
        echo "Building with Python support: ...................................$PYTHON"
        echo "Building with Python version: ...................................$PYTHON_VERSION"
@@ -1159,6 +1161,11 @@ if [ test "x$PYTHON_VERSION" != x ]; then
        echo "Building with Python pytest support .............................YES"
   else
        echo "Building with Python pytest support ..............................NO"
+  fi
+  if [test "x$HAVE_PYMOD_PYTEST_TAP" = xyes]; then
+       echo "Building with Python pytest-tap support .........................YES"
+  else
+       echo "Building with Python pytest-tap support ..........................NO"
   fi
 else
        echo "Building with Python support: ....................................NO"

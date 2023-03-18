@@ -5,6 +5,8 @@ include $(top_srcdir)/aminclude_static.am
 
 include $(top_srcdir)/glib-tap.mk
 
+TEST_EXTENSIONS = .py
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS)     \
@@ -213,7 +215,18 @@ test_programs =  \
 	test_nc_distance                  \
 	test_nc_galaxy_wl_ellipticity_kde
 
-# TEST_PROGS += $(check_programs)
+if HAVE_PYTEST_TAP
+
+PY_LOG_COMPILER = $(PYTHON)
+AM_PY_LOG_FLAGS = -m pytest --tap-stream
+AM_TESTS_ENVIRONMENT += \
+	GI_TYPELIB_PATH="$(abs_top_builddir)/numcosmo$${GI_TYPELIB_PATH:+:$${GI_TYPELIB_PATH}}" \
+	LD_LIBRARY_PATH="$(abs_top_builddir)/numcosmo/.libs$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}}" \
+	PYTHONPATH="$(abs_top_srcdir)$${PYTHONPATH:+:$${PYTHONPATH}}"
+
+dist_test_scripts = test_bla.py
+
+endif # HAVE_PYTEST_TAP
 
 test_ncm_sparam_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -490,7 +503,4 @@ test_nc_galaxy_wl_ellipticity_kde_LDADD = \
         $(GLIB_LIBS) \
         $(GSL_LIBS) \
         $(COVLIBS)
-
-#TESTS = $(check_programs)
-#export VERBOSE = 1
 

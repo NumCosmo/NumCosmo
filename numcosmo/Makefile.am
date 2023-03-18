@@ -32,7 +32,8 @@ MY_CFLAGS = \
 	 $(NLOPT_CFLAGS)      \
 	 $(OPENMP_CFLAGS)     \
 	 $(HDF5_CPPFLAGS)     \
-	 $(HDF5_CFLAGS)
+	 $(HDF5_CFLAGS)       \
+	 $(LIBFYAML_CFLAGS)
 
 AM_CFLAGS = \
 	 -Wall        \
@@ -63,6 +64,7 @@ libnumcosmo_la_LIBADD = \
 	$(LIBCUBA_PLACE)         \
 	$(HDF5_LDFLAGS)          \
 	$(HDF5_LIBS)             \
+	$(LIBFYAML_LIBS)         \
 	$(CODE_COVERAGE_LIBS)
 
 ncm_sources = \
