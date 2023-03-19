@@ -4,13 +4,13 @@
  *            nc_galaxy_wl_ellipticity_kde.h
  *
  *  Wed March 1 12:53:13 2023
- *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  Copyright  2023  Sandro Dias Pinto Vitenti & Caio Lima de Oliveira
+ *  <sandro@isoftware.com.br>, <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_ellipticity_kde.h
  * Copyright (C) 2023 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

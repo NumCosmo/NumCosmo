@@ -440,6 +440,7 @@ nc_headers = \
         lss/nc_galaxy_wl_dist.h                \
         lss/nc_galaxy_wl_ellipticity_gauss.h   \
         lss/nc_galaxy_wl_ellipticity_kde.h     \
+        lss/nc_galaxy_wl_ellipticity_binned.h  \
         lss/nc_galaxy_wl_proj.h                \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
         lss/nc_wl_surface_mass_density.h       \
@@ -593,6 +594,7 @@ nc_sources = \
 	lss/nc_galaxy_wl_dist.c                \
 	lss/nc_galaxy_wl_ellipticity_gauss.c   \
 	lss/nc_galaxy_wl_ellipticity_kde.c     \
+	lss/nc_galaxy_wl_ellipticity_binned.c  \
 	lss/nc_galaxy_wl_proj.c                \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	lss/nc_wl_surface_mass_density.c       \
