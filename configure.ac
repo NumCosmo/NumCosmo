@@ -1046,7 +1046,9 @@ PKG_CHECK_MODULES(LIBFYAML, [ libfyaml ], HAVE_LIBFYAML=1, HAVE_LIBFYAML=0)
 AC_SUBST(HAVE_LIBFYAML)
 AC_SUBST(LIBFYAML_CFLAGS)
 AC_SUBST(LIBFYAML_LIBS)
-AC_DEFINE_UNQUOTED([HAVE_LIBFYAML], [$HAVE_LIBFYAML], [Define to 1 if you have libfyaml available])
+if test "x$HAVE_LIBFYAML" = "x1"; then
+  AC_DEFINE([HAVE_LIBFYAML], [], [Define if you have libfyaml available])
+fi
 AM_CONDITIONAL([HAVE_LIBFYAML], [ test x$HAVE_LIBFYAML = x1 ])
 
 dnl ***************************************************************************
