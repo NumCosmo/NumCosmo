@@ -58,6 +58,7 @@
 #include "ncm_enum_types.h"
 
 #include <gio/gio.h>
+#include <float.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_LIBFYAML
@@ -1457,120 +1458,156 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   return ser_var;
 }
 
+#ifdef HAVE_LIBFYAML
+static struct fy_node *_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj);
+
+#endif /* HAVE_LIBFYAML */
+
 /**
- * ncm_serialize_to_yaml:
- * @ser: a #NcmSerialize.
- * @obj: a #GObject.
+ * ncm_serialize_variant_to_yaml:
+ * @ser: a #NcmSerialize
+ * @var_obj: a #GObject serialized to a #GVariant
  *
- * Serialize the @obj to a @GVariant representation.
+ * Converts a #GObject serialized to a #GVariant to a YAML string.
  *
- * Returns: A pointer to
+ * Returns: A pointer to the YAML string representation of the @var_obj.
  */
-gpointer
-ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
+gchar *
+ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
+{
+  g_assert (var_obj != NULL);
+  g_assert (g_variant_is_of_type (var_obj, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)));
+
+  {
+    struct fy_document *doc = fy_document_create (NULL);
+    struct fy_node *root    = _ncm_serialize_to_yaml_node (ser, doc, var_obj);
+    gchar *yaml             = NULL;
+
+    fy_document_set_root (doc, root);
+    yaml = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+    fy_document_destroy (doc);
+
+    return yaml;
+  }
+}
+
+static struct fy_node *
+
+_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj)
 {
 #ifdef HAVE_LIBFYAML
-  struct fy_document *doc = fy_document_create (NULL);
-  struct fy_node *root    = NULL;
-  gchar *obj_name         = g_strdup (G_OBJECT_TYPE_NAME (obj));
-  gchar *saved_name       = NULL;
+  GVariant *obj_name_var     = g_variant_get_child_value (var_obj, 0);
+  GVariant *params_var       = g_variant_get_child_value (var_obj, 1);
+  struct fy_node *root       = fy_node_create_mapping (doc);
+  const gchar *obj_full_name = g_variant_get_string (obj_name_var, NULL);
+  guint n_properties         = g_variant_n_children (params_var);
+  GMatchInfo *match_info     = NULL;
+  gchar *name;
+  gchar *anchor;
+  GType gtype;
 
   g_assert (doc != NULL);
+  g_assert (root != NULL);
 
-  if (ncm_serialize_contain_instance (ser, obj))
+  if (g_regex_match (ser->is_named_regex, obj_full_name, 0, &match_info))
   {
-    gchar *ni_name = ncm_serialize_peek_name (ser, obj);
-    gchar *fname   = g_strdup_printf ("%s[%s]", obj_name, ni_name);
-    struct fy_node *fy_node_create_alias (doc, ni_name, FY_NT);
-
-
-
-
-    /*printf ("# Found instante %p at ptr_name %s.\n", obj, fname);*/
-    ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
-    g_free (fname);
-  }
-  else if (g_hash_table_lookup_extended (ser->saved_ptr_name, obj, NULL, (gpointer *) &saved_name))
-  {
-    gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
-
-    /*printf ("# Found instante %p at saved_ptr_name %s.\n", obj, fname);*/
-    ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
-    g_free (fname);
+    name   = g_match_info_fetch (match_info, 1);
+    anchor = g_match_info_fetch (match_info, 2);
   }
   else
   {
-    GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
-    guint n_properties, i;
-    GParamSpec **prop = g_object_class_list_properties (klass, &n_properties);
-    gchar *name       = NULL;
+    name   = g_strdup (obj_full_name);
+    anchor = NULL;
+  }
 
-    if (ser->opts & NCM_SERIALIZE_OPT_AUTONAME_SER)
+  gtype = g_type_from_name (name);
+
+  g_match_info_free (match_info);
+
+  if (gtype == 0)
+    g_error ("_ncm_serialize_to_yaml_node: object `%s' is not registered.", name);
+
+  g_assert (g_variant_is_of_type (params_var, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE)));
+
+  if ((n_properties == 0) && (anchor != NULL))
+  {
+    fy_node_mapping_append (root,
+                            fy_node_create_scalar_copy (doc, name, FY_NT),
+                            fy_node_create_alias_copy (doc, anchor, FY_NT));
+  }
+  else
+  {
+    struct fy_node *properties = fy_node_create_mapping (doc);
+    struct fy_node *root_key   = fy_node_create_scalar_copy (doc, name, FY_NT);
+
+    if (anchor)
     {
-      gchar *tmp = obj_name;
-
-      name = g_strdup_printf (NCM_SERIALIZE_AUTOSAVE_NAME NCM_SERIALIZE_AUTOSAVE_NFORMAT, ser->autosave_count);
-
-      obj_name = g_strdup_printf ("%s[%s]", tmp, name);
-      g_free (tmp);
-
-      ser->autosave_count++;
+      gint rc = fy_node_set_anchor (root_key, g_strdup (anchor), FY_NT);
+      g_assert (rc == 0);
     }
 
-    if (n_properties == 0)
-    {
-      g_free (prop);
-      ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, obj_name, NULL));
-    }
-    else
-    {
-      GVariantBuilder b;
-      GVariant *params;
+    printf ("Setting %s anchor %s\n", name, anchor);
 
-      g_variant_builder_init (&b, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE));
+    fy_node_mapping_append (root,
+                            root_key,
+                            properties);
 
-      for (i = 0; i < n_properties; i++)
+    {
+      GVariantIter *p_iter = g_variant_iter_new (params_var);
+      GVariant *var        = NULL;
+      gint i;
+
+      while ((var = g_variant_iter_next_value (p_iter)))
       {
-        GVariant *var = NULL;
-        GValue val    = G_VALUE_INIT;
+        GVariant *var_key      = g_variant_get_child_value (var, 0);
+        GVariant *var_val      = g_variant_get_child_value (var, 1);
+        GVariant *val          = g_variant_get_variant (var_val);
+        const gchar *prop_name = g_variant_get_string (var_key, NULL);
+        struct fy_node *value  = NULL;
 
-        if ((prop[i]->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
-          continue;
-
-        g_value_init (&val, prop[i]->value_type);
-        g_object_get_property (obj, prop[i]->name, &val);
-
-        var = ncm_serialize_gvalue_to_gvariant (ser, &val);
-
-        if (var == NULL)
+        if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
         {
-          g_value_unset (&val);
-          continue;
+          const guint n = g_variant_n_children (val);
+
+          value = fy_node_create_sequence (doc);
+
+          for (i = 0; i < n; i++)
+          {
+            GVariant *cvar = g_variant_get_child_value (val, i);
+            fy_node_sequence_append (value, _ncm_serialize_to_yaml_node (ser, doc, cvar));
+            g_variant_unref (cvar);
+          }
+        }
+        else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
+        {
+          value = _ncm_serialize_to_yaml_node (ser, doc, val);
+        }
+        else
+        {
+          gchar *str = g_variant_print (val, FALSE);
+          value = fy_node_build_from_malloc_string (doc, str, FY_NT);
         }
 
-        g_variant_builder_add (&b, NCM_SERIALIZE_PROPERTY_TYPE, prop[i]->name, var);
+        fy_node_mapping_append (properties,
+                                fy_node_create_scalar_copy (doc, prop_name, FY_NT),
+                                value);
 
+        g_variant_unref (var_key);
+        g_variant_unref (var_val);
+        g_variant_unref (val);
         g_variant_unref (var);
-        g_value_unset (&val);
       }
 
-      params = g_variant_builder_end (&b);
-
-      g_free (prop);
-
-      ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, obj_name, params));
-    }
-
-    if (name != NULL)
-    {
-      _ncm_serialize_save_ser (ser, name, obj, ser_var);
-      g_free (name);
+      g_variant_iter_free (p_iter);
     }
   }
 
-  g_free (obj_name);
+  g_clear_pointer (&name, g_free);
+  g_clear_pointer (&anchor, g_free);
+  g_variant_unref (obj_name_var);
+  g_variant_unref (params_var);
 
-  return ser_var;
+  return root;
 
 #else /* HAVE_LIBFYAML */
   g_error ("ncm_serialize_to_yaml: libfyaml not available.");
@@ -1629,6 +1666,26 @@ ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant
 }
 
 /**
+ * ncm_serialize_to_yaml:
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ *
+ * Serialize the object @obj to a YAML string.
+ *
+ * Returns: (transfer full): A YAML string containing the serialized version of @obj.
+ */
+gchar *
+ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
+{
+  GVariant *ser_var = ncm_serialize_to_variant (ser, obj);
+  gchar *yaml_str   = ncm_serialize_variant_to_yaml (ser, ser_var);
+
+  g_variant_unref (ser_var);
+
+  return yaml_str;
+}
+
+/**
  * ncm_serialize_to_file:
  * @ser: a #NcmSerialize
  * @obj: a #GObject
@@ -1672,10 +1729,35 @@ ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename
   g_assert (filename != NULL);
 
   if (!g_file_set_contents (filename, g_variant_get_data (obj_ser), length, &error))
-    g_error ("ncm_serialize_to_file: cannot save to file %s: %s",
+    g_error ("ncm_serialize_to_binfile: cannot save to file %s: %s",
              filename, error->message);
 
   g_variant_unref (obj_ser);
+}
+
+/**
+ * ncm_serialize_to_yaml_file:
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @filename: File where to save the serialized version of the object
+ *
+ * Serializes @obj and saves the YAML string in @filename.
+ *
+ */
+void
+ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *yaml   = ncm_serialize_to_yaml (ser, obj);
+  gsize length  = strlen (yaml);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, yaml, length, &error))
+    g_error ("ncm_serialize_to_yaml_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (yaml);
 }
 
 /**
@@ -2140,6 +2222,25 @@ ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant)
 }
 
 /**
+ * ncm_serialize_global_to_yaml:
+ * @obj: a #GObject
+ *
+ * Global version of ncm_serialize_to_yaml().
+ *
+ * Returns: (transfer full): A string containing the serialized version of @obj.
+ */
+gchar *
+ncm_serialize_global_to_yaml (GObject *obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  gchar *ret        = ncm_serialize_to_yaml (ser, obj);
+
+  ncm_serialize_unref (ser);
+
+  return ret;
+}
+
+/**
  * ncm_serialize_global_to_file:
  * @obj: a #GObject.
  * @filename: File where to save the serialized version of the object
@@ -2174,6 +2275,23 @@ ncm_serialize_global_to_binfile (GObject *obj, const gchar *filename)
 }
 
 /**
+ * ncm_serialize_global_to_yaml_file:
+ * @obj: a #GObject.
+ * @filename: File where to save the serialized version of the object
+ *
+ * Global version of ncm_serialize_to_yaml_file().
+ *
+ */
+void
+ncm_serialize_global_to_yaml_file (GObject *obj, const gchar *filename)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+
+  ncm_serialize_to_yaml_file (ser, obj, filename);
+  ncm_serialize_unref (ser);
+}
+
+/**
  * ncm_serialize_global_dup_obj:
  * @obj: a #GObject.
  *
@@ -2192,5 +2310,25 @@ ncm_serialize_global_dup_obj (GObject *obj)
   ncm_serialize_unref (ser);
 
   return dup;
+}
+
+/**
+ * ncm_serialize_global_variant_to_yaml:
+ * @var_obj: a #GObject serialized to a #GVariant
+ *
+ * Global version of ncm_serialize_variant_to_yaml().
+ * Converts a #GObject serialized to a #GVariant to a YAML string.
+ *
+ * Returns: A pointer to the YAML string representation of the @var_obj.
+ */
+gchar *
+ncm_serialize_global_variant_to_yaml (GVariant *var_obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  gchar *ret        = ncm_serialize_variant_to_yaml (ser, var_obj);
+
+  ncm_serialize_unref (ser);
+
+  return ret;
 }
 

@@ -187,6 +187,14 @@ AC_C_RESTRICT()
 AC_C_VOLATILE()
 
 dnl ***************************************************************************
+dnl C Sizes
+dnl ***************************************************************************
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(long)
+AC_CHECK_SIZEOF(unsigned int)
+AC_CHECK_SIZEOF(unsigned long)
+
+dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
