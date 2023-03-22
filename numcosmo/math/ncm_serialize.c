@@ -1475,6 +1475,7 @@ static struct fy_node *_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy
 gchar *
 ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
 {
+#ifdef HAVE_LIBFYAML
   g_assert (var_obj != NULL);
   g_assert (g_variant_is_of_type (var_obj, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)));
 
@@ -1489,6 +1490,12 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
 
     return yaml;
   }
+#else
+  g_error ("ncm_serialize_variant_to_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif /* HAVE_LIBFYAML */
 }
 
 static struct fy_node *
