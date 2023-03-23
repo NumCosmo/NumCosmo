@@ -3,7 +3,7 @@
  *
  *  Wed March 08 13:49:14 2017
  *  Copyright  2017  Rodrigo vom Marttens
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo

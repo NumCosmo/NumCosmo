@@ -38,6 +38,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_multiplicity_func_tinker.h"
+#include "math/ncm_spline_cubic_d2.h"
+#include "math/ncm_spline_gsl.h"
 
 struct _NcMultiplicityFuncTinkerPrivate
 {
@@ -48,110 +50,21 @@ struct _NcMultiplicityFuncTinkerPrivate
   gdouble b0;
   gdouble c;
   gdouble Delta;
+  NcmSpline *A_s;
+  NcmSpline *a_s;
+  NcmSpline *b_s;
+  NcmSpline *c_s;
 };
 
 enum
 {
   PROP_0,
-  PROP_DELTA,
   PROP_SIZE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinker, nc_multiplicity_func_tinker, NC_TYPE_MULTIPLICITY_FUNC);
 
 static gdouble _nc_multiplicity_func_tinker_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) { g_error ("method eval not correctly initialized by %s.", G_OBJECT_TYPE_NAME (mulf)); return 0.0;}
-
-static void
-nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
-{
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv = nc_multiplicity_func_tinker_get_instance_private (mt);
-
-  self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
-  self->eval  = &_nc_multiplicity_func_tinker_eval_error;
-  self->A0    = 0.0;
-  self->a0    = 0.0;
-  self->b0    = 0.0;
-  self->c     = 0.0;
-  self->Delta = 0.0;
-}
-
-static void
-_nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
-  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  /*NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
-
-  switch (prop_id)
-  {
-    case PROP_DELTA:
-      nc_multiplicity_func_tinker_set_Delta (mt, g_value_get_double (value));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_multiplicity_func_tinker_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
-{
-  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
-  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  /* NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
-
-  switch (prop_id)
-  {
-    case PROP_DELTA:
-      g_value_set_double (value, nc_multiplicity_func_tinker_get_Delta (mt));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_multiplicity_func_tinker_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_multiplicity_func_tinker_parent_class)->finalize (object);
-}
-
-static void _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
-static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
-
-static void
-nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
-
-  object_class->set_property = _nc_multiplicity_func_tinker_set_property;
-  object_class->get_property = _nc_multiplicity_func_tinker_get_property;
-  object_class->finalize = _nc_multiplicity_func_tinker_finalize;
-
-  /**
-   * NcMultiplicityFuncTinker:Delta:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  parent_class->set_mdef = &_nc_multiplicity_func_tinker_set_mdef;
-  parent_class->get_mdef = &_nc_multiplicity_func_tinker_get_mdef;
-  parent_class->eval     = &_nc_multiplicity_func_tinker_eval;
-}
-
-/* Eval mean and critical */
 
 #define log10_200  2.301029995663981195213738894724493026768 //log10 (200.0);
 #define log10_300  2.477121254719662437295027903255115309202 //log10 (300.0);
@@ -163,66 +76,101 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
 #define log10_2400 3.380211241711606022936244587428594389505 //log10 (2400.0);
 #define log10_3200 3.505149978319905976068694473622465133840 //log10 (3200.0);
 
-static const gdouble
-_nc_multiplicity_func_tinker_coef_A[8][6] = {
-    {log10_200, log10_300, 0.186, 0.0, 0.2, 0.5},
-    {log10_300, log10_400, 0.2, 0.5, 0.212, -1.56},
-    {log10_400, log10_600, 0.212, -1.56, 0.218, 3.05},
-    {log10_600, log10_800, 0.218, 3.05, 0.248, -2.95},
-    {log10_800, log10_1200, 0.248, -2.95, 0.255, 1.07},
-    {log10_1200, log10_1600, 0.255, 1.07, 0.26, -0.71},
-    {log10_1600, log10_2400, 0.26, -0.71, 0.26, 0.21},
-    {log10_2400, log10_3200, 0.26, 0.21, 0.26, 0.0}};
-
-static const gdouble 
-_nc_multiplicity_func_tinker_coef_a[8][6] = {
-    {log10_200, log10_300, 1.47, 0.0, 1.52, 1.19},
-    {log10_300, log10_400, 1.52, 1.19, 1.46, -6.34},
-    {log10_400, log10_600, 1.46, -6.34, 1.61, 21.36},
-    {log10_600, log10_800, 1.61, 21.36, 1.87, -10.95},
-    {log10_800, log10_1200, 1.87, -10.95, 2.13, 2.59},
-    {log10_1200, log10_1600, 2.13, 2.59, 2.3, -0.85},
-    {log10_1600, log10_2400, 2.3, -0.85, 2.53, -2.07},
-    {log10_2400, log10_3200, 2.53, -2.07, 2.66, 0.0}};
-
-static const gdouble 
-_nc_multiplicity_func_tinker_coef_b[8][6] = {
-    {log10_200, log10_300, 2.57, 0.0, 2.25, -1.08},
-    {log10_300, log10_400, 2.25, -1.08, 2.05, 12.61},
-    {log10_400, log10_600, 2.05, 12.61, 1.87, -20.96},
-    {log10_600, log10_800, 1.87, -20.96, 1.59, 24.08},
-    {log10_800, log10_1200, 1.59, 24.08, 1.51, -6.64},
-    {log10_1200, log10_1600, 1.51, -6.64, 1.46, 3.84},
-    {log10_1600, log10_2400, 1.46, 3.84, 1.44, -2.09},
-    {log10_2400, log10_3200, 1.44, -2.09, 1.41, 0.0}};
-
-static const gdouble 
-_nc_multiplicity_func_tinker_coef_c[8][6] = {
-    {log10_200, log10_300, 1.19, 0.0, 1.27, 0.94},
-    {log10_300, log10_400, 1.27, 0.94, 1.34, -0.43},
-    {log10_400, log10_600, 1.34, -0.43, 1.45, 4.61},
-    {log10_600, log10_800, 1.45, 4.61, 1.58, 0.01},
-    {log10_800, log10_1200, 1.58, 0.01, 1.8, 1.21},
-    {log10_1200, log10_1600, 1.8, 1.21, 1.97, 1.43},
-    {log10_1600, log10_2400, 1.97, 1.43, 2.24, 0.33},
-    {log10_2400, log10_3200, 2.24, 0.33, 2.44, 0.0}};
-
-static gdouble
-calc_polynomial (const gdouble *d, gdouble x)
+static void
+nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
 {
-  const gdouble y = x - d[0];
-  const gdouble dx = d[1] - d[0];
-  const gdouble dx2 = dx * dx;
-  const gdouble p0 = d[2];
-  const gdouble p2 = d[3];
-  const gdouble p3 = (d[5] - p2) / dx;
-  const gdouble p1 = (d[4] - p0 - (p2 + p3 * dx / 3.0) * dx2 / 2.0) / dx;
-  const gdouble P = p0 + y * (p1 + y * (p2 + p3 * y / 3.0) / 2.0); 
 
-  //printf ("% 20.15g % 20.15g % 20.15g\n% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n% 20.15g % 20.15g % 20.15g % 20.15g\n", x, y, dx, d[0], d[1], 
-  //        p0, y * p1, y*y/2.0*p2, y*y*y/6.0*p3);
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv = nc_multiplicity_func_tinker_get_instance_private (mt);
 
-  return P;
+  self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->eval  = &_nc_multiplicity_func_tinker_eval_error;
+  self->A0    = 0.0;
+  self->a0    = 0.0;
+  self->b0    = 0.0;
+  self->c     = 0.0;
+  self->Delta = 0.0;
+  self->A_s = NULL;
+  self->a_s = NULL;
+  self->b_s = NULL;
+  self->c_s = NULL;
+
+  nc_multiplicity_func_tinker_set_linear_interp (mt, FALSE);
+}
+
+static void
+_nc_multiplicity_func_tinker_set_property (GObject * object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
+  /*NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
+
+  switch (prop_id)
+  {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_multiplicity_func_tinker_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
+{
+  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
+  /* NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
+
+  switch (prop_id)
+  {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_multiplicity_func_tinker_dispose (GObject *object)
+{
+  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (object);
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+
+  ncm_spline_clear (&self->A_s);
+  ncm_spline_clear (&self->a_s);
+  ncm_spline_clear (&self->b_s);
+  ncm_spline_clear (&self->c_s);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_multiplicity_func_tinker_parent_class)->dispose (object);
+}
+
+static void
+_nc_multiplicity_func_tinker_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_multiplicity_func_tinker_parent_class)->finalize (object);
+}
+
+static void _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
+static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf); 
+static gdouble _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
+static void
+nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+
+  object_class->set_property = &_nc_multiplicity_func_tinker_set_property;
+  object_class->get_property = &_nc_multiplicity_func_tinker_get_property;
+  object_class->dispose      = &_nc_multiplicity_func_tinker_dispose;
+  object_class->finalize     = &_nc_multiplicity_func_tinker_finalize;
+
+
+  parent_class->set_mdef = &_nc_multiplicity_func_tinker_set_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_tinker_set_Delta;
+  parent_class->get_mdef = &_nc_multiplicity_func_tinker_get_mdef;
+  parent_class->get_Delta = &_nc_multiplicity_func_tinker_get_Delta;
+  parent_class->eval     = &_nc_multiplicity_func_tinker_eval;
 }
 
 static gdouble
@@ -232,41 +180,15 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
 
   const gdouble Delta = self->Delta;
-  const gdouble log10_Delta = log10 (Delta);
-  gint i;
-  gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
-  g_assert (Delta <= 3200.0);
+  const gdouble A = self->A0 * pow(1.0 + z, -0.14);
+  const gdouble a = self->a0 * pow(1.0 + z, -0.06);
+  const gdouble log10alpha = -pow(0.75 / log10 (Delta / 75.0), 1.2);
+  const gdouble alpha = pow(10.0, log10alpha);
+  const gdouble b = self->b0 * pow(1.0 + z, -alpha);
+  const gdouble f_Tinker_mean = A * (pow(sigma / b, -a) + 1.0) * exp(-self->c / (sigma * sigma));
 
-  NCM_UNUSED (cosmo);
-
-  for (i = 0; i < 8; i++)
-  {
-    if (log10_Delta >= _nc_multiplicity_func_tinker_coef_A[i][1])
-      continue;
-    else 
-    {
-      A0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_A[i], log10_Delta);
-      a0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_a[i], log10_Delta);
-      b0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_b[i], log10_Delta);
-      c  = calc_polynomial (_nc_multiplicity_func_tinker_coef_c[i], log10_Delta);
-      break;
-    }
-  }
-
-  {
-    const gdouble A = A0 * pow(1.0 + z, -0.14);
-    const gdouble a = a0 * pow(1.0 + z, -0.06);
-    const gdouble log10alpha = -pow(0.75 / log10 (Delta / 75.0), 1.2);
-    const gdouble alpha = pow(10.0, log10alpha);
-    const gdouble b = b0 * pow(1.0 + z, -alpha);
-    const gdouble f_Tinker_mean = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
-
-    //printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, mulf_tinker_mean->Delta, Delta_z, E2, Omega_m0, gsl_pow_3 (1.0 + z));
-    //printf ("NC: A = %22.15g a = %22.15g b = %22.15g c = %22.15g sigma = %22.15g\n", A, a, b, c, sigma);
-
-    return f_Tinker_mean;
-  }
+  return f_Tinker_mean;
 }
 
 static gdouble
@@ -278,7 +200,6 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble Delta_z = self->Delta / Omega_m;
   const gdouble log10_Delta_z = log10 (Delta_z);
-  gint i;
   gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
   if (log10_Delta_z > log10_3200)
@@ -286,10 +207,10 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
     const gdouble a0_fit_3200 = 1.43 + pow (log10_3200 - 2.3, 1.5);
     const gdouble b0_fit_3200 = 1.0 + pow (log10_3200 - 1.6, -1.5);
     const gdouble c_fit_3200 = 1.2 + pow (log10_3200 - 2.35, 1.6);
-    const gdouble A0_s_3200 = calc_polynomial (_nc_multiplicity_func_tinker_coef_A[7], log10_3200);
-    const gdouble a0_s_3200 = calc_polynomial (_nc_multiplicity_func_tinker_coef_a[7], log10_3200);
-    const gdouble b0_s_3200 = calc_polynomial (_nc_multiplicity_func_tinker_coef_b[7], log10_3200);
-    const gdouble c_s_3200  = calc_polynomial (_nc_multiplicity_func_tinker_coef_c[7], log10_3200);
+    const gdouble A0_s_3200 = ncm_spline_eval (self->A_s, log10_3200);
+    const gdouble a0_s_3200 = ncm_spline_eval (self->a_s, log10_3200);
+    const gdouble b0_s_3200 = ncm_spline_eval (self->b_s, log10_3200);
+    const gdouble c_s_3200  = ncm_spline_eval (self->c_s, log10_3200);
 
     A0 = A0_s_3200;
     a0 = a0_s_3200 / a0_fit_3200 * (1.43 + pow (log10_Delta_z - 2.3, 1.5));
@@ -298,19 +219,11 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   }
   else
   {
-    for (i = 0; i < 8; i++)
-    {
-      if (log10_Delta_z >= _nc_multiplicity_func_tinker_coef_A[i][1])
-        continue;
-      else
-      {
-        A0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_A[i], log10_Delta_z);
-        a0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_a[i], log10_Delta_z);
-        b0 = calc_polynomial (_nc_multiplicity_func_tinker_coef_b[i], log10_Delta_z);
-        c  = calc_polynomial (_nc_multiplicity_func_tinker_coef_c[i], log10_Delta_z);
-        break;
-      }
-    }
+
+    A0 = ncm_spline_eval (self->A_s, log10_Delta_z);
+    a0 = ncm_spline_eval (self->a_s, log10_Delta_z);
+    b0 = ncm_spline_eval (self->b_s, log10_Delta_z);
+    c  = ncm_spline_eval (self->c_s, log10_Delta_z);
   }
 
   { 
@@ -455,14 +368,21 @@ nc_multiplicity_func_tinker_clear (NcMultiplicityFuncTinker **mt)
  * Sets the value @Delta to the #NcMultiplicityFuncTinker:Delta property.
  *
  */
-void
-nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Delta)
+static void
+_nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
+  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
-
+  const gdouble log10_Delta = log10 (Delta);
   g_assert (Delta >= 0);
+  g_assert (Delta <= 3200.0);
 
   self->Delta = Delta;
+
+  self->A0 = ncm_spline_eval (self->A_s, log10_Delta);
+  self->a0 = ncm_spline_eval (self->a_s, log10_Delta);
+  self->b0 = ncm_spline_eval (self->b_s, log10_Delta);
+  self->c  = ncm_spline_eval (self->c_s, log10_Delta);
 }
 
 /**
@@ -472,12 +392,82 @@ nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFuncTinker *mt, gdouble Del
  * Returns: the value of #NcMultiplicityFuncTinker:Delta property.
  */
 gdouble
-nc_multiplicity_func_tinker_get_Delta (const NcMultiplicityFuncTinker *mt)
+_nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf)
 {
+  NcMultiplicityFuncTinker *mt = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
   
   return self->Delta;
 }
 
+/**
+ * nc_multiplicity_func_tinker_set_linear_interp:
+ * @mulf: a #NcMultiplicityFuncTinker.
+ * @lin_interp: a @gboolean
+ *
+ * If @lin_interp is true uses linear interpolation to compute the
+ * coefficients A, a0, b0 and c. Otherwise it uses cubic interpolation
+ * as described in arxiv:0803.2706.
+ *
+ */
+void
+nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gboolean lin_interp)
+{
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (mt);
+  const gdouble Delta = nc_multiplicity_func_get_Delta (mulf);
 
+  gdouble log10_delta[9] = {log10_200, log10_300,  log10_400,  log10_600, log10_800, log10_1200, log10_1600, log10_2400, log10_3200};
+  gdouble coeff_A[9]     = {0.186, 0.200, 0.212, 0.218, 0.248, 0.255, 0.260, 0.260, 0.260};
+  gdouble coeff_a[9]     = {1.470, 1.520, 1.560, 1.610, 1.870, 2.130, 2.300, 2.530, 2.660};
+  gdouble coeff_b[9]     = {2.570, 2.250, 2.050, 1.870, 1.590, 1.510, 1.460, 1.440, 1.410};
+  gdouble coeff_c[9]     = {1.190, 1.270, 1.340, 1.450, 1.580, 1.800, 1.970, 2.240, 2.440};
 
+  gdouble d2f_A[9]       = {0.000,  0.500, -1.560,   3.050,  -2.950,  1.070, -0.710,  0.210, 0.000};
+  gdouble d2f_a[9]       = {0.000,  1.190, -6.340,  21.360, -10.950,  2.590, -0.850, -2.070, 0.000};
+  gdouble d2f_b[9]       = {0.000, -1.080, 12.610, -20.960,  24.080, -6.640,  3.840, -2.090, 0.000};
+  gdouble d2f_c[9]       = {0.000,  0.940, -0.430,   4.610,   0.010,  1.210,  1.430,  0.330, 0.000};
+
+  NcmVector *log10_delta_v = ncm_vector_new_data_dup (log10_delta, 9, 1);
+  NcmVector *coeff_A_v     = ncm_vector_new_data_dup (coeff_A, 9, 1);
+  NcmVector *coeff_a_v     = ncm_vector_new_data_dup (coeff_a, 9, 1);
+  NcmVector *coeff_b_v     = ncm_vector_new_data_dup (coeff_b, 9, 1);
+  NcmVector *coeff_c_v     = ncm_vector_new_data_dup (coeff_c, 9, 1);
+  NcmVector *d2f_A_v       = ncm_vector_new_data_dup (d2f_A, 9, 1);
+  NcmVector *d2f_a_v       = ncm_vector_new_data_dup (d2f_a, 9, 1);
+  NcmVector *d2f_b_v       = ncm_vector_new_data_dup (d2f_b, 9, 1);
+  NcmVector *d2f_c_v       = ncm_vector_new_data_dup (d2f_c, 9, 1);
+
+  ncm_spline_clear (&self->A_s);
+  ncm_spline_clear (&self->a_s);
+  ncm_spline_clear (&self->b_s);
+  ncm_spline_clear (&self->c_s);
+
+  if (!lin_interp)
+  {
+    self->A_s   = NCM_SPLINE (ncm_spline_cubic_d2_new (log10_delta_v, coeff_A_v, d2f_A_v, TRUE));
+    self->a_s   = NCM_SPLINE (ncm_spline_cubic_d2_new (log10_delta_v, coeff_a_v, d2f_a_v, TRUE));
+    self->b_s   = NCM_SPLINE (ncm_spline_cubic_d2_new (log10_delta_v, coeff_b_v, d2f_b_v, TRUE));
+    self->c_s   = NCM_SPLINE (ncm_spline_cubic_d2_new (log10_delta_v, coeff_c_v, d2f_c_v, TRUE));
+  }
+  else
+  {
+    self->A_s   = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_A_v, TRUE);
+    self->a_s   = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_a_v, TRUE);
+    self->b_s   = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_b_v, TRUE);
+    self->c_s   = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_c_v, TRUE);
+  }
+
+  ncm_vector_free (log10_delta_v);
+  ncm_vector_free (coeff_A_v);
+  ncm_vector_free (coeff_a_v);
+  ncm_vector_free (coeff_b_v);
+  ncm_vector_free (coeff_c_v);
+  ncm_vector_free (d2f_A_v);
+  ncm_vector_free (d2f_a_v);
+  ncm_vector_free (d2f_b_v);
+  ncm_vector_free (d2f_c_v);
+
+  if (self->Delta > 0.0)
+     _nc_multiplicity_func_tinker_set_Delta (mulf,Delta);
+}

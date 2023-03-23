@@ -184,12 +184,9 @@ static gdouble
 _nc_powspec_ml_fix_spline_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
-  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
   NcPowspecMLFixSpline *ps_fs = NC_POWSPEC_ML_FIX_SPLINE (powspec);
   const gdouble growth        = nc_growth_func_eval (ps_fs->gf, cosmo, z);
   const gdouble gf2           = gsl_pow_2 (growth);
-  
-  NCM_UNUSED (prim);
   
   return ncm_spline_eval (ps_fs->Pk, k) * gf2;
 }

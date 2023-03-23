@@ -3,11 +3,11 @@
  *
  *  Tue February 16 17:01:03 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_powspec.h
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,6 +30,8 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_integral1d_ptr.h>
+#include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
 
@@ -52,6 +54,7 @@ struct _NcmPowspecClass
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
   void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
+  NcmSpline2d *(*get_spline_2d) (NcmPowspec *powspec, NcmModel *model);
 };
 
 struct _NcmPowspec
@@ -62,6 +65,10 @@ struct _NcmPowspec
   gdouble zf;
   gdouble kmin;
   gdouble kmax;
+  NcmIntegral1dPtr *var_tophat_R;
+  NcmIntegral1dPtr *corr3D;
+  NcmIntegral1dPtr *sproj;
+  gdouble reltol_spline;
   NcmModelCtrl *ctrl;
 };
 
@@ -76,6 +83,7 @@ void ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi);
 void ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf);
 void ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin);
 void ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax);
+void ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol);
 
 void ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi);
 void ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf);
@@ -93,7 +101,8 @@ void ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 NCM_INLINE void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
 NCM_INLINE void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
 NCM_INLINE gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
-NCM_INLINE void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
+NCM_INLINE void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+NCM_INLINE NcmSpline2d *ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model);
 
 gdouble ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
 gdouble ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R);
@@ -138,6 +147,12 @@ NCM_INLINE void
 ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
+}
+
+NCM_INLINE NcmSpline2d *
+ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->get_spline_2d (powspec, model);
 }
 
 G_END_DECLS

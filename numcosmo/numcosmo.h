@@ -3,11 +3,11 @@
  *
  *  Sun May  6 17:20:29 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -82,6 +82,7 @@
 #include <numcosmo/model/nc_hicosmo_de_cpl.h>
 #include <numcosmo/model/nc_hicosmo_de_jbp.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
+#include <numcosmo/model/nc_hicosmo_de_wspline.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
@@ -119,13 +120,13 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_halo_bias_type.h>
-#include <numcosmo/lss/nc_halo_bias_type_ps.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_spher.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_ellip.h>
-#include <numcosmo/lss/nc_halo_bias_type_tinker.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
+#include <numcosmo/lss/nc_halo_bias_ps.h>
+#include <numcosmo/lss/nc_halo_bias_st_spher.h>
+#include <numcosmo/lss/nc_halo_bias_st_ellip.h>
+#include <numcosmo/lss/nc_halo_bias_tinker.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_redshift_nodist.h>
 #include <numcosmo/lss/nc_cluster_photoz_gauss.h>
@@ -146,7 +147,8 @@
 #include <numcosmo/lss/nc_galaxy_redshift_gauss.h>
 #include <numcosmo/lss/nc_galaxy_wl.h>
 #include <numcosmo/lss/nc_galaxy_wl_dist.h>
-#include <numcosmo/lss/nc_galaxy_wl_reduced_shear_gauss.h>
+#include <numcosmo/lss/nc_galaxy_wl_ellipticity_gauss.h>
+#include <numcosmo/lss/nc_galaxy_wl_ellipticity_kde.h>
 #include <numcosmo/lss/nc_galaxy_wl_proj.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
@@ -168,14 +170,13 @@
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
+#include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>
 #include <numcosmo/data/nc_data_cmb.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
-#include <numcosmo/data/nc_data_cluster_poisson.h>
-#include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>

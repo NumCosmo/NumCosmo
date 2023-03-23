@@ -4,11 +4,11 @@
  *
  *  Thu April 8 10:06:36 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_nnls.h
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -64,6 +64,8 @@ struct _NcmNNLS
  * @NCM_NNLS_UMETHOD_NORMAL: Solve using normal equations and Cholesky decomposition
  * @NCM_NNLS_UMETHOD_NORMAL_LU: Solve using normal equations and LU decomposition
  * @NCM_NNLS_UMETHOD_QR: Solve using QR decomposition
+ * @NCM_NNLS_UMETHOD_DGELSD: Solve using QR decomposition (Lapack's dgelsd)
+ * @NCM_NNLS_UMETHOD_GSL: Solve using GSL's gsl_multifit_linear
  *
  * Method used to solve the intermediate unconstrained least-squares.
  */
@@ -72,6 +74,8 @@ typedef enum _NcmNNLSUMethod /*< enum,underscore_name=NCM_NNLS_UMETHOD >*/
   NCM_NNLS_UMETHOD_NORMAL,
   NCM_NNLS_UMETHOD_NORMAL_LU,
   NCM_NNLS_UMETHOD_QR,
+  NCM_NNLS_UMETHOD_DGELSD,
+  NCM_NNLS_UMETHOD_GSL,
   /* < private > */
   NCM_NNLS_UMETHOD_LEN, /*< skip >*/
 } NcmNNLSUMethod;

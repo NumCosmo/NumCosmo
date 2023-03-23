@@ -3,11 +3,11 @@
  *
  *  Wed Nov 21 19:09:20 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -192,8 +192,8 @@ _ncm_spline_gsl_prepare (NcmSpline *s)
 {
   NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
 
-	g_assert_cmpint (ncm_vector_stride (s->xv), ==, 1);
-	g_assert_cmpint (ncm_vector_stride (s->yv), ==, 1);
+  g_assert_cmpint (ncm_vector_stride (s->xv), ==, 1);
+  g_assert_cmpint (ncm_vector_stride (s->yv), ==, 1);
 
   gsl_interp_init (sg->interp, ncm_vector_ptr (s->xv, 0), ncm_vector_ptr (s->yv, 0), s->len);
 }

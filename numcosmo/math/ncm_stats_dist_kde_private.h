@@ -5,11 +5,11 @@
  *
  *  Thu July 22 15:12:38 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_kde_private.h
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -37,9 +37,12 @@ struct _NcmStatsDistKDEPrivate
 {
   /*< private >*/
   NcmStatsVec *sample;
+  NcmStatsDistKDECovType cov_type;
+  NcmMatrix *cov_fixed;
   NcmMatrix *cov_decomp;
   NcmMatrix *sample_matrix;
-  GPtrArray *invUsample;
+  NcmMatrix *invUsample_matrix;
+  GPtrArray *invUsample_array;
   NcmVector *v;
   NcmVector *chi2;
   gdouble kernel_lnnorm;

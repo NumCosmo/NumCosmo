@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [15])
-m4_define([numcosmo_micro_version], [4])
+m4_define([numcosmo_minor_version], [16])
+m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -354,6 +354,16 @@ fi
 AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 
 dnl ***************************************************************************
+dnl check for python
+dnl ***************************************************************************
+
+AM_PATH_PYTHON([3.8], [
+AX_PYTHON_MODULE([gi])
+AX_PYTHON_MODULE([pytest])
+],[:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+
+dnl ***************************************************************************
 dnl check for gtk-doc
 dnl ***************************************************************************
 m4_ifdef([GTK_DOC_CHECK], [
@@ -607,7 +617,18 @@ TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GLIB_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GLIB_CFLAGS"
 
 # Setup GLIB_MKENUMS to use glib-mkenums even if GLib is uninstalled.
+AC_MSG_CHECKING([for glib-mkenums])
 GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
+AC_MSG_RESULT($GLIB_MKENUMS)
+
+AC_MSG_CHECKING([if glib-mkenums is working])
+AS_IF($GLIB_MKENUMS -v > /dev/null 2>&1, , GLIB_MKENUMS="")
+if test -z $GLIB_MKENUMS; then
+    AC_MSG_RESULT([ no, trying to find it on PATH ])
+    AC_PATH_PROG(GLIB_MKENUMS, glib-mkenums)
+else
+    AC_MSG_RESULT([ yes ])
+fi
 AC_SUBST(GLIB_MKENUMS)
 
 dnl ***************************************************************************
@@ -789,15 +810,6 @@ AC_SUBST(numcosmo_blas_include)
 
 AC_CHECK_FUNCS([openblas_set_num_threads MKL_Set_Num_Threads])
 
-AC_ARG_WITH(lapacke,
-        [AS_HELP_STRING([--with-lapacke=<lib>], [use LAPACKe library <lib>])])
-case $with_lapacke in
-        yes | "") ;;
-        no) lapacke_ok=disable ;;
-        -* | */* | *.a | *.so | *.so.* | *.o) LAPACKE_LIBS="$with_lapacke" ;;
-        *) LAPACKE_LIBS="-l$with_lapacke" ;;
-esac
-
 AX_LAPACK([],[have_lapack="no"])
 AC_MSG_CHECKING([if lapack is available $LAPACK_LIBS])
 if test "x$have_lapack" != "xno"; then
@@ -820,41 +832,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dgels_ dtrsv_],[],[])
-
-  if test "x$lapack_mkl" != "x"; then
-    AC_CHECK_HEADERS([mkl_lapacke.h],
-      [AC_CHECK_FUNC([LAPACKE_dptsv],
-        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-         AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])
-         have_lapacke="yes"][])])
-    AC_CHECK_HEADERS([mkl_lapack.h])
-  fi
-
-  if test "x$have_lapacke" != "xyes"; then
-    AC_CHECK_HEADERS([lapacke.h],
-      [AC_SEARCH_LIBS([LAPACKE_dptsv],[lapacke],  
-        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-         AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])
-         have_lapacke="yes"],[])])
-  fi
-
-  if test "x$have_lapacke" != "xyes"; then
-    AC_CHECK_HEADERS([clapack.h],
-      [AC_SEARCH_LIBS([clapack_dpotri],[clapack],
-        [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
-         AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])
-         have_clapack="yes"],[])])
-  fi
-  
-  if test "x$have_lapacke" = "xyes"; then
-    lapack_support="$lapack_support+LAPACKe"
-  fi
-
-  if test "x$have_clapack" = "xyes"; then
-    lapack_support="$lapack_support+cLAPACK"
-  fi
-
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dgels_ dgelsd_ dgelsy_ dtrsv_],[],[])
 else
   AC_MSG_RESULT([no])
   AC_MSG_ERROR([Lapack not found.])
@@ -1124,7 +1102,6 @@ examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
 notebooks/Makefile
-notebooks/tutorials/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])
@@ -1169,6 +1146,22 @@ if [ test "x$HAVE_ARB" = xyes ]; then
        echo "Building with ARB support: ......................................YES"
 else
        echo "Building with ARB support: .......................................NO"
+fi
+if [ test "x$PYTHON_VERSION" != x ]; then
+       echo "Building with Python support: ...................................$PYTHON"
+       echo "Building with Python version: ...................................$PYTHON_VERSION"
+  if [test "x$HAVE_PYMOD_GI" = xyes]; then
+       echo "Building with Python gi support .................................YES"
+  else
+       echo "Building with Python gi support ..................................NO"
+  fi
+  if [test "x$HAVE_PYMOD_PYTEST" = xyes]; then
+       echo "Building with Python pytest support .............................YES"
+  else
+       echo "Building with Python pytest support ..............................NO"
+  fi
+else
+       echo "Building with Python support: ....................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

@@ -3,12 +3,12 @@
  *
  *  Sun Aug  1 17:17:20 2010
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
- *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
+ *  <pennalima@gmail.com>, <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <sandro@isoftware.com.br>
+ * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -48,8 +48,9 @@ struct _NcmSpline2dClass
 {
   /*< private >*/
   GObjectClass parent_class;
+
   NcmSpline2d *(*copy_empty) (const NcmSpline2d *s2d);
-  
+
   void (*reset) (NcmSpline2d *s2d);
   void (*prepare) (NcmSpline2d *s2d);
   gdouble (*eval) (NcmSpline2d *s2d, gdouble x, gdouble y);
@@ -63,6 +64,7 @@ struct _NcmSpline2dClass
   gdouble (*int_dxdy) (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
   NcmSpline *(*int_dx_spline) (NcmSpline2d *s2d, gdouble xl, gdouble xu);
   NcmSpline *(*int_dy_spline) (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+  void (*eval_vec_y) (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res);
 };
 
 struct _NcmSpline2d
@@ -75,6 +77,10 @@ struct _NcmSpline2d
   NcmSpline *s;
   NcmVector *xv;
   NcmVector *yv;
+  guint x_interv;
+  guint y_interv;
+  gdouble *x_data;
+  gdouble *y_data;
   NcmMatrix *zm;
   gsl_interp_accel *acc_x;
   gsl_interp_accel *acc_y;
@@ -93,7 +99,7 @@ NcmSpline2d *ncm_spline2d_copy_empty (const NcmSpline2d *s2d);
 NcmSpline2d *ncm_spline2d_copy (NcmSpline2d *s2d);
 
 NcmSpline2d *ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init);
-
+NcmSpline2d *ncm_spline2d_ref (NcmSpline2d *s2d);
 void ncm_spline2d_free (NcmSpline2d *s2d);
 void ncm_spline2d_clear (NcmSpline2d **s2d);
 
@@ -119,6 +125,8 @@ NCM_INLINE gdouble ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdoub
 NCM_INLINE gdouble ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y);
 
 NCM_INLINE gdouble ncm_spline2dim_integ_total (NcmSpline2d *s2d);
+
+NCM_INLINE void ncm_spline2d_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res);
 
 G_END_DECLS
 
@@ -152,8 +160,8 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdx (s2d, x, y);
 }
 
@@ -161,8 +169,8 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->dzdy (s2d, x, y);
 }
 
@@ -170,8 +178,8 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdxy (s2d, x, y);
 }
 
@@ -179,8 +187,8 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdx2 (s2d, x, y);
 }
 
@@ -188,9 +196,15 @@ NCM_INLINE gdouble
 ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);
-  
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
+
   return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdy2 (s2d, x, y);
+}
+
+NCM_INLINE void
+ncm_spline2d_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *y, GArray *order, GArray *res)
+{
+  NCM_SPLINE2D_GET_CLASS (s2d)->eval_vec_y (s2d, x, y, order, res);
 }
 
 G_END_DECLS

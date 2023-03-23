@@ -3,11 +3,11 @@
  *
  *  Thu March 08 00:36:24 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -349,6 +349,7 @@ ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
       GVariant *sp_var_i = ncm_serialize_global_to_variant (G_OBJECT (sp_i));
       GVariant *entry_i = g_variant_new_dict_entry (i_var, sp_var_i);
       g_variant_builder_add_value (&builder, entry_i);
+      g_variant_unref (sp_var_i);
     }
   }
 

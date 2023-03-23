@@ -51,7 +51,7 @@
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_func.h"
 

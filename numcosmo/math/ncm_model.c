@@ -3,11 +3,11 @@
  *
  *  Fri February 24 21:18:21 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -1949,6 +1949,25 @@ void
 ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype)
 {
   g_array_index (model->ptypes, NcmParamType, n) = ptype;
+}
+
+/**
+ * ncm_model_params_set_default_ftype:
+ * @model: a #NcmModel
+ *
+ * Sets all parameters #NcmParamType to their default values.
+ *
+ */
+void
+ncm_model_params_set_default_ftype (NcmModel *model)
+{
+  guint i;
+  
+  for (i = 0; i < model->total_len; i++)
+  {
+    const NcmSParam *p = ncm_model_param_peek_desc (model, i);
+    g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (p);
+  }
 }
 
 /**

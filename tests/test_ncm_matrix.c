@@ -233,6 +233,16 @@ test_ncm_matrix_new_array (TestNcmMatrix *test, gconstpointer pdata)
     g_assert_cmpuint (ncm_matrix_nrows (test->m), ==, ga->len / test->ncols);
     
     g_assert_true (ga == ncm_matrix_get_array (test->m));
+    {
+      GArray *ga_dup = ncm_matrix_dup_array (test->m);
+
+      g_assert_true (ga_dup != ga);
+      g_assert_cmpuint (ga_dup->len, ==, ga->len);
+
+      for (i = 0; i < test->nrows * test->ncols; i++)
+        ncm_assert_cmpdouble (g_array_index (ga, gdouble, i), ==, g_array_index (ga_dup, gdouble, i));
+    }
+
     g_array_unref (ga);
   }
 }

@@ -3453,7 +3453,7 @@ int primordial_output_titles(struct perturbs * ppt,
  * and stores the tabulated values.
  * The sampling of the k's from CLASS is used.
  *
- * Author: Sandro Dias Pinto Vitenti (sandro@isoftware.com.br)
+ * Author: Sandro Dias Pinto Vitenti (vitenti@uel.br)
  * Date:   2015-10-27
  *
  * @param ppt  Input/output: pointer to perturbation structure

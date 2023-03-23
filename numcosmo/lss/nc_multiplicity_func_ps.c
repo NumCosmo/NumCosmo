@@ -42,6 +42,7 @@ struct _NcMultiplicityFuncPSPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble delta_c;
+  gdouble Delta;
 };
 
 enum
@@ -60,12 +61,14 @@ nc_multiplicity_func_ps_init (NcMultiplicityFuncPS *mps)
 
   self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->delta_c = 0.0;
+  self->Delta   = 0.0;
 }
 
 static void
-_nc_multiplicity_func_ps_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_ps_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (object);
+
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_PS (object));
 
   switch (prop_id)
@@ -83,6 +86,7 @@ static void
 _nc_multiplicity_func_ps_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (object);
+
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_PS (object));
 
   switch (prop_id)
@@ -99,20 +103,21 @@ _nc_multiplicity_func_ps_get_property (GObject *object, guint prop_id, GValue *v
 static void
 _nc_multiplicity_func_ps_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_ps_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_ps_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_ps_class_init (NcMultiplicityFuncPSClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass *parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
   object_class->set_property = &_nc_multiplicity_func_ps_set_property;
   object_class->get_property = &_nc_multiplicity_func_ps_get_property;
@@ -128,18 +133,20 @@ nc_multiplicity_func_ps_class_init (NcMultiplicityFuncPSClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.6864701998411454502,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  parent_class->set_mdef = &_nc_multiplicity_func_ps_set_mdef;
-  parent_class->get_mdef = &_nc_multiplicity_func_ps_get_mdef;
-  parent_class->eval     = &_nc_multiplicity_func_ps_eval;       
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  parent_class->set_mdef  = &_nc_multiplicity_func_ps_set_mdef;
+  parent_class->get_mdef  = &_nc_multiplicity_func_ps_get_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_ps_set_Delta;
+  parent_class->get_Delta = &_nc_multiplicity_func_ps_get_Delta;
+  parent_class->eval      = &_nc_multiplicity_func_ps_eval;
 }
 
-static void 
+static void
 _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (mulf);
+  NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
   NcMultiplicityFuncPSPrivate * const self = mps->priv;
 
   switch (mdef)
@@ -160,29 +167,47 @@ _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncM
       g_assert_not_reached ();
       break;
   }
-  
+
   self->mdef = mdef;
 }
 
-static NcMultiplicityFuncMassDef 
+static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_ps_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (mulf);
+  NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
   NcMultiplicityFuncPSPrivate * const self = mps->priv;
 
   return self->mdef;
 }
 
-static gdouble
-_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)       /* f(\sigma) - Press \& Schechter (PS) */
+static void
+_nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncPS *mps = NC_MULTIPLICITY_FUNC_PS (mulf);
+  NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
+  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+
+  self->Delta = Delta;
+}
+
+gdouble
+_nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
+  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+
+  return self->Delta;
+}
+
+static gdouble
+_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Press \& Schechter (PS) */
+{
+  NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
   NcMultiplicityFuncPSPrivate * const self = mps->priv;
 
   const gdouble c1   = sqrt (2.0 / M_PI);     /* c1 = \sqrt{\frac{2}{\pi}} */
   const gdouble x    = self->delta_c / sigma; /* \delta_c \sigma^{-1} */
   const gdouble x2   = x * x;
-  const gdouble f_PS = c1 * x * exp(-0.5 * x2);
+  const gdouble f_PS = c1 * x * exp (-0.5 * x2);
 
   return f_PS;
 }
@@ -256,9 +281,9 @@ void
 nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, gdouble delta_c)
 {
   NcMultiplicityFuncPSPrivate * const self = mps->priv;
-  
+
   g_assert (delta_c >= 0);
-  
+
   self->delta_c = delta_c;
 }
 

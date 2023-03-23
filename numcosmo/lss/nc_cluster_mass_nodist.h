@@ -3,11 +3,11 @@
  *
  *  Fri June 22 13:43:03 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterMassNodistClass NcClusterMassNodistClass;
 typedef struct _NcClusterMassNodist NcClusterMassNodist;
+typedef struct _NcClusterMassNodistPrivate NcClusterMassNodistPrivate;
 
 struct _NcClusterMassNodistClass
 {
@@ -53,8 +54,7 @@ struct _NcClusterMassNodist
 {
   /*< private >*/
   NcClusterMass parent_instance;
-  gdouble lnM_min;
-  gdouble lnM_max;
+  NcClusterMassNodistPrivate *priv;
 };
 
 GType nc_cluster_mass_nodist_get_type (void) G_GNUC_CONST;
@@ -62,3 +62,4 @@ GType nc_cluster_mass_nodist_get_type (void) G_GNUC_CONST;
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_NODIST_H_ */
+

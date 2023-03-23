@@ -3,7 +3,7 @@
  *
  *  Tue Apr 20 10:59:01 2010
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
- *  <pennalima@gmail.com> & <sandro@isoftware.com.br>
+ *  <pennalima@gmail.com> & <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
@@ -66,3 +66,4 @@ NcClusterRedshift *nc_cluster_photoz_gauss_new (void);
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_PHOTOZ_GAUSS_H_ */
+

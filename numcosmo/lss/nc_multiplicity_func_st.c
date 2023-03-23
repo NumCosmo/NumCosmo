@@ -28,8 +28,9 @@
  * @title: NcMultiplicityFuncST
  * @short_description: Dark matter halo -- Sheth-Tormen multiplicity function.
  *
- * FIXME
- * 
+ * Computes the multiplicity function of dark matter halos using the
+ * Sheth-Tormen model.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,10 +43,11 @@
 struct _NcMultiplicityFuncSTPrivate
 {
   NcMultiplicityFuncMassDef mdef;
-  gdouble A; 
+  gdouble A;
   gdouble b;
   gdouble p;
   gdouble delta_c;
+  gdouble Delta;
 };
 
 enum
@@ -53,7 +55,7 @@ enum
   PROP_0,
   PROP_A,
   PROP_B,
-  PROP_P, 
+  PROP_P,
   PROP_DELTA_C,
   PROP_SIZE,
 };
@@ -70,12 +72,14 @@ nc_multiplicity_func_st_init (NcMultiplicityFuncST *mst)
   self->b       = 0.0;
   self->p       = 0.0;
   self->delta_c = 0.0;
+  self->Delta   = 0.0;
 }
 
 static void
-_nc_multiplicity_func_st_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_st_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (object);
+
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_ST (object));
 
   switch (prop_id)
@@ -99,9 +103,10 @@ _nc_multiplicity_func_st_set_property (GObject * object, guint prop_id, const GV
 }
 
 static void
-_nc_multiplicity_func_st_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_st_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (object);
+
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_ST (object));
 
   switch (prop_id)
@@ -127,20 +132,21 @@ _nc_multiplicity_func_st_get_property (GObject * object, guint prop_id, GValue *
 static void
 _nc_multiplicity_func_st_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_st_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass *parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
   object_class->set_property = _nc_multiplicity_func_st_set_property;
   object_class->get_property = _nc_multiplicity_func_st_get_property;
@@ -157,7 +163,8 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                                         NULL,
                                                         "A",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.3222,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcMultiplicityFuncST:b:
    *
@@ -169,7 +176,8 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                                         NULL,
                                                         "b",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.707,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcMultiplicityFuncST:p:
    *
@@ -181,7 +189,8 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                                         NULL,
                                                         "p",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.3,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcMultiplicityFuncST:critical_delta:
    *
@@ -192,17 +201,19 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  parent_class->set_mdef = &_nc_multiplicity_func_st_set_mdef;
-  parent_class->get_mdef = &_nc_multiplicity_func_st_get_mdef;
-  parent_class->eval     = &_nc_multiplicity_func_st_eval;
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  parent_class->set_mdef  = &_nc_multiplicity_func_st_set_mdef;
+  parent_class->get_mdef  = &_nc_multiplicity_func_st_get_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_st_set_Delta;
+  parent_class->get_Delta = &_nc_multiplicity_func_st_get_Delta;
+  parent_class->eval      = &_nc_multiplicity_func_st_eval;
 }
 
-static void 
+static void
 _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
 
   switch (mdef)
@@ -227,35 +238,54 @@ _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncM
   self->mdef = mdef;
 }
 
-static NcMultiplicityFuncMassDef 
+static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
 
   return self->mdef;
 }
 
-static gdouble
-_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)          /* f(\sigma) - Sheth \& Tormen (ST) */
+static void
+_nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncST *mst = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
 
-//  const gdouble bc1 = sqrt(b/(2.0 * M_PI));
-  const gdouble A = self->A;
-  const gdouble b = self->b;
+  self->Delta = Delta;
+}
+
+static gdouble
+_nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+  return self->Delta;
+}
+
+static gdouble
+_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Sheth \& Tormen (ST) */
+{
+  NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
+  NcMultiplicityFuncSTPrivate * const self = mst->priv;
+
+/*  const gdouble bc1 = sqrt(b/(2.0 * M_PI)); */
+  const gdouble A   = self->A;
+  const gdouble b   = self->b;
   const gdouble bc1 = sqrt (2.0 * b / M_PI);
-  const gdouble p = self->p;
-  gdouble x = self->delta_c / sigma;
-  gdouble x2 = x * x;
-  //gdouble b2 = b * b;
-  gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's and Crocce's paper
-  //gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
+  const gdouble p   = self->p;
+  gdouble x         = self->delta_c / sigma;
+  gdouble x2        = x * x;
+  /*gdouble b2 = b * b; */
+  gdouble f_ST = A * bc1 * (1.0 + pow (x2 * b, -p)) * exp (-(b * x2) / 2.0) * x; /* Jenkin's and Crocce's paper */
+
+  /*gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper */
 
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
- //  printf ("A = %.5g, b=%.5g, p=%.5g, delta_c= %.5g\n", A, b, p, mulf_st->delta_c);
+  /*  printf ("A = %.5g, b=%.5g, p=%.5g, delta_c= %.5g\n", A, b, p, mulf_st->delta_c); */
 
   return f_ST;
 }
@@ -329,7 +359,7 @@ void
 nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mst, gdouble A)
 {
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
-    
+
   g_assert (A >= 0);
 
   self->A = A;
@@ -361,7 +391,7 @@ void
 nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mst, gdouble b)
 {
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
-    
+
   g_assert (b >= 0);
 
   self->b = b;
@@ -393,7 +423,7 @@ void
 nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mst, gdouble p)
 {
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
-    
+
   g_assert (p >= 0);
 
   self->p = p;
@@ -425,9 +455,9 @@ void
 nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mst, gdouble delta_c)
 {
   NcMultiplicityFuncSTPrivate * const self = mst->priv;
-    
+
   g_assert (delta_c >= 0);
-  
+
   self->delta_c = delta_c;
 }
 

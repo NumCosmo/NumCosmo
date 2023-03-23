@@ -8,6 +8,7 @@ Intel/*
 Optimized/*
 Profiling/*
 *.in
+*.log
 !numcosmo.pc.in
 configure
 compile
@@ -36,6 +37,8 @@ docs/references.dvi
 docs/references.log
 docs/references.out
 scripts/*.pyc
+__pycache__
+.ipynb_checkpoints
 *~
 *.la
 *.lo
@@ -46,3 +49,118 @@ scripts/*.pyc
 *.deps*
 *.dirstamp*
 *.libs*
+gtk-doc.m4
+perf.*
+vgcore.*
+.flake8
+.mypy.ini
+.vscode
+.RData
+.Rhistory
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+Footer
+
+# http://www.gnu.org/software/automake
+
+Makefile.in
+/ar-lib
+/mdate-sh
+/py-compile
+/test-driver
+/ylwrap
+.deps/
+.dirstamp
+
+# http://www.gnu.org/software/autoconf
+
+autom4te.cache
+/autoscan.log
+/autoscan-*.log
+/aclocal.m4
+/compile
+/config.cache
+/config.guess
+/config.h.in
+/config.log
+/config.status
+/config.sub
+/configure
+/configure.scan
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+
+# https://www.gnu.org/software/libtool/
+
+/ltmain.sh
+
+# http://www.gnu.org/software/texinfo
+
+/texinfo.tex
+
+# http://www.gnu.org/software/m4/
+
+aminclude_static.am
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+
+# Generated Makefile
+# (meta build system like autotools,
+# can automatically generate from config.status script
+# (which is called by configure script))
+Makefile
+
+# Docs and images
+*.pdf
+
+# Datafile
+*.fits 
+
+# Eclipse
+.autotools
+.cproject
+.idea
+.project
+.settings
+
+# Compilation directories
+Optimized/
+BDocs/
+Coverage/
+MPI/

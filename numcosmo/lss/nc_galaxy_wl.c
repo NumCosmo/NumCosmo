@@ -5,11 +5,11 @@
  *
  *  Mon July 27 11:12:53 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_galaxy_wl.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -29,11 +29,14 @@
 /**
  * SECTION:nc_galaxy_wl
  * @title: NcGalaxyWL
- * @short_description: Object containing galaxy weak lensing data
+ * @short_description: Class describing galaxy weak lensing distributions.
  * @stability: Unstable
  *
  *
- * FIXME
+ * This class describes a galaxy weak lensing distribution.
+ * It is composed by a weak lensing distribution $P_\mathrm{wl}(g)$ and a redshift distribution $P(z)$.
+ * The weak lensing distribution is defined by the abstract class #NcGalaxyWLDist.
+ * The redshift distribution is defined by the abstract class #NcGalaxyRedshift.
  *
  */
 
@@ -45,6 +48,10 @@
 #include "lss/nc_galaxy_wl.h"
 #include "lss/nc_galaxy_wl_dist.h"
 #include "lss/nc_galaxy_redshift.h"
+#include "lss/nc_galaxy_redshift_spec.h"
+#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
+#include "lss/nc_galaxy_wl_ellipticity_kde.h"
+#include "math/ncm_stats_dist1d_epdf.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -68,7 +75,7 @@ static void
 nc_galaxy_wl_init (NcGalaxyWL *gwl)
 {
   NcGalaxyWLPrivate * const self = gwl->priv = nc_galaxy_wl_get_instance_private (gwl);
-  
+
   self->gz_dist = NULL;
   self->wl_dist = NULL;
   self->len     = 0;
@@ -79,30 +86,30 @@ _nc_galaxy_wl_set_property (GObject *object, guint prop_id, const GValue *value,
 {
   NcGalaxyWL *gwl                = NC_GALAXY_WL (object);
   NcGalaxyWLPrivate * const self = gwl->priv;
-  
+
   g_return_if_fail (NC_IS_GALAXY_WL (object));
-  
+
   switch (prop_id)
   {
     case PROP_WL_DIST:
       self->wl_dist = g_value_dup_object (value);
-      
+
       if ((self->gz_dist != NULL) && (self->wl_dist != NULL))
       {
         g_assert_cmpuint (nc_galaxy_wl_dist_len (self->wl_dist), ==, nc_galaxy_redshift_len (self->gz_dist));
         self->len = nc_galaxy_wl_dist_len (self->wl_dist);
       }
-      
+
       break;
     case PROP_GZ_DIST:
       self->gz_dist = g_value_dup_object (value);
-      
+
       if ((self->gz_dist != NULL) && (self->wl_dist != NULL))
       {
         g_assert_cmpuint (nc_galaxy_wl_dist_len (self->wl_dist), ==, nc_galaxy_redshift_len (self->gz_dist));
         self->len = nc_galaxy_wl_dist_len (self->wl_dist);
       }
-      
+
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -115,9 +122,9 @@ _nc_galaxy_wl_get_property (GObject *object, guint prop_id, GValue *value, GPara
 {
   NcGalaxyWL *gwl                = NC_GALAXY_WL (object);
   NcGalaxyWLPrivate * const self = gwl->priv;
-  
+
   g_return_if_fail (NC_IS_GALAXY_WL (object));
-  
+
   switch (prop_id)
   {
     case PROP_WL_DIST:
@@ -137,10 +144,10 @@ _nc_galaxy_wl_dispose (GObject *object)
 {
   NcGalaxyWL *gwl                = NC_GALAXY_WL (object);
   NcGalaxyWLPrivate * const self = gwl->priv;
-  
+
   nc_galaxy_wl_dist_clear (&self->wl_dist);
   nc_galaxy_redshift_clear (&self->gz_dist);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_parent_class)->dispose (object);
 }
@@ -156,16 +163,16 @@ static void
 nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_galaxy_wl_set_property;
   object_class->get_property = &_nc_galaxy_wl_get_property;
   object_class->dispose      = &_nc_galaxy_wl_dispose;
   object_class->finalize     = &_nc_galaxy_wl_finalize;
-  
+
   /**
    * NcGalaxyWL:wl-dist:
    *
-   * FIXME
+   * A #NcGalaxyWLDist object.
    *
    */
   g_object_class_install_property (object_class,
@@ -175,11 +182,11 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
                                                         "Weak Lensing distribution",
                                                         NC_TYPE_GALAXY_WL_DIST,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcGalaxyWL:gz-dist:
    *
-   * FIXME
+   * A #NcGalaxyRedshift object.
    *
    */
   g_object_class_install_property (object_class,
@@ -197,6 +204,7 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
  * @gz_dist: a #NcGalaxyRedshift
  *
  * Creates a new galaxy weak lensing object.
+ * Requires an instance of #NcGalaxyWLDist and #NcGalaxyRedshift.
  *
  * Returns: (transfer full): a new NcGalaxyWL.
  */
@@ -207,7 +215,7 @@ nc_galaxy_wl_new (NcGalaxyWLDist *wl_dist, NcGalaxyRedshift *gz_dist)
                                   "wl-dist", wl_dist,
                                   "gz-dist", gz_dist,
                                   NULL);
-  
+
   return gwl;
 }
 
@@ -266,7 +274,7 @@ static gdouble
 _nc_galaxy_wl_Pz_integ (const gdouble z, gpointer userdata)
 {
   NcGalaxyWLEval *gwleval = (NcGalaxyWLEval *) userdata;
-  
+
   return nc_galaxy_wl_dist_m2lnP (gwleval->gwld, gwleval->cosmo, gwleval->dp, gwleval->smd, gwleval->z_cluster, gwleval->gal_i, z);
 }
 
@@ -280,6 +288,7 @@ _nc_galaxy_wl_Pz_integ (const gdouble z, gpointer userdata)
  *
  * Computes the galaxy probability given the theoretical modeling.
  *
+ *
  * Returns: $-2\ln(P)$.
  */
 gdouble
@@ -289,14 +298,16 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
   NcGalaxyWLEval gwleval         = {self->wl_dist, cosmo, dp, smd, z_cluster, 0};
   gdouble res                    = 0.0;
   gint gal_i;
-  
+
+  nc_galaxy_wl_dist_m2lnP_initial_prep (self->wl_dist, self->gz_dist, cosmo, dp, smd, z_cluster);
+
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
     gwleval.gal_i = gal_i;
     nc_galaxy_wl_dist_m2lnP_prep (self->wl_dist, cosmo, dp, smd, z_cluster, gal_i);
     res += nc_galaxy_redshift_compute_mean_m2lnf (self->gz_dist, gal_i, &_nc_galaxy_wl_Pz_integ, &gwleval);
   }
-  
+
   return res;
 }
 
@@ -310,7 +321,7 @@ guint
 nc_galaxy_wl_len (NcGalaxyWL *gwl)
 {
   NcGalaxyWLPrivate * const self = gwl->priv;
-  
+
   return self->len;
 }
 

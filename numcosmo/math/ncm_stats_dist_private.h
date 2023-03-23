@@ -5,11 +5,11 @@
  *
  *  Thu July 22 15:12:38 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_private.h
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -32,6 +32,10 @@
 #include "math/ncm_stats_dist.h"
 #include "math/ncm_nnls.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_multimin.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 G_BEGIN_DECLS
 
 struct _NcmStatsDistPrivate
@@ -50,8 +54,10 @@ struct _NcmStatsDistPrivate
   gdouble max_m2lnp;
   gdouble href;
   gdouble rnorm;
-  guint n;
-  guint alloc_n;
+  guint n_obs;
+  guint n_kernels;
+  guint alloc_n_obs;
+  guint alloc_n_kernels;
   gboolean alloc_subs;
   guint d;
   GArray *sampling;
@@ -60,9 +66,12 @@ struct _NcmStatsDistPrivate
   NcmMatrix *sub_IM;
   NcmVector *sub_x;
   NcmVector *f;
+  NcmVector *f1;
   gdouble *levmar_workz;
   guint levmar_n;
+  gsl_multimin_fminimizer *fmin;
   GArray *m2lnp_sort;
+  NcmRNG *rng;
 };
 
 G_END_DECLS

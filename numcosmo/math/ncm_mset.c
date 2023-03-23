@@ -3,11 +3,11 @@
  *
  *  Fri May 25 09:37:54 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -377,7 +377,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   }
   else
   {
-    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+    g_error ("This model or its parent is already registered, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
   }
 
   return;
@@ -1521,7 +1521,7 @@ ncm_mset_params_valid_bounds (NcmMSet *mset)
  * @mset1: a #NcmMSet
  * @cmp_model: whether to compare if the models correspond to the same objects
  *
- * Compares @mset0 and @mset1 and returns TRUE if both coitains the same models types.
+ * Compares @mset0 and @mset1 and returns TRUE if both contains the same models types.
  * If @cmp_model is TRUE compare also if the models correspond to the same objects.
  *
  * Returns: TRUE if @mset0 == @mset1.
@@ -2384,6 +2384,34 @@ ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
 }
 
 /**
+ * ncm_mset_fparam_get_bound_matrix:
+ * @mset: a #NcmMSet
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmMatrix *
+ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
+{
+  NcmMatrix *bounds = ncm_matrix_new (mset->fparam_len, 2);
+  gint i;
+  g_assert (mset->valid_map);
+
+  for (i = 0; i < mset->fparam_len; i++)
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, i);
+    const gdouble ub_i     = ncm_mset_param_get_upper_bound (mset, pi.mid, pi.pid);
+    const gdouble lb_i     = ncm_mset_param_get_lower_bound (mset, pi.mid, pi.pid);
+
+    ncm_matrix_set (bounds, i, 0, lb_i);
+    ncm_matrix_set (bounds, i, 1, ub_i);
+  }
+
+  return bounds;
+}
+
+/**
  * ncm_mset_fparam_get_abstol:
  * @mset: a #NcmMSet
  * @n: free parameter index
@@ -2795,7 +2823,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
 
 
 /**
- * ncm_mset_load:
+ * ncm_mset_load: (constructor):
  * @filename: mset filename
  * @ser: a #NcmSerialize
  *

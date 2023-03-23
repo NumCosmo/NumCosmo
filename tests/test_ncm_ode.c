@@ -3,7 +3,7 @@
  *
  *  Mon January 07 20:00:57 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * test_ncm_ode.c

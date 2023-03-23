@@ -105,7 +105,7 @@ int input_init_from_arguments(
 
     if (flag1 == _FALSE_){
       //printf("strlen-4 = %zu\n",strlen(input_file)-4);
-      strncpy(inifilename, input_file, strlen(input_file)-4);
+      strcpy(inifilename, input_file);
       inifilename[strlen(input_file)-4] = '\0';
       for (filenum = 0; filenum < 100; filenum++){
         sprintf(tmp_file,"output/%s%02d_cl.dat", inifilename, filenum);

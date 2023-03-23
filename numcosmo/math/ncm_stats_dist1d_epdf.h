@@ -3,11 +3,11 @@
  *
  *  Sat March 14 19:31:53 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist1d_epdf.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -83,7 +83,6 @@ struct _NcmStatsDist1dEPDF
   guint np_obs;
   gdouble WT;
   GArray *obs;
-  GSequence *obs_seq;
   gdouble min;
   gdouble max;
   gboolean list_sorted;
@@ -106,6 +105,13 @@ GType ncm_stats_dist1d_epdf_get_type (void) G_GNUC_CONST;
 
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new_full (guint max_obs, NcmStatsDist1dEPDFBw bw, gdouble h_fixed, gdouble sd_min_scale);
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (gdouble sd_min_scale);
+
+NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_ref (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_free (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_clear (NcmStatsDist1dEPDF **epdf1d);
+
+void ncm_stats_dist1d_epdf_set_bw_type (NcmStatsDist1dEPDF *epdf1d, NcmStatsDist1dEPDFBw bw);
+NcmStatsDist1dEPDFBw ncm_stats_dist1d_epdf_get_bw_type (NcmStatsDist1dEPDF *epdf1d);
 
 void ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble x, const gdouble w);
 void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, const gdouble x);

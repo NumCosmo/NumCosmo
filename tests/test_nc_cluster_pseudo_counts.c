@@ -199,6 +199,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   
   nc_cluster_abundance_prepare_if_needed (cad, cosmo, clusterz, clusterm);
   
+  ncm_matrix_free (m);
   nc_distance_free (dist);
   nc_window_free (wf);
   nc_transfer_func_free (tf);

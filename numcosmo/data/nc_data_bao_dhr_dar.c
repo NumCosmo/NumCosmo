@@ -3,11 +3,11 @@
  *
  *  Sat May 23 14:38:48 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti and Mariana Penna Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_data_bao_dhr_dar.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>, Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>, Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

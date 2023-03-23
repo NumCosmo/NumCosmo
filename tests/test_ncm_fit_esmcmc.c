@@ -3,11 +3,11 @@
  *
  *  Tue February 06 13:55:26 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2018 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2018 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -86,11 +86,12 @@ TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 gint
 main (gint argc, gchar *argv[])
 {
+  gint i, j;
+
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
   /*g_test_set_nonfatal_assertions ();*/
-  gint i, j;
 
   for (i = 0; i < TEST_NCM_FIT_ESMCMC_NWALKERS; i++)
   {

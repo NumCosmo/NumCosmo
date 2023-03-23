@@ -3,11 +3,11 @@
  *
  *  Tue April 03 16:02:26 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -550,9 +550,7 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
   
   for (i = 0; i < v_size - 2; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
-  
-  ncm_vector_clear (&cv);
-  
+
   for (i = 0; i < v_size; i++)
   {
     const gdouble d = g_test_rand_double_range (0.0, 1.0);
@@ -561,6 +559,86 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
   }
   
   ncm_assert_cmpdouble_e (ncm_vector_mean (v), ==, 0.5, 10.0 / sqrt (12.0 * v_size), 0.0);
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble d = g_test_rand_double_range (-2.0, 2.0);
+    ncm_vector_set (v, i, d);
+    ncm_vector_set (cv, i, d);
+  }
+
+  ncm_vector_square (v);
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble v_i  = ncm_vector_get (v, i);
+    const gdouble cv_i = ncm_vector_get (cv, i);
+
+    ncm_assert_cmpdouble_e (v_i, ==, cv_i * cv_i, 1.0e-13, 0.0);
+  }
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble d = g_test_rand_double_range (1.0, 2.0);
+    ncm_vector_set (v, i, d);
+    ncm_vector_set (cv, i, d);
+  }
+
+  ncm_vector_sqrt (v);
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble v_i  = ncm_vector_get (v, i);
+    const gdouble cv_i = ncm_vector_get (cv, i);
+
+    ncm_assert_cmpdouble_e (v_i, ==, sqrt (cv_i), 1.0e-13, 0.0);
+  }
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble d = g_test_rand_double_range (1.0, 2.0);
+    ncm_vector_set (v, i, d);
+    ncm_vector_set (cv, i, d);
+  }
+
+  ncm_vector_reciprocal (v);
+
+  for (i = 0; i < v_size; i++)
+  {
+    const gdouble v_i  = ncm_vector_get (v, i);
+    const gdouble cv_i = ncm_vector_get (cv, i);
+
+    ncm_assert_cmpdouble_e (v_i, ==, 1.0 / cv_i, 1.0e-13, 0.0);
+  }
+
+
+  {
+    const gdouble hp = g_test_rand_double_range (10.0, 20.0);
+    NcmVector *cv2 = ncm_vector_dup (v);
+
+    for (i = 0; i < v_size; i++)
+    {
+      const gdouble d = g_test_rand_double_range (1.0, 2.0);
+      ncm_vector_set (v, i, d);
+      ncm_vector_set (cv, i, d);
+    }
+
+    ncm_vector_memcpy (cv2, v);
+    ncm_vector_hypot (cv2, hp, cv);
+
+    for (i = 0; i < v_size; i++)
+    {
+      const gdouble v_i   = ncm_vector_get (v, i);
+      const gdouble cv_i  = ncm_vector_get (cv, i);
+      const gdouble cv2_i = ncm_vector_get (cv2, i);
+
+      ncm_assert_cmpdouble_e (cv2_i, ==, hypot (v_i, hp * cv_i), 1.0e-13, 0.0);
+    }
+
+    ncm_vector_clear (&cv2);
+  }
+
+  ncm_vector_clear (&cv);
 }
 
 void

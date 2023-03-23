@@ -3,11 +3,11 @@
  *
  *  Wed Aug 13 20:59:22 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -48,6 +48,7 @@
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline_cubic_d2.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
@@ -91,6 +92,7 @@
 #include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_de_wspline.h"
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
@@ -123,13 +125,15 @@
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_multiplicity_func_bocquet.h"
+#include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_galaxy_redshift_spec.h"
 #include "lss/nc_galaxy_redshift_spline.h"
 #include "lss/nc_galaxy_redshift_gauss.h"
 #include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_reduced_shear_gauss.h"
+#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
+#include "lss/nc_galaxy_wl_ellipticity_kde.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -143,11 +147,10 @@
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
-#include "lss/nc_halo_bias_func.h"
-#include "lss/nc_halo_bias_type_ps.h"
-#include "lss/nc_halo_bias_type_st_ellip.h"
-#include "lss/nc_halo_bias_type_st_spher.h"
-#include "lss/nc_halo_bias_type_tinker.h"
+#include "lss/nc_halo_bias_ps.h"
+#include "lss/nc_halo_bias_st_ellip.h"
+#include "lss/nc_halo_bias_st_spher.h"
+#include "lss/nc_halo_bias_tinker.h"
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
@@ -178,10 +181,11 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
-#include "data/nc_data_cluster_counts_box_poisson.h"
+#include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_wl.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
@@ -337,15 +341,18 @@ _ncm_cfg_exit (void)
 {
 #ifdef HAVE_MPI
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying [%d]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.initialized);
-  
+
   if (_mpi_ctrl.initialized)
   {
     ncm_cfg_mpi_kill_all_slaves ();
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Finalize ();
   }
-  
+
 #endif /* HAVE_MPI */
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_forget_wisdom ();
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
@@ -448,9 +455,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
   
-  ncm_cfg_set_openmp_nthreads (1);
-  ncm_cfg_set_openblas_nthreads (1);
-  ncm_cfg_set_mkl_nthreads (1);
+  //ncm_cfg_set_openmp_nthreads (1);
+  //ncm_cfg_set_openblas_nthreads (1);
+  //ncm_cfg_set_mkl_nthreads (1);
   
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -494,6 +501,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
   
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
@@ -559,6 +567,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
@@ -607,6 +616,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
   
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
   
@@ -616,7 +626,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
   
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -625,19 +636,18 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
   
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_FUNC);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_PS);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_TINKER);
+   
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TINKER);
   
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
   
@@ -683,6 +693,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DTR_DHR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
   
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
@@ -691,7 +702,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
   
-  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
@@ -1757,7 +1768,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftw_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftw_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
   
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
@@ -1766,7 +1786,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
   
-  fftwf_export_wisdom_to_filename (full_filename);
+  {
+    char *wisdown_str = fftwf_export_wisdom_to_string ();
+    gssize len = strlen (wisdown_str);
+    gboolean OK = FALSE;
+
+    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+    g_assert (OK);
+
+    g_free (wisdown_str);
+  }
 #endif
   
   g_free (file);

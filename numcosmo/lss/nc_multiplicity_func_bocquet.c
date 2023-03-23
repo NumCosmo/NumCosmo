@@ -80,7 +80,6 @@ enum
 {
   PROP_0,
   PROP_SIM,
-  PROP_DELTA,
   PROP_SIZE,
 };
 
@@ -113,9 +112,6 @@ _nc_multiplicity_func_bocquet_set_property (GObject * object, guint prop_id, con
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      nc_multiplicity_func_bocquet_set_Delta (mb, g_value_get_double (value));
-      break;
     case PROP_SIM:
       nc_multiplicity_func_bocquet_set_sim (mb, g_value_get_enum (value));
       break;  
@@ -133,9 +129,6 @@ _nc_multiplicity_func_bocquet_get_property (GObject * object, guint prop_id, GVa
 
   switch (prop_id)
   {
-    case PROP_DELTA:
-      g_value_set_double (value, nc_multiplicity_func_bocquet_get_Delta (mb));
-      break;
     case PROP_SIM:
       g_value_set_enum (value, nc_multiplicity_func_bocquet_get_sim (mb));
       break;  
@@ -171,8 +164,10 @@ _nc_multiplicity_func_bocquet_finalize (GObject *object)
   G_OBJECT_CLASS (nc_multiplicity_func_bocquet_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_bocquet_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_bocquet_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+static void _nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_bocquet_get_mdef (NcMultiplicityFunc *mulf);
+static gdouble _nc_multiplicity_func_bocquet_get_Delta (NcMultiplicityFunc *mulf); 
 static gdouble _nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 static gboolean _nc_multiplicity_func_bocquet_has_correction_factor (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_bocquet_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
@@ -188,18 +183,7 @@ nc_multiplicity_func_bocquet_class_init (NcMultiplicityFuncBocquetClass *klass)
   object_class->constructed  = _nc_multiplicity_func_bocquet_constructed;
   object_class->finalize     = _nc_multiplicity_func_bocquet_finalize;
 
-  /**
-   * NcMultiplicityFuncBocquet:Delta:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Delta",
-                                                        200.0, G_MAXDOUBLE, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcMultiplicityFuncBocquet:sim:
    *
@@ -215,6 +199,8 @@ nc_multiplicity_func_bocquet_class_init (NcMultiplicityFuncBocquetClass *klass)
 
   parent_class->set_mdef = &_nc_multiplicity_func_bocquet_set_mdef;
   parent_class->get_mdef = &_nc_multiplicity_func_bocquet_get_mdef;
+  parent_class->set_Delta = &_nc_multiplicity_func_bocquet_set_Delta;
+  parent_class->get_Delta = &_nc_multiplicity_func_bocquet_get_Delta;
   parent_class->eval     = &_nc_multiplicity_func_bocquet_eval;
   parent_class->has_correction_factor = &_nc_multiplicity_func_bocquet_has_correction_factor;
   parent_class->correction_factor     = &_nc_multiplicity_func_bocquet_correction_factor;
@@ -504,8 +490,9 @@ nc_multiplicity_func_bocquet_clear (NcMultiplicityFuncBocquet **mb)
  *
  */
 void
-nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFuncBocquet *mb, gdouble Delta)
+_nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
+  NcMultiplicityFuncBocquet *mb = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
   NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
 
   self->Delta = Delta;
@@ -520,8 +507,9 @@ nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFuncBocquet *mb, gdouble D
  * Returns: the value of #NcMultiplicityFuncBocquet:Delta property.
  */
 gdouble
-nc_multiplicity_func_bocquet_get_Delta (const NcMultiplicityFuncBocquet *mb)
+_nc_multiplicity_func_bocquet_get_Delta (NcMultiplicityFunc *mulf)
 {
+  NcMultiplicityFuncBocquet *mb = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
   NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
   
   return self->Delta;

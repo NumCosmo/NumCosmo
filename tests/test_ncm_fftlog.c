@@ -3,7 +3,7 @@
  *
  *  Sun September 03 11:45:13 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * test_ncm_fftlog.c

@@ -3,7 +3,7 @@
  *
  *  Sun March 24 16:53:52 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_fftlog_sbessel_jljm.c

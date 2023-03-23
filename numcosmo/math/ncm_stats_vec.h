@@ -3,11 +3,11 @@
  *
  *  Fri August 02 13:41:15 2013
  *  Copyright  2013  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_vec.h
- * Copyright (C) 2013 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2013 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -167,6 +167,9 @@ NcmVector *ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, con
 NcmVector *ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var);
 
 GPtrArray *ncm_stats_vec_dup_saved_x (NcmStatsVec *svec);
+
+NcmMatrix *ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec);
+NcmMatrix *ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec);
 
 NCM_INLINE NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 NCM_INLINE void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);

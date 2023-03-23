@@ -3,11 +3,11 @@
  *
  *  Thu Apr 22 14:34:54 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -270,6 +270,12 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
       break;
     case NC_DATA_HUBBLE_RIESS2016_HST_WFC3:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2016.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_gomez_valent_comp.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_RIESS2018:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2018.obj", TRUE);
       break;
     default:
       g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id);

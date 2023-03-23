@@ -3,11 +3,11 @@
  *
  *  Sat Apr 24 14:40:43 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -113,10 +113,9 @@ struct _NcDEDataClusterEntries
   gint n_bins;
   gchar **cata_file;
   gchar *save_cata;
-  gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 

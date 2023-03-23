@@ -3,7 +3,7 @@
  *
  *  Wed July 12 17:01:40 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * curve_generate.c

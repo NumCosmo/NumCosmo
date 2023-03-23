@@ -3,11 +3,11 @@
  *
  *  Sun January 07 20:34:52 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2018 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2018 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
