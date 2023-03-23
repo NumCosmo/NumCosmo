@@ -134,6 +134,7 @@
 #include "lss/nc_galaxy_wl.h"
 #include "lss/nc_galaxy_wl_ellipticity_gauss.h"
 #include "lss/nc_galaxy_wl_ellipticity_kde.h"
+#include "lss/nc_galaxy_wl_ellipticity_binned.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -629,6 +630,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
