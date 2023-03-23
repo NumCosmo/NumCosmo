@@ -4,13 +4,14 @@
  *            nc_galaxy_wl.c
  *
  *  Mon July 27 11:12:53 2020
- *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <vitenti@uel.br>, <pennalima@gmail.com>
+ *  Copyright  2023  Sandro Dias Pinto Vitenti & Mariana Penna Lima & Caio Lima de Oliveira
+ *  <vitenti@uel.br>, <pennalima@gmail.com>, <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_galaxy_wl.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
