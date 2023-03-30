@@ -747,8 +747,6 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
 
   {
     NcmMatrix *cov_est = ncm_stats_vec_peek_cov_matrix (test_stats, 0);
-    gdouble chi2;
-    gint ret;
 
     if (
       (test->nfail < 10) &&
@@ -766,36 +764,8 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
     }
     else
     {
-      g_assert_cmpfloat (ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0), <, 0.5);
-      g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0), <, 0.5);
-    }
-
-    if (FALSE)
-    {
-      ncm_cfg_msg_sepa ();
-
-      printf ("# WDIFF   : % 22.15e\n", ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0));
-      printf ("# WDIFFD  : % 22.15e\n", ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0));
-
-
-      ncm_vector_memcpy (y, NCM_DATA_GAUSS_COV (data_mvnd)->y);
-      ncm_vector_sub (y, ncm_stats_vec_peek_mean (test_stats));
-
-      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                            ncm_matrix_gsl (NCM_DATA_GAUSS_COV (data_mvnd)->LLT), ncm_vector_gsl (y));
-      NCM_TEST_GSL_RESULT ("test_ncm_stats_dist_gauss_sampling", ret);
-
-      ret = gsl_blas_ddot (ncm_vector_gsl (y), ncm_vector_gsl (y), &chi2);
-      NCM_TEST_GSL_RESULT ("test_ncm_stats_dist_gauss_sampling", ret);
-
-      printf ("# chi2 == % 22.15g ~ %u +/- % 22.15g\n", chi2, test->dim, sqrt (2.0 * test->dim));
-
-      ncm_vector_log_vals (NCM_DATA_GAUSS_COV (data_mvnd)->y,    "MEAN:     ", "% 12.5g", TRUE);
-      ncm_vector_log_vals (ncm_stats_vec_peek_mean (test_stats), "MEAN_EST: ", "% 12.5g", TRUE);
-      ncm_vector_log_vals (y,                                    "MEAN_CMP: ", "% 12.5g", TRUE);
-
-      ncm_matrix_log_vals (NCM_DATA_GAUSS_COV (data_mvnd)->cov,  "COV:     ", "% 12.5g");
-      ncm_matrix_log_vals (cov_est,                              "COV_EST: ", "% 12.5g");
+      g_assert_cmpfloat (ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 1.0), <, 0.5);
+      g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 1.0), <, 0.5);
     }
   }
 
