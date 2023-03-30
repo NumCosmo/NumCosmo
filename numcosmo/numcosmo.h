@@ -147,7 +147,9 @@
 #include <numcosmo/lss/nc_galaxy_redshift_gauss.h>
 #include <numcosmo/lss/nc_galaxy_wl.h>
 #include <numcosmo/lss/nc_galaxy_wl_dist.h>
-#include <numcosmo/lss/nc_galaxy_wl_reduced_shear_gauss.h>
+#include <numcosmo/lss/nc_galaxy_wl_ellipticity_gauss.h>
+#include <numcosmo/lss/nc_galaxy_wl_ellipticity_kde.h>
+#include <numcosmo/lss/nc_galaxy_wl_ellipticity_binned.h>
 #include <numcosmo/lss/nc_galaxy_wl_proj.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>

@@ -5,6 +5,8 @@ include $(top_srcdir)/aminclude_static.am
 
 include $(top_srcdir)/glib-tap.mk
 
+TEST_EXTENSIONS = .py
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS)     \
@@ -54,13 +56,13 @@ test_ncm_stats_dist_kernel_SOURCES = \
 	test_ncm_stats_dist_kernel.c
 	
 test_ncm_spline_SOURCES =  \
-        test_ncm_spline.c
+	test_ncm_spline.c
 
 test_ncm_spline2d_SOURCES =  \
-        test_ncm_spline2d.c
+	test_ncm_spline2d.c
 
 test_ncm_integral1d_SOURCES =  \
-        test_ncm_integral1d.c
+	test_ncm_integral1d.c
 
 test_ncm_sf_sbessel_SOURCES =  \
 	test_ncm_sf_sbessel.c
@@ -112,16 +114,16 @@ test_ncm_sphere_map_SOURCES =  \
 	test_ncm_sphere_map.c
 	
 test_nc_halo_bias_SOURCES =  \
-        test_nc_halo_bias.c
+	test_nc_halo_bias.c
 
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
 
 test_nc_window_SOURCES =  \
-        test_nc_window.c
+	test_nc_window.c
         
 test_nc_transfer_func_SOURCES =  \
-        test_nc_transfer_func.c        
+	test_nc_transfer_func.c        
 
 test_nc_galaxy_acf_SOURCES =  \
 	test_nc_galaxy_acf.c
@@ -136,80 +138,100 @@ test_nc_hiqg_1d_SOURCES =  \
 	test_nc_hiqg_1d.c
 
 test_nc_data_bao_rdv_SOURCES =  \
-        test_nc_data_bao_rdv.c
+	test_nc_data_bao_rdv.c
 
 test_nc_data_bao_dvdv_SOURCES =  \
-        test_nc_data_bao_dvdv.c
+	test_nc_data_bao_dvdv.c
         
 test_nc_data_cluster_ncount_SOURCES =  \
-        test_nc_data_cluster_ncount.c
+	test_nc_data_cluster_ncount.c
         
 test_nc_cluster_pseudo_counts_SOURCES =  \
-        test_nc_cluster_pseudo_counts.c
+	test_nc_cluster_pseudo_counts.c
 
 test_nc_cluster_abundance_SOURCES =  \
-        test_nc_cluster_abundance.c
+	test_nc_cluster_abundance.c
 
 test_nc_halo_density_profile_SOURCES =  \
-        test_nc_halo_density_profile.c
+	test_nc_halo_density_profile.c
 
 test_nc_wl_surface_mass_density_SOURCES =  \
-        test_nc_wl_surface_mass_density.c
+	test_nc_wl_surface_mass_density.c
 
 test_nc_powspec_SOURCES =  \
-        test_nc_powspec.c
+	test_nc_powspec.c
 
 test_nc_distance_SOURCES =  \
-        test_nc_distance.c
-        
-test_programs =  \
-	test_ncm_vector                 \
-	test_ncm_matrix                 \
-	test_ncm_stats_vec              \
-	test_ncm_stats_dist1d_epdf      \
-	test_ncm_stats_dist             \
-	test_ncm_stats_dist_kernel	\
-	test_ncm_spline                 \
-	test_ncm_spline2d               \
-	test_ncm_integral1d             \
-	test_ncm_sf_sbessel             \
-	test_ncm_mpsf_0F1               \
-	test_ncm_mpsf_trig_int           \
-	test_ncm_func_eval              \
-	test_ncm_sparam                 \
-	test_ncm_diff                   \
-	test_ncm_ode                    \
-	test_ncm_fftlog                 \
-	test_ncm_model                  \
-	test_ncm_model_ctrl             \
-	test_ncm_serialize              \
-	test_ncm_mset                   \
-	test_ncm_mset_catalog           \
-	test_ncm_obj_array              \
-	test_ncm_data_gauss_cov         \
-	test_ncm_fit                    \
-	test_ncm_fit_esmcmc             \
-	test_ncm_sf_spherical_harmonics \
-	test_ncm_sphere_map             \
-	test_nc_halo_bias		\
-	test_nc_hiqg_1d                 \
-	test_nc_hicosmo_de              \
-	test_nc_window                  \
-	test_nc_transfer_func           \
-	test_nc_galaxy_acf              \
-	test_nc_recomb                  \
-	test_nc_cbe                     \
-	test_nc_data_bao_rdv            \
-	test_nc_data_bao_dvdv           \
-	test_nc_data_cluster_ncount     \
-	test_nc_cluster_pseudo_counts   \
-	test_nc_cluster_abundance       \
-	test_nc_halo_density_profile    \
-	test_nc_wl_surface_mass_density \
-	test_nc_powspec                 \
-	test_nc_distance
+	test_nc_distance.c
 
-# TEST_PROGS += $(check_programs)
+test_nc_galaxy_wl_ellipticity_kde_SOURCES =  \
+	test_nc_galaxy_wl_ellipticity_kde.c
+
+test_nc_galaxy_wl_ellipticity_binned_SOURCES =  \
+	test_nc_galaxy_wl_ellipticity_binned.c
+
+test_programs =  \
+	test_ncm_vector                          \
+	test_ncm_matrix                          \
+	test_ncm_stats_vec                       \
+	test_ncm_stats_dist1d_epdf               \
+	test_ncm_stats_dist                      \
+	test_ncm_stats_dist_kernel               \
+	test_ncm_spline                          \
+	test_ncm_spline2d                        \
+	test_ncm_integral1d                      \
+	test_ncm_sf_sbessel                      \
+	test_ncm_mpsf_0F1                        \
+	test_ncm_mpsf_trig_int                   \
+	test_ncm_func_eval                       \
+	test_ncm_sparam                          \
+	test_ncm_diff                            \
+	test_ncm_ode                             \
+	test_ncm_fftlog                          \
+	test_ncm_model                           \
+	test_ncm_model_ctrl                      \
+	test_ncm_serialize                       \
+	test_ncm_mset                            \
+	test_ncm_mset_catalog                    \
+	test_ncm_obj_array                       \
+	test_ncm_data_gauss_cov                  \
+	test_ncm_fit                             \
+	test_ncm_fit_esmcmc                      \
+	test_ncm_sf_spherical_harmonics          \
+	test_ncm_sphere_map                      \
+	test_nc_halo_bias                        \
+	test_nc_hiqg_1d                          \
+	test_nc_hicosmo_de                       \
+	test_nc_window                           \
+	test_nc_transfer_func                    \
+	test_nc_galaxy_acf                       \
+	test_nc_recomb                           \
+	test_nc_cbe                              \
+	test_nc_data_bao_rdv                     \
+	test_nc_data_bao_dvdv                    \
+	test_nc_data_cluster_ncount              \
+	test_nc_cluster_pseudo_counts            \
+	test_nc_cluster_abundance                \
+	test_nc_halo_density_profile             \
+	test_nc_wl_surface_mass_density          \
+	test_nc_powspec                          \
+	test_nc_distance                         \
+	test_nc_galaxy_wl_ellipticity_kde        \
+	test_nc_galaxy_wl_ellipticity_binned
+
+if HAVE_PYTEST_TAP
+
+PY_LOG_COMPILER = $(PYTHON)
+AM_PY_LOG_FLAGS = -m pytest --tap-stream
+AM_TESTS_ENVIRONMENT += \
+	GI_TYPELIB_PATH="$(abs_top_builddir)/numcosmo$${GI_TYPELIB_PATH:+:$${GI_TYPELIB_PATH}}" \
+	LD_LIBRARY_PATH="$(abs_top_builddir)/numcosmo/.libs$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}}" \
+	PYTHONPATH="$(abs_top_srcdir)$${PYTHONPATH:+:$${PYTHONPATH}}"
+
+dist_test_scripts = \
+	test_py_sanity.py
+
+endif # HAVE_PYTEST_TAP
 
 test_ncm_sparam_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -380,10 +402,10 @@ test_ncm_sphere_map_LDADD = \
 	$(COVLIBS)
 	
 test_nc_halo_bias_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
 
 test_nc_hicosmo_de_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
@@ -458,29 +480,37 @@ test_nc_cluster_abundance_LDADD = \
 	$(COVLIBS)
 
 test_nc_halo_density_profile_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)	
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)	
 
 test_nc_powspec_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)	
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)	
 
 test_nc_wl_surface_mass_density_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
 
 test_nc_distance_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
 
-#TESTS = $(check_programs)
-#export VERBOSE = 1
+test_nc_galaxy_wl_ellipticity_kde_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
 
+test_nc_galaxy_wl_ellipticity_binned_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)

@@ -89,9 +89,9 @@ _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_MATRIX:
       ncm_matrix_substitute (&self->m, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -111,9 +111,9 @@ _ncm_data_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_MATRIX:
       g_value_set_object (value, self->m);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

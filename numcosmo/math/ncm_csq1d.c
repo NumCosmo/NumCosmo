@@ -374,9 +374,9 @@ _ncm_csq1d_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SING_DETECT:
       ncm_csq1d_set_sing_detect (csq1d, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -416,9 +416,9 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_SING_DETECT:
       g_value_set_boolean (value, ncm_csq1d_get_sing_detect (csq1d));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -609,12 +609,26 @@ _ncm_csq1d_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdo
   return 0.0;
 }
 
+typedef struct _NcmCSQ1DWS
+{
+  NcmCSQ1D *csq1d;
+  NcmModel *model;
+  gdouble reltol;
+} NcmCSQ1DWS;
+
+static gdouble _ncm_csq1d_F1_func (const gdouble t, gpointer user_data);
+
 static gdouble
 _ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  g_error ("_ncm_csq1d_eval_F2: not implemented.");
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
+  const gdouble twonu          = 2.0 * nu;
 
-  return 0.0;
+  gdouble err;
+
+  return ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F1_func, &ws, &err) / twonu;
 }
 
 static gdouble
@@ -1347,13 +1361,6 @@ ncm_csq1d_get_sing_detect (NcmCSQ1D *csq1d)
 
   return self->sing_detect;
 }
-
-typedef struct _NcmCSQ1DWS
-{
-  NcmCSQ1D *csq1d;
-  NcmModel *model;
-  gdouble reltol;
-} NcmCSQ1DWS;
 
 static gint _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
 static gint _ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
@@ -2373,6 +2380,16 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   }
 
   return TRUE;
+}
+
+static gdouble
+_ncm_csq1d_F1_func (const gdouble t, gpointer user_data)
+{
+  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
+  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, t, self->k);
+
+  return F1;
 }
 
 static gdouble

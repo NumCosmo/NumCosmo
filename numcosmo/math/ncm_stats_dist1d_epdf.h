@@ -106,6 +106,13 @@ GType ncm_stats_dist1d_epdf_get_type (void) G_GNUC_CONST;
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new_full (guint max_obs, NcmStatsDist1dEPDFBw bw, gdouble h_fixed, gdouble sd_min_scale);
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (gdouble sd_min_scale);
 
+NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_ref (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_free (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_clear (NcmStatsDist1dEPDF **epdf1d);
+
+void ncm_stats_dist1d_epdf_set_bw_type (NcmStatsDist1dEPDF *epdf1d, NcmStatsDist1dEPDFBw bw);
+NcmStatsDist1dEPDFBw ncm_stats_dist1d_epdf_get_bw_type (NcmStatsDist1dEPDF *epdf1d);
+
 void ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble x, const gdouble w);
 void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, const gdouble x);
 void ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d);

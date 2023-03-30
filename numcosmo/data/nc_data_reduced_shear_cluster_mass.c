@@ -1054,7 +1054,7 @@ nc_data_reduced_shear_cluster_mass_load_hdf5 (NcDataReducedShearClusterMass *drs
   
   if (g_hash_table_size (fdata) != photz_table->nrecords)
     g_warning ("nc_data_reduced_shear_cluster_mass_load_hdf5: filtered galaxy data and photz tables do not match in size (%u %llu). Using only galaxy with data in both tables.",
-               g_hash_table_size (fdata), photz_table->nrecords);
+               g_hash_table_size (fdata), (unsigned long long)photz_table->nrecords);
 
   {
     const gchar *cols[]  = {"Z_BEST"};

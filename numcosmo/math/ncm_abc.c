@@ -28,7 +28,11 @@
  * @title: NcmABC
  * @short_description: Abstract class for Approximate Bayesian Computation (ABC).
  *
+<<<<<<< HEAD
  * Base class for Approximate Bayesian Computation (ABC) methods.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 
@@ -94,6 +98,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmABC, ncm_abc, G_TYPE_OBJECT);
 static void
 ncm_abc_init (NcmABC *abc)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   self->mcat          = NULL;
@@ -124,13 +129,47 @@ ncm_abc_init (NcmABC *abc)
   self->ntotal        = 0;
   self->naccepted     = 0;
   self->nupdates      = 0;
+=======
+  abc->mcat          = NULL;
+  abc->dset          = NULL;
+  abc->dset_mock     = NULL;
+  abc->mp            = NULL;
+  abc->tkern         = NULL;
+  abc->prior         = NULL;
+  abc->nt            = ncm_timer_new ();
+  abc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  abc->mtype         = NCM_FIT_RUN_MSGS_NONE;
+  abc->theta         = NULL;
+  abc->thetastar     = NULL;
+  abc->covar         = NULL;
+  abc->weights       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  abc->weights_tm1   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  abc->dists         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  abc->dists_sorted  = FALSE;
+  abc->epsilon       = 0.0;
+  abc->depsilon      = 0.0;
+  abc->wran          = NULL;
+  abc->started       = FALSE;
+  abc->started_up    = FALSE;
+  abc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
+  abc->nthreads      = 0;
+  abc->nparticles    = 0;
+  abc->n             = 0;
+  abc->ntotal        = 0;
+  abc->naccepted     = 0;
+  abc->nupdates      = 0;
+>>>>>>> master
 }
 
 static void
 _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
+<<<<<<< HEAD
   NcmABC *abc                = NCM_ABC (object);
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
+=======
+  NcmABC *abc = NCM_ABC (object);
+>>>>>>> master
 
   g_return_if_fail (NCM_IS_ABC (object));
 
@@ -140,24 +179,40 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     {
       NcmMSet *mset = g_value_get_object (value);
 
+<<<<<<< HEAD
       g_assert (self->mcat == NULL);
+=======
+      g_assert (abc->mcat == NULL);
+>>>>>>> master
 
       if (mset == NULL)
         g_error ("ncm_abc_new: mset (NcmMSet) cannot be NULL.");
 
+<<<<<<< HEAD
       self->mcat = ncm_mset_catalog_new (mset, 1, 1, TRUE, "NcmABC:Distance", "d", NULL);
+=======
+      abc->mcat = ncm_mset_catalog_new (mset, 1, 1, TRUE, "NcmABC:Distance", "d", NULL);
+>>>>>>> master
       break;
     }
     case PROP_PRIOR:
     {
       NcmMSetTransKern *prior = g_value_dup_object (value);
 
+<<<<<<< HEAD
       g_assert (self->prior == NULL);
+=======
+      g_assert (abc->prior == NULL);
+>>>>>>> master
 
       if (prior == NULL)
         g_error ("ncm_abc_new: prior (NcmMSetTransKern) cannot be NULL.");
 
+<<<<<<< HEAD
       self->prior = prior;
+=======
+      abc->prior = prior;
+>>>>>>> master
       break;
     }
     case PROP_TKERN:
@@ -167,12 +222,20 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     {
       NcmDataset *dset = g_value_dup_object (value);
 
+<<<<<<< HEAD
       g_assert (self->dset == NULL);
+=======
+      g_assert (abc->dset == NULL);
+>>>>>>> master
 
       if (dset == NULL)
         g_error ("ncm_abc_new: dset (NcmDataset) cannot be NULL.");
 
+<<<<<<< HEAD
       self->dset = dset;
+=======
+      abc->dset = dset;
+>>>>>>> master
       break;
     }
     case PROP_EPSILON:
@@ -184,17 +247,21 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       g_assert_not_reached ();
       self->nparticles = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _ncm_abc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
+<<<<<<< HEAD
   NcmABC *abc                = NCM_ABC (object);
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
+=======
+  NcmABC *abc = NCM_ABC (object);
+>>>>>>> master
 
   g_return_if_fail (NCM_IS_ABC (object));
 
@@ -218,9 +285,9 @@ _ncm_abc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_NPARTICLES:
       g_value_set_uint (value, self->nparticles);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -338,10 +405,14 @@ ncm_abc_free (NcmABC *abc)
  * ncm_abc_clear:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Decreases the reference count of *@abc by one, and sets the pointer *@abc to NULL.
  * If @abc is NULL, this function does nothing.
  * See also: ncm_abc_free()
  * 
+=======
+ * FIXME
+>>>>>>> master
  */
 void
 ncm_abc_clear (NcmABC **abc)
@@ -401,7 +472,11 @@ ncm_abc_distance_prob (NcmABC *abc, gdouble distance)
  * ncm_abc_update_tkern: (virtual update_tkern)
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Updates the transition kernel present in @self->tkern.
+=======
+ * Updates the transition kernel present in @abc->tkern.
+>>>>>>> master
  *
  */
 void
@@ -465,19 +540,32 @@ ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype)
 void
 ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   const gchar *cur_filename  = ncm_mset_catalog_peek_filename (self->mcat);
 
   if ((self->cur_sample_id >= 0) && (cur_filename != NULL))
+=======
+  const gchar *cur_filename = ncm_mset_catalog_peek_filename (abc->mcat);
+
+  if ((abc->cur_sample_id >= 0) && (cur_filename != NULL))
+>>>>>>> master
     g_error ("ncm_abc_set_data_file: Cannot change data file during a run, call ncm_abc_end_run() first.");
 
   if ((cur_filename != NULL) && (strcmp (cur_filename, filename) == 0))
     return;
 
+<<<<<<< HEAD
   ncm_mset_catalog_set_file (self->mcat, filename);
 
   if (self->started)
     g_assert_cmpint (self->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (self->mcat));
+=======
+  ncm_mset_catalog_set_file (abc->mcat, filename);
+
+  if (abc->started)
+    g_assert_cmpint (abc->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (abc->mcat));
+>>>>>>> master
 }
 
 /**
@@ -520,7 +608,11 @@ ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng)
  * @abc: a #NcmABC
  * @tkern: a #NcmMSetTransKern
  *
+<<<<<<< HEAD
  * Sets the transition kernel to be used by the ABC algorithm.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
@@ -531,8 +623,13 @@ ncm_abc_set_trans_kern (NcmABC *abc, NcmMSetTransKern *tkern)
   if (self->tkern != NULL)
     g_warning ("Transition kernel already set, replacing.");
 
+<<<<<<< HEAD
   ncm_mset_trans_kern_clear (&self->tkern);
   self->tkern = ncm_mset_trans_kern_ref (tkern);
+=======
+  ncm_mset_trans_kern_clear (&abc->tkern);
+  abc->tkern = ncm_mset_trans_kern_ref (tkern);
+>>>>>>> master
 }
 
 static gint
@@ -549,9 +646,15 @@ _compare (gconstpointer a, gconstpointer b)
 /**
  * ncm_abc_get_dist_quantile:
  * @abc: a #NcmABC
+<<<<<<< HEAD
  * @p: a probability
  *
  * Sets the probability @p of the distance distribution.
+=======
+ * @p: FIXME
+ *
+ * FIXME
+>>>>>>> master
  *
  */
 gdouble
@@ -562,25 +665,42 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
   if (self->started)
     g_error ("ncm_abc_get_dist_quantile: Cannot get quantiles during a run, call ncm_abc_end_run() first.");
 
+<<<<<<< HEAD
   if (self->dists->len < 1)
     g_error ("ncm_abc_get_dist_quantile: Cannot get quantiles, no particles calculated.");
 
   if (!self->dists_sorted)
+=======
+  if (abc->dists->len < 1)
+    g_error ("ncm_abc_get_dist_quantile: Cannot get quantiles, no particles calculated.");
+
+  if (!abc->dists_sorted)
+>>>>>>> master
   {
     g_array_sort (self->dists, &_compare);
     self->dists_sorted = TRUE;
   }
 
+<<<<<<< HEAD
   return gsl_stats_quantile_from_sorted_data ((gdouble *) self->dists->data, 1, self->dists->len, p);
+=======
+  return gsl_stats_quantile_from_sorted_data ((gdouble *) abc->dists->data, 1, abc->dists->len, p);
+>>>>>>> master
 }
 
 /**
  * ncm_abc_get_accept_ratio:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Computes the acceptance ratio of the ABC algorithm.
  *
  * Returns: the acceptance ratio.
+=======
+ * FIXME
+ *
+ * Returns: FIXME
+>>>>>>> master
  */
 gdouble
 ncm_abc_get_accept_ratio (NcmABC *abc)
@@ -595,7 +715,11 @@ ncm_abc_get_accept_ratio (NcmABC *abc)
  * @abc: a #NcmABC
  * @epsilon: new epsilon.
  *
+<<<<<<< HEAD
  * Sets the new epsilon value.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
@@ -622,7 +746,11 @@ ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon)
 
     g_message ("\n");
     g_message ("# NcmABC: epsilon_t        = %g.\n",
+<<<<<<< HEAD
                self->epsilon);
+=======
+               abc->epsilon);
+>>>>>>> master
     g_message ("# NcmABC: epsilon_t+1      = %g.\n",
                epsilon);
     g_message ("# NcmABC: depsilon/epsilon = %04.2f%%.\n", 100.0 * (self->epsilon - epsilon) / self->epsilon);
@@ -636,9 +764,15 @@ ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon)
  * ncm_abc_get_epsilon:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Gets the current epsilon value.
  *
  * Returns: the current epsilon value.
+=======
+ * FIXME
+ *
+ * Returns: FIXME
+>>>>>>> master
  */
 gdouble
 ncm_abc_get_epsilon (NcmABC *abc)
@@ -652,9 +786,15 @@ ncm_abc_get_epsilon (NcmABC *abc)
  * ncm_abc_get_depsilon:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Gets the current delta epsilon value.
  *
  * Returns: the current delta epsilon value.
+=======
+ * FIXME
+ *
+ * Returns: FIXME
+>>>>>>> master
  */
 gdouble
 ncm_abc_get_depsilon (NcmABC *abc)
@@ -747,6 +887,7 @@ ncm_abc_peek_trans_kern (NcmABC *abc)
 void
 _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   const guint part   = 5;
@@ -760,11 +901,25 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
   self->dists_sorted                             = FALSE;
 
   switch (self->mtype)
+=======
+  const guint part   = 5;
+  const guint step   = (abc->n / part) == 0 ? 1 : (abc->n / part);
+  const guint pindex = abc->cur_sample_id % abc->nparticles;
+
+  ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, weight, NULL);
+  ncm_timer_task_increment (abc->nt);
+  g_array_index (abc->weights, gdouble, pindex) = weight;
+  g_array_index (abc->dists,   gdouble, pindex) = dist;
+  abc->dists_sorted                             = FALSE;
+
+  switch (abc->mtype)
+>>>>>>> master
   {
     case NCM_FIT_RUN_MSGS_NONE:
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
+<<<<<<< HEAD
       guint stepi          = (self->cur_sample_id + 1) % step;
       gboolean log_timeout = FALSE;
 
@@ -772,6 +927,15 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
         log_timeout = TRUE;
 
       if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
+=======
+      guint stepi          = (abc->cur_sample_id + 1) % step;
+      gboolean log_timeout = FALSE;
+
+      if ((abc->nt->pos_time - abc->nt->last_log_time) > 60.0)
+        log_timeout = TRUE;
+
+      if (log_timeout || (stepi == 0) || (abc->nt->task_pos == abc->nt->task_len))
+>>>>>>> master
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (self->mcat);
@@ -806,18 +970,29 @@ static void ncm_abc_intern_skip (NcmABC *abc, guint n);
  * ncm_abc_start_run:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Starts the ABC run.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
 ncm_abc_start_run (NcmABC *abc)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   NcmMSet *mset     = ncm_mset_catalog_peek_mset (self->mcat);
   const gint cur_id = ncm_mset_catalog_get_cur_id (self->mcat);
 
   if (self->started)
+=======
+  NcmMSet *mset     = ncm_mset_catalog_peek_mset (abc->mcat);
+  const gint cur_id = ncm_mset_catalog_get_cur_id (abc->mcat);
+
+  if (abc->started)
+>>>>>>> master
     g_error ("ncm_abc_start_run: run already started, run ncm_abc_end_run() first.");
 
   switch (self->mtype)
@@ -851,44 +1026,76 @@ ncm_abc_start_run (NcmABC *abc)
     ncm_rng_free (rng);
   }
 
+<<<<<<< HEAD
   self->dists_sorted = FALSE;
   self->started      = TRUE;
+=======
+  abc->dists_sorted = FALSE;
+  abc->started      = TRUE;
+>>>>>>> master
 
   {
     guint fparam_len = ncm_mset_fparam_len (mset);
 
+<<<<<<< HEAD
     if (self->theta != NULL)
+=======
+    if (abc->theta != NULL)
+>>>>>>> master
     {
       ncm_vector_free (self->theta);
       ncm_vector_free (self->thetastar);
       ncm_matrix_free (self->covar);
     }
 
+<<<<<<< HEAD
     self->theta     = ncm_vector_new (fparam_len);
     self->thetastar = ncm_vector_new (fparam_len);
     self->covar     = ncm_matrix_new (fparam_len, fparam_len);
+=======
+    abc->theta     = ncm_vector_new (fparam_len);
+    abc->thetastar = ncm_vector_new (fparam_len);
+    abc->covar     = ncm_matrix_new (fparam_len, fparam_len);
+>>>>>>> master
   }
 
   ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
   ncm_mset_catalog_set_sync_interval (self->mcat, NCM_ABC_MIN_SYNC_INTERVAL);
 
+<<<<<<< HEAD
   ncm_mset_catalog_sync (self->mcat, TRUE);
 
   if (cur_id > self->cur_sample_id)
+=======
+  ncm_mset_catalog_sync (abc->mcat, TRUE);
+
+  if (cur_id > abc->cur_sample_id)
+>>>>>>> master
   {
     ncm_abc_intern_skip (abc, cur_id - self->cur_sample_id);
     g_assert_cmpint (self->cur_sample_id, ==, cur_id);
   }
+<<<<<<< HEAD
   else if (cur_id < self->cur_sample_id)
   {
     g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
              cur_id, self->cur_sample_id);
+=======
+  else if (cur_id < abc->cur_sample_id)
+  {
+    g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+             cur_id, abc->cur_sample_id);
+>>>>>>> master
   }
 
   {
     NcmVector *cur_row = NULL;
 
+<<<<<<< HEAD
     cur_row = ncm_mset_catalog_peek_current_row (self->mcat);
+=======
+    cur_row = ncm_mset_catalog_peek_current_row (abc->mcat);
+>>>>>>> master
 
     if (cur_row != NULL)
       ncm_mset_fparams_set_vector_offset (mset, cur_row, 2);
@@ -901,15 +1108,24 @@ ncm_abc_start_run (NcmABC *abc)
   self->dset_mock = ncm_dataset_dup (self->dset, self->ser);
   ncm_serialize_reset (self->ser, TRUE);
 
+<<<<<<< HEAD
   self->ntotal    = 0;
   self->naccepted = 0;
+=======
+  abc->ntotal    = 0;
+  abc->naccepted = 0;
+>>>>>>> master
 }
 
 /**
  * ncm_abc_end_run:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Ends the ABC run.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
@@ -921,12 +1137,27 @@ ncm_abc_end_run (NcmABC *abc)
   gdouble WT    = 0.0;
   guint i;
 
+<<<<<<< HEAD
   g_assert (self->started);
+=======
+  g_assert (abc->started);
+
+  if (ncm_timer_task_is_running (abc->nt))
+    ncm_timer_task_end (abc->nt);
+>>>>>>> master
 
   if (ncm_timer_task_is_running (self->nt))
     ncm_timer_task_end (self->nt);
 
+<<<<<<< HEAD
   ncm_mset_catalog_sync (self->mcat, TRUE);
+=======
+  for (i = 0; i < abc->nparticles; i++)
+    WT += g_array_index (abc->weights, gdouble, i);
+
+  for (i = 0; i < abc->nparticles; i++)
+    g_array_index (abc->weights, gdouble, i) = g_array_index (abc->weights, gdouble, i) / WT;
+>>>>>>> master
 
   for (i = 0; i < self->nparticles; i++)
     WT += g_array_index (self->weights, gdouble, i);
@@ -950,19 +1181,28 @@ ncm_abc_end_run (NcmABC *abc)
       break;
   }
 
+<<<<<<< HEAD
   self->started = FALSE;
+=======
+  abc->started = FALSE;
+>>>>>>> master
 }
 
 /**
  * ncm_abc_reset:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Resets the ABC run.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
 ncm_abc_reset (NcmABC *abc)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   self->n             = 0;
@@ -972,6 +1212,15 @@ ncm_abc_reset (NcmABC *abc)
   self->naccepted     = 0;
   self->nupdates      = 0;
   ncm_mset_catalog_reset (self->mcat);
+=======
+  abc->n             = 0;
+  abc->cur_sample_id = -1;
+  abc->started       = FALSE;
+  abc->ntotal        = 0;
+  abc->naccepted     = 0;
+  abc->nupdates      = 0;
+  ncm_mset_catalog_reset (abc->mcat);
+>>>>>>> master
 }
 
 static void
@@ -1017,7 +1266,11 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
   if (!self->started)
     g_error ("ncm_abc_run: run not started, run ncm_abc_start_run() first.");
 
+<<<<<<< HEAD
   if (nparticles <= (self->cur_sample_id + 1))
+=======
+  if (nparticles <= (abc->cur_sample_id + 1))
+>>>>>>> master
   {
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -1027,6 +1280,7 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
 
     return;
   }
+<<<<<<< HEAD
 
   self->n = nparticles - (self->cur_sample_id + 1);
 
@@ -1038,6 +1292,19 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
   g_array_set_size (self->dists, nparticles);
 
   switch (self->mtype)
+=======
+
+  abc->n = nparticles - (abc->cur_sample_id + 1);
+
+  if ((abc->n > 0) && (abc->nupdates > 0))
+    g_error ("ncm_abc_run: cannot generate new particles when time t = %u != 0.", abc->nupdates);
+
+  abc->nparticles = nparticles;
+  g_array_set_size (abc->weights, nparticles);
+  g_array_set_size (abc->dists, nparticles);
+
+  switch (abc->mtype)
+>>>>>>> master
   {
     default:
     case NCM_FIT_RUN_MSGS_FULL:
@@ -1051,7 +1318,11 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
       break;
   }
 
+<<<<<<< HEAD
   if (ncm_timer_task_is_running (self->nt))
+=======
+  if (ncm_timer_task_is_running (abc->nt))
+>>>>>>> master
   {
     ncm_timer_task_add_tasks (self->nt, self->n);
     ncm_timer_task_continue (self->nt);
@@ -1061,6 +1332,12 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
     ncm_timer_task_start (self->nt, self->n);
     ncm_timer_set_name (self->nt, "NcmABC");
   }
+<<<<<<< HEAD
+=======
+
+  if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_timer_task_log_start_datetime (abc->nt);
+>>>>>>> master
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (self->nt);
@@ -1070,9 +1347,15 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
   else
     _ncm_abc_run_mt (abc);
 
+<<<<<<< HEAD
   ncm_timer_task_pause (self->nt);
 
   g_assert_cmpuint (self->nparticles, ==, self->cur_sample_id + 1);
+=======
+  ncm_timer_task_pause (abc->nt);
+
+  g_assert_cmpuint (abc->nparticles, ==, abc->cur_sample_id + 1);
+>>>>>>> master
 }
 
 static void
@@ -1085,6 +1368,7 @@ _ncm_abc_run_single (NcmABC *abc)
 
   guint i = 0;
 
+<<<<<<< HEAD
   for (i = 0; i < self->n;)
   {
     gdouble dist = 0.0, prob = 0.0;
@@ -1098,6 +1382,21 @@ _ncm_abc_run_single (NcmABC *abc)
     prob = ncm_abc_distance_prob (abc, dist);
 
     self->ntotal++;
+=======
+  for (i = 0; i < abc->n;)
+  {
+    gdouble dist = 0.0, prob = 0.0;
+
+    ncm_mset_trans_kern_prior_sample (abc->prior, abc->thetastar, rng);
+
+    ncm_mset_fparams_set_vector (mset, abc->thetastar);
+    ncm_dataset_resample (abc->dset_mock, mset, rng);
+
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, rng);
+    prob = ncm_abc_distance_prob (abc, dist);
+
+    abc->ntotal++;
+>>>>>>> master
 
     if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (rng->r) < prob)))
     {
@@ -1122,11 +1421,18 @@ _ncm_abc_dup_thread (gpointer userdata)
 {
   G_LOCK_DEFINE_STATIC (dup_thread);
 
+<<<<<<< HEAD
   NcmABC *abc                = NCM_ABC (userdata);
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   NcmABCThread *abct         = g_new (NcmABCThread, 1);
   NcmMSet *mset              = ncm_mset_catalog_peek_mset (self->mcat);
   NcmRNG *rng                = ncm_mset_catalog_peek_rng (self->mcat);
+=======
+  NcmABC *abc        = NCM_ABC (userdata);
+  NcmABCThread *abct = g_new (NcmABCThread, 1);
+  NcmMSet *mset      = ncm_mset_catalog_peek_mset (abc->mcat);
+  NcmRNG *rng        = ncm_mset_catalog_peek_rng (abc->mcat);
+>>>>>>> master
 
   G_LOCK (dup_thread);
   {
@@ -1162,10 +1468,16 @@ _ncm_abc_thread_eval (glong i, glong f, gpointer data)
 {
   G_LOCK_DEFINE_STATIC (update_lock);
 
+<<<<<<< HEAD
   NcmABC *abc                = NCM_ABC (data);
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   NcmABCThread **abct_ptr    = ncm_memory_pool_get (self->mp);
   NcmABCThread *abct         = *abct_ptr;
+=======
+  NcmABC *abc             = NCM_ABC (data);
+  NcmABCThread **abct_ptr = ncm_memory_pool_get (abc->mp);
+  NcmABCThread *abct      = *abct_ptr;
+>>>>>>> master
   guint j;
 
   for (j = i; j < f;)
@@ -1211,6 +1523,17 @@ _ncm_abc_run_mt (NcmABC *abc)
 
     return;
   }
+<<<<<<< HEAD
+=======
+
+  if (abc->mp != NULL)
+    ncm_memory_pool_free (abc->mp, TRUE);
+
+  abc->mp = ncm_memory_pool_new (&_ncm_abc_dup_thread, abc,
+                                 (GDestroyNotify) & _ncm_abc_free_thread);
+
+  g_assert_cmpuint (abc->nthreads, >, 1);
+>>>>>>> master
 
   if (self->mp != NULL)
     ncm_memory_pool_free (self->mp, TRUE);
@@ -1229,15 +1552,23 @@ _ncm_abc_run_mt (NcmABC *abc)
  * @prerun: Number of samples to run before checking the largest relative error
  * @lre: largest relative error
  *
+<<<<<<< HEAD
  * Runs the ABC algorithm until the largest relative error is less than @lre.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
 ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   NcmMSet *mset = ncm_mset_catalog_peek_mset (self->mcat);
+=======
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+>>>>>>> master
 
   gdouble lerror;
   const gdouble lre2 = lre * lre;
@@ -1254,9 +1585,15 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
 
   if (ncm_mset_catalog_len (self->mcat) < prerun)
   {
+<<<<<<< HEAD
     guint prerun_left = prerun - ncm_mset_catalog_len (self->mcat);
 
     if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+=======
+    guint prerun_left = prerun - ncm_mset_catalog_len (abc->mcat);
+
+    if (abc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+>>>>>>> master
       g_message ("# NcmABC: Running first %u pre-runs...\n", prerun_left);
 
     ncm_abc_run (abc, prerun);
@@ -1267,7 +1604,11 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
   while (lerror > lre)
   {
     const gdouble lerror2 = lerror * lerror;
+<<<<<<< HEAD
     gdouble n             = ncm_mset_catalog_len (self->mcat);
+=======
+    gdouble n             = ncm_mset_catalog_len (abc->mcat);
+>>>>>>> master
     gdouble m             = n * lerror2 / lre2;
     guint runs            = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
 
@@ -1277,8 +1618,13 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
       g_message ("# NcmABC: Running more %u runs...\n", runs);
     }
 
+<<<<<<< HEAD
     ncm_abc_run (abc, self->cur_sample_id + runs + 1);
     lerror = ncm_mset_catalog_largest_error (self->mcat);
+=======
+    ncm_abc_run (abc, abc->cur_sample_id + runs + 1);
+    lerror = ncm_mset_catalog_largest_error (abc->mcat);
+>>>>>>> master
   }
 
   if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
@@ -1290,18 +1636,29 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
  * @abc: a #NcmABC
  * @fit: a #NcmFit
  *
+<<<<<<< HEAD
  * Calculates the mean and covariance matrix of the accepted samples.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
 ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   NcmMSet *mset = ncm_mset_catalog_peek_mset (self->mcat);
 
   ncm_mset_catalog_get_mean (self->mcat, &fit->fstate->fparams);
   ncm_mset_catalog_get_covar (self->mcat, &fit->fstate->covar);
+=======
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+
+  ncm_mset_catalog_get_mean (abc->mcat, &fit->fstate->fparams);
+  ncm_mset_catalog_get_covar (abc->mcat, &fit->fstate->covar);
+>>>>>>> master
   ncm_mset_fparams_set_vector (mset, fit->fstate->fparams);
   fit->fstate->has_covar = TRUE;
 }
@@ -1310,12 +1667,17 @@ ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
  * ncm_abc_start_update:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Starts the update of the transition kernel.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
 ncm_abc_start_update (NcmABC *abc)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   NcmMSet *mset              = ncm_mset_catalog_peek_mset (self->mcat);
   const gint cur_id          = ncm_mset_catalog_get_cur_id (self->mcat);
@@ -1324,6 +1686,15 @@ ncm_abc_start_update (NcmABC *abc)
     g_error ("ncm_abc_start_update: particle generation not finished, run ncm_abc_end_run() first.");
 
   if (self->started_up)
+=======
+  NcmMSet *mset     = ncm_mset_catalog_peek_mset (abc->mcat);
+  const gint cur_id = ncm_mset_catalog_get_cur_id (abc->mcat);
+
+  if (abc->started)
+    g_error ("ncm_abc_start_update: particle generation not finished, run ncm_abc_end_run() first.");
+
+  if (abc->started_up)
+>>>>>>> master
     g_error ("ncm_abc_start_update: run already started, run ncm_abc_end_update() first.");
 
   if (self->tkern == NULL)
@@ -1364,6 +1735,34 @@ ncm_abc_start_update (NcmABC *abc)
 
   {
     guint fparam_len = ncm_mset_fparam_len (mset);
+<<<<<<< HEAD
+=======
+
+    if (abc->theta != NULL)
+    {
+      ncm_vector_free (abc->theta);
+      ncm_vector_free (abc->thetastar);
+      ncm_matrix_free (abc->covar);
+    }
+
+    abc->theta     = ncm_vector_new (fparam_len);
+    abc->thetastar = ncm_vector_new (fparam_len);
+    abc->covar     = ncm_matrix_new (fparam_len, fparam_len);
+  }
+
+  ncm_mset_catalog_sync (abc->mcat, TRUE);
+
+  if (cur_id > abc->cur_sample_id)
+  {
+    ncm_abc_intern_skip (abc, cur_id - abc->cur_sample_id);
+    g_assert_cmpint (abc->cur_sample_id, ==, cur_id);
+  }
+  else if (cur_id < abc->cur_sample_id)
+  {
+    g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+             cur_id, abc->cur_sample_id);
+  }
+>>>>>>> master
 
     if (self->theta != NULL)
     {
@@ -1395,11 +1794,19 @@ ncm_abc_start_update (NcmABC *abc)
   g_array_set_size (self->weights_tm1, self->nparticles);
 
   ncm_abc_update_tkern (abc);
+<<<<<<< HEAD
 
   memcpy (self->weights_tm1->data, self->weights->data, sizeof (gdouble) * self->nparticles);
   self->wran = gsl_ran_discrete_preproc (self->nparticles, (gdouble *) self->weights->data);
 
   ncm_mset_catalog_reset_stats (self->mcat);
+=======
+
+  memcpy (abc->weights_tm1->data, abc->weights->data, sizeof (gdouble) * abc->nparticles);
+  abc->wran = gsl_ran_discrete_preproc (abc->nparticles, (gdouble *) abc->weights->data);
+
+  ncm_mset_catalog_reset_stats (abc->mcat);
+>>>>>>> master
 
   if (!ncm_abc_data_summary (abc))
     g_error ("ncm_abc_start_run: error calculating summary data.");
@@ -1408,17 +1815,28 @@ ncm_abc_start_update (NcmABC *abc)
   self->dset_mock = ncm_dataset_dup (self->dset, self->ser);
   ncm_serialize_reset (self->ser, TRUE);
 
+<<<<<<< HEAD
   self->dists_sorted = FALSE;
   self->started_up   = TRUE;
   self->ntotal       = 0;
   self->naccepted    = 0;
+=======
+  abc->dists_sorted = FALSE;
+  abc->started_up   = TRUE;
+  abc->ntotal       = 0;
+  abc->naccepted    = 0;
+>>>>>>> master
 }
 
 /**
  * ncm_abc_end_update:
  * @abc: a #NcmABC
  *
+<<<<<<< HEAD
  * Ends the ABC update.
+=======
+ * FIXME
+>>>>>>> master
  *
  */
 void
@@ -1429,7 +1847,14 @@ ncm_abc_end_update (NcmABC *abc)
   guint i;
   gdouble WT = 0.0;
 
+<<<<<<< HEAD
   g_assert (self->started_up);
+=======
+  g_assert (abc->started_up);
+
+  if (ncm_timer_task_is_running (abc->nt))
+    ncm_timer_task_end (abc->nt);
+>>>>>>> master
 
   if (ncm_timer_task_is_running (self->nt))
     ncm_timer_task_end (self->nt);
@@ -1439,12 +1864,18 @@ ncm_abc_end_update (NcmABC *abc)
   for (i = 0; i < self->nparticles; i++)
     WT += g_array_index (self->weights, gdouble, i);
 
+<<<<<<< HEAD
   for (i = 0; i < self->nparticles; i++)
     g_array_index (self->weights, gdouble, i) = g_array_index (self->weights, gdouble, i) / WT;
 
   ncm_mset_catalog_sync (self->mcat, TRUE);
 
   switch (self->mtype)
+=======
+  ncm_mset_catalog_sync (abc->mcat, TRUE);
+
+  switch (abc->mtype)
+>>>>>>> master
   {
     case NCM_FIT_RUN_MSGS_NONE:
       break;
@@ -1494,7 +1925,11 @@ ncm_abc_update (NcmABC *abc)
       break;
   }
 
+<<<<<<< HEAD
   if (ncm_timer_task_is_running (self->nt))
+=======
+  if (ncm_timer_task_is_running (abc->nt))
+>>>>>>> master
   {
     ncm_timer_task_add_tasks (self->nt, self->n);
     ncm_timer_task_continue (self->nt);
@@ -1504,6 +1939,12 @@ ncm_abc_update (NcmABC *abc)
     ncm_timer_task_start (self->nt, self->n);
     ncm_timer_set_name (self->nt, "NcmABC");
   }
+<<<<<<< HEAD
+=======
+
+  if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_timer_task_log_start_datetime (abc->nt);
+>>>>>>> master
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (self->nt);
@@ -1520,6 +1961,7 @@ ncm_abc_update (NcmABC *abc)
 static void
 _ncm_abc_update_single (NcmABC *abc)
 {
+<<<<<<< HEAD
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
 
   NcmMSet *mset = ncm_mset_catalog_peek_mset (self->mcat);
@@ -1527,10 +1969,18 @@ _ncm_abc_update_single (NcmABC *abc)
   guint i       = 0;
 
   for (i = 0; i < self->n;)
+=======
+  NcmMSet *mset = ncm_mset_catalog_peek_mset (abc->mcat);
+  NcmRNG *rng   = ncm_mset_catalog_peek_rng (abc->mcat);
+  guint i       = 0;
+
+  for (i = 0; i < abc->n;)
+>>>>>>> master
   {
     gdouble dist = 0.0, prob = 0.0;
     gsize np = gsl_ran_discrete (rng->r, self->wran);
 
+<<<<<<< HEAD
     NcmVector *row   = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
 
@@ -1553,10 +2003,39 @@ _ncm_abc_update_single (NcmABC *abc)
       for (j = 0; j < self->nparticles; j++)
       {
         row    = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + j);
+=======
+    NcmVector *row   = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + np);
+    NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
+
+    ncm_mset_trans_kern_generate (abc->tkern, theta, abc->thetastar, rng);
+    ncm_mset_fparams_set_vector (mset, abc->thetastar);
+    ncm_dataset_resample (abc->dset_mock, mset, rng);
+
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, rng);
+    prob = ncm_abc_distance_prob (abc, dist);
+    ncm_vector_free (theta);
+
+    abc->ntotal++;
+
+    if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (rng->r) < prob)))
+    {
+      gdouble new_weight = ncm_mset_trans_kern_prior_pdf (abc->prior, abc->thetastar);
+      gdouble denom      = 0.0;
+      guint j;
+
+      for (j = 0; j < abc->nparticles; j++)
+      {
+        row    = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + j);
+>>>>>>> master
         theta  = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
         denom += g_array_index (self->weights_tm1, gdouble, j) * ncm_mset_trans_kern_pdf (self->tkern, theta, self->thetastar);
         ncm_vector_free (theta);
       }
+<<<<<<< HEAD
+=======
+
+      new_weight = new_weight / denom;
+>>>>>>> master
 
       new_weight = new_weight / denom;
 
@@ -1573,10 +2052,16 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
 {
   G_LOCK_DEFINE_STATIC (update_lock);
 
+<<<<<<< HEAD
   NcmABC *abc                = NCM_ABC (data);
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   NcmABCThread **abct_ptr    = ncm_memory_pool_get (self->mp);
   NcmABCThread *abct         = *abct_ptr;
+=======
+  NcmABC *abc             = NCM_ABC (data);
+  NcmABCThread **abct_ptr = ncm_memory_pool_get (abc->mp);
+  NcmABCThread *abct      = *abct_ptr;
+>>>>>>> master
   guint j;
 
   for (j = i; j < f;)
@@ -1584,7 +2069,11 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
     gdouble dist = 0.0, prob = 0.0;
     gsize np = gsl_ran_discrete (abct->rng->r, self->wran);
 
+<<<<<<< HEAD
     NcmVector *row   = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + np);
+=======
+    NcmVector *row   = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + np);
+>>>>>>> master
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
 
     ncm_mset_trans_kern_generate (self->tkern, theta, abct->thetastar, abct->rng);
@@ -1611,11 +2100,19 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
 
     if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (abct->rng->r) < prob)))
     {
+<<<<<<< HEAD
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (self->prior, abct->thetastar);
       gdouble denom      = 0.0;
       guint k;
 
       for (k = 0; k < self->nparticles; k++)
+=======
+      gdouble new_weight = ncm_mset_trans_kern_prior_pdf (abc->prior, abct->thetastar);
+      gdouble denom      = 0.0;
+      guint k;
+
+      for (k = 0; k < abc->nparticles; k++)
+>>>>>>> master
       {
         row    = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + k);
         theta  = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
@@ -1649,6 +2146,17 @@ _ncm_abc_update_mt (NcmABC *abc)
 
     return;
   }
+<<<<<<< HEAD
+=======
+
+  if (abc->mp != NULL)
+    ncm_memory_pool_free (abc->mp, TRUE);
+
+  abc->mp = ncm_memory_pool_new (&_ncm_abc_dup_thread, abc,
+                                 (GDestroyNotify) & _ncm_abc_free_thread);
+
+  g_assert_cmpuint (abc->nthreads, >, 1);
+>>>>>>> master
 
   if (self->mp != NULL)
     ncm_memory_pool_free (self->mp, TRUE);

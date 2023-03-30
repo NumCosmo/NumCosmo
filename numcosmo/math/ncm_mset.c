@@ -65,8 +65,8 @@ G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_ms
 static gint
 _int_sort (gconstpointer a, gconstpointer b, gpointer user_data)
 {
-  NcmMSetItem **item_a = (NcmMSetItem **)a;
-  NcmMSetItem **item_b = (NcmMSetItem **)b;
+  NcmMSetItem **item_a = (NcmMSetItem **) a;
+  NcmMSetItem **item_b = (NcmMSetItem **) b;
 
   return item_a[0]->mid - item_b[0]->mid;
 }
@@ -75,10 +75,12 @@ NcmMSetItem *
 _ncm_mset_item_new (NcmModel *model, NcmModelID mid)
 {
   NcmMSetItem *item = g_slice_new0 (NcmMSetItem);
-  item->model = ncm_model_ref (model);
-  item->mid   = mid;
-  item->dup   = FALSE;
+
+  item->model              = ncm_model_ref (model);
+  item->mid                = mid;
+  item->dup                = FALSE;
   item->added_total_params = ncm_model_len (model);
+
   return item;
 }
 
@@ -97,12 +99,12 @@ ncm_mset_init (NcmMSet *mset)
   mset->model_array     = g_ptr_array_sized_new (20);
   mset->model_item_hash = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
   mset->mid_item_hash   = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
-  mset->fpi_hash        = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)g_array_unref);
+  mset->fpi_hash        = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, (GDestroyNotify) g_array_unref);
   mset->fullname_parray = g_ptr_array_sized_new (NCM_MSET_INIT_MARRAY);
   mset->pi_array        = g_array_sized_new (FALSE, TRUE, sizeof (NcmMSetPIndex), 20);
   mset->mid_array       = g_array_sized_new (FALSE, TRUE, sizeof (NcmModelID), 20);
 
-  g_ptr_array_set_free_func (mset->model_array, (GDestroyNotify)_ncm_mset_item_free);
+  g_ptr_array_set_free_func (mset->model_array, (GDestroyNotify) _ncm_mset_item_free);
   g_ptr_array_set_free_func (mset->fullname_parray, g_free);
 
 /* mset->fpi_array[i] = g_array_sized_new (FALSE, TRUE, sizeof (gint), 10); */
@@ -117,6 +119,7 @@ static void
 _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMSet *mset = NCM_MSET (object);
+
   g_return_if_fail (NCM_IS_MSET (object));
 
   switch (prop_id)
@@ -128,12 +131,15 @@ _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     {
       NcmObjArray *oa = ncm_obj_array_new ();
       guint i;
+
       for (i = 0; i < mset->model_array->len; i++)
       {
         NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
         if (!NCM_MODEL_GET_CLASS (item->model)->is_submodel)
           ncm_obj_array_add (oa, G_OBJECT (item->model));
       }
+
       g_value_take_boxed (value, oa);
       break;
     }
@@ -150,6 +156,7 @@ static void
 _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMSet *mset = NCM_MSET (object);
+
   g_return_if_fail (NCM_IS_MSET (object));
 
   switch (prop_id)
@@ -157,37 +164,48 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_VALID_MAP:
     {
       const gboolean valid_map = g_value_get_boolean (value);
+
       if (valid_map)
       {
         if (!mset->valid_map)
           ncm_mset_prepare_fparam_map (mset);
       }
       else
+      {
         mset->valid_map = FALSE;
+      }
+
       break;
     }
     case PROP_MARRAY:
     {
       NcmObjArray *oa = (NcmObjArray *) g_value_get_boxed (value);
+
       if (oa != NULL)
       {
         guint i;
+
         for (i = 0; i < oa->len; i++)
         {
           NcmModel *model = NCM_MODEL (ncm_obj_array_peek (oa, i));
+
           if (NCM_MODEL_GET_CLASS (model)->is_submodel)
             g_error ("_ncm_mset_set_property: NcmMSet model array cannot contain submodels `%s'.",
                      G_OBJECT_TYPE_NAME (model));
+
           ncm_mset_push (mset, model);
         }
       }
+
       break;
     }
     case PROP_FMAP:
     {
       const gchar * const *fmap = g_value_get_boxed (value);
+
       if (fmap != NULL)
         ncm_mset_set_fmap (mset, fmap, FALSE);
+
       break;
     }
     default:
@@ -231,7 +249,7 @@ _ncm_mset_finalize (GObject *object)
 static void
 ncm_mset_class_init (NcmMSetClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_mset_set_property;
   object_class->get_property = &_ncm_mset_get_property;
@@ -241,8 +259,8 @@ ncm_mset_class_init (NcmMSetClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_VALID_MAP,
                                    g_param_spec_boolean ("valid-map", NULL, "Valid properties map",
-                                                        FALSE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_MARRAY,
@@ -263,7 +281,6 @@ ncm_mset_class_init (NcmMSetClass *klass)
   klass->model_desc_array = g_array_new (FALSE, TRUE, sizeof (NcmMSetModelDesc));
 }
 
-
 /**
  * ncm_mset_pindex_new:
  * @mid: Model id
@@ -277,6 +294,7 @@ NcmMSetPIndex *
 ncm_mset_pindex_new (NcmModelID mid, guint pid)
 {
   NcmMSetPIndex *pi = g_slice_new0 (NcmMSetPIndex);
+
   pi->mid = mid;
   pi->pid = pid;
 
@@ -295,6 +313,7 @@ NcmMSetPIndex *
 ncm_mset_pindex_dup (NcmMSetPIndex *pi)
 {
   NcmMSetPIndex *new_pi = ncm_mset_pindex_new (pi->mid, pi->pid);
+
   return new_pi;
 }
 
@@ -334,7 +353,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     NcmMSetClass *mset_class        = g_type_class_ref (NCM_TYPE_MSET);
     NcmMSetModelDesc *model_desc    = NULL;
     guint id;
-    
+
     G_LOCK (last_model_id);
 
     model_class->can_stack = can_stack;
@@ -347,7 +366,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 
     model_class->model_id = last_model_id * NCM_MSET_MAX_STACKSIZE;
     id                    = last_model_id;
-    
+
     last_model_id++;
     g_array_set_size (mset_class->model_desc_array, last_model_id);
 
@@ -356,6 +375,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 
     if (ns == NULL)
       g_error ("Cannot register model without a namespace.");
+
     if (desc == NULL)
       g_error ("Cannot register model without a description.");
 
@@ -430,7 +450,7 @@ ncm_mset_new (gpointer model0, ...)
 NcmMSet *
 ncm_mset_newv (gpointer model0, va_list ap)
 {
-  NcmMSet *mset = ncm_mset_empty_new ();
+  NcmMSet *mset   = ncm_mset_empty_new ();
   NcmModel *model = NULL;
 
   ncm_mset_set (mset, model0);
@@ -461,6 +481,7 @@ ncm_mset_new_array (GPtrArray *model_array)
   for (i = 0; i < model_array->len; i++)
   {
     NcmModel *model = NCM_MODEL (g_ptr_array_index (model_array, i));
+
     g_assert (NCM_IS_MODEL (model));
     ncm_mset_push (mset, model);
   }
@@ -508,16 +529,18 @@ ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
 NcmMSet *
 ncm_mset_shallow_copy (NcmMSet *mset)
 {
-  NcmMSet *mset_sc = ncm_mset_empty_new ();
+  NcmMSet *mset_sc    = ncm_mset_empty_new ();
   const guint nmodels = ncm_mset_nmodels (mset);
   guint i;
 
   for (i = 0; i < nmodels; i++)
   {
     NcmModel *model = ncm_mset_peek_array_pos (mset, i);
+
     if (!ncm_model_is_submodel (model))
       ncm_mset_push (mset_sc, model);
   }
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset_sc);
 
@@ -563,6 +586,7 @@ NcmModel *
 ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
 {
   NcmMSetItem *item = g_hash_table_lookup (mset->mid_item_hash, GINT_TO_POINTER (mid));
+
   if (item != NULL)
     return item->model;
   else
@@ -583,6 +607,7 @@ NcmModel *
 ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
 {
   NcmModelID mid = base_mid + stackpos_id;
+
   return ncm_mset_peek (mset, mid);
 }
 
@@ -599,6 +624,7 @@ NcmModel *
 ncm_mset_get (NcmMSet *mset, NcmModelID mid)
 {
   NcmModel *model = ncm_mset_peek (mset, mid);
+
   if (model != NULL)
     return ncm_model_ref (model);
   else
@@ -618,7 +644,8 @@ NcmModel *
 ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
 {
   g_assert_cmpuint (i, <, mset->model_array->len);
-  return ((NcmMSetItem *)g_ptr_array_index (mset->model_array, i))->model;
+
+  return ((NcmMSetItem *) g_ptr_array_index (mset->model_array, i))->model;
 }
 
 /**
@@ -634,7 +661,8 @@ NcmModelID
 ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
 {
   g_assert_cmpuint (i, <, mset->model_array->len);
-  return ((NcmMSetItem *)g_ptr_array_index (mset->model_array, i))->mid;
+
+  return ((NcmMSetItem *) g_ptr_array_index (mset->model_array, i))->mid;
 }
 
 /**
@@ -649,19 +677,20 @@ void
 ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
 {
   NcmMSetItem *item = g_hash_table_lookup (mset->mid_item_hash, GINT_TO_POINTER (mid));
+
   if (item != NULL)
   {
     mset->total_len -= item->added_total_params;
-    mset->valid_map = FALSE;
+    mset->valid_map  = FALSE;
 
     g_hash_table_remove (mset->mid_item_hash, GINT_TO_POINTER (mid));
+
     if (!item->dup)
       g_hash_table_remove (mset->model_item_hash, item->model);
 
     g_assert (g_ptr_array_remove (mset->model_array, item));
   }
 }
-
 
 /**
  * ncm_mset_set:
@@ -690,16 +719,19 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
 {
   g_assert (model != NULL);
   {
-    NcmModelID base_mid  = ncm_model_id (model);
-    guint stackpos_id = 0;
+    NcmModelID base_mid = ncm_model_id (model);
+    guint stackpos_id   = 0;
+
     while (TRUE)
     {
       NcmModelID mid = base_mid + stackpos_id;
+
       if (g_hash_table_lookup (mset->mid_item_hash, GINT_TO_POINTER (mid)) == NULL)
       {
         ncm_mset_set_pos (mset, model, stackpos_id);
         break;
       }
+
       stackpos_id++;
     }
   }
@@ -720,30 +752,30 @@ void
 ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  
+
   if (model_class->is_submodel)
     g_error ("ncm_mset_set_pos: cannot add model `%s' directly to a NcmMSet.\n"
              "                  This model is a submodel of `%s' and it should"
-             " be added to it instead of directly to a NcmMSet", 
+             " be added to it instead of directly to a NcmMSet",
              G_OBJECT_TYPE_NAME (model), ncm_mset_get_ns_by_id (model_class->main_model_id));
   else
     _ncm_mset_set_pos_intern (mset, model, stackpos_id);
 }
-  
+
 static void
 _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
   g_assert (model != NULL);
   {
-    NcmModelID mid  = ncm_model_id (model) + stackpos_id;
-    guint model_len = ncm_model_len (model);
+    NcmModelID mid    = ncm_model_id (model) + stackpos_id;
+    guint model_len   = ncm_model_len (model);
     NcmMSetItem *item = _ncm_mset_item_new (model, mid);
     GArray *fpi_array;
     NcmMSetItem *item0;
     guint i;
 
-    if (stackpos_id > 0 && !(NCM_MODEL_GET_CLASS (model)->can_stack))
-      g_error ("ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' not allowed.", 
+    if ((stackpos_id > 0) && !(NCM_MODEL_GET_CLASS (model)->can_stack))
+      g_error ("ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' not allowed.",
                stackpos_id, G_OBJECT_TYPE_NAME (model));
 
     ncm_mset_remove (mset, mid);
@@ -752,15 +784,16 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
     {
       if (item->mid > item0->mid)
       {
-        item->dup = TRUE;
+        item->dup                = TRUE;
         item->added_total_params = 0;
       }
       else
       {
-        item0->dup = TRUE;
+        item0->dup                = TRUE;
         item0->added_total_params = 0;
         g_hash_table_insert (mset->model_item_hash, model, item);
       }
+
       fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item0->mid));
       g_assert (fpi_array != NULL);
       g_array_ref (fpi_array);
@@ -769,8 +802,9 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
     {
       g_hash_table_insert (mset->model_item_hash, model, item);
       mset->total_len += item->added_total_params;
-      fpi_array = g_array_new (FALSE, TRUE, sizeof (gint));
+      fpi_array        = g_array_new (FALSE, TRUE, sizeof (gint));
       g_array_set_size (fpi_array, model_len);
+
       for (i = 0; i < model_len; i++)
         g_array_index (fpi_array, gint, i) = -1;
     }
@@ -787,6 +821,7 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
     for (i = 0; i < ncm_model_get_submodel_len (model); i++)
     {
       NcmModel *submodel = ncm_model_peek_submodel (model, i);
+
       _ncm_mset_set_pos_intern (mset, submodel, 0);
     }
   }
@@ -826,6 +861,7 @@ gboolean
 ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
   NcmModelID mid = NCM_MSET_MID (ncm_model_id (model), stackpos_id);
+
   if (ncm_mset_peek (mset, mid) != NULL)
     return TRUE;
   else
@@ -852,9 +888,11 @@ ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
     NcmModelID mid      = ncm_mset_get_mid_array_pos (sub_mset, i);
     NcmModel *sub_model = ncm_mset_peek_array_pos (sub_mset, i);
     NcmModel *model     = ncm_mset_peek (mset, mid);
+
     if (sub_model != model)
       return FALSE;
   }
+
   return TRUE;
 }
 
@@ -875,7 +913,9 @@ ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
   guint i;
 
   if (sub_nmodels0 != sub_nmodels1)
+  {
     return sub_nmodels0 < sub_nmodels1 ? -1 : 1;
+  }
   else
   {
     for (i = 0; i < sub_nmodels0; i++)
@@ -909,7 +949,7 @@ ncm_mset_get_id_by_type (GType model_type)
   g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
   {
     NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-    const gchar *ns = g_type_name (model_type);
+    const gchar *ns          = g_type_name (model_type);
     gpointer model_id;
     gboolean has = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
 
@@ -960,7 +1000,9 @@ ncm_mset_get_ns_by_id (NcmModelID id)
   g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
   {
     const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
+
     g_type_class_unref (mset_class);
+
     return ns;
   }
 }
@@ -980,11 +1022,12 @@ ncm_mset_get_type_by_id (NcmModelID id)
   g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
   {
     const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
-    GType t = g_type_from_name (ns);
+    GType t         = g_type_from_name (ns);
+
     g_type_class_unref (mset_class);
 
     g_assert_cmpint (t, !=, 0);
-    
+
     return t;
   }
 }
@@ -1009,9 +1052,11 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
-    
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
@@ -1025,14 +1070,18 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
         if (ncm_model_param_get_ftype (item->model, pid) == NCM_PARAM_TYPE_FREE)
         {
           NcmMSetPIndex pi = {item->mid, pid};
+
           g_array_append_val (mset->pi_array, pi);
           g_array_index (fpi_array, gint, pid) = mset->fparam_len;
           mset->fparam_len++;
           has_free = TRUE;
         }
         else
+        {
           g_array_index (fpi_array, gint, pid) = -1;
+        }
       }
+
       if (has_free)
         g_array_append_val (mset->mid_array, item->mid);
     }
@@ -1041,11 +1090,10 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
 
   ncm_vector_clear (&mset->temp_fparams);
+
   if (mset->fparam_len > 0)
-  {
     mset->temp_fparams = ncm_vector_new (mset->fparam_len);
-  }
-    
+
   mset->valid_map = TRUE;
 }
 
@@ -1059,22 +1107,28 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
  *
  */
 void
-ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models)
+ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models)
 {
   g_assert (fmap != NULL);
   {
-    guint len = g_strv_length ((gchar **)fmap);
+    guint len = g_strv_length ((gchar **) fmap);
     guint i;
+
     for (i = 0; i < mset->model_array->len; i++)
     {
       NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
       if (item->dup)
+      {
         continue;
+      }
       else
       {
         GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
         guint pid;
+
         g_assert (fpi_array != NULL);
+
         for (pid = 0; pid < item->added_total_params; pid++)
           g_array_index (fpi_array, gint, pid) = -1;
       }
@@ -1087,6 +1141,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_mode
     for (i = 0; i < len; i++)
     {
       NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i]);
+
       if (pi == NULL)
       {
         g_error ("ncm_mset_set_fmap: cannot set fmap, invalid param `%s'.", fmap[i]);
@@ -1094,19 +1149,21 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_mode
       else
       {
         GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (pi->mid));
+
         g_array_append_val (mset->pi_array, *pi);
         g_array_index (fpi_array, gint, pi->pid) = i;
       }
+
       ncm_mset_pindex_free (pi);
     }
 
     g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
     mset->valid_map = TRUE;
+
     if (update_models)
       ncm_mset_param_set_ftype_from_fmap (mset);
   }
 }
-
 
 /**
  * ncm_mset_get_fmap:
@@ -1121,17 +1178,21 @@ ncm_mset_get_fmap (NcmMSet *mset)
 {
   if (mset->valid_map)
   {
-    guint len = ncm_mset_fparam_len (mset);
+    guint len    = ncm_mset_fparam_len (mset);
     gchar **fmap = g_new0 (gchar *, len + 1);
     guint i;
+
     for (i = 0; i < len; i++)
     {
       fmap[i] = g_strdup (ncm_mset_fparam_full_name (mset, i));
     }
+
     return fmap;
   }
   else
+  {
     return NULL;
+  }
 }
 
 /**
@@ -1179,14 +1240,19 @@ ncm_mset_max_param_name (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       guint pid;
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         const gchar *pname = ncm_model_param_name (item->model, pid);
+
         name_size = GSL_MAX (name_size, strlen (pname));
       }
     }
@@ -1208,11 +1274,14 @@ ncm_mset_max_fparam_name (NcmMSet *mset)
 {
   const guint free_params_len = ncm_mset_fparams_len (mset);
   guint name_size = 0, i;
+
   for (i = 0; i < free_params_len; i++)
   {
     const gchar *pname = ncm_mset_fparam_name (mset, i);
+
     name_size = GSL_MAX (name_size, strlen (pname));
   }
+
   return name_size;
 }
 
@@ -1233,8 +1302,11 @@ ncm_mset_max_model_nick (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       guint pid;
@@ -1242,10 +1314,12 @@ ncm_mset_max_model_nick (NcmMSet *mset)
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         const gchar *nick = ncm_model_nick (item->model);
+
         nick_size = GSL_MAX (nick_size, strlen (nick));
       }
     }
   }
+
   return nick_size;
 }
 
@@ -1274,27 +1348,32 @@ void
 ncm_mset_pretty_log (NcmMSet *mset)
 {
   NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
-  guint name_size = ncm_mset_max_param_name (mset);
+  guint name_size          = ncm_mset_max_param_name (mset);
   guint i;
 
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       NcmModelID mid_base = NCM_MSET_GET_BASE_MID (item->mid);
-      GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
+      GArray *fpi_array   = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
       guint pid;
 
       ncm_cfg_msg_sepa ();
       g_message ("# Model[%05d]:\n#   - %s : %s\n", item->mid, g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns, ncm_model_name (item->model));
       ncm_cfg_msg_sepa ();
       g_message ("# Model parameters\n");
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         const gchar *pname = ncm_model_param_name (item->model, pid);
+
         g_message ("#   - %*s[%02d]: % -20.15g [%s]\n", name_size, pname, pid,
                    ncm_model_param_get (item->model, pid),
                    (g_array_index (fpi_array, gint, pid) >= 0) ? "FREE" : "FIXED");
@@ -1328,8 +1407,11 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       const gchar *nick = ncm_model_nick (item->model);
@@ -1338,6 +1420,7 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         const gchar *pname = ncm_model_param_name (item->model, pid);
+
         fprintf (out, "%*s:%*s %*s % 5.5g\n", nick_size, nick, name_size, pname, name_size,
                  (ncm_model_param_get_ftype (item->model, pid) == NCM_PARAM_TYPE_FREE) ? "FREE" : "FIXED",
                  ncm_model_param_get (item->model, pid));
@@ -1361,20 +1444,26 @@ ncm_mset_params_log_vals (NcmMSet *mset)
   guint i;
 
   g_message ("#");
+
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       guint pid;
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         g_message (" % -20.15g", ncm_model_param_get (item->model, pid));
       }
     }
   }
+
   g_message ("\n");
 }
 
@@ -1394,11 +1483,15 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       guint pid;
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         fprintf (out, " % -20.15g", ncm_model_param_get (item->model, pid));
@@ -1420,9 +1513,9 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 void
 ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
 {
-  const guint name_size       = ncm_mset_max_fparam_name (mset);
+  const guint name_size = ncm_mset_max_fparam_name (mset);
   const guint free_params_len = ncm_mset_fparam_len (mset);
-  const gchar *box            = "---------------";
+  const gchar *box = "---------------";
   guint i, j;
 
   g_assert (covar != NULL);
@@ -1430,32 +1523,43 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
   ncm_cfg_msg_sepa ();
   g_message ("# NcmMSet parameters covariance matrix\n");
   g_message ("#                                            ");
-  for (i = 0; i < name_size; i++) g_message (" ");
+
+  for (i = 0; i < name_size; i++)
+    g_message (" ");
 
   for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s", box) : g_message ("-%s",box);
+    i ? g_message ("%s", box) : g_message ("-%s", box);
+
   if (i)
     g_message ("\n");
 
   for (i = 0; i < free_params_len; i++)
   {
     const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (mset, i);
-    const gchar *pname = ncm_mset_fparam_name (mset, i);
+    const gchar *pname      = ncm_mset_fparam_name (mset, i);
+
     g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
                name_size, pname, pi->mid, pi->pid,
                ncm_mset_fparam_get (mset, i),
                sqrt (ncm_matrix_get (covar, i, i))
-               );
+              );
+
     for (j = 0; j < free_params_len; j++)
     {
       g_message (" % -12.4g |", ncm_matrix_get (covar, i, j) / (sqrt (ncm_matrix_get (covar, i, i) * ncm_matrix_get (covar, j, j))));
     }
+
     g_message ("\n");
   }
+
   g_message ("#                                            ");
-  for (i = 0; i < name_size; i++) g_message (" ");
+
+  for (i = 0; i < name_size; i++)
+    g_message (" ");
+
   for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s", box) : g_message ("-%s",box);
+    i ? g_message ("%s", box) : g_message ("-%s", box);
+
   if (i)
     g_message ("\n");
 
@@ -1478,14 +1582,13 @@ ncm_mset_params_valid (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
       continue;
-    else
-    {
-      if (!ncm_model_params_valid (item->model))
-        return FALSE;
-    }
+    else if (!ncm_model_params_valid (item->model))
+      return FALSE;
   }
+
   return TRUE;
 }
 
@@ -1501,17 +1604,17 @@ gboolean
 ncm_mset_params_valid_bounds (NcmMSet *mset)
 {
   guint i;
+
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
       continue;
-    else
-    {
-      if (!ncm_model_params_valid_bounds (item->model))
-        return FALSE;
-    }
+    else if (!ncm_model_params_valid_bounds (item->model))
+      return FALSE;
   }
+
   return TRUE;
 }
 
@@ -1742,8 +1845,10 @@ void
 ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype)
 {
   NcmModel *model = ncm_mset_peek (mset, mid);
+
   g_assert (model != NULL);
   ncm_model_param_set_ftype (model, pid, ftype);
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset);
 }
@@ -1764,8 +1869,11 @@ ncm_mset_param_set_all_ftype (NcmMSet *mset, NcmParamType ftype)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       gint pid;
@@ -1776,6 +1884,7 @@ ncm_mset_param_set_all_ftype (NcmMSet *mset, NcmParamType ftype)
       }
     }
   }
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset);
 }
@@ -1797,8 +1906,11 @@ ncm_mset_param_set_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup || (item->mid != mid))
+    {
       continue;
+    }
     else
     {
       gint pid;
@@ -1809,6 +1921,7 @@ ncm_mset_param_set_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype)
       }
     }
   }
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset);
 }
@@ -1830,8 +1943,11 @@ ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamTyp
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup || (item->mid == mid))
+    {
       continue;
+    }
     else
     {
       gint pid;
@@ -1842,6 +1958,7 @@ ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamTyp
       }
     }
   }
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset);
 }
@@ -1862,21 +1979,27 @@ ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup)
+    {
       continue;
+    }
     else
     {
       GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
 
       gint pid;
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
-        if (g_array_index (fpi_array, gint, pid) == - 1)
+        if (g_array_index (fpi_array, gint, pid) == -1)
           continue;
+
         ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FREE);
       }
     }
   }
+
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset);
 }
@@ -1900,11 +2023,15 @@ ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup || (item->added_total_params == 0))
+    {
       continue;
+    }
     else
     {
       NcmVector *mvec = ncm_vector_get_subvector (params, j, item->added_total_params);
+
       ncm_model_params_set_vector (item->model, mvec);
       ncm_vector_free (mvec);
       j += item->added_total_params;
@@ -1931,11 +2058,15 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+
     if (item->dup || (item->added_total_params == 0))
+    {
       continue;
+    }
     else
     {
       guint pid;
+
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         ncm_vector_set (params, j++, ncm_model_param_get (item->model, pid));
@@ -1953,7 +2084,7 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
  * be compatible.
  *
  */
-void 
+void
 ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src)
 {
   g_assert_cmpint (ncm_mset_cmp_all (mset_dest, mset_src), ==, 0);
@@ -1982,8 +2113,10 @@ NcmParamType
 ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
 {
   NcmModel *model = ncm_mset_peek (mset, mid);
+
   if (model == NULL)
     g_error ("ncm_mset_param_get_ftype: cannot get ftype of mode %d, model not set.", mid);
+
   return ncm_model_param_get_ftype (model, pid);
 }
 
@@ -2001,6 +2134,7 @@ void
 ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, guint n)
 {
   guint fpi;
+
   for (fpi = 0; fpi < n; fpi++)
     ncm_mset_param_set (mset, pi[fpi].mid, pi[fpi].pid, x[fpi]);
 }
@@ -2019,6 +2153,7 @@ void
 ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint n)
 {
   guint fpi;
+
   for (fpi = 0; fpi < n; fpi++)
     x[fpi] = ncm_mset_param_get (mset, pi[fpi].mid, pi[fpi].pid);
 }
@@ -2039,6 +2174,7 @@ ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x)
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_vector_set (x, fpi, ncm_mset_param_get (mset, pi.mid, pi.pid));
   }
 }
@@ -2060,6 +2196,7 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_vector_set (x, fpi + offset, ncm_mset_param_get (mset, pi.mid, pi.pid));
   }
 }
@@ -2080,12 +2217,14 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi));
   }
 
   for (fpi = 0; fpi < mset->mid_array->len; fpi++)
   {
     NcmModel *model = ncm_mset_peek (mset, g_array_index (mset->mid_array, NcmModelID, fpi));
+
     ncm_model_params_update (model);
   }
 }
@@ -2107,12 +2246,14 @@ ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint off
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi + offset));
   }
 
   for (fpi = 0; fpi < mset->mid_array->len; fpi++)
   {
     NcmModel *model = ncm_mset_peek (mset, g_array_index (mset->mid_array, NcmModelID, fpi));
+
     ncm_model_params_update (model);
   }
 }
@@ -2129,15 +2270,18 @@ void
 ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
 {
   guint fpi;
+
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, x[fpi]);
   }
 
   for (fpi = 0; fpi < mset->mid_array->len; fpi++)
   {
     NcmModel *model = ncm_mset_peek (mset, g_array_index (mset->mid_array, NcmModelID, fpi));
+
     ncm_model_params_update (model);
   }
 }
@@ -2154,15 +2298,18 @@ void
 ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x)
 {
   guint fpi;
+
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, gsl_vector_get (x, fpi));
   }
 
   for (fpi = 0; fpi < mset->mid_array->len; fpi++)
   {
     NcmModel *model = ncm_mset_peek (mset, g_array_index (mset->mid_array, NcmModelID, fpi));
+
     ncm_model_params_update (model);
   }
 }
@@ -2179,6 +2326,7 @@ guint
 ncm_mset_fparams_len (NcmMSet *mset)
 {
   g_assert (mset->valid_map);
+
   return mset->fparam_len;
 }
 
@@ -2197,6 +2345,7 @@ ncm_mset_fparam_name (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_name (mset, pi.mid, pi.pid);
   }
 }
@@ -2216,6 +2365,7 @@ ncm_mset_fparam_symbol (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_symbol (mset, pi.mid, pi.pid);
   }
 }
@@ -2233,14 +2383,18 @@ const gchar *
 ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
 {
   gchar *fullname;
+
   g_assert (mset->valid_map && n < mset->fparam_len);
+
   if ((fullname = g_ptr_array_index (mset->fullname_parray, n)) != NULL)
+  {
     return fullname;
+  }
   else
   {
-    NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
-    const gchar *model_ns = ncm_mset_get_ns_by_id (pi.mid); /* ncm_model_nick (ncm_mset_peek (mset, pi.mid));*/
-    const gchar *pname = ncm_mset_param_name (mset, pi.mid, pi.pid);
+    NcmMSetPIndex pi        = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+    const gchar *model_ns   = ncm_mset_get_ns_by_id (pi.mid); /* ncm_model_nick (ncm_mset_peek (mset, pi.mid));*/
+    const gchar *pname      = ncm_mset_param_name (mset, pi.mid, pi.pid);
     const guint stackpos_id = pi.mid % NCM_MSET_MAX_STACKSIZE;
 
     if (stackpos_id > 0)
@@ -2250,6 +2404,7 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
 
     g_ptr_array_index (mset->fullname_parray, n) = fullname;
   }
+
   return fullname;
 }
 
@@ -2266,17 +2421,17 @@ NcmMSetPIndex *
 ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
 {
   GMatchInfo *match_info = NULL;
-  NcmMSetPIndex *pi = NULL;
+  NcmMSetPIndex *pi      = NULL;
 
   if (g_regex_match (mset->fullname_regex, fullname, 0, &match_info))
   {
-    gint nm = g_match_info_get_match_count (match_info);
+    gint nm           = g_match_info_get_match_count (match_info);
     gchar *ns         = NULL;
     gchar *stackpos_s = NULL;
     gchar *pid_s      = NULL;
     gchar *endptr     = NULL;
-    guint pid      = 0;
-    guint stackpos = 0;
+    guint pid         = 0;
+    guint stackpos    = 0;
     NcmModelID mid;
     NcmModel *model;
 
@@ -2287,23 +2442,27 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
     pid_s      = g_match_info_fetch (match_info, 3);
 
     mid = ncm_mset_get_id_by_ns (ns);
+
     if (mid < 0)
       g_error ("ncm_mset_param_get_by_full_name: namespace `%s' not found.", ns);
 
     if (*stackpos_s != '\0')
     {
       stackpos = g_ascii_strtoll (stackpos_s, &endptr, 10);
+
       if (*endptr != '\0')
         g_error ("ncm_mset_param_get_by_full_name: invalid stackpos number `%s'.", stackpos_s);
     }
+
     g_free (stackpos_s);
 
-    mid += stackpos;
+    mid  += stackpos;
     model = ncm_mset_peek (mset, mid);
+
     if (model != NULL)
     {
       endptr = NULL;
-      pid = g_ascii_strtoll (pid_s, &endptr, 10);
+      pid    = g_ascii_strtoll (pid_s, &endptr, 10);
 
       if (*endptr != '\0')
       {
@@ -2315,11 +2474,14 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
         pi = ncm_mset_pindex_new (mid, pid);
       }
     }
+
     g_free (pid_s);
     g_free (ns);
   }
   else
+  {
     g_error ("ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
+  }
 
   g_match_info_free (match_info);
 
@@ -2341,6 +2503,7 @@ ncm_mset_fparam_get_scale (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_get_scale (mset, pi.mid, pi.pid);
   }
 }
@@ -2360,6 +2523,7 @@ ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_get_lower_bound (mset, pi.mid, pi.pid);
   }
 }
@@ -2379,6 +2543,7 @@ ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_get_upper_bound (mset, pi.mid, pi.pid);
   }
 }
@@ -2396,6 +2561,7 @@ ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
 {
   NcmMatrix *bounds = ncm_matrix_new (mset->fparam_len, 2);
   gint i;
+
   g_assert (mset->valid_map);
 
   for (i = 0; i < mset->fparam_len; i++)
@@ -2426,6 +2592,7 @@ ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_get_abstol (mset, pi.mid, pi.pid);
   }
 }
@@ -2445,6 +2612,7 @@ ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     ncm_mset_param_set_scale (mset, pi.mid, pi.pid, scale);
   }
 }
@@ -2465,14 +2633,17 @@ ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
   g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len);
   {
     guint i;
+
     for (i = 0; i < mset->fparam_len; i++)
     {
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i);
+
       if ((val < lb) || (val > ub))
         return FALSE;
     }
+
     return TRUE;
   }
 }
@@ -2494,14 +2665,17 @@ ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offs
   g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len + offset);
   {
     guint i;
+
     for (i = 0; i < mset->fparam_len; i++)
     {
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i + offset);
+
       if ((val < lb) || (val > ub))
         return FALSE;
     }
+
     return TRUE;
   }
 }
@@ -2519,6 +2693,7 @@ gboolean
 ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
 {
   gboolean valid;
+
   g_assert (mset->valid_map);
   g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len);
 
@@ -2527,7 +2702,7 @@ ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
 
   valid = ncm_mset_params_valid (mset) && ncm_mset_params_valid_bounds (mset);
   ncm_mset_fparams_set_vector (mset, mset->temp_fparams);
-  
+
   return valid;
 }
 
@@ -2546,6 +2721,7 @@ ncm_mset_fparam_get (NcmMSet *mset, guint n)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_get (mset, pi.mid, pi.pid);
   }
 }
@@ -2565,6 +2741,7 @@ ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x)
   g_assert (mset->valid_map && n < mset->fparam_len);
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+
     return ncm_mset_param_set (mset, pi.mid, pi.pid, x);
   }
 }
@@ -2582,6 +2759,7 @@ const NcmMSetPIndex *
 ncm_mset_fparam_get_pi (NcmMSet *mset, guint n)
 {
   g_assert (mset->valid_map && n < mset->fparam_len);
+
   return &(g_array_index (mset->pi_array, NcmMSetPIndex, n));
 }
 
@@ -2602,7 +2780,9 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 
   {
     GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (mid));
+
     g_assert (fpi_array != NULL);
+
     return g_array_index (fpi_array, gint, pid);
   }
 }
@@ -2619,13 +2799,16 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 const NcmMSetPIndex *
 ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
 {
-  guint match = 0;
+  guint match   = 0;
   guint match_i = 0;
   guint i;
+
   g_assert (mset->valid_map);
+
   for (i = 0; i < mset->fparam_len; i++)
   {
     const gchar *name_i = ncm_mset_fparam_name (mset, i);
+
     if (strcmp (name, name_i) == 0)
     {
       match++;
@@ -2637,6 +2820,7 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
   {
     g_warning ("ncm_mset_fparam_get_pi_by_name: more than one [%u] parameters with the same name %s, use the full name to avoid ambiguities, returning the last match.",
                match, name);
+
     return NULL;
   }
   else if (match == 1)
@@ -2648,21 +2832,28 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
     for (i = 0; i < mset->fparam_len; i++)
     {
       const gchar *name_i = ncm_mset_fparam_full_name (mset, i);
+
       if (strcmp (name, name_i) == 0)
       {
         match++;
         match_i = i;
       }
     }
+
     if (match == 0)
+    {
       return NULL;
+    }
     else if (match > 1)
     {
       g_error ("ncm_mset_fparam_get_pi_by_name: more than one full names [%u] match %s.", match, name);
+
       return NULL;
     }
     else
+    {
       return ncm_mset_fparam_get_pi (mset, match_i);
+    }
   }
 }
 
@@ -2673,19 +2864,19 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
  * @filename: FIXME
  * @save_comment: FIXME
  *
- * FIXME
+ * Saves the #NcmMSet to a file using #GKeyFile.
  *
  */
 void
 ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment)
 {
   NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
-  GKeyFile *msetfile = g_key_file_new ();
+  GKeyFile *msetfile       = g_key_file_new ();
   guint i;
 
   {
-    GError *error = NULL;
-    gchar *mset_desc = ncm_cfg_string_to_comment ("NcmMSet");
+    GError *error              = NULL;
+    gchar *mset_desc           = ncm_cfg_string_to_comment ("NcmMSet");
     gchar *mset_valid_map_desc = ncm_cfg_string_to_comment ("valid-map property");
 
     g_key_file_set_boolean (msetfile, "NcmMSet", "valid_map", mset->valid_map);
@@ -2694,6 +2885,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
     {
       if (!g_key_file_set_comment (msetfile, "NcmMSet", NULL, mset_desc, &error))
         g_error ("ncm_mset_save: %s", error->message);
+
       if (!g_key_file_set_comment (msetfile, "NcmMSet", "valid_map", mset_valid_map_desc, &error))
         g_error ("ncm_mset_save: %s", error->message);
     }
@@ -2707,8 +2899,8 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
     NcmMSetItem *item       = g_ptr_array_index (mset->model_array, i);
     NcmModelID mid_base     = item->mid / NCM_MSET_MAX_STACKSIZE;
     const guint stackpos_id = item->mid % NCM_MSET_MAX_STACKSIZE;
-    const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns;
-    GError *error = NULL;
+    const gchar *ns         = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns;
+    GError *error           = NULL;
     gchar *group;
 
     if (stackpos_id > 0)
@@ -2719,23 +2911,27 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
     if (item->dup)
     {
       NcmMSetItem *item0 = g_hash_table_lookup (mset->model_item_hash, item->model);
+
       g_assert (item0 != NULL);
 
       g_key_file_set_uint64 (msetfile, group, ns, item0->mid % NCM_MSET_MAX_STACKSIZE);
+
       if (save_comment)
       {
         gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
+
         if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
           g_error ("ncm_mset_save: %s", error->message);
+
         g_free (model_desc);
       }
     }
     else
     {
       NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
-      GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
-      GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
-      guint nsubmodels           = ncm_model_get_submodel_len (item->model);
+      GObjectClass *oclass = G_OBJECT_CLASS (model_class);
+      GVariant *model_var = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
+      guint nsubmodels = ncm_model_get_submodel_len (item->model);
       GVariant *params = NULL;
       gchar *obj_name = NULL;
       guint nparams, j;
@@ -2747,14 +2943,17 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       if (save_comment)
       {
         gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
+
         if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
           g_error ("ncm_mset_save: %s", error->message);
+
         g_free (model_desc);
       }
 
       for (j = 0; j < nsubmodels; j++)
       {
         NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+
         ncm_serialize_unset (ser, submodel);
         ncm_serialize_remove_ser (ser, submodel);
       }
@@ -2764,7 +2963,9 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
         GVariantIter iter;
         GVariant *value;
         gchar *key;
+
         g_variant_iter_init (&iter, params);
+
         while (g_variant_iter_next (&iter, "{sv}", &key, &value))
         {
           if (strcmp (key, "submodel-array") == 0)
@@ -2776,19 +2977,24 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
           else
           {
             GParamSpec *param_spec = g_object_class_find_property (oclass, key);
-            gchar *param_str = g_variant_print (value, TRUE);
+            gchar *param_str       = g_variant_print (value, TRUE);
+
             if (param_spec == NULL)
               g_error ("ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
 
             g_key_file_set_value (msetfile, group, key, param_str);
+
             if (save_comment)
             {
               const gchar *blurb = g_param_spec_get_blurb (param_spec);
-              if (blurb != NULL && blurb[0] != 0)
+
+              if ((blurb != NULL) && (blurb[0] != 0))
               {
                 gchar *desc = ncm_cfg_string_to_comment (blurb);
+
                 if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
                   g_error ("ncm_mset_save: %s", error->message);
+
                 g_free (desc);
               }
             }
@@ -2809,37 +3015,41 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
   }
 
   {
-    GError *error = NULL;
-    gsize len = 0;
+    GError *error    = NULL;
+    gsize len        = 0;
     gchar *mset_data = g_key_file_to_data (msetfile, &len, &error);
+
     if (error != NULL)
       g_error ("Error converting NcmMSet to configuration file: %s", error->message);
+
     if (!g_file_set_contents (filename, mset_data, len, &error))
       g_error ("Error saving configuration file to disk: %s", error->message);
+
     g_free (mset_data);
     g_key_file_free (msetfile);
   }
 }
 
-
 /**
- * ncm_mset_load: (constructor):
+ * ncm_mset_load: (constructor)
  * @filename: mset filename
  * @ser: a #NcmSerialize
  *
- * FIXME
+ * Loads a #NcmMSet from a configuration file using the #NcmSerialize
+ * object @ser. The file must be in the same format as the one
+ * generated by ncm_mset_save().
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the loaded #NcmMSet.
  */
 NcmMSet *
 ncm_mset_load (const gchar *filename, NcmSerialize *ser)
 {
-  NcmMSet *mset = ncm_mset_empty_new ();
-  GKeyFile *msetfile = g_key_file_new ();
-  GError *error = NULL;
-  gchar **groups = NULL;
-  gsize ngroups = 0;
-  gboolean valid_map = FALSE;
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  GKeyFile *msetfile        = g_key_file_new ();
+  GError *error             = NULL;
+  gchar **groups            = NULL;
+  gsize ngroups             = 0;
+  gboolean valid_map        = FALSE;
   GPtrArray *submodel_array = g_ptr_array_new ();
   guint i;
 
@@ -2848,6 +3058,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
   if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
   {
     g_error ("ncm_mset_load: Invalid mset configuration file: %s %s", filename, error->message);
+
     return NULL;
   }
 
@@ -2857,33 +3068,39 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
     {
       if (error != NULL)
         g_error ("ncm_mset_load: %s", error->message);
+
       valid_map = g_key_file_get_boolean (msetfile, "NcmMSet", "valid_map", &error);
+
       if (error != NULL)
         g_error ("ncm_mset_load: %s", error->message);
     }
+
     g_key_file_remove_group (msetfile, "NcmMSet", &error);
+
     if (error != NULL)
       g_error ("ncm_mset_load: %s", error->message);
   }
 
   groups = g_key_file_get_groups (msetfile, &ngroups);
+
   for (i = 0; i < ngroups; i++)
   {
     GString *obj_ser = g_string_sized_new (200);
-    gchar *ns = g_strdup (groups[i]);
+    gchar *ns        = g_strdup (groups[i]);
     gchar *twopoints = g_strrstr (ns, ":");
-    guint stackpos = 0;
+    guint stackpos   = 0;
 
     if (twopoints != NULL)
     {
       *twopoints = '\0';
-      stackpos = atoi (++twopoints);
+      stackpos   = atoi (++twopoints);
     }
 
     if (!g_key_file_has_key (msetfile, groups[i], ns, &error))
     {
       if (error != NULL)
         g_error ("ncm_mset_load: %s", error->message);
+
       g_error ("ncm_mset_load: Every group must contain a key with same name indicating the object type `%s' `%s'.", groups[i], ns);
     }
 
@@ -2892,7 +3109,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
 
       if (strlen (obj_type) < 5)
       {
-        gchar *endptr = NULL;
+        gchar *endptr       = NULL;
         guint stackpos_orig = g_ascii_strtoll (obj_type, &endptr, 10);
 
         g_assert (endptr != NULL);
@@ -2900,9 +3117,11 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         if (*endptr == '\0')
         {
           NcmModelID id = ncm_mset_get_id_by_ns (ns);
+
           g_assert_cmpint (id, >, -1);
           {
             NcmModel *model = ncm_mset_peek_pos (mset, id, stackpos_orig);
+
             g_assert (model != NULL);
             ncm_mset_set_pos (mset, model, stackpos);
           }
@@ -2913,16 +3132,19 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
       g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_type);
       g_free (obj_type);
       g_key_file_remove_key (msetfile, groups[i], ns, &error);
+
       if (error != NULL)
         g_error ("ncm_mset_load: %s", error->message);
     }
 
     {
-      gsize nkeys = 0;
+      gsize nkeys  = 0;
       gchar **keys = g_key_file_get_keys (msetfile, groups[i], &nkeys, &error);
       guint j;
+
       if (error != NULL)
         g_error ("ncm_mset_load: %s", error->message);
+
       for (j = 0; j < nkeys; j++)
       {
         if (strcmp (keys[j], "submodel-array") == 0)
@@ -2932,32 +3154,41 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         else
         {
           gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &error);
+
           if (error != NULL)
             g_error ("ncm_mset_load: %s", error->message);
+
           g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
           g_free (propval);
+
           if (j + 1 != nkeys)
             g_string_append (obj_ser, ", ");
         }
       }
+
       g_string_append (obj_ser, "}}");
       g_strfreev (keys);
     }
 
     {
       GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+
       g_assert (NCM_IS_MODEL (obj));
+
       if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
+
       if (ncm_model_is_submodel (NCM_MODEL (obj)))
       {
         NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
+
         g_ptr_array_add (submodel_array, submodel);
       }
       else
       {
         ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos);
       }
+
       ncm_model_free (NCM_MODEL (obj));
     }
     g_string_free (obj_ser, TRUE);
@@ -2966,14 +3197,15 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
 
   for (i = 0; i < submodel_array->len; i++)
   {
-    NcmModel *submodel = g_ptr_array_index (submodel_array, i);
-    NcmModelID mid = ncm_model_main_model (submodel);
+    NcmModel *submodel  = g_ptr_array_index (submodel_array, i);
+    NcmModelID mid      = ncm_model_main_model (submodel);
     NcmModel *mainmodel = ncm_mset_peek (mset, mid);
 
     g_assert_cmpint (mid, >=, 0);
+
     if (mainmodel == NULL)
     {
-      g_error ("ncm_mset_load: cannot add submodel `%s', main model `%s' not found.", 
+      g_error ("ncm_mset_load: cannot add submodel `%s', main model `%s' not found.",
                G_OBJECT_TYPE_NAME (submodel),
                ncm_mset_get_ns_by_id (mid));
     }
@@ -2983,13 +3215,15 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
       _ncm_mset_set_pos_intern (mset, submodel, 0);
     }
   }
-  
+
   g_key_file_unref (msetfile);
   g_strfreev (groups);
-    
+
   if (valid_map)
     ncm_mset_prepare_fparam_map (mset);
 
   g_ptr_array_unref (submodel_array);
+
   return mset;
 }
+

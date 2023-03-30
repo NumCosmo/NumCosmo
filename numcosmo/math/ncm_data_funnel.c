@@ -29,7 +29,7 @@
  * @title: NcmDataFunnel
  * @short_description: Funnel distribution.
  *
- * FIXME
+ * This object implements a funnel distribution.
  *
  */
 

@@ -24,6 +24,9 @@
 """Example of using the Rosenbrock function to test the MCMC sampler.
 """
 
+from pathlib import Path
+from typing import Optional
+
 from numcosmo_py import Ncm
 from numcosmo_py.sampling.esmcmc import (
     create_esmcmc,
@@ -47,7 +50,9 @@ def run_funnel_mcmc(
     nwalkers: int = 3000,
     nthreads: int = 4,
     over_smooth: float = 0.2,
+    local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0e2,
+    start_catalog: Optional[Path] = None,
 ) -> str:
     """Runs the Funnel MCMC example."""
 
@@ -63,6 +68,10 @@ def run_funnel_mcmc(
     dset.append_data(dfu)
     likelihood = Ncm.Likelihood.new(dset)
 
+    start_mcat = None
+    if start_catalog is not None:
+        start_mcat = Ncm.MSetCatalog.new_from_file_ro(start_catalog.as_posix(), 0)
+
     esmcmc = create_esmcmc(
         likelihood,
         mset,
@@ -77,7 +86,9 @@ def run_funnel_mcmc(
         nwalkers=nwalkers,
         nthreads=nthreads,
         over_smooth=over_smooth,
+        local_fraction=local_fraction,
         init_sampling_scale=init_sampling_scale,
+        start_mcat=start_mcat,
     )
 
     # Running the esmcmc.

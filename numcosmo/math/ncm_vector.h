@@ -119,7 +119,7 @@ void ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const g
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
-void ncm_vector_axpy (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
+void ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
 void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
@@ -205,10 +205,10 @@ ncm_vector_sum_cpts (const NcmVector *cv)
 {
   guint i;
   gdouble sum = 0.0;
-  
+
   for (i = 0; i < ncm_vector_len (cv); i++)
     sum += ncm_vector_get (cv, i);
-  
+
   return sum;
 }
 
@@ -313,9 +313,9 @@ ncm_vector_set_data (NcmVector *cv, const gdouble *array, guint size)
 {
   register guint i;
   const guint vsize = ncm_vector_len (cv);
-  
+
   g_assert_cmpuint (vsize, ==, size);
-  
+
   for (i = 0; i < size; i++)
     ncm_vector_set (cv, i, array[i]);
 }
@@ -325,9 +325,9 @@ ncm_vector_set_array (NcmVector *cv, GArray *array)
 {
   register guint i;
   const guint vsize = ncm_vector_len (cv);
-  
+
   g_assert_cmpuint (vsize, ==, array->len);
-  
+
   for (i = 0; i < vsize; i++)
     ncm_vector_set (cv, i, g_array_index (array, gdouble, i));
 }
@@ -386,7 +386,7 @@ ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start,
 {
   g_assert_cmpuint (ncm_vector_len (cv1), >=, size + cv1_start);
   g_assert_cmpuint (ncm_vector_len (cv2), >=, size + cv2_start);
-  
+
   memcpy (ncm_vector_ptr (cv1, cv1_start), ncm_vector_const_ptr (cv2, cv2_start), sizeof (gdouble) * size);
 }
 
@@ -394,7 +394,7 @@ NCM_INLINE GArray *
 ncm_vector_get_array (NcmVector *cv)
 {
   g_assert (cv->type == NCM_VECTOR_ARRAY);
-  
+
   return g_array_ref (cv->pdata);
 }
 
@@ -402,25 +402,25 @@ NCM_INLINE GArray *
 ncm_vector_dup_array (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
-  
+
   if (ncm_vector_stride (cv) == 1)
   {
     GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-    
+
     g_array_append_vals (a, ncm_vector_data (cv), len);
-    
+
     return a;
   }
   else
   {
     GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
     gint i;
-    
+
     g_array_set_size (a, len);
-    
+
     for (i = 0; i < len; i++)
       g_array_index (a, gdouble, i) = ncm_vector_get (cv, i);
-    
+
     return a;
   }
 }
@@ -502,13 +502,13 @@ ncm_vector_is_finite (const NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     if (!isfinite (ncm_vector_get (cv, i)))
       return FALSE;
   }
-  
+
   return TRUE;
 }
 
@@ -517,6 +517,7 @@ ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
   gint i;
+
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
   for (i = 0; i < len; i++)
@@ -524,6 +525,7 @@ ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2)
     if (ncm_vector_get (cv1, i) >= ncm_vector_get (cv2, i))
       return FALSE;
   }
+
   return TRUE;
 }
 
@@ -532,6 +534,7 @@ ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
   gint i;
+
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
   for (i = 0; i < len; i++)
@@ -539,6 +542,7 @@ ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2)
     if (ncm_vector_get (cv1, i) > ncm_vector_get (cv2, i))
       return FALSE;
   }
+
   return TRUE;
 }
 
@@ -554,24 +558,30 @@ ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector
   switch (type)
   {
     case 0:
+
       for (i = 0; i < len; i++)
       {
         const gdouble cv_i    = ncm_vector_get (cv, i);
         const gdouble cv_lb_i = ncm_vector_get (cv_lb, i);
         const gdouble cv_ub_i = ncm_vector_get (cv_ub, i);
+
         if ((cv_i < cv_lb_i) || (cv_ub_i <= cv_i))
           return FALSE;
       }
+
       break;
     case 1:
+
       for (i = 0; i < len; i++)
       {
         const gdouble cv_i    = ncm_vector_get (cv, i);
         const gdouble cv_lb_i = ncm_vector_get (cv_lb, i);
         const gdouble cv_ub_i = ncm_vector_get (cv_ub, i);
+
         if ((cv_i <= cv_lb_i) || (cv_ub_i < cv_i))
           return FALSE;
       }
+
       break;
     default:
       g_error ("ncm_vector_between: unknown comparison type `%d'", type);
@@ -580,7 +590,6 @@ ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector
 
   return TRUE;
 }
-
 
 G_END_DECLS
 

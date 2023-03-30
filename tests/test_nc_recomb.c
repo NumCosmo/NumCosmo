@@ -56,26 +56,26 @@ test_nc_recomb_seager_new ()
   
   NCM_TEST_FREE (nc_recomb_free, recomb);
   
-  recomb = NC_RECOMB (nc_recomb_seager_new_full (1e-10, 2.2e9, 1e-5));
+  recomb = NC_RECOMB (nc_recomb_seager_new_full (1.0e-10, 2.2e9, 1.0e-5));
   g_assert_true (NC_IS_RECOMB (recomb));
   g_assert_true (NC_IS_RECOMB_SEAGER (recomb));
   
-  ncm_assert_cmpdouble (recomb->init_frac, ==, 1e-10);
+  ncm_assert_cmpdouble (recomb->init_frac, ==, 1.0e-10);
   ncm_assert_cmpdouble (recomb->zi, ==, 2.2e9);
-  ncm_assert_cmpdouble (recomb->prec, ==, 1e-5);
+  ncm_assert_cmpdouble (recomb->prec, ==, 1.0e-5);
   
   NCM_TEST_FREE (nc_recomb_free, recomb);
   
 #if GLIB_CHECK_VERSION (2, 30, 0)
   recomb = nc_recomb_new_from_name ("NcRecombSeager{'prec':<2e-7>}");
 #else
-  recomb = nc_recomb_seager_new_full (1.0e-11, NC_PERTURBATION_START_X, 2e-7);
+  recomb = nc_recomb_seager_new_full (1.0e-11, NC_PERTURBATION_START_X, 2.0e-7);
 #endif
   
   g_assert_true (NC_IS_RECOMB (recomb));
   g_assert_true (NC_IS_RECOMB_SEAGER (recomb));
   
-  ncm_assert_cmpdouble (recomb->prec, ==, 2e-7);
+  ncm_assert_cmpdouble (recomb->prec, ==, 2.0e-7);
   
   NCM_TEST_FREE (nc_recomb_free, recomb);
 }
@@ -94,7 +94,7 @@ test_nc_recomb_seager_wmap_zstar (void)
   {
     const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
     
-    ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4, 0.0);
+    ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1.0e-4, 0.0);
   }
   
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
@@ -102,7 +102,7 @@ test_nc_recomb_seager_wmap_zstar (void)
   {
     const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
     
-    ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4, 0.0);
+    ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1.0e-4, 0.0);
   }
   
   nc_hireion_free (reion);

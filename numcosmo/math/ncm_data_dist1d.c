@@ -29,7 +29,7 @@
  * @title: NcmDataDist1d
  * @short_description: Abstract class for one variable distribution data.
  *
- * FIXME
+ * This object is an abstract class for one variable distribution data.
  *
  */
 
@@ -89,9 +89,9 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_VECTOR:
       ncm_vector_substitute (&self->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -111,9 +111,9 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_VECTOR:
       g_value_set_object (value, self->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

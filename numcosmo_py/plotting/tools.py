@@ -29,6 +29,8 @@ import numpy as np
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+from matplotlib import cm
 
 
 # pylint:disable-next=invalid-name
@@ -88,18 +90,18 @@ def latex_float(value: float):
         return float_str
 
 
-def set_rc_params_article(column_width: float = 246.0, ncol: int = 2):
+def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int = 1):
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
     golden_mean = (math.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
     fig_width = fig_width_pt * inches_per_pt  # width in inches
     fig_height = fig_width * golden_mean  # height in inches
-    fig_size = [fig_width, fig_height]
+    fig_size = [fig_width, fig_height * nrows]
 
     params = {
-        "axes.labelsize": 10,
-        "font.size": 10,
+        "axes.labelsize": 8,
+        "font.size": 8,
         "legend.fontsize": 8,
         "xtick.labelsize": 8,
         "ytick.labelsize": 8,
@@ -108,3 +110,33 @@ def set_rc_params_article(column_width: float = 246.0, ncol: int = 2):
     }
 
     plt.rcParams.update(params)
+
+
+def plot_m2lnp(
+    x: np.ndarray,  # pylint:disable-msg=invalid-name
+    y: np.ndarray,  # pylint:disable-msg=invalid-name
+    z: np.ndarray,  # pylint:disable-msg=invalid-name
+    ax: plt.Axes,  # pylint:disable-msg=invalid-name
+    *,
+    plotn: int = 150,
+    vmin: float = 1.0e-12,
+    vmax: float = 1.0,
+):
+    """Plot the -2lnp."""
+
+    z = z - np.min(z)
+    z = np.exp(-0.5 * z)
+    exp_z = z.reshape(plotn, plotn)
+
+    img = ax.imshow(
+        exp_z,
+        interpolation="bicubic",
+        origin="lower",
+        cmap=cm.gray_r,
+        norm=LogNorm(vmin=vmin, vmax=vmax),
+        extent=[x[0], x[-1], y[0], y[-1]],
+        aspect="auto",
+        rasterized=True,
+    )
+
+    return img

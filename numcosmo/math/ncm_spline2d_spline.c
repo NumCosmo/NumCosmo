@@ -297,7 +297,7 @@ _ncm_spline2d_spline_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y
   guint i;
 
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_START */
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_xl != xl) || (s2ds->last_xu != xu) || s2ds->first_prepare_integ)
   {
@@ -320,7 +320,7 @@ _ncm_spline2d_spline_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu
   guint i;
 
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_START */
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_x != x) || s2ds->first_prepare)
   {
@@ -342,7 +342,7 @@ _ncm_spline2d_spline_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble
   guint i;
 
   if (!s2d->init)
-    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_START */
+    ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_xl != xl) || (s2ds->last_xu != xu) || s2ds->first_prepare_integ)
   {
