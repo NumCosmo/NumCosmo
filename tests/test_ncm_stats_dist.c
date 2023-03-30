@@ -421,7 +421,7 @@ test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -469,7 +469,7 @@ test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -525,7 +525,7 @@ test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer 
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -605,7 +605,7 @@ test_ncm_stats_dist_dens_interp_cv_split (TestNcmStatsDist *test, gconstpointer 
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -658,7 +658,7 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -712,7 +712,7 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -746,12 +746,14 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
   }
 
   {
-    NcmMatrix *cov_est = ncm_stats_vec_peek_cov_matrix (test_stats, 0);
+    NcmMatrix *cov_est    = ncm_stats_vec_peek_cov_matrix (test_stats, 0);
+    NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+    NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
 
     if (
       (test->nfail < 10) &&
-      ((ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0) >= 0.5) ||
-       (ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 0.0) >= 0.5))
+      ((ncm_matrix_cmp (cov_est, cov, 0.0) >= 0.5) ||
+       (ncm_matrix_cmp_diag (cov_est, cov, 0.0) >= 0.5))
        )
     {
       guint nfail = test->nfail;
@@ -764,8 +766,8 @@ test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata)
     }
     else
     {
-      g_assert_cmpfloat (ncm_matrix_cmp (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 1.0), <, 0.5);
-      g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, NCM_DATA_GAUSS_COV (data_mvnd)->cov, 1.0), <, 0.5);
+      g_assert_cmpfloat (ncm_matrix_cmp (cov_est, cov, 1.0), <, 0.5);
+      g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, cov, 1.0), <, 0.5);
     }
   }
 
@@ -799,7 +801,7 @@ test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata)
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
@@ -871,7 +873,7 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
     {
       NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
 
-      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), gcov->cov);
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:

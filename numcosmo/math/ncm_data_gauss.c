@@ -91,7 +91,7 @@ _ncm_data_gauss_constructed (GObject *object)
 static void
 ncm_data_gauss_dispose (GObject *object)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (object);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (object);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
 
   ncm_vector_clear (&self->y);
@@ -113,7 +113,7 @@ ncm_data_gauss_finalize (GObject *object)
 static void
 ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (object);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (object);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS (object));
@@ -138,7 +138,7 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
 static void
 ncm_data_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (object);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (object);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS (object));
@@ -229,7 +229,7 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
 static guint
 _ncm_data_gauss_get_length (NcmData *data)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
 
   return self->np;
@@ -238,7 +238,7 @@ _ncm_data_gauss_get_length (NcmData *data)
 static void
 _ncm_data_gauss_prepare_LLT (NcmData *data)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
   gint ret;
 
@@ -295,10 +295,10 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 static void
 _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+  gboolean inv_cov_update = FALSE;
   guint i, j;
 
   *m2lnL = 0.0;
@@ -407,7 +407,7 @@ void
 _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
 {
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  NcmData *data = NCM_DATA (gauss);
+  NcmData *data                    = NCM_DATA (gauss);
 
   if ((np == 0) || (np != self->np))
   {
@@ -474,5 +474,37 @@ guint
 ncm_data_gauss_get_size (NcmDataGauss *gauss)
 {
   return NCM_DATA_GAUSS_GET_CLASS (gauss)->get_size (gauss);
+}
+
+/**
+ * ncm_data_gauss_peek_inv_cov:
+ * @gauss: a #NcmDataGauss
+ *
+ * Gets the inverse covariance matrix.
+ *
+ * Returns: (transfer none): Inverse covariance matrix.
+ */
+NcmMatrix *
+ncm_data_gauss_peek_inv_cov (NcmDataGauss *gauss)
+{
+  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
+
+  return self->inv_cov;
+}
+
+/**
+ * ncm_data_gauss_peek_mean:
+ * @gauss: a #NcmDataGauss
+ *
+ * Gets the mean vector.
+ *
+ * Returns: (transfer none): Mean vector.
+ */
+NcmVector *
+ncm_data_gauss_peek_mean (NcmDataGauss *gauss)
+{
+  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
+
+  return self->y;
 }
 

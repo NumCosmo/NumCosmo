@@ -34,6 +34,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA_GAUSS             (ncm_data_gauss_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (NcmDataGauss, ncm_data_gauss, NCM, DATA_GAUSS, NcmData)
 
 struct _NcmDataGaussClass
@@ -52,6 +53,9 @@ struct _NcmDataGaussClass
 
 void ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
 guint ncm_data_gauss_get_size (NcmDataGauss *gauss);
+
+NcmMatrix *ncm_data_gauss_peek_inv_cov (NcmDataGauss *gauss);
+NcmVector *ncm_data_gauss_peek_mean (NcmDataGauss *gauss);
 
 G_END_DECLS
 
