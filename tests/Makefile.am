@@ -228,7 +228,8 @@ AM_TESTS_ENVIRONMENT += \
 	LD_LIBRARY_PATH="$(abs_top_builddir)/numcosmo/.libs$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}}" \
 	PYTHONPATH="$(abs_top_srcdir)$${PYTHONPATH:+:$${PYTHONPATH}}"
 
-dist_test_scripts = test_bla.py
+dist_test_scripts = \
+	test_py_sanity.py
 
 endif # HAVE_PYTEST_TAP
 
