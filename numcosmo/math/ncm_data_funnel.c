@@ -14,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@
  * @title: NcmDataFunnel
  * @short_description: Funnel distribution.
  *
- * FIXME
+ * This object implements a funnel distribution.
  *
  */
 
@@ -70,7 +70,6 @@ ncm_data_funnel_constructed (GObject *object)
 static void
 ncm_data_funnel_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_funnel_parent_class)->finalize (object);
 }
@@ -93,8 +92,17 @@ ncm_data_funnel_class_init (NcmDataFunnelClass *klass)
   data_class->m2lnL_val  = &_ncm_data_funnel_m2lnL_val;
 }
 
-static guint _ncm_data_funnel_get_length (NcmData *data) { return 10; }
-static guint _ncm_data_funnel_get_dof (NcmData *data) { return 10; }
+static guint
+_ncm_data_funnel_get_length (NcmData *data)
+{
+  return 10;
+}
+
+static guint
+_ncm_data_funnel_get_dof (NcmData *data)
+{
+  return 10;
+}
 
 static void
 _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
@@ -105,12 +113,14 @@ _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   const guint x_len      = ncm_model_vparam_len (NCM_MODEL (mrb), NCM_MODEL_FUNNEL_X);
   const guint x_0_i      = ncm_model_vparam_index (NCM_MODEL (mrb), NCM_MODEL_FUNNEL_X, 0);
   gint i;
-  
+
   /*printf ("nu: % 22.15g\n", nu);*/
   m2lnL[0] = x_len * nu + gsl_pow_2 (nu / 3.0);
+
   for (i = 0; i < x_len; i++)
   {
     const gdouble x_i = ncm_model_param_get (NCM_MODEL (mrb), x_0_i + i);
+
     /*printf ("x[%d] = % 22.15g\n", i, x_i);*/
     m2lnL[0] += gsl_pow_2 (x_i / sigma_nu);
   }
@@ -118,25 +128,26 @@ _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
 /**
  * ncm_data_funnel_new:
- * 
+ *
  * Creates a new Funnel data.
- * 
+ *
  * Returns: the newly created object.
- */ 
+ */
 NcmDataFunnel *
 ncm_data_funnel_new (void)
 {
   NcmDataFunnel *dfu = g_object_new (NCM_TYPE_DATA_FUNNEL,
-                                         NULL);
+                                     NULL);
+
   return dfu;
 }
 
 /**
  * ncm_data_funnel_ref:
  * @dfu: a #NcmDataFunnel
- * 
+ *
  * Increases the reference count of @dfu by one.
- * 
+ *
  * Returns: (transfer full): @dfu
  */
 NcmDataFunnel *
@@ -148,11 +159,11 @@ ncm_data_funnel_ref (NcmDataFunnel *dfu)
 /**
  * ncm_data_funnel_free:
  * @dfu: a #NcmDataFunnel
- * 
+ *
  * Decreases the reference count of @dfu by one.
- * 
+ *
  */
-void 
+void
 ncm_data_funnel_free (NcmDataFunnel *dfu)
 {
   g_object_unref (dfu);
@@ -161,13 +172,14 @@ ncm_data_funnel_free (NcmDataFunnel *dfu)
 /**
  * ncm_data_funnel_clear:
  * @dfu: a #NcmDataFunnel
- * 
+ *
  * If @dfu is different from NULL, decreases the reference count of
  * @dfu by one and sets @dfu to NULL.
- * 
+ *
  */
-void 
+void
 ncm_data_funnel_clear (NcmDataFunnel **dfu)
 {
   g_clear_object (dfu);
 }
+
