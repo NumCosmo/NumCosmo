@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,10 +27,10 @@
  * SECTION:ncm_bootstrap
  * @title: NcmBootstrap
  * @short_description: Generic index bootstrap.
- * 
- * This object generate random samples of indexes. These samples are used 
+ *
+ * This object generate random samples of indexes. These samples are used
  * to calculate statistics using different combinations of the same data set.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -68,6 +68,7 @@ static void
 _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmBootstrap *bstrap = NCM_BOOTSTRAP (object);
+
   g_return_if_fail (NCM_IS_BOOTSTRAP (object));
 
   switch (prop_id)
@@ -82,26 +83,32 @@ _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value
     {
       GVariant *var = g_value_get_variant (value);
       guint bsize;
+
       g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE ("au")));
       bsize = g_variant_n_children (var);
 
       if (bsize != 0)
       {
         guint i;
+
         g_assert_cmpuint (bsize, ==, bstrap->bsize);
+
         for (i = 0; i < bsize; i++)
         {
           guint j = 0;
+
           g_variant_get_child (var, i, "u", j);
           g_array_index (bstrap->bootstrap_index, guint, i) = j;
         }
+
         bstrap->init = TRUE;
       }
+
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -109,6 +116,7 @@ static void
 _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmBootstrap *bstrap = NCM_BOOTSTRAP (object);
+
   g_return_if_fail (NCM_IS_BOOTSTRAP (object));
 
   switch (prop_id)
@@ -125,10 +133,12 @@ _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_REAL:
     {
       GVariant *var;
+
       if (bstrap->init)
       {
         gsize msize = sizeof (guint) * bstrap->bootstrap_index->len;
-#if GLIB_CHECK_VERSION(2,68,0)
+
+#if GLIB_CHECK_VERSION (2, 68, 0)
         gpointer mem = g_memdup2 (bstrap->bootstrap_index->data, msize);
 #else
         gpointer mem = g_memdup (bstrap->bootstrap_index->data, msize);
@@ -137,14 +147,16 @@ _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GPar
                                        mem, msize, TRUE, &g_free, mem);
       }
       else
+      {
         var = g_variant_new ("au", NULL);
-      
+      }
+
       g_value_take_variant (value, var);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -152,7 +164,7 @@ static void
 _ncm_bootstrap_finalize (GObject *object)
 {
   NcmBootstrap *bstrap = NCM_BOOTSTRAP (object);
-  
+
   if (bstrap->bootstrap_index != NULL)
   {
     g_array_unref (bstrap->bootstrap_index);
@@ -172,7 +184,7 @@ _ncm_bootstrap_finalize (GObject *object)
 static void
 ncm_bootstrap_class_init (NcmBootstrapClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_bootstrap_set_property;
   object_class->get_property = &_ncm_bootstrap_get_property;
@@ -213,34 +225,36 @@ ncm_bootstrap_class_init (NcmBootstrapClass *klass)
 
 /**
  * ncm_bootstrap_new:
- * 
+ *
  * Creates a new zero sized #NcmBootstrap object.
- * 
+ *
  * Returns: (transfer full): a #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_new (void)
 {
   NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP, NULL);
+
   return bstrap;
 }
 
 /**
  * ncm_bootstrap_sized_new:
  * @fsize: sample size.
- * 
+ *
  * Creates a new #NcmBootstrap object for a sample of size @fsize. This object
  * will sample with replacement all indexes @fsize times.
- * 
+ *
  * Returns: (transfer full): a #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_sized_new (guint fsize)
 {
-  NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP, 
-                                       "full-size", fsize, 
+  NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP,
+                                       "full-size", fsize,
                                        "bootstrap-size", fsize,
                                        NULL);
+
   return bstrap;
 }
 
@@ -248,28 +262,29 @@ ncm_bootstrap_sized_new (guint fsize)
  * ncm_bootstrap_full_new:
  * @fsize: sample size.
  * @bsize: bootstrap size.
- * 
+ *
  * Creates a new #NcmBootstrap object for a sample of size @fsize. This object
  * will sample with replacement all indexes @bsize times.
- * 
+ *
  * Returns: (transfer full): a #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_full_new (guint fsize, guint bsize)
 {
-  NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP, 
+  NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP,
                                        "full-size", fsize,
-                                       "bootstrap-size", bsize, 
+                                       "bootstrap-size", bsize,
                                        NULL);
+
   return bstrap;
 }
 
 /**
  * ncm_bootstrap_ref:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Incresases the reference count of @bstrap by one.
- * 
+ *
  * Returns: (transfer full): a #NcmBootstrap.
  */
 NcmBootstrap *
@@ -281,11 +296,11 @@ ncm_bootstrap_ref (NcmBootstrap *bstrap)
 /**
  * ncm_bootstrap_free:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Decreases the reference count of @bstrap by one.
- * 
+ *
  */
-void 
+void
 ncm_bootstrap_free (NcmBootstrap *bstrap)
 {
   g_object_unref (bstrap);
@@ -294,11 +309,11 @@ ncm_bootstrap_free (NcmBootstrap *bstrap)
 /**
  * ncm_bootstrap_clear:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Decreases the reference count of *@bstrap by one and sets *@bstrap tp NULL.
- * 
+ *
  */
-void 
+void
 ncm_bootstrap_clear (NcmBootstrap **bstrap)
 {
   g_clear_object (bstrap);
@@ -307,21 +322,22 @@ ncm_bootstrap_clear (NcmBootstrap **bstrap)
 /**
  * ncm_bootstrap_set_fsize:
  * @bstrap: a #NcmBootstrap.
- * @fsize: full sample size. 
- * 
+ * @fsize: full sample size.
+ *
  * Sets the full sample size, it also sets the bsize to the same value @fsize.
- * 
+ *
  */
-void 
+void
 ncm_bootstrap_set_fsize (NcmBootstrap *bstrap, guint fsize)
 {
   g_array_set_size (bstrap->increasing_index, fsize);
 
   bstrap->fsize = fsize;
-  
+
   if (fsize > 0)
   {
     guint i;
+
     for (i = 0; i < fsize; i++)
       g_array_index (bstrap->increasing_index, guint, i) = i;
   }
@@ -330,12 +346,12 @@ ncm_bootstrap_set_fsize (NcmBootstrap *bstrap, guint fsize)
 /**
  * ncm_bootstrap_get_fsize:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Gets the full sample size.
- * 
+ *
  * Returns: the full sample size.
  */
-guint 
+guint
 ncm_bootstrap_get_fsize (NcmBootstrap *bstrap)
 {
   return bstrap->fsize;
@@ -344,12 +360,12 @@ ncm_bootstrap_get_fsize (NcmBootstrap *bstrap)
 /**
  * ncm_bootstrap_set_bsize:
  * @bstrap: a #NcmBootstrap.
- * @bsize: bootstrap size. 
- * 
+ * @bsize: bootstrap size.
+ *
  * Sets the bootstrap size.
- * 
+ *
  */
-void 
+void
 ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize)
 {
   bstrap->bsize = bsize;
@@ -359,12 +375,12 @@ ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize)
 /**
  * ncm_bootstrap_get_bsize:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Gets the bootstrap size.
- * 
+ *
  * Returns: the bootstrap size.
  */
-guint 
+guint
 ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
 {
   return bstrap->bsize;
@@ -374,51 +390,52 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
  * ncm_bootstrap_resample:
  * @bstrap: a #NcmBootstrap.
  * @rng: a #NcmRNG.
- * 
- * Sample with replacement #NcmBootstrap:bootstrap-size from the 
+ *
+ * Sample with replacement #NcmBootstrap:bootstrap-size from the
  * #NcmBootstrap:full-size indexes.
- * 
+ *
  */
 /**
  * ncm_bootstrap_remix:
  * @bstrap: a #NcmBootstrap.
  * @rng: a #NcmRNG.
- * 
- * Sample without replacement #NcmBootstrap:bootstrap-size from the 
+ *
+ * Sample without replacement #NcmBootstrap:bootstrap-size from the
  * #NcmBootstrap:full-size indexes. Note that in this case
- * #NcmBootstrap:bootstrap-size must be equal or smaller than 
+ * #NcmBootstrap:bootstrap-size must be equal or smaller than
  * #NcmBootstrap:full-size.
- * 
+ *
  */
 /**
  * ncm_bootstrap_get:
  * @bstrap: a #NcmBootstrap.
  * @i: index in [0, #NcmBootstrap:bootstrap-size - 1].
- * 
+ *
  * Gets the index associated with the @i-th resampled index.
- * 
+ *
  * Returns: the @i-th resampled index.
  */
 /**
  * ncm_bootstrap_get_sortncomp:
  * @bstrap: a #NcmBootstrap.
- * 
- * Fills an array with the sorted indexes followed by the number of 
+ *
+ * Fills an array with the sorted indexes followed by the number of
  * times they appear.
- * 
+ *
  * Returns: (array) (element-type guint) (transfer full): the sorted array of indexes and frequences.
  */
 /**
  * ncm_bootstrap_is_init:
  * @bstrap: a #NcmBootstrap.
- * 
+ *
  * Checks if the bootstrap object was initialized (remix or resample).
- * 
+ *
  * Returns: whether @bstrap is initialized.
  */
 
 gint
 _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b)
 {
-  return (*((guint *)a) < *((guint *)b)) ? -1 : ((*((guint *)a) > *((guint *)b)) ? 1 : 0);
+  return (*((guint *) a) < *((guint *) b)) ? -1 : ((*((guint *) a) > *((guint *) b)) ? 1 : 0);
 }
+

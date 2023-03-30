@@ -375,9 +375,9 @@ _ncm_csq1d_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SING_DETECT:
       ncm_csq1d_set_sing_detect (csq1d, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -417,9 +417,9 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_SING_DETECT:
       g_value_set_boolean (value, ncm_csq1d_get_sing_detect (csq1d));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
