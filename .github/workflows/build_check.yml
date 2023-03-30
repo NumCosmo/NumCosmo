@@ -35,6 +35,12 @@ jobs:
       run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
     - name: make
       run: make -j8
+    - name: Test python examples
+      run: |
+        source numcosmo_export.sh
+        cd examples
+        python example_simple.py
+        python example_cbe.py
     - name: Test example compilation using non-installed library
       run: |
         source numcosmo_export.sh
