@@ -20,13 +20,15 @@ numcosmodoc_DATA = \
 	ChangeLog  \
 	NEWS
 
-#DISTCLEANFILES = intltool-extract intltool-merge intltool-update
+if HAVE_PYTHON
+include numcosmo_py.mk
+endif # HAVE_PYTHON
 
 EXTRA_DIST = \
-	INSTALL             \
-	$(numcosmodoc_DATA) \
-	numcosmo.pc.in      \
-        tap-driver.sh       \
+	INSTALL                \
+	$(numcosmodoc_DATA)    \
+	numcosmo-valgrind.supp \
+        tap-driver.sh          \
         tap-test
 
 AM_CFLAGS = 

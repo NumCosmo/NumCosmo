@@ -407,6 +407,7 @@
       <xi:include href="xml/nc_galaxy_wl_dist.xml"/>
       <xi:include href="xml/nc_galaxy_wl_ellipticity_gauss.xml"/>
       <xi:include href="xml/nc_galaxy_wl_ellipticity_kde.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_ellipticity_binned.xml"/>
       <xi:include href="xml/nc_galaxy_wl_proj.xml"/>
     </section>
     <section>

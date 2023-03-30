@@ -80,6 +80,8 @@ darkenergy_LDADD = \
 
 AM_CPPFLAGS = 
 
+dist_bin_SCRIPTS = mcat_calibrate_apes mcat_plot_corner
+
 bin_PROGRAMS = \
 	darkenergy    \
 	mcat_analyze  \
