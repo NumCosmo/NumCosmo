@@ -257,7 +257,8 @@ nc_galaxy_wl_ellipticity_binned_clear (NcGalaxyWLEllipticityBinned **gebin)
 /**
  * nc_galaxy_wl_ellipticity_binned_set_binobs:
  * @gebin: a #NcGalaxyWLEllipticityBinned
- * @obs: a #NcmObjArray
+ * @obs: a #NcmMatrix
+ * @bins: a #NcmVector
  *
  * Sets the array with observables matrices for each bin @binobs.
  */

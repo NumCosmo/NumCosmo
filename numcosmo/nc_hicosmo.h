@@ -237,12 +237,6 @@ struct _NcHICosmoClass
   NcHICosmoGetBGVar get_bg_var;
 };
 
-/**
- * NcHICosmo:
- *
- * FIXME
- *
- */
 struct _NcHICosmo
 {
   /*< private >*/

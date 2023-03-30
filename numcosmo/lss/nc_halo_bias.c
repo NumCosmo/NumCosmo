@@ -178,9 +178,10 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
 
 /**
  * nc_halo_bias_eval:
- * @bias: a #NcHaloBias.
+ * @bias: a #NcHaloBias
+ * @cosmo: a #NcHICosmo
  * @sigma: density constrast variance
- * @z: redshift.
+ * @z: redshift
  *
  * Computes the Halo Bias at a given redshift.
  *
@@ -194,7 +195,7 @@ nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 
 /**
  * nc_halo_bias_free:
- * @bias: a #NcHaloBias.
+ * @bias: a #NcHaloBias
  *
  * Atomically decrements the reference count of @bias by one. If the reference count drops to 0,
  * all memory allocated by @bias is released.
@@ -208,7 +209,7 @@ nc_halo_bias_free (NcHaloBias *bias)
 
 /**
  * nc_halo_bias_clear:
- * @bias: a #NcHaloBias.
+ * @bias: a #NcHaloBias
  *
  * Atomically decrements the reference count of @bias by one. If the reference count drops to 0,
  * all memory allocated by @bias is released. Set pointer to NULL.
@@ -222,10 +223,10 @@ nc_halo_bias_clear (NcHaloBias **bias)
 
 /**
  * nc_halo_bias_integrand:
- * @mbiasf: a #NcHaloBias.
- * @cosmo: a #NcHICosmo.
- * @lnM: logarithm base e of the mass.
- * @z: redshift.
+ * @mbiasf: a #NcHaloBias
+ * @cosmo: a #NcHICosmo
+ * @lnM: logarithm base e of the mass
+ * @z: redshift
  *
  * This function is the integrand of the mean bias, i.e., the product of the mass function with the bias function.
  * As both functions depend on the standard deviation of the matter density contrast, we implement this function to

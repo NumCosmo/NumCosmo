@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,8 @@
  * @title: NcmDataDist1d
  * @short_description: Abstract class for one variable distribution data.
  *
- * FIXME
- * 
+ * This object is an abstract class for one variable distribution data.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -68,6 +68,7 @@ static void
 _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (object);
+
   g_return_if_fail (NCM_IS_DATA_DIST1D (object));
 
   switch (prop_id)
@@ -78,9 +79,9 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_VECTOR:
       ncm_vector_substitute (&dist1d->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -99,9 +100,9 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_VECTOR:
       g_value_set_object (value, dist1d->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -119,7 +120,6 @@ ncm_data_dist1d_dispose (GObject *object)
 static void
 ncm_data_dist1d_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_dist1d_parent_class)->finalize (object);
 }
@@ -141,8 +141,8 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   object_class->set_property = &_ncm_data_dist1d_set_property;
   object_class->get_property = &_ncm_data_dist1d_get_property;
 
-  object_class->dispose      = &ncm_data_dist1d_dispose;
-  object_class->finalize     = &ncm_data_dist1d_finalize;
+  object_class->dispose  = &ncm_data_dist1d_dispose;
+  object_class->finalize = &ncm_data_dist1d_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
@@ -155,17 +155,17 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_VECTOR,
                                    g_param_spec_object ("vector",
-                                                         NULL,
-                                                         "Data vector",
-                                                         NCM_TYPE_VECTOR,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        NULL,
+                                                        "Data vector",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = TRUE;
   data_class->get_length = &_ncm_data_dist1d_get_length;
   data_class->begin      = NULL;
 
-  data_class->resample   = &_ncm_data_dist1d_resample;
-  data_class->m2lnL_val  = &_ncm_data_dist1d_m2lnL_val;
+  data_class->resample  = &_ncm_data_dist1d_resample;
+  data_class->m2lnL_val = &_ncm_data_dist1d_m2lnL_val;
 
   dist1d_class->m2lnL_val = NULL;
   dist1d_class->inv_pdf   = NULL;
@@ -173,46 +173,52 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   dist1d_class->get_size  = &_ncm_data_dist1d_get_size;
 }
 
-static guint 
+static guint
 _ncm_data_dist1d_get_length (NcmData *data)
-{ 
+{
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
-  return dist1d->np; 
+
+  return dist1d->np;
 }
 
 static void
 _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
+  NcmDataDist1d *dist1d            = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
   guint i;
-  
+
   *m2lnL = 0.0;
+
   if (!ncm_data_bootstrap_enabled (data))
   {
     for (i = 0; i < dist1d->np; i++)
     {
       const gdouble x_i = ncm_vector_get (dist1d->x, i);
+
       *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
     }
   }
   else
   {
     const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+
     for (i = 0; i < bsize; i++)
     {
-      guint k = ncm_bootstrap_get (data->bstrap, i);
+      guint k           = ncm_bootstrap_get (data->bstrap, i);
       const gdouble x_i = ncm_vector_get (dist1d->x, k);
+
       *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
-    }    
+    }
   }
+
   return;
 }
 
 static void
 _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
+  NcmDataDist1d *dist1d            = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
   guint i;
 
@@ -220,39 +226,46 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_error ("_ncm_data_dist1d_resample: This object do not implement the inverse of the pdf.");
 
   ncm_rng_lock (rng);
+
   for (i = 0; i < dist1d->np; i++)
   {
     const gdouble u_i = gsl_rng_uniform (rng->r);
     const gdouble x_i = dist1d_class->inv_pdf (dist1d, mset, u_i);
+
     ncm_vector_set (dist1d->x, i, x_i);
   }
+
   ncm_rng_unlock (rng);
 }
 
-static void 
+static void
 _ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 {
   NcmData *data = NCM_DATA (dist1d);
+
   if ((np == 0) || (np != dist1d->np))
   {
     dist1d->np = 0;
     ncm_vector_clear (&dist1d->x);
     data->init = FALSE;
   }
+
   if ((np != 0) && (np != dist1d->np))
   {
     dist1d->np = np;
     dist1d->x  = ncm_vector_new (dist1d->np);
+
     if (ncm_data_bootstrap_enabled (data))
     {
       ncm_bootstrap_set_fsize (data->bstrap, np);
       ncm_bootstrap_set_bsize (data->bstrap, np);
     }
+
     data->init = FALSE;
   }
 }
 
-static guint 
+static guint
 _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 {
   return dist1d->np;
@@ -264,9 +277,9 @@ _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
  * @np: data size.
  *
  * Sets the data size to @np.
- * 
+ *
  */
-void 
+void
 ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 {
   NCM_DATA_DIST1D_GET_CLASS (dist1d)->set_size (dist1d, np);
@@ -277,11 +290,11 @@ ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
  * @dist1d: a #NcmDataDist1d
  *
  * Gets the data size.
- * 
+ *
  * Returns: Data size.
- * 
+ *
  */
-guint 
+guint
 ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 {
   return NCM_DATA_DIST1D_GET_CLASS (dist1d)->get_size (dist1d);
@@ -292,11 +305,12 @@ ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
  * @dist1d: a #NcmDataDist1d
  *
  * Gets the data #NcmVector.
- * 
- * Returns: (transfer full): Data vector. 
+ *
+ * Returns: (transfer full): Data vector.
  */
 NcmVector *
 ncm_data_dist1d_get_data (NcmDataDist1d *dist1d)
 {
   return ncm_vector_ref (dist1d->x);
 }
+

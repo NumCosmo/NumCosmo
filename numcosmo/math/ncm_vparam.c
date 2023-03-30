@@ -278,7 +278,7 @@ ncm_vparam_set_len (NcmVParam *vparam, guint len)
 	                                       ncm_sparam_name (vparam->default_sparam), i)
 	                      );
 	ncm_sparam_take_symbol (g_ptr_array_index (vparam->sparam, i),
-	                        g_strdup_printf ("%s_%u",
+	                        g_strdup_printf ("{%s}_%u",
 	                                         ncm_sparam_symbol (vparam->default_sparam), i)
 	                        );
 

@@ -61,10 +61,10 @@ struct _NcmSerializeClass
  */
 typedef enum _NcmSerializeOpt
 {
-  NCM_SERIALIZE_OPT_NONE         = 0,
+  NCM_SERIALIZE_OPT_NONE = 0,
   NCM_SERIALIZE_OPT_AUTOSAVE_SER = 1 << 0,
   NCM_SERIALIZE_OPT_AUTONAME_SER = 1 << 1,
-  NCM_SERIALIZE_OPT_CLEAN_DUP    = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
+  NCM_SERIALIZE_OPT_CLEAN_DUP = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
 } NcmSerializeOpt;
 
 struct _NcmSerialize
@@ -117,9 +117,12 @@ GObject *ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename);
 GVariant *ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val);
 GVariant *ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj);
 gchar *ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant);
+gchar *ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj);
 void ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 void ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename);
+void ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 GObject *ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj);
+gchar *ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj);
 
 /* Global NcmSerialize object */
 
@@ -151,14 +154,17 @@ GObject *ncm_serialize_global_from_binfile (const gchar *filename);
 GVariant *ncm_serialize_global_gvalue_to_gvariant (GValue *val);
 GVariant *ncm_serialize_global_to_variant (GObject *obj);
 gchar *ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant);
+gchar *ncm_serialize_global_to_yaml (GObject *obj);
 void ncm_serialize_global_to_file (GObject *obj, const gchar *filename);
 void ncm_serialize_global_to_binfile (GObject *obj, const gchar *filename);
+void ncm_serialize_global_to_yaml_file (GObject *obj, const gchar *filename);
 GObject *ncm_serialize_global_dup_obj (GObject *obj);
+gchar *ncm_serialize_global_variant_to_yaml (GVariant *var_obj);
 
 #define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"
 #define NCM_SERIALIZE_PROPERTIES_TYPE "a"NCM_SERIALIZE_PROPERTY_TYPE
-#define NCM_SERIALIZE_OBJECT_TYPE "{s"NCM_SERIALIZE_PROPERTIES_TYPE"}"
-#define NCM_SERIALIZE_OBJECT_FORMAT "{s@"NCM_SERIALIZE_PROPERTIES_TYPE"}"
+#define NCM_SERIALIZE_OBJECT_TYPE "{s"NCM_SERIALIZE_PROPERTIES_TYPE "}"
+#define NCM_SERIALIZE_OBJECT_FORMAT "{s@"NCM_SERIALIZE_PROPERTIES_TYPE "}"
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
 #define NCM_SERIALIZE_STRV_TYPE "as"
@@ -168,3 +174,4 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 G_END_DECLS
 
 #endif /* _NCM_SERIALIZE_H_ */
+
