@@ -1498,11 +1498,11 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
 #endif /* HAVE_LIBFYAML */
 }
 
-static struct fy_node *
+#ifdef HAVE_LIBFYAML
 
+static struct fy_node *
 _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj)
 {
-#ifdef HAVE_LIBFYAML
   GVariant *obj_name_var     = g_variant_get_child_value (var_obj, 0);
   GVariant *params_var       = g_variant_get_child_value (var_obj, 1);
   struct fy_node *root       = fy_node_create_mapping (doc);
@@ -1615,14 +1615,8 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
   g_variant_unref (params_var);
 
   return root;
-
-#else /* HAVE_LIBFYAML */
-  g_error ("ncm_serialize_to_yaml: libfyaml not available.");
-
-  return NULL;
-
-#endif /* HAVE_LIBFYAML */
 }
+#endif /* HAVE_LIBFYAML */
 
 /**
  * ncm_serialize_to_string:

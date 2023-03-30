@@ -33,8 +33,8 @@ jobs:
       run: |
         source numcosmo_export.sh
         cd examples
-        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config glib-2.0 --libs --cflags)
-        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config glib-2.0 --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple -lnumcosmo $(pkg-config glib-2.0 --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca -lnumcosmo $(pkg-config glib-2.0 --libs --cflags)
         ./example_simple
         ./example_ca
     - name: Test example compilation using installed library
