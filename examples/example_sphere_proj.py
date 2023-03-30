@@ -13,6 +13,8 @@ import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+from scipy.interpolate import CubicSpline
 
 from matplotlib.colors import LogNorm
 from matplotlib.colors import SymLogNorm
@@ -20,6 +22,7 @@ from matplotlib.colors import SymLogNorm
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
+from scipy.interpolate import interp1d
 
 matplotlib.rcParams.update({'font.size': 11})
 
@@ -71,7 +74,7 @@ zdiv  = 0.49999999999
 
 # Mode bounds
 k_min = 1.0e-6
-k_max = 1.0e5
+k_max = 1.0e4
 
 ps_lin.set_kmin (k_min)
 ps_lin.set_kmax (k_max)
@@ -88,10 +91,11 @@ ps.set_kmax (k_max)
 ps.require_zi (z_min)
 ps.require_zf (z_max)
 
-ell_min = 250
-ell_max = 250
+ell_min = 0
+ell_max = 1
 
 sproj = Ncm.PowspecSphereProj.new (ps, ell_min, ell_max)
+
 sproj.props.reltol = 1.0e-4
 
 xi_i = 1.0e1
@@ -122,7 +126,10 @@ xi_a   = np.geomspace (xi_i, xi_f, num = 5000)
 z_a    = np.array ([dist.inv_comoving (cosmo, xi / RH_Mpc) for xi in xi_a])
 index  = np.logical_and ((z_a > 0.01), (z_a < 10.0))
 
-z_a    = np.linspace (0.05, 0.5, num = 2000)
+z_a    = np.linspace (0.2, 1.5, num = 2000)
+
+
+
 
 #print (xi_a)
 #print (z_a)
@@ -146,7 +153,8 @@ for ell in range (ell_min, ell_min + 1):
   
     #z_a    = np.array (z_a)
     #Cell   = np.array ([(gf.eval (cosmo, z)**2 * Cell_i) for (Cell_i, z) in zip (Cell, z_a)])
-    
+  
+
     #plt.plot (xi_a, Cell, label = r'$\ell$ = %d, $w$ = %f, full' % (ell, w))
   m    = [[sproj.eval_Cell_xi1_xi2 (cosmo, ell, z1, z2, RH_Mpc * dist.comoving (cosmo, z1), RH_Mpc * dist.comoving (cosmo, z2)) for z1 in z_a] for z2 in z_a]
   cov  = np.asanyarray (m)
@@ -162,7 +170,7 @@ for ell in range (ell_min, ell_min + 1):
   #plt.matshow (corr, norm = SymLogNorm (1.0e-4))
   plt.title (r'$C_{%d}(z_1, z_2)$' % (ell))  
   plt.colorbar ()
-
+  plt.show ()
 #plt.xticks(xi_a)
 
 #plt.xlabel (r'$\xi \; [\mathrm{Mpc}]$')
@@ -172,6 +180,170 @@ for ell in range (ell_min, ell_min + 1):
 #plt.yscale ('symlog', linthreshy=1.0e-8)
 #plt.xlim ([200.0, 4000.0])
 
+#plt.show ()
+
+
+
+
+#Contruct the bins 
+z_bin = np.linspace(0.2,1.5,14)
+def dV_dz(z):
+  return dist.comoving(cosmo,z)**2 * RH_Mpc**3 / (cosmo.E2(z)**(1/2))
+
+W2 = (1/(z_bin[1]-z_bin[0]))**2
+print(W2)
+dv_dz = []
+for z in z_a:
+  dv_dz.append(dV_dz(z))
+
+#Normalization I
+I = []
+for bin in range(len(z_bin)-1):
+  W2 = (1/(z_bin[bin+1]-z_bin[bin]))**2
+  I.append(integrate.quad(lambda z: dV_dz(z),z_bin[bin],z_bin[bin+1])[0]*W2)
+
+
+#Integrate in z2 bins
+cl_z2 = []
+for cl in cov:
+  cl_z2_bin = []
+
+  cl_interpol = CubicSpline(z_a,cl * dv_dz)
+  for bin in range(len(z_bin)-1):
+    W2 = (1/(z_bin[bin+1]-z_bin[bin]))**2
+    cl_z2_bin.append(cl_interpol.integrate(z_bin[bin],z_bin[bin+1])*W2/I[bin])
+  cl_z2.append(cl_z2_bin) 
+
+
+
+#separate the results as a function of z1
+Sij_z1 = []
+for bin in range(len(z_bin)-1):
+  Sij_z1_partial = []
+  for cl in cl_z2:
+    Sij_z1_partial.append(cl[bin])
+  
+  Sij_z1.append(Sij_z1_partial)
+
+Sij_z1 = np.asanyarray (Sij_z1)  
+
+#Integrate in z1 bins
+Sij = []
+for z1 in Sij_z1:
+  Sij_z1_bin = []
+  CL_interpol = CubicSpline(z_a,z1  * dv_dz)
+  for bin in range(len(z_bin)-1):
+    Sij_z1_bin.append(float(CL_interpol.integrate(z_bin[bin],z_bin[bin+1])*W2/I[bin]))
+  Sij.append(Sij_z1_bin) 
+
+Sij = np.asanyarray (Sij) 
+
+
+lnSij = np.log(abs(Sij))
+plt.matshow (abs(Sij), extent = np.array ([z_bin[0], z_bin[-1], z_bin[-1], z_bin[0]]) ,norm = SymLogNorm (1.0e-20) ,cmap='bwr')
+#plt.matshow (corr)
+#plt.matshow (corr, norm = SymLogNorm (1.0e-4))
+plt.title (r'$S_{%d}(z_1, z_2)$' % (ell))  
+plt.colorbar ()
 plt.show ()
 
 
+print(Sij)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+# Compute necessary FFTs and make interpolation functions
+def lacasa_cll(z):
+    nz = len(z)
+    keq         = 0.02/cosmo.h()                            #Equality matter radiation in 1/Mpc (more or less)
+    klogwidth   = 10                                        #Factor of width of the integration range.
+                                                            #10 seems ok ; going higher needs to increase nk_fft to reach convergence (fine cancellation issue noted in Lacasa & Grain)
+    kmin        = 1.0e-6
+    kmax        = 1.0e2
+    nk_fft      = 2**11                                     #seems to be enough. Increase to test precision, reduce to speed up.
+    k_4fft      = np.linspace(kmin,kmax,nk_fft)             #linear grid on k, as we need to use an FFT
+    Deltak      = kmax - kmin
+    Dk          = Deltak/nk_fft
+    Pk_4fft     = np.zeros(nk_fft)
+    for ik in range(nk_fft):
+        Pk_4fft[ik] = ps.eval(cosmo,0.,k_4fft[ik])               #In Mpc^3
+    dr_fft      = np.linspace(0,nk_fft//2,nk_fft//2+1)*2*np.pi/Deltak
+
+    
+    fft0        = np.fft.rfft(Pk_4fft)*Dk
+    dct0        = fft0.real ; dst0 = -fft0.imag
+    Pk_dct      = interp1d(dr_fft,dct0,kind='cubic')
+    
+    # Compute sigma^2(z1,z2)
+    sigma2_nog = np.zeros((nz,nz))
+    #First with P(k,z=0) and z1<=z2
+    for iz in range(nz):
+        r1 =   dist.comoving (cosmo, z[iz])
+        for jz in range(iz,nz):
+            r2                =  dist.comoving (cosmo, z[jz])
+            rsum              = r1+r2
+            rdiff             = abs(r1-r2)
+            Icp0              = Pk_dct(rsum) ; Icm0 = Pk_dct(rdiff)
+            sigma2_nog[iz,jz] = (Icm0-Icp0)/(4*np.pi**2 * r1 * r2)
+    #Now fill by symmetry and put back growth functions
+    sigma2      = np.zeros((nz,nz))
+    for iz in range(nz):
+        growth1 = ps.eval(cosmo,z[iz],0.1)/ps.eval(cosmo,0.,0.1)
+        for jz in range(nz):
+            growth2       = ps.eval(cosmo,z[jz],0.1)/ps.eval(cosmo,0.,0.1)
+            sigma2[iz,jz] = sigma2_nog[min(iz,jz),max(iz,jz)]*growth1*growth2
+
+    return sigma2
+
+print(lacasa_cll(z_a))
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
