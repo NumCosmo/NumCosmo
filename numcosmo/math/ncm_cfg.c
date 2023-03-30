@@ -1790,7 +1790,13 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
     gssize len        = strlen (wisdown_str);
     gboolean OK       = FALSE;
 
+#if GLIB_CHECK_VERSION (2, 66, 0)
+    OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                   G_FILE_SET_CONTENTS_CONSISTENT,
+                                   0666, NULL);
+#else /* GLIB_CHECK_VERSION (2, 66, 0) */
     OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
     g_assert (OK);
 
     g_free (wisdown_str);
@@ -1808,7 +1814,14 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
     gssize len        = strlen (wisdown_str);
     gboolean OK       = FALSE;
 
+#if GLIB_CHECK_VERSION (2, 66, 0)
+    OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                   G_FILE_SET_CONTENTS_CONSISTENT,
+                                   0666, NULL);
+#else /* GLIB_CHECK_VERSION (2, 66, 0) */
     OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
+
     g_assert (OK);
 
     g_free (wisdown_str);
