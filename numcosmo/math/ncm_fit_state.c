@@ -270,9 +270,9 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
  * @dof: FIXME
  * @is_least_squares: FIXME
  * 
- * FIXME
+ * Instantiates a new #NcmFitState.
  * 
- * Returns: FIXME
+ * Returns: (transfer full): a newly allocated #NcmFitState.
  */
 NcmFitState *
 ncm_fit_state_new (guint data_len, guint fparam_len, gint dof, gboolean is_least_squares)
@@ -287,11 +287,11 @@ ncm_fit_state_new (guint data_len, guint fparam_len, gint dof, gboolean is_least
 
 /**
  * ncm_fit_state_ref:
- * @fstate: FIXME
+ * @fstate: a #NcmFitState
  * 
- * FIXME
+ * Increases the reference count of @fstate by one. 
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @fstate.
  */
 NcmFitState *
 ncm_fit_state_ref (NcmFitState *fstate)
@@ -301,9 +301,9 @@ ncm_fit_state_ref (NcmFitState *fstate)
 
 /**
  * ncm_fit_state_free:
- * @fstate: FIXME
+ * @fstate: a #NcmFitState
  * 
- * FIXME
+ * Decreases the reference count of @fstate by one.
  * 
  */
 void 
@@ -314,9 +314,9 @@ ncm_fit_state_free (NcmFitState *fstate)
 
 /**
  * ncm_fit_state_clear:
- * @fstate: FIXME
+ * @fstate: a #NcmFitState
  * 
- * FIXME
+ * Decreases the reference count of *@fstate by one, and sets the pointer *@fstate to NULL.
  * 
  */
 void 
@@ -327,13 +327,13 @@ ncm_fit_state_clear (NcmFitState **fstate)
 
 /**
  * ncm_fit_state_set_all:
- * @fstate: FIXME
- * @data_len: FIXME
- * @fparam_len: FIXME
- * @dof: FIXME
- * @is_least_squares: FIXME
+ * @fstate: a #NcmFitState
+ * @data_len: Number of data points
+ * @fparam_len: Number of free parameters
+ * @dof: Degrees of freedom
+ * @is_least_squares: whether it is a least squares fit
  * 
- * FIXME
+ * Sets all the properties of @fstate.
  * 
  */
 void 
@@ -349,9 +349,9 @@ ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gi
 
 /**
  * ncm_fit_state_reset:
- * @fstate: FIXME
+ * @fstate: a #NcmFitState
  * 
- * FIXME
+ * Resets the #NcmFitState to its initial state.
  * 
  */
 void 
@@ -370,9 +370,9 @@ ncm_fit_state_reset (NcmFitState *fstate)
 
 /**
  * ncm_fit_state_realloc:
- * @fstate: FIXME
+ * @fstate: a #NcmFitState
  * 
- * FIXME
+ * Reallocates the #NcmFitState to its current state.
  * 
  */
 void 

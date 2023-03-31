@@ -34,29 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FFTLOG_GAUSSWIN2             (ncm_fftlog_gausswin2_get_type ())
-#define NCM_FFTLOG_GAUSSWIN2(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FFTLOG_GAUSSWIN2, NcmFftlogGausswin2))
-#define NCM_FFTLOG_GAUSSWIN2_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FFTLOG_GAUSSWIN2, NcmFftlogGausswin2Class))
-#define NCM_IS_FFTLOG_GAUSSWIN2(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FFTLOG_GAUSSWIN2))
-#define NCM_IS_FFTLOG_GAUSSWIN2_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FFTLOG_GAUSSWIN2))
-#define NCM_FFTLOG_GAUSSWIN2_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FFTLOG_GAUSSWIN2, NcmFftlogGausswin2Class))
+#define NCM_TYPE_FFTLOG_GAUSSWIN2 (ncm_fftlog_gausswin2_get_type ())
 
-typedef struct _NcmFftlogGausswin2Class NcmFftlogGausswin2Class;
-typedef struct _NcmFftlogGausswin2 NcmFftlogGausswin2;
-
-struct _NcmFftlogGausswin2Class
-{
-  /*< private >*/
-  NcmFftlogClass parent_class;
-};
-
-struct _NcmFftlogGausswin2
-{
-  /*< private >*/
-  NcmFftlog parent_instance;
-};
-
-GType ncm_fftlog_gausswin2_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM, FFTLOG_GAUSSWIN2, NcmFftlog)
 
 NcmFftlogGausswin2 *ncm_fftlog_gausswin2_new (gdouble lnr0, gdouble lnk0, gdouble Lk, guint N);
 

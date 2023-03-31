@@ -36,31 +36,11 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DIFF             (ncm_diff_get_type ())
-#define NCM_DIFF(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DIFF, NcmDiff))
-#define NCM_DIFF_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DIFF, NcmDiffClass))
-#define NCM_IS_DIFF(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DIFF))
-#define NCM_IS_DIFF_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DIFF))
-#define NCM_DIFF_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DIFF, NcmDiffClass))
 
-typedef struct _NcmDiffClass NcmDiffClass;
-typedef struct _NcmDiff NcmDiff;
-typedef struct _NcmDiffPrivate NcmDiffPrivate;
-
-struct _NcmDiffClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmDiff
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmDiffPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject);
 
 /**
- * NcmDiffFunc:
+ * NcmDiffFuncNtoM:
  * @x: function argument
  * @y: function value
  * @user_data: (nullable): user data
@@ -69,11 +49,34 @@ struct _NcmDiff
  *
  */
 typedef void (*NcmDiffFuncNtoM) (NcmVector *x, NcmVector *y, gpointer user_data);
+/**
+ * NcmDiffFunc1toM:
+ * @x: function argument
+ * @y: function value
+ * @user_data: (nullable): user data
+ *
+ * Functon $f(x)$ call back.
+ *
+ */
 typedef void (*NcmDiffFunc1toM) (const gdouble x, NcmVector *y, gpointer user_data);
+/**
+ * NcmDiffFuncNto1:
+ * @x: function argument
+ * @user_data: (nullable): user data
+ *
+ * Functon $f(x)$ call back.
+ *
+ */
 typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
+/**
+ * NcmDiffFunc1to1:
+ * @x: function argument
+ * @user_data: (nullable): user data
+ *
+ * Functon $f(x)$ call back.
+ *
+ */
 typedef gdouble (*NcmDiffFunc1to1) (const gdouble x, gpointer user_data);
-
-GType ncm_diff_get_type (void) G_GNUC_CONST;
 
 NcmDiff *ncm_diff_new (void);
 NcmDiff *ncm_diff_ref (NcmDiff *diff);

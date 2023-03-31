@@ -1,3 +1,4 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_data_dist1d.c
  *
@@ -48,13 +49,21 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmDataDist1d, ncm_data_dist1d, NCM_TYPE_DATA);
+typedef struct _NcmDataDist1dPrivate
+{
+  guint np;
+  NcmVector *x;
+} NcmDataDist1dPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist1d, ncm_data_dist1d, NCM_TYPE_DATA);
 
 static void
 ncm_data_dist1d_init (NcmDataDist1d *dist1d)
 {
-  dist1d->np = 0;
-  dist1d->x  = NULL;
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+
+  self->np = 0;
+  self->x  = NULL;
 }
 
 static void
@@ -67,7 +76,8 @@ _ncm_data_dist1d_constructed (GObject *object)
 static void
 _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (object);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (object);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
 
   g_return_if_fail (NCM_IS_DATA_DIST1D (object));
 
@@ -77,7 +87,7 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
       ncm_data_dist1d_set_size (dist1d, g_value_get_uint (value));
       break;
     case PROP_VECTOR:
-      ncm_vector_substitute (&dist1d->x, g_value_get_object (value), TRUE);
+      ncm_vector_substitute (&self->x, g_value_get_object (value), TRUE);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -88,7 +98,8 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (object);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (object);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
 
   g_return_if_fail (NCM_IS_DATA_DIST1D (object));
 
@@ -98,7 +109,7 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_uint (value, ncm_data_dist1d_get_size (dist1d));
       break;
     case PROP_VECTOR:
-      g_value_set_object (value, dist1d->x);
+      g_value_set_object (value, self->x);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -109,9 +120,10 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
 static void
 ncm_data_dist1d_dispose (GObject *object)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (object);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (object);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
 
-  ncm_vector_clear (&dist1d->x);
+  ncm_vector_clear (&self->x);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_dist1d_parent_class)->dispose (object);
@@ -176,37 +188,40 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
 static guint
 _ncm_data_dist1d_get_length (NcmData *data)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (data);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
 
-  return dist1d->np;
+  return self->np;
 }
 
 static void
 _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataDist1d *dist1d            = NCM_DATA_DIST1D (data);
-  NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (data);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+  NcmDataDist1dClass *dist1d_class  = NCM_DATA_DIST1D_GET_CLASS (data);
   guint i;
 
   *m2lnL = 0.0;
 
   if (!ncm_data_bootstrap_enabled (data))
   {
-    for (i = 0; i < dist1d->np; i++)
+    for (i = 0; i < self->np; i++)
     {
-      const gdouble x_i = ncm_vector_get (dist1d->x, i);
+      const gdouble x_i = ncm_vector_get (self->x, i);
 
       *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
     }
   }
   else
   {
-    const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
 
     for (i = 0; i < bsize; i++)
     {
-      guint k           = ncm_bootstrap_get (data->bstrap, i);
-      const gdouble x_i = ncm_vector_get (dist1d->x, k);
+      guint k           = ncm_bootstrap_get (bstrap, i);
+      const gdouble x_i = ncm_vector_get (self->x, k);
 
       *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
     }
@@ -218,8 +233,9 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 static void
 _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataDist1d *dist1d            = NCM_DATA_DIST1D (data);
-  NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
+  NcmDataDist1d *dist1d             = NCM_DATA_DIST1D (data);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+  NcmDataDist1dClass *dist1d_class  = NCM_DATA_DIST1D_GET_CLASS (data);
   guint i;
 
   if (dist1d_class->inv_pdf == NULL)
@@ -227,12 +243,12 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   ncm_rng_lock (rng);
 
-  for (i = 0; i < dist1d->np; i++)
+  for (i = 0; i < self->np; i++)
   {
     const gdouble u_i = gsl_rng_uniform (rng->r);
     const gdouble x_i = dist1d_class->inv_pdf (dist1d, mset, u_i);
 
-    ncm_vector_set (dist1d->x, i, x_i);
+    ncm_vector_set (self->x, i, x_i);
   }
 
   ncm_rng_unlock (rng);
@@ -241,34 +257,39 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 static void
 _ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 {
-  NcmData *data = NCM_DATA (dist1d);
+  NcmData *data                     = NCM_DATA (dist1d);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
 
-  if ((np == 0) || (np != dist1d->np))
+  if ((np == 0) || (np != self->np))
   {
-    dist1d->np = 0;
-    ncm_vector_clear (&dist1d->x);
-    data->init = FALSE;
+    self->np = 0;
+    ncm_vector_clear (&self->x);
+    ncm_data_set_init (data, FALSE);
   }
 
-  if ((np != 0) && (np != dist1d->np))
+  if ((np != 0) && (np != self->np))
   {
-    dist1d->np = np;
-    dist1d->x  = ncm_vector_new (dist1d->np);
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
+    self->np = np;
+    self->x  = ncm_vector_new (self->np);
 
     if (ncm_data_bootstrap_enabled (data))
     {
-      ncm_bootstrap_set_fsize (data->bstrap, np);
-      ncm_bootstrap_set_bsize (data->bstrap, np);
+      ncm_bootstrap_set_fsize (bstrap, np);
+      ncm_bootstrap_set_bsize (bstrap, np);
     }
 
-    data->init = FALSE;
+    ncm_data_set_init (data, FALSE);
   }
 }
 
 static guint
 _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 {
-  return dist1d->np;
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+
+  return self->np;
 }
 
 /**
@@ -311,6 +332,8 @@ ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 NcmVector *
 ncm_data_dist1d_get_data (NcmDataDist1d *dist1d)
 {
-  return ncm_vector_ref (dist1d->x);
+  NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+
+  return ncm_vector_ref (self->x);
 }
 

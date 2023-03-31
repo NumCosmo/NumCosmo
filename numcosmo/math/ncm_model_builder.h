@@ -85,3 +85,4 @@ NcmObjArray *ncm_model_builder_get_sparams (NcmModelBuilder *mb);
 G_END_DECLS
 
 #endif /* _NCM_MODEL_BUILDER_H_ */
+

@@ -1,5 +1,4 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_csq1d.h
  *
@@ -35,24 +34,15 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_CSQ1D             (ncm_csq1d_get_type ())
-#define NCM_CSQ1D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_CSQ1D, NcmCSQ1D))
-#define NCM_CSQ1D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_CSQ1D, NcmCSQ1DClass))
-#define NCM_IS_CSQ1D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_CSQ1D))
-#define NCM_IS_CSQ1D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_CSQ1D))
-#define NCM_CSQ1D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_CSQ1D, NcmCSQ1DClass))
+#define NCM_TYPE_CSQ1D (ncm_csq1d_get_type ())
 
-typedef struct _NcmCSQ1DClass NcmCSQ1DClass;
-typedef struct _NcmCSQ1D NcmCSQ1D;
-typedef struct _NcmCSQ1DPrivate NcmCSQ1DPrivate;
-typedef struct _NcmCSQ1DSingFitUp NcmCSQ1DSingFitUp;
-typedef struct _NcmCSQ1DSingFitUm NcmCSQ1DSingFitUm;
+G_DECLARE_DERIVABLE_TYPE (NcmCSQ1D, ncm_csq1d, NCM, CSQ1D, GObject)
 
 struct _NcmCSQ1DClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   gdouble (*eval_xi)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_dxi)        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
@@ -68,7 +58,13 @@ struct _NcmCSQ1DClass
   gdouble (*eval_FN)         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t, const gdouble k);
   gdouble (*eval_powspec_factor) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[3];
 };
+
+typedef struct _NcmCSQ1DSingFitUp NcmCSQ1DSingFitUp;
+typedef struct _NcmCSQ1DSingFitUm NcmCSQ1DSingFitUm;
 
 /**
  * NcmCSQ1DEvolState:
@@ -87,17 +83,11 @@ typedef enum _NcmCSQ1DEvolState
   NCM_CSQ1D_EVOL_STATE_UM,
 } NcmCSQ1DEvolState;
 
-struct _NcmCSQ1D
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmCSQ1DPrivate *priv;
-};
 
 /**
  * NcmCSQ1DSingFitUp:
  *
- * Struct containig the $\Upsilon_+$ fitting model.
+ * Struct containing the $\Upsilon_+$ fitting model.
  *
  */
 struct _NcmCSQ1DSingFitUp
@@ -110,7 +100,6 @@ struct _NcmCSQ1DSingFitUp
 };
 
 GType ncm_csq1d_sing_fit_up_get_type (void) G_GNUC_CONST;
-GType ncm_csq1d_get_type (void) G_GNUC_CONST;
 
 NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_new (const gint chi_dim, const gint Up_dim);
 NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_dup (NcmCSQ1DSingFitUp *sing_up);

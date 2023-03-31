@@ -70,6 +70,11 @@
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcmFftlogGausswin2
+{
+  NcmFftlog parent_instance;
+};
+
 G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG);
 
 static void

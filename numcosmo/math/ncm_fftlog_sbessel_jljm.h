@@ -34,31 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FFTLOG_SBESSEL_JLJM             (ncm_fftlog_sbessel_jljm_get_type ())
-#define NCM_FFTLOG_SBESSEL_JLJM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FFTLOG_SBESSEL_JLJM, NcmFftlogSBesselJLJM))
-#define NCM_FFTLOG_SBESSEL_JLJM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FFTLOG_SBESSEL_JLJM, NcmFftlogSBesselJLJMClass))
-#define NCM_IS_FFTLOG_SBESSEL_JLJM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FFTLOG_SBESSEL_JLJM))
-#define NCM_IS_FFTLOG_SBESSEL_JLJM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FFTLOG_SBESSEL_JLJM))
-#define NCM_FFTLOG_SBESSEL_JLJM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FFTLOG_SBESSEL_JLJM, NcmFftlogSBesselJLJMClass))
+#define NCM_TYPE_FFTLOG_SBESSEL_JLJM (ncm_fftlog_sbessel_jljm_get_type ())
 
-typedef struct _NcmFftlogSBesselJLJMClass NcmFftlogSBesselJLJMClass;
-typedef struct _NcmFftlogSBesselJLJM NcmFftlogSBesselJLJM;
-typedef struct _NcmFftlogSBesselJLJMPrivate NcmFftlogSBesselJLJMPrivate;
-
-struct _NcmFftlogSBesselJLJMClass
-{
-  /*< private >*/
-  NcmFftlogClass parent_class;
-};
-
-struct _NcmFftlogSBesselJLJM
-{
-  /*< private >*/
-  NcmFftlog parent_instance;
-  NcmFftlogSBesselJLJMPrivate *priv;
-};
-
-GType ncm_fftlog_sbessel_jljm_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM, FFTLOG_SBESSEL_JLJM, NcmFftlog)
 
 NcmFftlogSBesselJLJM *ncm_fftlog_sbessel_jljm_new (gint ell, gint dell, gdouble lnw, gdouble lnr0, gdouble lnk0, gdouble Lk, guint N);
 

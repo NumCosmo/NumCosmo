@@ -45,9 +45,15 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmDataFunnelPrivate
+typedef struct _NcmDataFunnelPrivate
 {
   gint unused;
+} NcmDataFunnelPrivate;
+
+struct _NcmDataFunnel
+{
+  NcmData parent_instance;
+  NcmDataFunnelPrivate *priv;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA);

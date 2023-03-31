@@ -196,12 +196,13 @@ static void
 _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (gauss);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np        = ncm_data_gauss_get_size (gauss);
   guint i;
 
   if (bao_rdv->r_DV)
   {
-    for (i = 0; i < gauss->np; i++)
+    for (i = 0; i < np; i++)
     {
       const gdouble z  = ncm_vector_get (bao_rdv->x, i);
       const gdouble r_Dv = nc_distance_bao_r_Dv (bao_rdv->dist, cosmo, z);
@@ -210,7 +211,7 @@ _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
   }
   else
   {
-    for (i = 0; i < gauss->np; i++)
+    for (i = 0; i < np; i++)
     {
       const gdouble z  = ncm_vector_get (bao_rdv->x, i);
       const gdouble Dv_r = 1.0 / nc_distance_bao_r_Dv (bao_rdv->dist, cosmo, z);
@@ -223,11 +224,12 @@ static void
 _nc_data_bao_rdv_set_size (NcmDataGauss *gauss, guint np)
 {
   NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (gauss);
+  const guint cnp       = ncm_data_gauss_get_size (gauss);
 
-  if ((np == 0) || (np != gauss->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&bao_rdv->x);
 
-  if ((np != 0) && (np != gauss->np))
+  if ((np != 0) && (np != cnp))
     bao_rdv->x = ncm_vector_new (np);
   
   /* Chain up : end */
