@@ -64,12 +64,12 @@ nc_xcor_AB_init (NcXcorAB *xcab)
 {
   xcab->a = 99;
   xcab->b = 99;
-  
+
   xcab->ell_th_cut_off = 0;
   xcab->ell_lik_min    = 0;
   xcab->ell_lik_max    = 0;
   xcab->nell_lik       = 0;
-  
+
   xcab->mixing = NULL;
   xcab->cl_th  = NULL; /*column 0 : C_l^th, 1 : C_l^th+N_l, 2 : mixed C_l */
   xcab->cl_obs = NULL;
@@ -79,9 +79,9 @@ static void
 _nc_xcor_AB_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcXcorAB *xcab = NC_XCOR_AB (object);
-  
+
   g_return_if_fail (NC_IS_XCOR_AB (object));
-  
+
   switch (prop_id)
   {
     case PROP_A:
@@ -110,9 +110,9 @@ _nc_xcor_AB_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_CL_OBS:
       xcab->cl_obs = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -120,9 +120,9 @@ static void
 _nc_xcor_AB_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcXcorAB *xcab = NC_XCOR_AB (object);
-  
+
   g_return_if_fail (NC_IS_XCOR_AB (object));
-  
+
   switch (prop_id)
   {
     case PROP_A:
@@ -159,11 +159,11 @@ static void
 _nc_xcor_AB_dispose (GObject *object)
 {
   NcXcorAB *xcab = NC_XCOR_AB (object);
-  
+
   ncm_matrix_clear (&xcab->mixing);
   ncm_matrix_clear (&xcab->cl_th);
   ncm_vector_clear (&xcab->cl_obs);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_AB_parent_class)->dispose (object);
 }
@@ -179,14 +179,14 @@ static void
 nc_xcor_AB_class_init (NcXcorABClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   /*GObjectClass* parent_class = G_OBJECT_CLASS (klass); */
-  
+
   object_class->set_property = &_nc_xcor_AB_set_property;
   object_class->get_property = &_nc_xcor_AB_get_property;
   object_class->dispose      = &_nc_xcor_AB_dispose;
   object_class->finalize     = &_nc_xcor_AB_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_uint ("a",
@@ -194,7 +194,7 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
                                                       "a",
                                                       0, 99, 99,
                                                       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_B,
                                    g_param_spec_uint ("b",
@@ -202,7 +202,7 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
                                                       "b",
                                                       0, 99, 99,
                                                       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_ELL_TH_CUT_OFF,
                                    g_param_spec_uint ("ell-th-cut-off",
@@ -210,7 +210,7 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
                                                       "ell_th_cut_off",
                                                       0, 10000, 0,
                                                       G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_ELL_LIK_MIN,
                                    g_param_spec_uint ("ell-lik-min",
@@ -218,7 +218,7 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
                                                       "ell_lik_min",
                                                       0, 10000, 0,
                                                       G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_ELL_LIK_MAX,
                                    g_param_spec_uint ("ell-lik-max",
@@ -270,16 +270,16 @@ nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint
   NcmMatrix *mixing = ncm_matrix_new (ell_th_cut_off + 1, ell_th_cut_off + 1);
   NcmMatrix *cl_th  = ncm_matrix_new (ell_th_cut_off + 1, 2);
   NcmVector *cl_obs = ncm_vector_new (ell_lik_max + 1);
-  
+
   ncm_matrix_set_zero (cl_th);
-  
+
   if (b < a)
     g_error ("nc_xcor_AB_new: b must be greater or equal to a");
-  
+
   if (clobs_filename != NULL)
   {
     FILE *f = fopen (clobs_filename, "r");
-    
+
     gsl_vector_fscanf (f, ncm_vector_gsl (cl_obs));
     fclose (f);
   }
@@ -287,16 +287,16 @@ nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint
   {
     cl_obs = NULL;
   }
-  
+
   if (mixing_filename != NULL)
   {
     NcmMatrix *mixing_full = ncm_matrix_new (mixing_filelength, mixing_filelength);
     FILE *g                = fopen (mixing_filename, "r");
-    
+
     gsl_matrix_fscanf (g, ncm_matrix_gsl (mixing_full));
-    
+
     fclose (g);
-    
+
     ncm_matrix_memcpy (mixing, ncm_matrix_get_submatrix (mixing_full, 0, 0, ell_th_cut_off + 1, ell_th_cut_off + 1));
     ncm_matrix_free (mixing_full);
   }
@@ -304,7 +304,7 @@ nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint
   {
     mixing = NULL;
   }
-  
+
   {
     NcXcorAB *xcab = g_object_new (NC_TYPE_XCOR_AB,
                                    "a", a,
@@ -316,9 +316,9 @@ nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint
                                    "cl-th", cl_th,
                                    "cl-obs", cl_obs,
                                    NULL);
-    
+
     xcab->nell_lik = ell_lik_max - ell_lik_min + 1;
-    
+
     return xcab;
   }
 }

@@ -29,7 +29,7 @@
  * @title: NcmDiff
  * @short_description: Numerical differentiation object
  *
- * FIXME
+ * Class to perform numerical differentiation.
  *
  */
 
@@ -40,7 +40,7 @@
 
 #include "math/ncm_diff.h"
 
-struct _NcmDiffPrivate
+typedef struct _NcmDiffPrivate
 {
   guint maxorder;
   gdouble rs;
@@ -50,7 +50,7 @@ struct _NcmDiffPrivate
   GPtrArray *central_tables;
   GPtrArray *forward_tables;
   GPtrArray *backward_tables;
-};
+} NcmDiffPrivate;
 
 typedef struct _NcmDiffTable
 {
@@ -72,32 +72,37 @@ enum
   PROP_SIZE,
 };
 
+struct _NcmDiff
+{
+  GObject parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT);
 
 static void
 ncm_diff_init (NcmDiff *diff)
 {
-  diff->priv           = ncm_diff_get_instance_private (diff);
-  diff->priv->maxorder = 0;
-  diff->priv->rs       = 0.0;
-  diff->priv->terr_pad = 0.0;
-  diff->priv->roff_pad = 0.0;
-  diff->priv->ini_h    = 0.0;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  
+  self->maxorder = 0;
+  self->rs       = 0.0;
+  self->terr_pad = 0.0;
+  self->roff_pad = 0.0;
+  self->ini_h    = 0.0;
 
-  diff->priv->central_tables  = g_ptr_array_new ();
-  diff->priv->forward_tables  = g_ptr_array_new ();
-  diff->priv->backward_tables = g_ptr_array_new ();
+  self->central_tables  = g_ptr_array_new ();
+  self->forward_tables  = g_ptr_array_new ();
+  self->backward_tables = g_ptr_array_new ();
 
-  g_ptr_array_set_free_func (diff->priv->central_tables,  &_ncm_diff_table_free);
-  g_ptr_array_set_free_func (diff->priv->forward_tables,  &_ncm_diff_table_free);
-  g_ptr_array_set_free_func (diff->priv->backward_tables, &_ncm_diff_table_free);
+  g_ptr_array_set_free_func (self->central_tables,  &_ncm_diff_table_free);
+  g_ptr_array_set_free_func (self->forward_tables,  &_ncm_diff_table_free);
+  g_ptr_array_set_free_func (self->backward_tables, &_ncm_diff_table_free);
 }
 
 static void
 _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDiff *diff = NCM_DIFF (object);
-
 
   g_return_if_fail (NCM_IS_DIFF (object));
 
@@ -128,7 +133,6 @@ static void
 _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmDiff *diff = NCM_DIFF (object);
-
 
   g_return_if_fail (NCM_IS_DIFF (object));
 
@@ -174,11 +178,11 @@ static void
 _ncm_diff_dispose (GObject *object)
 {
   NcmDiff *diff = NCM_DIFF (object);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
 
-
-  g_clear_pointer (&diff->priv->central_tables,  g_ptr_array_unref);
-  g_clear_pointer (&diff->priv->forward_tables,  g_ptr_array_unref);
-  g_clear_pointer (&diff->priv->backward_tables, g_ptr_array_unref);
+  g_clear_pointer (&self->central_tables,  g_ptr_array_unref);
+  g_clear_pointer (&self->forward_tables,  g_ptr_array_unref);
+  g_clear_pointer (&self->backward_tables, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_diff_parent_class)->dispose (object);
@@ -334,8 +338,9 @@ _ncm_diff_build_diff_table (NcmDiff *diff, GPtrArray *tables, const guint maxord
 static gdouble
 _ncm_diff_central_g (const guint k, gpointer user_data)
 {
-  NcmDiff *diff   = NCM_DIFF (user_data);
-  const gdouble g = pow (diff->priv->rs, 2 * k);
+  NcmDiff *diff = NCM_DIFF (user_data);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const gdouble g = pow (self->rs, 2 * k);
 
 
   return +g;
@@ -344,8 +349,9 @@ _ncm_diff_central_g (const guint k, gpointer user_data)
 static gdouble
 _ncm_diff_forward_g (const guint k, gpointer user_data)
 {
-  NcmDiff *diff   = NCM_DIFF (user_data);
-  const gdouble g = pow (diff->priv->rs, k);
+  NcmDiff *diff = NCM_DIFF (user_data);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const gdouble g = pow (self->rs, k);
 
 
   return +g;
@@ -354,8 +360,9 @@ _ncm_diff_forward_g (const guint k, gpointer user_data)
 static gdouble
 _ncm_diff_backward_g (const guint k, gpointer user_data)
 {
-  NcmDiff *diff   = NCM_DIFF (user_data);
-  const gdouble g = pow (diff->priv->rs, k);
+  NcmDiff *diff = NCM_DIFF (user_data);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const gdouble g = pow (self->rs, k);
 
 
   return -g;
@@ -364,9 +371,11 @@ _ncm_diff_backward_g (const guint k, gpointer user_data)
 static void
 _ncm_diff_build_diff_tables (NcmDiff *diff)
 {
-  _ncm_diff_build_diff_table (diff, diff->priv->central_tables,  diff->priv->maxorder, _ncm_diff_central_g,  diff);
-  _ncm_diff_build_diff_table (diff, diff->priv->forward_tables,  diff->priv->maxorder, _ncm_diff_forward_g,  diff);
-  _ncm_diff_build_diff_table (diff, diff->priv->backward_tables, diff->priv->maxorder, _ncm_diff_backward_g, diff);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  _ncm_diff_build_diff_table (diff, self->central_tables,  self->maxorder, _ncm_diff_central_g,  diff);
+  _ncm_diff_build_diff_table (diff, self->forward_tables,  self->maxorder, _ncm_diff_forward_g,  diff);
+  _ncm_diff_build_diff_table (diff, self->backward_tables, self->maxorder, _ncm_diff_backward_g, diff);
 }
 
 /**
@@ -438,7 +447,9 @@ ncm_diff_clear (NcmDiff **diff)
 guint
 ncm_diff_get_max_order (NcmDiff *diff)
 {
-  return diff->priv->maxorder;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->maxorder;
 }
 
 /**
@@ -452,7 +463,9 @@ ncm_diff_get_max_order (NcmDiff *diff)
 gdouble
 ncm_diff_get_richardson_step (NcmDiff *diff)
 {
-  return diff->priv->rs;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->rs;
 }
 
 /**
@@ -466,7 +479,9 @@ ncm_diff_get_richardson_step (NcmDiff *diff)
 gdouble
 ncm_diff_get_round_off_pad (NcmDiff *diff)
 {
-  return diff->priv->roff_pad;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->roff_pad;
 }
 
 /**
@@ -480,7 +495,9 @@ ncm_diff_get_round_off_pad (NcmDiff *diff)
 gdouble
 ncm_diff_get_trunc_error_pad (NcmDiff *diff)
 {
-  return diff->priv->terr_pad;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->terr_pad;
 }
 
 /**
@@ -494,7 +511,9 @@ ncm_diff_get_trunc_error_pad (NcmDiff *diff)
 gdouble
 ncm_diff_get_ini_h (NcmDiff *diff)
 {
-  return diff->priv->ini_h;
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->ini_h;
 }
 
 /**
@@ -508,13 +527,15 @@ ncm_diff_get_ini_h (NcmDiff *diff)
 void
 ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   g_assert_cmpuint (maxorder, >, 0);
 
-  if (maxorder != diff->priv->maxorder)
+  if (maxorder != self->maxorder)
   {
-    diff->priv->maxorder = maxorder;
+    self->maxorder = maxorder;
 
-    if (diff->priv->central_tables->len > 0)
+    if (self->central_tables->len > 0)
       _ncm_diff_build_diff_tables (diff);
   }
 }
@@ -530,13 +551,15 @@ ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
 void
 ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   g_assert_cmpfloat (rs, >, 1.1);
 
-  if (rs != diff->priv->rs)
+  if (rs != self->rs)
   {
-    diff->priv->rs = rs;
+    self->rs = rs;
 
-    if (diff->priv->central_tables->len > 0)
+    if (self->central_tables->len > 0)
       _ncm_diff_build_diff_tables (diff);
   }
 }
@@ -552,8 +575,10 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 void
 ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   g_assert_cmpfloat (roff_pad, >, 1.01);
-  diff->priv->roff_pad = roff_pad;
+  self->roff_pad = roff_pad;
 }
 
 /**
@@ -567,8 +592,10 @@ ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
 void
 ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   g_assert_cmpfloat (terr_pad, >, 1.01);
-  diff->priv->terr_pad = terr_pad;
+  self->terr_pad = terr_pad;
 }
 
 /**
@@ -582,8 +609,10 @@ ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad)
 void
 ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   g_assert_cmpfloat (ini_h, >, GSL_DBL_EPSILON);
-  diff->priv->ini_h = ini_h;
+  self->ini_h = ini_h;
 }
 
 /**
@@ -596,12 +625,14 @@ ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
 void
 ncm_diff_log_central_tables (NcmDiff *diff)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   guint i;
 
 
-  for (i = 0; i < diff->priv->central_tables->len; i++)
+  for (i = 0; i < self->central_tables->len; i++)
   {
-    NcmDiffTable *dtable = g_ptr_array_index (diff->priv->central_tables, i);
+    NcmDiffTable *dtable = g_ptr_array_index (self->central_tables, i);
 
 
     ncm_message ("# NcmDiff[central]  order: %u\n", i + 1);
@@ -620,12 +651,14 @@ ncm_diff_log_central_tables (NcmDiff *diff)
 void
 ncm_diff_log_forward_tables (NcmDiff *diff)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   guint i;
 
 
-  for (i = 0; i < diff->priv->forward_tables->len; i++)
+  for (i = 0; i < self->forward_tables->len; i++)
   {
-    NcmDiffTable *dtable = g_ptr_array_index (diff->priv->forward_tables, i);
+    NcmDiffTable *dtable = g_ptr_array_index (self->forward_tables, i);
 
 
     ncm_message ("# NcmDiff[forward]  order: %u\n", i + 1);
@@ -644,12 +677,14 @@ ncm_diff_log_forward_tables (NcmDiff *diff)
 void
 ncm_diff_log_backward_tables (NcmDiff *diff)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   guint i;
 
 
-  for (i = 0; i < diff->priv->backward_tables->len; i++)
+  for (i = 0; i < self->backward_tables->len; i++)
   {
-    NcmDiffTable *dtable = g_ptr_array_index (diff->priv->backward_tables, i);
+    NcmDiffTable *dtable = g_ptr_array_index (self->backward_tables, i);
 
 
     ncm_message ("# NcmDiff[backward] order: %u\n", i + 1);
@@ -784,6 +819,7 @@ _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data,
 static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
   GPtrArray *tables       = NULL;
   GPtrArray *dfs          = g_ptr_array_new ();
   GPtrArray *roffs        = g_ptr_array_new ();
@@ -814,9 +850,9 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
   df_m = ncm_matrix_new_array (df, dim);
 
   if (po == 0)
-    tables = diff->priv->forward_tables;
+    tables = self->forward_tables;
   else
-    tables = diff->priv->central_tables;
+    tables = self->central_tables;
 
   if (Eerr != NULL)
   {
@@ -858,7 +894,7 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
   {
     const gdouble x       = g_array_index (x_a, gdouble, a);
     const gdouble scale   = (x == 0.0) ? 1.0 : fabs (x);
-    const gdouble h0      = diff->priv->ini_h * scale;
+    const gdouble h0      = self->ini_h * scale;
     const guint ntry_conv = 3;
     NcmDiffTable *ldtable = NULL;
     guint order_index;
@@ -872,7 +908,7 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
     memset (not_conv->data, ntry_conv, not_conv->len);
     ncm_vector_set_zero (err_last_max);
 
-    for (order_index = 0; order_index < diff->priv->maxorder; order_index++)
+    for (order_index = 0; order_index < self->maxorder; order_index++)
     {
       const guint nt       = order_index + 2;
       NcmDiffTable *dtable = g_ptr_array_index (tables, order_index);
@@ -939,9 +975,9 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
 
         for (i = 0; i < dim; i++)
         {
-          const gdouble err_trunc_i = fabs (ncm_vector_get (err_trunc, i)) * diff->priv->terr_pad;
-          const gdouble roff_last_i = fabs (ncm_vector_get (roff_last, i)) * diff->priv->roff_pad;
-          const gdouble roff_curr_i = fabs (ncm_vector_get (roff_curr, i)) * diff->priv->roff_pad;
+          const gdouble err_trunc_i = fabs (ncm_vector_get (err_trunc, i)) * self->terr_pad;
+          const gdouble roff_last_i = fabs (ncm_vector_get (roff_last, i)) * self->roff_pad;
+          const gdouble roff_curr_i = fabs (ncm_vector_get (roff_curr, i)) * self->roff_pad;
           const gdouble err_best_i  = ncm_vector_get (err_best, i);
 
           const gdouble err_curr_max_i = GSL_MAX (err_trunc_i, GSL_MAX (roff_last_i, roff_curr_i));
@@ -1071,6 +1107,8 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
 static GArray *
 ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   GPtrArray *tables = NULL;
   GArray *dfs       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *roffs     = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -1087,9 +1125,9 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
   df_m = ncm_matrix_new_array (df, nvar);
 
   if (po == 0)
-    tables = diff->priv->forward_tables;
+    tables = self->forward_tables;
   else
-    tables = diff->priv->central_tables;
+    tables = self->central_tables;
 
   if (Eerr != NULL)
   {
@@ -1114,8 +1152,8 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
       const gdouble y       = g_array_index (x_a, gdouble, b);
       const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
       const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
-      const gdouble hx0     = diff->priv->ini_h * scale_x;
-      const gdouble hy0     = diff->priv->ini_h * scale_y;
+      const gdouble hx0     = self->ini_h * scale_x;
+      const gdouble hy0     = self->ini_h * scale_y;
       NcmDiffTable *ldtable = NULL;
       gdouble err_best      = GSL_POSINF;
       gdouble err_trunc     = 0.0;
@@ -1134,7 +1172,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
       g_array_set_size (dfs, 0);
       g_array_set_size (roffs, 0);
 
-      for (order_index = 0; order_index < diff->priv->maxorder; order_index++)
+      for (order_index = 0; order_index < self->maxorder; order_index++)
       {
         const guint nt       = order_index + 2;
         NcmDiffTable *dtable = g_ptr_array_index (tables, order_index);
@@ -1193,14 +1231,14 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
           }
         }
 
-        err_trunc = fabs (df_curr - df_last) * diff->priv->terr_pad;
+        err_trunc = fabs (df_curr - df_last) * self->terr_pad;
         err_err   = (df_curr == 0.0) ? ((df_last == 0.0) ? 0.0 : fabs (df_last)) : ((df_last == 0.0) ? fabs (df_curr) : fabs ((df_curr - df_last) / GSL_MIN (fabs (df_curr), fabs (df_last))));
 
         {
           gboolean improve = FALSE;
 
-          const gdouble Eroff_last   = fabs (roff_last) * diff->priv->roff_pad;
-          const gdouble Eroff_curr   = fabs (roff_curr) * diff->priv->roff_pad;
+          const gdouble Eroff_last   = fabs (roff_last) * self->roff_pad;
+          const gdouble Eroff_curr   = fabs (roff_curr) * self->roff_pad;
           const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
           gdouble err_curr_best      = err_best;
 

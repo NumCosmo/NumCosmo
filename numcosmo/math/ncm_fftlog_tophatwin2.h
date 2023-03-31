@@ -34,29 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FFTLOG_TOPHATWIN2             (ncm_fftlog_tophatwin2_get_type ())
-#define NCM_FFTLOG_TOPHATWIN2(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FFTLOG_TOPHATWIN2, NcmFftlogTophatwin2))
-#define NCM_FFTLOG_TOPHATWIN2_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FFTLOG_TOPHATWIN2, NcmFftlogTophatwin2Class))
-#define NCM_IS_FFTLOG_TOPHATWIN2(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FFTLOG_TOPHATWIN2))
-#define NCM_IS_FFTLOG_TOPHATWIN2_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FFTLOG_TOPHATWIN2))
-#define NCM_FFTLOG_TOPHATWIN2_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FFTLOG_TOPHATWIN2, NcmFftlogTophatwin2Class))
+#define NCM_TYPE_FFTLOG_TOPHATWIN2 (ncm_fftlog_tophatwin2_get_type ())
 
-typedef struct _NcmFftlogTophatwin2Class NcmFftlogTophatwin2Class;
-typedef struct _NcmFftlogTophatwin2 NcmFftlogTophatwin2;
-
-struct _NcmFftlogTophatwin2Class
-{
-  /*< private >*/
-  NcmFftlogClass parent_class;
-};
-
-struct _NcmFftlogTophatwin2
-{
-  /*< private >*/
-  NcmFftlog parent_instance;
-};
-
-GType ncm_fftlog_tophatwin2_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM, FFTLOG_TOPHATWIN2, NcmFftlog)
 
 NcmFftlogTophatwin2 *ncm_fftlog_tophatwin2_new (gdouble lnr0, gdouble lnk0, gdouble Lk, guint N);
 

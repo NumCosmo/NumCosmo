@@ -45,17 +45,16 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmDataRosenbrockPrivate
+struct _NcmDataRosenbrock
 {
-  gint unused;
+  NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA);
 
 static void
 ncm_data_rosenbrock_init (NcmDataRosenbrock *drb)
 {
-  drb->priv = ncm_data_rosenbrock_get_instance_private (drb);
 }
 
 static void
@@ -117,7 +116,7 @@ _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 /**
  * ncm_data_rosenbrock_new:
  *
- * Creates a new rosenbrock distribution object.
+ * Creates a new Rosenbrock distribution object.
  *
  * Returns: the newly created object.
  */

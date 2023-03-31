@@ -34,15 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATASET             (ncm_dataset_get_type ())
-#define NCM_DATASET(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATASET, NcmDataset))
-#define NCM_DATASET_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATASET, NcmDatasetClass))
-#define NCM_IS_DATASET(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATASET))
-#define NCM_IS_DATASET_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATASET))
-#define NCM_DATASET_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATASET, NcmDatasetClass))
+#define NCM_TYPE_DATASET (ncm_dataset_get_type ())
 
-typedef struct _NcmDatasetClass NcmDatasetClass;
-typedef struct _NcmDataset NcmDataset;
+G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject);
 
 /**
  * NcmDatasetBStrapType:
@@ -50,38 +44,17 @@ typedef struct _NcmDataset NcmDataset;
  * @NCM_DATASET_BSTRAP_PARTIAL: Partial bootstrap, each #NcmData is bootstraped individually.
  * @NCM_DATASET_BSTRAP_TOTAL: Total bootstrap, all data is bootstraped simultaneously.
  *
+ * Bootstrap types.
+ * 
  */
 typedef enum _NcmDatasetBStrapType
 {
   NCM_DATASET_BSTRAP_DISABLE = 0,
   NCM_DATASET_BSTRAP_PARTIAL,
-  NCM_DATASET_BSTRAP_TOTAL, 
+  NCM_DATASET_BSTRAP_TOTAL,
   /* < private > */
-  NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
+  NCM_DATASET_BSTRAP_LEN, /*< skip >*/
 } NcmDatasetBStrapType;
-
-struct _NcmDatasetClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-/**
- * NcmDataSet:
- *
- * FIXME
- */
-struct _NcmDataset
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmObjArray *oa;
-  NcmDatasetBStrapType bstype;
-  GArray *data_prob;
-  GArray *bstrap;
-};
-
-GType ncm_dataset_get_type (void) G_GNUC_CONST;
 
 NcmDataset *ncm_dataset_new (void);
 NcmDataset *ncm_dataset_new_list (gpointer data0, ...) G_GNUC_NULL_TERMINATED;
@@ -134,3 +107,4 @@ void ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
 G_END_DECLS
 
 #endif /* _NCM_DATASET_H_ */
+

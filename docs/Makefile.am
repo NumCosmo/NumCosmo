@@ -3,7 +3,6 @@
 # Local xml files
 XML_FILES= \
 	introduction.xml \
-	darkenergy.xml   \
 	refs.xml
 
 # Generated xml files
@@ -135,6 +134,8 @@ IGNORE_HFILES= \
               libqp_splx.c                    \
               kdtree.h                        \
               kdtree.c                        \
+              rb_knn_list.h                   \
+              rb_knn_list.c                   \
               clencurt.h                      \
               converged.h                     \
               vwrapper.h                      \
@@ -195,32 +196,9 @@ endif
 
 ########################################################################
 
-man_MANS := darkenergy.1
+MAINTAINERCLEANFILES = $(BUILT_SOURCES)
 
-EXTRA_DIST += $(man_MANS)
-
-if ENABLE_MAN
-
-%.1: %.xml
-	@@XSLTPROC@ -nonet http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
-
-dist-local-check-mans-enabled:
-	if grep "Man generation disabled" $(man_MANS) >/dev/null; then $(RM) $(man_MANS); fi
-else
-
-$(man_MANS):
-	@echo Man generation disabled.  Creating dummy $@.  Configure with --enable-man to enable it.
-	@echo Man generation disabled.  Remove this file, configure with --enable-man, and rebuild > $@
-
-dist-local-check-mans-enabled:
-	@echo "*** --enable-man must be used in order to make dist"
-	false
-
-endif
-
-MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
-
-BUILT_EXTRA_DIST = $(man_MANS)
+BUILT_EXTRA_DIST = 
 
 CLEANFILES += \
 	addmathjax.stamp                                    \
@@ -238,7 +216,7 @@ CLEANFILES += \
 	$(addsuffix .xref, $(basename $(XML_GEN_FILES)))    \
 	$(addprefix $(top_srcdir)/docs/, $(XML_GEN_FILES))
 
-dist-hook-local: dist-local-check-mans-enabled all-local
+dist-hook-local: all-local
 
 numcosmo-docs-clean: clean
 	cd $(srcdir) && rm -rf xml html

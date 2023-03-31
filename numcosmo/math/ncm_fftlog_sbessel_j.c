@@ -121,11 +121,11 @@
 #include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmFftlogSBesselJPrivate
+typedef struct _NcmFftlogSBesselJPrivate
 {
   guint ell;
   gdouble q;
-};
+} NcmFftlogSBesselJPrivate;
 
 enum
 {
@@ -135,12 +135,16 @@ enum
   PROP_SIZE,
 };
 
+struct _NcmFftlogSBesselJ {
+  NcmFftlog parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
 
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   self->ell = 0;
   self->q   = 0.0;
@@ -244,7 +248,7 @@ static void
 _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   NcmFftlogSBesselJ *fftlog_jl          = NCM_FFTLOG_SBESSEL_J (fftlog);
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   const gdouble pi_sqrt  = sqrt (M_PI);
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
@@ -342,7 +346,7 @@ ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, gui
 void
 ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   if (self->ell != ell)
   {
@@ -362,7 +366,7 @@ ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell)
 guint
 ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   return self->ell;
 }
@@ -378,7 +382,7 @@ ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 void
 ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   if (self->q != q)
   {
@@ -398,7 +402,7 @@ ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
 gdouble
 ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   
   return self->q;
 }
@@ -416,7 +420,7 @@ ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
 void
 ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   NcmFftlog *fftlog                     = NCM_FFTLOG (fftlog_jl);
   
   gint signp = 0;
@@ -443,7 +447,7 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
 void
 ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl)
 {
-  NcmFftlogSBesselJPrivate * const self = fftlog_jl->priv;
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   NcmFftlog *fftlog                     = NCM_FFTLOG (fftlog_jl);
   
   gint signp = 0;

@@ -96,6 +96,7 @@ for cat in args.catalog:
 
     rows = np.delete(rows, m2lnL, 1)
     params = list(np.delete(params, m2lnL, 0))
+    print(params)
 
     if args.col:
         assert max(args.col) < mcat.ncols()

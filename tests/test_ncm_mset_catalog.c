@@ -129,11 +129,12 @@ test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
   NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
   NcmMSetCatalog *mcat;
 
   /*ncm_model_param_set_lower_bound (NCM_MODEL (model_mvnd), 0, 0.0);*/
 
-  ncm_mset_param_set_vector (mset, NCM_DATA_GAUSS_COV (data_mvnd)->y);
+  ncm_mset_param_set_vector (mset, y);
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
@@ -168,6 +169,7 @@ test_ncm_mset_catalog_mean (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
   NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   gint i;
@@ -179,7 +181,7 @@ test_ncm_mset_catalog_mean (TestNcmMSetCatalog *test, gconstpointer pdata)
     ncm_data_m2lnL_val (data, mset, &m2lnL);
 
     ncm_data_resample (data, mset, test->rng);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   if (FALSE)
@@ -212,7 +214,8 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
-  NcmMatrix *data_cov  = cov->cov;
+  NcmMatrix *data_cov  = ncm_data_gauss_cov_peek_cov (cov);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   gint i;
 
@@ -223,7 +226,7 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
     ncm_data_m2lnL_val (data, mset, &m2lnL);
 
     ncm_data_resample (data, mset, test->rng);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   {
@@ -258,12 +261,15 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
 void
 test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  NcmData *data = NCM_DATA (test->data_mvnd);
+  NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
-  NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 10;
-  gdouble ratio, lnnorm_sd;
-  gulong N, Nin;
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 10;
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gdouble ratio;
+  gdouble lnnorm_sd;
+  gulong N;
+  gulong Nin;
   gint i;
 
   N     = Nin = 0;
@@ -278,7 +284,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     N += Ni;
 
     ncm_data_m2lnL_val (data, mset, &m2lnL);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   while (TRUE)
@@ -305,12 +311,15 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
 void
 test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  NcmData *data = NCM_DATA (test->data_mvnd);
+  NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
-  NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 100;
-  gdouble ratio, lnnorm_sd;
-  gulong N, Nin;
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 100;
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gdouble ratio;
+  gdouble lnnorm_sd;
+  gulong N;
+  gulong Nin;
   gulong i;
 
   for (i = 0; i < test->dim; i++)
@@ -330,7 +339,7 @@ test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata
     N += Ni;
 
     ncm_data_m2lnL_val (data, mset, &m2lnL);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   ratio = ncm_data_gauss_cov_mvnd_est_ratio (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, &N, &i, 1.0e-3, test->rng);
@@ -346,6 +355,7 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX) * 10;
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   gdouble norma        = 1.0;
   gdouble lnnorm_sd;
   gulong i;
@@ -371,10 +381,10 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
       const gdouble ub = ncm_model_param_get_upper_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), j);
       const gdouble lb = ncm_model_param_get_lower_bound (ncm_mset_peek (mset, ncm_model_mvnd_id ()), j);
 
-      ncm_vector_set (cov->y, j, ncm_rng_uniform_gen (test->rng, lb, ub));
+      ncm_vector_set (y, j, ncm_rng_uniform_gen (test->rng, lb, ub));
     }
 
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   /*printf ("<% 22.15g % 22.15g % 12.5e %d>\n", ncm_mset_catalog_get_post_lnnorm (test->mcat), log (norma), fabs (expm1 (ncm_mset_catalog_get_post_lnnorm (test->mcat) - log (norma))), test->dim);*/
@@ -385,11 +395,13 @@ test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata)
 void
 test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  NcmData *data = NCM_DATA (test->data_mvnd);
+  NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
-  NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
-  gdouble glnvol, lnnorm_sd;
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gdouble glnvol;
+  gdouble lnnorm_sd;
   gint i;
 
   for (i = 0; i < nt; i++)
@@ -399,7 +411,7 @@ test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
     ncm_data_resample (data, mset, test->rng);
     ncm_data_m2lnL_val (data, mset, &m2lnL);
 
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   {
@@ -425,6 +437,7 @@ test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata)
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   gdouble m2lnL_min    = GSL_POSINF;
   NcmVector *min_row   = ncm_vector_new (test->dim);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   gint i;
 
   for (i = 0; i < nt; i++)
@@ -436,11 +449,11 @@ test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata)
 
     if (m2lnL < m2lnL_min)
     {
-      ncm_vector_memcpy (min_row, cov->y);
+      ncm_vector_memcpy (min_row, y);
       m2lnL_min = m2lnL;
     }
 
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   {
@@ -485,6 +498,7 @@ test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata)
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   gdouble m2lnL_min    = GSL_POSINF;
   NcmVector *min_row   = ncm_vector_new (test->dim);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   GArray *m2lnL_array  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   guint nth            = 0;
   gint i;
@@ -498,12 +512,12 @@ test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata)
 
     if (m2lnL < m2lnL_min)
     {
-      ncm_vector_memcpy (min_row, cov->y);
+      ncm_vector_memcpy (min_row, y);
       m2lnL_min = m2lnL;
     }
 
     g_array_append_val (m2lnL_array, m2lnL);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   g_array_sort (m2lnL_array, _cmp_double);
@@ -547,6 +561,7 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   gint i;
 
   for (i = 0; i < nt; i++)
@@ -556,7 +571,7 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
     ncm_data_resample (data, mset, test->rng);
     ncm_data_m2lnL_val (data, mset, &m2lnL);
 
-    ncm_mset_catalog_add_from_vector_array (test->mcat, cov->y, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
   }
 
   ncm_mset_catalog_estimate_autocorrelation_tau (test->mcat, FALSE);
