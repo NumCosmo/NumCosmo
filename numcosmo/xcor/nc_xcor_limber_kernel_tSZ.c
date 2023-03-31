@@ -1,7 +1,7 @@
 /***************************************************************************
  *            nc_xcor_limber_kernel_tSZ.c
  *
- *  Tue January 10 12:00:00 2021
+ *  Tue January 10 12:00:00 2022
  *  Copyright  2022  Arthur de Souza Molina
  *  <arthur.souza.molina@uel.br>
  ****************************************************************************/
@@ -26,9 +26,12 @@
 /**
  * SECTION:nc_xcor_limber_kernel_tSZ
  * @title: NcXcorLimberKerneltSZ
- * @short_description: implementation of #NcXcorLimberKernel with the thermal Sunyaev Zel'dovich
-    Compton-y parameter
+ * @short_description: implementation of #NcXcorLimberKernel with the thermal Sunyaev Zel'dovich effect
  *
+ * The thermal Sunyaev Zel'dovich (tSZ) effect is a modification in the observed temperature of the cosmic microwave 
+ * background (CMB) due to the inverse Compton scattering of CMB photons with high-energy electrons along the line-of-sight. 
+ * These electrons are present in the intracluster medium (ICM) of galaxy clusters, for example.   
+ *   Compton-y parameter
  * The kernel is given by
  * \begin{equation}
  *    W(\\chi) = \\frac{\\sigma_T}{m_ec^2} \\frac{1}{1+z}.
