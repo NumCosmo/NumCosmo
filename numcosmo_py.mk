@@ -19,5 +19,8 @@ nobase_python_PYTHON = \
 	numcosmo_py/plotting/getdist.py                          \
 	numcosmo_py/plotting/__init__.py                         \
 	numcosmo_py/plotting/tools.py                            \
+	numcosmo_py/sampling/model.py                            \
 	numcosmo_py/sampling/__init__.py                         \
-	numcosmo_py/sampling/esmcmc.py                          
+	numcosmo_py/sampling/esmcmc.py                           \
+	numcosmo_py/sampling/apes.py                             \
+	numcosmo_py/sampling/catalog.py                         

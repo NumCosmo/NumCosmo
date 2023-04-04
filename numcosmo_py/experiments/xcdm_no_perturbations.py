@@ -84,9 +84,11 @@ def run_xcdm_nopert_mcmc(
         mset = Ncm.MSet.load(progress_file, ser)
     else:
         mset = Ncm.MSet.empty_new()
-        
+
         if use_neutrino:
-            cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
+            cosmo = Nc.HICosmo.new_from_name(
+                Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}"
+            )
         else:
             cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
 
@@ -96,9 +98,9 @@ def run_xcdm_nopert_mcmc(
         cosmo.param_set_by_name("Omegab", 0.05)
         cosmo.param_set_by_name("Omegac", 0.25)
         cosmo.param_set_by_name("Omegak", 0.00)
-        
+
         if use_neutrino:
-            cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)    
+            cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
             id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
             cosmo.param_set_ftype(id, Ncm.ParamType.FREE)
 
