@@ -89,8 +89,8 @@ ncm_serialize_init (NcmSerialize *ser)
   ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                                (GDestroyNotify) & g_variant_unref);
 
-  ser->is_named_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
-  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->is_named_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
+  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
   ser->autosave_count  = 0;
 }
 
@@ -1501,6 +1501,7 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
 #ifdef HAVE_LIBFYAML
 
 static struct fy_node *
+
 _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj)
 {
   GVariant *obj_name_var     = g_variant_get_child_value (var_obj, 0);
@@ -1550,6 +1551,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
     if (anchor)
     {
       gint rc = fy_node_set_anchor (root_key, g_strdup (anchor), FY_NT);
+
       g_assert (rc == 0);
     }
 
@@ -1581,6 +1583,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
           for (i = 0; i < n; i++)
           {
             GVariant *cvar = g_variant_get_child_value (val, i);
+
             fy_node_sequence_append (value, _ncm_serialize_to_yaml_node (ser, doc, cvar));
             g_variant_unref (cvar);
           }
@@ -1592,6 +1595,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
         else
         {
           gchar *str = g_variant_print (val, FALSE);
+
           value = fy_node_build_from_malloc_string (doc, str, FY_NT);
         }
 
@@ -1616,6 +1620,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
 
   return root;
 }
+
 #endif /* HAVE_LIBFYAML */
 
 /**
