@@ -722,9 +722,9 @@ ncm_dataset_get_info (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_f() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_f() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_f() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f (NcmDataset *dset)
@@ -753,9 +753,9 @@ ncm_dataset_has_leastsquares_f (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_J:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_J() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_J() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_J (NcmDataset *dset)
@@ -784,9 +784,9 @@ ncm_dataset_has_leastsquares_J (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f_J:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_f_J() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f_J() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
@@ -815,9 +815,9 @@ ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_val() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_val() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_val() method.
  */
 gboolean
 ncm_dataset_has_m2lnL_val (NcmDataset *dset)
@@ -846,9 +846,9 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_grad:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_grad() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_grad() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
  *
  */
 gboolean
@@ -878,9 +878,9 @@ ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val_grad:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_val_grad() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val_grad() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
  *
  */
 gboolean

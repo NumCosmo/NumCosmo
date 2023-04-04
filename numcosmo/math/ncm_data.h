@@ -53,34 +53,6 @@ G_DECLARE_DERIVABLE_TYPE (NcmData, ncm_data, NCM, DATA, GObject)
  */
 typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
 
-/**
- * NcmDataClass:
- * @bootstrap: sets whenever the #NcmData implementations supports bootstrap.
- * @get_length: return the length associated to the #NcmData object.
- * @get_dof: return the effective degrees of freedom related to the #NcmData
- * statistics (likelihood or $\chi^2$) this number does not represent
- * necessarily the number of data points.
- * @begin: perform any model independent pre-calculation.
- * @prepare: perform any model dependent pre-calculation.
- * @resample: resample data from the models in #NcmMSet.
- * @leastsquares_f: calculates the least squares $\vec{f}$ vector, i.e.,
- * $\chi^2 \equiv \vec{f}\cdot\vec{f}$.
- * @leastsquares_J: calculates the least squares $\vec{f}$ vector derivatives
- * with respect to the free parameter of @mset.
- * @leastsquares_f_J: calculates both least squares vector and its derivatives.
- * @m2lnL_val: evaluate the minus two times the natural logarithm of the
- * likelihood, i.e., $-2\ln(L)$.
- * @m2lnL_grad: evaluate the gradient of $-2\ln(L)$ with respect to the free
- * parameters in @mset.
- * @m2lnL_val_grad: evaluate the value and the gradient of $-2\ln(L)$.
- * @mean_vector: evaluate the Gaussian mean (approximation or not)
- * @inv_cov_UH: evaluate the Gaussian inverse covariance matrix (approximation or not)
- * @fisher_matrix: calculates the Fisher matrix (based on a Gaussian approximation when it is the case)
- *
- * Virtual table for the #NcmData abstract class.
- *
- *
- */
 struct _NcmDataClass
 {
   /*< private >*/
