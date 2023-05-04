@@ -84,6 +84,7 @@ enum
 {
   PROP_0,
   PROP_LOCAL_FRAC,
+  PROP_USE_ROT_HREF,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE);
@@ -99,7 +100,8 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
   self->delta_x   = NULL;
   self->lnnorms   = NULL;
 
-  self->local_frac = 0.0;
+  self->local_frac   = 0.0;
+  self->use_rot_href = FALSE;
 
   g_ptr_array_set_free_func (self->cov_array, (GDestroyNotify) ncm_matrix_free);
 }
@@ -115,6 +117,9 @@ _ncm_stats_dist_vkde_set_property (GObject *object, guint prop_id, const GValue 
   {
     case PROP_LOCAL_FRAC:
       ncm_stats_dist_vkde_set_local_frac (sdvkde, g_value_get_double (value));
+      break;
+    case PROP_USE_ROT_HREF:
+      ncm_stats_dist_vkde_set_use_rot_href (sdvkde, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -135,6 +140,9 @@ _ncm_stats_dist_vkde_get_property (GObject *object, guint prop_id, GValue *value
   {
     case PROP_LOCAL_FRAC:
       g_value_set_double (value, ncm_stats_dist_vkde_get_local_frac (sdvkde));
+      break;
+    case PROP_USE_ROT_HREF:
+      g_value_set_boolean (value, ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -198,6 +206,14 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
                                                         0.001, 1.0, 0.05,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_USE_ROT_HREF,
+                                   g_param_spec_boolean ("use-rot-href",
+                                                         NULL,
+                                                         "Whether to use the href rule-of-thumb to compute the final bandwidth",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   base_class->set_dim            = &_ncm_stats_dist_vkde_set_dim;
   base_class->get_href           = &_ncm_stats_dist_vkde_get_href;
   base_class->prepare_kernel     = &_ncm_stats_dist_vkde_prepare_kernel;
@@ -233,14 +249,20 @@ _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim)
 static gdouble
 _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd)
 {
-  /* Chain up : start */
-  const gdouble href_base = NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->get_href (sd);
-  {
-    NcmStatsDistVKDEPrivate * const self = NCM_STATS_DIST_VKDE (sd)->priv;
+  NcmStatsDistVKDEPrivate * const self = NCM_STATS_DIST_VKDE (sd)->priv;
 
-    /*printf ("href % 22.15g % 22.15g % 22.15g\n", href_base / self->local_frac, href_base, self->local_frac);*/
+  if (self->use_rot_href)
+  {
+    /* Chain up : start */
+    const gdouble href_base = NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->get_href (sd);
 
     return href_base / self->local_frac;
+  }
+  else
+  {
+    NcmStatsDistPrivate * const ppself = sd->priv;
+
+    return ppself->over_smooth;
   }
 }
 
@@ -682,5 +704,35 @@ ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde)
   NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
 
   return self->local_frac;
+}
+
+/**
+ * ncm_stats_dist_vkde_set_use_rot_href:
+ * @sdvkde: a #NcmStatsDistVKDE
+ * @use_rot_href: whether to use the rule of thumb bandwidth
+ *
+ * Sets whether to use the rule of thumb bandwidth for the
+ *
+ */
+void
+ncm_stats_dist_vkde_set_use_rot_href (NcmStatsDistVKDE *sdvkde, const gboolean use_rot_href)
+{
+  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
+
+  self->use_rot_href = use_rot_href;
+}
+
+/**
+ * ncm_stats_dist_vkde_get_use_rot_href:
+ * @sdvkde: a #NcmStatsDistVKDE
+ *
+ * Returns: whether to use the rule of thumb bandwidth.
+ */
+gboolean
+ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde)
+{
+  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
+
+  return self->use_rot_href;
 }
 

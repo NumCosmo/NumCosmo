@@ -42,6 +42,7 @@ struct _NcmStatsDistVKDEPrivate
   NcmVector *delta_x;
   NcmVector *lnnorms;
   gdouble local_frac;
+  gboolean use_rot_href;
 };
 
 G_END_DECLS

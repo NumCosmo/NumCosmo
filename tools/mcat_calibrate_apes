@@ -60,6 +60,8 @@ def calibrate_catalog(
     ntries: int = 100,
     use_half: bool = True,
     verbose: bool = False,
+    plot_2d: bool = False,
+    plot_2d_scatter: bool = False
 ):
     """Calibrate the APES sampler using a given catalog.
 
@@ -145,36 +147,37 @@ def calibrate_catalog(
     print(f"# === Non-zero weights: {np.count_nonzero(weights)}")
     print(f"# === Final bandwidth: {sdist.get_href()}")
 
-    for a in range(nvar):  # pylint: disable-msg=invalid-name
-        for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
-            indices = np.array([a, b])
-            print(indices)
+    if plot_2d:
+        for a in range(nvar):  # pylint: disable-msg=invalid-name
+            for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
+                indices = np.array([a, b])
+                print(indices)
 
-            _, axis = plt.subplots(1, 1, figsize=(16, 8))
+                _, axis = plt.subplots(1, 1, figsize=(16, 8))
 
-            # pylint: disable-next=invalid-name
-            for ii in range(0, int(sdist.get_n_kernels())):
-                y_i, cov_i, _, w_i = sdist.get_Ki(ii)
-                mean = np.array(y_i.dup_array())
-                cov = np.array([[cov_i.get(i, j) for j in indices] for i in indices])
-                cov = cov * 1.0
-                w_i = weights[ii]
+                # pylint: disable-next=invalid-name
+                for ii in range(0, int(sdist.get_n_kernels())):
+                    y_i, cov_i, _, w_i = sdist.get_Ki(ii)
+                    mean = np.array(y_i.dup_array())
+                    cov = np.array([[cov_i.get(i, j) for j in indices] for i in indices])
+                    cov = cov * 1.0
+                    w_i = weights[ii]
 
-                if w_i > 0.0:
-                    confidence_ellipse(
-                        mean[indices],
-                        cov,
-                        axis,
-                        edgecolor="red",
-                        facecolor="red",
-                    )
-
-            axis.scatter(try_sample[:, a], try_sample[:, b])
-            plt.axis("auto")
-            plt.xlabel(params[a])
-            plt.ylabel(params[b])
-            plt.grid()
-            plt.show()
+                    if w_i > 0.0:
+                        confidence_ellipse(
+                            mean[indices],
+                            cov,
+                            axis,
+                            edgecolor="red",
+                            facecolor="red",
+                        )
+                if plot_2d_scatter:
+                    axis.scatter(try_sample[:, a], try_sample[:, b])
+                plt.axis("auto")
+                plt.xlabel(params[a])
+                plt.ylabel(params[b])
+                plt.grid()
+                plt.show()
 
 
 if __name__ == "__main__":
