@@ -5205,6 +5205,9 @@ ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gd
 
   esss = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
 
+  if (max_ess != NULL)
+    *max_ess = wp_ess;
+
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     const gchar *name = NULL;
