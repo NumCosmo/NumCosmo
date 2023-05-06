@@ -121,6 +121,7 @@ void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
 void ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
 void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
+gint ncm_vector_cmp2 (const NcmVector *cv1, const NcmVector *cv2, const gdouble reltol, const gdouble abstol);
 void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
 void ncm_vector_square (NcmVector *cv);

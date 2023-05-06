@@ -97,6 +97,8 @@ struct _NcmMSetCatalogPrivate
   NcmStatsVec *e_stats;
   NcmStatsVec *e_mean_stats;
   GPtrArray *e_var_array;
+  gint naccepted;
+  GArray *accept_ratio;
   NcmVector *chain_means;
   NcmVector *chain_vars;
   NcmMatrix *chain_cov;
@@ -195,6 +197,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   g_ptr_array_set_free_func (self->e_var_array, (GDestroyNotify) & ncm_vector_free);
   self->e_stats      = NULL;
   self->e_mean_stats = NULL;
+  self->naccepted    = 0;
+  self->accept_ratio = NULL;
   self->chain_means  = NULL;
   self->chain_vars   = NULL;
   self->chain_cov    = NULL;
@@ -261,6 +265,7 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
     self->mean_pstats  = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, FALSE);
     self->e_stats      = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, FALSE);
     self->e_mean_stats = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, TRUE);
+    self->accept_ratio = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
     self->chain_means = ncm_vector_new (self->nchains);
     self->chain_vars  = ncm_vector_new (self->nchains);
@@ -532,6 +537,7 @@ _ncm_mset_catalog_dispose (GObject *object)
   ncm_stats_vec_clear (&self->e_mean_stats);
 
   g_clear_pointer (&self->e_var_array, g_ptr_array_unref);
+  g_clear_pointer (&self->accept_ratio, g_array_unref);
 
   ncm_vector_clear (&self->chain_means);
   ncm_vector_clear (&self->chain_vars);
@@ -2098,6 +2104,7 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
     ncm_stats_vec_reset (self->mean_pstats, FALSE);
     ncm_stats_vec_reset (self->e_stats, FALSE);
     ncm_stats_vec_reset (self->e_mean_stats, FALSE);
+    self->naccepted = 0;
   }
 
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
@@ -2144,6 +2151,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
     ncm_stats_vec_reset (self->mean_pstats, TRUE);
     ncm_stats_vec_reset (self->e_stats, TRUE);
     ncm_stats_vec_reset (self->e_mean_stats, TRUE);
+    self->naccepted = 0;
   }
 
   ncm_vector_set_all (self->params_max, GSL_NEGINF);
@@ -2732,6 +2740,17 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
     ncm_stats_vec_append (self->pstats, x, FALSE);
   }
 
+  /* Counting the number of accepted steps */
+  if (self->pstats->nitens > self->nchains)
+  {
+    const gint current_index = self->pstats->nitens - 1;
+    const gint last_index    = current_index - self->nchains;
+    NcmVector *last_x        = ncm_stats_vec_peek_row (self->pstats, last_index);
+
+    if (ncm_vector_cmp2 (last_x, x, 1.0e-14, 0.0) > 0)
+      self->naccepted++;
+  }
+
   self->cur_id++;
 
   if (self->nchains > 1)
@@ -2751,7 +2770,15 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (self->e_var_array, e_var);
 
+      if (self->pstats->nitens > self->nchains)
+      {
+        const gdouble acc_ratio = self->naccepted / (gdouble) self->nchains;
+
+        g_array_append_val (self->accept_ratio, acc_ratio);
+      }
+
       ncm_stats_vec_reset (self->e_stats, FALSE);
+      self->naccepted = 0;
     }
   }
 
@@ -3074,6 +3101,22 @@ ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i)
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   return g_ptr_array_index (self->chain_pstats, i);
+}
+
+/**
+ * ncm_mset_catalog_peek_accept_ratio_array:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Peeks the acceptance ratio array.
+ *
+ * Returns: (transfer none) (element-type gdouble): the acceptance ratio array.
+ */
+GArray *
+ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = mcat->priv;
+
+  return self->accept_ratio;
 }
 
 /**
