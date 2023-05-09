@@ -327,6 +327,7 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   NcmVector *weights     = ncm_vector_new (n);
   NcmVector *chi2        = ncm_vector_new (n);
   NcmVector *lnnorms_vec = ncm_vector_new (n);
+  NcmVector *lnK         = ncm_vector_new (n);
   GArray *t_array0       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *t_array1       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const gdouble kappa    = -0.5 * (test->nu + test->dim);
@@ -384,8 +385,8 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
     g_array_insert_val (t_array1, i, lnt_i1);
   }
 
-  ncm_stats_dist_kernel_eval_sum0_gamma_lambda (test->kernel, chi2, weights, lnnorms_vec, &gamma0, &lambda0);
-  ncm_stats_dist_kernel_eval_sum1_gamma_lambda (test->kernel, chi2, weights, lnnorm, &gamma1, &lambda1);
+  ncm_stats_dist_kernel_eval_sum0_gamma_lambda (test->kernel, chi2, weights, lnnorms_vec, lnK, &gamma0, &lambda0);
+  ncm_stats_dist_kernel_eval_sum1_gamma_lambda (test->kernel, chi2, weights, lnnorm, lnK, &gamma1, &lambda1);
 
   for (i = 0; i < i_max0; i++)
   {

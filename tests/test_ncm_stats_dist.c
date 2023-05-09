@@ -267,6 +267,7 @@ test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
   test->np         = TESTMULT * test->dim;
   test->ntests     = NTESTS;
   test->corr_level = 1.0;
+  printf ("%d %d\n", dim, test->np);
 
   switch (cov_type)
   {

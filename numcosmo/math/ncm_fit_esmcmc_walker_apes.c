@@ -109,7 +109,6 @@ struct _NcmFitESMCMCWalkerAPESPrivate
   gdouble over_smooth;
   gboolean use_interp;
   gboolean constructed;
-  GMutex eval_lock;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM_TYPE_FIT_ESMCMC_WALKER);
@@ -140,8 +139,6 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->over_smooth = 0.0;
   self->use_interp  = FALSE;
   self->constructed = FALSE;
-
-  g_mutex_init (&self->eval_lock);
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
 }
@@ -243,7 +240,6 @@ _ncm_fit_esmcmc_walker_apes_finalize (GObject *object)
   NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
 
   g_clear_pointer (&self->desc, g_free);
-  g_mutex_clear (&self->eval_lock);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_apes_parent_class)->finalize (object);
@@ -530,34 +526,24 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
   if (k < self->size_2)
   {
-    g_mutex_lock (&self->eval_lock);
-    {
-      const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
-      const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
+    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
+    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
 
-      g_mutex_unlock (&self->eval_lock);
+    g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
-      g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
-
-      ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
-      ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
-    }
+    ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
+    ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
   }
 
   if (k >= self->size_2)
   {
-    g_mutex_lock (&self->eval_lock);
-    {
-      const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
-      const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
+    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
+    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
 
-      g_mutex_unlock (&self->eval_lock);
+    g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
-      g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
-
-      ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
-      ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
-    }
+    ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
+    ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
   }
 
   /*ncm_vector_log_vals (theta_k,   "    THETA: ", "% 22.15g", TRUE);*/

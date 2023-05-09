@@ -76,6 +76,9 @@ gdouble ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde);
 void ncm_stats_dist_vkde_set_use_rot_href (NcmStatsDistVKDE *sdvkde, const gboolean use_rot_href);
 gboolean ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde);
 
+void ncm_stats_dist_vkde_set_use_threads (NcmStatsDistVKDE *sdvkde, const gboolean use_threads);
+gboolean ncm_stats_dist_vkde_get_use_threads (NcmStatsDistVKDE *sdvkde);
+
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST_ND_H_ */

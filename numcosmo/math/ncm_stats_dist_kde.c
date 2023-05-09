@@ -114,6 +114,38 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM_TYPE_STATS_DIST);
 
+typedef struct _NcmStatsDistKDEEvalVars
+{
+  NcmVector *v;
+  NcmVector *chi2;
+  NcmVector *lnK;
+} NcmStatsDistKDEEvalVars;
+
+static gpointer
+_ncm_stats_dist_kde_eval_vars_new (gpointer userdata)
+{
+  NcmStatsDist *sd                   = NCM_STATS_DIST (userdata);
+  NcmStatsDistPrivate * const ppself = sd->priv;
+  NcmStatsDistKDEEvalVars *ev        = g_new0 (NcmStatsDistKDEEvalVars, 1);
+
+  ev->v    = ncm_vector_new (ppself->d);
+  ev->chi2 = ncm_vector_new (ppself->n_kernels);
+  ev->lnK  = ncm_vector_new (ppself->n_kernels);
+
+  return ev;
+}
+
+static void
+_ncm_stats_dist_kde_eval_vars_free (gpointer userdata)
+{
+  NcmStatsDistKDEEvalVars *ev = (NcmStatsDistKDEEvalVars *) userdata;
+
+  ncm_vector_free (ev->v);
+  ncm_vector_free (ev->chi2);
+
+  g_free (ev);
+}
+
 static void
 ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
 {
@@ -126,10 +158,13 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   self->sample_matrix     = NULL;
   self->invUsample_matrix = NULL;
   self->invUsample_array  = g_ptr_array_new ();
-  self->v                 = NULL;
-  self->chi2              = NULL;
   self->kernel_lnnorm     = 0.0;
   self->nearPD_maxiter    = 0;
+
+  self->mp_eval_vars = ncm_memory_pool_new (&_ncm_stats_dist_kde_eval_vars_new, sdkde,
+                                            &_ncm_stats_dist_kde_eval_vars_free);
+  self->mp_eval_vars_len = 0;
+
 
   g_ptr_array_set_free_func (self->invUsample_array, (GDestroyNotify) ncm_vector_free);
 }
@@ -195,10 +230,14 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   ncm_matrix_clear (&self->cov_decomp);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_matrix_clear (&self->invUsample_matrix);
-  ncm_vector_clear (&self->v);
-  ncm_vector_clear (&self->chi2);
 
   g_clear_pointer (&self->invUsample_array, g_ptr_array_unref);
+
+  if (self->mp_eval_vars)
+  {
+    ncm_memory_pool_free (self->mp_eval_vars, TRUE);
+    self->mp_eval_vars = NULL;
+  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kde_parent_class)->dispose (object);
@@ -279,11 +318,9 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->cov_decomp);
     ncm_matrix_clear (&self->sample_matrix);
     ncm_matrix_clear (&self->invUsample_matrix);
-    ncm_vector_clear (&self->v);
 
     self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
     self->cov_decomp = ncm_matrix_new (dim, dim);
-    self->v          = ncm_vector_new (dim);
   }
 }
 
@@ -413,10 +450,10 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
   /*
    * Allocating the evaluation vector
    */
-  if ((self->chi2 == NULL) || (ncm_vector_len (self->chi2) != pself->n_kernels))
+  if (self->mp_eval_vars_len != pself->n_kernels)
   {
-    ncm_vector_clear (&self->chi2);
-    self->chi2 = ncm_vector_new (pself->n_kernels);
+    ncm_memory_pool_empty (self->mp_eval_vars, TRUE);
+    self->mp_eval_vars_len = pself->n_kernels;
   }
 }
 
@@ -509,15 +546,19 @@ _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i)
 static gdouble
 _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself = sd->priv;
-  const gdouble href2 = pself->href * pself->href;
-  gint i, ret;
+  NcmStatsDistPrivate * const pself   = sd->priv;
+  const gdouble href2                 = pself->href * pself->href;
+  NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
+  NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
+  gdouble res;
+  gint ret;
+  gint i;
 
-  ncm_vector_memcpy (self->v, x);
+  ncm_vector_memcpy (ev->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
+                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (ev->v));
   NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_eval", ret);
 
   for (i = 0; i < pself->n_kernels; i++)
@@ -528,32 +569,39 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
 
     for (k = 0; k < pself->d; k++)
     {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (self->v, k)));
+      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (ev->v, k)));
     }
 
     chi2_i = chi2_i / href2;
 
-    ncm_vector_fast_set (self->chi2, i, chi2_i);
+    ncm_vector_fast_set (ev->chi2, i, chi2_i);
   }
 
-  ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, self->chi2, self->chi2);
+  ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, ev->chi2, ev->chi2);
 
-  return ncm_vector_dot (self->chi2, pself->weights) * exp (-(self->kernel_lnnorm + pself->d * log (pself->href)));
+  res = ncm_vector_dot (ev->chi2, pself->weights) * exp (-(self->kernel_lnnorm + pself->d * log (pself->href)));
+
+  ncm_memory_pool_return (ev_ptr);
+
+  return res;
 }
 
 static gdouble
 _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself = sd->priv;
-  const gdouble href2 = pself->href * pself->href;
-  gint i, ret;
+  NcmStatsDistPrivate * const pself   = sd->priv;
+  const gdouble href2                 = pself->href * pself->href;
+  NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
+  NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
+  gint ret;
+  gint i;
 
-  ncm_vector_memcpy (self->v, x);
+  ncm_vector_memcpy (ev->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (self->v));
-  NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_eval", ret);
+                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (ev->v));
+  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_eval_weights_m2lnp", ret);
 
   for (i = 0; i < pself->n_kernels; i++)
   {
@@ -563,18 +611,20 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
 
     for (k = 0; k < pself->d; k++)
     {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (self->v, k)));
+      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (ev->v, k)));
     }
 
     chi2_i = chi2_i / href2;
 
-    ncm_vector_fast_set (self->chi2, i, chi2_i);
+    ncm_vector_fast_set (ev->chi2, i, chi2_i);
   }
 
   {
     gdouble gamma, lambda;
 
-    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, self->chi2, pself->weights, self->kernel_lnnorm, &gamma, &lambda);
+    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, ev->chi2, pself->weights, self->kernel_lnnorm, ev->lnK, &gamma, &lambda);
+
+    ncm_memory_pool_return (ev_ptr);
 
     return -2.0 * (gamma + log1p (lambda) - pself->d * log (pself->href));
   }
