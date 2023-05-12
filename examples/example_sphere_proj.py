@@ -39,23 +39,25 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<
 cosmo.omega_x2omega_k ()
 cosmo.param_set_by_name ("Omegak",    0.0)
 cosmo.param_set_by_name ("w",        -1.0)
-cosmo.param_set_by_name ("Omegab",    0.04909244421)
-cosmo.param_set_by_name ("Omegac",    0.26580755578)
+cosmo.param_set_by_name ("Omegab",    0.022)
+cosmo.param_set_by_name ("Omegac",    0.12)
 cosmo.param_set_by_name ("massnu_0",  0.06)
 cosmo.param_set_by_name ("ENnu",      2.0328)
 
 reion = Nc.HIReionCamb.new ()
 prim  = Nc.HIPrimPowerLaw.new ()
 
-cosmo.param_set_by_name ("H0", 67.31)
+cosmo.param_set_by_name ("H0", 67)
 
-prim.param_set_by_name ("n_SA", 0.9658)
+prim.param_set_by_name ("n_SA", 0.96)
 prim.param_set_by_name ("ln10e10ASA", 3.0904)
 
 reion.param_set_by_name ("z_re", 9.9999)
 
+
 cosmo.add_submodel (reion)
 cosmo.add_submodel (prim)
+
 
 #
 #  Printing the parameters used.
@@ -73,8 +75,8 @@ z_max = 2.0
 zdiv  = 0.49999999999
 
 # Mode bounds
-k_min = 1.0e-6
-k_max = 1.0e4
+k_min = 1.0e-8
+k_max = 1.0e6
 
 ps_lin.set_kmin (k_min)
 ps_lin.set_kmax (k_max)
@@ -83,23 +85,28 @@ ps_lin.require_zf (z_max)
 
 ps_lin.set_intern_k_min (k_min)
 ps_lin.set_intern_k_max (50.0)
+psf = Ncm.PowspecFilter.new (ps_lin, Ncm.PowspecFilterType.TOPHAT)
+psf.set_best_lnr0 ()
 
-ps = Nc.PowspecMNLHaloFit.new (ps_lin, 2.0, 1.0e-5)
+ps = Nc.PowspecMNLHaloFit.new (ps_lin, 2.0, 1.0e-8)
 
 ps.set_kmin (k_min)
 ps.set_kmax (k_max)
 ps.require_zi (z_min)
 ps.require_zf (z_max)
 
+old_amplitude = math.exp (prim.props.ln10e10ASA)
+prim.props.ln10e10ASA = math.log ((0.81/ cosmo.sigma8(psf))**2 * old_amplitude)
+
 ell_min = 0
 ell_max = 1
 
 sproj = Ncm.PowspecSphereProj.new (ps, ell_min, ell_max)
 
-sproj.props.reltol = 1.0e-4
-
-xi_i = 1.0e1
-xi_f = 1.0e4
+sproj.props.reltol = 1.0e-8
+sproj.props.reltol_z = 1.0e-8
+xi_i = 1.0e-1
+xi_f = 1.0e7
 
 sproj.set_xi_i (xi_i)
 sproj.set_xi_f (xi_f)
@@ -124,9 +131,9 @@ RH_Mpc = cosmo.RH_Mpc ()
 
 xi_a   = np.geomspace (xi_i, xi_f, num = 5000)
 z_a    = np.array ([dist.inv_comoving (cosmo, xi / RH_Mpc) for xi in xi_a])
-index  = np.logical_and ((z_a > 0.01), (z_a < 10.0))
+index  = np.logical_and ((z_a > 0.0), (z_a < 10.0))
 
-z_a    = np.linspace (0.2, 1.5, num = 2000)
+z_a    = np.linspace (0.2, 2, num = 2001)[1:]
 
 
 
@@ -165,7 +172,9 @@ for ell in range (ell_min, ell_min + 1):
   #print (corr)  
   #plt.matshow (np.abs (corr), norm = LogNorm (vmin=1.0e-8, vmax = 1.0))
   #plt.matshow (corr, extent = np.array ([z_a[0], z_a[-1], z_a[0], z_a[-1]]), origin = "lower")
-  plt.matshow (corr, extent = np.array ([z_a[0], z_a[-1], z_a[0], z_a[-1]]), origin = "lower", norm = SymLogNorm (1.0e-8))
+  plt.matshow (cov, extent = np.array ([z_a[0], z_a[-1], z_a[0], z_a[-1]]), origin = "lower", norm = SymLogNorm (1.0e-6))
+  plt.xlabel(r'$z_2$')
+  plt.ylabel(r'$z_1$')
   #plt.matshow (corr)
   #plt.matshow (corr, norm = SymLogNorm (1.0e-4))
   plt.title (r'$C_{%d}(z_1, z_2)$' % (ell))  
@@ -181,93 +190,34 @@ for ell in range (ell_min, ell_min + 1):
 #plt.xlim ([200.0, 4000.0])
 
 #plt.show ()
+print(cov/np.log(10))
+
+
+'''''''''
+import sys
+sys.path.insert(0, '../../Programas_Cosmologia/')
+import PySSC
+from PySSC import PySSC
+zstakes = np.array([0.2,0.3,0.4,0.5,0.6,0.7,0.8,  ,1,1.1,1.2,1.3,1.4,1.5])
+
+nz       = 2000
+z_arr    = np.linspace(0.2,2,num=nz+1)[1:] 
 
 
 
-
-#Contruct the bins 
-z_bin = np.linspace(0.2,1.5,14)
-def dV_dz(z):
-  return dist.comoving(cosmo,z)**2 * RH_Mpc**3 / (cosmo.E2(z)**(1/2))
-
-W2 = (1/(z_bin[1]-z_bin[0]))**2
-print(W2)
-dv_dz = []
-for z in z_a:
-  dv_dz.append(dV_dz(z))
-
-#Normalization I
-I = []
-for bin in range(len(z_bin)-1):
-  W2 = (1/(z_bin[bin+1]-z_bin[bin]))**2
-  I.append(integrate.quad(lambda z: dV_dz(z),z_bin[bin],z_bin[bin+1])[0]*W2)
-
-
-#Integrate in z2 bins
-cl_z2 = []
-for cl in cov:
-  cl_z2_bin = []
-
-  cl_interpol = CubicSpline(z_a,cl * dv_dz)
-  for bin in range(len(z_bin)-1):
-    W2 = (1/(z_bin[bin+1]-z_bin[bin]))**2
-    cl_z2_bin.append(cl_interpol.integrate(z_bin[bin],z_bin[bin+1])*W2/I[bin])
-  cl_z2.append(cl_z2_bin) 
+nbins_T   = len(zstakes)-1
+kernels_T = np.zeros((nbins_T,nz))
+for i in range(nbins_T):
+    zminbin = zstakes[i] ; zmaxbin = zstakes[i+1] ; Dz = zmaxbin-zminbin
+    for iz in range(nz):
+        z = z_arr[iz]
+        if ((z>zminbin) and (z<=zmaxbin)):
+            kernels_T[i,iz] = 1/Dz
 
 
 
-#separate the results as a function of z1
-Sij_z1 = []
-for bin in range(len(z_bin)-1):
-  Sij_z1_partial = []
-  for cl in cl_z2:
-    Sij_z1_partial.append(cl[bin])
-  
-  Sij_z1.append(Sij_z1_partial)
-
-Sij_z1 = np.asanyarray (Sij_z1)  
-
-#Integrate in z1 bins
-Sij = []
-for z1 in Sij_z1:
-  Sij_z1_bin = []
-  CL_interpol = CubicSpline(z_a,z1  * dv_dz)
-  for bin in range(len(z_bin)-1):
-    Sij_z1_bin.append(float(CL_interpol.integrate(z_bin[bin],z_bin[bin+1])*W2/I[bin]))
-  Sij.append(Sij_z1_bin) 
-
-Sij = np.asanyarray (Sij) 
-
-
-lnSij = np.log(abs(Sij))
-plt.matshow (abs(Sij), extent = np.array ([z_bin[0], z_bin[-1], z_bin[-1], z_bin[0]]) ,norm = SymLogNorm (1.0e-20) ,cmap='bwr')
-#plt.matshow (corr)
-#plt.matshow (corr, norm = SymLogNorm (1.0e-4))
-plt.title (r'$S_{%d}(z_1, z_2)$' % (ell))  
-plt.colorbar ()
-plt.show ()
-
-
-print(Sij)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Sijw_T_alt = PySSC.Sij_alt_fullsky(z_arr,kernels_T)
+'''''''''
 
 
 
