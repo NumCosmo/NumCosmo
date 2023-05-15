@@ -33,15 +33,14 @@
 #include <numcosmo/nc_powspec_mnl.h>
 #include <numcosmo/nc_powspec_ml.h>
 
-
 G_BEGIN_DECLS
 
-#define NC_TYPE_POWSPEC_MNL_HALOFIT (nc_powspec_mnl_halofit_get_type ())
-#define NC_POWSPEC_MNL_HALOFIT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFit))
-#define NC_POWSPEC_MNL_HALOFIT_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFitClass))
-#define NC_IS_POWSPEC_MNL_HALOFIT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_POWSPEC_MNL_HALOFIT))
-#define NC_IS_POWSPEC_MNL_HALOFIT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_POWSPEC_MNL_HALOFIT))
-#define NC_POWSPEC_MNL_HALOFIT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFitClass))
+#define NC_TYPE_POWSPEC_MNL_HALOFIT            (nc_powspec_mnl_halofit_get_type ())
+#define NC_POWSPEC_MNL_HALOFIT(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFit))
+#define NC_POWSPEC_MNL_HALOFIT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFitClass))
+#define NC_IS_POWSPEC_MNL_HALOFIT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_POWSPEC_MNL_HALOFIT))
+#define NC_IS_POWSPEC_MNL_HALOFIT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  NC_TYPE_POWSPEC_MNL_HALOFIT))
+#define NC_POWSPEC_MNL_HALOFIT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  NC_TYPE_POWSPEC_MNL_HALOFIT, NcPowspecMNLHaloFitClass))
 
 typedef struct _NcPowspecMNLHaloFitClass NcPowspecMNLHaloFitClass;
 typedef struct _NcPowspecMNLHaloFit NcPowspecMNLHaloFit;

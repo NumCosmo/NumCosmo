@@ -185,6 +185,7 @@
       <xi:include href="xml/ncm_data_gauss_cov_mvnd.xml"/>
       <xi:include href="xml/ncm_model_rosenbrock.xml"/>
       <xi:include href="xml/ncm_data_rosenbrock.xml"/>
+      <xi:include href="xml/ncm_data_gaussmix2d.xml"/>
       <xi:include href="xml/ncm_model_funnel.xml"/>
       <xi:include href="xml/ncm_data_funnel.xml"/>
     </section>   
@@ -404,7 +405,9 @@
       <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
       <xi:include href="xml/nc_galaxy_wl.xml"/>
       <xi:include href="xml/nc_galaxy_wl_dist.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_reduced_shear_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_ellipticity_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_ellipticity_kde.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_ellipticity_binned.xml"/>
       <xi:include href="xml/nc_galaxy_wl_proj.xml"/>
     </section>
     <section>

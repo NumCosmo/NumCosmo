@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -56,34 +56,34 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
  * @NC_SNIA_DIST_COV_LNSIGMA_LENS: FIXME
  *
  * FIXME
- * 
+ *
  */
 typedef enum _NcSNIADistCovSParams
 {
   NC_SNIA_DIST_COV_ALPHA = 0,
   NC_SNIA_DIST_COV_BETA,
   NC_SNIA_DIST_COV_M1,
-  NC_SNIA_DIST_COV_M2,         
+  NC_SNIA_DIST_COV_M2,
   NC_SNIA_DIST_COV_LNSIGMA_PECZ,
-  NC_SNIA_DIST_COV_LNSIGMA_LENS, 
+  NC_SNIA_DIST_COV_LNSIGMA_LENS,
   /* < private > */
-  NC_SNIA_DIST_COV_SPARAM_LEN,   /*< skip >*/
+  NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
 } NcSNIADistCovSParams;
 
 /**
  * NcSNIADistCovVParams:
  * @NC_SNIA_DIST_COV_LNSIGMA_INT: FIXME
  * @NC_SNIA_DIST_COV_MU: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcSNIADistCovVParams
 {
   NC_SNIA_DIST_COV_LNSIGMA_INT = 0,
-  NC_SNIA_DIST_COV_MU,            
+  NC_SNIA_DIST_COV_MU,
   /* < private > */
-  NC_SNIA_DIST_COV_VPARAM_LEN,    /*< skip >*/
+  NC_SNIA_DIST_COV_VPARAM_LEN, /*< skip >*/
 } NcSNIADistCovVParams;
 
 struct _NcSNIADistCovClass

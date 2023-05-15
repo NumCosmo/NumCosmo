@@ -25,7 +25,7 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [16])
+m4_define([numcosmo_minor_version], [17])
 m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
@@ -185,6 +185,14 @@ dnl ***************************************************************************
 AC_C_CONST()
 AC_C_RESTRICT()
 AC_C_VOLATILE()
+
+dnl ***************************************************************************
+dnl C Sizes
+dnl ***************************************************************************
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(long)
+AC_CHECK_SIZEOF(unsigned int)
+AC_CHECK_SIZEOF(unsigned long)
 
 dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
@@ -354,6 +362,18 @@ fi
 AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 
 dnl ***************************************************************************
+dnl check for python
+dnl ***************************************************************************
+
+AM_PATH_PYTHON([3.8], [
+AX_PYTHON_MODULE([gi])
+AX_PYTHON_MODULE([pytest])
+AX_PYTHON_MODULE([pytest_tap])
+],[:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != ":"])
+AM_CONDITIONAL([HAVE_PYTEST_TAP], [test "x$HAVE_PYMOD_PYTEST_TAP" = xyes])
+
+dnl ***************************************************************************
 dnl check for gtk-doc
 dnl ***************************************************************************
 m4_ifdef([GTK_DOC_CHECK], [
@@ -361,23 +381,6 @@ GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 ],[
 AM_CONDITIONAL([ENABLE_GTK_DOC], false)
 ])
-
-AC_ARG_ENABLE(man,
-              [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
-              enable_man=no)
-
-if test "${enable_man}" != no; then
-
-dnl ***************************************************************************
-dnl Check for xsltproc
-dnl ***************************************************************************
-AC_PATH_PROG([XSLTPROC], [xsltproc])
-  if test -z "$XSLTPROC"; then
-    enable_man=no
-  fi
-fi
-
-AM_CONDITIONAL(ENABLE_MAN, test x$enable_man != xno)
 
 dnl ***************************************************************************
 dnl Set PACKAGE_DATA_DIR in config.h.
@@ -400,7 +403,7 @@ AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
-GLIB_REQUIRED_VERSION=2.38.0
+GLIB_REQUIRED_VERSION=2.44.0
 GSL_REQUIRED_VERSION=2.0
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
@@ -1043,6 +1046,20 @@ fi
 AC_SUBST(PLC_DEFINES)
 
 dnl ***************************************************************************
+dnl libfyaml
+dnl ***************************************************************************
+
+PKG_CHECK_MODULES(LIBFYAML, [ libfyaml ], HAVE_LIBFYAML=1, HAVE_LIBFYAML=0)
+
+AC_SUBST(HAVE_LIBFYAML)
+AC_SUBST(LIBFYAML_CFLAGS)
+AC_SUBST(LIBFYAML_LIBS)
+if test "x$HAVE_LIBFYAML" = "x1"; then
+  AC_DEFINE([HAVE_LIBFYAML], [], [Define if you have libfyaml available])
+fi
+AM_CONDITIONAL([HAVE_LIBFYAML], [ test x$HAVE_LIBFYAML = x1 ])
+
+dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 
@@ -1092,7 +1109,6 @@ examples/Makefile
 examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
 notebooks/Makefile
-notebooks/tutorials/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])
@@ -1137,6 +1153,32 @@ if [ test "x$HAVE_ARB" = xyes ]; then
        echo "Building with ARB support: ......................................YES"
 else
        echo "Building with ARB support: .......................................NO"
+fi
+if [ test "x$HAVE_LIBFYAML" = x1 ]; then
+       echo "Building with libfyaml support: .................................YES"
+else
+       echo "Building with libfyaml support: ..................................NO"
+fi
+if [ test "x$PYTHON_VERSION" != x ]; then
+       echo "Building with Python support: ...................................$PYTHON"
+       echo "Building with Python version: ...................................$PYTHON_VERSION"
+  if [test "x$HAVE_PYMOD_GI" = xyes]; then
+       echo "Building with Python gi support .................................YES"
+  else
+       echo "Building with Python gi support ..................................NO"
+  fi
+  if [test "x$HAVE_PYMOD_PYTEST" = xyes]; then
+       echo "Building with Python pytest support .............................YES"
+  else
+       echo "Building with Python pytest support ..............................NO"
+  fi
+  if [test "x$HAVE_PYMOD_PYTEST_TAP" = xyes]; then
+       echo "Building with Python pytest-tap support .........................YES"
+  else
+       echo "Building with Python pytest-tap support ..........................NO"
+  fi
+else
+       echo "Building with Python support: ....................................NO"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

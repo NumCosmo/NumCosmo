@@ -4,13 +4,14 @@
  *            nc_galaxy_wl_dist.c
  *
  *  Mon July 27 11:12:53 2020
- *  Copyright  2020  Sandro Dias Pinto Vitenti & Mariana Penna Lima
- *  <vitenti@uel.br>, <pennalima@gmail.com>
+ *  Copyright  2023  Sandro Dias Pinto Vitenti & Mariana Penna Lima & Caio Lima de Oliveira
+ *  <vitenti@uel.br>, <pennalima@gmail.com>, <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_dist.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2023 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,6 +44,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_galaxy_wl_dist.h"
+#include "lss/nc_galaxy_redshift.h"
+
 
 struct _NcGalaxyWLDistPrivate
 {
@@ -68,7 +71,7 @@ static gdouble
 _nc_galaxy_wl_dist_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, guint gal_i, const gdouble z)
 {
   g_error ("_nc_galaxy_wl_dist_m2lnP: method not implemented.");
-  
+
   return 0.0;
 }
 
@@ -76,7 +79,7 @@ static gdouble
 _nc_galaxy_wl_dist_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_wl_dist_gen: method not implemented.");
-  
+
   return 0.0;
 }
 
@@ -84,7 +87,7 @@ static guint
 _nc_galaxy_wl_dist_len (NcGalaxyWLDist *gwld)
 {
   g_error ("_nc_galaxy_wl_dist_len: method not implemented.");
-  
+
   return 0;
 }
 
@@ -92,9 +95,9 @@ static void
 nc_galaxy_wl_dist_class_init (NcGalaxyWLDistClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->finalize = &_nc_galaxy_wl_dist_finalize;
-  
+
   klass->m2lnP = &_nc_galaxy_wl_dist_m2lnP;
   klass->gen   = &_nc_galaxy_wl_dist_gen;
   klass->len   = &_nc_galaxy_wl_dist_len;
@@ -142,6 +145,18 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
 }
 
 /**
+ * nc_galaxy_wl_dist_m2lnP_initial_prep: (virtual m2lnP_initial_prep)
+ * @gwld: a #NcGalaxyWLDist
+ * @gz: a #NcGalaxyRedshift
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
+ * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ *
+ * Prepare to compute nc_galaxy_wl_dist_m2lnP() at different redshifts.
+ *
+ */
+/**
  * nc_galaxy_wl_dist_m2lnP_prep: (virtual m2lnP_prep)
  * @gwld: a #NcGalaxyWLDist
  * @cosmo: a #NcHICosmo
@@ -163,6 +178,9 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
  * @gal_i: galaxy id
  * @z: source redshift
  *
+ * Computes the probability density of the observable $g$ given the redshift $z$. The
+ * probability density is given by $P_\mathrm{wl}(g)$.
+ *
  * Returns: the probability density at @g, $-2\ln\left[P_\mathrm{wl}(g)\right]$.
  */
 /**
@@ -171,13 +189,14 @@ nc_galaxy_wl_dist_clear (NcGalaxyWLDist **gwld)
  * @g_true: true value of the observable
  * @rng: a #NcmRNG
  *
- * Generates a g value from the distribution using @rng.
+ * Generates a $g$ value from the distribution using @rng.
  *
  * Returns: the generated value $g$.
  */
 /**
  * nc_galaxy_wl_dist_len: (virtual len)
  * @gwld: a #NcGalaxyWLDist
+ *
  *
  * Returns: the number of galaxies in the object.
  */

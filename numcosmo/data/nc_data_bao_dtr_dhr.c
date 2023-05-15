@@ -168,9 +168,10 @@ _nc_data_bao_dtr_dhr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
 {
   NcDataBaoDtrDHr *dhdt = NC_DATA_BAO_DTR_DHR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np        = ncm_data_gauss_cov_get_size (gauss);
   gint i;
 
-  for (i = 0; i < gauss->np; i++)
+  for (i = 0; i < np; i++)
   {
     if (i % 2 == 0)
     {
@@ -191,11 +192,12 @@ static void
 _nc_data_bao_dtr_dhr_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcDataBaoDtrDHr *dhdt = NC_DATA_BAO_DTR_DHR (gauss);
+  const guint cnp       = ncm_data_gauss_cov_get_size (gauss);
 
-  if ((np == 0) || (np != gauss->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&dhdt->x);
 
-  if ((np != 0) && (np != gauss->np))
+  if ((np != 0) && (np != cnp))
     dhdt->x = ncm_vector_new (np);
 
   /* Chain up : end */

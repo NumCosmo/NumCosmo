@@ -284,6 +284,7 @@ nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassD
 /**
  * nc_multiplicity_func_set_Delta: (virtual set_Delta)
  * @mulf: a #NcMultiplicityFunc
+ * @Delta: the $Delta$ value
  *
  * Sets the Delta for mean or matter mass definition to mdef.
  *
@@ -344,6 +345,8 @@ nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf)
 /**
  * nc_multiplicity_func_get_matter_Delta: (virtual get_matter_Delta)
  * @mulf: a #NcMultiplicityFunc
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
  *
  * Gets the Delta Value with the matter density definition.
  *

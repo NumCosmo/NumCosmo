@@ -1,6 +1,12 @@
 name: Build and Check
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - '*'
 
 #env:
 #  CC: gcc-10
@@ -17,14 +23,33 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install prereq
-      run: sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
+      run: |
+        sudo apt-get update
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
+        pip install pytest pytest-tap
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
       run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
     - name: make
       run: make -j8
-    - name: Test example compilation
+    - name: Test python examples
+      run: |
+        source numcosmo_export.sh
+        cd examples
+        python example_simple.py
+        python example_cbe.py
+    - name: Test example compilation using non-installed library
+      run: |
+        source numcosmo_export.sh
+        cd examples
+        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
+        ./example_simple
+        ./example_ca
+    - name: Test example compilation using installed library
       run: |
         sudo make install
         cd examples
@@ -49,7 +74,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install prereq
-      run: sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        pip install pytest pytest-tap
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure
@@ -83,9 +111,11 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install prereq
       run: |
-        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib
+        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
         brew ls glib
         brew ls glib-utils
+    - name: Ensure clear Jupyter Notebooks
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Autogen
       run: NOCONFIGURE=yes ./autogen.sh
     - name: configure

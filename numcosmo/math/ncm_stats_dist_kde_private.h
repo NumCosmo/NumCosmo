@@ -30,6 +30,7 @@
 
 #include <glib.h>
 #include "math/ncm_stats_dist_kde.h"
+#include "math/ncm_memory_pool.h"
 
 G_BEGIN_DECLS
 
@@ -41,11 +42,12 @@ struct _NcmStatsDistKDEPrivate
   NcmMatrix *cov_fixed;
   NcmMatrix *cov_decomp;
   NcmMatrix *sample_matrix;
-  GPtrArray *invUsample;
-  NcmVector *v;
-  NcmVector *chi2;
+  NcmMatrix *invUsample_matrix;
+  GPtrArray *invUsample_array;
   gdouble kernel_lnnorm;
   guint nearPD_maxiter;
+  NcmMemoryPool *mp_eval_vars;
+  guint mp_eval_vars_len;
 };
 
 G_END_DECLS

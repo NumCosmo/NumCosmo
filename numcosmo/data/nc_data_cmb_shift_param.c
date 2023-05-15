@@ -196,11 +196,12 @@ static void
 _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
+  const guint cnp                      = ncm_data_gauss_diag_get_size (diag);
   
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&cmb_shift_param->x);
   
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     cmb_shift_param->x = ncm_vector_new (np);
   
   /* Chain up : start */

@@ -56,10 +56,10 @@ struct _NcHICosmoVexpClass
  * @NC_HICOSMO_VEXP_SIGMA_PHI: standard deviation of the scalar field wave function
  * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
  * @NC_HICOSMO_VEXP_ALPHA_B: logarithm base e of the scale factor at the bounce
- * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce 
+ * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce
  *
  * FIXME
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
 {
@@ -69,7 +69,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
   NC_HICOSMO_VEXP_SIGMA_PHI,
   NC_HICOSMO_VEXP_D_PHI,
   NC_HICOSMO_VEXP_ALPHA_B,
-  NC_HICOSMO_VEXP_X_B,        
+  NC_HICOSMO_VEXP_X_B,
   /* < private > */
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoVexpSParams;
@@ -104,6 +104,12 @@ gdouble nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
 void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
 
+gdouble nc_hicosmo_Vexp_eval_nu (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k);
+gdouble nc_hicosmo_Vexp_eval_F (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_L (0.75)
@@ -118,3 +124,4 @@ void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gd
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_VEXP_H_ */
+

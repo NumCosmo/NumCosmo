@@ -186,12 +186,13 @@ _nc_data_bao_dmr_hr_prepare (NcmData *data, NcmMSet *mset)
 static void
 _nc_data_bao_dmr_hr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
 {
-  NcDataBaoDMrHr *dmh   = NC_DATA_BAO_DMR_HR (gauss);
-  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (gauss);
+  NcHICosmo *cosmo    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const gdouble rd    = nc_distance_r_zd (dmh->dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo);
+  const guint np      = ncm_data_gauss_cov_get_size (gauss);
   gint i;
-  const gdouble rd = nc_distance_r_zd (dmh->dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo); 
     
-  for (i = 0; i < gauss->np; i++)
+  for (i = 0; i < np; i++)
   {
     if (i % 2 == 0)
     {
@@ -212,11 +213,12 @@ static void
 _nc_data_bao_dmr_hr_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (gauss);
+  const guint cnp     = ncm_data_gauss_cov_get_size (gauss);
 
-  if ((np == 0) || (np != gauss->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&dmh->x);
 
-  if ((np != 0) && (np != gauss->np))
+  if ((np != 0) && (np != cnp))
     dmh->x = ncm_vector_new (np);
 
   /* Chain up : end */

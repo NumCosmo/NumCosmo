@@ -172,9 +172,10 @@ _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np        = ncm_data_gauss_cov_get_size (gauss);
   gint i;
 
-  for (i = 0; i < gauss->np; i++)
+  for (i = 0; i < np; i++)
   {
     if (i % 2 == 0)
     {
@@ -195,11 +196,12 @@ static void
 _nc_data_bao_dhr_dar_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
+  const guint cnp       = ncm_data_gauss_cov_get_size (gauss);
 
-  if ((np == 0) || (np != gauss->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&dhda->x);
 
-  if ((np != 0) && (np != gauss->np))
+  if ((np != 0) && (np != cnp))
     dhda->x = ncm_vector_new (np);
 
   /* Chain up : end */

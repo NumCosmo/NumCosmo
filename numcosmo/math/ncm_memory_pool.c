@@ -27,8 +27,11 @@
  * @title: NcmMemoryPool
  * @short_description: Generic memory pool.
  *
- * FIXME
- * 
+ * #NcmMemoryPool is a generic memory pool, it alloc memory using
+ * a user defined function and save it for future use, the memory must
+ * be returned to the pool using #ncm_memory_pool_return.
+ * These functions are thread safe.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,15 +59,57 @@ ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNot
 {
   NcmMemoryPool *mp = g_slice_new (NcmMemoryPool);
 
-	g_mutex_init (&mp->update);
+  g_mutex_init (&mp->update);
   g_cond_init (&mp->finish);
-	
+
   mp->slices_in_use = 0;
   mp->slices        = g_ptr_array_new ();
   mp->alloc         = mp_alloc;
   mp->free          = mp_free;
   mp->userdata      = userdata;
+
   return mp;
+}
+
+/**
+ * ncm_memory_pool_empty:
+ * @mp: a #NcmMemoryPool, memory pool to be emptied
+ * @free_slices: if true and the pool was built with a free function, free the slices
+ *
+ * This function free all the slices in the pool and also
+ * the slices if free_slices == TRUE and the
+ * pool was built with a free function
+ *
+ * Returns: the number of slices freed
+ */
+guint
+ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices)
+{
+  guint i, n;
+
+  g_mutex_lock (&mp->update);
+
+  while (mp->slices_in_use != 0)
+    g_cond_wait (&mp->finish, &mp->update);
+
+  n = mp->slices->len;
+
+  for (i = 0; i < mp->slices->len; i++)
+  {
+    NcmMemoryPoolSlice *slice = g_ptr_array_index (mp->slices, i);
+
+    if (free_slices && mp->free)
+      mp->free (slice->p);
+
+    g_slice_free (NcmMemoryPoolSlice, slice);
+  }
+
+  g_ptr_array_free (mp->slices, TRUE);
+  mp->slices = g_ptr_array_new ();
+
+  g_mutex_unlock (&mp->update);
+
+  return n;
 }
 
 /**
@@ -83,16 +128,20 @@ ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
   guint i;
 
   g_mutex_lock (&mp->update);
+
   while (mp->slices_in_use != 0)
     g_cond_wait (&mp->finish, &mp->update);
-  
+
   for (i = 0; i < mp->slices->len; i++)
   {
     NcmMemoryPoolSlice *slice = g_ptr_array_index (mp->slices, i);
+
     if (free_slices && mp->free)
       mp->free (slice->p);
+
     g_slice_free (NcmMemoryPoolSlice, slice);
   }
+
   g_ptr_array_free (mp->slices, TRUE);
   mp->slices = NULL;
 
@@ -117,14 +166,17 @@ void
 ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
 {
   g_mutex_lock (&mp->update);
+
   while (mp->slices->len < n)
   {
     NcmMemoryPoolSlice *slice = g_slice_new (NcmMemoryPoolSlice);
+
     slice->in_use = FALSE;
     slice->p      = mp->alloc (mp->userdata);
     slice->mp     = mp;
     g_ptr_array_add (mp->slices, slice);
   }
+
   g_mutex_unlock (&mp->update);
 }
 
@@ -132,10 +184,10 @@ ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
  * ncm_memory_pool_add:
  * @mp: a #NcmMemoryPool.
  * @p: a pointer to an object compatible with the pool.
- * 
+ *
  * Adds an already allocated pointer @p to the pool. It will be freed with
  * #NcmMemoryPool->free during the pool destruction.
- * 
+ *
  */
 void
 ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
@@ -143,6 +195,7 @@ ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
   g_mutex_lock (&mp->update);
   {
     NcmMemoryPoolSlice *slice = g_slice_new (NcmMemoryPoolSlice);
+
     slice->in_use = FALSE;
     slice->p      = p;
     slice->mp     = mp;
@@ -169,9 +222,11 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
   NcmMemoryPoolSlice *slice = NULL;
 
   g_mutex_lock (&mp->update);
+
   for (i = 0; i < mp->slices->len; i++)
   {
-    NcmMemoryPoolSlice *lslice = (NcmMemoryPoolSlice *)g_ptr_array_index (mp->slices, i);
+    NcmMemoryPoolSlice *lslice = (NcmMemoryPoolSlice *) g_ptr_array_index (mp->slices, i);
+
     if (!lslice->in_use)
     {
       slice         = lslice;
@@ -179,6 +234,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
       break;
     }
   }
+
   if (slice == NULL)
   {
     slice         = g_slice_new (NcmMemoryPoolSlice);
@@ -187,6 +243,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
     slice->mp     = mp;
     g_ptr_array_add (mp->slices, slice);
   }
+
   mp->slices_in_use++;
 
   g_mutex_unlock (&mp->update);
@@ -203,7 +260,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
 void
 ncm_memory_pool_return (gpointer p)
 {
-  NcmMemoryPoolSlice *slice = (NcmMemoryPoolSlice *)p;
+  NcmMemoryPoolSlice *slice = (NcmMemoryPoolSlice *) p;
 
   g_mutex_lock (&slice->mp->update);
   slice->in_use = FALSE;
@@ -214,3 +271,4 @@ ncm_memory_pool_return (gpointer p)
 
   g_mutex_unlock (&slice->mp->update);
 }
+

@@ -55,7 +55,7 @@ typedef struct _NcmMSetModelDesc NcmMSetModelDesc;
 #define NCM_MSET_MAX_STACKSIZE 1000
 #define NCM_MSET_INIT_MARRAY 32
 #define NCM_MSET_GET_BASE_MID(mid) (mid / NCM_MSET_MAX_STACKSIZE)
-#define NCM_MSET_MID(id,pos) ((id) + pos)
+#define NCM_MSET_MID(id, pos) ((id) + pos)
 
 struct _NcmMSetModelDesc
 {
@@ -119,7 +119,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * FIXME
  *
  */
-#define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns##_id
+#define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns ## _id
 
 /**
  * NCM_MSET_MODEL_DECLARE_ID: (skip)
@@ -128,7 +128,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * FIXME
  *
  */
-#define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
+#define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) G_GNUC_CONST
 
 /**
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
@@ -138,18 +138,18 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * FIXME
  *
  */
-#define NCM_MSET_MODEL_REGISTER_ID(model_ns,typemacro) \
-NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
-{ \
-  static NcmModelID id = -1; \
-  if (id == -1) \
+#define NCM_MSET_MODEL_REGISTER_ID(model_ns, typemacro) \
+  NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) \
   { \
-    NcmModelClass *model_class = g_type_class_ref (typemacro); \
-    id = model_class->model_id; \
-    g_type_class_unref (model_class); \
-  } \
-  return id; \
-}
+    static NcmModelID id = -1; \
+    if (id == -1) \
+    { \
+      NcmModelClass *model_class = g_type_class_ref (typemacro); \
+      id = model_class->model_id; \
+      g_type_class_unref (model_class); \
+    } \
+    return id; \
+  }
 
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
@@ -185,7 +185,7 @@ NcmModelID ncm_mset_get_id_by_ns (const gchar *ns);
 const gchar *ncm_mset_get_ns_by_id (NcmModelID id);
 GType ncm_mset_get_type_by_id (NcmModelID id);
 
-void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 
@@ -266,3 +266,4 @@ NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser);
 G_END_DECLS
 
 #endif /* _NCM_MSET_H_ */
+
