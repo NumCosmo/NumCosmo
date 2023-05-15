@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[59]:
+# In[ ]:
 
 
 #!/usr/bin/env python
@@ -40,7 +40,7 @@ class ncounts_gauss(Ncm.DataGaussCov):
     #
     # The contructor assigns some default values and calls the father's constructor.
     #
-    def __init__(self, len=600):
+    def __init__(self, len):
         Ncm.DataGaussCov.__init__(self, n_points=len)
 
         if self.np > 0:
@@ -93,48 +93,55 @@ class ncounts_gauss(Ncm.DataGaussCov):
     # distribution.
     #
     def do_mean_func(self, mset, vp):
-        
         cosmo = mset.peek(Nc.HICosmo.id())
         cluster_m = mset.peek(Nc.ClusterMass.id())
         cluster_z = mset.peek(Nc.ClusterRedshift.id())
-        size = self.z_obs_bins.len()
-        nbins = int(size/2)
-        self.ca = Nc.ClusterAbundance
+        size_z = self.z_obs_bins.len()
+        size_lmM = self.lnM_obs_bins.len()
         self.ca.prepare(cosmo, cluster_z, cluster_m)
-        for i in range(nbins):
-            j = 2 * i
-            lnM_obs_lb = [self.lnM_obs_bins.get( j + 0)]
-            lnM_obs_ub = [self.lnM_obs_bins.get( j + 1)]
-            z_obs_lb = [self.z_obs_bins.get( j + 0)]
-            z_obs_ub = [self.z_obs_bins.get( j + 1)]
-            vp.set(i, self.ca.intp_bin_d2n(cosmo, cluster_z, cluster_m, lnM_obs_lb, lnM_obs_ub, None, z_obs_lb, z_obs_ub, None))
+        for i in range(size_z-1):
+            for j in range(size_lmM -1):
+                lnM_obs_lb = [self.lnM_obs_bins.get( j + 0)]
+                lnM_obs_ub = [self.lnM_obs_bins.get( j + 1)]
+                z_obs_lb = [self.z_obs_bins.get( i + 0)]
+                z_obs_ub = [self.z_obs_bins.get( i + 1)]
+                vp.set(i+j, self.ca.intp_bin_d2n(cosmo, cluster_z, cluster_m, lnM_obs_lb, lnM_obs_ub, None, z_obs_lb, z_obs_ub, None))
     
         return
 
-    def do_cov_func(self, mset):
+    def do_cov_func(self, mset, S):
         
         cosmo = mset.peek(Nc.HICosmo.id())
         cluster_m = mset.peek(Nc.ClusterMass.id())
         cluster_z = mset.peek(Nc.ClusterRedshift.id())
-        size = self.z_obs_bins.len()
-        nbins = int(size/2)
         bias = []
         poisson = []
         self.ca.prepare(cosmo, cluster_z, cluster_m)
-        for i in range(nbins):
-            j = 2 * i
-            lnM_obs_lb = [self.lnM_obs_bins.get( j + 0)]
-            lnM_obs_ub = [self.lnM_obs_bins.get( j + 1)]
-            z_obs_lb = [self.z_obs_bins.get( j + 0)]
-            z_obs_ub = [self.z_obs_bins.get( j + 1)]
-            bias.append(self.ca.intp_bin_d2n_bias(cosmo, cluster_z, cluster_m, lnM_obs_lb, lnM_obs_ub, None, z_obs_lb, z_obs_ub, None))
-            variance = poisson.append(self.ca.intp_bin_d2n(cosmo, cluster_z, cluster_m, lnM_obs_lb, lnM_obs_ub, None, z_obs_lb, z_obs_ub, None))
-        variance = np.array(variance)
-        z_obs_py = np.array(self.z_obs_bins)
-        self.cov = PySSC.Sij_fullsky(z_obs_py, bias, order  = 1) + variance
-        return self.cov
-    
+        size_z = self.z_obs_bins.len()
+        size_lmM = self.lnM_obs_bins.len()
 
+        for z_bin in range(size_z-1):
+            bias_bin_mass = []
+            poisson_bin_mass = []
+            for lnM_bin in range(size_lmM-1):
+                P_bias_bin = self.ca.intp_bin_d2n_bias(cosmo, cluster_z, cluster_m, [self.lnM_obs_bins.get(lnM_bin)], [self.lnM_obs_bins.get(lnM_bin+1)], None, [self.z_obs_bins.get(z_bin)], [self.z_obs_bins.get(z_bin+1)], None) 
+                P_poisson_bin = self.ca.intp_bin_d2n(cosmo, cluster_z, cluster_m, [self.lnM_obs_bins.get(lnM_bin)], [self.lnM_obs_bins.get(lnM_bin+1)], None, [self.z_obs_bins.get(z_bin)], [self.z_obs_bins.get(z_bin+1)], None)
+                bias_bin_mass.append(P_bias_bin)
+                poisson_bin_mass.append(P_poisson_bin)
+            bias.append(bias_bin_mass)
+            poisson.append(poisson_bin_mass)
+        
+        
+        for i in range(size_z-1):
+            for alpha in range(size_lmM-1):
+                for j in range(size_z-1):
+                    for beta in range(size_lmM-1):
+                        if i == j and alpha == beta:
+                            self.cov.set( i+alpha, j+beta ,poisson[i][alpha]**2 + bias[i][alpha] * bias[j][beta] * S[i][j])
+                        else:
+                            self.cov.set( i+alpha, j+beta ,bias[i][alpha] * bias[j][beta] * S[i][j])
+                            
+        return
 
     def set_lnM_obs_bins(self, lnM_obs_bins):
         self.lnM_obs_bins = lnM_obs_bins
@@ -153,12 +160,14 @@ class ncounts_gauss(Ncm.DataGaussCov):
         self.ca = cad
 
 
-# In[60]:
+# In[ ]:
 
 
-gauss = ncounts_gauss()
 cosmo = Nc.HICosmoDEXcdm()
-
+cosmo.props.H0  =  67.81
+cosmo.props.Omegac  =  0.2612
+cosmo.props.Omegab =  0.0486
+cosmo.props.ns =  0.9660
 
 reion = Nc.HIReionCamb.new () 
 prim = Nc.HIPrimPowerLaw.new () 
@@ -184,6 +193,7 @@ mulf.set_Delta (200.0)
 hmf = Nc.HaloMassFunction.new (dist, psf, mulf)
 hbias_Tinker = Nc.HaloBiasTinker.new(hmf)
 ca = Nc.ClusterAbundance.new(hmf,hbias_Tinker)
+ca.set_area(0.00001)
 
 cluster_m = Nc.ClusterMass.new_from_name("NcClusterMassNodist{'lnM-min':<%20.15e>, 'lnM-max':<%20.15e>}" % (math.log(10)*np.log10(1e14),math.log(10)*np.log10(1e16)))
 cluster_z = Nc.ClusterRedshift.new_from_name("NcClusterRedshiftNodist{'z-min': <%20.15e>, 'z-max':<%20.15e>}" % (0.25,2))
@@ -191,11 +201,12 @@ cluster_z = Nc.ClusterRedshift.new_from_name("NcClusterRedshiftNodist{'z-min': <
 
 mset = Ncm.MSet.new_array([cosmo,cluster_m,cluster_z])
 
-z_obs_bins  = Ncm.Vector.new_array(np.linspace(0,1,5))
-lnM_obs_bins = Ncm.Vector.new_array(np.linspace(14,15,5))
+z_obs_bins  = Ncm.Vector.new_array(np.linspace(0.1,0.8,8))
+lnM_obs_bins = Ncm.Vector.new_array(np.linspace(14,15, 5))
+gauss = ncounts_gauss((z_obs_bins.len()-1)* (lnM_obs_bins.len()-1))
 gauss.set_z_obs_bins(z_obs_bins)
 gauss.set_lnM_obs_bins(lnM_obs_bins)
 gauss.set_cad(ca)
 
-gauss.do_cov_func(mset)
+gauss.do_cov_func(mset,[[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]])
 
