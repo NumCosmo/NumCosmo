@@ -26,7 +26,7 @@
  */
 
 /**
- * SECTION:nc_galaxy_wl
+ * SECTION: nc_galaxy_wl
  * @title: NcGalaxyWL
  * @short_description: Class describing galaxy weak lensing distributions.
  * @stability: Unstable
@@ -34,9 +34,9 @@
  *
  * This class describes a galaxy weak lensing distribution.
  * It is composed by three distributions: a shape distribution $P(s)$, a proxy redshift distribution $P(z_p)$, and a position distribution $P(z)P(r)$.
- * The shape distribution is defined by the abstract class #NcGSDShape.
- * The proxy redshift distribution is defined by the abstract class #NcGSDZProxy.
- * The position distribution is defined by the abstract class #NcGSDPosition.
+ * The shape distribution is defined by the abstract class #NcGalaxySDShape.
+ * The proxy redshift distribution is defined by the abstract class #NcGalaxySDZProxy.
+ * The position distribution is defined by the abstract class #NcGalaxySDPosition.
  *
  */
 
@@ -46,17 +46,17 @@
 #include "build_cfg.h"
 
 #include "galaxy/nc_galaxy_wl.h"
-#include "galaxy/nc_gsd_shape.h"
-#include "galaxy/nc_gsd_z_proxy.h"
-#include "galaxy/nc_gsd_position.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "galaxy/nc_galaxy_sd_position.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
 struct _NcGalaxyWLPrivate
 {
-  NcGSDShape *s_dist;
-  NcGSDZProxy *zp_dist;
-  NcGSDPosition *rz_dist;
+  NcGalaxySDShape *s_dist;
+  NcGalaxySDZProxy *zp_dist;
+  NcGalaxySDPosition *rz_dist;
 };
 
 enum
@@ -137,9 +137,9 @@ _nc_galaxy_wl_dispose (GObject *object)
   NcGalaxyWLPrivate * const self = gwl->priv;
 
   /* FIX ME */
-  /* nc_gsd_shape_clear (&self->s_dist); */
-  /* nc_gsd_z_proxy_clear (&self->zp_dist); */
-  /* nc_gsd_position_clear (&self->rz_dist); */
+  /* nc_galaxy_sd_shape_clear (&self->s_dist); */
+  /* nc_galaxy_sd_z_proxy_clear (&self->zp_dist); */
+  /* nc_galaxy_sd_position_clear (&self->rz_dist); */
 
   G_OBJECT_CLASS (nc_galaxy_wl_parent_class)->dispose (object);
 }
@@ -163,7 +163,7 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
   /**
    * NcGalaxyWL:s-dist:
    *
-   * A #NcGSDShape object.
+   * A #NcGalaxySDShape object.
    *
    */
 
@@ -173,13 +173,13 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
                                    g_param_spec_object ("s-dist",
                                                         NULL,
                                                         "Galaxy sample shape distribution",
-                                                        NC_TYPE_GSD_SHAPE,
+                                                        NC_TYPE_GALAXY_SD_SHAPE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
 
   /**
    * NcGalaxyWL:zp-dist:
    *
-   * A #NcGSDZProxy object.
+   * A #NcGalaxySDZProxy object.
    *
    */
 
@@ -189,13 +189,13 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
                                    g_param_spec_object ("zp-dist",
                                                         NULL,
                                                         "Galaxy sample proxy redshift distribution",
-                                                        NC_TYPE_GSD_Z_PROXY,
+                                                        NC_TYPE_GALAXY_SD_Z_PROXY,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
 
   /**
    * NcGalaxyWL:rz-dist:
    *
-   * A #NcGSDZPosition object.
+   * A #NcGalaxySDZPosition object.
    *
    */
 
@@ -205,23 +205,23 @@ nc_galaxy_wl_class_init (NcGalaxyWLClass *klass)
                                    g_param_spec_object ("rz-dist",
                                                         NULL,
                                                         "Galaxy sample position distribution",
-                                                        NC_TYPE_GSD_POSITION,
+                                                        NC_TYPE_GALAXY_SD_POSITION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
 }
 
 /**
  * nc_galaxy_wl_new:
- * @s_dist: a #NcGSDShape
- * @zp_dist: a #NcGSDZProxy
- * @rz_dist: a #NcGSDPosition
+ * @s_dist: a #NcGalaxySDShape
+ * @zp_dist: a #NcGalaxySDZProxy
+ * @rz_dist: a #NcGalaxySDPosition
  *
  * Creates a new galaxy weak lensing object.
- * Requires an instance of #NcGSDShape, #NcGSDZProxy, and #NcGSDPosition.
+ * Requires an instance of #NcGalaxySDShape, #NcGalaxySDZProxy, and #NcGalaxySDPosition.
  *
  * Returns: (transfer full): a new NcGalaxyWL.
  */
 NcGalaxyWL *
-nc_galaxy_wl_new (NcGSDShape *s_dist, NcGSDZProxy *zp_dist, NcGSDPosition *rz_dist)
+nc_galaxy_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist)
 {
   NcGalaxyWL *gwl = g_object_new (NC_TYPE_GALAXY_WL,
                                   "s-dist", s_dist,

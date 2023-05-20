@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_wl.c
+ *            nc_galaxy_wl.h
  *
  *  Mon May 08 18:13:24 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_wl.c
+ * nc_galaxy_wl.h
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -32,9 +32,9 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/galaxy/nc_gsd_shape.h>
-#include <numcosmo/galaxy/nc_gsd_z_proxy.h>
-#include <numcosmo/galaxy/nc_gsd_position.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 
 
 G_BEGIN_DECLS
@@ -65,7 +65,7 @@ struct _NcGalaxyWL
 
 GType nc_galaxy_wl_get_type (void) G_GNUC_CONST;
 
-NcGalaxyWL *nc_galaxy_wl_new (NcGSDShape *s_dist, NcGSDZProxy *zp_dist, NcGSDPosition *rz_dist);
+NcGalaxyWL *nc_galaxy_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist);
 NcGalaxyWL *nc_galaxy_wl_ref (NcGalaxyWL *gwl);
 
 void nc_galaxy_wl_free (NcGalaxyWL *gwl);
