@@ -67,7 +67,7 @@ _nc_galaxy_sd_z_proxy_finalize (GObject *object)
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble zp)
+_nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z)
 {
   g_error ("_nc_galaxy_sd_z_proxy_gen: method not implemented.");
 
@@ -75,7 +75,7 @@ _nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDens
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble zp)
+_nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z)
 {
   g_error ("_nc_galaxy_sd_z_proxy_integ: method not implemented.");
 
@@ -137,12 +137,9 @@ nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp)
 
 /**
  * nc_galaxy_sd_z_proxy_gen: (virtual gen)
- * @gwld: a #NcGalaxyWLDist
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @z_cluster: cluster redshift $z_\mathrm{cl}
+ * @gsdzp: a #NcGalaxySDZProxy
  * @rng: a #NcmRNG
+ * @z: source redshift $z$
  *
  * Generates a $z_p$ value from the distribution using @rng.
  *
@@ -150,11 +147,8 @@ nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp)
  */
 /**
  * nc_galaxy_sd_z_proxy_integ: (virtual integ)
- * @gwld: a #NcGalaxyWLDist
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ * @gsdzp: a #NcGalaxySDZProxy
+ * @z: source redshift $z$
  *
  * Computes the probability density of the observable $z_p$ given the redshift.
  * The probability density is given by $P(z_p)P$.

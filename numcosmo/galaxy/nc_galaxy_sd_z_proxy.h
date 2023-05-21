@@ -66,8 +66,8 @@ NcGalaxySDZProxy *nc_galaxy_sd_z_proxy_ref (NcGalaxySDZProxy *gsdzp);
 void nc_galaxy_sd_z_proxy_free (NcGalaxySDZProxy *gsdzp);
 void nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp);
 
-NCM_INLINE gdouble nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble zp);
-NCM_INLINE gdouble nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble zp);
+NCM_INLINE gdouble nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z);
+NCM_INLINE gdouble nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z);
 
 G_END_DECLS
 
@@ -81,21 +81,21 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE void
-nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble zp)
+nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, const gdouble z)
 {
   NcGalaxySDZProxyClass *gsdzp_class = NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp);
 
   if (gsdzp_class->gen != NULL)
-    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->gen (gsdzp, cosmo, dp, smd, z_cluster, rng);
+    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->gen (gsdzp, rng, z);
 }
 
 NCM_INLINE void
-nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble zp)
+nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z)
 {
   NcGalaxySDZProxyClass *gsdzp_class = NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp);
 
   if (gsdzp_class->integ != NULL)
-    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, cosmo, dp, smd, z_cluster);
+    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, z);
 }
 
 G_END_DECLS

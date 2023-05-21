@@ -66,8 +66,8 @@ NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp);
 
-NCM_INLINE gdouble nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng);
-NCM_INLINE gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+NCM_INLINE NcmVector nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+NCM_INLINE gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
 
 G_END_DECLS
 
@@ -81,21 +81,21 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE void
-nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng)
+nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionClass *gsdp_class = NC_GALAXY_SD_POSITION_GET_CLASS (gsdp);
 
   if (gsdp_class->gen != NULL)
-    NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, cosmo, dp, smd, z_cluster, rng);
+    NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, rng);
 }
 
 NCM_INLINE void
-nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos)
 {
   NcGalaxySDPositionClass *gsdp_class = NC_GALAXY_SD_POSITION_GET_CLASS (gsdp);
 
   if (gsdp_class->integ != NULL)
-    NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, cosmo, dp, smd, z_cluster);
+    NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, pos);
 }
 
 G_END_DECLS

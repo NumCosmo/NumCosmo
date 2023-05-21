@@ -66,16 +66,16 @@ _nc_galaxy_sd_position_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_parent_class)->finalize (object);
 }
 
-static gdouble
-_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng)
+static NcmVector
+_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
 
-  return 0.0;
+  return NULL;
 }
 
 static gdouble
-_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos)
 {
   g_error ("_nc_galaxy_sd_position_integ: method not implemented.");
 
@@ -137,11 +137,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 
 /**
  * nc_galaxy_sd_position_gen: (virtual gen)
- * @gwld: a #NcGalaxyWLDist
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @z_cluster: cluster redshift $z_\mathrm{cl}
+ * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
  *
  * Generates a $(r, z)$ value from the distribution using @rng.
@@ -150,11 +146,8 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  */
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
- * @gwld: a #NcGalaxyWLDist
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ * @gsdp: a #NcGalaxySDPosition
+ * @pos: a #NcmVector stating position and redshift
  *
  * Computes the probability density of the observables $r$ and $z$ given the redshift.
  * The probability density is given by $P(z)P(r)$.
