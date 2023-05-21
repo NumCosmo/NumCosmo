@@ -33,7 +33,7 @@
  *
  *
  * This class describes a galaxy sample position distributions.
- * It is composed by two distributions: an imagem position distribution $P(r)$ and a redshift distribution $P(z)$.
+ * It is composed by two distributions: an image position distribution $P(r)$ and a redshift distribution $P(z)$.
  *
  */
 
