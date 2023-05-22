@@ -71,6 +71,11 @@ NcGalaxyWLLikelihood *nc_galaxy_wl_likelihood_ref (NcGalaxyWLLikelihood *gwl);
 void nc_galaxy_wl_likelihood_free (NcGalaxyWLLikelihood *gwl);
 void nc_galaxy_wl_likelihood_clear (NcGalaxyWLLikelihood **gwl);
 
+void nc_galaxy_wl_likelihood_set_obs (NcGalaxyWLLikelihood *gwl, NcmMatrix *obs);
+NcmMatrix *nc_galaxy_wl_likelihood_peek_obs (NcGalaxyWLLikelihood *gwl);
+gdouble nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+gdouble nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_WL_LIKELIHOOD_H_ */

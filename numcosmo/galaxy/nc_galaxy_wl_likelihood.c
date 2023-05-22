@@ -54,14 +54,17 @@
 
 struct _NcGalaxyWLLikelihoodPrivate
 {
+  NcmMatrix *obs;
   NcGalaxySDShape *s_dist;
   NcGalaxySDZProxy *zp_dist;
   NcGalaxySDPosition *rz_dist;
+  guint len;
 };
 
 enum
 {
   PROP_0,
+  PROP_OBS,
   PROP_S_DIST,
   PROP_ZP_DIST,
   PROP_RZ_DIST,
@@ -74,9 +77,11 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv = nc_galaxy_wl_likelihood_get_instance_private (gwl);
 
+  self->obs     = NULL;
   self->s_dist  = NULL;
   self->zp_dist = NULL;
   self->rz_dist = NULL;
+  self->len     = 0;
 }
 
 static void
@@ -89,6 +94,9 @@ _nc_galaxy_wl_likelihood_set_property (GObject *object, guint prop_id, const GVa
 
   switch (prop_id)
   {
+    case PROP_OBS:
+      nc_galaxy_wl_likelihood_set_obs (gwl, g_value_get_object (value));
+      break;
     case PROP_S_DIST:
       self->s_dist = g_value_dup_object (value);
       break;
@@ -115,6 +123,9 @@ _nc_galaxy_wl_likelihood_get_property (GObject *object, guint prop_id, GValue *v
 
   switch (prop_id)
   {
+    case PROP_OBS:
+      g_value_set_object (value, nc_galaxy_wl_likelihood_peek_obs (gwl));
+      break;
     case PROP_S_DIST:
       g_value_set_object (value, self->s_dist);
       break;
@@ -136,10 +147,10 @@ _nc_galaxy_wl_likelihood_dispose (GObject *object)
   NcGalaxyWLLikelihood *gwl = NC_GALAXY_WL_LIKELIHOOD (object);
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
 
-  /* FIX ME */
-  /* nc_galaxy_sd_shape_clear (&self->s_dist); */
-  /* nc_galaxy_sd_z_proxy_clear (&self->zp_dist); */
-  /* nc_galaxy_sd_position_clear (&self->rz_dist); */
+  ncm_matrix_clear (&self->obs);
+  nc_galaxy_sd_shape_clear (&self->s_dist);
+  nc_galaxy_sd_z_proxy_clear (&self->zp_dist);
+  nc_galaxy_sd_position_clear (&self->rz_dist);
 
   G_OBJECT_CLASS (nc_galaxy_wl_likelihood_parent_class)->dispose (object);
 }
@@ -157,8 +168,22 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
 
   object_class->set_property = &_nc_galaxy_wl_likelihood_set_property;
   object_class->get_property = &_nc_galaxy_wl_likelihood_get_property;
-  object_class->dispose = &_nc_galaxy_wl_likelihood_dispose;
-  object_class->finalize = &_nc_galaxy_wl_likelihood_finalize;
+  object_class->dispose      = &_nc_galaxy_wl_likelihood_dispose;
+  object_class->finalize     = &_nc_galaxy_wl_likelihood_finalize;
+
+  /**
+   * NcGalaxyWLLikelihood:obs:
+   *
+   * Galaxy weak lensing observables matrix.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_OBS,
+                                   g_param_spec_object ("obs",
+                                                        NULL,
+                                                        "Galaxy weak lensing observables",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLLikelihood:s-dist:
@@ -167,14 +192,13 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
    *
    */
 
-  /* FIX ME */
-  /* g_object_class_install_property (object_class,
-                                   PROP_S_DIST.
+  g_object_class_install_property (object_class,
+                                   PROP_S_DIST,
                                    g_param_spec_object ("s-dist",
                                                         NULL,
                                                         "Galaxy sample shape distribution",
                                                         NC_TYPE_GALAXY_SD_SHAPE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLLikelihood:zp-dist:
@@ -183,14 +207,13 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
    *
    */
 
-  /* FIX ME */
-  /* g_object_class_install_property (object_class,
+  g_object_class_install_property (object_class,
                                    PROP_ZP_DIST,
                                    g_param_spec_object ("zp-dist",
                                                         NULL,
                                                         "Galaxy sample proxy redshift distribution",
                                                         NC_TYPE_GALAXY_SD_Z_PROXY,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLLikelihood:rz-dist:
@@ -199,14 +222,13 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
    *
    */
 
-  /* FIX ME */
-  /* g_object_class_install_property (object_class,
+  g_object_class_install_property (object_class,
                                    PROP_RZ_DIST,
                                    g_param_spec_object ("rz-dist",
                                                         NULL,
                                                         "Galaxy sample position distribution",
                                                         NC_TYPE_GALAXY_SD_POSITION,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); */
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -224,10 +246,10 @@ NcGalaxyWLLikelihood *
 nc_galaxy_wl_likelihood_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist)
 {
   NcGalaxyWLLikelihood *gwl = g_object_new (NC_TYPE_GALAXY_WL_LIKELIHOOD,
-                                  "s-dist", s_dist,
-                                  "zp-dist", zp_dist,
-                                  "zp-dist", rz_dist,
-                                  NULL);
+                                            "s-dist", s_dist,
+                                            "zp-dist", zp_dist,
+                                            "zp-dist", rz_dist,
+                                            NULL);
 
   return gwl;
 }
@@ -271,4 +293,81 @@ void
 nc_galaxy_wl_likelihood_clear (NcGalaxyWLLikelihood **gwl)
 {
   g_clear_object (gwl);
+}
+
+/**
+ * nc_galaxy_wl_likelihood_set_obs:
+ * @gwl: a #NcGalaxyWLLikelihood
+ * @obs: a #NcmMatrix
+ *
+ * Sets the observables matrix @obs.
+ */
+void
+nc_galaxy_wl_likelihood_set_obs (NcGalaxyWLLikelihood *gwl, NcmMatrix *obs)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
+  g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
+
+  ncm_matrix_clear (&self->obs);
+
+  self->len = ncm_matrix_nrows (obs);
+  self->obs = ncm_matrix_ref (obs);
+}
+
+/**
+ * nc_galaxy_wl_likelihood_peek_obs:
+ * @gwl: a #NcGalaxyWLLikelihood
+ *
+ * Gets the observables matrix.
+ *
+ * Returns: (transfer none): the observables matrix.
+ */
+NcmMatrix *
+nc_galaxy_wl_likelihood_peek_obs (NcGalaxyWLLikelihood *gwl)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  return self->obs;
+}
+
+/**
+ * nc_galaxy_wl_likelihood_eval_m2lnP:
+ * @gwl: a #NcGalaxyWLLikelihood
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
+ * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ *
+ * Computes the observables probability given the theoretical modeling using
+ * integration method.
+ *
+ *
+ * Returns: $-2\ln(P)$.
+ */
+gdouble
+nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+{
+  return 0.0;
+}
+
+/**
+ * nc_galaxy_wl_likelihood_kde_eval_m2lnP:
+ * @gwl: a #NcGalaxyWLLikelihood
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
+ * @z_cluster: cluster redshift $z_\mathrm{cl}$
+ *
+ * Computes the observables probability given the theoretical modeling using
+ * kernel density estimation method.
+ *
+ *
+ * Returns: $-2\ln(P)$.
+ */
+gdouble
+nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+{
+  return 0.0;
 }
