@@ -52,8 +52,6 @@ __pycache__
 gtk-doc.m4
 perf.*
 vgcore.*
-.flake8
-.mypy.ini
 .vscode
 .RData
 .Rhistory

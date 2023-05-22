@@ -62,7 +62,6 @@
 
 #include "math/ncm_stats_dist_vkde.h"
 #include "math/ncm_iset.h"
-#include "math/ncm_nnls.h"
 #include "math/ncm_lapack.h"
 #include "ncm_enum_types.h"
 
@@ -71,6 +70,7 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
+#include <omp.h>
 #include "misc/kdtree.h"
 #include "misc/rb_knn_list.h"
 #include "levmar/levmar.h"
@@ -412,6 +412,8 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       NcmStatsVec **sample_ptr = ncm_memory_pool_get (self->mp_stats_vec);
       NcmStatsVec *sample      = *sample_ptr;
       rb_knn_list_table_t *table;
+      /*gint tid = omp_get_thread_num(); */
+      /*printf("Hello world from omp thread %d\n", tid); */
 
       table = kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
       {
@@ -491,41 +493,60 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   const gdouble href2                  = ppself->href * ppself->href;
   const gdouble one_href2              = 1.0 / href2;
 
-  gint i, j;
+  gint i;
 
-  for (i = 0; i < ppself->n_kernels; i++)
+  #pragma omp parallel if (self->use_threads)
   {
-    NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-    NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
-    gint ret;
+    NcmMatrix *invUsample_matrix = ncm_matrix_new (ncm_matrix_col_len (pself->sample_matrix), ncm_matrix_row_len (pself->sample_matrix));
 
-    ncm_matrix_memcpy (pself->invUsample_matrix, pself->sample_matrix);
-
-    /*#pragma omp parallel for if (self->use_threads) */
-
-    for (j = 0; j < ppself->n_obs; j++)
+    #pragma omp for schedule(dynamic, 1)
+    for (i = 0; i < ppself->n_kernels; i++)
     {
-      NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j);
+      NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      gint ret;
+      gint j;
 
-      ncm_vector_axpy (theta_j, -1.0, theta_i);
+      /*ncm_matrix_memcpy (pself->invUsample_matrix, pself->sample_matrix); */
+      ncm_matrix_memcpy (invUsample_matrix, pself->sample_matrix);
+
+      /*#pragma omp parallel for if (self->use_threads) */
+
+      for (j = 0; j < ppself->n_obs; j++)
+      {
+        /*NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j); */
+        gdouble *theta_j = ncm_matrix_ptr (invUsample_matrix, j, 0);
+
+        //ncm_vector_axpy (theta_j, -1.0, theta_i);
+        cblas_daxpy (ppself->d, -1.0, ncm_vector_const_data (theta_i), 1, theta_j, 1);
+      }
+
+      /*
+       *  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+       *                     1.0, ncm_matrix_gsl (cov_decomp_i),
+       *                     ncm_matrix_gsl (pself->invUsample_matrix));
+       */
+      ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                            1.0, ncm_matrix_gsl (cov_decomp_i),
+                            ncm_matrix_gsl (invUsample_matrix));
+      NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", ret);
+
+      /* #pragma omp parallel for if (self->use_threads) */
+
+      for (j = 0; j < ppself->n_obs; j++)
+      {
+        /*NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j); */
+        gdouble *theta_j = ncm_matrix_ptr (invUsample_matrix, j, 0);
+        gdouble chi2_ij;
+
+        //chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2;
+        chi2_ij = cblas_ddot (ppself->d, theta_j, 1, theta_j, 1) * one_href2;
+
+        ncm_matrix_set (IM, j, i, chi2_ij);
+      }
     }
 
-    ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
-                          1.0, ncm_matrix_gsl (cov_decomp_i),
-                          ncm_matrix_gsl (pself->invUsample_matrix));
-    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", ret);
-
-    /*#pragma omp parallel for if (self->use_threads) */
-
-    for (j = 0; j < ppself->n_obs; j++)
-    {
-      NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j);
-      gdouble chi2_ij;
-
-      chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2;
-
-      ncm_matrix_set (IM, j, i, chi2_ij);
-    }
+    ncm_matrix_free (invUsample_matrix);
   }
 
   {
@@ -589,21 +610,23 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
   gint ret;
   gint i;
 
-  for (i = 0; i < ppself->n_kernels; i++)
   {
-    NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-    NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
-
-    ncm_vector_memcpy (ev->delta_x, x);
-    ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
-
-    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (ev->delta_x));
-    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
-
+    for (i = 0; i < ppself->n_kernels; i++)
     {
-      const gdouble chi2_i = ncm_vector_dot (ev->delta_x, ev->delta_x) * one_href2;
+      NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
-      ncm_vector_fast_set (ev->chi2, i, chi2_i);
+      ncm_vector_memcpy (ev->delta_x, x);
+      ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
+
+      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (ev->delta_x));
+      NCM_TEST_GSL_RESULT ("_ncm_stats_dist_nd_vbk_studentt_eval", ret);
+
+      {
+        const gdouble chi2_i = ncm_vector_dot (ev->delta_x, ev->delta_x) * one_href2;
+
+        ncm_vector_fast_set (ev->chi2, i, chi2_i);
+      }
     }
   }
 
@@ -636,21 +659,23 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   gint ret;
   gint i;
 
-  for (i = 0; i < ppself->n_kernels; i++)
   {
-    NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-    NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
-
-    ncm_vector_memcpy (ev->delta_x, x);
-    ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
-
-    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (ev->delta_x));
-    NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_eval_weights_m2lnp", ret);
-
+    for (i = 0; i < ppself->n_kernels; i++)
     {
-      const gdouble chi2_i = ncm_vector_dot (ev->delta_x, ev->delta_x) * one_href2;
+      NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
 
-      ncm_vector_fast_set (ev->chi2, i, chi2_i);
+      ncm_vector_memcpy (ev->delta_x, x);
+      ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
+
+      ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (cov_decomp_i), ncm_vector_gsl (ev->delta_x));
+      NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_eval_weights_m2lnp", ret);
+
+      {
+        const gdouble chi2_i = ncm_vector_dot (ev->delta_x, ev->delta_x) * one_href2;
+
+        ncm_vector_fast_set (ev->chi2, i, chi2_i);
+      }
     }
   }
 

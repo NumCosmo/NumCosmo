@@ -114,6 +114,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
+#include <omp.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -551,6 +552,8 @@ _ncm_stats_dist_compute_IM_full (NcmStatsDist *sd)
 
   sd_class->compute_IM (sd, self->IM);
 
+  #pragma omp parallel for
+
   for (i = 0; i < self->n_obs; i++)
     ncm_matrix_mul_row (self->IM, i, 1.0 / ncm_vector_get (self->f, i));
 }
@@ -629,8 +632,17 @@ static void
 _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 {
   NcmStatsDistPrivate * const self = sd->priv;
+  double itime, ftime, exec_time;
+
+  itime = omp_get_wtime ();
 
   _ncm_stats_dist_prepare (sd);
+
+  ftime     = omp_get_wtime ();
+  exec_time = ftime - itime;
+  printf ("Time taken to prepare %f\n", exec_time);
+  itime = omp_get_wtime ();
+
   g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n_obs);
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
@@ -810,9 +822,30 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       break;
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
       case NCM_STATS_DIST_CV_NONE:
+        ftime     = omp_get_wtime ();
+        exec_time = ftime - itime;
+        printf ("Time taken to prepare_interp before alloc nnls %f\n", exec_time);
+        itime = omp_get_wtime ();
+
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
+        ftime     = omp_get_wtime ();
+        exec_time = ftime - itime;
+        printf ("Time taken to prepare_interp after alloc nnls %f\n", exec_time);
+        itime = omp_get_wtime ();
+
         _ncm_stats_dist_compute_IM_full (sd);
+        ftime       = omp_get_wtime ();
+        exec_time   = ftime - itime;
+        printf ("Time taken to prepare_interp compute IM %f\n", exec_time);
+        itime = omp_get_wtime ();
+
         self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
+
+        ftime       = omp_get_wtime ();
+        exec_time   = ftime - itime;
+        printf ("Time taken to prepare_interp solve nnls %f\n", exec_time);
+        itime = omp_get_wtime ();
+
 
         break;
       default:
@@ -828,6 +861,9 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     ncm_vector_scale (self->weights, 1.0 / total_weight);
   }
 
+  ftime     = omp_get_wtime ();
+  exec_time = ftime - itime;
+  printf ("Time taken to prepare_interp %f\n", exec_time);
   /* ncm_vector_log_vals (self->weights, "W: ", "% 22.15e", TRUE); */
 }
 

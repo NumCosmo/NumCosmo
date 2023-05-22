@@ -307,7 +307,7 @@ static void
 test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pdata)
 {
   const gdouble nu                = g_test_rand_double_range (3.0, 5.0);
-  const guint dim                 = g_test_rand_int_range (2, 4);
+  const guint dim                 = 40; //g_test_rand_int_range (2, 4);
   NcmStatsDistKernelST *sdk_st    = ncm_stats_dist_kernel_st_new (dim, nu);
   NcmStatsDistVKDE *sdvkde        = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (sdk_st), NCM_STATS_DIST_CV_NONE);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
@@ -372,23 +372,22 @@ test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_
   for (i = 0; i < test->ntests; i++)
   {
     NcmVector *y;
-    gdouble m2lnL, m2lnp_s, alpha;
+    gdouble m2lnL, m2lnp_s, alpha0, alpha1;
+
+    /* Measuring the Kullback-Leibler divergence */
 
     y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
     m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-
-    /* Measuring the Kullback-Leibler divergence */
-    alpha = 0.25 * (m2lnp_s - m2lnL);
-    ncm_stats_vec_set (err_stats, 0, log1p (tanh (alpha)));
-
+    alpha0 = 0.25 * (m2lnp_s - m2lnL);
+        
     ncm_stats_dist_sample (test->sd, y, rng);
     ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
     m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-
-    alpha = 0.25 * (m2lnL - m2lnp_s);
-    ncm_stats_vec_set (err_stats, 1, log1p (tanh (alpha)));
-
+    alpha1 = 0.25 * (m2lnL - m2lnp_s);
+    
+    ncm_stats_vec_set (err_stats, 0, log1p (tanh (alpha0)));
+    ncm_stats_vec_set (err_stats, 1, log1p (tanh (alpha1)));
     ncm_stats_vec_update (err_stats);
   }
 
@@ -493,7 +492,8 @@ test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
-  ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
+  for (i = 0; i < 2; i++)
+    ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
 
   test_ncm_stats_dist_cmp_dist (test, data_mvnd, mset, rng);
 

@@ -15,6 +15,7 @@ MY_CFLAGS = \
 	 $(FFTW3_CFLAGS)    \
 	 $(CFITSIO_CFLAGS)  \
 	 $(NLOPT_CFLAGS)    \
+	 $(OPENMP_CFLAGS)   \
 	 -I$(top_srcdir)    \
 	 $(CODE_COVERAGE_CFLAGS)
 

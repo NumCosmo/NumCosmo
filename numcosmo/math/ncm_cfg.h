@@ -73,6 +73,7 @@ void ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger);
 
 void ncm_cfg_set_openmp_nthreads (gint n);
 void ncm_cfg_set_openblas_nthreads (gint n);
+void ncm_cfg_set_blis_nthreads (gint n);
 void ncm_cfg_set_mkl_nthreads (gint n);
 
 void ncm_cfg_logfile (gboolean on);

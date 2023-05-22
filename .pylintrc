@@ -1,0 +1,60 @@
+[MAIN]
+
+# Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
+# number of processors available to use, and will cap the count on Windows to
+# avoid hangs.
+jobs=0
+
+# Minimum Python version to use for version dependent checks. Will default to
+# the version used to run pylint.
+py-version=3.9
+
+# Discover python modules and packages in the file system subtree.
+recursive=yes
+
+[MESSAGES CONTROL]
+
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time (only on the command line, not in the configuration file where
+# it should appear only once). See also the "--disable" option for examples.
+enable=c-extension-no-member
+
+[MISCELLANEOUS]
+
+# List of note tags to take in consideration, separated by a comma.
+notes=FIXME
+
+[BASIC]
+
+# Naming style matching correct argument names.
+argument-naming-style=any
+
+# Naming style matching correct attribute names.
+attr-naming-style=any
+
+# Naming style matching correct variable names.
+variable-naming-style=any
+
+# Naming style matching correct module level constants names.
+const-naming-style=any
+
+# Naming stule matching correct method names.
+method-naming-style=any
+
+[STRING]
+
+# This flag controls whether inconsistent-quotes generates a warning when the
+# character used as a quote delimiter is used inconsistently within a module.
+check-quote-consistency=yes
+
+[TYPECHECK]
+
+# Tells whether to warn about missing members when the owner of the attribute
+# is inferred to be None.
+ignore-none=false
+
+[FORMAT]
+
+# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
+expected-line-ending-format=LF

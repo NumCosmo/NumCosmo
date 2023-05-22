@@ -330,6 +330,8 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     ncm_stats_dist_clear (&self->sd1);
     ncm_vector_clear (&self->m2lnp_star);
     ncm_vector_clear (&self->m2lnp_cur);
+    ncm_vector_clear (&self->m2lnL_s0);
+    ncm_vector_clear (&self->m2lnL_s1);
 
     g_ptr_array_set_size (self->thetastar, 0);
 
@@ -668,6 +670,7 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
 
   g_clear_pointer (&self->desc, g_free);
   self->desc = g_strdup_printf ("APES-Move:%s:%s", method, kernel);
+  g_free (method);
 
   return self->desc;
 }

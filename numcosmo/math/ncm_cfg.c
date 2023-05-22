@@ -216,6 +216,10 @@
 #include <mpi.h>
 #endif /* HAVE_MPI */
 
+#ifdef HAVE_BLIS
+#include <blis/blis.h>
+#endif /* HAVE_BLIS */
+
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
 #endif
@@ -285,6 +289,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
 void clencurt_gen (int M);
 
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+void goto_set_num_threads (gint);
 void openblas_set_num_threads (gint);
 
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
@@ -458,9 +463,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
 
-  /*ncm_cfg_set_openmp_nthreads (1); */
-  /*ncm_cfg_set_openblas_nthreads (1); */
-  /*ncm_cfg_set_mkl_nthreads (1); */
+  /* ncm_cfg_set_openmp_nthreads (1); */
+  /* ncm_cfg_set_openblas_nthreads (1); */
+  /* ncm_cfg_set_blis_nthreads (1); */
+  /* ncm_cfg_set_mkl_nthreads (1); */
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -1038,7 +1044,7 @@ ncm_cfg_enable_gsl_err_handler (void)
   gsl_set_error_handler (gsl_err);
 }
 
-static uint nreg_model = 0;
+static guint nreg_model = 0;
 
 /**
  * ncm_cfg_register_obj:
@@ -1169,7 +1175,23 @@ ncm_cfg_set_openblas_nthreads (gint n)
 {
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
   openblas_set_num_threads (n);
+  goto_set_num_threads (n);
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+}
+
+/**
+ * ncm_cfg_set_blis_nthreads:
+ * @n: number of threads
+ *
+ * Sets BLIS number of threads to @n when available.
+ *
+ */
+void
+ncm_cfg_set_blis_nthreads (gint n)
+{
+#ifdef HAVE_BLIS
+  bli_thread_set_num_threads (n);
+#endif /* HAVE_BLIS */
 }
 
 /**
