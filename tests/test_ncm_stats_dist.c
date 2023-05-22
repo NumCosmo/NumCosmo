@@ -299,7 +299,7 @@ test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
     g_assert_true (sdvkde0 == 0);
   }
 
-  ncm_stats_dist_set_over_smooth (test->sd, 0.2);
+  ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sdvkde), cov_type);
 }
 
@@ -351,7 +351,7 @@ test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pda
     g_assert_true (sdvkde0 == 0);
   }
 
-  ncm_stats_dist_set_over_smooth (test->sd, 0.2);
+  ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sdvkde), cov_type);
 }
 

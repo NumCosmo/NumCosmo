@@ -53,15 +53,9 @@ D (struct kdtree *tree, long index, int r)
 }
 
 static inline int
-kdnode_passed (struct kdtree *tree, struct kdnode *node)
+knn_search_on (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
 {
-  return node != NULL ? tree->coord_passed[node->coord_index] : 1;
-}
-
-static inline int
-knn_search_on (struct kdtree *tree, rb_knn_list_table_t *table, int k, double value, double target)
-{
-  return table->rb_knn_list_count < k || square (target - value) < tree->knn_distance;
+  return table->rb_knn_list_count < k || square (target - value) < *knn_distance;
 }
 
 static inline void
@@ -84,18 +78,6 @@ coord_table_reset (struct kdtree *tree)
   {
     tree->coord_table[i] = tree->coords + i * tree->dim;
   }
-}
-
-static inline void
-coord_deleted_reset (struct kdtree *tree)
-{
-  memset (tree->coord_deleted, 0, tree->capacity);
-}
-
-static inline void
-coord_passed_reset (struct kdtree *tree)
-{
-  memset (tree->coord_passed, 0, tree->capacity);
 }
 
 static void
@@ -240,15 +222,6 @@ coord_cmp (double *c1, double *c2, int dim)
     return ret > 0 ? 1 : -1;
 }
 
-void
-kdtree_knn_search_clean (struct kdtree *tree)
-{
-  tree->knn_distance = 0.0;
-
-  coord_deleted_reset (tree);
-  coord_passed_reset (tree);
-}
-
 static void
 resize (struct kdtree *tree)
 {
@@ -256,12 +229,8 @@ resize (struct kdtree *tree)
   tree->coords        = realloc (tree->coords, tree->dim * sizeof (double) * tree->capacity);
   tree->coord_table   = realloc (tree->coord_table, sizeof (double *) * tree->capacity);
   tree->coord_indexes = realloc (tree->coord_indexes, sizeof (long) * tree->capacity);
-  tree->coord_deleted = realloc (tree->coord_deleted, sizeof (char) * tree->capacity);
-  tree->coord_passed  = realloc (tree->coord_passed, sizeof (char) * tree->capacity);
   coord_table_reset (tree);
   coord_index_reset (tree);
-  coord_deleted_reset (tree);
-  coord_passed_reset (tree);
 }
 
 static void
@@ -297,7 +266,7 @@ kdtree_insert (struct kdtree *tree, double *coord)
 }
 
 static void
-knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *target, int k)
+knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *knn_distance, double *target, int k)
 {
   double dist = distance (node->coord, target, tree->dim);
 
@@ -309,9 +278,9 @@ knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table
     log->distance = dist;
     rb_knn_list_insert (table, log);
 
-    tree->knn_distance = MAX (tree->knn_distance, dist);
+    *knn_distance = MAX (*knn_distance, dist);
   }
-  else if (dist < tree->knn_distance)
+  else if (dist < *knn_distance)
   {
     knn_list_t *log = g_slice_new (knn_list_t);
     rb_knn_list_traverser_t trav;
@@ -324,7 +293,7 @@ knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table
     last = rb_knn_list_t_last (&trav, table);
 
     if ((prev = rb_knn_list_t_prev (&trav)) != NULL)
-      tree->knn_distance = prev->distance;
+      *knn_distance = prev->distance;
 
     rb_knn_list_delete (table, last);
 
@@ -333,9 +302,9 @@ knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table
 }
 
 static void
-kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *target, int k, int *pickup, double *min_shift, double min_dist2)
+kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table, double *knn_distance, double *target, int k, int *pickup, double *min_shift, double min_dist2)
 {
-  if ((node == NULL) || kdnode_passed (tree, node))
+  if (node == NULL)
   {
     return;
   }
@@ -368,21 +337,20 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
       min_dist2_l = min_dist2_new;
     }
 
-    if (!knn_search_on (tree, table, k, node->coord[r], target[r]))
+    if (!knn_search_on (tree, table, knn_distance, k, node->coord[r], target[r]))
       return;
 
     /* Testing if the branch can be prunned. */
     if (table->rb_knn_list_count >= k)
-      if (min_dist2 > tree->knn_distance)
+      if (min_dist2 > *knn_distance)
         return;
 
 
     if (*pickup)
     {
-      tree->coord_passed[node->coord_index] = 1;
-      knn_pickup (tree, node, table, target, k);
-      kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, min_dist2_l);
-      kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, min_dist2_r);
+      knn_pickup (tree, node, table, knn_distance, target, k);
+      kdtree_search_recursive (tree, node->left, table, knn_distance, target, k, pickup, min_shift_l, min_dist2_l);
+      kdtree_search_recursive (tree, node->right, table, knn_distance, target, k, pickup, min_shift_r, min_dist2_r);
     }
     else
     {
@@ -396,22 +364,19 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
       {
         if (target[r] <= node->coord[r])
         {
-          kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, min_dist2_l);
-          kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, min_dist2_r);
+          kdtree_search_recursive (tree, node->left, table, knn_distance, target, k, pickup, min_shift_l, min_dist2_l);
+          kdtree_search_recursive (tree, node->right, table, knn_distance, target, k, pickup, min_shift_r, min_dist2_r);
         }
         else
         {
-          kdtree_search_recursive (tree, node->right, table, target, k, pickup, min_shift_r, min_dist2_r);
-          kdtree_search_recursive (tree, node->left, table, target, k, pickup, min_shift_l, min_dist2_l);
+          kdtree_search_recursive (tree, node->right, table, knn_distance, target, k, pickup, min_shift_r, min_dist2_r);
+          kdtree_search_recursive (tree, node->left, table, knn_distance, target, k, pickup, min_shift_l, min_dist2_l);
         }
       }
 
       /* back track and pick up  */
       if (*pickup)
-      {
-        tree->coord_passed[node->coord_index] = 1;
-        knn_pickup (tree, node, table, target, k);
-      }
+        knn_pickup (tree, node, table, knn_distance, target, k);
     }
   }
 }
@@ -423,13 +388,13 @@ kdtree_knn_search (struct kdtree *tree, double *target, int k)
   {
     rb_knn_list_table_t *table = rb_knn_list_create (NULL);
 
-    int pickup = 0;
+    int pickup          = 0;
+    double knn_distance = 0.0;
     double min_shift[tree->dim];
 
     memset (min_shift, 0, sizeof (double) * tree->dim);
 
-    kdtree_search_recursive (tree, tree->root, table, target, k, &pickup, min_shift, 0.0);
-    kdtree_knn_search_clean (tree);
+    kdtree_search_recursive (tree, tree->root, table, &knn_distance, target, k, &pickup, min_shift, 0.0);
 
     return table;
   }
@@ -528,24 +493,6 @@ kdtree_build (struct kdtree *tree)
 void
 kdtree_rebuild (struct kdtree *tree)
 {
-  long i, j;
-  size_t size_of_coord = tree->dim * sizeof (double);
-
-  for (i = 0, j = 0; j < tree->count; i++, j++)
-  {
-    while (j < tree->count && tree->coord_deleted[j])
-    {
-      j++;
-    }
-
-    if ((i != j) && (j < tree->count))
-    {
-      memcpy (tree->coord_table[i], tree->coord_table[j], size_of_coord);
-      tree->coord_deleted[i] = 0;
-    }
-  }
-
-  tree->count = i;
   coord_index_reset (tree);
   kdtree_build (tree);
 }
@@ -562,16 +509,11 @@ kdtree_init (int dim)
     tree->dim           = dim;
     tree->count         = 0;
     tree->capacity      = 65536;
-    tree->knn_distance  = 0.0;
     tree->coords        = malloc (dim * sizeof (double) * tree->capacity);
     tree->coord_table   = malloc (sizeof (double *) * tree->capacity);
     tree->coord_indexes = malloc (sizeof (long) * tree->capacity);
-    tree->coord_deleted = malloc (sizeof (char) * tree->capacity);
-    tree->coord_passed  = malloc (sizeof (char) * tree->capacity);
     coord_index_reset (tree);
     coord_table_reset (tree);
-    coord_deleted_reset (tree);
-    coord_passed_reset (tree);
   }
 
   return tree;
@@ -595,8 +537,6 @@ kdtree_destroy (struct kdtree *tree)
   free (tree->coords);
   free (tree->coord_table);
   free (tree->coord_indexes);
-  free (tree->coord_deleted);
-  free (tree->coord_passed);
   free (tree);
 }
 

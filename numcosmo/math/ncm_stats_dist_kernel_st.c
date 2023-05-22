@@ -99,7 +99,6 @@
 struct _NcmStatsDistKernelSTPrivate
 {
   gdouble nu;
-  GArray *t_array;
 };
 
 enum
@@ -115,8 +114,7 @@ ncm_stats_dist_kernel_st_init (NcmStatsDistKernelST *sdkst)
 {
   NcmStatsDistKernelSTPrivate * const self = sdkst->priv = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
-  self->nu      = 0.0;
-  self->t_array = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->nu = 0.0;
 }
 
 static void
@@ -171,10 +169,8 @@ _ncm_stats_dist_kernel_st_dispose (GObject *object)
 static void
 _ncm_stats_dist_kernel_st_finalize (GObject *object)
 {
-  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object);
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
-
-  g_clear_pointer (&self->t_array, g_array_unref);
+  /* NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object); */
+  /* NcmStatsDistKernelSTPrivate * const self = sdkst->priv; */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->finalize (object);
@@ -184,8 +180,8 @@ static gdouble _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *
 static gdouble _ncm_stats_dist_kernel_st_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
 static gdouble _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
 static void _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
-static void _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda);
-static void _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda);
+static void _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
+static void _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
 static void _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 
 static void
@@ -286,7 +282,7 @@ _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *c
 }
 
 static void
-_ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
@@ -298,11 +294,11 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnnorms));
+  g_assert (n == ncm_vector_len (lnK));
   g_assert (1 == ncm_vector_stride (chi2));
   g_assert (1 == ncm_vector_stride (weights));
   g_assert (1 == ncm_vector_stride (lnnorms));
-
-  g_array_set_size (self->t_array, n);
+  g_assert (1 == ncm_vector_stride (lnK));
 
   for (i = 0; i < n; i++)
   {
@@ -318,22 +314,22 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
       lnt_max = lnt_i;
     }
 
-    g_array_index (self->t_array, gdouble, i) = lnt_i;
+    ncm_vector_fast_set (lnK, i, lnt_i);
   }
 
   lambda[0] = 0.0;
 
   for (i = 0; i < i_max; i++)
-    lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
 
   for (i = i_max + 1; i < n; i++)
-    lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
 
   gamma[0] = lnt_max;
 }
 
 static void
-_ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
@@ -344,10 +340,10 @@ _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
   gint i, i_max = -1;
 
   g_assert_cmpuint (n, ==, ncm_vector_len (weights));
+  g_assert_cmpuint (n, ==, ncm_vector_len (lnK));
   g_assert_cmpuint (1, ==, ncm_vector_stride (chi2));
   g_assert_cmpuint (1, ==, ncm_vector_stride (weights));
-
-  g_array_set_size (self->t_array, n);
+  g_assert_cmpuint (1, ==, ncm_vector_stride (lnK));
 
   for (i = 0; i < n; i++)
   {
@@ -362,16 +358,16 @@ _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
       lnt_max = lnt_i;
     }
 
-    g_array_index (self->t_array, gdouble, i) = lnt_i;
+    ncm_vector_fast_set (lnK, i, lnt_i);
   }
 
   lambda[0] = 0.0;
 
   for (i = 0; i < i_max; i++)
-    lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
 
   for (i = i_max + 1; i < n; i++)
-    lambda[0] += exp (g_array_index (self->t_array, gdouble, i) - lnt_max);
+    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
 
   gamma[0] = lnt_max - lnnorm;
 }

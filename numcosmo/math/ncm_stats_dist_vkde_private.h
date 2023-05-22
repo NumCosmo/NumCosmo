@@ -30,18 +30,20 @@
 
 #include <glib.h>
 #include "math/ncm_stats_dist_vkde.h"
+#include "math/ncm_memory_pool.h"
 
 G_BEGIN_DECLS
 
 struct _NcmStatsDistVKDEPrivate
 {
   /*< private >*/
-  NcmStatsVec *sample;
   GPtrArray *cov_array;
-  NcmMatrix *tmp_cov;
-  NcmVector *delta_x;
   NcmVector *lnnorms;
   gdouble local_frac;
+  gboolean use_rot_href;
+  gboolean use_threads;
+  NcmMemoryPool *mp_stats_vec;
+  NcmMemoryPool *mp_eval_vars;
 };
 
 G_END_DECLS
