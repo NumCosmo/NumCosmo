@@ -158,6 +158,12 @@
 #include <numcosmo/lss/nc_reduced_shear_calib_wtg.h>
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
 
+/* Galaxy / Galaxy sample distributions */
+#include <numcosmo/galaxy/nc_galaxy_wl_likelihood.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
 #include <numcosmo/data/nc_data_dist_mu.h>

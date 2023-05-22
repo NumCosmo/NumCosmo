@@ -448,6 +448,10 @@ nc_headers = \
         lss/nc_reduced_shear_calib.h           \
         lss/nc_reduced_shear_calib_wtg.h       \
         lss/nc_galaxy_selfunc.h                \
+	galaxy/nc_galaxy_wl_likelihood.h       \
+	galaxy/nc_galaxy_sd_position.h         \
+	galaxy/nc_galaxy_sd_z_proxy.h          \
+	galaxy/nc_galaxy_sd_shape.h            \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -602,6 +606,10 @@ nc_sources = \
 	lss/nc_reduced_shear_calib.c           \
 	lss/nc_reduced_shear_calib_wtg.c       \
         lss/nc_galaxy_selfunc.c                \
+	galaxy/nc_galaxy_wl_likelihood.c       \
+	galaxy/nc_galaxy_sd_position.c         \
+	galaxy/nc_galaxy_sd_z_proxy.c          \
+	galaxy/nc_galaxy_sd_shape.c            \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
 	data/nc_data_snia_cov.c                \
