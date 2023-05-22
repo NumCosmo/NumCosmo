@@ -66,7 +66,6 @@ struct _NcGalaxySDShape
 
 GType nc_galaxy_sd_shape_get_type (void) G_GNUC_CONST;
 
-NcGalaxySDShape *nc_galaxy_sd_shape_new (NcGalaxySDShape *s_dist, NcGalaxySDShape *zp_dist, NcGalaxySDShape *rz_dist);
 NcGalaxySDShape *nc_galaxy_sd_shape_ref (NcGalaxySDShape *gsds);
 
 void nc_galaxy_sd_shape_free (NcGalaxySDShape *gsds);

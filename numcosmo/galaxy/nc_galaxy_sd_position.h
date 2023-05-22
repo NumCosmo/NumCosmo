@@ -69,7 +69,7 @@ NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp);
 
-NCM_INLINE NcmVector * nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+NCM_INLINE NcmVector *nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 NCM_INLINE gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
 
 G_END_DECLS

@@ -71,7 +71,7 @@ _nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
 
-  return ncm_vector_new(0);
+  return NULL;
 }
 
 static gdouble
@@ -142,7 +142,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  * Generates a $(r, z)$ value from the distribution using @rng.
  *
- * Returns: the generated value $(r, z)$.
+ * Returns: (transfer full): the generated value $(r, z)$.
  */
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
