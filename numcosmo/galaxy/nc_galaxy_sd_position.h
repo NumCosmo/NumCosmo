@@ -22,7 +22,7 @@
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _NC_GALAXY_SD_POSITION_H_
 #define _NC_GALAXY_SD_POSITION_H_
@@ -48,19 +48,18 @@ typedef struct _NcGalaxySDPositionPrivate NcGalaxySDPositionPrivate;
 struct _NcGalaxySDPositionClass
 {
   /*< private >*/
-  NcGalaxySDPositionDistClass parent_class;
+  NcGalaxySDPositionClass parent_class;
 };
 
 struct _NcGalaxySDPosition
 {
   /*< private >*/
-  NcGalaxySDPositionDist parent_instance;
+  NcGalaxySDPosition parent_instance;
   NcGalaxySDPositionPrivate *priv;
 };
 
 GType nc_galaxy_sd_position_get_type (void) G_GNUC_CONST;
 
-NcGalaxySDPosition *nc_galaxy_sd_position_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist);
 NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);

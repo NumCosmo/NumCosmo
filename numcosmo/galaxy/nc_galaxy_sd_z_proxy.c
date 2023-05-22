@@ -22,7 +22,7 @@
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -32,8 +32,8 @@
  * @stability: Unstable
  *
  *
- * This class describes a galaxy sample position distributions.
- * It is composed by two distributions: an imagem position distribution $P(r)$ and a redshift distribution $P(z)$.
+ * This class describes a galaxy sample proxy redshift distribution.
+ * It is composed by a $P(z_p)$ distribution.
  *
  */
 
