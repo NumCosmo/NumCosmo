@@ -66,12 +66,12 @@ _nc_galaxy_sd_position_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_parent_class)->finalize (object);
 }
 
-static NcmVector
+static NcmVector *
 _nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
 
-  return NULL;
+  return ncm_vector_new(0);
 }
 
 static gdouble

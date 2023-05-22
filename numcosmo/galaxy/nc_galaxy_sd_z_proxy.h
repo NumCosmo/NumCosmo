@@ -30,6 +30,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_vector.h>
 
 
 G_BEGIN_DECLS
@@ -48,13 +50,15 @@ typedef struct _NcGalaxySDZProxyPrivate NcGalaxySDZProxyPrivate;
 struct _NcGalaxySDZProxyClass
 {
   /*< private >*/
-  NcGalaxySDZProxyClass parent_class;
+  GObjectClass parent_class;
+  gdouble (*gen) (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z);
+  gdouble (*integ) (NcGalaxySDZProxy *gsdzp, const gdouble z);
 };
 
 struct _NcGalaxySDZProxy
 {
   /*< private >*/
-  NcGalaxySDZProxy parent_instance;
+  GObject parent_instance;
   NcGalaxySDZProxyPrivate *priv;
 };
 
@@ -79,22 +83,16 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE void
-nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, const gdouble z)
+NCM_INLINE gdouble
+nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z)
 {
-  NcGalaxySDZProxyClass *gsdzp_class = NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp);
-
-  if (gsdzp_class->gen != NULL)
-    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->gen (gsdzp, rng, z);
+  return NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->gen (gsdzp, rng, z);
 }
 
-NCM_INLINE void
+NCM_INLINE gdouble
 nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z)
 {
-  NcGalaxySDZProxyClass *gsdzp_class = NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp);
-
-  if (gsdzp_class->integ != NULL)
-    NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, z);
+  return NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, z);
 }
 
 G_END_DECLS

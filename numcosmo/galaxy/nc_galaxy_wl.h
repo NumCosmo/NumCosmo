@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_wl.h
+ *            nc_galaxy_wl_likelihood.h
  *
  *  Mon May 08 18:13:24 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_wl.h
+ * nc_galaxy_wl_likelihood.h
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_GALAXY_WL_H_
-#define _NC_GALAXY_WL_H_
+#ifndef _NC_GALAXY_WL_LIKELIHOOD_H_
+#define _NC_GALAXY_WL_LIKELIHOOD_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -39,39 +39,39 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_WL             (nc_galaxy_wl_get_type ())
-#define NC_GALAXY_WL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_WL, NcGalaxyWL))
-#define NC_GALAXY_WL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_WL, NcGalaxyWLClass))
-#define NC_IS_GALAXY_WL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_WL))
-#define NC_IS_GALAXY_WL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_WL))
-#define NC_GALAXY_WL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_WL, NcGalaxyWLClass))
+#define NC_TYPE_GALAXY_WL_LIKELIHOOD             (nc_galaxy_wl_likelihood_get_type ())
+#define NC_GALAXY_WL_LIKELIHOOD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_WL_LIKELIHOOD, NcGalaxyWLLikelihood))
+#define NC_GALAXY_WL_LIKELIHOOD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_WL_LIKELIHOOD, NcGalaxyWLLikelihoodClass))
+#define NC_IS_GALAXY_WL_LIKELIHOOD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_WL_LIKELIHOOD))
+#define NC_IS_GALAXY_WL_LIKELIHOOD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_WL_LIKELIHOOD))
+#define NC_GALAXY_WL_LIKELIHOOD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_WL_LIKELIHOOD, NcGalaxyWLLikelihoodClass))
 
-typedef struct _NcGalaxyWLClass NcGalaxyWLClass;
-typedef struct _NcGalaxyWL NcGalaxyWL;
-typedef struct _NcGalaxyWLPrivate NcGalaxyWLPrivate;
+typedef struct _NcGalaxyWLLikelihoodClass NcGalaxyWLLikelihoodClass;
+typedef struct _NcGalaxyWLLikelihood NcGalaxyWLLikelihood;
+typedef struct _NcGalaxyWLLikelihoodPrivate NcGalaxyWLLikelihoodPrivate;
 
-struct _NcGalaxyWLClass
+struct _NcGalaxyWLLikelihoodClass
 {
   /*< private >*/
-  NcGalaxyWLDistClass parent_class;
+  GObjectClass parent_class;
 };
 
-struct _NcGalaxyWL
+struct _NcGalaxyWLLikelihood
 {
   /*< private >*/
-  NcGalaxyWLDist parent_instance;
-  NcGalaxyWLPrivate *priv;
+  GObject parent_instance;
+  NcGalaxyWLLikelihoodPrivate *priv;
 };
 
-GType nc_galaxy_wl_get_type (void) G_GNUC_CONST;
+GType nc_galaxy_wl_likelihood_get_type (void) G_GNUC_CONST;
 
-NcGalaxyWL *nc_galaxy_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist);
-NcGalaxyWL *nc_galaxy_wl_ref (NcGalaxyWL *gwl);
+NcGalaxyWLLikelihood *nc_galaxy_wl_likelihood_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist);
+NcGalaxyWLLikelihood *nc_galaxy_wl_likelihood_ref (NcGalaxyWLLikelihood *gwl);
 
-void nc_galaxy_wl_free (NcGalaxyWL *gwl);
-void nc_galaxy_wl_clear (NcGalaxyWL **gwl);
+void nc_galaxy_wl_likelihood_free (NcGalaxyWLLikelihood *gwl);
+void nc_galaxy_wl_likelihood_clear (NcGalaxyWLLikelihood **gwl);
 
 G_END_DECLS
 
-#endif /* _NC_GALAXY_WL_H_ */
+#endif /* _NC_GALAXY_WL_LIKELIHOOD_H_ */
 

@@ -30,6 +30,10 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/lss/nc_halo_density_profile.h>
+#include <numcosmo/lss/nc_wl_surface_mass_density.h>
 
 
 G_BEGIN_DECLS
@@ -48,13 +52,15 @@ typedef struct _NcGalaxySDShapePrivate NcGalaxySDShapePrivate;
 struct _NcGalaxySDShapeClass
 {
   /*< private >*/
-  NcGalaxySDShapeClass parent_class;
+  GObjectClass parent_class;
+  gdouble (*gen) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos);
+  gdouble (*integ) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos);
 };
 
 struct _NcGalaxySDShape
 {
   /*< private >*/
-  NcGalaxySDShape parent_instance;
+  GObject parent_instance;
   NcGalaxySDShapePrivate *priv;
 };
 
@@ -67,7 +73,7 @@ void nc_galaxy_sd_shape_free (NcGalaxySDShape *gsds);
 void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 
 NCM_INLINE gdouble nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos);
-NCM_INLINE gdouble nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble zp);
+NCM_INLINE gdouble nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos);
 
 G_END_DECLS
 
@@ -80,22 +86,16 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE void
+NCM_INLINE gdouble
 nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos)
 {
-  NcGalaxySDShapeClass *gsds_class = NC_GALAXY_SD_SHAPE_GET_CLASS (gsds);
-
-  if (gsds_class->gen != NULL)
-    NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, z_cluster, rng, pos);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, z_cluster, rng, pos);
 }
 
-NCM_INLINE void
+NCM_INLINE gdouble
 nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos)
 {
-  NcGalaxySDShapeClass *gsds_class = NC_GALAXY_SD_SHAPE_GET_CLASS (gsds);
-
-  if (gsds_class->integ != NULL)
-    NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, z_cluster, pos);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, z_cluster, pos);
 }
 
 G_END_DECLS
