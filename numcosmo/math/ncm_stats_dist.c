@@ -473,7 +473,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   }
 
   if (self->n_obs < self->d)
-    g_error ("_ncm_stats_dist_prepare: sample too small.");
+    g_error ("_ncm_stats_dist_prepare: the sample is too small.");
 
   sd_class->prepare_kernel (sd, self->sample_array);
 
@@ -632,16 +632,8 @@ static void
 _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  double itime, ftime, exec_time;
-
-  itime = omp_get_wtime ();
 
   _ncm_stats_dist_prepare (sd);
-
-  ftime     = omp_get_wtime ();
-  exec_time = ftime - itime;
-  printf ("Time taken to prepare %f\n", exec_time);
-  itime = omp_get_wtime ();
 
   g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n_obs);
   {
@@ -656,7 +648,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     self->min_m2lnp = GSL_POSINF;
     self->max_m2lnp = GSL_NEGINF;
 
-    for (i = 0; i < self->n_obs; i++)
+    for (i = 0; i < self->n_kernels; i++)
     {
       const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
 
@@ -668,13 +660,13 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     {
       gint n_cut = 0;
 
-      g_array_set_size (self->m2lnp_sort, self->n_obs);
+      g_array_set_size (self->m2lnp_sort, self->n_kernels);
       gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
                       ncm_vector_data (m2lnp),
                       ncm_vector_stride (m2lnp),
                       ncm_vector_len (m2lnp));
 
-      for (i = 0; i < self->n_obs; i++)
+      for (i = 0; i < self->n_kernels; i++)
       {
         gint p                = g_array_index (self->m2lnp_sort, size_t, i);
         const gdouble m2lnp_p = ncm_vector_get (m2lnp, p);
@@ -686,13 +678,25 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         }
       }
 
-      /*
-       * Check if the cut removes more than 50%, if it does use normal
-       * kernel density estimation.
-       *
+      /* printf ("n_cut %d n_kernels %d\n", n_cut, self->n_kernels); */
+
+      /* Too many points falling outside using normal KDE using 10%
+       * of the weight for the points falling outside and 90% for
+       * the points falling inside.
        */
       if (n_cut < (gint) (0.5 * self->n_obs))
+      {
+        ncm_vector_set_all (self->weights, 0.1 / (self->n_kernels - n_cut));
+
+        for (i = 0; i < n_cut; i++)
+        {
+          gint p = g_array_index (self->m2lnp_sort, size_t, i);
+
+          ncm_vector_set (self->weights, p, 0.9 / n_cut);
+        }
+
         return;
+      }
 
       {
         NcmVector *m2lnp_cut        = ncm_vector_new (n_cut);
@@ -822,31 +826,9 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       break;
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
       case NCM_STATS_DIST_CV_NONE:
-        ftime     = omp_get_wtime ();
-        exec_time = ftime - itime;
-        printf ("Time taken to prepare_interp before alloc nnls %f\n", exec_time);
-        itime = omp_get_wtime ();
-
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
-        ftime     = omp_get_wtime ();
-        exec_time = ftime - itime;
-        printf ("Time taken to prepare_interp after alloc nnls %f\n", exec_time);
-        itime = omp_get_wtime ();
-
         _ncm_stats_dist_compute_IM_full (sd);
-        ftime       = omp_get_wtime ();
-        exec_time   = ftime - itime;
-        printf ("Time taken to prepare_interp compute IM %f\n", exec_time);
-        itime = omp_get_wtime ();
-
         self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
-
-        ftime       = omp_get_wtime ();
-        exec_time   = ftime - itime;
-        printf ("Time taken to prepare_interp solve nnls %f\n", exec_time);
-        itime = omp_get_wtime ();
-
-
         break;
       default:
         g_assert_not_reached ();
@@ -860,11 +842,6 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     g_assert (total_weight > 0.0);
     ncm_vector_scale (self->weights, 1.0 / total_weight);
   }
-
-  ftime     = omp_get_wtime ();
-  exec_time = ftime - itime;
-  printf ("Time taken to prepare_interp %f\n", exec_time);
-  /* ncm_vector_log_vals (self->weights, "W: ", "% 22.15e", TRUE); */
 }
 
 static void

@@ -596,7 +596,6 @@ _ncm_nnls_solve_normal_LU (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
                           &g_array_index (self->ipiv, gint, 0),
                           ncm_vector_data (self->sub_x_tmp), self->uncols,
                           &g_array_index (self->work, gdouble, 0), lwork);
-  printf ("dsysv ret %d, len %u\n", ret, ncm_vector_len (self->sub_x_tmp));
 
   if (ret > 0)
     _ncm_nnls_solve_normal_QR (self, Pset, A, x, f);
@@ -631,7 +630,6 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
                           ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
 
-  printf ("dgels ret %d, len %u\n", ret, ncm_vector_len (self->sub_x_tmp));
   g_assert_cmpint (ret, ==, 0);
 }
 
@@ -658,7 +656,6 @@ _ncm_nnls_solve_normal_cholesky (NcmNNLSPrivate * const self, NcmISet *Pset, Ncm
   _ncm_nnls_prepare_usys_normal (self, Pset, A, x, f);
 
   ret = ncm_matrix_cholesky_solve (self->sub_M_U, self->sub_x_tmp, 'U');
-  printf ("cholesky ret %d | len %u\n", ret, ncm_vector_len (self->sub_x_tmp));
 
   if (ret > 0)
     _ncm_nnls_solve_normal_LU (self, Pset, A, x, f);
@@ -704,10 +701,6 @@ _ncm_nnls_solve_unconstrained (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMa
       g_assert_not_reached ();
       break;
   }
-
-  /*printf ("# Method: %d: ", self->umethod);*/
-  /*ncm_vector_log_vals (self->sub_x_tmp, "X: ", "% 12.5g", TRUE);*/
-  /*printf ("NHOCA % 22.15g\n", ncm_vector_get (x, ncm_vector_len (x) - 1));*/
 }
 
 static gdouble
@@ -832,7 +825,6 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
     gdouble lrnorm;
     guint added;
 
-    printf("Out loop!\n");
     while (TRUE)
     {
       ncm_iset_copy (self->Pset, self->Pset_try);
@@ -848,7 +840,7 @@ ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
 
       _ncm_nnls_solve_feasible (self, self->Pset_try, A, self->x_try, f, added);
       lrnorm = _ncm_nnls_compute_residuals (self, A, self->x_try, f, self->residuals_try);
-      printf ("rnorm: % 22.15g, lrnorm: % 22.15g, improve %e, added %u, add_frac %f\n", rnorm, lrnorm, (rnorm - lrnorm) / rnorm, added, add_frac);
+
       if (rnorm - lrnorm > rnorm * self->reltol)
       {
         ncm_iset_copy (self->Pset_try, self->Pset);

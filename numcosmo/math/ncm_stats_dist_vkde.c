@@ -370,6 +370,8 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
   struct kdtree *tree = kdtree_init (ppself->d);
   gint i;
 
+  g_assert_cmpint (ppself->n_obs, >, 2);
+
   for (i = 0; i < ppself->n_obs; i++)
   {
     NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample_array, i);
@@ -394,7 +396,22 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     ncm_memory_pool_empty (self->mp_eval_vars, TRUE);
   }
 
-  g_ptr_array_set_size (self->cov_array, ppself->n_kernels);
+  /*
+   * Checking allocation of the covariance array.
+   */
+  {
+    guint cur_size = self->cov_array->len;
+
+    g_ptr_array_set_size (self->cov_array, ppself->n_kernels);
+
+    if (cur_size < ppself->n_kernels)
+    {
+      for (i = cur_size; i < ppself->n_kernels; i++)
+      {
+        g_ptr_array_index (self->cov_array, i) = ncm_matrix_new (ppself->d, ppself->d);
+      }
+    }
+  }
 
   /*
    * Lets find the k nearest neighbors of each vector in the
@@ -402,7 +419,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
    * vector location.
    */
   {
-    const size_t k = self->local_frac * ppself->n_obs;
+    const size_t k = GSL_MAX (self->local_frac * ppself->n_obs, 2);
 
     #pragma omp parallel for schedule(dynamic, 1) if (self->use_threads)
 
@@ -454,13 +471,11 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
         }
 
         {
-          NcmMatrix *cov_decomp = ncm_matrix_new (ppself->d, ppself->d);
+          NcmMatrix *cov_decomp = g_ptr_array_index (self->cov_array, i);
           gdouble lnnorm_i;
 
           _cholesky_decomp (cov_decomp, sample_cov, ppself->d, pself->nearPD_maxiter);
           ncm_matrix_free (sample_cov);
-
-          g_ptr_array_index (self->cov_array, i) = cov_decomp;
 
           lnnorm_i = ncm_stats_dist_kernel_get_lnnorm (kernel, cov_decomp);
 
@@ -478,6 +493,17 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
 static void
 _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
+  NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
+  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
+  NcmStatsDistPrivate * const ppself   = sd->priv;
+
+  if (self->local_frac * ppself->n_obs < 2)
+    g_error ("Too few observations.\n"
+             "\tThe number of observations is too small to use the local covariance method.\n"
+             "\tThe local fraction = %f times number of observations %d is less than 2.",
+             self->local_frac,
+             ppself->n_obs);
+
   /* Chain up : start */
   NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->prepare_kernel (sd, sample_array);
   _ncm_stats_dist_vkde_build_cov_array_kdtree (sd, sample_array);
@@ -500,6 +526,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     NcmMatrix *invUsample_matrix = ncm_matrix_new (ncm_matrix_col_len (pself->sample_matrix), ncm_matrix_row_len (pself->sample_matrix));
 
     #pragma omp for schedule(dynamic, 1)
+
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
@@ -517,7 +544,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
         /*NcmVector *theta_j = g_ptr_array_index (pself->invUsample_array, j); */
         gdouble *theta_j = ncm_matrix_ptr (invUsample_matrix, j, 0);
 
-        //ncm_vector_axpy (theta_j, -1.0, theta_i);
+        /*ncm_vector_axpy (theta_j, -1.0, theta_i); */
         cblas_daxpy (ppself->d, -1.0, ncm_vector_const_data (theta_i), 1, theta_j, 1);
       }
 
@@ -539,7 +566,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
         gdouble *theta_j = ncm_matrix_ptr (invUsample_matrix, j, 0);
         gdouble chi2_ij;
 
-        //chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2;
+        /*chi2_ij = ncm_vector_dot (theta_j, theta_j) * one_href2; */
         chi2_ij = cblas_ddot (ppself->d, theta_j, 1, theta_j, 1) * one_href2;
 
         ncm_matrix_set (IM, j, i, chi2_ij);

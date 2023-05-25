@@ -311,6 +311,26 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
 }
 
 static void
+_ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NcmFitESMCMCWalker *walker)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  guint cov_estimates0 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd0)) * self->size_2;
+  guint cov_estimates1 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd1)) * self->size_2;
+
+  if (cov_estimates0 < 2)
+    g_error ("Number of walkers per block (%d) is too low for the current dimension (%d).\n"
+             "\tToo few points (%d) to estimate local covariances.",
+             self->size_2, self->nparams, cov_estimates0);
+
+  if (cov_estimates1 < 2)
+    g_error ("Number of walkers per block (%d) is too low for the current dimension (%d).\n"
+             "\tToo few points (%d) to estimate local covariances.",
+             self->size_2, self->nparams, cov_estimates1);
+}
+
+static void
 _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
@@ -365,13 +385,18 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       switch (self->method)
       {
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE:
+        {
           self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           break;
+        }
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE:
+        {
           self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
+          _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (walker);
           break;
+        }
         default:
           g_assert_not_reached ();
           break;
@@ -450,9 +475,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (i = self->size_2; i < self->size; i++)
     {
-      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s0, i - self->size_2, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
     }
 
     for (i = self->size_2; i < self->size; i++)
@@ -475,8 +498,6 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       do {
         ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
       } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
-
-      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
 
@@ -486,9 +507,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (i = 0; i < self->size_2; i++)
     {
-      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s1, i, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_add_obs (self->dndg1, theta_i);*/
     }
 
     for (i = 0; i < self->size_2; i++)
@@ -511,8 +530,6 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       do {
         ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
       } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
-
-      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
 }
@@ -547,9 +564,6 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
     ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
   }
-
-  /*ncm_vector_log_vals (theta_k,   "    THETA: ", "% 22.15g", TRUE);*/
-  /*ncm_vector_log_vals (thetastar, "THETASTAR: ", "% 22.15g", TRUE);*/
 }
 
 static gdouble
@@ -954,6 +968,8 @@ ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble
 
   ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd0), local_frac);
   ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd1), local_frac);
+
+  _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NCM_FIT_ESMCMC_WALKER (apes));
 }
 
 /**
