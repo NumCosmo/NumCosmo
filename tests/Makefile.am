@@ -170,6 +170,9 @@ test_nc_galaxy_wl_ellipticity_kde_SOURCES =  \
 test_nc_galaxy_wl_ellipticity_binned_SOURCES =  \
 	test_nc_galaxy_wl_ellipticity_binned.c
 
+test_nc_galaxy_sd_position_flat_SOURCES =  \
+	test_nc_galaxy_sd_position_flat.c
+
 test_programs =  \
 	test_ncm_vector                          \
 	test_ncm_matrix                          \
@@ -217,7 +220,8 @@ test_programs =  \
 	test_nc_powspec                          \
 	test_nc_distance                         \
 	test_nc_galaxy_wl_ellipticity_kde        \
-	test_nc_galaxy_wl_ellipticity_binned
+	test_nc_galaxy_wl_ellipticity_binned     \
+	test_nc_galaxy_sd_position_flat
 
 if HAVE_PYTEST_TAP
 
@@ -514,3 +518,10 @@ test_nc_galaxy_wl_ellipticity_binned_LDADD = \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
 	$(COVLIBS)
+
+test_nc_galaxy_sd_position_flat_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
