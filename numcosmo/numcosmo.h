@@ -161,6 +161,7 @@
 /* Galaxy / Galaxy sample distributions */
 #include <numcosmo/galaxy/nc_galaxy_wl_likelihood.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 

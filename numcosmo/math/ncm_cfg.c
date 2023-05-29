@@ -163,6 +163,7 @@
 #include "lss/nc_reduced_shear_calib_wtg.h"
 #include "galaxy/nc_galaxy_wl_likelihood.h"
 #include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_z_proxy.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "nc_distance.h"
