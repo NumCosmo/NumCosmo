@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[8]:
 
 
 #!/usr/bin/env python
@@ -29,7 +29,7 @@ Ncm.cfg_set_log_handler (lambda msg: sys.stdout.write (msg) and sys.stdout.flush
 # Creating a new class implementing our object Ncm.Data
 #
 
-class ncounts_gauss(Ncm.DataGaussCov):
+class ncounts(Ncm.DataGaussCov):
     #
     # We need one vector property to save the independent variables x
     #
@@ -37,11 +37,12 @@ class ncounts_gauss(Ncm.DataGaussCov):
     z_obs_bins = GObject.Property(type=Ncm.Vector , flags=GObject.PARAM_READWRITE)
     lnM_obs_bins = GObject.Property(type=Ncm.Vector , flags=GObject.PARAM_READWRITE)
     ca = GObject.Property(type=Nc.ClusterAbundance, flags=GObject.PARAM_READWRITE)
+    S = GObject.Property(type=Ncm.Matrix, flags=GObject.PARAM_READWRITE)
     #
     # The contructor assigns some default values and calls the father's constructor.
     #
-    def __init__(self, len):
-        Ncm.DataGaussCov.__init__(self, n_points=len)
+    def __init__ (self, len = 600):
+        Ncm.DataGaussCov.__init__ (self, n_points = len)
 
         if self.np > 0:
             self.ncdata = Ncm.Vector.new(self.np)
@@ -76,7 +77,7 @@ class ncounts_gauss(Ncm.DataGaussCov):
     # involves the decomposition of a constant matrix, it can be done
     # during `begin' once and then used afterwards.
     #
-    def do_begin(self):
+    def do_prepare (self, mset):
         return
 
     #
@@ -109,7 +110,7 @@ class ncounts_gauss(Ncm.DataGaussCov):
     
         return
 
-    def do_cov_func(self, mset, S):
+    def do_cov_func(self, mset,rng):
         
         cosmo = mset.peek(Nc.HICosmo.id())
         cluster_m = mset.peek(Nc.ClusterMass.id())
@@ -137,11 +138,10 @@ class ncounts_gauss(Ncm.DataGaussCov):
                 for j in range(size_z-1):
                     for beta in range(size_lmM-1):
                         if i == j and alpha == beta:
-                            self.cov.set( i+alpha, j+beta ,poisson[i][alpha]**2 + bias[i][alpha] * bias[j][beta] * S[i][j])
+                            self.cov.set( i+alpha, j+beta ,poisson[i][alpha] + bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
                         else:
-                            self.cov.set( i+alpha, j+beta ,bias[i][alpha] * bias[j][beta] * S[i][j])
-                            
-        return
+                            self.cov.set( i+alpha, j+beta ,bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
+
 
     def set_lnM_obs_bins(self, lnM_obs_bins):
         self.lnM_obs_bins = lnM_obs_bins
@@ -159,54 +159,6 @@ class ncounts_gauss(Ncm.DataGaussCov):
     def set_cad(self, cad):
         self.ca = cad
 
-
-# In[ ]:
-
-
-cosmo = Nc.HICosmoDEXcdm()
-cosmo.props.H0  =  67.81
-cosmo.props.Omegac  =  0.2612
-cosmo.props.Omegab =  0.0486
-cosmo.props.ns =  0.9660
-
-reion = Nc.HIReionCamb.new () 
-prim = Nc.HIPrimPowerLaw.new () 
-
-cosmo.add_submodel (reion)
-cosmo.add_submodel (prim)
-
-dist = Nc.Distance.new (2.0)
-
-tf = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
-
-psml = Nc.PowspecMLTransfer.new (tf)
-psml.require_kmin (1.0e-6)
-psml.require_kmax (1.0e3)
-
-psf = Ncm.PowspecFilter.new (psml, Ncm.PowspecFilterType.TOPHAT)
-psf.set_best_lnr0 ()
-
-mulf = Nc.MultiplicityFuncTinker.new ()
-mulf.set_mdef (Nc.MultiplicityFuncMassDef.CRITICAL)
-mulf.set_Delta (200.0)
-
-hmf = Nc.HaloMassFunction.new (dist, psf, mulf)
-hbias_Tinker = Nc.HaloBiasTinker.new(hmf)
-ca = Nc.ClusterAbundance.new(hmf,hbias_Tinker)
-ca.set_area(0.00001)
-
-cluster_m = Nc.ClusterMass.new_from_name("NcClusterMassNodist{'lnM-min':<%20.15e>, 'lnM-max':<%20.15e>}" % (math.log(10)*np.log10(1e14),math.log(10)*np.log10(1e16)))
-cluster_z = Nc.ClusterRedshift.new_from_name("NcClusterRedshiftNodist{'z-min': <%20.15e>, 'z-max':<%20.15e>}" % (0.25,2))
-
-
-mset = Ncm.MSet.new_array([cosmo,cluster_m,cluster_z])
-
-z_obs_bins  = Ncm.Vector.new_array(np.linspace(0.1,0.8,8))
-lnM_obs_bins = Ncm.Vector.new_array(np.linspace(14,15, 5))
-gauss = ncounts_gauss((z_obs_bins.len()-1)* (lnM_obs_bins.len()-1))
-gauss.set_z_obs_bins(z_obs_bins)
-gauss.set_lnM_obs_bins(lnM_obs_bins)
-gauss.set_cad(ca)
-
-gauss.do_cov_func(mset,[[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]])
+    def set_S(self, S):
+        self.S = S
 
