@@ -83,36 +83,6 @@ typedef enum _NcmCSQ1DEvolState
   NCM_CSQ1D_EVOL_STATE_UM,
 } NcmCSQ1DEvolState;
 
-
-/**
- * NcmCSQ1DSingFitUp:
- *
- * Struct containing the $\Upsilon_+$ fitting model.
- *
- */
-struct _NcmCSQ1DSingFitUp
-{
-  /*< private >*/
-  gint chi_dim;
-  gint Up_dim;
-  NcmVector *chi_c;
-  NcmVector *Up_c;
-};
-
-GType ncm_csq1d_sing_fit_up_get_type (void) G_GNUC_CONST;
-
-NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_new (const gint chi_dim, const gint Up_dim);
-NcmCSQ1DSingFitUp *ncm_csq1d_sing_fit_up_dup (NcmCSQ1DSingFitUp *sing_up);
-void ncm_csq1d_sing_fit_up_free (NcmCSQ1DSingFitUp *sing_up);
-
-void ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, NcmVector *t, NcmVector *chim_t, NcmVector *exp_Up);
-
-gdouble ncm_csq1d_sing_fit_up_eval_chi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-gdouble ncm_csq1d_sing_fit_up_eval_exp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-
-gdouble ncm_csq1d_sing_fit_up_eval_dchi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-gdouble ncm_csq1d_sing_fit_up_eval_dexp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-
 NcmCSQ1D *ncm_csq1d_ref (NcmCSQ1D *csq1d);
 void ncm_csq1d_free (NcmCSQ1D *csq1d);
 void ncm_csq1d_clear (NcmCSQ1D **csq1d);
@@ -125,7 +95,6 @@ void ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf);
 void ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold);
 void ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold);
 void ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, const gboolean save);
-void ncm_csq1d_set_sing_detect (NcmCSQ1D *csq1d, const gboolean enable);
 void ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmCSQ1DEvolState state, const gdouble ti, const gdouble x, const gdouble y);
 void ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti);
 
@@ -137,7 +106,6 @@ gdouble ncm_csq1d_get_tf (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_adiab_threshold (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_prop_threshold (NcmCSQ1D *csq1d);
 gboolean ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d);
-gboolean ncm_csq1d_get_sing_detect (NcmCSQ1D *csq1d);
 
 NCM_INLINE gdouble ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
 NCM_INLINE gdouble ncm_csq1d_eval_dxi        (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);

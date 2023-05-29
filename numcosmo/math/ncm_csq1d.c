@@ -106,7 +106,6 @@ typedef struct _NcmCSQ1DPrivate
   gdouble adiab_threshold;
   gdouble prop_threshold;
   gboolean save_evol;
-  gboolean sing_detect;
   NcmModelCtrl *ctrl;
   gpointer cvode;
   gpointer cvode_Up;
@@ -148,10 +147,8 @@ enum
   PROP_ADIAB_THRESHOLD,
   PROP_PROP_THRESHOLD,
   PROP_SAVE_EVOL,
-  PROP_SING_DETECT,
 };
 
-G_DEFINE_BOXED_TYPE (NcmCSQ1DSingFitUp, ncm_csq1d_sing_fit_up, ncm_csq1d_sing_fit_up_dup, ncm_csq1d_sing_fit_up_free);
 G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT);
 
 static void
@@ -371,9 +368,6 @@ _ncm_csq1d_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SAVE_EVOL:
       ncm_csq1d_set_save_evol (csq1d, g_value_get_boolean (value));
       break;
-    case PROP_SING_DETECT:
-      ncm_csq1d_set_sing_detect (csq1d, g_value_get_boolean (value));
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -412,9 +406,6 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
     case PROP_SAVE_EVOL:
       g_value_set_boolean (value, ncm_csq1d_get_save_evol (csq1d));
-      break;
-    case PROP_SING_DETECT:
-      g_value_set_boolean (value, ncm_csq1d_get_sing_detect (csq1d));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -501,13 +492,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                    g_param_spec_boolean ("save-evol",
                                                          NULL,
                                                          "Save the system evolution",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_SING_DETECT,
-                                   g_param_spec_boolean ("sing-detect",
-                                                         NULL,
-                                                         "Singularity detection",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -645,330 +629,6 @@ _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble 
   g_error ("_ncm_csq1d_eval_powspec_factor: not implemented.");
 
   return 0.0;
-}
-
-/***********************************************************************************
- * Singular Up model
- ***********************************************************************************/
-
-/**
- * ncm_csq1d_sing_fit_up_new:
- * @chi_dim: model dimension for $\chi$ fitting
- * @Up_dim: model dimension for $\chi$ fitting
- *
- * New singular model for fitting $\chi$ and $\Upsilon_+$
- * across a singularity.
- *
- * Returns: (transfer full): a new NcmCSQ1DSingFit.
- */
-NcmCSQ1DSingFitUp *
-ncm_csq1d_sing_fit_up_new (const gint chi_dim, const gint Up_dim)
-{
-  NcmCSQ1DSingFitUp *sing_up = g_new0 (NcmCSQ1DSingFitUp, 1);
-
-  g_assert_cmpint (chi_dim,     >=, 2);
-  g_assert_cmpint (chi_dim % 2, ==, 0);
-
-  g_assert_cmpint (Up_dim,      >=, 1);
-  g_assert_cmpint (Up_dim  % 2, ==, 1);
-
-  sing_up->chi_dim = chi_dim;
-  sing_up->Up_dim  = Up_dim;
-  sing_up->chi_c   = ncm_vector_new (chi_dim);
-  sing_up->Up_c    = ncm_vector_new (Up_dim);
-
-  return sing_up;
-}
-
-/**
- * ncm_csq1d_sing_fit_up_dup:
- * @sing_up: a #NcmCSQ1DSingFitUp
- *
- * Duplicates @sing_up, without duplicating the contents.
- *
- * Returns: (transfer full): a shallow copy of @sing_up.
- */
-NcmCSQ1DSingFitUp *
-ncm_csq1d_sing_fit_up_dup (NcmCSQ1DSingFitUp *sing_up)
-{
-  NcmCSQ1DSingFitUp *sing_up_dup = g_new0 (NcmCSQ1DSingFitUp, 1);
-
-  sing_up_dup->chi_dim = sing_up->chi_dim;
-  sing_up_dup->Up_dim  = sing_up->Up_dim;
-  sing_up_dup->chi_c   = ncm_vector_ref (sing_up->chi_c);
-  sing_up_dup->Up_c    = ncm_vector_ref (sing_up->Up_c);
-
-  return sing_up_dup;
-}
-
-/**
- * ncm_csq1d_sing_fit_up_free:
- * @sing_up: a #NcmCSQ1DSingFitUp
- *
- * Frees @sing_up.
- */
-void
-ncm_csq1d_sing_fit_up_free (NcmCSQ1DSingFitUp *sing_up)
-{
-  ncm_vector_clear (&sing_up->chi_c);
-  ncm_vector_clear (&sing_up->Up_c);
-
-  g_free (sing_up);
-}
-
-/**
- * ncm_csq1d_sing_fit_up_fit:
- * @sing_up: a #NcmCSQ1DSingFitUp
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time vector
- * @chim_t: $m\chi/t$ vector
- * @exp_Up: $\exp(\Upsilon_+)$ vector
- *
- * Fits the models using the data in @t, @chim and @exp_Up.
- *
- */
-void
-ncm_csq1d_sing_fit_up_fit (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, NcmVector *t, NcmVector *chim_t, NcmVector *exp_Up)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  g_assert_cmpint (ncm_vector_len (t), ==, ncm_vector_len (chim_t));
-  g_assert_cmpint (ncm_vector_len (t), ==, ncm_vector_len (exp_Up));
-
-  {
-    const gint len                      = ncm_vector_len (chim_t);
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc (len, sing_up->chi_dim);
-    NcmMatrix *cov                      = ncm_matrix_new (sing_up->chi_dim, sing_up->chi_dim);
-    NcmMatrix *X                        = ncm_matrix_new (len, sing_up->chi_dim);
-    gdouble chisq;
-    gint ret;
-    gint i;
-
-    /*printf ("Fitting chi * m / t.\n");*/
-    for (i = 0; i < len; i++)
-    {
-      const gdouble t_i = ncm_vector_get (t, i);
-      const gdouble m_i = ncm_csq1d_eval_m (csq1d, model, t_i, self->k);
-      gdouble Ta        = 1.0;
-      gdouble Tb        = m_i / t_i;
-      gdouble lfac      = 1.0;
-      gint j;
-
-      for (j = 0; j < sing_up->chi_dim; j += 2)
-      {
-        ncm_matrix_set (X, i, j + 0, Ta);
-        ncm_matrix_set (X, i, j + 1, Tb);
-
-        Ta    = Ta * t_i / lfac;
-        Tb    = Tb * t_i / lfac;
-        lfac += 1.0;
-      }
-    }
-
-    ret = gsl_multifit_linear (ncm_matrix_gsl (X), ncm_vector_gsl (chim_t), ncm_vector_gsl (sing_up->chi_c), ncm_matrix_gsl (cov), &chisq, work);
-    g_assert_cmpint (ret, ==, 0);
-
-    /*printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));*/
-
-    /*ncm_vector_log_vals (sing_up->chi_c, "COEFS: ", "% 22.15g", TRUE);*/
-    /*ncm_matrix_log_vals (cov,            "COV:  ", "% 22.15g");*/
-
-    ncm_matrix_free (cov);
-    ncm_matrix_free (X);
-    gsl_multifit_linear_free (work);
-  }
-
-  {
-    const gint len                      = ncm_vector_len (exp_Up);
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc (len, sing_up->Up_dim);
-    NcmMatrix *cov                      = ncm_matrix_new (sing_up->Up_dim, sing_up->Up_dim);
-    NcmMatrix *X                        = ncm_matrix_new (len, sing_up->Up_dim);
-    gdouble chisq;
-    gint ret, i;
-
-    for (i = 0; i < len; i++)
-    {
-      const gdouble t_i = ncm_vector_get (t, i);
-      const gdouble m_i = ncm_csq1d_eval_m (csq1d, model, t_i, self->k);
-      gdouble Ta        = t_i * t_i;
-      gdouble Tb        = m_i * t_i;
-      gdouble lfac      = 1.0;
-      gint j;
-
-      ncm_matrix_set (X, i, 0, 1.0);
-
-      for (j = 1; j < sing_up->Up_dim; j += 2)
-      {
-        ncm_matrix_set (X, i, j + 0, Ta);
-        ncm_matrix_set (X, i, j + 1, Tb);
-
-        Ta    = Ta * t_i / lfac;
-        Tb    = Tb * t_i / lfac;
-        lfac += 1.0;
-      }
-    }
-
-    ret = gsl_multifit_linear (ncm_matrix_gsl (X), ncm_vector_gsl (exp_Up), ncm_vector_gsl (sing_up->Up_c), ncm_matrix_gsl (cov), &chisq, work);
-    g_assert_cmpint (ret, ==, 0);
-
-    /*printf ("MULTIFIT RET: %d, chisq % 22.15g, sqrt (chisq / len) % 22.15g\n", ret, chisq, sqrt (chisq / len));*/
-
-    /*ncm_vector_log_vals (sing_up->Up_c, "COEFS: ", "% 22.15g", TRUE);*/
-    /*ncm_matrix_log_vals (cov,           "COV:  ",  "% 22.15g");*/
-
-    ncm_matrix_free (cov);
-    ncm_matrix_free (X);
-    gsl_multifit_linear_free (work);
-  }
-}
-
-/**
- * ncm_csq1d_sing_fit_up_eval_chi:
- * @sing_up: a #NcmCSQ1DSingFitUp
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- *
- * Evaluates the model for $\chi$ at $t$.
- *
- */
-gdouble
-ncm_csq1d_sing_fit_up_eval_chi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble m              = ncm_csq1d_eval_m (csq1d, model, t, self->k);
-  gdouble Ta                   = t / m;
-  gdouble Tb                   = 1.0;
-  gdouble lfac                 = 1.0;
-  gdouble res                  = 0.0;
-  gint j;
-
-  for (j = 0; j < sing_up->chi_dim; j += 2)
-  {
-    res  += Ta * ncm_vector_get (sing_up->chi_c, j + 0);
-    res  += Tb * ncm_vector_get (sing_up->chi_c, j + 1);
-    Ta    = Ta * t / lfac;
-    Tb    = Tb * t / lfac;
-    lfac += 1.0;
-  }
-
-  return res;
-}
-
-/**
- * ncm_csq1d_sing_fit_up_eval_exp_Up:
- * @sing_up: a #NcmCSQ1DSingFitUp
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- *
- * Evaluates the model for $\exp(\Upsilon_+)$ at $t$.
- *
- */
-gdouble
-ncm_csq1d_sing_fit_up_eval_exp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble m              = ncm_csq1d_eval_m (csq1d, model, t, self->k);
-  gdouble Ta                   = t * t;
-  gdouble Tb                   = m * t;
-  gdouble lfac                 = 1.0;
-  gdouble res                  = ncm_vector_get (sing_up->Up_c, 0);
-  gint j;
-
-  for (j = 1; j < sing_up->Up_dim; j += 2)
-  {
-    res  += Ta * ncm_vector_get (sing_up->Up_c, j + 0);
-    res  += Tb * ncm_vector_get (sing_up->Up_c, j + 1);
-    Ta    = Ta * t / lfac;
-    Tb    = Tb * t / lfac;
-    lfac += 1.0;
-  }
-
-  return res;
-}
-
-/**
- * ncm_csq1d_sing_fit_up_eval_dchi:
- * @sing_up: a #NcmCSQ1DSingFitUp
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- *
- * Evaluates the model for $\chi^\prime$ at $t$.
- *
- */
-gdouble
-ncm_csq1d_sing_fit_up_eval_dchi (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble m              = ncm_csq1d_eval_m (csq1d, model, t, self->k);
-  const gdouble dm             = ncm_csq1d_eval_dm (csq1d, model, t, self->k);
-  gdouble Ta                   = 1.0 / m;
-  gdouble Ta1                  = -t * dm / (m * m);
-  gdouble Tb                   = 1.0 / t;
-  gdouble lfac                 = 1.0;
-  gdouble res                  = 0.0;
-  gdouble n                    = 0.0;
-  gint j;
-
-  for (j = 0; j < sing_up->chi_dim; j += 2)
-  {
-    res += Ta  * ncm_vector_get (sing_up->chi_c, j + 0) * (n + 1.0);
-    res += Ta1 * ncm_vector_get (sing_up->chi_c, j + 0);
-    res += Tb  * ncm_vector_get (sing_up->chi_c, j + 1) * (n + 0.0);
-
-    Ta  = Ta  * t / lfac;
-    Ta1 = Ta1 * t / lfac;
-    Tb  = Tb  * t / lfac;
-
-    lfac += 1.0;
-    n    += 1.0;
-  }
-
-  return res;
-}
-
-/**
- * ncm_csq1d_sing_fit_up_eval_dexp_Up:
- * @sing_up: a #NcmCSQ1DSingFitUp
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- *
- * Evaluates the model for $\exp(\Upsilon_+)^\prime$ at $t$.
- *
- */
-gdouble
-ncm_csq1d_sing_fit_up_eval_dexp_Up (NcmCSQ1DSingFitUp *sing_up, NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble m              = ncm_csq1d_eval_m (csq1d, model, t, self->k);
-  const gdouble dm             = ncm_csq1d_eval_dm (csq1d, model, t, self->k);
-  gdouble Ta                   = t;
-  gdouble Tb                   = m;
-  gdouble Tb1                  = dm * t;
-  gdouble lfac                 = 1.0;
-  gdouble res                  = 0.0;
-  gdouble n                    = 0.0;
-  gint j;
-
-  for (j = 1; j < sing_up->Up_dim; j += 2)
-  {
-    res += Ta  * ncm_vector_get (sing_up->Up_c, j + 0) * (n + 2.0);
-    res += Tb  * ncm_vector_get (sing_up->Up_c, j + 1) * (n + 1.0);
-    res += Tb1 * ncm_vector_get (sing_up->Up_c, j + 1);
-
-    Ta  = Ta  * t / lfac;
-    Tb  = Tb  * t / lfac;
-    Tb1 = Tb1 * t / lfac;
-
-    lfac += 1.0;
-    n    += 1.0;
-  }
-
-  return res;
 }
 
 /**
@@ -1144,27 +804,6 @@ ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
   {
     ncm_model_ctrl_force_update (self->ctrl);
     self->save_evol = save_evol;
-  }
-}
-
-/**
- * ncm_csq1d_set_sing_detect:
- * @csq1d: a #NcmCSQ1D
- * @enable: whether to try to detect all mass singularities
- *
- * If true it tries to detect all singularities caused
- * by the mass crossing $0$ or diverging to $\pm\infty$.
- *
- */
-void
-ncm_csq1d_set_sing_detect (NcmCSQ1D *csq1d, gboolean enable)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  if (self->sing_detect != enable)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
-    self->sing_detect = enable;
   }
 }
 
@@ -1346,20 +985,6 @@ ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   return self->save_evol;
-}
-
-/**
- * ncm_csq1d_get_sing_detect:
- * @csq1d: a #NcmCSQ1D
- *
- * Returns: whether the evolution will be saved.
- */
-gboolean
-ncm_csq1d_get_sing_detect (NcmCSQ1D *csq1d)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  return self->sing_detect;
 }
 
 static gint _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
@@ -2154,54 +1779,6 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
   }
 }
 
-static gdouble
-_ncm_csq1d_mass_root (gdouble t, gpointer params)
-{
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) params;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  return ncm_csq1d_eval_m (ws->csq1d, ws->model, t, self->k);
-}
-
-static gdouble
-_ncm_csq1d_sing_detect (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, gdouble ti, gdouble tf)
-{
-  /*NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);*/
-  gdouble tsing = 0.5 * (tf + ti);
-  gint iter = 0, max_iter = 1000;
-  const gdouble root_reltol = 1.0e-12;
-  const gsl_root_fsolver_type *T;
-  gsl_root_fsolver *s;
-  gsl_function F;
-  gint status;
-
-  F.function = &_ncm_csq1d_mass_root;
-  F.params   = ws;
-
-  T = gsl_root_fsolver_brent;
-  s = gsl_root_fsolver_alloc (T);
-  gsl_root_fsolver_set (s, &F, ti, tf);
-
-  if (PRINT_EVOL)
-    printf ("# Searching for singularities:\n");
-
-  do {
-    iter++;
-    status = gsl_root_fsolver_iterate (s);
-    tsing  = gsl_root_fsolver_root (s);
-    ti     = gsl_root_fsolver_x_lower (s);
-    tf     = gsl_root_fsolver_x_upper (s);
-    status = gsl_root_test_interval (ti, tf, 0.0, root_reltol);
-
-    if (PRINT_EVOL)
-      printf ("#   %5d [%.7e, %.7e] %.7e %+.7e\n", iter, ti, tf, tsing, tf - ti);
-  } while (status == GSL_CONTINUE && iter < max_iter);
-
-  gsl_root_fsolver_free (s);
-
-  return tsing;
-}
-
 /**
  * ncm_csq1d_prepare: (virtual prepare)
  * @csq1d: a #NcmCSQ1D
@@ -2221,9 +1798,6 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 
   g_assert (self->init_cond_set);
   g_assert_cmpfloat (self->tf, >, self->ti);
-
-  if (self->sing_detect)
-    _ncm_csq1d_sing_detect (csq1d, &ws, model, self->ti, self->tf);
 
   if (self->save_evol)
   {
@@ -2290,7 +1864,10 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
 
   cmp = MAX (alpha_reltol, dgamma_reltol);
 
-  return log (cmp / ws->reltol);
+  if (cmp == 0.0)
+    return -GSL_DBL_MAX;
+  else
+    return log (cmp / ws->reltol);
 }
 
 /**
@@ -2570,15 +2147,40 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   const gdouble twonu = 2.0 * nu;
   gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
 
-  F3             = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
-  d2F2           = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
-  dlnnu          = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
-  F4             = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
-  alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
-  dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
+  F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
+  d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
+  dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
+  F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
 
-  alpha[0]  = +F1 + F1_3 / 3.0 - F3;
-  dgamma[0] = -(1.0 + F1_2) * F2 + F4;
+  if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
+  {
+    g_warning ("WKB series with |F3| > |F2| or |F4| > |F3|, "
+               "|F3/F2| = % 22.15g and |F4/F3| = % 22.15g "
+               "at t = % 22.15e. Truncating series at F2.\n",
+               fabs (F3 / F2), fabs (F4 / F3), t);
+
+    alpha_reltol0  = fabs (F1);
+    dgamma_reltol0 = fabs (F2);
+    alpha[0]       = +F1;
+    dgamma[0]      = -F2;
+  }
+  else if ((F1 == 0.0) || (F2 == 0.0))
+  {
+    g_warning ("WKB series with F1 = 0 or F2 = 0 at t = % 22.15e. "
+               "Truncating series at F2, cannot estimate error.\n", t);
+
+    alpha_reltol0  = 0.0;
+    dgamma_reltol0 = 0.0;
+    alpha[0]       = F1;
+    dgamma[0]      = -F2;
+  }
+  else
+  {
+    alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
+    dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
+    alpha[0]       = +F1 + F1_3 / 3.0 - F3;
+    dgamma[0]      = -(1.0 + F1_2) * F2 + F4;
+  }
 
   if (alpha_reltol != NULL)
     alpha_reltol[0] = alpha_reltol0;
