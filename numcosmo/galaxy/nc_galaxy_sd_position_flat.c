@@ -168,7 +168,7 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_Z_LIM,
+                                   PROP_R_LIM,
                                    g_param_spec_object ("r-lim",
                                                         NULL,
                                                         "Galaxy sample radius distribution limits",
