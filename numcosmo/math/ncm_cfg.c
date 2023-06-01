@@ -673,6 +673,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_LIKELIHOOD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
 
