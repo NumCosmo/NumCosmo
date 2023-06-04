@@ -127,6 +127,7 @@ enum
   PROP_SAMPLE_SIZE,
   PROP_OVER_SMOOTH,
   PROP_CV_TYPE,
+  PROP_USE_THREADS,
   PROP_SPLIT_FRAC,
   PROP_PRINT_FIT,
 };
@@ -148,6 +149,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->print_fit       = FALSE;
   self->over_smooth     = 0.0;
   self->cv_type         = NCM_STATS_DIST_CV_LEN;
+  self->use_threads     = FALSE;
   self->split_frac      = 0.0;
   self->min_m2lnp       = 0.0;
   self->max_m2lnp       = 0.0;
@@ -196,6 +198,9 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_CV_TYPE:
       ncm_stats_dist_set_cv_type (sd, g_value_get_enum (value));
       break;
+    case PROP_USE_THREADS:
+      ncm_stats_dist_set_use_threads (sd, g_value_get_boolean (value));
+      break;
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_set_split_frac (sd, g_value_get_double (value));
       break;
@@ -229,6 +234,9 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_CV_TYPE:
       g_value_set_enum (value, ncm_stats_dist_get_cv_type (sd));
+      break;
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, ncm_stats_dist_get_use_threads (sd));
       break;
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_get_split_frac (sd));
@@ -378,6 +386,15 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                       "Cross-validation method",
                                                       NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_NONE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use OpenMP threads during computation",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_SPLIT_FRAC,
                                    g_param_spec_double ("split-frac",
@@ -434,6 +451,8 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
 
   self->over_smooth = exp (lnos);
   self->href        = ncm_stats_dist_get_href (sd);
+
+  #pragma omp parallel for if (self->use_threads)
 
   for (i = self->n_kernels; i < self->n_obs; i++)
   {
@@ -552,7 +571,7 @@ _ncm_stats_dist_compute_IM_full (NcmStatsDist *sd)
 
   sd_class->compute_IM (sd, self->IM);
 
-  #pragma omp parallel for
+  #pragma omp parallel for if (self->use_threads)
 
   for (i = 0; i < self->n_obs; i++)
     ncm_matrix_mul_row (self->IM, i, 1.0 / ncm_vector_get (self->f, i));
@@ -575,7 +594,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   gdouble rnorm          = 0.0;
   gint i;
 
-  g_assert (eval->self->sample_array->len == n);
+  g_assert (eval->self->n_obs == n);
 
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
@@ -583,7 +602,9 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   _ncm_stats_dist_compute_IM_full (eval->sd);
   rnorm = NCM_NNLS_SOLVE (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f1);
 
-  for (i = 0; i < eval->self->sample_array->len; i++)
+  #pragma omp parallel for if (eval->self->use_threads)
+
+  for (i = 0; i < eval->self->n_obs; i++)
   {
     NcmVector *x_i         = g_ptr_array_index (eval->self->sample_array, i);
     const gdouble m2lnpt_i = ncm_vector_get (eval->m2lnp, i) - eval->self->min_m2lnp;
@@ -1132,6 +1153,36 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = sd->priv;
 
   return self->cv_type;
+}
+
+/**
+ * ncm_stats_dist_set_use_threads:
+ * @sd: a #NcmStatsDist
+ * @use_threads: whether to use threads
+ *
+ * Sets whether to use OpenMP threads during the computation.
+ *
+ */
+void
+ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  self->use_threads = use_threads;
+}
+
+/**
+ * ncm_stats_dist_get_use_threads:
+ * @sd: a #NcmStatsDist
+ *
+ * Returns: whether to use OpenMP threads during the computation.
+ */
+gboolean
+ncm_stats_dist_get_use_threads (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  return self->use_threads;
 }
 
 /**

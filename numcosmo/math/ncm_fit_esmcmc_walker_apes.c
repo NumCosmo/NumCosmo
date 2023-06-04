@@ -931,6 +931,43 @@ ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes)
 }
 
 /**
+ * ncm_fit_esmcmc_walker_apes_set_use_threads:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @use_threads: whether to use threads
+ *
+ * Sets whether to use threads for building the posterior
+ * approximation.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  ncm_stats_dist_set_use_threads (self->sd0, use_threads);
+  ncm_stats_dist_set_use_threads (self->sd1, use_threads);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_use_threads:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: whether threads are being used for building the posterior
+ * approximation.
+ */
+gboolean
+ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+  gboolean use_threads0                      = ncm_stats_dist_get_use_threads (self->sd0);
+  gboolean use_threads1                      = ncm_stats_dist_get_use_threads (self->sd1);
+
+  g_assert (use_threads0 == use_threads1);
+
+  return use_threads0;
+}
+
+/**
  * ncm_fit_esmcmc_walker_apes_peek_sds:
  * @apes: a #NcmFitESMCMCWalkerAPES
  * @sd0: (out) (transfer none): a #NcmStatsDist

@@ -85,7 +85,6 @@ enum
   PROP_0,
   PROP_LOCAL_FRAC,
   PROP_USE_ROT_HREF,
-  PROP_USE_THREADS,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE);
@@ -144,7 +143,6 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
 
   self->local_frac   = 0.0;
   self->use_rot_href = FALSE;
-  self->use_threads  = FALSE;
 
   self->mp_stats_vec = ncm_memory_pool_new (&_ncm_stats_dist_vkde_stats_vec_new, sdvkde,
                                             (GDestroyNotify) & ncm_stats_vec_free);
@@ -170,9 +168,6 @@ _ncm_stats_dist_vkde_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_USE_ROT_HREF:
       ncm_stats_dist_vkde_set_use_rot_href (sdvkde, g_value_get_boolean (value));
       break;
-    case PROP_USE_THREADS:
-      ncm_stats_dist_vkde_set_use_threads (sdvkde, g_value_get_boolean (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -195,9 +190,6 @@ _ncm_stats_dist_vkde_get_property (GObject *object, guint prop_id, GValue *value
       break;
     case PROP_USE_ROT_HREF:
       g_value_set_boolean (value, ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
-      break;
-    case PROP_USE_THREADS:
-      g_value_set_boolean (value, ncm_stats_dist_vkde_get_use_threads (sdvkde));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -276,14 +268,6 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
                                                          NULL,
                                                          "Whether to use the href rule-of-thumb to compute the final bandwidth",
                                                          FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_USE_THREADS,
-                                   g_param_spec_boolean ("use-threads",
-                                                         NULL,
-                                                         "Whether to use threads to compute the kernel covariance matrices",
-                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   base_class->set_dim            = &_ncm_stats_dist_vkde_set_dim;
@@ -421,7 +405,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
   {
     const size_t k = GSL_MAX (self->local_frac * ppself->n_obs, 2);
 
-    #pragma omp parallel for schedule(dynamic, 1) if (self->use_threads)
+    #pragma omp parallel for schedule(dynamic, 1) if (ppself->use_threads)
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -521,7 +505,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 
   gint i;
 
-  #pragma omp parallel if (self->use_threads)
+  #pragma omp parallel if (ppself->use_threads)
   {
     NcmMatrix *invUsample_matrix = ncm_matrix_new (ncm_matrix_col_len (pself->sample_matrix), ncm_matrix_row_len (pself->sample_matrix));
 
@@ -537,7 +521,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       /*ncm_matrix_memcpy (pself->invUsample_matrix, pself->sample_matrix); */
       ncm_matrix_memcpy (invUsample_matrix, pself->sample_matrix);
 
-      /*#pragma omp parallel for if (self->use_threads) */
+      /*#pragma omp parallel for if (ppself->use_threads) */
 
       for (j = 0; j < ppself->n_obs; j++)
       {
@@ -558,7 +542,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
                             ncm_matrix_gsl (invUsample_matrix));
       NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_compute_IM", ret);
 
-      /* #pragma omp parallel for if (self->use_threads) */
+      /* #pragma omp parallel for if (ppself->use_threads) */
 
       for (j = 0; j < ppself->n_obs; j++)
       {
@@ -579,7 +563,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   {
     const gdouble lnnorm_href = ppself->d * log (ppself->href);
 
-    /* #pragma omp parallel for if (self->use_threads) */
+    /* #pragma omp parallel for if (ppself->use_threads) */
 
     for (i = 0; i < ppself->n_obs; i++)
     {
@@ -589,7 +573,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       ncm_vector_free (row_i);
     }
 
-    /* #pragma omp parallel for if (self->use_threads) */
+    /* #pragma omp parallel for if (ppself->use_threads) */
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -848,37 +832,5 @@ ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde)
   NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
 
   return self->use_rot_href;
-}
-
-/**
- * ncm_stats_dist_vkde_set_use_threads:
- * @sdvkde: a #NcmStatsDistVKDE
- * @use_threads: whether to use threads
- *
- * Sets whether to use threads to compute the kernel
- * covariances.
- *
- */
-void
-ncm_stats_dist_vkde_set_use_threads (NcmStatsDistVKDE *sdvkde, const gboolean use_threads)
-{
-  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
-
-  self->use_threads = use_threads;
-}
-
-/**
- * ncm_stats_dist_vkde_get_use_threads:
- * @sdvkde: a #NcmStatsDistVKDE
- *
- * Returns: whether to use threads to compute the kernel
- * covariances.
- */
-gboolean
-ncm_stats_dist_vkde_get_use_threads (NcmStatsDistVKDE *sdvkde)
-{
-  NcmStatsDistVKDEPrivate * const self = sdvkde->priv;
-
-  return self->use_threads;
 }
 
