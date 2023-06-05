@@ -189,7 +189,7 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_KERNEL:
       ncm_stats_dist_set_kernel (sd, g_value_get_object (value));
       break;
-    case PROP_SAMPLE_SIZE:
+    case PROP_SAMPLE_SIZE: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
     case PROP_OVER_SMOOTH:
@@ -207,7 +207,7 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_PRINT_FIT:
       ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -226,8 +226,8 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_KERNEL:
       g_value_set_object (value, ncm_stats_dist_peek_kernel (sd));
       break;
-    case PROP_SAMPLE_SIZE:
-      g_value_set_uint (value, self->sample_array->len);
+    case PROP_SAMPLE_SIZE:                               /* LCOV_EXCL_BR_LINE */
+      g_value_set_uint (value, self->sample_array->len); /* LCOV_EXCL_LINE */
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_stats_dist_get_over_smooth (sd));
@@ -244,7 +244,7 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_PRINT_FIT:
       g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -258,11 +258,11 @@ _ncm_stats_dist_dispose (GObject *object)
 
   ncm_stats_dist_kernel_clear (&self->kernel);
 
-  g_clear_pointer (&self->sample_array, g_ptr_array_unref);
+  g_clear_pointer (&self->sample_array, g_ptr_array_unref); /* LCOV_EXCL_BR_LINE */
   ncm_vector_clear (&self->weights);
   ncm_vector_clear (&self->wcum);
 
-  g_clear_pointer (&self->sampling, g_array_unref);
+  g_clear_pointer (&self->sampling, g_array_unref); /* LCOV_EXCL_BR_LINE */
 
   ncm_nnls_clear (&self->nnls);
 
@@ -274,7 +274,7 @@ _ncm_stats_dist_dispose (GObject *object)
 
   ncm_rng_clear (&self->rng);
 
-  g_clear_pointer (&self->m2lnp_sort, g_array_unref);
+  g_clear_pointer (&self->m2lnp_sort, g_array_unref); /* LCOV_EXCL_BR_LINE */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->dispose (object);
@@ -296,6 +296,8 @@ _ncm_stats_dist_finalize (GObject *object)
 
 static void _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_get_href (NcmStatsDist *sd);
+
+/* LCOV_EXCL_START these should be overwriten and never executed */
 
 static void
 _ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
@@ -345,6 +347,8 @@ _ncm_stats_dist_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVec
 }
 
 static void _ncm_stats_dist_reset (NcmStatsDist *sd);
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_stats_dist_class_init (NcmStatsDistClass *klass)
@@ -486,7 +490,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       self->n_obs     = self->sample_array->len;
       self->n_kernels = ceil (self->sample_array->len * self->split_frac);
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
   }
@@ -556,7 +560,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
 
       break;
     }
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
   }
@@ -851,7 +855,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         _ncm_stats_dist_compute_IM_full (sd);
         self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
         break;
-      default:
+      default: /* LCOV_EXCL_BR_LINE */
         g_assert_not_reached ();
         break;
     }
