@@ -26,6 +26,9 @@ AM_CFLAGS = \
 COVLIBS = \
 	$(CODE_COVERAGE_LIBS)
 
+test_ncm_cfg_SOURCES =  \
+	test_ncm_cfg.c
+
 test_ncm_sparam_SOURCES =  \
 	test_ncm_sparam.c
 
@@ -172,6 +175,7 @@ test_nc_galaxy_wl_ellipticity_binned_SOURCES =  \
 	test_nc_galaxy_wl_ellipticity_binned.c
 
 test_programs =  \
+	test_ncm_cfg                             \
 	test_ncm_vector                          \
 	test_ncm_matrix                          \
 	test_ncm_stats_vec                       \
@@ -233,6 +237,12 @@ dist_test_scripts = \
 	test_py_sanity.py
 
 endif # HAVE_PYTEST_TAP
+
+test_ncm_cfg_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
 
 test_ncm_sparam_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
