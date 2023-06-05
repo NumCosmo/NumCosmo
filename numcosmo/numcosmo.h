@@ -165,6 +165,7 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>

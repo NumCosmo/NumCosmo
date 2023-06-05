@@ -167,6 +167,7 @@
 #include "galaxy/nc_galaxy_sd_z_proxy.h"
 #include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -678,6 +679,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
