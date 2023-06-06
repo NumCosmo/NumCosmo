@@ -1400,6 +1400,39 @@ ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
 }
 
 /**
+ * ncm_vector_cmp2:
+ * @cv1: a constant #NcmVector
+ * @cv2: a constant #NcmVector
+ * @reltol: the relative tolerance
+ * @abstol: the absolute tolerance
+ *
+ * Performs a comparison, component-wise, of the two vectors and
+ * returns the number of components that do not match.
+ *
+ * Returns: the number of components that do not match.
+ */
+gint
+ncm_vector_cmp2 (const NcmVector *cv1, const NcmVector *cv2, const gdouble reltol, const gdouble abstol)
+{
+  const guint len1 = ncm_vector_len (cv1);
+  const guint len2 = ncm_vector_len (cv2);
+  gint n           = 0;
+  guint i;
+
+  g_assert_cmpint (len1, ==, len2);
+
+  for (i = 0; i < len1; i++)
+  {
+    const gdouble x1_i = ncm_vector_get (cv1, i);
+    const gdouble x2_i = ncm_vector_get (cv2, i);
+
+    n += abs (ncm_cmp (x1_i, x2_i, reltol, abstol));
+  }
+
+  return n;
+}
+
+/**
  * ncm_vector_sub_round_off:
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector

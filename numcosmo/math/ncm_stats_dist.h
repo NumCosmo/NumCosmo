@@ -120,6 +120,9 @@ gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
 void ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type);
 NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads);
+gboolean ncm_stats_dist_get_use_threads (NcmStatsDist *sd);
+
 void ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
 void ncm_stats_dist_prepare (NcmStatsDist *sd);
 void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);

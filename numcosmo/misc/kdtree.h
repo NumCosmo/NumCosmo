@@ -32,10 +32,7 @@ typedef struct kdtree
   double *coords;
   double **coord_table;
   long *coord_indexes;
-  unsigned char *coord_deleted;
-  unsigned char *coord_passed;
   int dim;
-  double knn_distance;
 } kdtree_t;
 
 struct kdtree *kdtree_init (int dim);

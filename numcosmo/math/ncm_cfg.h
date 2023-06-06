@@ -73,6 +73,7 @@ void ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger);
 
 void ncm_cfg_set_openmp_nthreads (gint n);
 void ncm_cfg_set_openblas_nthreads (gint n);
+void ncm_cfg_set_blis_nthreads (gint n);
 void ncm_cfg_set_mkl_nthreads (gint n);
 
 void ncm_cfg_logfile (gboolean on);
@@ -85,23 +86,9 @@ gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, g
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
 
-FILE *ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...);
-FILE *ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap);
-
-gboolean ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...);
-gboolean ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...);
-
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
 
-typedef union _NcmDoubleInt64
-{
-  gint64 i;
-  gdouble x;
-} NcmDoubleInt64;
-
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
-
-GArray *ncm_cfg_variant_to_array (GVariant *var, gsize esize);
 
 void ncm_cfg_array_set_variant (GArray *a, GVariant *var);
 GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
@@ -116,7 +103,7 @@ extern guint fftw_default_flags;
 
 #ifdef NUMCOSMO_CHECK_PREPARE
 #define NCM_CHECK_PREPARED(obj, name) \
-  G_STMT_START{ \
+  G_STMT_START { \
     if (!obj->prepared) \
     g_error ("calling method %s on an unprepared instance.", #name); \
   } G_STMT_END
@@ -141,7 +128,7 @@ extern guint fftw_default_flags;
 
 #ifndef NUMCOSMO_GIR_SCAN
 #define NCM_FITS_ERROR(status) \
-  G_STMT_START{ \
+  G_STMT_START { \
     if (status) \
     { \
       gchar errormsg[30]; \
