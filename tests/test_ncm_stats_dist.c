@@ -54,6 +54,8 @@ static void test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconst
 static void test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pdata);
 
+static void test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_prepare_too_few (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer pdata);
@@ -76,7 +78,7 @@ typedef struct _TestNcmStatsDistFunc
 } TestNcmStatsDistFunc;
 
 #define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 8
+#define TEST_NCM_STATS_DIST_TESTS_LEN 10
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -86,6 +88,8 @@ static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] =
 };
 
 static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
+  {"sanity",                           &test_ncm_stats_dist_sanity},
+  {"prepare_too_few",                  &test_ncm_stats_dist_prepare_too_few},
   {"gauss/dens/est",                   &test_ncm_stats_dist_dens_est},
   {"gauss/dens/interp",                &test_ncm_stats_dist_dens_interp},
   {"gauss/dens/interp/sampling",       &test_ncm_stats_dist_dens_interp_sampling},
@@ -360,6 +364,87 @@ test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_stats_dist_free, test->sd);
   NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
+}
+
+static void
+test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmStatsDist *sd = test->sd;
+
+  ncm_stats_dist_ref (test->sd);
+  ncm_stats_dist_free (test->sd);
+
+  ncm_stats_dist_ref (test->sd);
+  ncm_stats_dist_clear (&test->sd);
+
+  g_assert_true (test->sd == NULL);
+
+  test->sd = sd;
+
+  ncm_stats_dist_set_use_threads (test->sd, TRUE);
+  g_assert (ncm_stats_dist_get_use_threads (test->sd));
+
+  ncm_stats_dist_set_use_threads (test->sd, FALSE);
+  g_assert (!ncm_stats_dist_get_use_threads (test->sd));
+
+  ncm_stats_dist_set_over_smooth (test->sd, 1.2);
+  g_assert_cmpfloat (ncm_stats_dist_get_over_smooth (test->sd), ==, 1.2);
+
+  ncm_stats_dist_set_split_frac (test->sd, 0.2);
+  g_assert_cmpfloat (ncm_stats_dist_get_split_frac (test->sd), ==, 0.2);
+
+  ncm_stats_dist_set_print_fit (test->sd, TRUE);
+  g_assert (ncm_stats_dist_get_print_fit (test->sd));
+
+  ncm_stats_dist_set_print_fit (test->sd, FALSE);
+  g_assert (!ncm_stats_dist_get_print_fit (test->sd));
+
+  ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_NONE);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (test->sd), ==, NCM_STATS_DIST_CV_NONE);
+
+  ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_SPLIT);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (test->sd), ==, NCM_STATS_DIST_CV_SPLIT);
+
+  {
+    const guint dim                    = ncm_stats_dist_get_dim (test->sd);
+    NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
+    NcmStatsDistKernel *kernel         = ncm_stats_dist_get_kernel (test->sd);
+
+    g_assert (kernel == ncm_stats_dist_peek_kernel (test->sd));
+
+    ncm_stats_dist_kernel_free (kernel);
+
+    ncm_stats_dist_set_kernel (test->sd, NCM_STATS_DIST_KERNEL (sdk_gauss));
+    g_assert (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
+  }
+}
+
+static void
+test_ncm_stats_dist_prepare_too_few (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+    NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+    NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
+    NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+    gulong N                       = 0;
+
+    ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+
+    {
+      NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+
+      ncm_stats_dist_add_obs (test->sd, y);
+    }
+
+
+    ncm_stats_dist_prepare (test->sd);
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the sample is too small*");
 }
 
 static void

@@ -987,7 +987,10 @@ ncm_stats_dist_get_dim (NcmStatsDist *sd)
  * ncm_stats_dist_get_sample_size:
  * @sd: a #NcmStatsDist
  *
- * Returns: an int n, the size of the sample used in the last prepare call.
+ * After the prepare call, this function returns the size of the sample used in the
+ * interpolation.
+ *
+ * Returns: the size of the sample used.
  */
 guint
 ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
@@ -1000,6 +1003,9 @@ ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_get_n_kernels:
  * @sd: a #NcmStatsDist
+ *
+ * After the prepare call, this function returns the number of kernels used in the
+ * interpolation.
  *
  * Returns: the number of kernels used.
  */
