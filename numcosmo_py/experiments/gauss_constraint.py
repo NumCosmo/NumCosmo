@@ -45,6 +45,7 @@ def run_gauss_constraint_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
@@ -96,6 +97,7 @@ def run_gauss_constraint_mcmc(
     if start_catalog is not None:
         start_mcat = Ncm.MSetCatalog.new_from_file_ro(start_catalog.as_posix(), 0)
 
+    print(f"# Constant normalization {dgc.get_log_norma(mset)}")
     esmcmc = create_esmcmc(
         likelihood,
         mset,
@@ -104,6 +106,7 @@ def run_gauss_constraint_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
