@@ -196,6 +196,7 @@ const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i);
+GArray *ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat);

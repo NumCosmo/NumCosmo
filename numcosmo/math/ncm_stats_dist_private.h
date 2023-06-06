@@ -49,6 +49,7 @@ struct _NcmStatsDistPrivate
   gboolean print_fit;
   gdouble over_smooth;
   NcmStatsDistCV cv_type;
+  gboolean use_threads;
   gdouble split_frac;
   gdouble min_m2lnp;
   gdouble max_m2lnp;

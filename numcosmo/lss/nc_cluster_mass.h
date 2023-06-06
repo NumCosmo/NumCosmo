@@ -73,16 +73,17 @@ struct _NcClusterMassClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  
+
   gdouble (*P) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
   gdouble (*intP) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
-  gdouble (*intP_bin) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_bin_lower, const gdouble *lnM_bin_upper, const gdouble *lnM_obs_params);
+  gdouble (*intP_bin) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
   gboolean (*resample) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
   void (*P_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
   void (*P_bin_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
   void (*N_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
   gdouble (*volume) (NcClusterMass *clusterm);
   void (*P_vec_z_lnMobs) (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+
   guint obs_len;
   guint obs_params_len;
 };
@@ -125,3 +126,4 @@ void nc_cluster_mass_log_all_models (void);
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_H_ */
+

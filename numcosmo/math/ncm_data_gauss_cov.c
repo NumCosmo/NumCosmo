@@ -100,7 +100,7 @@ _ncm_data_gauss_cov_constructed (GObject *object)
 static void
 _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
@@ -132,7 +132,7 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
 static void
 _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
@@ -160,7 +160,7 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 _ncm_data_gauss_cov_dispose (GObject *object)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   ncm_vector_clear (&self->y);
@@ -262,7 +262,7 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
 static guint
 _ncm_data_gauss_cov_get_length (NcmData *data)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   return self->np;
@@ -271,7 +271,7 @@ _ncm_data_gauss_cov_get_length (NcmData *data)
 static void
 _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
   gint ret;
 
@@ -496,7 +496,7 @@ static void
 _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
-  NcmData *data = NCM_DATA (gauss);
+  NcmData *data                       = NCM_DATA (gauss);
 
   if ((np == 0) || (np != self->np))
   {
@@ -623,3 +623,30 @@ ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss)
 
   return self->cov;
 }
+
+/**
+ * ncm_data_gauss_cov_get_log_norma:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ *
+ * Returns: the log-normalization factor for $-2\ln(L)$.
+ */
+gdouble
+ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+  gdouble m2lnL                                = 0.0;
+  gboolean cov_update                          = FALSE;
+
+  if (gauss_cov_class->cov_func != NULL)
+    cov_update = gauss_cov_class->cov_func (gauss, mset, self->cov);
+
+  if (cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_cov_prepare_LLT (NCM_DATA (gauss));
+
+  gauss_cov_class->lnNorma2 (gauss, mset, &m2lnL);
+
+  return m2lnL;
+}
+

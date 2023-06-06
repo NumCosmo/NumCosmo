@@ -24,19 +24,36 @@
 
 """Example of using the APES MCMC sampler on test posteriors."""
 
+from typing import Optional
+
 import typer
 from numcosmo_py import Ncm
 from numcosmo_py.experiments.rosenbrock import run_rosenbrock_mcmc
 from numcosmo_py.experiments.gaussmix2d import run_gaussmix2d_mcmc
 from numcosmo_py.experiments.funnel import run_funnel_mcmc
+from numcosmo_py.experiments.gauss_constraint import run_gauss_constraint_mcmc
 
 
-Ncm.cfg_init()
 app = typer.Typer()
 
 app.command()(run_rosenbrock_mcmc)
 app.command()(run_gaussmix2d_mcmc)
 app.command()(run_funnel_mcmc)
+app.command()(run_gauss_constraint_mcmc)
+
+
+@app.callback()
+def main(log_file: Optional[str] = None):
+    """
+    Call different examples of using the APES MCMC sampler on test posteriors.
+
+    """
+
+    Ncm.cfg_init()
+
+    if log_file is not None:
+        Ncm.cfg_set_logfile(log_file)
+
 
 if __name__ == "__main__":
     app()

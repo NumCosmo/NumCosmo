@@ -125,7 +125,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   const gint dim                      = test->dim = g_test_rand_int_range (2, 4);
   const gint nwalkers                 = 100 * test->dim;
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 2.0e-2, 5.0e-2, 1.0, 1.0, 2.0, rng);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 2.0e-2, 5.0e-2, 10.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
@@ -236,8 +236,9 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
                                NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
 
-  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-1, 0.0, NULL, NULL);
   ncm_fit_fisher (fit);
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
@@ -246,10 +247,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   {
     NcmMatrix *cov = ncm_fit_get_covar (fit);
 
-    ncm_matrix_scale (cov, 2.0);
     ncm_mset_trans_kern_gauss_set_cov (init_sampler, cov);
-    ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.1);
-
     ncm_matrix_free (cov);
   }
 
@@ -303,10 +301,11 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
                                 NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
-  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.01);
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
 
   test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd);
   test->esmcmc    = ncm_fit_esmcmc_ref (esmcmc);
@@ -567,6 +566,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
                                                             NCM_FIT_RUN_MSGS_NONE);
 
     ncm_fit_esmcmc_set_rng (esmcmc, ncm_mset_catalog_peek_rng (mcat));
+    ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
 
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));

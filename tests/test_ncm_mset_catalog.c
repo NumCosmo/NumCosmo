@@ -38,6 +38,7 @@ typedef struct _TestNcmMSetCatalog
 } TestNcmMSetCatalog;
 
 void test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_new_2_chains (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 void test_ncm_mset_catalog_free (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -50,59 +51,61 @@ void test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata);
+
+typedef struct _TestNcmMSetCatalogTests
+{
+  const gchar *name;
+
+  void (*func) (TestNcmMSetCatalog *test, gconstpointer pdata);
+} TestNcmMSetCatalogTests;
+
+TestNcmMSetCatalogTests fixtures[] =
+{
+  {"one_chain", test_ncm_mset_catalog_new},
+  {"multiple_chain", test_ncm_mset_catalog_new_2_chains},
+  {NULL, NULL}
+};
+
+
+TestNcmMSetCatalogTests tests[] =
+{
+  {"mean", test_ncm_mset_catalog_mean},
+  {"cov", test_ncm_mset_catalog_cov},
+  {"norma", test_ncm_mset_catalog_norma},
+  {"norma/bound", test_ncm_mset_catalog_norma_bound},
+  {"norma/unif", test_ncm_mset_catalog_norma_unif},
+  {"vol", test_ncm_mset_catalog_vol},
+  {"bestfit", test_ncm_mset_catalog_bestfit},
+  {"percentile", test_ncm_mset_catalog_percentile},
+  {"autocorrelation", test_ncm_mset_catalog_autocorrelation},
+  {"accept_ratio_array", test_ncm_mset_catalog_accept_ratio_array},
+  {NULL, NULL}
+};
 
 gint
 main (gint argc, gchar *argv[])
 {
+  gint i, j;
+
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/ncm/mset/catalog/mean", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_mean,
-              &test_ncm_mset_catalog_free);
+  for (i = 0; fixtures[i].name != NULL; i++)
+  {
+    for (j = 0; tests[j].name != NULL; j++)
+    {
+      gchar *path = g_strdup_printf ("/ncm/mset/catalog/%s/%s",
+                                     fixtures[i].name, tests[j].name);
 
-  g_test_add ("/ncm/mset/catalog/cov", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_cov,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/norma", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_norma,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/norma/bound", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_norma_bound,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/norma/unif", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_norma_unif,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/vol", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_vol,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/bestfit", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_bestfit,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/percentile", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_percentile,
-              &test_ncm_mset_catalog_free);
-
-  g_test_add ("/ncm/mset/catalog/autocorrelation", TestNcmMSetCatalog, NULL,
-              &test_ncm_mset_catalog_new,
-              &test_ncm_mset_catalog_autocorrelation,
-              &test_ncm_mset_catalog_free);
+      g_test_add (path, TestNcmMSetCatalog, NULL,
+                  fixtures[i].func,
+                  tests[j].func,
+                  &test_ncm_mset_catalog_free);
+    }
+  }
 
   g_test_add ("/ncm/mset/catalog/traps", TestNcmMSetCatalog, NULL,
               &test_ncm_mset_catalog_new,
@@ -139,6 +142,41 @@ test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
   ncm_mset_prepare_fparam_map (mset);
 
   mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE,
+                               "m2lnL", "-2\\ln(L)",
+                               NULL);
+
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd);
+  test->mcat      = ncm_mset_catalog_ref (mcat);
+  test->rng       = rng;
+
+  g_assert_true (NCM_IS_MSET_CATALOG (test->mcat));
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_mset_clear (&mset);
+  ncm_mset_catalog_clear (&mcat);
+}
+
+void
+test_ncm_mset_catalog_new_2_chains (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  const gint dim                 = test->dim = g_test_rand_int_range (2, 5);
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
+  NcmMSetCatalog *mcat;
+
+  /*ncm_model_param_set_lower_bound (NCM_MODEL (model_mvnd), 0, 0.0);*/
+
+  ncm_mset_param_set_vector (mset, y);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 2, FALSE,
                                "m2lnL", "-2\\ln(L)",
                                NULL);
 
@@ -579,6 +617,53 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
     NcmVector *tau = ncm_mset_catalog_peek_autocorrelation_tau (test->mcat);
 
     g_assert (ncm_vector_is_finite (tau));
+  }
+
+  {
+    GArray *accept_ratio_array = ncm_mset_catalog_peek_accept_ratio_array (test->mcat);
+
+    if (ncm_mset_catalog_nchains (test->mcat) > 1)
+      g_assert (accept_ratio_array != NULL);
+    else
+      g_assert (accept_ratio_array == NULL);
+  }
+}
+
+void
+test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  NcmData *data        = NCM_DATA (test->data_mvnd);
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gint i;
+
+  for (i = 0; i < nt; i++)
+  {
+    gdouble m2lnL = 0.0;
+
+    ncm_data_resample (data, mset, test->rng);
+    ncm_data_m2lnL_val (data, mset, &m2lnL);
+
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
+  }
+
+  {
+    GArray *accept_ratio_array = ncm_mset_catalog_peek_accept_ratio_array (test->mcat);
+
+    if (ncm_mset_catalog_nchains (test->mcat) > 1)
+    {
+      const gint max_time = ncm_mset_catalog_max_time (test->mcat);
+
+      g_assert (accept_ratio_array != NULL);
+
+      g_assert_cmpuint (accept_ratio_array->len + 1, ==, max_time);
+    }
+    else
+    {
+      g_assert (accept_ratio_array == NULL);
+    }
   }
 }
 

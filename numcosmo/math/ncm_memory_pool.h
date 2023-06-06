@@ -71,6 +71,7 @@ struct _NcmMemoryPoolSlice
 NcmMemoryPool *ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free);
 void ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices);
 
+guint ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices);
 void ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n);
 void ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p);
 gpointer ncm_memory_pool_get (NcmMemoryPool *mp);
@@ -79,3 +80,4 @@ void ncm_memory_pool_return (gpointer p);
 G_END_DECLS
 
 #endif /* _NCM_MEMORY_POOL_H_ */
+

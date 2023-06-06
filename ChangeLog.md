@@ -3,6 +3,264 @@ CHANGELOG
 
 [Current]
 
+[v0.17.0]
+ * New version 0.17.0.
+
+     Minor documentation glitch fixes.
+
+ * New experimental python interface for sampling. New sampler comparisons. (#90)
+
+     * New experimental python interface for sampling. New sampler comparisons.
+     * More details on the rosenbrock_simple.ipynb notebook. Ran black.
+ * Encapsulating objects (#72)
+
+     * Encapsulated ncm_c, ncm_csq1d, ncm_data and ncm_data_dist1d. Uncrustify
+     all ncm_data_* files.
+     * Encapsulated ncm_bootstrap and ncm_data_dist2d.
+     * Encapsulated and indented ABC objects.
+     * Encapsulating ncm_data_funnel, ncm_data_gauss_cov and
+     ncm_data_gauss_cov_mvnd.
+     * Encapsulated ncm_data_gauss and ncm_data_gauss_diag.
+     * Encapsulated ncm_data_poisson. Added documentation to ncm_fit_state.
+     * Encapsulated Fftlog objects. Added documentation.
+     * Added documentation and fixed flake8 and mypy issues on scripts.
+     * Fixed tests to adapt to the encapsulated objects.
+     * Uncrustifying files.
+ * New features (#81)
+
+     * New support for pytest unit testing.
+     * Removed old man pages generations.
+     * Added optional support for libfyaml.
+     * Added rb_knn_list to documentation ignore list.
+     * Cleaned and organized apes tests notebooks.
+     * New apes_tests/xcdm_nopert.ipynb.
+     * Fixed documentation glitches.
+     * Started implementation of Serialization yaml backend.
+     * Fixed AC_DEFINE for libfyaml.
+     * Finished first version of the YAML serialization.
+     * Fixed NcmModel unit tests to handle double sub-indices.
+     * Added support for installing numcosmo_py. Added missing docs to
+     numcosmo-docs. Renamed mcat related scripts. New interface in
+     nc_hicosmo_Vexp.
+     * Added command to update apt index before installing prereqs.
+     * Added xcdm experiment with cosmological dataset without perturbation
+     dependent data.
+     * Added support for pytest in CI.
+     * Testing example compilation without installing the library.
+     * Fixed libfyaml dependent static function in ncm_serialize.c. Added link
+     to numcosmo library in test of non-installed library.
+     * Better test calibration.
+     * Improved doc in ncm_cfg.
+     * Improved wisdown handling in ncm_cfg.
+     * Improved coverage tweaking.
+     * Do not CI all branches.
+     * Testing python example running without installing.
+ * WL binned likelihood object (#77)
+
+     * New method for likelihood utilizing KDE
+     * Added necessary support to compute the galaxy wl likelihood using KDE.
+     Fixed leak in nc_galaxy_wl.
+     * Cut galaxies with e,g < 0, e,g > 0.05
+     * First working version of the KDE likelihood for WL.
+     * Fixed behavior for g_i < 0
+     * Better control of the border in the galaxy KDE.
+     * Renamed reduced shear to ellipticity to focus on the true weak lensing
+     observable. Created new object class nc_galaxy_wl_ellipticity_kde and moved
+     calculations from nc_galxy_wl to nc_galaxy_wl_ellipticity_kde. Introduced
+     new method nc_galaxy_wl_dist_m2lnP_initial_prep. Edited Makefile.am,
+     Makefile.in, ncm_cfg.c and numcosmo.h to accomodate changes. Changes have
+     made calculations slower but results seem to be in line with previous
+     version.
+     * Freeing s_kde and g_vec on _nc_galaxy_wl_dist_initial_prep seems to have
+     fixed memory leak (?) issue on last commit
+     * Fix's fix. Freeing the memory allocated to s_kde and g_vec is what was
+     initially causing the segmentation fault.
+     * Fixed indentation.
+     * Removed comments and added doc.
+     * Reorganizing internal of nc_galaxy_wl_ellipticity_kde. Indentation on
+     other related objects.
+     * Fixed email and unnecessary variable.
+     * Fixed object names on docs.
+     * Fixed numcosmo/lss/nc_galaxy_wl_ellipticity_kde.c bug. When resetting
+     self->kde, epdf_bw_type stayed as FIXED instead of being recast as RoT.
+     * First attempt at creating binned object for wl likelihood. Currently
+     working on creating a NcmObjArray with the galaxy data belonging to each
+     bin. Probably (certainly) very buggy.
+     * First version of unit test for nc_galaxy_wl_ellipticity_kde.
+     * Added lss/nc_galaxy_wl_ellipticity_kde to numcosmo.h and math/ncm_cfg.c
+     * Removed old code necessary for debugging.
+     * Fixed copyright notice, fixed reset of self->e_vec, added peek_kde and
+     peek_e_vec methods.
+     * Fixed file name when adding tests, fixed nc_distance_comoving error by
+     preparing dist object, reduced number of tests.
+     * Registered new object NcGalaxyWLEllipticityBinned
+     * Changed approach to binning, fixed set_bin_obs, object is now compiling
+     * Finished binned weak lensing object prototype
+     * Started implementation of unit test for wl_ellipticity_binned, setting
+     gebin->binobs as NcmObjArray on initialization.
+     * Fixed binning behaviour. Bug was caused by casting bin limits as an int
+     instead of a float. Tests are all passing now.
+     * Update nc_galaxy_wl.c
+     * Fixed copyright notices
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+     Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
+ * Added check to see if the python interface is available.
+
+ * Improved tests.
+
+ * New method for likelihood utilizing KDE (#65)
+
+     * New method for likelihood utilizing KDE
+     * Added necessary support to compute the galaxy wl likelihood using KDE.
+     Fixed leak in nc_galaxy_wl.
+     * Cut galaxies with e,g < 0, e,g > 0.05
+     * First working version of the KDE likelihood for WL.
+     * Fixed behavior for g_i < 0
+     * Better control of the border in the galaxy KDE.
+     * Renamed reduced shear to ellipticity to focus on the true weak lensing
+     observable. Created new object class nc_galaxy_wl_ellipticity_kde and moved
+     calculations from nc_galxy_wl to nc_galaxy_wl_ellipticity_kde. Introduced
+     new method nc_galaxy_wl_dist_m2lnP_initial_prep. Edited Makefile.am,
+     Makefile.in, ncm_cfg.c and numcosmo.h to accommodate changes. Changes have
+     made calculations slower but results seem to be in line with previous
+     version.
+     * Freeing s_kde and g_vec on _nc_galaxy_wl_dist_initial_prep seems to have
+     fixed memory leak (?) issue on last commit
+     * Fix's fix. Freeing the memory allocated to s_kde and g_vec is what was
+     initially causing the segmentation fault.
+     * Fixed indentation.
+     * Removed comments and added doc.
+     * Reorganizing internal of nc_galaxy_wl_ellipticity_kde. Indentation on
+     other related objects.
+     * Fixed email and unnecessary variable.
+     * Fixed object names on docs.
+     * Fixed numcosmo/lss/nc_galaxy_wl_ellipticity_kde.c bug. When resetting
+     self->kde, epdf_bw_type stayed as FIXED instead of being recast as RoT.
+     * First version of unit test for nc_galaxy_wl_ellipticity_kde.
+     * Added lss/nc_galaxy_wl_ellipticity_kde to numcosmo.h and math/ncm_cfg.c
+     * Removed old code necessary for debugging.
+     * Fixed copyright notice, fixed reset of self->e_vec, added peek_kde and
+     peek_e_vec methods.
+     * Fixed file name when adding tests, fixed nc_distance_comoving error by
+     preparing dist object, reduced number of tests.
+     * Fixed indentation
+     
+     ---------
+      Authored-by: Caio Lima de Oliveira <caiolimadeoliveira@gmail.com>
+ * Reordering -I to include first internal sub-packages.
+
+ * Added conditional use of g_tree_remove_all. Removed setting of all threads to
+     one. Reintroduced non fatal assertions in test_ncm_stats_dist.
+
+ * Improved ax_code_coverage.m4 to work with newer lcov versions.
+
+ * Organized m4 files and fixed lcov issues.
+
+ * Fixed a few lcov issues.
+
+ * Incresead number of points when testing StatsDist with rubust-diag.
+
+ * Changed divisions to multiplications.
+
+ * Fix bug in AR fitting when only two elements were available.
+
+ * Improved tests, added test to robust covariance computation.
+
+ * Modified vkde to use block triangular system solver.
+
+ * Finished the refactor of kdtree to use a red-black tree and prune impossible
+     branches. Significant increase in speed!
+
+ * Removed old tree. Finishing prunning.
+
+ * New red-black BT to improve kdtree. Added support for prunning kdtree during
+     search.
+
+ * 75 organizing python modules (#76)
+
+     * First reorganization and cleaning.
+     * New directory structure.
+     * Refactoring scripts to satisfy linters.
+     * Organizing notebooks.
+     * Reorganizing notebooks, new MCMC tests with gaussian mixture models.
+     * Organizing python scripts and support in NumCosmoPy.
+     * Refactored mcat_calibrate_apes.py.
+     * New interpolation object.
+     * Improving getdist (added asinh filter).
+     * Added check for unclean notebooks.
+     * Cleaning notebooks.
+     * Checking notebooks first in GHA.
+     * Normalizing filenames and organizing Makefile.am.
+     * Using lower-case names for notebooks.
+     * Updated Makefile.am.
+ * Updated kdtree and directories in notebooks/Makefile.am.
+
+ * Reorganizing notebooks.
+
+ * Added missing cell.
+
+ * Fixed missing properties (unused). autogen.
+
+ * Notebooks massfunc (#74)
+
+     * Time tests and tests of the Bocquet multiplicity function were added in
+     NC_CCL_mass_function notebook.
+     * Info about critical Delta was added.
+     * Notebook NC_CCL_mass_function was organized.
+     * Included data used in Penna-Lima et al. (2017) - Planck-CLASH clusters.
+     * Updated plcl script.
+     
+     ---------
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+     Mariana Penna Lima <pennalima@gmail.com>
+ * Halo bias tests (#73)
+
+     * Fixed Function Type Definition
+     
+     * Finished Halo Bias Tests
+ * Mean bias (#61)
+
+     * posterior volume
+     * Mean halo bias
+     * mean bias unbinned plot
+     * mean bias binned case
+     * Data DC2
+     * Redmapper data ncounts with richness
+     * Data preparation with richness
+     * skysim mcmcm file
+     * DC2 tests
+     * checking watson on nersc
+     * moved set/get Delta methods to parent class. Merged Bias type and Bias
+     Func.
+     * Updated all bias_func and bias_type to bias.
+     * Nodist MCMC analyses on Mock catalog
+     * Removed data files from repository.
+     * Added nc_halo_mass_function_peek_multiplicity_function to access the
+     NcMultiplicityFunc in NcHaloMassFunction.
+     * Tinker Bias Delta correction.
+     * Including the NcHICosmo in bias_eval function.
+     * Refactoring old Bias code to match new design.
+     * Tinker and ST_spher correction on new and new_full functions.
+     * Updated autotools. Added numcosmo-valgrind.supp for valgrind memcheck.
+     Fixed optimization bug in ncm_sphere_map.
+     * Uncrustify all halo bias objects.
+     * Implementation on the volume element on the bias integrand
+     * Improving integrand for bias computation.
+     * Bias as function of mass
+     * Added minimal documentation to bias objects.
+     * Finished Documentations
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com> 
+     Co-authored-by: root <root@eduardo>
+ * Added interface to generate models using an array of NcmSParams
+
+ * Added two missing files to the releases.
+
+ * New minor release v0.16.0.
+
+
 [v0.16.0]
  * New minor release v0.16.0.
 

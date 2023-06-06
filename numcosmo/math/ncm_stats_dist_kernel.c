@@ -32,34 +32,34 @@
  *
  * An N-dimensional kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
  *
- * This class provides the tools to generate a kernel function to be used in a kernel 
- * density estimation method. Below is a quick review of the kernel density estimation method 
- * and some properties of the kernel function, which are generalized for multidimensional problems. 
+ * This class provides the tools to generate a kernel function to be used in a kernel
+ * density estimation method. Below is a quick review of the kernel density estimation method
+ * and some properties of the kernel function, which are generalized for multidimensional problems.
  * For further information, check [[Density Estimation for Statistics and Data Analysis, B.W. Silverman](https://www.routledge.com/Density-Estimation-for-Statistics-and-Data-Analysis/Silverman/p/book/9780412246203)].
  *
- * Starting with the uni-dimensional case, let $X_1,...,X_n$ be independent and identically 
- * distributed (iid) samples drawn from a distribution $f(x)$. The kernel density estimation of the function is 
+ * Starting with the uni-dimensional case, let $X_1,...,X_n$ be independent and identically
+ * distributed (iid) samples drawn from a distribution $f(x)$. The kernel density estimation of the function is
  * \begin{align}
  * \tilde{f}(x) = \sum_{i=1}^{n}K\left(\frac{x-x_i}{h}\right)
  * ,\end{align}
- * where $K$ is the kernel function and $h$ is the bandwidth parameter. The kernel density 
- * estimator function must be close to the true density function $f(x)$, which can be tested 
- * by analyzing whether the estimator provides similar expected values as the function $f(x)$, 
+ * where $K$ is the kernel function and $h$ is the bandwidth parameter. The kernel density
+ * estimator function must be close to the true density function $f(x)$, which can be tested
+ * by analyzing whether the estimator provides similar expected values as the function $f(x)$,
  * that is, the function $\tilde{f}(x)$ must minimize the mean square error (MSE)
  * \begin{align}
  * \label{eqmse}
  * MSE_x(\tilde{f}) = E\left[\tilde{f}(x) - f(x)\right]^2
- * ,\end{align} 
- * where $E$ represents the expected value. This value depends on the choice of the kernel function, 
- * the data and the bandwidth. If the estimator $\tilde{f}(x)$ is close enough to the true function, 
+ * ,\end{align}
+ * where $E$ represents the expected value. This value depends on the choice of the kernel function,
+ * the data and the bandwidth. If the estimator $\tilde{f}(x)$ is close enough to the true function,
  * it shall be used to generate samples that are distributed by $f(x)$.
  *
  * The kernel $K$ is a symmetric function that must satisfy
  * \begin{align}
- * &\int K(x)~dx = 1 
+ * &\int K(x)~dx = 1
  * .\end{align}
  * Usually, the kernel function is a symmetric probability density function that is easy to sample from,
- * but it is totally under the user's control. Using simple kernels, such as the Gaussian kernel, makes 
+ * but it is totally under the user's control. Using simple kernels, such as the Gaussian kernel, makes
  * the kernel density estimator method a better alternative to generate samples when the desired distribution is a complicated function.
  *
  * For the multidimensional case, given i.i.d d-dimensional sample points $X_1,.., X_n$ distributed by $f(x)$,
@@ -67,18 +67,18 @@
  * \begin{align}
  * \tilde{f}(x) = \frac{1}{h^d} \sum_{i=1}^n w_i K\left(\frac{x-x_i}{h}, \Sigma_i\right)
  * ,\end{align}
- * where $\Sigma_i$ is the covariance matrix of the $i$-th point (the kernels used in this library depend on the covariance matrix), 
+ * where $\Sigma_i$ is the covariance matrix of the $i$-th point (the kernels used in this library depend on the covariance matrix),
  * $d$ is the dimension and $w_i$ is the weight attached to each kernel to find the minimal error in equation \eqref{eqmse}.
  *
- * The methods in this class define the type of kernel $K$, compute the bandwidth factor $h$, evaluate the kernel 
- * function at a given $d$-dimensional point $x$ or at a given vector of points $\vec{x}$, and, given the weights $w_i$, 
+ * The methods in this class define the type of kernel $K$, compute the bandwidth factor $h$, evaluate the kernel
+ * function at a given $d$-dimensional point $x$ or at a given vector of points $\vec{x}$, and, given the weights $w_i$,
  * compute the kernel density estimation function $\tilde{f}(x)$.
  *
  * Besides the function ncm\_stats\_dist\_kernel\_get\_dim(), this class object only has virtual methods.
- * Therefore, to use this object, the user must initialize one of the child objects (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST). 
- * Inside the child objects are the implemented functions, which must be defined for each specific type of kernel function. 
+ * Therefore, to use this object, the user must initialize one of the child objects (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST).
+ * Inside the child objects are the implemented functions, which must be defined for each specific type of kernel function.
  * Check the childs documentations for more information. More information about how the algorithm should be implemented is described below:
- *		
+ *
  *		-This class is implemented in the #NcmStatsDist class, where the #NcmStatsDistKernel class shall define
  *		the type of kernel used in the interpolation function in #NcmStatsDist and how to compute values such as
  *		the weighted sum of the kernels, the bandwidth, and so on. Yet, the user may use these class objects
@@ -86,7 +86,7 @@
  *		#NcmStatsDist class.
  *
  *		-This class does not possess the methods to compute the weights of each kernel. You may find this method in the
- *		#NcmStatsDist class. 
+ *		#NcmStatsDist class.
  *
  *		-Every child object of this class can be used either in the #NcmStatsDistKDE class or in the #NcmStatsDistVKDE class.
  *
@@ -126,7 +126,7 @@ static void
 ncm_stats_dist_kernel_init (NcmStatsDistKernel *sdk)
 {
   NcmStatsDistKernelPrivate * const self = sdk->priv = ncm_stats_dist_kernel_get_instance_private (sdk);
-  
+
   self->d = 0;
 }
 
@@ -134,11 +134,11 @@ static void
 _ncm_stats_dist_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);
-  
+
   /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-  
+
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIM:
@@ -154,11 +154,11 @@ static void
 _ncm_stats_dist_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);
-  
+
   /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-  
+
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIM:
@@ -175,7 +175,7 @@ _ncm_stats_dist_kernel_dispose (GObject *object)
 {
   /*NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);*/
   /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kernel_parent_class)->dispose (object);
 }
@@ -194,7 +194,7 @@ static gdouble
 _ncm_stats_dist_kernel_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n)
 {
   g_error ("method get_rot_bandwidth not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
-  
+
   return 0.0;
 }
 
@@ -202,7 +202,7 @@ static gdouble
 _ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
 {
   g_error ("method get_lnnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
-  
+
   return 0.0;
 }
 
@@ -210,7 +210,7 @@ static gdouble
 _ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2)
 {
   g_error ("method eval_unnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
-  
+
   return 0.0;
 }
 
@@ -221,13 +221,13 @@ _ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2
 }
 
 static void
-_ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
   g_error ("method eval_sum0_gamma_lambda not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
 }
 
 static void
-_ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
   g_error ("method eval_sum1_gamma_lambda not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
 }
@@ -243,12 +243,12 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
 {
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmStatsDistKernelClass *sd_class = NCM_STATS_DIST_KERNEL_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_stats_dist_kernel_set_property;
   object_class->get_property = &_ncm_stats_dist_kernel_get_property;
   object_class->dispose      = &_ncm_stats_dist_kernel_dispose;
   object_class->finalize     = &_ncm_stats_dist_kernel_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_DIM,
                                    g_param_spec_uint ("dimension",
@@ -256,7 +256,7 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
                                                       "Kernel dimension",
                                                       2, G_MAXUINT, 2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   sd_class->set_dim                = &_ncm_stats_dist_kernel_set_dim;
   sd_class->get_dim                = &_ncm_stats_dist_kernel_get_dim;
   sd_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_get_rot_bandwidth;
@@ -272,7 +272,7 @@ static void
 _ncm_stats_dist_kernel_set_dim (NcmStatsDistKernel *sdk, const guint dim)
 {
   NcmStatsDistKernelPrivate * const self = sdk->priv;
-  
+
   self->d = dim;
 }
 
@@ -280,7 +280,7 @@ static guint
 _ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
 {
   NcmStatsDistKernelPrivate * const self = sdk->priv;
-  
+
   return self->d;
 }
 
@@ -407,6 +407,7 @@ ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2,
  * @chi2: a #NcmVector
  * @weights: a #NcmVector
  * @lnnorms: a #NcmVector
+ * @lnK: a #NcmVector to store the logarithm of the kernels
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
@@ -418,9 +419,9 @@ ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2,
  *
  */
 void
-ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, gdouble *gamma, gdouble *lambda)
+ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum0_gamma_lambda (sdk, chi2, weights, lnnorms, gamma, lambda);
+  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum0_gamma_lambda (sdk, chi2, weights, lnnorms, lnK, gamma, lambda);
 }
 
 /**
@@ -429,20 +430,21 @@ ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector
  * @chi2: a #NcmVector
  * @weights: a #NcmVector
  * @lnnorm: a double
+ * @lnK: a #NcmVector to store the logarithm of the kernels
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
  * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
  * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u,$$
  * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u)$ and $a$ labels
- * is the largest term of the sum. This function shall be used when 
+ * is the largest term of the sum. This function shall be used when
  * all the kernels have the same normalization factor.
  *
  */
 void
-ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, gdouble *gamma, gdouble *lambda)
+ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum1_gamma_lambda (sdk, chi2, weights, lnnorm, gamma, lambda);
+  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum1_gamma_lambda (sdk, chi2, weights, lnnorm, lnK, gamma, lambda);
 }
 
 /**

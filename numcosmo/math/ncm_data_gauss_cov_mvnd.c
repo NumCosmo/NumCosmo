@@ -26,7 +26,7 @@
 
 /**
  * SECTION:ncm_data_gauss_cov_mvnd
- * @title: NcmDataGaussCov
+ * @title: NcmDataGaussCovMVND
  * @short_description: Multivariate Normal Distribution -- covariance provided.
  *
  * Multivariate Normal distribution which uses the covariance matrix as input.

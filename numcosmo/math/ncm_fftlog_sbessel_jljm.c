@@ -504,6 +504,8 @@ _ncm_fftlog_sbessel_jljm_cpu_2f1 (NcmFftlogSBesselJLJMPrivate * const self, cons
     return _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1 (self, ar, ai, c, self->ell, xref, x);
 }
 
+#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+
 static void
 _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
 {
@@ -514,6 +516,8 @@ _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
 
   printf ("# RES % 22.15g % 22.15g\n", creal (res), cimag (res));
 }
+
+#endif /* defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H) */
 
 #define _NCM_FFTLOG_SBESSEL_JLJM_CACHE_FILE "ncm_fftlog_sbessel_j%dj%d_lnw%.14g_L%.14g.fftlog", self->ell, self->ell + self->dell, self->lnw, ncm_fftlog_get_full_length (fftlog)
 

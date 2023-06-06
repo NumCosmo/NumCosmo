@@ -722,9 +722,9 @@ ncm_dataset_get_info (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_f() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_f() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_f() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f (NcmDataset *dset)
@@ -753,9 +753,9 @@ ncm_dataset_has_leastsquares_f (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_J:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_J() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_J() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_J (NcmDataset *dset)
@@ -784,9 +784,9 @@ ncm_dataset_has_leastsquares_J (NcmDataset *dset)
  * ncm_dataset_has_leastsquares_f_J:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a leastsquares_f_J() method.
+ * Whether all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a leastsquares_f_J() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
  */
 gboolean
 ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
@@ -815,9 +815,9 @@ ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_val() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_val() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_val() method.
  */
 gboolean
 ncm_dataset_has_m2lnL_val (NcmDataset *dset)
@@ -846,9 +846,9 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_grad:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_grad() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_grad() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
  *
  */
 gboolean
@@ -878,9 +878,9 @@ ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
  * ncm_dataset_has_m2lnL_val_grad:
  * @dset: a #NcmDataset
  *
- * Whether all the #NcmData in @dset have a m2lnL_val_grad() method.
+ * Whether all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
  *
- * Returns: %TRUE if all the #NcmData in @dset have a m2lnL_val_grad() method.
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
  *
  */
 gboolean
@@ -915,7 +915,7 @@ ncm_dataset_has_m2lnL_val_grad (NcmDataset *dset)
  * Computes the leastsquares vector f for the data @data.
  * The vector @f must be allocated with the correct size.
  * The vector @f is filled with the values of the leastsquares vector f.
- * 
+ *
  */
 void
 ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
@@ -998,7 +998,7 @@ ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J)
  * The matrix @J must be allocated with the correct size.
  * The vector @f is filled with the values of the leastsquares vector f.
  * The matrix @J is filled with the values of the leastsquares matrix J.
- * 
+ *
  */
 void
 ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
@@ -1042,7 +1042,7 @@ ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, Ncm
  *
  * Computes the value of the m2lnL for the data @data.
  * The value of the m2lnL is stored in @m2lnL.
- * 
+ *
  */
 void
 ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
@@ -1118,7 +1118,7 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
  *
  * Computes the gradient of the m2lnL for the data @data.
  * The gradient of the m2lnL is stored in @grad.
- * 
+ *
  */
 void
 ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
@@ -1237,11 +1237,11 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
  * ncm_dataset_fisher_matrix:
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet
- * @IM: (out): The fisher matrix
+ * @IM: (out) (transfer full): The fisher matrix
  *
  * Calculates the Fisher-information matrix @I adding
  * the individual ones from each #NcmData in @dset.
- * If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix 
+ * If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix
  * will be allocated otherwise *@IM will be used.
  *
  */
@@ -1264,5 +1264,7 @@ ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
 
     ncm_matrix_add (*IM, IM0);
   }
+
+  ncm_matrix_free (IM0);
 }
 

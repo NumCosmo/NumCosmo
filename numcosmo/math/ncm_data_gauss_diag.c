@@ -572,7 +572,7 @@ ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag)
 
 /**
  * ncm_data_gauss_diag_peek_mean:
- * diag: a #NcmDataGaussDiag
+ * @diag: a #NcmDataGaussDiag
  *
  * Returns: (transfer none): the current data mean #NcmVector.
  */
@@ -586,7 +586,7 @@ ncm_data_gauss_diag_peek_mean (NcmDataGaussDiag *diag)
 
 /**
  * ncm_data_gauss_diag_peek_std:
- * diag: a #NcmDataGaussDiag
+ * @diag: a #NcmDataGaussDiag
  *
  * Returns: (transfer none): the current data standard deviation #NcmVector.
  */
