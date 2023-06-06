@@ -52,6 +52,7 @@ def run_xcdm_nopert_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
@@ -101,8 +102,8 @@ def run_xcdm_nopert_mcmc(
 
         if use_neutrino:
             cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
-            id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
-            cosmo.param_set_ftype(id, Ncm.ParamType.FREE)
+            param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
+            cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
 
         cosmo.props.H0_fit = True
         cosmo.props.Omegac_fit = True
@@ -133,6 +134,7 @@ def run_xcdm_nopert_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
