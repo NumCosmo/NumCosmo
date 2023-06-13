@@ -11,7 +11,9 @@ from scipy.stats import norm
 import numpy as np
 import sys
 sys.path.insert(1, '../../../Programas_Cosmologia/PySSC/')
+sys.path.insert(1, '../../../Programas_Cosmologia/CLASS/')
 import PySSC
+from classy import Class
 try:
     import gi
 
@@ -38,6 +40,7 @@ class ncounts(Ncm.DataGaussCov):
     lnM_obs_bins = GObject.Property(type=Ncm.Vector , flags=GObject.PARAM_READWRITE)
     ca = GObject.Property(type=Nc.ClusterAbundance, flags=GObject.PARAM_READWRITE)
     S = GObject.Property(type=Ncm.Matrix, flags=GObject.PARAM_READWRITE)
+
     #
     # The contructor assigns some default values and calls the father's constructor.
     #
@@ -61,6 +64,8 @@ class ncounts(Ncm.DataGaussCov):
     #
     # Implements the virtual method get_length.
     #
+        self.mask = np.ndarray(shape = (0,0))
+        self.kernel = None
     def do_get_length(self):
         return self.np
 
@@ -70,15 +75,6 @@ class ncounts(Ncm.DataGaussCov):
     def do_get_dof(self):
         return self.np
 
-    #
-    # Implements the virtual method `begin'.
-    # This method usually do some groundwork in the data
-    # before the actual calculations. For example, if the likelihood
-    # involves the decomposition of a constant matrix, it can be done
-    # during `begin' once and then used afterwards.
-    #
-    def do_prepare (self, mset):
-        return
 
     #
     # Implements the virtual method `prepare'.
@@ -111,10 +107,33 @@ class ncounts(Ncm.DataGaussCov):
         return
 
     def do_cov_func(self, mset,rng):
-        
+
+
+       
         cosmo = mset.peek(Nc.HICosmo.id())
         cluster_m = mset.peek(Nc.ClusterMass.id())
         cluster_z = mset.peek(Nc.ClusterRedshift.id())
+        prim = cosmo.peek_prim()
+        
+        #Beggin of the S matrix calculation
+        nz       = self.kernel.shape[1]
+        z_arr    = np.linspace(0, 2,num=nz+1)[1:]
+        cosmo_fid = Class()
+        cosmo_fid.set({'h':cosmo.props.H0/100 ,'Omega_cdm':cosmo.props.Omegac ,'Omega_b':cosmo.props.Omegab ,'sigma8':0.82505858,'n_s':prim.props.n_SA,'output':'mPk'})
+        cosmo_fid.compute()
+        if self.mask.shape[0] == 0:
+            S_lacasa = PySSC.Sij(z_arr,self.kernel,cosmo_Class=cosmo_fid)
+        else:    
+            S_lacasa = PySSC.Sij_psky(z_arr,self.kernel,mask=self.mask,cosmo_Class=cosmo_fid)
+        
+        self.S = Ncm.Matrix.new(S_lacasa.shape[0],S_lacasa.shape[1])
+
+        for i in range(len(S_lacasa)):
+            for j in range(len(S_lacasa[i])):
+                self.S.set(i,j, S_lacasa[i][j])
+        #End of the S matrix calculation
+        
+        
         bias = []
         poisson = []
         self.ca.prepare(cosmo, cluster_z, cluster_m)
@@ -131,34 +150,39 @@ class ncounts(Ncm.DataGaussCov):
                 poisson_bin_mass.append(P_poisson_bin)
             bias.append(bias_bin_mass)
             poisson.append(poisson_bin_mass)
-        
-        
-        for i in range(size_z-1):
-            for alpha in range(size_lmM-1):
-                for j in range(size_z-1):
-                    for beta in range(size_lmM-1):
+
+        row = 0
+        for alpha in range(size_lmM-1):
+            for i in range(size_z-1):
+                col = 0
+                for beta in range(size_lmM-1):
+                
+                    for j in range(size_z-1):
                         if i == j and alpha == beta:
-                            self.cov.set( i+alpha, j+beta ,poisson[i][alpha] + bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
+                            self.cov.set( row, col ,poisson[i][alpha] + bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
                         else:
-                            self.cov.set( i+alpha, j+beta ,bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
+                            self.cov.set( row, col ,bias[i][alpha] * bias[j][beta] * self.S.get(i,j))
 
+                        col +=1
 
+                row +=1
+        
+        print(self.cov)
+        return
+    
     def set_lnM_obs_bins(self, lnM_obs_bins):
         self.lnM_obs_bins = lnM_obs_bins
 
     def set_z_obs_bins(self, z_obs_bins):
         self.z_obs_bins = z_obs_bins
 
-    def get_lnM_obs_bins(self):
-        return self.lnM_obs_bins
+    def set_mask(self,mask):
+        self.mask = mask
     
-    def get_z_obs_bins(self):
-        return self.z_obs_bins
+    def set_kernel(self,kernel):
+        self.kernel = kernel
     
 
     def set_cad(self, cad):
         self.ca = cad
-
-    def set_S(self, S):
-        self.S = S
 
