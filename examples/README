@@ -1,7 +1,10 @@
 Examples of how to use the library.
 
-Every example below assumes that you have unpacked and compiled the library 
-in: /home/[username]/numcosmo
+Every example below assumes that you have the library in `/home/[username]/NumCosmo`
+and compiled in `/home/[username]/NumCosmo/build`
+
+To setup the environment variables for the examples, you can use the script:
+`source path_to_numcosmo_build/numcosmo_export.sh`
 
 ****************************************************************************
 * Compilation of the examples in C
@@ -10,12 +13,8 @@ in: /home/[username]/numcosmo
 # To compile an example *without* installing numcosmo in your system:
 If you have libtool you can compile directly with:
 
-export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
-export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/home/[username]/numcosmo/numcosmo/.libs/"
-
 libtool --tag=CC --mode=link gcc example_simple.c -o example_simple \
-/home/[username]/numcosmo/numcosmo/libnumcosmo.la \
--I/home/[username]/numcosmo \
+/home/[username]/NumCosmo/build/numcosmo/libnumcosmo.la \
 `pkg-config glib-2.0 --cflags`
 
 Libtool takes care in finding the correct place of the compiled but not
@@ -33,15 +32,10 @@ for the missing header and add the corresponding pkg-config lib or -I
 * Running the python examples
 ***************************************************************************
 
-All examples assumes that you are using python 2.* 
+All examples assumes that you are using python >= 3.8 
+To test the example ust run the script:
 
-export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
-export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/home/[username]/numcosmo/numcosmo/.libs/"
-export GI_TYPELIB_PATH="${GI_TYPELIB_PATH}:/home/[username]/numcosmo/numcosmo"
-
-After these two steps just run the script:
-
-python2 ./example_simple.py
+`python ./example_simple.py`
 
 Note that some examples depend on matplotlib and/or other python modules.
 

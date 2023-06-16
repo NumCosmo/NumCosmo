@@ -78,7 +78,7 @@ def run_xcdm_nopert_mcmc(
     filename_base = f"{model_str}_{data_str}"
     progress_file = f"{filename_base}_progress.mset"
 
-    ser = Ncm.Serialize.new(0)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     dset = Ncm.Dataset.new()
 
     if os.path.exists(progress_file):
@@ -105,10 +105,10 @@ def run_xcdm_nopert_mcmc(
             param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
             cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
 
-        cosmo.props.H0_fit = True
-        cosmo.props.Omegac_fit = True
-        cosmo.props.Omegax_fit = not flat
-        cosmo.props.w_fit = True
+        cosmo.set_property("H0_fit", True)
+        cosmo.set_property("Omegac_fit", True)
+        cosmo.set_property("Omegax_fit", not flat)
+        cosmo.set_property("w_fit", True)
 
         mset.set(cosmo)
 

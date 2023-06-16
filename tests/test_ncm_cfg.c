@@ -45,6 +45,7 @@ void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_logfile_set_logstream (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata);
 
 void test_ncm_cfg_traps (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_invalid (TesNcmCfg *test, gconstpointer pdata);
@@ -71,6 +72,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/cfg/logfile/on_off", TesNcmCfg, NULL,
               &test_ncm_cfg_new,
               &test_ncm_cfg_logfile_on_off,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/logfile_str/on_off", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_logfile_str_on_off,
               &test_ncm_cfg_free);
 
   g_test_add ("/ncm/cfg/traps", TesNcmCfg, NULL,
@@ -164,6 +170,26 @@ test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata)
     ncm_message ("This message should not be printed in stderr %d", 1);
     ncm_cfg_logfile (TRUE);
     ncm_message ("This message should be printed in stderr %d", 1);
+
+    return;
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_stderr ("This message should be printed in stderr 1");
+}
+
+void
+test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    ncm_cfg_set_logstream (stderr);
+
+    ncm_cfg_logfile (FALSE);
+    ncm_message_str ("This message should not be printed in stderr 1");
+    ncm_cfg_logfile (TRUE);
+    ncm_message_str ("This message should be printed in stderr 1");
 
     return;
   }

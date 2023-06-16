@@ -35,12 +35,12 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 
-def test_halo_mass_function():
+def test_halo_mass_function() -> None:
     """Example testing halo mass function."""
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm()
 
     #
     #  New homogeneous and isotropic reionization object.

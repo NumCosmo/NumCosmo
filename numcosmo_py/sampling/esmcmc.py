@@ -23,7 +23,7 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional
+from typing import Optional, Union
 import warnings
 from enum import Enum
 from numcosmo_py import Ncm
@@ -81,6 +81,7 @@ def create_esmcmc(
     if fit_first:
         fit.run(message_level)
 
+    init_sampler: Union[Ncm.MSetTransKernCat, Ncm.MSetTransKernGauss]
     if start_mcat is not None:
         init_sampler = Ncm.MSetTransKernCat.new(start_mcat, None)
         init_sampler.set_sampling(Ncm.MSetTransKernCatSampling.CHOOSE)
@@ -99,6 +100,7 @@ def create_esmcmc(
     # very correlated parametric space.
     #
 
+    walker: Union[Ncm.FitESMCMCWalkerAPES, Ncm.FitESMCMCWalkerStretch]
     if sampler == WalkerTypes.APES:
         walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
         # Sets the calibrated over-smoothing factor.

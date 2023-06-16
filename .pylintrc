@@ -42,6 +42,9 @@ const-naming-style=any
 # Naming stule matching correct method names.
 method-naming-style=any
 
+# Naming style matching correct function names.
+function-naming-style=any
+
 [STRING]
 
 # This flag controls whether inconsistent-quotes generates a warning when the

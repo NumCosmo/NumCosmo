@@ -35,12 +35,12 @@ from numcosmo_py import Nc, Ncm, GLib
 Ncm.cfg_init()
 
 
-def test_fit_snia_cov():
+def test_fit_snia_cov() -> None:
     """Example fitting SNIaCov data."""
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm()
     cosmo.omega_x2omega_k()
 
     #
