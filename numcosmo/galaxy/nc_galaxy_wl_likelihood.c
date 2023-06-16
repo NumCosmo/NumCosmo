@@ -49,6 +49,8 @@
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_z_proxy.h"
 #include "galaxy/nc_galaxy_sd_position.h"
+#include "math/ncm_stats_dist_kde.h"
+#include "math/ncm_stats_dist_kernel_gauss.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -58,6 +60,7 @@ struct _NcGalaxyWLLikelihoodPrivate
   NcGalaxySDShape *s_dist;
   NcGalaxySDZProxy *zp_dist;
   NcGalaxySDPosition *rz_dist;
+  NcmStatsDistKDE *kde;
   guint len;
 };
 
@@ -68,6 +71,7 @@ enum
   PROP_S_DIST,
   PROP_ZP_DIST,
   PROP_RZ_DIST,
+  PROP_KDE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE(NcGalaxyWLLikelihood, nc_galaxy_wl_likelihood, G_TYPE_OBJECT);
@@ -81,6 +85,7 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
   self->s_dist  = NULL;
   self->zp_dist = NULL;
   self->rz_dist = NULL;
+  self->kde     = NULL;
   self->len     = 0;
 }
 
@@ -248,7 +253,7 @@ nc_galaxy_wl_likelihood_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist,
   NcGalaxyWLLikelihood *gwl = g_object_new (NC_TYPE_GALAXY_WL_LIKELIHOOD,
                                             "s-dist", s_dist,
                                             "zp-dist", zp_dist,
-                                            "zp-dist", rz_dist,
+                                            "rz-dist", rz_dist,
                                             NULL);
 
   return gwl;
@@ -332,6 +337,36 @@ nc_galaxy_wl_likelihood_peek_obs (NcGalaxyWLLikelihood *gwl)
   return self->obs;
 }
 
+void
+nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (3);
+  NcmStatsDistKDE *kde = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE);
+  NcmRNG *rng = ncm_rng_new (NULL);
+  gdouble ndata = 10000;
+  gint i;
+
+  for (i = 0; i < ndata; i++)
+  {
+    NcmVector *gen_pos = nc_galaxy_sd_position_gen (self->rz_dist, rng);
+    gdouble gen_zp = nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, ncm_vector_get (gen_pos, 0));
+    gdouble gen_s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, gen_pos);
+
+    NcmVector *obs = ncm_vector_new (3);
+    ncm_vector_set (obs, 0, ncm_vector_get (gen_pos, 1));
+    ncm_vector_set (obs, 1, gen_zp);
+    ncm_vector_set (obs, 2, gen_s);
+
+    ncm_stats_dist_add_obs (NCM_STATS_DIST (kde), obs);
+  }
+
+  ncm_stats_dist_prepare (NCM_STATS_DIST (kde));
+
+  self->kde = kde;
+}
+
 /**
  * nc_galaxy_wl_likelihood_eval_m2lnP:
  * @gwl: a #NcGalaxyWLLikelihood
@@ -369,5 +404,37 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
 gdouble
 nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
-  return 0.0;
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+  gdouble res = 0.0;
+  gint gal_i;
+
+  for (gal_i = 0; gal_i < self->len; gal_i++)
+  {
+    const gdouble r_i = ncm_matrix_get (self->obs, gal_i, 0);
+    const gdouble z_i = ncm_matrix_get (self->obs, gal_i, 1);
+    const gdouble s_i = ncm_matrix_get (self->obs, gal_i, 2);
+    NcmVector *data_vec = ncm_vector_new (3);
+
+    ncm_vector_set(data_vec, 0, r_i);
+    ncm_vector_set(data_vec, 1, z_i);
+    ncm_vector_set(data_vec, 2, s_i);
+
+    res += ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
+  }
+
+  return res;
+}
+
+/**
+ * nc_galaxy_wl_len:
+ * @gwl: a #NcGalaxyWL
+ *
+ * Returns: the number of galaxies in @gwl.
+ */
+guint
+nc_galaxy_wl_likelihood_len (NcGalaxyWLLikelihood *gwll)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwll->priv;
+
+  return self->len;
 }
