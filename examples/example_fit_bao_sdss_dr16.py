@@ -36,13 +36,13 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 
-def test_fit_bao_sdss_dr16():
+def test_fit_bao_sdss_dr16() -> None:
     """Example fitting BAO SDSS DR16 likelihoods."""
 
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm()
     cosmo.omega_x2omega_k()
 
     #

@@ -50,7 +50,7 @@ class RhsF:
         return self.alpha * y
 
 
-def test_ode_spline():
+def test_ode_spline() -> None:
     """Test function for the ODE spline."""
 
     f = RhsF(2.5)
@@ -75,6 +75,7 @@ def test_ode_spline():
 
     # Gets the results from the ODE solver.
     ss = os.peek_spline()
+    assert isinstance(ss, Ncm.SplineCubic)
 
     # Print the spline coefficients.
     for i in range(ss.len):

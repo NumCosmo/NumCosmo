@@ -34,13 +34,13 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 
-def test_cbe():
+def test_cbe() -> None:
     """Compare the results from CLASS using CBE to NumCosmo's."""
 
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
+    cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
     cosmo.set_reparam(Nc.HICosmoDEReparamCMB.new(cosmo.len()))
 
     #

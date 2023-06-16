@@ -28,6 +28,8 @@ test the MCMC sampler.
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 from numcosmo_py import Ncm
 from numcosmo_py.sampling.esmcmc import (
     create_esmcmc,
@@ -55,6 +57,7 @@ def run_gauss_constraint_mcmc(
     local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0,
     start_catalog: Optional[Path] = None,
+    perfect: bool = False,
 ) -> str:
     """Runs the Funnel MCMC example."""
 
@@ -88,6 +91,35 @@ def run_gauss_constraint_mcmc(
     cov = cov50.get_submatrix(0, 0, dim, dim).dup()
 
     dgc.set_cov_mean(mean, cov)
+
+    if perfect:
+        Ncm.message_str(
+            "# Sampling the likelihood posterior using a simple rejection sampler: "
+        )
+        rng = Ncm.RNG.seeded_new(None, 0)
+        bounds = np.array(
+            [
+                [mgc.param_get_lower_bound(i), mgc.param_get_upper_bound(i)]
+                for i in range(dim)
+            ]
+        )
+        mset.fparams_set_vector(mean)
+
+        sv = dgc.stats_vec(
+            mset,
+            5000,
+            Ncm.Vector.new_array(bounds[:, 0].tolist()),
+            Ncm.Vector.new_array(bounds[:, 1].tolist()),
+            True,
+            rng,
+        )
+        Ncm.message_str(f"# Mean : {sv.peek_mean().dup_array()}")
+        Ncm.message_str(f"# Stdev: {[sv.get_sd(i) for i in range(dim)]}")
+
+        for i in range(sv.nitens):
+            Ncm.message_str(f"# {sv.peek_row(i).dup_array()}")
+
+        return ""
 
     dset = Ncm.Dataset.new()
     dset.append_data(dgc)

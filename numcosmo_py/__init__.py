@@ -35,11 +35,11 @@ from gi.repository import GLib  # noqa: E402
 # pylint:disable-next=wrong-import-position,unused-import
 from gi.repository import GObject  # noqa: E402
 
-# pylint:disable-next=wrong-import-position,unused-import,no-name-in-module
-from gi.repository import NumCosmo as Nc  # noqa: E402
+# pylint:disable-next=wrong-import-position,unused-import
+from . import ncm as Ncm
 
-# pylint:disable-next=wrong-import-position,unused-import,no-name-in-module
-from gi.repository import NumCosmoMath as Ncm  # noqa: E402
+# pylint:disable-next=wrong-import-position,unused-import
+from . import nc as Nc
 
 
 class GEnum(str, Enum):
