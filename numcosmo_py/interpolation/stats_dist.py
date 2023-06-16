@@ -23,7 +23,7 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional
+from typing import Optional, Union
 
 from numcosmo_py import Ncm, GEnum
 
@@ -81,6 +81,7 @@ def create_stats_dist(
     :return: A new Ncm.StatsDist object.
     """
 
+    kernel: Union[Ncm.StatsDistKernelST, Ncm.StatsDistKernelGauss]
     if interpolation_kernel == InterpolationKernel.CAUCHY:
         kernel = Ncm.StatsDistKernelST.new(dim, 1.0)
     elif interpolation_kernel == InterpolationKernel.ST3:

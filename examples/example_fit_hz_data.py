@@ -36,12 +36,12 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 
-def test_fit_hz_data():
+def test_fit_hz_data() -> None:
     """Example fitting H(z) data."""
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm()
     cosmo.omega_x2omega_k()
 
     #

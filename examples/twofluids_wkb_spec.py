@@ -1,136 +1,218 @@
 #!/usr/bin/env python
+#
+# two_fluids_wkb_spec.py
+#
+# Mon May 22 16:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# two_fluids_wkb_spec.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-try:
-  import gi
-  gi.require_version('NumCosmo', '1.0')
-  gi.require_version('NumCosmoMath', '1.0')
-except:
-  pass
+"""Compute WKB approximation for the two-fluids model spectrum."""
 
-import scipy.stats as ss
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from tqdm import tqdm
-import time
-import math
 import sys
 import math
-from gi.repository import GObject
-from gi.repository import NumCosmo as Nc
-from gi.repository import NumCosmoMath as Ncm
+import numpy as np
+
+from tqdm import tqdm
+
+import matplotlib.pyplot as plt
+
+from numcosmo_py import Nc, Ncm
 
 
 #
-#  Initializing the library objects, this must be called before 
+#  Initializing the library objects, this must be called before
 #  any other library function.
 #
-Ncm.cfg_init ()
+Ncm.cfg_init()
 
-#
-#  New homogeneous and isotropic cosmological model NcHICosmoQGRW
-#
-cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
-if len (sys.argv) != 2:
-  print ("%s w" % (sys.argv[0]))
-  sys.exit (0)
+def test_two_fluids_wkb_spec() -> None:
+    """Compute WKB approximation for the two-fluids model spectrum."""
 
-w      = float (sys.argv[1])
-prec   = 1.0e-7
+    #
+    #  New homogeneous and isotropic cosmological model NcHICosmoQGRW
+    #
+    cosmo = Nc.HICosmoQGRW()
 
-cosmo.props.w      = w
-cosmo.props.Omegar = (1.0e-6) * 1.0
-cosmo.props.Omegaw = (1.0 - 1.0e-6) * 1.0
-cosmo.props.xb     = 1.e30
+    if len(sys.argv) != 2:
+        print(f"{sys.argv[0]} w")
+        sys.exit(0)
 
-pert = Nc.HIPertTwoFluids.new ()
+    w = float(sys.argv[1])
+    prec = 1.0e-7
 
-pert.props.reltol = prec
-#pert.set_stiff_solver (True)
+    cosmo.props.w = w
+    cosmo.props.Omegar = (1.0e-6) * 1.0
+    cosmo.props.Omegaw = (1.0 - 1.0e-6) * 1.0
+    cosmo.props.xb = 1.0e30
 
-lnki  = math.log (1.0e-3)
-lnkf  = math.log (1.0e3)
-lnk_a = np.linspace (lnki, lnkf, 20)
+    pert = Nc.HIPertTwoFluids.new()
 
-ci = Ncm.Vector.new (8)
+    pert.props.reltol = prec
+    # pert.set_stiff_solver (True)
 
-k_a       = []
-Ps_zeta1  = []
-Ps_S1     = []
-Ps_zeta2  = []
-Ps_S2     = []
-Ps_Pzeta1 = []
-Ps_PS1    = []
-Ps_Pzeta2 = []
-Ps_PS2    = []
+    lnki = math.log(1.0e-3)
+    lnkf = math.log(1.0e3)
+    lnk_a = np.linspace(lnki, lnkf, 20)
 
-out_file = f = open ('twofluids_spectrum_%e.dat' % (w), 'w')
+    ci = Ncm.Vector.new(8)
 
-start_alpha1 = 1.0e-10
-start_alpha2 = 1.0e-14
+    k_a = []
+    Ps_zeta1 = []
+    Ps_S1 = []
+    Ps_zeta2 = []
+    Ps_S2 = []
+    Ps_Pzeta1 = []
+    Ps_PS1 = []
+    # Ps_Pzeta2 = []
+    # Ps_PS2 = []
 
-for lnk in tqdm (lnk_a):
-  k = math.exp (lnk)
-  pert.set_mode_k (k)
-  k_a.append (k)
+    out_file = open("twofluids_spectrum_{w}.dat", "w", encoding="utf-8")
 
-  alphaf = cosmo.abs_alpha (1.0e20)
+    start_alpha1 = 1.0e-10
+    start_alpha2 = 1.0e-14
 
-  #print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
+    for lnk in tqdm(lnk_a):
+        k = math.exp(lnk)
+        pert.set_mode_k(k)
+        k_a.append(k)
 
-  alphai = -cosmo.abs_alpha (start_alpha1 * k**2)
-  pert.get_init_cond_zetaS (cosmo, alphai, 1, 0.25 * math.pi, ci)
-  pert.set_init_cond (cosmo, alphai, 1, False, ci)
-  
-  print ("# Mode 1 k % 21.15e, state module %f" % (k, pert.get_state_mod ()))
+        alphaf = cosmo.abs_alpha(1.0e20)
 
-  pert.evolve (cosmo, alphaf)
-  v, alphac = pert.peek_state ()
+        # print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
 
-  Delta_zeta1  = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.ZETA_R),  v.get (Nc.HIPertITwoFluidsVars.ZETA_I))**2  / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_S1     = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     v.get (Nc.HIPertITwoFluidsVars.S_I))**2     / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_Pzeta1 = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2 / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_PS1    = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    v.get (Nc.HIPertITwoFluidsVars.PS_I))**2    / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-    
-  Ps_zeta1.append (Delta_zeta1)
-  Ps_S1.append    (Delta_S1)
-  Ps_Pzeta1.append (Delta_Pzeta1)
-  Ps_PS1.append    (Delta_PS1)
+        alphai = -cosmo.abs_alpha(start_alpha1 * k**2)
+        pert.get_init_cond_zetaS(cosmo, alphai, 1, 0.25 * math.pi, ci)
+        pert.set_init_cond(cosmo, alphai, 1, False, ci)
 
-  alphai = -cosmo.abs_alpha (start_alpha2 * k**2)
-  pert.get_init_cond_zetaS (cosmo, alphai, 2, 0.25 * math.pi, ci)
-  pert.set_init_cond (cosmo, alphai, False, ci)
+        print(f"# Mode 1 k {k: 21.15e}, state module {pert.get_state_mod():f}")
 
-  print ("# Mode 2 k % 21.15e, state module %f" % (k, pert.get_state_mod ()))
+        pert.evolve(cosmo, alphaf)
+        v, _alphac = pert.peek_state(cosmo)
 
-  pert.evolve (cosmo, alphaf)
-  v, alphac = pert.peek_state ()
+        Delta_zeta1 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.ZETA_R),
+                v.get(Nc.HIPertITwoFluidsVars.ZETA_I),
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_S1 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.S_R), v.get(Nc.HIPertITwoFluidsVars.S_I)
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_Pzeta1 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.PZETA_R),
+                v.get(Nc.HIPertITwoFluidsVars.PZETA_I),
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_PS1 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.PS_R), v.get(Nc.HIPertITwoFluidsVars.PS_I)
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
 
-  Delta_zeta2  = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.ZETA_R),  v.get (Nc.HIPertITwoFluidsVars.ZETA_I))**2  / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_S2     = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     v.get (Nc.HIPertITwoFluidsVars.S_I))**2     / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_Pzeta2 = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2 / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-  Delta_PS2    = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    v.get (Nc.HIPertITwoFluidsVars.PS_I))**2    / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+        Ps_zeta1.append(Delta_zeta1)
+        Ps_S1.append(Delta_S1)
+        Ps_Pzeta1.append(Delta_Pzeta1)
+        Ps_PS1.append(Delta_PS1)
 
-  Ps_zeta2.append (Delta_zeta2)
-  Ps_S2.append    (Delta_S2)
-  Ps_zeta2.append (Delta_Pzeta2)
-  Ps_S2.append    (Delta_PS2)
-  
-  out_file.write ("% 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n" % (k, Delta_zeta1, Delta_zeta2, Delta_S1, Delta_S2, Delta_Pzeta1, Delta_Pzeta2, Delta_PS1, Delta_PS2))
-  out_file.flush ()
+        alphai = -cosmo.abs_alpha(start_alpha2 * k**2)
+        pert.get_init_cond_zetaS(cosmo, alphai, 2, 0.25 * math.pi, ci)
+        pert.set_init_cond(cosmo, alphai, 0, False, ci)
 
-out_file.close ()
+        print("# Mode 2 k {k: 21.15e}, state module {pert.get_state_mod():f}")
 
-plt.plot (k_a, Ps_zeta1, label = r'$P^1_\zeta$')
-plt.plot (k_a, Ps_S1,    label = r'$P^1_S$')
-plt.plot (k_a, Ps_zeta2, label = r'$P^2_\zeta$')
-plt.plot (k_a, Ps_S2,    label = r'$P^2_S$')
+        pert.evolve(cosmo, alphaf)
+        v, _alphac = pert.peek_state(cosmo)
 
-plt.grid ()
-plt.legend (loc="upper left")
-plt.xscale('log')
-plt.yscale('log')
+        Delta_zeta2 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.ZETA_R),
+                v.get(Nc.HIPertITwoFluidsVars.ZETA_I),
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_S2 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.S_R), v.get(Nc.HIPertITwoFluidsVars.S_I)
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_Pzeta2 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.PZETA_R),
+                v.get(Nc.HIPertITwoFluidsVars.PZETA_I),
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
+        Delta_PS2 = (
+            k**3
+            * math.hypot(
+                v.get(Nc.HIPertITwoFluidsVars.PS_R), v.get(Nc.HIPertITwoFluidsVars.PS_I)
+            )
+            ** 2
+            / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
+        )
 
-plt.show ()
-plt.clf ()
+        Ps_zeta2.append(Delta_zeta2)
+        Ps_S2.append(Delta_S2)
+        Ps_zeta2.append(Delta_Pzeta2)
+        Ps_S2.append(Delta_PS2)
+
+        out_file.write(
+            f"{k: 20.15e} {Delta_zeta1: 20.15e} {Delta_zeta2: 20.15e} {Delta_S1: 20.15e} "
+            f"{Delta_S2: 20.15e} {Delta_Pzeta1: 20.15e} {Delta_Pzeta2: 20.15e} "
+            f"{Delta_PS1: 20.15e} {Delta_PS2: 20.15e}\n"
+        )
+        out_file.flush()
+
+    out_file.close()
+
+    plt.plot(k_a, Ps_zeta1, label=r"$P^1_\zeta$")
+    plt.plot(k_a, Ps_S1, label=r"$P^1_S$")
+    plt.plot(k_a, Ps_zeta2, label=r"$P^2_\zeta$")
+    plt.plot(k_a, Ps_S2, label=r"$P^2_S$")
+
+    plt.grid()
+    plt.legend(loc="upper left")
+    plt.xscale("log")
+    plt.yscale("log")
+
+    plt.show()
+    plt.clf()

@@ -25,12 +25,13 @@
 
 from typing import Optional
 import numpy as np
+import numpy.typing as npt
+
+from getdist import MCSamples
 
 from numcosmo_py import Ncm
 from .model import build_mset
 from ..plotting.getdist import mcat_to_mcsamples
-
-from getdist import MCSamples
 
 
 class Catalog:
@@ -65,7 +66,7 @@ class Catalog:
         if run_type is not None:
             self._catalog.set_run_type(run_type)
 
-    def add_samples(self, sample: np.ndarray, interweaved: bool = True):
+    def add_samples(self, sample: npt.NDArray[np.float64], interweaved: bool = True):
         """Add a new sample to the catalog."""
 
         ncols = self._catalog.ncols()
@@ -74,7 +75,7 @@ class Catalog:
             if sample.shape[0] != ncols:
                 raise ValueError("sample shape does not match catalog")
 
-            self._catalog.add_from_vector(Ncm.Vector.new_array(sample))
+            self._catalog.add_from_vector(Ncm.Vector.new_array(sample.tolist()))
 
         elif len(sample.shape) == 2:
             if sample.shape[1] != ncols:

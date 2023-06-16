@@ -1248,6 +1248,19 @@ ncm_cfg_logfile_flush_now (void)
 }
 
 /**
+ * ncm_message_str:
+ * @msg: a string
+ *
+ * Logs a message string.
+ *
+ */
+void
+ncm_message_str (const gchar *msg)
+{
+  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "%s", msg);
+}
+
+/**
  * ncm_message:
  * @msg: a string
  * @...: a variable number of arguments
