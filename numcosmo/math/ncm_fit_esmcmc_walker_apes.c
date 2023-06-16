@@ -86,6 +86,7 @@ enum
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
   PROP_USE_INTERP,
+  PROP_USE_THREADS,
 };
 
 struct _NcmFitESMCMCWalkerAPESPrivate
@@ -108,6 +109,7 @@ struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
   gboolean use_interp;
+  gboolean use_threads;
   gboolean constructed;
 };
 
@@ -138,6 +140,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->k_type      = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
   self->over_smooth = 0.0;
   self->use_interp  = FALSE;
+  self->use_threads = FALSE;
   self->constructed = FALSE;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
@@ -163,6 +166,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
+      break;
+    case PROP_USE_THREADS:
+      ncm_fit_esmcmc_walker_apes_set_use_threads (apes, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -190,6 +196,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
+      break;
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_use_threads (apes));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -296,6 +305,14 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                          NULL,
                                                          "Whether to use interpolation to build the posterior approximation",
                                                          TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use threads when building the posterior approximation",
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_apes_set_size;
@@ -407,6 +424,9 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
 
     ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
     ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
+
+    ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
+    ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
 
     for (i = 0; i < self->size; i++)
     {
@@ -944,8 +964,13 @@ ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboole
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
 
-  ncm_stats_dist_set_use_threads (self->sd0, use_threads);
-  ncm_stats_dist_set_use_threads (self->sd1, use_threads);
+  self->use_threads = use_threads;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
+    ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
+  }
 }
 
 /**
@@ -962,6 +987,7 @@ ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes)
   gboolean use_threads0                      = ncm_stats_dist_get_use_threads (self->sd0);
   gboolean use_threads1                      = ncm_stats_dist_get_use_threads (self->sd1);
 
+  g_assert (self->use_threads == use_threads0);
   g_assert (use_threads0 == use_threads1);
 
   return use_threads0;
