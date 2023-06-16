@@ -96,7 +96,7 @@ def sol_p(k, t):
     return math.sin(a) / a
 
 
-def test():
+def test_hoaa() -> None:
     """Test the HOAA ODE solver for a scalar field model."""
     hoaa = PyHOAATest()
 
@@ -149,4 +149,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    test_hoaa()

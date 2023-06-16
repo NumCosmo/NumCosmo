@@ -31,6 +31,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss_cov.h>
+#include <numcosmo/math/ncm_stats_vec.h>
 
 G_BEGIN_DECLS
 
@@ -53,6 +54,8 @@ NcmVector *ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet 
 gdouble ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpointer obj, NcmDataGaussCovMVNDBound bound, gulong *N, gulong *Nin, const gdouble reltol, NcmRNG *rng);
 
 void ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd);
+
+NcmStatsVec *ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, guint n, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng);
 
 G_END_DECLS
 

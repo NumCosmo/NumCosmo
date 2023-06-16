@@ -65,6 +65,8 @@ NcmMatrix *ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss);
 
 gdouble ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset);
 
+void ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *resample, NcmRNG *rng);
+
 G_END_DECLS
 
 #endif /* _NCM_DATA_GAUSS_COV_H_ */
