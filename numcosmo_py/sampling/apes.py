@@ -72,6 +72,9 @@ class APES:
             # pylint:disable-next=invalid-name
             model = NcmModelGeneric(theta_length=ndim)
 
+        if model is None:
+            raise ValueError("Either ndim or model must be provided.")
+
         self.mset = Ncm.MSet()
         self.mset.set(model)
         self.mset.param_set_all_ftype(Ncm.ParamType.FREE)

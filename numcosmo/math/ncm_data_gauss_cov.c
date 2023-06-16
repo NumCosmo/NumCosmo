@@ -650,3 +650,71 @@ ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset)
   return m2lnL;
 }
 
+/**
+ * ncm_data_gauss_cov_bulk_resample:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ * @resample: a #NcmMatrix
+ * @rng: a #NcmRNG
+ *
+ * Resamples the data based on the models in @mset according to the current
+ * data distribution. The resampled data is stored in @resample. The resampling
+ * is done in bulk, i.e., all the data is resampled at once.
+ *
+ */
+void
+ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *resample, NcmRNG *rng)
+{
+  NcmData *data                         = NCM_DATA (gauss);
+  NcmDataGaussCovPrivate * const self   = ncm_data_gauss_cov_get_instance_private (gauss);
+  NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  gboolean cov_update                   = FALSE;
+  guint nrealizations                   = ncm_matrix_nrows (resample);
+  gint ret;
+  guint i, j;
+
+  g_assert_cmpuint (self->np, ==, ncm_matrix_ncols (resample));
+  g_assert_cmpuint (nrealizations, >=, 1);
+
+  ncm_data_prepare (data, mset);
+
+  if (gauss_cov_class->cov_func != NULL)
+    cov_update = gauss_cov_class->cov_func (gauss, mset, self->cov);
+
+  if (cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_cov_prepare_LLT (data);
+
+  ncm_rng_lock (rng);
+
+  for (j = 0; j < nrealizations; j++)
+  {
+    for (i = 0; i < self->np; i++)
+    {
+      const gdouble u_i = gsl_ran_ugaussian (rng->r);
+
+      ncm_matrix_set (resample, j, i, u_i);
+    }
+  }
+
+  ncm_rng_unlock (rng);
+
+  ret = gsl_blas_dtrmm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                        1.0, ncm_matrix_gsl (self->LLT),
+                        ncm_matrix_gsl (resample));
+  NCM_TEST_GSL_RESULT ("ncm_data_gauss_cov_bulk_resample", ret);
+
+  gauss_cov_class->mean_func (gauss, mset, self->v);
+
+  for (j = 0; j < nrealizations; j++)
+  {
+    gdouble *theta_j = ncm_matrix_ptr (resample, j, 0);
+
+    cblas_daxpy (self->np,
+                 -1.0,
+                 ncm_vector_const_data (self->v), ncm_vector_stride (self->v),
+                 theta_j, 1);
+  }
+
+  ncm_matrix_scale (resample, -1.0);
+}
+

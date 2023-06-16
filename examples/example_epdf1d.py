@@ -40,7 +40,7 @@ from numcosmo_py import Ncm
 Ncm.cfg_init()
 
 
-def test_epdf1d():
+def test_epdf1d() -> None:
     """Generate a distribution of points from a Gaussian mixture
     distribution and reconstruct the probability density function
     using the numcosmo library."""
