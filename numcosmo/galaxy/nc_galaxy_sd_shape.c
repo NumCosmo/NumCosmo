@@ -28,12 +28,12 @@
 /**
  * SECTION: nc_galaxy_sd_shape
  * @title: NcGalaxySDShape
- * @short_description: Class describing galaxy sample position distributions.
+ * @short_description: Class describing galaxy sample shape distribution.
  * @stability: Unstable
  *
  *
- * This class describes a galaxy sample position distributions.
- * It is composed by two distributions: an imagem position distribution $P(r)$ and a redshift distribution $P(z)$.
+ * This class describes a galaxy sample shape distribution.
+ * It is composed by a distribution $P(s)$.
  *
  */
 
