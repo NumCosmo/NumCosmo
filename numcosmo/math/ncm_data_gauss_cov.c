@@ -123,9 +123,9 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV:
       ncm_matrix_substitute (&self->cov, g_value_get_object (value), TRUE);
       break;
-    default: /* LCOV_EXCL_BR_LINE */
+    default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -151,9 +151,9 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV:
       g_value_set_object (value, self->cov);
       break;
-    default: /* LCOV_EXCL_BR_LINE */
+    default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -701,7 +701,7 @@ ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatr
   ret = gsl_blas_dtrmm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
                         1.0, ncm_matrix_gsl (self->LLT),
                         ncm_matrix_gsl (resample));
-  NCM_TEST_GSL_RESULT ("ncm_data_gauss_cov_bulk_resample", ret);
+  NCM_TEST_GSL_RESULT ("ncm_data_gauss_cov_bulk_resample", ret); /* LCOV_EXCL_BR_LINE */
 
   gauss_cov_class->mean_func (gauss, mset, self->v);
 
