@@ -33,13 +33,13 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 
-def test_fit_snia():
+def test_fit_snia() -> None:
     """Example fitting SNIa data."""
 
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm()
 
     #
     #  Setting values for the cosmological model, those not set stay in the

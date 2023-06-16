@@ -42,7 +42,7 @@ class PyHOAATest(Ncm.HOAA):
     def __init__(self):
         Ncm.HOAA.__init__(self, opt=Ncm.HOAAOpt.DLNMNU_ONLY)
 
-    def do_eval_nu(self, _model, _t, k):
+    def do_eval_nu(self, model, t, k):
         """Evaluate the nu function."""
         return k
 
@@ -95,7 +95,7 @@ def sol_p(k, t):
     return t * (math.cos(a) - math.sin(a) / a)
 
 
-def test():
+def test_hoaa():
     """Test the HOAA ODE solver."""
     hoaa = PyHOAATest()
 
@@ -151,3 +151,7 @@ def test():
             (qbar**2 + pbar**2) / math.hypot(upsilon, 1.0 / math.cosh(lnmnu)) - 1.0,
             Aq * q / (Av * v) + 1.0,
         )
+
+
+if __name__ == "__main__":
+    test_hoaa()

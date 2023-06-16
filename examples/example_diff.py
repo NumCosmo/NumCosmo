@@ -107,7 +107,7 @@ def cmp_array(a, b, err, title=None):
     print("")
 
 
-def test_diff():
+def test_diff() -> None:
     """Test the numcosmo library to calculate derivatives of functions."""
 
     #
@@ -127,7 +127,7 @@ def test_diff():
     #
     # First derivative: Forward method + Richardson extrapolation
     #
-    df_a, err_a = diff.rf_d1_N_to_M(x0_a, 4, ftest, L, roffpad)
+    df_a, err_a = diff.rf_d1_N_to_M(x0_a.tolist(), 4, ftest, L, roffpad)
 
     # Analytical derivative
     dfE_a = [
@@ -159,7 +159,7 @@ def test_diff():
     #
     # First derivative: Central method + Richardson extrapolation
     #
-    df_a, err_a = diff.rc_d1_N_to_M(x0_a, 4, ftest, L, roffpad)
+    df_a, err_a = diff.rc_d1_N_to_M(x0_a.tolist(), 4, ftest, L, roffpad)
 
     # Analytical derivative
     dfE_a = [
@@ -183,7 +183,7 @@ def test_diff():
     #
     # Second derivative: Central method + Richardson extrapolation
     #
-    df_a, err_a = diff.rc_d2_N_to_M(x0_a, 4, ftest, L, roffpad)
+    df_a, err_a = diff.rc_d2_N_to_M(x0_a.tolist(), 4, ftest, L, roffpad)
 
     # Analytical derivative
     dfE_a = [
@@ -210,7 +210,7 @@ def test_diff():
     # Hessian matrix: Forward method + Richardson extrapolation
     #
     x0_a = np.array([1.5, 2.0, 3.0])
-    H_a, Herr_a = diff.rf_Hessian_N_to_1(x0_a, ftest2, None, None)
+    H_a, Herr_a = diff.rf_Hessian_N_to_1(x0_a.tolist(), ftest2, None, None)
 
     # Analytical derivative
     HE_a = [
