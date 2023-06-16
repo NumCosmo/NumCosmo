@@ -390,7 +390,7 @@ ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
   gdouble *lb           = ncm_vector_data (lower);
   gdouble *ub           = ncm_vector_data (upper);
   guint dim             = ncm_data_gauss_cov_get_size (gcov);
-  NcmStatsVec *stats    = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
+  NcmStatsVec *stats    = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, save_realizations);
   const glong maxiter   = 1000000;
   const guint bulk_len  = n;
   NcmMatrix *sample     = ncm_matrix_new (bulk_len, dim);

@@ -72,7 +72,7 @@ typedef struct _NcmDataGaussCovPrivate
 } NcmDataGaussCovPrivate;
 
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA); /* LCOV_EXCL_BR_LINE */
 
 static void
 ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
@@ -123,7 +123,7 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV:
       ncm_matrix_substitute (&self->cov, g_value_get_object (value), TRUE);
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -151,7 +151,7 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV:
       g_value_set_object (value, self->cov);
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
