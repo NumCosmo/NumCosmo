@@ -55,7 +55,7 @@ gdouble ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMS
 
 void ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd);
 
-NcmStatsVec *ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, guint n, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng);
+NcmStatsVec *ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, const guint n, const glong maxiter, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng);
 
 G_END_DECLS
 
