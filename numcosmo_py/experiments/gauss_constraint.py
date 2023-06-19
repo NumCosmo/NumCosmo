@@ -110,9 +110,6 @@ def run_gauss_constraint_mcmc(
         cov_np = np.array(cov.dup_array())
         cov_np.shape = (dim, dim)
 
-        print(bounds[:, 0])
-        print(bounds[:, 1])
-
         tmvn_sampler = TruncatedMVN(
             mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
         )
