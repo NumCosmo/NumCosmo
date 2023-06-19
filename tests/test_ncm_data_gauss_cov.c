@@ -131,7 +131,7 @@ test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointe
   NcmVector *lower      = ncm_vector_new_data_static (lower_data, 5, 1);
   gdouble upper_data[5] = {2.0, 2.0, 2.0, 2.0, 2.0};
   NcmVector *upper      = ncm_vector_new_data_static (upper_data, 5, 1);
-  NcmStatsVec *sv       = ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 10000, lower, upper, FALSE, rng);
+  NcmStatsVec *sv       = ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 10000, 100000, lower, upper, FALSE, rng);
   gint i;
 
   for (i = 0; i < 5; i++)
@@ -143,7 +143,7 @@ test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 
   NCM_TEST_FREE (ncm_stats_vec_free, sv);
 
-  sv = ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 5000, lower, upper, TRUE, rng);
+  sv = ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 5000, 100000, lower, upper, TRUE, rng);
 
   for (i = 0; i < 5; i++)
   {
