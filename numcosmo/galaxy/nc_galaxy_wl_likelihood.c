@@ -344,8 +344,9 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
   NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (3);
   NcmStatsDistKDE *kde = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE);
+  NcmVector *obs = ncm_vector_new (3);
   NcmRNG *rng = ncm_rng_new (NULL);
-  gdouble ndata = 10000;
+  gdouble ndata = 100;
   gint i;
 
   for (i = 0; i < ndata; i++)
@@ -354,7 +355,6 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
     gdouble gen_zp = nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, ncm_vector_get (gen_pos, 0));
     gdouble gen_s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, gen_pos);
 
-    NcmVector *obs = ncm_vector_new (3);
     ncm_vector_set (obs, 0, ncm_vector_get (gen_pos, 1));
     ncm_vector_set (obs, 1, gen_zp);
     ncm_vector_set (obs, 2, gen_s);
@@ -363,6 +363,8 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
   }
 
   ncm_stats_dist_prepare (NCM_STATS_DIST (kde));
+
+  ncm_vector_clear (obs);
 
   self->kde = kde;
 }
@@ -405,6 +407,7 @@ gdouble
 nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+  NcmVector *data_vec = ncm_vector_new (3);
   gdouble res = 0.0;
   gint gal_i;
 
@@ -413,7 +416,6 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
     const gdouble r_i = ncm_matrix_get (self->obs, gal_i, 0);
     const gdouble z_i = ncm_matrix_get (self->obs, gal_i, 1);
     const gdouble s_i = ncm_matrix_get (self->obs, gal_i, 2);
-    NcmVector *data_vec = ncm_vector_new (3);
 
     ncm_vector_set(data_vec, 0, r_i);
     ncm_vector_set(data_vec, 1, z_i);
@@ -421,6 +423,8 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
 
     res += ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
   }
+
+  ncm_vector_clear (data_vec);
 
   return res;
 }
