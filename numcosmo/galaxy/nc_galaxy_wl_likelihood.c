@@ -360,11 +360,13 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
     ncm_vector_set (obs, 2, gen_s);
 
     ncm_stats_dist_add_obs (NCM_STATS_DIST (kde), obs);
+
+    ncm_vector_clear (&gen_pos);
   }
 
   ncm_stats_dist_prepare (NCM_STATS_DIST (kde));
 
-  ncm_vector_clear (obs);
+  ncm_vector_clear (&obs);
 
   self->kde = kde;
 }
@@ -424,7 +426,7 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
     res += ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
   }
 
-  ncm_vector_clear (data_vec);
+  ncm_vector_clear (&data_vec);
 
   return res;
 }
