@@ -26,7 +26,7 @@ for subdir in subdirs:
     for root, dirs, files in os.walk(subdir):
         if subdir == root:
             for file in files:
-                if file.endswith('.py'):
+                if file.endswith(('.py', '.pyi')):
                     file = os.path.join(root, file)
                     python_files.append(file)
                 

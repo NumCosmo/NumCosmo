@@ -372,6 +372,7 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
  * @data_mvnd: a #NcmDataGaussCovMVND
  * @mset: a #NcmMSet
  * @n: number of realizations
+ * @maxiter: maximum number of iterations
  * @lower: lower bound
  * @upper: upper bound
  * @save_realizations: whether to save realizations
@@ -384,14 +385,13 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
  * Returns: (transfer full): a new #NcmStatsVec with the statistics of the MVND.
  */
 NcmStatsVec *
-ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, guint n, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng)
+ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, const guint n, const glong maxiter, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
   gdouble *lb           = ncm_vector_data (lower);
   gdouble *ub           = ncm_vector_data (upper);
   guint dim             = ncm_data_gauss_cov_get_size (gcov);
   NcmStatsVec *stats    = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, save_realizations);
-  const glong maxiter   = 1000000;
   const guint bulk_len  = n;
   NcmMatrix *sample     = ncm_matrix_new (bulk_len, dim);
   glong iter            = 0;
@@ -436,6 +436,9 @@ ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
 
       ncm_vector_free (y);
     }
+
+    if (iter > maxiter)
+      break;
   }
 
   ncm_matrix_free (sample);
