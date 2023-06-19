@@ -8,7 +8,7 @@
 
 import math
 from scipy.stats import norm
-import numpy as np
+import numpy
 import sys
 sys.path.insert(1, '../../../Programas_Cosmologia/PySSC/')
 sys.path.insert(1, '../../../Programas_Cosmologia/CLASS/')
@@ -46,7 +46,8 @@ class ncounts(Ncm.DataGaussCov):
     #
     def __init__ (self, len = 600):
         Ncm.DataGaussCov.__init__ (self, n_points = len)
-
+        self.np = self.get_size()
+        
         if self.np > 0:
             self.ncdata = Ncm.Vector.new(self.np)
         else:
@@ -58,13 +59,14 @@ class ncounts(Ncm.DataGaussCov):
         # Initializing to sane values
         #
         if self.np > 0:
+            self.cov = self.peek_cov()
             self.cov.set_identity()
             self.ncdata.set_zero()
 
     #
     # Implements the virtual method get_length.
     #
-        self.mask = np.ndarray(shape = (0,0))
+        self.mask = numpy.ndarray(shape = (0,0))
         self.kernel = None
     def do_get_length(self):
         return self.np
@@ -114,12 +116,13 @@ class ncounts(Ncm.DataGaussCov):
         cluster_m = mset.peek(Nc.ClusterMass.id())
         cluster_z = mset.peek(Nc.ClusterRedshift.id())
         prim = cosmo.peek_prim()
-        
+        '''
         #Beggin of the S matrix calculation
         nz       = self.kernel.shape[1]
-        z_arr    = np.linspace(0, 2,num=nz+1)[1:]
+        z_arr    = numpy.linspace(0, 2,num=nz+1)[1:]
         cosmo_fid = Class()
-        cosmo_fid.set({'h':cosmo.props.H0/100 ,'Omega_cdm':cosmo.props.Omegac ,'Omega_b':cosmo.props.Omegab ,'sigma8':0.82505858,'n_s':prim.props.n_SA,'output':'mPk'})
+        #cosmo_fid.set({'h':cosmo.props.H0/100 ,'Omega_cdm':cosmo.props.Omegac ,'Omega_b':cosmo.props.Omegab ,'sigma8':0.82505858,'n_s':prim.props.n_SA,'output':'mPk'})
+        cosmo_fid.set({'h':0.67 ,'Omega_cdm':0.2612 ,'Omega_b':0.0486 ,'sigma8':0.82505858,'n_s':0.9660,'output':'mPk'})
         cosmo_fid.compute()
         if self.mask.shape[0] == 0:
             S_lacasa = PySSC.Sij(z_arr,self.kernel,cosmo_Class=cosmo_fid)
@@ -132,7 +135,7 @@ class ncounts(Ncm.DataGaussCov):
             for j in range(len(S_lacasa[i])):
                 self.S.set(i,j, S_lacasa[i][j])
         #End of the S matrix calculation
-        
+        '''
         
         bias = []
         poisson = []
@@ -167,8 +170,7 @@ class ncounts(Ncm.DataGaussCov):
 
                 row +=1
         
-        print(self.cov)
-        return
+        return True
     
     def set_lnM_obs_bins(self, lnM_obs_bins):
         self.lnM_obs_bins = lnM_obs_bins
@@ -185,4 +187,24 @@ class ncounts(Ncm.DataGaussCov):
 
     def set_cad(self, cad):
         self.ca = cad
+
+    def set_S(self):
+        #Beggin of the S matrix calculation
+        nz       = self.kernel.shape[1]
+        z_arr    = numpy.linspace(0, 2,num=nz+1)[1:]
+        cosmo_fid = Class()
+        #cosmo_fid.set({'h':cosmo.props.H0/100 ,'Omega_cdm':cosmo.props.Omegac ,'Omega_b':cosmo.props.Omegab ,'sigma8':0.82505858,'n_s':prim.props.n_SA,'output':'mPk'})
+        cosmo_fid.set({'h':0.67 ,'Omega_cdm':0.2612 ,'Omega_b':0.0486 ,'sigma8':0.82505858,'n_s':0.9660,'output':'mPk'})
+        cosmo_fid.compute()
+        if self.mask.shape[0] == 0:
+            S_lacasa = PySSC.Sij(z_arr,self.kernel,cosmo_Class=cosmo_fid)
+        else:    
+            S_lacasa = PySSC.Sij_psky(z_arr,self.kernel,mask=self.mask,cosmo_Class=cosmo_fid)
+        
+        self.S = Ncm.Matrix.new(S_lacasa.shape[0],S_lacasa.shape[1])
+
+        for i in range(len(S_lacasa)):
+            for j in range(len(S_lacasa[i])):
+                self.S.set(i,j, S_lacasa[i][j])
+        #End of the S matrix calculation
 
