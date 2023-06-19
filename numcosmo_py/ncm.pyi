@@ -1557,7 +1557,7 @@ class DataGaussCovMVND(DataGaussCov):
     def peek_mean(self) -> Vector: ...
     def ref(self) -> DataGaussCovMVND: ...
     def set_cov_mean(self, mean: Vector, cov: Matrix) -> None: ...
-    def stats_vec(self, mset: MSet, n: int, lower: Vector, upper: Vector, save_realizations: bool, rng: RNG) -> StatsVec: ...
+    def stats_vec(self, mset: MSet, n: int, maxiter: int, lower: Vector, upper: Vector, save_realizations: bool, rng: RNG) -> StatsVec: ...
     
 
 class DataGaussCovMVNDClass(GObject.GPointer):
@@ -2911,6 +2911,8 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Over-smooth parameter used to adjust kernel bandwidth
       use-interp -> gboolean: use-interp
         Whether to use interpolation to build the posterior approximation
+      use-threads -> gboolean: use-threads
+        Whether to use threads when building the posterior approximation
 
     Properties from NcmFitESMCMCWalker:
       size -> guint: size
@@ -2926,6 +2928,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         method: FitESMCMCWalkerAPESMethod
         over_smooth: float
         use_interp: bool
+        use_threads: bool
         nparams: int
         size: int
     props: Props = ...
@@ -2935,6 +2938,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
                  method: FitESMCMCWalkerAPESMethod = ...,
                  over_smooth: float = ...,
                  use_interp: bool = ...,
+                 use_threads: bool = ...,
                  nparams: int = ...,
                  size: int = ...): ...
     @staticmethod
