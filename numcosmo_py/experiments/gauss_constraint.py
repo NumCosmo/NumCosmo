@@ -39,6 +39,9 @@ from numcosmo_py.sampling.esmcmc import (
 )
 
 
+from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
+
+
 def run_gauss_constraint_mcmc(
     *,
     dim: int = 10,
@@ -57,7 +60,7 @@ def run_gauss_constraint_mcmc(
     local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0,
     start_catalog: Optional[Path] = None,
-    perfect: bool = False,
+    tmvn: bool = False,
 ) -> str:
     """Runs the Funnel MCMC example."""
 
@@ -89,13 +92,12 @@ def run_gauss_constraint_mcmc(
     rng = Ncm.RNG.seeded_new(None, 0)
     cov50.fill_rand_cor(10.0, rng)
     cov = cov50.get_submatrix(0, 0, dim, dim).dup()
+    # cov50.log_vals("", "% 22.15g")
 
     dgc.set_cov_mean(mean, cov)
 
-    if perfect:
-        Ncm.message_str(
-            "# Sampling the likelihood posterior using a simple rejection sampler: "
-        )
+    if tmvn:
+        Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
         rng = Ncm.RNG.seeded_new(None, 0)
         bounds = np.array(
             [
@@ -105,19 +107,32 @@ def run_gauss_constraint_mcmc(
         )
         mset.fparams_set_vector(mean)
 
-        sv = dgc.stats_vec(
-            mset,
-            5000,
-            Ncm.Vector.new_array(bounds[:, 0].tolist()),
-            Ncm.Vector.new_array(bounds[:, 1].tolist()),
-            True,
-            rng,
+        cov_np = np.array(cov.dup_array())
+        cov_np.shape = (dim, dim)
+
+        print(bounds[:, 0])
+        print(bounds[:, 1])
+
+        tmvn_sampler = TruncatedMVN(
+            mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
         )
-        Ncm.message_str(f"# Mean : {sv.peek_mean().dup_array()}")
-        Ncm.message_str(f"# Stdev: {[sv.get_sd(i) for i in range(dim)]}")
+
+        sv = Ncm.StatsVec.new(dim, Ncm.StatsVecType.COV, True)
+        for s in np.transpose(tmvn_sampler.sample(5000)):
+            sv.append(Ncm.Vector.new_array(s), True)
+
+        Ncm.message_str(f"#   Number of samples : {sv.nitens}\n")
+        Ncm.message_str(
+            f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
+        )
+        Ncm.message_str(
+            f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
+        )
 
         for i in range(sv.nitens):
-            Ncm.message_str(f"# {sv.peek_row(i).dup_array()}")
+            Ncm.message_str(
+                " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
+            )
 
         return ""
 
