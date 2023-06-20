@@ -217,7 +217,6 @@ _nc_data_cluster_wll_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     NcGalaxyWLLikelihood *gwll_i = NC_GALAXY_WL_LIKELIHOOD (ncm_obj_array_peek (self->galaxy_array, i));
     if (self->kde)
     {
-      nc_galaxy_wl_likelihood_prepare (gwll_i, cosmo, dp, smd, self->z_cluster);
       m2lnL[0] += nc_galaxy_wl_likelihood_kde_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
     }
     else
