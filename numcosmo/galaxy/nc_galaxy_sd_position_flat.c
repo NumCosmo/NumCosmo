@@ -191,7 +191,7 @@ _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 
   gdouble z_gen     = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
   gdouble cumul_gen = ncm_rng_uniform_gen (rng, 0.0, 1.0);
-  gdouble r_gen     = cbrt (cumul_gen * (pow (r_ul, 3.0) - pow (r_ll, 3.0)) + pow (r_ll, 3.0));
+  gdouble r_gen     = sqrt (cumul_gen * (pow (r_ul, 2.0) - pow (r_ll, 2.0)) + pow (r_ll, 2.0));
 
   ncm_vector_set (pos_gen, 0, z_gen);
   ncm_vector_set (pos_gen, 1, r_gen);
