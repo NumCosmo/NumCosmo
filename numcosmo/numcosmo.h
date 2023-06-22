@@ -164,6 +164,7 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_dirac.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 
