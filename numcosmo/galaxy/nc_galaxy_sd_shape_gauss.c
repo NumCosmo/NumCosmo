@@ -158,11 +158,12 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   NcGalaxySDShapeGauss *gsdsgauss = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = gsdsgauss->priv;
 
-  gdouble e_source = ncm_rng_gaussian_gen (rng, 0, self->sigma);
-  gdouble shear = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, ncm_vector_get (pos, 1), ncm_vector_get (pos, 0), z_cluster, z_cluster);
-  gdouble e_obs = e_source + shear;
+  gdouble et_source = ncm_rng_gaussian_gen (rng, 0, self->sigma);
+  gdouble ex_source = ncm_rng_gaussian_gen (rng, 0, self->sigma);
+  gdouble gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, ncm_vector_get (pos, 1), ncm_vector_get (pos, 0), z_cluster, z_cluster);
+  gdouble et_obs = (et_source + gt * (1 + pow (et_source, 2) + pow (ex_source, 2)) + pow (gt, 2) * et_source) / (1 + pow (gt, 2) * (pow (et_source, 2) + pow (ex_source, 2)));
 
-  return e_obs;
+  return et_obs;
 }
 
 static gdouble 
