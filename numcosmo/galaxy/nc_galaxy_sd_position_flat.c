@@ -42,7 +42,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-// #include "nc_enum_types.h"
+/* #include "nc_enum_types.h" */
 #include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include <math.h>
@@ -114,13 +114,12 @@ _nc_galaxy_sd_position_flat_get_property (GObject *object, guint prop_id, GValue
   }
 }
 
-
 static void
 _nc_galaxy_sd_position_flat_dispose (GObject *object)
 {
-  NcGalaxySDPositionFlat *gsdpflat = NC_GALAXY_SD_POSITION_FLAT (object);
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (object);
   NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
-  
+
   ncm_vector_clear (&self->z_lim);
   ncm_vector_clear (&self->r_lim);
 
@@ -133,14 +132,14 @@ _nc_galaxy_sd_position_flat_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_flat_parent_class)->finalize (object);
 }
 
-static NcmVector *_nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+static void _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
 
 static void
 nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
 {
   NcGalaxySDPositionClass *sd_position_class = NC_GALAXY_SD_POSITION_CLASS (klass);
-  GObjectClass *object_class         = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class                 = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_galaxy_sd_position_flat_set_property;
   object_class->get_property = &_nc_galaxy_sd_position_flat_get_property;
@@ -175,31 +174,28 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  sd_position_class->gen     = &_nc_galaxy_sd_position_flat_gen;
-  sd_position_class->integ   = &_nc_galaxy_sd_position_flat_integ;
+  sd_position_class->gen   = &_nc_galaxy_sd_position_flat_gen;
+  sd_position_class->integ = &_nc_galaxy_sd_position_flat_integ;
 }
 
-
-static NcmVector *
-_nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+static void
+_nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng)
 {
-  NcGalaxySDPositionFlat *gsdpflat = NC_GALAXY_SD_POSITION_FLAT (gsdp);
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
-  NcmVector *pos_gen = ncm_vector_new (2);
-  gdouble r_ll = ncm_vector_get (self->r_lim, 0);
-  gdouble r_ul = ncm_vector_get (self->r_lim, 1);
+  const gdouble r_lb                         = ncm_vector_get (self->r_lim, 0);
+  const gdouble r_ub                         = ncm_vector_get (self->r_lim, 1);
+  const gdouble r_lb2                        = r_lb * r_lb;
+  const gdouble r_ub2                        = r_ub * r_ub;
+  gdouble z_gen                              = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
+  gdouble cumul_gen                          = ncm_rng_uniform_gen (rng, 0.0, 1.0);
+  gdouble r_gen                              = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
 
-  gdouble z_gen     = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
-  gdouble cumul_gen = ncm_rng_uniform_gen (rng, 0.0, 1.0);
-  gdouble r_gen     = cbrt (cumul_gen * (pow (r_ul, 3.0) - pow (r_ll, 3.0)) + pow (r_ll, 3.0));
-
-  ncm_vector_set (pos_gen, 0, z_gen);
-  ncm_vector_set (pos_gen, 1, r_gen);
-
-  return ncm_vector_ref (pos_gen);
+  ncm_vector_set (pos, 0, z_gen);
+  ncm_vector_set (pos, 1, r_gen);
 }
 
-static gdouble 
+static gdouble
 _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *pos)
 {
   return 0.0;
@@ -216,7 +212,7 @@ NcGalaxySDPositionFlat *
 nc_galaxy_sd_position_flat_new ()
 {
   NcGalaxySDPositionFlat *gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
-                                                  NULL);
+                                                   NULL);
 
   return gsdpflat;
 }
@@ -281,7 +277,6 @@ nc_galaxy_sd_position_flat_set_z_lim (NcGalaxySDPositionFlat *gsdpflat, NcmVecto
   self->z_lim = ncm_vector_ref (lim);
 }
 
-
 /**
  * nc_galaxy_sd_position_flat_peek_z_lim:
  * @gsdpflat: a #NcGalaxySDPositionFlat
@@ -317,7 +312,6 @@ nc_galaxy_sd_position_flat_set_r_lim (NcGalaxySDPositionFlat *gsdpflat, NcmVecto
   self->r_lim = ncm_vector_ref (lim);
 }
 
-
 /**
  * nc_galaxy_sd_position_flat_peek_r_lim:
  * @gsdpflat: a #NcGalaxySDPositionFlat
@@ -333,3 +327,4 @@ nc_galaxy_sd_position_flat_peek_r_lim (NcGalaxySDPositionFlat *gsdpflat)
 
   return self->r_lim;
 }
+

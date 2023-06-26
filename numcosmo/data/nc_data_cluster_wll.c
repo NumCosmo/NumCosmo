@@ -29,7 +29,7 @@
  * @short_description: Cluster weak lensing likelihood.
  * @stability: Unstable
  *
- * FIXME
+ * This class implements the weak lensing likelihood for galaxy clusters.
  *
  */
 
@@ -71,7 +71,7 @@ static void
 nc_data_cluster_wll_init (NcDataClusterWLL *dcwll)
 {
   NcDataClusterWLLPrivate * const self = dcwll->priv = nc_data_cluster_wll_get_instance_private (dcwll);
-  
+
   self->galaxy_array = ncm_obj_array_new ();
   self->z_cluster    = 0.0;
   self->kde          = TRUE;
@@ -80,11 +80,11 @@ nc_data_cluster_wll_init (NcDataClusterWLL *dcwll)
 static void
 nc_data_cluster_wll_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (object);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (object);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  
+
   g_return_if_fail (NC_IS_DATA_CLUSTER_WLL (object));
-  
+
   switch (prop_id)
   {
     case PROP_GALAXY_ARRAY:
@@ -111,11 +111,11 @@ nc_data_cluster_wll_set_property (GObject *object, guint prop_id, const GValue *
 static void
 nc_data_cluster_wll_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (object);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (object);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  
+
   g_return_if_fail (NC_IS_DATA_CLUSTER_WLL (object));
-  
+
   switch (prop_id)
   {
     case PROP_GALAXY_ARRAY:
@@ -136,11 +136,11 @@ nc_data_cluster_wll_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 nc_data_cluster_wll_dispose (GObject *object)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (object);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (object);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  
+
   ncm_obj_array_clear (&self->galaxy_array);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wll_parent_class)->dispose (object);
 }
@@ -149,7 +149,7 @@ static void
 nc_data_cluster_wll_finalize (GObject *object)
 {
   /*NcDataClusterWLL *dcwll = NC_DATA_CLUSTER_WLL (object);*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wll_parent_class)->finalize (object);
 }
@@ -163,12 +163,12 @@ nc_data_cluster_wll_class_init (NcDataClusterWLLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  
+
   object_class->set_property = nc_data_cluster_wll_set_property;
   object_class->get_property = nc_data_cluster_wll_get_property;
   object_class->dispose      = nc_data_cluster_wll_dispose;
   object_class->finalize     = nc_data_cluster_wll_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_GALAXY_ARRAY,
                                    g_param_spec_boxed ("galaxy-array",
@@ -188,10 +188,10 @@ nc_data_cluster_wll_class_init (NcDataClusterWLLClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_KDE,
                                    g_param_spec_boolean ("kde",
-                                                        NULL,
-                                                        "Whether to use KDE method",
-                                                        TRUE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         NULL,
+                                                         "Whether to use KDE method",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
   data_class->m2lnL_val  = &_nc_data_cluster_wll_m2lnL_val;
@@ -202,51 +202,48 @@ nc_data_cluster_wll_class_init (NcDataClusterWLLClass *klass)
 static void
 _nc_data_cluster_wll_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (data);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  const guint ngal                    = self->galaxy_array->len;
+  NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *smd          = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcHaloDensityProfile *dp             = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+  const guint ngal                     = self->galaxy_array->len;
   gint i;
-  
+
   m2lnL[0] = 0.0;
-  
+
   for (i = 0; i < ngal; i++)
   {
     NcGalaxyWLLikelihood *gwll_i = NC_GALAXY_WL_LIKELIHOOD (ncm_obj_array_peek (self->galaxy_array, i));
+
     if (self->kde)
-    {
       m2lnL[0] += nc_galaxy_wl_likelihood_kde_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
-    }
     else
-    {
-       m2lnL[0] += nc_galaxy_wl_likelihood_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
-    }
+      m2lnL[0] += nc_galaxy_wl_likelihood_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
   }
-  
+
   return;
 }
 
 static guint
 _nc_data_cluster_wll_get_len (NcmData *data)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (data);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  
+
   if (self->galaxy_array != NULL)
   {
     const guint ngal = self->galaxy_array->len;
     guint len        = 0;
     gint i;
-    
+
     for (i = 0; i < ngal; i++)
     {
       NcGalaxyWLLikelihood *gwll_i = NC_GALAXY_WL_LIKELIHOOD (ncm_obj_array_peek (self->galaxy_array, i));
-      
+
       len += nc_galaxy_wl_likelihood_len (gwll_i);
     }
-    
+
     return len;
   }
   else
@@ -263,9 +260,9 @@ _nc_data_cluster_wll_prepare (NcmData *data, NcmMSet *mset)
   NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  
+
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
-  
+
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 }
 
@@ -280,8 +277,8 @@ NcDataClusterWLL *
 nc_data_cluster_wll_new (void)
 {
   NcDataClusterWLL *dcwll = g_object_new (NC_TYPE_DATA_CLUSTER_WLL,
-                                        NULL);
-  
+                                          NULL);
+
   return dcwll;
 }
 
@@ -297,9 +294,9 @@ NcDataClusterWLL *
 nc_data_cluster_wll_new_from_file (const gchar *filename)
 {
   NcDataClusterWLL *dcwll = NC_DATA_CLUSTER_WLL (ncm_serialize_global_from_file (filename));
-  
+
   g_assert (NC_IS_DATA_CLUSTER_WLL (dcwll));
-  
+
   return dcwll;
 }
 

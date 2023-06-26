@@ -52,7 +52,7 @@ struct _NcGalaxySDPositionPrivate
   gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE(NcGalaxySDPosition, nc_galaxy_sd_position, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_sd_position_init (NcGalaxySDPosition *gsdp)
@@ -66,12 +66,10 @@ _nc_galaxy_sd_position_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_parent_class)->finalize (object);
 }
 
-static NcmVector *
-_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+static void
+_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
-
-  return NULL;
 }
 
 static gdouble
@@ -92,7 +90,6 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
   klass->gen   = &_nc_galaxy_sd_position_gen;
   klass->integ = &_nc_galaxy_sd_position_integ;
 }
-
 
 /**
  * nc_galaxy_sd_position_ref:
@@ -138,9 +135,11 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 /**
  * nc_galaxy_sd_position_gen: (virtual gen)
  * @gsdp: a #NcGalaxySDPosition
+ * @pos: a #NcmVector
  * @rng: a #NcmRNG
  *
- * Generates a $(r, z)$ value from the distribution using @rng.
+ * Generates a $(r, z)$ value from the distribution using @rng
+ * and saves it in @pos.
  *
  * Returns: (transfer full): the generated value $(r, z)$.
  */
@@ -154,3 +153,4 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  * Returns: the probability density at $(r, z)$, $P(z)P(r)$.
  */
+

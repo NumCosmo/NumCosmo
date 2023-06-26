@@ -79,9 +79,9 @@ GType nc_data_cluster_wll_get_type (void) G_GNUC_CONST;
 
 NcDataClusterWLL *nc_data_cluster_wll_new (void);
 NcDataClusterWLL *nc_data_cluster_wll_new_from_file (const gchar *filename);
-NcDataClusterWLL *nc_data_cluster_wll_ref (NcDataClusterWLL *dcwl);
-void nc_data_cluster_wll_free (NcDataClusterWLL *dcwl);
-void nc_data_cluster_wll_clear (NcDataClusterWLL **dcwl);
+NcDataClusterWLL *nc_data_cluster_wll_ref (NcDataClusterWLL *dcwll);
+void nc_data_cluster_wll_free (NcDataClusterWLL *dcwll);
+void nc_data_cluster_wll_clear (NcDataClusterWLL **dcwll);
 
 G_END_DECLS
 
