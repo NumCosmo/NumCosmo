@@ -23,7 +23,7 @@
 
 """NumCosmoPy getdist utilities."""
 
-from typing import List
+from typing import List, Tuple
 import re
 import numpy as np
 
@@ -32,7 +32,11 @@ from numcosmo_py import Ncm
 
 
 def mcat_to_mcsamples(
-    mcat: Ncm.MSetCatalog, name: str, asinh_transform: List[int] = [], thin: int = 1
+    mcat: Ncm.MSetCatalog,
+    name: str,
+    asinh_transform: Tuple[int, ...] = (),
+    thin: int = 1,
+    collapse: bool = False,
 ) -> MCSamples:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
 
@@ -62,8 +66,12 @@ def mcat_to_mcsamples(
             params[i] = f"\\mathrm{{sinh}}^{{-1}}({params[i]})"
             names[i] = f"asinh_{names[i]}"
 
-    split_chains = np.array([rows[n::nchains] for n in range(nchains)])
-    split_posterior = np.array([posterior[n::nchains] for n in range(nchains)])
+    if not collapse:
+        split_chains = np.array([rows[n::nchains] for n in range(nchains)])
+        split_posterior = np.array([posterior[n::nchains] for n in range(nchains)])
+    else:
+        split_chains = rows
+        split_posterior = posterior
 
     mcsample = MCSamples(
         samples=split_chains,

@@ -95,6 +95,8 @@ def run_gauss_constraint_mcmc(
     # cov50.log_vals("", "% 22.15g")
 
     dgc.set_cov_mean(mean, cov)
+    m2lnN = dgc.get_log_norma(mset)
+    print(f"# Constant normalization {m2lnN}")
 
     if tmvn:
         Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
@@ -114,24 +116,29 @@ def run_gauss_constraint_mcmc(
             mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
         )
 
-        sv = Ncm.StatsVec.new(dim, Ncm.StatsVecType.COV, True)
-        for s in np.transpose(tmvn_sampler.sample(5000)):
-            sv.append(Ncm.Vector.new_array(s), True)
+        sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, True)
+        for s in np.transpose(tmvn_sampler.sample(ssize)):
+            dgc.peek_mean().set_array(s)
+            st = np.concatenate(([dgc.m2lnL_val(mset)], s))
+            sv.append(Ncm.Vector.new_array(st), True)
 
-        Ncm.message_str(f"#   Number of samples : {sv.nitens}\n")
-        Ncm.message_str(
-            f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
-        )
-        Ncm.message_str(
-            f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
-        )
-
-        for i in range(sv.nitens):
-            Ncm.message_str(
-                " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
+        filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"#   Number of samples : {sv.nitens}\n")
+            f.write(
+                f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
+            )
+            f.write(
+                f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
             )
 
-        return ""
+            for i in range(sv.nitens):
+                f.write(
+                    " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()])
+                    + "\n"
+                )
+
+        return filename
 
     dset = Ncm.Dataset.new()
     dset.append_data(dgc)
@@ -141,7 +148,6 @@ def run_gauss_constraint_mcmc(
     if start_catalog is not None:
         start_mcat = Ncm.MSetCatalog.new_from_file_ro(start_catalog.as_posix(), 0)
 
-    print(f"# Constant normalization {dgc.get_log_norma(mset)}")
     esmcmc = create_esmcmc(
         likelihood,
         mset,
