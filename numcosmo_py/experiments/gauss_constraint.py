@@ -56,7 +56,7 @@ def run_gauss_constraint_mcmc(
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     nthreads: int = 4,
-    over_smooth: float = 1.2,
+    over_smooth: float = 1.1,
     local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0,
     start_catalog: Optional[Path] = None,
