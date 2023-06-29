@@ -193,7 +193,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
                                                         NULL,
                                                         "Symbol (latex)",
                                                         NULL,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSParam:lower-bound:
