@@ -14,12 +14,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -70,6 +70,7 @@ static void
 _ncm_model_mvnd_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelMVND *model_mvnd = NCM_MODEL_MVND (object);
+
   g_return_if_fail (NCM_IS_MODEL_MVND (object));
 
   switch (prop_id)
@@ -87,6 +88,7 @@ static void
 _ncm_model_mvnd_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelMVND *model_mvnd = NCM_MODEL_MVND (object);
+
   g_return_if_fail (NCM_IS_MODEL_MVND (object));
 
   switch (prop_id)
@@ -104,9 +106,9 @@ static void
 _ncm_model_mvnd_dispose (GObject *object)
 {
   NcmModelMVND *model_mvnd = NCM_MODEL_MVND (object);
-  
+
   ncm_vector_clear (&model_mvnd->priv->mu);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_mvnd_parent_class)->dispose (object);
 }
@@ -114,7 +116,6 @@ _ncm_model_mvnd_dispose (GObject *object)
 static void
 _ncm_model_mvnd_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_mvnd_parent_class)->finalize (object);
 }
@@ -124,14 +125,14 @@ NCM_MSET_MODEL_REGISTER_ID (ncm_model_mvnd, NCM_TYPE_MODEL_MVND);
 static void
 ncm_model_mvnd_class_init (NcmModelMVNDClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_ncm_model_mvnd_set_property;
   model_class->get_property = &_ncm_model_mvnd_get_property;
-  
-  object_class->dispose      = &_ncm_model_mvnd_dispose;
-  object_class->finalize     = &_ncm_model_mvnd_finalize;
+
+  object_class->dispose  = &_ncm_model_mvnd_dispose;
+  object_class->finalize = &_ncm_model_mvnd_finalize;
 
   ncm_model_class_set_name_nick (model_class, "MVND", "NcmModelMVND");
   ncm_model_class_add_params (model_class, 0, NNCM_MODEL_MVND_VPARAM_LEN, PROP_SIZE);
@@ -143,7 +144,7 @@ ncm_model_mvnd_class_init (NcmModelMVNDClass *klass)
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
 
-  ncm_model_class_set_vparam (model_class, NCM_MODEL_MVND_MEAN, 1, "mu", "mu",
+  ncm_model_class_set_vparam (model_class, NCM_MODEL_MVND_MEAN, 1, "\\mu", "mu",
                               -50.0, 50.0, 1.0, 0.0, 0.0, NCM_PARAM_TYPE_FREE);
 
   ncm_model_class_check_params_info (model_class);
@@ -160,9 +161,9 @@ ncm_model_mvnd_class_init (NcmModelMVNDClass *klass)
 /**
  * ncm_model_mvnd_new:
  * @dim: dimension of the MVND
- * 
+ *
  * Creates a new MVND mean model of @dim dimensions.
- * 
+ *
  * Returns: (transfer full): the newly created #NcmModelMVND
  */
 NcmModelMVND *
@@ -172,15 +173,16 @@ ncm_model_mvnd_new (const guint dim)
                                            "dim", dim,
                                            "mu-length", dim,
                                            NULL);
+
   return gauss_mvnd;
 }
 
 /**
  * ncm_model_mvnd_ref:
  * @model_mvnd: a #NcmModelMVND
- * 
+ *
  * Increases the reference count of @model_mvnd by one.
- * 
+ *
  * Returns: (transfer full): @model_mvnd
  */
 NcmModelMVND *
@@ -192,11 +194,11 @@ ncm_model_mvnd_ref (NcmModelMVND *model_mvnd)
 /**
  * ncm_model_mvnd_free:
  * @model_mvnd: a #NcmModelMVND
- * 
+ *
  * Decreases the reference count of @model_mvnd by one.
- * 
+ *
  */
-void 
+void
 ncm_model_mvnd_free (NcmModelMVND *model_mvnd)
 {
   g_object_unref (model_mvnd);
@@ -205,12 +207,12 @@ ncm_model_mvnd_free (NcmModelMVND *model_mvnd)
 /**
  * ncm_model_mvnd_clear:
  * @model_mvnd: a #NcmModelMVND
- * 
- * If @model_mvnd is different from NULL, decreases the reference count of 
+ *
+ * If @model_mvnd is different from NULL, decreases the reference count of
  * @model_mvnd by one and sets @model_mvnd to NULL.
- * 
+ *
  */
-void 
+void
 ncm_model_mvnd_clear (NcmModelMVND **model_mvnd)
 {
   g_clear_object (model_mvnd);
@@ -220,11 +222,11 @@ ncm_model_mvnd_clear (NcmModelMVND **model_mvnd)
  * ncm_model_mvnd_mean:
  * @model_mvnd: a #NcmModelMVND
  * @y: a #NcmVector
- * 
+ *
  * Copies into @y the mean vector.
- * 
+ *
  */
-void 
+void
 ncm_model_mvnd_mean (NcmModelMVND *model_mvnd, NcmVector *y)
 {
   if (model_mvnd->priv->mu == NULL)
@@ -238,3 +240,4 @@ ncm_model_mvnd_mean (NcmModelMVND *model_mvnd, NcmVector *y)
 
   ncm_vector_memcpy (y, model_mvnd->priv->mu);
 }
+
