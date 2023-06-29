@@ -788,7 +788,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
     }
 
-    if (self->n_kernels > 10000)
+    if (self->n_kernels > 20000)
       g_warning ("_ncm_stats_dist_prepare_interp: very large system n = %u!", self->n_kernels);
 
     switch (self->cv_type)
