@@ -24,6 +24,7 @@
 """NumCosmoPy getdist utilities."""
 
 from typing import List, Tuple
+import warnings
 import re
 import numpy as np
 
@@ -35,6 +36,7 @@ def mcat_to_mcsamples(
     mcat: Ncm.MSetCatalog,
     name: str,
     asinh_transform: Tuple[int, ...] = (),
+    burnin: int = 0,
     thin: int = 1,
     collapse: bool = False,
 ) -> MCSamples:
@@ -42,6 +44,16 @@ def mcat_to_mcsamples(
 
     nchains: int = mcat.nchains()
     max_time: int = mcat.max_time()
+
+    if burnin % nchains != 0:
+        warnings.warn(
+            f"burnin ({burnin}) is not a multiple of nchains ({nchains}). "
+            f"burnin will be rounded down."
+        )
+    burnin_steps = burnin // nchains
+    burnin = burnin_steps * nchains
+    if burnin_steps >= max_time:
+        raise ValueError("burnin is greater than the number of steps.")
 
     assert thin >= 1
     rows: np.ndarray = np.array(
@@ -67,11 +79,13 @@ def mcat_to_mcsamples(
             names[i] = f"asinh_{names[i]}"
 
     if not collapse:
-        split_chains = np.array([rows[n::nchains] for n in range(nchains)])
-        split_posterior = np.array([posterior[n::nchains] for n in range(nchains)])
+        split_chains = np.array([rows[(burnin + n) :: nchains] for n in range(nchains)])
+        split_posterior = np.array(
+            [posterior[(burnin + n) :: nchains] for n in range(nchains)]
+        )
     else:
-        split_chains = rows
-        split_posterior = posterior
+        split_chains = rows[burnin::]
+        split_posterior = posterior[burnin::]
 
     mcsample = MCSamples(
         samples=split_chains,
