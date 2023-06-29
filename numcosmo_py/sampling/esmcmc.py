@@ -37,7 +37,7 @@ class WalkerTypes(str, Enum):
     """Possible walkers for ensemble samplers."""
 
     APES = "apes"
-    STRECTCH = "stretch"
+    STRETCH = "stretch"
 
 
 def create_esmcmc(
@@ -125,7 +125,7 @@ def create_esmcmc(
                 "Using threads with more than 1000 walkers can improve performance."
             )
 
-    elif sampler == WalkerTypes.STRECTCH:
+    elif sampler == WalkerTypes.STRETCH:
         walker = Ncm.FitESMCMCWalkerStretch.new(nwalkers, mset.fparams_len())
     else:
         raise ValueError(f"Unknown sampler {sampler}")

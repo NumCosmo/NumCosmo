@@ -46,7 +46,7 @@ def run_rosenbrock_mcmc(
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     nthreads: int = 4,
-    over_smooth: float = 0.2,
+    over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e2,
 ) -> str:
     """Runs the Rosenbrock MCMC example."""

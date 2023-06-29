@@ -58,7 +58,7 @@ def run_xcdm_nopert_mcmc(
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 2000,
     nthreads: int = 1,
-    over_smooth: float = 0.2,
+    over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e0,
     flat: bool = False,
     use_neutrino: bool = False,

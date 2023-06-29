@@ -46,7 +46,7 @@ def run_gaussmix2d_mcmc(
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 320,
     nthreads: int = 4,
-    over_smooth: float = 0.2,
+    over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e-1,
 ) -> str:
     """Runs the Gauss Mixture 2d MCMC example."""
