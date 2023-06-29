@@ -132,7 +132,7 @@ _nc_galaxy_sd_z_proxy_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_z_proxy_gauss_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z);
+static gboolean _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
 static gdouble _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z);
 
 static void
@@ -166,20 +166,17 @@ nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
   sd_position_class->integ = &_nc_galaxy_sd_z_proxy_gauss_integ;
 }
 
-static gdouble
-_nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z)
+static gboolean
+_nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp)
 {
   NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdp);
   NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
   gdouble z_ll                              = ncm_vector_get (self->z_lim, 0);
   gdouble z_ul                              = ncm_vector_get (self->z_lim, 1);
-  gdouble z_p_gen;
 
-  do {
-    z_p_gen = ncm_rng_gaussian_gen (rng, z, self->sigma * (1.0 + z));
-  } while ((z_p_gen < z_ll) || (z_p_gen > z_ul));
+  gen_zp[0] = ncm_rng_gaussian_gen (rng, z, self->sigma * (1.0 + z));
 
-  return z_p_gen;
+  return (gen_zp[0] > z_ll) && (gen_zp[0] < z_ul);
 }
 
 static gdouble

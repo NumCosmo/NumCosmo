@@ -52,7 +52,7 @@ struct _NcGalaxySDZProxyPrivate
   gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE(NcGalaxySDZProxy, nc_galaxy_sd_z_proxy, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDZProxy, nc_galaxy_sd_z_proxy, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_sd_z_proxy_init (NcGalaxySDZProxy *gsdzp)
@@ -66,12 +66,12 @@ _nc_galaxy_sd_z_proxy_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_z_proxy_parent_class)->finalize (object);
 }
 
-static gdouble
-_nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z)
+static gboolean
+_nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp)
 {
   g_error ("_nc_galaxy_sd_z_proxy_gen: method not implemented.");
 
-  return 0.0;
+  return FALSE;
 }
 
 static gdouble
@@ -92,7 +92,6 @@ nc_galaxy_sd_z_proxy_class_init (NcGalaxySDZProxyClass *klass)
   klass->gen   = &_nc_galaxy_sd_z_proxy_gen;
   klass->integ = &_nc_galaxy_sd_z_proxy_integ;
 }
-
 
 /**
  * nc_galaxy_sd_z_proxy_ref:
@@ -155,3 +154,4 @@ nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp)
  *
  * Returns: the probability density at $z_p$, $P(z_p)$.
  */
+

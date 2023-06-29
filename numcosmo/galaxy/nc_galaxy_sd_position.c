@@ -141,7 +141,6 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  * Generates a $(r, z)$ value from the distribution using @rng
  * and saves it in @pos.
  *
- * Returns: (transfer full): the generated value $(r, z)$.
  */
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)

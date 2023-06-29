@@ -453,8 +453,9 @@ nc_headers = \
 	galaxy/nc_galaxy_sd_position_flat.h    \
 	galaxy/nc_galaxy_sd_z_proxy.h          \
 	galaxy/nc_galaxy_sd_z_proxy_gauss.h    \
+	galaxy/nc_galaxy_sd_z_proxy_dirac.h    \
 	galaxy/nc_galaxy_sd_shape.h            \
-	galaxy/nc_galaxy_sd_shape_gauss.h            \
+	galaxy/nc_galaxy_sd_shape_gauss.h      \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -615,6 +616,7 @@ nc_sources = \
 	galaxy/nc_galaxy_sd_position_flat.c    \
 	galaxy/nc_galaxy_sd_z_proxy.c          \
 	galaxy/nc_galaxy_sd_z_proxy_gauss.c    \
+	galaxy/nc_galaxy_sd_z_proxy_dirac.c    \
 	galaxy/nc_galaxy_sd_shape.c            \
 	galaxy/nc_galaxy_sd_shape_gauss.c      \
 	data/nc_data_snia.c                    \
