@@ -349,29 +349,28 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
   gint i;
 
   ncm_stats_dist_reset (NCM_STATS_DIST (self->kde));
-  printf ("# Reconst\n");
-
 
   for (i = 0; i < ndata; i++)
   {
-    const gdouble r = ncm_vector_get (pos, 0);
-    const gdouble z = ncm_vector_get (pos, 1);
-    gdouble zp      = 0.0;
-
-    nc_galaxy_sd_position_gen (self->rz_dist, pos, rng);
-
     while (TRUE)
     {
-      const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, pos);
+      const gdouble r = ncm_vector_get (pos, 0);
+      const gdouble z = ncm_vector_get (pos, 1);
+      gdouble zp      = 0.0;
 
-      if (!nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
-        continue;
+      nc_galaxy_sd_position_gen (self->rz_dist, pos, rng);
 
-      ncm_vector_set (sample, 0, r);
-      ncm_vector_set (sample, 1, zp);
-      ncm_vector_set (sample, 2, s);
+      if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
+      {
+        const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, pos);
 
-      ncm_stats_dist_add_obs (NCM_STATS_DIST (self->kde), sample);
+        ncm_vector_set (sample, 0, r);
+        ncm_vector_set (sample, 1, zp);
+        ncm_vector_set (sample, 2, s);
+
+        ncm_stats_dist_add_obs (NCM_STATS_DIST (self->kde), sample);
+        break;
+      }
     }
   }
 
