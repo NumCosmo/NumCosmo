@@ -60,7 +60,7 @@ class ncounts(Ncm.DataGaussCov):
         #
         if self.np > 0:
             self.cov = self.peek_cov()
-            self.cov.set_identity()
+            #self.cov.set_identity()
             self.ncdata.set_zero()
 
     #
@@ -106,7 +106,7 @@ class ncounts(Ncm.DataGaussCov):
                 z_obs_ub = [self.z_obs_bins.get( i + 1)]
                 vp.set(i+j, self.ca.intp_bin_d2n(cosmo, cluster_z, cluster_m, lnM_obs_lb, lnM_obs_ub, None, z_obs_lb, z_obs_ub, None))
     
-        return
+        return 
 
     def do_cov_func(self, mset,rng):
 
@@ -169,7 +169,6 @@ class ncounts(Ncm.DataGaussCov):
                         col +=1
 
                 row +=1
-        
         return True
     
     def set_lnM_obs_bins(self, lnM_obs_bins):

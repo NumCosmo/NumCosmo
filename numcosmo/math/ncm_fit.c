@@ -2169,16 +2169,16 @@ void
 ncm_fit_fisher (NcmFit *fit)
 {
   NcmMatrix *IM = NULL;
-  printf("0");
+
   if ((ncm_likelihood_priors_length_f (fit->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (fit->lh) > 0))
     g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
-  printf("1");
+
   ncm_dataset_fisher_matrix (fit->lh->dset, fit->mset, &IM);
-  printf("2");
+
   ncm_fit_fisher_to_covar (fit, IM);
-  printf("3");
+
   ncm_matrix_clear (&IM);
-  printf("4");
+
 }
 
 /**
