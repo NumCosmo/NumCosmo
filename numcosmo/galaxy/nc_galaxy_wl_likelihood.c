@@ -66,6 +66,7 @@ struct _NcGalaxyWLLikelihoodPrivate
   gdouble zp_max;
   gdouble r_min;
   gdouble r_max;
+  gboolean constructed;
   guint len;
 };
 
@@ -76,7 +77,10 @@ enum
   PROP_S_DIST,
   PROP_ZP_DIST,
   PROP_RZ_DIST,
-  PROP_KDE,
+  PROP_R_MIN,
+  PROP_R_MAX,
+  PROP_ZP_MIN,
+  PROP_ZP_MAX,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLLikelihood, nc_galaxy_wl_likelihood, G_TYPE_OBJECT);
@@ -88,12 +92,17 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
 
   NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (3);
 
-  self->obs     = NULL;
-  self->s_dist  = NULL;
-  self->zp_dist = NULL;
-  self->rz_dist = NULL;
-  self->kde     = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE);
-  self->len     = 0;
+  self->obs         = NULL;
+  self->s_dist      = NULL;
+  self->zp_dist     = NULL;
+  self->rz_dist     = NULL;
+  self->kde         = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE);
+  self->len         = 0;
+  self->r_max       = 0.0;
+  self->r_min       = 0.0;
+  self->zp_max      = 0.0;
+  self->zp_min      = 0.0;
+  self->constructed = FALSE;
 }
 
 static void
@@ -117,6 +126,34 @@ _nc_galaxy_wl_likelihood_set_property (GObject *object, guint prop_id, const GVa
       break;
     case PROP_RZ_DIST:
       self->rz_dist = g_value_dup_object (value);
+      break;
+    case PROP_R_MIN:
+      self->r_min = g_value_get_double (value);
+
+      if (self->constructed)
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
+
+      break;
+    case PROP_R_MAX:
+      self->r_max = g_value_get_double (value);
+
+      if (self->constructed)
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
+
+      break;
+    case PROP_ZP_MIN:
+      self->zp_min = g_value_get_double (value);
+
+      if (self->constructed)
+        g_assert_cmpfloat (self->zp_min, <, self->zp_max);
+
+      break;
+    case PROP_ZP_MAX:
+      self->zp_max = g_value_get_double (value);
+
+      if (self->constructed)
+        g_assert_cmpfloat (self->zp_min, <, self->zp_max);
+
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -146,6 +183,18 @@ _nc_galaxy_wl_likelihood_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_RZ_DIST:
       g_value_set_object (value, self->rz_dist);
       break;
+    case PROP_R_MIN:
+      g_value_set_double (value, self->r_min);
+      break;
+    case PROP_R_MAX:
+      g_value_set_double (value, self->r_max);
+      break;
+    case PROP_ZP_MIN:
+      g_value_set_double (value, self->zp_min);
+      break;
+    case PROP_ZP_MAX:
+      g_value_set_double (value, self->zp_max);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -163,6 +212,8 @@ _nc_galaxy_wl_likelihood_dispose (GObject *object)
   nc_galaxy_sd_z_proxy_clear (&self->zp_dist);
   nc_galaxy_sd_position_clear (&self->rz_dist);
 
+  ncm_stats_dist_kde_clear (&self->kde);
+
   G_OBJECT_CLASS (nc_galaxy_wl_likelihood_parent_class)->dispose (object);
 }
 
@@ -170,6 +221,22 @@ static void
 _nc_galaxy_wl_likelihood_finalize (GObject *object)
 {
   G_OBJECT_CLASS (nc_galaxy_wl_likelihood_parent_class)->finalize (object);
+}
+
+static void
+_nc_galaxy_wl_likelihood_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_galaxy_wl_likelihood_parent_class)->constructed (object);
+  {
+    NcGalaxyWLLikelihood *gwl                = NC_GALAXY_WL_LIKELIHOOD (object);
+    NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+    g_assert_cmpfloat (self->r_min, <, self->r_max);
+    g_assert_cmpfloat (self->zp_min, <, self->zp_max);
+
+    self->constructed = TRUE;
+  }
 }
 
 static void
@@ -181,6 +248,7 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
   object_class->get_property = &_nc_galaxy_wl_likelihood_get_property;
   object_class->dispose      = &_nc_galaxy_wl_likelihood_dispose;
   object_class->finalize     = &_nc_galaxy_wl_likelihood_finalize;
+  object_class->constructed  = &_nc_galaxy_wl_likelihood_constructed;
 
   /**
    * NcGalaxyWLLikelihood:obs:
@@ -240,6 +308,66 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                                         "Galaxy sample position distribution",
                                                         NC_TYPE_GALAXY_SD_POSITION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLLikelihood:r-min:
+   *
+   * Minimum radius of the weak lensing observables.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_R_MIN,
+                                   g_param_spec_double ("r-min",
+                                                        NULL,
+                                                        "Minimum radius of the weak lensing observables",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLLikelihood:r-max:
+   *
+   * Maximum radius of the weak lensing observables.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_R_MAX,
+                                   g_param_spec_double ("r-max",
+                                                        NULL,
+                                                        "Maximum radius of the weak lensing observables",
+                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLLikelihood:zp-min:
+   *
+   * Minimum redshift of the weak lensing observables.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_ZP_MIN,
+                                   g_param_spec_double ("zp-min",
+                                                        NULL,
+                                                        "Minimum redshift of the weak lensing observables",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLLikelihood:zp-max:
+   *
+   * Maximum redshift of the weak lensing observables.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_ZP_MAX,
+                                   g_param_spec_double ("zp-max",
+                                                        NULL,
+                                                        "Maximum redshift of the weak lensing observables",
+                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -495,6 +623,9 @@ void
 nc_galaxy_wl_likelihood_set_cut (NcGalaxyWLLikelihood *gwl, const gdouble zp_min, const gdouble zp_max, const gdouble r_min, const gdouble r_max)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  g_assert_cmpfloat (zp_min, <, zp_max);
+  g_assert_cmpfloat (r_min, <, r_max);
 
   self->zp_min = zp_min;
   self->zp_max = zp_max;
