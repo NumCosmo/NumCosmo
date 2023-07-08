@@ -58,7 +58,7 @@ struct _NcGalaxySDPositionSRDY1Private
 {
   NcmVector *z_lim;
   NcmVector *r_lim;
-  NcmStatsDist1dSpline *z_dist;
+  NcmStatsDist1d *z_dist;
 };
 
 enum
@@ -198,7 +198,7 @@ _nc_galaxy_sd_position_srd_y1_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, Ncm
   const gdouble r_ub                          = ncm_vector_get (self->r_lim, 1);
   const gdouble r_lb2                         = r_lb * r_lb;
   const gdouble r_ub2                         = r_ub * r_ub;
-  gdouble z_gen                               = ncm_stats_dist1d_gen (NCM_STATS_DIST1D (self->z_dist), rng);
+  gdouble z_gen                               = ncm_stats_dist1d_gen (self->z_dist, rng);
   gdouble cumul_gen                           = ncm_rng_uniform_gen (rng, 0.0, 1.0);
   gdouble r_gen                               = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
 
@@ -284,7 +284,7 @@ nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
   ncm_vector_clear (&self->z_lim);
-  ncm_stats_dist1d_free (NCM_STATS_DIST1D (self->z_dist));
+  ncm_stats_dist1d_clear (&self->z_dist);
 
   gdouble z_ll = ncm_vector_get (lim, 0);
   gdouble z_ul = ncm_vector_get (lim, 1);
@@ -313,7 +313,7 @@ nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
   ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
 
   self->z_lim = ncm_vector_ref (lim);
-  self->z_dist = dist;
+  self->z_dist = NCM_STATS_DIST1D (dist);
 }
 
 
