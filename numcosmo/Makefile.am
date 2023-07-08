@@ -451,6 +451,7 @@ nc_headers = \
 	galaxy/nc_galaxy_wl_likelihood.h       \
 	galaxy/nc_galaxy_sd_position.h         \
 	galaxy/nc_galaxy_sd_position_flat.h    \
+	galaxy/nc_galaxy_sd_position_srd_y1.h  \
 	galaxy/nc_galaxy_sd_z_proxy.h          \
 	galaxy/nc_galaxy_sd_z_proxy_gauss.h    \
 	galaxy/nc_galaxy_sd_z_proxy_dirac.h    \
@@ -614,6 +615,7 @@ nc_sources = \
 	galaxy/nc_galaxy_wl_likelihood.c       \
 	galaxy/nc_galaxy_sd_position.c         \
 	galaxy/nc_galaxy_sd_position_flat.c    \
+	galaxy/nc_galaxy_sd_position_srd_y1.c  \
 	galaxy/nc_galaxy_sd_z_proxy.c          \
 	galaxy/nc_galaxy_sd_z_proxy_gauss.c    \
 	galaxy/nc_galaxy_sd_z_proxy_dirac.c    \

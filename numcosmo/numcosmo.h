@@ -162,6 +162,7 @@
 #include <numcosmo/galaxy/nc_galaxy_wl_likelihood.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_srd_y1.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_dirac.h>
