@@ -1317,7 +1317,8 @@ thermodynamics_onthespot_energy_injection (
   ErrorMsg             error_message
                                           )
 {
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
   double annihilation_at_z;
   double rho_cdm_today;
   double u_min;
@@ -1337,7 +1338,7 @@ thermodynamics_onthespot_energy_injection (
                         exp (preco->annihilation_variation * (-pow (log ((preco->annihilation_z + 1.) / (preco->annihilation_zmax + 1.)), 2)
                                                               + pow (log ((preco->annihilation_zmin + 1.) / (preco->annihilation_zmax + 1.)), 2)));
 
-  rho_cdm_today = pow (H0 * _c_ / _Mpc_over_m_, 2) * 3 / 8. / _PI_ / _G_ * pba->Omega0_cdm * _c_ * _c_; /* energy density in J/m^3 */
+  rho_cdm_today = pow (H0 * _c_ / _Mpc_over_m_, 2) * 3 / 8. / _PI_ / _G_ * Omega0_cdm * _c_ * _c_; /* energy density in J/m^3 */
 
   u_min = (1 + z) / (1 + preco->annihilation_z_halo);
 
@@ -1376,8 +1377,10 @@ thermodynamics_energy_injection (
   ErrorMsg             error_message
                                 )
 {
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+
   double zp, dz;
   double integrand, first_integrand;
   double factor, result;
@@ -1392,7 +1395,7 @@ thermodynamics_energy_injection (
       nH0 = 3. * preco->H0 * preco->H0 * Omega0_b / (8. * _PI_ * _G_ * _m_H_) * (1. - preco->YHe);
 
       /* factor = c sigma_T n_H(0) / (H(0) \sqrt(Omega_m)) (dimensionless) */
-      factor = _sigma_ * nH0 / H0 * _Mpc_over_m_ / sqrt (Omega0_b + pba->Omega0_cdm);
+      factor = _sigma_ * nH0 / H0 * _Mpc_over_m_ / sqrt (Omega0_b + Omega0_cdm);
 
       /* integral over z'(=zp) with step dz */
       dz = 1.;
@@ -2651,9 +2654,12 @@ thermodynamics_recombination_with_hyrec (
   /** Summary: */
 #ifdef HYREC
 
-  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double T_cmb    = nc_hicosmo_T_gamma0 (pba->cosmo);
-  const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double H0            = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double T_cmb         = nc_hicosmo_T_gamma0 (pba->cosmo);
+  const double Omega0_b      = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double Omega0_cdm    = nc_hicosmo_Omega_c0 (pba->cosmo);
+  const double Omega0_lambda = 0.0;
+  const double Omega0_fld    = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   REC_COSMOPARAMS param;
   HRATEEFF rate_table;
@@ -2674,9 +2680,9 @@ thermodynamics_recombination_with_hyrec (
 
   param.T0    = T_cmb;
   param.obh2  = Omega0_b * pba->h * pba->h;
-  param.omh2  = (Omega0_b + pba->Omega0_cdm + pba->Omega0_ncdm_tot) * pba->h * pba->h;
+  param.omh2  = (Omega0_b + Omega0_cdm + pba->Omega0_ncdm_tot) * pba->h * pba->h;
   param.okh2  = pba->Omega0_k * pba->h * pba->h;
-  param.odeh2 = (pba->Omega0_lambda + pba->Omega0_fld) * pba->h * pba->h;
+  param.odeh2 = (Omega0_lambda + Omega0_fld) * pba->h * pba->h;
   class_call (background_w_fld (pba, pba->a_today, &w_fld, &dw_over_da_fld, &integral_fld), pba->error_message, pth->error_message);
   param.w0                     = w_fld;
   param.wa                     = -dw_over_da_fld * pba->a_today;

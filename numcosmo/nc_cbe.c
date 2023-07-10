@@ -122,7 +122,6 @@ nc_cbe_init (NcCBE *cbe)
 
   cbe->priv->pba.h                       = 0.0;
   cbe->priv->pba.Omega0_ur               = 0.0;
-  cbe->priv->pba.Omega0_cdm              = 0.0;
   cbe->priv->pba.Omega0_dcdmdr           = 0.0;
   cbe->priv->pba.Omega0_dcdm             = 0.0;
   cbe->priv->pba.Gamma_dcdm              = 0.0;
@@ -146,8 +145,6 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pba.Omega0_k                = 0.0;
   cbe->priv->pba.K                       = 0.0;
   cbe->priv->pba.sgnK                    = 0;
-  cbe->priv->pba.Omega0_lambda           = 0.0;
-  cbe->priv->pba.Omega0_fld              = 0.0;
   cbe->priv->pba.fluid_equation_of_state = 0;
   cbe->priv->pba.a_today                 = 0.0;
   cbe->priv->pba.w0_fld                  = 0.0;
@@ -1130,7 +1127,6 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
   cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
   cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu0 (cosmo);
-  cbe->priv->pba.Omega0_cdm          = nc_hicosmo_Omega_c0 (cosmo);
   cbe->priv->pba.Omega0_dcdmdr       = 0.0;
   cbe->priv->pba.Omega0_dcdm         = 0.0;
   cbe->priv->pba.Gamma_dcdm          = 0.0;
@@ -1264,42 +1260,31 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
   if (NC_IS_HICOSMO_DE_XCDM (cosmo))
   {
-    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
-    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+    const gdouble w0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
 
     if (w0 != -1.0)
     {
       cbe->priv->pba.fluid_equation_of_state = CLP;
-      cbe->priv->pba.Omega0_lambda           = 0.0; /* Disable cosmological constant in CLASS */
-
-      cbe->priv->pba.Omega0_fld = Omega_X0; /* Enable DE fluid in CLASS */
-      cbe->priv->pba.w0_fld     = w0;
-      cbe->priv->pba.wa_fld     = 0.0;
-      cbe->priv->pba.cs2_fld    = 1.0;
+      cbe->priv->pba.w0_fld                  = w0;
+      cbe->priv->pba.wa_fld                  = 0.0;
+      cbe->priv->pba.cs2_fld                 = 1.0;
     }
     else
     {
-      cbe->priv->pba.Omega0_lambda = Omega_X0; /* Enable cosmological constant in CLASS */
-
-      cbe->priv->pba.Omega0_fld = 0.0; /* Disable DE fluid in CLASS */
-      cbe->priv->pba.w0_fld     = -1.0;
-      cbe->priv->pba.wa_fld     = 0.0;
-      cbe->priv->pba.cs2_fld    = 1.0;
+      cbe->priv->pba.w0_fld  = -1.0;
+      cbe->priv->pba.wa_fld  = 0.0;
+      cbe->priv->pba.cs2_fld = 1.0;
     }
   }
   else if (NC_IS_HICOSMO_DE_CPL (cosmo))
   {
-    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
-    const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
-    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+    const gdouble w0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
+    const gdouble w1 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
 
     cbe->priv->pba.fluid_equation_of_state = CLP;
-    cbe->priv->pba.Omega0_lambda           = 0.0; /* Disable cosmological constant in CLASS */
-
-    cbe->priv->pba.Omega0_fld = Omega_X0; /* Enable DE fluid in CLASS */
-    cbe->priv->pba.w0_fld     = w0;
-    cbe->priv->pba.wa_fld     = w1;
-    cbe->priv->pba.cs2_fld    = 1.0;
+    cbe->priv->pba.w0_fld                  = w0;
+    cbe->priv->pba.wa_fld                  = w1;
+    cbe->priv->pba.cs2_fld                 = 1.0;
   }
   else
   {

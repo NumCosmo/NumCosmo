@@ -63,11 +63,11 @@ struct background
 
   /* double Omega0_b; / **< \f$ \Omega_{0 b} \f$: baryons * / */
 
-  double Omega0_cdm; /**< \f$ \Omega_{0 cdm} \f$: cold dark matter */
+  /* double Omega0_cdm; / **< \f$ \Omega_{0 cdm} \f$: cold dark matter * / */
 
-  double Omega0_lambda; /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */
+  /* double Omega0_lambda; / **< \f$ \Omega_{0_\Lambda} \f$: cosmological constant * / */
 
-  double Omega0_fld; /**< \f$ \Omega_{0 de} \f$: fluid */
+  /* double Omega0_fld; / **< \f$ \Omega_{0 de} \f$: fluid * / */
 
   enum equation_of_state fluid_equation_of_state; /**< parametrisation scheme for fluid equation of state */
 
