@@ -190,7 +190,8 @@ _nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdoubl
   const gdouble r_lb2                        = r_lb * r_lb;
   const gdouble r_ub2                        = r_ub * r_ub;
   gdouble cumul_gen                          = ncm_rng_uniform_gen (rng, 0.0, 1.0);
-  gen_r[0]                                   = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+
+  gen_r[0] = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
 }
 
 static void
@@ -198,7 +199,8 @@ _nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdoubl
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
-  gen_z[0]                                   = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
+
+  gen_z[0] = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
 }
 
 static gdouble

@@ -167,14 +167,6 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   complex double e_source = et_source + I * ex_source;
   complex double gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
   complex double e_obs    = (e_source + gt) / (1.0 + conj (gt) * e_source);
-  // if (creal (gt) < 1.0)
-  // {
-  //   complex double e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
-  // }
-  // else
-  // {
-  //   complex double e_obs = (1 + gt * conj (e_source)) / (conj (e_source) + conj (gt));
-  // }
 
   return creal (e_obs);
 }

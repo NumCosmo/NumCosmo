@@ -53,6 +53,7 @@ struct _NcGalaxySDShapeClass
 {
   /*< private >*/
   GObjectClass parent_class;
+
   gdouble (*gen) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z);
   gdouble (*integ) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos);
 };

@@ -411,7 +411,7 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcGalaxyWLLikelihood:zp-min:
+   * NcGalaxyWLLikelihood:s-min:
    *
    * Minimum redshift of the weak lensing observables.
    *
@@ -419,14 +419,14 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_s_min,
-                                   g_param_spec_double ("e-min",
+                                   g_param_spec_double ("s-min",
                                                         NULL,
                                                         "Minimum ellipticity of the weak lensing observables",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcGalaxyWLLikelihood:zp-max:
+   * NcGalaxyWLLikelihood:s-max:
    *
    * Maximum redshift of the weak lensing observables.
    *
@@ -434,7 +434,7 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_s_max,
-                                   g_param_spec_double ("e-max",
+                                   g_param_spec_double ("s-max",
                                                         NULL,
                                                         "Maximum ellipticity of the weak lensing observables",
                                                         0.0, G_MAXDOUBLE, 10.0,
@@ -600,9 +600,7 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
       nc_galaxy_sd_position_gen_z (self->rz_dist, rng, &z);
 
       if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
-      {
         break;
-      }
     }
 
     const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
@@ -734,6 +732,8 @@ nc_galaxy_wl_likelihood_set_cut (NcGalaxyWLLikelihood *gwl, const gdouble zp_min
   self->zp_max = zp_max;
   self->r_min  = r_min;
   self->r_max  = r_max;
+  self->s_min  = s_min;
+  self->s_max  = s_max;
 }
 
 /**
@@ -751,3 +751,4 @@ nc_galaxy_wl_likelihood_set_ndata (NcGalaxyWLLikelihood *gwl, gdouble ndata)
 
   self->ndata = ndata;
 }
+

@@ -123,13 +123,12 @@ _nc_galaxy_sd_position_srd_y1_get_property (GObject *object, guint prop_id, GVal
   }
 }
 
-
 static void
 _nc_galaxy_sd_position_srd_y1_dispose (GObject *object)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (object);
   NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
-  
+
   ncm_vector_clear (&self->z_lim);
   ncm_vector_clear (&self->r_lim);
 
@@ -190,7 +189,6 @@ nc_galaxy_sd_position_srd_y1_class_init (NcGalaxySDPositionSRDY1Class *klass)
   sd_position_class->integ = &_nc_galaxy_sd_position_srd_y1_integ;
 }
 
-
 static void
 _nc_galaxy_sd_position_srd_y1_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
 {
@@ -201,7 +199,8 @@ _nc_galaxy_sd_position_srd_y1_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdou
   const gdouble r_lb2                         = r_lb * r_lb;
   const gdouble r_ub2                         = r_ub * r_ub;
   gdouble cumul_gen                           = ncm_rng_uniform_gen (rng, 0.0, 1.0);
-  gen_r[0]                                    = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+
+  gen_r[0] = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
 }
 
 static void
@@ -209,7 +208,8 @@ _nc_galaxy_sd_position_srd_y1_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdou
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
   NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
-  gen_z[0]                                    = ncm_stats_dist1d_gen (self->z_dist, rng);
+
+  gen_z[0] = ncm_stats_dist1d_gen (self->z_dist, rng);
 }
 
 static gdouble
@@ -296,32 +296,33 @@ nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
   gdouble z_ul = ncm_vector_get (lim, 1);
 
   gdouble
-  m2lnp (gdouble z, void * p)
+  m2lnp (gdouble z, void *p)
   {
-    (void)(p);
-    gdouble alpha = 0.78;
-    gdouble beta = 2.0;
-    gdouble z0 = 0.13;
+    (void) (p);
 
-    return - 2 * log (pow (z, beta) * exp (- pow (z/z0, alpha)));
+    gdouble alpha = 0.78;
+    gdouble beta  = 2.0;
+    gdouble z0    = 0.13;
+
+    return -2 * log (pow (z, beta) * exp (-pow (z / z0, alpha)));
   }
 
   gsl_function F;
 
   F.function = &m2lnp;
-  F.params = 0;
+  F.params   = 0;
 
   NcmSpline *spline = ncm_spline_cubic_notaknot_new ();
+
   ncm_spline_set_func (spline, NCM_SPLINE_FUNCTION_SPLINE, &F, z_ll, z_ul, 10000, 0.01);
 
   NcmStatsDist1dSpline *dist = ncm_stats_dist1d_spline_new (spline);
 
   ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
 
-  self->z_lim = ncm_vector_ref (lim);
+  self->z_lim  = ncm_vector_ref (lim);
   self->z_dist = NCM_STATS_DIST1D (dist);
 }
-
 
 /**
  * nc_galaxy_sd_position_srd_y1_peek_z_lim:
@@ -358,7 +359,6 @@ nc_galaxy_sd_position_srd_y1_set_r_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
   self->r_lim = ncm_vector_ref (lim);
 }
 
-
 /**
  * nc_galaxy_sd_position_srd_y1_peek_r_lim:
  * @gsdpsrdy1: a #NcGalaxySDPositionSRDY1
@@ -374,3 +374,4 @@ nc_galaxy_sd_position_srd_y1_peek_r_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 
   return self->r_lim;
 }
+

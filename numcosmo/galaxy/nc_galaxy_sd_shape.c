@@ -52,7 +52,7 @@ struct _NcGalaxySDShapePrivate
   gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE(NcGalaxySDShape, nc_galaxy_sd_shape, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShape, nc_galaxy_sd_shape, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_sd_shape_init (NcGalaxySDShape *gsds)
@@ -92,7 +92,6 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   klass->gen   = &_nc_galaxy_sd_shape_gen;
   klass->integ = &_nc_galaxy_sd_shape_integ;
 }
-
 
 /**
  * nc_galaxy_sd_shape_ref:
@@ -164,3 +163,4 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  *
  * Returns: the probability density of observable shape, $P(s)$.
  */
+

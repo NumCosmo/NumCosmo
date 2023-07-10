@@ -140,7 +140,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 }
 
 /**
- * nc_galaxy_sd_position_gen_r: (virtual gen)
+ * nc_galaxy_sd_position_gen_r: (virtual gen_r)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
  * @gen_r: a #gdouble
@@ -150,7 +150,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  */
 /**
- * nc_galaxy_sd_position_gen_z: (virtual gen)
+ * nc_galaxy_sd_position_gen_z: (virtual gen_z)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
  * @gen_z: a #gdouble
