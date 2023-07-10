@@ -52,7 +52,8 @@ struct _NcGalaxySDPositionClass
   /*< private >*/
   GObjectClass parent_class;
 
-  void (*gen) (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng);
+  void (*gen_r) (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r);
+  void (*gen_z) (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z);
   gdouble (*integ) (NcGalaxySDPosition *gsdp, NcmVector *pos);
 };
 
@@ -70,7 +71,8 @@ NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp);
 
-NCM_INLINE void nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng);
+NCM_INLINE void nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r);
+NCM_INLINE void nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z);
 NCM_INLINE gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
 
 G_END_DECLS
@@ -85,9 +87,15 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE void
-nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng)
+nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, pos, rng);
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_r (gsdp, rng, gen_r);
+}
+
+NCM_INLINE void
+nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z)
+{
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_z (gsdp, rng, gen_z);
 }
 
 NCM_INLINE gdouble

@@ -67,7 +67,7 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos)
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 
@@ -143,7 +143,8 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @smd: a #NcWLSurfaceMassDensity
  * @z_cluster: cluster redshift $z_\mathrm{cl}
  * @rng: a #NcmRNG
- * @pos: a #NcmVector stating position and redshift
+ * @r: a #gdouble
+ * @z: a #gdouble
  *
  * Generates a shape value from the position using @rng.
  *

@@ -142,7 +142,8 @@ _nc_galaxy_sd_position_srd_y1_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_srd_y1_parent_class)->finalize (object);
 }
 
-static void _nc_galaxy_sd_position_srd_y1_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng);
+static void _nc_galaxy_sd_position_srd_y1_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r);
+static void _nc_galaxy_sd_position_srd_y1_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z);
 static gdouble _nc_galaxy_sd_position_srd_y1_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
 
 static void
@@ -184,13 +185,14 @@ nc_galaxy_sd_position_srd_y1_class_init (NcGalaxySDPositionSRDY1Class *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  sd_position_class->gen   = &_nc_galaxy_sd_position_srd_y1_gen;
+  sd_position_class->gen_r = &_nc_galaxy_sd_position_srd_y1_gen_r;
+  sd_position_class->gen_z = &_nc_galaxy_sd_position_srd_y1_gen_z;
   sd_position_class->integ = &_nc_galaxy_sd_position_srd_y1_integ;
 }
 
 
 static void
-_nc_galaxy_sd_position_srd_y1_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng)
+_nc_galaxy_sd_position_srd_y1_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
   NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
@@ -198,12 +200,16 @@ _nc_galaxy_sd_position_srd_y1_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, Ncm
   const gdouble r_ub                          = ncm_vector_get (self->r_lim, 1);
   const gdouble r_lb2                         = r_lb * r_lb;
   const gdouble r_ub2                         = r_ub * r_ub;
-  gdouble z_gen                               = ncm_stats_dist1d_gen (self->z_dist, rng);
   gdouble cumul_gen                           = ncm_rng_uniform_gen (rng, 0.0, 1.0);
-  gdouble r_gen                               = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+  gen_r[0]                                    = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+}
 
-  ncm_vector_set (pos, 0, z_gen);
-  ncm_vector_set (pos, 1, r_gen);
+static void
+_nc_galaxy_sd_position_srd_y1_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z)
+{
+  NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
+  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  gen_z[0]                                    = ncm_stats_dist1d_gen (self->z_dist, rng);
 }
 
 static gdouble

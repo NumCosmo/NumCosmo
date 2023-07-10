@@ -124,7 +124,7 @@ _nc_galaxy_sd_shape_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos);
+static gdouble _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z);
 static gdouble _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos);
 
 static void
@@ -157,7 +157,7 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, NcmVector *pos)
+_nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = gsdsgauss->priv;
@@ -165,8 +165,16 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   gdouble et_source       = ncm_rng_gaussian_gen (rng, 0, self->sigma);
   gdouble ex_source       = ncm_rng_gaussian_gen (rng, 0, self->sigma);
   complex double e_source = et_source + I * ex_source;
-  complex double gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, ncm_vector_get (pos, 1), ncm_vector_get (pos, 0), z_cluster, z_cluster);
+  complex double gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
   complex double e_obs    = (e_source + gt) / (1.0 + conj (gt) * e_source);
+  // if (creal (gt) < 1.0)
+  // {
+  //   complex double e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
+  // }
+  // else
+  // {
+  //   complex double e_obs = (1 + gt * conj (e_source)) / (conj (e_source) + conj (gt));
+  // }
 
   return creal (e_obs);
 }

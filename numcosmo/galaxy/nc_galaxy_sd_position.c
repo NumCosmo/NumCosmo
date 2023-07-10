@@ -67,9 +67,15 @@ _nc_galaxy_sd_position_finalize (GObject *object)
 }
 
 static void
-_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmVector *pos, NcmRNG *rng)
+_nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
 {
-  g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_gen_r: method not implemented.");
+}
+
+static void
+_nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z)
+{
+  g_error ("_nc_galaxy_sd_position_gen_z: method not implemented.");
 }
 
 static gdouble
@@ -87,7 +93,8 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
 
   object_class->finalize = &_nc_galaxy_sd_position_finalize;
 
-  klass->gen   = &_nc_galaxy_sd_position_gen;
+  klass->gen_r = &_nc_galaxy_sd_position_gen_r;
+  klass->gen_z = &_nc_galaxy_sd_position_gen_z;
   klass->integ = &_nc_galaxy_sd_position_integ;
 }
 
@@ -133,13 +140,23 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 }
 
 /**
- * nc_galaxy_sd_position_gen: (virtual gen)
+ * nc_galaxy_sd_position_gen_r: (virtual gen)
  * @gsdp: a #NcGalaxySDPosition
- * @pos: a #NcmVector
  * @rng: a #NcmRNG
+ * @gen_r: a #gdouble
  *
- * Generates a $(r, z)$ value from the distribution using @rng
- * and saves it in @pos.
+ * Generates a $r$ value from the distribution using @rng
+ * and saves it in @r.
+ *
+ */
+/**
+ * nc_galaxy_sd_position_gen_z: (virtual gen)
+ * @gsdp: a #NcGalaxySDPosition
+ * @rng: a #NcmRNG
+ * @gen_z: a #gdouble
+ *
+ * Generates a $z$ value from the distribution using @rng
+ * and saves it in @z.
  *
  */
 /**
