@@ -2654,12 +2654,17 @@ thermodynamics_recombination_with_hyrec (
   /** Summary: */
 #ifdef HYREC
 
-  const double H0            = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double T_cmb         = nc_hicosmo_T_gamma0 (pba->cosmo);
-  const double Omega0_b      = nc_hicosmo_Omega_b0 (pba->cosmo);
-  const double Omega0_cdm    = nc_hicosmo_Omega_c0 (pba->cosmo);
-  const double Omega0_lambda = 0.0;
-  const double Omega0_fld    = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+  const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double T_cmb      = nc_hicosmo_T_gamma0 (pba->cosmo);
+  const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  double Omega0_lambda    = 0.0;
+  double Omega0_fld       = 0.0;
+
+  if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
+    Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+  else
+    Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   REC_COSMOPARAMS param;
   HRATEEFF rate_table;

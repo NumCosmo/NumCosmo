@@ -120,40 +120,39 @@ nc_cbe_init (NcCBE *cbe)
 
   /* background structure */
 
-  cbe->priv->pba.h                       = 0.0;
-  cbe->priv->pba.Omega0_ur               = 0.0;
-  cbe->priv->pba.Omega0_dcdmdr           = 0.0;
-  cbe->priv->pba.Omega0_dcdm             = 0.0;
-  cbe->priv->pba.Gamma_dcdm              = 0.0;
-  cbe->priv->pba.N_ncdm                  = 0;
-  cbe->priv->pba.Omega0_ncdm_tot         = 0.0;
-  cbe->priv->pba.ksi_ncdm_default        = 0.0;
-  cbe->priv->pba.ksi_ncdm                = NULL;
-  cbe->priv->pba.T_ncdm_default          = 0.0;
-  cbe->priv->pba.T_ncdm                  = NULL;
-  cbe->priv->pba.deg_ncdm_default        = 0.0;
-  cbe->priv->pba.deg_ncdm                = NULL;
-  cbe->priv->pba.ncdm_psd_parameters     = NULL;
-  cbe->priv->pba.ncdm_psd_files          = NULL;
-  cbe->priv->pba.Omega0_scf              = 0.0;
-  cbe->priv->pba.attractor_ic_scf        = _FALSE_;
-  cbe->priv->pba.scf_parameters          = NULL;
-  cbe->priv->pba.scf_parameters_size     = 0;
-  cbe->priv->pba.scf_tuning_index        = 0;
-  cbe->priv->pba.phi_ini_scf             = 0;
-  cbe->priv->pba.phi_prime_ini_scf       = 0;
-  cbe->priv->pba.Omega0_k                = 0.0;
-  cbe->priv->pba.K                       = 0.0;
-  cbe->priv->pba.sgnK                    = 0;
-  cbe->priv->pba.fluid_equation_of_state = 0;
-  cbe->priv->pba.a_today                 = 0.0;
-  cbe->priv->pba.w0_fld                  = 0.0;
-  cbe->priv->pba.wa_fld                  = 0.0;
-  cbe->priv->pba.Omega_EDE               = 0.0;
-  cbe->priv->pba.cs2_fld                 = 0.0;
-  cbe->priv->pba.use_ppf                 = _FALSE_;
-  cbe->priv->pba.c_gamma_over_c_fld      = 0.0;
-  cbe->priv->pba.shooting_failed         = _FALSE_;
+  cbe->priv->pba.h                   = 0.0;
+  cbe->priv->pba.Omega0_ur           = 0.0;
+  cbe->priv->pba.Omega0_dcdmdr       = 0.0;
+  cbe->priv->pba.Omega0_dcdm         = 0.0;
+  cbe->priv->pba.Gamma_dcdm          = 0.0;
+  cbe->priv->pba.N_ncdm              = 0;
+  cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
+  cbe->priv->pba.ksi_ncdm_default    = 0.0;
+  cbe->priv->pba.ksi_ncdm            = NULL;
+  cbe->priv->pba.T_ncdm_default      = 0.0;
+  cbe->priv->pba.T_ncdm              = NULL;
+  cbe->priv->pba.deg_ncdm_default    = 0.0;
+  cbe->priv->pba.deg_ncdm            = NULL;
+  cbe->priv->pba.ncdm_psd_parameters = NULL;
+  cbe->priv->pba.ncdm_psd_files      = NULL;
+  cbe->priv->pba.Omega0_scf          = 0.0;
+  cbe->priv->pba.attractor_ic_scf    = _FALSE_;
+  cbe->priv->pba.scf_parameters      = NULL;
+  cbe->priv->pba.scf_parameters_size = 0;
+  cbe->priv->pba.scf_tuning_index    = 0;
+  cbe->priv->pba.phi_ini_scf         = 0;
+  cbe->priv->pba.phi_prime_ini_scf   = 0;
+  cbe->priv->pba.Omega0_k            = 0.0;
+  cbe->priv->pba.K                   = 0.0;
+  cbe->priv->pba.sgnK                = 0;
+  cbe->priv->pba.a_today             = 0.0;
+  cbe->priv->pba.w0_fld              = 0.0;
+  cbe->priv->pba.wa_fld              = 0.0;
+  cbe->priv->pba.Omega_EDE           = 0.0;
+  cbe->priv->pba.cs2_fld             = 0.0;
+  cbe->priv->pba.use_ppf             = _FALSE_;
+  cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
+  cbe->priv->pba.shooting_failed     = _FALSE_;
 
   cbe->priv->pba.got_files                = NULL;
   cbe->priv->pba.m_ncdm_in_eV             = NULL;
@@ -1125,6 +1124,7 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   if (!g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     g_error ("_nc_cbe_set_bg: CLASS backend is compatible with darkenergy models only.");
 
+  cbe->priv->pba.cosmo               = cosmo;
   cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
   cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu0 (cosmo);
   cbe->priv->pba.Omega0_dcdmdr       = 0.0;
@@ -1264,10 +1264,9 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
     if (w0 != -1.0)
     {
-      cbe->priv->pba.fluid_equation_of_state = CLP;
-      cbe->priv->pba.w0_fld                  = w0;
-      cbe->priv->pba.wa_fld                  = 0.0;
-      cbe->priv->pba.cs2_fld                 = 1.0;
+      cbe->priv->pba.w0_fld  = w0;
+      cbe->priv->pba.wa_fld  = 0.0;
+      cbe->priv->pba.cs2_fld = 1.0;
     }
     else
     {
@@ -1281,10 +1280,9 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     const gdouble w0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
     const gdouble w1 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
 
-    cbe->priv->pba.fluid_equation_of_state = CLP;
-    cbe->priv->pba.w0_fld                  = w0;
-    cbe->priv->pba.wa_fld                  = w1;
-    cbe->priv->pba.cs2_fld                 = 1.0;
+    cbe->priv->pba.w0_fld  = w0;
+    cbe->priv->pba.wa_fld  = w1;
+    cbe->priv->pba.cs2_fld = 1.0;
   }
   else
   {
@@ -1612,6 +1610,8 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
   struct precision *ppr = (struct precision *) cbe->prec->priv;
 
   _nc_cbe_set_bg (cbe, cosmo);
+
+  cbe->priv->pba.cosmo = cosmo;
 
   if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
     g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);

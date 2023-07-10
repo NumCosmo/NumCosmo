@@ -72,6 +72,7 @@ class_hyrec_sources = \
 	hyrec/hyrectools.h
 
 class_sources = \
+	source/background.c      \
 	source/thermodynamics.c  \
 	source/perturbations.c   \
 	source/primordial.c      \
@@ -80,6 +81,7 @@ class_sources = \
 	source/spectra.c         \
 	source/lensing.c         \
 	include/nonlinear.h      \
+	include/background.h     \
 	include/thermodynamics.h \
 	include/primordial.h     \
         include/lensing.h        \

@@ -20,14 +20,6 @@ enum spatial_curvature
   closed
 };
 
-/** list of possible parametrisations of the DE equation of state */
-
-enum equation_of_state
-{
-  CLP,
-  EDE
-};
-
 /**
  * All background parameters and evolution that other modules need to know.
  *
@@ -69,7 +61,7 @@ struct background
 
   /* double Omega0_fld; / **< \f$ \Omega_{0 de} \f$: fluid * / */
 
-  enum equation_of_state fluid_equation_of_state; /**< parametrisation scheme for fluid equation of state */
+  /* enum equation_of_state fluid_equation_of_state; / **< parametrisation scheme for fluid equation of state * / */
 
   double w0_fld;    /**< \f$ w0_{DE} \f$: current fluid equation of state parameter */
   double wa_fld;    /**< \f$ wa_{DE} \f$: fluid equation of state parameter derivative */
@@ -410,10 +402,10 @@ int background_tau_of_z (
                         );
 
 int background_functions (
-  struct background *pba,
-  double            *pvecback_B,
-  short             return_format,
-  double            *pvecback
+  const struct background *pba,
+  double                  *pvecback_B,
+  short                   return_format,
+  double                  *pvecback
                          );
 
 int background_w_fld (
@@ -518,8 +510,8 @@ int background_derivs (
 
 /** Scalar field potential and its derivatives **/
 double V_scf (
-  struct background *pba,
-  double            phi
+  const struct background *pba,
+  double                  phi
              );
 
 double dV_scf (
@@ -528,8 +520,8 @@ double dV_scf (
               );
 
 double ddV_scf (
-  struct background *pba,
-  double            phi
+  const struct background *pba,
+  double                  phi
                );
 
 /** Coupling between scalar field and matter **/

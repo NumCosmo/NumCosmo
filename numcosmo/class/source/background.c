@@ -98,19 +98,19 @@
 
 int
 background_at_tau (
-  struct background *pba,
-  double            tau,
-  short             return_format,
-  short             intermode,
-  int               *last_index,
-  double            *pvecback /* vector with argument pvecback[index_bg] (must be already allocated with a size compatible with return_format) */
+  const struct background *pba,
+  double                  tau,
+  short                   return_format,
+  short                   intermode,
+  int                     *last_index,
+  double                  *pvecback /* vector with argument pvecback[index_bg] (must be already allocated with a size compatible with return_format) */
                   )
 {
   /** Summary: */
 
   /** - define local variables */
 
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  /*const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
 
   /* size of output vector, controlled by input parameter return_format */
   int pvecback_size;
@@ -154,7 +154,7 @@ background_at_tau (
                   last_index,
                   pvecback,
                   pvecback_size,
-                  pba->error_message),
+                  (char *) pba->error_message),
                 pba->error_message,
                 pba->error_message);
 
@@ -169,7 +169,7 @@ background_at_tau (
                   last_index,
                   pvecback,
                   pvecback_size,
-                  pba->error_message),
+                  (char *) pba->error_message),
                 pba->error_message,
                 pba->error_message);
 
@@ -190,9 +190,9 @@ background_at_tau (
 
 int
 background_tau_of_z (
-  struct background *pba,
-  double            z,
-  double            *tau
+  const struct background *pba,
+  double                  z,
+  double                  *tau
                     )
 {
   /** Summary: */
@@ -222,7 +222,7 @@ background_tau_of_z (
                 &last_index,
                 tau,
                 1,
-                pba->error_message),
+                (char *) pba->error_message),
               pba->error_message,
               pba->error_message);
 
@@ -248,17 +248,27 @@ background_tau_of_z (
 
 int
 background_functions (
-  struct background *pba,
-  double            *pvecback_B, /* Vector containing all {B} quantities. */
-  short             return_format,
-  double            *pvecback /* vector with argument pvecback[index_bg] (must be already allocated with a size compatible with return_format) */
+  const struct background *pba,
+  double                  *pvecback_B, /* Vector containing all {B} quantities. */
+  short                   return_format,
+  double                  *pvecback /* vector with argument pvecback[index_bg] (must be already allocated with a size compatible with return_format) */
                      )
 {
   /** Summary: */
 
   /** - define local variables */
 
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_g   = nc_hicosmo_Omega_g0 (pba->cosmo);
+  const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
+  const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  double Omega0_lambda    = 0.0;
+  double Omega0_fld       = 0.0;
+
+  if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
+    Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+  else
+    Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   /* total density */
   double rho_tot;
@@ -299,13 +309,13 @@ background_functions (
   /** - compute each component's density and pressure */
 
   /* photons */
-  pvecback[pba->index_bg_rho_g] = pba->Omega0_g * pow (H0, 2) / pow (a_rel, 4);
+  pvecback[pba->index_bg_rho_g] = Omega0_g * pow (H0, 2) / pow (a_rel, 4);
   rho_tot                      += pvecback[pba->index_bg_rho_g];
   p_tot                        += (1. / 3.) * pvecback[pba->index_bg_rho_g];
   rho_r                        += pvecback[pba->index_bg_rho_g];
 
   /* baryons */
-  pvecback[pba->index_bg_rho_b] = pba->Omega0_b * pow (H0, 2) / pow (a_rel, 3);
+  pvecback[pba->index_bg_rho_b] = Omega0_b * pow (H0, 2) / pow (a_rel, 3);
   rho_tot                      += pvecback[pba->index_bg_rho_b];
   p_tot                        += 0;
   rho_m                        += pvecback[pba->index_bg_rho_b];
@@ -313,7 +323,7 @@ background_functions (
   /* cdm */
   if (pba->has_cdm == _TRUE_)
   {
-    pvecback[pba->index_bg_rho_cdm] = pba->Omega0_cdm * pow (H0, 2) / pow (a_rel, 3);
+    pvecback[pba->index_bg_rho_cdm] = Omega0_cdm * pow (H0, 2) / pow (a_rel, 3);
     rho_tot                        += pvecback[pba->index_bg_rho_cdm];
     p_tot                          += 0.;
     rho_m                          += pvecback[pba->index_bg_rho_cdm];
@@ -400,7 +410,7 @@ background_functions (
   /* Lambda */
   if (pba->has_lambda == _TRUE_)
   {
-    pvecback[pba->index_bg_rho_lambda] = pba->Omega0_lambda * pow (H0, 2);
+    pvecback[pba->index_bg_rho_lambda] = Omega0_lambda * pow (H0, 2);
     rho_tot                           += pvecback[pba->index_bg_rho_lambda];
     p_tot                             -= pvecback[pba->index_bg_rho_lambda];
   }
@@ -480,72 +490,24 @@ background_functions (
 
 int
 background_w_fld (
-  struct background *pba,
-  double            a,
-  double            *w_fld,
-  double            *dw_over_da_fld,
-  double            *integral_fld)
+  const struct background *pba,
+  double                  a,
+  double                  *w_fld,
+  double                  *dw_over_da_fld,
+  double                  *integral_fld)
 {
-  double Omega_ede = 0.;
-  double dOmega_ede_over_da = 0.;
-  double d2Omega_ede_over_da2 = 0.;
-  double a_eq, Omega_r, Omega_m;
-
-  a_eq = 0.0;
-
   /** - first, define the function w(a) */
-  switch (pba->fluid_equation_of_state)
   {
-    case CLP:
-      *w_fld = pba->w0_fld + pba->wa_fld * (1. - a / pba->a_today);
-      break;
-    case EDE:
-      /* Omega_ede(a) taken from eq. (10) in 1706.00730 */
-      Omega_ede = (pba->Omega0_fld - pba->Omega_EDE * (1. - pow (a, -3. * pba->w0_fld)))
-                  / (pba->Omega0_fld + (1. - pba->Omega0_fld) * pow (a, 3. * pba->w0_fld))
-                  + pba->Omega_EDE * (1. - pow (a, -3. * pba->w0_fld));
-
-      /* d Omega_ede / d a taken analytically from the above */
-      dOmega_ede_over_da = -pba->Omega_EDE * 3. * pba->w0_fld * pow (a, -3. * pba->w0_fld - 1.) / (pba->Omega0_fld + (1. - pba->Omega0_fld) * pow (a, 3. * pba->w0_fld))
-                           - (pba->Omega0_fld - pba->Omega_EDE * (1. - pow (a, -3. * pba->w0_fld))) * (1. - pba->Omega0_fld) * 3. * pba->w0_fld * pow (a, 3. * pba->w0_fld - 1.) / pow (pba->Omega0_fld + (1. - pba->Omega0_fld) * pow (a, 3. * pba->w0_fld), 2)
-                           + pba->Omega_EDE * 3. * pba->w0_fld * pow (a, -3. * pba->w0_fld - 1.);
-
-      /* find a_equality (needed because EDE tracks first radiation, then matter) */
-      Omega_r = pba->Omega0_g * (1. + 3.046 * 7. / 8. * pow (4. / 11., 4. / 3.)); /* assumes LambdaCDM + eventually massive neutrinos so light that they are relativistic at equality; needs to be generalised later on. */
-      Omega_m = pba->Omega0_b;
-
-      if (pba->has_cdm == _TRUE_)
-        Omega_m += pba->Omega0_cdm;
-
-      if (pba->has_dcdm == _TRUE_)
-        class_stop (pba->error_message, "Early Dark Energy not compatible with decaying Dark Matter because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
-
-      a_eq = Omega_r / Omega_m; /* assumes a flat universe with a=1 today */
-      class_stop (pba->error_message, "a_eq = %e, z_eq =%e\n", a_eq, 1. / a_eq - 1.);
-
-      /* w_ede(a) taken from eq. (11) in 1706.00730 */
-      *w_fld = -dOmega_ede_over_da * a / Omega_ede / 3. / (1. - Omega_ede) + a_eq / 3. / (a + a_eq);
-      break;
+    *w_fld = pba->w0_fld + pba->wa_fld * (1. - a / pba->a_today);
   }
-
 
   /** - then, give the corresponding analytic derivative dw/da (used
    *     by perturbation equations; we could compute it numerically,
    *     but with a loss of precision; as long as there is a simple
    *     analytic expression of the derivative of the previous
    *     function, let's use it! */
-  switch (pba->fluid_equation_of_state)
   {
-    case CLP:
-      *dw_over_da_fld = -pba->wa_fld / pba->a_today;
-      break;
-    case EDE:
-      d2Omega_ede_over_da2 = 0.;
-      *dw_over_da_fld      = -d2Omega_ede_over_da2 * a / 3. / (1. - Omega_ede) / Omega_ede
-                             - dOmega_ede_over_da / 3. / (1. - Omega_ede) / Omega_ede
-                             + dOmega_ede_over_da * dOmega_ede_over_da * a / 3. / (1. - Omega_ede) / (1. - Omega_ede) / Omega_ede
-                             + a_eq / 3. / (a + a_eq) / (a + a_eq);
-      break;
+    *dw_over_da_fld = -pba->wa_fld / pba->a_today;
   }
 
   /** - finally, give the analytic solution of the following integral:
@@ -585,6 +547,10 @@ background_init (
 {
   /** Summary: */
 
+  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_g = nc_hicosmo_Omega_g0 (pba->cosmo);
+  const double T_cmb    = nc_hicosmo_T_gamma0 (pba->cosmo);
+
   /** - define local variables */
   int n_ncdm;
   double rho_ncdm_rel, rho_nu_rel;
@@ -601,7 +567,7 @@ background_init (
     /* below we want to inform the user about ncdm species*/
     if (pba->N_ncdm > 0)
     {
-      Neff = pba->Omega0_ur / 7. * 8. / pow (4. / 11., 4. / 3.) / pba->Omega0_g;
+      Neff = pba->Omega0_ur / 7. * 8. / pow (4. / 11., 4. / 3.) / Omega0_g;
 
       /* loop over ncdm species */
       for (n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++)
@@ -634,7 +600,7 @@ background_init (
          *  limit, i.e. assuming T_nu=(4/11)^1/3 T_gamma (this comes
          *  from the definition of N_eff) */
         rho_nu_rel = 56.0 / 45.0 * pow (_PI_, 6) * pow (4.0 / 11.0, 4.0 / 3.0) * _G_ / pow (_h_P_, 3) / pow (_c_, 7) *
-                     pow (_Mpc_over_m_, 2) * pow (pba->T_cmb * _k_B_, 4);
+                     pow (_Mpc_over_m_, 2) * pow (T_cmb * _k_B_, 4);
 
         printf (" -> ncdm species i=%d sampled with %d (resp. %d) points for purpose of background (resp. perturbation) integration. In the relativistic limit it gives Delta N_eff = %g\n",
                 n_ncdm + 1,
@@ -676,9 +642,9 @@ background_init (
   /* T_cmb in K */
   /* Many users asked for this test to be supressed. It is commented out. */
 
-  /*class_test((pba->T_cmb < _TCMB_SMALL_)||(pba->T_cmb > _TCMB_BIG_),
+  /*class_test((T_cmb < _TCMB_SMALL_)||(T_cmb > _TCMB_BIG_),
    *          pba->error_message,
-   *          "T_cmb=%g out of bounds (%g<T_cmb<%g)",pba->T_cmb,_TCMB_SMALL_,_TCMB_BIG_);*/
+   *          "T_cmb=%g out of bounds (%g<T_cmb<%g)",T_cmb,_TCMB_SMALL_,_TCMB_BIG_);*/
 
   /* Omega_k */
   /* Many users asked for this test to be supressed. It is commented out. */
@@ -861,6 +827,15 @@ background_indices (
 
   /** - define local variables */
 
+  const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  double Omega0_lambda    = 0.0;
+  double Omega0_fld       = 0.0;
+
+  if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
+    Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+  else
+    Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+
   /* a running index for the vector of background quantities */
   int index_bg;
   /* a running index for the vector of background quantities to be integrated */
@@ -878,7 +853,7 @@ background_indices (
   pba->has_ur        = _FALSE_;
   pba->has_curvature = _FALSE_;
 
-  if (pba->Omega0_cdm != 0.)
+  if (Omega0_cdm != 0.)
     pba->has_cdm = _TRUE_;
 
   if (pba->Omega0_ncdm_tot != 0.)
@@ -895,10 +870,10 @@ background_indices (
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
 
-  if (pba->Omega0_lambda != 0.)
+  if (Omega0_lambda != 0.)
     pba->has_lambda = _TRUE_;
 
-  if (pba->Omega0_fld != 0.)
+  if (Omega0_fld != 0.)
     pba->has_fld = _TRUE_;
 
   if (pba->Omega0_ur != 0.)
@@ -1260,6 +1235,8 @@ background_ncdm_init (
 
   pbadist.pba = pba;
 
+  const double T_cmb = nc_hicosmo_T_gamma0 (pba->cosmo);
+
   /* Allocate pointer arrays: */
   class_alloc (pba->q_ncdm, sizeof (double *) * pba->N_ncdm, pba->error_message);
   class_alloc (pba->w_ncdm, sizeof (double *) * pba->N_ncdm, pba->error_message);
@@ -1459,7 +1436,7 @@ background_ncdm_init (
         pba->dlnf0_dlnq_ncdm[k][index_q] = q / f0 * df0dq;
     }
 
-    pba->factor_ncdm[k] = pba->deg_ncdm[k] * 4 * _PI_ * pow (pba->T_cmb * pba->T_ncdm[k] * _k_B_, 4) * 8 * _PI_ * _G_
+    pba->factor_ncdm[k] = pba->deg_ncdm[k] * 4 * _PI_ * pow (T_cmb * pba->T_ncdm[k] * _k_B_, 4) * 8 * _PI_ * _G_
                           / 3. / pow (_h_P_ / 2. / _PI_, 3) / pow (_c_, 7) * _Mpc_over_m_ * _Mpc_over_m_;
 
     /* If allocated, deallocate interpolation table:  */
@@ -1678,6 +1655,11 @@ background_solve (
   /** Summary: */
 
   /** - define local variables */
+
+  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo);
+  /* const double Omega0_g      = nc_hicosmo_Omega_g0 (pba->cosmo); */
+  const double Omega0_lambda = 0.0;
 
   /* contains all quantities relevant for the integration algorithm */
   struct generic_integrator_workspace gi;
@@ -1946,7 +1928,7 @@ background_solve (
       printf ("     -> Omega0_dr = %f\n", pba->Omega0_dr);
       printf ("     -> Omega0_dr+Omega0_dcdm = %f, input value = %f\n",
               pba->Omega0_dr + pba->Omega0_dcdm, pba->Omega0_dcdmdr);
-      printf ("     -> Omega_ini_dcdm/Omega_b = %f\n", pba->Omega_ini_dcdm / pba->Omega0_b);
+      printf ("     -> Omega_ini_dcdm/Omega_b = %f\n", pba->Omega_ini_dcdm / Omega0_b);
     }
 
     if (pba->has_scf == _TRUE_)
@@ -1957,7 +1939,7 @@ background_solve (
 
       if (pba->has_lambda == _TRUE_)
         printf ("     -> Omega_Lambda = %g, wished %g\n",
-                pvecback[pba->index_bg_rho_lambda] / pvecback[pba->index_bg_rho_crit], pba->Omega0_lambda);
+                pvecback[pba->index_bg_rho_lambda] / pvecback[pba->index_bg_rho_crit], Omega0_lambda);
 
       printf ("     -> parameters: [lambda, alpha, A, B] = \n");
       printf ("                    [");
@@ -1998,6 +1980,16 @@ background_initial_conditions (
   /** Summary: */
 
   /** - define local variables */
+
+  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_g = nc_hicosmo_Omega_g0 (pba->cosmo);
+  double Omega0_lambda  = 0.0;
+  double Omega0_fld     = 0.0;
+
+  if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
+    Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
+  else
+    Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   /* scale factor */
   double a;
@@ -2059,7 +2051,7 @@ background_initial_conditions (
   pvecback_integration[pba->index_bi_a] = a;
 
   /* Set initial values of {B} variables: */
-  Omega_rad = pba->Omega0_g;
+  Omega_rad = Omega0_g;
 
   if (pba->has_ur == _TRUE_)
     Omega_rad += pba->Omega0_ur;
@@ -2105,7 +2097,7 @@ background_initial_conditions (
   if (pba->has_fld == _TRUE_)
   {
     /* rho_fld today */
-    rho_fld_today = pba->Omega0_fld * pow (H0, 2);
+    rho_fld_today = Omega0_fld * pow (H0, 2);
 
     /* integrate rho_fld(a) from a_ini to a_0, to get rho_fld(a_ini) given rho_fld(a0) */
     class_call (background_w_fld (pba, a, &w_fld, &dw_over_da_fld, &integral_fld), pba->error_message, pba->error_message);
@@ -2529,8 +2521,8 @@ background_derivs (
  */
 
 double
-V_e_scf (struct background *pba,
-         double            phi
+V_e_scf (const struct background *pba,
+         double                  phi
         )
 {
   double scf_lambda = pba->scf_parameters[0];
@@ -2543,8 +2535,8 @@ V_e_scf (struct background *pba,
 }
 
 double
-dV_e_scf (struct background *pba,
-          double            phi
+dV_e_scf (const struct background *pba,
+          double                  phi
          )
 {
   double scf_lambda = pba->scf_parameters[0];
@@ -2557,8 +2549,8 @@ dV_e_scf (struct background *pba,
 }
 
 double
-ddV_e_scf (struct background *pba,
-           double            phi
+ddV_e_scf (const struct background *pba,
+           double                  phi
           )
 {
   double scf_lambda = pba->scf_parameters[0];
@@ -2582,8 +2574,8 @@ ddV_e_scf (struct background *pba,
 
 double
 V_p_scf (
-  struct background *pba,
-  double            phi)
+  const struct background *pba,
+  double                  phi)
 {
   /*  double scf_lambda = pba->scf_parameters[0]; */
   double scf_alpha = pba->scf_parameters[1];
@@ -2595,8 +2587,8 @@ V_p_scf (
 
 double
 dV_p_scf (
-  struct background *pba,
-  double            phi)
+  const struct background *pba,
+  double                  phi)
 {
   /*  double scf_lambda = pba->scf_parameters[0]; */
   double scf_alpha = pba->scf_parameters[1];
@@ -2608,8 +2600,8 @@ dV_p_scf (
 
 double
 ddV_p_scf (
-  struct background *pba,
-  double            phi)
+  const struct background *pba,
+  double                  phi)
 {
   /*  double scf_lambda = pba->scf_parameters[0]; */
   double scf_alpha = pba->scf_parameters[1];
@@ -2624,8 +2616,8 @@ ddV_p_scf (
 
 double
 V_scf (
-  struct background *pba,
-  double            phi)
+  const struct background *pba,
+  double                  phi)
 {
   return V_e_scf (pba, phi) * V_p_scf (pba, phi);
 }
@@ -2640,8 +2632,8 @@ dV_scf (
 
 double
 ddV_scf (
-  struct background *pba,
-  double            phi)
+  const struct background *pba,
+  double                  phi)
 {
   return ddV_e_scf (pba, phi) * V_p_scf (pba, phi) + 2 * dV_e_scf (pba, phi) * dV_p_scf (pba, phi) + V_e_scf (pba, phi) * ddV_p_scf (pba, phi);
 }
