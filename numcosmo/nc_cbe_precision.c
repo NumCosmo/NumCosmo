@@ -228,9 +228,9 @@ static void
 nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
-  
+
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-  
+
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
@@ -273,22 +273,22 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     {
       gchar *sBBN_file    = g_value_dup_string (value);
       guint sBBN_file_len = strlen (sBBN_file);
-      
+
       g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
         g_free (sBBN_file);
-        
+
         sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
         sBBN_file_len = strlen (sBBN_file);
         g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
       g_free (sBBN_file);
-      
+
       break;
     }
     case PROP_RECFAST_Z_INI:
@@ -376,67 +376,67 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     {
       gchar *Alpha_inf_file    = g_value_dup_string (value);
       guint Alpha_inf_file_len = strlen (Alpha_inf_file);
-      
+
       g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
-        
+
         Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
         Alpha_inf_file_len = strlen (Alpha_inf_file);
         g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
       g_free (Alpha_inf_file);
-      
+
       break;
     }
     case PROP_HYREC_R_INF_FILE:
     {
       gchar *R_inf_file    = g_value_dup_string (value);
       guint R_inf_file_len = strlen (R_inf_file);
-      
+
       g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
-        
+
         R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
         R_inf_file_len = strlen (R_inf_file);
-        
+
         g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
       g_free (R_inf_file);
-      
+
       break;
     }
     case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
     {
       gchar *two_photon_tables_file    = g_value_dup_string (value);
       guint two_photon_tables_file_len = strlen (two_photon_tables_file);
-      
+
       g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
         g_free (two_photon_tables_file);
-        
+
         two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
         two_photon_tables_file_len = strlen (two_photon_tables_file);
-        
+
         g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
-      
+
       g_free (two_photon_tables_file);
       break;
     }
@@ -774,9 +774,9 @@ static void
 nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
-  
+
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-  
+
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
@@ -1249,11 +1249,11 @@ static void
 nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &nc_cbe_precision_set_property;
   object_class->get_property = &nc_cbe_precision_get_property;
   object_class->finalize     = &nc_cbe_precision_finalize;
-  
+
   /*
    * Background related parameters.
    */
@@ -1341,13 +1341,13 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)",
                                                         0.0, G_MAXDOUBLE, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Thermodynamics related parameters
    */
   {
     gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
@@ -1548,7 +1548,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   {
     gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_ALPHA_INF_FILE,
                                      g_param_spec_string ("hyrec-Alpha-inf-file",
@@ -1560,7 +1560,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
   }
   {
     gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_R_INF_FILE,
                                      g_param_spec_string ("hyrec-R-inf-file",
@@ -1572,7 +1572,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
   }
   {
     gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_TWO_PHOTON_TABLES_FILE,
                                      g_param_spec_string ("hyrec-two-photon-tables-file",
@@ -1619,7 +1619,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      "plays a minor (almost aesthetic) role in the definition of the variation rate of thermodynamical quantities",
                                                      0, G_MAXINT, 50,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Perturbations parameters
    */
@@ -1896,7 +1896,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "neglect CMB sources below visibility",
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Primordial spectra parameters
    */
@@ -2019,7 +2019,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "primordial inflation extra efolds",
                                                         0.0, G_MAXDOUBLE, 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Transfer functions parameters
    */
@@ -2268,7 +2268,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "controls how smooth are the edge of top-hat window function (<<1 for very sharp, 0.1 for sharp)",
                                                         0.0, G_MAXDOUBLE, 0.1,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Nonlinear module parameters
    */
@@ -2321,7 +2321,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "tolerance for finding the equivalent models of the pk_equal method",
                                                         0.0, G_MAXDOUBLE, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * parameter related to lensing
    */
@@ -2346,11 +2346,11 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      "difference between l_max in unlensed and lensed spectra",
                                                      0.0, G_MAXINT, 500,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * general precision parameters
    */
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SMALLEST_ALLOWED_VARIATION,
                                    g_param_spec_double ("smallest-allowed-variation",
@@ -2379,7 +2379,7 @@ nc_cbe_precision_new (void)
 {
   NcCBEPrecision *cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
                                            NULL);
-  
+
   return cbe_prec;
 }
 
@@ -2423,6 +2423,8 @@ nc_cbe_precision_clear (NcCBEPrecision **cbe_prec)
   g_clear_object (cbe_prec);
 }
 
+gint input_default_precision (struct precision *ppr);
+
 /**
  * nc_cbe_precision_assert_default:
  * @cbe_prec: a #NcCBEPrecision.
@@ -2434,9 +2436,9 @@ void
 nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
 {
   struct precision ppr;
-  
+
   input_default_precision (&ppr);
-  
+
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
 #define _CMP_STR(name)                                        \
   G_STMT_START                                                  \
@@ -2449,12 +2451,12 @@ nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
     g_free (s2);                                                \
   }                                                             \
   G_STMT_END
-  
+
   _CMP_STR (sBBN_file);
   _CMP_STR (hyrec_Alpha_inf_file);
   _CMP_STR (hyrec_R_inf_file);
   _CMP_STR (hyrec_two_photon_tables_file);
-  
+
   _CMP_DBL (a_ini_over_a_today_default);
   _CMP_DBL (back_integration_stepsize);
   _CMP_DBL (tol_background_integration);
@@ -2602,5 +2604,262 @@ nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
   _CMP_DBL (delta_l_max);
   _CMP_DBL (smallest_allowed_variation);
   _CMP_DBL (tol_gauss_legendre);
+}
+
+gint
+input_default_precision (struct precision *ppr)
+{
+  /* Initialize presicion parameters for different structures:
+   * - parameters related to the background
+   */
+
+  ppr->a_ini_over_a_today_default = 1.e-14;
+  ppr->back_integration_stepsize  = 7.e-3;
+  ppr->tol_background_integration = 1.e-2;
+
+  ppr->tol_initial_Omega_r  = 1.e-4;
+  ppr->tol_M_ncdm           = 1.e-7;
+  ppr->tol_ncdm             = 1.e-3;
+  ppr->tol_ncdm_synchronous = 1.e-3;
+  ppr->tol_ncdm_newtonian   = 1.e-5;
+  ppr->tol_ncdm_bg          = 1.e-5;
+  ppr->tol_ncdm_initial_w   = 1.e-3;
+
+  ppr->tol_tau_eq = 1.e-6;
+
+  /*
+   * - parameters related to the thermodynamics
+   */
+
+  /* for bbn */
+  sprintf (ppr->sBBN_file, __CLASSDIR__);
+  strcat (ppr->sBBN_file, "/bbn/sBBN_2017.dat");
+
+  /* for recombination */
+
+  ppr->recfast_z_initial = 1.e4;
+
+  ppr->recfast_Nz0            = 20000;
+  ppr->tol_thermo_integration = 1.e-2;
+
+  ppr->recfast_Heswitch = 6;    /* from recfast 1.4 */
+  ppr->recfast_fudge_He = 0.86; /* from recfast 1.4 */
+
+  ppr->recfast_Hswitch       = _TRUE_; /* from recfast 1.5 */
+  ppr->recfast_fudge_H       = 1.14;   /* from recfast 1.4 */
+  ppr->recfast_delta_fudge_H = -0.015; /* from recfast 1.5.2 */
+  ppr->recfast_AGauss1       = -0.14;  /* from recfast 1.5 */
+  ppr->recfast_AGauss2       =  0.079; /* from recfast 1.5.2 */
+  ppr->recfast_zGauss1       =  7.28;  /* from recfast 1.5 */
+  ppr->recfast_zGauss2       =  6.73;  /* from recfast 1.5.2 */
+  ppr->recfast_wGauss1       =  0.18;  /* from recfast 1.5 */
+  ppr->recfast_wGauss2       =  0.33;  /* from recfast 1.5 */
+
+  ppr->recfast_z_He_1              = 8000.; /* from recfast 1.4 */
+  ppr->recfast_delta_z_He_1        = 50.;   /* found to be OK on 3.09.10 */
+  ppr->recfast_z_He_2              = 5000.; /* from recfast 1.4 */
+  ppr->recfast_delta_z_He_2        = 100.;  /* found to be OK on 3.09.10 */
+  ppr->recfast_z_He_3              = 3500.; /* from recfast 1.4 */
+  ppr->recfast_delta_z_He_3        = 50.;   /* found to be OK on 3.09.10 */
+  ppr->recfast_x_He0_trigger       = 0.995; /* raised from 0.99 to 0.995 for smoother Helium */
+  ppr->recfast_x_He0_trigger2      = 0.995; /* raised from 0.985 to same as previous one for smoother Helium */
+  ppr->recfast_x_He0_trigger_delta = 0.05;  /* found to be OK on 3.09.10 */
+  ppr->recfast_x_H0_trigger        = 0.995; /* raised from 0.99 to 0.995 for smoother Hydrogen */
+  ppr->recfast_x_H0_trigger2       = 0.995; /* raised from 0.98 to same as previous one for smoother Hydrogen */
+  ppr->recfast_x_H0_trigger_delta  = 0.05;  /* found to be OK on 3.09.10 */
+
+  ppr->recfast_H_frac = 1.e-3; /* from recfast 1.4 */
+
+  sprintf (ppr->hyrec_Alpha_inf_file, __CLASSDIR__);
+  strcat (ppr->hyrec_Alpha_inf_file, "/hyrec/Alpha_inf.dat");
+  sprintf (ppr->hyrec_R_inf_file, __CLASSDIR__);
+  strcat (ppr->hyrec_R_inf_file, "/hyrec/R_inf.dat");
+  sprintf (ppr->hyrec_two_photon_tables_file, __CLASSDIR__);
+  strcat (ppr->hyrec_two_photon_tables_file, "/hyrec/two_photon_tables.dat");
+
+  /* for reionization */
+
+  ppr->reionization_z_start_max       = 50.;
+  ppr->reionization_sampling          = 5.e-2;
+  ppr->reionization_optical_depth_tol = 1.e-4;
+  ppr->reionization_start_factor      = 8.;
+
+  /* general */
+
+  ppr->thermo_rate_smoothing_radius = 50;
+
+  /*
+   * - parameters related to the perturbations
+   */
+
+  ppr->evolver = ndf15;
+
+  ppr->k_min_tau0             = 0.1;
+  ppr->k_max_tau0_over_l_max  = 2.4; /* very relevant for accuracy of lensed ClTT at highest l's */
+  ppr->k_step_sub             = 0.05;
+  ppr->k_step_super           = 0.002;
+  ppr->k_step_transition      = 0.2;
+  ppr->k_step_super_reduction = 0.1;
+  ppr->k_per_decade_for_pk    = 10.;
+  ppr->k_per_decade_for_bao   = 70.;
+  ppr->k_bao_center           = 3.;
+  ppr->k_bao_width            = 4.;
+
+  ppr->start_small_k_at_tau_c_over_tau_h       = 0.0015; /* decrease to start earlier in time */
+  ppr->start_large_k_at_tau_h_over_tau_k       = 0.07;   /* decrease to start earlier in time */
+  ppr->tight_coupling_trigger_tau_c_over_tau_h = 0.015;  /* decrease to switch off earlier in time */
+  ppr->tight_coupling_trigger_tau_c_over_tau_k = 0.01;   /* decrease to switch off earlier in time */
+  ppr->start_sources_at_tau_c_over_tau_h       = 0.008;  /* decrease to start earlier in time */
+  ppr->tight_coupling_approximation            = (int) compromise_CLASS;
+
+  ppr->l_max_g         = 12;
+  ppr->l_max_pol_g     = 10;
+  ppr->l_max_dr        = 17;
+  ppr->l_max_ur        = 17;
+  ppr->l_max_ncdm      = 17;
+  ppr->l_max_g_ten     = 5;
+  ppr->l_max_pol_g_ten = 5;
+
+  ppr->curvature_ini = 1.; /* initial curvature; used to fix adiabatic initial conditions; must remain fixed to one as long as the primordial adiabatic spectrum stands for the curvature power spectrum */
+  ppr->entropy_ini   = 1.; /* initial entropy; used to fix isocurvature initial conditions; must remain fixed to one as long as the primordial isocurvature spectrum stands for an entropy power spectrum */
+  /*ppr->gw_ini=0.25; / * to match normalization convention for GW in most of literature and ensure standard definition of r * / */
+  ppr->gw_ini = 1.;
+
+  ppr->perturb_integration_stepsize = 0.5;
+
+  ppr->tol_tau_approx            = 1.e-10;
+  ppr->tol_perturb_integration   = 1.e-5;
+  ppr->perturb_sampling_stepsize = 0.10;
+
+  ppr->radiation_streaming_approximation          = rsa_MD_with_reio;
+  ppr->radiation_streaming_trigger_tau_over_tau_k = 45.;
+  ppr->radiation_streaming_trigger_tau_c_over_tau = 5.;
+
+  ppr->ur_fluid_approximation          = ufa_CLASS;
+  ppr->ur_fluid_trigger_tau_over_tau_k = 30.;
+
+  ppr->ncdm_fluid_approximation          = ncdmfa_CLASS;
+  ppr->ncdm_fluid_trigger_tau_over_tau_k = 31.;
+
+  ppr->neglect_CMB_sources_below_visibility = 1.e-3;
+
+  /*
+   * - parameter related to the primordial spectra
+   */
+
+  ppr->k_per_decade_primordial = 10.;
+
+  ppr->primordial_inflation_ratio_min                   = 100.;
+  ppr->primordial_inflation_ratio_max                   = 1 / 50.;
+  ppr->primordial_inflation_phi_ini_maxit               = 10000;
+  ppr->primordial_inflation_pt_stepsize                 = 0.01;
+  ppr->primordial_inflation_bg_stepsize                 = 0.005;
+  ppr->primordial_inflation_tol_integration             = 1.e-3;
+  ppr->primordial_inflation_attractor_precision_pivot   = 0.001;
+  ppr->primordial_inflation_attractor_precision_initial = 0.1;
+  ppr->primordial_inflation_attractor_maxit             = 10;
+  ppr->primordial_inflation_tol_curvature               = 1.e-3;
+  ppr->primordial_inflation_aH_ini_target               = 0.9;
+  ppr->primordial_inflation_end_dphi                    = 1.e-10;
+  ppr->primordial_inflation_end_logstep                 = 10.;
+  ppr->primordial_inflation_small_epsilon               = 0.1;
+  ppr->primordial_inflation_small_epsilon_tol           = 0.01;
+  ppr->primordial_inflation_extra_efolds                = 2.;
+
+  /*
+   * - parameter related to the transfer functions
+   */
+
+  ppr->l_logstep = 1.12;
+  ppr->l_linstep = 40;
+
+  ppr->hyper_x_min                   = 1.e-5;
+  ppr->hyper_sampling_flat           = 8.;
+  ppr->hyper_sampling_curved_low_nu  = 7.0; /* changed from 6.0 to 7.0 in v2.6.0, otherwise C2 can be very wrong with large curvature */
+  ppr->hyper_sampling_curved_high_nu = 3.0;
+  ppr->hyper_nu_sampling_step        = 1000.;
+  ppr->hyper_phi_min_abs             = 1.e-10;
+  ppr->hyper_x_tol                   = 1.e-4;
+  ppr->hyper_flat_approximation_nu   = 4000.;
+
+  ppr->q_linstep            = 0.45;
+  ppr->q_logstep_spline     = 170.;
+  ppr->q_logstep_open       = 6.;
+  ppr->q_logstep_trapzd     = 20.;
+  ppr->q_numstep_transition = 250.;
+
+  ppr->transfer_neglect_delta_k_S_t0 = 0.15;
+  ppr->transfer_neglect_delta_k_S_t1 = 0.04;
+  ppr->transfer_neglect_delta_k_S_t2 = 0.15;
+  ppr->transfer_neglect_delta_k_S_e  = 0.11;
+  ppr->transfer_neglect_delta_k_V_t1 = 1.;
+  ppr->transfer_neglect_delta_k_V_t2 = 1.;
+  ppr->transfer_neglect_delta_k_V_e  = 1.;
+  ppr->transfer_neglect_delta_k_V_b  = 1.;
+  ppr->transfer_neglect_delta_k_T_t2 = 0.2;
+  ppr->transfer_neglect_delta_k_T_e  = 0.25;
+  ppr->transfer_neglect_delta_k_T_b  = 0.1;
+
+  ppr->transfer_neglect_late_source = 400.;
+
+  ppr->l_switch_limber = 10.;
+  /* For density Cl, we recommend not to use the Limber approximation */
+  /* at all, and hence to put here a very large number (e.g. 10000); but */
+  /* if you have wide and smooth selection functions you may wish to */
+  /* use it; then 100 might be OK */
+  ppr->l_switch_limber_for_nc_local_over_z = 100.;
+  /* For terms integrated along the line-of-sight involving spherical */
+  /* Bessel functions (but not their derivatives), Limber */
+  /* approximation works well. High precision can be reached with 2000 */
+  /* only. But if you have wide and smooth selection functions you may */
+  /* reduce to e.g. 30. */
+  ppr->l_switch_limber_for_nc_los_over_z = 30.;
+
+  ppr->selection_cut_at_sigma        = 5.;
+  ppr->selection_sampling            = 50;
+  ppr->selection_sampling_bessel     = 20;
+  ppr->selection_sampling_bessel_los = ppr->selection_sampling_bessel;
+  ppr->selection_tophat_edge         = 0.1;
+
+  /*
+   * - parameters related to spectra module
+   */
+
+  /* nothing */
+
+  /*
+   * - parameters related to nonlinear module
+   */
+
+  ppr->halofit_min_k_nonlinear = 1.e-4;
+  ppr->halofit_min_k_max       = 5.;
+  ppr->halofit_k_per_decade    = 80.;
+  ppr->halofit_sigma_precision = 0.05;
+  ppr->halofit_tol_sigma       = 1.e-6;
+  ppr->pk_eq_z_max             = 5.;
+  ppr->pk_eq_tol               = 1.e-7;
+
+  /*
+   * - parameter related to lensing
+   */
+
+  ppr->accurate_lensing  = _FALSE_;
+  ppr->num_mu_minus_lmax = 70;
+  ppr->delta_l_max       = 500; /* 750 for 0.2% near l_max, 1000 for 0.1% */
+
+  /*
+   * - automatic estimate of machine precision
+   */
+
+  /*get_machine_precision(&(ppr->smallest_allowed_variation)); */
+  ppr->smallest_allowed_variation = DBL_EPSILON;
+
+  class_test (ppr->smallest_allowed_variation < 0,
+              ppr->error_message,
+              "smallest_allowed_variation = %e < 0", ppr->smallest_allowed_variation);
+
+  ppr->tol_gauss_legendre = ppr->smallest_allowed_variation;
+
+  return _SUCCESS_;
 }
 
