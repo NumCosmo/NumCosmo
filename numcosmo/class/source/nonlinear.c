@@ -583,7 +583,7 @@ nonlinear_halofit (
 
   class_alloc (pvecback, pba->bg_size * sizeof (double), pnl->error_message);
 
-  Omega0_m = Omega0_cdm + Omega0_b + pba->Omega0_ncdm_tot + pba->Omega0_dcdm;
+  Omega0_m = Omega0_cdm + Omega0_b + pba->Omega0_ncdm_tot;
 
   if ((pnl->has_pk_m == _TRUE_) && (index_pk == pnl->index_pk_m))
     fnu = pba->Omega0_ncdm_tot / Omega0_m;

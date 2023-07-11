@@ -60,14 +60,6 @@ struct background
 
   double c_gamma_over_c_fld; /**< ppf parameter defined in eq. (16) of 0808.3125 [astro-ph] */
 
-  double Omega0_ur; /**< \f$ \Omega_{0 \nu r} \f$: ultra-relativistic neutrinos */
-
-  double Omega0_dcdmdr; /**< \f$ \Omega_{0 dcdm}+\Omega_{0 dr} \f$: decaying cold dark matter (dcdm) decaying to dark radiation (dr) */
-
-  double Gamma_dcdm; /**< \f$ \Gamma_{dcdm} \f$: decay constant for decaying cold dark matter */
-
-  double Omega_ini_dcdm; /**< \f$ \Omega_{ini,dcdm} \f$: rescaled initial value for dcdm density (see 1407.2418 for definitions) */
-
   double Omega0_scf;        /**< \f$ \Omega_{0 scf} \f$: scalar field */
   short attractor_ic_scf;   /**< whether the scalar field has attractor initial conditions */
   double phi_ini_scf;       /**< \f$ \phi(t_0) \f$: scalar field initial value */
@@ -75,10 +67,6 @@ struct background
   double *scf_parameters;   /**< list of parameters describing the scalar field potential */
   int scf_parameters_size;  /**< size of scf_parameters */
   int scf_tuning_index;     /**< index in scf_parameters used for tuning */
-  /*double scf_lambda; / **< \f$ \lambda \f$ : scalar field exponential potential slope * / */
-  /*double scf_alpha;  / **< \f$ \alpha \f$ : Albrecht-Skordis polynomial slope * / */
-  /*double scf_B; / **< \f$ \alpha \f$ : Albrecht-Skordis field shift * / */
-  /*double scf_A; / **< \f$ \alpha \f$ : Albrecht-Skordis offset * / */
 
   double Omega0_k; /**< \f$ \Omega_{0_k} \f$: curvature contribution */
 
@@ -127,8 +115,6 @@ struct background
   int sgnK;             /**< K/|K|: -1, 0 or 1 */
   double *m_ncdm_in_eV; /**< list of ncdm masses in eV (inferred from M_ncdm and other parameters above) */
   double Neff;          /**< so-called "effective neutrino number", computed at earliest time in interpolation table */
-  double Omega0_dcdm;   /**< \f$ \Omega_{0 dcdm} \f$: decaying cold dark matter */
-  double Omega0_dr;     /**< \f$ \Omega_{0 dr} \f$: decay radiation */
   double a_eq;          /**< scale factor at radiation/matter equality */
   double H_eq;          /**< Hubble rate at radiation/matter equality [Mpc^-1] */
   double z_eq;          /**< redshift at radiation/matter equality */
@@ -161,8 +147,6 @@ struct background
   int index_bg_rho_fld;    /**< fluid density */
   int index_bg_w_fld;      /**< fluid equation of state */
   int index_bg_rho_ur;     /**< relativistic neutrinos/relics density */
-  int index_bg_rho_dcdm;   /**< dcdm density */
-  int index_bg_rho_dr;     /**< dr density */
 
   int index_bg_phi_scf;       /**< scalar field value */
   int index_bg_phi_prime_scf; /**< scalar field derivative wrt conformal time */
@@ -232,8 +216,6 @@ struct background
   /*@{ */
 
   int index_bi_a;             /**< {B} scale factor */
-  int index_bi_rho_dcdm;      /**< {B} dcdm density */
-  int index_bi_rho_dr;        /**< {B} dr density */
   int index_bi_rho_fld;       /**< {B} fluid density */
   int index_bi_phi_scf;       /**< {B} scalar field value */
   int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
@@ -260,8 +242,6 @@ struct background
   /*@{ */
 
   short has_cdm;       /**< presence of cold dark matter? */
-  short has_dcdm;      /**< presence of decaying cold dark matter? */
-  short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */
   short has_ncdm;      /**< presence of non-cold dark matter? */
   short has_lambda;    /**< presence of cosmological constant? */

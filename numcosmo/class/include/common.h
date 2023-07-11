@@ -115,7 +115,9 @@ int get_number_of_titles (char *titlestring);
 
 /* macro for calling function and returning error if it failed */
 #define class_call(function, error_message_from_function, error_message_output)                                  \
-  class_call_except (function, error_message_from_function, error_message_output, )
+  do { \
+    class_call_except (function, error_message_from_function, error_message_output, ) \
+  } while (0)
 
 /* same in parallel region */
 #define class_call_parallel(function, error_message_from_function, error_message_output) \

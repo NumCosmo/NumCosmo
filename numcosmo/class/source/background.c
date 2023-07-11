@@ -262,6 +262,7 @@ background_functions (
   const double Omega0_g   = nc_hicosmo_Omega_g0 (pba->cosmo);
   const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  const double Omega0_ur  = nc_hicosmo_Omega_nu0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
 
   if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
@@ -324,26 +325,6 @@ background_functions (
     rho_tot                        += pvecback[pba->index_bg_rho_cdm];
     p_tot                          += 0.;
     rho_m                          += pvecback[pba->index_bg_rho_cdm];
-  }
-
-  /* dcdm */
-  if (pba->has_dcdm == _TRUE_)
-  {
-    /* Pass value of rho_dcdm to output */
-    pvecback[pba->index_bg_rho_dcdm] = pvecback_B[pba->index_bi_rho_dcdm];
-    rho_tot                         += pvecback[pba->index_bg_rho_dcdm];
-    p_tot                           += 0.;
-    rho_m                           += pvecback[pba->index_bg_rho_dcdm];
-  }
-
-  /* dr */
-  if (pba->has_dr == _TRUE_)
-  {
-    /* Pass value of rho_dr to output */
-    pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
-    rho_tot                       += pvecback[pba->index_bg_rho_dr];
-    p_tot                         += (1. / 3.) * pvecback[pba->index_bg_rho_dr];
-    rho_r                         += pvecback[pba->index_bg_rho_dr];
   }
 
   /* Scalar field */
@@ -433,7 +414,7 @@ background_functions (
   /* relativistic neutrinos (and all relativistic relics) */
   if (pba->has_ur == _TRUE_)
   {
-    pvecback[pba->index_bg_rho_ur] = pba->Omega0_ur * pow (H0, 2) / pow (a_rel, 4);
+    pvecback[pba->index_bg_rho_ur] = Omega0_ur * pow (H0, 2) / pow (a_rel, 4);
     rho_tot                       += pvecback[pba->index_bg_rho_ur];
     p_tot                         += (1. / 3.) * pvecback[pba->index_bg_rho_ur];
     rho_r                         += pvecback[pba->index_bg_rho_ur];
@@ -546,9 +527,10 @@ background_init (
 {
   /** Summary: */
 
-  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double Omega0_g = nc_hicosmo_Omega_g0 (pba->cosmo);
-  const double T_cmb    = nc_hicosmo_T_gamma0 (pba->cosmo);
+  const double H0        = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_g  = nc_hicosmo_Omega_g0 (pba->cosmo);
+  const double T_cmb     = nc_hicosmo_T_gamma0 (pba->cosmo);
+  const double Omega0_ur = nc_hicosmo_Omega_nu0 (pba->cosmo);
 
   /** - define local variables */
   int n_ncdm;
@@ -566,7 +548,7 @@ background_init (
     /* below we want to inform the user about ncdm species*/
     if (pba->N_ncdm > 0)
     {
-      Neff = pba->Omega0_ur / 7. * 8. / pow (4. / 11., 4. / 3.) / Omega0_g;
+      Neff = Omega0_ur / 7. * 8. / pow (4. / 11., 4. / 3.) / Omega0_g;
 
       /* loop over ncdm species */
       for (n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++)
@@ -827,6 +809,7 @@ background_indices (
   /** - define local variables */
 
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  const double Omega0_ur  = nc_hicosmo_Omega_nu0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
   double Omega0_fld       = 0.0;
 
@@ -844,8 +827,6 @@ background_indices (
 
   pba->has_cdm       = _FALSE_;
   pba->has_ncdm      = _FALSE_;
-  pba->has_dcdm      = _FALSE_;
-  pba->has_dr        = _FALSE_;
   pba->has_scf       = _FALSE_;
   pba->has_lambda    = _FALSE_;
   pba->has_fld       = _FALSE_;
@@ -858,14 +839,6 @@ background_indices (
   if (pba->Omega0_ncdm_tot != 0.)
     pba->has_ncdm = _TRUE_;
 
-  if (pba->Omega0_dcdmdr != 0.)
-  {
-    pba->has_dcdm = _TRUE_;
-
-    if (pba->Gamma_dcdm != 0.)
-      pba->has_dr = _TRUE_;
-  }
-
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
 
@@ -875,7 +848,7 @@ background_indices (
   if (Omega0_fld != 0.)
     pba->has_fld = _TRUE_;
 
-  if (pba->Omega0_ur != 0.)
+  if (Omega0_ur != 0.)
     pba->has_ur = _TRUE_;
 
   if (pba->sgnK != 0)
@@ -910,12 +883,6 @@ background_indices (
   class_define_index (pba->index_bg_rho_ncdm1, pba->has_ncdm, index_bg, pba->N_ncdm);
   class_define_index (pba->index_bg_p_ncdm1, pba->has_ncdm, index_bg, pba->N_ncdm);
   class_define_index (pba->index_bg_pseudo_p_ncdm1, pba->has_ncdm, index_bg, pba->N_ncdm);
-
-  /* - index for dcdm */
-  class_define_index (pba->index_bg_rho_dcdm, pba->has_dcdm, index_bg, 1);
-
-  /* - index for dr */
-  class_define_index (pba->index_bg_rho_dr, pba->has_dr, index_bg, 1);
 
   /* - indices for scalar field */
   class_define_index (pba->index_bg_phi_scf, pba->has_scf, index_bg, 1);
@@ -990,12 +957,6 @@ background_indices (
 
   /* -> scale factor */
   class_define_index (pba->index_bi_a, _TRUE_, index_bi, 1);
-
-  /* -> energy density in DCDM */
-  class_define_index (pba->index_bi_rho_dcdm, pba->has_dcdm, index_bi, 1);
-
-  /* -> energy density in DR */
-  class_define_index (pba->index_bi_rho_dr, pba->has_dr, index_bi, 1);
 
   /* -> energy density in fluid */
   class_define_index (pba->index_bi_rho_fld, pba->has_fld, index_bi, 1);
@@ -1655,8 +1616,8 @@ background_solve (
 
   /** - define local variables */
 
-  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo);
+  /* const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
+  /* const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo); */
   /* const double Omega0_g      = nc_hicosmo_Omega_g0 (pba->cosmo); */
   const double Omega0_lambda = 0.0;
 
@@ -1806,14 +1767,6 @@ background_solve (
   /* -> conformal age in Mpc */
   pba->conformal_age = pvecback_integration[pba->index_bi_tau];
 
-  /* -> contribution of decaying dark matter and dark radiation to the critical density today: */
-  if (pba->has_dcdm == _TRUE_)
-    pba->Omega0_dcdm = pvecback_integration[pba->index_bi_rho_dcdm] / H0 / H0;
-
-  if (pba->has_dr == _TRUE_)
-    pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr] / H0 / H0;
-
-
   /** - allocate background tables */
   class_alloc (pba->tau_table, pba->bt_size * sizeof (double), pba->error_message);
 
@@ -1920,16 +1873,6 @@ background_solve (
 
   if (pba->background_verbose > 2)
   {
-    if ((pba->has_dcdm == _TRUE_) && (pba->has_dr == _TRUE_))
-    {
-      printf ("    Decaying Cold Dark Matter details: (DCDM --> DR)\n");
-      printf ("     -> Omega0_dcdm = %f\n", pba->Omega0_dcdm);
-      printf ("     -> Omega0_dr = %f\n", pba->Omega0_dr);
-      printf ("     -> Omega0_dr+Omega0_dcdm = %f, input value = %f\n",
-              pba->Omega0_dr + pba->Omega0_dcdm, pba->Omega0_dcdmdr);
-      printf ("     -> Omega_ini_dcdm/Omega_b = %f\n", pba->Omega_ini_dcdm / Omega0_b);
-    }
-
     if (pba->has_scf == _TRUE_)
     {
       printf ("    Scalar field details:\n");
@@ -1980,9 +1923,10 @@ background_initial_conditions (
 
   /** - define local variables */
 
-  const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
-  const double Omega0_g = nc_hicosmo_Omega_g0 (pba->cosmo);
-  double Omega0_fld     = 0.0;
+  const double H0        = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double Omega0_g  = nc_hicosmo_Omega_g0 (pba->cosmo);
+  const double Omega0_ur = nc_hicosmo_Omega_nu0 (pba->cosmo);
+  double Omega0_fld      = 0.0;
 
   if (!(NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0)))
     Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
@@ -1991,7 +1935,7 @@ background_initial_conditions (
   double a;
 
   double rho_ncdm, p_ncdm, rho_ncdm_rel_tot = 0.;
-  double f, Omega_rad, rho_rad;
+  double Omega_rad, rho_rad;
   int counter, is_early_enough, n_ncdm;
   double scf_lambda;
   double rho_fld_today;
@@ -2050,45 +1994,13 @@ background_initial_conditions (
   Omega_rad = Omega0_g;
 
   if (pba->has_ur == _TRUE_)
-    Omega_rad += pba->Omega0_ur;
+    Omega_rad += Omega0_ur;
 
   rho_rad = Omega_rad * pow (H0, 2) / pow (a / pba->a_today, 4);
 
   if (pba->has_ncdm == _TRUE_)
     /** - We must add the relativistic contribution from NCDM species */
     rho_rad += rho_ncdm_rel_tot;
-
-  if (pba->has_dcdm == _TRUE_)
-  {
-    /* Remember that the critical density today in CLASS conventions is H0^2 */
-    pvecback_integration[pba->index_bi_rho_dcdm] =
-      pba->Omega_ini_dcdm * H0 * H0 * pow (pba->a_today / a, 3);
-
-    if (pba->background_verbose > 3)
-      printf ("Density is %g. a_today=%g. Omega_ini=%g\n", pvecback_integration[pba->index_bi_rho_dcdm], pba->a_today, pba->Omega_ini_dcdm);
-  }
-
-  if (pba->has_dr == _TRUE_)
-  {
-    if (pba->has_dcdm == _TRUE_)
-    {
-      /**  - f is the critical density fraction of DR. The exact solution is:
-       *
-       * `f = -Omega_rad+pow(pow(Omega_rad,3./2.)+0.5*pow(a/pba->a_today,6)*pvecback_integration[pba->index_bi_rho_dcdm]*pba->Gamma_dcdm/pow(H0,3),2./3.);`
-       *
-       * but it is not numerically stable for very small f which is always the case.
-       * Instead we use the Taylor expansion of this equation, which is equivalent to
-       * ignoring f(a) in the Hubble rate.
-       */
-      f                                          = 1. / 3. * pow (a / pba->a_today, 6) * pvecback_integration[pba->index_bi_rho_dcdm] * pba->Gamma_dcdm / pow (H0, 3) / sqrt (Omega_rad);
-      pvecback_integration[pba->index_bi_rho_dr] = f * H0 * H0 / pow (a / pba->a_today, 4);
-    }
-    else
-    {
-      /** There is also a space reserved for a future case where dr is not sourced by dcdm */
-      pvecback_integration[pba->index_bi_rho_dr] = 0.0;
-    }
-  }
 
   if (pba->has_fld == _TRUE_)
   {
@@ -2308,8 +2220,6 @@ background_output_titles (struct background *pba,
   class_store_columntitle (titles, "(.)w_fld", pba->has_fld);
   class_store_columntitle (titles, "(.)rho_ur", pba->has_ur);
   class_store_columntitle (titles, "(.)rho_crit", _TRUE_);
-  class_store_columntitle (titles, "(.)rho_dcdm", pba->has_dcdm);
-  class_store_columntitle (titles, "(.)rho_dr", pba->has_dr);
 
   class_store_columntitle (titles, "(.)rho_scf", pba->has_scf);
   class_store_columntitle (titles, "(.)p_scf", pba->has_scf);
@@ -2367,8 +2277,6 @@ background_output_data (
     class_store_double (dataptr, pvecback[pba->index_bg_w_fld], pba->has_fld, storeidx);
     class_store_double (dataptr, pvecback[pba->index_bg_rho_ur], pba->has_ur, storeidx);
     class_store_double (dataptr, pvecback[pba->index_bg_rho_crit], _TRUE_, storeidx);
-    class_store_double (dataptr, pvecback[pba->index_bg_rho_dcdm], pba->has_dcdm, storeidx);
-    class_store_double (dataptr, pvecback[pba->index_bg_rho_dr], pba->has_dr, storeidx);
 
     class_store_double (dataptr, pvecback[pba->index_bg_rho_scf], pba->has_scf, storeidx);
     class_store_double (dataptr, pvecback[pba->index_bg_p_scf], pba->has_scf, storeidx);
@@ -2462,16 +2370,6 @@ background_derivs (
 
   dy[pba->index_bi_D]       = y[pba->index_bi_D_prime];
   dy[pba->index_bi_D_prime] = -a * H * y[pba->index_bi_D_prime] + 1.5 * a * a * rho_M * y[pba->index_bi_D];
-
-  if (pba->has_dcdm == _TRUE_)
-    /** - compute dcdm density \f$ \rho' = -3aH \rho - a \Gamma \rho \f$*/
-    dy[pba->index_bi_rho_dcdm] = -3. * y[pba->index_bi_a] * pvecback[pba->index_bg_H] * y[pba->index_bi_rho_dcdm] -
-                                 y[pba->index_bi_a] * pba->Gamma_dcdm * y[pba->index_bi_rho_dcdm];
-
-  if ((pba->has_dcdm == _TRUE_) && (pba->has_dr == _TRUE_))
-    /** - Compute dr density \f$ \rho' = -4aH \rho - a \Gamma \rho \f$ */
-    dy[pba->index_bi_rho_dr] = -4. * y[pba->index_bi_a] * pvecback[pba->index_bg_H] * y[pba->index_bi_rho_dr] +
-                               y[pba->index_bi_a] * pba->Gamma_dcdm * y[pba->index_bi_rho_dcdm];
 
   if (pba->has_fld == _TRUE_)
     /** - Compute fld density \f$ \rho' = -3aH (1+w_{fld}(a)) \rho \f$ */

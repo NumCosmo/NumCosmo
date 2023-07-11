@@ -207,12 +207,6 @@ perturb_init (
     }
   }
 
-  if (pba->has_dcdm == _TRUE_)
-    class_test ((ppt->has_cdi == _TRUE_) || (ppt->has_bi == _TRUE_) || (ppt->has_nid == _TRUE_) || (ppt->has_niv == _TRUE_),
-                ppt->error_message,
-                "Non-adiabatic initial conditions not coded in presence of decaying dark matter");
-
-
   class_test (ppt->has_vectors == _TRUE_,
               ppt->error_message,
               "Vectors not coded yet");
@@ -682,9 +676,6 @@ perturb_indices_of_perturbs (
         if (pba->has_cdm == _TRUE_)
           ppt->has_source_delta_cdm = _TRUE_;
 
-        if (pba->has_dcdm == _TRUE_)
-          ppt->has_source_delta_dcdm = _TRUE_;
-
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
 
@@ -693,9 +684,6 @@ perturb_indices_of_perturbs (
 
         if (pba->has_ur == _TRUE_)
           ppt->has_source_delta_ur = _TRUE_;
-
-        if (pba->has_dr == _TRUE_)
-          ppt->has_source_delta_dr = _TRUE_;
 
         if (pba->has_ncdm == _TRUE_)
           ppt->has_source_delta_ncdm = _TRUE_;
@@ -717,9 +705,6 @@ perturb_indices_of_perturbs (
         if ((pba->has_cdm == _TRUE_) && (ppt->gauge != synchronous))
           ppt->has_source_theta_cdm = _TRUE_;
 
-        if (pba->has_dcdm == _TRUE_)
-          ppt->has_source_theta_dcdm = _TRUE_;
-
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
 
@@ -728,9 +713,6 @@ perturb_indices_of_perturbs (
 
         if (pba->has_ur == _TRUE_)
           ppt->has_source_theta_ur = _TRUE_;
-
-        if (pba->has_dr == _TRUE_)
-          ppt->has_source_theta_dr = _TRUE_;
 
         if (pba->has_ncdm == _TRUE_)
           ppt->has_source_theta_ncdm = _TRUE_;
@@ -1942,9 +1924,6 @@ perturb_workspace_init (
 
     if (pba->has_ncdm == _TRUE_)
       ppw->max_l_max = MAX (ppw->max_l_max, ppr->l_max_ncdm);
-
-    if (pba->has_dr == _TRUE_)
-      ppw->max_l_max = MAX (ppw->max_l_max, ppr->l_max_dr);
   }
 
   if (_tensors_)
@@ -2599,13 +2578,6 @@ perturb_prepare_output (const struct background *pba,
         }
       }
 
-      /* Decaying cold dark matter */
-      class_store_columntitle (ppt->scalar_titles, "delta_dcdm", pba->has_dcdm);
-      class_store_columntitle (ppt->scalar_titles, "theta_dcdm", pba->has_dcdm);
-      /* Decay radiation */
-      class_store_columntitle (ppt->scalar_titles, "delta_dr", pba->has_dr);
-      class_store_columntitle (ppt->scalar_titles, "theta_dr", pba->has_dr);
-      class_store_columntitle (ppt->scalar_titles, "shear_dr", pba->has_dr);
       /* Scalar field scf */
       class_store_columntitle (ppt->scalar_titles, "delta_scf", pba->has_scf);
       class_store_columntitle (ppt->scalar_titles, "theta_scf", pba->has_scf);
@@ -3101,12 +3073,6 @@ perturb_vector_init (
                 ppt->error_message,
                 "ppr->l_max_pol_g should be at least 4");
 
-    /* reject inconsistent values of the number of mutipoles in decay radiation hierarchy */
-    if (pba->has_dr == _TRUE_)
-      class_test (ppr->l_max_dr < 4,
-                  ppt->error_message,
-                  "ppr->l_max_dr should be at least 4, i.e. we must integrate at least over neutrino/relic density, velocity, shear, third and fourth momentum");
-
     /* reject inconsistent values of the number of mutipoles in ultra relativistic neutrino hierarchy */
     if (pba->has_ur == _TRUE_)
       class_test (ppr->l_max_ur < 4,
@@ -3148,18 +3114,6 @@ perturb_vector_init (
 
     class_define_index (ppv->index_pt_delta_cdm, pba->has_cdm, index_pt, 1);                              /* cdm density */
     class_define_index (ppv->index_pt_theta_cdm, pba->has_cdm && (ppt->gauge == newtonian), index_pt, 1); /* cdm velocity */
-
-    /* dcdm */
-
-    class_define_index (ppv->index_pt_delta_dcdm, pba->has_dcdm, index_pt, 1); /* dcdm density */
-    class_define_index (ppv->index_pt_theta_dcdm, pba->has_dcdm, index_pt, 1); /* dcdm velocity */
-
-    /* ultra relativistic decay radiation */
-    if (pba->has_dr == _TRUE_)
-    {
-      ppv->l_max_dr = ppr->l_max_dr;
-      class_define_index (ppv->index_pt_F0_dr, _TRUE_, index_pt, ppv->l_max_dr + 1); /* all momenta in Boltzmann hierarchy  */
-    }
 
     /* fluid */
 
@@ -3551,21 +3505,6 @@ perturb_vector_init (
           ppv->y[ppv->index_pt_theta_cdm] =
             ppw->pv->y[ppw->pv->index_pt_theta_cdm];
       }
-
-      if (pba->has_dcdm == _TRUE_)
-      {
-        ppv->y[ppv->index_pt_delta_dcdm] =
-          ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
-
-        ppv->y[ppv->index_pt_theta_dcdm] =
-          ppw->pv->y[ppw->pv->index_pt_theta_dcdm];
-      }
-
-      if (pba->has_dr == _TRUE_)
-        for (l = 0; l <= ppv->l_max_dr; l++)
-          ppv->y[ppv->index_pt_F0_dr + l] =
-            ppw->pv->y[ppw->pv->index_pt_F0_dr + l];
-
 
       if (pba->has_fld == _TRUE_)
       {
@@ -4149,17 +4088,16 @@ perturb_initial_conditions (struct precision         *ppr,
   /** Summary: */
 
   /** --> Declare local variables */
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
+
   double a, a_prime_over_a;
   double w_fld, dw_over_da_fld, integral_fld;
   double delta_ur = 0., theta_ur = 0., shear_ur = 0., l3_ur = 0., eta = 0., delta_cdm = 0., alpha, alpha_prime;
-  double delta_dr = 0;
   double q, epsilon, k2;
   int index_q, n_ncdm, idx;
   double rho_r, rho_m, rho_nu, rho_m_over_rho_r;
   double fracnu, fracg, fracb, fraccdm, om;
   double ktau_two, ktau_three;
-  double f_dr;
 
   double delta_tot;
   double velocity_tot;
@@ -4197,15 +4135,6 @@ perturb_initial_conditions (struct precision         *ppr,
 
     if (pba->has_cdm == _TRUE_)
       rho_m += ppw->pvecback[pba->index_bg_rho_cdm];
-
-    if (pba->has_dcdm == _TRUE_)
-      rho_m += ppw->pvecback[pba->index_bg_rho_dcdm];
-
-    if (pba->has_dr == _TRUE_)
-    {
-      rho_r  += ppw->pvecback[pba->index_bg_rho_dr];
-      rho_nu += ppw->pvecback[pba->index_bg_rho_dr];
-    }
 
     if (pba->has_ur == _TRUE_)
     {
@@ -4300,13 +4229,6 @@ perturb_initial_conditions (struct precision         *ppr,
 
       /* cdm velocity vanishes in the synchronous gauge */
 
-      if (pba->has_dcdm == _TRUE_)
-        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] = 3. / 4. * ppw->pv->y[ppw->pv->index_pt_delta_g];  /* dcdm density */
-
-      /* dcdm velocity velocity vanishes initially in the synchronous gauge */
-
-
-
       /* fluid (assumes wa=0, if this is not the case the
        *  fluid will catch anyway the attractor solution) */
       if (pba->has_fld == _TRUE_)
@@ -4345,7 +4267,7 @@ perturb_initial_conditions (struct precision         *ppr,
 
       /* all relativistic relics: ur, early ncdm, dr */
 
-      if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_) || (pba->has_dr == _TRUE_))
+      if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_))
       {
         delta_ur = ppw->pv->y[ppw->pv->index_pt_delta_g]; /* density of ultra-relativistic neutrinos/relics */
 
@@ -4354,9 +4276,6 @@ perturb_initial_conditions (struct precision         *ppr,
         shear_ur = ktau_two / (45. + 12. * fracnu) * (3. * s2_squared - 1.) * (1. + (4. * fracnu - 5.) / 4. / (2. * fracnu + 15.) * tau * om) * ppr->curvature_ini; /*TBC /s2_squared; / * shear of ultra-relativistic neutrinos/relics * /  //TBC:0 */
 
         l3_ur = ktau_three * 2. / 7. / (12. * fracnu + 45.) * ppr->curvature_ini; /*TBC */
-
-        if (pba->has_dr == _TRUE_)
-          delta_dr = delta_ur;
       }
 
       /* synchronous metric perturbation eta */
@@ -4507,8 +4426,6 @@ perturb_initial_conditions (struct precision         *ppr,
 
       if (pba->has_cdm == _TRUE_)
         delta_cdm = ppw->pv->y[ppw->pv->index_pt_delta_cdm];
-      else if (pba->has_dcdm == _TRUE_)
-        delta_cdm = ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
       else
         delta_cdm = 0.;
 
@@ -4532,12 +4449,6 @@ perturb_initial_conditions (struct precision         *ppr,
       {
         ppw->pv->y[ppw->pv->index_pt_delta_cdm] -= 3. * a_prime_over_a * alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_cdm]  = k * k * alpha;
-      }
-
-      if (pba->has_dcdm == _TRUE_)
-      {
-        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] += (-3. * a_prime_over_a - a * pba->Gamma_dcdm) * alpha;
-        ppw->pv->y[ppw->pv->index_pt_theta_dcdm]  = k * k * alpha;
       }
 
       /* fluid */
@@ -4564,14 +4475,11 @@ perturb_initial_conditions (struct precision         *ppr,
            + ppw->pvecback[pba->index_bg_phi_prime_scf] * alpha_prime);
       }
 
-      if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_) || (pba->has_dr == _TRUE_))
+      if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_))
       {
         delta_ur -= 4. * a_prime_over_a * alpha;
         theta_ur += k * k * alpha;
         /* shear and l3 are gauge invariant */
-
-        if (pba->has_dr == _TRUE_)
-          delta_dr += (-4. * a_prime_over_a + a * pba->Gamma_dcdm * ppw->pvecback[pba->index_bg_rho_dcdm] / ppw->pvecback[pba->index_bg_rho_dr]) * alpha;
       }
     } /* end of gauge transformation to newtonian gauge */
 
@@ -4612,19 +4520,6 @@ perturb_initial_conditions (struct precision         *ppr,
           idx += (ppw->pv->l_max_ncdm[n_ncdm] + 1);
         }
       }
-    }
-
-    if (pba->has_dr == _TRUE_)
-    {
-      f_dr = pow (pow (a / pba->a_today, 2) / H0, 2) * ppw->pvecback[pba->index_bg_rho_dr];
-
-      ppw->pv->y[ppw->pv->index_pt_F0_dr] = delta_dr * f_dr;
-
-      ppw->pv->y[ppw->pv->index_pt_F0_dr + 1] = 4. / (3. * k) * theta_ur * f_dr;
-
-      ppw->pv->y[ppw->pv->index_pt_F0_dr + 2] = 2. * shear_ur * f_dr;
-
-      ppw->pv->y[ppw->pv->index_pt_F0_dr + 3] = l3_ur * f_dr;
     }
   }
 
@@ -5355,7 +5250,7 @@ perturb_total_stress_energy (
   /** Summary: */
 
   /** - define local variables */
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
 
   double a, a2, a_prime_over_a, k2;
   double rho_plus_p_tot        = 0.;
@@ -5377,7 +5272,6 @@ perturb_total_stress_energy (
   double w_fld, dw_over_da_fld, integral_fld;
   double gwncdm;
   double rho_relativistic;
-  double rho_dr_over_f;
   double delta_rho_scf, delta_p_scf, psi;
   double c_gamma_k_H_square;
   double Gamma_prime_plus_a_prime_over_a_Gamma, alpha = 0., s2sq = 1.;
@@ -5477,31 +5371,6 @@ perturb_total_stress_energy (
         ppw->rho_plus_p_theta = ppw->rho_plus_p_theta + ppw->pvecback[pba->index_bg_rho_cdm] * y[ppw->pv->index_pt_theta_cdm];
 
       rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_cdm];
-    }
-
-    /* dcdm contribution */
-    if (pba->has_dcdm == _TRUE_)
-    {
-      ppw->delta_rho        += ppw->pvecback[pba->index_bg_rho_dcdm] * y[ppw->pv->index_pt_delta_dcdm];
-      ppw->rho_plus_p_theta += ppw->pvecback[pba->index_bg_rho_dcdm] * y[ppw->pv->index_pt_theta_dcdm];
-      rho_plus_p_tot        += ppw->pvecback[pba->index_bg_rho_dcdm];
-    }
-
-    /* ultra-relativistic decay radiation */
-
-    if (pba->has_dr == _TRUE_)
-    {
-      /* We have delta_rho_dr = rho_dr * F0_dr / f, where F follows the
-       *  convention in astro-ph/9907388 and f is defined as
-       *  f = rho_dr*a^4/rho_crit_today. In CLASS density units
-       *  rho_crit_today = H0^2.
-       */
-      rho_dr_over_f          = pow (H0 / a2, 2);
-      ppw->delta_rho        += rho_dr_over_f * y[ppw->pv->index_pt_F0_dr];
-      ppw->rho_plus_p_theta += 4. / 3. * 3. / 4 * k * rho_dr_over_f * y[ppw->pv->index_pt_F0_dr + 1];
-      ppw->rho_plus_p_shear += 2. / 3. * rho_dr_over_f * y[ppw->pv->index_pt_F0_dr + 2];
-      ppw->delta_p          += 1. / 3. * rho_dr_over_f * y[ppw->pv->index_pt_F0_dr];
-      rho_plus_p_tot        += 4. / 3. * ppw->pvecback[pba->index_bg_rho_dr];
     }
 
     /* ultra-relativistic neutrino/relics contribution */
@@ -5697,14 +5566,6 @@ perturb_total_stress_energy (
         rho_m       += ppw->pvecback[pba->index_bg_rho_cdm];
       }
 
-      /* include decaying cold dark matter */
-
-      if (pba->has_dcdm == _TRUE_)
-      {
-        delta_rho_m += ppw->pvecback[pba->index_bg_rho_dcdm] * y[ppw->pv->index_pt_delta_dcdm];
-        rho_m       += ppw->pvecback[pba->index_bg_rho_dcdm];
-      }
-
       /* infer delta_cb */
       if (ppt->has_source_delta_cb)
         ppw->delta_cb = delta_rho_m / rho_m;
@@ -5744,12 +5605,6 @@ perturb_total_stress_energy (
           rho_plus_p_theta_m += ppw->pvecback[pba->index_bg_rho_cdm] * y[ppw->pv->index_pt_theta_cdm];
 
         rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_cdm];
-      }
-
-      if (pba->has_dcdm == _TRUE_)
-      {
-        rho_plus_p_theta_m += ppw->pvecback[pba->index_bg_rho_dcdm] * y[ppw->pv->index_pt_theta_dcdm];
-        rho_plus_p_m       += ppw->pvecback[pba->index_bg_rho_dcdm];
       }
 
       if ((ppt->has_source_delta_cb == _TRUE_) || (ppt->has_source_theta_cb == _TRUE_))
@@ -5915,7 +5770,7 @@ perturb_sources (
 
   /** - define local variables */
 
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo);
+  /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo); */
 
   double P;
   int index_type;
@@ -5941,7 +5796,7 @@ perturb_sources (
   double w_fld, dw_over_da_fld, integral_fld;
   int switch_isw = 1;
 
-  double a_rel, a2_rel, f_dr;
+  double a_rel, a2_rel;
 
   /** - rename structure fields (just to avoid heavy notations) */
 
@@ -6220,13 +6075,6 @@ perturb_sources (
       _set_source_ (ppt->index_tp_delta_scf) = delta_rho_scf / pvecback[pba->index_bg_rho_scf];
     }
 
-    /* delta_dr */
-    if (ppt->has_source_delta_dr == _TRUE_)
-    {
-      f_dr                                  = pow (a2_rel / H0, 2) * pvecback[pba->index_bg_rho_dr];
-      _set_source_ (ppt->index_tp_delta_dr) = y[ppw->pv->index_pt_F0_dr] / f_dr;
-    }
-
     /* delta_ur */
     if (ppt->has_source_delta_ur == _TRUE_)
     {
@@ -6289,13 +6137,6 @@ perturb_sources (
                              k * k / a2_rel * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_scf];
       _set_source_ (ppt->index_tp_theta_scf) = rho_plus_p_theta_scf /
                                                (pvecback[pba->index_bg_rho_scf] + pvecback[pba->index_bg_p_scf]);
-    }
-
-    /* theta_dr */
-    if (ppt->has_source_theta_dr == _TRUE_)
-    {
-      f_dr                                  = pow (a2_rel / H0, 2) * pvecback[pba->index_bg_rho_dr];
-      _set_source_ (ppt->index_tp_theta_dr) = 3. / 4. * k * y[ppw->pv->index_pt_F0_dr + 1] / f_dr;
     }
 
     /* theta_ur */
@@ -6387,7 +6228,7 @@ perturb_print_variables (double   tau,
   /** Summary: */
 
   /** - define local variables */
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo);
+  /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo); */
 
   double k;
   int index_md;
@@ -6403,8 +6244,6 @@ perturb_print_variables (double   tau,
   double delta_g, theta_g, shear_g, l4_g, pol0_g, pol1_g, pol2_g, pol4_g;
   double delta_b, theta_b;
   double delta_cdm = 0., theta_cdm = 0.;
-  double delta_dcdm = 0., theta_dcdm = 0.;
-  double delta_dr = 0., theta_dr = 0., shear_dr = 0., f_dr = 1.0;
   double delta_ur = 0., theta_ur = 0., shear_ur = 0., l4_ur = 0.;
   double delta_rho_scf = 0., rho_plus_p_theta_scf = 0.;
   double delta_scf = 0., theta_scf = 0.;
@@ -6653,20 +6492,6 @@ perturb_print_variables (double   tau,
       }
     }
 
-    if (pba->has_dcdm == _TRUE_)
-    {
-      delta_dcdm = y[ppw->pv->index_pt_delta_dcdm];
-      theta_dcdm = y[ppw->pv->index_pt_theta_dcdm];
-    }
-
-    if (pba->has_dr == _TRUE_)
-    {
-      f_dr     = pow (pvecback[pba->index_bg_a] * pvecback[pba->index_bg_a] / H0, 2) * pvecback[pba->index_bg_rho_dr];
-      delta_dr = y[ppw->pv->index_pt_F0_dr] / f_dr;
-      theta_dr = y[ppw->pv->index_pt_F0_dr + 1] * 3. / 4. * k / f_dr;
-      shear_dr = y[ppw->pv->index_pt_F0_dr + 2] * 0.5 / f_dr;
-    }
-
     if (pba->has_scf == _TRUE_)
     {
       if (ppt->gauge == synchronous)
@@ -6703,13 +6528,6 @@ perturb_print_variables (double   tau,
         theta_ur += k * k * alpha;
       }
 
-      if (pba->has_dr == _TRUE_)
-      {
-        delta_dr += (-4. * a * H + a * pba->Gamma_dcdm * pvecback[pba->index_bg_rho_dcdm] / pvecback[pba->index_bg_rho_dr]) * alpha;
-
-        theta_dr += k * k * alpha;
-      }
-
       if (pba->has_cdm == _TRUE_)
       {
         delta_cdm -= 3. * pvecback[pba->index_bg_H] * pvecback[pba->index_bg_a] * alpha;
@@ -6722,12 +6540,6 @@ perturb_print_variables (double   tau,
         {
           /** - --> Do gauge transformation of delta, deltaP/rho (?) and theta using -= 3aH(1+w_ncdm) alpha for delta. */
         }
-      }
-
-      if (pba->has_dcdm == _TRUE_)
-      {
-        delta_dcdm += alpha * (-a * pba->Gamma_dcdm - 3. * a * H);
-        theta_dcdm += k * k * alpha;
       }
 
       if (pba->has_scf == _TRUE_)
@@ -6793,13 +6605,6 @@ perturb_print_variables (double   tau,
       }
     }
 
-    /* Decaying cold dark matter */
-    class_store_double (dataptr, delta_dcdm, pba->has_dcdm, storeidx);
-    class_store_double (dataptr, theta_dcdm, pba->has_dcdm, storeidx);
-    /* Decay radiation */
-    class_store_double (dataptr, delta_dr, pba->has_dr, storeidx);
-    class_store_double (dataptr, theta_dr, pba->has_dr, storeidx);
-    class_store_double (dataptr, shear_dr, pba->has_dr, storeidx);
     /* Scalar field scf*/
     class_store_double (dataptr, delta_scf, pba->has_scf, storeidx);
     class_store_double (dataptr, theta_scf, pba->has_scf, storeidx);
@@ -7032,9 +6837,6 @@ perturb_derivs (double   tau,
   /* for use with curvature */
   double cotKgen, sqrt_absK;
   double s2_squared, ssqrt3;
-
-  /* for use with dcdm and dr */
-  double f_dr, fprime_dr;
 
   /** - rename the fields of the input structure (just to avoid heavy notations) */
 
@@ -7367,58 +7169,6 @@ perturb_derivs (double   tau,
 
       /* see the documentation for this formula */
       dy[ppw->pv->index_pt_perturbed_recombination_delta_temp] =  2. / 3. * dy[ppw->pv->index_pt_delta_b] - a * Compton_CR * pow (T_cmb / a, 4) * chi / (1. + chi + fHe) * ((1. - T_cmb * pba->a_today / a / pvecthermo[pth->index_th_Tb]) * (delta_g + delta_chi * (1. + fHe) / (1. + chi + fHe)) + T_cmb * pba->a_today / a / pvecthermo[pth->index_th_Tb] * (delta_temp - 1. / 4. * delta_g));
-    }
-
-    /** - ---> dcdm and dr */
-
-    if (pba->has_dcdm == _TRUE_)
-    {
-      /** - ----> dcdm */
-
-      dy[pv->index_pt_delta_dcdm] = -(y[pv->index_pt_theta_dcdm] + metric_continuity)
-                                    - a * pba->Gamma_dcdm / k2 * metric_euler; /* dcdm density */
-
-      dy[pv->index_pt_theta_dcdm] = -a_prime_over_a * y[pv->index_pt_theta_dcdm] + metric_euler; /* dcdm velocity */
-    }
-
-    /** - ---> dr */
-
-    if ((pba->has_dcdm == _TRUE_) && (pba->has_dr == _TRUE_))
-    {
-      /* f = rho_dr*a^4/rho_crit_today. In CLASS density units
-       *  rho_crit_today = H0^2.
-       */
-
-      f_dr      = pow (pow (a / pba->a_today, 2) / H0, 2) * pvecback[pba->index_bg_rho_dr];
-      fprime_dr = pba->Gamma_dcdm * pvecback[pba->index_bg_rho_dcdm] * pow (a, 5) / pow (H0, 2);
-
-      /** - ----> dr F0 */
-      dy[pv->index_pt_F0_dr] = -k * y[pv->index_pt_F0_dr + 1] - 4. / 3. * metric_continuity * f_dr +
-                               fprime_dr * (y[pv->index_pt_delta_dcdm] + metric_euler / k2);
-
-      /** - ----> dr F1 */
-      dy[pv->index_pt_F0_dr + 1] = k / 3. * y[pv->index_pt_F0_dr] - 2. / 3. * k * y[pv->index_pt_F0_dr + 2] * s2_squared +
-                                   4 * metric_euler / (3. * k) * f_dr + fprime_dr / k * y[pv->index_pt_theta_dcdm];
-
-      /** - ----> exact dr F2 */
-      dy[pv->index_pt_F0_dr + 2] = 8. / 15. * (3. / 4. * k * y[pv->index_pt_F0_dr + 1] + metric_shear * f_dr) - 3. / 5. * k * s_l[3] / s_l[2] * y[pv->index_pt_F0_dr + 3];
-
-      /** - ----> exact dr l=3 */
-      l                          = 3;
-      dy[pv->index_pt_F0_dr + 3] = k / (2. * l + 1.) *
-                                   (l * s_l[l] * s_l[2] * y[pv->index_pt_F0_dr + 2] - (l + 1.) * s_l[l + 1] * y[pv->index_pt_F0_dr + 4]);
-
-      /** - ----> exact dr l>3 */
-      for (l = 4; l < pv->l_max_dr; l++)
-      {
-        dy[pv->index_pt_F0_dr + l] = k / (2. * l + 1) *
-                                     (l * s_l[l] * y[pv->index_pt_F0_dr + l - 1] - (l + 1.) * s_l[l + 1] * y[pv->index_pt_F0_dr + l + 1]);
-      }
-
-      /** - ----> exact dr lmax_dr */
-      l                          = pv->l_max_dr;
-      dy[pv->index_pt_F0_dr + l] =
-        k * (s_l[l] * y[pv->index_pt_F0_dr + l - 1] - (1. + l) * cotKgen * y[pv->index_pt_F0_dr + l]);
     }
 
     /** - ---> fluid (fld) */

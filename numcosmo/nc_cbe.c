@@ -121,10 +121,6 @@ nc_cbe_init (NcCBE *cbe)
   /* background structure */
 
   cbe->priv->pba.h                   = 0.0;
-  cbe->priv->pba.Omega0_ur           = 0.0;
-  cbe->priv->pba.Omega0_dcdmdr       = 0.0;
-  cbe->priv->pba.Omega0_dcdm         = 0.0;
-  cbe->priv->pba.Gamma_dcdm          = 0.0;
   cbe->priv->pba.N_ncdm              = 0;
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
@@ -1123,10 +1119,6 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
   cbe->priv->pba.cosmo               = cosmo;
   cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
-  cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu0 (cosmo);
-  cbe->priv->pba.Omega0_dcdmdr       = 0.0;
-  cbe->priv->pba.Omega0_dcdm         = 0.0;
-  cbe->priv->pba.Gamma_dcdm          = 0.0;
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
   cbe->priv->pba.ksi_ncdm            = NULL;
@@ -1261,7 +1253,6 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
 
   cbe->priv->pba.c_gamma_over_c_fld = 0.4;
-  cbe->priv->pba.Omega_ini_dcdm     = 0.0;
 
   cbe->priv->pba.shooting_failed    = _FALSE_;
   cbe->priv->pba.background_verbose = cbe->bg_verbose;
