@@ -80,7 +80,7 @@ void nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosm
 gdouble nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
 gdouble nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
 guint nc_galaxy_wl_likelihood_len (NcGalaxyWLLikelihood *gwll);
-void nc_galaxy_wl_likelihood_set_cut (NcGalaxyWLLikelihood *gwl, const gdouble zp_min, const gdouble zp_max, const gdouble r_min, const gdouble r_max, const gdouble s_min, const gdouble s_max);
+void nc_galaxy_wl_likelihood_set_cut (NcGalaxyWLLikelihood *gwl, const gdouble zp_min, const gdouble zp_max, const gdouble r_min, const gdouble r_max);
 void nc_galaxy_wl_likelihood_set_ndata (NcGalaxyWLLikelihood *gwl, gdouble ndata);
 
 G_END_DECLS
