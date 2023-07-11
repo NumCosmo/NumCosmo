@@ -66,6 +66,8 @@ void nc_scalefactor_clear (NcScalefactor **a);
 void nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo);
 void nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo);
 
+NcDistance *nc_scalefactor_peek_distance (NcScalefactor *a);
+
 void nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf);
 void nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf);
 
@@ -85,6 +87,8 @@ gdouble nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta);
 
 gdouble nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z);
 gdouble nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x);
+gdouble nc_scalefactor_eval_eta_Mpc_z (NcScalefactor *a, const gdouble z);
+gdouble nc_scalefactor_eval_eta_Mpc_x (NcScalefactor *a, const gdouble x);
 
 gdouble nc_scalefactor_eval_t_eta (NcScalefactor *a, const gdouble eta);
 gdouble nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t);
@@ -99,3 +103,4 @@ gdouble nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t);
 G_END_DECLS
 
 #endif /* _NC_SCALEFACTOR_H_ */
+

@@ -256,6 +256,8 @@ thermodynamics_init (
 
   /** - define local variables */
 
+  const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
+
   /* index running over time*/
   int index_tau;
   /* temporary variables related to visibility function */
@@ -732,7 +734,7 @@ thermodynamics_init (
   pth->ds_rec            = pth->rs_rec * pba->a_today / (1. + pth->z_rec);
   pth->da_rec            = pvecback[pba->index_bg_ang_distance];
   pth->ra_rec            = pth->da_rec * (1. + pth->z_rec) / pba->a_today;
-  pth->angular_rescaling = pth->ra_rec / (pba->conformal_age - pth->tau_rec);
+  pth->angular_rescaling = pth->ra_rec / (conformal_age - pth->tau_rec);
 
   /** - find damping scale at recombination (using linear interpolation) */
 
@@ -1085,6 +1087,7 @@ thermodynamics_helium_from_bbn (
   struct thermo     *pth
                                )
 {
+  const double h        = nc_hicosmo_h (pba->cosmo);
   const double T_cmb    = nc_hicosmo_T_gamma0 (pba->cosmo);
   const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo);
 
@@ -1220,7 +1223,7 @@ thermodynamics_helium_from_bbn (
               pth->error_message,
               pth->error_message);
 
-  omega_b = Omega0_b * pba->h * pba->h;
+  omega_b = Omega0_b * h * h;
 
   class_test (omega_b < omegab[0],
               pth->error_message,
@@ -2654,6 +2657,7 @@ thermodynamics_recombination_with_hyrec (
   /** Summary: */
 #ifdef HYREC
 
+  const double h          = nc_hicosmo_h (pba->cosmo);
   const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
   const double T_cmb      = nc_hicosmo_T_gamma0 (pba->cosmo);
   const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
@@ -2684,10 +2688,10 @@ thermodynamics_recombination_with_hyrec (
   /** - Fill hyrec parameter structure */
 
   param.T0    = T_cmb;
-  param.obh2  = Omega0_b * pba->h * pba->h;
-  param.omh2  = (Omega0_b + Omega0_cdm + pba->Omega0_ncdm_tot) * pba->h * pba->h;
-  param.okh2  = pba->Omega0_k * pba->h * pba->h;
-  param.odeh2 = (Omega0_lambda + Omega0_fld) * pba->h * pba->h;
+  param.obh2  = Omega0_b * h * h;
+  param.omh2  = (Omega0_b + Omega0_cdm + pba->Omega0_ncdm_tot) * h * h;
+  param.okh2  = pba->Omega0_k * h * h;
+  param.odeh2 = (Omega0_lambda + Omega0_fld) * h * h;
   class_call (background_w_fld (pba, pba->a_today, &w_fld, &dw_over_da_fld, &integral_fld), pba->error_message, pth->error_message);
   param.w0                     = w_fld;
   param.wa                     = -dw_over_da_fld * pba->a_today;

@@ -46,6 +46,8 @@ struct background
   /*@{ */
 
   void *cosmo;
+  void *scalefactor;
+  void *dist;
 
   double cs2_fld; /**< \f$ c^2_{s~DE} \f$: sound speed of the fluid
                    *  in the frame comoving with the fluid (so, this is
@@ -59,14 +61,6 @@ struct background
                   *  such way to have all fld parameters grouped. */
 
   double c_gamma_over_c_fld; /**< ppf parameter defined in eq. (16) of 0808.3125 [astro-ph] */
-
-  double Omega0_scf;        /**< \f$ \Omega_{0 scf} \f$: scalar field */
-  short attractor_ic_scf;   /**< whether the scalar field has attractor initial conditions */
-  double phi_ini_scf;       /**< \f$ \phi(t_0) \f$: scalar field initial value */
-  double phi_prime_ini_scf; /**< \f$ d\phi(t_0)/d\tau \f$: scalar field initial derivative wrt conformal time */
-  double *scf_parameters;   /**< list of parameters describing the scalar field potential */
-  int scf_parameters_size;  /**< size of scf_parameters */
-  int scf_tuning_index;     /**< index in scf_parameters used for tuning */
 
   double Omega0_k; /**< \f$ \Omega_{0_k} \f$: curvature contribution */
 
@@ -108,9 +102,8 @@ struct background
 
   /*@{ */
 
-  double h;             /**< reduced Hubble parameter */
-  double age;           /**< age in Gyears */
-  double conformal_age; /**< conformal age in Mpc */
+  /* double age;           / **< age in Gyears * / */
+  /* double conformal_age; / **< conformal age in Mpc * / */
   double K;             /**< \f$ K \f$: Curvature parameter \f$ K=-\Omega0_k*a_{today}^2*H_0^2\f$; */
   int sgnK;             /**< K/|K|: -1, 0 or 1 */
   double *m_ncdm_in_eV; /**< list of ncdm masses in eV (inferred from M_ncdm and other parameters above) */
@@ -147,14 +140,6 @@ struct background
   int index_bg_rho_fld;    /**< fluid density */
   int index_bg_w_fld;      /**< fluid equation of state */
   int index_bg_rho_ur;     /**< relativistic neutrinos/relics density */
-
-  int index_bg_phi_scf;       /**< scalar field value */
-  int index_bg_phi_prime_scf; /**< scalar field derivative wrt conformal time */
-  int index_bg_V_scf;         /**< scalar field potential V */
-  int index_bg_dV_scf;        /**< scalar field potential derivative V' */
-  int index_bg_ddV_scf;       /**< scalar field potential second derivative V'' */
-  int index_bg_rho_scf;       /**< scalar field energy density */
-  int index_bg_p_scf;         /**< scalar field pressure */
 
   int index_bg_rho_ncdm1;      /**< density of first ncdm species (others contiguous) */
   int index_bg_p_ncdm1;        /**< pressure of first ncdm species (others contiguous) */
@@ -215,10 +200,8 @@ struct background
 
   /*@{ */
 
-  int index_bi_a;             /**< {B} scale factor */
-  int index_bi_rho_fld;       /**< {B} fluid density */
-  int index_bi_phi_scf;       /**< {B} scalar field value */
-  int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
+  int index_bi_a;       /**< {B} scale factor */
+  int index_bi_rho_fld; /**< {B} fluid density */
 
   int index_bi_time;    /**< {C} proper (cosmological) time in Mpc */
   int index_bi_rs;      /**< {C} sound horizon */
@@ -242,7 +225,6 @@ struct background
   /*@{ */
 
   short has_cdm;       /**< presence of cold dark matter? */
-  short has_scf;       /**< presence of a scalar field? */
   short has_ncdm;      /**< presence of non-cold dark matter? */
   short has_lambda;    /**< presence of cosmological constant? */
   short has_fld;       /**< presence of fluid with constant w and cs2? */
@@ -467,29 +449,6 @@ int background_derivs (
   void     *parameters_and_workspace,
   ErrorMsg error_message
                       );
-
-/** Scalar field potential and its derivatives **/
-double V_scf (
-  const struct background *pba,
-  double                  phi
-             );
-
-double dV_scf (
-  const struct background *pba,
-  double                  phi
-              );
-
-double ddV_scf (
-  const struct background *pba,
-  double                  phi
-               );
-
-/** Coupling between scalar field and matter **/
-double Q_scf (
-  struct background *pba,
-  double            phi,
-  double            phi_prime
-             );
 
 #ifdef __cplusplus
 }

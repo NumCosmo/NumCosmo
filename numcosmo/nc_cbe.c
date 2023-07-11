@@ -103,7 +103,7 @@ nc_cbe_init (NcCBE *cbe)
   cbe->prec       = NULL;
   cbe->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   cbe->ctrl_prim  = ncm_model_ctrl_new (NULL);
-  cbe->a          = NULL;
+  cbe->a          = nc_scalefactor_new (10.0, NULL);
 
   cbe->target_Cls     = 0;
   cbe->calc_transfer  = FALSE;
@@ -120,7 +120,6 @@ nc_cbe_init (NcCBE *cbe)
 
   /* background structure */
 
-  cbe->priv->pba.h                   = 0.0;
   cbe->priv->pba.N_ncdm              = 0;
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
@@ -131,13 +130,6 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pba.deg_ncdm            = NULL;
   cbe->priv->pba.ncdm_psd_parameters = NULL;
   cbe->priv->pba.ncdm_psd_files      = NULL;
-  cbe->priv->pba.Omega0_scf          = 0.0;
-  cbe->priv->pba.attractor_ic_scf    = _FALSE_;
-  cbe->priv->pba.scf_parameters      = NULL;
-  cbe->priv->pba.scf_parameters_size = 0;
-  cbe->priv->pba.scf_tuning_index    = 0;
-  cbe->priv->pba.phi_ini_scf         = 0;
-  cbe->priv->pba.phi_prime_ini_scf   = 0;
   cbe->priv->pba.Omega0_k            = 0.0;
   cbe->priv->pba.K                   = 0.0;
   cbe->priv->pba.sgnK                = 0;
@@ -1117,8 +1109,10 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   if (!g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     g_error ("_nc_cbe_set_bg: CLASS backend is compatible with darkenergy models only.");
 
-  cbe->priv->pba.cosmo               = cosmo;
-  cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
+  cbe->priv->pba.cosmo       = cosmo;
+  cbe->priv->pba.scalefactor = cbe->a;
+  cbe->priv->pba.dist        = nc_scalefactor_peek_distance (cbe->a);
+
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
   cbe->priv->pba.ksi_ncdm            = NULL;
@@ -1221,15 +1215,6 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
       cbe->priv->pba.m_ncdm_in_eV   = NULL;
     }
   }
-
-  cbe->priv->pba.Omega0_scf       = 0.0;
-  cbe->priv->pba.attractor_ic_scf = _TRUE_;
-  cbe->priv->pba.scf_parameters   = NULL;
-
-  cbe->priv->pba.scf_parameters_size = 0;
-  cbe->priv->pba.scf_tuning_index    = 0;
-  cbe->priv->pba.phi_ini_scf         = 1;
-  cbe->priv->pba.phi_prime_ini_scf   = 1;
 
   cbe->priv->pba.Omega0_k = nc_hicosmo_Omega_k0 (cosmo);
 
@@ -1572,8 +1557,6 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
   _nc_cbe_set_bg (cbe, cosmo);
 
-  cbe->priv->pba.cosmo = cosmo;
-
   if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
     g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
 }
@@ -1767,6 +1750,20 @@ _nc_cbe_update_callbacks (NcCBE *cbe)
     cbe->call = _nc_cbe_call_spectra;
 }
 
+static void
+_nc_cbe_prepare_base (NcCBE *cbe, NcHICosmo *cosmo)
+{
+  struct precision *ppr = (struct precision *) cbe->prec->priv;
+  const gdouble zf      = 1.0 / ppr->a_ini_over_a_today_default;
+
+  /*printf ("Preparing CLASS!\n");*/
+  if (ncm_model_peek_submodel_by_mid (NCM_MODEL (cosmo), nc_hiprim_id ()) == NULL)
+    g_error ("nc_cbe_prepare: cosmo model must contain a NcHIPrim submodel.");
+
+  nc_scalefactor_set_zf (cbe->a, zf);
+  nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
+}
+
 /**
  * nc_cbe_thermodyn_prepare:
  * @cbe: a #NcCBE
@@ -1778,6 +1775,8 @@ _nc_cbe_update_callbacks (NcCBE *cbe)
 void
 nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 {
+  _nc_cbe_prepare_base (cbe, cosmo);
+
   if (cbe->thermodyn_prepared)
   {
     _nc_cbe_free_thermo (cbe);
@@ -1817,9 +1816,7 @@ nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 void
 nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 {
-  /*printf ("Preparing CLASS!\n");*/
-  if (ncm_model_peek_submodel_by_mid (NCM_MODEL (cosmo), nc_hiprim_id ()) == NULL)
-    g_error ("nc_cbe_prepare: cosmo model must contain a NcHIPrim submodel.");
+  _nc_cbe_prepare_base (cbe, cosmo);
 
   if (cbe->allocated)
   {
@@ -1905,23 +1902,13 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
 {
   nc_cbe_prepare (cbe, cosmo);
   {
-    struct precision *ppr  = (struct precision *) cbe->prec->priv;
-    struct background *pba = &cbe->priv->pba;
-    const gdouble RH       = nc_hicosmo_RH_Mpc (cosmo);
-    const gdouble zf       = 1.0 / ppr->a_ini_over_a_today_default;
-
+    struct background *pba  = &cbe->priv->pba;
+    const gdouble RH        = nc_hicosmo_RH_Mpc (cosmo);
+    const gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
+    const gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
+    gdouble err             = 0.0;
     gdouble pvecback[pba->bg_size];
-    gdouble err       = 0.0;
-    gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
-    gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
     guint i;
-
-    if (cbe->a == NULL)
-      cbe->a = nc_scalefactor_new (zf, NULL);
-    else
-      nc_scalefactor_set_zf (cbe->a, zf);
-
-    nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
 
     for (i = 0; i < pba->bt_size; i++)
     {

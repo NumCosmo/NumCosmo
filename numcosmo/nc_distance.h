@@ -61,14 +61,14 @@ struct _NcDistanceClass
  * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: uses the method defined by the implementation of #NcHICosmo.
  *
  * Enumeration to define which method to be applied in order to compute the cosmological distances.
- * 
+ *
  */
 typedef enum _NcDistanceComovingMethod
 {
   NC_DISTANCE_COMOVING_METHOD_INT_E = 0,
   NC_DISTANCE_COMOVING_METHOD_FROM_MODEL,
   /* < private > */
-  NC_DISTANCE_COMOVING_METHOD_LEN,   /*< skip >*/  
+  NC_DISTANCE_COMOVING_METHOD_LEN, /*< skip >*/
 } NcDistanceComovingMethod;
 
 struct _NcDistance
@@ -78,13 +78,14 @@ struct _NcDistance
   NcmOdeSpline *comoving_distance_spline;
   NcmSpline *inv_comoving_dist;
   NcmFunctionCache *comoving_distance_cache;
-	NcmFunctionCache *comoving_infinity;
+  NcmFunctionCache *comoving_infinity;
   NcmFunctionCache *time_cache;
   NcmFunctionCache *lookback_time_cache;
   NcmFunctionCache *conformal_time_cache;
   NcmFunctionCache *sound_horizon_cache;
   NcmModelCtrl *ctrl;
   gdouble zf;
+  gdouble RH_Mpc;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
   NcRecomb *recomb;
@@ -103,7 +104,7 @@ typedef struct _NcDistanceFuncZ
 {
   const gchar *name;
 
-  
+
   const gchar *desc;
   NcDistanceFunc1 f;
   NcHICosmoImpl impl;
@@ -144,6 +145,7 @@ gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
  ****************************************************************************/
 
 gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_comoving_Mpc (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);

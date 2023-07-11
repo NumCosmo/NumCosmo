@@ -576,10 +576,7 @@ perturb_indices_of_perturbs (
   ppt->has_source_delta_g      = _FALSE_;
   ppt->has_source_delta_b      = _FALSE_;
   ppt->has_source_delta_cdm    = _FALSE_;
-  ppt->has_source_delta_dcdm   = _FALSE_;
   ppt->has_source_delta_fld    = _FALSE_;
-  ppt->has_source_delta_scf    = _FALSE_;
-  ppt->has_source_delta_dr     = _FALSE_;
   ppt->has_source_delta_ur     = _FALSE_;
   ppt->has_source_delta_ncdm   = _FALSE_;
   ppt->has_source_theta_m      = _FALSE_;
@@ -587,10 +584,7 @@ perturb_indices_of_perturbs (
   ppt->has_source_theta_g      = _FALSE_;
   ppt->has_source_theta_b      = _FALSE_;
   ppt->has_source_theta_cdm    = _FALSE_;
-  ppt->has_source_theta_dcdm   = _FALSE_;
   ppt->has_source_theta_fld    = _FALSE_;
-  ppt->has_source_theta_scf    = _FALSE_;
-  ppt->has_source_theta_dr     = _FALSE_;
   ppt->has_source_theta_ur     = _FALSE_;
   ppt->has_source_theta_ncdm   = _FALSE_;
   ppt->has_source_phi          = _FALSE_;
@@ -679,9 +673,6 @@ perturb_indices_of_perturbs (
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
 
-        if (pba->has_scf == _TRUE_)
-          ppt->has_source_delta_scf = _TRUE_;
-
         if (pba->has_ur == _TRUE_)
           ppt->has_source_delta_ur = _TRUE_;
 
@@ -707,9 +698,6 @@ perturb_indices_of_perturbs (
 
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
-
-        if (pba->has_scf == _TRUE_)
-          ppt->has_source_theta_scf = _TRUE_;
 
         if (pba->has_ur == _TRUE_)
           ppt->has_source_theta_ur = _TRUE_;
@@ -774,10 +762,7 @@ perturb_indices_of_perturbs (
       class_define_index (ppt->index_tp_delta_g,    ppt->has_source_delta_g,   index_type, 1);
       class_define_index (ppt->index_tp_delta_b,    ppt->has_source_delta_b,   index_type, 1);
       class_define_index (ppt->index_tp_delta_cdm,  ppt->has_source_delta_cdm, index_type, 1);
-      class_define_index (ppt->index_tp_delta_dcdm, ppt->has_source_delta_dcdm, index_type, 1);
       class_define_index (ppt->index_tp_delta_fld,  ppt->has_source_delta_fld, index_type, 1);
-      class_define_index (ppt->index_tp_delta_scf,  ppt->has_source_delta_scf, index_type, 1);
-      class_define_index (ppt->index_tp_delta_dr,   ppt->has_source_delta_dr, index_type, 1);
       class_define_index (ppt->index_tp_delta_ur,   ppt->has_source_delta_ur,  index_type, 1);
       class_define_index (ppt->index_tp_delta_ncdm1, ppt->has_source_delta_ncdm, index_type, pba->N_ncdm);
       class_define_index (ppt->index_tp_theta_m,    ppt->has_source_theta_m,   index_type, 1);
@@ -785,10 +770,7 @@ perturb_indices_of_perturbs (
       class_define_index (ppt->index_tp_theta_g,    ppt->has_source_theta_g,   index_type, 1);
       class_define_index (ppt->index_tp_theta_b,    ppt->has_source_theta_b,   index_type, 1);
       class_define_index (ppt->index_tp_theta_cdm,  ppt->has_source_theta_cdm, index_type, 1);
-      class_define_index (ppt->index_tp_theta_dcdm, ppt->has_source_theta_dcdm, index_type, 1);
       class_define_index (ppt->index_tp_theta_fld,  ppt->has_source_theta_fld, index_type, 1);
-      class_define_index (ppt->index_tp_theta_scf,  ppt->has_source_theta_scf, index_type, 1);
-      class_define_index (ppt->index_tp_theta_dr,   ppt->has_source_theta_dr,  index_type, 1);
       class_define_index (ppt->index_tp_theta_ur,   ppt->has_source_theta_ur,  index_type, 1);
       class_define_index (ppt->index_tp_theta_ncdm1, ppt->has_source_theta_ncdm, index_type, pba->N_ncdm);
       class_define_index (ppt->index_tp_phi,        ppt->has_source_phi,       index_type, 1);
@@ -900,6 +882,8 @@ perturb_timesampling_for_sources (
   /** Summary: */
 
   /** - define local variables */
+
+  const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
 
   int counter;
   int index_md;
@@ -1088,7 +1072,7 @@ perturb_timesampling_for_sources (
   last_index_thermo = first_index_thermo;
   tau               = tau_ini;
 
-  while (tau < pba->conformal_age)
+  while (tau < conformal_age)
   {
     class_call (background_at_tau (pba,
                                    tau,
@@ -1171,7 +1155,7 @@ perturb_timesampling_for_sources (
   last_index_thermo = first_index_thermo;
   tau               = tau_ini;
 
-  while (tau < pba->conformal_age)
+  while (tau < conformal_age)
   {
     class_call (background_at_tau (pba,
                                    tau,
@@ -1230,7 +1214,7 @@ perturb_timesampling_for_sources (
   }
 
   /** - last sampling point = exactly today */
-  ppt->tau_sampling[counter] = pba->conformal_age;
+  ppt->tau_sampling[counter] = conformal_age;
 
   free (pvecback);
   free (pvecthermo);
@@ -1273,7 +1257,9 @@ perturb_get_k_list (
   struct perturbs         *ppt
                    )
 {
-  const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double H0            = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
+  const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
+
   int index_k, index_k_output, index_mode;
   double k, k_min = 0., k_rec, step, tau1;
   double *k_max_cmb;
@@ -1324,12 +1310,12 @@ perturb_get_k_list (
     /* first value */
     if (pba->sgnK == 0)
       /* K<0 (flat)  : start close to zero */
-      k_min = ppr->k_min_tau0 / pba->conformal_age;
+      k_min = ppr->k_min_tau0 / conformal_age;
     else if (pba->sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / pba->conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
     else if (pba->sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
@@ -1353,7 +1339,7 @@ perturb_get_k_list (
        *  k_max_cl[ppt->index_md_scalars]*[comvoving.ang.diameter.distance] > l_max */
 
       k_max_cmb[ppt->index_md_scalars] = ppr->k_max_tau0_over_l_max * ppt->l_scalar_max
-                                         / pba->conformal_age / pth->angular_rescaling;
+                                         / conformal_age / pth->angular_rescaling;
       k_max_cl[ppt->index_md_scalars] = k_max_cmb[ppt->index_md_scalars];
       k_max                           = k_max_cmb[ppt->index_md_scalars];
 
@@ -1377,7 +1363,7 @@ perturb_get_k_list (
                     pba->error_message,
                     ppt->error_message);
 
-        k_max_cl[ppt->index_md_scalars] = MAX (k_max_cl[ppt->index_md_scalars], ppr->k_max_tau0_over_l_max * ppt->l_lss_max / (pba->conformal_age - tau1)); /* to be very accurate we should use angular diameter distance to given redshift instead of comoving radius: would implement corrections depending on curvature */
+        k_max_cl[ppt->index_md_scalars] = MAX (k_max_cl[ppt->index_md_scalars], ppr->k_max_tau0_over_l_max * ppt->l_lss_max / (conformal_age - tau1)); /* to be very accurate we should use angular diameter distance to given redshift instead of comoving radius: would implement corrections depending on curvature */
         k_max                           = k_max_cl[ppt->index_md_scalars];
       }
     }
@@ -1514,12 +1500,12 @@ perturb_get_k_list (
     /* first value */
     if (pba->sgnK == 0)
       /* K<0 (flat)  : start close to zero */
-      k_min = ppr->k_min_tau0 / pba->conformal_age;
+      k_min = ppr->k_min_tau0 / conformal_age;
     else if (pba->sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / pba->conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
     else if (pba->sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
@@ -1543,7 +1529,7 @@ perturb_get_k_list (
        *  k_max_cl*[comvoving.ang.diameter.distance] > l_max */
 
       k_max_cmb[ppt->index_md_vectors] = ppr->k_max_tau0_over_l_max * ppt->l_vector_max
-                                         / pba->conformal_age / pth->angular_rescaling;
+                                         / conformal_age / pth->angular_rescaling;
       k_max_cl[ppt->index_md_vectors] = k_max_cmb[ppt->index_md_vectors];
       k_max                           = k_max_cmb[ppt->index_md_vectors];
     }
@@ -1645,12 +1631,12 @@ perturb_get_k_list (
     /* first value */
     if (pba->sgnK == 0)
       /* K<0 (flat)  : start close to zero */
-      k_min = ppr->k_min_tau0 / pba->conformal_age;
+      k_min = ppr->k_min_tau0 / conformal_age;
     else if (pba->sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / pba->conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
     else if (pba->sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
@@ -1674,7 +1660,7 @@ perturb_get_k_list (
        *  k_max_cl[ppt->index_md_tensors]*[comvoving.ang.diameter.distance] > l_max */
 
       k_max_cmb[ppt->index_md_tensors] = ppr->k_max_tau0_over_l_max * ppt->l_tensor_max
-                                         / pba->conformal_age / pth->angular_rescaling;
+                                         / conformal_age / pth->angular_rescaling;
       k_max_cl[ppt->index_md_tensors] = k_max_cmb[ppt->index_md_tensors];
       k_max                           = k_max_cmb[ppt->index_md_tensors];
     }
@@ -2578,10 +2564,6 @@ perturb_prepare_output (const struct background *pba,
         }
       }
 
-      /* Scalar field scf */
-      class_store_columntitle (ppt->scalar_titles, "delta_scf", pba->has_scf);
-      class_store_columntitle (ppt->scalar_titles, "theta_scf", pba->has_scf);
-
       ppt->number_of_scalar_titles =
         get_number_of_titles (ppt->scalar_titles);
     }
@@ -3127,11 +3109,6 @@ perturb_vector_init (
       class_define_index (ppv->index_pt_Gamma_fld, pba->has_fld, index_pt, 1); /* Gamma variable of PPF scheme */
     }
 
-    /* scalar field */
-
-    class_define_index (ppv->index_pt_phi_scf, pba->has_scf, index_pt, 1);       /* scalar field density */
-    class_define_index (ppv->index_pt_phi_prime_scf, pba->has_scf, index_pt, 1); /* scalar field velocity */
-
     /* perturbed recombination: the indices are defined once tca is off. */
     if ((ppt->has_perturbed_recombination == _TRUE_) && (ppw->approx[ppw->index_ap_tca] == (int) tca_off))
     {
@@ -3521,15 +3498,6 @@ perturb_vector_init (
           ppv->y[ppv->index_pt_Gamma_fld] =
             ppw->pv->y[ppw->pv->index_pt_Gamma_fld];
         }
-      }
-
-      if (pba->has_scf == _TRUE_)
-      {
-        ppv->y[ppv->index_pt_phi_scf] =
-          ppw->pv->y[ppw->pv->index_pt_phi_scf];
-
-        ppv->y[ppv->index_pt_phi_prime_scf] =
-          ppw->pv->y[ppw->pv->index_pt_phi_prime_scf];
       }
 
       if (ppt->gauge == synchronous)
@@ -4092,7 +4060,7 @@ perturb_initial_conditions (struct precision         *ppr,
 
   double a, a_prime_over_a;
   double w_fld, dw_over_da_fld, integral_fld;
-  double delta_ur = 0., theta_ur = 0., shear_ur = 0., l3_ur = 0., eta = 0., delta_cdm = 0., alpha, alpha_prime;
+  double delta_ur = 0., theta_ur = 0., shear_ur = 0., l3_ur = 0., eta = 0., delta_cdm = 0., alpha;
   double q, epsilon, k2;
   int index_q, n_ncdm, idx;
   double rho_r, rho_m, rho_nu, rho_m_over_rho_r;
@@ -4243,26 +4211,6 @@ perturb_initial_conditions (struct precision         *ppr,
         }
 
         /* if use_ppf == _TRUE_, y[ppw->pv->index_pt_Gamma_fld] will be automatically set to zero, and this is what we want (although one could probably work out some small nonzero initial conditions: TODO) */
-      }
-
-      if (pba->has_scf == _TRUE_)
-      {
-        /** - ---> Canonical field (solving for the perturbations):
-         *  initial perturbations set to zero, they should reach the attractor soon enough.
-         *  - --->  TODO: Incorporate the attractor IC from 1004.5509.
-         *  delta_phi \f$ = -(a/k)^2/\phi'(\rho + p)\theta \f$,
-         *  delta_phi_prime \f$ = a^2/\phi' \f$ (delta_rho_phi + V'delta_phi),
-         *  and assume theta, delta_rho as for perfect fluid
-         *  with \f$ c_s^2 = 1 \f$ and w = 1/3 (ASSUMES radiation TRACKING)
-         */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;
-        /*  a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] = 0.;
-
-        /* delta_fld expression * rho_scf with the w = 1/3, c_s = 1
-         *   a*a/ppw->pvecback[pba->index_bg_phi_prime_scf]*( - ktau_two/4.*(1.+1./3.)*(4.-3.*1.)/(4.-6.*(1/3.)+3.*1.)*ppw->pvecback[pba->index_bg_rho_scf] - ppw->pvecback[pba->index_bg_dV_scf]*ppw->pv->y[ppw->pv->index_pt_phi_scf])* ppr->curvature_ini * s2_squared; */
       }
 
       /* all relativistic relics: ur, early ncdm, dr */
@@ -4458,21 +4406,6 @@ perturb_initial_conditions (struct precision         *ppr,
 
         ppw->pv->y[ppw->pv->index_pt_delta_fld] += 3 * (1. + w_fld) * a_prime_over_a * alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_fld] += k * k * alpha;
-      }
-
-      /* scalar field: check */
-      if (pba->has_scf == _TRUE_)
-      {
-        alpha_prime = 0.0;
-
-        /* - 2. * a_prime_over_a * alpha + eta
-         *  - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_scf]       += alpha * ppw->pvecback[pba->index_bg_phi_prime_scf];
-        ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
-          (-2. * a_prime_over_a * alpha * ppw->pvecback[pba->index_bg_phi_prime_scf]
-           - a * a * dV_scf (pba, ppw->pvecback[pba->index_bg_phi_scf]) * alpha
-           + ppw->pvecback[pba->index_bg_phi_prime_scf] * alpha_prime);
       }
 
       if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_))
@@ -5272,7 +5205,6 @@ perturb_total_stress_energy (
   double w_fld, dw_over_da_fld, integral_fld;
   double gwncdm;
   double rho_relativistic;
-  double delta_rho_scf, delta_p_scf, psi;
   double c_gamma_k_H_square;
   double Gamma_prime_plus_a_prime_over_a_Gamma, alpha = 0., s2sq = 1.;
 
@@ -5465,47 +5397,6 @@ perturb_total_stress_energy (
           rho_plus_p_tot        += ppw->pvecback[pba->index_bg_rho_ncdm1 + n_ncdm] + ppw->pvecback[pba->index_bg_p_ncdm1 + n_ncdm];
         }
       }
-    }
-
-    /* scalar field contribution.
-     *  In Newtonian gauge, delta_scf depends on the metric perturbation psi which is inferred
-     *  from rho_plus_p_shear. So the contribution from the scalar field must be below all
-     *  species with non-zero shear.
-     */
-    if (pba->has_scf == _TRUE_)
-    {
-      if (ppt->gauge == synchronous)
-      {
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]);
-        delta_p_scf = 1. / 3. *
-                      (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                       - ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]);
-      }
-      else
-      {
-        /* equation for psi */
-        psi = y[ppw->pv->index_pt_phi] - 4.5 * (a2 / k / k) * ppw->rho_plus_p_shear;
-
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]
-                         - 1. / a2 * pow (ppw->pvecback[pba->index_bg_phi_prime_scf], 2) * psi);
-        delta_p_scf =  1. / 3. *
-                      (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                       - ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]
-                       - 1. / a2 * pow (ppw->pvecback[pba->index_bg_phi_prime_scf], 2) * psi);
-      }
-
-      ppw->delta_rho += delta_rho_scf;
-
-      ppw->rho_plus_p_theta +=  1. / 3. *
-                               k * k / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_scf];
-
-      ppw->delta_p += delta_p_scf;
-
-      rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf];
     }
 
     /* add your extra species here */
@@ -5790,13 +5681,13 @@ perturb_sources (
   double *pvecthermo;
   double *pvecmetric;
 
-  double delta_g, delta_rho_scf, rho_plus_p_theta_scf;
+  double delta_g;
   double a_prime_over_a = 0.;       /* (a'/a) */
   double a_prime_over_a_prime = 0.; /* (a'/a)' */
   double w_fld, dw_over_da_fld, integral_fld;
   int switch_isw = 1;
 
-  double a_rel, a2_rel;
+  double a_rel;
 
   /** - rename structure fields (just to avoid heavy notations) */
 
@@ -5838,8 +5729,7 @@ perturb_sources (
               pth->error_message,
               error_message);
 
-  a_rel  = ppw->pvecback[pba->index_bg_a] / pba->a_today;
-  a2_rel = a_rel * a_rel;
+  a_rel = ppw->pvecback[pba->index_bg_a] / pba->a_today;
 
   /* derived background quantities, useful only in synchronous gauge */
   if (ppt->gauge == synchronous)
@@ -6051,29 +5941,9 @@ perturb_sources (
     if (ppt->has_source_delta_cdm == _TRUE_)
       _set_source_ (ppt->index_tp_delta_cdm) = y[ppw->pv->index_pt_delta_cdm];
 
-    /* delta_dcdm */
-    if (ppt->has_source_delta_dcdm == _TRUE_)
-      _set_source_ (ppt->index_tp_delta_dcdm) = y[ppw->pv->index_pt_delta_dcdm];
-
     /* delta_fld */
     if (ppt->has_source_delta_fld == _TRUE_)
       _set_source_ (ppt->index_tp_delta_fld) = ppw->delta_rho_fld / pvecback[pba->index_bg_rho_fld];
-
-    /* delta_scf */
-    if (ppt->has_source_delta_scf == _TRUE_)
-    {
-      if (ppt->gauge == synchronous)
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2_rel * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]);
-      else
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2_rel * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]
-                         - 1. / a2_rel * pow (ppw->pvecback[pba->index_bg_phi_prime_scf], 2) * ppw->pvecmetric[ppw->index_mt_psi]);
-
-      _set_source_ (ppt->index_tp_delta_scf) = delta_rho_scf / pvecback[pba->index_bg_rho_scf];
-    }
 
     /* delta_ur */
     if (ppt->has_source_delta_ur == _TRUE_)
@@ -6118,25 +5988,12 @@ perturb_sources (
     if (ppt->has_source_theta_cdm == _TRUE_)
       _set_source_ (ppt->index_tp_theta_cdm) = y[ppw->pv->index_pt_theta_cdm];
 
-    /* theta_dcdm */
-    if (ppt->has_source_theta_dcdm == _TRUE_)
-      _set_source_ (ppt->index_tp_theta_dcdm) = y[ppw->pv->index_pt_theta_dcdm];
-
     /* theta_fld */
     if (ppt->has_source_theta_fld == _TRUE_)
     {
       class_call (background_w_fld (pba, a_rel * pba->a_today, &w_fld, &dw_over_da_fld, &integral_fld), pba->error_message, ppt->error_message);
 
       _set_source_ (ppt->index_tp_theta_fld) = ppw->rho_plus_p_theta_fld / (1. + w_fld) / pvecback[pba->index_bg_rho_fld];
-    }
-
-    /* theta_scf */
-    if (ppt->has_source_theta_scf == _TRUE_)
-    {
-      rho_plus_p_theta_scf = 1. / 3. *
-                             k * k / a2_rel * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_scf];
-      _set_source_ (ppt->index_tp_theta_scf) = rho_plus_p_theta_scf /
-                                               (pvecback[pba->index_bg_rho_scf] + pvecback[pba->index_bg_p_scf]);
     }
 
     /* theta_ur */
@@ -6245,8 +6102,6 @@ perturb_print_variables (double   tau,
   double delta_b, theta_b;
   double delta_cdm = 0., theta_cdm = 0.;
   double delta_ur = 0., theta_ur = 0., shear_ur = 0., l4_ur = 0.;
-  double delta_rho_scf = 0., rho_plus_p_theta_scf = 0.;
-  double delta_scf = 0., theta_scf = 0.;
   /** - ncdm sector begins */
   int n_ncdm;
   double *delta_ncdm = NULL, *theta_ncdm = NULL, *shear_ncdm = NULL, *delta_p_over_delta_rho_ncdm = NULL;
@@ -6261,7 +6116,7 @@ perturb_print_variables (double   tau,
   double phi = 0., psi = 0., alpha = 0.;
   double delta_temp = 0., delta_chi = 0.;
 
-  double a, a2, H;
+  double a, a2;
   int idx, index_q, storeidx;
   double *dataptr;
 
@@ -6317,7 +6172,6 @@ perturb_print_variables (double   tau,
 
   a  = pvecback[pba->index_bg_a];
   a2 = a * a;
-  H  = pvecback[pba->index_bg_H];
 
   if (pba->has_ncdm == _TRUE_)
   {
@@ -6492,25 +6346,6 @@ perturb_print_variables (double   tau,
       }
     }
 
-    if (pba->has_scf == _TRUE_)
-    {
-      if (ppt->gauge == synchronous)
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]);
-      else
-        delta_rho_scf =  1. / 3. *
-                        (1. / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_prime_scf]
-                         + ppw->pvecback[pba->index_bg_dV_scf] * y[ppw->pv->index_pt_phi_scf]
-                         - 1. / a2 * pow (ppw->pvecback[pba->index_bg_phi_prime_scf], 2) * ppw->pvecmetric[ppw->index_mt_psi]);
-
-      rho_plus_p_theta_scf =  1. / 3. *
-                             k * k / a2 * ppw->pvecback[pba->index_bg_phi_prime_scf] * y[ppw->pv->index_pt_phi_scf];
-
-      delta_scf = delta_rho_scf / pvecback[pba->index_bg_rho_scf];
-      theta_scf = rho_plus_p_theta_scf / (pvecback[pba->index_bg_rho_scf] + pvecback[pba->index_bg_p_scf]);
-    }
-
     /* converting synchronous variables to newtonian ones */
     if (ppt->gauge == synchronous)
     {
@@ -6540,12 +6375,6 @@ perturb_print_variables (double   tau,
         {
           /** - --> Do gauge transformation of delta, deltaP/rho (?) and theta using -= 3aH(1+w_ncdm) alpha for delta. */
         }
-      }
-
-      if (pba->has_scf == _TRUE_)
-      {
-        delta_scf += alpha * (-3.0 * H * (1.0 + pvecback[pba->index_bg_p_scf] / pvecback[pba->index_bg_rho_scf]));
-        theta_scf += k * k * alpha;
       }
     }
 
@@ -6604,10 +6433,6 @@ perturb_print_variables (double   tau,
         class_store_double (dataptr, delta_p_over_delta_rho_ncdm[n_ncdm],  _TRUE_, storeidx);
       }
     }
-
-    /* Scalar field scf*/
-    class_store_double (dataptr, delta_scf, pba->has_scf, storeidx);
-    class_store_double (dataptr, theta_scf, pba->has_scf, storeidx);
 
     /*fprintf(ppw->perturb_output_file,"\n"); */
   }
@@ -7204,21 +7029,6 @@ perturb_derivs (double   tau,
       {
         dy[pv->index_pt_Gamma_fld] = ppw->Gamma_prime_fld; /* Gamma variable of PPF formalism */
       }
-    }
-
-    /** - ---> scalar field (scf) */
-
-    if (pba->has_scf == _TRUE_)
-    {
-      /** - ----> field value */
-
-      dy[pv->index_pt_phi_scf] = y[pv->index_pt_phi_prime_scf];
-
-      /** - ----> Klein Gordon equation */
-
-      dy[pv->index_pt_phi_prime_scf] =  -2. * a_prime_over_a * y[pv->index_pt_phi_prime_scf]
-                                       - metric_continuity * pvecback[pba->index_bg_phi_prime_scf]              /*  metric_continuity = h'/2 */
-                                       - (k2 + a2 * pvecback[pba->index_bg_ddV_scf]) * y[pv->index_pt_phi_scf]; /*checked */
     }
 
     /** - ---> ultra-relativistic neutrino/relics (ur) */

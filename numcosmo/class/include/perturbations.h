@@ -294,10 +294,7 @@ struct perturbs
   short has_source_delta_g;      /**< do we need source for delta of gammas? */
   short has_source_delta_b;      /**< do we need source for delta of baryons? */
   short has_source_delta_cdm;    /**< do we need source for delta of cold dark matter? */
-  short has_source_delta_dcdm;   /**< do we need source for delta of DCDM? */
   short has_source_delta_fld;    /**< do we need source for delta of dark energy? */
-  short has_source_delta_scf;    /**< do we need source for delta from scalar field? */
-  short has_source_delta_dr;     /**< do we need source for delta of decay radiation? */
   short has_source_delta_ur;     /**< do we need source for delta of ultra-relativistic neutrinos/relics? */
   short has_source_delta_ncdm;   /**< do we need source for delta of all non-cold dark matter species (e.g. massive neutrinos)? */
   short has_source_theta_m;      /**< do we need source for theta of total matter? */
@@ -305,10 +302,7 @@ struct perturbs
   short has_source_theta_g;      /**< do we need source for theta of gammas? */
   short has_source_theta_b;      /**< do we need source for theta of baryons? */
   short has_source_theta_cdm;    /**< do we need source for theta of cold dark matter? */
-  short has_source_theta_dcdm;   /**< do we need source for theta of DCDM? */
   short has_source_theta_fld;    /**< do we need source for theta of dark energy? */
-  short has_source_theta_scf;    /**< do we need source for theta of scalar field? */
-  short has_source_theta_dr;     /**< do we need source for theta of ultra-relativistic neutrinos/relics? */
   short has_source_theta_ur;     /**< do we need source for theta of ultra-relativistic neutrinos/relics? */
   short has_source_theta_ncdm;   /**< do we need source for theta of all non-cold dark matter species (e.g. massive neutrinos)? */
   short has_source_phi;          /**< do we need source for metric fluctuation phi? */
@@ -333,10 +327,7 @@ struct perturbs
   int index_tp_delta_g;                            /**< index value for delta of gammas */
   int index_tp_delta_b;                            /**< index value for delta of baryons */
   int index_tp_delta_cdm;                          /**< index value for delta of cold dark matter */
-  int index_tp_delta_dcdm;                         /**< index value for delta of DCDM */
   int index_tp_delta_fld;                          /**< index value for delta of dark energy */
-  int index_tp_delta_scf;                          /**< index value for delta of scalar field */
-  int index_tp_delta_dr;                           /**< index value for delta of decay radiation */
   int index_tp_delta_ur;                           /**< index value for delta of ultra-relativistic neutrinos/relics */
   int index_tp_delta_ncdm1;                        /**< index value for delta of first non-cold dark matter species (e.g. massive neutrinos) */
   int index_tp_perturbed_recombination_delta_temp; /**< Gas temperature perturbation */
@@ -347,11 +338,8 @@ struct perturbs
   int index_tp_theta_g;     /**< index value for theta of gammas */
   int index_tp_theta_b;     /**< index value for theta of baryons */
   int index_tp_theta_cdm;   /**< index value for theta of cold dark matter */
-  int index_tp_theta_dcdm;  /**< index value for theta of DCDM */
   int index_tp_theta_fld;   /**< index value for theta of dark energy */
-  int index_tp_theta_scf;   /**< index value for theta of scalar field */
   int index_tp_theta_ur;    /**< index value for theta of ultra-relativistic neutrinos/relics */
-  int index_tp_theta_dr;    /**< index value for F1 of decay radiation */
   int index_tp_theta_ncdm1; /**< index value for theta of first non-cold dark matter species (e.g. massive neutrinos) */
 
   int index_tp_phi;          /**< index value for metric fluctuation phi */
@@ -443,32 +431,28 @@ struct perturbs
 
 struct perturb_vector
 {
-  int index_pt_delta_g;       /**< photon density */
-  int index_pt_theta_g;       /**< photon velocity */
-  int index_pt_shear_g;       /**< photon shear */
-  int index_pt_l3_g;          /**< photon l=3 */
-  int l_max_g;                /**< max momentum in Boltzmann hierarchy (at least 3) */
-  int index_pt_pol0_g;        /**< photon polarization, l=0 */
-  int index_pt_pol1_g;        /**< photon polarization, l=1 */
-  int index_pt_pol2_g;        /**< photon polarization, l=2 */
-  int index_pt_pol3_g;        /**< photon polarization, l=3 */
-  int l_max_pol_g;            /**< max momentum in Boltzmann hierarchy (at least 3) */
-  int index_pt_delta_b;       /**< baryon density */
-  int index_pt_theta_b;       /**< baryon velocity */
-  int index_pt_delta_cdm;     /**< cdm density */
-  int index_pt_theta_cdm;     /**< cdm velocity */
-  int index_pt_delta_dcdm;    /**< dcdm density */
-  int index_pt_theta_dcdm;    /**< dcdm velocity */
-  int index_pt_delta_fld;     /**< dark energy density in true fluid case */
-  int index_pt_theta_fld;     /**< dark energy velocity in true fluid case */
-  int index_pt_Gamma_fld;     /**< unique dark energy dynamical variable in PPF case */
-  int index_pt_phi_scf;       /**< scalar field density */
-  int index_pt_phi_prime_scf; /**< scalar field velocity */
-  int index_pt_delta_ur;      /**< density of ultra-relativistic neutrinos/relics */
-  int index_pt_theta_ur;      /**< velocity of ultra-relativistic neutrinos/relics */
-  int index_pt_shear_ur;      /**< shear of ultra-relativistic neutrinos/relics */
-  int index_pt_l3_ur;         /**< l=3 of ultra-relativistic neutrinos/relics */
-  int l_max_ur;               /**< max momentum in Boltzmann hierarchy (at least 3) */
+  int index_pt_delta_g;   /**< photon density */
+  int index_pt_theta_g;   /**< photon velocity */
+  int index_pt_shear_g;   /**< photon shear */
+  int index_pt_l3_g;      /**< photon l=3 */
+  int l_max_g;            /**< max momentum in Boltzmann hierarchy (at least 3) */
+  int index_pt_pol0_g;    /**< photon polarization, l=0 */
+  int index_pt_pol1_g;    /**< photon polarization, l=1 */
+  int index_pt_pol2_g;    /**< photon polarization, l=2 */
+  int index_pt_pol3_g;    /**< photon polarization, l=3 */
+  int l_max_pol_g;        /**< max momentum in Boltzmann hierarchy (at least 3) */
+  int index_pt_delta_b;   /**< baryon density */
+  int index_pt_theta_b;   /**< baryon velocity */
+  int index_pt_delta_cdm; /**< cdm density */
+  int index_pt_theta_cdm; /**< cdm velocity */
+  int index_pt_delta_fld; /**< dark energy density in true fluid case */
+  int index_pt_theta_fld; /**< dark energy velocity in true fluid case */
+  int index_pt_Gamma_fld; /**< unique dark energy dynamical variable in PPF case */
+  int index_pt_delta_ur;  /**< density of ultra-relativistic neutrinos/relics */
+  int index_pt_theta_ur;  /**< velocity of ultra-relativistic neutrinos/relics */
+  int index_pt_shear_ur;  /**< shear of ultra-relativistic neutrinos/relics */
+  int index_pt_l3_ur;     /**< l=3 of ultra-relativistic neutrinos/relics */
+  int l_max_ur;           /**< max momentum in Boltzmann hierarchy (at least 3) */
 /* perturbed recombination */
   int index_pt_perturbed_recombination_delta_temp; /**< Gas temperature perturbation */
   int index_pt_perturbed_recombination_delta_chi;  /**< Inionization fraction perturbation */

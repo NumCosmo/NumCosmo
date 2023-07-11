@@ -17,6 +17,7 @@
  */
 
 #include "spectra.h"
+#include <numcosmo/numcosmo.h>
 
 int
 spectra_bandpower (struct spectra *psp,
@@ -2247,11 +2248,8 @@ spectra_indices (
   class_define_index (psp->index_tr_delta_g, ppt->has_source_delta_g, index_tr, 1);
   class_define_index (psp->index_tr_delta_b, ppt->has_source_delta_b, index_tr, 1);
   class_define_index (psp->index_tr_delta_cdm, ppt->has_source_delta_cdm, index_tr, 1);
-  class_define_index (psp->index_tr_delta_dcdm, ppt->has_source_delta_dcdm, index_tr, 1);
-  class_define_index (psp->index_tr_delta_scf, ppt->has_source_delta_scf, index_tr, 1);
   class_define_index (psp->index_tr_delta_fld, ppt->has_source_delta_fld, index_tr, 1);
   class_define_index (psp->index_tr_delta_ur, ppt->has_source_delta_ur, index_tr, 1);
-  class_define_index (psp->index_tr_delta_dr, ppt->has_source_delta_dr, index_tr, 1);
   class_define_index (psp->index_tr_delta_ncdm1, ppt->has_source_delta_ncdm, index_tr, pba->N_ncdm);
   class_define_index (psp->index_tr_delta_tot, ppt->has_density_transfers, index_tr, 1);
   class_define_index (psp->index_tr_phi, ppt->has_source_phi, index_tr, 1);
@@ -2267,11 +2265,8 @@ spectra_indices (
   class_define_index (psp->index_tr_theta_g, ppt->has_source_theta_g, index_tr, 1);
   class_define_index (psp->index_tr_theta_b, ppt->has_source_theta_b, index_tr, 1);
   class_define_index (psp->index_tr_theta_cdm, ppt->has_source_theta_cdm, index_tr, 1);
-  class_define_index (psp->index_tr_theta_dcdm, ppt->has_source_theta_dcdm, index_tr, 1);
-  class_define_index (psp->index_tr_theta_scf, ppt->has_source_theta_scf, index_tr, 1);
   class_define_index (psp->index_tr_theta_fld, ppt->has_source_theta_fld, index_tr, 1);
   class_define_index (psp->index_tr_theta_ur, ppt->has_source_theta_ur, index_tr, 1);
-  class_define_index (psp->index_tr_theta_dr, ppt->has_source_theta_dr, index_tr, 1);
   class_define_index (psp->index_tr_theta_ncdm1, ppt->has_source_theta_ncdm, index_tr, pba->N_ncdm);
   class_define_index (psp->index_tr_theta_tot, ppt->has_velocity_transfers, index_tr, 1);
 
@@ -3095,6 +3090,8 @@ spectra_pk (
 
   /** - define local variables */
 
+  const double h = nc_hicosmo_h (pba->cosmo);
+
   int index_md;
   int index_ic1, index_ic2, index_ic1_ic1, index_ic2_ic2, index_ic1_ic2;
   int index_k;
@@ -3376,25 +3373,25 @@ spectra_pk (
 
   /* compute sigma8 (mean variance today in sphere of radius 8/h Mpc */
 
-  class_call (spectra_sigma (pba, ppm, psp, 8. / pba->h, 0., &(psp->sigma8)),
+  class_call (spectra_sigma (pba, ppm, psp, 8. / h, 0., &(psp->sigma8)),
               psp->error_message,
               psp->error_message);
 
   if (psp->spectra_verbose > 0)
     fprintf (stdout, " -> sigma8=%g (computed till k = %g h/Mpc)\n",
              psp->sigma8,
-             exp (psp->ln_k[psp->ln_k_size - 1]) / pba->h);
+             exp (psp->ln_k[psp->ln_k_size - 1]) / h);
 
   if (pba->has_ncdm)
   {
-    class_call (spectra_sigma_cb (pba, ppm, psp, 8. / pba->h, 0., &(psp->sigma8_cb)),
+    class_call (spectra_sigma_cb (pba, ppm, psp, 8. / h, 0., &(psp->sigma8_cb)),
                 psp->error_message,
                 psp->error_message);
 
     if (psp->spectra_verbose > 0)
       fprintf (stdout, " -> sigma8 (ONLY CDM+BARYON)=%g (computed till k = %g h/Mpc)\n",
                psp->sigma8_cb,
-               exp (psp->ln_k[psp->ln_k_size - 1]) / pba->h);
+               exp (psp->ln_k[psp->ln_k_size - 1]) / h);
   }
 
   /**- if interpolation of \f$ P_{NL}(k,\tau)\f$ will be needed (as a function of tau),
@@ -3823,40 +3820,6 @@ spectra_matter_transfers (
           rho_plus_p_tot += rho_i;
         }
 
-        /* T_scf(k,tau) */
-
-        if (pba->has_scf == _TRUE_)
-        {
-          rho_i = pvecback_sp_long[pba->index_bg_rho_scf];
-
-          if (ppt->has_source_delta_scf == _TRUE_)
-          {
-            delta_i = ppt->sources[index_md]
-                      [index_ic * ppt->tp_size[index_md] + ppt->index_tp_delta_scf]
-                      [(index_tau - psp->ln_tau_size + ppt->tau_size) * ppt->k_size[index_md] + index_k];
-
-            psp->matter_transfer[((index_tau * psp->ln_k_size + index_k) * psp->ic_size[index_md] + index_ic) * psp->tr_size + psp->index_tr_delta_scf] = delta_i;
-
-            delta_rho_tot += rho_i * delta_i;
-          }
-
-          rho_tot += rho_i;
-
-          if (ppt->has_source_theta_scf == _TRUE_)
-          {
-            theta_i = ppt->sources[index_md]
-                      [index_ic * ppt->tp_size[index_md] + ppt->index_tp_theta_scf]
-                      [(index_tau - psp->ln_tau_size + ppt->tau_size) * ppt->k_size[index_md] + index_k];
-
-            psp->matter_transfer[((index_tau * psp->ln_k_size + index_k) * psp->ic_size[index_md] + index_ic) * psp->tr_size + psp->index_tr_theta_scf] = theta_i;
-
-            rho_plus_p_theta_tot += (rho_i + pvecback_sp_long[pba->index_bg_p_scf]) * theta_i;
-          }
-
-          rho_plus_p_tot += (rho_i + pvecback_sp_long[pba->index_bg_p_scf]);
-        }
-
-
         /* T_fld(k,tau) */
 
         if (pba->has_fld == _TRUE_)
@@ -4078,7 +4041,6 @@ spectra_output_tk_titles (struct background *pba,
         }
       }
 
-      class_store_columntitle (titles, "d_scf", pba->has_scf);
       class_store_columntitle (titles, "d_tot", _TRUE_);
       class_store_columntitle (titles, "phi", ppt->has_source_phi);
       class_store_columntitle (titles, "psi", ppt->has_source_psi);
@@ -4106,7 +4068,6 @@ spectra_output_tk_titles (struct background *pba,
         }
       }
 
-      class_store_columntitle (titles, "t__scf", pba->has_scf);
       class_store_columntitle (titles, "t_tot", _TRUE_);
     }
   }
@@ -4135,6 +4096,7 @@ spectra_output_tk_data (
   double            *data
                        )
 {
+  const double h = nc_hicosmo_h (pba->cosmo);
   int n_ncdm;
   double k, k_over_h, k2;
   double *tkfull = NULL; /* array with argument
@@ -4192,7 +4154,7 @@ spectra_output_tk_data (
       tk       = &(tkfull[(index_k * psp->ic_size[index_md] + index_ic) * psp->tr_size]);
       k        = exp (psp->ln_k[index_k]);
       k2       = k * k;
-      k_over_h = k / pba->h;
+      k_over_h = k / h;
 
       class_store_double (dataptr, k_over_h, _TRUE_, storeidx);
 
@@ -4216,9 +4178,6 @@ spectra_output_tk_data (
             }
           }
 
-          class_store_double (dataptr, tk[psp->index_tr_delta_dcdm], ppt->has_source_delta_dcdm, storeidx);
-          class_store_double (dataptr, tk[psp->index_tr_delta_dr], ppt->has_source_delta_dr, storeidx);
-          class_store_double (dataptr, tk[psp->index_tr_delta_scf], ppt->has_source_delta_scf, storeidx);
           class_store_double (dataptr, tk[psp->index_tr_delta_tot], _TRUE_, storeidx);
           class_store_double (dataptr, tk[psp->index_tr_phi], ppt->has_source_phi, storeidx);
           class_store_double (dataptr, tk[psp->index_tr_psi], ppt->has_source_psi, storeidx);
@@ -4245,9 +4204,6 @@ spectra_output_tk_data (
             }
           }
 
-          class_store_double (dataptr, tk[psp->index_tr_theta_dcdm], ppt->has_source_theta_dcdm, storeidx);
-          class_store_double (dataptr, tk[psp->index_tr_theta_dr], ppt->has_source_theta_dr, storeidx);
-          class_store_double (dataptr, tk[psp->index_tr_theta_scf], ppt->has_source_theta_scf, storeidx);
           class_store_double (dataptr, tk[psp->index_tr_theta_tot], _TRUE_, storeidx);
         }
       }

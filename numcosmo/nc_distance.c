@@ -101,7 +101,7 @@
  * D_t(z_1, z_2) &= \frac{\sinh\left\\{\sqrt{\Omega_{k0}}\left[D_c(z_2)-D_c(z_1)\right]\right\\}}{\sqrt{\Omega_{k0}}}, \\\\ \label{eq:def:DA12}
  * D_A(z_1, z_2) &= D_t (z_1, z_2) / (1 + z_2).
  * \end{align}
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -137,24 +137,24 @@ static void
 nc_distance_init (NcDistance *dist)
 {
   dist->use_cache = TRUE;
-  
+
   dist->comoving_distance_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-  
+
   dist->comoving_infinity    = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->time_cache           = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->lookback_time_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
   dist->conformal_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-  
-  dist->sound_horizon_cache  = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
-  
+
+  dist->sound_horizon_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+
   dist->comoving_distance_spline = NULL;
   dist->inv_comoving_dist        = NULL;
   dist->cpu_inv_comoving         = FALSE;
-  
+
   dist->recomb = NULL;
-  
+
   dist->cmethod = NC_DISTANCE_COMOVING_METHOD_LEN;
-  
+
   dist->ctrl = ncm_model_ctrl_new (NULL);
 }
 
@@ -162,9 +162,9 @@ static void
 _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDistance *dist = NC_DISTANCE (object);
-  
+
   g_return_if_fail (NC_IS_DISTANCE (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZF:
@@ -187,9 +187,9 @@ static void
 _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDistance *dist = NC_DISTANCE (object);
-  
+
   g_return_if_fail (NC_IS_DISTANCE (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZF:
@@ -216,7 +216,8 @@ _nc_distance_constructed (GObject *object)
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
     NcDistance *dist = NC_DISTANCE (object);
-    NcmSpline *s = ncm_spline_cubic_notaknot_new ();      
+    NcmSpline *s     = ncm_spline_cubic_notaknot_new ();
+
     dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
     ncm_spline_free (s);
@@ -227,19 +228,19 @@ static void
 _nc_distance_dispose (GObject *object)
 {
   NcDistance *dist = NC_DISTANCE (object);
-  
+
   ncm_function_cache_clear (&dist->comoving_distance_cache);
   ncm_function_cache_clear (&dist->comoving_infinity);
   ncm_function_cache_clear (&dist->time_cache);
   ncm_function_cache_clear (&dist->lookback_time_cache);
   ncm_function_cache_clear (&dist->conformal_time_cache);
   ncm_function_cache_clear (&dist->sound_horizon_cache);
-  
+
   ncm_ode_spline_clear (&dist->comoving_distance_spline);
   ncm_spline_clear (&dist->inv_comoving_dist);
-  
+
   ncm_model_ctrl_clear (&dist->ctrl);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_distance_parent_class)->dispose (object);
 }
@@ -255,13 +256,13 @@ static void
 nc_distance_class_init (NcDistanceClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->constructed  = &_nc_distance_constructed;
   object_class->set_property = &_nc_distance_set_property;
   object_class->get_property = &_nc_distance_get_property;
   object_class->dispose      = &_nc_distance_dispose;
   object_class->finalize     = &_nc_distance_finalize;
-  
+
   /**
    * NcDistance:zf:
    *
@@ -277,7 +278,7 @@ nc_distance_class_init (NcDistanceClass *klass)
                                                         G_MAXDOUBLE,
                                                         10.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcDistance:recomb:
    *
@@ -319,7 +320,7 @@ nc_distance_new (gdouble zf)
  * nc_distance_ref:
  * @dist: a #NcDistance
  *
- * Increases the reference count of @dist atomically. 
+ * Increases the reference count of @dist atomically.
  *
  * Returns: (transfer full): @dist.
  */
@@ -333,7 +334,7 @@ nc_distance_ref (NcDistance *dist)
  * nc_distance_free:
  * @dist: a #NcDistance
  *
- * Atomically decrements the reference count of @dist by one. 
+ * Atomically decrements the reference count of @dist by one.
  * If the reference count drops to 0, all memory allocated by @dist is released.
  *
  */
@@ -347,8 +348,8 @@ nc_distance_free (NcDistance *dist)
  * nc_distance_clear:
  * @dist: a #NcDistance
  *
- * Atomically decrements the reference count of @dist by one. 
- * If the reference count drops to 0, all memory allocated by @dist is released. 
+ * Atomically decrements the reference count of @dist by one.
+ * If the reference count drops to 0, all memory allocated by @dist is released.
  * Set pointer to NULL.
  *
  */
@@ -371,7 +372,7 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
   if (zf > dist->zf)
   {
-    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, zf);
     dist->zf = zf;
 
     ncm_model_ctrl_force_update (dist->ctrl);
@@ -392,7 +393,7 @@ nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb)
   if (dist->recomb != recomb)
   {
     nc_recomb_clear (&dist->recomb);
-    
+
     if (recomb != NULL)
       dist->recomb = nc_recomb_ref (recomb);
 
@@ -417,7 +418,6 @@ nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi)
   }
 }
 
-
 /**
  * nc_distance_prepare:
  * @dist: a #NcDistance
@@ -437,7 +437,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   ncm_function_cache_empty_cache (dist->lookback_time_cache);
   ncm_function_cache_empty_cache (dist->conformal_time_cache);
   ncm_function_cache_empty_cache (dist->sound_horizon_cache);
-  
+
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
   {
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_FROM_MODEL;
@@ -447,27 +447,29 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
   }
-  
+
   if (dist->cpu_inv_comoving)
   {
     NcmSpline *s      = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
     NcmVector *z_vec  = ncm_spline_get_xv (s);
     NcmVector *xi_vec = ncm_spline_get_yv (s);
-    
+
     ncm_spline_clear (&dist->inv_comoving_dist);
     dist->inv_comoving_dist = ncm_spline_copy_empty (s);
-    
+
     ncm_spline_set (dist->inv_comoving_dist, xi_vec, z_vec, TRUE);
-    
+
     ncm_vector_free (z_vec);
     ncm_vector_free (xi_vec);
   }
-  
+
   if (dist->recomb != NULL)
     nc_recomb_prepare_if_needed (dist->recomb, cosmo);
-  
+
+  dist->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+
   ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo));
-  
+
   return;
 }
 
@@ -495,7 +497,7 @@ gdouble
 nc_distance_hubble (NcDistance *dist, NcHICosmo *cosmo)
 {
   NCM_UNUSED (dist);
-  
+
   return ncm_c_c () / (nc_hicosmo_H0 (cosmo) * 1.0e3);
 }
 
@@ -517,9 +519,9 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
-    
+
       return nc_hicosmo_Dc (cosmo, z);
-      
+
       break;
     case NC_DISTANCE_COMOVING_METHOD_INT_E:
     {
@@ -531,26 +533,42 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
       {
         gdouble result, error;
         gsl_function F;
-        
+
         F.function = &_comoving_distance_integral_argument;
         F.params   = cosmo;
-        
+
         if (dist->use_cache)
           ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
         else
           ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
-        
+
         return result;
       }
-      
+
       break;
     }
     default:
       g_assert_not_reached ();
       break;
   }
-  
+
   return GSL_NAN;
+}
+
+/**
+ * nc_distance_comoving_Mpc:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Calculate the comoving distance $D_c (z)$ as defined in Eq. $\eqref{eq:def:Dc}$.
+ *
+ * Returns: $D_c(z)$ in Mpc.
+ */
+gdouble
+nc_distance_comoving_Mpc (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
+{
+  return nc_distance_comoving (dist, cosmo, z) * dist->RH_Mpc;
 }
 
 static gdouble
@@ -558,10 +576,10 @@ _comoving_distance_integral_argument (gdouble z, gpointer p)
 {
   NcHICosmo *cosmo = NC_HICOSMO (p);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-  
+
   if (GSL_SIGN (E2) == -1.0)
     return GSL_POSINF;
-  
+
   return 1.0 / sqrt (E2);
 }
 
@@ -570,7 +588,7 @@ _dcddz (gdouble cd, const gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-  
+
   return 1.0 / sqrt (E2);
 }
 
@@ -579,29 +597,29 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
 {
   const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-  
+
   switch (k)
   {
     case 0:
-    
+
       return r;
-      
+
       break;
     case -1:
-    
+
       return sinh (sqrt_Omega_k0 * r) / sqrt_Omega_k0;
-      
+
       break;
     case 1:
-    
+
       return fabs (sin (sqrt_Omega_k0 * r) / sqrt_Omega_k0);
-      
+
       break;
     default:
       g_assert_not_reached ();
-      
+
       return 0.0;
-      
+
       break;
   }
 }
@@ -621,10 +639,10 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
-  
+
   if (gsl_isinf (comoving_dist))
     return comoving_dist;
-  
+
   return _nc_distance_sinn (comoving_dist, Omega_k0);
 }
 
@@ -645,7 +663,7 @@ nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble 
   const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble dc1      = nc_distance_comoving (dist, cosmo, z1);
   const gdouble dc2      = nc_distance_comoving (dist, cosmo, z2);
-  
+
   return _nc_distance_sinn (dc2 - dc1, Omega_k0);
 }
 
@@ -667,35 +685,35 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
   gdouble E             = sqrt (nc_hicosmo_E2 (cosmo, z));
   gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-  
+
   switch (k)
   {
     case 0:
-    
+
       return 1.0 / E;
-      
+
       break;
     case -1:
     {
       gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
-      
+
       return cosh (sqrt_Omega_k0 * comoving_dist) / E;
-      
+
       break;
     }
     case 1:
     {
       gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
-      
+
       return ncm_c_sign_sin (sqrt_Omega_k0 * comoving_dist) * cos (sqrt_Omega_k0 * comoving_dist) / E; /* LOOK */
-      
+
       break;
     }
     default:
       g_assert_not_reached ();
-      
+
       return 0.0;
-      
+
       break;
   }
 }
@@ -715,7 +733,7 @@ nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   const gdouble Dl = (1.0 + z) * Dt;
-  
+
   return Dl;
 }
 
@@ -734,7 +752,7 @@ nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble 
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   const gdouble DA = Dt / (1.0 + z);
-  
+
   return DA;
 }
 
@@ -754,7 +772,7 @@ nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gd
 {
   const gdouble Dt = nc_distance_transverse_z1_z2 (dist, cosmo, z1, z2);
   const gdouble DA = Dt / (1.0 + z2);
-  
+
   return DA;
 }
 
@@ -772,10 +790,10 @@ gdouble
 nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble Dl = nc_distance_luminosity (dist, cosmo, z);
-  
+
   if (!gsl_finite (Dl))
     return Dl;
-  
+
   return (5.0 * log10 (Dl) + 25.0);
 }
 
@@ -795,7 +813,7 @@ nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_
 {
   const gdouble Dt = nc_distance_transverse (dist, cosmo, z_cmb);
   const gdouble Dl = (1.0 + z_he) * Dt;
-  
+
   return Dl;
 }
 
@@ -815,10 +833,10 @@ gdouble
 nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb)
 {
   const gdouble Dl = nc_distance_luminosity_hef (dist, cosmo, z_he, z_cmb);
-  
+
   if (!gsl_finite (Dl))
     return Dl;
-  
+
   return (5.0 * log10 (Dl) + 25.0);
 }
 
@@ -839,7 +857,7 @@ gdouble
 nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo)
 {
   const gdouble z_star = nc_distance_decoupling_redshift (dist, cosmo);
-  
+
   if (gsl_finite (z_star))
     return sqrt (nc_hicosmo_E2 (cosmo, z_star)) *
            nc_distance_transverse (dist, cosmo, z_star) / (1.0 + z_star);
@@ -868,7 +886,7 @@ nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z
 {
   const gdouble sqrt_mod_Omega_m0 = sqrt (fabs (nc_hicosmo_Omega_m0 (cosmo)));
   const gdouble transverse        = nc_distance_transverse (dist, cosmo, z);
-  
+
   return sqrt_mod_Omega_m0 * transverse;
 }
 
@@ -887,11 +905,11 @@ nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo)
 {
   const gdouble sqrt_mod_Omega_m0 = sqrt (fabs (nc_hicosmo_Omega_m0 (cosmo)));
   const gdouble z_star            = nc_distance_decoupling_redshift (dist, cosmo);
-  
+
   if (gsl_finite (z_star))
   {
     const gdouble transverse = nc_distance_transverse (dist, cosmo, z_star);
-    
+
     return sqrt_mod_Omega_m0 * transverse;
   }
   else
@@ -914,7 +932,7 @@ gdouble
 nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
 {
   const gdouble z_star = nc_distance_decoupling_redshift (dist, cosmo);
-  
+
   if (gsl_finite (z_star))
     return nc_distance_comoving (dist, cosmo, z_star);
   else
@@ -945,7 +963,7 @@ gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
   NCM_UNUSED (dist);
-  
+
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_z_lss))
   {
     return nc_hicosmo_z_lss (cosmo);
@@ -956,7 +974,7 @@ nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
     gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
     gdouble g1         = 0.0783 * pow (omega_b_h2, -0.238) / (1.0 + 39.5 * pow (omega_b_h2, 0.763));
     gdouble g2         = 0.560 / (1.0 + 21.1 * pow (omega_b_h2, 1.81));
-    
+
     return 1048.0 * (1.0 + 1.24e-3 * pow (omega_b_h2, -0.738)) * (1.0 + g1 * pow (omega_m_h2, g2));
   }
 }
@@ -985,17 +1003,17 @@ nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
   gdouble result, error;
   gsl_function F;
-  
+
   g_assert (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_bgp_cs2));
-  
+
   F.function = &sound_horizon_integral_argument;
   F.params   = cosmo;
-  
+
   if (dist->use_cache)
     ncm_integral_cached_x_inf (dist->sound_horizon_cache, &F, z, &result, &error);
   else
     ncm_integral_locked_a_inf (&F, z, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-  
+
   return _nc_distance_sinn (result, Omega_k0);
 }
 
@@ -1003,9 +1021,10 @@ static gdouble
 sound_horizon_integral_argument (gdouble z, gpointer p)
 {
   NcHICosmo *cosmo = NC_HICOSMO (p);
-  
+
   const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
   const gdouble bgp_cs2 = nc_hicosmo_bgp_cs2 (cosmo, z);
+
   /*printf ("% 22.15g % 22.15g % 22.15g\n", z, bgp_cs2, E2);*/
   return sqrt (bgp_cs2 / E2);
 }
@@ -1028,7 +1047,7 @@ gdouble
 nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   NCM_UNUSED (dist);
-  
+
   return -sound_horizon_integral_argument (z, cosmo);
 }
 
@@ -1050,7 +1069,7 @@ gdouble
 nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
 {
   gdouble z = nc_distance_decoupling_redshift (dist, cosmo);
-  
+
   if (gsl_finite (z))
     return M_PI * nc_distance_transverse (dist, cosmo, z) / nc_distance_sound_horizon (dist, cosmo, z);
   else
@@ -1076,7 +1095,7 @@ gdouble
 nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
 {
   gdouble z = nc_distance_decoupling_redshift (dist, cosmo);
-  
+
   if (gsl_finite (z))
     return 100.0 * nc_distance_sound_horizon (dist, cosmo, z) / nc_distance_transverse (dist, cosmo, z);
   else
@@ -1117,9 +1136,9 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
     gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
     gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
     gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
-    
+
     NCM_UNUSED (dist);
-    
+
     return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
            (1.0 + b1 * pow (omega_b_h2, b2));
   }
@@ -1150,7 +1169,7 @@ nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   gdouble Dt = nc_distance_transverse (dist, cosmo, z);
   gdouble E  = sqrt (nc_hicosmo_E2 (cosmo, z));
   gdouble Dv = cbrt (Dt * Dt * z / E);
-  
+
   return Dv;
 }
 
@@ -1174,7 +1193,7 @@ nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble Dv            = nc_distance_dilation_scale (dist, cosmo, z);
   gdouble sqrt_Omega_m0 = sqrt (nc_hicosmo_Omega_m0 (cosmo));
-  
+
   return sqrt_Omega_m0 * Dv / z;
 }
 
@@ -1192,7 +1211,7 @@ gdouble
 nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 {
   gdouble r_zd;
-  
+
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_as_drag))
   {
     r_zd = nc_hicosmo_as_drag (cosmo);
@@ -1200,13 +1219,13 @@ nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
   else
   {
     gdouble zd = nc_distance_drag_redshift (dist, cosmo);
-    
+
     if (!gsl_finite (zd))
       return GSL_NAN;
-    
+
     r_zd = nc_distance_sound_horizon (dist, cosmo, zd);
   }
-  
+
   return r_zd;
 }
 
@@ -1262,7 +1281,7 @@ nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble E    = nc_hicosmo_E (cosmo, z);
-  
+
   return 1.0 / (E * r_zd);
 }
 
@@ -1282,7 +1301,7 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble r_zd = nc_distance_r_zd (dist, cosmo);
   gdouble DA   = nc_distance_angular_diameter (dist, cosmo, z);
-  
+
   return DA / r_zd;
 }
 
@@ -1320,7 +1339,7 @@ _nc_distance_comoving_infinity_integrand (gdouble logx, gpointer p)
     NcHICosmo *cosmo = NC_HICOSMO (p);
     const gdouble z  = expm1 (logx);
     const gdouble E  = sqrt (nc_hicosmo_E2 (cosmo, z));
-    
+
     if (gsl_finite (E))
       return (1.0 + z) / E;
     else
@@ -1343,15 +1362,15 @@ nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gd
 {
   gdouble result, error;
   gsl_function F;
-  
+
   F.function = &_nc_distance_comoving_infinity_integrand;
   F.params   = cosmo;
-  
+
   if (dist->use_cache)
     ncm_integral_cached_x_inf (dist->comoving_infinity, &F, log1p (z), &result, &error);
   else
     ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-  
+
   return result;
 }
 
@@ -1371,10 +1390,10 @@ nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const 
 {
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble comoving_dist = nc_distance_comoving_z_to_infinity (dist, cosmo, z);
-  
+
   if (gsl_isinf (comoving_dist))
     return comoving_dist;
-  
+
   return _nc_distance_sinn (comoving_dist, Omega_k0);
 }
 
@@ -1392,7 +1411,7 @@ gdouble
 nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
 {
   g_assert (dist->cpu_inv_comoving);
-  
+
   return ncm_spline_eval (dist->inv_comoving_dist, xi);
 }
 
@@ -1416,7 +1435,7 @@ _nc_distance_cosmic_time_integrand (gdouble logx, gpointer p)
     NcHICosmo *cosmo = NC_HICOSMO (p);
     const gdouble z  = expm1 (logx);
     const gdouble E  = sqrt (nc_hicosmo_E2 (cosmo, z));
-    
+
     if (gsl_finite (E))
       return 1.0 / E;
     else
@@ -1442,15 +1461,15 @@ nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
-  
+
   F.function = &_nc_distance_cosmic_time_integrand;
   F.params   = cosmo;
-  
+
   if (dist->use_cache)
     ncm_integral_cached_x_inf (dist->time_cache, &F, log1p (z), &result, &error);
   else
     ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-  
+
   return result;
 }
 
@@ -1473,15 +1492,15 @@ nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
-  
+
   F.function = &_nc_distance_cosmic_time_integrand;
   F.params   = cosmo;
-  
+
   if (dist->use_cache)
     ncm_integral_cached_0_x (dist->lookback_time_cache, &F, log1p (z), &result, &error);
   else
     ncm_integral_locked_a_b (&F, 0.0, log1p (z), 0.0, NCM_INTEGRAL_ERROR, &result, &error);
-  
+
   return result;
 }
 
@@ -1516,7 +1535,7 @@ _nc_distance_conformal_time_integrand (gdouble logx, gpointer p)
     const gdouble z  = expm1 (logx);
     const gdouble x  = 1.0 + z;
     const gdouble E  = sqrt (nc_hicosmo_E2 (cosmo, z));
-    
+
     if (gsl_finite (E))
       return x / E;
     else
@@ -1540,15 +1559,15 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble result, error;
   gsl_function F;
-  
+
   F.function = &_nc_distance_conformal_time_integrand;
   F.params   = cosmo;
-  
+
   if (dist->use_cache)
     ncm_integral_cached_x_inf (dist->conformal_time_cache, &F, log1p (z), &result, &error);
   else
     ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-  
+
   return result;
 }
 
@@ -1604,7 +1623,7 @@ _nc_distance_register_functions (void)
   ncm_mset_func_list_register ("angular_diameter_curvature_scale", "z_\\mathrm{dec}",          "NcDistance", "Angular diameter curvature scale", NC_TYPE_DISTANCE, _nc_distance_flist_angular_diameter_curvature_scale, 0, 1);
   ncm_mset_func_list_register ("r_zd",                             "r_\\mathrm{dec}",          "NcDistance", "Sound horizon at drag redshift",   NC_TYPE_DISTANCE, _nc_distance_flist_r_zd,                             0, 1);
   ncm_mset_func_list_register ("r_zd_Mpc",                         "r_\\mathrm{dec}R_H",       "NcDistance", "Sound horizon at drag redshift in Mpc", NC_TYPE_DISTANCE, _nc_distance_flist_r_zd_Mpc,                    0, 1);
-  
+
   ncm_mset_func_list_register ("comoving",         "d_\\mathrm{c}",               "NcDistance", "Comoving distance",          NC_TYPE_DISTANCE, _nc_distance_flist_comoving,         1, 1);
   ncm_mset_func_list_register ("transverse",       "d_\\mathrm{t}",               "NcDistance", "Transverse distance",        NC_TYPE_DISTANCE, _nc_distance_flist_transverse,       1, 1);
   ncm_mset_func_list_register ("luminosity",       "d_\\mathrm{l}",               "NcDistance", "Luminosity distance",        NC_TYPE_DISTANCE, _nc_distance_flist_luminosity,       1, 1);

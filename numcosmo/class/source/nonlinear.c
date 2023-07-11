@@ -538,6 +538,7 @@ nonlinear_halofit (
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
 
   double Omega_m, Omega_v, fnu, Omega0_m, w0, dw_over_da_fld, integral_fld;
+  const double h = nc_hicosmo_h (pba->cosmo);
 
   /** Determine non linear ratios (from pk) **/
 
@@ -945,7 +946,7 @@ nonlinear_halofit (
       pk_halo = a * pow (y, f1 * 3.) / (1. + b * pow (y, f2) + pow (f3 * c * y, 3. - gam));
       pk_halo = pk_halo / (1 + xmu * pow (y, -1) + xnu * pow (y, -2)) * (1 + fnu * (0.977 - 18.015 * (Omega0_m - 0.3)));
       /* rk is in 1/Mpc, 47.48and 1.5 in Mpc**-2, so we need an h**2 here (Credits Antonio J. Cuesta) */
-      pk_linaa = pk_lin * (1 + fnu * 47.48 * pow (rk / pba->h, 2) / (1 + 1.5 * pow (rk / pba->h, 2)));
+      pk_linaa = pk_lin * (1 + fnu * 47.48 * pow (rk / h, 2) / (1 + 1.5 * pow (rk / h, 2)));
       pk_quasi = pk_lin * pow ((1 + pk_linaa), beta) / (1 + pk_linaa * alpha) * exp (-y / 4.0 - pow (y, 2) / 8.0);
 
       pk_nl[index_k] = (pk_halo + pk_quasi) / pow (pnl->k[index_k], 3) / anorm;
