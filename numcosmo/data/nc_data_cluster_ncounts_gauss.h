@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -74,16 +74,16 @@ struct _NcDataClusterNCountsGauss
 
 GType nc_data_cluster_ncounts_gauss_get_type (void) G_GNUC_CONST;
 
-NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new(NcClusterAbundance *cad);
+NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad);
 
 
-void nc_data_cluster_ncounts_gauss_set_z_obs ( NcDataClusterNCountsGauss *ncounts_gauss , NcmVector *z_obs);
-void nc_data_cluster_ncounts_gauss_set_z_obs_params ( NcDataClusterNCountsGauss *ncounts_gauss , NcmMatrix *z_obs_params);
-void nc_data_cluster_ncounts_gauss_set_lnM_obs ( NcDataClusterNCountsGauss *ncounts_gauss , NcmVector *lnM_obs);
-void nc_data_cluster_ncounts_gauss_set_lnM_obs_params ( NcDataClusterNCountsGauss *ncounts_gauss , NcmMatrix *lnM_obs_params);
-void nc_data_cluster_ncounts_gauss_set_has_ssc ( NcDataClusterNCountsGauss *ncounts_gauss , gboolean on);
-void nc_data_cluster_ncounts_gauss_set_s_matrix ( NcDataClusterNCountsGauss *ncounts_gauss , NcmMatrix *s_matrix);
-void nc_data_cluster_ncounts_gauss_set_bin_count (NcDataClusterNCountsGauss *ncounts_gauss , NcmVector *bin_count);
+void nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *z_obs);
+void nc_data_cluster_ncounts_gauss_set_z_obs_params (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *z_obs_params);
+void nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *lnM_obs);
+void nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *lnM_obs_params);
+void nc_data_cluster_ncounts_gauss_set_has_ssc (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on);
+void nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix);
+void nc_data_cluster_ncounts_gauss_set_bin_count (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *bin_count);
 
 NcmVector *nc_data_cluster_ncounts_gauss_get_z_obs (NcDataClusterNCountsGauss *ncounts_gauss);
 NcmMatrix *nc_data_cluster_ncounts_gauss_get_z_obs_params (NcDataClusterNCountsGauss *ncounts_gauss);
@@ -96,3 +96,4 @@ NcmVector *nc_data_cluster_ncounts_gauss_get_bin_count (NcDataClusterNCountsGaus
 G_END_DECLS
 
 #endif /* _NC_DATA_CLUSTER_NCOUNTS_GAUSS_H_ */
+
