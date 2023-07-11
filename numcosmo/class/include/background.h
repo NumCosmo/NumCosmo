@@ -47,26 +47,6 @@ struct background
 
   void *cosmo;
 
-  /*double H0; / **< \f$ H_0 \f$: Hubble parameter (in fact, [\f$H_0/c\f$]) in \f$ Mpc^{-1} \f$ * / */
-
-  /* double Omega0_g; / **< \f$ \Omega_{0 \gamma} \f$: photons * / */
-
-  /* double T_cmb; / **< \f$ T_{cmb} \f$: current CMB temperature in Kelvins * / */
-
-  /* double Omega0_b; / **< \f$ \Omega_{0 b} \f$: baryons * / */
-
-  /* double Omega0_cdm; / **< \f$ \Omega_{0 cdm} \f$: cold dark matter * / */
-
-  /* double Omega0_lambda; / **< \f$ \Omega_{0_\Lambda} \f$: cosmological constant * / */
-
-  /* double Omega0_fld; / **< \f$ \Omega_{0 de} \f$: fluid * / */
-
-  /* enum equation_of_state fluid_equation_of_state; / **< parametrisation scheme for fluid equation of state * / */
-
-  double w0_fld;    /**< \f$ w0_{DE} \f$: current fluid equation of state parameter */
-  double wa_fld;    /**< \f$ wa_{DE} \f$: fluid equation of state parameter derivative */
-  double Omega_EDE; /**< \f$ wa_{DE} \f$: Early Dark Energy density parameter */
-
   double cs2_fld; /**< \f$ c^2_{s~DE} \f$: sound speed of the fluid
                    *  in the frame comoving with the fluid (so, this is
                    *  not [delta p/delta rho] in the synchronous or

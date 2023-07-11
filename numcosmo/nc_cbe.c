@@ -146,9 +146,6 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pba.K                   = 0.0;
   cbe->priv->pba.sgnK                = 0;
   cbe->priv->pba.a_today             = 0.0;
-  cbe->priv->pba.w0_fld              = 0.0;
-  cbe->priv->pba.wa_fld              = 0.0;
-  cbe->priv->pba.Omega_EDE           = 0.0;
   cbe->priv->pba.cs2_fld             = 0.0;
   cbe->priv->pba.use_ppf             = _FALSE_;
   cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
@@ -1258,38 +1255,11 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     cbe->priv->pba.sgnK     = 0;
   }
 
-  if (NC_IS_HICOSMO_DE_XCDM (cosmo))
-  {
-    const gdouble w0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
+  cbe->priv->pba.cs2_fld = 1.0;
 
-    if (w0 != -1.0)
-    {
-      cbe->priv->pba.w0_fld  = w0;
-      cbe->priv->pba.wa_fld  = 0.0;
-      cbe->priv->pba.cs2_fld = 1.0;
-    }
-    else
-    {
-      cbe->priv->pba.w0_fld  = -1.0;
-      cbe->priv->pba.wa_fld  = 0.0;
-      cbe->priv->pba.cs2_fld = 1.0;
-    }
-  }
-  else if (NC_IS_HICOSMO_DE_CPL (cosmo))
-  {
-    const gdouble w0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
-    const gdouble w1 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
-
-    cbe->priv->pba.w0_fld  = w0;
-    cbe->priv->pba.wa_fld  = w1;
-    cbe->priv->pba.cs2_fld = 1.0;
-  }
-  else
-  {
+  if (!NC_IS_HICOSMO_DE (cosmo))
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
-  }
 
-  cbe->priv->pba.Omega_EDE          = 0.0;
   cbe->priv->pba.c_gamma_over_c_fld = 0.4;
   cbe->priv->pba.Omega_ini_dcdm     = 0.0;
 

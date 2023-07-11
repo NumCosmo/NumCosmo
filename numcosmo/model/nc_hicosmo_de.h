@@ -49,11 +49,13 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
 /**
  * NcHICosmoDEImpl:
  * @NC_HICOSMO_DE_IMPL_E2Omega_de: dark energy (DE) component of the normalized Hubble function (squared) $E^2(z)$
- * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: DE component of the first derivative of $E^2(z)$ with respect to the redshift $z$ 
+ * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: DE component of the first derivative of $E^2(z)$ with respect to the redshift $z$
  * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: DE component of the second derivative of $E^2(z)$ with respect to $z$
  * @NC_HICOSMO_DE_IMPL_w_de: DE equation of state
+ * @NC_HICOSMO_DE_IMPL_dw_de: DE equation of state
+ * @NC_HICOSMO_DE_IMPL_ln_rho_rho0: DE equation of state
  *
- * FIXME
+ * Flags to select which dark energy functions are implemented.
  *
  */
 typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
@@ -61,7 +63,9 @@ typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
   NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
   NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
   NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2,
-  NC_HICOSMO_DE_IMPL_w_de, 
+  NC_HICOSMO_DE_IMPL_w_de,
+  NC_HICOSMO_DE_IMPL_dw_de,
+  NC_HICOSMO_DE_IMPL_ln_rho_rho0,
   /* < private > */
   NC_HICOSMO_DE_IMPL_LAST, /*< skip >*/
 } NcHICosmoDEImpl;
@@ -78,7 +82,7 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_ENNU: effective number of neutrinos
  * @NC_HICOSMO_DE_OMEGA_B: baryon density parameter
  *
- * FIXME
+ * Enumerates the cosmological parameters used by the dark energy models.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
@@ -100,8 +104,8 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
  * @NC_HICOSMO_DE_MASSNU_T: massive neutrino temperatures
  * @NC_HICOSMO_DE_MASSNU_MU: massive neutrino chemical potentials
  * @NC_HICOSMO_DE_MASSNU_G: massive neutrino degeneracy factors
- * 
- * FIXME
+ *
+ * Enumerates the dark energy model vector parameters.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/
@@ -109,7 +113,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,
   NC_HICOSMO_DE_MASSNU_MU,
-  NC_HICOSMO_DE_MASSNU_G,   
+  NC_HICOSMO_DE_MASSNU_G,
   /* < private > */
   NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoDEVParams;
@@ -134,6 +138,8 @@ struct _NcHICosmoDEClass
   NcHICosmoDEFunc1 dE2Omega_de_dz;
   NcHICosmoDEFunc1 d2E2Omega_de_dz2;
   NcHICosmoDEFunc1 w_de;
+  NcHICosmoDEFunc1 dw_de;
+  NcHICosmoDEFunc1 ln_rho_rho0;
 };
 
 struct _NcHICosmoDE
@@ -154,11 +160,15 @@ void nc_hicosmo_de_set_E2Omega_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICo
 void nc_hicosmo_de_set_dE2Omega_de_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 void nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 void nc_hicosmo_de_set_w_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_dw_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_ln_rho_rho0_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 
 NCM_INLINE gdouble nc_hicosmo_de_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z);
 NCM_INLINE gdouble nc_hicosmo_de_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
 NCM_INLINE gdouble nc_hicosmo_de_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 NCM_INLINE gdouble nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z);
+NCM_INLINE gdouble nc_hicosmo_de_dw_de (NcHICosmoDE *cosmo_de, gdouble z);
+NCM_INLINE gdouble nc_hicosmo_de_ln_rho_rho0 (NcHICosmoDE *cosmo_de, gdouble z);
 NCM_INLINE gdouble nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z);
 
 G_END_DECLS
@@ -171,11 +181,12 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
-
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,E2Omega_de,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dE2Omega_de_dz,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2E2Omega_de_dz2,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,w_de,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, E2Omega_de, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, dE2Omega_de_dz, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, d2E2Omega_de_dz2, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, w_de, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, dw_de, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, ln_rho_rho0, z)
 
 NCM_INLINE gdouble
 nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z)
@@ -188,3 +199,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HICOSMO_DE_INLINE_H_ */
+

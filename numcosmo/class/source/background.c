@@ -263,12 +263,9 @@ background_functions (
   const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
-  double Omega0_fld       = 0.0;
 
   if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
     Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
-  else
-    Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   /* total density */
   double rho_tot;
@@ -496,9 +493,11 @@ background_w_fld (
   double                  *dw_over_da_fld,
   double                  *integral_fld)
 {
+  const double z = pba->a_today / a - 1.0;
+
   /** - first, define the function w(a) */
   {
-    *w_fld = pba->w0_fld + pba->wa_fld * (1. - a / pba->a_today);
+    *w_fld = nc_hicosmo_de_w_de (pba->cosmo, z);
   }
 
   /** - then, give the corresponding analytic derivative dw/da (used
@@ -507,7 +506,7 @@ background_w_fld (
    *     analytic expression of the derivative of the previous
    *     function, let's use it! */
   {
-    *dw_over_da_fld = -pba->wa_fld / pba->a_today;
+    *dw_over_da_fld = nc_hicosmo_de_dw_de (pba->cosmo, z) * (-pba->a_today / (a * a));
   }
 
   /** - finally, give the analytic solution of the following integral:
@@ -520,7 +519,7 @@ background_w_fld (
    *     implement a numerical calculation of this integral only for
    *     a=a_ini, using for instance Romberg integration. It should be
    *     fast, simple, and accurate enough. */
-  *integral_fld = 3. * ((1. + pba->w0_fld + pba->wa_fld) * log (pba->a_today / a) + pba->wa_fld * (a / pba->a_today - 1.));
+  *integral_fld = nc_hicosmo_de_ln_rho_rho0 (pba->cosmo, z);
 
   /** note: of course you can generalise these formulas to anything,
    *   defining new parameters pba->w..._fld. Just remember that so
@@ -1983,12 +1982,9 @@ background_initial_conditions (
 
   const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
   const double Omega0_g = nc_hicosmo_Omega_g0 (pba->cosmo);
-  double Omega0_lambda  = 0.0;
   double Omega0_fld     = 0.0;
 
-  if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
-    Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
-  else
+  if (!(NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0)))
     Omega0_fld = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
 
   /* scale factor */
