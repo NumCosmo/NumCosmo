@@ -84,6 +84,8 @@ gdouble nc_scalefactor_get_abstol (NcScalefactor *a);
 
 gdouble nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta);
 gdouble nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta);
+gdouble nc_scalefactor_eval_z_eta_Mpc (NcScalefactor *a, const gdouble eta_Mpc);
+gdouble nc_scalefactor_eval_a_eta_Mpc (NcScalefactor *a, const gdouble eta_Mpc);
 
 gdouble nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z);
 gdouble nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x);

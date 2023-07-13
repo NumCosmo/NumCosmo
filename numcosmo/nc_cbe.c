@@ -130,9 +130,6 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pba.deg_ncdm            = NULL;
   cbe->priv->pba.ncdm_psd_parameters = NULL;
   cbe->priv->pba.ncdm_psd_files      = NULL;
-  cbe->priv->pba.Omega0_k            = 0.0;
-  cbe->priv->pba.K                   = 0.0;
-  cbe->priv->pba.sgnK                = 0;
   cbe->priv->pba.a_today             = 0.0;
   cbe->priv->pba.cs2_fld             = 0.0;
   cbe->priv->pba.use_ppf             = _FALSE_;
@@ -1245,23 +1242,8 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     }
   }
 
-  cbe->priv->pba.Omega0_k = nc_hicosmo_Omega_k0 (cosmo);
-
-  if (fabs (cbe->priv->pba.Omega0_k) > NC_HICOSMO_OMEGA_K0_LIMIT)
-  {
-    cbe->priv->pba.a_today = 1.0;
-    cbe->priv->pba.K       = -cbe->priv->pba.Omega0_k * gsl_pow_2 (cbe->priv->pba.a_today * H0);
-    cbe->priv->pba.sgnK    = GSL_SIGN (cbe->priv->pba.K);
-  }
-  else
-  {
-    cbe->priv->pba.Omega0_k = 0.0;
-    cbe->priv->pba.a_today  = 1.0;
-    cbe->priv->pba.K        = 0.0;
-    cbe->priv->pba.sgnK     = 0;
-  }
-
   cbe->priv->pba.cs2_fld = 1.0;
+  cbe->priv->pba.a_today = 1.0;
 
   if (!NC_IS_HICOSMO_DE (cosmo))
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
@@ -1969,7 +1951,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
         const gdouble rho_b      = nc_hicosmo_E2Omega_b  (cosmo, z) * RH_pow_m2;
         const gdouble rho_cdm    = nc_hicosmo_E2Omega_c  (cosmo, z) * RH_pow_m2;
         const gdouble rho_Lambda = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) * RH_pow_m2;
-        const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2;
+        /* const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2; */
 
         /* CLASS defines Omega_X = rho_X / rho_total */
         const gdouble E2Omega_t = nc_hicosmo_E2Omega_t (cosmo, z);
@@ -1994,7 +1976,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
           const gdouble Omega_m0_diff = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
           const gdouble Omega_r0_diff = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
 
-          const gdouble Omega_k_diff  = (rho_k == -pba->K / a / a) ? 0.0 : fabs ((rho_k - (-pba->K / a / a)) / (-pba->K / a / a + 1.0 - 2));
+          /*const gdouble Omega_k_diff  = (rho_k == -pba->K / a / a) ? 0.0 : fabs ((rho_k - (-pba->K / a / a)) / (-pba->K / a / a + 1.0 - 2)); */
           const gdouble rho_crit_diff = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
 
           err = GSL_MAX (err, a_diff);
@@ -2008,11 +1990,11 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
           err = GSL_MAX (err, rho_Lambda_diff);
           err = GSL_MAX (err, Omega_r0_diff);
           err = GSL_MAX (err, Omega_m0_diff);
-          err = GSL_MAX (err, Omega_k_diff);
+          /*err = GSL_MAX (err, Omega_k_diff); */
           err = GSL_MAX (err, rho_crit_diff);
 
           if (log_cmp)
-            printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n",
+            printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n",
                     eta, pvecback[pba->index_bg_a],
                     a_diff,          /* 01 */
                     H_diff,          /* 02 */
@@ -2025,7 +2007,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
                     rho_Lambda_diff, /* 09 */
                     Omega_r0_diff,   /* 10 */
                     Omega_m0_diff,   /* 11 */
-                    Omega_k_diff,    /* 12 */
+                                     /*Omega_k_diff,    / * 12 * / */
                     rho_crit_diff,   /* 13 */
                     err);
         }

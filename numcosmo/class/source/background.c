@@ -264,6 +264,8 @@ background_functions (
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
   const double Omega0_ur  = nc_hicosmo_Omega_nu0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
     Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
@@ -402,10 +404,10 @@ background_functions (
    *   only place where the Friedmann equation is assumed. Remember
    *   that densities are all expressed in units of \f$ [3c^2/8\pi G] \f$, ie
    *   \f$ \rho_{class} = [8 \pi G \rho_{physical} / 3 c^2]\f$ */
-  pvecback[pba->index_bg_H] = sqrt (rho_tot - pba->K / a / a);
+  pvecback[pba->index_bg_H] = sqrt (rho_tot - K / a / a);
 
   /** - compute derivative of H with respect to conformal time */
-  pvecback[pba->index_bg_H_prime] = -(3. / 2.) * (rho_tot + p_tot) * a + pba->K / a;
+  pvecback[pba->index_bg_H_prime] = -(3. / 2.) * (rho_tot + p_tot) * a + K / a;
 
   /** - compute relativistic density to total density ratio */
   pvecback[pba->index_bg_Omega_r] = rho_r / rho_tot;
@@ -414,7 +416,7 @@ background_functions (
   if (return_format == pba->long_info)
   {
     /** - compute critical density */
-    pvecback[pba->index_bg_rho_crit] = rho_tot - pba->K / a / a;
+    pvecback[pba->index_bg_rho_crit] = rho_tot - K / a / a;
     class_test (pvecback[pba->index_bg_rho_crit] <= 0.,
                 pba->error_message,
                 "rho_crit = %e instead of strictly positive", pvecback[pba->index_bg_rho_crit]);
@@ -780,11 +782,14 @@ background_indices (
   /** Summary: */
 
   /** - define local variables */
-
+  /* const double H0         = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
   const double Omega0_ur  = nc_hicosmo_Omega_nu0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
   double Omega0_fld       = 0.0;
+  int sgnK;
+
+  nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   if (NC_IS_HICOSMO_DE_XCDM (pba->cosmo) && (ncm_model_orig_param_get (NCM_MODEL (pba->cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0))
     Omega0_lambda = nc_hicosmo_de_E2Omega_de (pba->cosmo, 0.0);
@@ -820,7 +825,7 @@ background_indices (
   if (Omega0_ur != 0.)
     pba->has_ur = _TRUE_;
 
-  if (pba->sgnK != 0)
+  if (sgnK != 0)
     pba->has_curvature = _TRUE_;
 
   /** - initialize all indices */
@@ -1572,10 +1577,12 @@ background_solve (
 
   /** - define local variables */
 
-  /* const double H0       = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
+  /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
   /* const double Omega0_b = nc_hicosmo_Omega_b0 (pba->cosmo); */
   /* const double Omega0_g      = nc_hicosmo_Omega_g0 (pba->cosmo); */
   /* const double Omega0_lambda = 0.0; */
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   /* contains all quantities relevant for the integration algorithm */
   struct generic_integrator_workspace gi;
@@ -1739,15 +1746,15 @@ background_solve (
 
     pvecback[pba->index_bg_time]          = pData[i * pba->bi_size + pba->index_bi_time];
     pvecback[pba->index_bg_conf_distance] = nc_distance_comoving_Mpc (pba->dist, pba->cosmo, pba->z_table[i]);
-  
+
     /* printf ("% 22.15g % 22.15g % 22.15g\n", pba->z_table[i], pvecback[pba->index_bg_conf_distance], nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0)); */
 
-    if (pba->sgnK == 0)
+    if (sgnK == 0)
       comoving_radius = pvecback[pba->index_bg_conf_distance];
-    else if (pba->sgnK == 1)
-      comoving_radius = sin (sqrt (pba->K) * pvecback[pba->index_bg_conf_distance]) / sqrt (pba->K);
-    else if (pba->sgnK == -1)
-      comoving_radius = sinh (sqrt (-pba->K) * pvecback[pba->index_bg_conf_distance]) / sqrt (-pba->K);
+    else if (sgnK == 1)
+      comoving_radius = sin (sqrt (K) * pvecback[pba->index_bg_conf_distance]) / sqrt (K);
+    else if (sgnK == -1)
+      comoving_radius = sinh (sqrt (-K) * pvecback[pba->index_bg_conf_distance]) / sqrt (-K);
 
     pvecback[pba->index_bg_ang_distance] = pba->a_today * comoving_radius / (1. + pba->z_table[i]);
     pvecback[pba->index_bg_lum_distance] = pba->a_today * comoving_radius * (1. + pba->z_table[i]);
@@ -2139,6 +2146,7 @@ background_derivs (
 {
   /** Summary: */
 
+
   /** - define local variables */
 
   struct background_parameters_and_workspace *pbpaw;
@@ -2148,6 +2156,9 @@ background_derivs (
   pbpaw    = parameters_and_workspace;
   pba      =  pbpaw->pba;
   pvecback = pbpaw->pvecback;
+
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   /** - calculate functions of \f$ a \f$ with background_functions() */
   class_call (background_functions (pba, y, pba->normal_info, pvecback),
@@ -2169,7 +2180,7 @@ background_derivs (
               "rho_g = %e instead of strictly positive", pvecback[pba->index_bg_rho_g]);
 
   /** - calculate \f$ rs' = c_s \f$*/
-  dy[pba->index_bi_rs] = 1. / sqrt (3. * (1. + 3. * pvecback[pba->index_bg_rho_b] / 4. / pvecback[pba->index_bg_rho_g])) * sqrt (1. - pba->K * y[pba->index_bi_rs] * y[pba->index_bi_rs]); /* TBC: curvature correction */
+  dy[pba->index_bi_rs] = 1. / sqrt (3. * (1. + 3. * pvecback[pba->index_bg_rho_b] / 4. / pvecback[pba->index_bg_rho_g])) * sqrt (1. - K * y[pba->index_bi_rs] * y[pba->index_bi_rs]); /* TBC: curvature correction */
 
   /** - solve second order growth equation  \f$ [D''(\tau)=-aHD'(\tau)+3/2 a^2 \rho_M D(\tau) \f$ */
   rho_M = pvecback[pba->index_bg_rho_b];

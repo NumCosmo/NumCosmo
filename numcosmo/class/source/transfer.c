@@ -130,6 +130,8 @@ transfer_init (
   /** - define local variables */
 
   const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   /* running index for wavenumbers */
   int index_q;
@@ -227,7 +229,7 @@ transfer_init (
   /** - initialize all indices in the transfers structure and
    *   allocate all its arrays using transfer_indices_of_transfers() */
 
-  class_call (transfer_indices_of_transfers (ppr, ppt, ptr, q_period, pba->K, pba->sgnK),
+  class_call (transfer_indices_of_transfers (ppr, ppt, ptr, q_period, K, sgnK),
               ptr->error_message,
               ptr->error_message);
 
@@ -273,7 +275,7 @@ transfer_init (
 
   xmax = ptr->q[ptr->q_size - 1] * tau0;
 
-  if (pba->sgnK == -1)
+  if (sgnK == -1)
     xmax *= (ptr->l[ptr->l_size_max - 1] / ppr->hyper_flat_approximation_nu) / asinh (ptr->l[ptr->l_size_max - 1] / ppr->hyper_flat_approximation_nu) * 1.01;
 
   class_call (hyperspherical_HIS_create (0,
@@ -329,8 +331,8 @@ transfer_init (
                                                   &ptw,
                                                   ppt->tau_size,
                                                   tau_size_max,
-                                                  pba->K,
-                                                  pba->sgnK,
+                                                  K,
+                                                  sgnK,
                                                   tau0 - pth->tau_cut,
                                                   &BIS),
                          ptr->error_message,
@@ -2142,6 +2144,8 @@ transfer_sources (
   /** - define local variables */
 
   const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   /* index running on time */
   int index_tau;
@@ -2278,22 +2282,22 @@ transfer_sources (
           }
           else
           {
-            switch (pba->sgnK)
+            switch (sgnK)
             {
               case 1:
-                rescaling = sqrt (pba->K)
-                            * sin ((tau_rec - tau) * sqrt (pba->K))
-                            / sin ((tau0 - tau) * sqrt (pba->K))
-                            / sin ((tau0 - tau_rec) * sqrt (pba->K));
+                rescaling = sqrt (K)
+                            * sin ((tau_rec - tau) * sqrt (K))
+                            / sin ((tau0 - tau) * sqrt (K))
+                            / sin ((tau0 - tau_rec) * sqrt (K));
                 break;
               case 0:
                 rescaling = (tau_rec - tau) / (tau0 - tau) / (tau0 - tau_rec);
                 break;
               case -1:
-                rescaling = sqrt (-pba->K)
-                            * sinh ((tau_rec - tau) * sqrt (-pba->K))
-                            / sinh ((tau0 - tau) * sqrt (-pba->K))
-                            / sinh ((tau0 - tau_rec) * sqrt (-pba->K));
+                rescaling = sqrt (-K)
+                            * sinh ((tau_rec - tau) * sqrt (-K))
+                            / sinh ((tau0 - tau) * sqrt (-K))
+                            / sinh ((tau0 - tau_rec) * sqrt (-K));
                 break;
             }
 
@@ -2419,20 +2423,20 @@ transfer_sources (
           tau = tau0 - tau0_minus_tau[index_tau];
 
           /* geometrical quantity */
-          switch (pba->sgnK)
+          switch (sgnK)
           {
             case 1:
-              cotKgen_source = sqrt (pba->K) / ptr->k[index_md][index_q]
-                               * cos (tau0_minus_tau[index_tau] * sqrt (pba->K))
-                               / sin (tau0_minus_tau[index_tau] * sqrt (pba->K));
+              cotKgen_source = sqrt (K) / ptr->k[index_md][index_q]
+                               * cos (tau0_minus_tau[index_tau] * sqrt (K))
+                               / sin (tau0_minus_tau[index_tau] * sqrt (K));
               break;
             case 0:
               cotKgen_source = 1. / (ptr->k[index_md][index_q] * tau0_minus_tau[index_tau]);
               break;
             case -1:
-              cotKgen_source = sqrt (-pba->K) / ptr->k[index_md][index_q]
-                               * cosh (tau0_minus_tau[index_tau] * sqrt (-pba->K))
-                               / sinh (tau0_minus_tau[index_tau] * sqrt (-pba->K));
+              cotKgen_source = sqrt (-K) / ptr->k[index_md][index_q]
+                               * cosh (tau0_minus_tau[index_tau] * sqrt (-K))
+                               / sinh (tau0_minus_tau[index_tau] * sqrt (-K));
               break;
           }
 
@@ -2706,13 +2710,13 @@ transfer_sources (
                  index_tau_sources < tau_sources_size;
                  index_tau_sources++)
             {
-              switch (pba->sgnK)
+              switch (sgnK)
               {
                 case 1:
-                  sinKgen_source         = ptr->k[index_md][index_q] * sin (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (pba->K)) / sqrt (pba->K);
-                  sinKgen_source_to_lens = ptr->k[index_md][index_q] * sin ((tau0_minus_tau[index_tau] - tau0_minus_tau_lensing_sources[index_tau_sources]) * sqrt (pba->K)) / sqrt (pba->K);
-                  cotKgen_source         = cos (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (pba->K)) / sinKgen_source;
-                  cscKgen_lens           = sqrt (pba->K) / ptr->k[index_md][index_q] / sin (sqrt (pba->K) * tau0_minus_tau[index_tau]);
+                  sinKgen_source         = ptr->k[index_md][index_q] * sin (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (K)) / sqrt (K);
+                  sinKgen_source_to_lens = ptr->k[index_md][index_q] * sin ((tau0_minus_tau[index_tau] - tau0_minus_tau_lensing_sources[index_tau_sources]) * sqrt (K)) / sqrt (K);
+                  cotKgen_source         = cos (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (K)) / sinKgen_source;
+                  cscKgen_lens           = sqrt (K) / ptr->k[index_md][index_q] / sin (sqrt (K) * tau0_minus_tau[index_tau]);
                   break;
                 case 0:
                   sinKgen_source         = ptr->k[index_md][index_q] * tau0_minus_tau_lensing_sources[index_tau_sources];
@@ -2721,10 +2725,10 @@ transfer_sources (
                   cscKgen_lens           = 1. / (ptr->k[index_md][index_q] * tau0_minus_tau[index_tau]);
                   break;
                 case -1:
-                  sinKgen_source         = ptr->k[index_md][index_q] * sinh (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (-pba->K)) / sqrt (-pba->K);
-                  sinKgen_source_to_lens = ptr->k[index_md][index_q] * sinh ((tau0_minus_tau[index_tau] - tau0_minus_tau_lensing_sources[index_tau_sources]) * sqrt (-pba->K)) / sqrt (-pba->K);
-                  cotKgen_source         = cosh (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (-pba->K)) / sinKgen_source;
-                  cscKgen_lens           = sqrt (-pba->K) / ptr->k[index_md][index_q] / sinh (sqrt (-pba->K) * tau0_minus_tau[index_tau]);
+                  sinKgen_source         = ptr->k[index_md][index_q] * sinh (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (-K)) / sqrt (-K);
+                  sinKgen_source_to_lens = ptr->k[index_md][index_q] * sinh ((tau0_minus_tau[index_tau] - tau0_minus_tau_lensing_sources[index_tau_sources]) * sqrt (-K)) / sqrt (-K);
+                  cotKgen_source         = cosh (tau0_minus_tau_lensing_sources[index_tau_sources] * sqrt (-K)) / sinKgen_source;
+                  cscKgen_lens           = sqrt (-K) / ptr->k[index_md][index_q] / sinh (sqrt (-K) * tau0_minus_tau[index_tau]);
                   break;
               }
 

@@ -2533,6 +2533,10 @@ spectra_compute_cl (
 
   index_ic1_ic2 = index_symmetric_matrix (index_ic1, index_ic2, psp->ic_size[index_md]);
 
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
+
+
   if (ppt->has_cl_number_count == _TRUE_)
   {
     class_alloc (transfer_ic1_nc, psp->d_size * sizeof (double), psp->error_message);
@@ -2877,7 +2881,7 @@ spectra_compute_cl (
        *  everywhere, or to (ptr->q_size-1), to enforce trapezoidal
        *  integration everywhere. */
 
-      if (pba->sgnK == 1)
+      if (sgnK == 1)
         index_q_spline = ptr->index_q_flat_approximation;
 
       class_call (array_integrate_all_trapzd_or_spline (cl_integrand,
@@ -2902,8 +2906,8 @@ spectra_compute_cl (
        *  sum. The line below correct this problem in an exact way.
        */
 
-      if (pba->sgnK == 1)
-        clvalue += cl_integrand[1 + index_ct] * ptr->q[0] / ptr->k[0][0] * sqrt (pba->K) / 2.;
+      if (sgnK == 1)
+        clvalue += cl_integrand[1 + index_ct] * ptr->q[0] / ptr->k[0][0] * sqrt (K) / 2.;
 
       /* we have the correct C_l now. We can store it in the transfer structure. */
 

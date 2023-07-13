@@ -2662,6 +2662,7 @@ thermodynamics_recombination_with_hyrec (
   const double T_cmb      = nc_hicosmo_T_gamma0 (pba->cosmo);
   const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
+  const double Omega0_k   = nc_hicosmo_Omega_k0 (pba->cosmo);
   double Omega0_lambda    = 0.0;
   double Omega0_fld       = 0.0;
 
@@ -2690,7 +2691,7 @@ thermodynamics_recombination_with_hyrec (
   param.T0    = T_cmb;
   param.obh2  = Omega0_b * h * h;
   param.omh2  = (Omega0_b + Omega0_cdm + pba->Omega0_ncdm_tot) * h * h;
-  param.okh2  = pba->Omega0_k * h * h;
+  param.okh2  = Omega0_k * h * h;
   param.odeh2 = (Omega0_lambda + Omega0_fld) * h * h;
   class_call (background_w_fld (pba, pba->a_today, &w_fld, &dw_over_da_fld, &integral_fld), pba->error_message, pth->error_message);
   param.w0                     = w_fld;

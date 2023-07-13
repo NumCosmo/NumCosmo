@@ -106,6 +106,8 @@ perturb_init (
   /** Summary: */
 
   /** - define local variables */
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   /* running index for modes */
   int index_md;
@@ -371,8 +373,8 @@ perturb_init (
           {
             printf ("evolving mode k=%e /Mpc  (%d/%d)", ppt->k[index_md][index_k], index_k + 1, ppt->k_size[index_md]);
 
-            if (pba->sgnK != 0)
-              printf (" (for scalar modes, corresponds to nu=%e)", sqrt (ppt->k[index_md][index_k] * ppt->k[index_md][index_k] + pba->K) / sqrt (pba->sgnK * pba->K));
+            if (sgnK != 0)
+              printf (" (for scalar modes, corresponds to nu=%e)", sqrt (ppt->k[index_md][index_k] * ppt->k[index_md][index_k] + K) / sqrt (sgnK * K));
 
             printf ("\n");
           }
@@ -1259,6 +1261,8 @@ perturb_get_k_list (
 {
   const double H0            = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo);
   const double conformal_age = nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0);
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   int index_k, index_k_output, index_mode;
   double k, k_min = 0., k_rec, step, tau1;
@@ -1308,18 +1312,18 @@ perturb_get_k_list (
   if (ppt->has_scalars == _TRUE_)
   {
     /* first value */
-    if (pba->sgnK == 0)
+    if (sgnK == 0)
       /* K<0 (flat)  : start close to zero */
       k_min = ppr->k_min_tau0 / conformal_age;
-    else if (pba->sgnK == -1)
+    else if (sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
-    else if (pba->sgnK == 1)
+    else if (sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
-      k_min = sqrt ((8. - 1.e-4) * pba->K);
+      k_min = sqrt ((8. - 1.e-4) * K);
 
     /** - --> find k_max (as well as k_max_cmb[ppt->index_md_scalars], k_max_cl[ppt->index_md_scalars]) */
 
@@ -1437,7 +1441,7 @@ perturb_get_k_list (
        *  stepsize is still fixed by k_step_super, this is just a
        *  reduction factor. */
 
-      scale2 = pow (pba->a_today * H0, 2) + fabs (pba->K);
+      scale2 = pow (pba->a_today * H0, 2) + fabs (K);
 
       step *= (k * k / scale2 + 1.) / (k * k / scale2 + 1. / ppr->k_step_super_reduction);
 
@@ -1498,18 +1502,18 @@ perturb_get_k_list (
   if (ppt->has_vectors == _TRUE_)
   {
     /* first value */
-    if (pba->sgnK == 0)
+    if (sgnK == 0)
       /* K<0 (flat)  : start close to zero */
       k_min = ppr->k_min_tau0 / conformal_age;
-    else if (pba->sgnK == -1)
+    else if (sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
-    else if (pba->sgnK == 1)
+    else if (sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
-      k_min = sqrt ((7. - 1.e-4) * pba->K);
+      k_min = sqrt ((7. - 1.e-4) * K);
 
     /** - --> find k_max (as well as k_max_cmb[ppt->index_md_vectors], k_max_cl[ppt->index_md_vectors]) */
 
@@ -1594,7 +1598,7 @@ perturb_get_k_list (
        *  stepsize is still fixed by k_step_super, this is just a
        *  reduction factor. */
 
-      scale2 = pow (pba->a_today * H0, 2) + fabs (pba->K);
+      scale2 = pow (pba->a_today * H0, 2) + fabs (K);
 
       step *= (k * k / scale2 + 1.) / (k * k / scale2 + 1. / ppr->k_step_super_reduction);
 
@@ -1629,18 +1633,18 @@ perturb_get_k_list (
   if (ppt->has_tensors == _TRUE_)
   {
     /* first value */
-    if (pba->sgnK == 0)
+    if (sgnK == 0)
       /* K<0 (flat)  : start close to zero */
       k_min = ppr->k_min_tau0 / conformal_age;
-    else if (pba->sgnK == -1)
+    else if (sgnK == -1)
       /* K<0 (open)  : start close to sqrt(-K)
        *  (in transfer modules, for scalars, this will correspond to q close to zero;
        *  for vectors and tensors, this value is even smaller than the minimum necessary value) */
-      k_min = sqrt (-pba->K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
+      k_min = sqrt (-K + pow (ppr->k_min_tau0 / conformal_age / pth->angular_rescaling, 2));
 
-    else if (pba->sgnK == 1)
+    else if (sgnK == 1)
       /* K>0 (closed): start from q=sqrt(k2+(1+m)K) equal to 3sqrt(K), i.e. k=sqrt((8-m)K) */
-      k_min = sqrt ((6. - 1.e-4) * pba->K);
+      k_min = sqrt ((6. - 1.e-4) * K);
 
     /** - --> find k_max (as well as k_max_cmb[ppt->index_md_tensors], k_max_cl[ppt->index_md_tensors]) */
 
@@ -1725,7 +1729,7 @@ perturb_get_k_list (
        *  stepsize is still fixed by k_step_super, this is just a
        *  reduction factor. */
 
-      scale2 = pow (pba->a_today * H0, 2) + fabs (pba->K);
+      scale2 = pow (pba->a_today * H0, 2) + fabs (K);
 
       step *= (k * k / scale2 + 1.) / (k * k / scale2 + 1. / ppr->k_step_super_reduction);
 
@@ -1829,7 +1833,7 @@ perturb_get_k_list (
    *
    *  for (index_k=0; index_k < ppt->k_size[0]; index_k++) {
    *
-   *  fprintf(out,"%e\n",ppt->k[0][index_k],pba->K);
+   *  fprintf(out,"%e\n",ppt->k[0][index_k],K);
    *
    *  }
    *  fclose(out);
@@ -2123,6 +2127,9 @@ perturb_solve (
 
   /** - define local variables */
 
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
+
   /* contains all fixed parameters, indices and workspaces used by the perturb_derivs function */
   struct perturb_parameters_and_workspace ppaw;
 
@@ -2197,7 +2204,7 @@ perturb_solve (
   {
     for (l = 0; l <= ppw->max_l_max; l++)
     {
-      ppw->s_l[l] = sqrt (MAX (1.0 - pba->K * (l * l - 1.0) / k / k, 0.));
+      ppw->s_l[l] = sqrt (MAX (1.0 - K * (l * l - 1.0) / k / k, 0.));
     }
   }
 
@@ -4057,6 +4064,8 @@ perturb_initial_conditions (struct precision         *ppr,
 
   /** --> Declare local variables */
   /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   double a, a_prime_over_a;
   double w_fld, dw_over_da_fld, integral_fld;
@@ -4156,7 +4165,7 @@ perturb_initial_conditions (struct precision         *ppr,
 
     /* curvature-dependent factors */
 
-    s2_squared = 1. - 3. * pba->K / k / k;
+    s2_squared = 1. - 3. * K / k / k;
 
     /** - (b) starts by setting everything in synchronous gauge. If
      *   another gauge is needed, we will perform a gauge
@@ -4572,13 +4581,13 @@ perturb_initial_conditions (struct precision         *ppr,
 
     k2 = k * k;
 
-    if (pba->sgnK != 0)
-      ppw->pv->y[ppw->pv->index_pt_gw] *= sqrt (k2 * (k2 - pba->K) / (k2 + 3. * pba->K) / (k2 + 2. * pba->K));
+    if (sgnK != 0)
+      ppw->pv->y[ppw->pv->index_pt_gw] *= sqrt (k2 * (k2 - K) / (k2 + 3. * K) / (k2 + 2. * K));
 
-    if (pba->sgnK == -1)
+    if (sgnK == -1)
     {
-      if (k * k + 3 * pba->K >= 0.)
-        ppw->pv->y[ppw->pv->index_pt_gw] *= sqrt (tanh (_PI_ / 2. * sqrt (k2 + 3 * pba->K) / sqrt (-pba->K)));
+      if (k * k + 3 * K >= 0.)
+        ppw->pv->y[ppw->pv->index_pt_gw] *= sqrt (tanh (_PI_ / 2. * sqrt (k2 + 3 * K) / sqrt (-K)));
       else
         ppw->pv->y[ppw->pv->index_pt_gw] = 0.;
     }
@@ -4997,6 +5006,9 @@ perturb_einstein (
 
   /** - define local variables */
 
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
+
   double k2, a, a2, a_prime_over_a;
   double s2_squared;
   double shear_g = 0.;
@@ -5007,7 +5019,7 @@ perturb_einstein (
   a              = ppw->pvecback[pba->index_bg_a];
   a2             = a * a;
   a_prime_over_a = ppw->pvecback[pba->index_bg_H] * a;
-  s2_squared     = 1. - 3. * pba->K / k2;
+  s2_squared     = 1. - 3. * K / k2;
 
   /** - sum up perturbations from all species */
   class_call (perturb_total_stress_energy (ppr, pba, pth, ppt, index_md, k, y, ppw),
@@ -5076,7 +5088,7 @@ perturb_einstein (
       }
 
       /* second equation involving total velocity */
-      ppw->pvecmetric[ppw->index_mt_eta_prime] = (1.5 * a2 * ppw->rho_plus_p_theta + 0.5 * pba->K * ppw->pvecmetric[ppw->index_mt_h_prime]) / k2 / s2_squared; /* eta' */
+      ppw->pvecmetric[ppw->index_mt_eta_prime] = (1.5 * a2 * ppw->rho_plus_p_theta + 0.5 * K * ppw->pvecmetric[ppw->index_mt_h_prime]) / k2 / s2_squared; /* eta' */
 
       /* third equation involving total pressure */
       ppw->pvecmetric[ppw->index_mt_h_prime_prime] =
@@ -5154,14 +5166,14 @@ perturb_einstein (
     /*ppw->pvecmetric[ppw->index_mt_hv_prime_prime] = -2.*a_prime_over_a*y[ppw->pv->index_pt_hv_prime] - 3.*ppw->vector_source_pi; */
 
     /* if we use the other equation: */
-    /*ppw->pvecmetric[ppw->index_mt_hv_prime] = -2./k/ (1.-2.*pba->K/k2) * 3. * ppw->vector_source_v; */
+    /*ppw->pvecmetric[ppw->index_mt_hv_prime] = -2./k/ (1.-2.*K/k2) * 3. * ppw->vector_source_v; */
   }
 
   /** - for tensor modes */
 
   if (_tensors_)
     /* single einstein equation for tensor perturbations */
-    ppw->pvecmetric[ppw->index_mt_gw_prime_prime] = -2. * a_prime_over_a * y[ppw->pv->index_pt_gwdot] - (k2 + 2. * pba->K) * y[ppw->pv->index_pt_gw] + ppw->gw_source;
+    ppw->pvecmetric[ppw->index_mt_gw_prime_prime] = -2. * a_prime_over_a * y[ppw->pv->index_pt_gwdot] - (k2 + 2. * K) * y[ppw->pv->index_pt_gw] + ppw->gw_source;
 
 
 
@@ -5184,6 +5196,8 @@ perturb_total_stress_energy (
 
   /** - define local variables */
   /* const double H0 = 1.0 / nc_hicosmo_RH_Mpc (pba->cosmo); */
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (pba->cosmo, &sgnK);
 
   double a, a2, a_prime_over_a, k2;
   double rho_plus_p_tot        = 0.;
@@ -5535,7 +5549,7 @@ perturb_total_stress_energy (
                                 * (y[ppw->pv->index_pt_delta_g] + 2. * y[ppw->pv->index_pt_delta_g] + y[ppw->pv->index_pt_shear_g]);
 
         ppw->vector_source_pi += 1. / 3. * a2 * ppw->pvecback[pba->index_bg_rho_g]
-                                 * (6. * _SQRT2_ / 5. / sqrt (1. - 2. * pba->K / k / k))
+                                 * (6. * _SQRT2_ / 5. / sqrt (1. - 2. * K / k / k))
                                  * (4. / 3. / k * y[ppw->pv->index_pt_theta_g] + y[ppw->pv->index_pt_l3_g]);
       }
     }
@@ -6611,6 +6625,8 @@ perturb_derivs (double   tau,
 
   const double T_cmb    = nc_hicosmo_T_gamma0 (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo);
   const double Omega0_b = nc_hicosmo_Omega_b0 (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo);
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo, &sgnK);
 
   /* multipole */
   int l;
@@ -6731,15 +6747,15 @@ perturb_derivs (double   tau,
   }
   else
   {
-    sqrt_absK = sqrt (fabs (pba->K));
+    sqrt_absK = sqrt (fabs (K));
 
-    if (pba->K < 0)
+    if (K < 0)
       cotKgen = sqrt_absK / k / tanh (sqrt_absK * tau);
     else
       cotKgen = sqrt_absK / k / tan (sqrt_absK * tau);
   }
 
-  s2_squared = 1. - 3. * pba->K / k2;
+  s2_squared = 1. - 3. * K / k2;
 
   /** - for scalar modes: */
   if (_scalars_)
@@ -7257,7 +7273,7 @@ perturb_derivs (double   tau,
   {
     fprintf (stderr, "we are in vectors\n");
 
-    ssqrt3 = sqrt (1. - 2. * pba->K / k2);
+    ssqrt3 = sqrt (1. - 2. * K / k2);
     cb2    = pvecthermo[pth->index_th_cb2];
 
     /** - --> baryon velocity */
@@ -7555,6 +7571,8 @@ perturb_tca_slip_and_shear (double   *y,
   /** Summary: */
 
   /** - define local variables */
+  int sgnK;
+  double K = nc_hicosmo_curvature_K (((struct perturb_parameters_and_workspace *) parameters_and_workspace)->pba->cosmo, &sgnK);
 
   /* scale factor and other background quantities */
   double a, a_prime_over_a, a_primeprime_over_a, R;
@@ -7617,7 +7635,7 @@ perturb_tca_slip_and_shear (double   *y,
   a_primeprime_over_a = pvecback[pba->index_bg_H_prime] * a + 2. * a_prime_over_a * a_prime_over_a;
   /*z = pba->a_today-1.; */
   R          = 4. / 3. * pvecback[pba->index_bg_rho_g] / pvecback[pba->index_bg_rho_b];
-  s2_squared = 1. - 3. * pba->K / k2;
+  s2_squared = 1. - 3. * K / k2;
 
   /** - --> (a) define short-cut notations for the scalar perturbations */
   if (ppw->approx[ppw->index_ap_rsa] == (int) rsa_off)
@@ -7743,7 +7761,7 @@ perturb_tca_slip_and_shear (double   *y,
 
     if (ppt->gauge == synchronous)
     {
-      class_test (pba->sgnK != 0,
+      class_test (sgnK != 0,
                   ppt->error_message,
                   "the second_order_CRS approach to tight-coupling is coded in the flat case only: for non-flat try another tight-coupling scheme");
 

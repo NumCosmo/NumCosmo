@@ -127,9 +127,6 @@ nonlinear_init (
   double *lnpk_l;
   double *ddlnpk_l;
   short print_warning = _FALSE_;
-  double *pvecback;
-  int last_index;
-  double a, z;
   short halofit_found_k_max;
 
   /** Define flags and indices (so few that no dedicated routine needed) */
@@ -279,20 +276,6 @@ nonlinear_init (
             for (index_k = 0; index_k < pnl->k_size; index_k++)
             {
               pnl->nl_corr_density[index_pk][index_tau * pnl->k_size + index_k] = 1.;
-            }
-
-            if (pnl->nonlinear_verbose > 0)
-            {
-              class_alloc (pvecback, pba->bg_size * sizeof (double), pnl->error_message);
-              class_call (background_at_tau (pba, pnl->tau[index_tau], pba->short_info, pba->inter_normal, &last_index, pvecback),
-                          pba->error_message,
-                          pnl->error_message);
-              a = pvecback[pba->index_bg_a];
-              z = pba->a_today / a - 1.;
-              fprintf (stdout,
-                       " -> [WARNING:] index_pk=%d Halofit non-linear corrections could not be computed at redshift z=%5.2f and higher.\n    This is because k_max is too small for Halofit to be able to compute the scale k_NL at this redshift.\n    If non-linear corrections at such high redshift really matter for you,\n    just try to increase one of the parameters P_k_max_h/Mpc or P_k_max_1/Mpc or halofit_min_k_max (the code will take the max of these parameters) until reaching desired z.\n",
-                       index_pk, z);
-              free (pvecback);
             }
           }
         }
@@ -537,7 +520,7 @@ nonlinear_halofit (
   const double Omega0_b   = nc_hicosmo_Omega_b0 (pba->cosmo);
   const double Omega0_cdm = nc_hicosmo_Omega_c0 (pba->cosmo);
 
-  double Omega_m, Omega_v, fnu, Omega0_m, w0, dw_over_da_fld, integral_fld;
+  double Omega_m, Omega_v, fnu, Omega0_m, w0;
   const double h = nc_hicosmo_h (pba->cosmo);
 
   /** Determine non linear ratios (from pk) **/
@@ -551,8 +534,6 @@ nonlinear_halofit (
   double pk_linaa;
   double y;
   double f1a, f2a, f3a, f1b, f2b, f3b, frac;
-
-  double *pvecback;
 
   int last_index = 0;
   int counter;
@@ -582,8 +563,6 @@ nonlinear_halofit (
 
   double *w_and_Omega;
 
-  class_alloc (pvecback, pba->bg_size * sizeof (double), pnl->error_message);
-
   Omega0_m = Omega0_cdm + Omega0_b + pba->Omega0_ncdm_tot;
 
   if ((pnl->has_pk_m == _TRUE_) && (index_pk == pnl->index_pk_m))
@@ -597,15 +576,12 @@ nonlinear_halofit (
   {
     /* default method to compute w0 = w_fld today, Omega_m(tau) and Omega_v=Omega_DE(tau),
      *  all required by HALFIT fitting formulas */
+    const double z         = nc_scalefactor_eval_z_eta_Mpc (pba->scalefactor, tau);
+    const double E2Omega_t = nc_hicosmo_E2Omega_t (pba->cosmo, z);
 
-    class_call (background_w_fld (pba, pba->a_today, &w0, &dw_over_da_fld, &integral_fld), pba->error_message, pnl->error_message);
-
-    class_call (background_at_tau (pba, tau, pba->long_info, pba->inter_normal, &last_index, pvecback),
-                pba->error_message,
-                pnl->error_message);
-
-    Omega_m = pvecback[pba->index_bg_Omega_m];
-    Omega_v = 1. - pvecback[pba->index_bg_Omega_m] - pvecback[pba->index_bg_Omega_r];
+    w0      = nc_hicosmo_de_w_de (pba->cosmo, z);
+    Omega_m = nc_hicosmo_E2Omega_m (pba->cosmo, z) / E2Omega_t;
+    Omega_v = nc_hicosmo_de_E2Omega_de (pba->cosmo, z) / E2Omega_t;
   }
   else
   {
@@ -691,13 +667,14 @@ nonlinear_halofit (
     integrand_array[index_k * ia_size + index_ia_pk] = exp (lnpk_integrand);
   }
 
-  class_call (background_at_tau (pba, tau, pba->long_info, pba->inter_normal, &last_index, pvecback),
-              pba->error_message,
-              pnl->error_message);
+  {
+    const double z         = nc_scalefactor_eval_z_eta_Mpc (pba->scalefactor, tau);
+    const double E2Omega_t = nc_hicosmo_E2Omega_t (pba->cosmo, z);
 
-  Omega_m = pvecback[pba->index_bg_Omega_m];
-  Omega_v = 1. - pvecback[pba->index_bg_Omega_m] - pvecback[pba->index_bg_Omega_r];
-
+    w0      = nc_hicosmo_de_w_de (pba->cosmo, z);
+    Omega_m = nc_hicosmo_E2Omega_m (pba->cosmo, z) / E2Omega_t;
+    Omega_v = nc_hicosmo_de_E2Omega_de (pba->cosmo, z) / E2Omega_t;
+  }
   /* for debugging: */
   /*printf("Call Halofit at z=%e\n",pba->a_today/pvecback[pba->index_bg_a]-1.); */
 
@@ -755,7 +732,6 @@ nonlinear_halofit (
   if (sigma < 1.)
   {
     *halofit_found_k_max = _FALSE_;
-    free (pvecback);
     free (integrand_array);
 
     return _SUCCESS_;
@@ -959,7 +935,6 @@ nonlinear_halofit (
     }
   }
 
-  free (pvecback);
   free (integrand_array);
 
   return _SUCCESS_;

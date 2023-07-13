@@ -701,6 +701,9 @@ nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
   flag = CVodeSetMaxNumSteps (self->cvode, 50000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+  flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
+
   flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
@@ -726,6 +729,66 @@ nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
   NcScalefactorPrivate * const self = a->priv;
 
   return -ncm_spline_eval (self->a_eta, eta);
+}
+
+/**
+ * nc_scalefactor_eval_a_eta:
+ * @a: a #NcScalefactor
+ * @eta: conformal time $\eta$
+ *
+ * Calculates the value of the scale factor in $\eta$,
+ * i.e., $a(\eta)$.
+ *
+ * Returns: $a(\eta)$.
+ */
+gdouble
+nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta)
+{
+  NcScalefactorPrivate * const self = a->priv;
+  gdouble mz;
+
+  mz = ncm_spline_eval (self->a_eta, eta);
+
+  return self->a0 / (1.0 - mz);
+}
+
+/**
+ * nc_scalefactor_eval_z_eta_Mpc:
+ * @a: a #NcScalefactor
+ * @eta_Mpc: conformal time $\eta$ in Mpc
+ *
+ * Calculates the value of the redshift in $\eta$ in Mpc,
+ * i.e., $z(\eta)$.
+ *
+ * Returns: $z(\eta)$.
+ */
+gdouble
+nc_scalefactor_eval_z_eta_Mpc (NcScalefactor *a, const gdouble eta_Mpc)
+{
+  NcScalefactorPrivate * const self = a->priv;
+
+  return -ncm_spline_eval (self->a_eta, eta_Mpc / self->RH_Mpc);
+}
+
+/**
+ * nc_scalefactor_eval_a_eta_Mpc:
+ * @a: a #NcScalefactor
+ * @eta_Mpc: conformal time $\eta$ in Mpc
+ *
+ * Calculates the value of the scale factor in $\eta$ in Mpc,
+ * i.e., $a(\eta)$.
+ *
+ * Returns: $a(\eta)$.
+ */
+gdouble
+nc_scalefactor_eval_a_eta_Mpc (NcScalefactor *a, const gdouble eta_Mpc)
+{
+  NcScalefactorPrivate * const self = a->priv;
+  gdouble mz;
+
+  mz = ncm_spline_eval (self->a_eta, eta_Mpc / self->RH_Mpc);
+
+  return self->a0 / (1.0 - mz);
 }
 
 /**
@@ -798,27 +861,6 @@ nc_scalefactor_eval_eta_Mpc_x (NcScalefactor *a, const gdouble x)
   NcScalefactorPrivate * const self = a->priv;
 
   return ncm_spline_eval (self->eta_a, -(x - 1.0)) * self->RH_Mpc;
-}
-
-/**
- * nc_scalefactor_eval_a_eta:
- * @a: a #NcScalefactor
- * @eta: conformal time $\eta$
- *
- * Calculates the value of the scale factor in $\eta$,
- * i.e., $a(\eta)$.
- *
- * Returns: $a(\eta)$.
- */
-gdouble
-nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta)
-{
-  NcScalefactorPrivate * const self = a->priv;
-  gdouble mz;
-
-  mz = ncm_spline_eval (self->a_eta, eta);
-
-  return self->a0 / (1.0 - mz);
 }
 
 /**
@@ -918,7 +960,7 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
       break;
   }
 
-  if (fabs (g_array_index (mz_a, gdouble, mz_a->len - 1)) < 1e-10)
+  if (fabs (g_array_index (mz_a, gdouble, mz_a->len - 1)) < 1.0e-9)
     g_array_index (mz_a, gdouble, mz_a->len - 1) = 0.0;
   else
     g_error ("_nc_scalefactor_calc_spline today redshift must be zero not % 20.15g.",
