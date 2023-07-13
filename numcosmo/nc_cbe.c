@@ -791,6 +791,21 @@ nc_cbe_set_calc_transfer (NcCBE *cbe, gboolean calc_transfer)
 }
 
 /**
+ * nc_cbe_set_halofit:
+ * @cbe: a #NcCBE
+ * @use_halofit: a boolean.
+ *
+ * Sets whether it should use halofit.
+ *
+ */
+void
+nc_cbe_set_halofit (NcCBE *cbe, gboolean use_halofit)
+{
+  cbe->use_halofit = use_halofit;
+  _nc_cbe_update_callbacks (cbe);
+}
+
+/**
  * nc_cbe_set_lensed_Cls:
  * @cbe: a #NcCBE
  * @use_lensed_Cls: a boolean.
@@ -997,6 +1012,20 @@ gboolean
 nc_cbe_calc_transfer (NcCBE *cbe)
 {
   return cbe->calc_transfer;
+}
+
+/**
+ * nc_cbe_halofit:
+ * @cbe: a #NcCBE
+ *
+ * Gets whether it uses halofit.
+ *
+ * Returns: a boolean.
+ */
+gboolean
+nc_cbe_halofit (NcCBE *cbe)
+{
+  return cbe->use_halofit;
 }
 
 /**
@@ -1536,7 +1565,11 @@ _nc_cbe_set_lensing (NcCBE *cbe, NcHICosmo *cosmo)
 static void
 _nc_cbe_set_nonlin (NcCBE *cbe, NcHICosmo *cosmo)
 {
-  cbe->priv->pnl.method            = nl_none;
+  if (cbe->use_halofit)
+    cbe->priv->pnl.method = nl_halofit;
+  else
+    cbe->priv->pnl.method = nl_none;
+
   cbe->priv->pnl.has_pk_eq         = _FALSE_;
   cbe->priv->pnl.nonlinear_verbose = cbe->nonlin_verbose;
 }

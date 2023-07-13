@@ -40,6 +40,7 @@ typedef struct _TestNcCBE
 } TestNcCBE;
 
 static void test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata);
+static void test_nc_cbe_lcdm_halofit_new (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata);
@@ -73,10 +74,11 @@ typedef struct _TestNcCBEFunc
   gconstpointer pdata;
 } TestNcCBEFunc;
 
-#define TEST_NC_CBE_MODEL_LEN 8
+#define TEST_NC_CBE_MODEL_LEN 9
 TestNcCBEFunc models[TEST_NC_CBE_MODEL_LEN] =
 {
   {test_nc_cbe_lcdm_new,          "lcdm",          NULL},
+  {test_nc_cbe_lcdm_halofit_new,  "lcdm/halofit",  NULL},
   {test_nc_cbe_xcdm_new,          "xcdm",          NULL},
   {test_nc_cbe_mnu_lcdm_new,      "lcdm/mnu",      NULL},
   {test_nc_cbe_mnu_xcdm_new,      "xcdm/mnu",      NULL},
@@ -141,6 +143,31 @@ test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>}");
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  test->cbe    = cbe;
+  test->cosmo  = cosmo;
+  test->ntests = 1000;
+
+  g_assert_true (cbe != NULL);
+  g_assert_true (NC_IS_CBE (cbe));
+
+  g_assert_true (NC_IS_HICOSMO (cosmo));
+  g_assert_true (NC_IS_HIREION (reion));
+  g_assert_true (NC_IS_HIPRIM  (prim));
+
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+}
+
+void
+test_nc_cbe_lcdm_halofit_new (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBE *cbe       = nc_cbe_new ();
+  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>}");
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  nc_cbe_set_halofit (cbe, TRUE);
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -393,7 +420,7 @@ test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
 
     g_assert_cmpfloat (err, <, 1.0e-4);
     nc_cbe_compare_bg (cbe, cosmo, FALSE);
-  } 
+  }
 }
 
 static void
