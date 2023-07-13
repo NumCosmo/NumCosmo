@@ -105,7 +105,7 @@ void nc_cbe_clear (NcCBE **cbe);
 void nc_cbe_set_precision (NcCBE *cbe, NcCBEPrecision *cbe_prec);
 void nc_cbe_set_target_Cls (NcCBE *cbe, NcDataCMBDataType target_Cls);
 void nc_cbe_set_calc_transfer (NcCBE *cbe, gboolean calc_transfer);
-void nc_cbe_set_halofit (NcCBE *cbe, gboolean use_lensed_Cls);
+void nc_cbe_set_halofit (NcCBE *cbe, gboolean use_halofit);
 void nc_cbe_set_lensed_Cls (NcCBE *cbe, gboolean use_lensed_Cls);
 void nc_cbe_set_tensor (NcCBE *cbe, gboolean use_tensor);
 void nc_cbe_set_thermodyn (NcCBE *cbe, gboolean use_thermodyn);

@@ -499,7 +499,7 @@ nc_hicosmo_curvature_K (NcHICosmo *cosmo, gint *sgnK)
   K        = -Omega_k0 / gsl_pow_2 (RH_Mpc);
 
   if (sgnK)
-    *sgnK = K > 0.0 ? 1 : -1;
+    *sgnK = (K == 0.0 ? 0 : (K > 0.0 ? 1 : -1));
 
   return K;
 }
