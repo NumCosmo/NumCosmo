@@ -52,6 +52,7 @@
 #include "math/ncm_stats_dist.h"
 #include "math/ncm_stats_dist_kde.h"
 #include "math/ncm_stats_dist_kernel_gauss.h"
+#include "math/ncm_stats_dist_kernel_st.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -67,6 +68,7 @@ struct _NcGalaxyWLLikelihoodPrivate
   gdouble zp_max;
   gdouble r_min;
   gdouble r_max;
+  gdouble scale_cut;
   gint ndata;
   gboolean constructed;
   guint len;
@@ -84,6 +86,7 @@ enum
   PROP_R_MAX,
   PROP_ZP_MIN,
   PROP_ZP_MAX,
+  PROP_SCALE_CUT,
   PROP_NDATA,
 };
 
@@ -96,6 +99,8 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
 
   NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (3);
 
+  /* NcmStatsDistKernelST *kernel = ncm_stats_dist_kernel_st_new (3, 3); */
+
   self->obs         = NULL;
   self->s_dist      = NULL;
   self->zp_dist     = NULL;
@@ -106,7 +111,8 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
   self->r_min       = 0.0;
   self->zp_max      = 0.0;
   self->zp_min      = 0.0;
-  self->ndata       = 100;
+  self->scale_cut   = 0.0;
+  self->ndata       = 0.0;
   self->constructed = FALSE;
 }
 
@@ -160,6 +166,9 @@ _nc_galaxy_wl_likelihood_set_property (GObject *object, guint prop_id, const GVa
         g_assert_cmpfloat (self->zp_min, <, self->zp_max);
 
       break;
+    case PROP_SCALE_CUT:
+      nc_galaxy_wl_likelihood_set_scale_cut (gwl, g_value_get_double (value));
+      break;
     case PROP_NDATA:
       nc_galaxy_wl_likelihood_set_ndata (gwl, g_value_get_int (value));
       break;
@@ -206,6 +215,8 @@ _nc_galaxy_wl_likelihood_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_ZP_MAX:
       g_value_set_double (value, self->zp_max);
       break;
+    case PROP_SCALE_CUT:
+      g_value_set_double (value, self->scale_cut);
     case PROP_NDATA:
       g_value_set_int (value, self->ndata);
       break;
@@ -384,6 +395,21 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcGalaxyWLLikelihood:scale-cut:
+   *
+   * Scale of probability at which to include a sample in the cut.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_SCALE_CUT,
+                                   g_param_spec_double ("scale-cut",
+                                                        NULL,
+                                                        "Scale of probability at which to include a sample in the cut",
+                                                        0.0, 1.0, 0.00001,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcGalaxyWLLikelihood:ndata:
    *
    * Number of data points to sample for KDE.
@@ -395,7 +421,7 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                    g_param_spec_int ("ndata",
                                                      NULL,
                                                      "Number of data points to sample for KDE",
-                                                     0.0, G_MAXINT, 100000.0,
+                                                     0.0, G_MAXINT, 10000.0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -521,16 +547,19 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
   NcmVector *sample                        = ncm_vector_new (3);
-  NcmVector *pos                           = ncm_vector_new (2);
+  NcmVector *avg                           = ncm_vector_new (2);
+  NcmVector *sigma                         = ncm_vector_new (2);
   NcmRNG *rng                              = ncm_rng_new (NULL);
-  glong in_cut                             = 0;
-  glong out_cut                            = 0;
+  gint i                                   = 0;
 
-  gint i;
+  ncm_vector_set (avg, 0, 0.0);
+  ncm_vector_set (avg, 1, 0.0);
+  ncm_vector_set (sigma, 0, 0.0);
+  ncm_vector_set (sigma, 1, 0.0);
 
   ncm_stats_dist_reset (NCM_STATS_DIST (self->kde));
 
-  for (i = 0; i < self->ndata; i++)
+  while (i < self->ndata)
   {
     gdouble r  = 0.0;
     gdouble z  = 0.0;
@@ -538,34 +567,52 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
     nc_galaxy_sd_position_gen_r (self->rz_dist, rng, &r);
 
-    while (TRUE)
+    gint order_r     = (r >= self->r_min) + (r >= self->r_max);
+    gdouble avg_r    = (ncm_vector_get (avg, 0) * (gdouble) i + r) / ((gdouble) i + 1.0);
+    gdouble sigma_r  = (ncm_vector_get (sigma, 0) * ((gdouble) i + 1) + (r - avg_r) * (r - avg_r)) / ((gdouble) i + 2);
+    gdouble bw       = pow (4.0 / (3.0 * (i + 1)), 1.0 / 5.0) * sigma_r;
+    gdouble is_cut_r = (order_r == 0) * exp (-(self->r_min - r) * (self->r_min - r) / (2.0 * bw * bw)) + (order_r == 1) + (order_r == 2) * exp (-(self->r_max - r) * (self->r_max - r) / (2.0 * bw * bw));
+
+    if (is_cut_r >= self->scale_cut)
     {
-      nc_galaxy_sd_position_gen_z (self->rz_dist, rng, &z);
+      while (TRUE)
+      {
+        nc_galaxy_sd_position_gen_z (self->rz_dist, rng, &z);
 
-      if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
-        break;
+        if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
+          break;
+      }
+
+      gint order_zp     = (zp >= self->zp_min) + (zp >= self->zp_max);
+      gdouble avg_zp    = (ncm_vector_get (avg, 1) * (gdouble) i + zp) / ((gdouble) i + 1.0);
+      gdouble sigma_zp  = (ncm_vector_get (sigma, 1) * ((gdouble) i + 1) + (zp - avg_zp) * (zp - avg_zp)) / ((gdouble) i + 2);
+      gdouble bw        = pow (4.0 / (3.0 * (i + 1)), 1.0 / 5.0) * sigma_zp;
+      gdouble is_cut_zp = (order_zp == 0) * exp (-(self->zp_min - zp) * (self->zp_min - zp) / (2.0 * bw * bw)) + (order_zp == 1) + (order_zp == 2) * exp (-(self->zp_max - zp) * (self->zp_max - zp) / (2.0 * bw * bw));
+
+      if (is_cut_zp >= self->scale_cut)
+      {
+        i++;
+
+        const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
+
+        ncm_vector_set (avg, 0, avg_r);
+        ncm_vector_set (avg, 1, avg_zp);
+        ncm_vector_set (sigma, 0, sigma_r);
+        ncm_vector_set (sigma, 1, sigma_zp);
+
+        ncm_vector_set (sample, 0, r);
+        ncm_vector_set (sample, 1, zp);
+        ncm_vector_set (sample, 2, s);
+
+        ncm_stats_dist_add_obs (NCM_STATS_DIST (self->kde), sample);
+      }
     }
-
-    const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
-
-    ncm_vector_set (sample, 0, r);
-    ncm_vector_set (sample, 1, zp);
-    ncm_vector_set (sample, 2, s);
-
-    if ((self->r_min <= r) && (r <= self->r_max) && (self->zp_min <= zp) && (zp <= self->zp_max))
-      in_cut++;
-    else
-      out_cut++;
-
-    ncm_stats_dist_add_obs (NCM_STATS_DIST (self->kde), sample);
   }
 
-  self->cut_fraction = (gdouble) in_cut / (gdouble) (in_cut + out_cut);
 
   ncm_stats_dist_prepare (NCM_STATS_DIST (self->kde));
 
   ncm_rng_clear (&rng);
-  ncm_vector_clear (&pos);
   ncm_vector_clear (&sample);
 }
 
@@ -631,8 +678,6 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
     }
   }
 
-  res += 2.0 * in_cut * log (self->cut_fraction);
-
   ncm_vector_clear (&data_vec);
 
   return res;
@@ -675,6 +720,22 @@ nc_galaxy_wl_likelihood_set_cut (NcGalaxyWLLikelihood *gwl, const gdouble zp_min
   self->zp_max = zp_max;
   self->r_min  = r_min;
   self->r_max  = r_max;
+}
+
+/**
+ * nc_galaxy_wl_likelihood_set_scale_cut:
+ * @gwl: a #NcGalaxyWL
+ * @scale: scale of the probability at which a point should be included in the cut
+ *
+ * Sets the scale of the probability at which a point should be included in the cut.
+ *
+ */
+void
+nc_galaxy_wl_likelihood_set_scale_cut (NcGalaxyWLLikelihood *gwl, const gdouble scale)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  self->scale_cut = scale;
 }
 
 /**
