@@ -550,6 +550,8 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
   NcmVector *avg                           = ncm_vector_new (2);
   NcmVector *sigma                         = ncm_vector_new (2);
   NcmRNG *rng                              = ncm_rng_new (NULL);
+  gdouble in_cut                           = 0;
+  gdouble out_cut                          = 0;
   gint i                                   = 0;
 
   ncm_vector_set (avg, 0, 0.0);
@@ -593,6 +595,11 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
       {
         i++;
 
+        if ((order_r == 1) && (order_zp == 1))
+          in_cut++;
+        else
+          out_cut++;
+
         const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
 
         ncm_vector_set (avg, 0, avg_r);
@@ -608,6 +615,8 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
       }
     }
   }
+
+  self->cut_fraction = (gdouble) in_cut / (gdouble) (in_cut + out_cut);
 
 
   ncm_stats_dist_prepare (NCM_STATS_DIST (self->kde));
@@ -677,6 +686,8 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
       res += ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
     }
   }
+
+  res += 2.0 * in_cut * log (self->cut_fraction);
 
   ncm_vector_clear (&data_vec);
 
