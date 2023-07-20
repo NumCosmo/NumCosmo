@@ -42,7 +42,28 @@ typedef struct _NcmIntegralndClass NcmIntegralndClass;
 typedef struct _NcmIntegralnd NcmIntegralnd;
 typedef struct _NcmIntegralndPrivate NcmIntegralndPrivate;
 
-typedef gdouble (*NcmIntegralndF) (NcmIntegralnd *intnd, const gdouble x);
+/**
+ * NcmIntegralndF:
+ * @intnd: a #NcmIntegralnd
+ * @x: (array) (element-type double): the value of the variable of integration
+ * @dim: the dimension of the integral argument
+ * @npoints: the number of points in the array @x
+ * @fdim: the dimension of the function to be integrated
+ * 
+ * The type of the function that must be implemented by a subclass of #NcmIntegralnd.
+ * 
+ * This function receives @npoints points in the array @x (size @dim * @npoints), and 
+ * returns an array (size @fdim * @npoints) of @npoints values of the integrand at all 
+ * points in @x. The @x is an array of doubles in row-major order
+ * (i.e. the first @dim elements of @x are the coordinates of the first point, the next
+ * @dim elements are the coordinates of the second point, and so on). The return value
+ * is an array of @fdim values of the integrand at all points in @x (e.g. the first
+ * @fdim elements are the values of the integrand at the first point, the next @fdim
+ * elements are the values of the integrand at the second point, and so on).
+ * 
+ * Returns: (array) (element-type double): the @fdim values of the integrand at all points in @x
+ */
+typedef GArray *(*NcmIntegralndF) (NcmIntegralnd *intnd, gdouble *x, guint dim, guint npoints, guint fdim);
 
 struct _NcmIntegralndClass
 {
@@ -65,45 +86,17 @@ NcmIntegralnd *ncm_integralnd_ref (NcmIntegralnd *intnd);
 void ncm_integralnd_free (NcmIntegralnd *intnd);
 void ncm_integralnd_clear (NcmIntegralnd **intnd);
 
-void ncm_integralnd_set_partition (NcmIntegralnd *intnd, guint partition);
-void ncm_integralnd_set_rule (NcmIntegralnd *intnd, guint rule);
 void ncm_integralnd_set_reltol (NcmIntegralnd *intnd, gdouble reltol);
 void ncm_integralnd_set_abstol (NcmIntegralnd *intnd, gdouble abstol);
 
-guint ncm_integralnd_get_partition (NcmIntegralnd *intnd);
-guint ncm_integralnd_get_rule (NcmIntegralnd *intnd);
 gdouble ncm_integralnd_get_reltol (NcmIntegralnd *intnd);
 gdouble ncm_integralnd_get_abstol (NcmIntegralnd *intnd);
 
-NCM_INLINE gdouble ncm_integralnd_integrand (NcmIntegralnd *intnd, const gdouble x);
+gdouble *ncm_integralnd_eval (NcmIntegralnd *intnd, const gdouble *xi, const gdouble *xf, gdouble **err);
 
-gdouble ncm_integralnd_eval_h (NcmIntegralnd *intnd, const gdouble xi, const gdouble xf, gdouble *err);
-
-#define NCM_INTEGRALND_DEFAULT_PARTITION 100000
-#define NCM_INTEGRALND_DEFAULT_ALG 6
 #define NCM_INTEGRALND_DEFAULT_RELTOL 1e-13
 #define NCM_INTEGRALND_DEFAULT_ABSTOL 0.0
 
 G_END_DECLS
 
 #endif /* _NCM_INTEGRALND_H_ */
-
-#ifndef _NCM_INTEGRALND_INLINE_H_
-#define _NCM_INTEGRALND_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE gdouble 
-ncm_integralnd_integrand (NcmIntegralnd *intnd, const gdouble x)
-{
-  return NCM_INTEGRALND_GET_CLASS (intnd)->integrand (intnd, x);  
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_INTEGRALND_INLINE_H_ */
-
