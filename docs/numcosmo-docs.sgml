@@ -30,6 +30,7 @@
       <xi:include href="xml/ncm_obj_array.xml"/>
       <xi:include href="xml/ncm_integral1d.xml"/>
       <xi:include href="xml/ncm_integral1d_ptr.xml"/>
+      <xi:include href="xml/ncm_integralnd.xml"/>
       <xi:include href="xml/ncm_lapack.xml"/>
       <xi:include href="xml/ncm_func_eval.xml"/>
       <xi:include href="xml/ncm_timer.xml"/>
