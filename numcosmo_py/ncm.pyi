@@ -32,6 +32,8 @@ INTEGRAL1D_DEFAULT_ABSTOL: float = 0.0
 INTEGRAL1D_DEFAULT_ALG: int = 6
 INTEGRAL1D_DEFAULT_PARTITION: int = 100000
 INTEGRAL1D_DEFAULT_RELTOL: float = 0.0
+INTEGRALND_DEFAULT_ABSTOL: float = 0.0
+INTEGRALND_DEFAULT_RELTOL: float = 0.0
 INTEGRAL_ABS_ERROR: float = 0.0
 INTEGRAL_ALG: int = 6
 INTEGRAL_ERROR: float = 0.0
@@ -4382,6 +4384,79 @@ class IntegralFixed(GObject.GPointer):
     def nodes_eval(self) -> float: ...
     
 
+class Integralnd(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        Integralnd(**properties)
+
+    Object NcmIntegralnd
+
+    Properties from NcmIntegralnd:
+      method -> NcmIntegralndMethod: method
+        Integration method
+      error -> NcmIntegralndError: error
+        Error measure
+      maxeval -> guint: maxeval
+        Maximum number of function evaluations (0 means unlimited)
+      reltol -> gdouble: reltol
+        Integral relative tolerance
+      abstol -> gdouble: abstol
+        Integral absolute tolerance
+
+    Signals from GObject:
+      notify (GParam)
+    """
+    class Props:
+        abstol: float
+        error: IntegralndError
+        maxeval: int
+        method: IntegralndMethod
+        reltol: float
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    priv: IntegralndPrivate = ...
+    def __init__(self, abstol: float = ...,
+                 error: IntegralndError = ...,
+                 maxeval: int = ...,
+                 method: IntegralndMethod = ...,
+                 reltol: float = ...): ...
+    @staticmethod
+    def clear(intnd: Integralnd) -> None: ...
+    def do_get_dimensions(self) -> Tuple[int, int]: ...
+    def do_integrand(self, x: Vector, dim: int, npoints: int, fdim: int, fval: Vector) -> None: ...
+    def eval(self, xi: Vector, xf: Vector, res: Vector, err: Vector) -> None: ...
+    def free(self) -> None: ...
+    def get_abstol(self) -> float: ...
+    def get_error(self) -> IntegralndError: ...
+    def get_maxeval(self) -> int: ...
+    def get_method(self) -> IntegralndMethod: ...
+    def get_reltol(self) -> float: ...
+    def ref(self) -> Integralnd: ...
+    def set_abstol(self, abstol: float) -> None: ...
+    def set_error(self, error: IntegralndError) -> None: ...
+    def set_maxeval(self, maxeval: int) -> None: ...
+    def set_method(self, method: IntegralndMethod) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    
+
+class IntegralndClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        IntegralndClass()
+    """
+    parent_class: GObject.ObjectClass = ...
+    integrand: Callable[[Integralnd, Vector, int, int, int, Vector], None] = ...
+    get_dimensions: Callable[[Integralnd], Tuple[int, int]] = ...
+    padding: list[None] = ...
+
+class IntegralndPrivate(GObject.GPointer): ...
+
 class Integrand2dim(GObject.GPointer):
     r"""
     :Constructors:
@@ -6087,6 +6162,7 @@ class Model(GObject.Object):
     def orig_param_get_upper_bound(self, n: int) -> float: ...
     def orig_param_index_from_name(self, param_name: str) -> Tuple[bool, int]: ...
     def orig_param_name(self, n: int) -> str: ...
+    def orig_param_peek_desc(self, n: int) -> SParam: ...
     def orig_param_set(self, n: int, val: float) -> None: ...
     def orig_param_set_by_name(self, param_name: str, val: float) -> None: ...
     def orig_param_symbol(self, n: int) -> str: ...
@@ -6414,11 +6490,11 @@ class ModelMVND(Model):
       dim -> guint: dim
         Problem dimension
       mu -> NcmVector: mu
-        mu
+        \mu
       mu-length -> guint: mu-length
-        mu:length
+        \mu:length
       mu-fit -> GVariant: mu-fit
-        mu:fit
+        \mu:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10796,6 +10872,19 @@ class HOAAVar(GObject.GEnum):
     QBAR = 0
     SYS_SIZE = 4
     UPSILON = 2
+
+class IntegralndError(GObject.GEnum):
+    INDIVIDUAL = 0
+    L1 = 3
+    L2 = 2
+    LINF = 4
+    PAIRWISE = 1
+
+class IntegralndMethod(GObject.GEnum):
+    H = 0
+    H_V = 2
+    P = 1
+    P_V = 3
 
 class LHRatio1dRoot(GObject.GEnum):
     BRACKET = 0

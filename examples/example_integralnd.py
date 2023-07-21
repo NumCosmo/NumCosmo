@@ -24,6 +24,11 @@
 
 """Simple example computing cosmological distances."""
 
+from typing import Tuple
+
+import numpy as np
+import timeit
+
 from numcosmo_py import Ncm
 
 #
@@ -36,16 +41,54 @@ Ncm.cfg_init()
 class TestIntegralND(Ncm.Integralnd):
     """Test class for IntegralND."""
 
-    def do_integrand(self, x: list[float], dim, npoints, fdim) -> list[float]:
+    def do_get_dimensions(self) -> Tuple[int, int]:
+        """Get number of dimensions."""
+        return 3, 3
+
+    def do_integrand(
+        self,
+        x_vec: Ncm.Vector,
+        dim: int,
+        npoints: int,
+        fdim: int,
+        fval_vec: Ncm.Vector,
+    ) -> None:
         """Integrand function."""
-        return [1.0]
+
+        x = np.array(x_vec.dup_array())
+        fval = (3.0 * x**2 + 2.0 * x) * np.sin(1.0 * x)
+
+        fval_vec.set_array(fval.tolist())
 
 
 def test_integralnd() -> None:
     """Example computing cosmological distances."""
-    test_f = TestIntegralND()
+    test_f = TestIntegralND(method=Ncm.IntegralndMethod.H_V)
 
-    test_f.eval([0.0, 0.0], [1.0, 1.0])
+    res = Ncm.Vector.new(3)
+    err = Ncm.Vector.new(3)
+
+    def test_int():
+        test_f.eval(
+            Ncm.Vector.new_array([0.0, 0.0, 0.0]),
+            Ncm.Vector.new_array([1.0, 1.0, 1.0]),
+            res,
+            err,
+        )
+
+    test_f.set_method(Ncm.IntegralndMethod.P_V)
+    print(timeit.timeit(test_int, number=10))
+
+    test_f.set_method(Ncm.IntegralndMethod.H_V)
+    print(timeit.timeit(test_int, number=10))
+
+    test_f.set_method(Ncm.IntegralndMethod.P)
+    print(timeit.timeit(test_int, number=10))
+
+    test_f.set_method(Ncm.IntegralndMethod.H)
+    print(timeit.timeit(test_int, number=10))
+
+    print(res.dup_array(), err.dup_array())
 
 
 if __name__ == "__main__":

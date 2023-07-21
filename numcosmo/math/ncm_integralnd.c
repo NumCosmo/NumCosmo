@@ -26,7 +26,7 @@
 /**
  * SECTION:ncm_integralnd
  * @title: NcmIntegralnd
- * @short_description: One dimensional integration object.
+ * @short_description: N-dimensional integration object.
  * @stability: Stable
  * @include: numcosmo/math/ncm_integralnd.h
  *
@@ -44,6 +44,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_integralnd.h"
+#include "ncm_enum_types.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 
@@ -57,6 +58,9 @@
 
 struct _NcmIntegralndPrivate
 {
+  NcmIntegralndMethod method;
+  NcmIntegralndError error;
+  guint maxeval;
   gdouble reltol;
   gdouble abstol;
 };
@@ -66,6 +70,9 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralnd, ncm_integralnd, G_TYPE_OBJEC
 enum
 {
   PROP_0,
+  PROP_METHOD,
+  PROP_ERROR,
+  PROP_MAXEVAL,
   PROP_RELTOL,
   PROP_ABSTOL,
   PROP_SIZE,
@@ -76,8 +83,11 @@ ncm_integralnd_init (NcmIntegralnd *intnd)
 {
   NcmIntegralndPrivate * const self = intnd->priv = ncm_integralnd_get_instance_private (intnd);
 
-  self->reltol = 0.0;
-  self->abstol = 0.0;
+  self->method  = NCM_INTEGRALND_METHOD_LEN;
+  self->error   = NCM_INTEGRALND_ERROR_LEN;
+  self->maxeval = 0;
+  self->reltol  = 0.0;
+  self->abstol  = 0.0;
 }
 
 static void
@@ -89,6 +99,15 @@ ncm_integralnd_set_property (GObject *object, guint prop_id, const GValue *value
 
   switch (prop_id)
   {
+    case PROP_METHOD:
+      ncm_integralnd_set_method (intnd, g_value_get_enum (value));
+      break;
+    case PROP_ERROR:
+      ncm_integralnd_set_error (intnd, g_value_get_enum (value));
+      break;
+    case PROP_MAXEVAL:
+      ncm_integralnd_set_maxeval (intnd, g_value_get_uint (value));
+      break;
     case PROP_RELTOL:
       ncm_integralnd_set_reltol (intnd, g_value_get_double (value));
       break;
@@ -110,6 +129,15 @@ ncm_integralnd_get_property (GObject *object, guint prop_id, GValue *value, GPar
 
   switch (prop_id)
   {
+    case PROP_METHOD:
+      g_value_set_enum (value, ncm_integralnd_get_method (intnd));
+      break;
+    case PROP_ERROR:
+      g_value_set_enum (value, ncm_integralnd_get_error (intnd));
+      break;
+    case PROP_MAXEVAL:
+      g_value_set_uint (value, ncm_integralnd_get_maxeval (intnd));
+      break;
     case PROP_RELTOL:
       g_value_set_double (value, ncm_integralnd_get_reltol (intnd));
       break;
@@ -125,12 +153,15 @@ ncm_integralnd_get_property (GObject *object, guint prop_id, GValue *value, GPar
 static void
 ncm_integralnd_finalize (GObject *object)
 {
-  NcmIntegralnd *intnd              = NCM_INTEGRALND (object);
-  NcmIntegralndPrivate * const self = intnd->priv;
+  /* NcmIntegralnd *intnd              = NCM_INTEGRALND (object); */
+  /* NcmIntegralndPrivate * const self = intnd->priv; */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integralnd_parent_class)->finalize (object);
 }
+
+void _ncm_integralnd_eval (NcmIntegralnd *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+void _ncm_integralnd_get_dimensions (NcmIntegralnd *intnd, guint *dim, guint *fdim);
 
 static void
 ncm_integralnd_class_init (NcmIntegralndClass *klass)
@@ -140,6 +171,32 @@ ncm_integralnd_class_init (NcmIntegralndClass *klass)
   object_class->set_property = &ncm_integralnd_set_property;
   object_class->get_property = &ncm_integralnd_get_property;
   object_class->finalize     = &ncm_integralnd_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_METHOD,
+                                   g_param_spec_enum ("method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NCM_TYPE_INTEGRALND_METHOD,
+                                                      NCM_INTEGRALND_METHOD_CUBATURE_H,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_ERROR,
+                                   g_param_spec_enum ("error",
+                                                      NULL,
+                                                      "Error measure",
+                                                      NCM_TYPE_INTEGRALND_ERROR,
+                                                      NCM_INTEGRALND_ERROR_INDIVIDUAL,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_MAXEVAL,
+                                   g_param_spec_uint ("maxeval",
+                                                      NULL,
+                                                      "Maximum number of function evaluations (0 means unlimited)",
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -155,6 +212,21 @@ ncm_integralnd_class_init (NcmIntegralndClass *klass)
                                                         "Integral absolute tolerance",
                                                         0.0, G_MAXDOUBLE, NCM_INTEGRALND_DEFAULT_ABSTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->integrand      = &_ncm_integralnd_eval;
+  klass->get_dimensions = &_ncm_integralnd_get_dimensions;
+}
+
+void
+_ncm_integralnd_eval (NcmIntegralnd *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  g_error ("ncm_integralnd_eval not implemented by subclass: `%s`.", G_OBJECT_TYPE_NAME (intnd));
+}
+
+void
+_ncm_integralnd_get_dimensions (NcmIntegralnd *intnd, guint *dim, guint *fdim)
+{
+  g_error ("ncm_integralnd_get_dimensions not implemented by subclass: `%s`.", G_OBJECT_TYPE_NAME (intnd));
 }
 
 /**
@@ -199,6 +271,54 @@ ncm_integralnd_clear (NcmIntegralnd **intnd)
 }
 
 /**
+ * ncm_integralnd_set_method:
+ * @intnd: a #NcmIntegralnd
+ * @method: a #NcmIntegralndMethod
+ *
+ * Sets the integration method to use.
+ *
+ */
+void
+ncm_integralnd_set_method (NcmIntegralnd *intnd, NcmIntegralndMethod method)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  self->method = method;
+}
+
+/**
+ * ncm_integralnd_set_error:
+ * @intnd: a #NcmIntegralnd
+ * @error: a #NcmIntegralndError
+ *
+ * Sets the error measure to use.
+ *
+ */
+void
+ncm_integralnd_set_error (NcmIntegralnd *intnd, NcmIntegralndError error)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  self->error = error;
+}
+
+/**
+ * ncm_integralnd_set_maxeval:
+ * @intnd: a #NcmIntegralnd
+ * @maxeval: maximum number of function evaluations
+ *
+ * Sets the maximum number of function evaluations to use.
+ * Zero means unlimited.
+ */
+void
+ncm_integralnd_set_maxeval (NcmIntegralnd *intnd, guint maxeval)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  self->maxeval = maxeval;
+}
+
+/**
  * ncm_integralnd_set_reltol:
  * @intnd: a #NcmIntegralnd
  * @reltol: relative tolerance
@@ -231,6 +351,48 @@ ncm_integralnd_set_abstol (NcmIntegralnd *intnd, gdouble abstol)
 }
 
 /**
+ * ncm_integralnd_get_method:
+ * @intnd: a #NcmIntegralnd
+ *
+ * Returns: the integration method used.
+ */
+NcmIntegralndMethod
+ncm_integralnd_get_method (NcmIntegralnd *intnd)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  return self->method;
+}
+
+/**
+ * ncm_integralnd_get_error:
+ * @intnd: a #NcmIntegralnd
+ *
+ * Returns: the error measure used.
+ */
+NcmIntegralndError
+ncm_integralnd_get_error (NcmIntegralnd *intnd)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  return self->error;
+}
+
+/**
+ * ncm_integralnd_get_maxeval:
+ * @intnd: a #NcmIntegralnd
+ *
+ * Returns: the maximum number of function evaluations used.
+ */
+guint
+ncm_integralnd_get_maxeval (NcmIntegralnd *intnd)
+{
+  NcmIntegralndPrivate * const self = intnd->priv;
+
+  return self->maxeval;
+}
+
+/**
  * ncm_integralnd_get_reltol:
  * @intnd: a #NcmIntegralnd
  *
@@ -258,28 +420,158 @@ ncm_integralnd_get_abstol (NcmIntegralnd *intnd)
   return self->abstol;
 }
 
+static gint
+_ncm_integralnd_cubature_int (unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
+{
+  NcmIntegralnd *intnd = NCM_INTEGRALND (fdata);
+  NcmVector *x_vec     = ncm_vector_new_data_static ((gdouble *) x, ndim, 1);
+  NcmVector *fval_vec  = ncm_vector_new_data_static (fval, fdim, 1);
+
+
+  NCM_INTEGRALND_GET_CLASS (intnd)->integrand (intnd, x_vec, ndim, 1, fdim, fval_vec);
+
+  ncm_vector_free (x_vec);
+  ncm_vector_free (fval_vec);
+
+  return 0;
+}
+
+static gint
+_ncm_integralnd_cubature_vint (unsigned ndim, size_t npt, const double *x, void *fdata, unsigned fdim, double *fval)
+{
+  NcmIntegralnd *intnd = NCM_INTEGRALND (fdata);
+  NcmVector *x_vec     = ncm_vector_new_data_static ((gdouble *) x, ndim * npt, 1);
+  NcmVector *fval_vec  = ncm_vector_new_data_static (fval, fdim * npt, 1);
+
+  NCM_INTEGRALND_GET_CLASS (intnd)->integrand (intnd, x_vec, ndim, npt, fdim, fval_vec);
+
+  ncm_vector_free (x_vec);
+  ncm_vector_free (fval_vec);
+
+  return 0;
+}
+
 /**
  * ncm_integralnd_eval:
  * @intnd: a #NcmIntegralnd
- * @xi: (array) (element-type double): inferior integration limit $x_i$
- * @xf: (array) (element-type double): superior integration limit $x_f$
- * @err: (array) (element-type double) (out callee-allocates): the error in the integration
+ * @xi: a #NcmVector containing the inferior integration limit $x_i$
+ * @xf: a #NcmVector containing the superior integration limit $x_f$
+ * @res: a #NcmVector containing the result of the integration
+ * @err: a #NcmVector containing the error of the integration
  *
  * Evaluated the integral $I_F(x_i, x_f) = \int_{x_i}^{x_f}F(x)\mathrm{d}x$.
  *
- * Returns: (transfer full) (array) (element-type double): the value of the integral $I_F(x_i, x_f)$.
  */
-gdouble *
-ncm_integralnd_eval (NcmIntegralnd *intnd, const gdouble *xi, const gdouble *xf, gdouble **err)
+void
+ncm_integralnd_eval (NcmIntegralnd *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
 {
   NcmIntegralndPrivate * const self = intnd->priv;
-  gdouble *result                   = g_new (gdouble, 1);
+  gint error                        = 0;
 
-  printf ("xi = %g, xf = %g\n", xi[0], xf[0]);
-  fflush (stdout);
+  guint dim, fdim;
+  gint ret;
 
-  *err = g_new (gdouble, 1);
 
-  return result;
+  NCM_INTEGRALND_GET_CLASS (intnd)->get_dimensions (intnd, &dim, &fdim);
+
+  g_assert_cmpuint (ncm_vector_len (xi), ==, dim);
+  g_assert_cmpuint (ncm_vector_len (xf), ==, dim);
+  g_assert_cmpuint (ncm_vector_len (res), ==, fdim);
+  g_assert_cmpuint (ncm_vector_len (err), ==, fdim);
+
+  switch (self->error)
+  {
+    case NCM_INTEGRALND_ERROR_INDIVIDUAL:
+      error = ERROR_INDIVIDUAL;
+      break;
+    case NCM_INTEGRALND_ERROR_PAIRWISE:
+      error = ERROR_PAIRED;
+      break;
+    case NCM_INTEGRALND_ERROR_L2:
+      error = ERROR_L2;
+      break;
+    case NCM_INTEGRALND_ERROR_L1:
+      error = ERROR_L1;
+      break;
+    case NCM_INTEGRALND_ERROR_LINF:
+      error = ERROR_LINF;
+      break;
+    default:
+      g_error ("ncm_integralnd_eval: invalid error measure: `%d`.", self->error);
+      break;
+  }
+
+
+  switch (self->method)
+  {
+    case NCM_INTEGRALND_METHOD_CUBATURE_H:
+      ret = hcubature (
+        fdim,
+        _ncm_integralnd_cubature_int,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        self->maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                      );
+      break;
+    case NCM_INTEGRALND_METHOD_CUBATURE_P:
+      ret = pcubature (
+        fdim,
+        _ncm_integralnd_cubature_int,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        self->maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                      );
+      break;
+    case NCM_INTEGRALND_METHOD_CUBATURE_H_V:
+      ret = hcubature_v (
+        fdim,
+        _ncm_integralnd_cubature_vint,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        self->maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                        );
+    case NCM_INTEGRALND_METHOD_CUBATURE_P_V:
+      ret = pcubature_v (
+        fdim,
+        _ncm_integralnd_cubature_vint,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        self->maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                        );
+      break;
+    default:
+      g_error ("ncm_integralnd_eval: invalid method: `%d`.", self->method);
+      break;
+  }
+
+  g_assert (ret == 0);
 }
 
