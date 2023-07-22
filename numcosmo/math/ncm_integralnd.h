@@ -138,7 +138,7 @@ gdouble ncm_integralnd_get_abstol (NcmIntegralnd *intnd);
 
 void ncm_integralnd_eval (NcmIntegralnd *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err);
 
-#define NCM_INTEGRALND_DEFAULT_RELTOL 1e-13
+#define NCM_INTEGRALND_DEFAULT_RELTOL 1e-4
 #define NCM_INTEGRALND_DEFAULT_ABSTOL 0.0
 
 G_END_DECLS
