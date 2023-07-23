@@ -24,10 +24,10 @@
 
 """Tests for the Python bindings sanity."""
 
+import math
+
 from numcosmo_py import Ncm
 from numcosmo_py import Nc
-
-import math
 
 
 def test_cfg_init():
