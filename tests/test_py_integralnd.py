@@ -120,9 +120,6 @@ def test_integralnd_props() -> None:
     """Example computing cosmological distances."""
     test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralndMethod.H_V)
 
-    res = Ncm.Vector.new(3)
-    err = Ncm.Vector.new(3)
-
     test_f.set_abstol(1e-6)
     assert_almost_equal(test_f.get_abstol(), 1e-6)
 
