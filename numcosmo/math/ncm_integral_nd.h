@@ -90,6 +90,19 @@ struct _NcmIntegralNDClass
   gpointer padding[16];
 };
 
+/**
+ * NcmIntegralNDMethod:
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H: adapative integration by partitioning the integration domain ("h-adaptive")
+ *  and using the same fixed-degree quadrature in each subdomain, recursively, until convergence is achieved.
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P: adaptive integration by increasing the degree of (tensor-product
+ *  Clenshaw-Curtis) quadrature rules ("p-adaptive"), rather than subdividing the domain ("h-adaptive").
+ *  Possibly better for smooth integrands in low dimensions.
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V: same as @NCM_INTEGRAL_ND_METHOD_CUBATURE_H with vectorized integrand
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V: same as @NCM_INTEGRAL_ND_METHOD_CUBATURE_P with vectorized integrand
+ *
+ * The type of the method used to perform the integral.
+ *
+ */
 typedef enum _NcmIntegralNDMethod
 {
   NCM_INTEGRAL_ND_METHOD_CUBATURE_H,
@@ -100,6 +113,17 @@ typedef enum _NcmIntegralNDMethod
   NCM_INTEGRAL_ND_METHOD_LEN, /*< skip >*/
 } NcmIntegralNDMethod;
 
+/**
+ * NcmIntegralNDError:
+ * @NCM_INTEGRAL_ND_ERROR_INDIVIDUAL: error is estimated for each integrand separately
+ * @NCM_INTEGRAL_ND_ERROR_PAIRWISE: error is estimated for each pair of integrands
+ * @NCM_INTEGRAL_ND_ERROR_L2: error is estimated for the L2 norm of the vector of integrands
+ * @NCM_INTEGRAL_ND_ERROR_L1: error is estimated for the L1 norm of the vector of integrands
+ * @NCM_INTEGRAL_ND_ERROR_LINF: error is estimated for the L-infinity norm of the vector of integrands
+ *
+ * The type of the error estimation used to perform the integral.
+ *
+ */
 typedef enum _NcmIntegralNDError
 {
   NCM_INTEGRAL_ND_ERROR_INDIVIDUAL,

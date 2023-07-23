@@ -34,7 +34,8 @@
  * using different methods.
  *
  * The integration can be performed using the cubature library. The cubature
- * library is a library for adaptive multidimensional integration.
+ * library is a library for adaptive multidimensional integration. The original
+ * code can be found at https://github.com/stevengj/cubature .
  *
  */
 
