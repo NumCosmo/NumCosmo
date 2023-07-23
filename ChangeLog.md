@@ -2,6 +2,21 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * New minor release 0.18.0.
+
+ * Implementing n-dimensional integration object (#106)
+
+     * Initiating implementation
+     * Adding IntegralND to docs.
+     * Changed error for testing
+     * Adding tests to integralnd.
+     * removed unnecessary variables
+     * Adding numpy to testing.
+     * Renamed object and improved coverage.
+     * Added documentation.
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
 
 [v0.18.0]
  * New minor release.
