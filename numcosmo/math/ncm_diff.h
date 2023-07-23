@@ -35,7 +35,7 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DIFF             (ncm_diff_get_type ())
+#define NCM_TYPE_DIFF (ncm_diff_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject);
 
@@ -49,6 +49,7 @@ G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject);
  *
  */
 typedef void (*NcmDiffFuncNtoM) (NcmVector *x, NcmVector *y, gpointer user_data);
+
 /**
  * NcmDiffFunc1toM:
  * @x: function argument
@@ -59,6 +60,7 @@ typedef void (*NcmDiffFuncNtoM) (NcmVector *x, NcmVector *y, gpointer user_data)
  *
  */
 typedef void (*NcmDiffFunc1toM) (const gdouble x, NcmVector *y, gpointer user_data);
+
 /**
  * NcmDiffFuncNto1:
  * @x: function argument
@@ -68,6 +70,7 @@ typedef void (*NcmDiffFunc1toM) (const gdouble x, NcmVector *y, gpointer user_da
  *
  */
 typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
+
 /**
  * NcmDiffFunc1to1:
  * @x: function argument
