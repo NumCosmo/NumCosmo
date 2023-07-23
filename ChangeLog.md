@@ -3,6 +3,93 @@ CHANGELOG
 
 [Current]
 
+[v0.18.0]
+ * New minor release.
+
+ * Create SECURITY.md
+ * Create CONTRIBUTING.md
+ * Create CODE_OF_CONDUCT.md
+ * Update issue templates
+ * Update bug_report.md
+ * Update issue templates (#104)
+
+     * Update issue templates
+ * 102 add notebook for gauss constraint tests (#103)
+
+     * New gauss_constraint_mcmc.ipynb notebook. 
+     * Minor improvements and tweaks on numcosmo_py.
+     * Adding xcdm experiment to the example_apes.py. 
+     * Updated default oversmooth to match new VKDE parametrization.
+     * Fixed typos.
+     * Added burnin option in getdist helper function.
+     * Cleaning notebooks.
+     * Black on notebooks.
+ * Added TMVN sampler. (#101)
+
+     * Added TMVN sampler.
+ * Update README.md
+ * Update README.md (#99)
+
+
+ * Updated python interface. (#98)
+
+     * Updated interface and generated stubs for mypy. All examples were
+     updated.
+     * Adding tests to new methods.
+     * Improving tests.
+ * Fixed bug that resets the values of use_threads in APES.
+
+ * Several improvements on APES and others. (#92)
+
+     * Several improvements on APES and others.
+     
+     - Added linters to python code on NumCosmo.
+     - Updated severeal examples, more to come.
+     - Removed old and/or incomplete examples.
+     - Added support for for BLIS (BLAS like library).
+     - This commit has timing logs on the APES code (it will be removed soon).
+     - Complete parallelization using OpenMP.
+     - Combininig different parallelizations OpenBLAS, VKDE, Interpolation, etc.
+     
+     - Better documentation and error messages. Removed debug and timing prints.
+     
+     - Updated examples. Organized walker's thread usage.
+     - Removed old and unused code.
+     - Minimal tests to ncm_cfg.
+     - Calibrating lcov exclusions.
+ * Removed printf from test.
+
+ * Improving parallelization for APES.
+
+     - Made several methods reentrant (kdtree, ncm_stats_dist_vkde
+     ncm_stats_dist_kde).
+     - Added parallelization to KDE preparation (VKDE and KDE).
+     - Updated multi-thread model to use OpenMP in NcmFitESMCMC.
+     - Fixed the associated tests.
+
+ * Fixed setting of max_ess.
+
+ * Added conditional compilation of internal function.
+
+ * Added support in ncm_mset_catalog and mcat_analyze to compute acceptance ratio.
+
+ * Many minor improvements.
+
+     * Added one more numcosmo_py experiment: gauss_constraint.
+     * Added source dir tools PATH numcosmo_export.sh to allow non-installed
+     version to find python tools.
+     * Working in a new primordial model.
+     * Added option to mcat_calibrate_apes to whether to plot the calibrated
+     results.
+     * Minor identation and documentation tweaks.
+
+ * Fixed scripts shebang.
+
+ * New version 0.17.0.
+
+     Minor documentation glitch fixes.
+
+
 [v0.17.0]
  * New version 0.17.0.
 
