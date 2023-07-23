@@ -46,8 +46,8 @@
 #include <numcosmo/math/ncm_serialize.h>
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_integral1d.h>
-#include <numcosmo/math/ncm_integralnd.h>
 #include <numcosmo/math/ncm_integral1d_ptr.h>
+#include <numcosmo/math/ncm_integral_nd.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d.h>

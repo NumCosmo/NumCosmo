@@ -32,11 +32,11 @@ INTEGRAL1D_DEFAULT_ABSTOL: float = 0.0
 INTEGRAL1D_DEFAULT_ALG: int = 6
 INTEGRAL1D_DEFAULT_PARTITION: int = 100000
 INTEGRAL1D_DEFAULT_RELTOL: float = 0.0
-INTEGRALND_DEFAULT_ABSTOL: float = 0.0
-INTEGRALND_DEFAULT_RELTOL: float = 0.0
 INTEGRAL_ABS_ERROR: float = 0.0
 INTEGRAL_ALG: int = 6
 INTEGRAL_ERROR: float = 0.0
+INTEGRAL_ND_DEFAULT_ABSTOL: float = 0.0
+INTEGRAL_ND_DEFAULT_RELTOL: float = 0.0
 INTEGRAL_PARTITION: int = 100000
 MODEL_CLASS_IMPL_ALL: int = 18446744073709551615
 MODEL_MAX_STATES: int = 10
@@ -4384,20 +4384,20 @@ class IntegralFixed(GObject.GPointer):
     def nodes_eval(self) -> float: ...
     
 
-class Integralnd(GObject.Object):
+class IntegralND(GObject.Object):
     r"""
     :Constructors:
 
     ::
 
-        Integralnd(**properties)
+        IntegralND(**properties)
 
-    Object NcmIntegralnd
+    Object NcmIntegralND
 
-    Properties from NcmIntegralnd:
-      method -> NcmIntegralndMethod: method
+    Properties from NcmIntegralND:
+      method -> NcmIntegralNDMethod: method
         Integration method
-      error -> NcmIntegralndError: error
+      error -> NcmIntegralNDError: error
         Error measure
       maxeval -> guint: maxeval
         Maximum number of function evaluations (0 means unlimited)
@@ -4411,51 +4411,51 @@ class Integralnd(GObject.Object):
     """
     class Props:
         abstol: float
-        error: IntegralndError
+        error: IntegralNDError
         maxeval: int
-        method: IntegralndMethod
+        method: IntegralNDMethod
         reltol: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    priv: IntegralndPrivate = ...
+    priv: IntegralNDPrivate = ...
     def __init__(self, abstol: float = ...,
-                 error: IntegralndError = ...,
+                 error: IntegralNDError = ...,
                  maxeval: int = ...,
-                 method: IntegralndMethod = ...,
+                 method: IntegralNDMethod = ...,
                  reltol: float = ...): ...
     @staticmethod
-    def clear(intnd: Integralnd) -> None: ...
+    def clear(intnd: IntegralND) -> None: ...
     def do_get_dimensions(self) -> Tuple[int, int]: ...
     def do_integrand(self, x: Vector, dim: int, npoints: int, fdim: int, fval: Vector) -> None: ...
     def eval(self, xi: Vector, xf: Vector, res: Vector, err: Vector) -> None: ...
     def free(self) -> None: ...
     def get_abstol(self) -> float: ...
-    def get_error(self) -> IntegralndError: ...
+    def get_error(self) -> IntegralNDError: ...
     def get_maxeval(self) -> int: ...
-    def get_method(self) -> IntegralndMethod: ...
+    def get_method(self) -> IntegralNDMethod: ...
     def get_reltol(self) -> float: ...
-    def ref(self) -> Integralnd: ...
+    def ref(self) -> IntegralND: ...
     def set_abstol(self, abstol: float) -> None: ...
-    def set_error(self, error: IntegralndError) -> None: ...
+    def set_error(self, error: IntegralNDError) -> None: ...
     def set_maxeval(self, maxeval: int) -> None: ...
-    def set_method(self, method: IntegralndMethod) -> None: ...
+    def set_method(self, method: IntegralNDMethod) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     
 
-class IntegralndClass(GObject.GPointer):
+class IntegralNDClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        IntegralndClass()
+        IntegralNDClass()
     """
     parent_class: GObject.ObjectClass = ...
-    integrand: Callable[[Integralnd, Vector, int, int, int, Vector], None] = ...
-    get_dimensions: Callable[[Integralnd], Tuple[int, int]] = ...
+    integrand: Callable[[IntegralND, Vector, int, int, int, Vector], None] = ...
+    get_dimensions: Callable[[IntegralND], Tuple[int, int]] = ...
     padding: list[None] = ...
 
-class IntegralndPrivate(GObject.GPointer): ...
+class IntegralNDPrivate(GObject.GPointer): ...
 
 class Integrand2dim(GObject.GPointer):
     r"""
@@ -10873,14 +10873,14 @@ class HOAAVar(GObject.GEnum):
     SYS_SIZE = 4
     UPSILON = 2
 
-class IntegralndError(GObject.GEnum):
+class IntegralNDError(GObject.GEnum):
     INDIVIDUAL = 0
     L1 = 3
     L2 = 2
     LINF = 4
     PAIRWISE = 1
 
-class IntegralndMethod(GObject.GEnum):
+class IntegralNDMethod(GObject.GEnum):
     H = 0
     H_V = 2
     P = 1

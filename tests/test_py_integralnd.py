@@ -38,7 +38,7 @@ from numcosmo_py import Ncm
 Ncm.cfg_init()
 
 
-class IntegralND(Ncm.Integralnd):
+class IntegralND(Ncm.IntegralND):
     """Test class for IntegralND."""
 
     def __init__(self, w: List[float], **kwargs) -> None:
@@ -68,15 +68,15 @@ class IntegralND(Ncm.Integralnd):
         fval_vec.set_array(fval.flatten())
 
 
-def test_integralnd() -> None:
+def test_integral_nd() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralndMethod.H_V)
+    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
 
     res = Ncm.Vector.new(3)
     err = Ncm.Vector.new(3)
 
-    test_f.set_method(Ncm.IntegralndMethod.P_V)
-    assert test_f.get_method() == Ncm.IntegralndMethod.P_V
+    test_f.set_method(Ncm.IntegralNDMethod.P_V)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.P_V
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -85,8 +85,8 @@ def test_integralnd() -> None:
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
-    test_f.set_method(Ncm.IntegralndMethod.H_V)
-    assert test_f.get_method() == Ncm.IntegralndMethod.H_V
+    test_f.set_method(Ncm.IntegralNDMethod.H_V)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.H_V
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -95,8 +95,8 @@ def test_integralnd() -> None:
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
-    test_f.set_method(Ncm.IntegralndMethod.P)
-    assert test_f.get_method() == Ncm.IntegralndMethod.P
+    test_f.set_method(Ncm.IntegralNDMethod.P)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.P
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -105,8 +105,8 @@ def test_integralnd() -> None:
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
-    test_f.set_method(Ncm.IntegralndMethod.H)
-    assert test_f.get_method() == Ncm.IntegralndMethod.H
+    test_f.set_method(Ncm.IntegralNDMethod.H)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.H
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -116,9 +116,9 @@ def test_integralnd() -> None:
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
 
-def test_integralnd_props() -> None:
+def test_integral_nd_props() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralndMethod.H_V)
+    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
 
     test_f.set_abstol(1e-6)
     assert_almost_equal(test_f.get_abstol(), 1e-6)
@@ -126,25 +126,25 @@ def test_integralnd_props() -> None:
     test_f.set_reltol(1e-6)
     assert_almost_equal(test_f.get_reltol(), 1e-6)
 
-    test_f.set_method(Ncm.IntegralndMethod.P_V)
-    assert test_f.get_method() == Ncm.IntegralndMethod.P_V
+    test_f.set_method(Ncm.IntegralNDMethod.P_V)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.P_V
 
     test_f.set_maxeval(1000)
     assert test_f.get_maxeval() == 1000
 
-    test_f.set_error(Ncm.IntegralndError.INDIVIDUAL)
-    assert test_f.get_error() == Ncm.IntegralndError.INDIVIDUAL
+    test_f.set_error(Ncm.IntegralNDError.INDIVIDUAL)
+    assert test_f.get_error() == Ncm.IntegralNDError.INDIVIDUAL
 
 
-def test_integralnd_errors() -> None:
+def test_integral_nd_errors() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralndMethod.H_V)
+    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
 
     res = Ncm.Vector.new(3)
     err = Ncm.Vector.new(3)
 
-    test_f.set_error(Ncm.IntegralndError.PAIRWISE)
-    assert test_f.get_error() == Ncm.IntegralndError.PAIRWISE
+    test_f.set_error(Ncm.IntegralNDError.PAIRWISE)
+    assert test_f.get_error() == Ncm.IntegralNDError.PAIRWISE
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -153,8 +153,8 @@ def test_integralnd_errors() -> None:
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
-    test_f.set_error(Ncm.IntegralndError.L2)
-    assert test_f.get_error() == Ncm.IntegralndError.L2
+    test_f.set_error(Ncm.IntegralNDError.L2)
+    assert test_f.get_error() == Ncm.IntegralNDError.L2
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -163,8 +163,8 @@ def test_integralnd_errors() -> None:
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
 
-    test_f.set_error(Ncm.IntegralndError.L1)
-    assert test_f.get_error() == Ncm.IntegralndError.L1
+    test_f.set_error(Ncm.IntegralNDError.L1)
+    assert test_f.get_error() == Ncm.IntegralNDError.L1
     test_f.eval(
         Ncm.Vector.new_array([0.0, 0.0, 0.0]),
         Ncm.Vector.new_array([1.0, 1.0, 1.0]),
@@ -172,3 +172,35 @@ def test_integralnd_errors() -> None:
         err,
     )
     assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+
+    test_f.set_error(Ncm.IntegralNDError.LINF)
+    assert test_f.get_error() == Ncm.IntegralNDError.LINF
+    test_f.eval(
+        Ncm.Vector.new_array([0.0, 0.0, 0.0]),
+        Ncm.Vector.new_array([1.0, 1.0, 1.0]),
+        res,
+        err,
+    )
+    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+
+
+def test_integral_nd_serialize() -> None:
+    """Example computing cosmological distances."""
+    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+
+    test_f.set_method(Ncm.IntegralNDMethod.H)
+    test_f.set_abstol(1e-6)
+    test_f.set_reltol(1e-6)
+    test_f.set_maxeval(11234)
+    test_f.set_error(Ncm.IntegralNDError.LINF)
+    test_f_dup = ser.dup_obj(test_f)
+
+    assert isinstance(test_f_dup, IntegralND)
+
+    assert test_f_dup.get_method() == test_f.get_method()
+    assert test_f_dup.get_abstol() == test_f.get_abstol()
+    assert test_f_dup.get_reltol() == test_f.get_reltol()
+    assert test_f_dup.get_maxeval() == test_f.get_maxeval()
+    assert test_f_dup.get_error() == test_f.get_error()
