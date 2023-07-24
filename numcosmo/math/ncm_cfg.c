@@ -54,6 +54,8 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
+#include "math/ncm_integral1d.h"
+#include "math/ncm_integral_nd.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
@@ -518,6 +520,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
+  
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
