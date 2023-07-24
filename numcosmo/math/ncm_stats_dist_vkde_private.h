@@ -41,7 +41,6 @@ struct _NcmStatsDistVKDEPrivate
   NcmVector *lnnorms;
   gdouble local_frac;
   gboolean use_rot_href;
-  gboolean use_threads;
   NcmMemoryPool *mp_stats_vec;
   NcmMemoryPool *mp_eval_vars;
 };

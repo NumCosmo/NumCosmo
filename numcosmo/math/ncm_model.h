@@ -172,6 +172,7 @@ NCM_INLINE void ncm_model_param_set_default (NcmModel *model, guint n);
 NCM_INLINE void ncm_model_orig_param_set (NcmModel *model, guint n, gdouble val);
 NCM_INLINE void ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val);
 NCM_INLINE void ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val);
+NCM_INLINE NcmSParam *ncm_model_orig_param_peek_desc (NcmModel *model, guint n);
 NCM_INLINE NcmSParam *ncm_model_param_peek_desc (NcmModel *model, guint n);
 NCM_INLINE gdouble ncm_model_param_get (NcmModel *model, guint n);
 NCM_INLINE gdouble ncm_model_orig_param_get (NcmModel *model, guint n);

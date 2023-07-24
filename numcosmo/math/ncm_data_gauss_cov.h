@@ -52,7 +52,6 @@ struct _NcmDataGaussCovClass
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
-
 };
 
 void ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np);
@@ -63,6 +62,10 @@ void ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma);
 void ncm_data_gauss_cov_replace_mean (NcmDataGaussCov *gauss, NcmVector *mean);
 NcmVector *ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss);
 NcmMatrix *ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss);
+
+gdouble ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset);
+
+void ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *resample, NcmRNG *rng);
 
 G_END_DECLS
 

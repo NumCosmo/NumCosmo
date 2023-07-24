@@ -321,6 +321,7 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 
     g_array_unref (dmu_a);
     g_array_unref (x_a);
+    ncm_matrix_free (dmu);
   }
   ncm_mset_fparams_set_vector (mset, x_v);
   ncm_vector_free (x_v);

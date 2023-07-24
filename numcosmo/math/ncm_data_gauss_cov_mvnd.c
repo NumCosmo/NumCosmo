@@ -190,9 +190,9 @@ void
 ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, const gdouble mean_min, const gdouble mean_max, NcmRNG *rng)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
-  NcmVector *y   = ncm_data_gauss_cov_peek_mean (gcov);
-  NcmMatrix *cov = ncm_data_gauss_cov_peek_cov (gcov);
-  const guint np = ncm_data_gauss_cov_get_size (gcov);
+  NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
+  const guint np        = ncm_data_gauss_cov_get_size (gcov);
   gint i;
 
   g_assert_cmpfloat (mean_min, <=, mean_max);
@@ -258,7 +258,7 @@ NcmVector *
 ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
-  NcmVector *y         = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
 
   return y;
 }
@@ -368,6 +368,85 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
 }
 
 /**
+ * ncm_data_gauss_cov_mvnd_stats_vec:
+ * @data_mvnd: a #NcmDataGaussCovMVND
+ * @mset: a #NcmMSet
+ * @n: number of realizations
+ * @maxiter: maximum number of iterations
+ * @lower: lower bound
+ * @upper: upper bound
+ * @save_realizations: whether to save realizations
+ * @rng: a #NcmRNG
+ *
+ * Generates a #NcmStatsVec with the statistics of the MVND. If
+ * @save_realizations is TRUE, the realizations are saved in the
+ * #NcmStatsVec.
+ *
+ * Returns: (transfer full): a new #NcmStatsVec with the statistics of the MVND.
+ */
+NcmStatsVec *
+ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, const guint n, const glong maxiter, NcmVector *lower, NcmVector *upper, gboolean save_realizations, NcmRNG *rng)
+{
+  NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+  gdouble *lb           = ncm_vector_data (lower);
+  gdouble *ub           = ncm_vector_data (upper);
+  guint dim             = ncm_data_gauss_cov_get_size (gcov);
+  NcmStatsVec *stats    = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, save_realizations);
+  const guint bulk_len  = n;
+  NcmMatrix *sample     = ncm_matrix_new (bulk_len, dim);
+  glong iter            = 0;
+
+  g_assert_cmpuint (ncm_vector_stride (lower), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (upper), ==, 1);
+  g_assert_cmpuint (ncm_vector_len (lower), ==, dim);
+  g_assert_cmpuint (ncm_vector_len (upper), ==, dim);
+
+  while (ncm_stats_vec_nitens (stats) < n)
+  {
+    gint i, j;
+
+    ncm_data_gauss_cov_bulk_resample (gcov, mset, sample, rng);
+
+    for (j = 0; j < bulk_len; j++)
+    {
+      NcmVector *y    = ncm_matrix_get_row (sample, j);
+      gdouble *y_data = ncm_vector_data (y);
+      gboolean accept = TRUE;
+
+      if (++iter > maxiter)
+      {
+        g_warning ("ncm_data_gauss_cov_mvnd_stats_vec: too many iterations, result is not trustworthy!");
+        break;
+      }
+
+      for (i = 0; i < dim; i++)
+      {
+        if ((y_data[i] < lb[i]) || (ub[i] < y_data[i]))
+        {
+          accept = FALSE;
+          break;
+        }
+      }
+
+      if (accept)
+      {
+        ncm_stats_vec_append (stats, y, TRUE);
+        iter = 0;
+      }
+
+      ncm_vector_free (y);
+    }
+
+    if (iter > maxiter)
+      break;
+  }
+
+  ncm_matrix_free (sample);
+
+  return stats;
+}
+
+/**
  * ncm_data_gauss_cov_mvnd_log_info:
  * @data_mvnd: a #NcmDataGaussCovMVND
  *
@@ -378,8 +457,8 @@ void
 ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd)
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
-  NcmVector *y         = ncm_data_gauss_cov_peek_mean (gcov);
-  NcmMatrix *cov       = ncm_data_gauss_cov_peek_cov (gcov);
+  NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
+  NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
 
   g_assert (y != NULL);
   g_assert (cov != NULL);

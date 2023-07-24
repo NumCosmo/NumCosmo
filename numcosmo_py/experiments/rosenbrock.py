@@ -40,12 +40,13 @@ def run_rosenbrock_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: bool = True,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     nthreads: int = 4,
-    over_smooth: float = 0.2,
+    over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e2,
 ) -> str:
     """Runs the Rosenbrock MCMC example."""
@@ -69,6 +70,7 @@ def run_rosenbrock_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,

@@ -25,8 +25,8 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [17])
-m4_define([numcosmo_micro_version], [0])
+m4_define([numcosmo_minor_version], [18])
+m4_define([numcosmo_micro_version], [2])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -724,6 +724,7 @@ if test "x$have_blas" != "xno"; then
   blas_mkl=`echo $BLAS_LIBS | grep -i mkl`
   blas_atlas=`echo $BLAS_LIBS | grep -i atlas`
   blas_openblas=`echo $BLAS_LIBS | grep -i openblas`
+  blas_blis=`echo $BLAS_LIBS | grep -i blis`
   
   if test "x$blas_mkl" != "x"; then
     blas_support="Intel's MKL"
@@ -731,10 +732,18 @@ if test "x$have_blas" != "xno"; then
     blas_support="ATLAS"
   elif test "x$blas_openblas" != "x"; then 
     blas_support="OpenBLAS"
+  elif test "x$blas_blis" != "x"; then 
+    blas_support="BLIS"
   else
     blas_support="Other"
   fi
   AC_MSG_RESULT([$blas_support])
+
+  if test "x$blas_blis" != "x"; then
+    AC_CHECK_HEADERS([blis/blis.h],[
+      AC_DEFINE(HAVE_BLIS,1,[Define if you have the BLIS library.])    
+    ],[AC_MSG_ERROR([unable to find blis.h])])
+  fi
 
   if test "x$blas_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_cblas.h],[],[AC_MSG_ERROR([unable to find mkl_cblas.h])])
@@ -825,7 +834,7 @@ if test "x$have_lapack" != "xno"; then
   LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
   
-  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dgels_ dgelsd_ dgelsy_ dtrsv_],[],[])
+  AC_CHECK_FUNCS([dptsv_ dpotrf_ dpotri_ dpotrs_ dposv_ dpstrf_ dsytrf_ dsytrs_ dsytri_ dsysv_  dsysvx_ dsysvxx_ dsyevr_ dsyevd_ dgeev_ dgeevx_ dggglm_ dgeqrf_ dgerqf_ dgeqlf_ dgelqf_ dgels_ dgelsd_ dgelsy_ dtrsv_],[],[])
 else
   AC_MSG_RESULT([no])
   AC_MSG_ERROR([Lapack not found.])

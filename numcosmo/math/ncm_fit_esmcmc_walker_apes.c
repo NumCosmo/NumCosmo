@@ -86,6 +86,7 @@ enum
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
   PROP_USE_INTERP,
+  PROP_USE_THREADS,
 };
 
 struct _NcmFitESMCMCWalkerAPESPrivate
@@ -108,6 +109,7 @@ struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
   gboolean use_interp;
+  gboolean use_threads;
   gboolean constructed;
 };
 
@@ -138,6 +140,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->k_type      = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
   self->over_smooth = 0.0;
   self->use_interp  = FALSE;
+  self->use_threads = FALSE;
   self->constructed = FALSE;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
@@ -163,6 +166,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
+      break;
+    case PROP_USE_THREADS:
+      ncm_fit_esmcmc_walker_apes_set_use_threads (apes, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -190,6 +196,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
+      break;
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_use_threads (apes));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -298,6 +307,14 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use threads when building the posterior approximation",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_apes_set_size;
   walker_class->get_size    = &_ncm_fit_esmcmc_walker_apes_get_size;
   walker_class->set_nparams = &_ncm_fit_esmcmc_walker_apes_set_nparams;
@@ -308,6 +325,26 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_apes_prob_norm;
   walker_class->clean       = &_ncm_fit_esmcmc_walker_apes_clean;
   walker_class->desc        = &_ncm_fit_esmcmc_walker_apes_desc;
+}
+
+static void
+_ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NcmFitESMCMCWalker *walker)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  guint cov_estimates0 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd0)) * self->size_2;
+  guint cov_estimates1 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd1)) * self->size_2;
+
+  if (cov_estimates0 < 2)
+    g_error ("Number of walkers per block (%d) is too low for the current dimension (%d).\n"
+             "\tToo few points (%d) to estimate local covariances.",
+             self->size_2, self->nparams, cov_estimates0);
+
+  if (cov_estimates1 < 2)
+    g_error ("Number of walkers per block (%d) is too low for the current dimension (%d).\n"
+             "\tToo few points (%d) to estimate local covariances.",
+             self->size_2, self->nparams, cov_estimates1);
 }
 
 static void
@@ -330,6 +367,8 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     ncm_stats_dist_clear (&self->sd1);
     ncm_vector_clear (&self->m2lnp_star);
     ncm_vector_clear (&self->m2lnp_cur);
+    ncm_vector_clear (&self->m2lnL_s0);
+    ncm_vector_clear (&self->m2lnL_s1);
 
     g_ptr_array_set_size (self->thetastar, 0);
 
@@ -363,13 +402,18 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       switch (self->method)
       {
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE:
+        {
           self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           break;
+        }
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE:
+        {
           self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
           self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
+          _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (walker);
           break;
+        }
         default:
           g_assert_not_reached ();
           break;
@@ -380,6 +424,9 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
 
     ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
     ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
+
+    ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
+    ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
 
     for (i = 0; i < self->size; i++)
     {
@@ -448,9 +495,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (i = self->size_2; i < self->size; i++)
     {
-      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s0, i - self->size_2, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_add_obs (NCM_STATS_DIST_ND_VBK (self->dndg0), theta_i);*/
     }
 
     for (i = self->size_2; i < self->size; i++)
@@ -473,8 +518,6 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       do {
         ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
       } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
-
-      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
 
@@ -484,9 +527,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (i = 0; i < self->size_2; i++)
     {
-      /*NcmVector *theta_i = g_ptr_array_index (theta, i);*/
       ncm_vector_set (self->m2lnL_s1, i, (1.0 / T) * ncm_vector_get (g_ptr_array_index (m2lnL, i), 0));
-      /*ncm_stats_dist_add_obs (self->dndg1, theta_i);*/
     }
 
     for (i = 0; i < self->size_2; i++)
@@ -509,8 +550,6 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       do {
         ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
       } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
-
-      /*ncm_vector_log_vals (thetastar_i, "TS: ", "%12.5g", TRUE);*/
     }
   }
 }
@@ -545,9 +584,6 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
     ncm_vector_set (self->m2lnp_star, k, m2lnapes_star);
     ncm_vector_set (self->m2lnp_cur,  k, m2lnapes_cur);
   }
-
-  /*ncm_vector_log_vals (theta_k,   "    THETA: ", "% 22.15g", TRUE);*/
-  /*ncm_vector_log_vals (thetastar, "THETASTAR: ", "% 22.15g", TRUE);*/
 }
 
 static gdouble
@@ -668,6 +704,7 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
 
   g_clear_pointer (&self->desc, g_free);
   self->desc = g_strdup_printf ("APES-Move:%s:%s", method, kernel);
+  g_free (method);
 
   return self->desc;
 }
@@ -914,6 +951,49 @@ ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes)
 }
 
 /**
+ * ncm_fit_esmcmc_walker_apes_set_use_threads:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @use_threads: whether to use threads
+ *
+ * Sets whether to use threads for building the posterior
+ * approximation.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+
+  self->use_threads = use_threads;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
+    ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_use_threads:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: whether threads are being used for building the posterior
+ * approximation.
+ */
+gboolean
+ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = apes->priv;
+  gboolean use_threads0                      = ncm_stats_dist_get_use_threads (self->sd0);
+  gboolean use_threads1                      = ncm_stats_dist_get_use_threads (self->sd1);
+
+  g_assert (self->use_threads == use_threads0);
+  g_assert (use_threads0 == use_threads1);
+
+  return use_threads0;
+}
+
+/**
  * ncm_fit_esmcmc_walker_apes_peek_sds:
  * @apes: a #NcmFitESMCMCWalkerAPES
  * @sd0: (out) (transfer none): a #NcmStatsDist
@@ -951,6 +1031,8 @@ ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble
 
   ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd0), local_frac);
   ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd1), local_frac);
+
+  _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NCM_FIT_ESMCMC_WALKER (apes));
 }
 
 /**
