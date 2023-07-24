@@ -3,6 +3,12 @@ CHANGELOG
 
 [Current]
 
+[v0.18.2]
+ * New version v0.18.2.
+
+ * Improving stubs.
+
+
 [v0.18.1]
  * New minor version v0.18.1.
 
