@@ -268,3 +268,7 @@ def compute_spherical_projection():
 
     print(lacasa_cll(z_a))
     """ """""" """""" """""" """""" """""" """""" """""" """""" """"""
+
+
+if __name__ == "__main__":
+    compute_spherical_projection()
