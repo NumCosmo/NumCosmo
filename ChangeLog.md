@@ -3,6 +3,14 @@ CHANGELOG
 
 [Current]
 
+[v0.18.1]
+ * New minor version v0.18.1.
+
+ * Missing files for python typing
+
+ * Updated changelog.
+
+
 [v0.18.0]
  * Updated changelog.
 
