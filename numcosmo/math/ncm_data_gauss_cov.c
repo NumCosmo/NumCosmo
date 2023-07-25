@@ -286,6 +286,7 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
   {
     /* g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret); */
     g_warning ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+    ncm_matrix_log_vals (self->cov, "COV: ", "% 22.15g");
     self->prepared_LLT = FALSE;
   }
   else

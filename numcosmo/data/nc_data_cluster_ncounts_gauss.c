@@ -28,7 +28,9 @@
  * @title: NcDataClusterNCountsGauss
  * @short_description: Cluster number count data gaussian likelihood.
  *
- * FIXME
+ * #NcDataClusterNCountsGauss is a #NcmDataGaussCov that implements the
+ * gaussian likelihood for the cluster number count data.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -80,9 +82,20 @@ struct _NcDataClusterNCountsGaussPrivate
   gboolean has_ssc;
   NcmMatrix *s_matrix;
   NcmVector *bin_count;
+  GArray *index_map;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCountsGauss, nc_data_cluster_ncounts_gauss, NCM_TYPE_DATA_GAUSS_COV);
+
+typedef struct _NcDataClusterNCountsGaussIndex
+{
+  guint i_z;
+  guint i_lnM;
+  gdouble *z_obs_lb;
+  gdouble *z_obs_ub;
+  gdouble *lnM_obs_lb;
+  gdouble *lnM_obs_ub;
+} NcDataClusterNCountsGaussIndex;
 
 static void
 nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
@@ -97,6 +110,7 @@ nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
   self->has_ssc        = FALSE;
   self->s_matrix       = NULL;
   self->bin_count      = NULL;
+  self->index_map      = g_array_new (FALSE, FALSE, sizeof (NcDataClusterNCountsGaussIndex));
 }
 
 static void
@@ -193,6 +207,8 @@ nc_data_cluster_ncounts_gauss_dispose (GObject *object)
   ncm_matrix_clear (&self->s_matrix);
   ncm_vector_clear (&self->bin_count);
 
+  g_clear_pointer (&self->index_map, g_array_unref);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->dispose (object);
 }
@@ -204,6 +220,7 @@ nc_data_cluster_ncounts_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->finalize (object);
 }
 
+static void _nc_data_cluster_ncounts_gauss_begin (NcmData *data);
 static void _nc_data_cluster_ncounts_gauss_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_cluster_ncounts_gauss_set_size (NcmDataGaussCov *gauss_cov, guint np);
 static void _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *mset, NcmVector *vp);
@@ -279,10 +296,47 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
+  data_class->begin          = &_nc_data_cluster_ncounts_gauss_begin;
   data_class->prepare        = &_nc_data_cluster_ncounts_gauss_prepare;
   gauss_cov_class->set_size  = &_nc_data_cluster_ncounts_gauss_set_size;
   gauss_cov_class->mean_func = &_nc_data_cluster_ncounts_gauss_mean_func;
   gauss_cov_class->cov_func  = &_nc_data_cluster_ncounts_gauss_cov_func;
+}
+
+static void
+_nc_data_cluster_ncounts_gauss_begin (NcmData *data)
+{
+  NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (data);
+  NcmDataGaussCov *gauss_cov                    = NCM_DATA_GAUSS_COV (data);
+  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  const guint np                                = ncm_data_gauss_cov_get_size (gauss_cov);
+  const gint nz                                 = ncm_vector_len (self->z_obs) - 1;
+  const gint nlnM                               = ncm_vector_len (self->lnM_obs) - 1;
+
+  g_assert_cmpint (np, ==, nz * nlnM);
+
+  g_array_set_size (self->index_map, 0);
+
+  {
+    gint i_z, i_lnM;
+
+    for (i_z = 0; i_z < nz; i_z++)
+    {
+      for (i_lnM = 0; i_lnM < nlnM; i_lnM++)
+      {
+        NcDataClusterNCountsGaussIndex k;
+
+        k.i_z        = i_z;
+        k.i_lnM      = i_lnM;
+        k.z_obs_lb   = ncm_vector_ptr (self->z_obs, i_z + 0);
+        k.z_obs_ub   = ncm_vector_ptr (self->z_obs, i_z + 1);
+        k.lnM_obs_lb = ncm_vector_ptr (self->lnM_obs, i_lnM + 0);
+        k.lnM_obs_ub = ncm_vector_ptr (self->lnM_obs, i_lnM + 1);
+
+        g_array_append_val (self->index_map, k);
+      }
+    }
+  }
 }
 
 static void
@@ -332,34 +386,22 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
   NcClusterRedshift *clusterz                   = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                       = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
   NcClusterAbundance *cad                       = self->cad;
-  const guint z_obs_len                         = ncm_vector_len (self->z_obs);
-  const guint lnM_obs_len                       = ncm_vector_len (self->lnM_obs);
-  guint i;
-  guint j;
-  NcmVector *lnM_obs_lb = ncm_vector_new (1);
-  NcmVector *lnM_obs_ub = ncm_vector_new (1);
-  NcmVector *z_obs_lb   = ncm_vector_new (1);
-  NcmVector *z_obs_ub   = ncm_vector_new (1);
+  gint i;
 
-  for (i = 0; i < z_obs_len - 1; i++)
+
+  for (i = 0; i < self->index_map->len; i++)
   {
-    for (j = 0; j < lnM_obs_len - 1; j++)
-    {
-      ncm_vector_set (lnM_obs_lb, 0, ncm_vector_get (self->lnM_obs, j + 0));
-      ncm_vector_set (lnM_obs_ub, 0, ncm_vector_get (self->lnM_obs, j + 1));
-      ncm_vector_set (z_obs_lb, 0, ncm_vector_get (self->z_obs, i + 0));
-      ncm_vector_set (z_obs_ub, 0, ncm_vector_get (self->z_obs, i + 1));
+    const NcDataClusterNCountsGaussIndex *k = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
 
+    const gdouble mean = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
+                                                            k->lnM_obs_lb,
+                                                            k->lnM_obs_ub,
+                                                            NULL,
+                                                            k->z_obs_lb,
+                                                            k->z_obs_ub,
+                                                            NULL);
 
-      const gdouble mean = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
-                                                              ncm_vector_data (lnM_obs_lb),
-                                                              ncm_vector_data (lnM_obs_ub),
-                                                              NULL,
-                                                              ncm_vector_data (z_obs_lb),
-                                                              ncm_vector_data (z_obs_ub),
-                                                              NULL);
-      ncm_vector_set (vp, i + j, mean);
-    }
+    ncm_vector_set (vp, i, mean);
   }
 
   return;
@@ -375,122 +417,76 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
 static gboolean
 _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *mset, NcmMatrix *cov)
 {
-  NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
+  NcDataClusterNCountsGauss *ncounts_gauss = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-  NcHICosmo *cosmo                              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz                   = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
-  NcClusterMass *clusterm                       = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterAbundance *cad                       = self->cad;
-  guint i;
-  guint j;
-  guint alpha;
-  guint beta;
-  guint row               = 0;
-  const guint z_obs_len   = ncm_vector_len (self->z_obs);
-  const guint lnM_obs_len = ncm_vector_len (self->lnM_obs);
-  NcmVector *lnM_obs_lb   = ncm_vector_new (1);
-  NcmVector *lnM_obs_ub   = ncm_vector_new (1);
-  NcmVector *z_obs_lb     = ncm_vector_new (1);
-  NcmVector *z_obs_ub     = ncm_vector_new (1);
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterAbundance *cad = self->cad;
+  guint i, j;
 
-
+  ncm_matrix_set_zero (cov);
 
   if (self->has_ssc)
   {
-    for (alpha = 0; alpha < lnM_obs_len - 1; alpha++)
+    for (i = 0; i < self->index_map->len; i++)
     {
-      for (i = 0; i < z_obs_len - 1; i++)
+      const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
+      const gdouble bias_i                      = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
+                                                                                          k_i->lnM_obs_lb,
+                                                                                          k_i->lnM_obs_ub,
+                                                                                          NULL,
+                                                                                          k_i->z_obs_lb,
+                                                                                          k_i->z_obs_ub,
+                                                                                          NULL);
+
+      for (j = 0; j < self->index_map->len; j++)
       {
-        ncm_vector_set (lnM_obs_lb, 0, ncm_vector_get (self->lnM_obs, alpha + 0));
-        ncm_vector_set (lnM_obs_ub, 0, ncm_vector_get (self->lnM_obs, alpha + 1));
-        ncm_vector_set (z_obs_lb, 0, ncm_vector_get (self->z_obs, i + 0));
-        ncm_vector_set (z_obs_ub, 0, ncm_vector_get (self->z_obs, i + 1));
+        const NcDataClusterNCountsGaussIndex *k_j = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, j);
+        const gdouble Sij                         = ncm_matrix_get (self->s_matrix, k_i->i_z, k_j->i_z);
 
 
-
-        const gdouble poisson_alphai = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
-                                                                          ncm_vector_data (lnM_obs_lb),
-                                                                          ncm_vector_data (lnM_obs_ub),
-                                                                          NULL,
-                                                                          ncm_vector_data (z_obs_lb),
-                                                                          ncm_vector_data (z_obs_ub),
-                                                                          NULL);
-        const gdouble bias_alphai = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
-                                                                            ncm_vector_data (lnM_obs_lb),
-                                                                            ncm_vector_data (lnM_obs_ub),
-                                                                            NULL,
-                                                                            ncm_vector_data (z_obs_lb),
-                                                                            ncm_vector_data (z_obs_ub),
-                                                                            NULL);
-
-        guint col = 0;
-
-        for (beta = 0; beta < lnM_obs_len - 1; beta++)
+        if (i == j)
         {
-          for (j = 0; j < z_obs_len - 1; j++)
-          {
-            ncm_vector_set (lnM_obs_lb, 0, ncm_vector_get (self->lnM_obs, beta + 0));
-            ncm_vector_set (lnM_obs_ub, 0, ncm_vector_get (self->lnM_obs, beta + 1));
-            ncm_vector_set (z_obs_lb, 0, ncm_vector_get (self->z_obs, j + 0));
-            ncm_vector_set (z_obs_ub, 0, ncm_vector_get (self->z_obs, j + 1));
+          const gdouble poisson_i = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
+                                                                       k_i->lnM_obs_lb,
+                                                                       k_i->lnM_obs_ub,
+                                                                       NULL,
+                                                                       k_i->z_obs_lb,
+                                                                       k_i->z_obs_ub,
+                                                                       NULL);
 
-            const gdouble bias_betaj = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
-                                                                               ncm_vector_data (lnM_obs_lb),
-                                                                               ncm_vector_data (lnM_obs_ub),
-                                                                               NULL,
-                                                                               ncm_vector_data (z_obs_lb),
-                                                                               ncm_vector_data (z_obs_ub),
-                                                                               NULL);
-            const gdouble Sij = ncm_matrix_get (self->s_matrix, i, j);
-
-            if ((i == j) && (alpha == beta))
-              ncm_matrix_set (cov, row, col, poisson_alphai + bias_alphai * bias_betaj * Sij);
-            else
-              ncm_matrix_set (cov, row, col, bias_alphai * bias_betaj * Sij);
-
-            col += 1;
-          }
+          ncm_matrix_set (cov, i, j, poisson_i + bias_i * bias_i * Sij);
         }
+        else
+        {
+          const gdouble bias_j = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
+                                                                         k_j->lnM_obs_lb,
+                                                                         k_j->lnM_obs_ub,
+                                                                         NULL,
+                                                                         k_j->z_obs_lb,
+                                                                         k_j->z_obs_ub,
+                                                                         NULL);
 
-        row += 1;
+          ncm_matrix_set (cov, i, j, bias_i * bias_j * Sij);
+        }
       }
     }
   }
-
-  if (!self->has_ssc)
+  else
   {
-    for (alpha = 0; alpha < lnM_obs_len - 1; alpha++)
+    for (i = 0; i < self->index_map->len; i++)
     {
-      for (i = 0; i < z_obs_len - 1; i++)
-      {
-        ncm_vector_set (lnM_obs_lb, 0, ncm_vector_get (self->lnM_obs, alpha + 0));
-        ncm_vector_set (lnM_obs_ub, 0, ncm_vector_get (self->lnM_obs, alpha + 1));
-        ncm_vector_set (z_obs_lb, 0, ncm_vector_get (self->z_obs, i + 0));
-        ncm_vector_set (z_obs_ub, 0, ncm_vector_get (self->z_obs, i + 1));
+      const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
+      const gdouble poisson_i                   = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
+                                                                                     k_i->lnM_obs_lb,
+                                                                                     k_i->lnM_obs_ub,
+                                                                                     NULL,
+                                                                                     k_i->z_obs_lb,
+                                                                                     k_i->z_obs_ub,
+                                                                                     NULL);
 
-        const gdouble poisson_alphai = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
-                                                                          ncm_vector_data (lnM_obs_lb),
-                                                                          ncm_vector_data (lnM_obs_ub),
-                                                                          NULL,
-                                                                          ncm_vector_data (z_obs_lb),
-                                                                          ncm_vector_data (z_obs_ub),
-                                                                          NULL);
-
-        guint col = 0;
-
-        for (beta = 0; beta < lnM_obs_len - 1; beta++)
-        {
-          for (j = 0; j < z_obs_len - 1; j++)
-          {
-            if ((i == j) && (alpha == beta))
-              ncm_matrix_set (cov, row, col, poisson_alphai);
-
-            col += 1;
-          }
-        }
-
-        row += 1;
-      }
+      ncm_matrix_set (cov, i, i, poisson_i);
     }
   }
 
