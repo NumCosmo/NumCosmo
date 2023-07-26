@@ -159,7 +159,7 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
   { \
   } \
   static void \
-  _module_obj_name ## _finalize (GObject * object) \
+  module_obj_name ## _finalize (GObject * object) \
   { \
     ModuleObjName *intnd = MODULE ## _ ## OBJ_NAME (object); \
     user_data_free (&intnd->data); \
@@ -169,7 +169,7 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
   { \
     NcmIntegralNDClass *intnd_class = NCM_INTEGRAL_ND_CLASS (klass); \
     GObjectClass *gobject_class     = G_OBJECT_CLASS (klass); \
-    gobject_class->finalize     = &_module_obj_name ## _finalize; \
+    gobject_class->finalize     = &module_obj_name ## _finalize; \
     intnd_class->get_dimensions = &method_get_dimensions; \
     intnd_class->integrand      = &method_integrand; \
   } \
