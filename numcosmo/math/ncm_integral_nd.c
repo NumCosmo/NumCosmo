@@ -57,14 +57,14 @@
 #include <gsl/gsl_errno.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmIntegralNDPrivate
+typedef struct _NcmIntegralNDPrivate
 {
   NcmIntegralNDMethod method;
   NcmIntegralNDError error;
   guint maxeval;
   gdouble reltol;
   gdouble abstol;
-};
+} NcmIntegralNDPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT);
 
@@ -82,7 +82,7 @@ enum
 static void
 ncm_integral_nd_init (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv = ncm_integral_nd_get_instance_private (intnd);
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->method  = NCM_INTEGRAL_ND_METHOD_LEN;
   self->error   = NCM_INTEGRAL_ND_ERROR_LEN;
@@ -286,7 +286,7 @@ ncm_integral_nd_clear (NcmIntegralND **intnd)
 void
 ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->method = method;
 }
@@ -302,7 +302,7 @@ ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
 void
 ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->error = error;
 }
@@ -318,7 +318,7 @@ ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
 void
 ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->maxeval = maxeval;
 }
@@ -334,7 +334,7 @@ ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
 void
 ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->reltol = reltol;
 }
@@ -350,7 +350,7 @@ ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
 void
 ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->abstol = abstol;
 }
@@ -364,7 +364,7 @@ ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
 NcmIntegralNDMethod
 ncm_integral_nd_get_method (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->method;
 }
@@ -378,7 +378,7 @@ ncm_integral_nd_get_method (NcmIntegralND *intnd)
 NcmIntegralNDError
 ncm_integral_nd_get_error (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->error;
 }
@@ -392,7 +392,7 @@ ncm_integral_nd_get_error (NcmIntegralND *intnd)
 guint
 ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->maxeval;
 }
@@ -406,7 +406,7 @@ ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
 gdouble
 ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->reltol;
 }
@@ -420,7 +420,7 @@ ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
 gdouble
 ncm_integral_nd_get_abstol (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->abstol;
 }
@@ -470,7 +470,7 @@ _ncm_integral_nd_cubature_vint (unsigned ndim, size_t npt, const double *x, void
 void
 ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
   gint error                        = 0;
 
   guint dim, fdim;

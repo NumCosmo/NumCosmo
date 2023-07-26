@@ -52,12 +52,12 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_add ("/ncm/integralnd/sinx/eval", TestNcmIntegralND, NULL,
               &test_ncm_integral_nd_new_sinx,
               &test_ncm_integral_nd_sinx_eval,
               &test_ncm_integral_nd_free);
-  
+
 #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/integralnd/invalid/test/subprocess", TestNcmIntegralND, NULL,
               &test_ncm_integral_nd_new_sinx,
@@ -67,47 +67,46 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-static void
-test_sin (NcmIntegralND * intnd, NcmVector * x, guint dim, guint npoints, guint fdim, NcmVector * fval)
+struct sin_data
 {
-   NcmVector * x_d = ncm_vector_new(dim);
-   fval = ncm_vector_new(dim);
-   ncm_vector_memcpy(x_d, x);
-   ncm_vector_set_zero(fval);
+  gdouble a;
+};
+
+static void test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void test_sin_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_SIN, NcmTestIntSin, ncm_test_int_sin, test_sin_dim, test_sin, struct sin_data)
+
+static void
+test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcmTestIntSin *test_int_sin = NCM_TEST_INT_SIN (intnd);
+  gint i;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble x_i = ncm_vector_get (x, i);
+
+    ncm_vector_set (fval, i, sin (test_int_sin->data.a * x_i));
+    printf ("%d % 22.15g % 22.15g\n", i, x_i, sin (test_int_sin->data.a * x_i));
+  }
 }
 
 static void
 test_sin_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 {
-  guint dim_i, fdim_i;
-  dim_i = 1;
-  fdim_i = 1;
-  fdim = &fdim_i;
-  dim = &dim_i;
+  *dim  = 1;
+  *fdim = 1;
 }
 
 void
 test_ncm_integral_nd_new_sinx (TestNcmIntegralND *test, gconstpointer pdata)
 {
-  NcmIntegralNDClass *self;
-  self->integrand = &test_sin;
-  self->get_dimensions 	  = &test_sin_dim;
-  test->intnd  = NCM_INTEGRAL_ND (self);
-  test->reltol = ncm_integral_nd_get_reltol (test->intnd);
- 
-  g_assert_cmpfloat (test->reltol, ==, NCM_INTEGRAL_ND_DEFAULT_RELTOL);
-  
-  g_assert_cmpfloat (ncm_integral_nd_get_abstol (test->intnd), ==, NCM_INTEGRAL_ND_DEFAULT_ABSTOL);
-  
-  g_assert_true (NCM_IS_INTEGRAL_ND (test->intnd));
-}
+  NcmTestIntSin *test_int_sin = g_object_new (ncm_test_int_sin_get_type (), NULL);
 
-void
-_set_destroyed (gpointer b)
-{
-  gboolean *destroyed = b;
-  
-  *destroyed = TRUE;
+  test->intnd = NCM_INTEGRAL_ND (test_int_sin);
+
+  test_int_sin->data.a = 3.0;
 }
 
 void
@@ -116,35 +115,32 @@ test_ncm_integral_nd_free (TestNcmIntegralND *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_integral_nd_free, test->intnd);
 }
 
-#define NCM_INTEGRAL_ND_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
-#define NCM_INTEGRAL_ND_TESTCMP(d) g_assert_cmpfloat (fabs ((result - ((gdouble) d)) / result), <=, prec)
-
 void
 test_ncm_integral_nd_sinx_eval (TestNcmIntegralND *test, gconstpointer pdata)
 {
-  NcmVector * err = ncm_vector_new(1);
-  NcmVector * xi = ncm_vector_new(1);
-  NcmVector * xf = ncm_vector_new(1);
-  NcmVector * res = ncm_vector_new(1);
-  gdouble xi_i = 0.0;
-  gdouble xf_i = 2.0 * ncm_c_pi ();
-  ncm_vector_set (xf, 0, xf_i);
-  ncm_vector_set (xi, 0, xi_i);
+  NcmVector *err     = ncm_vector_new (1);
+  NcmVector *xi      = ncm_vector_new (1);
+  NcmVector *xf      = ncm_vector_new (1);
+  NcmVector *res     = ncm_vector_new (1);
+  gdouble xi_i       = 0.0;
+  gdouble xf_i       = 2.0 * ncm_c_pi ();
   const gdouble prec = 1.0e-11;
   gdouble result;
 
-	
+  ncm_vector_set (xf, 0, xf_i);
+  ncm_vector_set (xi, 0, xi_i);
+
   ncm_integral_nd_set_reltol (test->intnd, prec);
   ncm_integral_nd_set_abstol (test->intnd, prec);
   ncm_integral_nd_eval (test->intnd, xi, xf, res, err);
-  result = ncm_vector_get(res, 0);
-  NCM_INTEGRAL_ND_TESTCMP_ABS;
-  
-  ncm_integral_nd_set_reltol (test->intnd, prec);
-  ncm_integral_nd_set_abstol (test->intnd, 0.0);
-  ncm_integral_nd_eval (test->intnd, xi, xf, res, err);
-  result = ncm_vector_get(res, 0);
-  NCM_INTEGRAL_ND_TESTCMP (2.0L);
+
+  result = ncm_vector_get (res, 0);
+  g_assert_cmpfloat (fabs (result), <=, prec);
+
+  ncm_vector_free (err);
+  ncm_vector_free (xi);
+  ncm_vector_free (xf);
+  ncm_vector_free (res);
 }
 
 void
