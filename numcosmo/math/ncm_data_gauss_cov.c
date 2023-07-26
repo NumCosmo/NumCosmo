@@ -72,7 +72,7 @@ typedef struct _NcmDataGaussCovPrivate
 } NcmDataGaussCovPrivate;
 
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA); /* LCOV_EXCL_BR_LINE */
 
 static void
 ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
@@ -100,7 +100,7 @@ _ncm_data_gauss_cov_constructed (GObject *object)
 static void
 _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
@@ -123,16 +123,16 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV:
       ncm_matrix_substitute (&self->cov, g_value_get_object (value), TRUE);
       break;
-    default:
+    default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   g_return_if_fail (NCM_IS_DATA_GAUSS_COV (object));
@@ -151,16 +151,16 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV:
       g_value_set_object (value, self->cov);
       break;
-    default:
+    default: /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _ncm_data_gauss_cov_dispose (GObject *object)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (object);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   ncm_vector_clear (&self->y);
@@ -262,7 +262,7 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
 static guint
 _ncm_data_gauss_cov_get_length (NcmData *data)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   return self->np;
@@ -271,7 +271,7 @@ _ncm_data_gauss_cov_get_length (NcmData *data)
 static void
 _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
 {
-  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCov *gauss              = NCM_DATA_GAUSS_COV (data);
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
   gint ret;
 
@@ -286,6 +286,7 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
   {
     /* g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret); */
     g_warning ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+    ncm_matrix_log_vals (self->cov, "COV: ", "% 22.15g");
     self->prepared_LLT = FALSE;
   }
   else
@@ -496,7 +497,7 @@ static void
 _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
-  NcmData *data = NCM_DATA (gauss);
+  NcmData *data                       = NCM_DATA (gauss);
 
   if ((np == 0) || (np != self->np))
   {
@@ -623,3 +624,98 @@ ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss)
 
   return self->cov;
 }
+
+/**
+ * ncm_data_gauss_cov_get_log_norma:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ *
+ * Returns: the log-normalization factor for $-2\ln(L)$.
+ */
+gdouble
+ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+  gdouble m2lnL                                = 0.0;
+  gboolean cov_update                          = FALSE;
+
+  if (gauss_cov_class->cov_func != NULL)
+    cov_update = gauss_cov_class->cov_func (gauss, mset, self->cov);
+
+  if (cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_cov_prepare_LLT (NCM_DATA (gauss));
+
+  gauss_cov_class->lnNorma2 (gauss, mset, &m2lnL);
+
+  return m2lnL;
+}
+
+/**
+ * ncm_data_gauss_cov_bulk_resample:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ * @resample: a #NcmMatrix
+ * @rng: a #NcmRNG
+ *
+ * Resamples the data based on the models in @mset according to the current
+ * data distribution. The resampled data is stored in @resample. The resampling
+ * is done in bulk, i.e., all the data is resampled at once.
+ *
+ */
+void
+ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *resample, NcmRNG *rng)
+{
+  NcmData *data                         = NCM_DATA (gauss);
+  NcmDataGaussCovPrivate * const self   = ncm_data_gauss_cov_get_instance_private (gauss);
+  NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  gboolean cov_update                   = FALSE;
+  guint nrealizations                   = ncm_matrix_nrows (resample);
+  gint ret;
+  guint i, j;
+
+  g_assert_cmpuint (self->np, ==, ncm_matrix_ncols (resample));
+  g_assert_cmpuint (nrealizations, >=, 1);
+
+  ncm_data_prepare (data, mset);
+
+  if (gauss_cov_class->cov_func != NULL)
+    cov_update = gauss_cov_class->cov_func (gauss, mset, self->cov);
+
+  if (cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_cov_prepare_LLT (data);
+
+  ncm_rng_lock (rng);
+
+  for (j = 0; j < nrealizations; j++)
+  {
+    for (i = 0; i < self->np; i++)
+    {
+      const gdouble u_i = gsl_ran_ugaussian (rng->r);
+
+      ncm_matrix_set (resample, j, i, u_i);
+    }
+  }
+
+  ncm_rng_unlock (rng);
+
+  ret = gsl_blas_dtrmm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                        1.0, ncm_matrix_gsl (self->LLT),
+                        ncm_matrix_gsl (resample));
+  NCM_TEST_GSL_RESULT ("ncm_data_gauss_cov_bulk_resample", ret); /* LCOV_EXCL_BR_LINE */
+
+  gauss_cov_class->mean_func (gauss, mset, self->v);
+
+  for (j = 0; j < nrealizations; j++)
+  {
+    gdouble *theta_j = ncm_matrix_ptr (resample, j, 0);
+
+    cblas_daxpy (self->np,
+                 -1.0,
+                 ncm_vector_const_data (self->v), ncm_vector_stride (self->v),
+                 theta_j, 1);
+  }
+
+  ncm_matrix_scale (resample, -1.0);
+}
+

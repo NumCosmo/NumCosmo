@@ -40,12 +40,13 @@ def run_gaussmix2d_mcmc(
     fit_first: bool = True,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: bool = True,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 320,
     nthreads: int = 4,
-    over_smooth: float = 0.2,
+    over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e-1,
 ) -> str:
     """Runs the Gauss Mixture 2d MCMC example."""
@@ -69,6 +70,7 @@ def run_gaussmix2d_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,

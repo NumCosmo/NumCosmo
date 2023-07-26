@@ -29,22 +29,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/math/ncm_data_gauss_cov.h>
-#include <numcosmo/nc_distance.h>
-#include <numcosmo/lss/nc_cluster_redshift.h>
-#include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
-#include <numcosmo/math/ncm_data.h>
-#include <numcosmo/math/ncm_vector.h>
-#include <numcosmo/math/ncm_matrix.h>
-
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#include <gsl/gsl_histogram2d.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 
 G_BEGIN_DECLS
 

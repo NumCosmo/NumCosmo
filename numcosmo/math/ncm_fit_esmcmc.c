@@ -1391,6 +1391,8 @@ _ncm_fit_esmcmc_check_init_points (NcmFitESMCMC *esmcmc)
   }
   else
   {
+    g_array_unref (inrange);
+
     return self->nwalkers;
   }
 

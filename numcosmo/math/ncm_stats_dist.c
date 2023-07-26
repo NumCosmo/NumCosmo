@@ -114,6 +114,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
+#include <omp.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -126,6 +127,7 @@ enum
   PROP_SAMPLE_SIZE,
   PROP_OVER_SMOOTH,
   PROP_CV_TYPE,
+  PROP_USE_THREADS,
   PROP_SPLIT_FRAC,
   PROP_PRINT_FIT,
 };
@@ -147,6 +149,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->print_fit       = FALSE;
   self->over_smooth     = 0.0;
   self->cv_type         = NCM_STATS_DIST_CV_LEN;
+  self->use_threads     = FALSE;
   self->split_frac      = 0.0;
   self->min_m2lnp       = 0.0;
   self->max_m2lnp       = 0.0;
@@ -186,7 +189,7 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_KERNEL:
       ncm_stats_dist_set_kernel (sd, g_value_get_object (value));
       break;
-    case PROP_SAMPLE_SIZE:
+    case PROP_SAMPLE_SIZE: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
     case PROP_OVER_SMOOTH:
@@ -195,13 +198,16 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_CV_TYPE:
       ncm_stats_dist_set_cv_type (sd, g_value_get_enum (value));
       break;
+    case PROP_USE_THREADS:
+      ncm_stats_dist_set_use_threads (sd, g_value_get_boolean (value));
+      break;
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_set_split_frac (sd, g_value_get_double (value));
       break;
     case PROP_PRINT_FIT:
       ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -220,8 +226,8 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_KERNEL:
       g_value_set_object (value, ncm_stats_dist_peek_kernel (sd));
       break;
-    case PROP_SAMPLE_SIZE:
-      g_value_set_uint (value, self->sample_array->len);
+    case PROP_SAMPLE_SIZE:                               /* LCOV_EXCL_BR_LINE */
+      g_value_set_uint (value, self->sample_array->len); /* LCOV_EXCL_LINE */
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_stats_dist_get_over_smooth (sd));
@@ -229,13 +235,16 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_CV_TYPE:
       g_value_set_enum (value, ncm_stats_dist_get_cv_type (sd));
       break;
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, ncm_stats_dist_get_use_threads (sd));
+      break;
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_get_split_frac (sd));
       break;
     case PROP_PRINT_FIT:
       g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -249,11 +258,11 @@ _ncm_stats_dist_dispose (GObject *object)
 
   ncm_stats_dist_kernel_clear (&self->kernel);
 
-  g_clear_pointer (&self->sample_array, g_ptr_array_unref);
+  g_clear_pointer (&self->sample_array, g_ptr_array_unref); /* LCOV_EXCL_BR_LINE */
   ncm_vector_clear (&self->weights);
   ncm_vector_clear (&self->wcum);
 
-  g_clear_pointer (&self->sampling, g_array_unref);
+  g_clear_pointer (&self->sampling, g_array_unref); /* LCOV_EXCL_BR_LINE */
 
   ncm_nnls_clear (&self->nnls);
 
@@ -265,7 +274,7 @@ _ncm_stats_dist_dispose (GObject *object)
 
   ncm_rng_clear (&self->rng);
 
-  g_clear_pointer (&self->m2lnp_sort, g_array_unref);
+  g_clear_pointer (&self->m2lnp_sort, g_array_unref); /* LCOV_EXCL_BR_LINE */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->dispose (object);
@@ -287,6 +296,8 @@ _ncm_stats_dist_finalize (GObject *object)
 
 static void _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_get_href (NcmStatsDist *sd);
+
+/* LCOV_EXCL_START these should be overwriten and never executed */
 
 static void
 _ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
@@ -337,6 +348,8 @@ _ncm_stats_dist_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVec
 
 static void _ncm_stats_dist_reset (NcmStatsDist *sd);
 
+/* LCOV_EXCL_STOP */
+
 static void
 ncm_stats_dist_class_init (NcmStatsDistClass *klass)
 {
@@ -377,6 +390,15 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                       "Cross-validation method",
                                                       NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_NONE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use OpenMP threads during computation",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_SPLIT_FRAC,
                                    g_param_spec_double ("split-frac",
@@ -434,6 +456,8 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
   self->over_smooth = exp (lnos);
   self->href        = ncm_stats_dist_get_href (sd);
 
+  #pragma omp parallel for if (self->use_threads)
+
   for (i = self->n_kernels; i < self->n_obs; i++)
   {
     NcmVector *x_i        = g_ptr_array_index (self->sample_array, i);
@@ -466,13 +490,13 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       self->n_obs     = self->sample_array->len;
       self->n_kernels = ceil (self->sample_array->len * self->split_frac);
       break;
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
   }
 
   if (self->n_obs < self->d)
-    g_error ("_ncm_stats_dist_prepare: sample too small.");
+    g_error ("_ncm_stats_dist_prepare: the sample is too small.");
 
   sd_class->prepare_kernel (sd, self->sample_array);
 
@@ -536,7 +560,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
 
       break;
     }
-    default:
+    default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
   }
@@ -550,6 +574,8 @@ _ncm_stats_dist_compute_IM_full (NcmStatsDist *sd)
   gint i;
 
   sd_class->compute_IM (sd, self->IM);
+
+  #pragma omp parallel for if (self->use_threads)
 
   for (i = 0; i < self->n_obs; i++)
     ncm_matrix_mul_row (self->IM, i, 1.0 / ncm_vector_get (self->f, i));
@@ -572,7 +598,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   gdouble rnorm          = 0.0;
   gint i;
 
-  g_assert (eval->self->sample_array->len == n);
+  g_assert (eval->self->n_obs == n);
 
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
@@ -580,7 +606,9 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   _ncm_stats_dist_compute_IM_full (eval->sd);
   rnorm = NCM_NNLS_SOLVE (eval->self->nnls, eval->self->sub_IM, eval->self->sub_x, eval->self->f1);
 
-  for (i = 0; i < eval->self->sample_array->len; i++)
+  #pragma omp parallel for if (eval->self->use_threads)
+
+  for (i = 0; i < eval->self->n_obs; i++)
   {
     NcmVector *x_i         = g_ptr_array_index (eval->self->sample_array, i);
     const gdouble m2lnpt_i = ncm_vector_get (eval->m2lnp, i) - eval->self->min_m2lnp;
@@ -631,6 +659,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   NcmStatsDistPrivate * const self = sd->priv;
 
   _ncm_stats_dist_prepare (sd);
+
   g_assert_cmpuint (ncm_vector_len (m2lnp), ==, self->n_obs);
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
@@ -644,7 +673,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     self->min_m2lnp = GSL_POSINF;
     self->max_m2lnp = GSL_NEGINF;
 
-    for (i = 0; i < self->n_obs; i++)
+    for (i = 0; i < self->n_kernels; i++)
     {
       const gdouble m2lnp_i = ncm_vector_get (m2lnp, i);
 
@@ -656,13 +685,13 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     {
       gint n_cut = 0;
 
-      g_array_set_size (self->m2lnp_sort, self->n_obs);
+      g_array_set_size (self->m2lnp_sort, self->n_kernels);
       gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
                       ncm_vector_data (m2lnp),
                       ncm_vector_stride (m2lnp),
                       ncm_vector_len (m2lnp));
 
-      for (i = 0; i < self->n_obs; i++)
+      for (i = 0; i < self->n_kernels; i++)
       {
         gint p                = g_array_index (self->m2lnp_sort, size_t, i);
         const gdouble m2lnp_p = ncm_vector_get (m2lnp, p);
@@ -674,13 +703,25 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         }
       }
 
-      /*
-       * Check if the cut removes more than 50%, if it does use normal
-       * kernel density estimation.
-       *
+      /* printf ("n_cut %d n_kernels %d\n", n_cut, self->n_kernels); */
+
+      /* Too many points falling outside using normal KDE using 10%
+       * of the weight for the points falling outside and 90% for
+       * the points falling inside.
        */
       if (n_cut < (gint) (0.5 * self->n_obs))
+      {
+        ncm_vector_set_all (self->weights, 0.1 / (self->n_kernels - n_cut));
+
+        for (i = 0; i < n_cut; i++)
+        {
+          gint p = g_array_index (self->m2lnp_sort, size_t, i);
+
+          ncm_vector_set (self->weights, p, 0.9 / n_cut);
+        }
+
         return;
+      }
 
       {
         NcmVector *m2lnp_cut        = ncm_vector_new (n_cut);
@@ -747,7 +788,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       ncm_vector_set (self->f, i, exp (-0.5 * (m2lnp_i - self->min_m2lnp)));
     }
 
-    if (self->n_kernels > 10000)
+    if (self->n_kernels > 20000)
       g_warning ("_ncm_stats_dist_prepare_interp: very large system n = %u!", self->n_kernels);
 
     switch (self->cv_type)
@@ -813,9 +854,8 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
         _ncm_stats_dist_compute_IM_full (sd);
         self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
-
         break;
-      default:
+      default: /* LCOV_EXCL_BR_LINE */
         g_assert_not_reached ();
         break;
     }
@@ -827,8 +867,6 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     g_assert (total_weight > 0.0);
     ncm_vector_scale (self->weights, 1.0 / total_weight);
   }
-
-  /* ncm_vector_log_vals (self->weights, "W: ", "% 22.15e", TRUE); */
 }
 
 static void
@@ -949,7 +987,10 @@ ncm_stats_dist_get_dim (NcmStatsDist *sd)
  * ncm_stats_dist_get_sample_size:
  * @sd: a #NcmStatsDist
  *
- * Returns: an int n, the size of the sample used in the last prepare call.
+ * After the prepare call, this function returns the size of the sample used in the
+ * interpolation.
+ *
+ * Returns: the size of the sample used.
  */
 guint
 ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
@@ -962,6 +1003,9 @@ ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_get_n_kernels:
  * @sd: a #NcmStatsDist
+ *
+ * After the prepare call, this function returns the number of kernels used in the
+ * interpolation.
  *
  * Returns: the number of kernels used.
  */
@@ -1119,6 +1163,36 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = sd->priv;
 
   return self->cv_type;
+}
+
+/**
+ * ncm_stats_dist_set_use_threads:
+ * @sd: a #NcmStatsDist
+ * @use_threads: whether to use threads
+ *
+ * Sets whether to use OpenMP threads during the computation.
+ *
+ */
+void
+ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  self->use_threads = use_threads;
+}
+
+/**
+ * ncm_stats_dist_get_use_threads:
+ * @sd: a #NcmStatsDist
+ *
+ * Returns: whether to use OpenMP threads during the computation.
+ */
+gboolean
+ncm_stats_dist_get_use_threads (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+
+  return self->use_threads;
 }
 
 /**

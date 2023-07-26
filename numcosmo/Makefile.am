@@ -89,6 +89,7 @@ ncm_sources = \
 	math/ncm_serialize.c                  \
 	math/ncm_obj_array.c                  \
 	math/ncm_integral1d.c                 \
+	math/ncm_integral_nd.c                \
 	math/ncm_integral1d_ptr.c             \
 	math/ncm_rng.c                        \
 	math/ncm_stats_vec.c                  \
@@ -118,7 +119,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c           \
 	math/ncm_powspec.c                    \
 	math/ncm_powspec_filter.c             \
-	math/ncm_powspec_sphere_proj.c       \
+	math/ncm_powspec_sphere_proj.c        \
 	math/ncm_powspec_corr3d.c             \
 	math/ncm_hoaa.c                       \
 	math/ncm_csq1d.c                      \
@@ -130,7 +131,7 @@ ncm_sources = \
 	math/ncm_mpsf_0F1.c                   \
 	math/ncm_fftlog.c                     \
 	math/ncm_fftlog_sbessel_j.c           \
-	math/ncm_fftlog_sbessel_jljm.c       \
+	math/ncm_fftlog_sbessel_jljm.c        \
 	math/ncm_fftlog_tophatwin2.c          \
 	math/ncm_fftlog_gausswin2.c           \
 	math/ncm_sparam.c                     \
@@ -221,6 +222,7 @@ ncm_headers =                                 \
 	math/ncm_serialize.h                  \
 	math/ncm_obj_array.h                  \
 	math/ncm_integral1d.h                 \
+	math/ncm_integral_nd.h                \
 	math/ncm_integral1d_ptr.h             \
 	math/ncm_rng.h                        \
 	math/ncm_stats_vec.h                  \
@@ -250,7 +252,7 @@ ncm_headers =                                 \
 	math/ncm_spline2d_bicubic.h           \
 	math/ncm_powspec.h                    \
 	math/ncm_powspec_filter.h             \
-	math/ncm_powspec_sphere_proj.h       \
+	math/ncm_powspec_sphere_proj.h        \
 	math/ncm_powspec_corr3d.h             \
 	math/ncm_hoaa.h                       \
 	math/ncm_csq1d.h                      \
@@ -262,7 +264,7 @@ ncm_headers =                                 \
 	math/ncm_mpsf_0F1.h                   \
 	math/ncm_fftlog.h                     \
 	math/ncm_fftlog_sbessel_j.h           \
-	math/ncm_fftlog_sbessel_jljm.h       \
+	math/ncm_fftlog_sbessel_jljm.h        \
 	math/ncm_fftlog_tophatwin2.h          \
 	math/ncm_fftlog_gausswin2.h           \
 	math/ncm_sparam.h                     \
@@ -413,41 +415,41 @@ nc_headers = \
 	lss/nc_multiplicity_func_bocquet.h     \
 	lss/nc_multiplicity_func_watson.h      \
 	lss/nc_halo_mass_function.h            \
-    lss/nc_halo_bias.h                     \
-    lss/nc_halo_bias_ps.h                  \
-    lss/nc_halo_bias_st_spher.h            \
-    lss/nc_halo_bias_st_ellip.h            \
-    lss/nc_halo_bias_tinker.h              \
-    lss/nc_cluster_redshift.h              \
-    lss/nc_cluster_redshift_nodist.h       \
-    lss/nc_cluster_photoz_gauss.h          \
-    lss/nc_cluster_photoz_gauss_global.h   \
-    lss/nc_cluster_mass.h                  \
-    lss/nc_cluster_mass_nodist.h           \
-    lss/nc_cluster_mass_lnnormal.h         \
-    lss/nc_cluster_mass_vanderlinde.h      \
-    lss/nc_cluster_mass_benson.h           \
-    lss/nc_cluster_mass_benson_xray.h      \
-    lss/nc_cluster_mass_plcl.h             \
-    lss/nc_cluster_mass_ascaso.h           \
-    lss/nc_cluster_abundance.h             \
-    lss/nc_cluster_pseudo_counts.h         \
-    lss/nc_galaxy_redshift.h               \
-    lss/nc_galaxy_redshift_spec.h          \
-    lss/nc_galaxy_redshift_spline.h        \
-    lss/nc_galaxy_redshift_gauss.h         \
-    lss/nc_galaxy_wl.h                     \
-    lss/nc_galaxy_wl_dist.h                \
-    lss/nc_galaxy_wl_ellipticity_gauss.h   \
-    lss/nc_galaxy_wl_ellipticity_kde.h     \
-    lss/nc_galaxy_wl_ellipticity_binned.h  \
-    lss/nc_galaxy_wl_proj.h                \
-    lss/nc_cor_cluster_cmb_lens_limber.h   \
-    lss/nc_wl_surface_mass_density.h       \
-    lss/nc_reduced_shear_cluster_mass.h    \
-    lss/nc_reduced_shear_calib.h           \
-    lss/nc_reduced_shear_calib_wtg.h       \
-    lss/nc_galaxy_selfunc.h                \
+	lss/nc_halo_bias.h                     \
+	lss/nc_halo_bias_ps.h                  \
+	lss/nc_halo_bias_st_spher.h            \
+	lss/nc_halo_bias_st_ellip.h            \
+	lss/nc_halo_bias_tinker.h              \
+	lss/nc_cluster_redshift.h              \
+	lss/nc_cluster_redshift_nodist.h       \
+	lss/nc_cluster_photoz_gauss.h          \
+	lss/nc_cluster_photoz_gauss_global.h   \
+	lss/nc_cluster_mass.h                  \
+	lss/nc_cluster_mass_nodist.h           \
+	lss/nc_cluster_mass_lnnormal.h         \
+	lss/nc_cluster_mass_vanderlinde.h      \
+	lss/nc_cluster_mass_benson.h           \
+	lss/nc_cluster_mass_benson_xray.h      \
+	lss/nc_cluster_mass_plcl.h             \
+	lss/nc_cluster_mass_ascaso.h           \
+	lss/nc_cluster_abundance.h             \
+	lss/nc_cluster_pseudo_counts.h         \
+	lss/nc_galaxy_redshift.h               \
+	lss/nc_galaxy_redshift_spec.h          \
+	lss/nc_galaxy_redshift_spline.h        \
+	lss/nc_galaxy_redshift_gauss.h         \
+	lss/nc_galaxy_wl.h                     \
+	lss/nc_galaxy_wl_dist.h                \
+	lss/nc_galaxy_wl_ellipticity_gauss.h   \
+	lss/nc_galaxy_wl_ellipticity_kde.h     \
+	lss/nc_galaxy_wl_ellipticity_binned.h  \
+	lss/nc_galaxy_wl_proj.h                \
+	lss/nc_cor_cluster_cmb_lens_limber.h   \
+	lss/nc_wl_surface_mass_density.h       \
+	lss/nc_reduced_shear_cluster_mass.h    \
+	lss/nc_reduced_shear_calib.h           \
+	lss/nc_reduced_shear_calib_wtg.h       \
+	lss/nc_galaxy_selfunc.h                \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -584,7 +586,7 @@ nc_sources = \
 	lss/nc_cluster_mass_benson.c           \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_mass_plcl.c             \
-        lss/nc_cluster_mass_ascaso.c           \
+	lss/nc_cluster_mass_ascaso.c           \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cluster_pseudo_counts.c         \
 	lss/nc_galaxy_redshift.c               \
@@ -602,7 +604,7 @@ nc_sources = \
 	lss/nc_reduced_shear_cluster_mass.c    \
 	lss/nc_reduced_shear_calib.c           \
 	lss/nc_reduced_shear_calib_wtg.c       \
-    lss/nc_galaxy_selfunc.c                \
+	lss/nc_galaxy_selfunc.c                \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
 	data/nc_data_snia_cov.c                \

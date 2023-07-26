@@ -54,6 +54,8 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
+#include "math/ncm_integral1d.h"
+#include "math/ncm_integral_nd.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
@@ -217,6 +219,10 @@
 #include <mpi.h>
 #endif /* HAVE_MPI */
 
+#ifdef HAVE_BLIS
+#include <blis/blis.h>
+#endif /* HAVE_BLIS */
+
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
 #endif
@@ -286,6 +292,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
 void clencurt_gen (int M);
 
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+void goto_set_num_threads (gint);
 void openblas_set_num_threads (gint);
 
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
@@ -459,9 +466,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
 
-  /*ncm_cfg_set_openmp_nthreads (1); */
-  /*ncm_cfg_set_openblas_nthreads (1); */
-  /*ncm_cfg_set_mkl_nthreads (1); */
+  /* ncm_cfg_set_openmp_nthreads (1); */
+  /* ncm_cfg_set_openblas_nthreads (1); */
+  /* ncm_cfg_set_blis_nthreads (1); */
+  /* ncm_cfg_set_mkl_nthreads (1); */
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -512,6 +520,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
+  
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
@@ -1040,7 +1052,7 @@ ncm_cfg_enable_gsl_err_handler (void)
   gsl_set_error_handler (gsl_err);
 }
 
-static uint nreg_model = 0;
+static guint nreg_model = 0;
 
 /**
  * ncm_cfg_register_obj:
@@ -1171,7 +1183,23 @@ ncm_cfg_set_openblas_nthreads (gint n)
 {
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
   openblas_set_num_threads (n);
+  goto_set_num_threads (n);
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+}
+
+/**
+ * ncm_cfg_set_blis_nthreads:
+ * @n: number of threads
+ *
+ * Sets BLIS number of threads to @n when available.
+ *
+ */
+void
+ncm_cfg_set_blis_nthreads (gint n)
+{
+#ifdef HAVE_BLIS
+  bli_thread_set_num_threads (n);
+#endif /* HAVE_BLIS */
 }
 
 /**
@@ -1225,6 +1253,19 @@ void
 ncm_cfg_logfile_flush_now (void)
 {
   fflush (_log_stream);
+}
+
+/**
+ * ncm_message_str:
+ * @msg: a string
+ *
+ * Logs a message string.
+ *
+ */
+void
+ncm_message_str (const gchar *msg)
+{
+  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "%s", msg);
 }
 
 /**
@@ -1843,74 +1884,6 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
- * ncm_cfg_fopen:
- * @filename: FIXME
- * @mode: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-FILE *
-ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
-{
-  FILE *F;
-  gchar *file;
-  gchar *full_filename;
-  va_list ap;
-
-  g_assert (numcosmo_init);
-
-  va_start (ap, mode);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
-
-  F = g_fopen (full_filename, mode);
-
-  if (F == NULL)
-    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
-  g_free (file);
-  g_free (full_filename);
-
-  return F;
-}
-
-/**
- * ncm_cfg_vfopen: (skip)
- * @filename: FIXME
- * @mode: FIXME
- * @ap: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-FILE *
-ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
-{
-  FILE *F;
-  gchar *file;
-  gchar *full_filename;
-
-  g_assert (numcosmo_init);
-  file          = g_strdup_vprintf (filename, ap);
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
-
-  F = g_fopen (full_filename, mode);
-
-  if (F == NULL)
-    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-
-  g_free (file);
-  g_free (full_filename);
-
-  return F;
-}
-
-/**
  * ncm_cfg_exists:
  * @filename: FIXME
  * @...: FIXME
@@ -1939,113 +1912,6 @@ ncm_cfg_exists (const gchar *filename, ...)
   g_free (full_filename);
 
   return exists;
-}
-
-/**
- * ncm_cfg_load_spline: (skip)
- * @filename: FIXME
- * @stype: FIXME
- * @s: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
-{
-  guint64 size;
-  NcmVector *xv, *yv;
-  va_list ap;
-
-  va_start (ap, s);
-
-  FILE *F = ncm_cfg_vfopen (filename, "r", ap);
-
-  va_end (ap);
-
-  if (F == NULL)
-    return FALSE;
-
-  if (fread (&size, sizeof (guint64), 1, F) != 1)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  if (*s == NULL)
-  {
-    xv = ncm_vector_new (size);
-    yv = ncm_vector_new (size);
-  }
-  else
-  {
-    xv = ncm_spline_get_xv (*s);
-    yv = ncm_spline_get_yv (*s);
-    g_assert (size == ncm_vector_len (xv));
-  }
-
-  if (fread (ncm_vector_ptr (xv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  if (fread (ncm_vector_ptr (yv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  if (*s == NULL)
-  {
-    *s = ncm_spline_gsl_new (stype);
-    ncm_spline_set (*s, xv, yv, TRUE);
-  }
-  else
-  {
-    ncm_spline_prepare (*s);
-  }
-
-  ncm_vector_free (xv);
-  ncm_vector_free (yv);
-
-  fclose (F);
-
-  return TRUE;
-}
-
-/**
- * ncm_cfg_save_spline:
- * @filename: FIXME
- * @s: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...)
-{
-  guint64 size;
-  va_list ap;
-
-  va_start (ap, s);
-
-  FILE *F = ncm_cfg_vfopen (filename, "w", ap);
-
-  va_end (ap);
-
-  if (F == NULL)
-    return FALSE;
-
-  size = s->len;
-
-  if (fwrite (&size, sizeof (guint64), 1, F) != 1)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  if (fwrite (ncm_vector_ptr (s->xv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  if (fwrite (ncm_vector_ptr (s->yv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-
-  fclose (F);
-
-  return TRUE;
 }
 
 /**
@@ -2147,28 +2013,6 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
   full_cmd_line_ptr[0] = '\0';
 
   return full_cmd_line;
-}
-
-/**
- * ncm_cfg_variant_to_array: (skip)
- * @var: a variant of array type.
- * @esize: element size.
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-GArray *
-ncm_cfg_variant_to_array (GVariant *var, gsize esize)
-{
-  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE_ARRAY));
-  {
-    GArray *a = g_array_new (FALSE, FALSE, esize);
-
-    ncm_cfg_array_set_variant (a, var);
-
-    return a;
-  }
 }
 
 /**

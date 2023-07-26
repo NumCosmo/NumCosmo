@@ -23,7 +23,8 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional
+from typing import Optional, Union
+import warnings
 from enum import Enum
 from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
@@ -36,7 +37,7 @@ class WalkerTypes(str, Enum):
     """Possible walkers for ensemble samplers."""
 
     APES = "apes"
-    STRECTCH = "stretch"
+    STRETCH = "stretch"
 
 
 def create_esmcmc(
@@ -48,6 +49,7 @@ def create_esmcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
@@ -79,6 +81,7 @@ def create_esmcmc(
     if fit_first:
         fit.run(message_level)
 
+    init_sampler: Union[Ncm.MSetTransKernCat, Ncm.MSetTransKernGauss]
     if start_mcat is not None:
         init_sampler = Ncm.MSetTransKernCat.new(start_mcat, None)
         init_sampler.set_sampling(Ncm.MSetTransKernCatSampling.CHOOSE)
@@ -97,6 +100,7 @@ def create_esmcmc(
     # very correlated parametric space.
     #
 
+    walker: Union[Ncm.FitESMCMCWalkerAPES, Ncm.FitESMCMCWalkerStretch]
     if sampler == WalkerTypes.APES:
         walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
         # Sets the calibrated over-smoothing factor.
@@ -108,8 +112,20 @@ def create_esmcmc(
         walker.use_interp(use_apes_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
+        if use_apes_threads is None:
+            use_apes_threads = nwalkers >= 1000
 
-    elif sampler == WalkerTypes.STRECTCH:
+        walker.set_use_threads(use_apes_threads)
+        if use_apes_threads and nwalkers < 1000:
+            warnings.warn(
+                "Using threads with less than 1000 walkers can degrade performance."
+            )
+        elif not use_apes_threads and nwalkers >= 1000:
+            warnings.warn(
+                "Using threads with more than 1000 walkers can improve performance."
+            )
+
+    elif sampler == WalkerTypes.STRETCH:
         walker = Ncm.FitESMCMCWalkerStretch.new(nwalkers, mset.fparams_len())
     else:
         raise ValueError(f"Unknown sampler {sampler}")

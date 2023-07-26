@@ -321,6 +321,7 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 
     g_array_unref (dmu_a);
     g_array_unref (x_a);
+    ncm_matrix_free (dmu);
   }
   ncm_mset_fparams_set_vector (mset, x_v);
   ncm_vector_free (x_v);
@@ -599,23 +600,13 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
 void
 ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
-  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
-
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.",
              ncm_data_get_desc (data));
 
-  self->begin = TRUE;
   _ncm_data_prepare (data, mset);
 
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
-  self->begin = FALSE;
-
-  if ((NCM_DATA_GET_CLASS (data)->begin != NULL) && !self->begin)
-  {
-    NCM_DATA_GET_CLASS (data)->begin (data);
-    self->begin = TRUE;
-  }
 
   ncm_data_set_init (data, TRUE);
 }

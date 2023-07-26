@@ -32,6 +32,7 @@ from numcosmo_py.experiments.rosenbrock import run_rosenbrock_mcmc
 from numcosmo_py.experiments.gaussmix2d import run_gaussmix2d_mcmc
 from numcosmo_py.experiments.funnel import run_funnel_mcmc
 from numcosmo_py.experiments.gauss_constraint import run_gauss_constraint_mcmc
+from numcosmo_py.experiments.xcdm_no_perturbations import run_xcdm_nopert_mcmc
 
 
 app = typer.Typer()
@@ -40,6 +41,7 @@ app.command()(run_rosenbrock_mcmc)
 app.command()(run_gaussmix2d_mcmc)
 app.command()(run_funnel_mcmc)
 app.command()(run_gauss_constraint_mcmc)
+app.command()(run_xcdm_nopert_mcmc)
 
 
 @app.callback()

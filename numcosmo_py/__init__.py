@@ -30,13 +30,16 @@ gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
 
 # pylint:disable-next=wrong-import-position,unused-import
+from gi.repository import GLib  # noqa: E402
+
+# pylint:disable-next=wrong-import-position,unused-import
 from gi.repository import GObject  # noqa: E402
 
 # pylint:disable-next=wrong-import-position,unused-import
-from gi.repository import NumCosmo as Nc  # noqa: E402
+from . import ncm as Ncm
 
 # pylint:disable-next=wrong-import-position,unused-import
-from gi.repository import NumCosmoMath as Ncm  # noqa: E402
+from . import nc as Nc
 
 
 class GEnum(str, Enum):
@@ -53,4 +56,4 @@ class GEnum(str, Enum):
         self.genum = genum
 
 
-__all__ = ["Nc", "Ncm", "GObject", "GEnum"]
+__all__ = ["Nc", "Ncm", "GLib", "GObject", "GEnum"]

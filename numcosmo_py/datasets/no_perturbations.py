@@ -87,7 +87,7 @@ def gen_bao_likelihood(
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
     if bao_id == BAOID.ALL_COMBINED_JAN_2023:
-        bao_ids = [
+        bao_enums = [
             Nc.DataBaoId.RDV_BEUTLER2011,
             Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
             Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
@@ -97,8 +97,8 @@ def gen_bao_likelihood(
             Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
             Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021,
         ]
-        for bao_id in bao_ids:
-            bao_likelihood = Nc.data_bao_create(dist, bao_id)
+        for bao_enum in bao_enums:
+            bao_likelihood = Nc.data_bao_create(dist, bao_enum)
             dataset.append_data(bao_likelihood)
     else:
         raise ValueError(f"Unknown BAO data set id: {bao_id}")
@@ -114,9 +114,9 @@ def gen_h_likelihood(
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
     if h_id == HID.ALL_COMBINED_JAN_2023:
-        h_ids = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
-        for h_id in h_ids:
-            h_likelihood = Nc.DataHubble.new_from_id(h_id)
+        h_enums = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
+        for h_enum in h_enums:
+            h_likelihood = Nc.DataHubble.new_from_id(h_enum)
             dataset.append_data(h_likelihood)
     else:
         raise ValueError(f"Unknown Hubble data set id: {h_id}")

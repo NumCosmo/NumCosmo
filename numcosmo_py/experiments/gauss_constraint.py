@@ -28,6 +28,8 @@ test the MCMC sampler.
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 from numcosmo_py import Ncm
 from numcosmo_py.sampling.esmcmc import (
     create_esmcmc,
@@ -35,6 +37,9 @@ from numcosmo_py.sampling.esmcmc import (
     InterpolationKernel,
     InterpolationMethod,
 )
+
+
+from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
 
 
 def run_gauss_constraint_mcmc(
@@ -45,15 +50,17 @@ def run_gauss_constraint_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     nthreads: int = 4,
-    over_smooth: float = 1.2,
+    over_smooth: float = 1.1,
     local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0,
     start_catalog: Optional[Path] = None,
+    tmvn: bool = False,
 ) -> str:
     """Runs the Funnel MCMC example."""
 
@@ -85,8 +92,53 @@ def run_gauss_constraint_mcmc(
     rng = Ncm.RNG.seeded_new(None, 0)
     cov50.fill_rand_cor(10.0, rng)
     cov = cov50.get_submatrix(0, 0, dim, dim).dup()
+    # cov50.log_vals("", "% 22.15g")
 
     dgc.set_cov_mean(mean, cov)
+    m2lnN = dgc.get_log_norma(mset)
+    print(f"# Constant normalization {m2lnN}")
+
+    if tmvn:
+        Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
+        rng = Ncm.RNG.seeded_new(None, 0)
+        bounds = np.array(
+            [
+                [mgc.param_get_lower_bound(i), mgc.param_get_upper_bound(i)]
+                for i in range(dim)
+            ]
+        )
+        mset.fparams_set_vector(mean)
+
+        cov_np = np.array(cov.dup_array())
+        cov_np.shape = (dim, dim)
+
+        tmvn_sampler = TruncatedMVN(
+            mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
+        )
+
+        sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, True)
+        for s in np.transpose(tmvn_sampler.sample(ssize)):
+            dgc.peek_mean().set_array(s)
+            st = np.concatenate(([dgc.m2lnL_val(mset)], s))
+            sv.append(Ncm.Vector.new_array(st), True)
+
+        filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"#   Number of samples : {sv.nitens}\n")
+            f.write(
+                f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
+            )
+            f.write(
+                f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
+            )
+
+            for i in range(sv.nitens):
+                f.write(
+                    " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()])
+                    + "\n"
+                )
+
+        return filename
 
     dset = Ncm.Dataset.new()
     dset.append_data(dgc)
@@ -104,6 +156,7 @@ def run_gauss_constraint_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
