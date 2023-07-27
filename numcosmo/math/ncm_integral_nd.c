@@ -61,10 +61,10 @@
  * Having the functions, the user must instantiate an object of the type
  * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro 
  * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which 
- * will later be instatiable. Examples on how to define the objects
+ * will later be instantiable. Examples of how to define the objects
  * containing the integrand can be found in the test folder under
  * test\textunderscore ncm\textunderscore integral\textunderscore nd.c.
- * For an example about the python implementation of the integrand in a class,
+ * For an example of the Python implementation of the integrand in a class,
  * check test\textunderscore py\textunderscore integralnd.py in the same folder.
  * This object cannot be used without the child object containing the cited functions.
  *
