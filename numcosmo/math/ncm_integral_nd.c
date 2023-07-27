@@ -35,8 +35,46 @@
  *
  * The integration can be performed using the cubature library. The cubature
  * library is a library for adaptive multidimensional integration. The original
- * code can be found at https://github.com/stevengj/cubature .
+ * code can be found at https://github.com/stevengj/cubature.
  *
+ * To use this object, the user must initialize a child object that implements
+ * two functions: get_dimensions and integrand. To do so, the user must 
+ * first define these two functions as the prototypes described 
+ * in ncm_integral_nd.h. The get dimensions function should return the
+ * dimension of the arguments to be integrated and the function dimension.
+ * For instance, if the integrand is given by $F(x,y) = x + y$, the get
+ * dimensions function must return $(2,1)$, such that it will compute
+ * \begin{align}
+ * \int \int F(x, y) dxdy 
+ * ,\end{align}
+ * returning a scalar for the integral evaluated in the given intervals.
+
+ * This object can also be used with multi-dimensional functions that return 
+ * an array instead of a scalar. Considering the integrand 
+ * $F(x,y,z) = [x^2, y+z ]$, the get dimensions method should return $(3,2)$
+ * and the object will compute the integral
+ * \begin{align}
+ * \int \int \int F(x,y,z) dxdy = [\frac{yzx^3}{3}, frac{x(y^2+z^2)}{2}]
+ * \end{align}
+ * for the given intervals.
+ *
+ * Having the functions, the user must instantiate an object of the type
+ * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro 
+ * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which 
+ * will later be instatiable. Examples on how to define the objects
+ * containing the integrand can be found in the test folder under
+ * test\textunderscore ncm\textunderscore integral\textunderscore nd.c.
+ * For an example about the python implementation of the integrand in a class,
+ * check test\textunderscore py\textunderscore integralnd.py in the same folder.
+ * This object cannot be used without the child object containing the cited functions.
+ *
+ * After defining the child class with the necessary functions,
+ * the user may use the integration object with the prefered method
+ * from the cubature library.
+ *
+ * The user may provide the input values for: @rel_tol - ncm_integral_nd_set_reltol(), @abs_tol - ncm_integral_nd_set_abstol(),
+ * @integ_method - ncm_integral_nd_set_method(), @max_eval - ncm_integral_nd_set_maxeval(), @error - ncm_integral_nd_set_error().
+ * If these functions are not called, default parameters are chosen. 
  */
 
 #ifdef HAVE_CONFIG_H
