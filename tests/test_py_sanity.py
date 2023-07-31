@@ -1,14 +1,43 @@
-from numcosmo_py import Ncm
-from numcosmo_py import Nc
+#!/usr/bin/env python
+#
+# test_py_sanity.py
+#
+# Mon May 22 16:00:00 2023
+# Copyright  2023  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# test_py_sanity.py
+# Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""Tests for the Python bindings sanity."""
 
 import math
 
+from numcosmo_py import Ncm
+from numcosmo_py import Nc
+
 
 def test_cfg_init():
+    """Test NumCosmo initialization."""
     Ncm.cfg_init()
 
 
 def test_distances():
+    """Test distances."""
+
     Ncm.cfg_init()
 
     cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")

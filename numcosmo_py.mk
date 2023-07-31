@@ -2,6 +2,7 @@
 
 
 nobase_python_PYTHON = \
+	numcosmo_py/py.typed                                     \
 	numcosmo_py/nc.pyi                                       \
 	numcosmo_py/ncm.pyi                                      \
 	numcosmo_py/ncm.py                                       \
@@ -19,6 +20,8 @@ nobase_python_PYTHON = \
 	numcosmo_py/experiments/funnel.py                        \
 	numcosmo_py/experiments/xcdm_no_perturbations.py         \
 	numcosmo_py/experiments/__init__.py                      \
+	numcosmo_py/external/minimax_tilting_sampler.py          \
+	numcosmo_py/external/__init__.py                         \
 	numcosmo_py/interpolation/__init__.py                    \
 	numcosmo_py/interpolation/stats_dist.py                  \
 	numcosmo_py/plotting/tools.py                            \
