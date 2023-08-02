@@ -102,16 +102,7 @@ struct background
 
   /*@{ */
 
-  /* double age;           / **< age in Gyears * / */
-  /* double conformal_age; / **< conformal age in Mpc * / */
-  /* double K;             / **< \f$ K \f$: Curvature parameter \f$ K=-\Omega0_k*a_{today}^2*H_0^2\f$; * / */
-  /* int sgnK;             / **< K/|K|: -1, 0 or 1 * / */
   double *m_ncdm_in_eV; /**< list of ncdm masses in eV (inferred from M_ncdm and other parameters above) */
-  double Neff;          /**< so-called "effective neutrino number", computed at earliest time in interpolation table */
-  double a_eq;          /**< scale factor at radiation/matter equality */
-  double H_eq;          /**< Hubble rate at radiation/matter equality [Mpc^-1] */
-  double z_eq;          /**< redshift at radiation/matter equality */
-  double tau_eq;        /**< conformal time at radiation/matter equality [Mpc] */
 
   /*@} */
 

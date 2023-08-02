@@ -1808,17 +1808,6 @@ background_solve (
               pba->error_message,
               pba->error_message);
 
-  /** - compute remaining "related parameters"
-   *     - so-called "effective neutrino number", computed at earliest
-   *   time in interpolation table. This should be seen as a
-   *   definition: Neff is the equivalent number of
-   *   instantaneously-decoupled neutrinos accounting for the
-   *   radiation density, beyond photons */
-  pba->Neff = (pba->background_table[pba->index_bg_Omega_r]
-               * pba->background_table[pba->index_bg_rho_crit]
-               - pba->background_table[pba->index_bg_rho_g])
-              / (7. / 8. * pow (4. / 11., 4. / 3.) * pba->background_table[pba->index_bg_rho_g]);
-
   /** - done */
   if (pba->background_verbose > 0)
     printf (" -> conformal age = %f Mpc\n", nc_scalefactor_eval_eta_Mpc_z (pba->scalefactor, 0.0));
@@ -2041,17 +2030,6 @@ background_find_equality (
       tau_plus = tau_mid;
     else
       tau_minus = tau_mid;
-  }
-
-  pba->a_eq   = pvecback[pba->index_bg_a];
-  pba->H_eq   = pvecback[pba->index_bg_H];
-  pba->z_eq   = pba->a_today / pba->a_eq - 1.;
-  pba->tau_eq = tau_mid;
-
-  if (pba->background_verbose > 0)
-  {
-    printf (" -> radiation/matter equality at z = %f\n", pba->z_eq);
-    printf ("    corresponding to conformal time = %f Mpc\n", pba->tau_eq);
   }
 
   free (pvecback);
