@@ -675,8 +675,6 @@ nonlinear_halofit (
     Omega_m = nc_hicosmo_E2Omega_m (pba->cosmo, z) / E2Omega_t;
     Omega_v = nc_hicosmo_de_E2Omega_de (pba->cosmo, z) / E2Omega_t;
   }
-  /* for debugging: */
-  /*printf("Call Halofit at z=%e\n",pba->a_today/pvecback[pba->index_bg_a]-1.); */
 
   /* minimum value of R such that the integral giving sigma_R is
    *  converged.  The parameter halofit_sigma_precision should be
@@ -719,15 +717,6 @@ nonlinear_halofit (
    *  special error handling here (using class_test_except and free()
    *  commands to avoid memory leaks, and calling this whole function
    *  not through a class_call) */
-
-  /*
-   *  class_test_except(sigma < 1.,
-   *                 pnl->error_message,
-   *                 free(pvecback);free(integrand_array),
-   *                 "Your k_max=%g 1/Mpc is too small for Halofit to find the non-linearity scale z_nl at z=%g. Increase input parameter P_k_max_h/Mpc or P_k_max_1/Mpc",
-   *                 pnl->k[pnl->k_size-1],
-   *                 pba->a_today/pvecback[pba->index_bg_a]-1.);
-   */
 
   if (sigma < 1.)
   {
@@ -811,14 +800,6 @@ nonlinear_halofit (
     else if (diff < -ppr->halofit_tol_sigma)
       xlogr2 = log10 (rmid);
 
-    /* The first version of this test woukld let the code continue: */
-
-    /*
-     *  class_test_except(counter > _MAX_IT_,
-     *                 pnl->error_message,
-     *                 free(pvecback);free(integrand_array),
-     *                 "could not converge within maximum allowed number of iterations");
-     */
     /* ... but in this situation it sounds better to make it stop and return an error! */
     class_test (counter > _MAX_IT_,
                 pnl->error_message,

@@ -36,8 +36,8 @@ libclass_la_LIBADD = \
 ## CLik modules sources
 
 class_tool_sources =           \
-        tools/growTable.c      \
-        tools/dei_rkck.c       \
+	tools/growTable.c      \
+	tools/dei_rkck.c       \
 	tools/sparse.c         \
 	tools/evolver_rkck.c   \
 	tools/evolver_ndf15.c  \
@@ -84,12 +84,11 @@ class_sources = \
 	include/background.h     \
 	include/thermodynamics.h \
 	include/primordial.h     \
-        include/lensing.h        \
+	include/lensing.h        \
 	include/perturbations.h  \
 	include/spectra.h        \
 	include/transfer.h       \
 	include/class.h          \
-	include/output.h         \
 	include/svnversion.h
 	
 

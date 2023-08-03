@@ -28,6 +28,5 @@
 #include "transfer.h"
 #include "spectra.h"
 #include "lensing.h"
-#include "output.h"
 
 #endif
