@@ -69,6 +69,7 @@ enum
   PROP_HAS_SSC,
   PROP_S_MATRIX,
   PROP_BIN_COUNT,
+  PROP_FIX_COV,
   PROP_SIZE,
 };
 
@@ -82,6 +83,7 @@ struct _NcDataClusterNCountsGaussPrivate
   gboolean has_ssc;
   NcmMatrix *s_matrix;
   NcmVector *bin_count;
+  gboolean fix_cov;
   GArray *index_map;
 };
 
@@ -111,6 +113,7 @@ nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
   self->s_matrix       = NULL;
   self->bin_count      = NULL;
   self->index_map      = g_array_new (FALSE, FALSE, sizeof (NcDataClusterNCountsGaussIndex));
+  self->fix_cov        = FALSE;
 }
 
 static void
@@ -146,6 +149,9 @@ nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, cons
       nc_data_cluster_ncounts_gauss_set_s_matrix (ncounts_gauss,  g_value_get_object (value));
     case PROP_BIN_COUNT:
       nc_data_cluster_ncounts_gauss_set_bin_count (ncounts_gauss, g_value_get_object (value));
+      break;
+    case PROP_FIX_COV:
+      nc_data_cluster_ncounts_gauss_set_fix_cov (ncounts_gauss, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -186,6 +192,9 @@ nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_BIN_COUNT:
       g_value_set_object (value, self->bin_count);
+      break;
+    case PROP_FIX_COV:
+      g_value_set_boolean (value, self->fix_cov);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -294,7 +303,13 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
                                                         "Bin count",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  g_object_class_install_property (object_class,
+                                   PROP_FIX_COV,
+                                   g_param_spec_boolean ("fix-cov",
+                                                         NULL,
+                                                         "Whether the covariance matrix is fixed or not",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->begin          = &_nc_data_cluster_ncounts_gauss_begin;
   data_class->prepare        = &_nc_data_cluster_ncounts_gauss_prepare;
@@ -417,8 +432,14 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
 static gboolean
 _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *mset, NcmMatrix *cov)
 {
-  NcDataClusterNCountsGauss *ncounts_gauss = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+NcDataClusterNCountsGauss *ncounts_gauss = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
+NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;  
+if (self->fix_cov)
+{
+return FALSE;
+}
+else
+{
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
@@ -489,9 +510,8 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
       ncm_matrix_set (cov, i, i, poisson_i);
     }
   }
-
-
-  return TRUE;
+    return TRUE;
+   }
 }
 
 /**
@@ -635,6 +655,22 @@ nc_data_cluster_ncounts_gauss_set_bin_count (NcDataClusterNCountsGauss *ncounts_
 }
 
 /**
+ * nc_data_cluster_ncounts_gauss_set_fix_cov:
+ * @ncounts_gauss: a #NcDataClusterNCountsGauss
+ * @on: FIXME
+ *
+ * Sets array of #Set if the data covariance matrix is fixed.
+ *
+ */
+void
+nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on)
+{
+  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+
+  self->fix_cov = on;
+}
+
+/**
  * nc_data_cluster_ncounts_gauss_get_z_obs:
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  *
@@ -762,5 +798,21 @@ nc_data_cluster_ncounts_gauss_get_bin_count (NcDataClusterNCountsGauss *ncounts_
     return ncm_vector_ref (self->bin_count);
   else
     return NULL;
+}
+
+/**
+ * nc_data_cluster_ncounts_gauss_get_fix_cov:
+ * @ncounts_gauss: a #NcDataClusterNCountsGauss
+ *
+ * Gets if the covariance is fixed.
+ *
+ * Returns: TRUE or FALSE.
+ */
+gboolean
+nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss)
+{
+  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+
+  return self->fix_cov;
 }
 
