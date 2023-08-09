@@ -35,7 +35,7 @@ libclass_la_LIBADD = \
 
 ## CLik modules sources
 
-class_tool_sources =           \
+class_tool_sources =       \
 	tools/growTable.c      \
 	tools/dei_rkck.c       \
 	tools/sparse.c         \
@@ -90,7 +90,7 @@ class_sources = \
 	include/transfer.h       \
 	include/class.h          \
 	include/svnversion.h
-	
+
 
 libclass_la_SOURCES = \
 	$(class_tool_sources)  \
