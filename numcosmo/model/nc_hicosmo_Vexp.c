@@ -2532,6 +2532,38 @@ nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp)
 }
 
 /**
+ * nc_hicosmo_Vexp_alpha_0e:
+ * @Vexp: a #NcHICosmoVexp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hicosmo_Vexp_alpha_0e (NcHICosmoVexp *Vexp)
+{
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  return Vexp->priv->alpha_0e;
+}
+
+/**
+ * nc_hicosmo_Vexp_alpha_0c:
+ * @Vexp: a #NcHICosmoVexp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hicosmo_Vexp_alpha_0c (NcHICosmoVexp *Vexp)
+{
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  return Vexp->priv->alpha_0c;
+}
+
+/**
  * nc_hicosmo_Vexp_x_tau:
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$

@@ -106,6 +106,7 @@ typedef struct _NcmCSQ1DPrivate
   gdouble adiab_threshold;
   gdouble prop_threshold;
   gboolean save_evol;
+  gboolean max_order_2;
   NcmModelCtrl *ctrl;
   gpointer cvode;
   gpointer cvode_Up;
@@ -147,6 +148,7 @@ enum
   PROP_ADIAB_THRESHOLD,
   PROP_PROP_THRESHOLD,
   PROP_SAVE_EVOL,
+  PROP_MAX_ORDER_2,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT);
@@ -166,6 +168,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->adiab_threshold = 0.0;
   self->prop_threshold  = 0.0;
   self->save_evol       = FALSE;
+  self->max_order_2     = FALSE;
   self->ctrl            = ncm_model_ctrl_new (NULL);
 
   self->cvode           = NULL;
@@ -368,6 +371,9 @@ _ncm_csq1d_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SAVE_EVOL:
       ncm_csq1d_set_save_evol (csq1d, g_value_get_boolean (value));
       break;
+    case PROP_MAX_ORDER_2:
+      ncm_csq1d_set_max_order_2 (csq1d, g_value_get_boolean (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -406,6 +412,9 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
     case PROP_SAVE_EVOL:
       g_value_set_boolean (value, ncm_csq1d_get_save_evol (csq1d));
+      break;
+    case PROP_MAX_ORDER_2:
+      g_value_set_boolean (value, ncm_csq1d_get_max_order_2 (csq1d));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -493,6 +502,13 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                                          NULL,
                                                          "Save the system evolution",
                                                          TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_ORDER_2,
+                                   g_param_spec_boolean ("max-order-2",
+                                                         NULL,
+                                                         "Whether to always truncate at order 2",
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->eval_xi             = &_ncm_csq1d_eval_xi;
@@ -808,6 +824,26 @@ ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
 }
 
 /**
+ * ncm_csq1d_set_max_order_2:
+ * @csq1d: a #NcmCSQ1D
+ * @truncate: whether to truncate the adiabatic series at order 2
+ *
+ * If true truncates the adiabatic series at order 2.
+ *
+ */
+void
+ncm_csq1d_set_max_order_2 (NcmCSQ1D *csq1d, gboolean truncate)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  if (self->max_order_2 != truncate)
+  {
+    ncm_model_ctrl_force_update (self->ctrl);
+    self->max_order_2 = truncate;
+  }
+}
+
+/**
  * ncm_csq1d_set_init_cond:
  * @csq1d: a #NcmCSQ1D
  * @state: a #NcmCSQ1DEvolState
@@ -985,6 +1021,20 @@ ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   return self->save_evol;
+}
+
+/**
+ * ncm_csq1d_get_max_order_2:
+ * @csq1d: a #NcmCSQ1D
+ *
+ * Returns: whether the maximum order of the adiabatic series is 2.
+ */
+gboolean
+ncm_csq1d_get_max_order_2 (NcmCSQ1D *csq1d)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  return self->max_order_2;
 }
 
 static gint _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
@@ -1852,6 +1902,8 @@ ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
   return t_a;
 }
 
+static void _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol);
+
 gdouble
 _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
 {
@@ -1860,7 +1912,7 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
 
   gdouble alpha, dgamma, cmp, alpha_reltol, dgamma_reltol;
 
-  ncm_csq1d_eval_adiab_at (ws->csq1d, ws->model, t, &alpha, &dgamma, &alpha_reltol, &dgamma_reltol);
+  _ncm_csq1d_eval_adiab_at_no_test (ws->csq1d, ws->model, t, &alpha, &dgamma, &alpha_reltol, &dgamma_reltol);
 
   cmp = MAX (alpha_reltol, dgamma_reltol);
 
@@ -1895,8 +1947,8 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
 
   g_assert_cmpfloat (reltol, >, 0.0);
 
-  ncm_csq1d_eval_adiab_at (csq1d, model, t0, &alpha0, &dgamma0, &alpha_reltol0, &dgamma_reltol0);
-  ncm_csq1d_eval_adiab_at (csq1d, model, t1, &alpha1, &dgamma1, &alpha_reltol1, &dgamma_reltol1);
+  _ncm_csq1d_eval_adiab_at_no_test (csq1d, model, t0, &alpha0, &dgamma0, &alpha_reltol0, &dgamma_reltol0);
+  _ncm_csq1d_eval_adiab_at_no_test (csq1d, model, t1, &alpha1, &dgamma1, &alpha_reltol1, &dgamma_reltol1);
 
   g_assert (gsl_finite (alpha0));
   g_assert (gsl_finite (alpha1));
@@ -2152,7 +2204,14 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
   F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
 
-  if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
+  if (self->max_order_2)
+  {
+    alpha_reltol0  = fabs (F1);
+    dgamma_reltol0 = fabs (F2);
+    alpha[0]       = +F1;
+    dgamma[0]      = -F2;
+  }
+  else if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
   {
     g_warning ("WKB series with |F3| > |F2| or |F4| > |F3|, "
                "|F3/F2| = % 22.15g and |F4/F3| = % 22.15g "
@@ -2176,6 +2235,46 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   }
   else
   {
+    alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
+    dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
+    alpha[0]       = +F1 + F1_3 / 3.0 - F3;
+    dgamma[0]      = -(1.0 + F1_2) * F2 + F4;
+  }
+
+  if (alpha_reltol != NULL)
+    alpha_reltol[0] = alpha_reltol0;
+
+  if (dgamma_reltol != NULL)
+    dgamma_reltol[0] = dgamma_reltol0;
+}
+
+static void
+_ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  NcmCSQ1DWS ws = {csq1d, model, 0.0};
+  const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
+  const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
+  const gdouble F1_2 = F1 * F1;
+  const gdouble F1_3 = F1_2 * F1;
+  const gdouble nu = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
+  const gdouble twonu = 2.0 * nu;
+  gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
+
+  if (self->max_order_2)
+  {
+    alpha_reltol0  = fabs (F1);
+    dgamma_reltol0 = fabs (F2);
+    alpha[0]       = +F1;
+    dgamma[0]      = -F2;
+  }
+  else
+  {
+    F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
+    d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
+    dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
+    F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
+
     alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
     dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
     alpha[0]       = +F1 + F1_3 / 3.0 - F3;
