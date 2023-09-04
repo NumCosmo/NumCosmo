@@ -49,9 +49,11 @@ struct _NcHaloDensityProfileClass
   /*< private >*/
   NcmModelClass parent_class;
   
-  gdouble (*eval_dl_density) (NcHaloDensityProfile *dp, const gdouble x);
+  gdouble (*eval_inner_dl_density) (NcHaloDensityProfile *dp, const gdouble x);
+  gdouble (*eval_outer_dl_density) (NcHaloDensityProfile *dp, const gdouble x);
   gdouble (*eval_dl_spher_mass) (NcHaloDensityProfile *dp, const gdouble x);
-  gdouble (*eval_dl_2d_density) (NcHaloDensityProfile *dp, const gdouble X);
+  gdouble (*eval_inner_dl_2d_density) (NcHaloDensityProfile *dp, const gdouble X);
+  gdouble (*eval_outer_dl_2d_density) (NcHaloDensityProfile *dp, const gdouble X);
   gdouble (*eval_dl_cyl_mass) (NcHaloDensityProfile *dp, const gdouble X);
 };
 
@@ -123,9 +125,11 @@ gdouble nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp);
 
 void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
 
-gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_outer_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
-gdouble nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+gdouble nc_halo_density_profile_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+gdouble nc_halo_density_profile_eval_outer_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 gdouble nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 gdouble nc_halo_density_profile_Delta (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
@@ -136,9 +140,11 @@ gdouble nc_halo_density_profile_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosm
 gdouble nc_halo_density_profile_r_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
 void nc_halo_density_profile_r_s_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *r_s, gdouble *rho_s);
 
-gdouble nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+gdouble nc_halo_density_profile_eval_inner_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+gdouble nc_halo_density_profile_eval_outer_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
 gdouble nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
-gdouble nc_halo_density_profile_eval_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+gdouble nc_halo_density_profile_eval_inner_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+gdouble nc_halo_density_profile_eval_outer_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
 gdouble nc_halo_density_profile_eval_cyl_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
 
 GArray *nc_halo_density_profile_eval_density_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *r, gdouble fin, gdouble fout, const gdouble z);

@@ -253,9 +253,9 @@ test_nc_halo_density_profile_nfw_eval_density (TestNcHaloDensityProfile *test, g
   NcHICosmo *cosmo         = test->cosmo;
   NcHaloDensityProfile *dp = test->dp;
   
-  gdouble rho1 = nc_halo_density_profile_eval_density (dp, cosmo, test->R1, test->z);
-  gdouble rho2 = nc_halo_density_profile_eval_density (dp, cosmo, test->R2, test->z);
-  gdouble rho3 = nc_halo_density_profile_eval_density (dp, cosmo, test->R3, test->z);
+  gdouble rho1 = nc_halo_density_profile_eval_inner_density (dp, cosmo, test->R1, test->z);
+  gdouble rho2 = nc_halo_density_profile_eval_inner_density (dp, cosmo, test->R2, test->z);
+  gdouble rho3 = nc_halo_density_profile_eval_inner_density (dp, cosmo, test->R3, test->z);
   
   ncm_assert_cmpdouble_e (rho1, ==, 7.670479e+14, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (rho2, ==, 5.557793e+14, 1.0e-5, 0.0);
@@ -306,7 +306,7 @@ test_nc_halo_density_profile_eval_dl_2d_density (TestNcHaloDensityProfile *test,
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
-      const gdouble ISigma  = nc_halo_density_profile_eval_dl_2d_density (dp, X);
+      const gdouble ISigma  = nc_halo_density_profile_eval_inner_dl_2d_density (dp, X);
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_2d_density (dp, X);
     
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);

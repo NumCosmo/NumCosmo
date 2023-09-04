@@ -128,9 +128,9 @@ _nc_halo_density_profile_hernquist_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_hernquist_parent_class)->finalize (object);
 }
 
-static gdouble _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_hernquist_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+static gdouble _nc_halo_density_profile_hernquist_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 static void
@@ -150,14 +150,14 @@ nc_halo_density_profile_hernquist_class_init (NcHaloDensityProfileHernquistClass
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
-  dp_class->eval_dl_density    = &_nc_halo_density_profile_hernquist_eval_dl_density;
+  dp_class->eval_inner_dl_density    = &_nc_halo_density_profile_hernquist_eval_inner_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_hernquist_eval_dl_spher_mass;
-  dp_class->eval_dl_2d_density = &_nc_halo_density_profile_hernquist_eval_dl_2d_density;
+  dp_class->eval_inner_dl_2d_density = &_nc_halo_density_profile_hernquist_eval_inner_dl_2d_density;
   dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_hernquist_eval_dl_cyl_mass;
 }
 
 static gdouble
-_nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_hernquist_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
   return 1.0 / (x * gsl_pow_3 (1.0 + x));
 }
@@ -169,7 +169,7 @@ _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp,
 }
 
 static gdouble
-_nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
+_nc_halo_density_profile_hernquist_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
   const gdouble Xm1              = X - 1.0;
   const gdouble Xp1              = X + 1.0;

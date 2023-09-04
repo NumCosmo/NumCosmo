@@ -403,6 +403,7 @@ nc_headers = \
 	lss/nc_halo_density_profile_einasto.h   \
 	lss/nc_halo_density_profile_dk14.h      \
 	lss/nc_halo_density_profile_hernquist.h \
+	lss/nc_halo_density_profile_mean.h       \
 	lss/nc_galaxy_acf.h                    \
 	lss/nc_multiplicity_func.h             \
 	lss/nc_multiplicity_func_ps.h          \
@@ -557,6 +558,7 @@ nc_sources = \
 	lss/nc_halo_density_profile_einasto.c   \
 	lss/nc_halo_density_profile_dk14.c      \
 	lss/nc_halo_density_profile_hernquist.c \
+	lss/nc_halo_density_profile_mean.c \
 	lss/nc_galaxy_acf.c                     \
 	lss/nc_multiplicity_func.c              \
 	lss/nc_multiplicity_func_ps.c           \

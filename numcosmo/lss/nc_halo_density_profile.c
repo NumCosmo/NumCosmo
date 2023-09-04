@@ -36,7 +36,7 @@
  * \end{equation}
  * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale
  * and $r_s$ the scale radius. This function corresponds to the virtual function
- * nc_halo_density_profile_eval_dl_density().
+ * nc_halo_density_profile_eval_inner_dl_density().
  *
  * # Parametrization
  *
@@ -89,7 +89,7 @@
  * \end{equation}
  * This integral can be implemented through the virtual method
  * nc_halo_density_profile_eval_dl_spher_mass(), otherwise it will
- * be computed numerically using nc_halo_density_profile_eval_dl_density().
+ * be computed numerically using nc_halo_density_profile_eval_inner_dl_density().
  * This same mass can be obtained from the background density using
  * mass-radius relation \eqref{eq:mrr}, consequently
  * \begin{equation}\label{def:rho_s}
@@ -135,7 +135,7 @@
  * nc_halo_density_profile_eval_dl_2d_density(),
  * nc_halo_density_profile_eval_dl_cyl_mass(),
  * they will be computed numerically integrating the density
- * $\hat{\rho}$ (nc_halo_density_profile_eval_dl_density()).
+ * $\hat{\rho}$ (nc_halo_density_profile_eval_inner_dl_density()).
  * These functions will be prepared to be computed inside the
  * interval $(X_i,\,X_f)$ defined by #NcHaloDensityProfile:lnXi
  * and #NcHaloDensityProfile:lnXf and using the relative
@@ -307,7 +307,7 @@ _nc_halo_density_profile_finalize (GObject *object)
 
 NCM_MSET_MODEL_REGISTER_ID (nc_halo_density_profile, NC_TYPE_HALO_DENSITY_PROFILE);
 
-static gdouble _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 
 static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp);
 static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp);
@@ -450,16 +450,18 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                                                         -G_MAXDOUBLE, +G_MAXDOUBLE, log (1.0e+4),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  klass->eval_dl_density    = &_nc_halo_density_profile_eval_dl_density;
+  klass->eval_inner_dl_density    = &_nc_halo_density_profile_eval_inner_dl_density;
+  klass->eval_outer_dl_density    = &_nc_halo_density_profile_eval_inner_dl_density;
   klass->eval_dl_spher_mass = &nc_halo_density_profile_eval_numint_dl_spher_mass;
-  klass->eval_dl_2d_density = &nc_halo_density_profile_eval_numint_dl_2d_density;
+  klass->eval_inner_dl_2d_density = &nc_halo_density_profile_eval_numint_dl_2d_density;
+  klass->eval_outer_dl_2d_density = &nc_halo_density_profile_eval_numint_dl_2d_density;
   klass->eval_dl_cyl_mass   = &nc_halo_density_profile_eval_numint_dl_cyl_mass;
 }
 
 static gdouble
-_nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
-  g_error ("Required method eval_dl_density not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp));
+  g_error ("Required method eval_inner_dl_density not implemented by `%s' class.", G_OBJECT_CLASS_NAME (dp));
   
   return 0.0;
 }
@@ -493,7 +495,7 @@ _nc_halo_density_profile_prepare_dl_spher_mass_int (gdouble x, gpointer userdata
 {
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (userdata);
   
-  return x * x * nc_halo_density_profile_eval_dl_density (dp, x);
+  return x * x * nc_halo_density_profile_eval_inner_dl_density (dp, x);
 }
 
 static void
@@ -532,7 +534,7 @@ _nc_halo_density_profile_prepare_dl_2d_density_X_u (gdouble lnu, gpointer userda
   NcHaloDensityProfile2D *dp2D = (NcHaloDensityProfile2D *) userdata;
   const gdouble u = exp (lnu);
   
-  return nc_halo_density_profile_eval_dl_density (dp2D->dp, hypot (dp2D->X, u)) * u;
+  return nc_halo_density_profile_eval_inner_dl_density (dp2D->dp, hypot (dp2D->X, u)) * u;
 }
 
 static gdouble
@@ -600,7 +602,7 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X_x_1 (gdouble lnx, gpointer userda
   const gdouble x = exp (lnx);  
   const gdouble x2 = x * x;
      
-  return x2 * x * nc_halo_density_profile_eval_dl_density (dp2D->dp, x);
+  return x2 * x * nc_halo_density_profile_eval_inner_dl_density (dp2D->dp, x);
 }
 
 static gdouble
@@ -610,7 +612,7 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X_x_2 (gdouble lnmu, gpointer userd
   const gdouble fa             = sqrt (fabs (expm1 (-2.0 * lnmu)));
   const gdouble mu             = exp (lnmu);
 
-  return nc_halo_density_profile_eval_dl_density (dp2D->dp, dp2D->X * mu) * mu / (1.0 + fa);
+  return nc_halo_density_profile_eval_inner_dl_density (dp2D->dp, dp2D->X * mu) * mu / (1.0 + fa);
 }
 
 static gdouble
@@ -681,23 +683,38 @@ _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
 }
 
 /**
- * nc_halo_density_profile_new_from_name:
- * @density_profile_name: Density profile's name
+ * nc_halo_density_profiles_new_from_names:
+ * @inner_profile_name: Inner density profile's name
+ * @outer_profile_names: (array) (nullable) (element-type gchar*): Array of outer density profile names (optional)
  *
- * This function returns a new #NcHaloDensityProfile whose type is defined by @density_profile_name string.
+ * This function returns a #NcHaloDensityProfile object. If @outer_profile_names is provided, it creates multiple Outer Profiles; otherwise, only an Inner Profile is created.
  *
  * Returns: A new #NcHaloDensityProfile.
  */
 NcHaloDensityProfile *
-nc_halo_density_profile_new_from_name (gchar *density_profile_name)
+nc_halo_density_profiles_new_from_name (gchar *inner_profile_name, gchar **outer_profile_names)
 {
-  GObject *obj               = ncm_serialize_global_from_string (density_profile_name);
+  GObject *obj               = ncm_serialize_global_from_string (inner_profile_name);
   GType density_profile_type = G_OBJECT_TYPE (obj);
   
   if (!g_type_is_a (density_profile_type, NC_TYPE_HALO_DENSITY_PROFILE))
-    g_error ("nc_halo_density_profile_new_from_name: NcHaloDensityProfile %s do not descend from %s.", density_profile_name,
+    g_error ("nc_halo_density_profile_new_from_name: NcHaloDensityProfile %s do not descend from %s.", inner_profile_name,
              g_type_name (NC_TYPE_HALO_DENSITY_PROFILE));
   
+  // Create the Outer Profiles if names are provided
+  if (outer_profile_names != NULL) {
+    for (gchar **outer_name = outer_profile_names; *outer_name != NULL; outer_name++) {
+      GObject *outer_obj = ncm_serialize_global_from_string (*outer_name);
+      GType outer_profile_type = G_OBJECT_TYPE (outer_obj);
+  
+      if (!g_type_is_a (outer_profile_type, NC_TYPE_HALO_DENSITY_PROFILE))
+        g_error ("nc_halo_density_profiles_new_from_names: Outer Profile %s do not descend from %s.", *outer_name,
+                 g_type_name (NC_TYPE_HALO_DENSITY_PROFILE));
+  
+      NcHaloDensityProfile *outer_profile = NC_HALO_DENSITY_PROFILE (outer_obj);
+    }
+  }
+
   return NC_HALO_DENSITY_PROFILE (obj);
 }
 
@@ -871,7 +888,7 @@ nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cos
 }
 
 /**
- * nc_halo_density_profile_eval_dl_density: (virtual eval_dl_density)
+ * nc_halo_density_profile_eval_inner_dl_density: (virtual eval_inner_dl_density)
  * @dp: a #NcHaloDensityProfile
  * @x: dimensionless radius $x = r / r_s$
  *
@@ -881,10 +898,27 @@ nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cos
  * Returns: the value of the dimensionless density profile $\hat\rho(x)$.
  */
 gdouble
-nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
+nc_halo_density_profile_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
-  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_density (dp, x);
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_inner_dl_density (dp, x);
 }
+
+/**
+ * nc_halo_density_profile_eval_inner_dl_density: (virtual eval_inner_dl_density)
+ * @dp: a #NcHaloDensityProfile
+ * @x: dimensionless radius $x = r / r_s$
+ *
+ * This function computes the dimensionless density profile,
+ * see Eq. \eqref{def:dlrho}.
+ *
+ * Returns: the value of the dimensionless density profile $\hat\rho(x)$.
+ */
+gdouble
+nc_halo_density_profile_eval_outer_dl_density (NcHaloDensityProfile *dp, const gdouble z)
+{
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_outer_dl_density (dp, z);
+}
+
 
 /**
  * nc_halo_density_profile_eval_dl_spher_mass: (virtual eval_dl_spher_mass)
@@ -913,9 +947,24 @@ nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdou
  * Returns: the value of the dimensionless 2D density profile $\hat\Sigma(X)$.
  */
 gdouble
-nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
+nc_halo_density_profile_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
-  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_2d_density (dp, X);
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_inner_dl_2d_density (dp, X);
+}
+/**
+ * nc_halo_density_profile_eval_dl_2d_density: (virtual eval_dl_2d_density)
+ * @dp: a #NcHaloDensityProfile
+ * @X: dimensionless 2D radius $X = R / r_s$
+ *
+ * This function computes the dimensionless 2D density profile,
+ * see Eq. \eqref{eq:def:hatSigma}.
+ *
+ * Returns: the value of the dimensionless 2D density profile $\hat\Sigma(X)$.
+ */
+gdouble
+nc_halo_density_profile_eval_outer_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
+{
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_outer_dl_2d_density (dp, X);
 }
 
 /**
@@ -1140,13 +1189,34 @@ nc_halo_density_profile_r_s_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, c
  * Returns: the value of the density profile $\rho(r)\;\left[M_\odot\times\mathrm{Mpc}^{-3}\right]$.
  */
 gdouble
-nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble r, gdouble z)
+nc_halo_density_profile_eval_inner_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble r, gdouble z)
 {
   gdouble r_s, rho_s;
   
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
   
-  return rho_s * nc_halo_density_profile_eval_dl_density (dp, r / r_s);
+  return rho_s * nc_halo_density_profile_eval_inner_dl_density (dp, r / r_s);
+}
+
+/**
+ * nc_halo_density_profile_eval_density:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @r: radius $r\;\left[\mathrm{Mpc}\right]$
+ * @z: redshift $z$
+ *
+ * This function computes the density profile in real space.
+ *
+ * Returns: the value of the density profile $\rho(r)\;\left[M_\odot\times\mathrm{Mpc}^{-3}\right]$.
+ */
+gdouble
+nc_halo_density_profile_eval_outer_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, gdouble r, gdouble z)
+{
+  gdouble r_s, rho_s;
+  
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+  
+  return rho_s * nc_halo_density_profile_eval_outer_dl_density (dp, r / r_s);
 }
 
 /**
@@ -1185,13 +1255,35 @@ nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *co
  * Returns: the value of $\Sigma(R)\left[M_\odot\times\mathrm{Mpc}^{-2}\right]$.
  */
 gdouble
-nc_halo_density_profile_eval_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+nc_halo_density_profile_eval_inner_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
 {
   gdouble r_s, rho_s;
   
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
   
-  return r_s * rho_s * nc_halo_density_profile_eval_dl_2d_density (dp, R / r_s);
+  return r_s * rho_s * nc_halo_density_profile_eval_inner_dl_2d_density (dp, R / r_s);
+}
+
+/**
+ * nc_halo_density_profile_eval_2d_density:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: radius $R$ in Mpc
+ * @z: redshift $z$
+ *
+ * This function computes the 2D projection of the density profile
+ * at radius $R$ and redshift $z$, see Eq. \eqref{}.
+ *
+ * Returns: the value of $\Sigma(R)\left[M_\odot\times\mathrm{Mpc}^{-2}\right]$.
+ */
+gdouble
+nc_halo_density_profile_eval_outer_2d_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z)
+{
+  gdouble r_s, rho_s;
+  
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+  
+  return r_s * rho_s * nc_halo_density_profile_eval_outer_dl_2d_density (dp, R / r_s);
 }
 
 /**
@@ -1251,7 +1343,8 @@ nc_halo_density_profile_eval_density_array (NcHaloDensityProfile *dp, NcHICosmo 
     
     for (i = 0; i < r->len; i++)
     {
-      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_dl_density (dp, g_array_index (r, gdouble, i) * fin);
+      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_inner_dl_density (dp, g_array_index (r, gdouble, i) * fin)
+                                        +fout * nc_halo_density_profile_eval_outer_dl_density (dp, g_array_index (r, gdouble, i) * fin);
     }
     
     return res;
@@ -1292,7 +1385,7 @@ nc_halo_density_profile_eval_2d_density_array (NcHaloDensityProfile *dp, NcHICos
     
     for (i = 0; i < R->len; i++)
     {
-      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_dl_2d_density (dp, g_array_index (R, gdouble, i) * fin);
+      g_array_index (res, gdouble, i) = fout * nc_halo_density_profile_eval_inner_dl_2d_density (dp, g_array_index (R, gdouble, i) * fin);
     }
     
     return res;

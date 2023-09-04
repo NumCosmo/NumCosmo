@@ -58,7 +58,7 @@
  * \hat{\overline{\Sigma}} (< X) = 2 \left[\frac{\arctan  (\sqrt{X^2 - 1})}{\sqrt{X^2 - 1}} + \ln (X / 2)\right],
  * \end{equation}
  * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
- *
+ *a
  * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
  */
 
@@ -128,9 +128,9 @@ _nc_halo_density_profile_nfw_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_nfw_parent_class)->finalize (object);
 }
 
-static gdouble _nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_nfw_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
+static gdouble _nc_halo_density_profile_nfw_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 static void
@@ -150,14 +150,14 @@ nc_halo_density_profile_nfw_class_init (NcHaloDensityProfileNFWClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
-  dp_class->eval_dl_density    = &_nc_halo_density_profile_nfw_eval_dl_density;
+  dp_class->eval_inner_dl_density    = &_nc_halo_density_profile_nfw_eval_inner_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
-  dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
+  dp_class->eval_inner_dl_2d_density = &_nc_halo_density_profile_nfw_eval_inner_dl_2d_density;
   dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
 }
 
 static gdouble
-_nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_nfw_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
   return 1.0 / (x * gsl_pow_2 (1.0 + x));
 }
@@ -169,7 +169,7 @@ _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const
 }
 
 static gdouble
-_nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
+_nc_halo_density_profile_nfw_eval_inner_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
   const gdouble Xm1              = X - 1.0;
   const gdouble Xp1              = X + 1.0;
@@ -277,13 +277,13 @@ nc_halo_density_profile_nfw_class_set_ni (gboolean num)
   if (num)
   {
     dp_class->eval_dl_spher_mass = dp_parent_class->eval_dl_spher_mass;
-    dp_class->eval_dl_2d_density = dp_parent_class->eval_dl_2d_density;
+    dp_class->eval_inner_dl_2d_density = dp_parent_class->eval_inner_dl_2d_density;
     dp_class->eval_dl_cyl_mass   = dp_parent_class->eval_dl_cyl_mass;
   }
   else
   {
     dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
-    dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
+    dp_class->eval_inner_dl_2d_density = &_nc_halo_density_profile_nfw_eval_inner_dl_2d_density;
     dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
   }
 

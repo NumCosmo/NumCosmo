@@ -120,7 +120,7 @@ nc_halo_density_profile_einasto_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_einasto_parent_class)->finalize (object);
 }
 
-static gdouble _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, const gdouble X);
+static gdouble _nc_halo_density_profile_einasto_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 static void
@@ -151,12 +151,12 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
   
-  dp_class->eval_dl_density    = &_nc_halo_density_profile_einasto_eval_dl_density;
+  dp_class->eval_inner_dl_density    = &_nc_halo_density_profile_einasto_eval_inner_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_einasto_eval_dl_spher_mass;
 }
 
 static gdouble
-_nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_einasto_eval_inner_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
   return exp (-2.0 / ALPHA * (pow (x, ALPHA) - 1.0));
 }
