@@ -449,11 +449,11 @@ gdouble
 _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (params);
+  NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   NcmStatsDistPrivate * const self = sd->priv;
   const double lnos                = gsl_vector_get (v, 0);
   gdouble m2lnp                    = 0.0;
-  const gdouble n                  = self->n_obs;
-  guint i;
+  gint i;
 
   switch (self->cv_type)
   {
@@ -482,27 +482,31 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
     {
       self->over_smooth = exp (lnos);
       self->href        = ncm_stats_dist_get_href (sd);
+      NcmMatrix *inv_IM = ncm_matrix_new (self->n_obs, self->n_obs);
+
+      ncm_matrix_clear (&self->IM);
+      self->IM = ncm_matrix_new (self->n_obs, self->n_obs);
+
+      sd_class->compute_IM (sd, self->IM);
+
+      NcmMatrix *IM_decomp_inv = ncm_matrix_new (self->n_obs, self->n_obs);
+      ncm_matrix_memcpy (IM_decomp_inv, self->IM);
+      ncm_matrix_cholesky_decomp (IM_decomp_inv, 'U');
+      ncm_matrix_cholesky_inverse (IM_decomp_inv, 'U');
+
+      ncm_matrix_dgemm (inv_IM, 'N', 'T', 1.0, IM_decomp_inv, IM_decomp_inv, 0.0);
 
       #pragma omp parallel for if (self->use_threads)
 
-      /* integrate f^2 */
-
       for (i = 0; i < self->n_obs; i++)
       {
-        NcmVector *x_i = g_ptr_array_steal_index (self->sample_array, i);
-
-        self->cv_ready = FALSE;
-        _ncm_stats_dist_prepare (sd);
-        self->cv_ready = TRUE;
-
-        const gdouble m2lnp_i = ncm_stats_dist_eval (sd, x_i);
-
-        m2lnp -= log (m2lnp_i);
-        // m2lnp += -2 / n * m2lnp_i;
-
-        g_ptr_array_insert (self->sample_array, i, ncm_vector_dup (x_i));
-        ncm_vector_clear (&x_i);
+        m2lnp +=  gsl_pow_2 (ncm_vector_get (self->weights, i) / ncm_matrix_get (inv_IM, i, i));
       }
+
+      m2lnp = log (m2lnp);
+
+      ncm_matrix_clear (&inv_IM);
+      ncm_matrix_clear (&IM_decomp_inv);
 
       if (self->print_fit)
         ncm_message ("# over-smooth: % 22.15g, m2lnp = % 22.15g\n",
@@ -942,6 +946,10 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       break;
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
       case NCM_STATS_DIST_CV_LOO:
+        _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
+        _ncm_stats_dist_compute_IM_full (sd);
+        self->rnorm = NCM_NNLS_SOLVE (self->nnls, self->sub_IM, self->sub_x, self->f1);
+        break;
       case NCM_STATS_DIST_CV_NONE:
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
         _ncm_stats_dist_compute_IM_full (sd);
