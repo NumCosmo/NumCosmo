@@ -108,10 +108,18 @@ gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
 void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
 
 gdouble nc_hicosmo_Vexp_eval_nu (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k);
+
 gdouble nc_hicosmo_Vexp_eval_F (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+
+gdouble nc_hicosmo_Vexp_gauss_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_gauss_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_gauss_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+
+gdouble nc_hicosmo_Vexp_cauchy_eval_F (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_cauchy_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_cauchy_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+gdouble nc_hicosmo_Vexp_cauchy_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
+
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
