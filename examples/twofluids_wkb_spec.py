@@ -217,6 +217,8 @@ def test_two_fluids_wkb_spec() -> None:
 
 test_two_fluids_wkb_spec()
 
+
+'''
 import pandas as pd
 
 data = pd.read_csv('twofluids_spectrum_{w}.dat', header=None, delim_whitespace= True)
@@ -235,3 +237,4 @@ print(ns1zeta)
 print(ns1S)
 print(ns2zeta)
 print(ns2S)
+'''
