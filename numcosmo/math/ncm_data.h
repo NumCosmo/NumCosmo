@@ -98,6 +98,7 @@ gchar *ncm_data_get_desc (NcmData *data);
 
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);
 void ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
+gboolean ncm_data_is_resampling (NcmData *data);
 
 void ncm_data_bootstrap_create (NcmData *data);
 void ncm_data_bootstrap_remove (NcmData *data);

@@ -63,6 +63,7 @@ typedef struct _NcmDataPrivate
   gchar *long_desc;
   gboolean init;
   gboolean begin;
+  gboolean is_resampling;
   NcmBootstrap *bstrap;
   NcmDiff *diff;
 } NcmDataPrivate;
@@ -74,11 +75,12 @@ ncm_data_init (NcmData *data)
 {
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
 
-  self->desc      = NULL;
-  self->long_desc = NULL;
-  self->init      = FALSE;
-  self->begin     = FALSE;
-  self->diff      = ncm_diff_new ();
+  self->desc          = NULL;
+  self->long_desc     = NULL;
+  self->init          = FALSE;
+  self->begin         = FALSE;
+  self->is_resampling = FALSE;
+  self->diff          = ncm_diff_new ();
 }
 
 static void
@@ -595,20 +597,41 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
  * @rng: a #NcmRNG
  *
  * Resample data in @data from the models contained in @mset.
+ * During the resampling the @data is marked as resampling
+ * and prepare is called.
  *
  */
 void
 ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.",
              ncm_data_get_desc (data));
+
+  self->is_resampling = TRUE;
 
   _ncm_data_prepare (data, mset);
 
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
 
+  self->is_resampling = FALSE;
   ncm_data_set_init (data, TRUE);
+}
+
+/**
+ * ncm_data_is_resampling:
+ * @data: a #NcmData
+ *
+ * Returns: whether the @data is resampling.
+ */
+gboolean
+ncm_data_is_resampling (NcmData *data)
+{
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
+  return self->is_resampling;
 }
 
 /**
