@@ -637,6 +637,7 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
   self->s_matrix = ncm_matrix_ref (s_matrix);
 }
 
+
 /**
  * nc_data_cluster_ncounts_gauss_set_bin_count:
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
