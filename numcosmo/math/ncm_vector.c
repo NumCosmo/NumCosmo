@@ -41,6 +41,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_vector.h"
+#include "math/ncm_matrix.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
@@ -1577,4 +1578,84 @@ ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
  *
  * Returns: the mean of the vector @cv components.
  */
+
+/**
+ * ncm_vector_d_r_symmetrization:
+ * @cv: a #NcmVector
+ * @d: a constant gdouble
+ * @r: a constant gdouble
+ *
+ * Calculates in place the product $S_{d,r} v$ where $S_{d,r}$ is the d-variate
+ * symmetrizer matrix of order r and $v$ is the vector @cv of length $d^r$.
+ *
+ */
+void
+ncm_vector_d_r_symmetrization (NcmVector *cv, const gint d, const gint r)
+{
+  NcmMatrix *P     = ncm_matrix_new (pow (d, r), r);
+  NcmVector *w_old = ncm_vector_dup (cv);
+  NcmVector *w_new = ncm_vector_new (pow (d, r));
+  gint i;
+  gint j;
+  gint k;
+
+  g_assert_cmpuint (ncm_vector_len (cv), ==, pow (d, r));
+
+  if (r < 1)
+  {
+    return;
+  }
+  else
+  {
+    for (i = 1; i <= pow (d, r); i++)
+    {
+      for (j = 1; j <= r; j++)
+      {
+        const gint q_1 = floor ((i - 1) * 1.0 / pow (d, j - 1));
+        const gint q_2 = d * floor ((i - 1) * 1.0 / pow (d, j));
+        const gint p   = q_1 - q_2;
+
+        ncm_matrix_set (P, i - 1, j - 1, p);
+      }
+    }
+
+    for (k = 1; k < r; k++)
+    {
+      gint l;
+
+      ncm_vector_set_zero (w_new);
+
+      for (l = 0; l < k; l++)
+      {
+        gint m;
+
+        for (m = 0; m < pow (d, r); m++)
+        {
+          NcmVector *P_m = ncm_matrix_get_row (P, m);
+          gint p_m_k     = ncm_vector_get (P_m, k);
+
+          ncm_vector_set (P_m, k, ncm_vector_get (P_m, l));
+          ncm_vector_set (P_m, l, p_m_k);
+
+          gint perm_m = 0;
+          gint n;
+
+          for (n = 0; n < r; n++)
+          {
+            perm_m += ncm_vector_get (P_m, n) * pow (d, n);
+          }
+
+          ncm_vector_addto (w_new, m, ncm_vector_get (w_old, perm_m));
+        }
+      }
+
+      ncm_vector_scale (w_new, 1.0 / k);
+      ncm_vector_memcpy (w_old, w_new);
+    }
+
+    ncm_vector_memcpy (cv, w_old);
+    ncm_vector_clear (&w_old);
+    ncm_vector_clear (&w_new);
+  }
+}
 

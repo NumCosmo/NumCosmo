@@ -180,6 +180,8 @@ NCM_INLINE gboolean ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE gboolean ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE gboolean ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector *cv_ub, gint type);
 
+void ncm_vector_d_r_symmetrization (NcmVector *cv, const gint d, const gint r);
+
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 guint ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x);
 
