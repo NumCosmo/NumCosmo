@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_cfg.c
  *
@@ -519,7 +520,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
@@ -1064,6 +1065,7 @@ ncm_cfg_register_obj (GType obj)
 {
 #if GLIB_CHECK_VERSION (2, 34, 0)
   g_type_ensure (obj);
+
 #endif /* GLIB >= 2.34*/
   gpointer obj_class = g_type_class_ref (obj);
 
@@ -1762,7 +1764,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   va_end (ap);
 
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -1822,7 +1824,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_end (ap);
 
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
