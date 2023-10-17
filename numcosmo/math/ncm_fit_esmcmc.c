@@ -28,7 +28,12 @@
  * @title: NcmFitESMCMC
  * @short_description: Ensemble sampler Markov Chain Monte Carlo analysis.
  *
- * FIXME
+ * #NcmFitESMCMC is a class that implements the Ensemble sampler Markov Chain
+ * Monte Carlo analysis. The object requires a #NcmFit object to be set before
+ * running the analysis. The initial points are sampled from a #NcmMSetTransKern
+ * object. The walkers are defined by a #NcmFitESMCMCWalker object.
+ *
+ * The #NcmFitESMCMC object can be run in parallel using MPI.
  *
  */
 
@@ -704,11 +709,11 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
  * @nwalkers: number of walkers
  * @sampler: inital points sampler #NcmMSetTransKern
  * @walker: (allow-none): a #NcmFitESMCMCWalker
- * @mtype: FIXME
+ * @mtype: a #NcmFitRunMsgs
  *
- * FIXME
+ * Creates a new #NcmFitESMCMC object using the given parameters.
  *
- * Returns: FIXME
+ * Returns: (transfer full): the newly created #NcmFitESMCMC object.
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype)
@@ -730,12 +735,14 @@ ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFi
  * @nwalkers: number of walkers
  * @sampler: inital points sampler #NcmMSetTransKern
  * @walker: (allow-none): a #NcmFitESMCMCWalker
- * @mtype: FIXME
+ * @mtype: a #NcmFitRunMsgs
  * @funcs_array: a #NcmObjArray of scalar functions to include in the catalog.
  *
- * FIXME
+ * Creates a new #NcmFitESMCMC object using the given parameters.
+ * The @funcs_array is used to compute extra columns in the catalog.
+ * The functions must be scalar and constant.
  *
- * Returns: FIXME
+ * Returns: (transfer full): the newly created #NcmFitESMCMC object.
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array)
@@ -756,9 +763,9 @@ ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sa
  * ncm_fit_esmcmc_ref:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Increases the reference count of @esmcmc by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the same @esmcmc object.
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc)
@@ -770,7 +777,8 @@ ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_free:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Decreases the reference count of @esmcmc by one. If the reference
+ * count reaches zero, all memory allocated by the object is released.
  *
  */
 void
@@ -783,7 +791,9 @@ ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_clear:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Decreases the reference count of @esmcmc by one. If the reference
+ * count reaches zero, all memory allocated by the object is released.
+ * The @esmcmc pointer is set to %NULL.
  *
  */
 void
@@ -797,7 +807,7 @@ ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc)
  * @esmcmc: a #NcmFitESMCMC
  * @filename: a filename.
  *
- * FIXME
+ * Sets the data file to use for the chains catalog.
  *
  */
 void
@@ -834,9 +844,9 @@ ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
 /**
  * ncm_fit_esmcmc_set_mtype:
  * @esmcmc: a #NcmFitESMCMC
- * @mtype: FIXME
+ * @mtype: a #NcmFitRunMsgs
  *
- * FIXME
+ * Sets the type of messages to use when running.
  *
  */
 void
@@ -852,7 +862,7 @@ ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype)
  * @esmcmc: a #NcmFitESMCMC
  * @tkern: a #NcmMSetTransKern.
  *
- * FIXME
+ * Sets the transition kernel to use.
  *
  */
 void
@@ -917,9 +927,9 @@ ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi)
 /**
  * ncm_fit_esmcmc_set_rng:
  * @esmcmc: a #NcmFitESMCMC
- * @rng: FIXME
+ * @rng: a #NcmRNG
  *
- * FIXME
+ * Sets the random number generator to use.
  *
  */
 void
@@ -1022,8 +1032,6 @@ ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time)
  * ncm_fit_esmcmc_has_rng:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
- *
  * Returns: whether there is a #NcmRNG set.
  */
 gboolean
@@ -1038,9 +1046,10 @@ ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_get_accept_ratio:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * The acceptance ratio is the ratio of accepted proposals over the
+ * total number of proposals.
  *
- * Returns: FIXME
+ * Returns: the acceptance ratio.
  */
 gdouble
 ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc)
@@ -1055,9 +1064,10 @@ ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_get_offboard_ratio:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * The offboard ratio is the ratio of offboard proposals over the
+ * total number of proposals.
  *
- * Returns: FIXME
+ * Returns: the offboard ratio.
  */
 gdouble
 ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc)
@@ -1072,9 +1082,10 @@ ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_get_accept_ratio_last_update:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * The acceptance ratio is the ratio of accepted proposals over the
+ * total number of proposals during the last update.
  *
- * Returns: FIXME
+ * Returns: the acceptance ratio.
  */
 gdouble
 ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc)
@@ -1089,9 +1100,10 @@ ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_get_offboard_ratio_last_update:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * The offboard ratio is the ratio of offboard proposals over the
+ * total number of proposals during the last update.
  *
- * Returns: FIXME
+ * Returns: the offboard ratio.
  */
 gdouble
 ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc)
@@ -1439,7 +1451,8 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_start_run:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Starts the run. This method should be called before any other
+ * run related method.
  *
  */
 void
@@ -1630,7 +1643,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_end_run:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Terminates the run. This method should be called after all
+ * run related methods.
  *
  */
 void
@@ -1658,7 +1672,7 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_reset:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Resets the run.
  *
  */
 void
@@ -2042,10 +2056,14 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
 /**
  * ncm_fit_esmcmc_run_burnin:
  * @esmcmc: a #NcmFitESMCMC
- * @prerun: FIXME
- * @ntimes: FIXME
+ * @prerun: number of pre-runs
+ * @ntimes: multiplication factor
  *
- * FIXME
+ * Runs the ESMCMC algorithm until the @prerun-th iterations are reached.
+ * Then it runs @ntimes times the estimated constant break.
+ *
+ * The constant break is the number of iterations after which the variance
+ * of the m2lnL is constant.
  *
  */
 void
@@ -2112,7 +2130,8 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
  * ncm_fit_esmcmc_mean_covar:
  * @esmcmc: a #NcmFitESMCMC
  *
- * FIXME
+ * Calculates the mean and covariance of the generated catalog.
+ *
  */
 void
 ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
