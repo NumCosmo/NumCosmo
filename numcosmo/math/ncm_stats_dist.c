@@ -114,6 +114,8 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_sf.h>
 #include <omp.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -173,6 +175,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->fmin            = gsl_multimin_fminimizer_alloc (gsl_multimin_fminimizer_nmsimplex2, 1);
   self->m2lnp_sort      = g_array_new (FALSE, FALSE, sizeof (size_t));
   self->rng             = ncm_rng_seeded_new (NULL, 0);
+  self->CM              = NULL;
 
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
 }
@@ -271,6 +274,8 @@ _ncm_stats_dist_dispose (GObject *object)
   ncm_vector_clear (&self->sub_x);
   ncm_vector_clear (&self->f);
   ncm_vector_clear (&self->f1);
+
+  ncm_stats_vec_clear (&self->stats_vec);
 
   ncm_rng_clear (&self->rng);
 
@@ -490,6 +495,54 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       self->n_obs     = self->sample_array->len;
       self->n_kernels = ceil (self->sample_array->len * self->split_frac);
       break;
+    case NCM_STATS_DIST_CV_ISJ:
+      self->n_obs     = self->sample_array->len;
+      self->n_kernels = self->sample_array->len;
+
+      NcmMatrix *CM          = ncm_matrix_new (self->d, self->d);
+      NcmStatsVec *stats_vec = ncm_stats_vec_new (self->d, NCM_STATS_VEC_COV, FALSE);
+
+      ncm_stats_vec_append_data (stats_vec, self->sample_array, FALSE);
+      ncm_stats_vec_get_cov (stats_vec, CM, 0);
+      ncm_matrix_cholesky_decomp (CM, 'U');
+
+      gdouble det = gsl_sf_exp (ncm_matrix_cholesky_lndet (CM));
+
+      ncm_matrix_cholesky_inverse (CM, 'U');
+      ncm_matrix_transpose (CM);
+
+      gdouble idde = 40320 / (gsl_pow_int (2, 8 + self->d) * 24 * gsl_pow_int (M_PI, self->d / 2.0) * sqrt (det));
+      NcmVector *vec_cov = ncm_matrix_as_vector (CM);
+      NcmVector *vec_cov_kp = ncm_vector_new (ncm_vector_len (vec_cov));
+
+      ncm_vector_memcpy (vec_cov_kp, vec_cov);
+
+      gint r;
+
+      for (r = 2; r <= 4; r++)
+      {
+        NcmVector *vec_sub = ncm_vector_new (pow (ncm_vector_len (vec_cov), r));
+        gint i;
+
+        for (i = 0; i < ncm_vector_len (vec_cov_kp); i++)
+        {
+          gint j;
+
+          for (j = 0; j < ncm_vector_len (vec_cov); i++)
+          {
+            ncm_vector_set (vec_sub, i * ncm_vector_len (vec_cov) + j, ncm_vector_get (vec_cov_kp, i) * ncm_vector_get (vec_cov, j));
+          }
+        }
+
+        ncm_vector_substitute (&vec_cov_kp, vec_sub);
+      }
+
+      ncm_vector_d_r_symmetrization (vec_cov_kp, self->d, 8);
+      mcm_vector_scale (vec_cov_kp, idde);
+
+
+
+      break;
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
@@ -559,6 +612,10 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       }
 
       break;
+    }
+    case NCM_STATS_DIST_CV_ISJ:
+    {
+      gint i;
     }
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();

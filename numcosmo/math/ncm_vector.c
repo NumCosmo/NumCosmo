@@ -1646,6 +1646,7 @@ ncm_vector_d_r_symmetrization (NcmVector *cv, const gint d, const gint r)
           }
 
           ncm_vector_addto (w_new, m, ncm_vector_get (w_old, perm_m));
+          ncm_vector_clear (&P_m);
         }
       }
 

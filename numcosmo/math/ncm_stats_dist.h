@@ -80,6 +80,7 @@ struct _NcmStatsDist
  * @NCM_STATS_DIST_CV_NONE: No cross validation
  * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
  * @NCM_STATS_DIST_CV_SPLIT_NOFIT: Sample split cross validation without fitting
+ * @NCM_STATS_DIST_CV_ISJ: Improved Sheather-Jones cross validation
  *
  * Cross-validation method to be applied.
  *
@@ -89,6 +90,7 @@ typedef enum _NcmStatsDistCV
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,
   NCM_STATS_DIST_CV_SPLIT_NOFIT,
+  NCM_STATS_DIST_CV_CDPI,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
