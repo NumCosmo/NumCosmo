@@ -28,7 +28,8 @@
  * @title: NcDataClusterNCount
  * @short_description: Cluster number count data.
  *
- * FIXME
+ * A likelihood function for cluster number count data.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -738,9 +739,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
  * @redshift_type: #NcClusterRedshift class string
  * @mass_type: #NcClusterMass class string
  *
- * FIXME
+ * Creates a new #NcDataClusterNCount object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): the newly created #NcDataClusterNCount
  */
 NcDataClusterNCount *
 nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type, const gchar *mass_type)
@@ -758,9 +759,9 @@ nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type,
  * nc_data_cluster_ncount_ref:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * Increases the reference count of the #NcDataClusterNCount.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the #NcDataClusterNCount
  */
 NcDataClusterNCount *
 nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
@@ -772,7 +773,8 @@ nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
  * nc_data_cluster_ncount_free:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * Decreases the reference count of the #NcDataClusterNCount.
+ * If the reference count reaches zero, the #NcDataClusterNCount is freed.
  *
  */
 void
@@ -785,7 +787,9 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
  * nc_data_cluster_ncount_clear:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * If *@ncount is not %NULL, decreases the reference count of the #NcDataClusterNCount.
+ * If the reference count reaches zero, the #NcDataClusterNCount is freed.
+ * Sets the *@ncount to %NULL.
  *
  */
 void
@@ -1410,7 +1414,7 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
   }
   else
   {
-    gulong len = f - i;
+    gulong len   = f - i;
     gdouble *val = &g_array_index (evald2n->self->m2lnL_a, gdouble, 0);
     gdouble *err = &g_array_index (evald2n->self->m2lnL_err_a, gdouble, 0);
     gdouble lnMl, lnMu;
@@ -1605,9 +1609,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 /**
  * nc_data_cluster_ncount_true_data:
  * @ncount: a #NcDataClusterNCount
- * @use_true_data: FIXME
+ * @use_true_data: if TRUE it will use the true data.
  *
- * FIXME
+ * Sets whether to use the true data or not.
  *
  */
 void
@@ -1647,7 +1651,9 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
  * @area_survey: area in units of square degrees
  * @rng: a #NcmRNG
  *
- * FIXME
+ * Initialize @ncount from a sampling using @mset as the fiducial model.
+ * The area of the survey is @area_survey in units of square degrees.
+ * The random number generator @rng is used to sample the data.
  *
  */
 void
@@ -1713,9 +1719,9 @@ nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_set_binned:
  * @ncount: a #NcDataClusterNCount.
- * @on: FIXME
+ * @on: whether to use binned data or not.
  *
- * FIXME
+ * Sets whether to use binned data or not.
  *
  */
 void
@@ -1781,11 +1787,11 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_catalog_save:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * @filename: name of the file
- * @overwrite: FIXME
+ * @overwrite: whether to overwrite the file or not
  *
- * FIXME
+ * Saves the current data present in @ncount to a FITS file.
  *
  */
 void
@@ -2011,7 +2017,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
  * @ncount: a #NcDataClusterNCount.
  * @filename: name of the file
  *
- * FIXME
+ * Loads the data present in @filename to @ncount.
  *
  */
 void
