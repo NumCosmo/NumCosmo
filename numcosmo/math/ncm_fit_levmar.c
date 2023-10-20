@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,19 @@
  * @title: NcmFitLevmar
  * @short_description: Best-fit finder -- Levenberg-Marquardt nonlinear least squares algorithm library.
  *
- * FIXME
- * 
+ * This object serves as an implementation of a best-fit finder utilizing the
+ * Levenberg-Marquardt nonlinear least squares algorithm library. It is designed as a
+ * subclass of #NcmFit and operates as a wrapper for the levmar library. It's important
+ * to note that the NcmLevMar object can only be effectively employed when all #NcmData
+ * within the #NcmDataset are of Gaussian type, and all priors defined in
+ * #NcmLikelihood are of Gaussian type as well.
+ *
+ * # Levenberg-Marquardt Algorithm:
+ *
+ * The Levenberg-Marquardt algorithm is a widely recognized approach for solving
+ * nonlinear least squares problems. Its particular strength lies in its suitability
+ * for solving problems with a substantial number of variables, especially when gradient
+ * methods prove impractical.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -70,14 +81,14 @@ _ncm_fit_levmar_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_fit_levmar_parent_class)->constructed (object);
   {
     NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
-    NcmFit *fit = NCM_FIT (object);
+    NcmFit *fit              = NCM_FIT (object);
 
     fit_levmar->fparam_len = fit->fstate->fparam_len;
 
     fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
     fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
-    
-    fit_levmar->data_len   = fit->fstate->data_len;
+
+    fit_levmar->data_len = fit->fstate->data_len;
     ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
   }
 }
@@ -86,6 +97,7 @@ static void
 _ncm_fit_levmar_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
+
   g_return_if_fail (NCM_IS_FIT_LEVMAR (object));
 
   switch (prop_id)
@@ -96,6 +108,7 @@ _ncm_fit_levmar_set_property (GObject *object, guint prop_id, const GValue *valu
         fit_levmar->algo = g_value_get_enum (value);
       else
         ncm_fit_levmar_set_algo (fit_levmar, g_value_get_enum (value));
+
       break;
     }
     default:
@@ -108,12 +121,13 @@ static void
 _ncm_fit_levmar_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
+
   g_return_if_fail (NCM_IS_FIT_LEVMAR (object));
 
   switch (prop_id)
   {
     case PROP_ALGO:
-    g_value_set_enum (value, fit_levmar->algo);
+      g_value_set_enum (value, fit_levmar->algo);
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -151,8 +165,8 @@ static const gchar *_ncm_fit_levmar_get_desc (NcmFit *fit);
 static void
 ncm_fit_levmar_class_init (NcmFitLevmarClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmFitClass* fit_class     = NCM_FIT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmFitClass *fit_class     = NCM_FIT_CLASS (klass);
 
   object_class->constructed  = &_ncm_fit_levmar_constructed;
   object_class->set_property = &_ncm_fit_levmar_set_property;
@@ -167,7 +181,7 @@ ncm_fit_levmar_class_init (NcmFitLevmarClass *klass)
                                                       "Levmar least squares library algorithm",
                                                       NCM_TYPE_FIT_LEVMAR_ALGOS, NCM_FIT_LEVMAR_DIF,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   fit_class->copy_new = &_ncm_fit_levmar_copy_new;
   fit_class->reset    = &_ncm_fit_levmar_reset;
   fit_class->run      = &_ncm_fit_levmar_run;
@@ -180,27 +194,29 @@ static NcmFit *
 _ncm_fit_levmar_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
+
   return ncm_fit_levmar_new (lh, mset, gtype, fit_levmar->algo);
 }
 
-static void 
+static void
 _ncm_fit_levmar_reset (NcmFit *fit)
 {
   /* Chain up : start */
   NCM_FIT_CLASS (ncm_fit_levmar_parent_class)->reset (fit);
   {
     NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
-    if (fit_levmar->fparam_len != fit->fstate->fparam_len || fit_levmar->data_len != fit->fstate->data_len)
+
+    if ((fit_levmar->fparam_len != fit->fstate->fparam_len) || (fit_levmar->data_len != fit->fstate->data_len))
     {
       fit_levmar->fparam_len = fit->fstate->fparam_len;
-      
+
       ncm_vector_clear (&fit_levmar->lb);
       ncm_vector_clear (&fit_levmar->ub);
 
       fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
       fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
-      
-      fit_levmar->data_len   = fit->fstate->data_len;
+
+      fit_levmar->data_len = fit->fstate->data_len;
       ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
     }
   }
@@ -216,7 +232,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
   guint i;
-  
+
   g_assert (fit->fstate->fparam_len != 0);
 
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
@@ -227,20 +243,24 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_vector_set (fit_levmar->lb, i, ncm_mset_fparam_get_lower_bound (fit->mset, i));
     ncm_vector_set (fit_levmar->ub, i, ncm_mset_fparam_get_upper_bound (fit->mset, i));
   }
-  
+
   switch (fit_levmar->algo)
   {
     case NCM_FIT_LEVMAR_DER:
       return ncm_fit_levmar_der_run (fit, mtype);
+
       break;
     case NCM_FIT_LEVMAR_DIF:
       return ncm_fit_levmar_dif_run (fit, mtype);
+
       break;
     case NCM_FIT_LEVMAR_BC_DER:
       return ncm_fit_levmar_bc_der_run (fit, mtype);
+
       break;
     case NCM_FIT_LEVMAR_BC_DIF:
       return ncm_fit_levmar_bc_dif_run (fit, mtype);
+
       break;
     default:
       g_assert_not_reached ();
@@ -261,24 +281,24 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
-  
+
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
-  
+
   g_assert (ncm_vector_stride (fit->fstate->ls_f) == 1 &&
             ncm_vector_stride (fit->fstate->fparams) == 1 &&
             ncm_matrix_tda (fit->fstate->covar) == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_der (
-                     &nc_residual_levmar_f, &nc_residual_levmar_J,
-                     ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                     fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
-                     );
-  
+    &nc_residual_levmar_f, &nc_residual_levmar_J,
+    ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+    fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
+                    );
+
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
@@ -302,12 +322,12 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
-  
+
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
   g_assert (ncm_vector_stride (fit->fstate->ls_f) == 1 &&
@@ -315,10 +335,10 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
             ncm_matrix_tda (fit->fstate->covar) == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_dif (
-                        &nc_residual_levmar_f,
-                        ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,  
-                        fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
-                        );
+    &nc_residual_levmar_f,
+    ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+    fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
+                    );
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -343,25 +363,25 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
-  
+
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
-  
+
   g_assert (ncm_vector_stride (fit->fstate->ls_f) == 1 &&
             ncm_vector_stride (fit->fstate->fparams) == 1 &&
             ncm_matrix_tda (fit->fstate->covar) == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_bc_der (
-                        &nc_residual_levmar_f, &nc_residual_levmar_J,
-                        ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                        ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,
-                        fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
-                        );
-  
+    &nc_residual_levmar_f, &nc_residual_levmar_J,
+    ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+    ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,
+    fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
+                       );
+
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
@@ -385,12 +405,12 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
-  
+
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
   g_assert (ncm_vector_stride (fit->fstate->ls_f) == 1 &&
@@ -398,11 +418,11 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
             ncm_matrix_tda (fit->fstate->covar) == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_bc_dif (
-                        &nc_residual_levmar_f,
-                        ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                        ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,  
-                        fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
-                        );
+    &nc_residual_levmar_f,
+    ncm_vector_data (fit->fstate->fparams), NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+    ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,
+    fit->maxiter, opts, info, fit_levmar->workz, ncm_matrix_data (fit->fstate->covar), fit
+                       );
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -420,15 +440,16 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 static void
 nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 {
-  NcmFit *fit = NCM_FIT (adata);
+  NcmFit *fit  = NCM_FIT (adata);
   NcmVector *f = ncm_vector_new_data_static (hx, n, 1);
 
   NCM_UNUSED (m);
-  
+
   ncm_fit_params_set_array (fit, p);
+
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_levmar_f: stepping in a invalid parameter point, continuing anyway.");
-  
+
   ncm_fit_ls_f (fit, f);
 
   ncm_fit_state_set_m2lnL_curval (fit->fstate, gsl_pow_2 (ncm_vector_dnrm2 (f)));
@@ -439,10 +460,11 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 static void
 nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata)
 {
-  NcmFit *fit = NCM_FIT (adata);
+  NcmFit *fit  = NCM_FIT (adata);
   NcmMatrix *J = ncm_matrix_new_data_static (j, n, m);
 
   ncm_fit_params_set_array (fit, p);
+
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_levmar_J: stepping in a invalid parameter point, continuing anyway.");
 
@@ -455,19 +477,24 @@ static const gchar *
 _ncm_fit_levmar_get_desc (NcmFit *fit)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
+
   switch (fit_levmar->algo)
   {
     case NCM_FIT_LEVMAR_DER:
       return "Levmar:external derivatives";
+
       break;
     case NCM_FIT_LEVMAR_DIF:
       return "Levmar:internal derivatives";
+
       break;
     case NCM_FIT_LEVMAR_BC_DER:
       return "Levmar:external derivatives and box constraints";
+
       break;
     case NCM_FIT_LEVMAR_BC_DIF:
       return "Levmar:internal derivatives and box constraints";
+
       break;
     default:
       g_assert_not_reached ();
@@ -477,58 +504,62 @@ _ncm_fit_levmar_get_desc (NcmFit *fit)
 
 /**
  * ncm_fit_levmar_new:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
- * @algo: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
+ * @algo: a #NcmFitLevmarAlgos
  *
- * FIXME
- * 
- * Returns: FIXME
+ * Creates a new #NcmFitLevmar object from the given likelihood, model set, gradient
+ * type and algorithm.
+ *
+ * Returns: a #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitLevmarAlgos algo)
 {
-  return g_object_new (NCM_TYPE_FIT_LEVMAR, 
+  return g_object_new (NCM_TYPE_FIT_LEVMAR,
                        "likelihood", lh,
                        "mset", mset,
                        "grad-type", gtype,
                        "algorithm", algo,
                        NULL
-                       );
+                      );
 }
 
 /**
  * ncm_fit_levmar_new_default:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
  *
- * FIXME
- * 
- * Returns: FIXME
+ * Creates a new #NcmFitLevmar object from the given likelihood, model set and
+ * gradient type. The algorithm used is the default one (#NCM_FIT_LEVMAR_DIF).
+ *
+ * Returns: a #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
-  return g_object_new (NCM_TYPE_FIT_LEVMAR, 
+  return g_object_new (NCM_TYPE_FIT_LEVMAR,
                        "likelihood", lh,
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                       );
+                      );
 }
 
 /**
  * ncm_fit_levmar_new_by_name:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
- * @algo_name: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
+ * @algo_name: a string containing the name of the algorithm to be used
  *
- * FIXME
- * 
- * Returns: FIXME
+ * Creates a new #NcmFitLevmar object from the given likelihood, model set, gradient
+ * type and algorithm name. If the algorithm name is NULL, the default one
+ * (#NCM_FIT_LEVMAR_DIF) is used.
+ *
+ * Returns: a #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name)
@@ -537,12 +568,16 @@ ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
   {
     const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_LEVMAR_ALGOS,
                                                                algo_name);
+
     if (algo == NULL)
       g_error ("ncm_fit_levmar_new_by_name: algorithm %s not found.", algo_name);
+
     return ncm_fit_levmar_new (lh, mset, gtype, algo->value);
   }
   else
+  {
     return ncm_fit_levmar_new_default (lh, mset, gtype);
+  }
 }
 
 /**
@@ -550,7 +585,7 @@ ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
  * @fit_levmar: a #NcmFitLevmar.
  * @algo: a #levmar_algorithm.
  *
- * FIXME
+ * Sets the algorithm to be used by the given #NcmFitLevmar.
  *
  */
 void
@@ -563,13 +598,13 @@ ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
   {
     switch (fit_levmar->algo)
     {
-      case NCM_FIT_LEVMAR_DER: 
+      case NCM_FIT_LEVMAR_DER:
         fit_levmar->workz = g_new0 (gdouble, LM_DER_WORKSZ (fit_levmar->fparam_len, fit_levmar->data_len));
         break;
       case NCM_FIT_LEVMAR_DIF:
         fit_levmar->workz = g_new0 (gdouble, LM_DIF_WORKSZ (fit_levmar->fparam_len, fit_levmar->data_len));
         break;
-      case NCM_FIT_LEVMAR_BC_DER: 
+      case NCM_FIT_LEVMAR_BC_DER:
         fit_levmar->workz = g_new0 (gdouble, LM_BC_DER_WORKSZ (fit_levmar->fparam_len, fit_levmar->data_len));
         break;
       case NCM_FIT_LEVMAR_BC_DIF:
@@ -581,3 +616,4 @@ ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
     }
   }
 }
+

@@ -28,7 +28,8 @@
  * @title: NcmFitGSLLS
  * @short_description: Best-fit finder -- GSL least squares algorithms.
  *
- * FIXME
+ * This object implements a best-fit finder using the GSL least squares
+ * algorithms. It is a subclass of #NcmFit.
  *
  */
 
@@ -64,7 +65,7 @@ _ncm_fit_gsl_ls_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_fit_gsl_ls_parent_class)->constructed (object);
   {
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (object);
-    NcmFit *fit = NCM_FIT (fit_gsl_ls);
+    NcmFit *fit             = NCM_FIT (fit_gsl_ls);
 
     if (fit->fstate->fparam_len > 0)
     {
@@ -101,11 +102,11 @@ static const gchar *_ncm_fit_gsl_ls_get_desc (NcmFit *fit);
 static void
 ncm_fit_gsl_ls_class_init (NcmFitGSLLSClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmFitClass* fit_class     = NCM_FIT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmFitClass *fit_class     = NCM_FIT_CLASS (klass);
 
-  object_class->constructed  = &_ncm_fit_gsl_ls_constructed;
-  object_class->finalize     = &ncm_fit_gsl_ls_finalize;
+  object_class->constructed = &_ncm_fit_gsl_ls_constructed;
+  object_class->finalize    = &ncm_fit_gsl_ls_finalize;
 
   fit_class->copy_new = &_ncm_fit_gsl_ls_copy_new;
   fit_class->reset    = &_ncm_fit_gsl_ls_reset;
@@ -119,6 +120,7 @@ static NcmFit *
 _ncm_fit_gsl_ls_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   NCM_UNUSED (fit);
+
   return ncm_fit_gsl_ls_new (lh, mset, gtype);
 }
 
@@ -129,7 +131,8 @@ _ncm_fit_gsl_ls_reset (NcmFit *fit)
   NCM_FIT_CLASS (ncm_fit_gsl_ls_parent_class)->reset (fit);
   {
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
-    if (fit_gsl_ls->f.p != fit->fstate->fparam_len || fit_gsl_ls->f.n != fit->fstate->data_len)
+
+    if ((fit_gsl_ls->f.p != fit->fstate->fparam_len) || (fit_gsl_ls->f.n != fit->fstate->data_len))
     {
       g_clear_pointer (&fit_gsl_ls->ls, gsl_multifit_fdfsolver_free);
 
@@ -161,13 +164,13 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   gsl_multifit_fdfsolver_set (fit_gsl_ls->ls, &fit_gsl_ls->f, ncm_vector_gsl (fit->fstate->fparams));
 
-  status = gsl_multifit_fdfsolver_driver (fit_gsl_ls->ls, 
-                                          fit->maxiter, 
+  status = gsl_multifit_fdfsolver_driver (fit_gsl_ls->ls,
+                                          fit->maxiter,
                                           ncm_fit_get_params_reltol (fit),
                                           ncm_fit_get_m2lnL_reltol (fit),
                                           ncm_fit_get_m2lnL_reltol (fit),
                                           &info
-                                          );
+                                         );
 
   {
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
@@ -195,10 +198,11 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
 static gint
 ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
 {
-  NcmFit *fit = NCM_FIT (p);
+  NcmFit *fit   = NCM_FIT (p);
   NcmVector *fv = ncm_vector_new_gsl_static (f);
 
   ncm_fit_params_set_gsl_vector (fit, x);
+
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
@@ -206,16 +210,18 @@ ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
   ncm_fit_ls_f (fit, fv);
 
   ncm_vector_free (fv);
+
   return GSL_SUCCESS;
 }
 
 static gint
 ncm_fit_gsl_ls_df (const gsl_vector *x, gpointer p, gsl_matrix *J)
 {
-  NcmFit *fit = NCM_FIT (p);
+  NcmFit *fit   = NCM_FIT (p);
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
 
   ncm_fit_params_set_gsl_vector (fit, x);
+
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
@@ -223,17 +229,19 @@ ncm_fit_gsl_ls_df (const gsl_vector *x, gpointer p, gsl_matrix *J)
   ncm_fit_ls_J (fit, Jm);
 
   ncm_matrix_free (Jm);
+
   return GSL_SUCCESS;
 }
 
 static gint
 ncm_fit_gsl_ls_fdf (const gsl_vector *x, gpointer p, gsl_vector *f, gsl_matrix *J)
 {
-  NcmFit *fit = NCM_FIT (p);
+  NcmFit *fit   = NCM_FIT (p);
   NcmVector *fv = ncm_vector_new_gsl_static (f);
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
 
   ncm_fit_params_set_gsl_vector (fit, x);
+
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
@@ -242,6 +250,7 @@ ncm_fit_gsl_ls_fdf (const gsl_vector *x, gpointer p, gsl_vector *f, gsl_matrix *
 
   ncm_vector_free (fv);
   ncm_matrix_free (Jm);
+
   return GSL_SUCCESS;
 }
 
@@ -249,24 +258,28 @@ static const gchar *
 _ncm_fit_gsl_ls_get_desc (NcmFit *fit)
 {
   static gchar *desc = NULL;
+
   if (desc == NULL)
   {
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
+
     desc = g_strdup_printf ("GSL Least Squares:%s",
                             fit_gsl_ls->ls != NULL ? gsl_multifit_fdfsolver_name (fit_gsl_ls->ls) : "not-set");
   }
+
   return desc;
 }
 
 /**
  * ncm_fit_gsl_ls_new:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
  *
- * FIXME
+ * Creates a new #NcmFitGSLLS object with the given likelihood, model set and
+ * gradient type.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmFitGSLLS object.
  */
 NcmFit *
 ncm_fit_gsl_ls_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -276,5 +289,6 @@ ncm_fit_gsl_ls_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                       );
+                      );
 }
+

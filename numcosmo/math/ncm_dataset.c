@@ -28,7 +28,11 @@
  * @title: NcmDataset
  * @short_description: A set of NcmData objects
  *
- * This Class define a set of NcmData objects.
+ * The purpose of this class is to define a collection of #NcmData objects. These
+ * objects serve as containers for #NcmData intended for use within the NumCosmo
+ * library. Each individual #NcmData object is responsible for defining a distinct
+ * data likelihood function. It is essential to note that all #NcmData objects are
+ * designed to be entirely statistically independent of each other.
  *
  */
 
