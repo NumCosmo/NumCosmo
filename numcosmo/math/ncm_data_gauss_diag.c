@@ -390,7 +390,7 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
         const gdouble sigma_i = ncm_vector_get (self->sigma, i);
         const gdouble r_i     = (yt_i - y_i) / sigma_i;
 
-        *m2lnL += r_i * r_i;
+        *m2lnL += r_i * r_i + 2.0 * sigma_i;
       }
     }
     else

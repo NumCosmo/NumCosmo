@@ -496,3 +496,41 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   }
 }
 
+/**
+ * nc_cluster_mass_ascaso_get_mean_richness:
+ * @cl_rich: FIXME
+ * @lnM: FIXME
+ * @z: FIXME
+ * 
+ * FIXME
+ *
+ */
+gdouble
+nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
+{
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+  const gdouble DlnM                      = lnM - self->lnM0;
+  const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
+
+  return MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
+}
+
+/**
+ * nc_cluster_mass_ascaso_get_std_richness:
+ * @cl_rich: FIXME
+ * @lnM: FIXME
+ * @z: FIXME
+ * 
+ * FIXME
+ *
+ */
+gdouble
+nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
+{
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+  const gdouble DlnM                      = lnM - self->lnM0;
+  const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
+
+  return SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+}
+

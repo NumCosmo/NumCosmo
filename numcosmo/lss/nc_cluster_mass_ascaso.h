@@ -90,6 +90,9 @@ struct _NcClusterMassAscaso
 
 GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
 
+gdouble nc_cluster_mass_ascaso_get_mean_richness(NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_ascaso_get_std_richness(NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_ASCASO_H_ */
