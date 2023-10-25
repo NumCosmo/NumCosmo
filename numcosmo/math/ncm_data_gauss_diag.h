@@ -34,6 +34,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA_GAUSS_DIAG (ncm_data_gauss_diag_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (NcmDataGaussDiag, ncm_data_gauss_diag, NCM, DATA_GAUSS_DIAG, NcmData)
 
 struct _NcmDataGaussDiagClass
@@ -42,7 +43,7 @@ struct _NcmDataGaussDiagClass
   NcmDataClass parent_class;
 
   void (*mean_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
-  gboolean (*sigma_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *var);
+  gboolean (*sigma_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma);
   void (*set_size) (NcmDataGaussDiag *diag, guint np);
   guint (*get_size) (NcmDataGaussDiag *diag);
 };

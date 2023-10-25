@@ -471,6 +471,7 @@ nc_headers = \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_pseudo_counts.h      \
 	data/nc_data_cluster_wl.h                 \
+	data/nc_data_cluster_mass_rich.h          \
 	data/nc_data_reduced_shear_cluster_mass.h \
 	data/nc_data_planck_lkl.h                 \
 	data/nc_data_xcor.h                       \
@@ -625,6 +626,7 @@ nc_sources = \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_pseudo_counts.c      \
 	data/nc_data_cluster_wl.c                 \
+	data/nc_data_cluster_mass_rich.c          \
 	data/nc_data_reduced_shear_cluster_mass.c \
 	data/nc_data_planck_lkl.c                 \
 	data/nc_data_xcor.c                       \

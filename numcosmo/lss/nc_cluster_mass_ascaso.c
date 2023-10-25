@@ -349,7 +349,7 @@ _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble l
 static gdouble
 _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
   NcClusterMassAscasoPrivate * const self = ascaso->priv;
   gdouble lnR_true, sigma;
 
@@ -388,7 +388,7 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 static gboolean
 _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
   NcClusterMassAscasoPrivate * const self = ascaso->priv;
   gdouble lnR_true, sigma;
 
@@ -498,11 +498,11 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
 
 /**
  * nc_cluster_mass_ascaso_get_mean_richness:
- * @cl_rich: FIXME
- * @lnM: FIXME
- * @z: FIXME
- * 
- * FIXME
+ * @ascaso: a #NcClusterMassAscaso
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the mean of the richness distribution.
  *
  */
 gdouble
@@ -517,11 +517,11 @@ nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble l
 
 /**
  * nc_cluster_mass_ascaso_get_std_richness:
- * @cl_rich: FIXME
- * @lnM: FIXME
- * @z: FIXME
- * 
- * FIXME
+ * @ascaso: a #NcClusterMassAscaso
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the standard deviation of the richness distribution.
  *
  */
 gdouble

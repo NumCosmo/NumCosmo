@@ -1565,6 +1565,9 @@ class ClusterMassAscaso(ClusterMass):
                  reparam: NumCosmoMath.Reparam = ...,
                  sparam_array: NumCosmoMath.ObjArray = ...,
                  submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    
 
 class ClusterMassAscasoClass(GObject.GPointer):
     r"""
@@ -3846,6 +3849,90 @@ class DataCMBShiftParamClass(GObject.GPointer):
     ::
 
         DataCMBShiftParamClass()
+    """
+    parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataClusterMassRich(NumCosmoMath.DataGaussDiag):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRich(**properties)
+        new() -> NumCosmo.DataClusterMassRich
+
+    Object NcDataClusterMassRich
+
+    Properties from NcDataClusterMassRich:
+      z-cluster -> NcmVector: z-cluster
+        Clusters (halo) redshift array
+      lnM-cluster -> NcmVector: lnM-cluster
+        Clusters (halo) ln-mass array
+
+    Properties from NcmDataGaussDiag:
+      n-points -> guint: n-points
+        Data sample size
+      w-mean -> gboolean: w-mean
+        Whether to minimize analytically over the weighted mean
+      mean -> NcmVector: mean
+        Data mean
+      sigma -> NcmVector: sigma
+        Data standard deviation
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+    class Props:
+        lnM_cluster: NumCosmoMath.Vector
+        z_cluster: NumCosmoMath.Vector
+        mean: NumCosmoMath.Vector
+        n_points: int
+        sigma: NumCosmoMath.Vector
+        w_mean: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+    props: Props = ...
+    def __init__(self, lnM_cluster: NumCosmoMath.Vector = ...,
+                 z_cluster: NumCosmoMath.Vector = ...,
+                 mean: NumCosmoMath.Vector = ...,
+                 n_points: int = ...,
+                 sigma: NumCosmoMath.Vector = ...,
+                 w_mean: bool = ...,
+                 bootstrap: NumCosmoMath.Bootstrap = ...,
+                 desc: str = ...,
+                 init: bool = ...,
+                 long_desc: str = ...): ...
+    @staticmethod
+    def clear(dmr: DataClusterMassRich) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> DataClusterMassRich: ...
+    def ref(self) -> DataClusterMassRich: ...
+    def set_data(self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, lnR: NumCosmoMath.Vector) -> None: ...
+    
+
+class DataClusterMassRichClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRichClass()
     """
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
