@@ -574,6 +574,27 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       if ((!NCM_IS_STATS_DIST_KDE (sd)) || (!NCM_IS_STATS_DIST_KERNEL_GAUSS (self->kernel)))
         g_error ("Leave-one-out cross-validation is only available for KDE with Gaussian kernel.");
 
+      self->n_obs     = self->sample_array->len;
+      self->n_kernels = self->sample_array->len;
+
+      if ((self->n_obs != self->alloc_n_obs) || (self->n_kernels != self->alloc_n_kernels))
+      {
+        ncm_matrix_clear (&self->IM);
+        ncm_vector_clear (&self->f);
+        ncm_vector_clear (&self->f1);
+
+        self->IM = ncm_matrix_new (self->n_obs, self->n_kernels);
+        self->f  = ncm_vector_new (self->n_obs);
+        self->f1 = ncm_vector_new (self->n_obs);
+
+        ncm_vector_set_all (self->f1, 1.0);
+
+        self->alloc_n_obs     = self->n_obs;
+        self->alloc_n_kernels = self->n_kernels;
+        self->alloc_subs      = FALSE;
+      }
+
+      break;
     case NCM_STATS_DIST_CV_NONE:
       self->n_obs     = self->sample_array->len;
       self->n_kernels = self->sample_array->len;
