@@ -104,6 +104,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_stats_dist.h"
+#include "math/ncm_stats_dist_kde.h"
+#include "math/ncm_stats_dist_kernel_gauss.h"
 #include "math/ncm_iset.h"
 #include "math/ncm_rng.h"
 #include "math/ncm_lapack.h"
@@ -473,6 +475,92 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
   return m2lnp;
 }
 
+gdouble
+_ncm_stats_dist_amise (const gsl_vector *v, void *params)
+{
+  NcmStatsDist *sd                 = NCM_STATS_DIST (params);
+  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
+  const double lnos                = gsl_vector_get (v, 0);
+  gdouble amise                    = 0.0;
+  gint i, j;
+
+  self->over_smooth = exp (lnos);
+  self->href        = 2.0 * ncm_stats_dist_get_href (sd);
+
+  sd_class->compute_IM (sd, self->IM);
+
+  for (i = 0; i < self->n_kernels; i++)
+  {
+    for (j = 0; j < self->n_kernels; j++)
+    {
+      amise += ncm_matrix_get (self->IM, i, j) / gsl_pow_2 (self->n_kernels);
+    }
+  }
+
+  self->over_smooth = exp (lnos);
+  self->href        = ncm_stats_dist_get_href (sd);
+
+  sd_class->compute_IM (sd, self->IM);
+
+  for (i = 0; i < self->n_kernels; i++)
+  {
+    for (j = 0; j < self->n_kernels; j++)
+    {
+      if (i == j)
+        continue;
+
+      amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
+    }
+  }
+
+  if (self->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, amise = % 22.15g\n",
+                 self->over_smooth, amise);
+
+  return amise;
+}
+
+static void
+_ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective)(const gsl_vector *, void *))
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  gdouble s                        = 0.1;
+  gdouble lnos                     = log (self->over_smooth);
+  NcmVector *x                     = ncm_vector_new_data_static (&lnos, 1, 1);
+  NcmVector *ss                    = ncm_vector_new_data_static (&s, 1, 1);
+  gsl_multimin_function minex_func;
+
+  minex_func.n      = 1;
+  minex_func.f      = objective;
+  minex_func.params = sd;
+
+  gsl_multimin_fminimizer_set (
+    self->fmin,
+    &minex_func,
+    ncm_vector_gsl (x),
+    ncm_vector_gsl (ss));
+
+  {
+    gint iter = 0;
+    gint status;
+
+    do {
+      iter++;
+      status = gsl_multimin_fminimizer_iterate (self->fmin);
+
+      if (status)
+        break;
+
+      status = gsl_multimin_test_size (self->fmin->size, 1.0e-4);
+    } while (status == GSL_CONTINUE && iter < 1000);
+
+    if (self->print_fit)
+      printf ("# iter: %d, over-smooth: % 22.15g, m2lnp = % 22.15g, gsl status (%d)\n",
+              iter, self->over_smooth, self->fmin->fval, status);
+  }
+}
+
 static void
 _ncm_stats_dist_prepare (NcmStatsDist *sd)
 {
@@ -481,6 +569,12 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
 
   switch (self->cv_type)
   {
+    case NCM_STATS_DIST_CV_LOO:
+
+      if ((!NCM_IS_STATS_DIST_KDE (sd)) || (!NCM_IS_STATS_DIST_KERNEL_GAUSS (self->kernel)))
+        g_error ("Leave-one-out cross-validation is only available for KDE with Gaussian kernel.");
+
+      break;
     case NCM_STATS_DIST_CV_NONE:
       self->n_obs     = self->sample_array->len;
       self->n_kernels = self->sample_array->len;
@@ -522,44 +616,11 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
     case NCM_STATS_DIST_CV_SPLIT:
       break;
     case NCM_STATS_DIST_CV_SPLIT_NOFIT:
-    {
-      gdouble s     = 0.1;
-      gdouble lnos  = log (self->over_smooth);
-      NcmVector *x  = ncm_vector_new_data_static (&lnos, 1, 1);
-      NcmVector *ss = ncm_vector_new_data_static (&s, 1, 1);
-      gsl_multimin_function minex_func;
-
-      minex_func.n      = 1;
-      minex_func.f      = _ncm_stats_dist_m2lnp;
-      minex_func.params = sd;
-
-      gsl_multimin_fminimizer_set (
-        self->fmin,
-        &minex_func,
-        ncm_vector_gsl (x),
-        ncm_vector_gsl (ss));
-
-      {
-        gint iter = 0;
-        gint status;
-
-        do {
-          iter++;
-          status = gsl_multimin_fminimizer_iterate (self->fmin);
-
-          if (status)
-            break;
-
-          status = gsl_multimin_test_size (self->fmin->size, 1.0e-4);
-        } while (status == GSL_CONTINUE && iter < 1000);
-
-        if (self->print_fit)
-          printf ("# iter: %d, over-smooth: % 22.15g, m2lnp = % 22.15g, gsl status (%d)\n",
-                  iter, self->over_smooth, self->fmin->fval, status);
-      }
-
+      _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_m2lnp);
       break;
-    }
+    case NCM_STATS_DIST_CV_LOO:
+      _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise);
+      break;
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
       break;
