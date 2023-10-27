@@ -574,7 +574,6 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       if ((!NCM_IS_STATS_DIST_KDE (sd)) || (!NCM_IS_STATS_DIST_KERNEL_GAUSS (self->kernel)))
         g_error ("Leave-one-out cross-validation is only available for KDE with Gaussian kernel.");
 
-      break;
     case NCM_STATS_DIST_CV_NONE:
       self->n_obs     = self->sample_array->len;
       self->n_kernels = self->sample_array->len;

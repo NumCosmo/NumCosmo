@@ -525,6 +525,7 @@ test_ncm_stats_dist_dens_est (TestNcmStatsDist *test, gconstpointer pdata)
     ncm_stats_dist_add_obs (test->sd, y);
   }
 
+  ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_LOO);
   ncm_stats_dist_prepare (test->sd);
 
   test_ncm_stats_dist_cmp_dist (test, data_mvnd, mset, rng);
@@ -591,14 +592,14 @@ test_ncm_stats_dist_dens_interp (TestNcmStatsDist *test, gconstpointer pdata)
 static void
 test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
-  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (test->dim);
-  NcmMSet *mset = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  const guint ntests = 10000000;
-  gulong N = 0;
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  const guint ntests              = 10000000;
+  gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
-  NcmVector *m2lnp_v = ncm_vector_new (test->np);
+  NcmVector *m2lnp_v              = ncm_vector_new (test->np);
   NcmVector *weights, *cum;
   gdouble sum_weights;
   guint i, n;
@@ -1001,11 +1002,11 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
 
     for (i = 0; i < n; i++)
     {
-      NcmMatrix *cov_decomp = ncm_stats_dist_peek_cov_decomp (test->sd, i);
-      const gdouble lnnorm_i = ncm_stats_dist_get_lnnorm (test->sd, i);
+      NcmMatrix *cov_decomp   = ncm_stats_dist_peek_cov_decomp (test->sd, i);
+      const gdouble lnnorm_i  = ncm_stats_dist_get_lnnorm (test->sd, i);
       const gdouble lnnorm0_i = ncm_stats_dist_kernel_get_lnnorm (kernel, cov_decomp);
-      NcmVector *y_i = NULL;
-      NcmMatrix *cov_i = NULL;
+      NcmVector *y_i          = NULL;
+      NcmMatrix *cov_i        = NULL;
       gdouble w_i, n_i;
 
       ncm_stats_dist_get_Ki (test->sd, i, &y_i, &cov_i, &n_i, &w_i);
