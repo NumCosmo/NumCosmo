@@ -821,7 +821,7 @@ test_ncm_stats_dist_dens_interp_cv_loo (TestNcmStatsDist *test, gconstpointer pd
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
-  ncm_stats_dist_set_print_fit (test->sd, TRUE);
+  /* ncm_stats_dist_set_print_fit (test->sd, TRUE); */
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_LOO);
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
 
