@@ -476,7 +476,7 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
 }
 
 gdouble
-_ncm_stats_dist_amise (const gsl_vector *v, void *params)
+_ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (params);
   NcmStatsDistPrivate * const self = sd->priv;
@@ -486,7 +486,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
   gint i, j;
 
   self->over_smooth = exp (lnos);
-  self->href        = 2.0 * ncm_stats_dist_get_href (sd);
+  self->href        = sqrt (2.0) * ncm_stats_dist_get_href (sd);
 
   sd_class->compute_IM (sd, self->IM);
 
@@ -512,6 +512,89 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 
       amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
     }
+  }
+
+  if (self->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, amise = % 22.15g\n",
+                 self->over_smooth, amise);
+
+  return amise;
+}
+
+gdouble
+_ncm_stats_dist_amise (const gsl_vector *v, void *params)
+{
+  NcmStatsDist *sd                 = NCM_STATS_DIST (params);
+  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
+  const double lnos                = gsl_vector_get (v, 0);
+  gdouble amise                    = 0.0;
+  gint i, j;
+
+  self->over_smooth = exp (lnos);
+  self->href        = ncm_stats_dist_get_href (sd);
+
+  sd_class->compute_IM (sd, self->IM);
+
+  for (i = 0; i < self->n_kernels; i++)
+  {
+    for (j = 0; j < self->n_kernels; j++)
+    {
+      if (i == j)
+        continue;
+
+      amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
+    }
+  }
+
+  {
+    NcmRNG *rng          = ncm_rng_seeded_new (NULL, 0);
+    NcmVector *x         = ncm_vector_new (self->d);
+    NcmStatsVec *stats   = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+    gdouble integral_tp2 = 0.0;
+    guint max_iter       = 100000000;
+    const guint ntests0  = 100;
+    guint ntests         = ntests0;
+
+    for (i = 0; i < max_iter; i++)
+    {
+      gdouble test = integral_tp2;
+      gdouble P_x;
+
+      ncm_stats_dist_sample (sd, x, rng);
+
+      P_x          = ncm_stats_dist_eval (sd, x);
+      integral_tp2 = (i * integral_tp2 + P_x) / (i + 1.0);
+
+      ncm_stats_vec_set (stats, 0, P_x);
+      ncm_stats_vec_update (stats);
+
+      if (i % 100000 == 0)
+        printf ("# %10d, % 22.15g, % 22.15g, % 22.15e (% 22.15g % 22.15e) [%3d]\n",
+                i,
+                test,
+                integral_tp2,
+                fabs (test / integral_tp2 - 1.0),
+                ncm_stats_vec_get_mean (stats, 0),
+                ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0) / ncm_stats_vec_get_mean (stats, 0),
+                ntests);
+
+      if (fabs (test / integral_tp2 - 1.0) < 1.0e-6)
+      {
+        if (ntests-- == 0)
+          break;
+      }
+      else
+      {
+        ntests = ntests0;
+      }
+    }
+
+    ncm_stats_vec_free (stats);
+    ncm_vector_free (x);
+    ncm_rng_clear (&rng);
+
+    amise += integral_tp2;
   }
 
   if (self->print_fit)
@@ -570,9 +653,6 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
   switch (self->cv_type)
   {
     case NCM_STATS_DIST_CV_LOO:
-
-      if ((!NCM_IS_STATS_DIST_KDE (sd)) || (!NCM_IS_STATS_DIST_KERNEL_GAUSS (self->kernel)))
-        g_error ("Leave-one-out cross-validation is only available for KDE with Gaussian kernel.");
 
       self->n_obs     = self->sample_array->len;
       self->n_kernels = self->sample_array->len;
@@ -639,7 +719,12 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_m2lnp);
       break;
     case NCM_STATS_DIST_CV_LOO:
-      _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise);
+
+      if ((NCM_IS_STATS_DIST_KDE (sd)) && (NCM_IS_STATS_DIST_KERNEL_GAUSS (self->kernel)))
+        _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise_kde_gauss);
+      else
+        _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise);
+
       break;
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
@@ -931,6 +1016,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       }
       break;
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
+      case NCM_STATS_DIST_CV_LOO:
       case NCM_STATS_DIST_CV_NONE:
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
         _ncm_stats_dist_compute_IM_full (sd);
