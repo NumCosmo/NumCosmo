@@ -484,7 +484,7 @@ test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_
     gdouble KL_PS_M = ncm_stats_vec_get_mean (err_stats, 1);
     gdouble JS_P_PS = 0.5 * (KL_P_M + KL_PS_M);
 
-    printf ("JS(P||P_s) = % 22.15g\n", JS_P_PS);
+    /* printf ("JS(P||P_s) = % 22.15g\n", JS_P_PS); */
     g_assert_cmpfloat (JS_P_PS, <, RELTOL);
   }
 

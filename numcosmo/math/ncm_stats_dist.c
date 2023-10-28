@@ -548,53 +548,35 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
   }
 
   {
-    NcmRNG *rng          = ncm_rng_seeded_new (NULL, 0);
-    NcmVector *x         = ncm_vector_new (self->d);
-    NcmStatsVec *stats   = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
-    gdouble integral_tp2 = 0.0;
-    guint max_iter       = 100000000;
-    const guint ntests0  = 100;
-    guint ntests         = ntests0;
+    NcmRNG *rng        = ncm_rng_seeded_new (NULL, 0);
+    NcmVector *x       = ncm_vector_new (self->d);
+    NcmStatsVec *stats = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+    guint max_iter     = 100000000;
+
+
+    ncm_stats_dist_sample (sd, x, rng);
+    ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
+    ncm_stats_vec_update (stats);
 
     for (i = 0; i < max_iter; i++)
     {
-      gdouble test = integral_tp2;
-      gdouble P_x;
+      gdouble msd;
 
       ncm_stats_dist_sample (sd, x, rng);
-
-      P_x          = ncm_stats_dist_eval (sd, x);
-      integral_tp2 = (i * integral_tp2 + P_x) / (i + 1.0);
-
-      ncm_stats_vec_set (stats, 0, P_x);
+      ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
       ncm_stats_vec_update (stats);
 
-      if (i % 100000 == 0)
-        printf ("# %10d, % 22.15g, % 22.15g, % 22.15e (% 22.15g % 22.15e) [%3d]\n",
-                i,
-                test,
-                integral_tp2,
-                fabs (test / integral_tp2 - 1.0),
-                ncm_stats_vec_get_mean (stats, 0),
-                ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0) / ncm_stats_vec_get_mean (stats, 0),
-                ntests);
+      msd = ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0) / ncm_stats_vec_get_mean (stats, 0);
 
-      if (fabs (test / integral_tp2 - 1.0) < 1.0e-6)
-      {
-        if (ntests-- == 0)
-          break;
-      }
-      else
-      {
-        ntests = ntests0;
-      }
+      if (msd < 1.0e-3)
+        break;
     }
+
+    amise += ncm_stats_vec_get_mean (stats, 0);
 
     ncm_stats_vec_free (stats);
     ncm_vector_free (x);
     ncm_rng_clear (&rng);
-
-    amise += integral_tp2;
   }
 
   if (self->print_fit)
@@ -635,7 +617,7 @@ _ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective)(const gsl_v
       if (status)
         break;
 
-      status = gsl_multimin_test_size (self->fmin->size, 1.0e-4);
+      status = gsl_multimin_test_size (self->fmin->size, 1.0e-3);
     } while (status == GSL_CONTINUE && iter < 1000);
 
     if (self->print_fit)
