@@ -234,8 +234,9 @@ AM_TESTS_ENVIRONMENT += \
 	PYTHONPATH="$(abs_top_srcdir)$${PYTHONPATH:+:$${PYTHONPATH}}"
 
 dist_test_scripts = \
-	test_py_sanity.py     \
-	test_py_integralnd.py
+	test_py_sanity.py                     \
+	test_py_integralnd.py                 \
+	test_py_cluster_abundance_sampling.py
 
 endif # HAVE_PYTEST_TAP
 
