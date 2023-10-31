@@ -42,6 +42,7 @@
 
 #include "data/nc_data_cluster_mass_rich.h"
 #include "lss/nc_cluster_mass_ascaso.h"
+#include "lss/nc_cluster_mass_lnrich_ext.h"
 
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
@@ -188,17 +189,41 @@ _nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
 {
   NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (diag);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
-  NcClusterMassAscaso *ascaso               = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  const guint ncluster                      = ncm_vector_len (self->z_cluster);
-  gint i;
+  NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
-  for (i = 0; i < ncluster; i++)
+  if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
   {
-    const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
-    const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
-    const gdouble lnM_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+    NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+    const guint ncluster        = ncm_vector_len (self->z_cluster);
+    gint i;
 
-    ncm_vector_set (vp, i, lnM_i_mean);
+    for (i = 0; i < ncluster; i++)
+    {
+      const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+      const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+      const gdouble lnM_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+
+      ncm_vector_set (vp, i, lnM_i_mean);
+    }
+  }
+  else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
+  {
+    NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+    const guint ncluster               = ncm_vector_len (self->z_cluster);
+    gint i;
+
+    for (i = 0; i < ncluster; i++)
+    {
+      const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+      const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+      const gdouble lnM_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
+
+      ncm_vector_set (vp, i, lnM_i_mean);
+    }
+  }
+  else
+  {
+    g_error ("nc_data_cluster_mass_rich_mean_func: unsupported cluster mass model");
   }
 
   return;
@@ -209,17 +234,41 @@ _nc_data_cluster_mass_rich_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, Nc
 {
   NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (diag);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
-  NcClusterMassAscaso *ascaso               = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  const guint ncluster                      = ncm_vector_len (self->z_cluster);
-  gint i;
+  NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
-  for (i = 0; i < ncluster; i++)
+  if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
   {
-    const gdouble z_i       = ncm_vector_get (self->z_cluster, i);
-    const gdouble lnM_i     = ncm_vector_get (self->lnM_cluster, i);
-    const gdouble lnM_i_std = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
+    NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+    const guint ncluster        = ncm_vector_len (self->z_cluster);
+    gint i;
 
-    ncm_vector_set (sigma, i, lnM_i_std);
+    for (i = 0; i < ncluster; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (self->z_cluster, i);
+      const gdouble lnM_i     = ncm_vector_get (self->lnM_cluster, i);
+      const gdouble lnM_i_std = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
+
+      ncm_vector_set (sigma, i, lnM_i_std);
+    }
+  }
+  else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
+  {
+    NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+    const guint ncluster               = ncm_vector_len (self->z_cluster);
+    gint i;
+
+    for (i = 0; i < ncluster; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (self->z_cluster, i);
+      const gdouble lnM_i     = ncm_vector_get (self->lnM_cluster, i);
+      const gdouble lnM_i_std = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
+
+      ncm_vector_set (sigma, i, lnM_i_std);
+    }
+  }
+  else
+  {
+    g_error ("nc_data_cluster_mass_rich_sigma_func: unsupported cluster mass model");
   }
 
   return TRUE;
@@ -232,7 +281,7 @@ _nc_data_cluster_mass_rich_prepare (NcmData *data, NcmMSet *mset)
   NcClusterMass *cmass = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
   /* Currently only compatible with #NcClusterMassAscaso */
-  g_assert (NC_IS_CLUSTER_MASS_ASCASO (cmass));
+  g_assert (NC_IS_CLUSTER_MASS_ASCASO (cmass) || NC_IS_CLUSTER_MASS_LNRICH_EXT (cmass));
 }
 
 /**

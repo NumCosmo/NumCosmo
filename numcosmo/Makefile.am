@@ -432,6 +432,7 @@ nc_headers = \
         lss/nc_cluster_mass_benson_xray.h      \
         lss/nc_cluster_mass_plcl.h             \
         lss/nc_cluster_mass_ascaso.h           \
+        lss/nc_cluster_mass_lnrich_ext.h       \
         lss/nc_cluster_abundance.h             \
         lss/nc_cluster_pseudo_counts.h         \
         lss/nc_galaxy_redshift.h               \
@@ -587,6 +588,7 @@ nc_sources = \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_mass_plcl.c             \
         lss/nc_cluster_mass_ascaso.c           \
+        lss/nc_cluster_mass_lnrich_ext.c       \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cluster_pseudo_counts.c         \
 	lss/nc_galaxy_redshift.c               \

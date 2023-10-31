@@ -378,6 +378,7 @@
       <xi:include href="xml/nc_cluster_mass_benson_xray.xml"/>
       <xi:include href="xml/nc_cluster_mass_plcl.xml"/>
       <xi:include href="xml/nc_cluster_mass_ascaso.xml"/>
+      <xi:include href="xml/nc_cluster_mass_lnrich_ext.xml"/>
     </section>
     <section>
       <title>Cross-correlations</title>
