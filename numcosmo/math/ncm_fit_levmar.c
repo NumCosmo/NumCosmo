@@ -96,12 +96,12 @@ _ncm_fit_levmar_constructed (GObject *object)
     NcmFit *fit              = NCM_FIT (object);
     NcmFitState *fstate      = ncm_fit_peek_state (fit);
 
-    fit_levmar->fparam_len = fstate->fparam_len;
+    fit_levmar->fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
     fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
     fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
 
-    fit_levmar->data_len = fstate->data_len;
+    fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
     ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
   }
 }
@@ -220,9 +220,9 @@ _ncm_fit_levmar_reset (NcmFit *fit)
     NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
     NcmFitState *fstate      = ncm_fit_peek_state (fit);
 
-    if ((fit_levmar->fparam_len != fstate->fparam_len) || (fit_levmar->data_len != fstate->data_len))
+    if ((fit_levmar->fparam_len != ncm_fit_state_get_fparam_len (fstate)) || (fit_levmar->data_len != ncm_fit_state_get_data_len (fstate)))
     {
-      fit_levmar->fparam_len = fstate->fparam_len;
+      fit_levmar->fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
       ncm_vector_clear (&fit_levmar->lb);
       ncm_vector_clear (&fit_levmar->ub);
@@ -230,7 +230,7 @@ _ncm_fit_levmar_reset (NcmFit *fit)
       fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
       fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
 
-      fit_levmar->data_len = fstate->data_len;
+      fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
       ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
     }
   }
@@ -249,7 +249,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmMSet *mset            = ncm_fit_peek_mset (fit);
   guint i;
 
-  g_assert (fstate->fparam_len != 0);
+  g_assert (ncm_fit_state_get_fparam_len (fstate) != 0);
 
   if (ncm_fit_equality_constraints_len (fit) || ncm_fit_inequality_constraints_len (fit))
     g_error ("_ncm_fit_levmar_run: GSL algorithms do not support constraints.");
@@ -305,16 +305,16 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
   g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
-            ncm_vector_stride (fstate->fparams) == 1 &&
-            ncm_matrix_tda (fstate->covar) == ncm_matrix_ncols (fstate->covar));
+            ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
+            ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
   ret = dlevmar_der (
     &nc_residual_levmar_f, &nc_residual_levmar_J,
-    ncm_vector_data (fstate->fparams), NULL, fstate->fparam_len, fstate->data_len,
-    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (fstate->covar), fit);
+    ncm_vector_data (ncm_fit_state_peek_fparams (fstate)), NULL, ncm_fit_state_get_fparam_len (fstate), ncm_fit_state_get_data_len (fstate),
+    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (ncm_fit_state_peek_covar (fstate)), fit);
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -324,7 +324,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
-  ncm_fit_params_set_vector (fit, fstate->fparams);
+  ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
   return TRUE;
 }
@@ -347,16 +347,16 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
   g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
-            ncm_vector_stride (fstate->fparams) == 1 &&
-            ncm_matrix_tda (fstate->covar) == ncm_matrix_ncols (fstate->covar));
+            ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
+            ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
   ret = dlevmar_dif (
     &nc_residual_levmar_f,
-    ncm_vector_data (fstate->fparams), NULL, fstate->fparam_len, fstate->data_len,
-    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (fstate->covar), fit);
+    ncm_vector_data (ncm_fit_state_peek_fparams (fstate)), NULL, ncm_fit_state_get_fparam_len (fstate), ncm_fit_state_get_data_len (fstate),
+    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (ncm_fit_state_peek_covar (fstate)), fit);
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -366,7 +366,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
-  ncm_fit_params_set_vector (fit, fstate->fparams);
+  ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
   return TRUE;
 }
@@ -389,17 +389,17 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
   g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
-            ncm_vector_stride (fstate->fparams) == 1 &&
-            ncm_matrix_tda (fstate->covar) == ncm_matrix_ncols (fstate->covar));
+            ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
+            ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
   ret = dlevmar_bc_der (
     &nc_residual_levmar_f, &nc_residual_levmar_J,
-    ncm_vector_data (fstate->fparams), NULL, fstate->fparam_len, fstate->data_len,
+    ncm_vector_data (ncm_fit_state_peek_fparams (fstate)), NULL, ncm_fit_state_get_fparam_len (fstate), ncm_fit_state_get_data_len (fstate),
     ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,
-    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (fstate->covar), fit);
+    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (ncm_fit_state_peek_covar (fstate)), fit);
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -409,7 +409,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
-  ncm_fit_params_set_vector (fit, fstate->fparams);
+  ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
   return TRUE;
 }
@@ -432,17 +432,17 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[3] = 1.0e-20;
   opts[4] = LM_DIFF_DELTA;
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
   g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
-            ncm_vector_stride (fstate->fparams) == 1 &&
-            ncm_matrix_tda (fstate->covar) == ncm_matrix_ncols (fstate->covar));
+            ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
+            ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
   ret = dlevmar_bc_dif (
     &nc_residual_levmar_f,
-    ncm_vector_data (fstate->fparams), NULL, fstate->fparam_len, fstate->data_len,
+    ncm_vector_data (ncm_fit_state_peek_fparams (fstate)), NULL, ncm_fit_state_get_fparam_len (fstate), ncm_fit_state_get_data_len (fstate),
     ncm_vector_data (fit_levmar->lb), ncm_vector_data (fit_levmar->ub), NULL,
-    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (fstate->covar), fit);
+    ncm_fit_get_maxiter (fit), opts, info, fit_levmar->workz, ncm_matrix_data (ncm_fit_state_peek_covar (fstate)), fit);
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
@@ -452,7 +452,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
-  ncm_fit_params_set_vector (fit, fstate->fparams);
+  ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
   return TRUE;
 }
