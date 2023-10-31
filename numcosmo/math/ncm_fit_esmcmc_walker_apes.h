@@ -36,29 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER_APES             (ncm_fit_esmcmc_walker_apes_get_type ())
-#define NCM_FIT_ESMCMC_WALKER_APES(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPES))
-#define NCM_FIT_ESMCMC_WALKER_APES_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPESClass))
-#define NCM_IS_FIT_ESMCMC_WALKER_APES(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES))
-#define NCM_IS_FIT_ESMCMC_WALKER_APES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APES))
-#define NCM_FIT_ESMCMC_WALKER_APES_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPESClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER_APES (ncm_fit_esmcmc_walker_apes_get_type ())
 
-typedef struct _NcmFitESMCMCWalkerAPESClass NcmFitESMCMCWalkerAPESClass;
-typedef struct _NcmFitESMCMCWalkerAPES NcmFitESMCMCWalkerAPES;
-typedef struct _NcmFitESMCMCWalkerAPESPrivate NcmFitESMCMCWalkerAPESPrivate;
-
-struct _NcmFitESMCMCWalkerAPESClass
-{
-  /*< private >*/
-  NcmFitESMCMCWalkerClass parent_class;
-};
-
-struct _NcmFitESMCMCWalkerAPES
-{
-  /*< private >*/
-  NcmFitESMCMCWalker parent_instance;
-  NcmFitESMCMCWalkerAPESPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM, FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalker)
 
 /**
  * NcmFitESMCMCWalkerAPESMethod:
@@ -93,8 +73,6 @@ typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCM
   /* < private > */
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN, /*< skip >*/
 } NcmFitESMCMCWalkerAPESKType;
-
-GType ncm_fit_esmcmc_walker_apes_get_type (void) G_GNUC_CONST;
 
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams);
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth, gboolean use_interp);

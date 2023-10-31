@@ -57,6 +57,18 @@ enum
   PROP_FILE,
 };
 
+struct _NcmFitMCBS
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmFit *fit;
+  NcmFitMC *mc_resample;
+  NcmFitMC *mc_bstrap;
+  NcmMSetCatalog *mcat;
+  gchar *base_name;
+};
+
+
 G_DEFINE_TYPE (NcmFitMCBS, ncm_fit_mcbs, G_TYPE_OBJECT);
 
 static void
@@ -75,25 +87,28 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
   NcmFitMCBS *mcbs = NCM_FIT_MCBS (object);
 
   g_return_if_fail (NCM_IS_FIT_MCBS (object));
-
-  switch (prop_id)
   {
-    case PROP_FIT:
-      mcbs->fit         = g_value_dup_object (value);
-      mcbs->mc_resample = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
-      mcbs->mc_bstrap   = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE);
-      mcbs->mcat        = ncm_mset_catalog_new (mcbs->fit->mset, 1, 1, FALSE,
-                                                NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
-                                                NULL);
-      ncm_mset_catalog_set_m2lnp_var (mcbs->mcat, 0);
-      ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
-      break;
-    case PROP_FILE:
-      ncm_fit_mcbs_set_filename (mcbs, g_value_get_string (value));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    NcmMSet *mset = ncm_fit_peek_mset (mcbs->fit);
+
+    switch (prop_id)
+    {
+      case PROP_FIT:
+        mcbs->fit         = g_value_dup_object (value);
+        mcbs->mc_resample = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
+        mcbs->mc_bstrap   = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE);
+        mcbs->mcat        = ncm_mset_catalog_new (mset, 1, 1, FALSE,
+                                                  NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
+                                                  NULL);
+        ncm_mset_catalog_set_m2lnp_var (mcbs->mcat, 0);
+        ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
+        break;
+      case PROP_FILE:
+        ncm_fit_mcbs_set_filename (mcbs, g_value_get_string (value));
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+        break;
+    }
   }
 }
 
@@ -275,7 +290,7 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
 void
 ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
 {
-  if (mcbs->mc_bstrap->started)
+  if (ncm_fit_mc_is_running (mcbs->mc_bstrap))
     g_error ("ncm_fit_mcbs_set_rng: Cannot change the RNG object during a run.");
 
   ncm_mset_catalog_set_rng (mcbs->mcat, rng);
@@ -302,9 +317,11 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
 void
 ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, guint bsmt)
 {
-  NcmRNG *mcat_rng = ncm_mset_catalog_peek_rng (mcbs->mcat);
-  guint i;
+  NcmRNG *mcat_rng     = ncm_mset_catalog_peek_rng (mcbs->mcat);
+  NcmFitState *fstate  = ncm_fit_peek_state (mcbs->fit);
+  NcmLikelihood *lh    = ncm_fit_peek_likelihood (mcbs->fit);
   gboolean cat_has_rng = FALSE;
+  guint i;
 
   ncm_fit_mc_set_rtype (mcbs->mc_resample, NCM_FIT_MC_RESAMPLE_FROM_MODEL);
   ncm_fit_mc_set_mtype (mcbs->mc_resample, NCM_FIT_RUN_MSGS_SIMPLE);
@@ -322,7 +339,8 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_start_run (mcbs->mc_resample);
 
   if (!cat_has_rng)
-    ncm_mset_catalog_set_rng (mcbs->mcat, ncm_mset_catalog_peek_rng (mcbs->mc_resample->mcat));
+    ncm_mset_catalog_set_rng (mcbs->mcat,
+                              ncm_mset_catalog_peek_rng (ncm_fit_mc_peek_catalog (mcbs->mc_resample)));
 
   if (ni > 0)
     ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, ni);
@@ -336,10 +354,10 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
 
   for (i = ni; i < nf; i++)
   {
-    ncm_dataset_bootstrap_set (mcbs->fit->lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
     /*ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1); */
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (mcbs->fit->lh->dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
+    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
 
     if (mcbs->base_name != NULL)
     {
@@ -352,16 +370,17 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_start_run (mcbs->mc_bstrap);
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
-    ncm_mset_catalog_add_from_vector (mcbs->mcat, ncm_mset_catalog_peek_pstats (mcbs->mc_bstrap->mcat)->mean);
+    ncm_mset_catalog_add_from_vector (mcbs->mcat,
+                                      ncm_mset_catalog_peek_pstats (ncm_fit_mc_peek_catalog (mcbs->mc_bstrap))->mean);
     ncm_mset_catalog_log_current_stats (mcbs->mcat);
 
     ncm_fit_mc_end_run (mcbs->mc_bstrap);
     ncm_fit_mc_reset (mcbs->mc_bstrap);
   }
 
-  ncm_mset_catalog_get_mean (mcbs->mcat, &mcbs->fit->fstate->fparams);
-  ncm_mset_catalog_get_covar (mcbs->mcat, &mcbs->fit->fstate->covar);
-  mcbs->fit->fstate->has_covar = TRUE;
+  ncm_mset_catalog_get_mean (mcbs->mcat, &fstate->fparams);
+  ncm_mset_catalog_get_covar (mcbs->mcat, &fstate->covar);
+  fstate->has_covar = TRUE;
 
   ncm_fit_mc_end_run (mcbs->mc_resample);
 }

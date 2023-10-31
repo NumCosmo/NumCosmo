@@ -1513,9 +1513,9 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 void
 ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
 {
-  const guint name_size = ncm_mset_max_fparam_name (mset);
+  const guint name_size       = ncm_mset_max_fparam_name (mset);
   const guint free_params_len = ncm_mset_fparam_len (mset);
-  const gchar *box = "---------------";
+  const gchar *box            = "---------------";
   guint i, j;
 
   g_assert (covar != NULL);
@@ -2235,7 +2235,8 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
  * @x: a #NcmVector
  * @offset: starting index
  *
- * FIXME
+ * Set the free parameters of @mset using the values of @x starting
+ * at @offset.
  *
  */
 void
@@ -2929,11 +2930,11 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
     else
     {
       NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
-      GObjectClass *oclass = G_OBJECT_CLASS (model_class);
-      GVariant *model_var = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
-      guint nsubmodels = ncm_model_get_submodel_len (item->model);
-      GVariant *params = NULL;
-      gchar *obj_name = NULL;
+      GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
+      GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
+      guint nsubmodels           = ncm_model_get_submodel_len (item->model);
+      GVariant *params           = NULL;
+      gchar *obj_name            = NULL;
       guint nparams, j;
 
       g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);

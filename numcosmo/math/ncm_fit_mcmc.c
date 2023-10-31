@@ -58,6 +58,32 @@ enum
   PROP_DATA_FILE,
 };
 
+struct _NcmFitMCMC
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmFit *fit;
+  NcmMSetCatalog *mcat;
+  NcmFitRunMsgs mtype;
+  NcmTimer *nt;
+  NcmSerialize *ser;
+  NcmMSetTransKern *tkern;
+  NcmVector *theta;
+  NcmVector *thetastar;
+  guint nthreads;
+  guint n;
+  NcmMemoryPool *mp;
+  gint write_index;
+  gint cur_sample_id;
+  guint naccepted;
+  guint ntotal;
+  gboolean started;
+  GMutex dup_fit;
+  GMutex resample_lock;
+  GMutex update_lock;
+  GCond write_cond;
+};
+
 G_DEFINE_TYPE (NcmFitMCMC, ncm_fit_mcmc, G_TYPE_OBJECT);
 
 static void
@@ -228,9 +254,11 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
 static void
 _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 {
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
+
   g_assert (mcmc->fit == NULL);
   mcmc->fit  = ncm_fit_ref (fit);
-  mcmc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE,
+  mcmc->mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE,
                                      NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
                                      NULL);
   ncm_mset_catalog_set_m2lnp_var (mcmc->mcat, 0);
@@ -334,13 +362,15 @@ ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype)
 void
 ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
 {
+  NcmMSet *mset = ncm_fit_peek_mset (mcmc->fit);
+
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_set_rtype: Cannot change resample type during a run, call ncm_fit_mcmc_end_run() first.");
 
   mcmc->tkern = ncm_mset_trans_kern_ref (tkern);
 
   ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
-  ncm_mset_trans_kern_set_mset (tkern, mcmc->fit->mset);
+  ncm_mset_trans_kern_set_mset (tkern, mset);
 }
 
 /**
@@ -391,10 +421,12 @@ ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc)
 void
 _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
 {
-  const guint part = 5;
-  const guint step = (mcmc->n / part) == 0 ? 1 : (mcmc->n / part);
+  NcmMSet *mset       = ncm_fit_peek_mset (fit);
+  NcmFitState *fstate = ncm_fit_peek_state (fit);
+  const guint part    = 5;
+  const guint step    = (mcmc->n / part) == 0 ? 1 : (mcmc->n / part);
 
-  ncm_mset_catalog_add_from_mset (mcmc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate), NULL);
+  ncm_mset_catalog_add_from_mset (mcmc->mcat, mset, ncm_fit_state_get_m2lnL_curval (fstate), NULL);
   ncm_timer_task_increment (mcmc->nt);
 
   switch (mcmc->mtype)
@@ -427,7 +459,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
     }
     default:
     case NCM_FIT_RUN_MSGS_FULL:
-      fit->mtype = mcmc->mtype;
+      ncm_fit_set_messages (fit, mcmc->mtype);
       ncm_fit_log_state (fit);
       ncm_mset_catalog_log_current_stats (mcmc->mcat);
       g_message ("# NcmFitMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_mcmc_get_accept_ratio (mcmc) * 100.0);
@@ -453,7 +485,10 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
 void
 ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
 {
-  const gint cur_id = ncm_mset_catalog_get_cur_id (mcmc->mcat);
+  NcmMSet *mset       = ncm_fit_peek_mset (mcmc->fit);
+  NcmLikelihood *lh   = ncm_fit_peek_likelihood (mcmc->fit);
+  NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
+  const gint cur_id   = ncm_mset_catalog_get_cur_id (mcmc->mcat);
 
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_start_run: run already started, run ncm_fit_mcmc_end_run() first.");
@@ -464,10 +499,10 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMCMC: Starting Markov Chain Monte Carlo...\n");
-      ncm_dataset_log_info (mcmc->fit->lh->dset);
+      ncm_dataset_log_info (lh->dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMCMC: Model set:\n");
-      ncm_mset_pretty_log (mcmc->fit->mset);
+      ncm_mset_pretty_log (mset);
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       break;
@@ -492,7 +527,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   mcmc->started = TRUE;
 
   {
-    guint fparam_len = ncm_mset_fparam_len (mcmc->fit->mset);
+    guint fparam_len = ncm_mset_fparam_len (mset);
 
     if (mcmc->theta != NULL)
     {
@@ -530,15 +565,15 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
 
     if (cur_row != NULL)
     {
-      ncm_mset_fparams_set_vector_offset (mcmc->fit->mset, cur_row, 1);
-      ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, ncm_vector_get (cur_row, 0));
+      ncm_mset_fparams_set_vector_offset (mset, cur_row, 1);
+      ncm_fit_state_set_m2lnL_curval (fstate, ncm_vector_get (cur_row, 0));
     }
     else
     {
       gdouble m2lnL = 0.0;
 
       ncm_fit_m2lnL_val (mcmc->fit, &m2lnL);
-      ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL);
+      ncm_fit_state_set_m2lnL_curval (fstate, m2lnL);
     }
   }
 }
@@ -704,17 +739,19 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
 static void
 _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 {
-  NcmRNG *rng = ncm_mset_catalog_peek_rng (mcmc->mcat);
-  guint i     = 0;
+  NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
+  NcmMSet *mset       = ncm_fit_peek_mset (mcmc->fit);
+  NcmRNG *rng         = ncm_mset_catalog_peek_rng (mcmc->mcat);
+  guint i             = 0;
 
   for (i = 0; i < mcmc->n; i++)
   {
-    gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (mcmc->fit->fstate);
+    gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fstate);
     gdouble m2lnL_star, prob, jump = 0.0;
 
-    ncm_mset_fparams_get_vector (mcmc->fit->mset, mcmc->theta);
+    ncm_mset_fparams_get_vector (mset, mcmc->theta);
     ncm_mset_trans_kern_generate (mcmc->tkern, mcmc->theta, mcmc->thetastar, rng);
-    ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->thetastar);
+    ncm_mset_fparams_set_vector (mset, mcmc->thetastar);
 
     ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
     mcmc->ntotal++;
@@ -725,7 +762,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
  *   ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
  */
     prob = GSL_MIN (exp ((m2lnL_cur - m2lnL_star) * 0.5), 1.0);
-    ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_star);
+    ncm_fit_state_set_m2lnL_curval (fstate, m2lnL_star);
 
     /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/
 
@@ -735,8 +772,8 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 
       if (jump > prob)
       {
-        ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->theta);
-        ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_cur);
+        ncm_mset_fparams_set_vector (mset, mcmc->theta);
+        ncm_fit_state_set_m2lnL_curval (fstate, m2lnL_cur);
         mcmc->naccepted--;
       }
     }
@@ -842,9 +879,10 @@ _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc)
 void
 ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
 {
-  gdouble lerror;
+  NcmMSet *mset          = ncm_fit_peek_mset (mcmc->fit);
   const gdouble lre2     = lre * lre;
-  const guint fparam_len = ncm_mset_fparam_len (mcmc->fit->mset);
+  const guint fparam_len = ncm_mset_fparam_len (mset);
+  gdouble lerror;
 
   g_assert_cmpfloat (lre, >, 0.0);
 
@@ -894,10 +932,12 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
 void
 ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
 {
-  ncm_mset_catalog_get_mean (mcmc->mcat, &mcmc->fit->fstate->fparams);
-  ncm_mset_catalog_get_covar (mcmc->mcat, &mcmc->fit->fstate->covar);
-  ncm_mset_fparams_set_vector (ncm_mset_catalog_peek_mset (mcmc->mcat), mcmc->fit->fstate->fparams);
-  mcmc->fit->fstate->has_covar = TRUE;
+  NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
+
+  ncm_mset_catalog_get_mean (mcmc->mcat, &fstate->fparams);
+  ncm_mset_catalog_get_covar (mcmc->mcat, &fstate->covar);
+  ncm_mset_fparams_set_vector (ncm_mset_catalog_peek_mset (mcmc->mcat), fstate->fparams);
+  fstate->has_covar = TRUE;
 }
 
 /**

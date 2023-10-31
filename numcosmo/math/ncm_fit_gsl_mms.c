@@ -53,6 +53,18 @@ enum
   PROP_SIZE,
 };
 
+struct _NcmFitGSLMMS
+{
+  /*< private >*/
+  NcmFit parent_instance;
+  gsl_multimin_fminimizer *mms;
+  gsl_multimin_function f;
+  NcmFitGSLMMSAlgos algo;
+  gchar *desc;
+  NcmVector *ss;
+};
+
+
 G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT);
 
 static void
@@ -116,19 +128,21 @@ _ncm_fit_gsl_mms_constructed (GObject *object)
   {
     NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
     NcmFit *fit               = NCM_FIT (fit_gsl_mms);
+    NcmFitState *fstate       = ncm_fit_peek_state (fit);
+    NcmMSet *mset             = ncm_fit_peek_mset (fit);
     guint i;
 
-    if (fit->fstate->fparam_len > 0)
+    if (fstate->fparam_len > 0)
     {
       fit_gsl_mms->f.f      = &nc_residual_multimin_f;
-      fit_gsl_mms->f.n      = fit->fstate->fparam_len;
+      fit_gsl_mms->f.n      = fstate->fparam_len;
       fit_gsl_mms->f.params = fit_gsl_mms;
 
-      fit_gsl_mms->ss = ncm_vector_new (fit->fstate->fparam_len);
+      fit_gsl_mms->ss = ncm_vector_new (fstate->fparam_len);
 
-      for (i = 0; i < ncm_mset_fparams_len (fit->mset); i++)
+      for (i = 0; i < ncm_mset_fparams_len (mset); i++)
       {
-        gdouble pscale = ncm_mset_fparam_get_scale (fit->mset, i);
+        gdouble pscale = ncm_mset_fparam_get_scale (mset, i);
 
         ncm_vector_set (fit_gsl_mms->ss, i, pscale * 1e-3);
       }
@@ -206,14 +220,15 @@ _ncm_fit_gsl_mms_reset (NcmFit *fit)
   NCM_FIT_CLASS (ncm_fit_gsl_mms_parent_class)->reset (fit);
   {
     NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (fit);
+    NcmFitState *fstate       = ncm_fit_peek_state (fit);
 
-    if (fit_gsl_mms->f.n != fit->fstate->fparam_len)
+    if (fit_gsl_mms->f.n != fstate->fparam_len)
     {
       g_clear_pointer (&fit_gsl_mms->mms, gsl_multimin_fminimizer_free);
-      fit_gsl_mms->f.n = fit->fstate->fparam_len;
+      fit_gsl_mms->f.n = fstate->fparam_len;
       fit_gsl_mms->mms = NULL;
 
-      if (fit->fstate->fparam_len > 0)
+      if (fstate->fparam_len > 0)
         ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
     }
   }
@@ -223,31 +238,33 @@ static gboolean
 _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (fit);
+  NcmFitState *fstate       = ncm_fit_peek_state (fit);
+  NcmMSet *mset             = ncm_fit_peek_mset (fit);
+  const gdouble prec        = ncm_fit_get_params_reltol (fit);
+  gdouble last_size         = 1e300;
+  gdouble last_min          = GSL_POSINF;
+  gulong still_count        = 0;
+  guint restart             = 10;
+  const gdouble rfac        = 0.99;
   gint status;
-  const gdouble prec = ncm_fit_get_params_reltol (fit);
-  gdouble last_size  = 1e300;
-  gdouble last_min   = GSL_POSINF;
-  gulong still_count = 0;
-  guint restart      = 10;
-  const gdouble rfac = 0.99;
 
-  if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
+  if (ncm_fit_equality_constraints_len (fit) || ncm_fit_inequality_constraints_len (fit))
     g_error ("_ncm_fit_gsl_mms_run: GSL algorithms do not support constraints.");
 
-  g_assert (fit->fstate->fparam_len != 0);
+  g_assert (fstate->fparam_len != 0);
 
-  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
-  gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
+  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
 
   do {
     gdouble size;
 
-    fit->fstate->niter++;
+    fstate->niter++;
     status = gsl_multimin_fminimizer_iterate (fit_gsl_mms->mms);
 
-    if ((fit->fstate->niter == 1) && !gsl_finite (fit_gsl_mms->mms->fval))
+    if ((fstate->niter == 1) && !gsl_finite (fit_gsl_mms->mms->fval))
     {
-      ncm_fit_params_set_vector (fit, fit->fstate->fparams);
+      ncm_fit_params_set_vector (fit, fstate->fparams);
 
       return FALSE;
     }
@@ -285,23 +302,23 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
     {
       if (fit_gsl_mms->mms->fval < (last_min * rfac))
       {
-        ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
-        gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
+        ncm_mset_fparams_get_vector (mset, fstate->fparams);
+        gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
         status = GSL_CONTINUE;
         restart--;
         last_min = fit_gsl_mms->mms->fval;
       }
     }
 
-    ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
+    ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mms->mms->fval);
     ncm_fit_log_step (fit);
-  } while ((status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter));
+  } while ((status == GSL_CONTINUE) && (fstate->niter < ncm_fit_get_maxiter (fit)));
 
   ncm_fit_params_set_gsl_vector (fit, fit_gsl_mms->mms->x);
 
-  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
-  ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
-  ncm_fit_state_set_m2lnL_prec (fit->fstate, last_size);
+  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mms->mms->fval);
+  ncm_fit_state_set_m2lnL_prec (fstate, last_size);
 
   return TRUE;
 }
@@ -309,12 +326,13 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 static gdouble
 nc_residual_multimin_f (const gsl_vector *x, gpointer p)
 {
-  NcmFit *fit = NCM_FIT (p);
+  NcmFit *fit   = NCM_FIT (p);
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
   gdouble result;
 
   ncm_fit_params_set_gsl_vector (fit, x);
 
-  if (!ncm_mset_params_valid (fit->mset))
+  if (!ncm_mset_params_valid (mset))
     return GSL_POSINF;
 
   ncm_fit_m2lnL_val (fit, &result);
@@ -431,7 +449,8 @@ ncm_fit_gsl_mms_set_algo (NcmFitGSLMMS *fit_gsl_mms, NcmFitGSLMMSAlgos algo)
     gsl_multimin_fminimizer_nmsimplex,
     gsl_multimin_fminimizer_nmsimplex2rand,
   };
-  NcmFit *fit = NCM_FIT (fit_gsl_mms);
+  NcmFit *fit         = NCM_FIT (fit_gsl_mms);
+  NcmFitState *fstate = ncm_fit_peek_state (fit);
 
   g_assert (fit_gsl_mms->algo < NCM_FIT_GSL_MMS_NUM_ALGOS);
   g_assert (fit_gsl_mms->f.n  > 0);
@@ -452,6 +471,6 @@ ncm_fit_gsl_mms_set_algo (NcmFitGSLMMS *fit_gsl_mms, NcmFitGSLMMSAlgos algo)
   }
 
   if (fit_gsl_mms->mms == NULL)
-    fit_gsl_mms->mms = gsl_multimin_fminimizer_alloc (ncm_fit_gsl_mms_algos[fit_gsl_mms->algo], fit->fstate->fparam_len);
+    fit_gsl_mms->mms = gsl_multimin_fminimizer_alloc (ncm_fit_gsl_mms_algos[fit_gsl_mms->algo], fstate->fparam_len);
 }
 

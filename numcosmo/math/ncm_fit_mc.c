@@ -72,6 +72,33 @@ enum
   PROP_DATA_FILE,
 };
 
+struct _NcmFitMC
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmFitMCResample resample;
+  NcmFit *fit;
+  NcmMSet *fiduc;
+  NcmMSetCatalog *mcat;
+  NcmFitRunMsgs mtype;
+  NcmFitMCResampleType rtype;
+  NcmVector *bf;
+  NcmTimer *nt;
+  NcmSerialize *ser;
+  guint nthreads;
+  guint n;
+  gboolean keep_order;
+  NcmMemoryPool *mp;
+  gint write_index;
+  gint cur_sample_id;
+  gint first_sample_id;
+  gboolean started;
+  GMutex dup_fit;
+  GMutex resample_lock;
+  GMutex update_lock;
+  GCond write_cond;
+};
+
 G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT);
 
 static void
@@ -266,9 +293,11 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
 static void
 _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 {
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
+
   g_assert (mc->fit == NULL);
   mc->fit  = ncm_fit_ref (fit);
-  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE,
+  mc->mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE,
                                    NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
                                    NULL);
   ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
@@ -386,7 +415,9 @@ static void _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG
 static gint
 _ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
 {
-  mc->resample (fit->lh->dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
+  NcmLikelihood *lh = ncm_fit_peek_likelihood (fit);
+
+  mc->resample (lh->dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
   mc->cur_sample_id++;
 
   return mc->cur_sample_id;
@@ -404,6 +435,7 @@ void
 ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 {
   const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
 
   if (mc->started)
     g_error ("ncm_fit_mc_set_rtype: Cannot change resample type during a run, call ncm_fit_mc_end_run() first.");
@@ -416,15 +448,15 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
   {
     case NCM_FIT_MC_RESAMPLE_FROM_MODEL:
       mc->resample = &ncm_dataset_resample;
-      ncm_dataset_bootstrap_set (mc->fit->lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (mc->fit->lh->dset, NCM_DATASET_BSTRAP_PARTIAL);
+      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_PARTIAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (mc->fit->lh->dset, NCM_DATASET_BSTRAP_TOTAL);
+      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN:
       g_assert_not_reached ();
@@ -481,17 +513,19 @@ ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
 void
 ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
 {
+  NcmMSet *mset = ncm_fit_peek_mset (mc->fit);
+
   ncm_mset_clear (&mc->fiduc);
 
-  if ((fiduc == NULL) || (fiduc == mc->fit->mset))
+  if ((fiduc == NULL) || (fiduc == mset))
   {
-    mc->fiduc = ncm_mset_dup (mc->fit->mset, mc->ser);
+    mc->fiduc = ncm_mset_dup (mset, mc->ser);
     ncm_serialize_reset (mc->ser, TRUE);
   }
   else
   {
     mc->fiduc = ncm_mset_ref (fiduc);
-    g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, FALSE));
+    g_assert (ncm_mset_cmp (mset, fiduc, FALSE));
   }
 }
 
@@ -512,13 +546,31 @@ ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng)
   ncm_mset_catalog_set_rng (mc->mcat, rng);
 }
 
+/**
+ * ncm_fit_mc_is_running:
+ * @mc: a #NcmFitMC
+ *
+ * Checks whether a run is running, that is whether ncm_fit_mc_start_run()
+ * was called and ncm_fit_mc_end_run() was not called yet.
+ *
+ * Returns: %TRUE if a run is running, %FALSE otherwise.
+ */
+gboolean
+ncm_fit_mc_is_running (NcmFitMC *mc)
+{
+  return mc->started;
+}
+
 void
 _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
 {
+  NcmMSet *mset       = ncm_fit_peek_mset (fit);
+  NcmFitState *fstate = ncm_fit_peek_state (fit);
+
   const guint part = 5;
   const guint step = (mc->n / part) == 0 ? 1 : (mc->n / part);
 
-  ncm_mset_catalog_add_from_mset (mc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate), NULL);
+  ncm_mset_catalog_add_from_mset (mc->mcat, mset, ncm_fit_state_get_m2lnL_curval (fstate), NULL);
   ncm_timer_task_increment (mc->nt);
 
   switch (mc->mtype)
@@ -549,7 +601,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
     }
     default:
     case NCM_FIT_RUN_MSGS_FULL:
-      fit->mtype = mc->mtype;
+      ncm_fit_set_messages (fit, mc->mtype);
       ncm_fit_log_state (fit);
       ncm_mset_catalog_log_current_stats (mc->mcat);
       /* ncm_timer_task_increment (mc->nt); */
@@ -585,6 +637,8 @@ _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 void
 ncm_fit_mc_start_run (NcmFitMC *mc)
 {
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
+  NcmMSet *mset          = ncm_fit_peek_mset (mc->fit);
   const guint param_len  = ncm_mset_total_len (mc->fiduc);
   const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
   NcmRNG *mcat_rng       = ncm_mset_catalog_peek_rng (mc->mcat);
@@ -602,13 +656,13 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Starting Monte Carlo...\n");
-      ncm_dataset_log_info (mc->fit->lh->dset);
+      ncm_dataset_log_info (lh->dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Fiducial model set:\n");
       ncm_mset_pretty_log (mc->fiduc);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Fitting model set:\n");
-      ncm_mset_pretty_log (mc->fit->mset);
+      ncm_mset_pretty_log (mset);
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
       break;
@@ -814,11 +868,12 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
 static void
 _ncm_fit_mc_run_single (NcmFitMC *mc)
 {
+  NcmMSet *mset = ncm_fit_peek_mset (mc->fit);
   guint i;
 
   for (i = 0; i < mc->n; i++)
   {
-    ncm_mset_param_set_vector (mc->fit->mset, mc->bf);
+    ncm_mset_param_set_vector (mset, mc->bf);
     _ncm_fit_mc_resample (mc, mc->fit);
     ncm_fit_run (mc->fit, NCM_FIT_RUN_MSGS_NONE);
 
@@ -847,6 +902,7 @@ static void
 _ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
 {
   NcmFitMC *mc     = NCM_FIT_MC (data);
+  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
   NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
   NcmFit *fit      = *fit_ptr;
   guint j;
@@ -855,7 +911,7 @@ _ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
   {
     gint sample_index;
 
-    ncm_mset_param_set_vector (fit->mset, mc->bf);
+    ncm_mset_param_set_vector (mset, mc->bf);
 
     g_mutex_lock (&mc->resample_lock);
     sample_index = _ncm_fit_mc_resample (mc, fit);
@@ -884,13 +940,14 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
   G_LOCK_DEFINE_STATIC (update_lock);
 
   NcmFitMC *mc     = NCM_FIT_MC (data);
+  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
   NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
   NcmFit *fit      = *fit_ptr;
   guint j;
 
   for (j = i; j < f; j++)
   {
-    ncm_mset_param_set_vector (fit->mset, mc->bf);
+    ncm_mset_param_set_vector (mset, mc->bf);
 
     g_mutex_lock (&mc->resample_lock);
     _ncm_fit_mc_resample (mc, fit);
@@ -1007,12 +1064,13 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
 void
 ncm_fit_mc_mean_covar (NcmFitMC *mc)
 {
-  NcmMSet *mset = ncm_mset_catalog_peek_mset (mc->mcat);
+  NcmMSet *mset       = ncm_mset_catalog_peek_mset (mc->mcat);
+  NcmFitState *fstate = ncm_fit_peek_state (mc->fit);
 
-  ncm_mset_catalog_get_mean (mc->mcat, &mc->fit->fstate->fparams);
-  ncm_mset_catalog_get_covar (mc->mcat, &mc->fit->fstate->covar);
-  ncm_mset_fparams_set_vector (mset, mc->fit->fstate->fparams);
-  mc->fit->fstate->has_covar = TRUE;
+  ncm_mset_catalog_get_mean (mc->mcat, &fstate->fparams);
+  ncm_mset_catalog_get_covar (mc->mcat, &fstate->covar);
+  ncm_mset_fparams_set_vector (mset, fstate->fparams);
+  fstate->has_covar = TRUE;
 }
 
 /**
@@ -1027,5 +1085,19 @@ NcmMSetCatalog *
 ncm_fit_mc_get_catalog (NcmFitMC *mc)
 {
   return ncm_mset_catalog_ref (mc->mcat);
+}
+
+/**
+ * ncm_fit_mc_peek_catalog:
+ * @mc: a #NcmFitMC
+ *
+ * Peeks the generated catalog of @mc.
+ *
+ * Returns: (transfer none): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mc_peek_catalog (NcmFitMC *mc)
+{
+  return mc->mcat;
 }
 
