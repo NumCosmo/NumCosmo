@@ -287,7 +287,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
   ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mm->mm->f);
-  ncm_fit_state_set_m2lnL_prec (fstate, gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f);
+  ncm_fit_state_set_m2lnL_prec (fstate, fabs (gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f));
 
   ncm_fit_params_set_gsl_vector (fit, fit_gsl_mm->mm->x);
 
