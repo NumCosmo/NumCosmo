@@ -68,6 +68,7 @@ enum
   PROP_CAD,
   PROP_HAS_SSC,
   PROP_S_MATRIX,
+  PROP_RESAMPLE_S_MATRIX,
   PROP_BIN_COUNT,
   PROP_FIX_COV,
   PROP_SIZE,
@@ -150,6 +151,9 @@ nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, cons
     case PROP_S_MATRIX:
       nc_data_cluster_ncounts_gauss_set_s_matrix (ncounts_gauss,  g_value_get_object (value));
       break;
+    case PROP_RESAMPLE_S_MATRIX:
+      nc_data_cluster_ncounts_gauss_set_resample_s_matrix (ncounts_gauss,  g_value_get_object (value));
+      break;
     case PROP_BIN_COUNT:
       nc_data_cluster_ncounts_gauss_set_bin_count (ncounts_gauss, g_value_get_object (value));
       break;
@@ -193,6 +197,9 @@ nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVal
     case PROP_S_MATRIX:
       g_value_set_object (value, self->s_matrix);
       break;
+    case PROP_RESAMPLE_S_MATRIX:
+      g_value_set_object (value, self->resample_s_matrix);
+      break;
     case PROP_BIN_COUNT:
       g_value_set_object (value, self->bin_count);
       break;
@@ -217,6 +224,7 @@ nc_data_cluster_ncounts_gauss_dispose (GObject *object)
   ncm_matrix_clear (&self->lnM_obs_params);
   nc_cluster_abundance_clear (&self->cad);
   ncm_matrix_clear (&self->s_matrix);
+  ncm_matrix_clear (&self->resample_s_matrix);
   ncm_vector_clear (&self->bin_count);
 
   g_clear_pointer (&self->index_map, g_array_unref);
@@ -297,6 +305,13 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
                                    g_param_spec_object ("s-matrix",
                                                         NULL,
                                                         "Super sample covariance matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RESAMPLE_S_MATRIX,
+                                   g_param_spec_object ("resample-s-matrix",
+                                                        NULL,
+                                                        "Super sample covariance resample matrix",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -406,7 +421,6 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
   NcClusterAbundance *cad                       = self->cad;
   gint i;
 
-
   for (i = 0; i < self->index_map->len; i++)
   {
     const NcDataClusterNCountsGaussIndex *k = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
@@ -421,7 +435,7 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
 
     ncm_vector_set (vp, i, mean);
   }
-
+  
   return;
 }
 
@@ -450,12 +464,13 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     NcClusterAbundance *cad     = self->cad;
     NcmMatrix *s_matrix;
     guint i, j;
-
     if (ncm_data_is_resampling (NCM_DATA (gauss_cov)) && (self->resample_s_matrix != NULL))
-      s_matrix = self->resample_s_matrix;
+      {
+      s_matrix = self->resample_s_matrix;}
     else
+      {
       s_matrix = self->s_matrix;
-
+      }
     if (s_matrix == NULL)
       g_error ("Super sample covariance matrix not set");
 
@@ -523,7 +538,6 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
         ncm_matrix_set (cov, i, i, poisson_i);
       }
     }
-
     return TRUE;
   }
 }

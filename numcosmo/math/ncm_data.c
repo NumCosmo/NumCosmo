@@ -611,7 +611,6 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
              ncm_data_get_desc (data));
 
   self->is_resampling = TRUE;
-
   _ncm_data_prepare (data, mset);
 
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
