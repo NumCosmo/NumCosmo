@@ -51,6 +51,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_run_empty, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/serialize", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
+                    &test_ncm_fit_serialize, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -62,7 +67,7 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_invalid_run, \
                     &test_ncm_fit_free);
 
-#define TESTS_NCM_NEW(lib, algo, lib_enum, algo_str, max_dim, max_iter) \
+#define TESTS_NCM_NEW(lib, algo, lib_enum, fit_type, algo_str, max_dim, max_iter) \
         void \
         test_ncm_fit_ ## lib ## _ ## algo ## _new (TestNcmFit * test, gconstpointer pdata) \
         { \
@@ -74,18 +79,19 @@ typedef struct _TestNcmFit
           NcmLikelihood *lh              = ncm_likelihood_new (dset); \
           NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL); \
           NcmFit *fit; \
- \
+\
           ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE); \
-   \
+\
           fit = ncm_fit_new (lib_enum, algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL); \
           ncm_fit_set_maxiter (fit, max_iter); \
- \
+\
           test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd); \
           test->fit       = ncm_fit_ref (fit); \
           test->rng       = rng; \
-   \
+\
           g_assert_true (NCM_IS_FIT (fit)); \
- \
+          g_assert_true (NCM_IS_ ## fit_type (fit)); \
+\
           ncm_data_gauss_cov_mvnd_clear (&data_mvnd); \
           ncm_model_mvnd_clear (&model_mvnd); \
           ncm_dataset_clear (&dset); \
@@ -104,18 +110,18 @@ typedef struct _TestNcmFit
           NcmLikelihood *lh              = ncm_likelihood_new (dset); \
           NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL); \
           NcmFit *fit; \
- \
+\
           ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED); \
-   \
+\
           fit = ncm_fit_new (lib_enum, algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL); \
           ncm_fit_set_maxiter (fit, max_iter); \
- \
+\
           test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd); \
           test->fit       = ncm_fit_ref (fit); \
           test->rng       = rng; \
-   \
+\
           g_assert_true (NCM_IS_FIT (fit)); \
- \
+\
           ncm_data_gauss_cov_mvnd_clear (&data_mvnd); \
           ncm_model_mvnd_clear (&model_mvnd); \
           ncm_dataset_clear (&dset); \
@@ -157,9 +163,15 @@ TESTS_NCM_DECL (gsl, nmsimplex)
 TESTS_NCM_DECL (gsl, nmsimplex2)
 TESTS_NCM_DECL (gsl, nmsimplex2rand)
 
+TESTS_NCM_DECL (levmar, der)
+TESTS_NCM_DECL (levmar, dif)
+TESTS_NCM_DECL (levmar, bc_dif)
+TESTS_NCM_DECL (levmar, bc_der)
+
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -169,6 +181,8 @@ main (gint argc, gchar *argv[])
 
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
 
 #ifdef NUMCOSMO_HAVE_NLOPT
   TESTS_NCM_ADD (nlopt, neldermead)
@@ -187,6 +201,11 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD (gsl, nmsimplex2)
   TESTS_NCM_ADD (gsl, nmsimplex2rand)
 
+  TESTS_NCM_ADD (levmar, der)
+  TESTS_NCM_ADD (levmar, dif)
+  TESTS_NCM_ADD (levmar, bc_der)
+  TESTS_NCM_ADD (levmar, bc_dif)
+
 #if GLIB_CHECK_VERSION (2, 38, 0)
 #ifdef NUMCOSMO_HAVE_NLOPT
   TESTS_NCM_ADD_INVALID (nlopt, neldermead)
@@ -204,26 +223,36 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex)
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex2)
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex2rand)
+
+  TESTS_NCM_ADD_INVALID (levmar, der)
+  TESTS_NCM_ADD_INVALID (levmar, dif)
+  TESTS_NCM_ADD_INVALID (levmar, bc_der)
+  TESTS_NCM_ADD_INVALID (levmar, bc_dif)
 #endif
   g_test_run ();
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, "ln-neldermead", 20, NCM_FIT_DEFAULT_MAXITER)
-TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, "ld-slsqp",      20, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", 20, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      20, NCM_FIT_DEFAULT_MAXITER)
 #endif /* NUMCOSMO_HAVE_NLOPT */
 
-TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, NULL, 20, 10000000)
+TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, 20, 10000000)
 
-TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, "conjugate-fr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, "conjugate-pr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, "vector-bfgs",      20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, "vector-bfgs2",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, "steepest-descent", 20, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-fr",     20, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-pr",     20, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs",      20, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs2",     20, 10000000)
+TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "steepest-descent", 20, 10000000)
 
-TESTS_NCM_NEW (gsl, nmsimplex, NCM_FIT_TYPE_GSL_MMS,      "nmsimplex",     20, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2, NCM_FIT_TYPE_GSL_MMS,     "nmsimplex2",     5, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, "nmsimplex2rand", 5, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex,      NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex",     20, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2,     NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2",     5, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2rand", 5, 10000000)
+
+TESTS_NCM_NEW (levmar, der,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "der",    20, 10000000)
+TESTS_NCM_NEW (levmar, dif,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "dif",    20, 10000000)
+TESTS_NCM_NEW (levmar, bc_der, NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "bc-der", 20, 10000000)
+TESTS_NCM_NEW (levmar, bc_dif, NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "bc-dif", 20, 10000000)
 
 void
 test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
@@ -253,7 +282,13 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
     for (i = 0; i < ncm_vector_len (y); i++)
     {
       ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
-      /* printf ("[%4d] % 22.15g % 22.15g %e\n", i, ncm_vector_get (y, i), ncm_vector_get (ym, i), fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0)); */
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (ym, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
+       */
     }
   }
 }
@@ -265,6 +300,49 @@ test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+}
+
+void
+test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit       = test->fit;
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmFit *fit_dup   = NCM_FIT (ncm_serialize_dup_obj (ser, G_OBJECT (fit)));
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_run (fit_dup, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit_dup, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmMSet *mset       = ncm_fit_peek_mset (fit);
+    NcmMSet *mset_dup   = ncm_fit_peek_mset (fit_dup);
+    NcmModel *model     = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmModel *model_dup = NCM_MODEL (ncm_mset_peek (mset_dup, ncm_model_mvnd_id ()));
+    NcmVector *y        = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+    NcmVector *y_dup    = ncm_model_orig_vparam_get_vector (model_dup, NCM_MODEL_MVND_MEAN);
+    gint i;
+
+    g_assert_true (NCM_IS_FIT (fit_dup));
+    g_assert_true (mset != mset_dup);
+    g_assert_true (model != model_dup);
+    g_assert_true (y != y_dup);
+
+    for (i = 0; i < ncm_vector_len (y); i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (y_dup, i), 5.0e-2, 5.0e-2);
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (y_dup, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (y_dup, i) - 1.0));
+       */
+    }
+  }
+
+  ncm_serialize_free (ser);
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT
@@ -283,6 +361,11 @@ TESTS_NCM_TRAPS (gsl, mm_steepest_descent)
 TESTS_NCM_TRAPS (gsl, nmsimplex)
 TESTS_NCM_TRAPS (gsl, nmsimplex2)
 TESTS_NCM_TRAPS (gsl, nmsimplex2rand)
+
+TESTS_NCM_TRAPS (levmar, der)
+TESTS_NCM_TRAPS (levmar, dif)
+TESTS_NCM_TRAPS (levmar, bc_der)
+TESTS_NCM_TRAPS (levmar, bc_dif)
 
 void
 test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata)

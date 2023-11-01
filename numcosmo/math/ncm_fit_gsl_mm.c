@@ -148,6 +148,7 @@ _ncm_fit_gsl_mm_get_property (GObject *object, guint prop_id, GValue *value, GPa
   {
     case PROP_ALGO:
       g_value_set_enum (value, fit_gsl_mm->algo);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;

@@ -98,8 +98,11 @@ _ncm_fit_levmar_constructed (GObject *object)
 
     fit_levmar->fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
-    fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
-    fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
+    if (fit_levmar->fparam_len > 0)
+    {
+      fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
+      fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
+    }
 
     fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
     ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
@@ -141,6 +144,7 @@ _ncm_fit_levmar_get_property (GObject *object, guint prop_id, GValue *value, GPa
   {
     case PROP_ALGO:
       g_value_set_enum (value, fit_levmar->algo);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -322,7 +326,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
+  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -365,7 +369,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
+  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -409,7 +413,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
+  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -453,7 +457,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
+  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
