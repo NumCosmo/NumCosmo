@@ -48,12 +48,14 @@ void ncm_fit_state_clear (NcmFitState **fstate);
 
 void ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gint dof, gboolean is_least_squares);
 void ncm_fit_state_reset (NcmFitState *fstate);
-void ncm_fit_state_realloc (NcmFitState *fstate);
 
 void ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J);
 
 void ncm_fit_state_set_fparam_len (NcmFitState *fstate, guint fparam_len);
 guint ncm_fit_state_get_fparam_len (NcmFitState *fstate);
+
+void ncm_fit_state_set_data_len (NcmFitState *fstate, guint data_len);
+guint ncm_fit_state_get_data_len (NcmFitState *fstate);
 
 void ncm_fit_state_set_dof (NcmFitState *fstate, gint dof);
 gint ncm_fit_state_get_dof (NcmFitState *fstate);
@@ -81,8 +83,6 @@ gdouble ncm_fit_state_get_params_prec (NcmFitState *fstate);
 
 void ncm_fit_state_set_elapsed_time (NcmFitState *fstate, gdouble elapsed_time);
 gdouble ncm_fit_state_get_elapsed_time (NcmFitState *fstate);
-
-guint ncm_fit_state_get_data_len (NcmFitState *fstate);
 
 void ncm_fit_state_set_has_covar (NcmFitState *fstate, gboolean has_covar);
 gboolean ncm_fit_state_has_covar (NcmFitState *fstate);

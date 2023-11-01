@@ -109,6 +109,8 @@ ncm_fit_state_init (NcmFitState *fstate)
   fstate->has_covar        = FALSE;
 }
 
+static void _ncm_fit_state_realloc (NcmFitState *fstate);
+
 static void
 ncm_fit_state_constructed (GObject *object)
 {
@@ -117,7 +119,7 @@ ncm_fit_state_constructed (GObject *object)
   {
     NcmFitState *fstate = NCM_FIT_STATE (object);
 
-    ncm_fit_state_realloc (fstate);
+    _ncm_fit_state_realloc (fstate);
   }
 }
 
@@ -131,31 +133,28 @@ ncm_fit_state_set_property (GObject *object, guint prop_id, const GValue *value,
   switch (prop_id)
   {
     case PROP_DATA_LEN:
-      fstate->data_len = g_value_get_uint (value);
-      ncm_fit_state_realloc (fstate);
+      ncm_fit_state_set_data_len (fstate, g_value_get_uint (value));
       break;
     case PROP_FPARAM_LEN:
-      fstate->fparam_len = g_value_get_uint (value);
-      ncm_fit_state_realloc (fstate);
+      ncm_fit_state_set_fparam_len (fstate, g_value_get_uint (value));
       break;
     case PROP_DOF:
-      fstate->dof = g_value_get_int (value);
+      ncm_fit_state_set_dof (fstate, g_value_get_int (value));
       break;
     case PROP_IS_LEAST_SQUARES:
-      fstate->is_least_squares = g_value_get_boolean (value);
-      ncm_fit_state_realloc (fstate);
+      ncm_fit_state_set_is_least_squares (fstate, g_value_get_boolean (value));
       break;
     case PROP_NITERS:
-      fstate->niter = g_value_get_uint (value);
+      ncm_fit_state_set_niter (fstate, g_value_get_uint (value));
       break;
     case PROP_FUNC_EVAL:
-      fstate->func_eval = g_value_get_uint (value);
+      ncm_fit_state_set_func_eval (fstate, g_value_get_uint (value));
       break;
     case PROP_GRAD_EVAL:
-      fstate->grad_eval = g_value_get_uint (value);
+      ncm_fit_state_set_grad_eval (fstate, g_value_get_uint (value));
       break;
     case PROP_IS_BEST_FIT:
-      fstate->is_best_fit = g_value_get_boolean (value);
+      ncm_fit_state_set_is_best_fit (fstate, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -173,28 +172,28 @@ ncm_fit_state_get_property (GObject *object, guint prop_id, GValue *value, GPara
   switch (prop_id)
   {
     case PROP_DATA_LEN:
-      g_value_set_uint (value, fstate->data_len);
+      g_value_set_uint (value, ncm_fit_state_get_data_len (fstate));
       break;
     case PROP_FPARAM_LEN:
-      g_value_set_uint (value, fstate->fparam_len);
+      g_value_set_uint (value, ncm_fit_state_get_fparam_len (fstate));
       break;
     case PROP_DOF:
-      g_value_set_int (value, fstate->dof);
+      g_value_set_int (value, ncm_fit_state_get_dof (fstate));
       break;
     case PROP_IS_LEAST_SQUARES:
-      g_value_set_boolean (value, fstate->is_least_squares);
+      g_value_set_boolean (value, ncm_fit_state_is_least_squares (fstate));
       break;
     case PROP_NITERS:
-      g_value_set_uint (value, fstate->niter);
+      g_value_set_uint (value, ncm_fit_state_get_niter (fstate));
       break;
     case PROP_FUNC_EVAL:
-      g_value_set_uint (value, fstate->func_eval);
+      g_value_set_uint (value, ncm_fit_state_get_func_eval (fstate));
       break;
     case PROP_GRAD_EVAL:
-      g_value_set_uint (value, fstate->grad_eval);
+      g_value_set_uint (value, ncm_fit_state_get_grad_eval (fstate));
       break;
     case PROP_IS_BEST_FIT:
-      g_value_set_boolean (value, fstate->is_best_fit);
+      g_value_set_boolean (value, ncm_fit_state_is_best_fit (fstate));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -293,6 +292,59 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                                          G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
+static void
+_ncm_fit_state_realloc (NcmFitState *fstate)
+{
+  gboolean fparam_diff_len = FALSE;
+
+  if (fstate->alloc_fparam_len != fstate->fparam_len)
+  {
+    ncm_vector_clear (&fstate->fparams);
+    ncm_vector_clear (&fstate->dm2lnL);
+    ncm_matrix_clear (&fstate->covar);
+    ncm_matrix_clear (&fstate->hessian);
+    fparam_diff_len = TRUE;
+
+    if (fstate->fparam_len > 0)
+    {
+      fstate->covar   = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
+      fstate->hessian = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
+      fstate->fparams = ncm_vector_new (fstate->fparam_len);
+      fstate->dm2lnL  = ncm_vector_new (fstate->fparam_len);
+    }
+
+    fstate->alloc_fparam_len = fstate->fparam_len;
+  }
+
+  if (fstate->is_least_squares)
+  {
+    gboolean data_diff_len = fstate->alloc_data_len != fstate->data_len;
+
+    if (fparam_diff_len || data_diff_len || (fstate->ls_J == NULL))
+    {
+      ncm_matrix_clear (&fstate->ls_J);
+
+      if ((fstate->fparam_len > 0) && (fstate->data_len > 0))
+        fstate->ls_J = ncm_matrix_new (fstate->data_len, fstate->fparam_len);
+    }
+
+    if (data_diff_len || (fstate->ls_f == NULL))
+    {
+      ncm_vector_clear (&fstate->ls_f);
+
+      if (fstate->data_len > 0)
+        fstate->ls_f = ncm_vector_new (fstate->data_len);
+    }
+  }
+  else
+  {
+    ncm_matrix_clear (&fstate->ls_J);
+    ncm_vector_clear (&fstate->ls_f);
+  }
+
+  fstate->alloc_data_len = fstate->data_len;
+}
+
 /**
  * ncm_fit_state_new:
  * @data_len: data length
@@ -374,7 +426,7 @@ ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gi
   fstate->dof              = dof;
   fstate->is_least_squares = is_least_squares;
 
-  ncm_fit_state_realloc (fstate);
+  _ncm_fit_state_realloc (fstate);
 }
 
 /**
@@ -396,65 +448,8 @@ ncm_fit_state_reset (NcmFitState *fstate)
   fstate->m2lnL_curval = 0.0;
 
   fstate->is_best_fit = FALSE;
-}
 
-/**
- * ncm_fit_state_realloc:
- * @fstate: a #NcmFitState
- *
- * Reallocates the #NcmFitState to its current state.
- *
- */
-void
-ncm_fit_state_realloc (NcmFitState *fstate)
-{
-  gboolean fparam_diff_len = FALSE;
-
-  if (fstate->data_len == 0)
-    return;
-
-  if (fstate->alloc_fparam_len != fstate->fparam_len)
-  {
-    ncm_vector_clear (&fstate->fparams);
-    ncm_vector_clear (&fstate->dm2lnL);
-    ncm_matrix_clear (&fstate->covar);
-    ncm_matrix_clear (&fstate->hessian);
-    fparam_diff_len = TRUE;
-
-    if (fstate->fparam_len > 0)
-    {
-      fstate->covar   = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
-      fstate->hessian = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
-      fstate->fparams = ncm_vector_new (fstate->fparam_len);
-      fstate->dm2lnL  = ncm_vector_new (fstate->fparam_len);
-    }
-
-    fstate->alloc_fparam_len = fstate->fparam_len;
-  }
-
-  if (fstate->is_least_squares)
-  {
-    gboolean data_diff_len = fstate->alloc_data_len != fstate->data_len;
-
-    if ((fparam_diff_len || data_diff_len || (fstate->ls_J == NULL)) && (fstate->fparam_len > 0))
-    {
-      ncm_matrix_clear (&fstate->ls_J);
-      fstate->ls_J = ncm_matrix_new (fstate->data_len, fstate->fparam_len);
-    }
-
-    if (data_diff_len || (fstate->ls_f == NULL))
-    {
-      ncm_vector_clear (&fstate->ls_f);
-      fstate->ls_f = ncm_vector_new (fstate->data_len);
-    }
-  }
-  else
-  {
-    ncm_matrix_clear (&fstate->ls_J);
-    ncm_vector_clear (&fstate->ls_f);
-  }
-
-  fstate->alloc_data_len = fstate->data_len;
+  _ncm_fit_state_realloc (fstate);
 }
 
 /**
@@ -504,6 +499,7 @@ void
 ncm_fit_state_set_fparam_len (NcmFitState *fstate, guint fparam_len)
 {
   fstate->fparam_len = fparam_len;
+  _ncm_fit_state_realloc (fstate);
 }
 
 /**
@@ -518,6 +514,35 @@ guint
 ncm_fit_state_get_fparam_len (NcmFitState *fstate)
 {
   return fstate->fparam_len;
+}
+
+/**
+ * ncm_fit_state_set_data_len:
+ * @fstate: a #NcmFitState
+ * @data_len: Number of data points
+ *
+ * Sets the number of data points used to compute @fstate.
+ *
+ */
+void
+ncm_fit_state_set_data_len (NcmFitState *fstate, guint data_len)
+{
+  fstate->data_len = data_len;
+  _ncm_fit_state_realloc (fstate);
+}
+
+/**
+ * ncm_fit_state_get_data_len:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the number of data points used to compute @fstate.
+ *
+ * Returns: Number of data points
+ */
+guint
+ncm_fit_state_get_data_len (NcmFitState *fstate)
+{
+  return fstate->data_len;
 }
 
 /**
@@ -705,6 +730,9 @@ ncm_fit_state_get_grad_eval (NcmFitState *fstate)
 void
 ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec)
 {
+  g_assert_cmpfloat (prec, >=, 0.0);
+  g_assert_cmpfloat (prec, <, 1.0);
+
   fstate->m2lnL_prec = prec;
 }
 
@@ -767,6 +795,9 @@ ncm_fit_state_get_m2lnL_curval (NcmFitState *fstate)
 void
 ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec)
 {
+  g_assert_cmpfloat (prec, >=, 0.0);
+  g_assert_cmpfloat (prec, <, 1.0);
+
   fstate->params_prec = prec;
 }
 
@@ -798,6 +829,8 @@ ncm_fit_state_get_params_prec (NcmFitState *fstate)
 void
 ncm_fit_state_set_elapsed_time (NcmFitState *fstate, gdouble elapsed_time)
 {
+  g_assert_cmpfloat (elapsed_time, >=, 0.0);
+
   fstate->elapsed_time = elapsed_time;
 }
 
@@ -813,20 +846,6 @@ gdouble
 ncm_fit_state_get_elapsed_time (NcmFitState *fstate)
 {
   return fstate->elapsed_time;
-}
-
-/**
- * ncm_fit_state_get_data_len:
- * @fstate: a #NcmFitState
- *
- * Gets the number of data points used to compute @fstate.
- *
- * Returns: Number of data points
- */
-guint
-ncm_fit_state_get_data_len (NcmFitState *fstate)
-{
-  return fstate->data_len;
 }
 
 /**
@@ -897,6 +916,7 @@ void
 ncm_fit_state_set_is_least_squares (NcmFitState *fstate, gboolean is_least_squares)
 {
   fstate->is_least_squares = is_least_squares;
+  _ncm_fit_state_realloc (fstate);
 }
 
 /**
