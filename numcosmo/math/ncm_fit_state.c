@@ -156,9 +156,9 @@ ncm_fit_state_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_IS_BEST_FIT:
       ncm_fit_state_set_is_best_fit (fstate, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -195,9 +195,9 @@ ncm_fit_state_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_IS_BEST_FIT:
       g_value_set_boolean (value, ncm_fit_state_is_best_fit (fstate));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -42,6 +42,7 @@ void test_ncm_fit_state_new (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_free (TestNcmFitState *test, gconstpointer pdata);
 
 void test_ncm_fit_state_sanity (TestNcmFitState *test, gconstpointer pdata);
+void test_ncm_fit_state_serialize (TestNcmFitState *test, gconstpointer pdata);
 
 void test_ncm_fit_state_set_ls (TestNcmFitState *test, gconstpointer pdata);
 
@@ -86,6 +87,11 @@ main (int argc, char *argv[])
   g_test_add ("/ncm/fit_state/sanity", TestNcmFitState, NULL,
               &test_ncm_fit_state_new,
               &test_ncm_fit_state_sanity,
+              &test_ncm_fit_state_free);
+
+  g_test_add ("/ncm/fit_state/serialize", TestNcmFitState, NULL,
+              &test_ncm_fit_state_new,
+              &test_ncm_fit_state_serialize,
               &test_ncm_fit_state_free);
 
   g_test_add ("/ncm/fit_state/set_ls", TestNcmFitState, NULL,
@@ -251,6 +257,38 @@ void
 test_ncm_fit_state_sanity (TestNcmFitState *test, gconstpointer pdata)
 {
   g_assert_true (NCM_IS_FIT_STATE (test->fit_state));
+
+  g_assert_true (ncm_fit_state_ref (test->fit_state) == test->fit_state);
+  ncm_fit_state_free (test->fit_state);
+
+  {
+    NcmFitState *fit_state = ncm_fit_state_ref (test->fit_state);
+
+    ncm_fit_state_clear (&fit_state);
+
+    g_assert_true (fit_state == NULL);
+  }
+}
+
+void
+test_ncm_fit_state_serialize (TestNcmFitState *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
+  NcmFitState *dup_fit_state = NCM_FIT_STATE (ncm_serialize_dup_obj (ser, G_OBJECT (test->fit_state)));
+
+  g_assert_true (NCM_IS_FIT_STATE (dup_fit_state));
+  g_assert_true (ncm_fit_state_get_data_len (dup_fit_state) == ncm_fit_state_get_data_len (test->fit_state));
+  g_assert_true (ncm_fit_state_get_fparam_len (dup_fit_state) == ncm_fit_state_get_fparam_len (test->fit_state));
+  g_assert_true (ncm_fit_state_get_dof (dup_fit_state) == ncm_fit_state_get_dof (test->fit_state));
+  g_assert_true (ncm_fit_state_is_least_squares (dup_fit_state) == ncm_fit_state_is_least_squares (test->fit_state));
+  g_assert_true (ncm_fit_state_get_niter (dup_fit_state) == ncm_fit_state_get_niter (test->fit_state));
+  g_assert_true (ncm_fit_state_get_func_eval (dup_fit_state) == ncm_fit_state_get_func_eval (test->fit_state));
+  g_assert_true (ncm_fit_state_get_grad_eval (dup_fit_state) == ncm_fit_state_get_grad_eval (test->fit_state));
+  g_assert_true (ncm_fit_state_is_best_fit (dup_fit_state) == ncm_fit_state_is_best_fit (test->fit_state));
+
+  ncm_fit_state_free (dup_fit_state);
+  ncm_serialize_free (ser);
 }
 
 void
@@ -586,7 +624,7 @@ test_ncm_fit_state_hessian (TestNcmFitState *test, gconstpointer pdata)
 
     ncm_fit_state_set_fparam_len (test->fit_state, fparam_len);
     {
-      NcmMatrix *hessian = ncm_matrix_new (fparam_len, fparam_len);
+      NcmMatrix *hessian = ncm_fit_state_peek_hessian (test->fit_state);
 
       g_assert_true (hessian != NULL);
       g_assert_true (NCM_IS_MATRIX (hessian));
@@ -595,6 +633,12 @@ test_ncm_fit_state_hessian (TestNcmFitState *test, gconstpointer pdata)
       g_assert_cmpuint (ncm_matrix_nrows (hessian), ==, ncm_fit_state_get_fparam_len (test->fit_state));
       g_assert_cmpuint (ncm_matrix_ncols (hessian), ==, ncm_fit_state_get_fparam_len (test->fit_state));
     }
+  }
+  ncm_fit_state_set_fparam_len (test->fit_state, 0);
+  {
+    NcmMatrix *hessian = ncm_fit_state_peek_hessian (test->fit_state);
+
+    g_assert_true (hessian == NULL);
   }
 }
 
@@ -616,6 +660,12 @@ test_ncm_fit_state_covar (TestNcmFitState *test, gconstpointer pdata)
       g_assert_cmpuint (ncm_matrix_nrows (covar), ==, ncm_fit_state_get_fparam_len (test->fit_state));
       g_assert_cmpuint (ncm_matrix_ncols (covar), ==, ncm_fit_state_get_fparam_len (test->fit_state));
     }
+  }
+  ncm_fit_state_set_fparam_len (test->fit_state, 0);
+  {
+    NcmMatrix *covar = ncm_fit_state_peek_covar (test->fit_state);
+
+    g_assert_true (covar == NULL);
   }
 }
 
@@ -661,6 +711,23 @@ test_ncm_fit_state_f (TestNcmFitState *test, gconstpointer pdata)
       g_assert_cmpuint (ncm_vector_len (f), ==, data_len);
       g_assert_cmpuint (ncm_vector_len (f), ==, ncm_fit_state_get_data_len (test->fit_state));
     }
+
+    ncm_fit_state_set_fparam_len (test->fit_state, 0);
+    {
+      NcmVector *f = ncm_fit_state_peek_f (test->fit_state);
+
+      g_assert_true (f != NULL);
+      g_assert_true (NCM_IS_VECTOR (f));
+      g_assert_cmpuint (ncm_vector_len (f), ==, data_len);
+      g_assert_cmpuint (ncm_vector_len (f), ==, ncm_fit_state_get_data_len (test->fit_state));
+    }
+
+    ncm_fit_state_set_data_len (test->fit_state, 0);
+    {
+      NcmVector *f = ncm_fit_state_peek_f (test->fit_state);
+
+      g_assert_true (f == NULL);
+    }
   }
 }
 
@@ -685,6 +752,21 @@ test_ncm_fit_state_J (TestNcmFitState *test, gconstpointer pdata)
       g_assert_cmpuint (ncm_matrix_ncols (J), ==, fparam_len);
       g_assert_cmpuint (ncm_matrix_nrows (J), ==, ncm_fit_state_get_data_len (test->fit_state));
       g_assert_cmpuint (ncm_matrix_ncols (J), ==, ncm_fit_state_get_fparam_len (test->fit_state));
+    }
+
+    ncm_fit_state_set_fparam_len (test->fit_state, 0);
+    {
+      NcmMatrix *J = ncm_fit_state_peek_J (test->fit_state);
+
+      g_assert_true (J == NULL);
+    }
+
+    ncm_fit_state_set_fparam_len (test->fit_state, fparam_len);
+    ncm_fit_state_set_data_len (test->fit_state, 0);
+    {
+      NcmMatrix *J = ncm_fit_state_peek_J (test->fit_state);
+
+      g_assert_true (J == NULL);
     }
   }
 }
