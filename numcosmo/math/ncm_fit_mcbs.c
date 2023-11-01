@@ -378,10 +378,15 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_reset (mcbs->mc_bstrap);
   }
 
-  ncm_mset_catalog_get_mean (mcbs->mcat, &fstate->fparams);
-  ncm_mset_catalog_get_covar (mcbs->mcat, &fstate->covar);
-  fstate->has_covar = TRUE;
+  {
+    NcmVector *fparams = ncm_fit_state_peek_fparams (fstate);
+    NcmMatrix *covar   = ncm_fit_state_peek_covar (fstate);
 
+    ncm_mset_catalog_get_mean (mcbs->mcat, &fparams);
+    ncm_mset_catalog_get_covar (mcbs->mcat, &covar);
+
+    ncm_fit_state_set_has_covar (fstate, TRUE);
+  }
   ncm_fit_mc_end_run (mcbs->mc_resample);
 }
 

@@ -96,7 +96,7 @@ _ncm_fit_gsl_mm_constructed (GObject *object)
     fit_gsl_mm->err_a = GSL_POSINF;
     fit_gsl_mm->err_b = 1.0e-1;
 
-    for (i = 0; i < fstate->fparam_len; i++)
+    for (i = 0; i < ncm_fit_state_get_fparam_len (fstate); i++)
     {
       gdouble pscale = ncm_mset_fparam_get_scale (mset, i);
 
@@ -106,7 +106,7 @@ _ncm_fit_gsl_mm_constructed (GObject *object)
     fit_gsl_mm->f.f      = &nc_residual_multimin_f;
     fit_gsl_mm->f.df     = &nc_residual_multimin_df;
     fit_gsl_mm->f.fdf    = &nc_residual_multimin_fdf;
-    fit_gsl_mm->f.n      = fstate->fparam_len;
+    fit_gsl_mm->f.n      = ncm_fit_state_get_fparam_len (fstate);
     fit_gsl_mm->f.params = fit_gsl_mm;
 
     ncm_fit_gsl_mm_set_algo (fit_gsl_mm, fit_gsl_mm->algo);
@@ -213,11 +213,11 @@ _ncm_fit_gsl_mm_reset (NcmFit *fit)
     NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (fit);
     NcmFitState *fstate     = ncm_fit_peek_state (fit);
 
-    if (fit_gsl_mm->f.n != fstate->fparam_len)
+    if (fit_gsl_mm->f.n != ncm_fit_state_get_fparam_len (fstate))
     {
       gsl_multimin_fdfminimizer_free (fit_gsl_mm->mm);
       fit_gsl_mm->mm  = NULL;
-      fit_gsl_mm->f.n = fstate->fparam_len;
+      fit_gsl_mm->f.n = ncm_fit_state_get_fparam_len (fstate);
       ncm_fit_gsl_mm_set_algo (fit_gsl_mm, fit_gsl_mm->algo);
     }
   }
@@ -238,21 +238,22 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ncm_fit_equality_constraints_len (fit) || ncm_fit_inequality_constraints_len (fit))
     g_error ("_ncm_fit_gsl_mm_run: GSL algorithms do not support constraints.");
 
-  g_assert (fstate->fparam_len != 0);
+  g_assert (ncm_fit_state_get_fparam_len (fstate) != 0);
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
-  gsl_multimin_fdfminimizer_set (fit_gsl_mm->mm, &fit_gsl_mm->f, ncm_vector_gsl (fstate->fparams), fit_gsl_mm->err_a, fit_gsl_mm->err_b);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
+  gsl_multimin_fdfminimizer_set (fit_gsl_mm->mm, &fit_gsl_mm->f, ncm_vector_gsl (ncm_fit_state_peek_fparams (fstate)), fit_gsl_mm->err_a, fit_gsl_mm->err_b);
 
   do {
     gdouble pscale;
 
-    fstate->niter++;
+    ncm_fit_state_add_iter (fstate, 1);
+
     status = gsl_multimin_fdfminimizer_iterate (fit_gsl_mm->mm);
     pscale = prec * fabs (fit_gsl_mm->mm->f != 0.0 ? fit_gsl_mm->mm->f : 1.0);
 
-    if ((fstate->niter == 1) && !gsl_finite (fit_gsl_mm->mm->f))
+    if ((ncm_fit_state_get_niter (fstate) == 1) && !gsl_finite (fit_gsl_mm->mm->f))
     {
-      ncm_fit_params_set_vector (fit, fstate->fparams);
+      ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
       return FALSE;
     }
@@ -282,9 +283,9 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mm->mm->f);
     ncm_fit_log_step (fit);
-  } while ((status == GSL_CONTINUE) && (fstate->niter < ncm_fit_get_maxiter (fit)));
+  } while ((status == GSL_CONTINUE) && (ncm_fit_state_get_niter (fstate) < ncm_fit_get_maxiter (fit)));
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
   ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mm->mm->f);
   ncm_fit_state_set_m2lnL_prec (fstate, gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f);
 
@@ -472,6 +473,6 @@ ncm_fit_gsl_mm_set_algo (NcmFitGSLMM *fit_gsl_mm, NcmFitGSLMMAlgos algo)
   }
 
   if (fit_gsl_mm->mm == NULL)
-    fit_gsl_mm->mm = gsl_multimin_fdfminimizer_alloc (ncm_fit_gsl_mm_algos[fit_gsl_mm->algo], fstate->fparam_len);
+    fit_gsl_mm->mm = gsl_multimin_fdfminimizer_alloc (ncm_fit_gsl_mm_algos[fit_gsl_mm->algo], ncm_fit_state_get_fparam_len (fstate));
 }
 

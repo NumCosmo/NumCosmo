@@ -1236,12 +1236,14 @@ void
 ncm_fit_ls_covar (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmMatrix *J        = ncm_fit_state_peek_J (self->fstate);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
 
-  g_assert (self->fstate->is_least_squares);
-  ncm_fit_ls_J (fit, self->fstate->ls_J);
-  gsl_multifit_covar (ncm_matrix_gsl (self->fstate->ls_J), 0.0,
-                      ncm_matrix_gsl (self->fstate->covar));
-  self->fstate->has_covar = TRUE;
+  ncm_fit_ls_J (fit, J);
+  gsl_multifit_covar (ncm_matrix_gsl (J), 0.0,
+                      ncm_matrix_gsl (covar));
+
+  ncm_fit_state_set_has_covar (self->fstate, TRUE);
 }
 
 /**
@@ -1262,9 +1264,13 @@ ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
-  g_assert (self->fstate->has_covar);
+  g_assert (ncm_fit_state_has_covar (self->fstate));
 
-  return ncm_matrix_get (self->fstate->covar, fpi, fpi);
+  {
+    NcmMatrix *covar = ncm_fit_state_peek_covar (self->fstate);
+
+    return ncm_matrix_get (covar, fpi, fpi);
+  }
 }
 
 /**
@@ -1305,9 +1311,13 @@ ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
-  g_assert (self->fstate->has_covar);
+  g_assert (ncm_fit_state_has_covar (self->fstate));
 
-  return ncm_matrix_get (self->fstate->covar, fpi1, fpi2);
+  {
+    NcmMatrix *covar = ncm_fit_state_peek_covar (self->fstate);
+
+    return ncm_matrix_get (covar, fpi1, fpi2);
+  }
 }
 
 /**
@@ -1424,21 +1434,23 @@ gboolean
 _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  gdouble m2lnL_curval;
 
   self->mtype = mtype;
 
-  ncm_fit_m2lnL_val (fit, &self->fstate->m2lnL_curval);
+  ncm_fit_m2lnL_val (fit, &m2lnL_curval);
+  ncm_fit_state_set_m2lnL_curval (self->fstate, m2lnL_curval);
   ncm_fit_log_step (fit);
 
-  self->fstate->m2lnL_prec  = 0.0;
-  self->fstate->params_prec = 0.0;
+  ncm_fit_state_set_m2lnL_prec (self->fstate, 0.0);
+  ncm_fit_state_set_params_prec (self->fstate, 0.0);
 
-  self->fstate->has_covar    = FALSE;
-  self->fstate->is_best_fit  = TRUE;
-  self->fstate->elapsed_time = 0.0;
-  self->fstate->niter        = 0;
-  self->fstate->func_eval    = 0;
-  self->fstate->grad_eval    = 0;
+  ncm_fit_state_set_has_covar (self->fstate, FALSE);
+  ncm_fit_state_set_is_best_fit (self->fstate, TRUE);
+  ncm_fit_state_set_elapsed_time (self->fstate, 0.0);
+  ncm_fit_state_set_niter (self->fstate, 0);
+  ncm_fit_state_set_func_eval (self->fstate, 0);
+  ncm_fit_state_set_grad_eval (self->fstate, 0);
 
   return TRUE;
 }
@@ -1493,8 +1505,8 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
     run = FALSE;
   }
 
-  self->fstate->elapsed_time = g_timer_elapsed (self->timer, NULL);
-  self->fstate->is_best_fit  = run;
+  ncm_fit_state_set_elapsed_time (self->fstate, g_timer_elapsed (self->timer, NULL));
+  ncm_fit_state_set_is_best_fit (self->fstate, run);
 
   ncm_fit_log_end (fit);
 
@@ -1533,8 +1545,8 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
     g_timer_start (self->timer);
     _ncm_fit_run_empty (fit, mtype);
 
-    self->fstate->elapsed_time = g_timer_elapsed (self->timer, NULL);
-    self->fstate->is_best_fit  = TRUE;
+    ncm_fit_state_set_elapsed_time (self->fstate, g_timer_elapsed (self->timer, NULL));
+    ncm_fit_state_set_is_best_fit (self->fstate, TRUE);
 
     ncm_fit_log_end (fit);
 
@@ -1723,10 +1735,10 @@ ncm_fit_log_state (NcmFit *fit)
     elap_min  = elap_min % 60;
     elap_hour =  elap_hour % 24;
     g_message ("#  Elapsed time: %02lu days, %02lu:%02lu:%010.7f\n", elap_day, elap_hour, elap_min, elap_sec);
-    g_message ("#  iteration            [%06d]\n", self->fstate->niter);
-    g_message ("#  function evaluations [%06d]\n", self->fstate->func_eval);
-    g_message ("#  gradient evaluations [%06d]\n", self->fstate->grad_eval);
-    g_message ("#  degrees of freedom   [%06d]\n", self->fstate->dof);
+    g_message ("#  iteration            [%06d]\n", ncm_fit_state_get_niter (self->fstate));
+    g_message ("#  function evaluations [%06d]\n", ncm_fit_state_get_func_eval (self->fstate));
+    g_message ("#  gradient evaluations [%06d]\n", ncm_fit_state_get_grad_eval (self->fstate));
+    g_message ("#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
 
     if (self->lh->m2lnL_v != NULL)
     {
@@ -1768,12 +1780,16 @@ ncm_fit_log_step (NcmFit *fit)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   if (self->mtype == NCM_FIT_RUN_MSGS_FULL)
+  {
     ncm_fit_log_state (fit);
+  }
   else if (self->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
-    if ((self->fstate->niter < 10) || ((self->fstate->niter % 10) == 0))
+  {
+    const guint niter = ncm_fit_state_get_niter (self->fstate);
+
+    if ((niter < 10) || ((niter % 10) == 0))
       ncm_message (".");
-
-
+  }
 
   return;
 }
@@ -1793,7 +1809,7 @@ ncm_fit_log_finish (NcmFit *fit)
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     const gdouble m2lnL     = ncm_fit_state_get_m2lnL_curval (self->fstate);
-    const gint dof          = self->fstate->dof;
+    const gint dof          = ncm_fit_state_get_dof (self->fstate);
     const gdouble m2lnL_dof = m2lnL / dof;
 
     g_message ("#  m2lnL/dof = %20.15g\n", m2lnL_dof);
@@ -1854,8 +1870,8 @@ ncm_fit_log_covar (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
-  g_assert (self->fstate->has_covar);
-  ncm_mset_fparams_log_covar (self->mset, self->fstate->covar);
+  g_assert (ncm_fit_state_has_covar (self->fstate));
+  ncm_mset_fparams_log_covar (self->mset, ncm_fit_state_peek_covar (self->fstate));
 
   return;
 }
@@ -1953,7 +1969,7 @@ ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   ncm_likelihood_m2lnL_val (self->lh, self->mset, m2lnL);
-  self->fstate->func_eval++;
+  ncm_fit_state_add_func_eval (self->fstate, 1);
 }
 
 /**
@@ -1970,7 +1986,7 @@ ncm_fit_ls_f (NcmFit *fit, NcmVector *f)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   ncm_likelihood_leastsquares_f (self->lh, self->mset, f);
-  self->fstate->func_eval++;
+  ncm_fit_state_add_func_eval (self->fstate, 1);
 }
 
 /**
@@ -2006,7 +2022,8 @@ ncm_fit_m2lnL_grad_an (NcmFit *fit, NcmVector *df)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   ncm_likelihood_m2lnL_grad (self->lh, self->mset, df);
-  self->fstate->grad_eval++;
+
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2063,7 +2080,7 @@ ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
     ncm_fit_params_set (fit, i, p);
   }
 
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2108,7 +2125,7 @@ ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian)
   }
 
   ncm_vector_free (tmp);
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2141,7 +2158,7 @@ ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
   g_array_unref (grad_a);
   ncm_vector_free (x);
 
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2179,8 +2196,8 @@ ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df)
 
   ncm_likelihood_m2lnL_val_grad (self->lh, self->mset, result, df);
 
-  self->fstate->func_eval++;
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_func_eval (self->fstate, 1);
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2218,8 +2235,8 @@ ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
     ncm_fit_params_set (fit, i, p);
   }
 
-  self->fstate->func_eval++;
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_func_eval (self->fstate, 1);
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2287,7 +2304,7 @@ ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   ncm_likelihood_leastsquares_J (self->lh, self->mset, J);
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 
   return;
 }
@@ -2306,9 +2323,10 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
+  NcmVector *f        = ncm_fit_state_peek_f (self->fstate);
   guint i;
 
-  ncm_fit_ls_f (fit, self->fstate->ls_f);
+  ncm_fit_ls_f (fit, f);
 
   for (i = 0; i < fparam_len; i++)
   {
@@ -2324,16 +2342,16 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
     ncm_fit_params_set (fit, i, pph);
     ncm_fit_ls_f (fit, J_col_i);
 
-    for (k = 0; k < ncm_vector_len (self->fstate->ls_f); k++)
+    for (k = 0; k < ncm_vector_len (f); k++)
       ncm_vector_set (J_col_i, k,
-                      (ncm_vector_get (J_col_i, k) - ncm_vector_get (self->fstate->ls_f, k)) * one_h
+                      (ncm_vector_get (J_col_i, k) - ncm_vector_get (f, k)) * one_h
                      );
 
     ncm_fit_params_set (fit, i, p);
     ncm_vector_free (J_col_i);
   }
 
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2350,6 +2368,7 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
+  NcmVector *f        = ncm_fit_state_peek_f (self->fstate);
   guint i;
 
   for (i = 0; i < fparam_len; i++)
@@ -2368,18 +2387,18 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
     ncm_fit_ls_f (fit, J_col_i);
 
     ncm_fit_params_set (fit, i, pmh);
-    ncm_fit_ls_f (fit, self->fstate->ls_f);
+    ncm_fit_ls_f (fit, f);
 
-    for (k = 0; k < ncm_vector_len (self->fstate->ls_f); k++)
+    for (k = 0; k < ncm_vector_len (f); k++)
       ncm_vector_set (J_col_i, k,
-                      (ncm_vector_get (J_col_i, k) - ncm_vector_get (self->fstate->ls_f, k)) * one_2h
+                      (ncm_vector_get (J_col_i, k) - ncm_vector_get (f, k)) * one_2h
                      );
 
     ncm_fit_params_set (fit, i, p);
     ncm_vector_free (J_col_i);
   }
 
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2414,7 +2433,7 @@ ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
   g_array_unref (J_a);
   ncm_vector_free (x);
 
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
 /**
@@ -2451,8 +2470,8 @@ ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 
   ncm_likelihood_leastsquares_f_J (self->lh, self->mset, f, J);
 
-  self->fstate->func_eval++;
-  self->fstate->grad_eval++;
+  ncm_fit_state_add_func_eval (self->fstate, 1);
+  ncm_fit_state_add_grad_eval (self->fstate, 1);
 
   return;
 }
@@ -2471,9 +2490,10 @@ void
 ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmVector *fit_f    = ncm_fit_state_peek_f (self->fstate);
 
   ncm_fit_ls_J_nd_fo (fit, J);
-  ncm_vector_memcpy (f, self->fstate->ls_f);
+  ncm_vector_memcpy (f, fit_f);
 }
 
 /**
@@ -2581,27 +2601,28 @@ void
 ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
   gint ret;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_fisher_to_covar: mset object has 0 free parameters");
 
-  ncm_matrix_memcpy (self->fstate->covar, fisher);
+  ncm_matrix_memcpy (covar, fisher);
 
-  ret = ncm_matrix_cholesky_decomp (self->fstate->covar, 'U');
+  ret = ncm_matrix_cholesky_decomp (covar, 'U');
 
   if (ret == 0)
   {
-    ret = ncm_matrix_cholesky_inverse (self->fstate->covar, 'U');
+    ret = ncm_matrix_cholesky_inverse (covar, 'U');
 
     if (ret != 0)
       g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
 
-    ncm_matrix_copy_triangle (self->fstate->covar, 'U');
+    ncm_matrix_copy_triangle (covar, 'U');
   }
   else if (ret > 0)
   {
-    NcmMatrix *LU      = ncm_matrix_dup (self->fstate->hessian);
+    NcmMatrix *LU      = ncm_matrix_dup (fisher);
     gsl_permutation *p = gsl_permutation_alloc (ncm_mset_fparam_len (self->mset));
     gint signum;
     gint ret1;
@@ -2613,7 +2634,7 @@ ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
     NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_decomp]", ret1);
 
-    ret1 = gsl_linalg_LU_invert (ncm_matrix_gsl (LU), p, ncm_matrix_gsl (self->fstate->covar));
+    ret1 = gsl_linalg_LU_invert (ncm_matrix_gsl (LU), p, ncm_matrix_gsl (covar));
     NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_invert]", ret1);
 
     gsl_permutation_free (p);
@@ -2624,7 +2645,7 @@ ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
     g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
   }
 
-  self->fstate->has_covar = TRUE;
+  ncm_fit_state_set_has_covar (self->fstate, TRUE);
 }
 
 /**
@@ -2677,14 +2698,15 @@ void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmMatrix *hessian  = ncm_fit_state_peek_hessian (self->fstate);
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
-  ncm_fit_numdiff_m2lnL_hessian (fit, self->fstate->hessian, self->params_reltol);
-  ncm_matrix_scale (self->fstate->hessian, 0.5);
+  ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
+  ncm_matrix_scale (hessian, 0.5);
 
-  ncm_fit_fisher_to_covar (fit, self->fstate->hessian);
+  ncm_fit_fisher_to_covar (fit, hessian);
 }
 
 /**
@@ -2701,7 +2723,9 @@ gdouble
 ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  const guint len     = ncm_matrix_nrows (self->fstate->covar);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
+  NcmMatrix *hessian  = ncm_fit_state_peek_hessian (self->fstate);
+  const guint len     = ncm_matrix_nrows (covar);
   gdouble lndetC      = 0.0;
   guint i;
   gint ret;
@@ -2709,22 +2733,22 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
-  ncm_fit_numdiff_m2lnL_hessian (fit, self->fstate->hessian, 1.0e-2);
-  ncm_matrix_memcpy (self->fstate->covar, self->fstate->hessian);
-  ncm_matrix_scale (self->fstate->covar, 0.5);
+  ncm_fit_numdiff_m2lnL_hessian (fit, hessian, 1.0e-2);
+  ncm_matrix_memcpy (covar, hessian);
+  ncm_matrix_scale (covar, 0.5);
 
-  ret = ncm_matrix_cholesky_decomp (self->fstate->covar, 'U');
+  ret = ncm_matrix_cholesky_decomp (covar, 'U');
 
   if (ret == 0)
   {
     for (i = 0; i < len; i++)
-      lndetC += log (ncm_matrix_get (self->fstate->covar, i, i));
+      lndetC += log (ncm_matrix_get (covar, i, i));
 
     lndetC = -2.0 * lndetC;
   }
   else if (ret > 0)
   {
-    NcmMatrix *LU      = ncm_matrix_dup (self->fstate->hessian);
+    NcmMatrix *LU      = ncm_matrix_dup (hessian);
     gsl_permutation *p = gsl_permutation_alloc (ncm_mset_fparam_len (self->mset));
     gint signum;
     gint ret1;
@@ -2765,9 +2789,9 @@ ncm_fit_get_covar (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
-  g_assert (self->fstate->has_covar);
+  g_assert (ncm_fit_state_has_covar (self->fstate));
 
-  return ncm_matrix_dup (self->fstate->covar);
+  return ncm_matrix_dup (ncm_fit_state_peek_covar (self->fstate));
 }
 
 typedef struct _FitDProb
@@ -3075,18 +3099,19 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
   }
   else
   {
-    NcmVector *v    = NULL;
-    NcmVector *tmp1 = NULL;
+    NcmMatrix *covar = ncm_fit_state_peek_covar (self->fstate);
+    NcmVector *v     = NULL;
+    NcmVector *tmp1  = NULL;
     gdouble result;
     gint ret;
 
     ncm_mset_func_numdiff_fparams (func, self->mset, x, &v);
     tmp1 = ncm_vector_dup (v);
 
-    if (self->fstate->covar == NULL)
+    if (!ncm_fit_state_has_covar (self->fstate))
       g_error ("ncm_fit_function_error: called without any covariance matrix calculated.");
 
-    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (self->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
+    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
     NCM_TEST_GSL_RESULT ("ncm_fit_function_error[covar.v]", ret);
     ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
     NCM_TEST_GSL_RESULT ("ncm_fit_function_error[v.covar.v]", ret);

@@ -927,17 +927,21 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
  * ncm_fit_mcmc_mean_covar:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Computes the mean and covariance of the generated catalog.
+ *
  */
 void
 ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
 {
   NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
+  NcmVector *fparams  = ncm_fit_state_peek_fparams (fstate);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (fstate);
 
-  ncm_mset_catalog_get_mean (mcmc->mcat, &fstate->fparams);
-  ncm_mset_catalog_get_covar (mcmc->mcat, &fstate->covar);
-  ncm_mset_fparams_set_vector (ncm_mset_catalog_peek_mset (mcmc->mcat), fstate->fparams);
-  fstate->has_covar = TRUE;
+  ncm_mset_catalog_get_mean (mcmc->mcat, &fparams);
+  ncm_mset_catalog_get_covar (mcmc->mcat, &covar);
+  ncm_mset_fparams_set_vector (ncm_mset_catalog_peek_mset (mcmc->mcat), fparams);
+
+  ncm_fit_state_set_has_covar (fstate, TRUE);
 }
 
 /**

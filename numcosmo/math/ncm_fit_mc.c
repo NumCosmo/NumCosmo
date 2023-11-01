@@ -1066,11 +1066,14 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
 {
   NcmMSet *mset       = ncm_mset_catalog_peek_mset (mc->mcat);
   NcmFitState *fstate = ncm_fit_peek_state (mc->fit);
+  NcmVector *fparams  = ncm_fit_state_peek_fparams (fstate);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (fstate);
 
-  ncm_mset_catalog_get_mean (mc->mcat, &fstate->fparams);
-  ncm_mset_catalog_get_covar (mc->mcat, &fstate->covar);
-  ncm_mset_fparams_set_vector (mset, fstate->fparams);
-  fstate->has_covar = TRUE;
+  ncm_mset_catalog_get_mean (mc->mcat, &fparams);
+  ncm_mset_catalog_get_covar (mc->mcat, &covar);
+  ncm_mset_fparams_set_vector (mset, fparams);
+
+  ncm_fit_state_set_has_covar (fstate, TRUE);
 }
 
 /**

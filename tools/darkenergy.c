@@ -818,7 +818,7 @@ main (gint argc, gchar *argv[])
     NcmFitState *fstate = ncm_fit_peek_state (fit);
     gdouble m2lnL       = 0.0;
 
-    if (fstate->is_best_fit)
+    if (ncm_fit_state_is_best_fit (fstate))
       m2lnL = ncm_fit_state_get_m2lnL_curval (fstate);
 
     if (de_fit.fiducial != NULL)
@@ -916,8 +916,9 @@ main (gint argc, gchar *argv[])
 
     if (de_fit.fisher)
     {
-      NcmFitState *fstate = ncm_fit_peek_state (fit);
-      NcmMatrix *covar    = ncm_matrix_dup (fstate->covar);
+      NcmFitState *fstate  = ncm_fit_peek_state (fit);
+      NcmMatrix *fit_covar = ncm_fit_state_peek_covar (fstate);
+      NcmMatrix *covar     = ncm_matrix_dup (fit_covar);
 
       ncm_matrix_scale (covar, 2.0);
       ncm_mset_trans_kern_gauss_set_cov (mcsg, covar);
@@ -1017,8 +1018,9 @@ main (gint argc, gchar *argv[])
 
     if (de_fit.fisher)
     {
-      NcmFitState *fstate = ncm_fit_peek_state (fit);
-      NcmMatrix *covar    = ncm_matrix_dup (fstate->covar);
+      NcmFitState *fstate  = ncm_fit_peek_state (fit);
+      NcmMatrix *fit_covar = ncm_fit_state_peek_covar (fstate);
+      NcmMatrix *covar     = ncm_matrix_dup (fit_covar);
 
       ncm_matrix_scale (covar, 2.0);
       ncm_mset_trans_kern_gauss_set_cov (init_sampler, covar);

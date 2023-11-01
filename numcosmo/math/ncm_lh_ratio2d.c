@@ -198,7 +198,7 @@ ncm_lh_ratio2d_constructed (GObject *object)
     gint i;
 
     ncm_serialize_free (ser);
-    g_assert (fstate->is_best_fit);
+    g_assert (ncm_fit_state_is_best_fit (fstate));
 
     for (i = 0; i < 2; i++)
     {
@@ -608,9 +608,9 @@ ncm_lh_ratio2d_f (gdouble x, gpointer ptr)
     ncm_mset_param_set_pi (constrained_mset, lhr2d->pi, p, 2);
     ncm_fit_run (lhr2d->constrained, NCM_FIT_RUN_MSGS_NONE);
 
-    lhr2d->niter     += constrained_fstate->niter;
-    lhr2d->func_eval += constrained_fstate->func_eval;
-    lhr2d->grad_eval += constrained_fstate->grad_eval;
+    lhr2d->niter     += ncm_fit_state_get_niter (constrained_fstate);
+    lhr2d->func_eval += ncm_fit_state_get_func_eval (constrained_fstate);
+    lhr2d->grad_eval += ncm_fit_state_get_grad_eval (constrained_fstate);
 
     {
       const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (constrained_fstate);

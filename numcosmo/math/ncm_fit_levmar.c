@@ -293,6 +293,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
   NcmFitState *fstate      = ncm_fit_peek_state (fit);
   NcmMSet *mset            = ncm_fit_peek_mset (fit);
+  NcmVector *f             = ncm_fit_state_peek_f (fstate);
   gdouble info[LM_INFO_SZ];
   gdouble opts[LM_OPTS_SZ];
   gint ret;
@@ -307,7 +308,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
-  g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
+  g_assert (ncm_vector_stride (f) == 1 &&
             ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
             ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
@@ -319,7 +320,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fstate->ls_f);
+  ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
@@ -335,6 +336,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
   NcmFitState *fstate      = ncm_fit_peek_state (fit);
   NcmMSet *mset            = ncm_fit_peek_mset (fit);
+  NcmVector *f             = ncm_fit_state_peek_f (fstate);
   gdouble info[LM_INFO_SZ];
   gdouble opts[LM_OPTS_SZ];
   gint ret;
@@ -349,7 +351,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
-  g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
+  g_assert (ncm_vector_stride (f) == 1 &&
             ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
             ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
@@ -361,7 +363,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fstate->ls_f);
+  ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
@@ -377,6 +379,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
   NcmFitState *fstate      = ncm_fit_peek_state (fit);
   NcmMSet *mset            = ncm_fit_peek_mset (fit);
+  NcmVector *f             = ncm_fit_state_peek_f (fstate);
   gdouble info[LM_INFO_SZ];
   gdouble opts[LM_OPTS_SZ];
   gint ret;
@@ -391,7 +394,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
-  g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
+  g_assert (ncm_vector_stride (f) == 1 &&
             ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
             ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
@@ -404,7 +407,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fstate->ls_f);
+  ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);
@@ -420,6 +423,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
   NcmFitState *fstate      = ncm_fit_peek_state (fit);
   NcmMSet *mset            = ncm_fit_peek_mset (fit);
+  NcmVector *f             = ncm_fit_state_peek_f (fstate);
   gdouble info[LM_INFO_SZ];
   gdouble opts[LM_OPTS_SZ];
   gint ret;
@@ -434,7 +438,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
-  g_assert (ncm_vector_stride (fstate->ls_f) == 1 &&
+  g_assert (ncm_vector_stride (f) == 1 &&
             ncm_vector_stride (ncm_fit_state_peek_fparams (fstate)) == 1 &&
             ncm_matrix_tda (ncm_fit_state_peek_covar (fstate)) == ncm_matrix_ncols (ncm_fit_state_peek_covar (fstate)));
 
@@ -447,7 +451,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fstate->ls_f);
+  ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
   ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1]);
   ncm_fit_state_set_niter (fstate, info[5]);

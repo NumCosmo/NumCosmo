@@ -96,7 +96,7 @@ _ncm_fit_nlopt_constructed (GObject *object)
     NcmFit *fit            = NCM_FIT (fit_nlopt);
     NcmFitState *fstate    = ncm_fit_peek_state (fit);
 
-    fit_nlopt->fparam_len = fstate->fparam_len;
+    fit_nlopt->fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
     if (fit_nlopt->fparam_len > 0)
     {
@@ -248,10 +248,11 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
   {
     NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (fit);
     NcmFitState *fstate    = ncm_fit_peek_state (fit);
+    const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
-    if (fit_nlopt->fparam_len != fstate->fparam_len)
+    if (fit_nlopt->fparam_len != fparam_len)
     {
-      fit_nlopt->fparam_len = fstate->fparam_len;
+      fit_nlopt->fparam_len = fparam_len;
 
       ncm_vector_clear (&fit_nlopt->lb);
       ncm_vector_clear (&fit_nlopt->ub);
@@ -292,14 +293,16 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (fit);
   NcmFitState *fstate    = ncm_fit_peek_state (fit);
+  NcmVector *fparams     = ncm_fit_state_peek_fparams (fstate);
   NcmMSet *mset          = ncm_fit_peek_mset (fit);
+  const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
   gdouble minf           = 0.0;
 
   NCM_UNUSED (mtype);
 
-  g_assert (fstate->fparam_len != 0);
+  g_assert (fparam_len != 0);
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
+  ncm_mset_fparams_get_vector (mset, fparams);
 
   {
     GArray *ca = g_array_new (FALSE, FALSE, sizeof (NcmFitNLOptConst));
@@ -371,7 +374,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
         g_error ("_ncm_fit_nlopt_run[local_nlopt]: (%d)", ret);
     }
 
-    ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_data (fstate->fparams), &minf);
+    ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_data (fparams), &minf);
 
     ncm_fit_state_set_m2lnL_prec (fstate,
                                   GSL_MAX (nlopt_get_ftol_rel (fit_nlopt->nlopt),
@@ -396,14 +399,15 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   }
 
   {
-    gdouble m2lnL = 0.0;
+    const gdouble m2lnL_prec = ncm_fit_state_get_m2lnL_prec (fstate);
+    gdouble m2lnL            = 0.0;
 
-    ncm_fit_params_set_vector (fit, fstate->fparams);
+    ncm_fit_params_set_vector (fit, fparams);
     ncm_fit_m2lnL_val (fit, &m2lnL);
 
-    if (ncm_cmp (m2lnL, minf, fstate->m2lnL_prec, 0.0) != 0)
+    if (ncm_cmp (m2lnL, minf, m2lnL_prec, 0.0) != 0)
       g_warning ("_ncm_fit_nlopt_run: algorithm minimum differs from evaluated m2lnL % 22.15g != % 22.15g (prec = %e)\n",
-                 m2lnL, minf, fstate->m2lnL_prec);
+                 m2lnL, minf, m2lnL_prec);
 
     ncm_fit_state_set_m2lnL_curval (fstate, minf);
   }
@@ -420,7 +424,7 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   gdouble m2lnL;
   guint i;
 
-  fstate->niter++;
+  ncm_fit_state_add_iter (fstate, 1);
 
   for (i = 0; i < n; i++)
   {
@@ -460,7 +464,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   NcmFitState *fstate  = ncm_fit_peek_state (fit);
   gdouble constraint;
 
-  fstate->func_eval++;
+  ncm_fit_state_add_func_eval (fstate, 1);
   ncm_fit_params_set_array (fit, x);
 
   if (!ncm_mset_params_valid (mset))
@@ -648,15 +652,16 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 void
 ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 {
-  NcmFit *fit         = NCM_FIT (fit_nlopt);
-  NcmFitState *fstate = ncm_fit_peek_state (fit);
+  NcmFit *fit            = NCM_FIT (fit_nlopt);
+  NcmFitState *fstate    = ncm_fit_peek_state (fit);
+  const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->nlopt_algo != algo)
     g_clear_pointer (&fit_nlopt->nlopt, nlopt_destroy);
 
   if (fit_nlopt->nlopt == NULL)
   {
-    fit_nlopt->nlopt      = nlopt_create (algo, fstate->fparam_len);
+    fit_nlopt->nlopt      = nlopt_create (algo, fparam_len);
     fit_nlopt->nlopt_algo = algo;
   }
 
@@ -678,15 +683,16 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 void
 ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 {
-  NcmFit *fit         = NCM_FIT (fit_nlopt);
-  NcmFitState *fstate = ncm_fit_peek_state (fit);
+  NcmFit *fit            = NCM_FIT (fit_nlopt);
+  NcmFitState *fstate    = ncm_fit_peek_state (fit);
+  const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->local_nlopt_algo != algo)
     g_clear_pointer (&fit_nlopt->local_nlopt, nlopt_destroy);
 
   if (fit_nlopt->local_nlopt == NULL)
   {
-    fit_nlopt->local_nlopt      = nlopt_create (algo, fstate->fparam_len);
+    fit_nlopt->local_nlopt      = nlopt_create (algo, fparam_len);
     fit_nlopt->local_nlopt_algo = algo;
   }
 

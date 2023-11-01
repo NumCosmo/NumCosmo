@@ -78,13 +78,13 @@ _ncm_fit_gsl_ls_constructed (GObject *object)
     NcmFit *fit             = NCM_FIT (fit_gsl_ls);
     NcmFitState *fstate     = ncm_fit_peek_state (fit);
 
-    if (fstate->fparam_len > 0)
+    if (ncm_fit_state_get_fparam_len (fstate) > 0)
     {
       fit_gsl_ls->f.f      = &_ncm_fit_gsl_ls_f;
       fit_gsl_ls->f.df     = &_ncm_fit_gsl_ls_df;
       fit_gsl_ls->f.fdf    = &_ncm_fit_gsl_ls_fdf;
-      fit_gsl_ls->f.p      = fstate->fparam_len;
-      fit_gsl_ls->f.n      = fstate->data_len;
+      fit_gsl_ls->f.p      = ncm_fit_state_get_fparam_len (fstate);
+      fit_gsl_ls->f.n      = ncm_fit_state_get_data_len (fstate);
       fit_gsl_ls->f.params = fit;
 
       fit_gsl_ls->ls = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
@@ -144,14 +144,14 @@ _ncm_fit_gsl_ls_reset (NcmFit *fit)
     NcmFitGSLLS *fit_gsl_ls = NCM_FIT_GSL_LS (fit);
     NcmFitState *fstate     = ncm_fit_peek_state (fit);
 
-    if ((fit_gsl_ls->f.p != fstate->fparam_len) || (fit_gsl_ls->f.n != fstate->data_len))
+    if ((fit_gsl_ls->f.p != ncm_fit_state_get_fparam_len (fstate)) || (fit_gsl_ls->f.n != ncm_fit_state_get_data_len (fstate)))
     {
       g_clear_pointer (&fit_gsl_ls->ls, gsl_multifit_fdfsolver_free);
 
-      if (fstate->fparam_len > 0)
+      if (ncm_fit_state_get_fparam_len (fstate) > 0)
       {
-        fit_gsl_ls->f.p = fstate->fparam_len;
-        fit_gsl_ls->f.n = fstate->data_len;
+        fit_gsl_ls->f.p = ncm_fit_state_get_fparam_len (fstate);
+        fit_gsl_ls->f.n = ncm_fit_state_get_data_len (fstate);
         fit_gsl_ls->ls  = gsl_multifit_fdfsolver_alloc (fit_gsl_ls->T,
                                                         fit_gsl_ls->f.n,
                                                         fit_gsl_ls->f.p);
@@ -173,10 +173,10 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ncm_fit_equality_constraints_len (fit) || ncm_fit_inequality_constraints_len (fit))
     g_error ("_ncm_fit_gsl_ls_run: GSL algorithms do not support constraints.");
 
-  g_assert (fstate->fparam_len != 0);
+  g_assert (ncm_fit_state_get_fparam_len (fstate) != 0);
 
-  ncm_mset_fparams_get_vector (mset, fstate->fparams);
-  gsl_multifit_fdfsolver_set (fit_gsl_ls->ls, &fit_gsl_ls->f, ncm_vector_gsl (fstate->fparams));
+  ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
+  gsl_multifit_fdfsolver_set (fit_gsl_ls->ls, &fit_gsl_ls->f, ncm_vector_gsl (ncm_fit_state_peek_fparams (fstate)));
 
   status = gsl_multifit_fdfsolver_driver (fit_gsl_ls->ls,
                                           ncm_fit_get_maxiter (fit),

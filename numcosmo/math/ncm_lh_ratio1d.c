@@ -114,7 +114,7 @@ ncm_lh_ratio1d_constructed (GObject *object)
     ncm_serialize_free (ser);
     g_assert_cmpint (lhr1d->pi.mid, >=, 0);
 
-    g_assert (fstate->is_best_fit);
+    g_assert (ncm_fit_state_is_best_fit (fstate));
 
     if (ncm_mset_peek (fit_mset, lhr1d->pi.mid) == NULL)
       g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set.",
@@ -452,9 +452,9 @@ ncm_lh_ratio1d_f (gdouble x, gpointer ptr)
 
   ncm_fit_run (lhr1d->constrained, NCM_FIT_RUN_MSGS_NONE);
 
-  lhr1d->niter     += constrained_fstate->niter;
-  lhr1d->func_eval += constrained_fstate->func_eval;
-  lhr1d->grad_eval += constrained_fstate->grad_eval;
+  lhr1d->niter     += ncm_fit_state_get_niter (constrained_fstate);
+  lhr1d->func_eval += ncm_fit_state_get_func_eval (constrained_fstate);
+  lhr1d->grad_eval += ncm_fit_state_get_grad_eval (constrained_fstate);
 
   if (p == lhr1d->lb)
   {

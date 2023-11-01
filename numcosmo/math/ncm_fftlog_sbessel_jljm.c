@@ -257,6 +257,8 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
   fftlog_class->get_Ym = &_ncm_fftlog_sbessel_jljm_get_Ym;
 }
 
+#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data);
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_jac (gdouble x, N_Vector y, N_Vector fy, SUNMatrix Jac, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
@@ -308,19 +310,6 @@ _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_jac (gdouble x, N_Vector y, N_Vector 
   SM_ELEMENT_D (Jac, 3, 3) = -(data->_2ar_p_3 * x + data->c) / denom;
 
   return 0;
-}
-
-static complex double
-_ncm_fftlog_sbessel_jljm_cpu_direct_2f1 (const gdouble ar, const gdouble ai, const gdouble c, const gdouble l, const gdouble x)
-{
-  const gdouble _2lp1     = 2.0 * l + 1.0;
-  const gdouble xp1       = 1.0 + x;
-  const complex double a  = ar + I * ai;
-  const complex double ac = ar - I * ai;
-  const gdouble _2f1      = gsl_sf_hyperg_2F1_conj (ar,       ai, c, -x);
-  const gdouble _2f1_p1   = gsl_sf_hyperg_2F1_conj (ar + 1.0, ai, c, -x);
-
-  return cpow (xp1, a) * ((2.0 * ac - _2lp1) * _2f1 + 2.0 * a * xp1 * _2f1_p1) / (4.0 * ar - _2lp1);
 }
 
 static gdouble
@@ -490,6 +479,19 @@ _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1 (NcmFftlogSBesselJLJMPrivate * const 
 }
 
 static complex double
+_ncm_fftlog_sbessel_jljm_cpu_direct_2f1 (const gdouble ar, const gdouble ai, const gdouble c, const gdouble l, const gdouble x)
+{
+  const gdouble _2lp1     = 2.0 * l + 1.0;
+  const gdouble xp1       = 1.0 + x;
+  const complex double a  = ar + I * ai;
+  const complex double ac = ar - I * ai;
+  const gdouble _2f1      = gsl_sf_hyperg_2F1_conj (ar,       ai, c, -x);
+  const gdouble _2f1_p1   = gsl_sf_hyperg_2F1_conj (ar + 1.0, ai, c, -x);
+
+  return cpow (xp1, a) * ((2.0 * ac - _2lp1) * _2f1 + 2.0 * a * xp1 * _2f1_p1) / (4.0 * ar - _2lp1);
+}
+
+static complex double
 _ncm_fftlog_sbessel_jljm_cpu_2f1 (NcmFftlogSBesselJLJMPrivate * const self, const gdouble L, const gint n, const gdouble x)
 {
   const gdouble p    = 1.0;
@@ -503,8 +505,6 @@ _ncm_fftlog_sbessel_jljm_cpu_2f1 (NcmFftlogSBesselJLJMPrivate * const self, cons
   else
     return _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1 (self, ar, ai, c, self->ell, xref, x);
 }
-
-#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
 
 static void
 _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
@@ -525,17 +525,17 @@ static void
 _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
 #if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
-  NcmFftlogSBesselJLJM *fftlog_jljm = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
+  NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
   NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
-  const guint maxprec = 64 * 64;
-  guint prec = 64 * 2;
-  const gint Nf = ncm_fftlog_get_full_size (fftlog);
-  const gint Nf_2 = Nf / 2;
-  fftw_complex *Ym_base = (fftw_complex *) Ym_0;
-  fftw_complex *Ym_cache = NULL;
-  NcmVector *Ym_v_cache = NULL;
-  gint Nf_cached = 0;
-  gint Nf_cached_2 = 0;
+  const guint maxprec                      = 64 * 64;
+  guint prec                               = 64 * 2;
+  const gint Nf                            = ncm_fftlog_get_full_size (fftlog);
+  const gint Nf_2                          = Nf / 2;
+  fftw_complex *Ym_base                    = (fftw_complex *) Ym_0;
+  fftw_complex *Ym_cache                   = NULL;
+  NcmVector *Ym_v_cache                    = NULL;
+  gint Nf_cached                           = 0;
+  gint Nf_cached_2                         = 0;
   acb_t two, onehalf, twopi_Lt, Lt, a_n, A_n, B_n, C_n, D_n, E_n, F_n, N_n, w4, x, q, lnw, res, pi;
   gint i, i_ini = 0, i_size = Nf;
   glong prec_sf;
@@ -752,6 +752,7 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
       if ((phys_i <= Nf_cached_2) && (phys_i > -Nf_cached_2))
       {
         gint cache_array_index = (phys_i < 0) ? phys_i + Nf_cached : phys_i;
+
         printf ("# CMP CACHE %d %d %d %d %e % 22.15g % 22.15g % 22.15g % 22.15g\n",
                 i, phys_i, cache_array_index, Nf_cached, cabs (Ym_base[i] / Ym_cache[cache_array_index] - 1.0), creal (Ym_base[i]), cimag (Ym_base[i]), creal (Ym_cache[cache_array_index]), cimag (Ym_cache[cache_array_index]));
       }

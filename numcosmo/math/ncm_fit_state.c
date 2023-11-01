@@ -295,10 +295,10 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
 
 /**
  * ncm_fit_state_new:
- * @data_len: FIXME
- * @fparam_len: FIXME
- * @dof: FIXME
- * @is_least_squares: FIXME
+ * @data_len: data length
+ * @fparam_len: free parameters length
+ * @dof: degrees of freedom
+ * @is_least_squares: whether it is a least squares fit
  *
  * Instantiates a new #NcmFitState.
  *
@@ -521,6 +521,50 @@ ncm_fit_state_get_fparam_len (NcmFitState *fstate)
 }
 
 /**
+ * ncm_fit_state_set_dof:
+ * @fstate: a #NcmFitState
+ * @dof: Degrees of freedom
+ *
+ * Sets the degrees of freedom of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_set_dof (NcmFitState *fstate, gint dof)
+{
+  fstate->dof = dof;
+}
+
+/**
+ * ncm_fit_state_get_dof:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the degrees of freedom of @fstate.
+ *
+ * Returns: Degrees of freedom
+ */
+gint
+ncm_fit_state_get_dof (NcmFitState *fstate)
+{
+  return fstate->dof;
+}
+
+/**
+ * ncm_fit_state_add_iter:
+ * @fstate: a #NcmFitState
+ * @niter: Number of iterations
+ *
+ * Adds @niter to the number of iterations of @fstate.
+ */
+void
+ncm_fit_state_add_iter (NcmFitState *fstate, guint niter)
+{
+  fstate->niter += niter;
+}
+
+/**
  * ncm_fit_state_set_niter:
  * @fstate: a #NcmFitState
  * @niter: Number of iterations
@@ -549,6 +593,102 @@ guint
 ncm_fit_state_get_niter (NcmFitState *fstate)
 {
   return fstate->niter;
+}
+
+/**
+ * ncm_fit_state_add_func_eval:
+ * @fstate: a #NcmFitState
+ * @func_eval: Number of function evaluations
+ *
+ * Adds @func_eval to the number of function evaluations of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_add_func_eval (NcmFitState *fstate, guint func_eval)
+{
+  fstate->func_eval += func_eval;
+}
+
+/**
+ * ncm_fit_state_set_func_eval:
+ * @fstate: a #NcmFitState
+ * @func_eval: Number of function evaluations
+ *
+ * Sets the number of function evaluations of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_set_func_eval (NcmFitState *fstate, guint func_eval)
+{
+  fstate->func_eval = func_eval;
+}
+
+/**
+ * ncm_fit_state_get_func_eval:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the number of function evaluations of @fstate.
+ *
+ * Returns: Number of function evaluations
+ */
+guint
+ncm_fit_state_get_func_eval (NcmFitState *fstate)
+{
+  return fstate->func_eval;
+}
+
+/**
+ * ncm_fit_state_add_grad_eval:
+ * @fstate: a #NcmFitState
+ * @grad_eval: Number of gradient evaluations
+ *
+ * Adds @grad_eval to the number of gradient evaluations of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_add_grad_eval (NcmFitState *fstate, guint grad_eval)
+{
+  fstate->grad_eval += grad_eval;
+}
+
+/**
+ * ncm_fit_state_set_grad_eval:
+ * @fstate: a #NcmFitState
+ * @grad_eval: Number of gradient evaluations
+ *
+ * Sets the number of gradient evaluations of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_set_grad_eval (NcmFitState *fstate, guint grad_eval)
+{
+  fstate->grad_eval = grad_eval;
+}
+
+/**
+ * ncm_fit_state_get_grad_eval:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the number of gradient evaluations of @fstate.
+ *
+ * Returns: Number of gradient evaluations
+ */
+guint
+ncm_fit_state_get_grad_eval (NcmFitState *fstate)
+{
+  return fstate->grad_eval;
 }
 
 /**
@@ -585,7 +725,7 @@ ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate)
 /**
  * ncm_fit_state_set_m2lnL_curval:
  * @fstate: a #NcmFitState
- * @m2lnL: Current value of the m2lnL
+ * @m2lnL_curval: Current value of the m2lnL
  *
  * Sets the current value of the m2lnL of @fstate.
  *
@@ -594,9 +734,9 @@ ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate)
  *
  */
 void
-ncm_fit_state_set_m2lnL_curval (NcmFitState *fstate, gdouble m2lnL)
+ncm_fit_state_set_m2lnL_curval (NcmFitState *fstate, gdouble m2lnL_curval)
 {
-  fstate->m2lnL_curval = m2lnL;
+  fstate->m2lnL_curval = m2lnL_curval;
 }
 
 /**
@@ -645,6 +785,37 @@ ncm_fit_state_get_params_prec (NcmFitState *fstate)
 }
 
 /**
+ * ncm_fit_state_set_elapsed_time:
+ * @fstate: a #NcmFitState
+ * @elapsed_time: Elapsed time
+ *
+ * Sets the elapsed time of @fstate.
+ *
+ * This method is used by #NcmFit implementations to set @fstate state.
+ * It should not be used by the user.
+ *
+ */
+void
+ncm_fit_state_set_elapsed_time (NcmFitState *fstate, gdouble elapsed_time)
+{
+  fstate->elapsed_time = elapsed_time;
+}
+
+/**
+ * ncm_fit_state_get_elapsed_time:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the elapsed time of @fstate.
+ *
+ * Returns: Elapsed time
+ */
+gdouble
+ncm_fit_state_get_elapsed_time (NcmFitState *fstate)
+{
+  return fstate->elapsed_time;
+}
+
+/**
  * ncm_fit_state_get_data_len:
  * @fstate: a #NcmFitState
  *
@@ -656,6 +827,90 @@ guint
 ncm_fit_state_get_data_len (NcmFitState *fstate)
 {
   return fstate->data_len;
+}
+
+/**
+ * ncm_fit_state_set_has_covar:
+ * @fstate: a #NcmFitState
+ * @has_covar: whether @fstate has a covariance matrix
+ *
+ * Sets whether @fstate has a computed covariance matrix.
+ *
+ */
+void
+ncm_fit_state_set_has_covar (NcmFitState *fstate, gboolean has_covar)
+{
+  fstate->has_covar = has_covar;
+}
+
+/**
+ * ncm_fit_state_has_covar:
+ * @fstate: a #NcmFitState
+ *
+ * Checks if @fstate has a computed covariance matrix.
+ *
+ * Returns: TRUE if @fstate has a computed covariance matrix, FALSE otherwise
+ */
+gboolean
+ncm_fit_state_has_covar (NcmFitState *fstate)
+{
+  return fstate->has_covar;
+}
+
+/**
+ * ncm_fit_state_set_is_best_fit:
+ * @fstate: a #NcmFitState
+ * @is_best_fit: whether @fstate is a best fit
+ *
+ * Sets whether @fstate is a best fit.
+ *
+ */
+void
+ncm_fit_state_set_is_best_fit (NcmFitState *fstate, gboolean is_best_fit)
+{
+  fstate->is_best_fit = is_best_fit;
+}
+
+/**
+ * ncm_fit_state_is_best_fit:
+ * @fstate: a #NcmFitState
+ *
+ * Checks if @fstate is a best fit.
+ *
+ * Returns: TRUE if @fstate is a best fit, FALSE otherwise
+ */
+gboolean
+ncm_fit_state_is_best_fit (NcmFitState *fstate)
+{
+  return fstate->is_best_fit;
+}
+
+/**
+ * ncm_fit_state_set_is_least_squares:
+ * @fstate: a #NcmFitState
+ * @is_least_squares: whether @fstate is a least squares fit
+ *
+ * Sets whether @fstate is a least squares fit.
+ *
+ */
+void
+ncm_fit_state_set_is_least_squares (NcmFitState *fstate, gboolean is_least_squares)
+{
+  fstate->is_least_squares = is_least_squares;
+}
+
+/**
+ * ncm_fit_state_is_least_squares:
+ * @fstate: a #NcmFitState
+ *
+ * Checks if @fstate is a least squares fit.
+ *
+ * Returns: TRUE if @fstate is a least squares fit, FALSE otherwise
+ */
+gboolean
+ncm_fit_state_is_least_squares (NcmFitState *fstate)
+{
+  return fstate->is_least_squares;
 }
 
 /**
@@ -673,6 +928,20 @@ ncm_fit_state_peek_fparams (NcmFitState *fstate)
 }
 
 /**
+ * ncm_fit_state_peek_hessian:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the Hessian #NcmMatrix of @fstate.
+ *
+ * Returns: (transfer none): Hessian #NcmMatrix
+ */
+NcmMatrix *
+ncm_fit_state_peek_hessian (NcmFitState *fstate)
+{
+  return fstate->hessian;
+}
+
+/**
  * ncm_fit_state_peek_covar:
  * @fstate: a #NcmFitState
  *
@@ -684,5 +953,37 @@ NcmMatrix *
 ncm_fit_state_peek_covar (NcmFitState *fstate)
 {
   return fstate->covar;
+}
+
+/**
+ * ncm_fit_state_peek_f:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the function #NcmVector of @fstate.
+ *
+ * Returns: (transfer none): Function #NcmVector
+ */
+NcmVector *
+ncm_fit_state_peek_f (NcmFitState *fstate)
+{
+  g_assert (fstate->is_least_squares);
+
+  return fstate->ls_f;
+}
+
+/**
+ * ncm_fit_state_peek_J:
+ * @fstate: a #NcmFitState
+ *
+ * Gets the Jacobian #NcmMatrix of @fstate.
+ *
+ * Returns: (transfer none): Jacobian #NcmMatrix
+ */
+NcmMatrix *
+ncm_fit_state_peek_J (NcmFitState *fstate)
+{
+  g_assert (fstate->is_least_squares);
+
+  return fstate->ls_J;
 }
 

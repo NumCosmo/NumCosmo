@@ -1299,11 +1299,14 @@ ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
   NcmMSet *mset              = ncm_mset_catalog_peek_mset (self->mcat);
   NcmFitState *fstate        = ncm_fit_peek_state (fit);
+  NcmVector *fparams         = ncm_fit_state_peek_fparams (fstate);
+  NcmMatrix *covar           = ncm_fit_state_peek_covar (fstate);
 
-  ncm_mset_catalog_get_mean (self->mcat, &fstate->fparams);
-  ncm_mset_catalog_get_covar (self->mcat, &fstate->covar);
-  ncm_mset_fparams_set_vector (mset, fstate->fparams);
-  fstate->has_covar = TRUE;
+  ncm_mset_catalog_get_mean (self->mcat, &fparams);
+  ncm_mset_catalog_get_covar (self->mcat, &covar);
+  ncm_mset_fparams_set_vector (mset, fparams);
+
+  ncm_fit_state_set_has_covar (fstate, TRUE);
 }
 
 /**
