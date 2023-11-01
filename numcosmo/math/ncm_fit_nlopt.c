@@ -130,9 +130,9 @@ _ncm_fit_nlopt_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_LOCAL_ALGO:
       ncm_fit_nlopt_set_local_algo (fit_nlopt, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -151,9 +151,9 @@ _ncm_fit_nlopt_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_LOCAL_ALGO:
       g_value_set_enum (value, fit_nlopt->local_nlopt_algo);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
