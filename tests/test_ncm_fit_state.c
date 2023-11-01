@@ -776,12 +776,15 @@ test_ncm_fit_state_set_ls_wrong (TestNcmFitState *test, gconstpointer pdata)
 {
   ncm_fit_state_set_is_least_squares (test->fit_state, FALSE);
 
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_ls (test->fit_state, NULL, NULL);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -791,12 +794,15 @@ test_ncm_fit_state_set_ls_wrong (TestNcmFitState *test, gconstpointer pdata)
 void
 test_ncm_fit_state_set_m2lnL_prec_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_m2lnL_prec (test->fit_state, -1.0);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -806,12 +812,15 @@ test_ncm_fit_state_set_m2lnL_prec_wrong_lower_bound (TestNcmFitState *test, gcon
 void
 test_ncm_fit_state_set_m2lnL_prec_wrong_upper_bound (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_m2lnL_prec (test->fit_state, 1.1);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -821,12 +830,15 @@ test_ncm_fit_state_set_m2lnL_prec_wrong_upper_bound (TestNcmFitState *test, gcon
 void
 test_ncm_fit_state_set_params_prec_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_params_prec (test->fit_state, -1.0);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -836,12 +848,15 @@ test_ncm_fit_state_set_params_prec_wrong_lower_bound (TestNcmFitState *test, gco
 void
 test_ncm_fit_state_set_params_prec_wrong_upper_bound (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_params_prec (test->fit_state, 1.1);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -851,12 +866,15 @@ test_ncm_fit_state_set_params_prec_wrong_upper_bound (TestNcmFitState *test, gco
 void
 test_ncm_fit_state_set_elapsed_time_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_elapsed_time (test->fit_state, -1.0);
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -866,6 +884,7 @@ test_ncm_fit_state_set_elapsed_time_wrong_lower_bound (TestNcmFitState *test, gc
 void
 test_ncm_fit_state_peek_f_wrong (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_is_least_squares (test->fit_state, FALSE);
@@ -873,6 +892,8 @@ test_ncm_fit_state_peek_f_wrong (TestNcmFitState *test, gconstpointer pdata)
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
@@ -882,6 +903,7 @@ test_ncm_fit_state_peek_f_wrong (TestNcmFitState *test, gconstpointer pdata)
 void
 test_ncm_fit_state_peek_J_wrong (TestNcmFitState *test, gconstpointer pdata)
 {
+  /* LCOV_EXCL_START */
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_is_least_squares (test->fit_state, FALSE);
@@ -889,6 +911,8 @@ test_ncm_fit_state_peek_J_wrong (TestNcmFitState *test, gconstpointer pdata)
 
     return;
   }
+
+  /* LCOV_EXCL_STOP */
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
