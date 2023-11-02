@@ -51,13 +51,28 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_run_empty, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/restart", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_restart, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/restart/save", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_restart_save, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/restart/save/file", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_restart_save_file, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/serialize", TestNcmFit, NULL, \
-                    &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_serialize, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/copy_new", TestNcmFit, NULL, \
-                    &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_copy_new, \
                     &test_ncm_fit_free); \
 \
@@ -176,6 +191,9 @@ TESTS_NCM_DECL (levmar, bc_der)
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
@@ -306,6 +324,74 @@ test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+}
+
+void
+test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
+}
+
+void
+test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit       = test->fit;
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmMSet *mset     = ncm_fit_peek_mset (fit);
+  NcmMSet *mset_dup = ncm_mset_dup (mset, ser);
+
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, mset_dup, NULL);
+
+  g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
+
+  {
+    const guint fparams_len = ncm_mset_fparams_len (mset);
+    NcmVector *x            = ncm_vector_new (fparams_len);
+    NcmVector *x_dup        = ncm_vector_new (fparams_len);
+
+    g_assert_true (fparams_len == ncm_mset_fparams_len (mset_dup));
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_fparams_get_vector (mset_dup, x_dup);
+
+    g_assert_true (ncm_vector_cmp2 (x, x_dup, 1.0e-3, 0.0) == 0);
+  }
+
+  ncm_mset_free (mset_dup);
+  ncm_serialize_free (ser);
+}
+
+void
+test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit       = test->fit;
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmMSet *mset     = ncm_fit_peek_mset (fit);
+  NcmMSet *mset_dup;
+
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, "tmp_test_ncm_fit_run_restart_save_file.mset");
+
+  mset_dup = ncm_mset_load ("tmp_test_ncm_fit_run_restart_save_file.mset", ser);
+
+  g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
+
+  {
+    const guint fparams_len = ncm_mset_fparams_len (mset);
+    NcmVector *x            = ncm_vector_new (fparams_len);
+    NcmVector *x_dup        = ncm_vector_new (fparams_len);
+
+    g_assert_true (fparams_len == ncm_mset_fparams_len (mset_dup));
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_fparams_get_vector (mset_dup, x_dup);
+
+    g_assert_true (ncm_vector_cmp2 (x, x_dup, 1.0e-3, 0.0) == 0);
+  }
+
+  ncm_mset_free (mset_dup);
+  ncm_serialize_free (ser);
 }
 
 void

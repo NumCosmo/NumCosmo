@@ -1564,13 +1564,11 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
       m2lnL   = ncm_fit_state_get_m2lnL_curval (self->fstate);
       restart = (last_m2lnL - m2lnL) >= (abstol + reltol * fabs (last_m2lnL));
 
-      if (save_progress)
-      {
-        if (self->mset != mset_out)
-          ncm_mset_param_set_mset (mset_out, self->mset);
+      if (self->mset != mset_out)
+        ncm_mset_param_set_mset (mset_out, self->mset);
 
+      if (save_progress)
         ncm_mset_save (mset_out, ser, mset_file, TRUE);
-      }
 
       if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
       {
