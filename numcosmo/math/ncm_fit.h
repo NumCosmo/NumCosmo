@@ -75,7 +75,6 @@ typedef enum _NcmFitType
 
 /**
  * NcmFitGradType:
- * @NCM_FIT_GRAD_ANALYTICAL: Analytical gradient
  * @NCM_FIT_GRAD_NUMDIFF_FORWARD: Numerical gradient (forward)
  * @NCM_FIT_GRAD_NUMDIFF_CENTRAL: Numerical gradient (central)
  * @NCM_FIT_GRAD_NUMDIFF_ACCURATE: Numerical gradient (accurate)
@@ -85,8 +84,7 @@ typedef enum _NcmFitType
  */
 typedef enum _NcmFitGradType
 {
-  NCM_FIT_GRAD_ANALYTICAL = 0,
-  NCM_FIT_GRAD_NUMDIFF_FORWARD,
+  NCM_FIT_GRAD_NUMDIFF_FORWARD = 0,
   NCM_FIT_GRAD_NUMDIFF_CENTRAL,
   NCM_FIT_GRAD_NUMDIFF_ACCURATE,
 } NcmFitGradType;
@@ -209,7 +207,6 @@ void ncm_fit_ls_f (NcmFit *fit, NcmVector *f);
 
 void ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df);
 
-void ncm_fit_m2lnL_grad_an (NcmFit *fit, NcmVector *df);
 void ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);
@@ -217,21 +214,18 @@ void ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian);
 
 void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
 
-void ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df);
 void ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 void ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 void ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 
 void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
 
-void ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J);
 
 void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
-void ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);

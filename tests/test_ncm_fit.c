@@ -56,6 +56,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_serialize, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/copy_new", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
+                    &test_ncm_fit_copy_new, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -172,6 +177,7 @@ void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -343,6 +349,50 @@ test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata)
   }
 
   ncm_serialize_free (ser);
+}
+
+void
+test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit     = test->fit;
+  NcmFit *fit_dup = ncm_fit_copy_new (fit,
+                                      ncm_fit_peek_likelihood (fit),
+                                      ncm_fit_peek_mset (fit),
+                                      ncm_fit_get_grad_type (fit));
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_run (fit_dup, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit_dup, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmMSet *mset       = ncm_fit_peek_mset (fit);
+    NcmMSet *mset_dup   = ncm_fit_peek_mset (fit_dup);
+    NcmModel *model     = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmModel *model_dup = NCM_MODEL (ncm_mset_peek (mset_dup, ncm_model_mvnd_id ()));
+    NcmVector *y        = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+    NcmVector *y_dup    = ncm_model_orig_vparam_get_vector (model_dup, NCM_MODEL_MVND_MEAN);
+    gint i;
+
+    g_assert_true (NCM_IS_FIT (fit_dup));
+    g_assert_true (mset == mset_dup);
+    g_assert_true (model == model_dup);
+
+    for (i = 0; i < ncm_vector_len (y); i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (y_dup, i), 5.0e-2, 5.0e-2);
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (y_dup, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (y_dup, i) - 1.0));
+       */
+    }
+  }
+
+  ncm_fit_free (fit_dup);
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT

@@ -658,15 +658,6 @@ ncm_fit_get_sub_fit (NcmFit *fit)
   return ncm_fit_ref (self->sub_fit);
 }
 
-static NcmFitGrad _ncm_fit_grad_analitical = {
-  NCM_FIT_GRAD_ANALYTICAL,
-  "Analytical gradient",
-  &ncm_fit_ls_J_an,
-  &ncm_fit_ls_f_J_an,
-  &ncm_fit_m2lnL_grad_an,
-  &ncm_fit_m2lnL_val_grad_an,
-};
-
 static NcmFitGrad _ncm_fit_grad_numdiff_forward = {
   NCM_FIT_GRAD_NUMDIFF_FORWARD,
   "Numerical differentiantion (forward)",
@@ -709,14 +700,8 @@ ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
 
   self->grad.gtype = gtype;
 
-  if ((gtype == NCM_FIT_GRAD_ANALYTICAL) && !ncm_likelihood_has_m2lnL_grad (self->lh))
-    g_error ("Likelihood do not support analytical gradient, try to use a numerical algorithm.");
-
   switch (gtype)
   {
-    case NCM_FIT_GRAD_ANALYTICAL:
-      self->grad = _ncm_fit_grad_analitical;
-      break;
     case NCM_FIT_GRAD_NUMDIFF_FORWARD:
       self->grad = _ncm_fit_grad_numdiff_forward;
       break;
@@ -2009,24 +1994,6 @@ static gdouble _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data);
 static void _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data);
 
 /**
- * ncm_fit_m2lnL_grad_an:
- * @fit: a #NcmFit
- * @df: a #NcmVector
- *
- * Analytical gradient.
- *
- */
-void
-ncm_fit_m2lnL_grad_an (NcmFit *fit, NcmVector *df)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-
-  ncm_likelihood_m2lnL_grad (self->lh, self->mset, df);
-
-  ncm_fit_state_add_grad_eval (self->fstate, 1);
-}
-
-/**
  * ncm_fit_m2lnL_grad_nd_fo:
  * @fit: a #NcmFit
  * @grad: a #NcmVector
@@ -2180,27 +2147,6 @@ ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df)
 }
 
 /**
- * ncm_fit_m2lnL_val_grad_an:
- * @fit: a #NcmFit
- * @result: (out): the minus two times the logarithm base e of the likelihood
- * @df: a #NcmVector
- *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient.
- *
- */
-void
-ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-
-  ncm_likelihood_m2lnL_val_grad (self->lh, self->mset, result, df);
-
-  ncm_fit_state_add_func_eval (self->fstate, 1);
-  ncm_fit_state_add_grad_eval (self->fstate, 1);
-}
-
-/**
  * ncm_fit_m2lnL_val_grad_nd_fo:
  * @fit: a #NcmFit
  * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
@@ -2287,26 +2233,6 @@ ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   self->grad.ls_J (fit, J);
-}
-
-/**
- * ncm_fit_ls_J_an:
- * @fit: a #NcmFit
- * @J: a #NcmMatrix
- *
- * Computes the Jacobian matrix for the least squares problem using analytical
- * derivatives.
- *
- */
-void
-ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-
-  ncm_likelihood_leastsquares_J (self->lh, self->mset, J);
-  ncm_fit_state_add_grad_eval (self->fstate, 1);
-
-  return;
 }
 
 /**
@@ -2451,29 +2377,6 @@ ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   self->grad.ls_f_J (fit, f, J);
-}
-
-/**
- * ncm_fit_ls_f_J_an:
- * @fit: a #NcmFit
- * @f: a #NcmVector where the residuals vector is stored
- * @J: a #NcmMatrix where the Jacobian matrix is stored
- *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
- * It uses analytical derivatives.
- *
- */
-void
-ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-
-  ncm_likelihood_leastsquares_f_J (self->lh, self->mset, f, J);
-
-  ncm_fit_state_add_func_eval (self->fstate, 1);
-  ncm_fit_state_add_grad_eval (self->fstate, 1);
-
-  return;
 }
 
 /**
