@@ -658,31 +658,44 @@ ncm_fit_get_sub_fit (NcmFit *fit)
   return ncm_fit_ref (self->sub_fit);
 }
 
+static void _ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
+static void _ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
+static void _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);
+static void _ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+static void _ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+static void _ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+static void _ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
+static void _ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
+static void _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J);
+static void _ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+static void _ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+static void _ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+
 static NcmFitGrad _ncm_fit_grad_numdiff_forward = {
   NCM_FIT_GRAD_NUMDIFF_FORWARD,
   "Numerical differentiantion (forward)",
-  &ncm_fit_ls_J_nd_fo,
-  &ncm_fit_ls_f_J_nd_fo,
-  &ncm_fit_m2lnL_grad_nd_fo,
-  &ncm_fit_m2lnL_val_grad_nd_fo,
+  &_ncm_fit_ls_J_nd_fo,
+  &_ncm_fit_ls_f_J_nd_fo,
+  &_ncm_fit_m2lnL_grad_nd_fo,
+  &_ncm_fit_m2lnL_val_grad_nd_fo,
 };
 
 static NcmFitGrad _ncm_fit_grad_numdiff_central = {
   NCM_FIT_GRAD_NUMDIFF_CENTRAL,
   "Numerical differentiantion (central)",
-  &ncm_fit_ls_J_nd_ce,
-  &ncm_fit_ls_f_J_nd_ce,
-  &ncm_fit_m2lnL_grad_nd_ce,
-  &ncm_fit_m2lnL_val_grad_nd_ce,
+  &_ncm_fit_ls_J_nd_ce,
+  &_ncm_fit_ls_f_J_nd_ce,
+  &_ncm_fit_m2lnL_grad_nd_ce,
+  &_ncm_fit_m2lnL_val_grad_nd_ce,
 };
 
 static NcmFitGrad _ncm_fit_grad_numdiff_accurate = {
   NCM_FIT_GRAD_NUMDIFF_ACCURATE,
   "Numerical differentiantion (Richardson extrapolation)",
-  &ncm_fit_ls_J_nd_ac,
-  &ncm_fit_ls_f_J_nd_ac,
-  &ncm_fit_m2lnL_grad_nd_ac,
-  &ncm_fit_m2lnL_val_grad_nd_ac,
+  &_ncm_fit_ls_J_nd_ac,
+  &_ncm_fit_ls_f_J_nd_ac,
+  &_ncm_fit_m2lnL_grad_nd_ac,
+  &_ncm_fit_m2lnL_val_grad_nd_ac,
 };
 
 /**
@@ -1825,21 +1838,6 @@ ncm_fit_log_info (NcmFit *fit)
   ncm_dataset_log_info (self->lh->dset);
   ncm_mset_pretty_log (self->mset);
 
-  if (FALSE)
-  {
-    gdouble ks_test, mean, sd, skew, kurtosis, max;
-
-    ks_test = ncm_fit_residual_ks_test (fit, &mean, &sd, &skew, &kurtosis, &max);
-    ncm_cfg_msg_sepa ();
-    g_message ("# Residuals Kolmogorov-Smirnov test:\n");
-    g_message ("#   - mean:     % -20.15g\n", mean);
-    g_message ("#   - sd:       % -20.15g\n", sd);
-    g_message ("#   - skew:     % -20.15g\n", skew);
-    g_message ("#   - kurtosis: % -20.15g\n", kurtosis);
-    g_message ("#   - max:      % -20.15g\n", max);
-    g_message ("#   - pval:     % -20.15e\n", 1.0 - ks_test);
-  }
-
   return;
 }
 
@@ -1993,32 +1991,16 @@ ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df)
 static gdouble _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data);
 static void _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data);
 
-/**
- * ncm_fit_m2lnL_grad_nd_fo:
- * @fit: a #NcmFit
- * @grad: a #NcmVector
- *
- * Numerical differentiation (forward).
- *
- */
-void
-ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad)
 {
   gdouble m2lnL;
 
-  ncm_fit_m2lnL_val_grad_nd_fo (fit, &m2lnL, grad);
+  _ncm_fit_m2lnL_val_grad_nd_fo (fit, &m2lnL, grad);
 }
 
-/**
- * ncm_fit_m2lnL_grad_nd_ce:
- * @fit: a #NcmFit
- * @grad: a #NcmVector
- *
- * Numerical differentiation (central).
- *
- */
-void
-ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
@@ -2050,61 +2032,8 @@ ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
-/**
- * ncm_fit_m2lnL_hessian_nd_ce:
- * @fit: a #NcmFit
- * @hessian: a #NcmMatrix
- *
- * Numerical differentiation (central) Hessian matrix.
- *
- */
-void
-ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  guint fparam_len    = ncm_mset_fparam_len (self->mset);
-  NcmVector *tmp      = ncm_vector_new (fparam_len);
-  guint i;
-
-  for (i = 0; i < fparam_len; i++)
-  {
-    const gdouble p       = ncm_mset_fparam_get (self->mset, i);
-    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (self->mset, i));
-    const gdouble h       = p_scale * GSL_ROOT3_DBL_EPSILON;
-    const gdouble pph     = p + h;
-    const gdouble pmh     = p - h;
-    const gdouble twoh    = pph - pmh;
-    const gdouble one_2h  = 1.0 / twoh;
-    NcmVector *row        = ncm_matrix_get_row (hessian, i);
-
-    ncm_fit_params_set (fit, i, pph);
-    ncm_fit_m2lnL_grad_nd_ce (fit, row);
-
-    ncm_fit_params_set (fit, i, pmh);
-    ncm_fit_m2lnL_grad_nd_ce (fit, tmp);
-
-    ncm_vector_sub (row, tmp);
-    ncm_vector_scale (row, one_2h);
-
-    ncm_fit_params_set (fit, i, p);
-
-    ncm_vector_free (row);
-  }
-
-  ncm_vector_free (tmp);
-  ncm_fit_state_add_grad_eval (self->fstate, 1);
-}
-
-/**
- * ncm_fit_m2lnL_grad_nd_ac:
- * @fit: a #NcmFit
- * @grad: a #NcmVector
- *
- * Numerical differentiation (accurate).
- *
- */
-void
-ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
 {
   NcmFitPrivate *self         = ncm_fit_get_instance_private (fit);
   const guint free_params_len = ncm_mset_fparams_len (self->mset);
@@ -2146,18 +2075,8 @@ ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df)
   self->grad.m2lnL_val_grad (fit, result, df);
 }
 
-/**
- * ncm_fit_m2lnL_val_grad_nd_fo:
- * @fit: a #NcmFit
- * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
- * @grad: a #NcmVector
- *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient using numerical differentiation (forward).
- *
- */
-void
-ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
@@ -2185,38 +2104,18 @@ ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
-/**
- * ncm_fit_m2lnL_val_grad_nd_ce:
- * @fit: a #NcmFit
- * @m2lnL: minus two times the logarithm base e of the likelihood.
- * @grad: a #NcmVector
- *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient using numerical differentiation (central).
- *
- */
-void
-ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 {
   ncm_fit_m2lnL_val (fit, m2lnL);
-  ncm_fit_m2lnL_grad_nd_ce (fit, grad);
+  _ncm_fit_m2lnL_grad_nd_ce (fit, grad);
 }
 
-/**
- * ncm_fit_m2lnL_val_grad_nd_ac:
- * @fit: a #NcmFit
- * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
- * @grad: a #NcmVector
- *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient using numerical differentiation (accurate).
- *
- */
-void
-ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
+static void
+_ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 {
   ncm_fit_m2lnL_val (fit, m2lnL);
-  ncm_fit_m2lnL_grad_nd_ac (fit, grad);
+  _ncm_fit_m2lnL_grad_nd_ac (fit, grad);
 }
 
 /**
@@ -2235,17 +2134,8 @@ ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J)
   self->grad.ls_J (fit, J);
 }
 
-/**
- * ncm_fit_ls_J_nd_fo:
- * @fit: a #NcmFit
- * @J: a #NcmMatrix
- *
- * Computes the Jacobian matrix for the least squares problem using numerical
- * differentiation (forward).
- *
- */
-void
-ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
+static void
+_ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
@@ -2280,17 +2170,8 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
-/**
- * ncm_fit_ls_J_nd_ce:
- * @fit: a #NcmFit
- * @J: a #NcmMatrix
- *
- * Computes the Jacobian matrix for the least squares problem using numerical
- * differentiation (central).
- *
- */
-void
-ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
+static void
+_ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   guint fparam_len    = ncm_mset_fparam_len (self->mset);
@@ -2327,17 +2208,8 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
-/**
- * ncm_fit_ls_J_nd_ac:
- * @fit: a #NcmFit
- * @J: a #NcmMatrix
- *
- * Computes the Jacobian matrix for the least squares problem using numerical
- * differentiation (accurate).
- *
- */
-void
-ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
+static void
+_ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
 {
   NcmFitPrivate *self    = ncm_fit_get_instance_private (fit);
   const guint fparam_len = ncm_mset_fparam_len (self->mset);
@@ -2379,58 +2251,28 @@ ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J)
   self->grad.ls_f_J (fit, f, J);
 }
 
-/**
- * ncm_fit_ls_f_J_nd_fo:
- * @fit: a #NcmFit
- * @f: a #NcmVector where the residuals vector is stored
- * @J: a #NcmMatrix where the Jacobian matrix is stored
- *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
- * It uses numerical differentiation (forward).
- *
- */
-void
-ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J)
+static void
+_ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   NcmVector *fit_f    = ncm_fit_state_peek_f (self->fstate);
 
-  ncm_fit_ls_J_nd_fo (fit, J);
+  _ncm_fit_ls_J_nd_fo (fit, J);
   ncm_vector_memcpy (f, fit_f);
 }
 
-/**
- * ncm_fit_ls_f_J_nd_ce:
- * @fit: a #NcmFit
- * @f: a #NcmVector where the residuals vector is stored
- * @J: a #NcmMatrix where the Jacobian matrix is stored
- *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
- * It uses numerical differentiation (central).
- *
- */
-void
-ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J)
+static void
+_ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 {
   ncm_fit_ls_f (fit, f);
-  ncm_fit_ls_J_nd_ce (fit, J);
+  _ncm_fit_ls_J_nd_ce (fit, J);
 }
 
-/**
- * ncm_fit_ls_f_J_nd_ac:
- * @fit: a #NcmFit
- * @f: a #NcmVector where the residuals vector is stored
- * @J: a #NcmMatrix where the Jacobian matrix is stored
- *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
- * It uses numerical differentiation (accurate).
- *
- */
-void
-ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J)
+static void
+_ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 {
   ncm_fit_ls_f (fit, f);
-  ncm_fit_ls_J_nd_ac (fit, J);
+  _ncm_fit_ls_J_nd_ac (fit, J);
 }
 
 static gdouble

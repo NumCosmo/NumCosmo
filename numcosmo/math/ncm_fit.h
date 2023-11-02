@@ -206,29 +206,10 @@ void ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL);
 void ncm_fit_ls_f (NcmFit *fit, NcmVector *f);
 
 void ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df);
-
-void ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
-void ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
-void ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);
-void ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian);
-
 void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
 
-void ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
-void ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
-void ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
-
 void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
-
-void ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
-void ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
-void ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J);
-
 void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
-
-void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
-void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
-void ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
 void ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher);
 void ncm_fit_obs_fisher (NcmFit *fit);
@@ -250,7 +231,6 @@ gdouble ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi);
 gdouble ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2);
 gdouble ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2);
 
-gdouble ncm_fit_residual_ks_test (NcmFit *fit, gdouble *o_mean, gdouble *o_sd, gdouble *o_skew, gdouble *o_kurtosis, gdouble *o_max);
 void ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step);
 void ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm);
 gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);
