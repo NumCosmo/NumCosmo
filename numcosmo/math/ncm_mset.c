@@ -28,7 +28,31 @@
  * @title: NcmMSet
  * @short_description: A set of different NcmModel objects.
  *
- * FIXME
+ * A #NcmMSet is a set of different #NcmModel objects. It is used to
+ * represent a set of models that can be used to fit a data set.
+ *
+ * When the model class is created the class method ncm_mset_model_register_id()
+ * must be used to register the model class. This function must be used once
+ * and only once in the model class definition. Any subclasse of the model
+ * class will inherit the model id. The same compilation unit must call the macro
+ * NCM_MSET_MODEL_REGISTER_ID() for each model class that will be used in the #NcmMSet.
+ * It should also include NCM_MSET_MODEL_DECLARE_ID() in the header file.
+ *
+ * Models can be stackable or not. If a model is stackable, the #NcmMSet can contain
+ * more than one instance of the same model. If a model is not stackable, the #NcmMSet
+ * can contain only one instance of the model.
+ *
+ * The model can be a submodel of another model. In this case, the
+ * model class must set the main_model_id field to the model id of the
+ * parent model. If it is the main model, the main_model_id must be
+ * set to NCM_MSET_MODEL_MAIN().
+ *
+ * The #NcmMSet can be created empty or with a list of models. The stackable models can
+ * be added to the #NcmMSet using the function ncm_mset_push() to add the model to the
+ * end of the list or using ncm_mset_set_pos() to add the model in a specific position.
+ * The non-stackable models can be added using ncm_mset_set(). For both
+ * ncm_mset_set_pos() and ncm_mset_set() if there is already a model in the position
+ * it will be replaced.
  *
  */
 
@@ -286,9 +310,9 @@ ncm_mset_class_init (NcmMSetClass *klass)
  * @mid: Model id
  * @pid: Parameter id
  *
- * FIXME
+ * Creates a new #NcmMSetPIndex.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmMSetPIndex
  */
 NcmMSetPIndex *
 ncm_mset_pindex_new (NcmModelID mid, guint pid)
@@ -305,9 +329,9 @@ ncm_mset_pindex_new (NcmModelID mid, guint pid)
  * ncm_mset_pindex_dup:
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
+ * Duplicate a #NcmMSetPIndex.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmMSetPIndex with the same values of @pi
  */
 NcmMSetPIndex *
 ncm_mset_pindex_dup (NcmMSetPIndex *pi)
@@ -321,7 +345,7 @@ ncm_mset_pindex_dup (NcmMSetPIndex *pi)
  * ncm_mset_pindex_free:
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
+ * Free a #NcmMSetPIndex.
  *
  */
 void
@@ -341,7 +365,21 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * @can_stack: whether the models can stack in a #NcmMSet
  * @main_model_id: main model id, use -1 if this is a main model
  *
- * FIXME
+ * Register a model class in the #NcmMSet. This function must be used once and only
+ * once in the model class definition. Any subclasse of the model class will inherit
+ * the model id. The same compilation unit must call the macro
+ * NCM_MSET_MODEL_REGISTER_ID() for each model class that will be used in the #NcmMSet.
+ * It should also include NCM_MSET_MODEL_DECLARE_ID() in the header file.
+ *
+ * If @can_stack is TRUE, the models can stack in a #NcmMSet. If @can_stack is FALSE,
+ * the #NcmMSet can contain only one instance of the model class or any of its
+ * subclasses.
+ *
+ * If @main_model_id is NCM_MSET_MODEL_MAIN(), this is a main model. If @main_model_id
+ * is not NCM_MSET_MODEL_MAIN(), this must be the id of the main model. This is used
+ * to define an hierarchy of models. For example, the model class #NcHIPrim is a
+ * submodel of #NcHICosmo. The main model of #NcHIPrim is #NcHICosmo. Thus, each
+ * instance of #NnHICosmo can contain one instance of #NcHIPrim.
  *
  */
 void
@@ -406,9 +444,9 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 /**
  * ncm_mset_empty_new:
  *
- * FIXME
+ * Creates a new empty #NcmMSet.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new empty #NcmMSet
  */
 NcmMSet *
 ncm_mset_empty_new (void)
@@ -419,11 +457,11 @@ ncm_mset_empty_new (void)
 /**
  * ncm_mset_new:
  * @model0: a #NcmModel
- * @...: FIXME
+ * @...: a null terminated list of #NcmModel
  *
- * FIXME
+ * Creates a new #NcmMSet with the models passed as arguments.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
 ncm_mset_new (gpointer model0, ...)
@@ -441,11 +479,11 @@ ncm_mset_new (gpointer model0, ...)
 /**
  * ncm_mset_newv:
  * @model0: a #NcmModel
- * @ap: FIXME
+ * @ap: a va_list
  *
- * FIXME
+ * Creates a new #NcmMSet with the models passed as arguments.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
 ncm_mset_newv (gpointer model0, va_list ap)
@@ -468,9 +506,9 @@ ncm_mset_newv (gpointer model0, va_list ap)
  * ncm_mset_new_array:
  * @model_array: (array) (element-type NcmModel): a #GPtrArray of #NcmModel.
  *
- * FIXME
+ * Creates a new #NcmMSet with the models passed as arguments.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
 ncm_mset_new_array (GPtrArray *model_array)
@@ -493,7 +531,7 @@ ncm_mset_new_array (GPtrArray *model_array)
  * ncm_mset_ref:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Increases the reference count of @mset by one.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
@@ -508,7 +546,7 @@ ncm_mset_ref (NcmMSet *mset)
  * @mset: a #NcmMSet
  * @ser: a #NcmSerialize
  *
- * FIXME
+ * Duplicate a #NcmMSet using a #NcmSerialize object.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
@@ -522,7 +560,7 @@ ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
  * ncm_mset_shallow_copy:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Creates a new #NcmMSet with the same models of @mset.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
@@ -551,7 +589,8 @@ ncm_mset_shallow_copy (NcmMSet *mset)
  * ncm_mset_free:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Atomically decreases the reference count of @mset by one. If the reference count drops to 0,
+ * all memory allocated by @mset is released.
  *
  */
 void
@@ -564,7 +603,9 @@ ncm_mset_free (NcmMSet *mset)
  * ncm_mset_clear:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * If *@mse is not NULL, decreases the reference count of @mset by one. If the
+ * reference count drops to 0, all memory allocated by @mset is released and *@mset is
+ * set to NULL.
  *
  */
 void
@@ -578,9 +619,9 @@ ncm_mset_clear (NcmMSet **mset)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  *
- * FIXME
+ * Peeks a #NcmModel from the #NcmMSet using the model id @mid.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a #NcmModel with the model id @mid
  */
 NcmModel *
 ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
@@ -597,11 +638,12 @@ ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
  * ncm_mset_peek_pos:
  * @mset: a #NcmMSet
  * @base_mid: a #NcmModelID
- * @stackpos_id: FIXME
+ * @stackpos_id: position in the stack
  *
- * FIXME
+ * Peeks a #NcmModel from the #NcmMSet using the model id @base_mid and stack position
+ * @stackpos_id. This function is useful when the model is stackable.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a #NcmModel with the model id @base_mid + @stackpos_id
  */
 NcmModel *
 ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
@@ -616,9 +658,9 @@ ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  *
- * FIXME
+ * Gets a #NcmModel from the #NcmMSet using the model id @mid.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a #NcmModel with the model id @mid.
  */
 NcmModel *
 ncm_mset_get (NcmMSet *mset, NcmModelID mid)
@@ -636,9 +678,12 @@ ncm_mset_get (NcmMSet *mset, NcmModelID mid)
  * @mset: a #NcmMSet
  * @i: array position
  *
- * FIXME
+ * Peeks a #NcmModel from the #NcmMSet using the array position @i.
+ * The array position is not guaranteed to be the same for different
+ * #NcmMSet objects. This function is useful to iterate over the models
+ * in the #NcmMSet.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a #NcmModel with the array position @i.
  */
 NcmModel *
 ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
@@ -653,9 +698,12 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
  * @mset: a #NcmMSet
  * @i: array position
  *
- * FIXME
+ * Gets the model id of the model in the array position @i.
+ * The array position is not guaranteed to be the same for different
+ * #NcmMSet objects. This function is useful to iterate over the models
+ * in the #NcmMSet.
  *
- * Returns: FIXME
+ * Returns: a #NcmModelID with the array position @i.
  */
 NcmModelID
 ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
@@ -670,7 +718,7 @@ ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  *
- * FIXME
+ * Removes a #NcmModel from the #NcmMSet using the model id @mid.
  *
  */
 void
@@ -697,7 +745,9 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
  * @mset: a #NcmMSet
  * @model: a #NcmModel
  *
- * FIXME
+ * Sets a #NcmModel in the #NcmMSet. If there is already a model with the same
+ * model id, it will be replaced. If it is a stackable model, it will be added
+ * to the first position.
  *
  */
 void
@@ -711,7 +761,9 @@ ncm_mset_set (NcmMSet *mset, NcmModel *model)
  * @mset: a #NcmMSet
  * @model: a #NcmModel
  *
- * FIXME
+ * Pushes a #NcmModel to the end of the #NcmMSet. If the model is not stackable,
+ * it will be added to the first position, if there is already a model with the
+ * same model id an error will be raised.
  *
  */
 void
@@ -743,9 +795,15 @@ static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stac
  * ncm_mset_set_pos:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
- * @stackpos_id: FIXME
+ * @stackpos_id: stack position
  *
- * FIXME
+ * Sets a #NcmModel in the #NcmMSet in the stack position @stackpos_id.
+ * If there is already a model with the same model id, it will be replaced.
+ * If it is a stackable model, it will be added to the position @stackpos_id.
+ * If @stackpos_id is 0, it will be added to the first position.
+ *
+ * If the @model is not stackable, it will raise an error if @stackpos_id is
+ * different from 0.
  *
  */
 void
@@ -832,9 +890,9 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
  * @mset: a #NcmMSet
  * @model: a #NcmModel
  *
- * FIXME
+ * Tests whether a #NcmModel exists in the #NcmMSet.
  *
- * Returns: FIXME
+ * Returns: TRUE if @model exists in @mset, FALSE otherwise.
  */
 gboolean
 ncm_mset_exists (NcmMSet *mset, NcmModel *model)
@@ -851,11 +909,12 @@ ncm_mset_exists (NcmMSet *mset, NcmModel *model)
  * ncm_mset_exists_pos:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
- * @stackpos_id: FIXME
+ * @stackpos_id: stack position
  *
- * FIXME
+ * Checks whether a #NcmModel with the same id as @model and stack position
+ * @stackpos_id exists in the #NcmMSet.
  *
- * Returns: FIXME
+ * Returns: TRUE if @model exists in @mset, FALSE otherwise.
  */
 gboolean
 ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
@@ -873,9 +932,10 @@ ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
  * @mset: a #NcmMSet
  * @sub_mset: a #NcmMSet
  *
- * FIXME
+ * Checks whether @sub_mset is a subset of @mset, that is,
+ * whether all models in @sub_mset are also in @mset.
  *
- * Returns: FIXME
+ * Returns: TRUE if @sub_mset is a subset of @mset, FALSE otherwise.
  */
 gboolean
 ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
@@ -901,9 +961,16 @@ ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
  * @mset0: a #NcmMSet
  * @mset1: a #NcmMSet
  *
- * FIXME
+ * Compares two #NcmMSet objects. It returns 0 if they contain the same
+ * models, with the same number of parameters, in the same order. It
+ * returns -1 if @mset0 has fewer models than @mset1, or if they have
+ * the same number of models but @mset0 has a model with fewer
+ * parameters than the corresponding model in @mset1. It returns 1 if
+ * @mset0 has more models than @mset1, or if they have the same number
+ * of models but @mset0 has a model with more parameters than the
+ * corresponding model in @mset1.
  *
- * Returns: FIXME
+ * Returns: the comparison result.
  */
 gint
 ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
@@ -937,11 +1004,11 @@ ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
 
 /**
  * ncm_mset_get_id_by_type:
- * @model_type: FIXME
+ * @model_type: a #GType
  *
- * FIXME
+ * Gets the model id for a model type in the GObject type system.
  *
- * Returns: FIXME
+ * Returns: the model id for @model_type, or -1 if @model_type is not a #NcmModel.
  */
 NcmModelID
 ncm_mset_get_id_by_type (GType model_type)
@@ -964,11 +1031,11 @@ ncm_mset_get_id_by_type (GType model_type)
 
 /**
  * ncm_mset_get_id_by_ns:
- * @ns: FIXME
+ * @ns: a string containing the model namespace
  *
- * FIXME
+ * Gets the model id for a model namespace.
  *
- * Returns: FIXME
+ * Returns: the model id for @ns, or -1 if @ns is not a registered model namespace.
  */
 NcmModelID
 ncm_mset_get_id_by_ns (const gchar *ns)
@@ -1036,7 +1103,8 @@ ncm_mset_get_type_by_id (NcmModelID id)
  * ncm_mset_prepare_fparam_map:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Computes the free parameters map for @mset. This function must be
+ * called before any other function that uses the free parameters map.
  *
  */
 void
@@ -1103,7 +1171,10 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
  * @fmap: (in) (array zero-terminated=1) (element-type utf8): an array of strings
  * @update_models: a boolean
  *
- * FIXME
+ * Sets the free parameters map for @mset. This function must be called
+ * before any other function that uses the free parameters map. The @fmap
+ * array must be zero-terminated and contain the full names of the free
+ * parameters in @mset.
  *
  */
 void
@@ -1169,7 +1240,9 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
  * ncm_mset_get_fmap:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the free parameters map for @mset. The returned array must be
+ * freed with g_strfreev(). It contains the full names of the free
+ * parameters in @mset.
  *
  * Returns: (transfer full) (array zero-terminated=1) (element-type utf8): an array of strings
  */
@@ -1199,9 +1272,10 @@ ncm_mset_get_fmap (NcmMSet *mset)
  * ncm_mset_total_len:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the total number of parameters in @mset (including fixed and
+ * free parameters).
  *
- * Returns: FIXME
+ * Returns: Total number of parameters in @mset.
  */
 guint
 ncm_mset_total_len (NcmMSet *mset)
@@ -1213,9 +1287,9 @@ ncm_mset_total_len (NcmMSet *mset)
  * ncm_mset_fparam_len:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the number of free parameters in @mset.
  *
- * Returns: FIXME
+ * Returns: Number of free parameters in @mset.
  */
 guint
 ncm_mset_fparam_len (NcmMSet *mset)
@@ -1227,9 +1301,10 @@ ncm_mset_fparam_len (NcmMSet *mset)
  * ncm_mset_max_param_name:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the maximum length of the parameter names in @mset.
+ * This function is useful to print the parameters in a pretty way.
  *
- * Returns: FIXME
+ * Returns: Maximum length of the parameter names in @mset.
  */
 guint
 ncm_mset_max_param_name (NcmMSet *mset)
@@ -1265,9 +1340,10 @@ ncm_mset_max_param_name (NcmMSet *mset)
  * ncm_mset_max_fparam_name:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the maximum length of the free parameter names in @mset.
+ * This function is useful to print the parameters in a pretty way.
  *
- * Returns: FIXME
+ * Returns: Maximum length of the free parameter names in @mset.
  */
 guint
 ncm_mset_max_fparam_name (NcmMSet *mset)
@@ -1289,9 +1365,10 @@ ncm_mset_max_fparam_name (NcmMSet *mset)
  * ncm_mset_max_model_nick:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the maximum length of the model nick in @mset.
+ * This function is useful to print the models in a pretty way.
  *
- * Returns: FIXME
+ * Returns: Maximum length of the model nick in @mset.
  */
 guint
 ncm_mset_max_model_nick (NcmMSet *mset)
@@ -1327,9 +1404,9 @@ ncm_mset_max_model_nick (NcmMSet *mset)
  * ncm_mset_nmodels:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the number of models in @mset.
  *
- * Returns: FIXME
+ * Returns: Number of models in @mset.
  */
 guint
 ncm_mset_nmodels (NcmMSet *mset)
@@ -1341,7 +1418,9 @@ ncm_mset_nmodels (NcmMSet *mset)
  * ncm_mset_pretty_log:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * This function prints the contents of @mset. It prints the model
+ * nick and parameters' names and their values indicating if they are
+ * fixed or free.
  *
  */
 void
@@ -1435,7 +1514,7 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
  * ncm_mset_params_log_vals:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Logs the values of the parameters in @mset.
  *
  */
 void
@@ -1470,9 +1549,10 @@ ncm_mset_params_log_vals (NcmMSet *mset)
 /**
  * ncm_mset_params_print_vals:
  * @mset: a #NcmMSet
- * @out: FIXME
+ * @out: a #FILE handler
  *
- * FIXME
+ * Prints the values of the parameters in @mset in
+ * the file @out.
  *
  */
 void
@@ -1507,7 +1587,10 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
  * @mset: a #NcmMSet
  * @covar: a #NcmMatrix
  *
- * FIXME
+ * Logs the covariance matrix of the free parameters in @mset.
+ * The covariance matrix is assumed to be in the same order as
+ * the free parameters in @mset and must be square and with
+ * the same size as the number of free parameters ncm_mset_fparam_len().
  *
  */
 void
@@ -1570,9 +1653,9 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
  * ncm_mset_params_valid:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Check whenever all models in @mset have valid parameters.
  *
- * Returns: FIXME
+ * Returns: If TRUE all models have valid parameters.
  */
 gboolean
 ncm_mset_params_valid (NcmMSet *mset)
@@ -1660,9 +1743,12 @@ ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
- * @x: FIXME
+ * @x: the value to set
  *
- * FIXME
+ * Sets the value of the parameter @pid in the model @mid to @x.
+ * This function does not update the model parameters. It is useful
+ * when the parameters are being updated in a loop and the model
+ * parameters are updated only once, after the loop.
  *
  */
 void
@@ -1676,9 +1762,10 @@ ncm_mset_param_set0 (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
- * @x: FIXME
+ * @x: the value to set
  *
- * FIXME
+ * Sets the value of the parameter @pid in the model @mid to @x.
+ * This function updates the model parameters.
  *
  */
 void
@@ -1693,9 +1780,9 @@ ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the value of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the value of the parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1709,9 +1796,10 @@ ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the value of the original parameter @pid in the model @mid.
+ * That is the value of the parameter before any reparametrization.
  *
- * Returns: FIXME
+ * Returns: the value of the original parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1725,9 +1813,9 @@ ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the name of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the name of the parameter @pid in the model @mid.
  */
 const gchar *
 ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1741,9 +1829,11 @@ ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the symbol of the parameter @pid in the model @mid. The
+ * parameter symbol is a string that represents the parameter
+ * using LaTeX symbols.
  *
- * Returns: FIXME
+ * Returns: the symbol of the parameter @pid in the model @mid.
  */
 const gchar *
 ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1757,9 +1847,12 @@ ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the scale of the parameter @pid in the model @mid.
+ * This scale is a value that is used as a starting guess
+ * for the variation of the parameter in a statistical
+ * analysis.
  *
- * Returns: FIXME
+ * Returns: the scale of the parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1774,7 +1867,10 @@ ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
  * @pid: parameter id
  * @scale: new scale
  *
- * FIXME
+ * Sets the scale of the parameter @pid in the model @mid to @scale.
+ * This scale is a value that is used as a starting guess
+ * for the variation of the parameter in a statistical
+ * analysis.
  *
  */
 void
@@ -1789,9 +1885,9 @@ ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scal
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the lower bound of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the lower bound of the parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1805,9 +1901,9 @@ ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the upper bound of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the upper bound of the parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1821,9 +1917,9 @@ ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
- * FIXME
+ * Gets the absolute tolerance of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the absolute tolerance of the parameter @pid in the model @mid.
  */
 gdouble
 ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -1838,7 +1934,8 @@ ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid)
  * @pid: parameter id
  * @ftype: a #NcmParamType
  *
- * FIXME
+ * Sets the type of the parameter @pid in the model @mid to @ftype.
+ * The parameter type can be fixed (#NCM_PARAM_TYPE_FIXED) or free (#NCM_PARAM_TYPE_FREE).
  *
  */
 void
@@ -2105,9 +2202,9 @@ ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src)
  * @mid: a #NcmModelID
  * @pid: parameter id
  *
- * FIXME
+ * Gets the type #NcmParamType of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the type #NcmParamType of the parameter @pid in the model @mid.
  */
 NcmParamType
 ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -2123,11 +2220,13 @@ ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_set_pi:
  * @mset: a #NcmMSet
- * @pi: (array length=n) (element-type NcmMSetPIndex): a #NcmMSetPIndex
+ * @pi: (array length=n) (element-type NcmMSetPIndex): a #NcmMSetPIndex array
  * @x: (array length=n) (element-type double): values to be set
  * @n: number of parameters to set
  *
- * FIXME
+ * Sets the values of the parameters in @mset using the values in @x.
+ * The parameters are identified by the #NcmMSetPIndex @pi. This array
+ * and @x must have the same size @n.
  *
  */
 void
@@ -2142,11 +2241,13 @@ ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, guint
 /**
  * ncm_mset_param_get_pi:
  * @mset: a #NcmMSet
- * @pi: a #NcmMSetPIndex
- * @x: FIXME
- * @n: FIXME
+ * @pi: (array length=n) (element-type NcmMSetPIndex): a #NcmMSetPIndex array
+ * @x: (array length=n) (element-type double): array to store the values
+ * @n: number of parameters to get
  *
- * FIXME
+ * Gets the values of the parameters in @mset and stores them in @x.
+ * The parameters are identified by the #NcmMSetPIndex @pi. This array
+ * and @x must have the same size @n.
  *
  */
 void
@@ -2163,7 +2264,9 @@ ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint n)
  * @mset: a #NcmMSet
  * @x: a #NcmVector
  *
- * FIXME
+ * Gets the free parameters of @mset and stores them in @x.
+ * The size of @x must be equal to the number of free parameters
+ * in @mset ncm_mset_fparams_len().
  *
  */
 void
@@ -2185,7 +2288,9 @@ ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x)
  * @x: a #NcmVector
  * @offset: starting index
  *
- * FIXME
+ * Gets the free parameters of @mset and stores them in @x starting
+ * at @offset. The size of @x must be equal to the number of free
+ * parameters in @mset ncm_mset_fparams_len() plus @offset.
  *
  */
 void
@@ -2206,7 +2311,9 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
  * @mset: a #NcmMSet
  * @x: a #NcmVector
  *
- * FIXME
+ * Sets the free parameters of @mset using the values of @x.
+ * The size of @x must be equal to the number of free parameters
+ * in @mset ncm_mset_fparams_len().
  *
  */
 void
@@ -2262,9 +2369,12 @@ ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint off
 /**
  * ncm_mset_fparams_set_array:
  * @mset: a #NcmMSet
- * @x: (array) (element-type double): FIXME
+ * @x: (array) (element-type double): array with the values
  *
- * FIXME
+ * Sets the free parameters of @mset using the values of @x.
+ * The size of @x must be equal to the number of free parameters
+ * in @mset ncm_mset_fparams_len(). Otherwise the behaviour is
+ * undefined.
  *
  */
 void
@@ -2290,9 +2400,11 @@ ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
 /**
  * ncm_mset_fparams_set_gsl_vector: (skip)
  * @mset: a #NcmMSet.
- * @x: FIXME
+ * @x: a #gsl_vector.
  *
- * FIXME
+ * Sets the free parameters of @mset using the values of @x.
+ * The size of @x must be equal to the number of free parameters
+ * in @mset ncm_mset_fparams_len().
  *
  */
 void
@@ -2319,9 +2431,9 @@ ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x)
  * ncm_mset_fparams_len:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets the number of free parameters in @mset.
  *
- * Returns: FIXME
+ * Returns: the number of free parameters in @mset.
  */
 guint
 ncm_mset_fparams_len (NcmMSet *mset)
@@ -2336,9 +2448,9 @@ ncm_mset_fparams_len (NcmMSet *mset)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the name of the @n-th free parameter.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the name of the @n-th free parameter.
  */
 const gchar *
 ncm_mset_fparam_name (NcmMSet *mset, guint n)
@@ -2356,9 +2468,9 @@ ncm_mset_fparam_name (NcmMSet *mset, guint n)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the symbol of the @n-th free parameter.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the symbol of the @n-th free parameter.
  */
 const gchar *
 ncm_mset_fparam_symbol (NcmMSet *mset, guint n)
@@ -2376,9 +2488,11 @@ ncm_mset_fparam_symbol (NcmMSet *mset, guint n)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the full name of the @n-th free parameter. That is
+ * the name of the model, the stack position and the parameter
+ * name.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the full name of the @n-th free parameter.
  */
 const gchar *
 ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
@@ -2414,9 +2528,12 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
  * @mset: a #NcmMSet
  * @fullname: param's full name
  *
- * FIXME
+ * Gets the #NcmMSetPIndex of the parameter identified by @fullname.
+ * The @fullname must be in the form "model:stackpos:param_name" when
+ * the model has a stack or "model:param_name" when the model has no
+ * stack.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the #NcmMSetPIndex of the parameter identified by @fullname.
  */
 NcmMSetPIndex *
 ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
@@ -2494,9 +2611,9 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the scale of the @n-th free parameter.
  *
- * Returns: FIXME
+ * Returns: the scale of the @n-th free parameter.
  */
 gdouble
 ncm_mset_fparam_get_scale (NcmMSet *mset, guint n)
@@ -2514,9 +2631,9 @@ ncm_mset_fparam_get_scale (NcmMSet *mset, guint n)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the lower bound of the @n-th free parameter.
  *
- * Returns: FIXME
+ * Returns: the lower bound of the @n-th free parameter.
  */
 gdouble
 ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n)
@@ -2534,9 +2651,9 @@ ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the upper bound of the @n-th free parameter.
  *
- * Returns: FIXME
+ * Returns: the upper bound of the @n-th free parameter.
  */
 gdouble
 ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
@@ -2553,9 +2670,12 @@ ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
  * ncm_mset_fparam_get_bound_matrix:
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Gets a matrix with the lower and upper bounds of all free parameters.
+ * The returned matrix has two columns, the first column contains the
+ * lower bounds and the second column contains the upper bounds.
+ * The number of rows is equal to the number of free parameters in @mset.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a matrix with the lower and upper bounds of all free parameters.
  */
 NcmMatrix *
 ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
@@ -2583,9 +2703,9 @@ ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the absolute tolerance of the @n-th free parameter.
  *
- * Returns: FIXME
+ * Returns: the absolute tolerance of the @n-th free parameter.
  */
 gdouble
 ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
@@ -2604,7 +2724,7 @@ ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
  * @n: free parameter index
  * @scale: new scale
  *
- * FIXME
+ * Sets the scale of the @n-th free parameter to @scale.
  *
  */
 void
@@ -2623,7 +2743,7 @@ ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale)
  * @mset: a #NcmMSet
  * @theta: free parameters vector
  *
- * FIXME
+ * Checks if the values of @theta respect the parameter bounds.
  *
  * Returns: whether @theta contain values respecting the parameter bounds.
  */
@@ -2655,7 +2775,8 @@ ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
  * @theta: free parameters vector
  * @offset: starting index
  *
- * FIXME
+ * Checks if the values of @theta respect the parameter bounds.
+ * The values are checked starting at @offset.
  *
  * Returns: whether @theta contain values respecting the parameter bounds.
  */
@@ -2686,7 +2807,7 @@ ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offs
  * @mset: a #NcmMSet
  * @theta: free parameters vector
  *
- * FIXME
+ * Checks if the values of @theta respect all requirements.
  *
  * Returns: whether @theta contain values respecting all requirements.
  */
@@ -2712,9 +2833,9 @@ ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the value of the @n-th free parameter.
  *
- * Returns: FIXME
+ * Returns: the value of the @n-th free parameter.
  */
 gdouble
 ncm_mset_fparam_get (NcmMSet *mset, guint n)
@@ -2731,9 +2852,9 @@ ncm_mset_fparam_get (NcmMSet *mset, guint n)
  * ncm_mset_fparam_set:
  * @mset: a #NcmMSet
  * @n: free parameter index
- * @x: FIXME
+ * @x: new value
  *
- * FIXME
+ * Sets the value of the @n-th free parameter to @x.
  *
  */
 void
@@ -2752,9 +2873,9 @@ ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x)
  * @mset: a #NcmMSet
  * @n: free parameter index
  *
- * FIXME
+ * Gets the #NcmMSetPIndex of the @n-th free parameter.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmMSetPIndex of the @n-th free parameter.
  */
 const NcmMSetPIndex *
 ncm_mset_fparam_get_pi (NcmMSet *mset, guint n)
@@ -2770,9 +2891,9 @@ ncm_mset_fparam_get_pi (NcmMSet *mset, guint n)
  * @mid: a #NcmModelID
  * @pid: parameter id
  *
- * FIXME
+ * Gets the free parameter index of the parameter @pid in the model @mid.
  *
- * Returns: FIXME
+ * Returns: the free parameter index of the parameter @pid in the model @mid.
  */
 gint
 ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
@@ -2791,11 +2912,12 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_fparam_get_pi_by_name:
  * @mset: a #NcmMSet
- * @name: FIXME
+ * @name: parameter name
  *
- * FIXME
+ * Gets the #NcmMSetPIndex of the parameter identified by @name.
+ * The name can be the parameter name or the full name.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmMSetPIndex of the parameter identified by @name.
  */
 const NcmMSetPIndex *
 ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
@@ -2862,8 +2984,8 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
  * ncm_mset_save:
  * @mset: a #NcmMSet
  * @ser: a #NcmSerialize
- * @filename: FIXME
- * @save_comment: FIXME
+ * @filename: a filename
+ * @save_comment: whether to save comments
  *
  * Saves the #NcmMSet to a file using #GKeyFile.
  *

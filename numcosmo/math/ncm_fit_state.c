@@ -265,7 +265,7 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                                       NULL,
                                                       "Number of interations",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_FUNC_EVAL,
@@ -273,7 +273,7 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                                       NULL,
                                                       "Number of function evaluations",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_GRAD_EVAL,
@@ -281,7 +281,7 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                                       NULL,
                                                       "Number of gradient evaluations",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_IS_BEST_FIT,
@@ -289,7 +289,7 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                                          NULL,
                                                          "Is a best fit state",
                                                          FALSE,
-                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void

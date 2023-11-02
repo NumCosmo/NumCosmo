@@ -46,9 +46,15 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_run, \
                     &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/run/empty", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
                     &test_ncm_fit_run_empty, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/empty/restart", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
+                    &test_ncm_fit_run_restart, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/run/restart", TestNcmFit, NULL, \
@@ -74,6 +80,21 @@ typedef struct _TestNcmFit
         g_test_add ("/ncm/fit/" #lib "/" #algo "/copy_new", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_copy_new, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/wrong/fit", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_sub_fit_wrong_fit, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/wrong/mset", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_sub_fit_wrong_mset, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/wrong/param", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_sub_fit_wrong_param, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
@@ -196,6 +217,9 @@ void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_sub_fit_wrong_mset (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -478,6 +502,73 @@ test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata)
     }
   }
 
+  ncm_fit_free (fit_dup);
+}
+
+void
+test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata)
+{
+  /* LCOV_EXCL_START */
+  if (g_test_subprocess ())
+  {
+    ncm_fit_set_sub_fit (test->fit, test->fit);
+
+    return;
+  }
+
+  /* LCOV_EXCL_STOP */
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_fit_sub_fit_wrong_mset (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmFit *fit_dup   = NCM_FIT (ncm_serialize_dup_obj (ser, G_OBJECT (test->fit)));
+
+  /* LCOV_EXCL_START */
+  if (g_test_subprocess ())
+  {
+    ncm_mset_remove (ncm_fit_peek_mset (fit_dup), ncm_model_mvnd_id ());
+    ncm_fit_set_sub_fit (fit_dup, test->fit);
+
+    return;
+  }
+
+  /* LCOV_EXCL_STOP */
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+
+  ncm_serialize_free (ser);
+  ncm_fit_free (fit_dup);
+}
+
+void
+test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmFit *fit_dup   = NCM_FIT (ncm_serialize_dup_obj (ser, G_OBJECT (test->fit)));
+
+  /* LCOV_EXCL_START */
+  if (g_test_subprocess ())
+  {
+    ncm_fit_set_sub_fit (fit_dup, test->fit);
+
+    return;
+  }
+
+  /* LCOV_EXCL_STOP */
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+
+  ncm_serialize_free (ser);
   ncm_fit_free (fit_dup);
 }
 
