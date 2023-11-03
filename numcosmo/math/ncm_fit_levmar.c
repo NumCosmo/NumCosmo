@@ -71,6 +71,7 @@ struct _NcmFitLevmar
   gpointer workz;
   guint fparam_len;
   guint data_len;
+  NcmVector *f;
   NcmVector *lb;
   NcmVector *ub;
   NcmFitLevmarAlgos algo;
@@ -82,6 +83,7 @@ static void
 ncm_fit_levmar_init (NcmFitLevmar *fit_levmar)
 {
   fit_levmar->workz = NULL;
+  fit_levmar->f     = NULL;
   fit_levmar->ub    = NULL;
   fit_levmar->lb    = NULL;
 }
@@ -100,6 +102,7 @@ _ncm_fit_levmar_constructed (GObject *object)
 
     if (fit_levmar->fparam_len > 0)
     {
+      fit_levmar->f  = NULL;
       fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
       fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
     }
@@ -156,6 +159,7 @@ _ncm_fit_levmar_dispose (GObject *object)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
 
+  ncm_vector_clear (&fit_levmar->f);
   ncm_vector_clear (&fit_levmar->lb);
   ncm_vector_clear (&fit_levmar->ub);
 
@@ -228,6 +232,7 @@ _ncm_fit_levmar_reset (NcmFit *fit)
     {
       fit_levmar->fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
+      ncm_vector_clear (&fit_levmar->f);
       ncm_vector_clear (&fit_levmar->lb);
       ncm_vector_clear (&fit_levmar->ub);
 
@@ -266,6 +271,9 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_vector_set (fit_levmar->lb, i, ncm_mset_fparam_get_lower_bound (mset, i));
     ncm_vector_set (fit_levmar->ub, i, ncm_mset_fparam_get_upper_bound (mset, i));
   }
+
+  /* Creating a fake vector */
+  fit_levmar->f = ncm_vector_new_data_static (GINT_TO_POINTER (1), fit_levmar->data_len, 1);
 
   switch (fit_levmar->algo)
   {
@@ -471,21 +479,21 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 static void
 nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 {
-  NcmFit *fit         = NCM_FIT (adata);
-  NcmFitState *fstate = ncm_fit_peek_state (fit);
-  NcmMSet *mset       = ncm_fit_peek_mset (fit);
-  NcmVector *f        = ncm_vector_new_data_static (hx, n, 1);
+  NcmFit *fit              = NCM_FIT (adata);
+  NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
+  NcmFitState *fstate      = ncm_fit_peek_state (fit);
+  NcmMSet *mset            = ncm_fit_peek_mset (fit);
 
+  ncm_vector_replace_data (fit_levmar->f, hx);
   ncm_fit_params_set_array (fit, p);
 
   if (!ncm_mset_params_valid (mset))
     g_warning ("nc_residual_levmar_f: stepping in a invalid parameter point, continuing anyway.");
 
-  ncm_fit_ls_f (fit, f);
+  ncm_fit_ls_f (fit, fit_levmar->f);
 
-  ncm_fit_state_set_m2lnL_curval (fstate, gsl_pow_2 (ncm_vector_dnrm2 (f)));
+  ncm_fit_state_set_m2lnL_curval (fstate, gsl_pow_2 (ncm_vector_dnrm2 (fit_levmar->f)));
   ncm_fit_log_step (fit);
-  ncm_vector_free (f);
 }
 
 static void

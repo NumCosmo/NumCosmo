@@ -61,6 +61,7 @@ struct _NcmDataset
   NcmDatasetBStrapType bstype;
   GArray *data_prob;
   GArray *bstrap;
+  NcmVector *ls_f;
 };
 
 G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);
@@ -74,6 +75,7 @@ ncm_dataset_init (NcmDataset *dset)
   dset->oa        = ncm_obj_array_sized_new (_NCM_DATASET_INITIAL_ALLOC);
   dset->data_prob = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_DATASET_INITIAL_ALLOC);
   dset->bstrap    = g_array_sized_new (FALSE, FALSE, sizeof (guint), _NCM_DATASET_INITIAL_ALLOC);
+  dset->ls_f      = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1);
 }
 
 static void
@@ -136,6 +138,8 @@ ncm_dataset_dispose (GObject *object)
     g_array_unref (dset->bstrap);
     dset->bstrap = NULL;
   }
+
+  ncm_vector_clear (&dset->ls_f);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_dataset_parent_class)->dispose (object);
@@ -811,12 +815,11 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
     }
     else
     {
-      NcmVector *f_i = ncm_vector_get_subvector (f, pos, n);
+      ncm_vector_get_subvector2 (dset->ls_f, f, pos, n);
 
       ncm_data_prepare (data, mset);
-      NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f_i);
+      NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, dset->ls_f);
       pos += n;
-      ncm_vector_free (f_i);
     }
   }
 

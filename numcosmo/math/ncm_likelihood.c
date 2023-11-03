@@ -63,6 +63,8 @@ ncm_likelihood_init (NcmLikelihood *lh)
   lh->m2lnL_v      = NULL;
   lh->priors_f     = ncm_obj_array_sized_new (10);
   lh->priors_m2lnL = ncm_obj_array_sized_new (10);
+  lh->ls_f_data    = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1); /* Invalid vectors */
+  lh->ls_f_priors  = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1); /* Invalid vectors */
 }
 
 static void
@@ -149,6 +151,9 @@ _ncm_likelihood_dispose (GObject *object)
 
   ncm_vector_clear (&lh->m2lnL_v);
   ncm_dataset_clear (&lh->dset);
+
+  ncm_vector_clear (&lh->ls_f_data);
+  ncm_vector_clear (&lh->ls_f_priors);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_likelihood_parent_class)->dispose (object);
@@ -559,18 +564,16 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
 
   if (data_size)
   {
-    NcmVector *data_f = ncm_vector_get_subvector (f, 0, data_size);
+    ncm_vector_get_subvector2 (lh->ls_f_data, f, 0, data_size);
 
-    ncm_dataset_leastsquares_f (lh->dset, mset, data_f);
-    ncm_vector_free (data_f);
+    ncm_dataset_leastsquares_f (lh->dset, mset, lh->ls_f_data);
   }
 
   if (priors_f_size)
   {
-    NcmVector *priors_f = ncm_vector_get_subvector (f, data_size, priors_f_size);
+    ncm_vector_get_subvector2 (lh->ls_f_priors, f, data_size, priors_f_size);
 
-    ncm_likelihood_priors_leastsquares_f (lh, mset, priors_f);
-    ncm_vector_free (priors_f);
+    ncm_likelihood_priors_leastsquares_f (lh, mset, lh->ls_f_priors);
   }
 
   return;
