@@ -236,7 +236,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_set_nonfatal_assertions ();
+  /* g_test_set_nonfatal_assertions (); */
 
 #ifdef NUMCOSMO_HAVE_NLOPT
   TESTS_NCM_ADD (nlopt, neldermead)
