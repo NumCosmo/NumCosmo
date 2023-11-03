@@ -97,6 +97,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_sub_fit_wrong_param, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/run", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_sub_fit_run, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -220,6 +225,7 @@ void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_mset (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -569,6 +575,27 @@ test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata)
   g_test_trap_assert_failed ();
 
   ncm_serialize_free (ser);
+  ncm_fit_free (fit_dup);
+}
+
+void
+test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmMSet *mset     = ncm_fit_peek_mset (test->fit);
+  NcmMSet *mset_dup = ncm_mset_shallow_copy (mset);
+  NcmFit *fit_dup   = ncm_fit_copy_new (test->fit,
+                                        ncm_fit_peek_likelihood (test->fit),
+                                        mset_dup,
+                                        ncm_fit_get_grad_type (test->fit));
+
+  ncm_mset_param_set_all_ftype (mset_dup, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
+  ncm_mset_param_set_ftype (mset, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_fit_set_sub_fit (test->fit, fit_dup);
+
+  ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
+
   ncm_fit_free (fit_dup);
 }
 

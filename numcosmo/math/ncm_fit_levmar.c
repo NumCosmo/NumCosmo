@@ -231,8 +231,11 @@ _ncm_fit_levmar_reset (NcmFit *fit)
       ncm_vector_clear (&fit_levmar->lb);
       ncm_vector_clear (&fit_levmar->ub);
 
-      fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
-      fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
+      if (fit_levmar->fparam_len)
+      {
+        fit_levmar->lb = ncm_vector_new (fit_levmar->fparam_len);
+        fit_levmar->ub = ncm_vector_new (fit_levmar->fparam_len);
+      }
 
       fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
       ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
