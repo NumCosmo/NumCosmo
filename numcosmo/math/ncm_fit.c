@@ -906,6 +906,20 @@ ncm_fit_get_messages (NcmFit *fit)
 }
 
 /**
+ * ncm_fit_is_least_squares:
+ * @fit: a #NcmFit
+ *
+ * Indicates if the least squares fitting is being used (TRUE) or not (FALSE).
+ *
+ * Returns: whenever the fit object use a least squares method.
+ */
+gboolean
+ncm_fit_is_least_squares (NcmFit *fit)
+{
+  return NCM_FIT_GET_CLASS (fit)->is_least_squares;
+}
+
+/**
  * ncm_fit_peek_mset:
  * @fit: a #NcmFit
  *
@@ -1587,20 +1601,6 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
   }
 
   ncm_serialize_free (ser);
-}
-
-/**
- * ncm_fit_is_least_squares:
- * @fit: a #NcmFit
- *
- * Indicates if the least squares fitting is being used (TRUE) or not (FALSE).
- *
- * Returns: whenever the fit object use a least squares method.
- */
-gboolean
-ncm_fit_is_least_squares (NcmFit *fit)
-{
-  return NCM_FIT_GET_CLASS (fit)->is_least_squares;
 }
 
 /**

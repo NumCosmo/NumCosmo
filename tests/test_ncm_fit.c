@@ -52,6 +52,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_set_get, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/params/set_get", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_params_set_get, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/run/grad/forward", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_run_grad_forward, \
@@ -236,6 +241,7 @@ TESTS_NCM_DECL (levmar, bc_der)
 
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
@@ -381,10 +387,86 @@ test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_ACCURATE);
   g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_ACCURATE);
 
+  if (NCM_IS_FIT_LEVMAR (fit) || NCM_IS_FIT_GSL_LS (fit))
+    g_assert_true (ncm_fit_is_least_squares (fit));
+  else
+    g_assert_false (ncm_fit_is_least_squares (fit));
+
   g_assert_true (NCM_IS_MSET (ncm_fit_peek_mset (fit)));
   g_assert_true (NCM_IS_FIT_STATE (ncm_fit_peek_state (fit)));
   g_assert_true (NCM_IS_LIKELIHOOD (ncm_fit_peek_likelihood (fit)));
   g_assert_true (NCM_IS_DIFF (ncm_fit_peek_diff (fit)));
+}
+
+void
+test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit             = test->fit;
+  NcmMSet *mset           = ncm_fit_peek_mset (fit);
+  const gdouble x0        = g_test_rand_double_range (-1.0, 1.0);
+  const guint fparams_len = ncm_mset_fparam_len (mset);
+
+  ncm_fit_params_set (fit, 0, x0);
+  g_assert_true (ncm_mset_fparam_get (mset, 0) == x0);
+
+  /* Testing setting vector */
+  {
+    NcmVector *x_vec = ncm_vector_new (fparams_len);
+    gint i;
+
+    for (i = 0; i < fparams_len; i++)
+      ncm_vector_set (x_vec, i, g_test_rand_double_range (-1.0, 1.0));
+
+    ncm_fit_params_set_vector (fit, x_vec);
+
+    for (i = 0; i < fparams_len; i++)
+      g_assert_true (ncm_mset_fparam_get (mset, i) == ncm_vector_get (x_vec, i));
+  }
+
+  /* Testing setting vector with offset */
+  {
+    guint offset     = g_test_rand_int_range (1, 10);
+    NcmVector *x_vec = ncm_vector_new (fparams_len + offset);
+    gint i;
+
+    for (i = 0; i < fparams_len + offset; i++)
+      ncm_vector_set (x_vec, i, g_test_rand_double_range (-1.0, 1.0));
+
+    ncm_fit_params_set_vector_offset (fit, x_vec, offset);
+
+    for (i = 0; i < fparams_len; i++)
+      g_assert_true (ncm_mset_fparam_get (mset, i) == ncm_vector_get (x_vec, i + offset));
+  }
+
+  /* Testing setting array */
+  {
+    GArray *x_array = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    gint i;
+
+    g_array_set_size (x_array, fparams_len);
+
+    for (i = 0; i < fparams_len; i++)
+      g_array_index (x_array, gdouble, i) = g_test_rand_double_range (-1.0, 1.0);
+
+    ncm_fit_params_set_array (fit, (gdouble *) x_array->data);
+
+    for (i = 0; i < fparams_len; i++)
+      g_assert_true (ncm_mset_fparam_get (mset, i) == g_array_index (x_array, gdouble, i));
+  }
+
+  /* Testing setting gsl_vector */
+  {
+    NcmVector *x_vec = ncm_vector_new (fparams_len);
+    gint i;
+
+    for (i = 0; i < fparams_len; i++)
+      ncm_vector_set (x_vec, i, g_test_rand_double_range (-1.0, 1.0));
+
+    ncm_fit_params_set_gsl_vector (fit, ncm_vector_gsl (x_vec));
+
+    for (i = 0; i < fparams_len; i++)
+      g_assert_true (ncm_mset_fparam_get (mset, i) == ncm_vector_get (x_vec, i));
+  }
 }
 
 void
@@ -741,14 +823,43 @@ test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata)
                                         mset_dup,
                                         ncm_fit_get_grad_type (test->fit));
 
-  ncm_mset_param_set_all_ftype (mset_dup, NCM_PARAM_TYPE_FIXED);
-  ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
   ncm_mset_param_set_ftype (mset, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FIXED);
 
-  ncm_fit_set_sub_fit (test->fit, fit_dup);
+  ncm_mset_param_set_all_ftype (mset_dup, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
 
+  ncm_fit_set_sub_fit (test->fit, fit_dup);
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
 
+  g_assert_true (ncm_fit_get_sub_fit (test->fit) == fit_dup);
+
+  {
+    NcmMSet *mset       = ncm_fit_peek_mset (test->fit);
+    NcmMSet *mset_dup   = ncm_fit_peek_mset (fit_dup);
+    NcmModel *model     = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmModel *model_dup = NCM_MODEL (ncm_mset_peek (mset_dup, ncm_model_mvnd_id ()));
+    NcmVector *y        = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+    NcmVector *y_dup    = ncm_model_orig_vparam_get_vector (model_dup, NCM_MODEL_MVND_MEAN);
+    gint i;
+
+    g_assert_true (NCM_IS_FIT (fit_dup));
+    g_assert_false (mset == mset_dup);
+    g_assert_true (model == model_dup);
+
+    for (i = 0; i < ncm_vector_len (y); i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (y_dup, i), 5.0e-2, 5.0e-2);
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (y_dup, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (y_dup, i) - 1.0));
+       */
+    }
+  }
+
+  ncm_fit_free (fit_dup);
   ncm_fit_free (fit_dup);
 }
 

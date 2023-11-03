@@ -230,8 +230,24 @@ _ncm_fit_gsl_mms_reset (NcmFit *fit)
       fit_gsl_mms->f.n = fparam_len;
       fit_gsl_mms->mms = NULL;
 
+      ncm_vector_clear (&fit_gsl_mms->ss);
+
       if (fparam_len > 0)
+      {
+        NcmMSet *mset = ncm_fit_peek_mset (fit);
+        gint i;
+
         ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
+
+        fit_gsl_mms->ss = ncm_vector_new (fparam_len);
+
+        for (i = 0; i < ncm_mset_fparams_len (mset); i++)
+        {
+          gdouble pscale = ncm_mset_fparam_get_scale (mset, i);
+
+          ncm_vector_set (fit_gsl_mms->ss, i, pscale * 1e-3);
+        }
+      }
     }
   }
 }

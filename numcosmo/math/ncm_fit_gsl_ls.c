@@ -189,7 +189,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
   {
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
     NcmVector *_f = ncm_vector_new_gsl_static (fit_gsl_ls->ls->f);
-    NcmMatrix *_J = ncm_matrix_new (fit_gsl_ls->f.p, fit_gsl_ls->f.p);
+    NcmMatrix *_J = ncm_matrix_new (fit_gsl_ls->f.n, fit_gsl_ls->f.p);
 
     gsl_multifit_fdfsolver_jac (fit_gsl_ls->ls, ncm_matrix_gsl (_J));
 

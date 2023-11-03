@@ -164,6 +164,7 @@ gdouble ncm_fit_get_m2lnL_reltol (NcmFit *fit);
 gdouble ncm_fit_get_m2lnL_abstol (NcmFit *fit);
 gdouble ncm_fit_get_params_reltol (NcmFit *fit);
 NcmFitRunMsgs ncm_fit_get_messages (NcmFit *fit);
+gboolean ncm_fit_is_least_squares (NcmFit *fit);
 
 NcmMSet *ncm_fit_peek_mset (NcmFit *fit);
 NcmFitState *ncm_fit_peek_state (NcmFit *fit);
@@ -185,8 +186,6 @@ guint ncm_fit_equality_constraints_len (NcmFit *fit);
 guint ncm_fit_inequality_constraints_len (NcmFit *fit);
 void ncm_fit_get_equality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdouble *tot);
 void ncm_fit_get_inequality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdouble *tot);
-
-gboolean ncm_fit_is_least_squares (NcmFit *fit);
 
 const gchar *ncm_fit_get_desc (NcmFit *fit);
 void ncm_fit_log_info (NcmFit *fit);
