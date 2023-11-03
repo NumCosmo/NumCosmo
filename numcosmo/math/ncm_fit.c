@@ -2223,6 +2223,7 @@ _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
   J_a = ncm_diff_rf_d1_N_to_M (self->diff, x_a, data_len, _ncm_fit_numdiff_ls_f, fit, NULL);
 
   ncm_matrix_set_from_array (J, J_a);
+  ncm_matrix_transpose (J);
   ncm_mset_fparams_set_vector (self->mset, x);
 
   g_array_unref (x_a);

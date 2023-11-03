@@ -47,6 +47,26 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_run, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/set_get", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_set_get, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/grad/forward", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_grad_forward, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/grad/accurate", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_grad_accurate, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/grad/wrong/type", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_grad_wrong_type, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/run/empty", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new_empty, \
                     &test_ncm_fit_run_empty, \
@@ -215,7 +235,11 @@ TESTS_NCM_DECL (levmar, bc_dif)
 TESTS_NCM_DECL (levmar, bc_der)
 
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_grad_wrong_type (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
@@ -319,6 +343,51 @@ test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
 }
 
 void
+test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit                 = test->fit;
+  const guint maxiter         = g_test_rand_int_range (1, 1000);
+  const gdouble m2lnL_abstol  = g_test_rand_double_range (1.0e-6, 1.0e-3);
+  const gdouble m2lnL_reltol  = g_test_rand_double_range (1.0e-6, 1.0e-3);
+  const gdouble params_reltol = g_test_rand_double_range (1.0e-6, 1.0e-3);
+
+  ncm_fit_set_maxiter (fit, maxiter);
+  g_assert_true (ncm_fit_get_maxiter (fit) == maxiter);
+
+  ncm_fit_set_m2lnL_abstol (fit, m2lnL_abstol);
+  g_assert_true (ncm_fit_get_m2lnL_abstol (fit) == m2lnL_abstol);
+
+  ncm_fit_set_m2lnL_reltol (fit, m2lnL_reltol);
+  g_assert_true (ncm_fit_get_m2lnL_reltol (fit) == m2lnL_reltol);
+
+  ncm_fit_set_params_reltol (fit, params_reltol);
+  g_assert_true (ncm_fit_get_params_reltol (fit) == params_reltol);
+
+  ncm_fit_set_messages (fit, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_true (ncm_fit_get_messages (fit) == NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_set_messages (fit, NCM_FIT_RUN_MSGS_SIMPLE);
+  g_assert_true (ncm_fit_get_messages (fit) == NCM_FIT_RUN_MSGS_SIMPLE);
+
+  ncm_fit_set_messages (fit, NCM_FIT_RUN_MSGS_FULL);
+  g_assert_true (ncm_fit_get_messages (fit) == NCM_FIT_RUN_MSGS_FULL);
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_FORWARD);
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_ACCURATE);
+  g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_ACCURATE);
+
+  g_assert_true (NCM_IS_MSET (ncm_fit_peek_mset (fit)));
+  g_assert_true (NCM_IS_FIT_STATE (ncm_fit_peek_state (fit)));
+  g_assert_true (NCM_IS_LIKELIHOOD (ncm_fit_peek_likelihood (fit)));
+  g_assert_true (NCM_IS_DIFF (ncm_fit_peek_diff (fit)));
+}
+
+void
 test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit = test->fit;
@@ -345,6 +414,90 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
        */
     }
   }
+}
+
+void
+test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_FORWARD);
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmMSet *mset   = ncm_fit_peek_mset (fit);
+    NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+    NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+    gint i;
+
+    for (i = 0; i < ncm_vector_len (y); i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (ym, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
+       */
+    }
+  }
+}
+
+void
+test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_ACCURATE);
+  g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_ACCURATE);
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmMSet *mset   = ncm_fit_peek_mset (fit);
+    NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+    NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+    gint i;
+
+    for (i = 0; i < ncm_vector_len (y); i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+
+      /*
+       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+       *       ncm_vector_get (y, i),
+       *       ncm_vector_get (ym, i),
+       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
+       */
+    }
+  }
+}
+
+void
+test_ncm_fit_run_grad_wrong_type (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  /* LCOV_EXCL_START */
+  if (g_test_subprocess ())
+  {
+    ncm_fit_set_grad_type (fit, 1000);
+
+    return;
+  }
+
+  /* LCOV_EXCL_STOP */
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
 }
 
 void
