@@ -264,7 +264,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
   g_assert (ncm_fit_state_get_fparam_len (fstate) != 0);
 
   if (ncm_fit_equality_constraints_len (fit) || ncm_fit_inequality_constraints_len (fit))
-    g_error ("_ncm_fit_levmar_run: GSL algorithms do not support constraints.");
+    g_error ("_ncm_fit_levmar_run: levmar algorithms do not support constraints.");
 
   for (i = 0; i < fit_levmar->fparam_len; i++)
   {

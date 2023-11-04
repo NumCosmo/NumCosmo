@@ -127,6 +127,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_sub_fit_run, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/constraints/equality", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_equality_constraints, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -256,6 +261,7 @@ void test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_mset (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -861,6 +867,52 @@ test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_free (fit_dup);
   ncm_fit_free (fit_dup);
+}
+
+void
+test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit       = test->fit;
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+
+  ncm_fit_add_equality_constraint (fit, func, 1.0e-5);
+
+#ifdef NUMCOSMO_HAVE_NLOPT
+
+  if (NCM_IS_FIT_NLOPT (fit))
+  {
+    NcmFitNloptAlgorithm algorithm;
+    g_object_get (fit, "algorithm", &algorithm, NULL);
+
+    if (algorithm != NCM_FIT_NLOPT_LD_SLSQP)
+    {
+      g_test_skip ("Only NLOpt:slsqp supports equality constraints");
+
+      return;
+    }
+
+    ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  }
+  else
+  {
+    g_test_skip ("Only NLOpt:slsqp supports equality constraints");
+
+    return;
+  }
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmMSet *mset   = ncm_fit_peek_mset (fit);
+    NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+    NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+
+    ncm_assert_cmpdouble_e (ncm_vector_get (ym, 0), ==, 1.0, 5.0e-2, 5.0e-2);
+  }
+
+
+#endif /* NUMCOSMO_HAVE_NLOPT */
+  ncm_mset_func_free (func);
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT
