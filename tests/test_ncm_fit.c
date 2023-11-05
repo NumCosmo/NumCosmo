@@ -137,6 +137,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_inequality_constraints, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/serialize/constraints", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_serialize_constraints, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -268,6 +273,7 @@ void test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -925,6 +931,8 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
     g_assert_true (func == func2);
     g_assert_true (tol == 1.0e-5);
   }
+  ncm_fit_remove_equality_constraints (fit);
+  g_assert_true (ncm_fit_equality_constraints_len (fit) == 0);
 
 #endif /* NUMCOSMO_HAVE_NLOPT */
   ncm_mset_func_free (func);
@@ -980,9 +988,77 @@ test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
     g_assert_true (func == func2);
     g_assert_true (tol == 1.0e-5);
   }
+  ncm_fit_remove_inequality_constraints (fit);
+  g_assert_true (ncm_fit_inequality_constraints_len (fit) == 0);
 
 #endif /* NUMCOSMO_HAVE_NLOPT */
   ncm_mset_func_free (func);
+}
+
+void
+test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit        = test->fit;
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 1, 1.1, 1.1));
+  NcmFit *fit_dup;
+
+  ncm_fit_add_inequality_constraint (fit, func0, 1.0e-5);
+  ncm_fit_add_equality_constraint (fit, func1, 1.0e-5);
+
+  fit_dup = ncm_fit_dup (fit, ser);
+
+  g_assert_true (ncm_fit_inequality_constraints_len (fit_dup) == 1);
+  g_assert_true (ncm_fit_equality_constraints_len (fit_dup) == 1);
+
+  {
+    NcmMSetFunc *func0_dup = NULL;
+    NcmMSetFunc *func1_dup = NULL;
+    gdouble mu, sigma;
+    guint mid, pid;
+    gdouble tol0_dup;
+    gdouble tol1_dup;
+
+    ncm_fit_get_inequality_constraint (fit_dup, 0, &func0_dup, &tol0_dup);
+    ncm_fit_get_equality_constraint (fit_dup, 0, &func1_dup, &tol1_dup);
+
+    g_assert_true (NCM_IS_MSET_FUNC (func0_dup));
+    g_assert_true (NCM_IS_MSET_FUNC (func1_dup));
+
+    g_assert_true (NCM_IS_PRIOR_GAUSS (func0_dup));
+    g_assert_true (NCM_IS_PRIOR_GAUSS (func1_dup));
+
+    g_assert_true (NCM_IS_PRIOR_GAUSS_PARAM (func0_dup));
+    g_assert_true (NCM_IS_PRIOR_GAUSS_PARAM (func1_dup));
+
+    g_object_get (func0_dup,
+                  "mu", &mu,
+                  "sigma", &sigma,
+                  "mid", &mid,
+                  "pid", &pid,
+                  NULL);
+
+    g_assert_true (mu == 1.0);
+    g_assert_true (sigma == 1.0);
+    g_assert_true (mid == ncm_model_mvnd_id ());
+    g_assert_true (pid == 0);
+
+    g_object_get (func1_dup,
+                  "mu", &mu,
+                  "sigma", &sigma,
+                  "mid", &mid,
+                  "pid", &pid,
+                  NULL);
+
+    g_assert_true (mu == 1.1);
+    g_assert_true (sigma == 1.1);
+    g_assert_true (mid == ncm_model_mvnd_id ());
+    g_assert_true (pid == 1);
+
+    g_assert_true (tol0_dup == 1.0e-5);
+    g_assert_true (tol1_dup == 1.0e-5);
+  }
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT
