@@ -47,6 +47,16 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_run, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/simple", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_simple, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/full", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_full, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/set_get", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_set_get, \
@@ -258,6 +268,8 @@ void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_full (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_wrong_type (TestNcmFit *test, gconstpointer pdata);
@@ -514,6 +526,84 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
        */
     }
   }
+}
+
+void
+test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmFit *fit = test->fit;
+
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_SIMPLE);
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_SIMPLE);
+
+    {
+      NcmMSet *mset   = ncm_fit_peek_mset (fit);
+      NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+      NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+      NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+      gint i;
+
+      for (i = 0; i < ncm_vector_len (y); i++)
+      {
+        ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+
+        /*
+         *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+         *       ncm_vector_get (y, i),
+         *       ncm_vector_get (ym, i),
+         *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
+         */
+      }
+    }
+
+    return;
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*Minimum found with precision*");
+}
+
+void
+test_ncm_fit_run_full (TestNcmFit *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmFit *fit = test->fit;
+
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_FULL);
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_FULL);
+
+    {
+      NcmMSet *mset   = ncm_fit_peek_mset (fit);
+      NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+      NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+      NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+      gint i;
+
+      for (i = 0; i < ncm_vector_len (y); i++)
+      {
+        ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+
+        /*
+         *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
+         *       ncm_vector_get (y, i),
+         *       ncm_vector_get (ym, i),
+         *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
+         */
+      }
+    }
+
+    return;
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*Minimum found with precision*");
 }
 
 void

@@ -1267,28 +1267,6 @@ ncm_fit_get_inequality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdo
 }
 
 /**
- * ncm_fit_ls_covar:
- * @fit: a #NcmFit
- *
- * Computes the covariance matrix using the least squares method,
- * and fills up the internal structure matrix.
- *
- */
-void
-ncm_fit_ls_covar (NcmFit *fit)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  NcmMatrix *J        = ncm_fit_state_peek_J (self->fstate);
-  NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
-
-  ncm_fit_ls_J (fit, J);
-  gsl_multifit_covar (ncm_matrix_gsl (J), 0.0,
-                      ncm_matrix_gsl (covar));
-
-  ncm_fit_state_set_has_covar (self->fstate, TRUE);
-}
-
-/**
  * ncm_fit_covar_fparam_var:
  * @fit: a #NcmFit
  * @fpi: index of a free parameter
@@ -2329,17 +2307,8 @@ _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data)
   ncm_fit_ls_f (fit, y);
 }
 
-/**
- * ncm_fit_numdiff_m2lnL_hessian:
- * @fit: a #NcmFit
- * @H: a #NcmMatrix
- * @reltol: relative tolerance.
- *
- * Calculates the Hessian of $-2\ln(L)$ with respect to the free parameters.
- *
- */
-void
-ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
+static void
+_ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 {
   NcmFitPrivate *self         = ncm_fit_get_instance_private (fit);
   const guint free_params_len = ncm_mset_fparams_len (self->mset);
@@ -2416,23 +2385,70 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
  * ncm_fit_obs_fisher:
  * @fit: a #NcmFit
  *
- * Calculates the covariance from the observed Fisher
- * matrix, see ncm_fit_numdiff_m2lnL_covar().
+ * Computes the covariance matrix using the inverse of the Hessian matrix
+ * $\partial_i\partial_j -\ln(L)$, where the derivatives are taken with respect to the
+ * free parameters. This function does not use the gradient defined in the @fit object,
+ * it always uses the accurate numerical differentiation methods implemented in the
+ * #NcmDiff object.
  *
+ * It sets both the covariance matrix and the Hessian matrix in the #NcmFitState object
+ * associated to the @fit object.
  */
 void
 ncm_fit_obs_fisher (NcmFit *fit)
 {
-  ncm_fit_numdiff_m2lnL_covar (fit);
+  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmMatrix *hessian  = ncm_fit_state_peek_hessian (self->fstate);
+
+  if (ncm_mset_fparam_len (self->mset) == 0)
+    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+
+  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
+  ncm_matrix_scale (hessian, 0.5);
+
+  _ncm_fit_fisher_to_covar (fit, hessian);
+}
+
+/**
+ * ncm_fit_ls_fisher:
+ * @fit: a #NcmFit
+ *
+ * Computes the covariance matrix using the jacobian matrix and the least squares
+ * problem, see ncm_fit_ls_J(). Note that this function uses the gradient defined
+ * in the @fit object using ncm_fit_set_grad_type() to compute the jacobian matrix.
+ *
+ * This function is similar to ncm_fit_fisher() but it computes the covariance
+ * using the full jacobian matrix instead adding the individual contributions
+ * of each #NcmData in the data set.
+ *
+ * It sets both the covariance matrix in the #NcmFitState object associated to the
+ * @fit object.
+ */
+void
+ncm_fit_ls_fisher (NcmFit *fit)
+{
+  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmMatrix *J        = ncm_fit_state_peek_J (self->fstate);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
+
+  ncm_fit_ls_J (fit, J);
+  gsl_multifit_covar (ncm_matrix_gsl (J), 0.0,
+                      ncm_matrix_gsl (covar));
+
+  ncm_fit_state_set_has_covar (self->fstate, TRUE);
 }
 
 /**
  * ncm_fit_fisher:
  * @fit: a #NcmFit
  *
- * Calculates the covariance from the Fisher matrix, see
- * ncm_dataset_fisher_matrix().
+ * Calculates the covariance from the Fisher matrix, see ncm_dataset_fisher_matrix().
+ * Note that this function does not use the gradient defined in the @fit object, it
+ * always uses the accurate numerical differentiation methods implemented in the
+ * #NcmDiff object.
  *
+ * It sets both the covariance matrix in the #NcmFitState object associated to the
+ * @fit object.
  */
 void
 ncm_fit_fisher (NcmFit *fit)
@@ -2457,29 +2473,26 @@ ncm_fit_fisher (NcmFit *fit)
  * Hessian matrix $\partial_i\partial_j -\ln(L)$, where
  * the derivatives are taken with respect to the free parameters.
  *
+ * Deprecated: 0.18.2: Use ncm_fit_obs_fisher() instead.
  */
+G_DEPRECATED_FOR (ncm_fit_obs_fisher)
+
 void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  NcmMatrix *hessian  = ncm_fit_state_peek_hessian (self->fstate);
-
-  if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
-
-  ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
-  ncm_matrix_scale (hessian, 0.5);
-
-  _ncm_fit_fisher_to_covar (fit, hessian);
+  ncm_fit_obs_fisher (fit);
 }
 
 /**
  * ncm_fit_numdiff_m2lnL_lndet_covar:
  * @fit: a #NcmFit
  *
- * Calculates the logarithm of the determinant of the covariance matrix
- * using the inverse of the Hessian matrix $\partial_i\partial_j -\ln(L)$,
- * where the derivatives are taken with respect to the free parameters.
+ * Calculates the logarithm of the determinant of the covariance matrix using the
+ * inverse of the Hessian matrix $\partial_i\partial_j -\ln(L)$, where the derivatives
+ * are taken with respect to the free parameters.
+ *
+ * It sets the covariance matrix in the #NcmFitState object associated to the @fit
+ * object.
  *
  * Returns: the logarithm of the determinant of the covariance matrix.
  */
@@ -2497,7 +2510,7 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
-  ncm_fit_numdiff_m2lnL_hessian (fit, hessian, 1.0e-2);
+  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_memcpy (covar, hessian);
   ncm_matrix_scale (covar, 0.5);
 

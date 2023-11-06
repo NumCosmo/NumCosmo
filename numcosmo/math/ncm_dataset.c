@@ -941,10 +941,9 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
  * @mset: a #NcmMSet
  * @IM: (out) (transfer full): The fisher matrix
  *
- * Calculates the Fisher-information matrix @I adding
- * the individual ones from each #NcmData in @dset.
- * If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix
- * will be allocated otherwise *@IM will be used.
+ * Calculates the Fisher-information matrix @I adding the individual ones from each
+ * #NcmData in @dset. If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix will
+ * be allocated otherwise *@IM will be used.
  *
  */
 void
