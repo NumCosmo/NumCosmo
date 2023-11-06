@@ -210,7 +210,6 @@ void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
 void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
-void ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher);
 void ncm_fit_obs_fisher (NcmFit *fit);
 void ncm_fit_fisher (NcmFit *fit);
 

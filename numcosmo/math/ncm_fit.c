@@ -164,36 +164,66 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       ncm_fit_set_params_reltol (fit, g_value_get_double (value));
       break;
     case PROP_EQC:
-      g_clear_pointer (&self->equality_constraints, g_ptr_array_unref);
-      self->equality_constraints = g_value_dup_boxed (value);
+    {
+      NcmObjArray *v = g_value_dup_boxed (value);
+
+      if (v != NULL)
+      {
+        g_clear_pointer (&self->equality_constraints, g_ptr_array_unref);
+        self->equality_constraints = v;
+      }
+      else
+      {
+        g_ptr_array_set_size (self->equality_constraints, 0);
+      }
+
       break;
+    }
     case PROP_EQC_TOT:
     {
       NcmVector *v = g_value_get_object (value);
 
-      g_clear_pointer (&self->equality_constraints_tot, g_array_unref);
-
       if (v != NULL)
+      {
+        g_clear_pointer (&self->equality_constraints_tot, g_array_unref);
         self->equality_constraints_tot = ncm_vector_dup_array (v);
+      }
       else
-        self->equality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      {
+        g_array_set_size (self->equality_constraints_tot, 0);
+      }
 
       break;
     }
     case PROP_INEQC:
-      g_clear_pointer (&self->inequality_constraints, g_ptr_array_unref);
-      self->inequality_constraints = g_value_dup_boxed (value);
+    {
+      NcmObjArray *v = g_value_dup_boxed (value);
+
+      if (v != NULL)
+      {
+        g_clear_pointer (&self->inequality_constraints, g_ptr_array_unref);
+        self->inequality_constraints = v;
+      }
+      else
+      {
+        g_ptr_array_set_size (self->inequality_constraints, 0);
+      }
+
       break;
+    }
     case PROP_INEQC_TOT:
     {
       NcmVector *v = g_value_get_object (value);
 
-      g_clear_pointer (&self->inequality_constraints_tot, g_array_unref);
-
       if (v != NULL)
+      {
+        g_clear_pointer (&self->inequality_constraints_tot, g_array_unref);
         self->inequality_constraints_tot = ncm_vector_dup_array (v);
+      }
       else
-        self->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      {
+        g_array_set_size (self->inequality_constraints_tot, 0);
+      }
 
       break;
     }
@@ -2331,25 +2361,15 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   ncm_vector_free (x);
 }
 
-/**
- * ncm_fit_fisher_to_covar:
- * @fit: a #NcmFit
- * @fisher: a #NcmMatrix
- *
- * Inverts the matrix @fisher and sets as the covariance matrix
- * of @fit. The Fisher matrix used can be both the Fisher or the
- * observed Fisher matrices.
- *
- */
-void
-ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
+static void
+_ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
   gint ret;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_fisher_to_covar: mset object has 0 free parameters");
+    g_error ("_ncm_fit_fisher_to_covar: mset object has 0 free parameters");
 
   ncm_matrix_memcpy (covar, fisher);
 
@@ -2360,7 +2380,7 @@ ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
     ret = ncm_matrix_cholesky_inverse (covar, 'U');
 
     if (ret != 0)
-      g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+      g_error ("_ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
 
     ncm_matrix_copy_triangle (covar, 'U');
   }
@@ -2373,20 +2393,20 @@ ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
 
     ncm_matrix_scale (LU, 0.5);
 
-    g_warning ("ncm_fit_fisher_to_covar: covariance matrix not positive definite, errors are not trustworthy.");
+    g_warning ("_ncm_fit_fisher_to_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
-    NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_decomp]", ret1);
+    NCM_TEST_GSL_RESULT ("_ncm_fit_fisher_to_covar[gsl_linalg_LU_decomp]", ret1);
 
     ret1 = gsl_linalg_LU_invert (ncm_matrix_gsl (LU), p, ncm_matrix_gsl (covar));
-    NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_invert]", ret1);
+    NCM_TEST_GSL_RESULT ("_ncm_fit_fisher_to_covar[gsl_linalg_LU_invert]", ret1);
 
     gsl_permutation_free (p);
     ncm_matrix_free (LU);
   }
   else
   {
-    g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+    g_error ("_ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
   }
 
   ncm_fit_state_set_has_covar (self->fstate, TRUE);
@@ -2424,7 +2444,7 @@ ncm_fit_fisher (NcmFit *fit)
     g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
   ncm_dataset_fisher_matrix (self->lh->dset, self->mset, &IM);
-  ncm_fit_fisher_to_covar (fit, IM);
+  _ncm_fit_fisher_to_covar (fit, IM);
 
   ncm_matrix_clear (&IM);
 }
@@ -2450,7 +2470,7 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
   ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
 
-  ncm_fit_fisher_to_covar (fit, hessian);
+  _ncm_fit_fisher_to_covar (fit, hessian);
 }
 
 /**

@@ -556,8 +556,11 @@ test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_ACCURATE);
   g_assert_true (ncm_fit_get_grad_type (fit) == NCM_FIT_GRAD_NUMDIFF_ACCURATE);
 
+  ncm_vector_log_vals (ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (test->data_mvnd)), "mean", "% 22.15g", TRUE);
+
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
 
   {
     NcmMSet *mset   = ncm_fit_peek_mset (fit);
@@ -1059,6 +1062,16 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
     g_assert_true (tol0_dup == 1.0e-5);
     g_assert_true (tol1_dup == 1.0e-5);
   }
+
+  g_object_set (fit_dup,
+                "equality-constraints", NULL,
+                "equality-constraints-tot", NULL,
+                "inequality-constraints", NULL,
+                "inequality-constraints-tot", NULL,
+                NULL);
+
+  g_assert_true (ncm_fit_inequality_constraints_len (fit_dup) == 0);
+  g_assert_true (ncm_fit_equality_constraints_len (fit_dup) == 0);
 }
 
 #ifdef NUMCOSMO_HAVE_NLOPT
