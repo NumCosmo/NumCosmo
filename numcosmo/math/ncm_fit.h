@@ -196,8 +196,6 @@ void ncm_fit_log_step (NcmFit *fit);
 void ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...);
 void ncm_fit_log_end (NcmFit *fit);
 
-void ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header);
-
 void ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL);
 void ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL);
 

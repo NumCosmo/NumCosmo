@@ -1799,37 +1799,6 @@ ncm_fit_log_step (NcmFit *fit)
 }
 
 /**
- * ncm_fit_log_finish:
- * @fit: a #NcmFit
- *
- * This function prints in the log the final state.
- *
- */
-void
-ncm_fit_log_finish (NcmFit *fit)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-
-  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-  {
-    const gdouble m2lnL     = ncm_fit_state_get_m2lnL_curval (self->fstate);
-    const gint dof          = ncm_fit_state_get_dof (self->fstate);
-    const gdouble m2lnL_dof = m2lnL / dof;
-
-    g_message ("#  m2lnL/dof = %20.15g\n", m2lnL_dof);
-    g_message ("#  |m2lnL-dof|/sqrt(2*dof) = %20.15g,\n", fabs (m2lnL_dof) / sqrt (2.0 * dof));
-    g_message ("#  GoF_tt = %4.2f%% = (%4.2f + %4.2f)%%; GoF = %4.2f%%\n",
-               gsl_cdf_chisq_Q (dof + fabs (dof - m2lnL), dof) * 100.0 +
-               gsl_cdf_chisq_P (dof - fabs (dof - m2lnL), dof) * 100.0,
-               gsl_cdf_chisq_P (dof - fabs (dof - m2lnL), dof) * 100.0,
-               gsl_cdf_chisq_Q (dof + fabs (dof - m2lnL), dof) * 100.0,
-               gsl_cdf_chisq_Q (m2lnL, dof) * 100.0);
-  }
-
-  return;
-}
-
-/**
  * ncm_fit_log_info:
  * @fit: a #NcmFit
  *
@@ -1863,49 +1832,6 @@ ncm_fit_log_covar (NcmFit *fit)
   ncm_mset_fparams_log_covar (self->mset, ncm_fit_state_peek_covar (self->fstate));
 
   return;
-}
-
-/**
- * ncm_fit_fisher_matrix_print:
- * @fit: a #NcmFit
- * @out: name of the file
- * @header: pointer to the command line
- *
- * This function print the command line (first line, commented), the cosmological
- * parameters' names which were fitted (second line, commented) and the Fisher Matrix.
- *
- */
-void
-ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header)
-{
-  NcmFitPrivate *self   = ncm_fit_get_instance_private (fit);
-  guint name_size       = ncm_mset_max_param_name (self->mset);
-  guint free_params_len = ncm_mset_fparam_len (self->mset);
-  guint i, j;
-
-  if (header != NULL)
-    fprintf (out, "# %s\n# ", header);
-  else
-    fprintf (out, "# ");
-
-  for (i = 0; i < free_params_len; i++)
-  {
-    const gchar *pname = ncm_mset_fparam_name (self->mset, i);
-
-    fprintf (out, "%*s[%02d] ", name_size, pname, i);
-  }
-
-  fprintf (out, "\n");
-
-  for (i = 0; i < free_params_len; i++)
-  {
-    for (j = 0; j < free_params_len; j++)
-    {
-      fprintf (out, " % -20.15g", ncm_fit_covar_fparam_cov (fit, i, j));
-    }
-
-    fprintf (out, "\n");
-  }
 }
 
 /**
