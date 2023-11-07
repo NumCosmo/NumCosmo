@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_gaussmix2d.h
  *
@@ -34,31 +35,8 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_GAUSSMIX2D             (ncm_data_gaussmix2d_get_type ())
-#define NCM_DATA_GAUSSMIX2D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_DATA_GAUSSMIX2D, NcmDataGaussMix2D))
-#define NCM_DATA_GAUSSMIX2D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_DATA_GAUSSMIX2D, NcmDataGaussMix2DClass))
-#define NCM_IS_DATA_GAUSSMIX2D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_DATA_GAUSSMIX2D))
-#define NCM_IS_DATA_GAUSSMIX2D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_DATA_GAUSSMIX2D))
-#define NCM_DATA_GAUSSMIX2D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_DATA_GAUSSMIX2D, NcmDataGaussMix2DClass))
-
-typedef struct _NcmDataGaussMix2DClass NcmDataGaussMix2DClass;
-typedef struct _NcmDataGaussMix2D NcmDataGaussMix2D;
-typedef struct _NcmDataGaussMix2DPrivate NcmDataGaussMix2DPrivate;
-
-struct _NcmDataGaussMix2DClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-struct _NcmDataGaussMix2D
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcmDataGaussMix2DPrivate *priv;
-};
-
-GType ncm_data_gaussmix2d_get_type (void) G_GNUC_CONST;
+#define NCM_TYPE_DATA_GAUSSMIX2D (ncm_data_gaussmix2d_get_type ())
+G_DECLARE_FINAL_TYPE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM, DATA_GAUSSMIX2D, NcmData)
 
 NcmDataGaussMix2D *ncm_data_gaussmix2d_new (void);
 NcmDataGaussMix2D *ncm_data_gaussmix2d_ref (NcmDataGaussMix2D *gm2d);
