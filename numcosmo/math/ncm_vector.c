@@ -621,6 +621,31 @@ ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
 }
 
 /**
+ * ncm_vector_get_subvector2:
+ * @sub_cv: a #NcmVector
+ * @cv: a #NcmVector
+ * @k: component index of the original vector
+ * @size: number of components of the subvector
+ *
+ * This function sets @sub_cv to be a subvector of the vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
+ * The new vector has @size elements.
+ *
+ * It is assumed that @sub_cv is a static vector allocated with
+ * ncm_vector_new_data_static(). If a different type of vector is passed
+ * then the function will lead to a memory leak.
+ *
+ */
+void
+ncm_vector_get_subvector2 (NcmVector *sub_cv, NcmVector *cv, const gsize k, const gsize size)
+{
+  g_assert_cmpuint (size, >, 0);
+  g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
+
+  sub_cv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
+}
+
+/**
  * ncm_vector_get_subvector_stride:
  * @cv: a #NcmVector
  * @k: component index of the original vector
@@ -1085,6 +1110,19 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * Returns: (transfer none): A constant pointer to the vector @cv data.
  */
 
+/**
+ * ncm_vector_replace_data: (skip)
+ * @cv: a #NcmVector
+ * @data: a pointer to the new data
+ *
+ * This function replaces the data of the vector @cv by @data.
+ * It does not make any check on the size of the new data.
+ * It assumes that the new data has the same size of the vector @cv
+ * and that the original data was statically allocated.
+ *
+ * It is useful when one needs to convert a data pointer to a #NcmVector.
+ *
+ */
 /**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector

@@ -108,6 +108,9 @@ test_ncm_data_gauss_cov_SOURCES = \
 test_ncm_fit_SOURCES = \
 	test_ncm_fit.c
 
+test_ncm_fit_state_SOURCES = \
+	test_ncm_fit_state.c
+
 test_ncm_fit_esmcmc_SOURCES = \
 	test_ncm_fit_esmcmc.c
 
@@ -205,6 +208,7 @@ test_programs =  \
 	test_ncm_obj_array                       \
 	test_ncm_data_gauss_cov                  \
 	test_ncm_fit                             \
+	test_ncm_fit_state                       \
 	test_ncm_fit_esmcmc                      \
 	test_ncm_sf_spherical_harmonics          \
 	test_ncm_sphere_map                      \
@@ -238,8 +242,10 @@ AM_TESTS_ENVIRONMENT += \
 	PYTHONPATH="$(abs_top_srcdir)$${PYTHONPATH:+:$${PYTHONPATH}}"
 
 dist_test_scripts = \
-	test_py_sanity.py     \
-	test_py_integralnd.py
+	test_py_sanity.py                     \
+	test_py_integralnd.py                 \
+	test_py_diff.py                       \
+	test_py_cluster_abundance_sampling.py
 
 endif # HAVE_PYTEST_TAP
 
@@ -399,6 +405,12 @@ test_ncm_fit_LDADD = \
 	$(GSL_LIBS) \
 	$(COVLIBS)
 
+test_ncm_fit_state_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
 test_ncm_fit_esmcmc_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
@@ -536,3 +548,7 @@ test_nc_galaxy_wl_ellipticity_binned_LDADD = \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \
 	$(COVLIBS)
+
+EXTRA_DIST = \
+        test_ncm_template.c
+

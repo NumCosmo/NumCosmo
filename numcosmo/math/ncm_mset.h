@@ -107,49 +107,52 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 /**
  * NCM_MSET_MODEL_MAIN: (skip)
  *
- * FIXME
+ * Id of a main model. Used to identify the main model in
+ * hierarchy of models.
  *
  */
 #define NCM_MSET_MODEL_MAIN (-1)
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
- * @model_ns: FIXME
+ * @model_ns: model namespace in snake case
  *
- * FIXME
+ * Defines a function to get the model id from the model namespace.
  *
  */
 #define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns ## _id
 
 /**
  * NCM_MSET_MODEL_DECLARE_ID: (skip)
- * @model_ns: FIXME
+ * @model_ns: model namespace in snake case
  *
- * FIXME
+ * Declares a function to get the model id from the model namespace.
+ * This macro should be used in the header file of the model.
  *
  */
 #define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) G_GNUC_CONST
 
 /**
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
- * @model_ns: FIXME
- * @typemacro: FIXME
+ * @model_ns: model namespace in snake case
+ * @typemacro: macro that returns the #GType of the model
  *
- * FIXME
+ * Defines the function to get the model id from the model namespace.
+ * This macro should be used in the source file of the model.
  *
  */
 #define NCM_MSET_MODEL_REGISTER_ID(model_ns, typemacro) \
-  NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) \
-  { \
-    static NcmModelID id = -1; \
-    if (id == -1) \
-    { \
-      NcmModelClass *model_class = g_type_class_ref (typemacro); \
-      id = model_class->model_id; \
-      g_type_class_unref (model_class); \
-    } \
-    return id; \
-  }
+        NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) \
+        { \
+          static NcmModelID id = -1; \
+          if (id == -1) \
+          { \
+            NcmModelClass *model_class = g_type_class_ref (typemacro); \
+            id = model_class->model_id; \
+            g_type_class_unref (model_class); \
+          } \
+          return id; \
+        }
 
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
