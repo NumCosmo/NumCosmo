@@ -43,33 +43,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC             (ncm_fit_esmcmc_get_type ())
-#define NCM_FIT_ESMCMC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMC))
-#define NCM_FIT_ESMCMC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCClass))
-#define NCM_IS_FIT_ESMCMC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC))
-#define NCM_IS_FIT_ESMCMC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC))
-#define NCM_FIT_ESMCMC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCClass))
+#define NCM_TYPE_FIT_ESMCMC (ncm_fit_esmcmc_get_type ())
 
-typedef struct _NcmFitESMCMCClass NcmFitESMCMCClass;
-typedef struct _NcmFitESMCMC NcmFitESMCMC;
-typedef struct _NcmFitESMCMCPrivate NcmFitESMCMCPrivate;
+G_DECLARE_FINAL_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, NCM, FIT_ESMCMC, GObject)
 
-struct _NcmFitESMCMCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmFitESMCMC
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFitESMCMCPrivate *priv;
-};
-
-GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
-
-NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, gint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
 NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
 NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);

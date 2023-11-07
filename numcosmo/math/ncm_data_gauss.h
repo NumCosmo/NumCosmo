@@ -33,7 +33,7 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_GAUSS             (ncm_data_gauss_get_type ())
+#define NCM_TYPE_DATA_GAUSS (ncm_data_gauss_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcmDataGauss, ncm_data_gauss, NCM, DATA_GAUSS, NcmData)
 
