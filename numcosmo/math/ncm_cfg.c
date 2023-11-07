@@ -1433,13 +1433,14 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 
 /**
  * ncm_cfg_keyfile_to_arg:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
- * @argv: FIXME
- * @argc: FIXME
+ * @kfile: keyfile filename
+ * @group_name: group name
+ * @entries: a #GOptionEntry
+ * @argv: an array of strings
+ * @argc: a pointer to an integer
  *
- * FIXME
+ * Transforms the @entries in a keyfile @kfile group @group_name into an array of
+ * strings representing the command line arguments.
  *
  */
 void
@@ -1499,11 +1500,11 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
 
 /**
  * ncm_cfg_string_to_comment:
- * @str: FIXME
+ * @str: a string
  *
- * FIXME
+ * Transforms @str into a comment string.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a comment string.
  */
 gchar *
 ncm_cfg_string_to_comment (const gchar *str)
@@ -1521,11 +1522,11 @@ ncm_cfg_string_to_comment (const gchar *str)
 
 /**
  * ncm_cfg_entries_to_keyfile:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
+ * @kfile: a #GKeyFile
+ * @group_name: group name
+ * @entries: a null terminated array of #GOptionEntry
  *
- * FIXME
+ * Transforms the @entries into a keyfile @kfile group @group_name.
  *
  */
 void
@@ -1610,12 +1611,12 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
 
 /**
  * ncm_cfg_get_enum_by_id_name_nick:
- * @enum_type: FIXME
- * @id_name_nick: FIXME
+ * @enum_type: enum type #GType
+ * @id_name_nick: id, name or nick
  *
- * FIXME
+ * Gets the enum value from @enum_type by @id_name_nick.
  *
- * Returns: FIXME
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
@@ -1651,12 +1652,12 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
 
 /**
  * ncm_cfg_enum_get_value:
- * @enum_type: FIXME
- * @n: FIXME
+ * @enum_type: enum type #GType
+ * @n: enum value position
  *
- * FIXME
+ * Gets the enum value from @enum_type by @n.
  *
- * Returns: (transfer none)
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_enum_get_value (GType enum_type, guint n)
@@ -1676,10 +1677,10 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
 
 /**
  * ncm_cfg_enum_print_all:
- * @enum_type: FIXME
- * @header: FIXME
+ * @enum_type: enum type #GType
+ * @header: header string
  *
- * FIXME
+ * Prints all enum values from @enum_type.
  *
  */
 void
@@ -1738,7 +1739,7 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 /**
  * ncm_cfg_lock_plan_fftw:
  *
- * FIXME
+ * Locks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1750,7 +1751,7 @@ ncm_cfg_lock_plan_fftw (void)
 /**
  * ncm_cfg_unlock_plan_fftw:
  *
- * FIXME
+ * Unlocks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1761,12 +1762,12 @@ ncm_cfg_unlock_plan_fftw (void)
 
 /**
  * ncm_cfg_load_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to load the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Loads the FFTW wisdom from @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was loaded.
  */
 gboolean
 ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
@@ -1822,12 +1823,12 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
 /**
  * ncm_cfg_save_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to save the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Saves the current FFTW wisdom to @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was saved.
  */
 gboolean
 ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
@@ -1906,12 +1907,12 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
 /**
  * ncm_cfg_exists:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to search in the numcosmo path.
+ * @...: a variable number of arguments for @filename string.
  *
- * FIXME
+ * Checks if @filename exists in the numcosmo path.
  *
- * Returns: FIXME
+ * Returns: TRUE if @filename exists.
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)
@@ -1983,12 +1984,12 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
 
 /**
  * ncm_cfg_command_line:
- * @argv: FIXME
- * @argc: FIXME
+ * @argv: array of strings
+ * @argc: number of strings in @argv
  *
- * FIXME
+ * Converts @argv to a single string.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a command line string.
  */
 gchar *
 ncm_cfg_command_line (gchar *argv[], gint argc)
@@ -2041,7 +2042,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
  * @a: a #GArray.
  * @var: a variant of array type.
  *
- * FIXME
+ * Transfers the data from @var to @a.
  *
  */
 void
@@ -2060,9 +2061,9 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
  * @a: a #GArray.
  * @etype: element type.
  *
- * FIXME
+ * Creates a variant of array type from @a.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a variant of array type.
  */
 GVariant *
 ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)

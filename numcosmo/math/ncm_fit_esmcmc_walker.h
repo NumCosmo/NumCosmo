@@ -35,21 +35,15 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER             (ncm_fit_esmcmc_walker_get_type ())
-#define NCM_FIT_ESMCMC_WALKER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER, NcmFitESMCMCWalker))
-#define NCM_FIT_ESMCMC_WALKER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER, NcmFitESMCMCWalkerClass))
-#define NCM_IS_FIT_ESMCMC_WALKER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER))
-#define NCM_IS_FIT_ESMCMC_WALKER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER))
-#define NCM_FIT_ESMCMC_WALKER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER, NcmFitESMCMCWalkerClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER (ncm_fit_esmcmc_walker_get_type ())
 
-typedef struct _NcmFitESMCMCWalkerClass NcmFitESMCMCWalkerClass;
-typedef struct _NcmFitESMCMCWalker NcmFitESMCMCWalker;
+G_DECLARE_DERIVABLE_TYPE (NcmFitESMCMCWalker, ncm_fit_esmcmc_walker, NCM, FIT_ESMCMC_WALKER, GObject)
 
 struct _NcmFitESMCMCWalkerClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*set_size) (NcmFitESMCMCWalker *walker, guint size);
   guint (*get_size) (NcmFitESMCMCWalker *walker);
   void (*set_nparams) (NcmFitESMCMCWalker *walker, guint nparams);
@@ -60,17 +54,11 @@ struct _NcmFitESMCMCWalkerClass
   gdouble (*prob_norm) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
   void (*clean) (NcmFitESMCMCWalker *walker, guint ki, guint kf);
   const gchar *(*desc) (NcmFitESMCMCWalker *walker);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[8];
 };
 
-struct _NcmFitESMCMCWalker
-{
-  /*< private >*/
-  GObject parent_instance;
-};
-
-GType ncm_fit_esmcmc_walker_get_type (void) G_GNUC_CONST;
-
-NcmFitESMCMCWalker *ncm_fit_esmcmc_walker_new_from_name (const gchar *walker_name);
 NcmFitESMCMCWalker *ncm_fit_esmcmc_walker_ref (NcmFitESMCMCWalker *walker);
 void ncm_fit_esmcmc_walker_free (NcmFitESMCMCWalker *walker);
 void ncm_fit_esmcmc_walker_clear (NcmFitESMCMCWalker **walker);

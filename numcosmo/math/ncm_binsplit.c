@@ -47,7 +47,7 @@ mpz_t NCM_BINSPLIT_ONE;
 
 /**
  * ncm_binsplit_alloc: (skip)
- * @userdata: FIXME
+ * @userdata: user data to be passed to the #NcmBinSplitEval function
  *
  * Allocates a new #NcmBinSplit.
  *
@@ -93,7 +93,7 @@ ncm_binsplit_alloc (gpointer userdata)
  * ncm_binsplit_test_next: (skip)
  * @bs: a #NcmBinSplit
  * @bs_eval: a #NcmBinSplitEval
- * @nt: FIXME
+ * @nt: number of terms to be added to the sum
  *
  * FIXME
  *

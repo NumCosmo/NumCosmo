@@ -1,4 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_mset_func1.h
  *
@@ -14,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,16 +48,16 @@ typedef GArray *(*NcmMSetFunc1N) (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x);
 
 struct _NcmMSetFunc1Class
 {
-	/*< private >*/
-	NcmMSetFuncClass parent_class;
-	NcmMSetFunc1N eval1;
+  /*< private >*/
+  NcmMSetFuncClass parent_class;
+  NcmMSetFunc1N eval1;
 };
 
 struct _NcmMSetFunc1
 {
-	/*< private >*/
-	NcmMSetFunc parent_instance;
-	NcmMSetFunc1Private *priv;
+  /*< private >*/
+  NcmMSetFunc parent_instance;
+  NcmMSetFunc1Private *priv;
 };
 
 GType ncm_mset_func1_get_type (void) G_GNUC_CONST;
@@ -72,3 +71,4 @@ GArray *ncm_mset_func1_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x);
 G_END_DECLS
 
 #endif /* _NCM_MSET_FUNC1_H_ */
+

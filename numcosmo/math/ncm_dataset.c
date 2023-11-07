@@ -28,7 +28,11 @@
  * @title: NcmDataset
  * @short_description: A set of NcmData objects
  *
- * This Class define a set of NcmData objects.
+ * The purpose of this class is to define a collection of #NcmData objects. These
+ * objects serve as containers for #NcmData intended for use within the NumCosmo
+ * library. Each individual #NcmData object is responsible for defining a distinct
+ * data likelihood function. It is essential to note that all #NcmData objects are
+ * designed to be entirely statistically independent of each other.
  *
  */
 
@@ -57,6 +61,7 @@ struct _NcmDataset
   NcmDatasetBStrapType bstype;
   GArray *data_prob;
   GArray *bstrap;
+  NcmVector *ls_f;
 };
 
 G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);
@@ -70,6 +75,7 @@ ncm_dataset_init (NcmDataset *dset)
   dset->oa        = ncm_obj_array_sized_new (_NCM_DATASET_INITIAL_ALLOC);
   dset->data_prob = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_DATASET_INITIAL_ALLOC);
   dset->bstrap    = g_array_sized_new (FALSE, FALSE, sizeof (guint), _NCM_DATASET_INITIAL_ALLOC);
+  dset->ls_f      = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1);
 }
 
 static void
@@ -132,6 +138,8 @@ ncm_dataset_dispose (GObject *object)
     g_array_unref (dset->bstrap);
     dset->bstrap = NULL;
   }
+
+  ncm_vector_clear (&dset->ls_f);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_dataset_parent_class)->dispose (object);
@@ -750,68 +758,6 @@ ncm_dataset_has_leastsquares_f (NcmDataset *dset)
 }
 
 /**
- * ncm_dataset_has_leastsquares_J:
- * @dset: a #NcmDataset
- *
- * Whether all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
- *
- * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_J() method.
- */
-gboolean
-ncm_dataset_has_leastsquares_J (NcmDataset *dset)
-{
-  if (dset->oa->len == 0)
-  {
-    return FALSE;
-  }
-  else
-  {
-    guint i;
-
-    for (i = 0; i < dset->oa->len; i++)
-    {
-      NcmData *data = ncm_dataset_peek_data (dset, i);
-
-      if (!NCM_DATA_GET_CLASS (data)->leastsquares_J)
-        return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/**
- * ncm_dataset_has_leastsquares_f_J:
- * @dset: a #NcmDataset
- *
- * Whether all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
- *
- * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_leastsquares_f_J() method.
- */
-gboolean
-ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
-{
-  if (dset->oa->len == 0)
-  {
-    return FALSE;
-  }
-  else
-  {
-    guint i;
-
-    for (i = 0; i < dset->oa->len; i++)
-    {
-      NcmData *data = ncm_dataset_peek_data (dset, i);
-
-      if (!NCM_DATA_GET_CLASS (data)->leastsquares_f_J)
-        return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/**
  * ncm_dataset_has_m2lnL_val:
  * @dset: a #NcmDataset
  *
@@ -835,70 +781,6 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
       NcmData *data = ncm_dataset_peek_data (dset, i);
 
       if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-        return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/**
- * ncm_dataset_has_m2lnL_grad:
- * @dset: a #NcmDataset
- *
- * Whether all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
- *
- * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_grad() method.
- *
- */
-gboolean
-ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
-{
-  if (dset->oa->len == 0)
-  {
-    return FALSE;
-  }
-  else
-  {
-    guint i;
-
-    for (i = 0; i < dset->oa->len; i++)
-    {
-      NcmData *data = ncm_dataset_peek_data (dset, i);
-
-      if (!NCM_DATA_GET_CLASS (data)->m2lnL_grad)
-        return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/**
- * ncm_dataset_has_m2lnL_val_grad:
- * @dset: a #NcmDataset
- *
- * Whether all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
- *
- * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_m2lnL_val_grad() method.
- *
- */
-gboolean
-ncm_dataset_has_m2lnL_val_grad (NcmDataset *dset)
-{
-  if (dset->oa->len == 0)
-  {
-    return FALSE;
-  }
-  else
-  {
-    guint i;
-
-    for (i = 0; i < dset->oa->len; i++)
-    {
-      NcmData *data = ncm_dataset_peek_data (dset, i);
-
-      if (!NCM_DATA_GET_CLASS (data)->m2lnL_val_grad)
         return FALSE;
     }
   }
@@ -933,105 +815,15 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
     }
     else
     {
-      NcmVector *f_i = ncm_vector_get_subvector (f, pos, n);
+      ncm_vector_get_subvector2 (dset->ls_f, f, pos, n);
 
       ncm_data_prepare (data, mset);
-      NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f_i);
+      NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, dset->ls_f);
       pos += n;
-      ncm_vector_free (f_i);
     }
   }
 
   return;
-}
-
-/**
- * ncm_dataset_leastsquares_J:
- * @dset: a #NcmLikelihood.
- * @mset: a #NcmMSet.
- * @J: a #NcmMatrix.
- *
- * Computes the leastsquares matrix J for the data @data.
- * The matrix @J must be allocated with the correct size.
- * The matrix @J is filled with the values of the leastsquares matrix J.
- *
- */
-void
-ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J)
-{
-  guint pos = 0, i;
-
-  for (i = 0; i < dset->oa->len; i++)
-  {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-    guint n       = ncm_data_get_length (data);
-
-    if (!NCM_DATA_GET_CLASS (data)->leastsquares_J)
-    {
-      g_error ("ncm_dataset_leastsquares_J: %s dont implement leastsquares matrix J", G_OBJECT_TYPE_NAME (data));
-    }
-    else
-    {
-      NcmMatrix *J_i = ncm_matrix_get_submatrix (J, pos, 0, n, ncm_matrix_ncols (J));
-
-      ncm_data_prepare (data, mset);
-
-      NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J_i);
-
-      pos += n;
-      ncm_matrix_free (J_i);
-    }
-  }
-
-  return;
-}
-
-/**
- * ncm_dataset_leastsquares_f_J:
- * @dset: a #NcmLikelihood.
- * @mset: a #NcmMSet.
- * @f: a #NcmVector.
- * @J: a #NcmMatrix.
- *
- * Computes the leastsquares vector f and matrix J for the data @data.
- * The vector @f must be allocated with the correct size.
- * The matrix @J must be allocated with the correct size.
- * The vector @f is filled with the values of the leastsquares vector f.
- * The matrix @J is filled with the values of the leastsquares matrix J.
- *
- */
-void
-ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
-{
-  guint pos = 0, i;
-
-  for (i = 0; i < dset->oa->len; i++)
-  {
-    NcmData *data  = ncm_dataset_peek_data (dset, i);
-    guint n        = ncm_data_get_length (data);
-    NcmMatrix *J_i = ncm_matrix_get_submatrix (J, pos, 0, n, ncm_matrix_ncols (J));
-    NcmVector *f_i = ncm_vector_get_subvector (f, pos, n);
-
-    ncm_data_prepare (data, mset);
-
-    if (NCM_DATA_GET_CLASS (data)->leastsquares_f_J != NULL)
-    {
-      NCM_DATA_GET_CLASS (data)->leastsquares_f_J (data, mset, f_i, J_i);
-    }
-    else if ((NCM_DATA_GET_CLASS (data)->leastsquares_f != NULL) && (NCM_DATA_GET_CLASS (data)->leastsquares_J != NULL))
-    {
-      NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f_i);
-      NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J_i);
-    }
-    else
-    {
-      g_error ("ncm_dataset_leastsquares_f_J: %s dont implement leastsquares f J", G_OBJECT_TYPE_NAME (data));
-    }
-
-    pos += n;
-    ncm_matrix_free (J_i);
-    ncm_vector_free (f_i);
-  }
 }
 
 /**
@@ -1111,96 +903,6 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 }
 
 /**
- * ncm_dataset_m2lnL_grad:
- * @dset: a #NcmLikelihood.
- * @mset: a #NcmMSet.
- * @grad: a #NcmVector.
- *
- * Computes the gradient of the m2lnL for the data @data.
- * The gradient of the m2lnL is stored in @grad.
- *
- */
-void
-ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
-{
-  const guint fparams_len = ncm_mset_fparams_len (mset);
-  NcmVector *grad_i       = ncm_vector_new (fparams_len);
-  guint i;
-
-  ncm_vector_set_zero (grad);
-
-  for (i = 0; i < dset->oa->len; i++)
-  {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-
-    if (!NCM_DATA_GET_CLASS (data)->m2lnL_grad)
-    {
-      g_error ("ncm_dataset_m2lnL_grad: %s dont implement m2lnL grad", G_OBJECT_TYPE_NAME (data));
-    }
-    else
-    {
-      ncm_data_prepare (data, mset);
-      NCM_DATA_GET_CLASS (data)->m2lnL_grad (data, mset, grad_i);
-      ncm_vector_add (grad, grad_i);
-    }
-  }
-
-  ncm_vector_free (grad_i);
-
-  return;
-}
-
-/**
- * ncm_dataset_m2lnL_val_grad:
- * @dset: a #NcmLikelihood.
- * @mset: a #NcmMSet.
- * @m2lnL: (out): a pointer to a double.
- * @grad: a #NcmVector.
- *
- * Computes the value of the m2lnL for the data @data.
- * The value of the m2lnL is stored in @m2lnL.
- * The gradient of the m2lnL is stored in @grad.
- * The #NcmVector @grad must be previously allocated.
- */
-void
-ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
-{
-  const guint fparams_len = ncm_mset_fparams_len (mset);
-  NcmVector *grad_i       = ncm_vector_new (fparams_len);
-  guint i;
-
-  ncm_vector_set_zero (grad);
-  *m2lnL = 0.0;
-
-  for (i = 0; i < dset->oa->len; i++)
-  {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-    gdouble m2lnL_i;
-
-    ncm_data_prepare (data, mset);
-
-    if (NCM_DATA_GET_CLASS (data)->m2lnL_val_grad != NULL)
-    {
-      NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, &m2lnL_i, grad_i);
-    }
-    else if ((NCM_DATA_GET_CLASS (data)->m2lnL_val != NULL) && (NCM_DATA_GET_CLASS (data)->m2lnL_grad != NULL))
-    {
-      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
-      NCM_DATA_GET_CLASS (data)->m2lnL_grad (data, mset, grad_i);
-    }
-    else
-    {
-      g_error ("ncm_dataset_m2lnL_val_grad: %s dont implement m2lnL val grad", G_OBJECT_TYPE_NAME (data));
-    }
-
-    *m2lnL += m2lnL_i;
-    ncm_vector_add (grad, grad_i);
-  }
-
-  ncm_vector_free (grad_i);
-}
-
-/**
  * ncm_dataset_m2lnL_i_val:
  * @dset: a #NcmLikelihood
  * @mset: a #NcmMSet
@@ -1239,10 +941,9 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
  * @mset: a #NcmMSet
  * @IM: (out) (transfer full): The fisher matrix
  *
- * Calculates the Fisher-information matrix @I adding
- * the individual ones from each #NcmData in @dset.
- * If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix
- * will be allocated otherwise *@IM will be used.
+ * Calculates the Fisher-information matrix @I adding the individual ones from each
+ * #NcmData in @dset. If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix will
+ * be allocated otherwise *@IM will be used.
  *
  */
 void
