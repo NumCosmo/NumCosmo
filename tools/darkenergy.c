@@ -702,7 +702,7 @@ main (gint argc, gchar *argv[])
 
   de_fit.fisher        = !de_fit.fisher && ((de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL)) ? 1 : de_fit.fisher;
   de_fit.fit           = (de_fit.fit || de_fit.fisher);
-  de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
+  de_fit.save_best_fit = de_fit.save_best_fit;
 
   if (de_fit.fit)
   {
@@ -748,21 +748,6 @@ main (gint argc, gchar *argv[])
     }
 
     ncm_fit_log_covar (fit);
-
-    if (de_fit.save_fisher)
-    {
-      FILE *f_MF;
-      gchar *mfile = NULL;
-
-      f_MF = nc_de_open_dataout_file (cosmo, "MF", &mfile);
-      ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
-      fclose (f_MF);
-
-      ncm_message ("#---------------------------------------------------------------------------------- \n");
-      ncm_message ("# FM file: %s\n", mfile);
-
-      g_free (mfile);
-    }
   }
 
   if (de_fit.funcs != NULL)
