@@ -132,9 +132,9 @@ def plot_m2lnp(
         exp_z,
         interpolation="bicubic",
         origin="lower",
-        cmap=cm.gray_r,  # pylint:disable-msg=no-member
+        cmap=cm.gray_r,  # type: ignore # pylint:disable-msg=no-member
         norm=LogNorm(vmin=vmin, vmax=vmax),
-        extent=[x[0], x[-1], y[0], y[-1]],
+        extent=(x[0], x[-1], y[0], y[-1]),
         aspect="auto",
         rasterized=True,
     )

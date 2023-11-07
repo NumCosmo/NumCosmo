@@ -281,7 +281,6 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample", NULL},
     { "qspline-cp",       0, 0, G_OPTION_ARG_NONE,         &de_fit->qspline_cp,       "Include the continuity priors on a NcHICosmoQSpline model", NULL},
     { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors", NULL},
-    { "save-fisher",      0, 0, G_OPTION_ARG_NONE,         &de_fit->save_fisher,      "Create a file and print the Fisher matrix", NULL},
     { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones)", NULL},
     { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage", NULL},
     { NULL }

@@ -66,11 +66,7 @@ struct _NcmDataClass
   void (*prepare) (NcmData *data, NcmMSet *mset);
   void (*resample) (NcmData *data, NcmMSet *mset, NcmRNG *rng);
   void (*leastsquares_f) (NcmData *data, NcmMSet *mset, NcmVector *f);
-  void (*leastsquares_J) (NcmData *data, NcmMSet *mset, NcmMatrix *J);
-  void (*leastsquares_f_J) (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
   void (*m2lnL_val) (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
-  void (*m2lnL_grad) (NcmData *data, NcmMSet *mset, NcmVector *grad);
-  void (*m2lnL_val_grad) (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
   void (*mean_vector) (NcmData *data, NcmMSet *mset, NcmVector *mu);
   void (*inv_cov_UH) (NcmData *data, NcmMSet *mset, NcmMatrix *H);
 
@@ -108,11 +104,7 @@ gboolean ncm_data_bootstrap_enabled (NcmData *data);
 NcmBootstrap *ncm_data_peek_bootstrap (NcmData *data);
 
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
-void ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J);
-void ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
 void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
-void ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad);
-void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
 
 void ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 void ncm_data_sigma_vector (NcmData *data, NcmMSet *mset, NcmVector *sigma);

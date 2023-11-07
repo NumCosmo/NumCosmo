@@ -69,7 +69,7 @@ def _blit_draw(_self, artists, bg_cache):
 
 # MONKEY PATCH!!
 # pylint: disable-next=protected-access
-matplotlib.animation.Animation._blit_draw = _blit_draw
+matplotlib.animation.Animation._blit_draw = _blit_draw  # type: ignore
 
 #
 #  Initializing the library objects, this must be called before

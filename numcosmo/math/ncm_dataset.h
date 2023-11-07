@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject);
  * @NCM_DATASET_BSTRAP_TOTAL: Total bootstrap, all data is bootstraped simultaneously.
  *
  * Bootstrap types.
- * 
+ *
  */
 typedef enum _NcmDatasetBStrapType
 {
@@ -84,21 +84,12 @@ void ncm_dataset_log_info (NcmDataset *dset);
 gchar *ncm_dataset_get_info (NcmDataset *dset);
 
 gboolean ncm_dataset_has_leastsquares_f (NcmDataset *dset);
-gboolean ncm_dataset_has_leastsquares_J (NcmDataset *dset);
-gboolean ncm_dataset_has_leastsquares_f_J (NcmDataset *dset);
-
 gboolean ncm_dataset_has_m2lnL_val (NcmDataset *dset);
-gboolean ncm_dataset_has_m2lnL_grad (NcmDataset *dset);
-gboolean ncm_dataset_has_m2lnL_val_grad (NcmDataset *dset);
 
 void ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f);
-void ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J);
-void ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
 
 void ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL);
 void ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v);
-void ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad);
-void ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
 
 void ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i);
 

@@ -162,7 +162,7 @@ def test_epdf1d() -> None:
     fig.plot(
         x_a, np.abs(np.array((p_rot_a - true_p(x_a)) / true_p(x_a))), label="RoT-bw"
     )
-    fig.set_ylim([1.0e-6, 1.0e1])
+    fig.set_ylim((1.0e-6, 1.0e1))
     fig.grid()
 
     fig.legend(loc="upper right")

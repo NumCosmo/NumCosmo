@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -34,36 +34,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_MCBS             (ncm_fit_mcbs_get_type ())
-#define NCM_FIT_MCBS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_MCBS, NcmFitMCBS))
-#define NCM_FIT_MCBS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_MCBS, NcmFitMCBSClass))
-#define NCM_IS_FIT_MCBS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_MCBS))
-#define NCM_IS_FIT_MCBS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_MCBS))
-#define NCM_FIT_MCBS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_MCBS, NcmFitMCBSClass))
+#define NCM_TYPE_FIT_MCBS (ncm_fit_mcbs_get_type ())
 
-typedef struct _NcmFitMCBSClass NcmFitMCBSClass;
-typedef struct _NcmFitMCBS NcmFitMCBS;
+G_DECLARE_FINAL_TYPE (NcmFitMCBS, ncm_fit_mcbs, NCM, FIT_MCBS, GObject)
 
-struct _NcmFitMCBSClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmFitMCBS
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFit *fit;
-  NcmFitMC *mc_resample;
-  NcmFitMC *mc_bstrap;
-  NcmMSetCatalog *mcat;
-  gchar *base_name;
-};
-
-GType ncm_fit_mcbs_get_type (void) G_GNUC_CONST;
-
-NcmFitMCBS *ncm_fit_mcbs_new (NcmFit *fit);
+NcmFitMCBS *ncm_fit_mcbs_new (NcmFit * fit);
 void ncm_fit_mcbs_free (NcmFitMCBS *mcbs);
 void ncm_fit_mcbs_clear (NcmFitMCBS **mcbs);
 
@@ -76,3 +51,4 @@ NcmMSetCatalog *ncm_fit_mcbs_get_catalog (NcmFitMCBS *mcbs);
 G_END_DECLS
 
 #endif /* _NCM_FIT_MCBS_H_ */
+
