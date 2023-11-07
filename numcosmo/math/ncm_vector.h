@@ -108,6 +108,7 @@ const NcmVector *ncm_vector_const_new_variant (GVariant *var);
 const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
+void ncm_vector_get_subvector2 (NcmVector *sub_cv, NcmVector *cv, const gsize k, const gsize size);
 NcmVector *ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride);
 GVariant *ncm_vector_get_variant (const NcmVector *cv);
 GVariant *ncm_vector_peek_variant (const NcmVector *cv);
@@ -161,6 +162,7 @@ NCM_INLINE GArray *ncm_vector_dup_array (NcmVector *cv);
 NCM_INLINE gdouble *ncm_vector_data (NcmVector *cv);
 NCM_INLINE const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
+NCM_INLINE void ncm_vector_replace_data (NcmVector *cv, gdouble *data);
 NCM_INLINE gsl_vector *ncm_vector_gsl (NcmVector *cv);
 NCM_INLINE const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 NCM_INLINE gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
@@ -436,6 +438,12 @@ NCM_INLINE const gdouble *
 ncm_vector_const_data (const NcmVector *cv)
 {
   return (cv)->vv.vector.data;
+}
+
+NCM_INLINE void
+ncm_vector_replace_data (NcmVector *cv, gdouble *data)
+{
+  cv->vv.vector.data = data;
 }
 
 NCM_INLINE gsl_vector *
