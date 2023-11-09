@@ -521,6 +521,8 @@ _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
   return amise;
 }
 
+void ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *rng);
+
 gdouble
 _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 {
@@ -528,6 +530,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
   NcmStatsDistPrivate * const self = sd->priv;
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
+  GArray *m2lnp                    = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), self->n_kernels);
   gdouble amise                    = 0.0;
   gint i, j;
 
@@ -536,37 +539,79 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 
   sd_class->compute_IM (sd, self->IM);
 
+  g_array_set_size (m2lnp, self->n_kernels);
+
   for (i = 0; i < self->n_kernels; i++)
   {
     for (j = 0; j < self->n_kernels; j++)
     {
+      g_array_index (m2lnp, gdouble, i) += ncm_matrix_get (self->IM, i, j);
+
       if (i == j)
         continue;
 
       amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
     }
+
+    g_array_index (m2lnp, gdouble, i) = g_array_index (m2lnp, gdouble, i) / self->n_kernels;
+
+    printf ("pt(x_i) = % 22.15g\n", g_array_index (m2lnp, gdouble, i));
+  }
+
+  g_array_set_size (self->m2lnp_sort, self->n_kernels);
+  gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
+                  (gdouble *) m2lnp->data, 1, m2lnp->len);
+
+  for (i = 0; i < self->n_kernels; i++)
+  {
+    gint p = g_array_index (self->m2lnp_sort, size_t, i);
+
+    printf ("[%d %d] pt(x_i) = % 22.15g\n", i, p, g_array_index (m2lnp, gdouble, p));
   }
 
   {
     NcmRNG *rng        = ncm_rng_seeded_new (NULL, 0);
-    NcmVector *x       = ncm_vector_new (self->d);
-    NcmStatsVec *stats = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+    NcmVector *x1      = ncm_vector_new (self->d);
+    NcmVector *x2      = ncm_vector_new (self->d);
+    NcmStatsVec *stats = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
     guint max_iter     = 100000000;
+    gdouble p1, p2;
 
 
-    ncm_stats_dist_sample (sd, x, rng);
-    ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
+    ncm_stats_dist_sample2 (sd, x1, x2, rng);
+    p1 = ncm_stats_dist_eval (sd, x1);
+    p2 = ncm_stats_dist_eval (sd, x2);
+
+    ncm_stats_vec_set (stats, 0, p1);
+    ncm_stats_vec_set (stats, 1, p2);
     ncm_stats_vec_update (stats);
+
 
     for (i = 0; i < max_iter; i++)
     {
+      gdouble n0 = 1.0 / sqrt (i + 1.0);
       gdouble msd;
 
-      ncm_stats_dist_sample (sd, x, rng);
-      ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
+
+      ncm_stats_dist_sample2 (sd, x1, x2, rng);
+      p1 = ncm_stats_dist_eval (sd, x1);
+      p2 = ncm_stats_dist_eval (sd, x2);
+
+      ncm_stats_vec_set (stats, 0, p1);
+      ncm_stats_vec_set (stats, 1, p2);
       ncm_stats_vec_update (stats);
 
       msd = ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0) / ncm_stats_vec_get_mean (stats, 0);
+      printf ("COR % 22.15g | p1 = % 22.15g +/- % 22.15g p2 = % 22.15g +/- % 22.15g | comb % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n",
+              ncm_stats_vec_get_cor (stats, 0, 1),
+              ncm_stats_vec_get_mean (stats, 0), ncm_stats_vec_get_sd (stats, 0) * n0,
+              ncm_stats_vec_get_mean (stats, 1), ncm_stats_vec_get_sd (stats, 1) * n0,
+              0.5 * (ncm_stats_vec_get_mean (stats, 0) + ncm_stats_vec_get_mean (stats, 1)),
+              sqrt (0.25 * (ncm_stats_vec_get_var (stats, 0) + ncm_stats_vec_get_var (stats, 1) + 2.0 * ncm_stats_vec_get_cov (stats, 0, 1))) * n0,
+              sqrt (0.25 * (ncm_stats_vec_get_var (stats, 0) + ncm_stats_vec_get_var (stats, 1) + 0.0 * ncm_stats_vec_get_cov (stats, 0, 1))) * n0,
+              msd,
+              sqrt (0.25 * (ncm_stats_vec_get_var (stats, 0) + ncm_stats_vec_get_var (stats, 1) + 0.0 * ncm_stats_vec_get_cov (stats, 0, 1))) * n0 / (0.5 * (ncm_stats_vec_get_mean (stats, 0) + ncm_stats_vec_get_mean (stats, 1)))
+             );
 
       if (msd < 1.0e-3)
         break;
@@ -575,7 +620,8 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
     amise += ncm_stats_vec_get_mean (stats, 0);
 
     ncm_stats_vec_free (stats);
-    ncm_vector_free (x);
+    ncm_vector_free (x1);
+    ncm_vector_free (x2);
     ncm_rng_clear (&rng);
   }
 
@@ -1511,6 +1557,27 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
   NcmMatrix *cov_U                 = ncm_stats_dist_peek_cov_decomp (sd, i);
 
   ncm_stats_dist_kernel_sample (self->kernel, cov_U, self->href, x_i, x, rng);
+}
+
+void
+ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *rng)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  const gint i                     = ncm_stats_dist_kernel_choose (sd, rng);
+  const gint o_i                   = g_array_index (self->m2lnp_sort, size_t, i);
+  NcmVector *x_i                   = g_ptr_array_index (self->sample_array, o_i);
+  NcmMatrix *cov_U_i               = ncm_stats_dist_peek_cov_decomp (sd, o_i);
+
+  ncm_stats_dist_kernel_sample (self->kernel, cov_U_i, self->href, x_i, x1, rng);
+
+  {
+    const gint j       = self->sample_array->len - 1 - i;
+    const gint o_j     = g_array_index (self->m2lnp_sort, size_t, j);
+    NcmVector *x_j     = g_ptr_array_index (self->sample_array, o_j);
+    NcmMatrix *cov_U_j = ncm_stats_dist_peek_cov_decomp (sd, o_j);
+
+    ncm_stats_dist_kernel_sample (self->kernel, cov_U_j, self->href, x_j, x2, rng);
+  }
 }
 
 /**

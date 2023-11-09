@@ -783,13 +783,14 @@ test_ncm_stats_dist_dens_interp_cv_split_nofit (TestNcmStatsDist *test, gconstpo
 static void
 test_ncm_stats_dist_dens_interp_cv_loo (TestNcmStatsDist *test, gconstpointer pdata)
 {
-  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
-  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
-  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  gulong N                        = 0;
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  /*guint bla                       = test->np = 100; */
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
+  gulong N                        = 0;
   guint i;
 
   switch (cov_type)
@@ -821,7 +822,8 @@ test_ncm_stats_dist_dens_interp_cv_loo (TestNcmStatsDist *test, gconstpointer pd
     ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
-  /* ncm_stats_dist_set_print_fit (test->sd, TRUE); */
+  printf ("NP %d\n", test->np);
+  ncm_stats_dist_set_print_fit (test->sd, TRUE);
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_LOO);
   ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
 
