@@ -500,7 +500,7 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
         const gdouble m2lnp_i = ncm_stats_dist_eval (sd, x_i);
 
         m2lnp -= log (m2lnp_i);
-        // m2lnp += -2 / n * m2lnp_i;
+        /* m2lnp += -2 / n * m2lnp_i; */
 
         g_ptr_array_insert (self->sample_array, i, ncm_vector_dup (x_i));
         ncm_vector_clear (&x_i);
@@ -710,10 +710,6 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
     case NCM_STATS_DIST_CV_SPLIT_NOFIT:
       self->n_obs     = self->sample_array->len;
       self->n_kernels = ceil (self->sample_array->len * self->split_frac);
-      break;
-    case NCM_STATS_DIST_CV_LOO:
-      self->n_obs     = self->sample_array->len;
-      self->n_kernels = self->sample_array->len;
       break;
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
