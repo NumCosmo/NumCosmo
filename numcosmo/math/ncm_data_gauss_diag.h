@@ -46,6 +46,8 @@ struct _NcmDataGaussDiagClass
   gboolean (*sigma_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma);
   void (*set_size) (NcmDataGaussDiag *diag, guint np);
   guint (*get_size) (NcmDataGaussDiag *diag);
+
+  gpointer padding[14];
 };
 
 void ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np);

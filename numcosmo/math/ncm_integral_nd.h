@@ -33,16 +33,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_INTEGRAL_ND             (ncm_integral_nd_get_type ())
-#define NCM_INTEGRAL_ND(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_INTEGRAL_ND, NcmIntegralND))
-#define NCM_INTEGRAL_ND_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_INTEGRAL_ND, NcmIntegralNDClass))
-#define NCM_IS_INTEGRAL_ND(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_INTEGRAL_ND))
-#define NCM_IS_INTEGRAL_ND_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_INTEGRAL_ND))
-#define NCM_INTEGRAL_ND_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_INTEGRAL_ND, NcmIntegralNDClass))
+#define NCM_TYPE_INTEGRAL_ND (ncm_integral_nd_get_type ())
 
-typedef struct _NcmIntegralNDClass NcmIntegralNDClass;
-typedef struct _NcmIntegralND NcmIntegralND;
-typedef struct _NcmIntegralNDPrivate NcmIntegralNDPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmIntegralND, ncm_integral_nd, NCM, INTEGRAL_ND, GObject)
 
 /**
  * NcmIntegralNDF:
@@ -85,6 +78,7 @@ struct _NcmIntegralNDClass
 {
   /*< private >*/
   GObjectClass parent_class;
+
   NcmIntegralNDF integrand;
   NcmIntegralNDGetDimensions get_dimensions;
   gpointer padding[16];
@@ -135,15 +129,6 @@ typedef enum _NcmIntegralNDError
   NCM_INTEGRAL_ND_ERROR_LEN, /*< skip >*/
 } NcmIntegralNDError;
 
-struct _NcmIntegralND
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmIntegralNDPrivate *priv;
-};
-
-GType ncm_integral_nd_get_type (void) G_GNUC_CONST;
-
 NcmIntegralND *ncm_integral_nd_ref (NcmIntegralND *intnd);
 void ncm_integral_nd_free (NcmIntegralND *intnd);
 void ncm_integral_nd_clear (NcmIntegralND **intnd);
@@ -164,6 +149,33 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
 
 #define NCM_INTEGRAL_ND_DEFAULT_RELTOL 1e-7
 #define NCM_INTEGRAL_ND_DEFAULT_ABSTOL 0.0
+
+#define NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, user_data_free) \
+  G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND) \
+  struct _ ## ModuleObjName { NcmIntegralND parent_instance; user_data data; }; \
+  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_INTEGRAL_ND); \
+  static void \
+  module_obj_name ## _init (ModuleObjName * intnd) \
+  { \
+  } \
+  static void \
+  module_obj_name ## _finalize (GObject * object) \
+  { \
+    ModuleObjName *intnd = MODULE ## _ ## OBJ_NAME (object); \
+    user_data_free (&intnd->data); \
+    G_OBJECT_CLASS (module_obj_name ## _parent_class)->finalize (object); \
+  } \
+  static void module_obj_name ## _class_init (ModuleObjName ## Class * klass) \
+  { \
+    NcmIntegralNDClass *intnd_class = NCM_INTEGRAL_ND_CLASS (klass); \
+    GObjectClass *gobject_class     = G_OBJECT_CLASS (klass); \
+    gobject_class->finalize     = &module_obj_name ## _finalize; \
+    intnd_class->get_dimensions = &method_get_dimensions; \
+    intnd_class->integrand      = &method_integrand; \
+  } \
+
+#define NCM_INTEGRAL_ND_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data) \
+  NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE (MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, (void)) \
 
 G_END_DECLS
 
