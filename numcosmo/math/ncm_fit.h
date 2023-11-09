@@ -82,7 +82,7 @@ typedef enum _NcmFitType
  * Defines the type of gradient calculation.
  *
  */
-typedef enum _NcmFitGradType
+typedef enum _NcmFitGradType /*< enum,prefix=NCM_FIT_GRAD >*/
 {
   NCM_FIT_GRAD_NUMDIFF_FORWARD = 0,
   NCM_FIT_GRAD_NUMDIFF_CENTRAL,
