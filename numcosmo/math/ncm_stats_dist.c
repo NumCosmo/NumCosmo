@@ -174,6 +174,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->levmar_n        = 0;
   self->fmin            = gsl_multimin_fminimizer_alloc (gsl_multimin_fminimizer_nmsimplex2, 1);
   self->m2lnp_sort      = g_array_new (FALSE, FALSE, sizeof (size_t));
+  self->m2lnp           = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->rng             = ncm_rng_seeded_new (NULL, 0);
 
   g_ptr_array_set_free_func (self->sample_array, (GDestroyNotify) ncm_vector_free);
@@ -277,6 +278,7 @@ _ncm_stats_dist_dispose (GObject *object)
   ncm_rng_clear (&self->rng);
 
   g_clear_pointer (&self->m2lnp_sort, g_array_unref); /* LCOV_EXCL_BR_LINE */
+  g_clear_pointer (&self->m2lnp, g_array_unref);      /* LCOV_EXCL_BR_LINE */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->dispose (object);
@@ -505,11 +507,13 @@ _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
 
   for (i = 0; i < self->n_kernels; i++)
   {
-    for (j = 0; j < self->n_kernels; j++)
+    for (j = 0; j < i; j++)
     {
-      if (i == j)
-        continue;
+      amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
+    }
 
+    for (j = i + 1; j < self->n_kernels; j++)
+    {
       amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
     }
   }
@@ -520,6 +524,8 @@ _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
 
   return amise;
 }
+
+void ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *rng);
 
 gdouble
 _ncm_stats_dist_amise (const gsl_vector *v, void *params)
@@ -536,46 +542,78 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 
   sd_class->compute_IM (sd, self->IM);
 
+  g_array_set_size (self->m2lnp_sort, self->n_kernels);
+  g_array_set_size (self->m2lnp, self->n_kernels);
+
   for (i = 0; i < self->n_kernels; i++)
   {
-    for (j = 0; j < self->n_kernels; j++)
-    {
-      if (i == j)
-        continue;
+    register gdouble row_sum = 0.0;
 
-      amise -= 2.0 * ncm_matrix_get (self->IM, i, j) / (self->n_kernels * (self->n_kernels - 1));
+    for (j = 0; j < i; j++)
+    {
+      row_sum += ncm_matrix_get (self->IM, i, j);
     }
+
+    for (j = i + 1; j < self->n_kernels; j++)
+    {
+      row_sum += ncm_matrix_get (self->IM, i, j);
+    }
+
+    amise -= 2.0 * row_sum / (self->n_kernels * (self->n_kernels - 1));
+
+    g_array_index (self->m2lnp, gdouble, i) = (row_sum + ncm_matrix_get (self->IM, i, i)) / self->n_kernels;
   }
+
+  gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
+                  (gdouble *) self->m2lnp->data, 1, self->m2lnp->len);
 
   {
     NcmRNG *rng        = ncm_rng_seeded_new (NULL, 0);
-    NcmVector *x       = ncm_vector_new (self->d);
-    NcmStatsVec *stats = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+    NcmVector *x1      = ncm_vector_new (self->d);
+    NcmVector *x2      = ncm_vector_new (self->d);
+    NcmStatsVec *stats = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
     guint max_iter     = 100000000;
+    gdouble mean;
+    gdouble p1, p2;
 
+    for (i = 0; i < 100; i++)
+    {
+      ncm_stats_dist_sample2 (sd, x1, x2, rng);
+      p1 = ncm_stats_dist_eval (sd, x1);
+      p2 = ncm_stats_dist_eval (sd, x2);
 
-    ncm_stats_dist_sample (sd, x, rng);
-    ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
-    ncm_stats_vec_update (stats);
+      ncm_stats_vec_set (stats, 0, p1);
+      ncm_stats_vec_set (stats, 1, p2);
+      ncm_stats_vec_update (stats);
+    }
 
     for (i = 0; i < max_iter; i++)
     {
-      gdouble msd;
+      ncm_stats_dist_sample2 (sd, x1, x2, rng);
+      p1 = ncm_stats_dist_eval (sd, x1);
+      p2 = ncm_stats_dist_eval (sd, x2);
 
-      ncm_stats_dist_sample (sd, x, rng);
-      ncm_stats_vec_set (stats, 0, ncm_stats_dist_eval (sd, x));
+      ncm_stats_vec_set (stats, 0, p1);
+      ncm_stats_vec_set (stats, 1, p2);
       ncm_stats_vec_update (stats);
 
-      msd = ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0) / ncm_stats_vec_get_mean (stats, 0);
+      mean = 0.5 * (ncm_stats_vec_get_mean (stats, 0) + ncm_stats_vec_get_mean (stats, 1));
 
-      if (msd < 1.0e-3)
-        break;
+      {
+        const gdouble var = 0.25 * (ncm_stats_vec_get_var (stats, 0) + ncm_stats_vec_get_var (stats, 1) + 2.0 * ncm_stats_vec_get_cov (stats, 0, 1));
+
+        const gdouble msd = sqrt (var / (i + 101.0)) / mean;
+
+        if (msd < 1.0e-2)
+          break;
+      }
     }
 
-    amise += ncm_stats_vec_get_mean (stats, 0);
+    amise += mean;
 
     ncm_stats_vec_free (stats);
-    ncm_vector_free (x);
+    ncm_vector_free (x1);
+    ncm_vector_free (x2);
     ncm_rng_clear (&rng);
   }
 
@@ -1511,6 +1549,30 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
   NcmMatrix *cov_U                 = ncm_stats_dist_peek_cov_decomp (sd, i);
 
   ncm_stats_dist_kernel_sample (self->kernel, cov_U, self->href, x_i, x, rng);
+}
+
+/* This is an internal function used to sample antithetic variates
+ * to improve the variance of the Monte Carlo integration.
+ */
+void
+ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *rng)
+{
+  NcmStatsDistPrivate * const self = sd->priv;
+  const gint i                     = ncm_stats_dist_kernel_choose (sd, rng);
+  const gint o_i                   = g_array_index (self->m2lnp_sort, size_t, i);
+  NcmVector *x_i                   = g_ptr_array_index (self->sample_array, o_i);
+  NcmMatrix *cov_U_i               = ncm_stats_dist_peek_cov_decomp (sd, o_i);
+
+  ncm_stats_dist_kernel_sample (self->kernel, cov_U_i, self->href, x_i, x1, rng);
+
+  {
+    const gint j       = self->sample_array->len - 1 - i;
+    const gint o_j     = g_array_index (self->m2lnp_sort, size_t, j);
+    NcmVector *x_j     = g_ptr_array_index (self->sample_array, o_j);
+    NcmMatrix *cov_U_j = ncm_stats_dist_peek_cov_decomp (sd, o_j);
+
+    ncm_stats_dist_kernel_sample (self->kernel, cov_U_j, self->href, x_j, x2, rng);
+  }
 }
 
 /**

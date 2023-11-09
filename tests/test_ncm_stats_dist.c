@@ -787,9 +787,9 @@ test_ncm_stats_dist_dens_interp_cv_loo (TestNcmStatsDist *test, gconstpointer pd
   NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
-  gulong N                        = 0;
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
+  gulong N                        = 0;
   guint i;
 
   switch (cov_type)
