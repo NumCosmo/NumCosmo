@@ -32,7 +32,12 @@
  * [Delubac et al. (2015)][XDelubac2015] and
  * [Aubourg et al. (2014)][XAubourg2014].
  *
- * FIXME
+ * The data is stored in a #NcDataBaoDHrDAr object. The data is stored in a
+ * #NcDataGaussCov base class object, which is a subclass of #NcmData.
+ * The data represents the mean values of the transverse distance $D_A$ and the
+ * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
+ * last scattering surface $r_s$.
+ *
  *
  */
 
@@ -66,6 +71,7 @@ static void
 nc_data_bao_dhr_dar_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DHR_DAR (object));
 
   switch (prop_id)
@@ -86,6 +92,7 @@ static void
 nc_data_bao_dhr_dar_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DHR_DAR (object));
 
   switch (prop_id)
@@ -130,7 +137,7 @@ static void _nc_data_bao_dhr_dar_set_size (NcmDataGaussCov *gauss, guint np);
 static void
 nc_data_bao_dhr_dar_class_init (NcDataBaoDHrDArClass *klass)
 {
-  GObjectClass* object_class        = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
   NcmDataGaussCovClass *gauss_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
@@ -164,6 +171,7 @@ _nc_data_bao_dhr_dar_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (data);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (dhda->dist, cosmo);
 }
 
@@ -179,16 +187,18 @@ _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
   {
     if (i % 2 == 0)
     {
-      const gdouble z1      = ncm_vector_get (dhda->x, i);
-      const gdouble z2      = ncm_vector_get (dhda->x, i + 1);
-      const gdouble DH_r    = nc_distance_DH_r (dhda->dist, cosmo, z1);
-      const gdouble DA_r    = nc_distance_DA_r (dhda->dist, cosmo, z2);
+      const gdouble z1   = ncm_vector_get (dhda->x, i);
+      const gdouble z2   = ncm_vector_get (dhda->x, i + 1);
+      const gdouble DH_r = nc_distance_DH_r (dhda->dist, cosmo, z1);
+      const gdouble DA_r = nc_distance_DA_r (dhda->dist, cosmo, z2);
 
       ncm_vector_set (vp, i, DH_r);
       ncm_vector_set (vp, i + 1, DA_r);
     }
     else
+    {
       continue;
+    }
   }
 }
 
@@ -220,7 +230,9 @@ NcDataBaoDHrDAr *
 nc_data_bao_dhr_dar_new_from_file (const gchar *filename)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_BAO_DHR_DAR (dhda));
+
   return dhda;
 }
 
@@ -229,7 +241,8 @@ nc_data_bao_dhr_dar_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
- * FIXME
+ * Creates a new acustic scale data object #NcDataBaoDHrDAr from @id.
+ * This object requires a #NcDistance object to be set.
  *
  * Returns: (transfer full): a #NcDataBaoDHrDAr
  */
@@ -251,6 +264,7 @@ nc_data_bao_dhr_dar_new_from_id (NcDistance *dist, NcDataBaoId id)
       g_error ("nc_data_bao_dhr_dar_new_from_id: id %d not recognized.", id);
       break;
   }
+
   dhda = nc_data_bao_dhr_dar_new_from_file (filename);
   nc_data_bao_dhr_dar_set_dist (dhda, dist);
   g_free (filename);
@@ -272,3 +286,4 @@ nc_data_bao_dhr_dar_set_dist (NcDataBaoDHrDAr *dhda, NcDistance *dist)
   nc_distance_clear (&dhda->dist);
   dhda->dist = nc_distance_ref (dist);
 }
+

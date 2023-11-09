@@ -53,6 +53,21 @@ enum
   PROP_SCALE
 };
 
+struct _NcmFitESMCMCWalkerWalk
+{
+  /*< private >*/
+  NcmFitESMCMCWalker parent_instance;
+  guint size;
+  guint size_2;
+  guint nparams;
+  gdouble a;
+  gdouble sqrt_nparams;
+  NcmMatrix *z;
+  GPtrArray *thetabar;
+  GArray *indices;
+  GArray *numbers;
+};
+
 G_DEFINE_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM_TYPE_FIT_ESMCMC_WALKER);
 
 static void
@@ -67,7 +82,7 @@ ncm_fit_esmcmc_walker_walk_init (NcmFitESMCMCWalkerWalk *walk)
   walk->thetabar     = g_ptr_array_new ();
   walk->indices      = g_array_new (TRUE, TRUE, sizeof (guint));
   walk->numbers      = g_array_new (TRUE, TRUE, sizeof (guint));
-  
+
   g_ptr_array_set_free_func (walk->thetabar, (GDestroyNotify) ncm_vector_free);
 }
 
@@ -75,13 +90,13 @@ static void
 ncm_fit_esmcmc_walker_walk_dispose (GObject *object)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (object);
-  
+
   ncm_matrix_clear (&walk->z);
-  
+
   g_clear_pointer (&walk->thetabar, g_ptr_array_unref);
   g_clear_pointer (&walk->indices, g_array_unref);
   g_clear_pointer (&walk->numbers, g_array_unref);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_walk_parent_class)->dispose (object);
 }
@@ -97,9 +112,9 @@ static void
 ncm_fit_esmcmc_walker_walk_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (object);
-  
+
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_WALK (object));
-  
+
   switch (prop_id)
   {
     case PROP_SCALE:
@@ -115,9 +130,9 @@ static void
 ncm_fit_esmcmc_walker_walk_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (object);
-  
+
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_WALK (object));
-  
+
   switch (prop_id)
   {
     case PROP_SCALE:
@@ -145,12 +160,12 @@ ncm_fit_esmcmc_walker_walk_class_init (NcmFitESMCMCWalkerWalkClass *klass)
 {
   GObjectClass *object_class            = G_OBJECT_CLASS (klass);
   NcmFitESMCMCWalkerClass *walker_class = NCM_FIT_ESMCMC_WALKER_CLASS (klass);
-  
+
   object_class->set_property = ncm_fit_esmcmc_walker_walk_set_property;
   object_class->get_property = ncm_fit_esmcmc_walker_walk_get_property;
   object_class->dispose      = ncm_fit_esmcmc_walker_walk_dispose;
   object_class->finalize     = ncm_fit_esmcmc_walker_walk_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SCALE,
                                    g_param_spec_double ("scale",
@@ -158,7 +173,7 @@ ncm_fit_esmcmc_walker_walk_class_init (NcmFitESMCMCWalkerWalkClass *klass)
                                                         "Walk scale a",
                                                         1.0e-2, G_MAXDOUBLE, 0.2,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_walk_set_size;
   walker_class->get_size    = &_ncm_fit_esmcmc_walker_walk_get_size;
   walker_class->set_nparams = &_ncm_fit_esmcmc_walker_walk_set_nparams;
@@ -175,39 +190,39 @@ static void
 _ncm_fit_esmcmc_walker_walk_set_sys (NcmFitESMCMCWalker *walker, guint size, guint nparams)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
-  
+
   g_assert_cmpuint (size, >, 0);
   g_assert_cmpuint (nparams, >, 0);
-  
+
   if ((walk->size != size) || (walk->nparams != nparams))
   {
     guint i;
-    
+
     ncm_matrix_clear (&walk->z);
-    
+
     g_assert (size % 2 == 0);
-    
+
     walk->z = ncm_matrix_new (size, nparams);
-    
+
     g_array_set_size (walk->indices, size * nparams);
-    
+
     g_array_set_size (walk->numbers, size);
-    
+
     for (i = 0; i < size; i++)
       g_array_index (walk->numbers, guint, i) = i;
-    
+
     g_ptr_array_set_size (walk->thetabar, 0);
-    
+
     for (i = 0; i < size; i++)
     {
       NcmVector *thetabar_i = ncm_vector_new (nparams);
-      
+
       g_ptr_array_add (walk->thetabar, thetabar_i);
     }
-    
+
     walk->size   = size;
     walk->size_2 = size / 2;
-    
+
     walk->size         = size;
     walk->nparams      = nparams;
     walk->sqrt_nparams = sqrt (1.0 * walk->nparams);
@@ -218,9 +233,9 @@ static void
 _ncm_fit_esmcmc_walker_walk_set_size (NcmFitESMCMCWalker *walker, guint size)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
-  
+
   g_assert_cmpuint (size, >, 0);
-  
+
   if (walk->nparams != 0)
     _ncm_fit_esmcmc_walker_walk_set_sys (walker, size, walk->nparams);
   else
@@ -231,7 +246,7 @@ static guint
 _ncm_fit_esmcmc_walker_walk_get_size (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
-  
+
   return walk->size;
 }
 
@@ -239,9 +254,9 @@ static void
 _ncm_fit_esmcmc_walker_walk_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
-  
+
   g_assert_cmpuint (nparams, >, 0);
-  
+
   if (walk->size != 0)
     _ncm_fit_esmcmc_walker_walk_set_sys (walker, walk->size, nparams);
   else
@@ -252,7 +267,7 @@ static guint
 _ncm_fit_esmcmc_walker_walk_get_nparams (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
-  
+
   return walk->nparams;
 }
 
@@ -261,26 +276,26 @@ _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 {
   NcmFitESMCMCWalkerWalk *walk = NCM_FIT_ESMCMC_WALKER_WALK (walker);
   guint k;
-  
+
   for (k = ki; k < kf; k++)
   {
     const guint subensemble = (k < walk->size_2) ? walk->size_2 : 0;
     guint pi;
-    
+
     for (pi = 0; pi < walk->nparams; pi++)
     {
       const gdouble zi = gsl_ran_ugaussian (rng->r);
-      
+
       ncm_matrix_set (walk->z, k, pi, zi);
     }
-    
+
     gsl_ran_choose (rng->r,
                     &g_array_index (walk->indices, guint, k * walk->nparams),
                     walk->nparams,
                     &g_array_index (walk->numbers, guint, subensemble),
                     walk->size_2,
                     g_array_get_element_size (walk->numbers));
-    
+
 /*
  *   for (pi = 0; pi < walk->nparams; pi++)
  *   {
@@ -300,35 +315,35 @@ _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
   NcmVector *theta_k           = g_ptr_array_index (theta, k);
   NcmVector *thetabar_k        = g_ptr_array_index (walk->thetabar, k);
   guint i;
-  
+
   ncm_vector_set_zero (thetabar_k);
-  
+
   for (i = 0; i < walk->nparams; i++)
   {
     const guint j      = g_array_index (walk->indices, guint, k * walk->nparams + i);
     NcmVector *theta_j = g_ptr_array_index (theta, j);
-    
+
     /*printf ("walker %u using walker %u to calculate mean\n", k, j);*/
-    
+
     ncm_vector_add (thetabar_k, theta_j);
   }
-  
+
   ncm_vector_scale (thetabar_k, 1.0 / (1.0 * walk->nparams));
-  
+
   ncm_vector_memcpy (thetastar, theta_k);
-  
+
   for (i = 0; i < walk->nparams; i++)
   {
     const gdouble z    = ncm_matrix_get (walk->z, k, i);
     const guint j      = g_array_index (walk->indices, guint, k * walk->nparams + i);
     NcmVector *theta_j = g_ptr_array_index (theta, j);
     guint m;
-    
+
     for (m = 0; m < walk->nparams; m++)
     {
       const gdouble thetabar_k_i = ncm_vector_get (thetabar_k, i);
       const gdouble theta_j_i    = ncm_vector_get (theta_j, i);
-      
+
       ncm_vector_addto (thetastar, i, walk->a * z * (theta_j_i - thetabar_k_i) / walk->sqrt_nparams);
     }
   }
@@ -373,7 +388,7 @@ ncm_fit_esmcmc_walker_walk_new (guint nwalkers)
   NcmFitESMCMCWalkerWalk *walk = g_object_new (NCM_TYPE_FIT_ESMCMC_WALKER_WALK,
                                                "size", nwalkers,
                                                NULL);
-  
+
   return walk;
 }
 

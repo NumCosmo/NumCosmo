@@ -4,6 +4,9 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#ifdef HAVE_NLOPT
+#include <nlopt.h>
+#endif /* HAVE_NLOPT */
 
 /**
  * SECTION:ncm_fit_nlopt_enum
