@@ -89,6 +89,7 @@ typedef enum _NcmStatsDistCV
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,
   NCM_STATS_DIST_CV_SPLIT_NOFIT,
+  NCM_STATS_DIST_CV_LOO,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
