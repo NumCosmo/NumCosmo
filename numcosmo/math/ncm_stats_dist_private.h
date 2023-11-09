@@ -72,6 +72,7 @@ struct _NcmStatsDistPrivate
   guint levmar_n;
   gsl_multimin_fminimizer *fmin;
   GArray *m2lnp_sort;
+  GArray *m2lnp;
   NcmRNG *rng;
 };
 
