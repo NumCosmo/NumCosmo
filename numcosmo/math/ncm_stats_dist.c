@@ -148,7 +148,6 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->weights         = NULL;
   self->wcum            = NULL;
   self->wcum_ready      = FALSE;
-  self->cv_ready        = TRUE;
   self->print_fit       = FALSE;
   self->over_smooth     = 0.0;
   self->cv_type         = NCM_STATS_DIST_CV_LEN;
@@ -454,68 +453,24 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
   NcmStatsDistPrivate * const self = sd->priv;
   const double lnos                = gsl_vector_get (v, 0);
   gdouble m2lnp                    = 0.0;
-  const gdouble n                  = self->n_obs;
-  guint i;
+  gint i;
 
-  switch (self->cv_type)
+  self->over_smooth = exp (lnos);
+  self->href        = ncm_stats_dist_get_href (sd);
+
+  #pragma omp parallel for if (self->use_threads)
+
+  for (i = self->n_kernels; i < self->n_obs; i++)
   {
-    case NCM_STATS_DIST_CV_SPLIT_NOFIT:
-    {
-      self->over_smooth = exp (lnos);
-      self->href        = ncm_stats_dist_get_href (sd);
+    NcmVector *x_i        = g_ptr_array_index (self->sample_array, i);
+    const gdouble m2lnp_i = ncm_stats_dist_eval_m2lnp (sd, x_i);
 
-      #pragma omp parallel for if (self->use_threads)
-
-      for (i = self->n_kernels; i < self->n_obs; i++)
-      {
-        NcmVector *x_i        = g_ptr_array_index (self->sample_array, i);
-        const gdouble m2lnp_i = ncm_stats_dist_eval_m2lnp (sd, x_i);
-
-        m2lnp += m2lnp_i;
-      }
-
-      if (self->print_fit)
-        ncm_message ("# over-smooth: % 22.15g, m2lnp = % 22.15g\n",
-                     self->over_smooth, m2lnp);
-
-      break;
-    }
-    case NCM_STATS_DIST_CV_LOO:
-    {
-      self->over_smooth = exp (lnos);
-      self->href        = ncm_stats_dist_get_href (sd);
-
-      #pragma omp parallel for if (self->use_threads)
-
-      /* integrate f^2 */
-
-      for (i = 0; i < self->n_obs; i++)
-      {
-        NcmVector *x_i = g_ptr_array_steal_index (self->sample_array, i);
-
-        self->cv_ready = FALSE;
-        _ncm_stats_dist_prepare (sd);
-        self->cv_ready = TRUE;
-
-        const gdouble m2lnp_i = ncm_stats_dist_eval (sd, x_i);
-
-        m2lnp -= log (m2lnp_i);
-        /* m2lnp += -2 / n * m2lnp_i; */
-
-        g_ptr_array_insert (self->sample_array, i, ncm_vector_dup (x_i));
-        ncm_vector_clear (&x_i);
-      }
-
-      if (self->print_fit)
-        ncm_message ("# over-smooth: % 22.15g, m2lnp = % 22.15g\n",
-                     self->over_smooth, m2lnp);
-
-      break;
-    }
-    default: /* LCOV_EXCL_BR_LINE */
-      g_assert_not_reached ();
-      break;
+    m2lnp += m2lnp_i;
   }
+
+  if (self->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, m2lnp = % 22.15g\n",
+                 self->over_smooth, m2lnp);
 
   return m2lnp;
 }
