@@ -563,11 +563,9 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
   while (i < self->ndata)
   {
-    gdouble r  = 0.0;
-    gdouble z  = 0.0;
-    gdouble zp = 0.0;
-
-    nc_galaxy_sd_position_gen_r (self->rz_dist, rng, &r);
+    const gdouble r = nc_galaxy_sd_position_gen_r (self->rz_dist, rng);
+    gdouble z       = 0.0;
+    gdouble zp      = 0.0;
 
     gint order_r     = (r >= self->r_min) + (r >= self->r_max);
     gdouble avg_r    = (ncm_vector_get (avg, 0) * (gdouble) i + r) / ((gdouble) i + 1.0);
@@ -579,7 +577,7 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
     {
       while (TRUE)
       {
-        nc_galaxy_sd_position_gen_z (self->rz_dist, rng, &z);
+        z = nc_galaxy_sd_position_gen_z (self->rz_dist, rng);
 
         if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
           break;

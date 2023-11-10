@@ -132,9 +132,9 @@ _nc_galaxy_sd_position_flat_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_flat_parent_class)->finalize (object);
 }
 
-static void _nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r);
-static void _nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z);
-static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *pos);
+static gdouble _nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+static gdouble _nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
 
 static void
 nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
@@ -180,8 +180,8 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
   sd_position_class->integ = &_nc_galaxy_sd_position_flat_integ;
 }
 
-static void
-_nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
+static gdouble
+_nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
@@ -191,21 +191,30 @@ _nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdoubl
   const gdouble r_ub2                        = r_ub * r_ub;
   gdouble cumul_gen                          = ncm_rng_uniform_gen (rng, 0.0, 1.0);
 
-  gen_r[0] = sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+  return sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
 }
 
-static void
-_nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z)
+static gdouble
+_nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
 
-  gen_z[0] = ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
+  return ncm_rng_uniform_gen (rng, ncm_vector_get (self->z_lim, 0), ncm_vector_get (self->z_lim, 1));
 }
 
 static gdouble
-_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *pos)
+_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
 {
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
+  NcGalaxySDPositionFlatPrivate * const self = gsdpflat->priv;
+
+  if ((z >= ncm_vector_get (self->z_lim, 0)) && (z <= ncm_vector_get (self->z_lim, 1)) &&
+      (r >= ncm_vector_get (self->r_lim, 0)) && (r <= ncm_vector_get (self->r_lim, 1)))
+    return 1.0;
+
+  g_assert_not_reached ();
+
   return 0.0;
 }
 

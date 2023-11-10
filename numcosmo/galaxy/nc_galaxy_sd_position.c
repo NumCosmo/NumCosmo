@@ -66,20 +66,24 @@ _nc_galaxy_sd_position_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_parent_class)->finalize (object);
 }
 
-static void
-_nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_r)
+static gdouble
+_nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen_r: method not implemented.");
-}
 
-static void
-_nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *gen_z)
-{
-  g_error ("_nc_galaxy_sd_position_gen_z: method not implemented.");
+  return 0.0;
 }
 
 static gdouble
-_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *pos)
+_nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+{
+  g_error ("_nc_galaxy_sd_position_gen_z: method not implemented.");
+
+  return 0.0;
+}
+
+static gdouble
+_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
 {
   g_error ("_nc_galaxy_sd_position_integ: method not implemented.");
 
@@ -143,26 +147,27 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  * nc_galaxy_sd_position_gen_r: (virtual gen_r)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
- * @gen_r: a #gdouble
  *
  * Generates a $r$ value from the distribution using @rng
  * and saves it in @r.
  *
+ * Returns: the generated $r$ value.
  */
 /**
  * nc_galaxy_sd_position_gen_z: (virtual gen_z)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
- * @gen_z: a #gdouble
  *
  * Generates a $z$ value from the distribution using @rng
  * and saves it in @z.
  *
+ * Returns: the generated $z$ value.
  */
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
- * @pos: a #NcmVector stating position and redshift
+ * @r: a #gdouble representing the radial position
+ * @z: a #gdouble representing the redshift
  *
  * Computes the probability density of the observables $r$ and $z$ given the redshift.
  * The probability density is given by $P(z)P(r)$.
