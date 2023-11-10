@@ -242,6 +242,12 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
       const gdouble lnR_i_std  = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
       const gdouble lnR_cut_i  = nc_cluster_mass_ascaso_get_cut (ascaso, lnM_i, z_i);
 
+      if (lnR_i > lnR_cut_i)
+      {
+        local_m2lnL = GSL_POSINF;
+        break;
+      }
+
       local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
                      + 2.0 * log (lnR_i_std)
                      + 2.0 * log1p (erf ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
@@ -261,6 +267,12 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
       const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
       const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
       const gdouble lnR_cut_i  = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext, lnM_i, z_i);
+
+      if (lnR_i > lnR_cut_i)
+      {
+        local_m2lnL = GSL_POSINF;
+        break;
+      }
 
       local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
                      + 2.0 * log (lnR_i_std)
