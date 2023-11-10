@@ -53,6 +53,7 @@ typedef struct _NcDataClusterMassRichPrivate
 {
   NcmVector *z_cluster;
   NcmVector *lnM_cluster;
+  NcmVector *lnR_cluster;
 } NcDataClusterMassRichPrivate;
 
 enum
@@ -60,15 +61,16 @@ enum
   PROP_0,
   PROP_Z_CLUSTER,
   PROP_LNM_CLUSTER,
+  PROP_LNR_CLUSTER,
   PROP_SIZE,
 };
 
 struct _NcDataClusterMassRich
 {
-  NcmDataGaussDiag parent_instance;
+  NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterMassRich, nc_data_cluster_mass_rich, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterMassRich, nc_data_cluster_mass_rich, NCM_TYPE_DATA);
 
 static void
 nc_data_cluster_mass_rich_init (NcDataClusterMassRich *dmr)
@@ -77,6 +79,7 @@ nc_data_cluster_mass_rich_init (NcDataClusterMassRich *dmr)
 
   self->z_cluster   = NULL;
   self->lnM_cluster = NULL;
+  self->lnR_cluster = NULL;
 }
 
 static void
@@ -96,6 +99,10 @@ nc_data_cluster_mass_rich_set_property (GObject *object, guint prop_id, const GV
     case PROP_LNM_CLUSTER:
       ncm_vector_clear (&self->lnM_cluster);
       self->lnM_cluster = g_value_dup_object (value);
+      break;
+    case PROP_LNR_CLUSTER:
+      ncm_vector_clear (&self->lnR_cluster);
+      self->lnR_cluster = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -119,6 +126,9 @@ nc_data_cluster_mass_rich_get_property (GObject *object, guint prop_id, GValue *
     case PROP_LNM_CLUSTER:
       g_value_set_object (value, self->lnM_cluster);
       break;
+    case PROP_LNR_CLUSTER:
+      g_value_set_object (value, self->lnR_cluster);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -133,6 +143,7 @@ nc_data_cluster_mass_rich_dispose (GObject *object)
 
   ncm_vector_clear (&self->z_cluster);
   ncm_vector_clear (&self->lnM_cluster);
+  ncm_vector_clear (&self->lnR_cluster);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_mass_rich_parent_class)->dispose (object);
@@ -147,17 +158,16 @@ nc_data_cluster_mass_rich_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_cluster_mass_rich_parent_class)->finalize (object);
 }
 
-static void _nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
-static gboolean _nc_data_cluster_mass_rich_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma);
+static guint _nc_data_cluster_mass_rich_get_length (NcmData *data);
+static guint _nc_data_cluster_mass_rich_get_dof (NcmData *data);
+static void _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _nc_data_cluster_mass_rich_prepare (NcmData *data, NcmMSet *mset);
 
 static void
 nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
 {
-  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
-
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->set_property = nc_data_cluster_mass_rich_set_property;
   object_class->get_property = nc_data_cluster_mass_rich_get_property;
@@ -179,17 +189,43 @@ nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  diag_class->mean_func  = &_nc_data_cluster_mass_rich_mean_func;
-  diag_class->sigma_func = &_nc_data_cluster_mass_rich_sigma_func;
+  g_object_class_install_property (object_class,
+                                   PROP_LNR_CLUSTER,
+                                   g_param_spec_object ("lnR-cluster",
+                                                        NULL,
+                                                        "Clusters (halo) ln-richness array",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  data_class->bootstrap  = FALSE;
+  data_class->get_length = &_nc_data_cluster_mass_rich_get_length;
+  data_class->get_dof    = &_nc_data_cluster_mass_rich_get_dof;
+  data_class->m2lnL_val  = &_nc_data_cluster_mass_rich_m2lnL_val;
   data_class->prepare    = &_nc_data_cluster_mass_rich_prepare;
 }
 
-static void
-_nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
+static guint
+_nc_data_cluster_mass_rich_get_length (NcmData *data)
 {
-  NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (diag);
+  NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (data);
+  NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
+
+  return ncm_vector_len (self->z_cluster);
+}
+
+static guint
+_nc_data_cluster_mass_rich_get_dof (NcmData *data)
+{
+  return _nc_data_cluster_mass_rich_get_length (data);
+}
+
+static void
+_nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
+{
+  NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (data);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
   NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  register gdouble local_m2lnL              = 0.0;
 
   if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
   {
@@ -201,9 +237,14 @@ _nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
     {
       const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
       const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnM_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+      const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+      const gdouble lnR_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+      const gdouble lnR_i_std  = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
+      const gdouble lnR_cut_i  = nc_cluster_mass_ascaso_get_cut (ascaso, lnM_i, z_i);
 
-      ncm_vector_set (vp, i, lnM_i_mean);
+      local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
+                     + 2.0 * log (lnR_i_std)
+                     + 2.0 * log1p (erf ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
     }
   }
   else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
@@ -216,9 +257,14 @@ _nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
     {
       const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
       const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnM_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
+      const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+      const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
+      const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
+      const gdouble lnR_cut_i  = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext, lnM_i, z_i);
 
-      ncm_vector_set (vp, i, lnM_i_mean);
+      local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
+                     + 2.0 * log (lnR_i_std)
+                     + 2.0 * log1p (erf ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
     }
   }
   else
@@ -226,52 +272,7 @@ _nc_data_cluster_mass_rich_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
     g_error ("nc_data_cluster_mass_rich_mean_func: unsupported cluster mass model");
   }
 
-  return;
-}
-
-static gboolean
-_nc_data_cluster_mass_rich_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma)
-{
-  NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (diag);
-  NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
-  NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-
-  if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
-  {
-    NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-    const guint ncluster        = ncm_vector_len (self->z_cluster);
-    gint i;
-
-    for (i = 0; i < ncluster; i++)
-    {
-      const gdouble z_i       = ncm_vector_get (self->z_cluster, i);
-      const gdouble lnM_i     = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnM_i_std = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
-
-      ncm_vector_set (sigma, i, lnM_i_std);
-    }
-  }
-  else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
-  {
-    NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-    const guint ncluster               = ncm_vector_len (self->z_cluster);
-    gint i;
-
-    for (i = 0; i < ncluster; i++)
-    {
-      const gdouble z_i       = ncm_vector_get (self->z_cluster, i);
-      const gdouble lnM_i     = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnM_i_std = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
-
-      ncm_vector_set (sigma, i, lnM_i_std);
-    }
-  }
-  else
-  {
-    g_error ("nc_data_cluster_mass_rich_sigma_func: unsupported cluster mass model");
-  }
-
-  return TRUE;
+  *m2lnL = local_m2lnL;
 }
 
 static void
@@ -364,19 +365,13 @@ nc_data_cluster_mass_rich_set_data (NcDataClusterMassRich *dmr, NcmVector *lnM, 
     return;
   }
 
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (dmr), len);
-
   ncm_vector_clear (&self->z_cluster);
   ncm_vector_clear (&self->lnM_cluster);
+  ncm_vector_clear (&self->lnR_cluster);
 
   self->z_cluster   = ncm_vector_dup (z);
   self->lnM_cluster = ncm_vector_dup (lnM);
-
-  {
-    NcmVector *internal_lnR = ncm_data_gauss_diag_peek_mean (NCM_DATA_GAUSS_DIAG (dmr));
-
-    ncm_vector_memcpy (internal_lnR, lnR);
-  }
+  self->lnR_cluster = ncm_vector_dup (lnR);
 
   ncm_data_set_init (NCM_DATA (dmr), TRUE);
 }

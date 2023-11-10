@@ -30,13 +30,13 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_distance.h>
-#include <numcosmo/math/ncm_data_gauss_diag.h>
+#include <numcosmo/math/ncm_data.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_CLUSTER_MASS_RICH             (nc_data_cluster_mass_rich_get_type ())
+#define NC_TYPE_DATA_CLUSTER_MASS_RICH (nc_data_cluster_mass_rich_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcDataClusterMassRich, nc_data_cluster_mass_rich, NC, DATA_CLUSTER_MASS_RICH, NcmDataGaussDiag);
+G_DECLARE_FINAL_TYPE (NcDataClusterMassRich, nc_data_cluster_mass_rich, NC, DATA_CLUSTER_MASS_RICH, NcmData);
 
 NcDataClusterMassRich *nc_data_cluster_mass_rich_new (void);
 NcDataClusterMassRich *nc_data_cluster_mass_rich_ref (NcDataClusterMassRich *dmr);

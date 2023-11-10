@@ -71,6 +71,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, 
 #define SIGMA_M2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2))
 #define SIGMA_Z2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
 #define SIGMA_MZ (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
+#define CUT      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
 
 enum
 {
@@ -373,6 +374,17 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ,
                               NCM_PARAM_TYPE_FIXED);
 
+  /**
+   * NcClusterMassLnrichExt:cut:
+   *
+   * Cut in richness.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNRICH_EXT_CUT, "cut", "cut",
+                              0.0, 100.0, 1.0e-2,
+                              NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT,
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -556,5 +568,23 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
   return SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
+}
+
+/**
+ * nc_cluster_mass_lnrich_ext_get_cut:
+ * @lnrich_ext: a #NcClusterMassLnrichExt
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the cut in richness.
+ *
+ * Returns: the cut in richness.
+ */
+gdouble
+nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z)
+{
+  NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
+
+  return CUT;
 }
 
