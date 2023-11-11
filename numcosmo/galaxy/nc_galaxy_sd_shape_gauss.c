@@ -166,7 +166,10 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   gdouble ex_source       = ncm_rng_gaussian_gen (rng, 0, self->sigma);
   complex double e_source = et_source + I * ex_source;
   complex double gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
-  complex double e_obs    = (e_source + gt) / (1.0 + conj (gt) * e_source);
+  complex double e_obs    = e_source;
+
+  if (z > z_cluster)
+    e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
 
   return creal (e_obs);
 }
