@@ -171,26 +171,20 @@ test_nc_galaxy_sd_position_flat_gen_lim (TestNcGalaxySDPositionFlat *test, gcons
 static void
 test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPositionFlat *test, gconstpointer pdata)
 {
-  NcmRNG *rng             = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const gint nruns        = 1000;
-  const gint ndata        = 1000;
-  NcmVector *z_avg_sample = ncm_vector_new (nruns);
-  NcmVector *z_var_sample = ncm_vector_new (nruns);
-  NcmVector *r_avg_sample = ncm_vector_new (nruns);
-  NcmVector *r_var_sample = ncm_vector_new (nruns);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmVector *z_lim    = ncm_vector_new (2);
+  NcmVector *r_lim    = ncm_vector_new (2);
+  const gdouble z_ll  = g_test_rand_double_range (0.1, 0.5);
+  const gdouble z_ul  = g_test_rand_double_range (5.0, 1000.0);
+  const gdouble r_ll  = g_test_rand_double_range (0.001, 0.1);
+  const gdouble r_ul  = g_test_rand_double_range (1.0, 10.0);
+  const gdouble z_avg = (z_ul + z_ll) / 2.0;
+  const gdouble r_avg = 2.0 / 3.0 * (r_ll + r_ul - r_ll * r_ul / (r_ll + r_ul));
+  const gdouble z_var = 1.0 / 12.0 * (gsl_pow_2 (z_ul - z_ll));
+  const gdouble r_var = 1.0 / 18.0 * (gsl_pow_2 (r_ul - r_ll) * (gsl_pow_2 (r_ul + r_ll) + 2.0 * r_ul * r_ll) / gsl_pow_2 (r_ll + r_ul));
+  const gint nruns    = 10;
+  const gint ndata    = 10000;
   gint i;
-
-  NcmVector *z_lim   = ncm_vector_new (2);
-  NcmVector *r_lim   = ncm_vector_new (2);
-  const gdouble z_ll = g_test_rand_double_range (0.1, 0.5);
-  const gdouble z_ul = g_test_rand_double_range (5.0, 1000.0);
-  const gdouble r_ll = g_test_rand_double_range (0.001, 0.1);
-  const gdouble r_ul = g_test_rand_double_range (1.0, 10.0);
-
-  gdouble z_avg = (z_ul - z_ll) / 2.0;
-  gdouble r_avg = 3.0 * (pow (r_ul, 4.0) - pow (r_ll, 4.0)) / (4.0 * (pow (r_ul, 3.0) - pow (r_ll, 3.0)));
-  gdouble z_var = (pow (z_ll, 2.0) + z_ll * z_ul + pow (z_ul, 2.0)) / 3.0 - pow (z_avg, 2.0);
-  gdouble r_var = 3.0 * (pow (r_ul, 5.0) - pow (r_ll, 5.0)) / (5.0 * (pow (r_ul, 3.0) - pow (r_ll, 3.0))) - pow (r_avg, 2.0);
 
   ncm_vector_set (z_lim, 0, z_ll);
   ncm_vector_set (z_lim, 1, z_ul);
@@ -202,45 +196,34 @@ test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPositionFlat *test, gcon
 
   for (i = 0; i < nruns; i++)
   {
+    NcmStatsVec *pos_sample = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
     gint j;
-
-    NcmVector *z_gen_total = ncm_vector_new (ndata);
-    NcmVector *r_gen_total = ncm_vector_new (ndata);
 
     for (j = 0; j < ndata; j++)
     {
       const gdouble gen_z = nc_galaxy_sd_position_gen_z (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
       const gdouble gen_r = nc_galaxy_sd_position_gen_r (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
 
-      ncm_vector_set (z_gen_total, j, gen_z);
-      ncm_vector_set (r_gen_total, j, gen_r);
+      ncm_stats_vec_set (pos_sample, 0, gen_z);
+      ncm_stats_vec_set (pos_sample, 1, gen_r);
+
+      ncm_stats_vec_update (pos_sample);
     }
 
-    ncm_vector_set (z_avg_sample, i, ncm_vector_mean (z_gen_total));
-    ncm_vector_set (r_avg_sample, i, ncm_vector_mean (r_gen_total));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 5.0 * sqrt (z_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 5.0 * sqrt (z_var / ndata));
 
-    gint k;
-    gdouble data_z_var = 0;
-    gdouble data_r_var = 0;
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, r_avg + 5.0 * sqrt (r_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, r_avg - 5.0 * sqrt (r_var / ndata));
 
-    for (k = 0; k < ndata; k++)
-    {
-      data_z_var += pow (ncm_vector_get (z_gen_total, k) - ncm_vector_get (z_avg_sample, i), 2.0) / (ndata - 1);
-      data_r_var += pow (ncm_vector_get (r_gen_total, k) - ncm_vector_get (r_avg_sample, i), 2.0) / (ndata - 1);
-    }
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 1.0e-1);
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / r_var - 1.0), <, 1.0e-1);
 
-    ncm_vector_set (z_var_sample, i, data_z_var);
-    ncm_vector_set (r_var_sample, i, data_r_var);
+    ncm_stats_vec_free (pos_sample);
   }
 
-  g_assert_cmpfloat (ncm_vector_mean (z_avg_sample), >, (1.0 - 0.05) * z_avg);
-  g_assert_cmpfloat (ncm_vector_mean (z_avg_sample), <, (1.0 + 0.05) * z_avg);
-  g_assert_cmpfloat (ncm_vector_mean (r_avg_sample), >, (1.0 - 0.05) * r_avg);
-  g_assert_cmpfloat (ncm_vector_mean (r_avg_sample), <, (1.0 + 0.05) * r_avg);
-
-  g_assert_cmpfloat (ncm_vector_mean (z_var_sample), >, (1.0 - 0.05) * z_var);
-  g_assert_cmpfloat (ncm_vector_mean (z_var_sample), <, (1.0 + 0.05) * z_var);
-  g_assert_cmpfloat (ncm_vector_mean (r_var_sample), >, (1.0 - 0.05) * r_var);
-  g_assert_cmpfloat (ncm_vector_mean (r_var_sample), <, (1.0 + 0.05) * r_var);
+  ncm_vector_free (z_lim);
+  ncm_vector_free (r_lim);
+  ncm_rng_free (rng);
 }
 

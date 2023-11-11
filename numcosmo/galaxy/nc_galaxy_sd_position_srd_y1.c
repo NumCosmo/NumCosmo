@@ -53,12 +53,17 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_randist.h>
 
 struct _NcGalaxySDPositionSRDY1Private
 {
   NcmVector *z_lim;
   NcmVector *r_lim;
-  NcmStatsDist1d *z_dist;
+  gdouble alpha;
+  gdouble beta;
+  gdouble z0;
+  gdouble y0;
+  gdouble gamma_a;
 };
 
 enum
@@ -76,9 +81,13 @@ nc_galaxy_sd_position_srd_y1_init (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 {
   NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
-  self->z_lim  = NULL;
-  self->r_lim  = NULL;
-  self->z_dist = NULL;
+  self->z_lim   = NULL;
+  self->r_lim   = NULL;
+  self->alpha   = 0.78;
+  self->beta    = 2.0;
+  self->z0      = 0.13;
+  self->y0      = pow (self->z0, self->alpha);
+  self->gamma_a = (1.0 + self->beta) / self->alpha;
 }
 
 static void
@@ -208,16 +217,28 @@ _nc_galaxy_sd_position_srd_y1_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
   NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  const gdouble z_lb                          = ncm_vector_get (self->z_lim, 0);
+  const gdouble z_ub                          = ncm_vector_get (self->z_lim, 1);
+  gdouble z;
 
-  return ncm_stats_dist1d_gen (self->z_dist, rng);
+  do {
+    const gdouble gen_y = ncm_rng_gamma_gen (rng, self->gamma_a, self->y0);
+
+    z = pow (gen_y, 1.0 / self->alpha);
+  } while (z < z_lb || z > z_ub);
+
+  return z;
 }
 
 static gdouble
 _nc_galaxy_sd_position_srd_y1_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
 {
-  g_assert_not_reached ();
+  NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
+  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
 
-  return 0.0;
+  const gdouble y = pow (z, self->alpha);
+
+  return gsl_ran_gamma_pdf (y, self->gamma_a, self->y0) * self->alpha * y / z;
 }
 
 /**
@@ -277,18 +298,6 @@ nc_galaxy_sd_position_srd_y1_clear (NcGalaxySDPositionSRDY1 **gsdpsrdy1)
   g_clear_object (gsdpsrdy1);
 }
 
-static gdouble
-_m2lnp (gdouble z, void *p)
-{
-  (void) (p);
-
-  gdouble alpha = 0.78;
-  gdouble beta  = 2.0;
-  gdouble z0    = 0.13;
-
-  return -2.0 * log (pow (z, beta) * exp (-pow (z / z0, alpha)));
-}
-
 /**
  * nc_galaxy_sd_position_srd_y1_set_z_lim:
  * @gsdpsrdy1: a #NcGalaxySDPositionSRDY1
@@ -304,26 +313,8 @@ nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
   ncm_vector_clear (&self->z_lim);
-  ncm_stats_dist1d_clear (&self->z_dist);
 
-  gdouble z_ll = ncm_vector_get (lim, 0);
-  gdouble z_ul = ncm_vector_get (lim, 1);
-
-  gsl_function F;
-
-  F.function = &_m2lnp;
-  F.params   = 0;
-
-  NcmSpline *spline = ncm_spline_cubic_notaknot_new ();
-
-  ncm_spline_set_func (spline, NCM_SPLINE_FUNCTION_SPLINE, &F, z_ll, z_ul, 10000, 0.01);
-
-  NcmStatsDist1dSpline *dist = ncm_stats_dist1d_spline_new (spline);
-
-  ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
-
-  self->z_lim  = ncm_vector_ref (lim);
-  self->z_dist = NCM_STATS_DIST1D (dist);
+  self->z_lim = ncm_vector_ref (lim);
 }
 
 /**
