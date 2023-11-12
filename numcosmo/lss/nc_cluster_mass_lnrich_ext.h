@@ -60,7 +60,8 @@ typedef struct _NcClusterMassLnrichExtPrivate NcClusterMassLnrichExtPrivate;
  * @NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2: quadratic redshift dependency on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ: cross term on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_LNRICH_EXT_CUT: cut in richness
- *
+ * @NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1: slope on the cut in richness
+ * @NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1: redshift dependency on the cut in richness
  * Parameters of the extended richness-mass relation.
  *
  */
@@ -79,6 +80,8 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNRICH_EXT_SPARAMS >*/
   NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2,
   NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ,
   NC_CLUSTER_MASS_LNRICH_EXT_CUT,
+  NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1,
+  NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1,
   /* < private > */
   NC_CLUSTER_MASS_LNRICH_EXT_SPARAM_LEN, /*< skip >*/
 } NcClusterMassLnrichExtSParams;
@@ -97,6 +100,8 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNRICH_EXT_SPARAMS >*/
 #define NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ  (0.0)
 #define NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT       (20.0)
 #define NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1 (0.0)
+#define NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_Z1 (0.0)
 
 struct _NcClusterMassLnrichExtClass
 {

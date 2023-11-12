@@ -72,6 +72,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, 
 #define SIGMA_Z2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
 #define SIGMA_MZ (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
 #define CUT      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
+#define CUT_M1      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1))
+#define CUT_Z1      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1))
 
 enum
 {
@@ -385,6 +387,27 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT,
                               NCM_PARAM_TYPE_FIXED);
 
+  /**
+   * NcClusterMassLnrichExt:cut_M1:
+   *
+   * Cut in richness.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1, "\\cut_\\mathrm{M_1}", "cutM1",
+                              -10.0, 10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1,
+                              NCM_PARAM_TYPE_FIXED);
+  /**
+   * NcClusterMassLnrichExt:cut_Z1:
+   *
+   * Cut in richness.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1, "\\cut_\\mathrm{Z_1}", "cutZ1",
+                              -10.0, 10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_Z1,
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -584,7 +607,9 @@ gdouble
 nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z)
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
+  const gdouble DlnM                         = lnM - self->lnM0;
+  const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
-  return CUT;
+  return CUT + CUT_M1 * DlnM + CUT_Z1 * Dln1pz ;
 }
 
