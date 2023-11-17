@@ -43,6 +43,7 @@ class Catalog:
         ndim: Optional[int] = None,
         nwalkers: Optional[int] = None,
         run_type: Optional[str] = None,
+        weighted: bool = False,
     ):
         """Initialize the catalog."""
 
@@ -51,11 +52,13 @@ class Catalog:
             if ndim is not None or nwalkers is not None:
                 raise ValueError("ndim and nwalkers must be None if mcat is not None")
             mset = mcat.peek_mset()
+            if mcat.weighted() != weighted:
+                raise ValueError("weighted must be the same as in mcat")
         elif ndim is not None and nwalkers is not None:
             mset = build_mset(ndim)
 
             self._catalog = Ncm.MSetCatalog.new_array(
-                mset, 1, nwalkers, False, ["m2lnL"], [r"-2\ln(L)"]
+                mset, 1, nwalkers, weighted, ["m2lnL"], [r"-2\ln(L)"]
             )
 
             self._catalog.set_m2lnp_var(0)
@@ -66,7 +69,11 @@ class Catalog:
         if run_type is not None:
             self._catalog.set_run_type(run_type)
 
-    def add_samples(self, sample: npt.NDArray[np.float64], interweaved: bool = True):
+    def add_samples(
+        self,
+        sample: npt.NDArray[np.float64],
+        interweaved: bool = True,
+    ):
         """Add a new sample to the catalog."""
 
         ncols = self._catalog.ncols()
@@ -97,9 +104,16 @@ class Catalog:
                         )
 
     def add_points_m2lnp(
-        self, points: np.ndarray, m2lnp: np.ndarray, interweaved: bool = True
+        self,
+        points: np.ndarray,
+        m2lnp: np.ndarray,
+        interweaved: bool = True,
+        weights: Optional[np.ndarray] = None,
     ):
         """Add a new point to the catalog."""
+
+        if self._catalog.weighted() and weights is None:
+            raise ValueError("weights must be provided for a weighted catalog")
 
         if len(points.shape) != 2:
             raise ValueError("points must be a 2D array")
@@ -111,6 +125,15 @@ class Catalog:
             raise ValueError("points and m2lnp must have the same size")
 
         sample = np.insert(points, 0, m2lnp, axis=1)
+
+        if weights is not None:
+            if len(weights.shape) != 1:
+                raise ValueError("weights must be a 1D array")
+
+            if points.shape[0] != weights.shape[0]:
+                raise ValueError("points and weights must have the same size")
+
+            sample = np.insert(sample, 1, weights, axis=1)
 
         self.add_samples(sample, interweaved=interweaved)
 

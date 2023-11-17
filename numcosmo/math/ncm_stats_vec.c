@@ -482,6 +482,11 @@ _ncm_stats_vec_update_from_vec_weight_cov (NcmStatsVec *svec, const gdouble w, N
   const guint sveclen     = svec->len;
   guint i;
 
+  svec->nitens++;
+
+  if (w == 0.0)
+    return;
+
   for (i = 0; i < sveclen; i++)
   {
     guint j;
@@ -509,7 +514,6 @@ _ncm_stats_vec_update_from_vec_weight_cov (NcmStatsVec *svec, const gdouble w, N
     }
   }
 
-  svec->nitens++;
   svec->weight   = curweight;
   svec->weight2 += w * w;
   svec->bias_wt  = 1.0 / (svec->weight - svec->weight2 / svec->weight);
@@ -535,6 +539,11 @@ _ncm_stats_vec_update_from_vec_weight_var (NcmStatsVec *svec, const gdouble w, N
   const guint sveclen     = svec->len;
   guint i;
 
+  svec->nitens++;
+
+  if (w == 0.0)
+    return;
+
   for (i = 0; i < sveclen; i++)
   {
     const gdouble mean_i  = ncm_vector_fast_get (svec->mean, i);
@@ -548,7 +557,6 @@ _ncm_stats_vec_update_from_vec_weight_var (NcmStatsVec *svec, const gdouble w, N
     ncm_vector_fast_set (svec->var, i, var + dvar);
   }
 
-  svec->nitens++;
   svec->weight   = curweight;
   svec->weight2 += w * w;
   svec->bias_wt  = 1.0 / (svec->weight - svec->weight2 / svec->weight);
@@ -574,6 +582,11 @@ _ncm_stats_vec_update_from_vec_weight_mean (NcmStatsVec *svec, const gdouble w, 
   const guint sveclen     = svec->len;
   guint i;
 
+  svec->nitens++;
+
+  if (w == 0.0)
+    return;
+
   for (i = 0; i < sveclen; i++)
   {
     const gdouble mean_i  = ncm_vector_fast_get (svec->mean, i);
@@ -584,7 +597,6 @@ _ncm_stats_vec_update_from_vec_weight_mean (NcmStatsVec *svec, const gdouble w, 
     ncm_vector_fast_set (svec->mean, i, mean_i + R_i);
   }
 
-  svec->nitens++;
   svec->weight   = curweight;
   svec->weight2 += w * w;
   svec->bias_wt  = 1.0 / (svec->weight - svec->weight2 / svec->weight);
@@ -917,6 +929,7 @@ gdouble
 ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i)
 {
   g_assert_cmpuint (i, <, svec->q_array->len);
+
   {
     gsl_rstat_quantile_workspace *qws_i = g_ptr_array_index (svec->q_array, i);
 
@@ -983,6 +996,7 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
   {
     guint i;
     const gdouble mean = ncm_stats_vec_get_mean (svec, p);
+
     memset (&svec->param_data[eff_nitens], 0, sizeof (gdouble) * (svec->fft_plan_size - eff_nitens));
 
     if (subsample > 1)
@@ -1047,6 +1061,7 @@ ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
   {
     NcmVector *autocor = ncm_vector_new_data_dup (svec->param_data, svec->nitens, 1);
+
     ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
 
     return autocor;
@@ -1081,6 +1096,7 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
   g_assert_cmpuint (svec->nitens, >=, subsample);
   {
     NcmVector *autocor = ncm_vector_new_data_dup (svec->param_data, svec->nitens / subsample, 1);
+
     ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
 
     return autocor;
@@ -1148,6 +1164,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
     for (i = 0; i < aorder; i++)
     {
       const gdouble a_i = svec->param_data[i + 1];
+
       ncm_vector_fast_set (M, aorder + i + 1, a_i);
       ncm_vector_fast_set (M, aorder - i - 1, a_i);
     }
@@ -1182,6 +1199,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
+
             var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
             crit = var * (n + p) / (n - p);
 
@@ -1205,6 +1223,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
+
             var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
 
             crit = n * log (var) + 2.0 * (p + 1.0);
@@ -1612,11 +1631,11 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 NcmVector *
 ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
 {
-  NcmStatsVec *chunk = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
-  const guint nitens = svec->nitens - fi;
-  gdouble spec0 = 0.0;
-  guint c_order = 0;
-  gdouble cumsum = 0.0;
+  NcmStatsVec *chunk  = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  const guint nitens  = svec->nitens - fi;
+  gdouble spec0       = 0.0;
+  guint c_order       = 0;
+  gdouble cumsum      = 0.0;
   NcmVector *cumsum_v = ncm_vector_new (nitens);
   gint i, j = 0;
 
@@ -1665,12 +1684,12 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
 NcmVector *
 ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess)
 {
-  NcmStatsVec *chunk = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
-  const gint size = svec->nitens;
-  const gint block = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / ntests + 1);
+  NcmStatsVec *chunk  = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
+  const gint size     = svec->nitens;
+  const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / ntests + 1);
   NcmVector *esss_tmp = ncm_vector_new (svec->len);
-  NcmVector *esss = ncm_vector_new (svec->len);
-  gdouble max_t_ess = 0.0;
+  NcmVector *esss     = ncm_vector_new (svec->len);
+  gdouble max_t_ess   = 0.0;
   gint i, j = 0;
 
   g_assert_cmpuint (svec->nitens, >=, 10);
@@ -1687,7 +1706,7 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
     if ((i == 0) || ((i % block == 0) && (j >= 99)))
     {
       gdouble min_ess = GSL_POSINF;
-      guint cur_size = size - i;
+      guint cur_size  = size - i;
       guint lwp_order = 0;
       guint k, lwp    = 0;
 
@@ -1839,15 +1858,15 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
 NcmMatrix *
 ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
 {
-  NcmMatrix *cov = ncm_matrix_new (svec->len, svec->len);
-  NcmMatrix *E = ncm_matrix_new (svec->len, svec->len);
-  NcmMatrix *y = ncm_matrix_new (svec->nitens, svec->len);
-  NcmMatrix *z = ncm_matrix_new (svec->len, svec->nitens);
+  NcmMatrix *cov     = ncm_matrix_new (svec->len, svec->len);
+  NcmMatrix *E       = ncm_matrix_new (svec->len, svec->len);
+  NcmMatrix *y       = ncm_matrix_new (svec->nitens, svec->len);
+  NcmMatrix *z       = ncm_matrix_new (svec->len, svec->nitens);
   NcmVector *sigma_x = ncm_vector_new (svec->len);
   NcmVector *sigma_z = ncm_vector_new (svec->len);
-  GArray *data = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *data       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *work_int   = g_array_new (FALSE, FALSE, sizeof (gint));
   gint a, i;
 
   if (svec->nitens < 4)
@@ -2050,6 +2069,7 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint ma
     for (i = 1; i < Fmax_lag + 1; i++)
     {
       const gdouble rho_i = svec->param_data[i] / svec->param_data[0];
+
       tau += rho_i;
     }
   }
