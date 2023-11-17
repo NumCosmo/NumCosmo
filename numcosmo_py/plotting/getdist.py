@@ -72,6 +72,17 @@ def mcat_to_mcsamples(
     params = list(np.delete(params, m2lnL, 0))
     names = [re.sub("[^A-Za-z0-9_]", "", param) for param in params]
 
+    weights = None
+    if mcat.weighted():
+        # Original index is nadd_vals - 1,
+        # but since we removed m2lnL it is now nadd_vals - 2
+        weight_index = mcat.nadd_vals() - 2
+        assert weight_index >= 0
+        weights = rows[:, weight_index]
+        rows = np.delete(rows, weight_index, 1)
+        params = list(np.delete(params, weight_index, 0))
+        names = list(np.delete(names, weight_index, 0))
+
     if len(asinh_transform) > 0:
         rows[:, asinh_transform] = np.arcsinh(rows[:, asinh_transform])
         for i in asinh_transform:
@@ -87,12 +98,22 @@ def mcat_to_mcsamples(
         split_chains = rows[burnin::]
         split_posterior = posterior[burnin::]
 
+    split_weights = None
+    if weights is not None:
+        if not collapse:
+            split_weights = np.array(
+                [weights[(burnin + n) :: nchains] for n in range(nchains)]
+            )
+        else:
+            split_weights = weights[burnin::]
+
     mcsample = MCSamples(
         samples=split_chains,
         loglikes=split_posterior,
         names=names,
         labels=params,
         label=name,
+        weights=split_weights,
     )
 
     return mcsample, rows, posterior
