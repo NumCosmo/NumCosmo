@@ -321,6 +321,7 @@ _ncm_mset_catalog_constructed (GObject *object)
 
       {
         NcmSerialize *ser = ncm_serialize_global ();
+
         self->mset = ncm_mset_load (self->mset_file, ser);
         ncm_serialize_free (ser);
       }
@@ -1606,6 +1607,7 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
   self->file = g_strdup (filename);
   {
     gchar *base_name = ncm_util_basename_fits (self->file);
+
     self->mset_file = g_strdup_printf ("%s.mset", base_name);
     g_free (base_name);
   }
@@ -1767,6 +1769,7 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
     if (!self->readonly)
     {
       gint status = 0;
+
       fits_flush_file (self->fptr, &status);
       NCM_FITS_ERROR (status);
     }
@@ -1906,12 +1909,14 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
     if (self->file_first_id > self->first_id)
     {
       guint rows_to_add = self->file_first_id - self->first_id;
+
       fits_insert_rows (self->fptr, 0, rows_to_add, &status);
       NCM_FITS_ERROR (status);
 
       for (i = 0; i < rows_to_add; i++)
       {
         NcmVector *row = ncm_stats_vec_peek_row (self->pstats, i);
+
         _ncm_mset_catalog_write_row (mcat, row, i + 1);
       }
 
@@ -1942,6 +1947,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       for (i = 0; i < rows_to_add; i++)
       {
         NcmVector *row = ncm_vector_dup (ncm_stats_vec_peek_x (self->pstats));
+
         _ncm_mset_catalog_read_row (mcat, row, i + 1);
         g_ptr_array_index (rows, i) = row;
       }
@@ -1955,6 +1961,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
           NcmVector *x        = g_ptr_array_index (rows, i);
           guint chain_id      = (self->file_first_id + i) % self->nchains;
           NcmStatsVec *pstats = g_ptr_array_index (self->chain_pstats, chain_id);
+
           ncm_stats_vec_prepend (pstats, x, FALSE);
         }
       }
@@ -1993,6 +2000,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       for (i = 0; i < rows_to_add; i++)
       {
         NcmVector *row = ncm_stats_vec_peek_row (self->pstats, offset + i);
+
         _ncm_mset_catalog_write_row (mcat, row, offset + i + 1);
       }
 
@@ -2021,6 +2029,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       for (i = 0; i < rows_to_add; i++)
       {
         NcmVector *row = ncm_vector_new (self->pstats->len);
+
         _ncm_mset_catalog_read_row (mcat, row, offset + i + 1);
         _ncm_mset_catalog_post_update (mcat, row);
         ncm_vector_free (row);
@@ -2170,6 +2179,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 #ifdef NUMCOSMO_HAVE_CFITSIO
   self->file_cur_id = self->file_first_id - 1;
   _ncm_mset_catalog_close_file (mcat);
+
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
@@ -3248,17 +3258,17 @@ static gdouble
 _ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const guint fparams_len = ncm_mset_fparams_len (self->mset);
-  const guint cat_len = ncm_mset_catalog_len (mcat);
-  NcmMatrix *cov = NULL;
-  NcmVector *mean = NULL;
-  NcmVector *v = ncm_vector_new (fparams_len);
-  gdouble level = 0.50;
-  gdouble R2_cut = gsl_cdf_chisq_Pinv (level, fparams_len);
-  gdouble lnNorma = 0.0;
-  gdouble s = 0.0;
-  gdouble c = 0.0;
-  gdouble R_max = 1.0e300;
+  const guint fparams_len     = ncm_mset_fparams_len (self->mset);
+  const guint cat_len         = ncm_mset_catalog_len (mcat);
+  NcmMatrix *cov              = NULL;
+  NcmVector *mean             = NULL;
+  NcmVector *v                = ncm_vector_new (fparams_len);
+  gdouble level               = 0.50;
+  gdouble R2_cut              = gsl_cdf_chisq_Pinv (level, fparams_len);
+  gdouble lnNorma             = 0.0;
+  gdouble s                   = 0.0;
+  gdouble c                   = 0.0;
+  gdouble R_max               = 1.0e300;
   gdouble R2_max, post_lnnorm;
   gint i, ret;
 
@@ -3302,9 +3312,9 @@ _ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_
 
   for (i = 0; i < cat_len; i++)
   {
-    NcmVector *row_i = ncm_mset_catalog_peek_row (mcat, i);
+    NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i);
     const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
-    gdouble m2lnp_i = 0.0;
+    gdouble m2lnp_i       = 0.0;
     gdouble e_i, t;
 
     ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
@@ -3384,9 +3394,9 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
 
     for (i = 0; i < slice_size1; i++)
     {
-      NcmVector *row_i = ncm_mset_catalog_peek_row (mcat, i + w);
+      NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i + w);
       const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
-      gdouble m2lnp_i = 0.0;
+      gdouble m2lnp_i       = 0.0;
       gdouble e_i, t;
 
       ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
@@ -3535,11 +3545,11 @@ static gdouble
 _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_bs, gdouble *post_lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const guint fparams_len = ncm_mset_fparams_len (self->mset);
-  NcmMatrix *cov = NULL;
-  NcmVector *mean = NULL;
-  NcmRNG *rng = ncm_rng_new (NULL);
-  gdouble lnNorma = 0.0;
+  const guint fparams_len     = ncm_mset_fparams_len (self->mset);
+  NcmMatrix *cov              = NULL;
+  NcmVector *mean             = NULL;
+  NcmRNG *rng                 = ncm_rng_new (NULL);
+  gdouble lnNorma             = 0.0;
   gdouble ratio, post_lnnorm;
   gint ret;
 
@@ -3860,9 +3870,9 @@ void
 ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const guint params_len = ncm_mset_fparam_len (self->mset) + self->nadd_vals;
-  const gchar *box = "---------------";
-  guint name_size = ncm_mset_max_fparam_name (self->mset);
+  const guint params_len      = ncm_mset_fparam_len (self->mset) + self->nadd_vals;
+  const gchar *box            = "---------------";
+  guint name_size             = ncm_mset_max_fparam_name (self->mset);
   gint i, j;
 
   for (i = 0; i < self->add_vals_names->len; i++)
@@ -4304,10 +4314,10 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
   g_assert_cmpuint (p_val->len, >, 1);
   {
-    const guint nelem = p_val->len * 2 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = p_val->len * 2 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (self->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
     guint i, j;
 
     ncm_mset_fparams_get_vector (self->mset, save_params);
@@ -4399,11 +4409,11 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
   g_assert_cmpuint (p_val->len, >, 1);
   {
-    const guint nelem = p_val->len * 4 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = p_val->len * 4 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (self->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
-    GPtrArray *epdf_a = g_ptr_array_sized_new (dim);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
+    GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
     ncm_mset_fparams_get_vector (self->mset, save_params);
@@ -4545,11 +4555,11 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
 
   g_assert_cmpuint (lim->len, >, 1);
   {
-    const guint nelem = lim->len * 2 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = lim->len * 2 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (self->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
-    GPtrArray *epdf_a = g_ptr_array_sized_new (dim);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
+    GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
     ncm_mset_fparams_get_vector (self->mset, save_params);
@@ -4980,7 +4990,7 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
   if ((thin != 1) || (tc > 0))
   {
     GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
-    gchar *file = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+    gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
     guint t, tf;
 
     if (file != NULL)
@@ -5063,8 +5073,8 @@ guint
 ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
-  gchar *file = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+  GPtrArray *rows             = ncm_stats_vec_dup_saved_x (self->pstats);
+  gchar *file                 = g_strdup (ncm_mset_catalog_peek_filename (mcat));
   guint i, ndel;
 
   if (file != NULL)
@@ -5268,9 +5278,9 @@ guint
 ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  NcmStatsVec *pstats = (self->nchains == 1) ? self->pstats : self->e_mean_stats;
-  const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
-  gint bindex = 0;
+  NcmStatsVec *pstats         = (self->nchains == 1) ? self->pstats : self->e_mean_stats;
+  const gdouble pvalue_lef    = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
+  gint bindex                 = 0;
   guint wp = 0, wp_order = 0;
   gdouble wp_pvalue = 0.0;
   NcmVector *pvals;
@@ -5600,7 +5610,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
   else
   {
     const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
-    gint tbindex = -1;
+    gint tbindex             = -1;
     guint twp = 0, twp_order = 0;
     gdouble twp_pvalue = 0.0;
     guint i, ti = 0;
