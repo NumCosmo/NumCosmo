@@ -47,17 +47,16 @@
 #include <gsl/gsl_math.h>
 
 
-struct _NcGalaxySDPositionPrivate
+typedef struct _NcGalaxySDPositionPrivate
 {
   gint placeholder;
-};
+} NcGalaxySDPositionPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, G_TYPE_OBJECT);
 
 static void
 nc_galaxy_sd_position_init (NcGalaxySDPosition *gsdp)
 {
-  gsdp->priv = nc_galaxy_sd_position_get_instance_private (gsdp);
 }
 
 static void
@@ -153,6 +152,12 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  * Returns: the generated $r$ value.
  */
+gdouble
+nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+{
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_r (gsdp, rng);
+}
+
 /**
  * nc_galaxy_sd_position_gen_z: (virtual gen_z)
  * @gsdp: a #NcGalaxySDPosition
@@ -163,6 +168,12 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  * Returns: the generated $z$ value.
  */
+gdouble
+nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+{
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_z (gsdp, rng);
+}
+
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
@@ -174,4 +185,9 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
  *
  * Returns: the probability density at $(r, z)$, $P(z)P(r)$.
  */
+gdouble
+nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
+{
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, r, z);
+}
 

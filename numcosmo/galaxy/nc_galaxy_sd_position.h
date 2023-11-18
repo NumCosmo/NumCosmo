@@ -32,20 +32,13 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
-
+#include <numcosmo/math/ncm_model.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_POSITION             (nc_galaxy_sd_position_get_type ())
-#define NC_GALAXY_SD_POSITION(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_POSITION, NcGalaxySDPosition))
-#define NC_GALAXY_SD_POSITION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_POSITION, NcGalaxySDPositionClass))
-#define NC_IS_GALAXY_SD_POSITION(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_POSITION))
-#define NC_IS_GALAXY_SD_POSITION_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_POSITION))
-#define NC_GALAXY_SD_POSITION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_POSITION, NcGalaxySDPositionClass))
+#define NC_TYPE_GALAXY_SD_POSITION (nc_galaxy_sd_position_get_type ())
 
-typedef struct _NcGalaxySDPositionClass NcGalaxySDPositionClass;
-typedef struct _NcGalaxySDPosition NcGalaxySDPosition;
-typedef struct _NcGalaxySDPositionPrivate NcGalaxySDPositionPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcGalaxySDPosition, nc_galaxy_sd_position, NC, GALAXY_SD_POSITION, GObject);
 
 struct _NcGalaxySDPositionClass
 {
@@ -55,58 +48,26 @@ struct _NcGalaxySDPositionClass
   gdouble (*gen_r) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
   gdouble (*gen_z) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
   gdouble (*integ) (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
-};
 
-struct _NcGalaxySDPosition
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcGalaxySDPositionPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[15];
 };
-
-GType nc_galaxy_sd_position_get_type (void) G_GNUC_CONST;
 
 NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp);
 
-NCM_INLINE gdouble nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-NCM_INLINE gdouble nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-NCM_INLINE gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
+void nc_galaxy_sd_position_set_z_lim (NcGalaxySDPosition *gsdp, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_position_peek_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdouble *z_max);
+void nc_galaxy_sd_position_set_r_lim (NcGalaxySDPosition *gsdp, const gdouble r_min, const gdouble r_max);
+void nc_galaxy_sd_position_peek_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max);
+
+gdouble nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+gdouble nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
 
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SD_POSITION_H_ */
-
-#ifndef _NC_GALAXY_SD_POSITION_INLINE_H_
-#define _NC_GALAXY_SD_POSITION_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE gdouble
-nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_r (gsdp, rng);
-}
-
-NCM_INLINE gdouble
-nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_z (gsdp, rng);
-}
-
-NCM_INLINE gdouble
-nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, r, z);
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NC_GALAXY_SD_POSITION_INLINE_H_ */
 
