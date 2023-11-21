@@ -69,7 +69,7 @@ enum
   PROP_E_VEC,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST)
 
 static void
 nc_galaxy_wl_ellipticity_kde_init (NcGalaxyWLEllipticityKDE *gekde)

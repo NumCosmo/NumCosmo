@@ -65,7 +65,7 @@ enum
   PROP_OBS,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLProj, nc_galaxy_wl_proj, NC_TYPE_GALAXY_WL_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLProj, nc_galaxy_wl_proj, NC_TYPE_GALAXY_WL_DIST)
 
 static void
 nc_galaxy_wl_proj_init (NcGalaxyWLProj *gwlp)

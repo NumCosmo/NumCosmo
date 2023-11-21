@@ -45,7 +45,7 @@ struct _NcClusterRedshiftPrivate
   guint place_holder;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcClusterRedshift, nc_cluster_redshift, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcClusterRedshift, nc_cluster_redshift, NCM_TYPE_MODEL)
 
 static void
 nc_cluster_redshift_init (NcClusterRedshift *clusterz)

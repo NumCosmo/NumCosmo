@@ -49,7 +49,7 @@
 #define Z_BIAS (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))
 #define SIGMA0 (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0))
 
-G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT);
+G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT)
 
 enum
 {

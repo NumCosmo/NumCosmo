@@ -67,7 +67,7 @@ typedef struct _NcmDataPrivate
   NcmDiff *diff;
 } NcmDataPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT)
 
 static void
 ncm_data_init (NcmData *data)

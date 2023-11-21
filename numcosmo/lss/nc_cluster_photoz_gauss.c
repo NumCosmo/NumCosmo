@@ -45,7 +45,7 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterPhotozGauss, nc_cluster_photoz_gauss, NC_TYPE_CLUSTER_REDSHIFT);
+G_DEFINE_TYPE (NcClusterPhotozGauss, nc_cluster_photoz_gauss, NC_TYPE_CLUSTER_REDSHIFT)
 
 enum
 {

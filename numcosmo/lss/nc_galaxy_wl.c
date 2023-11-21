@@ -70,7 +70,7 @@ enum
   PROP_GZ_DIST,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWL, nc_galaxy_wl, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWL, nc_galaxy_wl, G_TYPE_OBJECT)
 
 static void
 nc_galaxy_wl_init (NcGalaxyWL *gwl)

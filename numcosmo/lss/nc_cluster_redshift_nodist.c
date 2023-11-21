@@ -51,7 +51,7 @@ struct _NcClusterRedshiftNodistPrivate
   gdouble norma;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT)
 
 enum
 {

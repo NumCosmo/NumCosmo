@@ -47,7 +47,7 @@ struct _NcClusterMassNodistPrivate
   gdouble norma;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassNodist, nc_cluster_mass_nodist, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassNodist, nc_cluster_mass_nodist, NC_TYPE_CLUSTER_MASS)
 
 enum
 {

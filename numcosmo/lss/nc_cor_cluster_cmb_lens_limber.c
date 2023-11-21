@@ -41,7 +41,7 @@
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_TYPE (NcCorClusterCmbLensLimber, nc_cor_cluster_cmb_lens_limber, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcCorClusterCmbLensLimber, nc_cor_cluster_cmb_lens_limber, G_TYPE_OBJECT)
 
 #define _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY 6
 

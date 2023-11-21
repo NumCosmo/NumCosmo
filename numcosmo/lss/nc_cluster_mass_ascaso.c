@@ -54,7 +54,7 @@ struct _NcClusterMassAscasoPrivate
   gdouble lnR_min;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR (NCM_MODEL (ascaso)->params)
 #define MU_P0 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_ASCASO_MU_P0))

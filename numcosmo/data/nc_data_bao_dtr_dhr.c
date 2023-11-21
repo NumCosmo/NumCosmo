@@ -54,7 +54,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDtrDHr, nc_data_bao_dtr_dhr, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataBaoDtrDHr, nc_data_bao_dtr_dhr, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 nc_data_bao_dtr_dhr_init (NcDataBaoDtrDHr *dhdt)

@@ -66,7 +66,7 @@ enum
   PROP_OBS,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftGauss, nc_galaxy_redshift_gauss, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftGauss, nc_galaxy_redshift_gauss, NC_TYPE_GALAXY_REDSHIFT)
 
 static void
 nc_galaxy_redshift_gauss_init (NcGalaxyRedshiftGauss *gzg)

@@ -45,7 +45,7 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassBenson, nc_cluster_mass_benson, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE (NcClusterMassBenson, nc_cluster_mass_benson, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR (NCM_MODEL (msz)->params)
 #define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_A_SZ))

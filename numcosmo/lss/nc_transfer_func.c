@@ -54,7 +54,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT)
 
 static void
 nc_transfer_func_init (NcTransferFunc *tf)

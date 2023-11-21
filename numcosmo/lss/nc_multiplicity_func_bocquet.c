@@ -83,7 +83,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, NC_TYPE_MULTIPLICITY_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_bocquet_init (NcMultiplicityFuncBocquet *mb)

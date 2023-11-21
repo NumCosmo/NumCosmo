@@ -51,7 +51,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT)
 
 /**
  * nc_window_new_from_name:

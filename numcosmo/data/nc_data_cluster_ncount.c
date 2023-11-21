@@ -118,7 +118,7 @@ struct _NcDataClusterNCountPrivate
   gchar *rnd_name;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)

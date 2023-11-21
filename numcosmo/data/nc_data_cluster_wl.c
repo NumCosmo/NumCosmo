@@ -69,7 +69,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterWL, nc_data_cluster_wl, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterWL, nc_data_cluster_wl, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_wl_init (NcDataClusterWL *dcwl)

@@ -55,7 +55,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_pseudo_counts_init (NcDataClusterPseudoCounts *dcpc)

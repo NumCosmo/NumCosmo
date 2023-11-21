@@ -46,7 +46,7 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL)
 
 #define VECTOR  (NCM_MODEL (cpc)->params)
 #define LNMCUT  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))

@@ -78,7 +78,7 @@ struct _NcABCClusterNCount
   NcABCClusterNCountEpsilonUpdate uptype;
 };
 
-G_DEFINE_TYPE (NcABCClusterNCount, nc_abc_cluster_ncount, NCM_TYPE_ABC);
+G_DEFINE_TYPE (NcABCClusterNCount, nc_abc_cluster_ncount, NCM_TYPE_ABC)
 
 static void
 nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)

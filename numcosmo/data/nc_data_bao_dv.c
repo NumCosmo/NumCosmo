@@ -54,7 +54,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDV, nc_data_bao_dv, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataBaoDV, nc_data_bao_dv, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_bao_dv_init (NcDataBaoDV *bao_dv)

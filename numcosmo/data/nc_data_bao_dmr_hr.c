@@ -57,7 +57,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDMrHr, nc_data_bao_dmr_hr, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataBaoDMrHr, nc_data_bao_dmr_hr, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 nc_data_bao_dmr_hr_init (NcDataBaoDMrHr *dmh)

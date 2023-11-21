@@ -81,7 +81,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataXcor, nc_data_xcor, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataXcor, nc_data_xcor, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 _nc_data_xcor_sort (const gint a, const gint b, gint *aa, gint *bb)

@@ -62,7 +62,7 @@ enum
   PROP_DISTS,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftSpline, nc_galaxy_redshift_spline, NC_TYPE_GALAXY_REDSHIFT)
 
 static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)

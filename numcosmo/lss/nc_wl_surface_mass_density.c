@@ -78,7 +78,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
-G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODEL)
 
 #define VECTOR (NCM_MODEL (smd)->params)
 #define PCC   (ncm_vector_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_PCC))

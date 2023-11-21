@@ -327,8 +327,8 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV);
-G_DEFINE_QUARK(nc-data-snia-cov-error-quark, nc_data_snia_cov_error);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV)
+G_DEFINE_QUARK(nc-data-snia-cov-error-quark, nc_data_snia_cov_error)
 
 enum
 {

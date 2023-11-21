@@ -196,7 +196,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL)
 
 #define VECTOR  (NCM_MODEL (dp)->params)
 #define LOG10M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA))

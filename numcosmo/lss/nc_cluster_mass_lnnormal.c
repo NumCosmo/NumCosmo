@@ -43,7 +43,7 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR (NCM_MODEL (mlnn)->params)
 #define BIAS   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_BIAS))
