@@ -40,6 +40,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_cblas.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
@@ -1150,6 +1151,11 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  *
  * Returns: $\vec{v}_1 \cdot \vec{v}_2$.
  */
+gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
+}
 
 /**
  * ncm_vector_len:
