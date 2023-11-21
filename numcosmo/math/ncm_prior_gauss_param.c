@@ -46,7 +46,7 @@ enum
   PROP_PID
 };
 
-G_DEFINE_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM_TYPE_PRIOR_GAUSS);
+G_DEFINE_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM_TYPE_PRIOR_GAUSS)
 
 static void
 ncm_prior_gauss_param_init (NcmPriorGaussParam *pgp)

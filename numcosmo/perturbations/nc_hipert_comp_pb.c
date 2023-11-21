@@ -51,7 +51,7 @@ enum
   PROP_LMAX
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP)
 
 static void
 nc_hipert_comp_pb_init (NcHIPertCompPB *pb)

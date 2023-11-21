@@ -72,7 +72,7 @@ enum
   PROP_OPTS,
 };
 
-G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT)
 
 static void
 ncm_serialize_init (NcmSerialize *ser)

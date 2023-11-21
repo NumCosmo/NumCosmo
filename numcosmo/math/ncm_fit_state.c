@@ -82,7 +82,7 @@ struct _NcmFitState
 };
 
 
-G_DEFINE_TYPE (NcmFitState, ncm_fit_state, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitState, ncm_fit_state, G_TYPE_OBJECT)
 
 static void
 ncm_fit_state_init (NcmFitState *fstate)

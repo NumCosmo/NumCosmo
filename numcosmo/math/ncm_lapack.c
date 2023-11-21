@@ -58,7 +58,7 @@
 #define _NCM_LAPACK_CONV_UPLO(uplo) (uplo == 'L' ? 'U' : 'L')
 #define _NCM_LAPACK_CONV_TRANS(trans) (trans == 'N' ? 'T' : 'N')
 
-G_DEFINE_BOXED_TYPE (NcmLapackWS, ncm_lapack_ws, ncm_lapack_ws_dup, ncm_lapack_ws_free);
+G_DEFINE_BOXED_TYPE (NcmLapackWS, ncm_lapack_ws, ncm_lapack_ws_dup, ncm_lapack_ws_free)
 
 /**
  * ncm_lapack_ws_new:

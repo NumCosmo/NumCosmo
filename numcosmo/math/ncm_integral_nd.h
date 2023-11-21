@@ -153,7 +153,7 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
 #define NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, user_data_free) \
   G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND) \
   struct _ ## ModuleObjName { NcmIntegralND parent_instance; user_data data; }; \
-  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_INTEGRAL_ND); \
+  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_INTEGRAL_ND) \
   static void \
   module_obj_name ## _init (ModuleObjName * intnd) \
   { \

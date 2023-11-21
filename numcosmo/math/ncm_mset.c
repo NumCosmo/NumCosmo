@@ -83,8 +83,8 @@ typedef struct _NcmMSetItem
   gint added_total_params;
 } NcmMSetItem;
 
-G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_mset_pindex_free);
+G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_mset_pindex_free)
 
 static gint
 _int_sort (gconstpointer a, gconstpointer b, gpointer user_data)

@@ -74,7 +74,7 @@ enum
 
 extern NcmMPIJobCtrl _mpi_ctrl;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMPIJob, ncm_mpi_job, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMPIJob, ncm_mpi_job, G_TYPE_OBJECT)
 
 static gpointer _ncm_mpi_job_create_input_buffer (gpointer userdata);
 static gpointer _ncm_mpi_job_create_return_buffer (gpointer userdata);

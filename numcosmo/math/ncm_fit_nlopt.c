@@ -74,7 +74,7 @@ struct _NcmFitNLOpt
   guint fparam_len;
 };
 
-G_DEFINE_TYPE (NcmFitNLOpt, ncm_fit_nlopt, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitNLOpt, ncm_fit_nlopt, NCM_TYPE_FIT)
 
 static void
 ncm_fit_nlopt_init (NcmFitNLOpt *fit_nlopt)

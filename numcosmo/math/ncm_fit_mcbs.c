@@ -69,7 +69,7 @@ struct _NcmFitMCBS
 };
 
 
-G_DEFINE_TYPE (NcmFitMCBS, ncm_fit_mcbs, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitMCBS, ncm_fit_mcbs, G_TYPE_OBJECT)
 
 static void
 ncm_fit_mcbs_init (NcmFitMCBS *mcbs)

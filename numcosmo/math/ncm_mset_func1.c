@@ -44,7 +44,7 @@ struct _NcmMSetFunc1Private
   gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_mset_func1_init (NcmMSetFunc1 *f1)

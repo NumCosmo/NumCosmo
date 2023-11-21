@@ -110,7 +110,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_sbessel_jljm_init (NcmFftlogSBesselJLJM *fftlog_jljm)

@@ -85,7 +85,7 @@ enum
   PROP_INI_STEP,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT)
 
 typedef struct _NcmOdeSplineDydxData
 {
