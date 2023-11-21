@@ -50,7 +50,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHIPrim, nc_hiprim, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcHIPrim, nc_hiprim, NCM_TYPE_MODEL)
 
 static void
 nc_hiprim_init (NcHIPrim *prim)

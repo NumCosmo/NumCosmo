@@ -57,7 +57,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT)
 
 static void
 ncm_vector_init (NcmVector *cv)

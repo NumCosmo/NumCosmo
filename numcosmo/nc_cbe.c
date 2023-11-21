@@ -94,7 +94,7 @@ struct _NcCBEPrivate
   struct output pop;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT)
 
 static void
 nc_cbe_init (NcCBE *cbe)

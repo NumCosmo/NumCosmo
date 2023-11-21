@@ -99,7 +99,7 @@ enum
   PROP_PKEQUAL,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMNLHaloFit, nc_powspec_mnl_halofit, NC_TYPE_POWSPEC_MNL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMNLHaloFit, nc_powspec_mnl_halofit, NC_TYPE_POWSPEC_MNL)
 
 static void
 nc_powspec_mnl_halofit_init (NcPowspecMNLHaloFit *pshf)

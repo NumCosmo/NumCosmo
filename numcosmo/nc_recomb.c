@@ -158,7 +158,7 @@
 
 #define X_TODAY 1.0
 
-G_DEFINE_ABSTRACT_TYPE (NcRecomb, nc_recomb, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcRecomb, nc_recomb, G_TYPE_OBJECT)
 
 enum
 {

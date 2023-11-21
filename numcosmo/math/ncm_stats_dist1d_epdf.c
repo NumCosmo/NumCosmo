@@ -62,7 +62,7 @@ enum
   PROP_OUTLIERS_THRESHOLD,
 };
 
-G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D);
+G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D)
 
 typedef struct _NcmStatsDist1dEPDFObs
 {

@@ -134,7 +134,7 @@ enum
   PROP_PRINT_FIT,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT)
 
 #define NCM_NNLS_SOLVE ncm_nnls_solve
 

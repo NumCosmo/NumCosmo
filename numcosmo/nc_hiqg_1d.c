@@ -152,10 +152,10 @@ enum
   PROP_NOBOUNDARY,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
-G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
-G_DEFINE_BOXED_TYPE (NcHIQG1DSQ,    nc_hiqg_1d_sq,    nc_hiqg_1d_sq_dup,    nc_hiqg_1d_sq_free);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free)
+G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free)
+G_DEFINE_BOXED_TYPE (NcHIQG1DSQ,    nc_hiqg_1d_sq,    nc_hiqg_1d_sq_dup,    nc_hiqg_1d_sq_free)
 
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)

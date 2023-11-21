@@ -94,7 +94,7 @@ enum
   PROP_0,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelGauss, ncm_stats_dist_kernel_gauss, NCM_TYPE_STATS_DIST_KERNEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelGauss, ncm_stats_dist_kernel_gauss, NCM_TYPE_STATS_DIST_KERNEL)
 
 static void
 ncm_stats_dist_kernel_gauss_init (NcmStatsDistKernelGauss *sdkg)

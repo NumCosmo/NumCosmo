@@ -42,7 +42,7 @@
 
 #include "nc_powspec_mnl.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcPowspecMNL, nc_powspec_mnl, NCM_TYPE_POWSPEC);
+G_DEFINE_ABSTRACT_TYPE (NcPowspecMNL, nc_powspec_mnl, NCM_TYPE_POWSPEC)
 
 static void
 nc_powspec_mnl_init (NcPowspecMNL *nc_powspec_mnl)

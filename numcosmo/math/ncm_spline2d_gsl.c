@@ -46,7 +46,7 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D);
+G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D)
 
 static void
 ncm_spline2d_gsl_init (NcmSpline2dGsl *s2dgsl)

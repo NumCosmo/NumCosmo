@@ -67,7 +67,7 @@ enum {
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBF, nc_hicosmo_qrbf, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBF, nc_hicosmo_qrbf, NC_TYPE_HICOSMO)
 
 static void
 nc_hicosmo_qrbf_init (NcHICosmoQRBF *qrbf)
@@ -546,7 +546,7 @@ enum
   PROP_LAMBDA,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBFRprior, nc_hicosmo_qrbf_rprior, NCM_TYPE_PRIOR);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBFRprior, nc_hicosmo_qrbf_rprior, NCM_TYPE_PRIOR)
 
 static void
 nc_hicosmo_qrbf_rprior_init (NcHICosmoQRBFRprior *qrprior)

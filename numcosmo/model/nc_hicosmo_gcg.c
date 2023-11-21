@@ -52,7 +52,7 @@ struct _NcHICosmoGCGPrivate
   gdouble zmax;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoGCG, nc_hicosmo_gcg, NC_TYPE_HICOSMO)
 
 enum
 {
@@ -899,7 +899,7 @@ nc_hicosmo_gcg_cmb_params (NcHICosmoGCG *cosmo_de)
 /* Reparam CMB                                                         */
 /***********************************************************************/
 
-G_DEFINE_TYPE (NcHICosmoGCGReparamCMB, nc_hicosmo_gcg_reparam_cmb, NCM_TYPE_REPARAM);
+G_DEFINE_TYPE (NcHICosmoGCGReparamCMB, nc_hicosmo_gcg_reparam_cmb, NCM_TYPE_REPARAM)
 
 static void
 nc_hicosmo_gcg_reparam_cmb_init (NcHICosmoGCGReparamCMB *gcg_reparam_ok)
@@ -1030,7 +1030,7 @@ nc_hicosmo_gcg_reparam_cmb_new (guint length)
 /* Reparam Omega_x -> Omega_k                                          */
 /***********************************************************************/
 
-G_DEFINE_TYPE (NcHICosmoGCGReparamOk, nc_hicosmo_gcg_reparam_ok, NCM_TYPE_REPARAM);
+G_DEFINE_TYPE (NcHICosmoGCGReparamOk, nc_hicosmo_gcg_reparam_ok, NCM_TYPE_REPARAM)
 
 static void
 nc_hicosmo_gcg_reparam_ok_init (NcHICosmoGCGReparamOk *gcg_reparam_ok)

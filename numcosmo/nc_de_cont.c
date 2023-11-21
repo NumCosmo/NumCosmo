@@ -74,7 +74,7 @@ enum
   PROP_W,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDECont, nc_de_cont, NCM_TYPE_CSQ1D);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDECont, nc_de_cont, NCM_TYPE_CSQ1D)
 
 static void
 nc_de_cont_init (NcDECont *dec)

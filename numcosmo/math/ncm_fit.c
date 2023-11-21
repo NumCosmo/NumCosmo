@@ -101,7 +101,7 @@ typedef struct _NcmFitPrivate
   NcmDiff *diff;
 } NcmFitPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFit, ncm_fit, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFit, ncm_fit, G_TYPE_OBJECT)
 
 static void
 ncm_fit_init (NcmFit *fit)

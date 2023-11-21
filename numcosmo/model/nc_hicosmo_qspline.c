@@ -44,7 +44,7 @@
 #include <gsl/gsl_fit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO)
 
 enum {
   PROP_0,
@@ -452,7 +452,7 @@ enum
   PROP_CP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, NCM_TYPE_MODEL)
 
 static void
 nc_hicosmo_qspline_cont_prior_init (NcHICosmoQSplineContPrior *qspline_cp)
@@ -731,7 +731,7 @@ nc_hicosmo_qspline_cont_prior_get_abstol (NcHICosmoQSplineContPrior *qspline_cp)
 
 /****************************** Continuity Prior ******************************/
 
-G_DEFINE_TYPE (NcPriorQSplineCont, nc_prior_qspline_cont, NCM_TYPE_PRIOR);
+G_DEFINE_TYPE (NcPriorQSplineCont, nc_prior_qspline_cont, NCM_TYPE_PRIOR)
 
 static void
 nc_prior_qspline_cont_init (NcPriorQSplineCont *nc_prior_qspline_cont)

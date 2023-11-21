@@ -59,7 +59,7 @@ struct _NcHICosmoDEPrivate
   gsl_min_fminimizer *min;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO)
 
 enum
 {

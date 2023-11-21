@@ -51,7 +51,7 @@ enum
   PROP_ACC,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT)
 
 static void
 ncm_spline_init (NcmSpline *s)

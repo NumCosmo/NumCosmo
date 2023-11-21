@@ -112,7 +112,7 @@ enum
   PROP_COV_FIXED,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM_TYPE_STATS_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM_TYPE_STATS_DIST)
 
 typedef struct _NcmStatsDistKDEEvalVars
 {

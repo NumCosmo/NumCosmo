@@ -52,7 +52,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcPowspecMLFixSpline, nc_powspec_ml_fix_spline, NC_TYPE_POWSPEC_ML);
+G_DEFINE_TYPE (NcPowspecMLFixSpline, nc_powspec_ml_fix_spline, NC_TYPE_POWSPEC_ML)
 
 static void
 nc_powspec_ml_fix_spline_init (NcPowspecMLFixSpline *ps_fs)

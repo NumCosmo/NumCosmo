@@ -107,7 +107,7 @@ enum
   PROP_NU,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM_TYPE_STATS_DIST_KERNEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM_TYPE_STATS_DIST_KERNEL)
 
 static void
 ncm_stats_dist_kernel_st_init (NcmStatsDistKernelST *sdkst)

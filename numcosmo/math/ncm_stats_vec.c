@@ -107,7 +107,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmStatsVec, ncm_stats_vec, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmStatsVec, ncm_stats_vec, G_TYPE_OBJECT)
 
 static void
 ncm_stats_vec_init (NcmStatsVec *svec)

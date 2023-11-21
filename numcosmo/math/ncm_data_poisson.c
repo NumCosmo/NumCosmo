@@ -64,7 +64,7 @@ typedef struct _NcmDataPoissonPrivate
   guint nbins;
 } NcmDataPoissonPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataPoisson, ncm_data_poisson, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataPoisson, ncm_data_poisson, NCM_TYPE_DATA)
 
 static void
 ncm_data_poisson_init (NcmDataPoisson *poisson)

@@ -57,7 +57,7 @@ enum
   PROP_SYS_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmODEEval, ncm_ode_eval, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmODEEval, ncm_ode_eval, G_TYPE_OBJECT)
 
 static void
 ncm_ode_eval_init (NcmODEEval *ode_eval)

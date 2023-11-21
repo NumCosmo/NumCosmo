@@ -48,7 +48,7 @@ enum
   PROP_CBE
 };
 
-G_DEFINE_TYPE (NcRecombCBE, nc_recomb_cbe, NC_TYPE_RECOMB);
+G_DEFINE_TYPE (NcRecombCBE, nc_recomb_cbe, NC_TYPE_RECOMB)
 
 static void
 nc_recomb_cbe_init (NcRecombCBE *recomb_cbe)

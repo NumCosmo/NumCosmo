@@ -109,7 +109,7 @@ struct _NcHIPertTwoFluidsPrivate
   gpointer arkode;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT)
 
 typedef struct _NcHIPertTwoFluidsArg
 {

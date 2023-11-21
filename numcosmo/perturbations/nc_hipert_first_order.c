@@ -112,7 +112,7 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertFirstOrder, nc_hipert_first_order, NC_TYPE_HIPERT_BOLTZMANN);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertFirstOrder, nc_hipert_first_order, NC_TYPE_HIPERT_BOLTZMANN)
 
 void 
 _nc_hipert_first_order_clear_var (NcHIPertFirstOrderVar *var)

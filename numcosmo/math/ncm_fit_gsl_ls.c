@@ -55,7 +55,7 @@ struct _NcmFitGSLLS
 };
 
 
-G_DEFINE_TYPE (NcmFitGSLLS, ncm_fit_gsl_ls, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitGSLLS, ncm_fit_gsl_ls, NCM_TYPE_FIT)
 
 static void
 ncm_fit_gsl_ls_init (NcmFitGSLLS *fit_gsl_ls)

@@ -577,7 +577,7 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
   g_free (s);
 }
 
-G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free);
+G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free)
 
 /**
  * ncm_complex_new:

@@ -42,7 +42,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D);
+G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D)
 
 static void
 ncm_spline2d_bicubic_init (NcmSpline2dBicubic *object)

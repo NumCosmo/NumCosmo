@@ -66,7 +66,7 @@ enum
   PROP_EOM,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcHIPertWKB, nc_hipert_wkb, NC_TYPE_HIPERT);
+G_DEFINE_ABSTRACT_TYPE (NcHIPertWKB, nc_hipert_wkb, NC_TYPE_HIPERT)
 
 static gdouble _nc_hipert_wkb_phase (gdouble x, gpointer userdata);
 

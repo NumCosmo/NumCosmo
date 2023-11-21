@@ -65,7 +65,7 @@ struct _NcmFitGSLMM
   gdouble err_b;
 };
 
-G_DEFINE_TYPE (NcmFitGSLMM, ncm_fit_gsl_mm, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitGSLMM, ncm_fit_gsl_mm, NCM_TYPE_FIT)
 
 static void
 ncm_fit_gsl_mm_init (NcmFitGSLMM *fit_gsl_mm)

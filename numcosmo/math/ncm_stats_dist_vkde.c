@@ -87,7 +87,7 @@ enum
   PROP_USE_ROT_HREF,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE)
 
 static gpointer
 _ncm_stats_dist_vkde_stats_vec_new (gpointer userdata)

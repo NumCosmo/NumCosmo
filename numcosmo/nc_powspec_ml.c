@@ -57,7 +57,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC);
+G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC)
 
 static void
 nc_powspec_ml_init (NcPowspecML *nc_powspec_ml)

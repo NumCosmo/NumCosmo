@@ -62,7 +62,7 @@
 #include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcHIReion, nc_hireion, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcHIReion, nc_hireion, NCM_TYPE_MODEL)
 
 enum
 {

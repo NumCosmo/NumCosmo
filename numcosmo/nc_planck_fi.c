@@ -47,7 +47,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcPlanckFI, nc_planck_fi, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcPlanckFI, nc_planck_fi, NCM_TYPE_MODEL)
 
 static void
 nc_planck_fi_init (NcPlanckFI *nc_planck_fi)

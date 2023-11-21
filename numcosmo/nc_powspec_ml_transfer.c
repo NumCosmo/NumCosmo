@@ -55,7 +55,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcPowspecMLTransfer, nc_powspec_ml_transfer, NC_TYPE_POWSPEC_ML);
+G_DEFINE_TYPE (NcPowspecMLTransfer, nc_powspec_ml_transfer, NC_TYPE_POWSPEC_ML)
 
 static void
 nc_powspec_ml_transfer_init (NcPowspecMLTransfer *ps_mlt)

@@ -41,7 +41,7 @@
 #include "math/ncm_obj_array.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref);
+G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref)
 
 /**
  * ncm_obj_array_new:
