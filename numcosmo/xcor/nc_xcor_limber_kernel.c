@@ -50,7 +50,8 @@
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
+G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
 
 enum
 {
@@ -222,6 +223,37 @@ void
 nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
 {
   g_clear_object (xclk);
+}
+
+/**
+ * nc_xcor_kinetic_copy:
+ * @xck: a #NcXcorKinetic
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcXcorKinetic *
+nc_xcor_kinetic_copy (NcXcorKinetic *xck)
+{
+  NcXcorKinetic *xck_copy = g_new (NcXcorKinetic, 1);
+
+  xck_copy[0] = xck[0];
+
+  return xck_copy;
+}
+
+/**
+ * nc_xcor_kinetic_free:
+ * @xck: a #NcXcorKinetic
+ *
+ * FIXME
+ *
+ */
+void
+nc_xcor_kinetic_free (NcXcorKinetic *xck)
+{
+  g_free (xck);
 }
 
 /**
