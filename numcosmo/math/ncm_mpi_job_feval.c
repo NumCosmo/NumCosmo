@@ -364,7 +364,7 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 
   if (self->func_oa != NULL)
   {
-    gint i;
+    guint i;
 
     for (i = 0; i < self->func_oa->len; i++)
     {

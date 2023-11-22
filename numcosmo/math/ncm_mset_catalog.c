@@ -3270,7 +3270,8 @@ _ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_
   gdouble c                   = 0.0;
   gdouble R_max               = 1.0e300;
   gdouble R2_max, post_lnnorm;
-  gint i, ret;
+  gint ret;
+  guint i;
 
   ncm_mset_catalog_get_covar (mcat, &cov);
   ncm_mset_catalog_get_mean (mcat, &mean);
@@ -3362,7 +3363,8 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
   guint slice_res             = 0;
   guint nslices               = 1;
   gdouble mean_lnnorm;
-  gint i, j, w, ret;
+  gint ret;
+  guint i, j, w;
 
   while ((cat_len / slice_div) < slice_min)
   {
@@ -3457,7 +3459,8 @@ _ncm_mset_catalog_get_post_lnnorm_sum_bs (NcmMSetCatalog *mcat, NcmVector *mean,
   gdouble s                   = 0.0;
   gdouble c                   = 0.0;
   gdouble mean_lnnorm;
-  gint i, j, ret;
+  gint ret;
+  guint i, j;
 
   for (i = 0; i < cat_len; i++)
   {
@@ -3873,7 +3876,7 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
   const guint params_len      = ncm_mset_fparam_len (self->mset) + self->nadd_vals;
   const gchar *box            = "---------------";
   guint name_size             = ncm_mset_max_fparam_name (self->mset);
-  gint i, j;
+  guint i, j;
 
   for (i = 0; i < self->add_vals_names->len; i++)
   {
@@ -5005,7 +5008,7 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 
     for (t = tc; t < tf; t += thin)
     {
-      gint i;
+      guint i;
 
       for (i = 0; i < self->nchains; i++)
       {

@@ -588,7 +588,7 @@ _ncm_nnls_solve_normal_LU (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
 
   lwork = g_array_index (self->work, gdouble, 0);
 
-  if (lwork > self->work->len)
+  if (lwork > (gint) self->work->len)
     g_array_set_size (self->work, lwork);
 
   ret = ncm_lapack_dsysv ('U', self->uncols, 1,
@@ -622,7 +622,7 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
 
   lwork = g_array_index (self->work, gdouble, 0);
 
-  if (lwork > self->work->len)
+  if (lwork > (gint) self->work->len)
     g_array_set_size (self->work, lwork);
 
   ret = ncm_lapack_dgels ('N', self->nrows, self->uncols, 1,

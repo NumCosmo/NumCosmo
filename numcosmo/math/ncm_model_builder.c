@@ -304,7 +304,7 @@ ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const g
 void
 ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams)
 {
-  gint i;
+  guint i;
 
   for (i = 0; i < sparams->len; i++)
   {
@@ -325,7 +325,7 @@ NcmObjArray *
 ncm_model_builder_get_sparams (NcmModelBuilder *mb)
 {
   NcmObjArray *oa = ncm_obj_array_new ();
-  gint i;
+  guint i;
 
   for (i = 0; i < mb->sparams->len; i++)
   {

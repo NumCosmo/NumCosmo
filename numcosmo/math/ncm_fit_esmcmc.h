@@ -47,8 +47,8 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, NCM, FIT_ESMCMC, GObject)
 
-NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, gint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
-NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
+NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, guint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
 NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 

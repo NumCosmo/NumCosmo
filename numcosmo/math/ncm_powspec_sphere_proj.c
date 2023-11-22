@@ -205,8 +205,8 @@ static void
 _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint ell_min, guint ell_max, gboolean reset)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
-  gint i, w_i;
   
+  guint i, w_i;
   g_assert_cmpint (ell_min, <=, ell_max);
 
   if (reset)
@@ -622,9 +622,9 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
     GPtrArray *fftlog_w = g_ptr_array_index (self->fftlog, w_i);
     NcmVector *lnk      = g_ptr_array_index (self->lnk_array, w_i);
     NcmVector *k2Pk     = g_ptr_array_index (self->k2Pk_array, w_i);
-    const gint n        = ncm_vector_len (lnk);
-    gint i;
     
+    const guint n       = ncm_vector_len (lnk);
+    guint i;
     for (i = 0; i < n; i++)
     {
       const gdouble lnk_i = ncm_vector_get (lnk, i);
@@ -642,9 +642,9 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
   }
 
   {
-    const gint nn  = (self->ell_max - self->ell_min + 1);
+    const guint nn = (self->ell_max - self->ell_min + 1);
     NcmVector *w_v = ncm_vector_new (self->w_array->len);
-    gint i;
+    guint i;
 
     for (i = 0; i < self->w_array->len; i++)
       ncm_vector_set (w_v, i, g_array_index (self->w_array, gdouble, self->w_array->len - 1 - i));

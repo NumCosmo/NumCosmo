@@ -235,7 +235,7 @@ _ncm_fit_gsl_mms_reset (NcmFit *fit)
       if (fparam_len > 0)
       {
         NcmMSet *mset = ncm_fit_peek_mset (fit);
-        gint i;
+        guint i;
 
         ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
 

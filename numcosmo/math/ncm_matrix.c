@@ -915,8 +915,8 @@ ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
   const guint nrows = ncm_matrix_nrows (cm1);
   const guint ncols = ncm_matrix_ncols (cm1);
   gdouble reltol = 0.0;
-  gint i, j;
   
+  guint i, j;
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   
@@ -1255,8 +1255,9 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
   GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
   gint neva = 0;
-  gint ret, i, iter;
   
+  gint ret, i;
+  guint iter;
   g_array_set_size (isuppz, 2 * n);
   
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
@@ -1361,8 +1362,9 @@ ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec)
   GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
   gint neva = 0;
-  gint ret, i;
   
+  gint ret;
+  guint i;
   g_array_set_size (isuppz, 2 * n);
   g_array_set_size (tau, n);
   
@@ -1410,8 +1412,9 @@ ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
   GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
   gint neva = 0;
-  gint ret, i;
   
+  gint ret;
+  guint i;
   g_array_set_size (isuppz, 2 * n);
   
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
@@ -1473,8 +1476,8 @@ void
 ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym)
 {
   const guint n = ncm_matrix_ncols (cm);
-  gint i;
   
+  guint i;
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (sym));
@@ -1485,8 +1488,8 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
     {
       for (i = 0; i < n; i++)
       {
-        gint j;
         
+        guint j;
         for (j = i + 1; j < n; j++)
         {
           ncm_matrix_set (cm, j, i, 0.0);
@@ -1497,8 +1500,8 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
     {
       for (i = 0; i < n; i++)
       {
-        gint j;
         
+        guint j;
         for (j = i + 1; j < n; j++)
         {
           ncm_matrix_set (cm, i, j, 0.0);
@@ -1744,8 +1747,8 @@ void
 ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n = ncm_matrix_nrows (cm);
-  gint k;
   
+  guint k;
   g_assert_cmpfloat (sigma_min, >, 0.0);
   g_assert_cmpfloat (sigma_max, >, sigma_min);
   
@@ -1783,8 +1786,8 @@ void
 ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_min, const gdouble reltol_max, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n = ncm_matrix_nrows (cm);
-  gint k;
   
+  guint k;
   g_assert_cmpfloat (reltol_min, >, 0.0);
   g_assert_cmpfloat (reltol_max, >, reltol_min);
   g_assert_cmpuint (n, ==, ncm_vector_len (mu));
@@ -1820,8 +1823,8 @@ void
 ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
 {
   const guint n = ncm_matrix_nrows (cov);
-  gint i;
   
+  guint i;
   g_assert_cmpuint (ncm_matrix_ncols (cov), ==, n);
   
   if (cov != cor)

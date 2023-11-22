@@ -383,8 +383,8 @@ void
 ncm_mpi_job_test_set_rand_vector (NcmMPIJobTest *mjt, const guint len, NcmRNG *rng)
 {
   NcmMPIJobTestPrivate * const self = mjt->priv;
-  gint i;
   
+  guint i;
   g_assert_cmpuint (len, >, 0);
   ncm_vector_clear (&self->vec);
   

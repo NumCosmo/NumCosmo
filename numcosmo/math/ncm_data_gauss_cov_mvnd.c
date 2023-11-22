@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_gauss_cov_mvnd.c
  *
@@ -193,7 +194,7 @@ ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdou
   NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
   NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
   const guint np        = ncm_data_gauss_cov_get_size (gcov);
-  gint i;
+  guint i;
 
   g_assert_cmpfloat (mean_min, <=, mean_max);
   g_assert_cmpint (np, >, 0);
@@ -333,7 +334,7 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
   gulong NNin = (Nin != NULL) ? *Nin : 0;
   gdouble ratio;
   gulong maxiter = 100000000;
-  glong miniter  = MIN (10000, (glong) (1.0 / reltol));
+  gulong miniter = MIN (10000, (glong) (1.0 / reltol));
 
   while (TRUE)
   {
@@ -403,7 +404,7 @@ ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
 
   while (ncm_stats_vec_nitens (stats) < n)
   {
-    gint i, j;
+    guint i, j;
 
     ncm_data_gauss_cov_bulk_resample (gcov, mset, sample, rng);
 

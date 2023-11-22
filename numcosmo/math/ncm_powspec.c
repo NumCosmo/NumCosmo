@@ -220,7 +220,7 @@ _ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
       0.5 * (powspec->zi + powspec->zf),
       exp (0.5 * (log (powspec->kmin) + log(powspec->kmax)))};
   gsl_function Fx, Fy;
-  gint i, j;
+  guint i, j;
 
   Fx.function = __P_z;
   Fx.params   = &data;

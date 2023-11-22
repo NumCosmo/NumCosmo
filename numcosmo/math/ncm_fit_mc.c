@@ -815,7 +815,7 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
   if (!mc->started)
     g_error ("ncm_fit_mc_run: run not started, run ncm_fit_mc_start_run() first.");
 
-  if (n <= (mc->cur_sample_id + 1))
+  if (n <= (guint) (mc->cur_sample_id + 1))
   {
     if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
