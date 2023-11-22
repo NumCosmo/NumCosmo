@@ -371,7 +371,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
     ncm_mset_catalog_add_from_vector (mcbs->mcat,
-                                      ncm_mset_catalog_peek_pstats (ncm_fit_mc_peek_catalog (mcbs->mc_bstrap))->mean);
+                                      ncm_stats_vec_peek_mean (ncm_mset_catalog_peek_pstats (ncm_fit_mc_peek_catalog (mcbs->mc_bstrap))));
     ncm_mset_catalog_log_current_stats (mcbs->mcat);
 
     ncm_fit_mc_end_run (mcbs->mc_bstrap);

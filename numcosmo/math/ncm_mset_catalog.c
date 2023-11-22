@@ -2033,7 +2033,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 
       for (i = 0; i < rows_to_add; i++)
       {
-        NcmVector *row = ncm_vector_new (self->pstats->len);
+        NcmVector *row = ncm_vector_new (ncm_stats_vec_len (self->pstats));
 
         _ncm_mset_catalog_read_row (mcat, row, offset + i + 1);
         _ncm_mset_catalog_post_update (mcat, row);
@@ -2391,7 +2391,7 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-  return self->pstats->nitens;
+  return ncm_stats_vec_nitens (self->pstats);
 }
 
 /**
@@ -2409,9 +2409,9 @@ ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   if (self->nchains > 1)
-    return self->e_mean_stats->nitens;
+    return ncm_stats_vec_nitens (self->e_mean_stats);
   else
-    return self->pstats->nitens;
+    return ncm_stats_vec_nitens (self->pstats);
 }
 
 /**
@@ -2477,7 +2477,7 @@ ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t)
   const guint row_n           = t - self->first_id;
 
   g_assert_cmpint (t, >=, self->first_id);
-  g_assert_cmpuint (row_n, <, self->pstats->nitens);
+  g_assert_cmpuint (row_n, <, ncm_stats_vec_nitens (self->pstats));
 
   return row_n;
 }
@@ -2718,7 +2718,7 @@ static void
 _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const guint len             = self->pstats->len;
+  const guint len             = ncm_stats_vec_len (self->pstats);
   guint i;
 
   for (i = 0; i < len; i++)
@@ -2759,9 +2759,9 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
   }
 
   /* Counting the number of accepted steps */
-  if (self->pstats->nitens > self->nchains)
+  if (ncm_stats_vec_nitens (self->pstats) > self->nchains)
   {
-    const gint current_index = self->pstats->nitens - 1;
+    const gint current_index = ncm_stats_vec_nitens (self->pstats) - 1;
     const gint last_index    = current_index - self->nchains;
     NcmVector *last_x        = ncm_stats_vec_peek_row (self->pstats, last_index);
 
@@ -2788,7 +2788,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (self->e_var_array, e_var);
 
-      if (self->pstats->nitens > self->nchains)
+      if (ncm_stats_vec_nitens (self->pstats) > self->nchains)
       {
         const gdouble acc_ratio = self->naccepted / (gdouble) self->nchains;
 
@@ -2850,7 +2850,7 @@ void
 ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  NcmVector *row_i            = ncm_vector_new (self->pstats->len);
+  NcmVector *row_i            = ncm_vector_new (ncm_stats_vec_len (self->pstats));
   va_list ap;
   guint i;
 
@@ -2886,7 +2886,7 @@ void
 ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  NcmVector *row_i            = ncm_vector_new (self->pstats->len);
+  NcmVector *row_i            = ncm_vector_new (ncm_stats_vec_len (self->pstats));
   guint i;
 
   for (i = 0; i < self->nadd_vals; i++)
@@ -2930,7 +2930,7 @@ void
 ncm_mset_catalog_add_from_vector_array (NcmMSetCatalog *mcat, NcmVector *vals, gdouble *ax)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  NcmVector *row_i            = ncm_vector_new (self->pstats->len);
+  NcmVector *row_i            = ncm_vector_new (ncm_stats_vec_len (self->pstats));
   guint i;
 
   for (i = 0; i < self->nadd_vals; i++)
@@ -2943,20 +2943,28 @@ ncm_mset_catalog_add_from_vector_array (NcmMSetCatalog *mcat, NcmVector *vals, g
 }
 
 static gdouble
-_fvar (gdouble v_i, guint i, gpointer user_data)
-{
-  NcmStatsVec *pstats = NCM_STATS_VEC (user_data);
-
-  return sqrt (v_i * pstats->bias_wt);
-}
-
-static gdouble
-_fmeanvar (gdouble v_i, guint i, gpointer user_data)
+_fmeansd (gdouble v_i, guint i, gpointer user_data)
 {
   NcmMSetCatalog *mcat        = NCM_MSET_CATALOG (user_data);
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-  return sqrt (v_i * self->pstats->bias_wt * ncm_vector_get (self->tau, i) / self->pstats->nitens);
+  return sqrt (ncm_stats_vec_get_var (self->pstats, i) * ncm_vector_get (self->tau, i) / ncm_stats_vec_nitens (self->pstats));
+}
+
+static gdouble
+_fsd (gdouble v_i, guint i, gpointer user_data)
+{
+  NcmStatsVec *pstats = NCM_STATS_VEC (user_data);
+
+  return ncm_stats_vec_get_sd (pstats, i);
+}
+
+static gdouble
+_fvar (gdouble v_i, guint i, gpointer user_data)
+{
+  NcmStatsVec *pstats = NCM_STATS_VEC (user_data);
+
+  return ncm_stats_vec_get_var (pstats, i);
 }
 
 static gdouble
@@ -2979,12 +2987,13 @@ void
 ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
+  NcmVector *mean             = ncm_stats_vec_peek_mean (self->pstats);
 
-  ncm_vector_log_vals (self->pstats->mean,     "# NcmMSetCatalog: Current mean:  ", "% -12.5g", TRUE);
-  ncm_vector_log_vals_func (self->pstats->var, "# NcmMSetCatalog: Current msd:   ", "% -12.5g", &_fmeanvar, mcat);
-  ncm_vector_log_vals_func (self->pstats->var, "# NcmMSetCatalog: Current sd:    ", "% -12.5g", &_fvar, self->pstats);
-  ncm_vector_log_vals_avpb (self->pstats->var, "# NcmMSetCatalog: Current var:   ", "% -12.5g", self->pstats->bias_wt, 0.0);
-  ncm_vector_log_vals_func (self->pstats->var, "# NcmMSetCatalog: Current tau:   ", "% -12.5g", &_ftau, mcat);
+  ncm_vector_log_vals (mean,      "# NcmMSetCatalog: Current mean:  ", "% -12.5g", TRUE);
+  ncm_vector_log_vals_func (mean, "# NcmMSetCatalog: Current msd:   ", "% -12.5g", &_fmeansd, mcat);
+  ncm_vector_log_vals_func (mean, "# NcmMSetCatalog: Current sd:    ", "% -12.5g", &_fsd, self->pstats);
+  ncm_vector_log_vals_func (mean, "# NcmMSetCatalog: Current var:   ", "% -12.5g", &_fvar, self->pstats);
+  ncm_vector_log_vals_func (mean, "# NcmMSetCatalog: Current tau:   ", "% -12.5g", &_ftau, mcat);
 }
 
 /**
@@ -3171,10 +3180,10 @@ ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-  if (self->pstats->nitens == 0)
+  if (ncm_stats_vec_nitens (self->pstats) == 0)
     return NULL;
   else
-    return ncm_stats_vec_peek_row (self->pstats, self->pstats->nitens - 1);
+    return ncm_stats_vec_peek_row (self->pstats, ncm_stats_vec_nitens (self->pstats) - 1);
 }
 
 /**
@@ -3190,8 +3199,8 @@ ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-  if (self->e_mean_stats->nitens > 0)
-    return ncm_stats_vec_peek_row (self->e_mean_stats, self->e_mean_stats->nitens - 1);
+  if (ncm_stats_vec_nitens (self->e_mean_stats) > 0)
+    return ncm_stats_vec_peek_row (self->e_mean_stats, ncm_stats_vec_nitens (self->e_mean_stats) - 1);
   else
     return NULL;
 }
@@ -3231,7 +3240,7 @@ ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
 
   if (self->nchains > 1)
   {
-    g_assert_cmpuint (t, <, self->e_mean_stats->nitens);
+    g_assert_cmpuint (t, <, ncm_stats_vec_nitens (self->e_mean_stats));
 
     return ncm_stats_vec_peek_row (self->e_mean_stats, t);
   }
@@ -3827,7 +3836,7 @@ ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector **mean)
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   if (*mean == NULL)
-    *mean = ncm_vector_new (self->pstats->len - self->nadd_vals);
+    *mean = ncm_vector_new (ncm_stats_vec_len (self->pstats) - self->nadd_vals);
 
   ncm_stats_vec_get_mean_vector (self->pstats, *mean, self->nadd_vals);
 }
@@ -3846,7 +3855,7 @@ ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   if (*cov == NULL)
-    *cov = ncm_matrix_new (self->pstats->len - self->nadd_vals, self->pstats->len - self->nadd_vals);
+    *cov = ncm_matrix_new (ncm_stats_vec_len (self->pstats) - self->nadd_vals, ncm_stats_vec_len (self->pstats) - self->nadd_vals);
 
   ncm_stats_vec_get_cov_matrix (self->pstats, *cov, self->nadd_vals);
 }
@@ -3865,7 +3874,7 @@ ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   if (*cov == NULL)
-    *cov = ncm_matrix_new (self->pstats->len, self->pstats->len);
+    *cov = ncm_matrix_new (ncm_stats_vec_len (self->pstats), ncm_stats_vec_len (self->pstats));
 
   ncm_stats_vec_get_cov_matrix (self->pstats, *cov, 0);
 }
@@ -3990,7 +3999,7 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
           guint c_order     = 0;
           const gdouble ess = ncm_stats_vec_ar_ess (self->pstats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
 
-          ncm_vector_set (self->tau, p, self->pstats->nitens / ess);
+          ncm_vector_set (self->tau, p, ncm_stats_vec_nitens (self->pstats) / ess);
         }
 
         break;
@@ -4021,7 +4030,7 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
           guint c_order     = 0;
           const gdouble ess = ncm_stats_vec_ar_ess (self->e_mean_stats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
 
-          ncm_vector_set (self->tau, p, self->pstats->nitens / (ess * self->nchains));
+          ncm_vector_set (self->tau, p, ncm_stats_vec_nitens (self->pstats) / (ess * self->nchains));
         }
 
         break;
@@ -4064,7 +4073,7 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
   NcmMSetCatalogPrivate *self = mcat->priv;
   guint i;
   gdouble W, B_n, shrink_factor;
-  guint n = self->pstats->nitens;
+  guint n = ncm_stats_vec_nitens (self->pstats);
 
   if (self->nchains == 1)
     return 1.0;
@@ -4118,8 +4127,8 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = mcat->priv;
   gint ret;
   guint i;
-  guint n                     = self->pstats->nitens;
-  const guint free_params_len = self->pstats->len - self->nadd_vals;
+  guint n                     = ncm_stats_vec_nitens (self->pstats);
+  const guint free_params_len = ncm_stats_vec_len (self->pstats) - self->nadd_vals;
   gdouble shrink_factor       = 1.0e10;
 
   if (self->nchains == 1)
@@ -4208,7 +4217,7 @@ void
 ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
-  const guint n               = self->pstats->nitens;
+  const guint n               = ncm_stats_vec_nitens (self->pstats);
   const guint nbins           = n / 10 >= 10 ? n / 10 : 10;
   const gdouble p_max         = ncm_vector_get (self->params_max, i);
   const gdouble p_min         = ncm_vector_get (self->params_min, i);
@@ -4236,7 +4245,7 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
 
   gsl_histogram_set_ranges_uniform (self->h, p_min, p_max);
 
-  for (k = 0; k < self->pstats->nitens; k++)
+  for (k = 0; k < ncm_stats_vec_nitens (self->pstats); k++)
   {
     NcmVector *row = ncm_stats_vec_peek_row (self->pstats, k);
 
