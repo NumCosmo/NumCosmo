@@ -208,7 +208,7 @@ _ncm_stats_dist_kernel_gauss_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector
 {
   /*NcmStatsDistKernelPrivate * const pself = sdk->priv;*/
   const guint n = ncm_vector_len (chi2);
-  gint i;
+  guint i;
 
   g_assert (ncm_vector_len (Ku) == n);
 
@@ -240,9 +240,9 @@ _ncm_stats_dist_kernel_gauss_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, Nc
   /* NcmStatsDistKernelGaussPrivate * const self = NCM_STATS_DIST_KERNEL_GAUSS (sdk)->priv; */
   /*NcmStatsDistKernelPrivate * const pself  = sdk->priv;*/
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n   = ncm_vector_len (chi2);
   gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  guint i, i_max = 0;
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnnorms));
@@ -286,9 +286,9 @@ _ncm_stats_dist_kernel_gauss_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, Nc
   /* NcmStatsDistKernelGaussPrivate * const self = NCM_STATS_DIST_KERNEL_GAUSS (sdk)->priv; */
   /* NcmStatsDistKernelPrivate * const pself  = sdk->priv; */
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n   = ncm_vector_len (chi2);
   gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  guint i, i_max = 0;
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnK));
@@ -327,7 +327,8 @@ static void
 _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistKernelPrivate * const pself = sdk->priv;
-  gint i, ret;
+  gint ret;
+  guint i;
 
   for (i = 0; i < pself->d; i++)
   {

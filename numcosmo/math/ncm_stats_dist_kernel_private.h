@@ -34,7 +34,7 @@ G_BEGIN_DECLS
 struct _NcmStatsDistKernelPrivate
 {
   /*< private >*/
-  gint d;
+  guint d;
 };
 
 G_END_DECLS

@@ -1363,8 +1363,9 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
     NcmVector *y                      = ncm_vector_new (n);
     NcmVector *c                      = ncm_vector_new (1);
     gsl_multifit_robust_stats stats;
-    gint status, i;
+    gint status;
     gdouble t0, cutoff;
+    guint i;
 
     for (i = 0; i < n; i++)
     {
@@ -1507,7 +1508,7 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 {
   NcmStatsVec *chunk   = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
   const gint half_size = svec->nitens / 2;
-  const gint block     = (ntests == 0) ? ((half_size - 1) / 10 + 1) : ((half_size - 1) / ntests + 1);
+  const gint block     = (ntests == 0) ? ((half_size - 1) / 10 + 1) : ((half_size - 1) / (gint) ntests + 1);
   const gdouble onepv  = (pvalue == 0.0) ? 0.95 : (1.0 - pvalue);
   NcmVector *pvals     = ncm_vector_new (svec->len);
   NcmVector *Ivals     = ncm_vector_new (svec->len);
@@ -1528,7 +1529,7 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
     ncm_stats_vec_append (chunk, row, FALSE);
   }
 
-  for (i = 0; i < svec->len; i++)
+  for (i = 0; i < (gint) svec->len; i++)
   {
     ncm_stats_vec_ar_ess (chunk, i, NCM_STATS_VEC_AR_AICC, ncm_vector_ptr (spec0, i), &c_order);
     g_array_append_val (ar_order, c_order);
@@ -1546,7 +1547,8 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
     if ((i % block) == 0)
     {
       const guint nitens = svec->nitens - i;
-      gint j, p;
+      gint j;
+      guint p;
 
       ncm_vector_set_zero (cumsum);
       ncm_vector_set_zero (Ivals);
@@ -1686,7 +1688,7 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
 {
   NcmStatsVec *chunk  = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
   const gint size     = svec->nitens;
-  const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / ntests + 1);
+  const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / (gint) ntests + 1);
   NcmVector *esss_tmp = ncm_vector_new (svec->len);
   NcmVector *esss     = ncm_vector_new (svec->len);
   gdouble max_t_ess   = 0.0;
@@ -1800,7 +1802,7 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
   GArray *data     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *work     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
-  gint i;
+  guint i;
 
   if (svec->nitens < 4)
     g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
@@ -1818,7 +1820,7 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
   for (i = 0; i < svec->len; i++)
   {
     gdouble var_ii;
-    gint a;
+    guint a;
 
     for (a = 0; a < svec->nitens; a++)
     {
@@ -1867,7 +1869,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   GArray *data       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *work_int   = g_array_new (FALSE, FALSE, sizeof (gint));
-  gint a, i;
+  guint a, i;
 
   if (svec->nitens < 4)
     g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
@@ -1915,7 +1917,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
 
   for (i = 0; i < svec->len; i++)
   {
-    gint j;
+    guint j;
 
     for (j = i + 1; j < svec->len; j++)
     {
@@ -2006,7 +2008,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   for (i = 0; i < svec->len; i++)
   {
     const gdouble sigma_z_i = ncm_vector_get (sigma_z, i);
-    gint j;
+    guint j;
 
     for (j = 0; j < svec->len; j++)
     {

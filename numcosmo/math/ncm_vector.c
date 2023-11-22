@@ -1598,7 +1598,7 @@ void
 ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 

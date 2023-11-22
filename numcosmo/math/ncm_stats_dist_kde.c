@@ -335,7 +335,7 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 
     if (ncm_matrix_nearPD (cov_decomp, 'U', TRUE, maxiter) != 0)
     {
-      gint i;
+      guint i;
 
       ncm_matrix_set_zero (cov_decomp);
 
@@ -352,10 +352,11 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 static void
 _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
-  NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself = sd->priv;
-  gint i, ret;
+  NcmStatsDistPrivate * const pself   = sd->priv;
+  gint ret;
+  guint i;
 
   /*
    * Computing the covariance matrix considering the whole sample.
@@ -464,12 +465,12 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   NcmStatsDistKDEPrivate * const self = sdkde->priv;
   NcmStatsDistPrivate * const pself   = sd->priv;
   const gdouble href2                 = pself->href * pself->href;
-  gint i;
+  guint i;
 
   for (i = 0; i < pself->n_kernels; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
-    gint j;
+    guint j;
 
     ncm_matrix_set (IM, i, i, 0.0);
 
@@ -477,7 +478,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     {
       NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
       gdouble chi2_ij  = 0.0;
-      gint k;
+      guint k;
 
       for (k = 0; k < pself->d; k++)
       {
@@ -494,13 +495,13 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   for (i = pself->n_kernels; i < pself->n_obs; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
-    gint j;
+    guint j;
 
     for (j = 0; j < pself->n_kernels; j++)
     {
       NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
       gdouble chi2_ij  = 0.0;
-      gint k;
+      guint k;
 
       for (k = 0; k < pself->d; k++)
       {
@@ -554,7 +555,7 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
   gdouble res;
   gint ret;
-  gint i;
+  guint i;
 
   ncm_vector_memcpy (ev->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
@@ -565,7 +566,7 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
     gdouble chi2_i   = 0.0;
-    gint k;
+    guint k;
 
     for (k = 0; k < pself->d; k++)
     {
@@ -596,7 +597,7 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
   gint ret;
-  gint i;
+  guint i;
 
   ncm_vector_memcpy (ev->v, x);
   ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
@@ -607,7 +608,7 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
     gdouble chi2_i   = 0.0;
-    gint k;
+    guint k;
 
     for (k = 0; k < pself->d; k++)
     {
