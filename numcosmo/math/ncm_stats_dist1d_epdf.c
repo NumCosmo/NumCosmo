@@ -297,7 +297,7 @@ _ncm_stats_dist1d_epdf_cmp_double (gconstpointer a,
 #undef B
 
 #define _NCM_STATS_DIST1D_EPDF_OBS_N(obs, epdf1d, sd) \
-  0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
+        0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
 
 static gdouble _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x);
 
@@ -414,12 +414,12 @@ _ncm_stats_dist1d_epdf_estimate_h (NcmVector *p_tilde2, NcmVector *Iv, const gui
 static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
-  const guint nbins = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
+  const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
   const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
-  const gdouble deltax = delta_l / nbins;
-  const gdouble xm = (epdf1d->max + epdf1d->min) * 0.5;
-  const gdouble lb = xm - delta_l * 0.5;
-  gdouble xc = lb + deltax;
+  const gdouble deltax  = delta_l / nbins;
+  const gdouble xm      = (epdf1d->max + epdf1d->min) * 0.5;
+  const gdouble lb      = xm - delta_l * 0.5;
+  gdouble xc            = lb + deltax;
   guint i, j;
 
   if (epdf1d->fftsize != nbins)
@@ -604,6 +604,8 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 
   if ((x < epdf1d->min) || (x > epdf1d->max))
     return 0.0;
+
+  g_assert_cmpuint (epdf1d->obs->len, >, 0);
 
   _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
