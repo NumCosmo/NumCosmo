@@ -466,7 +466,7 @@ gdouble
 ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -495,7 +495,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -526,7 +526,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -558,7 +558,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -594,7 +594,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, const gdouble mu, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, mu, r};
+  NcIntegral1dHermite int1d_H       = {int1d, mu, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -628,7 +628,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite1_p (NcmIntegral1d *int1d, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -658,7 +658,7 @@ gdouble
 ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -722,7 +722,7 @@ gdouble
 ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
   NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
