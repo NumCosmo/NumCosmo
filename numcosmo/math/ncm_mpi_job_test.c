@@ -63,7 +63,7 @@ enum
   PROP_VECTOR
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_test_init (NcmMPIJobTest *mjt)

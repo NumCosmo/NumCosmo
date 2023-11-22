@@ -63,7 +63,7 @@ enum
   PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_feval_init (NcmMPIJobFEval *mjfeval)

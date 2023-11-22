@@ -118,7 +118,7 @@ struct _NcmFitESMCMCWalkerAPES
   NcmFitESMCMCWalker parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM_TYPE_FIT_ESMCMC_WALKER);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM_TYPE_FIT_ESMCMC_WALKER)
 
 #define __MK(method, k_type) (method + (k_type << 8))
 

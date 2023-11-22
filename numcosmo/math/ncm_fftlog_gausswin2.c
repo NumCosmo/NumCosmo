@@ -75,7 +75,7 @@ struct _NcmFftlogGausswin2
   NcmFftlog parent_instance;
 };
 
-G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_gausswin2_init (NcmFftlogGausswin2 *gwin2)

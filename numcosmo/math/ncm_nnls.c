@@ -88,7 +88,7 @@ enum
   PROP_RELTOL,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmNNLS, ncm_nnls, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmNNLS, ncm_nnls, G_TYPE_OBJECT)
 
 static void
 ncm_nnls_init (NcmNNLS *nnls)

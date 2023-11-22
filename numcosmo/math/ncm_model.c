@@ -69,7 +69,7 @@ enum
 G_DEFINE_QUARK (ncm - model - error - quark, ncm_model_error)
 #define NCM_MODEL_ERROR (ncm_model_error_quark ())
 
-G_DEFINE_ABSTRACT_TYPE (NcmModel, ncm_model, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmModel, ncm_model, G_TYPE_OBJECT)
 
 static void
 ncm_model_init (NcmModel *model)

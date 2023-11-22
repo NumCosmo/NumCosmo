@@ -139,7 +139,7 @@ struct _NcmFftlogSBesselJ {
   NcmFftlog parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)

@@ -82,7 +82,7 @@ enum
 	PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSphereProj, ncm_powspec_sphere_proj, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSphereProj, ncm_powspec_sphere_proj, G_TYPE_OBJECT)
 
 static void
 ncm_powspec_sphere_proj_init (NcmPowspecSphereProj *psp)

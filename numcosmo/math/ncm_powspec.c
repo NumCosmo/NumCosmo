@@ -71,7 +71,7 @@ enum
   PROP_RELTOL_SPLINE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT)
 
 static gdouble _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight);
 static gdouble _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight);

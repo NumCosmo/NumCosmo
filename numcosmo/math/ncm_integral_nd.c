@@ -104,7 +104,7 @@ typedef struct _NcmIntegralNDPrivate
   gdouble abstol;
 } NcmIntegralNDPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT)
 
 enum
 {

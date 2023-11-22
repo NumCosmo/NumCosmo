@@ -52,7 +52,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT)
 
 static void
 ncm_matrix_init (NcmMatrix *m)

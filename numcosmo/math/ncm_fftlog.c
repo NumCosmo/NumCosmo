@@ -181,7 +181,7 @@ enum
   PROP_EVAL_R_MAX,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT)
 
 static void
 ncm_fftlog_init (NcmFftlog *fftlog)

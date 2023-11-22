@@ -61,7 +61,7 @@ enum
   PROP_ABSTOL,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFunctionCache, ncm_function_cache, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFunctionCache, ncm_function_cache, G_TYPE_OBJECT)
 
 static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data);
 static void gdouble_free (gpointer data);

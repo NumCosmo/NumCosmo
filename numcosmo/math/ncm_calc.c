@@ -48,7 +48,7 @@ enum
   PROP_ABSTOL
 };
 
-G_DEFINE_TYPE (NcmCalc, ncm_calc, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmCalc, ncm_calc, G_TYPE_OBJECT)
 
 static void
 ncm_calc_init (NcmCalc *calc)

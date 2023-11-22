@@ -75,7 +75,7 @@ enum
   PROP_CHOOSE_PERCENTILE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN)
 
 static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data);
 

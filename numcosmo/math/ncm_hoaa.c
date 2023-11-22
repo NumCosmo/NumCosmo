@@ -164,7 +164,7 @@ enum
   PROP_OPT,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT)
 
 static void
 ncm_hoaa_init (NcmHOAA *hoaa)

@@ -46,7 +46,7 @@ enum
   PROP_OBJECT,
 };
 
-G_DEFINE_TYPE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC);
+G_DEFINE_TYPE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_mset_func_list_init (NcmMSetFuncList *flist)

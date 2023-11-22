@@ -45,7 +45,7 @@ enum
   PROP_MODEL,
 };
 
-G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT)
 
 static void
 ncm_model_ctrl_init (NcmModelCtrl *ctrl)

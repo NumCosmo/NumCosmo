@@ -50,9 +50,9 @@ enum
 	PROP_LMAX,
 };
 
-G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsY, ncm_sf_spherical_harmonics_Y, ncm_sf_spherical_harmonics_Y_dup, ncm_sf_spherical_harmonics_Y_free);
-G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsYArray, ncm_sf_spherical_harmonics_Y_array, ncm_sf_spherical_harmonics_Y_array_dup, ncm_sf_spherical_harmonics_Y_array_free);
-G_DEFINE_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsY, ncm_sf_spherical_harmonics_Y, ncm_sf_spherical_harmonics_Y_dup, ncm_sf_spherical_harmonics_Y_free)
+G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsYArray, ncm_sf_spherical_harmonics_Y_array, ncm_sf_spherical_harmonics_Y_array_dup, ncm_sf_spherical_harmonics_Y_array_free)
+G_DEFINE_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, G_TYPE_OBJECT)
 
 static void
 ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)

@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_funnel.c
  *
@@ -56,7 +57,7 @@ struct _NcmDataFunnel
   NcmDataFunnelPrivate *priv;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA)
 
 static void
 ncm_data_funnel_init (NcmDataFunnel *dfu)

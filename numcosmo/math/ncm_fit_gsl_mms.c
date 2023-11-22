@@ -65,7 +65,7 @@ struct _NcmFitGSLMMS
 };
 
 
-G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT)
 
 static void
 ncm_fit_gsl_mms_init (NcmFitGSLMMS *fit_gsl_mms)

@@ -50,7 +50,7 @@ struct _NcmDataGaussCovMVND
   NcmDataGaussCov parent_instance;
 };
 
-G_DEFINE_TYPE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcmDataGaussCovMVND, ncm_data_gauss_cov_mvnd, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 ncm_data_gauss_cov_mvnd_init (NcmDataGaussCovMVND *gauss_mvnd)

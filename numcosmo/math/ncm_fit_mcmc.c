@@ -84,7 +84,7 @@ struct _NcmFitMCMC
   GCond write_cond;
 };
 
-G_DEFINE_TYPE (NcmFitMCMC, ncm_fit_mcmc, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitMCMC, ncm_fit_mcmc, G_TYPE_OBJECT)
 
 static void
 ncm_fit_mcmc_init (NcmFitMCMC *mcmc)

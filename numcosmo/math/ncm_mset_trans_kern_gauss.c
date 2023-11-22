@@ -54,7 +54,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcmMSetTransKernGauss, ncm_mset_trans_kern_gauss, NCM_TYPE_MSET_TRANS_KERN);
+G_DEFINE_TYPE (NcmMSetTransKernGauss, ncm_mset_trans_kern_gauss, NCM_TYPE_MSET_TRANS_KERN)
 
 static void
 ncm_mset_trans_kern_gauss_init (NcmMSetTransKernGauss *tkerng)

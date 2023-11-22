@@ -63,7 +63,7 @@ enum
   PROP_N,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmISet, ncm_iset, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmISet, ncm_iset, G_TYPE_OBJECT)
 
 static gint _ncm_iset_cmp (gconstpointer a, gconstpointer b, gpointer user_data) {return GPOINTER_TO_INT (a) - GPOINTER_TO_INT (b); }
 

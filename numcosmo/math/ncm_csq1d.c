@@ -152,8 +152,8 @@ enum
   PROP_SING_DETECT,
 };
 
-G_DEFINE_BOXED_TYPE (NcmCSQ1DSingFitUp, ncm_csq1d_sing_fit_up, ncm_csq1d_sing_fit_up_dup, ncm_csq1d_sing_fit_up_free);
-G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcmCSQ1DSingFitUp, ncm_csq1d_sing_fit_up, ncm_csq1d_sing_fit_up_dup, ncm_csq1d_sing_fit_up_free)
+G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT)
 
 static void
 ncm_csq1d_init (NcmCSQ1D *csq1d)

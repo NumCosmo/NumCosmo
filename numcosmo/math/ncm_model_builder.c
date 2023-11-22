@@ -50,7 +50,7 @@ enum
   PROP_DESC,
 };
 
-G_DEFINE_TYPE (NcmModelBuilder, ncm_model_builder, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmModelBuilder, ncm_model_builder, G_TYPE_OBJECT)
 
 static void
 ncm_model_builder_init (NcmModelBuilder *mb)

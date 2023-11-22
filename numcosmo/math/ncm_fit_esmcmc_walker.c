@@ -86,7 +86,7 @@ enum
   PROP_NPARAMS,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmFitESMCMCWalker, ncm_fit_esmcmc_walker, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmFitESMCMCWalker, ncm_fit_esmcmc_walker, G_TYPE_OBJECT)
 
 static void
 ncm_fit_esmcmc_walker_init (NcmFitESMCMCWalker *walker)

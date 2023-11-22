@@ -81,7 +81,7 @@ struct _NcmFftlogTophatwin2
   NcmFftlog parent_instance;
 };
 
-G_DEFINE_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_tophatwin2_init (NcmFftlogTophatwin2 *j1pow2)

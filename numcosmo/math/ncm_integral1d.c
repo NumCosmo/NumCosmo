@@ -59,7 +59,7 @@ struct _NcmIntegral1dPrivate
   gsl_integration_cquad_workspace *cquad_ws;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT)
 
 enum
 {

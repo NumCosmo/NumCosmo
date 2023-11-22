@@ -137,7 +137,7 @@ struct _NcmFitESMCMC
   GObject parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT)
 
 static gpointer _ncm_fit_esmcmc_worker_dup (gpointer userdata);
 static void _ncm_fit_esmcmc_worker_free (gpointer p);

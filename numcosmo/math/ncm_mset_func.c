@@ -48,7 +48,7 @@ enum
   PROP_EVAL_X,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT)
 
 static void
 ncm_mset_func_init (NcmMSetFunc *func)
