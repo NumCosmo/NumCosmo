@@ -221,6 +221,8 @@ _ncm_stats_vec_constructed (GObject *object)
         svec->update = &_ncm_stats_vec_update_from_vec_weight_cov;
 
         ncm_matrix_set_zero (svec->cov);
+
+        G_GNUC_FALLTHROUGH;
       case NCM_STATS_VEC_VAR:
         g_assert (svec->var == NULL);
 
@@ -230,6 +232,8 @@ _ncm_stats_vec_constructed (GObject *object)
           svec->update = &_ncm_stats_vec_update_from_vec_weight_var;
 
         ncm_vector_set_zero (svec->var);
+
+        G_GNUC_FALLTHROUGH;
       case NCM_STATS_VEC_MEAN:
         g_assert (svec->x == NULL);
         g_assert (svec->mean == NULL);
@@ -243,7 +247,6 @@ _ncm_stats_vec_constructed (GObject *object)
         ncm_vector_set_zero (svec->x);
         ncm_vector_set_zero (svec->mean);
         break;
-      case NCM_STATS_VEC_TYPES_LEN:
       default:
         g_assert_not_reached ();
         break;
@@ -447,9 +450,13 @@ ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
     case NCM_STATS_VEC_COV:
       g_assert (svec->cov != NULL);
       ncm_matrix_set_zero (svec->cov);
+
+      G_GNUC_FALLTHROUGH;
     case NCM_STATS_VEC_VAR:
       g_assert (svec->var != NULL);
       ncm_vector_set_zero (svec->var);
+
+      G_GNUC_FALLTHROUGH;
     case NCM_STATS_VEC_MEAN:
       g_assert (svec->x != NULL);
       ncm_vector_set_zero (svec->x);
