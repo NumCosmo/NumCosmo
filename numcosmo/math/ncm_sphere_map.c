@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_sphere_map.c
  *
@@ -91,12 +92,12 @@
 #else
 #  define _fft_complex complex double
 #  define _fft_vec_alloc_complex(N) g_new (_fft_complex, (N))
-#  define _fft_vec_alloc gsl_vector_float_alloc
-#  define _fft_vec_free  gsl_vector_float_free
-#  define _fft_vec_set_zero(v, s) gsl_vector_float_set_zero (v)
-#  define _fft_vec_set_zero_complex(v, s)
-#  define _fft_vec_memcpy(dest, orig, s) gsl_vector_float_memcpy ((dest), (orig))
-#  define _fft_vec_ptr(v, i) (gsl_vector_float_ptr ((v), (i)))
+#  define _fft_vec_alloc(N) g_new (gdouble, (N))
+#  define _fft_vec_free  g_free
+#  define _fft_vec_set_zero(v, s) memset ((v), 0, sizeof (gdouble) * (s))
+#  define _fft_vec_set_zero_complex(v, s) memset ((v), 0, sizeof (_fft_complex) * (s))
+#  define _fft_vec_memcpy(dest, orig, s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
+#  define _fft_vec_ptr(v, i) (&((gdouble *) (v))[i])
 #endif
 #define _fft_vec_idx(v, i) (*_fft_vec_ptr (v, i))
 
@@ -508,7 +509,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 
       {
         const gint64 nrings_2 = self->nrings / 2;
-        const gint64 nblocks = nrings_2 / NCM_SPHERE_MAP_BLOCK_NC;
+        const gint64 nblocks  = nrings_2 / NCM_SPHERE_MAP_BLOCK_NC;
         gint64 i, j;
 
         self->block_ring_size = nblocks * NCM_SPHERE_MAP_BLOCK_NC;
@@ -1349,9 +1350,9 @@ static void
 _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *nest_index)
 {
   NcmSphereMapPrivate * const self = smap->priv;
-  const gdouble two_3 = 2.0 / 3.0;
-  const gdouble abs_z = fabs (z);
-  const gdouble tt = fmod (phi / M_PI_2, 4.0);
+  const gdouble two_3              = 2.0 / 3.0;
+  const gdouble abs_z              = fabs (z);
+  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
   gint64 x, y, f;
 
   if (abs_z <= two_3)
@@ -1966,6 +1967,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
                                                      &pvec[cap_size], NULL,
                                                      1, ring_size,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
+
       /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, self->npix, plan_r2c);*/
       g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
@@ -2004,6 +2006,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
                                                    &pvec[ring_fi_north], NULL,
                                                    1, dist,
                                                    fftw_default_flags | FFTW_DESTROY_INPUT);
+
       g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }
