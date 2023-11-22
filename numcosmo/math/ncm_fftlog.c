@@ -152,12 +152,12 @@ typedef struct _NcmFftlogPrivate
   GPtrArray *Gr_vec;
   GPtrArray *Gr_s;
   
+  GPtrArray *Ym;
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_complex *Fk;
   fftw_complex *Cm;
   fftw_complex *Gr;
   fftw_complex *CmYm;
-  GPtrArray *Ym;
   fftw_plan p_Fk2Cm;
   fftw_plan p_CmYm2Gr;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
@@ -627,6 +627,7 @@ ncm_fftlog_reset (NcmFftlog *fftlog)
 void
 ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
   
   if (self->nderivs != nderivs)
@@ -660,6 +661,7 @@ ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
     
     self->nderivs = nderivs;
   }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
@@ -1190,6 +1192,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 gdouble *
 ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
   
   fftw_complex *Ym_0 = g_ptr_array_index (self->Ym, 0);
@@ -1199,6 +1202,11 @@ ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
   size[0] = ncm_fftlog_get_full_size (fftlog) * 2;
   
   return (gdouble *) Ym_0;
+#else
+
+  return NULL;
+
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
