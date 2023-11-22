@@ -223,6 +223,7 @@ add_project_arguments(numcosmo_debug_cflags, language: 'c')
 glib_req = '>= 2.44.0'
 gobject_req = '>= 2.44.0'
 gsl_req = '>= 2.0'
+fftw_req = '>= 3.1.2'
 
 #######################################################################################
 # Checking for MPI:
@@ -303,7 +304,29 @@ gsl_dep = dependency('gsl', version: gsl_req)
 gmp_dep = dependency('gmp')
 mpfr_dep = dependency('mpfr')
 
+#######################################################################################
+# Checking for FFTW (optional)
+#######################################################################################
 
+fftw3_dep = dependency(
+  'fftw3',
+  version: fftw_req,
+  required: false,
+)
+
+fftw3f_dep = dependency(
+  'fftw3f',
+  version: fftw_req,
+  required: false,
+)
+
+if fftw3_dep.found()
+  numcosmo_conf.set('HAVE_FFTW3', true)
+endif
+
+if fftw3f_dep.found()
+  numcosmo_conf.set('HAVE_FFTW3F', true)
+endif
 #######################################################################################
 # Using internal libcuba
 #######################################################################################
@@ -333,7 +356,7 @@ mkl_may_use_sdl = not use_ilp64
 if blas_name == 'auto'
   foreach _name : get_option('blas-order')
     if _name == 'mkl'
-      blas = dependency(
+      blas_dep = dependency(
         'mkl',
         modules: ['cblas'] + blas_interface + mkl_opts,
         required: false, # may be required, but we need to emit a custom error message
@@ -342,8 +365,8 @@ if blas_name == 'auto'
       # Insert a second try with MKL, because we may be rejecting older versions
       # or missing it because no pkg-config installed. If so, we need to retry
       # with MKL SDL, and drop the version constraint (this always worked).
-      if not blas.found() and mkl_may_use_sdl
-        blas = dependency(
+      if not blas_dep.found() and mkl_may_use_sdl
+        blas_dep = dependency(
           'mkl',
           modules: ['cblas', 'sdl: true'],
           required: false,
@@ -353,35 +376,35 @@ if blas_name == 'auto'
       if _name == 'flexiblas' and use_ilp64
         _name = 'flexiblas64'
       endif
-      blas = dependency(
+      blas_dep = dependency(
         _name,
         modules: ['cblas'] + blas_interface,
         required: false,
       )
     endif
-    if blas.found()
+    if blas_dep.found()
       blas_name = _name
       break
     endif
   endforeach
 else
   if blas_name == 'mkl'
-    blas = dependency(
+    blas_dep = dependency(
       'mkl',
       modules: ['cblas'] + blas_interface + mkl_opts,
       required: false,
       version: mkl_version_req,
     )
     # Same deal as above - try again for MKL
-    if not blas.found() and mkl_may_use_sdl
-      blas = dependency(
+    if not blas_dep.found() and mkl_may_use_sdl
+      blas_dep = dependency(
         'mkl',
         modules: ['cblas', 'sdl: true'],
         required: false,
       )
     endif
   else
-    blas = dependency(
+    blas_dep = dependency(
       blas_name,
       modules: ['cblas'] + blas_interface,
       required: false,
