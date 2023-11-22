@@ -351,8 +351,12 @@ _ncm_mset_catalog_constructed (GObject *object)
 
       if (self->file != NULL)
       {
+#ifdef NUMCOSMO_HAVE_CFITSIO
         _ncm_mset_catalog_open_create_file (mcat, FALSE);
         ncm_mset_catalog_sync (mcat, TRUE);
+#else
+        g_error ("_ncm_mset_catalog_constructed: cannot create catalog without cfitsio.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
       }
     }
   }

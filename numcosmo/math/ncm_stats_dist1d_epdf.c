@@ -208,8 +208,10 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
 
+#ifdef NUMCOSMO_HAVE_FFTW3
   g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
   g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -414,6 +416,7 @@ _ncm_stats_dist1d_epdf_estimate_h (NcmVector *p_tilde2, NcmVector *Iv, const gui
 static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
   const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
   const gdouble deltax  = delta_l / nbins;
@@ -560,6 +563,10 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
     ncm_spline_prepare (epdf1d->ph_spline);
   }
+
+#else
+  g_error ("ncm_stats_dist1d_epdf_autobw: FFTW3 not available."); /* LCOV_EXCL_LINE */
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 static void
@@ -621,6 +628,7 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   {
     guint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
     guint i;
+    gint j;
 
     for (i = s; i < epdf1d->obs->len; i++)
     {
@@ -636,17 +644,17 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
         break;
     }
 
-    for (i = s - 1; i >= 0; i--)
+    for (j = s - 1; j >= 0; j--)
     {
-      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      const gdouble x_i          = obs->x;
-      const gdouble de_i         = (x - x_i) / epdf1d->h;
-      const gdouble de2_i        = de_i * de_i;
-      const gdouble wexp_i       = obs->w * exp (-de2_i * 0.5);
+      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
+      const gdouble x_j          = obs->x;
+      const gdouble de_j         = (x - x_j) / epdf1d->h;
+      const gdouble de2_j        = de_j * de_j;
+      const gdouble wexp_j       = obs->w * exp (-de2_j * 0.5);
 
-      res += wexp_i;
+      res += wexp_j;
 
-      if (wexp_i / res < GSL_DBL_EPSILON)
+      if (wexp_j / res < GSL_DBL_EPSILON)
         break;
     }
   }

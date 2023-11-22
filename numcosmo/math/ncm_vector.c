@@ -244,12 +244,20 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
 
   cv->type = NCM_VECTOR_MALLOC;
 
   return cv;
+
+#else
+  g_error ("ncm_vector_new_fftw: fftw3 not available");
+
+  return NULL;
+
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
