@@ -458,10 +458,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     return;
 
 #ifdef NUMCOSMO_HAVE_FFTW3
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
 
@@ -1126,6 +1128,7 @@ typedef struct _NcmCfgLoggerFuncContainer
 static void
 _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
 
   if (_enable_msg && _log_stream)
     container->logger (message);

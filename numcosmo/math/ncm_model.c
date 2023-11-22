@@ -75,27 +75,27 @@ static void
 ncm_model_init (NcmModel *model)
 {
   gint i;
-  
+
   model->sparams         = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_sparam_free);
   model->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
   model->params          = NULL;
   model->p               = NULL;
-  
+
   model->vparam_len = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
   model->vparam_pos = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
-  
+
   model->pkey = 1;
   model->skey = 0;
-  
+
   for (i = 0; i < NCM_MODEL_MAX_STATES; i++)
     model->slkey[i] = 0;
-  
+
   model->reparam = NULL;
   model->ptypes  = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
-  
+
   model->submodel_array   = g_ptr_array_new ();
   model->submodel_mid_pos = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
-  
+
   g_ptr_array_set_free_func (model->submodel_array, (GDestroyNotify) ncm_model_free);
 }
 
@@ -104,39 +104,39 @@ _ncm_model_set_sparams (NcmModel *model)
 {
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
   guint i;
-  
+
   g_hash_table_remove_all (model->sparams_name_id);
   g_ptr_array_set_size (model->sparams, 0);
   g_ptr_array_set_size (model->sparams, model->total_len);
-  
+
   for (i = 0; i < model_class->sparam_len; i++)
   {
     NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
-    
+
     g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
     g_ptr_array_index (model->sparams, i)          = ncm_sparam_copy (sp);
     g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
   }
-  
+
   for (i = 0; i < model_class->vparam_len; i++)
   {
     const guint len = g_array_index (model->vparam_len, guint, i);
     const guint pos = g_array_index (model->vparam_pos, guint, i);
     NcmVParam *vp   = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
     guint j;
-    
+
     ncm_vparam_set_len (vp, len);
-    
+
     for (j = 0; j < len; j++)
     {
       const guint n = pos + j;
       NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
-      
+
       g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
       g_ptr_array_index (model->sparams, n)          = ncm_sparam_ref (sp);
       g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
     }
-    
+
     ncm_vparam_free (vp);
   }
 }
@@ -147,17 +147,17 @@ _ncm_model_set_sparams_from_array (NcmModel *model, GPtrArray *sparams)
   if ((sparams != NULL) && (sparams->len > 0))
   {
     guint i;
-    
+
     g_hash_table_remove_all (model->sparams_name_id);
     g_ptr_array_set_size (model->sparams, 0);
     g_ptr_array_set_size (model->sparams, model->total_len);
-    
+
     g_assert_cmpuint (sparams->len, ==, model->total_len);
-    
+
     for (i = 0; i < sparams->len; i++)
     {
       NcmSParam *sp = NCM_SPARAM (ncm_obj_array_peek (sparams, i));
-      
+
       g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
       g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
     }
@@ -183,15 +183,15 @@ _ncm_model_constructed (GObject *object)
     NcmModel *model            = NCM_MODEL (object);
     NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
     guint i;
-    
+
     model->total_len = model_class->sparam_len;
-    
+
     for (i = 0; i < model_class->vparam_len; i++)
     {
       g_array_index (model->vparam_pos, guint, i) = model->total_len;
       model->total_len                           += g_array_index (model->vparam_len, guint, i);
     }
-    
+
     model->params = ncm_vector_new (model->total_len == 0 ? 1 : model->total_len);
     model->p      = ncm_vector_ref (model->params);
     g_array_set_size (model->ptypes, model->total_len);
@@ -204,21 +204,21 @@ static void
 _ncm_model_dispose (GObject *object)
 {
   NcmModel *model = NCM_MODEL (object);
-  
+
   ncm_vector_clear (&model->params);
   ncm_vector_clear (&model->p);
-  
+
   ncm_reparam_clear (&model->reparam);
-  
+
   g_clear_pointer (&model->vparam_len,       g_array_unref);
   g_clear_pointer (&model->vparam_pos,       g_array_unref);
   g_clear_pointer (&model->ptypes,           g_array_unref);
   g_clear_pointer (&model->sparams,          g_ptr_array_unref);
   g_clear_pointer (&model->sparams_name_id,  g_hash_table_unref);
-  
+
   g_clear_pointer (&model->submodel_array,   g_ptr_array_unref);
   g_clear_pointer (&model->submodel_mid_pos, g_hash_table_unref);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->dispose (object);
 }
@@ -234,9 +234,9 @@ static void
 _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModel *model = NCM_MODEL (object);
-  
+
   g_return_if_fail (NCM_IS_MODEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_SPARAM_ARRAY:
@@ -248,23 +248,23 @@ _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SUBMODEL_ARRAY:
     {
       NcmObjArray *oa = (NcmObjArray *) g_value_get_boxed (value);
-      
+
       if (oa != NULL)
       {
         guint i;
-        
+
         for (i = 0; i < oa->len; i++)
         {
           NcmModel *submodel = NCM_MODEL (ncm_obj_array_peek (oa, i));
-          
+
           if (!NCM_MODEL_GET_CLASS (submodel)->is_submodel)
             g_error ("_ncm_model_set_property: NcmModel submodel array can only contain submodels `%s'.",
                      G_OBJECT_TYPE_NAME (submodel));
-          
+
           ncm_model_add_submodel (model, submodel);
         }
       }
-      
+
       break;
     }
     default:
@@ -278,9 +278,9 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 {
   NcmModel *model            = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (object);
-  
+
   g_return_if_fail (NCM_IS_MODEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_NAME:
@@ -311,14 +311,14 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     {
       NcmObjArray *oa = ncm_obj_array_new ();
       guint i;
-      
+
       for (i = 0; i < model->submodel_array->len; i++)
       {
         NcmModel *submodel = g_ptr_array_index (model->submodel_array, i);
-        
+
         ncm_obj_array_add (oa, G_OBJECT (submodel));
       }
-      
+
       g_value_take_boxed (value, oa);
       break;
     }
@@ -332,7 +332,7 @@ static gboolean
 _ncm_model_valid (NcmModel *model)
 {
   NCM_UNUSED (model);
-  
+
   return TRUE;
 }
 
@@ -342,17 +342,17 @@ static void
 ncm_model_class_init (NcmModelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->constructed  = &_ncm_model_constructed;
   object_class->set_property = &_ncm_model_set_property;
   object_class->get_property = &_ncm_model_get_property;
   object_class->dispose      = &_ncm_model_dispose;
   object_class->finalize     = &_ncm_model_finalize;
-  
+
   klass->valid        = &_ncm_model_valid;
   klass->set_property = NULL;
   klass->get_property = NULL;
-  
+
   klass->model_id          = -1;
   klass->can_stack         = FALSE;
   klass->main_model_id     = -1;
@@ -364,7 +364,7 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->vparam_len        = 0;
   klass->sparam            = NULL;
   klass->vparam            = NULL;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -379,7 +379,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         "Model's nick",
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SPARAMS_LEN,
                                    g_param_spec_uint ("scalar-params-len",
@@ -394,7 +394,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                       "Number of vector parameters",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_IMPLEMENTATION,
                                    g_param_spec_uint64  ("implementation",
@@ -402,7 +402,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          "Bitwise specification of functions implementation",
                                                          0, G_MAXUINT64, 0,
                                                          G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_PTYPES,
                                    g_param_spec_boxed  ("params-types",
@@ -410,7 +410,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         "Parameters' types",
                                                         G_TYPE_ARRAY,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SPARAM_ARRAY,
                                    g_param_spec_boxed ("sparam-array",
@@ -425,7 +425,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          "Model reparametrization",
                                                          NCM_TYPE_REPARAM,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SUBMODEL_ARRAY,
                                    g_param_spec_boxed ("submodel-array",
@@ -457,7 +457,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   const guint vparam_len_id  = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id  = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id  = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
-  
+
   if ((prop_id < model_class->nonparam_prop_len) && model_class->get_property)
   {
     model_class->get_property (object, prop_id, value, pspec);
@@ -469,7 +469,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   else if (vparam_id < model_class->vparam_len)
   {
     NcmVector *vp = ncm_model_orig_vparam_get_vector (model, vparam_id);
-    
+
     g_value_take_object (value, vp);
   }
   else if (vparam_len_id < model_class->vparam_len)
@@ -486,20 +486,20 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
     GVariantBuilder builder;
     GVariant *var;
     guint i;
-    
+
     g_variant_builder_init (&builder, G_VARIANT_TYPE ("ab"));
-    
+
     for (i = 0; i < n; i++)
     {
       guint pid      = ncm_model_vparam_index (model, vparam_fit_id, i);
       gboolean tofit = ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE ? TRUE : FALSE;
-      
+
       g_variant_builder_add (&builder, "b", tofit);
     }
-    
+
     var = g_variant_builder_end (&builder);
     g_variant_ref_sink (var);
-    
+
     g_value_take_variant (value, var);
   }
   else
@@ -529,9 +529,9 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint vparam_len_id  = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id  = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id  = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
-  
+
   /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
-  
+
   if ((prop_id < model_class->nonparam_prop_len) && model_class->set_property)
   {
     model_class->set_property (object, prop_id, value, pspec);
@@ -539,25 +539,25 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   else if (sparam_id < model_class->sparam_len)
   {
     gdouble val = g_value_get_double (value);
-    
+
     ncm_model_orig_param_set (model, sparam_id, val);
   }
   else if (vparam_id < model_class->vparam_len)
   {
     NcmVector *vals = g_value_get_object (value);
     guint n         = ncm_vector_len (vals);
-    
+
     if (n != g_array_index (model->vparam_len, guint, vparam_id))
       g_error ("set_property: cannot set value of vector parameter, vector contains %u elements but vparam dimension is %u",
                n, ncm_model_vparam_len (model, vparam_id));
-    
+
     ncm_model_orig_vparam_set_vector (model, vparam_id, vals);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
     NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
     guint psize                = g_value_get_uint (value);
-    
+
     if (model->vparam_len->len == 0)
     {
       g_array_set_size (model->vparam_len, model_class->vparam_len);
@@ -568,13 +568,13 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
       g_assert_cmpuint (model->vparam_len->len, ==, model_class->vparam_len);
       g_assert_cmpuint (model->vparam_pos->len, ==, model_class->vparam_len);
     }
-    
+
     g_array_index (model->vparam_len, guint, vparam_len_id) = psize;
   }
   else if (sparam_fit_id < model_class->sparam_len)
   {
     gboolean tofit = g_value_get_boolean (value);
-    
+
     ncm_model_param_set_ftype (model, sparam_fit_id, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
   }
   else if (vparam_fit_id < model_class->vparam_len)
@@ -583,25 +583,25 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
     gsize n       = g_variant_n_children (var);
     gsize nv      = g_array_index (model->vparam_len, guint, vparam_fit_id);
     guint i;
-    
+
     if (n == 1)
     {
       gboolean tofit;
       GVariant *varc = g_variant_get_child_value (var, 0);
-      
+
       if (g_variant_is_of_type (varc, G_VARIANT_TYPE ("b")))
         tofit = g_variant_get_boolean (varc);
       else if (g_variant_is_of_type (varc, G_VARIANT_TYPE ("i")))
         tofit = g_variant_get_int32 (varc) != 0;
       else
         g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (varc));
-      
+
       g_variant_unref (varc);
-      
+
       for (i = 0; i < nv; i++)
       {
         guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-        
+
         ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
       }
     }
@@ -617,7 +617,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
         {
           guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
           gboolean tofit;
-          
+
           g_variant_get_child (var, i, "b", &tofit);
           ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
         }
@@ -628,7 +628,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
         {
           guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
           gint tofit;
-          
+
           g_variant_get_child (var, i, "i", &tofit);
           ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
         }
@@ -659,7 +659,7 @@ void
 ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (model_class);
-  
+
   object_class->set_property     = &ncm_model_class_set_property;
   object_class->get_property     = &ncm_model_class_get_property;
   model_class->parent_sparam_len = model_class->sparam_len;
@@ -667,7 +667,7 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
   model_class->sparam_len       += sparam_len;
   model_class->vparam_len       += vparam_len;
   model_class->nonparam_prop_len = nonparam_prop_len;
-  
+
   if (model_class->sparam_len > 0)
   {
     if (model_class->sparam == NULL)
@@ -679,17 +679,17 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
     {
       GPtrArray *sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_sparam_free);
       guint i;
-      
+
       g_ptr_array_set_size (sparam, model_class->sparam_len);
-      
+
       /* Copy all parent params info */
       for (i = 0; i < model_class->parent_sparam_len; i++)
         g_ptr_array_index (sparam, i) = ncm_sparam_copy (g_ptr_array_index (model_class->sparam, i));
-      
+
       model_class->sparam = sparam;
     }
   }
-  
+
   if (model_class->vparam_len > 0)
   {
     if (model_class->vparam == NULL)
@@ -701,13 +701,13 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
     {
       GPtrArray *vparam = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vparam_free);
       guint i;
-      
+
       g_ptr_array_set_size (vparam, model_class->vparam_len);
-      
+
       /* Copy all parent params info */
       for (i = 0; i < model_class->parent_vparam_len; i++)
         g_ptr_array_index (vparam, i) = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
-      
+
       model_class->vparam = vparam;
     }
   }
@@ -746,29 +746,29 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
   GObjectClass *object_class = G_OBJECT_CLASS (model_class);
   const guint prop_id        = sparam_id - model_class->parent_sparam_len + model_class->nonparam_prop_len;
   const guint prop_fit_id    = prop_id + (model_class->sparam_len - model_class->parent_sparam_len) + 2 * (model_class->vparam_len - model_class->parent_vparam_len);
-  
+
   if (sparam_id >= model_class->sparam_len)
     g_error ("ncm_model_class_set_sparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
              sparam_id + 1, model_class->sparam_len, ncm_sparam_name (sparam), model_class->name);
-  
+
   g_assert_cmpint (prop_id, >, 0);
-  
+
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
     g_error ("Scalar Parameter: %u is already set.", sparam_id);
-  
+
   g_ptr_array_index (model_class->sparam, sparam_id) = ncm_sparam_ref (sparam);
-  
+
   g_object_class_install_property (object_class, prop_id,
                                    g_param_spec_double (ncm_sparam_name (sparam), NULL, ncm_sparam_symbol (sparam),
  /*ncm_sparam_get_lower_bound (sparam), ncm_sparam_get_upper_bound (sparam),*/ /*old behavior*/
                                                         -G_MAXDOUBLE, +G_MAXDOUBLE,
                                                         ncm_sparam_get_default_value (sparam),
                                                         G_PARAM_READWRITE));
-  
+
   {
     gchar *param_fit_name   = g_strdup_printf ("%s-fit", ncm_sparam_name (sparam));
     gchar *param_fit_symbol = g_strdup_printf ("%s:fit", ncm_sparam_symbol (sparam));
-    
+
     g_object_class_install_property (object_class, prop_fit_id,
                                      g_param_spec_boolean (param_fit_name, NULL, param_fit_symbol,
                                                            ncm_sparam_get_fit_type (sparam) == NCM_PARAM_TYPE_FREE ? TRUE : FALSE,
@@ -794,18 +794,18 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
   const guint prop_id        = vparam_id + model_class->nonparam_prop_len - model_class->parent_vparam_len + (model_class->sparam_len - model_class->parent_sparam_len);
   const guint prop_len_id    = prop_id + (model_class->vparam_len - model_class->parent_vparam_len);
   const guint prop_fit_id    = prop_len_id + (model_class->vparam_len - model_class->parent_vparam_len) + (model_class->sparam_len - model_class->parent_sparam_len);
-  
+
   if (vparam_id >= model_class->vparam_len)
     g_error ("ncm_model_class_set_vparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
              vparam_id + 1, model_class->vparam_len, ncm_vparam_name (vparam), model_class->name);
-  
+
   g_assert (prop_id > 0);
   g_assert (prop_len_id > 0);
   /*g_assert_cmpuint (default_length, >, 0);*/
-  
+
   if (g_ptr_array_index (model_class->vparam, vparam_id) != NULL)
     g_error ("Vector Parameter: %u is already set.", vparam_id);
-  
+
   g_ptr_array_index (model_class->vparam, vparam_id) = ncm_vparam_ref (vparam);
   g_object_class_install_property (object_class, prop_id,
                                    g_param_spec_object (ncm_vparam_name (vparam), NULL, ncm_vparam_symbol (vparam),
@@ -816,14 +816,14 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
     gchar *param_length_symbol = g_strdup_printf ("%s:length", ncm_vparam_symbol (vparam));
     gchar *param_fit_name      = g_strdup_printf ("%s-fit", ncm_vparam_name (vparam));
     gchar *param_fit_symbol    = g_strdup_printf ("%s:fit", ncm_vparam_symbol (vparam));
-    
+
     g_object_class_install_property (object_class, prop_len_id,
                                      g_param_spec_uint (param_length_name,
                                                         NULL,
                                                         param_length_symbol,
                                                         0, G_MAXUINT, ncm_vparam_len (vparam),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
-    
+
     g_object_class_install_property (object_class, prop_fit_id,
                                      g_param_spec_variant (param_fit_name, NULL, param_fit_symbol,
                                                            G_VARIANT_TYPE_ARRAY, NULL,
@@ -855,9 +855,9 @@ void
 ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
 {
   NcmSParam *sparam = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
-  
+
   ncm_model_class_set_sparam_obj (model_class, sparam_id, sparam);
-  
+
   ncm_sparam_free (sparam);
 }
 
@@ -882,9 +882,9 @@ void
 ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
 {
   NcmVParam *vparam = ncm_vparam_full_new (default_length, name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
-  
+
   ncm_model_class_set_vparam_obj (model_class, vparam_id, vparam);
-  
+
   ncm_vparam_free (vparam);
 }
 
@@ -900,7 +900,7 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 {
   gulong i;
   guint total_params_len = model_class->sparam_len + model_class->vparam_len;
-  
+
   if ((total_params_len == 0) && (model_class->nonparam_prop_len == 0))
     g_error ("Class size or params not initialized, call ncm_model_class_add_params.");
 
@@ -911,7 +911,7 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 
     /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
   }
-  
+
   for (i = 0; i < model_class->vparam_len; i++)
   {
     if (g_ptr_array_index (model_class->vparam, i) == NULL)
@@ -919,23 +919,23 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 
     /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
   }
-  
+
   {
     GObjectClass *object_class = G_OBJECT_CLASS (model_class);
-    
+
     if (object_class->set_property != &ncm_model_class_set_property)
       g_error ("Class (%s) is using object_class set_property, use model_class set_property instead.", model_class->name ? model_class->name : "no-name");
-    
+
     if (object_class->get_property != &ncm_model_class_get_property)
       g_error ("Class (%s) is using object_class get_property, use model_class get_property instead.", model_class->name ? model_class->name : "no-name");
   }
-  
+
   {
     if (model_class->nonparam_prop_len > 1)
     {
       if (model_class->set_property == NULL)
         g_error ("Class (%s) uses non parameter properties but does not set model_class->set_property.", model_class->name ? model_class->name : "no-name");
-      
+
       if (model_class->get_property == NULL)
         g_error ("Class (%s) uses non parameter properties but does not set model_class->get_property.", model_class->name ? model_class->name : "no-name");
     }
@@ -956,16 +956,16 @@ ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...)
 {
   gint opt_i;
   va_list ap;
-  
+
   va_start (ap, opt1);
-  
+
   model_class->impl_flag = model_class->impl_flag | NCM_MODEL_OPT2IMPL (opt1);
-  
+
   while ((opt_i = va_arg (ap, gint)) != -1)
   {
     model_class->impl_flag = model_class->impl_flag | NCM_MODEL_OPT2IMPL (opt_i);
   }
-  
+
   va_end (ap);
 }
 
@@ -1054,17 +1054,17 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
   if (reparam != NULL)
   {
     GType compat_type = ncm_reparam_get_compat_type (reparam);
-    
+
     if (!g_type_is_a (G_OBJECT_TYPE (model), compat_type))
       g_error ("ncm_model_set_reparam: model `%s' is not compatible with the reparametrization `%s'",
                g_type_name (G_OBJECT_TYPE (model)), g_type_name (compat_type));
-    
+
     ncm_reparam_clear (&model->reparam);
     model->reparam = ncm_reparam_ref (reparam);
-    
+
     ncm_vector_clear (&model->p);
     model->p = ncm_vector_ref (model->reparam->new_params);
-    
+
     ncm_reparam_old2new (model->reparam, model);
   }
   else
@@ -1087,19 +1087,19 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 {
   if (G_OBJECT_TYPE (model1) != G_OBJECT_TYPE (model2))
     return FALSE;
-  
+
   if (model1->total_len != model2->total_len)
     return FALSE;
-  
+
   if (model1->reparam)
   {
     if (model2->reparam == NULL)
       return FALSE;
-    
+
     if (G_OBJECT_TYPE (model1->reparam) != G_OBJECT_TYPE (model2->reparam))
       return FALSE;
   }
-  
+
   return TRUE;
 }
 
@@ -1115,10 +1115,10 @@ NcmReparam *
 ncm_model_get_reparam (NcmModel *model)
 {
   NcmReparam *reparam;
-  
+
   g_object_get (model, "reparam", &reparam, NULL);
   g_assert (NCM_IS_REPARAM (reparam));
-  
+
   return reparam;
 }
 
@@ -1167,14 +1167,14 @@ void
 ncm_model_params_set_default (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
   {
     const NcmSParam *p = ncm_model_param_peek_desc (model, i);
-    
+
     ncm_vector_set (model->p, i, ncm_sparam_get_default_value (p));
   }
-  
+
   ncm_model_params_update (model);
 }
 
@@ -1189,11 +1189,11 @@ void
 ncm_model_params_save_as_default (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
   {
     NcmSParam *p = ncm_model_param_peek_desc (model, i);
-    
+
     ncm_sparam_set_default_value (p, ncm_vector_get (model->p, i));
   }
 }
@@ -1226,16 +1226,16 @@ ncm_model_params_set_all (NcmModel *model, ...)
 {
   guint i;
   va_list ap;
-  
+
   va_start (ap, model);
-  
+
   for (i = 0; i < model->total_len; i++)
     ncm_vector_set (model->p, i, va_arg (ap, gdouble));
-  
+
   va_end (ap);
-  
+
   ncm_model_params_update (model);
-  
+
   return;
 }
 
@@ -1251,12 +1251,12 @@ void
 ncm_model_params_set_all_data (NcmModel *model, gdouble *data)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
     ncm_vector_set (model->p, i, data[i]);
-  
+
   ncm_model_params_update (model);
-  
+
   return;
 }
 
@@ -1302,13 +1302,13 @@ void
 ncm_model_params_print_all (NcmModel *model, FILE *out)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
     fprintf (out, "  % 20.16g", ncm_vector_get (model->p, i));
-  
+
   fprintf (out, "\n");
   fflush (out);
-  
+
   return;
 }
 
@@ -1323,12 +1323,12 @@ void
 ncm_model_orig_params_log_all (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
     g_message ("  % 20.16g", ncm_vector_get (model->params, i));
-  
+
   g_message ("\n");
-  
+
   return;
 }
 
@@ -1343,12 +1343,12 @@ void
 ncm_model_params_log_all (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
     g_message ("  % 20.16g", ncm_vector_get (model->p, i));
-  
+
   g_message ("\n");
-  
+
   return;
 }
 
@@ -1378,7 +1378,7 @@ gboolean
 ncm_model_params_valid (NcmModel *model)
 {
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  
+
   return model_class->valid (model);
 }
 
@@ -1394,17 +1394,17 @@ gboolean
 ncm_model_params_valid_bounds (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
   {
     const gdouble lb  = ncm_model_param_get_lower_bound (model, i);
     const gdouble ub  = ncm_model_param_get_upper_bound (model, i);
     const gdouble val = ncm_model_param_get (model, i);
-    
+
     if ((val < lb) || (val > ub))
       return FALSE;
   }
-  
+
   return TRUE;
 }
 
@@ -1458,20 +1458,20 @@ ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
 {
   guint64 flag = 0;
   gint opt_i;
-  
+
   va_list ap;
-  
+
   va_start (ap, opt1);
-  
+
   flag = flag | NCM_MODEL_OPT2IMPL (opt1);
-  
+
   while ((opt_i = va_arg (ap, gint)) != -1)
   {
     flag = flag | NCM_MODEL_OPT2IMPL (opt_i);
   }
-  
+
   va_end (ap);
-  
+
   return ncm_model_check_impl_flag (model, flag);
 }
 
@@ -1962,10 +1962,11 @@ void
 ncm_model_params_set_default_ftype (NcmModel *model)
 {
   guint i;
-  
+
   for (i = 0; i < model->total_len; i++)
   {
     const NcmSParam *p = ncm_model_param_peek_desc (model, i);
+
     g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (p);
   }
 }
@@ -2027,13 +2028,14 @@ GPtrArray *
 ncm_model_param_names (NcmModel *model)
 {
   GPtrArray *names = g_ptr_array_new ();
-  gint i;
+  guint i;
 
   /* g_ptr_array_set_free_func (names, g_free); */
 
   for (i = 0; i < model->sparams->len; i++)
   {
     gchar *name = g_strdup (ncm_sparam_name (ncm_model_param_peek_desc (model, i)));
+
     g_ptr_array_add (names, name);
   }
 
@@ -2053,7 +2055,7 @@ const gchar *
 ncm_model_param_symbol (NcmModel *model, guint n)
 {
   g_assert (n < model->total_len);
-  
+
   return ncm_sparam_symbol (ncm_model_param_peek_desc (model, n));
 }
 
@@ -2073,12 +2075,12 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
 {
   gpointer param_id;
   gboolean found = g_hash_table_lookup_extended (model->sparams_name_id, param_name, NULL, &param_id);
-  
+
   if (found)
     *i = GPOINTER_TO_UINT (param_id);
   else
     *i = -1;  /* Yup, I know. */
-  
+
   return found;
 }
 
@@ -2097,7 +2099,7 @@ gboolean
 ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i)
 {
   NcmReparam *reparam = ncm_model_peek_reparam (model);
-  
+
   if (reparam != NULL)
   {
     if (ncm_reparam_index_from_name (reparam, param_name, i))
@@ -2110,7 +2112,7 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
       {
         g_error ("ncm_model_param_index_from_name: parameter (%s) was changed by a NcmReparam, it is now named (%s).",
                  param_name, ncm_sparam_name (ncm_reparam_peek_param_desc (reparam, *i)));
-        
+
         return FALSE;
       }
       else
@@ -2143,12 +2145,12 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
 {
   guint i;
   const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
-  
+
   if (!has_param)
     g_error ("ncm_model_param_set_by_name: model `%s' does not have a parameter called `%s'. "
              "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
              G_OBJECT_TYPE_NAME (model), param_name);
-  
+
   ncm_model_param_set (model, i, val);
 }
 
@@ -2166,12 +2168,12 @@ ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdou
 {
   guint i;
   const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
-  
+
   if (!has_param)
     g_error ("ncm_model_orig_param_set_by_name: model `%s' does not have a parameter called `%s'. "
              "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
              G_OBJECT_TYPE_NAME (model), param_name);
-  
+
   ncm_model_orig_param_set (model, i, val);
 }
 
@@ -2189,12 +2191,12 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
   guint i;
   const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
-  
+
   if (!has_param)
     g_error ("ncm_model_param_get_by_name: model `%s' does not have a parameter called `%s'. "
              "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
              G_OBJECT_TYPE_NAME (model), param_name);
-  
+
   return ncm_model_param_get (model, i);
 }
 
@@ -2212,12 +2214,12 @@ ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
   guint i;
   const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
-  
+
   if (!has_param)
     g_error ("ncm_model_orig_param_get_by_name: model `%s' does not have a parameter called `%s'. "
              "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
              G_OBJECT_TYPE_NAME (model), param_name);
-  
+
   return ncm_model_orig_param_get (model, i);
 }
 
@@ -2235,9 +2237,9 @@ ncm_model_type_is_submodel (GType model_type)
   {
     NcmModelClass *model_class = g_type_class_ref (model_type);
     gboolean is_submodel       = model_class->is_submodel;
-    
+
     g_type_class_unref (model_class);
-    
+
     return is_submodel;
   }
 }
@@ -2258,9 +2260,9 @@ ncm_model_type_main_model (GType model_type)
   {
     NcmModelClass *model_class = g_type_class_ref (model_type);
     NcmModelID main_model_id   = model_class->main_model_id;
-    
+
     g_type_class_unref (model_class);
-    
+
     return main_model_id;
   }
 }
@@ -2310,24 +2312,24 @@ ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 static void
 _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 {
-  NcmModelClass *submodel_class = NCM_MODEL_GET_CLASS (submodel);
+  NcmModelClass *submodel_class  = NCM_MODEL_GET_CLASS (submodel);
   const NcmModelID main_model_id = submodel_class->main_model_id;
-  const gboolean is_submodel = submodel_class->is_submodel;
-  const NcmModelID submodel_mid = ncm_model_id (submodel);
+  const gboolean is_submodel     = submodel_class->is_submodel;
+  const NcmModelID submodel_mid  = ncm_model_id (submodel);
   gpointer pos_ptr, orig_key;
-  
+
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
-  
+
   if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
   {
     const gint pos = GPOINTER_TO_INT (pos_ptr);
-    
+
     g_assert_cmpint (pos, >, -1);
     g_assert_cmpint (pos, <, model->submodel_array->len);
     {
       NcmModel *old_submodel = g_ptr_array_index (model->submodel_array, pos);
-      
+
       g_ptr_array_index (model->submodel_array, pos) = ncm_model_ref (submodel);
       ncm_model_free (old_submodel);
     }
@@ -2335,7 +2337,7 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   else
   {
     gint pos = model->submodel_array->len;
-    
+
     ncm_model_ref (submodel);
     g_ptr_array_add (model->submodel_array, submodel);
     g_hash_table_insert (model->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), GINT_TO_POINTER (pos));
@@ -2369,7 +2371,7 @@ NcmModel *
 ncm_model_peek_submodel (NcmModel *model, guint i)
 {
   g_assert_cmpuint (i, <, ncm_model_get_submodel_len (model));
-  
+
   return g_ptr_array_index (model->submodel_array, i);
 }
 
@@ -2386,14 +2388,14 @@ NcmModel *
 ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
 {
   gpointer pos_ptr, orig_key;
-  
+
   if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (mid), &orig_key, &pos_ptr))
   {
     gint pos = GPOINTER_TO_INT (pos_ptr);
-    
+
     g_assert_cmpint (pos, >, -1);
     g_assert_cmpint (pos, <, model->submodel_array->len);
-    
+
     return g_ptr_array_index (model->submodel_array, pos);
   }
   else
@@ -2415,14 +2417,14 @@ gint
 ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
 {
   gpointer pos_ptr, orig_key;
-  
+
   if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (mid), &orig_key, &pos_ptr))
   {
     gint pos = GPOINTER_TO_INT (pos_ptr);
-    
+
     g_assert_cmpint (pos, >, -1);
     g_assert_cmpint (pos, <, model->submodel_array->len);
-    
+
     return pos;
   }
   else
@@ -2457,6 +2459,7 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err)
                    NCM_MODEL_ERROR_PARAM_NOT_FOUND,
                    "Parameter named: %s does not exist in %s",
                    param, G_OBJECT_TYPE_NAME (model));
+
     return GSL_NAN;
   }
 }

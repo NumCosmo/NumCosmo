@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,8 +27,8 @@
  * SECTION:ncm_powspec_sphere_proj
  * @title: NcmPowspecSphereProj
  * @short_description: Class to compute spherical projection of power spectra
- * 
- *  
+ *
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,7 +46,7 @@
 struct _NcmPowspecSphereProjPrivate
 {
   NcmPowspec *ps;
-  GArray *w_array;   
+  GArray *w_array;
   GPtrArray *fftlog;
   gdouble lnr0;
   gdouble lnk0;
@@ -79,7 +79,7 @@ enum
   PROP_POWERSPECTRUM,
   PROP_ELL_MIN,
   PROP_ELL_MAX,
-	PROP_SIZE,
+  PROP_SIZE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSphereProj, ncm_powspec_sphere_proj, G_TYPE_OBJECT)
@@ -88,6 +88,7 @@ static void
 ncm_powspec_sphere_proj_init (NcmPowspecSphereProj *psp)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv = ncm_powspec_sphere_proj_get_instance_private (psp);
+
   self->ps          = NULL;
   self->w_array     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->lnr0        = 0.0;
@@ -109,10 +110,11 @@ ncm_powspec_sphere_proj_init (NcmPowspecSphereProj *psp)
 
   {
     gint i;
-    
+
     for (i = 0; i < 10; i++)
     {
       gdouble w = exp (log (0.90) / 9.0 * i);
+
       g_array_append_val (self->w_array, w);
     }
   }
@@ -126,8 +128,9 @@ ncm_powspec_sphere_proj_init (NcmPowspecSphereProj *psp)
 static void
 _ncm_powspec_sphere_proj_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmPowspecSphereProj *psp = NCM_POWSPEC_SPHERE_PROJ (object);
+  NcmPowspecSphereProj *psp                = NCM_POWSPEC_SPHERE_PROJ (object);
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   g_return_if_fail (NCM_IS_POWSPEC_SPHERE_PROJ (object));
 
   switch (prop_id)
@@ -165,8 +168,9 @@ _ncm_powspec_sphere_proj_set_property (GObject *object, guint prop_id, const GVa
 static void
 _ncm_powspec_sphere_proj_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmPowspecSphereProj *psp = NCM_POWSPEC_SPHERE_PROJ (object);
+  NcmPowspecSphereProj *psp                = NCM_POWSPEC_SPHERE_PROJ (object);
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   g_return_if_fail (NCM_IS_POWSPEC_SPHERE_PROJ (object));
 
   switch (prop_id)
@@ -194,7 +198,7 @@ _ncm_powspec_sphere_proj_get_property (GObject *object, guint prop_id, GValue *v
       break;
     case PROP_ELL_MAX:
       g_value_set_uint (value, ncm_powspec_sphere_proj_get_ell_max (psp));
-      break;    
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -205,8 +209,8 @@ static void
 _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint ell_min, guint ell_max, gboolean reset)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
-  
   guint i, w_i;
+
   g_assert_cmpint (ell_min, <=, ell_max);
 
   if (reset)
@@ -217,6 +221,7 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
     for (i = self->fftlog->len; i < self->w_array->len; i++)
     {
       GPtrArray *fftlog_w = g_ptr_array_new ();
+
       g_ptr_array_set_free_func (fftlog_w, (GDestroyNotify) ncm_fftlog_free);
       g_ptr_array_add (self->fftlog, fftlog_w);
     }
@@ -228,25 +233,25 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
 
   for (w_i = 0; w_i < self->w_array->len; w_i++)
   {
-    const gdouble w = g_array_index (self->w_array, gdouble, w_i);
+    const gdouble w     = g_array_index (self->w_array, gdouble, w_i);
     GPtrArray *fftlog_w = g_ptr_array_index (self->fftlog, w_i);
-    
+
     if (fftlog_w->len == 0)
     {
-      gint nell = ell_max - ell_min;
+      guint nell = ell_max - ell_min;
 
       self->ell_min = ell_min;
       self->ell_max = ell_max;
 
       for (i = 0; i <= nell; i++)
       {
-        const guint ell = i + self->ell_min;
+        const guint ell            = i + self->ell_min;
         NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
 
         ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
         ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
-        //ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0);
-        ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);      
+        /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
+        ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);
         g_ptr_array_add (fftlog_w, jljm);
       }
     }
@@ -256,16 +261,17 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
 
       if (ell_min < self->ell_min)
       {
-        const gint nell = self->ell_min - ell_min;
+        const guint nell = self->ell_min - ell_min;
+
         for (i = 0; i < nell; i++)
         {
-          const gint ell = self->ell_min - i - 1;
+          const gint ell             = self->ell_min - i - 1;
           NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
 
           ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
           ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
-          
-          //ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0);
+
+          /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
 
           ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);
           g_ptr_array_insert (fftlog_w, 0, jljm);
@@ -274,29 +280,34 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
       else
       {
         const gint nell = ell_min - self->ell_min;
+
         g_ptr_array_remove_range (fftlog_w, 0, nell);
       }
+
       self->ell_min = ell_min;
 
       if (ell_max > self->ell_max)
       {
-        const gint nell = ell_max - self->ell_max;
+        const guint nell = ell_max - self->ell_max;
+
         for (i = 0; i < nell; i++)
         {
-          const gint ell = self->ell_max + i + 1;
+          const gint ell             = self->ell_max + i + 1;
           NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
+
           ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
           ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
 
-          //ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0);
+          /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
 
-          ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);      
+          ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);
           g_ptr_array_add (fftlog_w, jljm);
         }
       }
       else
       {
-        const gint nell = self->ell_max - ell_max;      
+        const gint nell = self->ell_max - ell_max;
+
         g_ptr_array_remove_range (fftlog_w, ell_max + 1 - self->ell_min, nell);
       }
     }
@@ -309,16 +320,16 @@ _ncm_powspec_sphere_proj_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_powspec_sphere_proj_parent_class)->constructed (object);
   {
-    NcmPowspecSphereProj *psp = NCM_POWSPEC_SPHERE_PROJ (object);
+    NcmPowspecSphereProj *psp                = NCM_POWSPEC_SPHERE_PROJ (object);
     NcmPowspecSphereProjPrivate * const self = psp->priv;
-    const gdouble lnk_min = log (ncm_powspec_get_kmin (self->ps));
-    const gdouble lnk_max = log (ncm_powspec_get_kmax (self->ps));
-    
+    const gdouble lnk_min                    = log (ncm_powspec_get_kmin (self->ps));
+    const gdouble lnk_max                    = log (ncm_powspec_get_kmax (self->ps));
+
     self->lnk0 = 0.5 * (lnk_max + lnk_min);
     self->Lk   = (lnk_max - lnk_min);
-    
+
     _ncm_powspec_sphere_proj_adjust_fftlog_array (psp, self->ell_min, self->ell_max, TRUE);
-        
+
     self->constructed = TRUE;
   }
 }
@@ -326,7 +337,7 @@ _ncm_powspec_sphere_proj_constructed (GObject *object)
 static void
 _ncm_powspec_sphere_proj_dispose (GObject *object)
 {
-  NcmPowspecSphereProj *psp = NCM_POWSPEC_SPHERE_PROJ (object);
+  NcmPowspecSphereProj *psp                = NCM_POWSPEC_SPHERE_PROJ (object);
   NcmPowspecSphereProjPrivate * const self = psp->priv;
 
   ncm_powspec_clear (&self->ps);
@@ -336,9 +347,9 @@ _ncm_powspec_sphere_proj_dispose (GObject *object)
   g_clear_pointer (&self->w_array,     g_array_unref);
   g_clear_pointer (&self->lnk_array,   g_ptr_array_unref);
   g_clear_pointer (&self->k2Pk_array,  g_ptr_array_unref);
-  g_clear_pointer (&self->fftlog,      g_ptr_array_unref);  
-  g_clear_pointer (&self->Cell_spline, g_ptr_array_unref);  
-  
+  g_clear_pointer (&self->fftlog,      g_ptr_array_unref);
+  g_clear_pointer (&self->Cell_spline, g_ptr_array_unref);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_sphere_proj_parent_class)->dispose (object);
 }
@@ -346,7 +357,6 @@ _ncm_powspec_sphere_proj_dispose (GObject *object)
 static void
 _ncm_powspec_sphere_proj_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_sphere_proj_parent_class)->finalize (object);
 }
@@ -354,7 +364,7 @@ _ncm_powspec_sphere_proj_finalize (GObject *object)
 static void
 ncm_powspec_sphere_proj_class_init (NcmPowspecSphereProjClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_powspec_sphere_proj_set_property;
   object_class->get_property = &_ncm_powspec_sphere_proj_get_property;
@@ -425,9 +435,9 @@ ncm_powspec_sphere_proj_class_init (NcmPowspecSphereProjClass *klass)
  * @ps: a #NcmPowspec
  * @ell_min: minimum $\ell$
  * @ell_max: maximum $\ell$
- * 
- * Creates a new #NcmPowspecSphereProj from the power spectrum @ps. 
- * 
+ *
+ * Creates a new #NcmPowspecSphereProj from the power spectrum @ps.
+ *
  * Returns: (transfer full): the newly created #NcmPowspecSphereProj.
  */
 NcmPowspecSphereProj *
@@ -438,16 +448,16 @@ ncm_powspec_sphere_proj_new (NcmPowspec *ps, guint ell_min, guint ell_max)
                                             "ell-min",       ell_min,
                                             "ell-max",       ell_max,
                                             NULL);
-  
+
   return psp;
 }
 
 /**
  * ncm_powspec_sphere_proj_ref:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * Increases the reference count of @psp by one.
- * 
+ *
  * Returns: (transfer full): @psp
  */
 NcmPowspecSphereProj *
@@ -459,9 +469,9 @@ ncm_powspec_sphere_proj_ref (NcmPowspecSphereProj *psp)
 /**
  * ncm_powspec_sphere_proj_free:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * Decreases the reference count of @psp by one.
- * 
+ *
  */
 void
 ncm_powspec_sphere_proj_free (NcmPowspecSphereProj *psp)
@@ -472,10 +482,10 @@ ncm_powspec_sphere_proj_free (NcmPowspecSphereProj *psp)
 /**
  * ncm_powspec_sphere_proj_clear:
  * @psp: a #NcmPowspecSphereProj
- * 
- * If @psp is different from NULL, decreases the reference count of 
+ *
+ * If @psp is different from NULL, decreases the reference count of
  * @psp by one and sets @fftlog to NULL.
- * 
+ *
  */
 void
 ncm_powspec_sphere_proj_clear (NcmPowspecSphereProj **psp)
@@ -490,23 +500,24 @@ typedef struct _NcmPowspecSphereProjArg
   gdouble z;
 } NcmPowspecSphereProjArg;
 
-static gdouble 
+static gdouble
 _ncm_powspec_sphere_proj_k2Pk (gdouble k, gpointer userdata)
 {
-  NcmPowspecSphereProjArg *arg = (NcmPowspecSphereProjArg *) userdata;
+  NcmPowspecSphereProjArg *arg             = (NcmPowspecSphereProjArg *) userdata;
   NcmPowspecSphereProjPrivate * const self = arg->psp->priv;
-  const gdouble two_pi = 2.0 / ncm_c_pi ();
-  const gdouble k2     = k * k;
-  const gdouble Pk     = ncm_powspec_eval (self->ps, arg->model, arg->z, k);
-  const gdouble f      = Pk * k2 * two_pi;
-  
+  const gdouble two_pi                     = 2.0 / ncm_c_pi ();
+  const gdouble k2                         = k * k;
+  const gdouble Pk                         = ncm_powspec_eval (self->ps, arg->model, arg->z, k);
+  const gdouble f                          = Pk * k2 * two_pi;
+
   return f;
 }
 
-static gdouble 
+static gdouble
 _ncm_powspec_sphere_proj_growth2 (NcmPowspecSphereProj *psp, NcmModel *model, const gdouble z)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   return ncm_powspec_eval (self->ps, model, z, self->k_pivot) / self->Pk_pivot;
 }
 
@@ -514,9 +525,9 @@ _ncm_powspec_sphere_proj_growth2 (NcmPowspecSphereProj *psp, NcmModel *model, co
  * ncm_powspec_sphere_proj_prepare:
  * @psp: a #NcmPowspecSphereProj
  * @model: a #NcmModel
- * 
+ *
  * Prepares the object applying the filter to the power spectrum.
- * 
+ *
  */
 void
 ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
@@ -524,7 +535,7 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
   NcmPowspecSphereProjPrivate * const self = psp->priv;
   NcmPowspecSphereProjArg arg;
   gsl_function F;
-  gint w_i;
+  guint w_i;
 
   F.function = &_ncm_powspec_sphere_proj_k2Pk;
   F.params   = &arg;
@@ -535,7 +546,7 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
 
   ncm_powspec_prepare_if_needed (self->ps, model);
   self->Pk_pivot = ncm_powspec_eval (self->ps, model, 0.0, self->k_pivot);
-  
+
   {
     GPtrArray *fftlog_w0      = g_ptr_array_index (self->fftlog, 0);
     NcmFftlog *fftlog_w0_last = g_ptr_array_index (fftlog_w0, fftlog_w0->len - 1);
@@ -548,11 +559,11 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
     if ((self->lnk0 != ncm_fftlog_get_lnk0 (fftlog_w0_last)) || (self->Lk != ncm_fftlog_get_length (fftlog_w0_last)))
     {
       NcmFftlogSBesselJLJM *jljm0 = NCM_FFTLOG_SBESSEL_JLJM (fftlog_w0_last);
-      
+
       ncm_fftlog_set_lnk0 (fftlog_w0_last, self->lnk0);
       ncm_fftlog_set_length (fftlog_w0_last, self->Lk);
       ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm0);
-      
+
       self->calibrated = FALSE;
     }
   }
@@ -573,8 +584,8 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
       {
         NcmVector *lnk;
         NcmVector *k2Pk;
-        gint n = ncm_fftlog_get_size (fftlog_w_last);
-        gint i;
+        guint n = ncm_fftlog_get_size (fftlog_w_last);
+        guint i;
 
         if (w_i < self->lnk_array->len)
         {
@@ -587,7 +598,7 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
         else
         {
           g_assert_cmpint (w_i, ==, self->lnk_array->len);
-          
+
           lnk  = ncm_vector_new (n);
           k2Pk = ncm_vector_new (n);
 
@@ -614,6 +625,7 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
         }
       }
     }
+
     self->calibrated = TRUE;
   }
 
@@ -622,13 +634,14 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
     GPtrArray *fftlog_w = g_ptr_array_index (self->fftlog, w_i);
     NcmVector *lnk      = g_ptr_array_index (self->lnk_array, w_i);
     NcmVector *k2Pk     = g_ptr_array_index (self->k2Pk_array, w_i);
-    
     const guint n       = ncm_vector_len (lnk);
     guint i;
+
     for (i = 0; i < n; i++)
     {
       const gdouble lnk_i = ncm_vector_get (lnk, i);
       const gdouble k_i   = exp (lnk_i);
+
       ncm_vector_set (k2Pk, i, GSL_FN_EVAL (&F, k_i));
     }
 
@@ -650,18 +663,18 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
       ncm_vector_set (w_v, i, g_array_index (self->w_array, gdouble, self->w_array->len - 1 - i));
 
     g_ptr_array_set_size (self->Cell_spline, 0);
-    
+
     for (i = 0; i < nn; i++)
     {
       GPtrArray *fftlog_w_last   = g_ptr_array_index (self->fftlog, self->w_array->len - 1);
       NcmFftlog *fftlog_w_last_i = g_ptr_array_index (fftlog_w_last, i);
-      
-      NcmSpline *Cell_s          = ncm_fftlog_peek_spline_Gr (fftlog_w_last_i, 0);
-      NcmVector *lnxi_v          = ncm_spline_get_xv (Cell_s);
-      const gint xi_v_len        = ncm_vector_len (lnxi_v);
 
-      NcmMatrix *Cell_m          = ncm_matrix_new (self->w_array->len, xi_v_len);
-      
+      NcmSpline *Cell_s   = ncm_fftlog_peek_spline_Gr (fftlog_w_last_i, 0);
+      NcmVector *lnxi_v   = ncm_spline_get_xv (Cell_s);
+      const gint xi_v_len = ncm_vector_len (lnxi_v);
+
+      NcmMatrix *Cell_m = ncm_matrix_new (self->w_array->len, xi_v_len);
+
       for (w_i = 0; w_i < self->w_array->len; w_i++)
       {
         GPtrArray *fftlog_w   = g_ptr_array_index (self->fftlog, w_i);
@@ -672,18 +685,21 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
         for (j = 0; j < xi_v_len; j++)
         {
           const gdouble lnxi_j = ncm_vector_get (lnxi_v, j);
+
           ncm_matrix_set (Cell_m, self->w_array->len - 1 - w_i, j, ncm_spline_eval (Cell_w_s, lnxi_j));
         }
       }
 
       {
         NcmSpline2d *s2d = ncm_spline2d_bicubic_notaknot_new ();
+
         ncm_spline2d_set (s2d, lnxi_v, w_v, Cell_m, TRUE);
-        g_ptr_array_add (self->Cell_spline, s2d);      
+        g_ptr_array_add (self->Cell_spline, s2d);
       }
 
       ncm_vector_free (lnxi_v);
     }
+
     ncm_vector_free (w_v);
   }
 }
@@ -692,15 +708,15 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
  * ncm_powspec_sphere_proj_prepare_if_needed:
  * @psp: a #NcmPowspecSphereProj
  * @model: a #NcmModel
- * 
+ *
  * Prepares (if necessary) the object applying the filter to the power spectrum.
- * 
+ *
  */
 void
 ncm_powspec_sphere_proj_prepare_if_needed (NcmPowspecSphereProj *psp, NcmModel *model)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
-  gboolean model_up = ncm_model_ctrl_update (self->ctrl, model);
+  gboolean model_up                        = ncm_model_ctrl_update (self->ctrl, model);
 
   if (model_up)
     ncm_powspec_sphere_proj_prepare (psp, model);
@@ -710,14 +726,15 @@ ncm_powspec_sphere_proj_prepare_if_needed (NcmPowspecSphereProj *psp, NcmModel *
  * ncm_powspec_sphere_proj_set_xi_i:
  * @psp: a #NcmPowspecSphereProj
  * @xi_i: the output initial scale $\xi_i$
- * 
+ *
  * FIXME
- * 
+ *
  */
-void 
+void
 ncm_powspec_sphere_proj_set_xi_i (NcmPowspecSphereProj *psp, gdouble xi_i)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   if (self->xi_i != xi_i)
   {
     self->xi_i = xi_i;
@@ -730,14 +747,15 @@ ncm_powspec_sphere_proj_set_xi_i (NcmPowspecSphereProj *psp, gdouble xi_i)
  * ncm_powspec_sphere_proj_set_xi_f:
  * @psp: a #NcmPowspecSphereProj
  * @xi_f: the output final scale $\xi_f$
- * 
+ *
  * FIXME
- * 
+ *
  */
-void 
+void
 ncm_powspec_sphere_proj_set_xi_f (NcmPowspecSphereProj *psp, gdouble xi_f)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   if (self->xi_f != xi_f)
   {
     self->xi_f = xi_f;
@@ -750,14 +768,15 @@ ncm_powspec_sphere_proj_set_xi_f (NcmPowspecSphereProj *psp, gdouble xi_f)
  * ncm_powspec_sphere_proj_set_k_pivot:
  * @psp: a #NcmPowspecSphereProj
  * @k_pivot: the pivot k
- * 
+ *
  * FIXME
- * 
+ *
  */
-void 
+void
 ncm_powspec_sphere_proj_set_k_pivot (NcmPowspecSphereProj *psp, gdouble k_pivot)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   if (self->k_pivot != k_pivot)
   {
     self->k_pivot = k_pivot;
@@ -769,30 +788,32 @@ ncm_powspec_sphere_proj_set_k_pivot (NcmPowspecSphereProj *psp, gdouble k_pivot)
 /**
  * ncm_powspec_sphere_proj_get_r_min:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * FIXME
- * 
- * Returns: FIXME 
+ *
+ * Returns: FIXME
  */
 gdouble
 ncm_powspec_sphere_proj_get_r_min (NcmPowspecSphereProj *psp)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   return exp (self->lnr0 - self->Lk * 0.5);
 }
 
 /**
  * ncm_powspec_sphere_proj_get_r_max:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * FIXME
- * 
- * Returns: FIXME 
+ *
+ * Returns: FIXME
  */
 gdouble
 ncm_powspec_sphere_proj_get_r_max (NcmPowspecSphereProj *psp)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   return exp (self->lnr0 + self->Lk * 0.5);
 }
 
@@ -800,13 +821,14 @@ ncm_powspec_sphere_proj_get_r_max (NcmPowspecSphereProj *psp)
  * ncm_powspec_sphere_proj_set_ell_min:
  * @psp: a #NcmPowspecSphereProj
  * @ell_min: minimum $\ell$
- * 
+ *
  * Sets the minimum $\ell$ to @ell_min.
  */
 void
 ncm_powspec_sphere_proj_set_ell_min (NcmPowspecSphereProj *psp, const guint ell_min)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   if (self->constructed && (ell_min != self->ell_min))
   {
     _ncm_powspec_sphere_proj_adjust_fftlog_array (psp, ell_min, self->ell_max, FALSE);
@@ -814,20 +836,23 @@ ncm_powspec_sphere_proj_set_ell_min (NcmPowspecSphereProj *psp, const guint ell_
     self->calibrated = FALSE;
   }
   else
+  {
     self->ell_min = ell_min;
+  }
 }
 
 /**
  * ncm_powspec_sphere_proj_set_ell_max:
  * @psp: a #NcmPowspecSphereProj
  * @ell_max: maximum $\ell$
- * 
+ *
  * Sets the maximum $\ell$ to @ell_max.
  */
 void
 ncm_powspec_sphere_proj_set_ell_max (NcmPowspecSphereProj *psp, const guint ell_max)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   if (self->constructed && (ell_max != self->ell_max))
   {
     _ncm_powspec_sphere_proj_adjust_fftlog_array (psp, self->ell_min, ell_max, FALSE);
@@ -835,13 +860,15 @@ ncm_powspec_sphere_proj_set_ell_max (NcmPowspecSphereProj *psp, const guint ell_
     self->calibrated = FALSE;
   }
   else
+  {
     self->ell_max = ell_max;
+  }
 }
 
 /**
  * ncm_powspec_sphere_proj_get_ell_min:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * Returns: the minimum $\ell$.
  */
 guint
@@ -855,7 +882,7 @@ ncm_powspec_sphere_proj_get_ell_min (NcmPowspecSphereProj *psp)
 /**
  * ncm_powspec_sphere_proj_get_ell_max:
  * @psp: a #NcmPowspecSphereProj
- * 
+ *
  * Returns: the maximum $\ell$.
  */
 guint
@@ -870,13 +897,14 @@ ncm_powspec_sphere_proj_get_ell_max (NcmPowspecSphereProj *psp)
  * ncm_powspec_sphere_proj_get_w:
  * @psp: a #NcmPowspecSphereProj
  * @w_i: w index
- * 
+ *
  * Returns: the value of the @w_i-th $w$.
  */
 gdouble
 ncm_powspec_sphere_proj_get_w (NcmPowspecSphereProj *psp, const guint w_i)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
+
   g_assert_cmpuint (w_i, <, self->w_array->len);
 
   return g_array_index (self->w_array, gdouble, w_i);
@@ -889,11 +917,11 @@ ncm_powspec_sphere_proj_get_w (NcmPowspecSphereProj *psp, const guint w_i)
  * @ell: the value of $\ell$
  * @lnxi: (out) (transfer full) (array) (element-type gdouble): array with the $\xi$ values
  * @Cell: (out) (transfer full) (array) (element-type gdouble): array with the $\xi$ values
- * 
+ *
  * Returns the results for $\ell$.
- * 
+ *
  */
-void 
+void
 ncm_powspec_sphere_proj_get_ell (NcmPowspecSphereProj *psp, const guint w_i, const gint ell, GArray **lnxi, GArray **Cell)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
@@ -922,14 +950,14 @@ ncm_powspec_sphere_proj_get_ell (NcmPowspecSphereProj *psp, const guint w_i, con
  * @psp: a #NcmPowspecSphereProj
  * @w_i: w index
  * @ell: the value of $\ell$
- * 
+ *
  * Returns: (transfer none): the resulting spline for $\ell$.
  */
 NcmSpline *
 ncm_powspec_sphere_proj_peek_ell_spline (NcmPowspecSphereProj *psp, const guint w_i, const gint ell)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
-  GPtrArray *fftlog_w = g_ptr_array_index (self->fftlog, w_i);
+  GPtrArray *fftlog_w                      = g_ptr_array_index (self->fftlog, w_i);
 
   g_assert_cmpuint (w_i, <, self->w_array->len);
   g_assert_cmpint (ell, <=, self->ell_max);
@@ -937,6 +965,7 @@ ncm_powspec_sphere_proj_peek_ell_spline (NcmPowspecSphereProj *psp, const guint 
 
   {
     NcmFftlog *fftlog = g_ptr_array_index (fftlog_w, ell - self->ell_min);
+
     return ncm_fftlog_peek_spline_Gr (fftlog, 0);
   }
 }
@@ -950,20 +979,21 @@ ncm_powspec_sphere_proj_peek_ell_spline (NcmPowspecSphereProj *psp, const guint 
  * @z2: the value of $z_2$
  * @xi1: the value of $\xi_1$
  * @xi2: the value of $\xi_2$
- * 
+ *
  * Returns: the value of $C_\ell(\xi_1, \xi_2)$.
  */
 gdouble
 ncm_powspec_sphere_proj_eval_Cell_xi1_xi2 (NcmPowspecSphereProj *psp, NcmModel *model, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)
 {
   NcmPowspecSphereProjPrivate * const self = psp->priv;
-  NcmSpline2d *s2d   = g_ptr_array_index (self->Cell_spline, ell - self->ell_min);
-  const gdouble lnxi = 0.5 * log (xi1 * xi2);
-  const gdouble w    = (xi1 > xi2) ? sqrt (xi2 / xi1) : sqrt (xi1 / xi2); 
+  NcmSpline2d *s2d                         = g_ptr_array_index (self->Cell_spline, ell - self->ell_min);
+  const gdouble lnxi                       = 0.5 * log (xi1 * xi2);
+  const gdouble w                          = (xi1 > xi2) ? sqrt (xi2 / xi1) : sqrt (xi1 / xi2);
 
-  //printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g\n", xi1, xi2, exp (lnxi), w, g_array_index (self->w_array, gdouble, self->w_array->len - 1));
+  /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g\n", xi1, xi2, exp (lnxi), w, g_array_index (self->w_array, gdouble, self->w_array->len - 1)); */
   if (w < g_array_index (self->w_array, gdouble, self->w_array->len - 1))
     return 0.0;
   else
     return ncm_spline2d_eval (s2d, lnxi, w) * sqrt (_ncm_powspec_sphere_proj_growth2 (psp, model, z1) * _ncm_powspec_sphere_proj_growth2 (psp, model, z2));
 }
+

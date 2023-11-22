@@ -70,6 +70,7 @@ static void
 ncm_mset_trans_kern_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (object);
+
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN_GAUSS (object));
 
   switch (prop_id)
@@ -90,6 +91,7 @@ static void
 ncm_mset_trans_kern_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (object);
+
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN_GAUSS (object));
 
   switch (prop_id)
@@ -122,7 +124,6 @@ ncm_mset_trans_kern_gauss_dispose (GObject *object)
 static void
 ncm_mset_trans_kern_gauss_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_trans_kern_gauss_parent_class)->finalize (object);
 }
@@ -135,7 +136,7 @@ static const gchar *_ncm_mset_trans_kern_gauss_get_name (NcmMSetTransKern *tkern
 static void
 ncm_mset_trans_kern_gauss_class_init (NcmMSetTransKernGaussClass *klass)
 {
-  GObjectClass* object_class   = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class         = G_OBJECT_CLASS (klass);
   NcmMSetTransKernClass *tkern_class = NCM_MSET_TRANS_KERN_CLASS (klass);
 
   object_class->set_property = ncm_mset_trans_kern_gauss_set_property;
@@ -169,7 +170,9 @@ static void
 _ncm_mset_trans_kern_gauss_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
   NCM_UNUSED (mset);
+
   guint fparam_len = ncm_mset_fparam_len (tkern->mset);
+
   ncm_mset_trans_kern_gauss_set_size (NCM_MSET_TRANS_KERN_GAUSS (tkern), fparam_len);
 }
 
@@ -185,11 +188,14 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
   while (TRUE)
   {
     ncm_rng_lock (rng);
+
     for (i = 0; i < tkerng->len; i++)
     {
       const gdouble u_i = gsl_ran_ugaussian (rng->r);
+
       ncm_vector_set (thetastar, i, u_i);
     }
+
     ncm_rng_unlock (rng);
 
     ret = gsl_blas_dtrmv (CblasLower, CblasNoTrans, CblasNonUnit,
@@ -207,8 +213,10 @@ static gdouble
 _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
-  gdouble m2lnP = 0.0;
-  gint ret, i;
+  gdouble m2lnP                 = 0.0;
+  gint ret;
+  guint i;
+
   g_assert (tkerng->init);
 
   ncm_vector_memcpy (tkerng->v, theta);
@@ -230,7 +238,7 @@ _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVe
     m2lnP += 2.0 * log (ncm_matrix_get (tkerng->LLT, i, i));
   }
 
-  return exp (- 0.5 * m2lnP);
+  return exp (-0.5 * m2lnP);
 }
 
 static const gchar *
@@ -252,8 +260,9 @@ NcmMSetTransKernGauss *
 ncm_mset_trans_kern_gauss_new (guint len)
 {
   NcmMSetTransKernGauss *tkerng = g_object_new (NCM_TYPE_MSET_TRANS_KERN_GAUSS,
-                                          "length", len,
-                                          NULL);
+                                                "length", len,
+                                                NULL);
+
   return tkerng;
 }
 
@@ -275,6 +284,7 @@ ncm_mset_trans_kern_gauss_set_size (NcmMSetTransKernGauss *tkerng, guint len)
     ncm_matrix_clear (&tkerng->LLT);
     ncm_vector_clear (&tkerng->v);
   }
+
   if ((len != 0) && (len != tkerng->len))
   {
     tkerng->len = len;
@@ -310,14 +320,17 @@ void
 ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatrix *cov)
 {
   gint ret;
+
   g_assert_cmpuint (ncm_matrix_ncols (tkerng->cov), ==, ncm_matrix_ncols (cov));
   g_assert_cmpuint (ncm_matrix_nrows (tkerng->cov), ==, ncm_matrix_nrows (cov));
   ncm_matrix_memcpy (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, cov);
 
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov[ncm_matrix_cholesky_decomp]: %d.", ret);
+
   tkerng->init = TRUE;
 }
 
@@ -333,12 +346,15 @@ void
 ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVariant *cov)
 {
   gint ret;
+
   ncm_matrix_set_from_variant (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
 
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov_variant[ncm_matrix_cholesky_decomp]: %d.", ret);
+
   tkerng->init = TRUE;
 }
 
@@ -354,12 +370,15 @@ void
 ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *cov)
 {
   gint ret;
+
   ncm_matrix_set_from_data (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
 
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov_variant[ncm_matrix_cholesky_decomp]: %d.", ret);
+
   tkerng->init = TRUE;
 }
 
@@ -395,14 +414,18 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
   g_assert (tkern->mset != NULL);
 
   ncm_matrix_set_identity (tkerng->cov);
+
   for (i = 0; i < tkerng->len; i++)
   {
     const gdouble scale = ncm_mset_fparam_get_scale (tkern->mset, i);
+
     ncm_matrix_set (tkerng->cov, i, i, scale * scale);
   }
+
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
 
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
 
@@ -428,16 +451,21 @@ ncm_mset_trans_kern_gauss_set_cov_from_rescale (NcmMSetTransKernGauss *tkerng, c
   g_assert (tkern->mset != NULL);
 
   ncm_matrix_set_identity (tkerng->cov);
+
   for (i = 0; i < tkerng->len; i++)
   {
     const gdouble scale = ncm_mset_fparam_get_scale (tkern->mset, i) * epsilon;
+
     ncm_matrix_set (tkerng->cov, i, i, scale * scale);
   }
+
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
 
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
 
   tkerng->init = TRUE;
 }
+

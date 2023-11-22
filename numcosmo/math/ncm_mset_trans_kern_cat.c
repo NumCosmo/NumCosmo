@@ -363,11 +363,11 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
   if (!self->sd_prep)
   {
     const guint nchains = ncm_mset_catalog_nchains (self->mcat);
-    const guint np = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
-    const guint n = MIN (cat_len, np);
-    const guint nadd = ncm_mset_catalog_nadd_vals (self->mcat);
+    const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
+    const guint n       = MIN (cat_len, np);
+    const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
     const guint m2lnp_i = ncm_mset_catalog_get_m2lnp_var (self->mcat);
-    NcmVector *m2lnp = ncm_vector_new (np);
+    NcmVector *m2lnp    = ncm_vector_new (np);
     NcmVector *last_row = NULL;
     guint i, j;
 

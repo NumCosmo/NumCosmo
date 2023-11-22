@@ -38,19 +38,19 @@
  * code can be found at https://github.com/stevengj/cubature.
  *
  * To use this object, the user must initialize a child object that implements
- * two functions: get_dimensions and integrand. To do so, the user must 
- * first define these two functions as the prototypes described 
+ * two functions: get_dimensions and integrand. To do so, the user must
+ * first define these two functions as the prototypes described
  * in ncm_integral_nd.h. The get dimensions function should return the
  * dimension of the arguments to be integrated and the function dimension.
  * For instance, if the integrand is given by $F(x,y) = x + y$, the get
  * dimensions function must return $(2,1)$, such that it will compute
  * \begin{align}
- * \int \int F(x, y) dxdy 
+ * \int \int F(x, y) dxdy
  * ,\end{align}
  * returning a scalar for the integral evaluated in the given intervals.
-
- * This object can also be used with multi-dimensional functions that return 
- * an array instead of a scalar. Considering the integrand 
+ *
+ * This object can also be used with multi-dimensional functions that return
+ * an array instead of a scalar. Considering the integrand
  * $F(x,y,z) = [x^2, y+z ]$, the get dimensions method should return $(3,2)$
  * and the object will compute the integral
  * \begin{align}
@@ -59,8 +59,8 @@
  * for the given intervals.
  *
  * Having the functions, the user must instantiate an object of the type
- * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro 
- * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which 
+ * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro
+ * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which
  * will later be instantiable. Examples of how to define the objects
  * containing the integrand can be found in the test folder under
  * test\textunderscore ncm\textunderscore integral\textunderscore nd.c.
@@ -74,7 +74,7 @@
  *
  * The user may provide the input values for: @rel_tol - ncm_integral_nd_set_reltol(), @abs_tol - ncm_integral_nd_set_abstol(),
  * @integ_method - ncm_integral_nd_set_method(), @max_eval - ncm_integral_nd_set_maxeval(), @error - ncm_integral_nd_set_error().
- * If these functions are not called, default parameters are chosen. 
+ * If these functions are not called, default parameters are chosen.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -594,6 +594,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         ncm_vector_data (res),
         ncm_vector_data (err)
                         );
+      break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
       ret = pcubature_v (
         fdim,
