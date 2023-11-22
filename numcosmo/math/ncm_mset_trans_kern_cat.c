@@ -308,9 +308,9 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
   else
     nth = cat_len;
 
-  if (g_tree_height (self->m2lnL_tree) >= nth)
-    g_error ("_ncm_mset_trans_kern_cat_generate_choose: cannot choose from %u points, only %u available.",
-             nth, nth - g_tree_height (self->m2lnL_tree));
+  if ((guint) g_tree_nnodes (self->m2lnL_tree) >= nth)
+    g_error ("_ncm_mset_trans_kern_cat_generate_choose: cannot choose from %u points, no rows available.",
+             nth);
 
   ncm_rng_lock (rng);
 
