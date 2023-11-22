@@ -131,7 +131,7 @@ void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
 gdouble ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x);
 gdouble ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x);
 
-gint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
+guint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
 void ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng);
 
 gdouble ncm_stats_dist_get_rnorm (NcmStatsDist *sd);
