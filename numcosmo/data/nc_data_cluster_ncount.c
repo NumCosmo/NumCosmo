@@ -52,9 +52,9 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -1783,7 +1783,7 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
   }
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
 /**
  * nc_data_cluster_ncount_catalog_save:
@@ -2294,5 +2294,5 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
   return;
 }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
