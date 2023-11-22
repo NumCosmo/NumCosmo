@@ -67,9 +67,9 @@
 #include <gsl/gsl_vector_complex.h>
 #include <gsl/gsl_cdf.h>
 #include <math.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmMSetCatalogPrivate
@@ -122,9 +122,9 @@ struct _NcmMSetCatalogPrivate
   gint file_cur_id;
   glong burnin;
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   fitsfile *fptr;
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
   NcmVector *params_max;
   NcmVector *params_min;
   glong pdf_i;
@@ -220,9 +220,9 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->rtype_str     = NULL;
   self->porder        = g_array_new (FALSE, FALSE, sizeof (gint));
   self->quantile_ws   = NULL;
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   self->fptr = NULL;
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
   self->pdf_i      = -1;
   self->h          = NULL;
   self->h_pdf      = NULL;
@@ -232,11 +232,11 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->constructed = FALSE;
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 static void _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat);
 static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
 static void
 _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
@@ -306,7 +306,7 @@ _ncm_mset_catalog_constructed (GObject *object)
 
     if (self->mset == NULL)
     {
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
       if (self->mset_file == NULL)
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog without mset.");
@@ -332,7 +332,7 @@ _ncm_mset_catalog_constructed (GObject *object)
       ncm_mset_catalog_sync (mcat, TRUE);
 #else
       g_error ("_ncm_mset_catalog_constructed: cannot create catalog without mset.");
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
     }
     else
     {
@@ -351,12 +351,12 @@ _ncm_mset_catalog_constructed (GObject *object)
 
       if (self->file != NULL)
       {
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
         _ncm_mset_catalog_open_create_file (mcat, FALSE);
         ncm_mset_catalog_sync (mcat, TRUE);
 #else
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog without cfitsio.");
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
       }
     }
   }
@@ -557,10 +557,10 @@ _ncm_mset_catalog_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_mset_catalog_parent_class)->dispose (object);
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 static void _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat);
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
 static void
 _ncm_mset_catalog_finalize (GObject *object)
@@ -574,9 +574,9 @@ _ncm_mset_catalog_finalize (GObject *object)
   if (self->h_pdf != NULL)
     gsl_histogram_pdf_free (self->h_pdf);
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   _ncm_mset_catalog_close_file (mcat);
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
   g_clear_pointer (&self->rtype_str, g_free);
 
@@ -902,7 +902,7 @@ ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
   g_clear_object (mcat);
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
 static void
 _ncm_fits_update_key_str (fitsfile *fptr, gchar *keyname, gchar *value, gchar *comment, gboolean overwrite)
@@ -1195,7 +1195,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
     if (load_from_cat)
       self->nchains = nchains;
-    else if (nchains != self->nchains)
+    else if (nchains != (gint) self->nchains)
       g_error ("_ncm_mset_catalog_open_create_file: catalog has %d chains and file contains %d.", self->nchains, nchains);
 
     fits_read_key (self->fptr, TINT, NCM_MSET_CATALOG_NADDVAL_LABEL,
@@ -1204,7 +1204,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
     if (load_from_cat)
       self->nadd_vals = nadd_vals;
-    else if (nadd_vals != self->nadd_vals)
+    else if (nadd_vals != (gint) self->nadd_vals)
       g_error ("_ncm_mset_catalog_open_create_file: catalog has %d additional values and file contains %d.", self->nadd_vals, nadd_vals);
 
     fits_read_key (self->fptr, TLOGICAL, NCM_MSET_CATALOG_WEIGHTED_LABEL,
@@ -1348,7 +1348,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         else
           g_assert_cmpstr (symbol_s, ==, csymbol);
 
-        if (cindex != i + 1)
+        if (cindex != (gint) (i + 1))
           g_error ("_ncm_mset_catalog_open_create_file: Additional column %s is not the %d-th column [%d], invalid fits file.",
                    cname, i + 1, cindex);
 
@@ -1525,7 +1525,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
   }
 }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
 static void
 _ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names)
@@ -1588,7 +1588,7 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
   if (!self->constructed)
   {
@@ -1625,7 +1625,7 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 
 #else
   g_error ("ncm_mset_catalog_set_file: cannot set file without cfitsio.");
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
   self->first_flush = TRUE;
 }
@@ -1690,7 +1690,7 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 
   self->file_first_id = first_id;
   self->file_cur_id   = first_id - 1;
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
   if (self->fptr != NULL)
   {
@@ -1698,7 +1698,7 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
     ncm_mset_catalog_sync (mcat, TRUE);
   }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
 /**
@@ -1733,12 +1733,12 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
   }
 
   self->rtype_str = g_strdup (rtype_str);
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
   if (self->fptr != NULL)
     _ncm_fits_update_key_str (self->fptr, NCM_MSET_CATALOG_RTYPE_LABEL, self->rtype_str, NULL, !self->readonly);
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
 /**
@@ -1765,7 +1765,7 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
 
   self->rng_inis = ncm_rng_get_state (rng);
   self->rng_stat = g_strdup (self->rng_inis);
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
   if (self->fptr != NULL)
   {
@@ -1780,10 +1780,10 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
     }
   }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
 static void
 _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat)
@@ -1864,7 +1864,7 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
   }
 }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
 static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x);
 
@@ -1879,7 +1879,7 @@ static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x);
 void
 ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 {
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   NcmMSetCatalogPrivate *self = mcat->priv;
   gint status                 = 0;
   guint i;
@@ -2065,7 +2065,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
   if (need_flush)
     _ncm_mset_catalog_flush_file (mcat);
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
 /**
@@ -2181,11 +2181,11 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   self->order_cat_sort = FALSE;
 
   self->cur_id = self->first_id - 1;
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   self->file_cur_id = self->file_first_id - 1;
   _ncm_mset_catalog_close_file (mcat);
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
 /**
@@ -2199,7 +2199,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 void
 ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
 {
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
   NcmMSetCatalogPrivate *self = mcat->priv;
 
   if (self->fptr != NULL)
@@ -2217,7 +2217,7 @@ ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
     }
   }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 }
 
 /**
@@ -2659,12 +2659,12 @@ ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
   if (self->fptr != NULL)
     g_error ("ncm_mset_catalog_set_burnin: cannot set burnin with an already loaded catalog");
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
   self->burnin = burnin;
 }
 

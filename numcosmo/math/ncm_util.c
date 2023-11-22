@@ -55,9 +55,9 @@
 #ifdef HAVE_FFTW3
 #include <fftw3.h>
 #endif /* HAVE_FFTW3 */
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h> /* for nanosleep */
 #else
