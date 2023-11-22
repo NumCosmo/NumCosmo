@@ -485,7 +485,7 @@ _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
-  gint i, j;
+  guint i, j;
 
   self->over_smooth = exp (lnos);
   self->href        = sqrt (2.0) * ncm_stats_dist_get_href (sd);
@@ -535,7 +535,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
-  gint i, j;
+  guint i, j;
 
   self->over_smooth = exp (lnos);
   self->href        = ncm_stats_dist_get_href (sd);
@@ -784,7 +784,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   gdouble rnorm          = 0.0;
   gint i;
 
-  g_assert (eval->self->n_obs == n);
+  g_assert (eval->self->n_obs == (guint) n);
 
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
@@ -813,7 +813,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
 }
 
 static void
-_ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols)
+_ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const guint nrows, const guint ncols)
 {
   NcmStatsDistPrivate * const self = sd->priv;
 

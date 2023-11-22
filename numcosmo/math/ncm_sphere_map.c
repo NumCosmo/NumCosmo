@@ -2054,7 +2054,7 @@ static void
 _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 {
   NcmSphereMapPrivate * const self = smap->priv;
-  gint m, l, lm_index = 0;
+  guint m, l, lm_index = 0;
 
   ncm_vector_set_zero (self->Cl);
 
@@ -2397,7 +2397,7 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
   gdouble p_ellm2                  = 1.0;
   gdouble p_ellm1                  = x;
   gdouble p_ell;
-  gint ell;
+  guint ell;
 
   gdouble Ctheta =
     1.0 * (2.0 * 0.0 + 1.0) * ncm_vector_fast_get (self->Cl, 0) +

@@ -617,8 +617,8 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
 
   {
-    gint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
-    gint i;
+    guint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
+    guint i;
 
     for (i = s; i < epdf1d->obs->len; i++)
     {

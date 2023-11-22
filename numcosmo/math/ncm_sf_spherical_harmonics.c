@@ -480,7 +480,7 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const gint l
  *
  * Returns: the currently used lmax.
  */
-gint
+guint
 ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
 {
   return spha->lmax;

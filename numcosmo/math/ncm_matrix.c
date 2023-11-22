@@ -1696,14 +1696,14 @@ ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng)
   ncm_rng_lock (rng);
   {
     NcmMatrix *P = ncm_matrix_dup (cm);
-    gint k;
+    guint k;
 
     ncm_matrix_set_all (P, 0.0);
     ncm_matrix_set_identity (cm);
 
     for (k = 0; k < nm1; k++)
     {
-      gint i;
+      guint i;
 
       for (i = k + 1; i < n; i++)
       {

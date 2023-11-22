@@ -1129,7 +1129,7 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
     {
       GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
       gboolean has_free = FALSE;
-      guint pid;
+      gint pid;
 
       g_assert (fpi_array != NULL);
 
@@ -1196,7 +1196,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
       else
       {
         GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
-        guint pid;
+        gint pid;
 
         g_assert (fpi_array != NULL);
 
@@ -1322,7 +1322,7 @@ ncm_mset_max_param_name (NcmMSet *mset)
     }
     else
     {
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -1386,7 +1386,7 @@ ncm_mset_max_model_nick (NcmMSet *mset)
     }
     else
     {
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -1442,7 +1442,7 @@ ncm_mset_pretty_log (NcmMSet *mset)
     {
       NcmModelID mid_base = NCM_MSET_GET_BASE_MID (item->mid);
       GArray *fpi_array   = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
-      guint pid;
+      gint pid;
 
       ncm_cfg_msg_sepa ();
       g_message ("# Model[%05d]:\n#   - %s : %s\n", item->mid, g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns, ncm_model_name (item->model));
@@ -1494,7 +1494,7 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
     else
     {
       const gchar *nick = ncm_model_nick (item->model);
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -1534,7 +1534,7 @@ ncm_mset_params_log_vals (NcmMSet *mset)
     }
     else
     {
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -1570,7 +1570,7 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
     }
     else
     {
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -2148,7 +2148,7 @@ void
 ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
 {
   guint j = 0;
-  gint i;
+  guint i;
 
   g_assert (ncm_vector_len (params) == ncm_mset_total_len (mset));
 
@@ -2162,7 +2162,7 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
     }
     else
     {
-      guint pid;
+      gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
       {
@@ -2681,7 +2681,7 @@ NcmMatrix *
 ncm_mset_fparam_get_bound_matrix (NcmMSet *mset)
 {
   NcmMatrix *bounds = ncm_matrix_new (mset->fparam_len, 2);
-  gint i;
+  guint i;
 
   g_assert (mset->valid_map);
 

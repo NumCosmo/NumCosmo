@@ -1190,7 +1190,7 @@ _ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *
   const gdouble dx          = x - x0;
   const guint len           = ncm_vector_len (y);
   NcmSpline2dBicubicCoeffs *sa;
-  gint k, i;
+  guint k, i;
   size_t l;
   gdouble y0, y_l, a0, a1, a2, a3;
 
