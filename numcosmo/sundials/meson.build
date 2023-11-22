@@ -159,7 +159,7 @@ inc = include_directories('include')
 src_sundials = include_directories('src/sundials')
 
 libsundials = static_library(
-    'numcosmo',
+    'sundials',
     sources: [
         sundials_arkode_sources,
         sundials_cvode_sources,
