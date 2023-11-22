@@ -67,9 +67,9 @@
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 #ifdef HAVE_ACB_H
 #include <acb.h>
@@ -112,7 +112,7 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
 static void
 _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #if defined (HAVE_ACB_H) && defined (NCM_FFTLOG_USE_ACB)
   const guint prec      = 120;
   const gint Nf         = ncm_fftlog_get_full_size (fftlog);
@@ -236,7 +236,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   }
 
 #endif /* HAVE_ACB_H */
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 }
 
 /**

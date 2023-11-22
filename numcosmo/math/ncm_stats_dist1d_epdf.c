@@ -45,9 +45,9 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -208,10 +208,10 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
   g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -416,7 +416,7 @@ _ncm_stats_dist1d_epdf_estimate_h (NcmVector *p_tilde2, NcmVector *Iv, const gui
 static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
   const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
   const gdouble deltax  = delta_l / nbins;
@@ -566,7 +566,7 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
 #else
   g_error ("ncm_stats_dist1d_epdf_autobw: FFTW3 not available."); /* LCOV_EXCL_LINE */
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 }
 
 static void

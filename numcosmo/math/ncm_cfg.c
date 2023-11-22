@@ -210,9 +210,9 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
 #include <gio/gio.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <cuba.h>
 
 #ifdef HAVE_MPI
@@ -361,9 +361,9 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_forget_wisdom ();
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -457,12 +457,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
@@ -486,9 +486,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   gsl_err = gsl_set_error_handler_off ();
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_set_timelimit (10.0);
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
@@ -1721,7 +1721,7 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
   g_type_class_unref (enum_class);
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 
 G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
@@ -1894,7 +1894,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   return TRUE;
 }
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_exists:
@@ -2076,7 +2076,7 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
 
 gdouble fftw_default_timeout = 60.0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
@@ -2102,5 +2102,5 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 #else
 guint fftw_default_flags = 0;
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 

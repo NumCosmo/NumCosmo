@@ -59,9 +59,9 @@
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #ifndef HAVE_FFTW3_ALLOC
@@ -201,7 +201,7 @@ ncm_sphere_map_init (NcmSphereMap *smap)
   self->fft_pvec          = NULL;
   self->fft_plan_r2c      = g_ptr_array_new ();
   self->fft_plan_c2r      = g_ptr_array_new ();
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
   g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify) fftwf_destroy_plan);
   g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify) fftwf_destroy_plan);
@@ -469,7 +469,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
     self->block_ring_size   = 0;
     self->last_sing_ring    = 0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
     g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftwf_free);
 #  else
@@ -497,7 +497,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 
       _fft_vec_set_zero (self->pvec, self->npix);
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
       self->fft_pvec = fftwf_alloc_complex (self->npix);
 #  else
@@ -1913,7 +1913,7 @@ ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_fil
 static void
 _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
 
   if (self->fft_plan_r2c->len == 0)
@@ -2063,7 +2063,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 #endif
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include "ncm_sphere_map_block.c"
 #endif
 
@@ -2118,7 +2118,7 @@ _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 void
 ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
   gint i;
 
@@ -2343,7 +2343,7 @@ ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
 void
 ncm_sphere_map_alm2map (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
   guint i;
 
