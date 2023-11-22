@@ -224,6 +224,7 @@ glib_req = '>= 2.44.0'
 gobject_req = '>= 2.44.0'
 gsl_req = '>= 2.0'
 fftw_req = '>= 3.1.2'
+cfitsio_req = '>= 3.25'
 
 #######################################################################################
 # Checking for MPI:
@@ -327,6 +328,21 @@ endif
 if fftw3f_dep.found()
   numcosmo_conf.set('HAVE_FFTW3F', true)
 endif
+
+#######################################################################################
+# Checking for cfitsio (optional)
+#######################################################################################
+
+cfitsio_dep = dependency(
+  'cfitsio',
+  version: cfitsio_req,
+  required: false,
+)
+
+if cfitsio_dep.found()
+  numcosmo_conf.set('HAVE_CFITSIO', true)
+endif
+
 #######################################################################################
 # Using internal libcuba
 #######################################################################################

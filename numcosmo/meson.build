@@ -335,6 +335,7 @@ libnumcosmo = library(
         blas_dep,
         fftw3_dep,
         fftw3f_dep,
+        cfitsio_dep,
     ],
     c_args: numcosmo_c_args,
     objc_args: numcosmo_c_args,
