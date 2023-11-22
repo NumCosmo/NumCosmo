@@ -324,7 +324,7 @@ libnumcosmo = library(
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc],
     link_with: [libsundials],
-    dependencies: [glib_dep, gobject_dep, omp_c, gsl_dep, gmp_dep, mpfr_dep, blas],
+    dependencies: [glib_dep, gobject_dep, gio_dep, omp_c, gsl_dep, gmp_dep, mpfr_dep, blas],
     c_args: numcosmo_c_args,
     objc_args: numcosmo_c_args,
     gnu_symbol_visibility: 'hidden',
