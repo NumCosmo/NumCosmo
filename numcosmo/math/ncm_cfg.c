@@ -1118,18 +1118,17 @@ ncm_cfg_set_logstream (FILE *stream)
   _log_stream = stream;
 }
 
+typedef struct _NcmCfgLoggerFuncContainer
+{
+  NcmCfgLoggerFunc logger;
+} NcmCfgLoggerFuncContainer;
+
 static void
 _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
-  NCM_UNUSED (log_domain);
-  NCM_UNUSED (log_level);
-  NCM_UNUSED (user_data);
 
   if (_enable_msg && _log_stream)
-  {
-    void (*logger) (const gchar *msg) = user_data;
-    logger (message);
-  }
+    container->logger (message);
 }
 
 /**
@@ -1142,7 +1141,11 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
 void
 ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1155,7 +1158,11 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
