@@ -1582,8 +1582,9 @@ _ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbol
 void
 ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 {
-#ifdef NUMCOSMO_HAVE_CFITSIO
   NcmMSetCatalogPrivate *self = mcat->priv;
+
+#ifdef NUMCOSMO_HAVE_CFITSIO
 
   if (!self->constructed)
   {
@@ -2654,9 +2655,12 @@ ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin)
 {
   NcmMSetCatalogPrivate *self = mcat->priv;
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
+
   if (self->fptr != NULL)
     g_error ("ncm_mset_catalog_set_burnin: cannot set burnin with an already loaded catalog");
 
+#endif /* NUMCOSMO_HAVE_CFITSIO */
   self->burnin = burnin;
 }
 
