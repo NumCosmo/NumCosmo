@@ -769,19 +769,20 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 {
 #ifdef HAVE_FFTW3
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-  guint nt                      = n * (1.0 + self->pad_p);
+  gint nt                       = n * (1.0 + self->pad_p);
+  gint n_new;
 
   self->Nr = n;
 
   nt        = ncm_util_fact_size (nt);
   self->pad = nt * self->pad_p * 0.5 / (1.0 + self->pad_p);
-  n         = nt - 2 * self->pad;
+  n_new     = nt - 2 * self->pad;
 
-  if ((n != self->N) || (n + 2 * self->pad != self->Nf))
+  if ((n_new != self->N) || (n_new + 2 * (gint) self->pad != self->Nf))
   {
-    guint i;
+    gint i;
 
-    self->N    = n;
+    self->N    = n_new;
     self->N_2  = self->N / 2;
     self->Lk_N = self->Lk / (1.0 * self->N);
 
@@ -804,7 +805,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
     self->p_Fk2Cm   = fftw_plan_dft_1d (self->Nf, self->Fk,   self->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     self->p_CmYm2Gr = fftw_plan_dft_1d (self->Nf, self->CmYm, self->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
-    for (i = 0; i <= self->nderivs; i++)
+    for (i = 0; i <= (gint) self->nderivs; i++)
     {
       NcmVector *Gr_vec_i = ncm_vector_new (self->N);
       NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE);
@@ -1265,7 +1266,7 @@ _ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
   gsl_poly_dd_init (dd1, xa1, ya1, size);
   gsl_poly_dd_init (dd2, xa2, ya2, size);
 
-  for (i = 0; i < self->pad; i++)
+  for (i = 0; i < (gint) self->pad; i++)
   {
     self->Fk[i]                       = exp (gsl_poly_dd_eval (dd1, xa1, size, log1p (1.0 * i)));
     self->Fk[self->pad + self->N + i] = exp (gsl_poly_dd_eval (dd2, xa2, size, log1p (self->pad + self->N + i)));

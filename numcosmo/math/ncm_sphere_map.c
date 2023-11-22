@@ -2120,7 +2120,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 {
 #ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
-  gint i;
+  guint i;
 
   if (self->lmax == 0)
   {
