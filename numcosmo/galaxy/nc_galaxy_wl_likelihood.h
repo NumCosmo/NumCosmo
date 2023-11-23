@@ -37,6 +37,7 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <math/ncm_integral_nd.h>
 
 
 G_BEGIN_DECLS

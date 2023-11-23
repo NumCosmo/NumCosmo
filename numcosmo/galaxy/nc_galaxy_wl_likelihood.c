@@ -53,6 +53,7 @@
 #include "math/ncm_stats_dist_kde.h"
 #include "math/ncm_stats_dist_kernel_gauss.h"
 #include "math/ncm_stats_dist_kernel_st.h"
+#include "math/ncm_integral_nd.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -466,6 +467,47 @@ nc_galaxy_wl_likelihood_peek_kde (NcGalaxyWLLikelihood *gwl)
   return self->kde;
 }
 
+struct int_data
+{
+  NcGalaxySDPosition *rz_dist;
+  NcGalaxySDZProxy *zp_dist;
+  NcGalaxySDShape *s_dist;
+  NcHICosmo *cosmo;
+  NcHaloDensityProfile *dp;
+  NcWLSurfaceMassDensity *smd;
+  gdouble z_cluster;
+  gdouble zp;
+  gdouble et;
+  gdouble r;
+};
+
+static void nc_galaxy_wl_likelihood_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void nc_galaxy_wl_likelihood_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, GALAXY_WL_LIKELIHOOD_INT, NcGalaxyWLLikelihoodInt, nc_galaxy_wl_likelihood_int, nc_galaxy_wl_likelihood_int_dim, nc_galaxy_wl_likelihood_integ, struct int_data);
+
+static void
+nc_galaxy_wl_likelihood_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcGalaxyWLLikelihoodInt *lh_int = NC_GALAXY_WL_LIKELIHOOD_INT (intnd);
+  gint i;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble z = ncm_vector_get (x, i);
+    gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.rz_dist, lh_int->data.r, z) * nc_galaxy_sd_z_proxy_integ (lh_int->data.zp_dist, z, lh_int->data.zp) * nc_galaxy_sd_shape_integ (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.z_cluster, lh_int->data.r, z, lh_int->data.et);
+
+    ncm_vector_set (fval, i, res);
+  }
+}
+
+static void
+nc_galaxy_wl_likelihood_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
+{
+  *dim  = 1;
+  *fdim = 1;
+}
+
 void
 nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
@@ -533,7 +575,52 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 gdouble
 nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
-  return 0.0;
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+  NcmVector *err                           = ncm_vector_new (1);
+  NcmVector *zpi                           = ncm_vector_new (1);
+  NcmVector *zpf                           = ncm_vector_new (1);
+  NcmVector *res                           = ncm_vector_new (1);
+  gdouble zp_i                             = z_cluster;
+  gdouble zp_f                             = 10;
+  const gdouble prec                       = 1.0e-11;
+  gdouble result                           = 0;
+  gint gal_i;
+
+  ncm_vector_set (zpi, 0, zp_i);
+  ncm_vector_set (zpf, 0, zp_f);
+
+  for (gal_i = 0; gal_i < self->len; gal_i++)
+  {
+    NcGalaxyWLLikelihoodInt *likelihood_integral = g_object_new (nc_galaxy_wl_likelihood_int_get_type (), NULL);
+    NcmIntegralND *lh_int                        = NCM_INTEGRAL_ND (likelihood_integral);
+
+    likelihood_integral->data.rz_dist   = NC_GALAXY_SD_POSITION (self->rz_dist);
+    likelihood_integral->data.zp_dist   = NC_GALAXY_SD_Z_PROXY (self->zp_dist);
+    likelihood_integral->data.s_dist    = NC_GALAXY_SD_SHAPE (self->s_dist);
+    likelihood_integral->data.cosmo     = cosmo;
+    likelihood_integral->data.dp        = dp;
+    likelihood_integral->data.smd       = smd;
+    likelihood_integral->data.z_cluster = z_cluster;
+    likelihood_integral->data.r         = ncm_matrix_get (self->obs, gal_i, 0);
+    likelihood_integral->data.zp        = ncm_matrix_get (self->obs, gal_i, 1);
+    likelihood_integral->data.et        = ncm_matrix_get (self->obs, gal_i, 2);
+
+    ncm_integral_nd_set_reltol (lh_int, prec);
+    ncm_integral_nd_set_abstol (lh_int, prec);
+    ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
+
+    result += ncm_vector_get (res, 0);
+    // g_assert_cmpfloat (fabs (result), <=, prec);
+
+    ncm_integral_nd_clear (&lh_int);
+  }
+
+  ncm_vector_free (err);
+  ncm_vector_free (zpi);
+  ncm_vector_free (zpf);
+  ncm_vector_free (res);
+
+  return result;
 }
 
 /**
