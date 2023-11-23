@@ -67,7 +67,7 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z)
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble r, const gdouble z)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 
@@ -75,7 +75,7 @@ _nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityP
 }
 
 static gdouble
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmVector *pos)
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
@@ -156,7 +156,9 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
  * @z_cluster: cluster redshift $z_\mathrm{cl}$
- * @pos: a #NcmVector stating position and redshift
+ * @r: a #gdouble
+ * @z: a #gdouble
+ * @et: a #gdouble
  *
  * Computes the probability density of the observable shape given the position.
  * The probability density is given by $P(s)P$.

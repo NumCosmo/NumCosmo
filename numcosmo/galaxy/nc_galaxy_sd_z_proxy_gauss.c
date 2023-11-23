@@ -133,7 +133,7 @@ _nc_galaxy_sd_z_proxy_gauss_finalize (GObject *object)
 }
 
 static gboolean _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
-static gdouble _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z);
+static gdouble _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z, const gdouble zp);
 
 static void
 nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
@@ -180,9 +180,12 @@ _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdou
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, gdouble z)
+_nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z, const gdouble zp)
 {
-  return 0.0;
+  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdp);
+  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+
+  return gsl_ran_gaussian_pdf (zp - z, self->sigma * (1.0 + z));
 }
 
 /**
