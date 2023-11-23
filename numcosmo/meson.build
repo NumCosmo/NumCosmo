@@ -707,6 +707,7 @@ libnumcosmo = library(
         gmp_dep,
         mpfr_dep,
         blas_dep,
+        lapack_dep,
         fftw3_dep,
         fftw3f_dep,
         cfitsio_dep,

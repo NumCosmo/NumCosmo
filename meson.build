@@ -526,6 +526,28 @@ if not cc.has_header_symbol(cblas_header, 'CBLAS_ORDER', required: false)
   numcosmo_conf.set('BLAS_NOT_TYPEDEFED', true)
 endif
 
+if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate'
+  lapack = blas_dep
+else
+  if lapack_name == 'auto'
+    foreach _name : get_option('lapack-order')
+      lapack = dependency(_name, modules: ['lapack'] + blas_interface, required: false)
+      if lapack.found()
+        break
+      endif
+    endforeach
+  else
+    lapack = dependency(lapack_name, modules: ['lapack'] + blas_interface, required: false)
+  endif
+endif
+
+have_lapack = lapack.found()
+lapack_dep = []
+if have_lapack
+  numcosmo_conf.set('HAVE_LAPACK', true)
+  lapack_dep = declare_dependency(dependencies: [lapack, blas_dep])
+endif
+
 #######################################################################################
 # Creating the config.h file:
 #######################################################################################
