@@ -13,6 +13,7 @@ numcosmo_sources += numcosmo_build_cfg_h
 
 subdir('sundials')
 subdir('libcuba')
+subdir('levmar')
 
 ncm_sources = files(
     'math/ncm_abc.c',
@@ -675,6 +676,7 @@ install_headers(ncm_headers, install_dir: numcosmo_sub_includedir)
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
+plc_inc = include_directories(['plc', 'plc/cldf', 'plc/minipmc', 'plc/plik'])
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 libnumcosmo = library(
@@ -685,10 +687,15 @@ libnumcosmo = library(
         ncm_sources_nogi,
         ncm_headers_nogi,
         ncm_headers_internal,
+        nc_sources,
+        nc_headers,
         numcosmo_sources,
         ncm_enum_types,
         nc_enum_types,
         ncm_fit_nlopt_enum_types,
+        'numcosmo.h',
+        'numcosmo-math.h',
+        'config_extra.h',
     ],
     version: library_version,
     soversion: soversion,
@@ -696,8 +703,8 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc],
-    link_with: [libsundials, libcuba],
+    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
+    link_with: [libsundials, libcuba, liblevmar],
     dependencies: [
         glib_dep,
         gobject_dep,
