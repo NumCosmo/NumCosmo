@@ -219,6 +219,7 @@ add_project_arguments(numcosmo_debug_cflags, language: 'c')
 #######################################################################################
 # Headers
 #######################################################################################
+message('Checking for headers availability')
 
 headers = ['alloca.h']
 
@@ -232,6 +233,7 @@ endforeach
 #######################################################################################
 # Functions
 #######################################################################################
+message('Checking for functions availability')
 
 functions = [
   'alloca',
@@ -255,6 +257,7 @@ endforeach
 #######################################################################################
 # Compiler features
 #######################################################################################
+message('Checking for compiler features')
 
 if cc.compiles(
   '''static int x;
@@ -272,6 +275,7 @@ endif
 #######################################################################################
 # Types
 #######################################################################################
+message('Checking for types availability')
 
 if cc.compiles(
   '''/* The Stardent Vistra knows sizeof(long double), but does not support it.  */
@@ -298,6 +302,7 @@ cfitsio_req = '>= 3.25'
 #
 # MPI is not required, but if it is found, we will use it.
 #######################################################################################
+message('Checking for MPI')
 
 dependency(
   'mpi',
@@ -316,6 +321,7 @@ dependency(
 #
 # OpenMP is not required, but if it is found, we will use it.
 #######################################################################################
+message('Checking for OpenMP')
 
 omp_c = dependency(
   'openmp',
@@ -333,6 +339,7 @@ omp_fortran = dependency(
 #
 # GObject introspection is not required, but if it is found, we will use it.
 #######################################################################################
+message('Checking for GObject introspection')
 
 gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'))
 enable_gir = (
@@ -354,6 +361,7 @@ gir_args = [
 #######################################################################################
 # Checking for Glib
 #######################################################################################
+message('Checking for Glib, GObject and GIO')
 
 glib_dep = dependency('glib-2.0', version: glib_req)
 gobject_dep = dependency('gobject-2.0', version: glib_req)
@@ -362,12 +370,14 @@ gio_dep = dependency('gio-2.0', version: glib_req)
 #######################################################################################
 # Checking for GSL
 #######################################################################################
+message('Checking for GSL')
 
 gsl_dep = dependency('gsl', version: gsl_req)
 
 #######################################################################################
 # Checking for GMP and MPFR
 #######################################################################################
+message('Checking for GMP and MPFR')
 
 gmp_dep = dependency('gmp')
 mpfr_dep = dependency('mpfr')
@@ -375,6 +385,7 @@ mpfr_dep = dependency('mpfr')
 #######################################################################################
 # Checking for FFTW (optional)
 #######################################################################################
+message('Checking for FFTW')
 
 fftw3_dep = dependency(
   'fftw3',
@@ -399,6 +410,7 @@ endif
 #######################################################################################
 # Checking for cfitsio (optional)
 #######################################################################################
+message('Checking for cfitsio')
 
 cfitsio_dep = dependency(
   'cfitsio',
@@ -420,6 +432,7 @@ numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
 #######################################################################################
 # Checking for NLopt (optional)
 #######################################################################################
+message('Checking for NLopt')
 
 nlopt_dep = dependency(
   'nlopt',
@@ -433,6 +446,7 @@ endif
 #######################################################################################
 # Checking for BLAS/LAPACK
 #######################################################################################
+message('Checking for BLAS/LAPACK')
 
 blas_name = get_option('blas')
 lapack_name = get_option('lapack')
