@@ -25,7 +25,16 @@ toeplitz_sources = files(
     'solvers/toetool.h',
 )
 
-toeplitz_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H', '-Wno-sign-compare']
+toeplitz_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
+
+disable_warnings = ['-Wno-sign-compare']
+
+foreach flag : disable_warnings
+    if cc.has_argument(flag)
+        toeplitz_c_args += flag
+    endif
+endforeach
+
 
 libtoeplitz = static_library(
     'toeplitz',

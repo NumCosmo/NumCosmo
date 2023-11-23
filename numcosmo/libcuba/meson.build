@@ -6,13 +6,21 @@ cuba_c_args = [
     '-DG_LOG_DOMAIN="NUMCOSMO"',
     '-DHAVE_CONFIG_H',
     '-DNOUNDERSCORE',
-    '-Wno-sign-compare',
-    '-Wno-clobbered',
 ]
 if not cc_supports_c99_vla
     cuba_c_args += ['-DNDIM=@0@'.format(get_option('libcuba-max-dim'))]
     cuba_c_args += ['-DNCOMP=@0@'.format(get_option('libcuba-max-comp'))]
 endif
+
+disable_warnings = ['-Wno-sign-compare', '-Wno-clobbered']
+
+foreach flag : disable_warnings
+    if cc.has_argument(flag)
+        cuba_c_args += flag
+    endif
+endforeach
+
+
 
 cuhre_sources = files(
     'cuhre/Cuhre.c',
