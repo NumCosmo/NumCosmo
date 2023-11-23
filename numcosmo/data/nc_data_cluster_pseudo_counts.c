@@ -226,7 +226,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   if (dcpc->M_Z_FlatPrior)
   {
     /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
-    gint i;
+    guint i;
 
     for (i = 0; i < dcpc->np; i++)
     {
@@ -250,7 +250,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   {
     gdouble Ndet   = nc_cluster_pseudo_counts_ndet (cpc, dcpc->cad->mfp, cosmo);
     gdouble lnNdet = log (Ndet);
-    gint i;
+    guint i;
 
     *m2lnL = 0.0;
 

@@ -349,7 +349,7 @@ _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble l
 static gdouble
 _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
   NcClusterMassAscasoPrivate * const self = ascaso->priv;
   gdouble lnR_true, sigma;
 
@@ -388,7 +388,7 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 static gboolean
 _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
   NcClusterMassAscasoPrivate * const self = ascaso->priv;
   gdouble lnR_true, sigma;
 
@@ -466,7 +466,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
   gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
-  gint i;
+  guint i;
 
   if ((tda == 1) && (sz == 1))
   {

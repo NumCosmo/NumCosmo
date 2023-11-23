@@ -197,7 +197,7 @@ _nc_data_bao_dmr_hr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector 
   NcHICosmo *cosmo    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const gdouble rd    = nc_distance_r_zd (dmh->dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo);
   const guint np      = ncm_data_gauss_cov_get_size (gauss);
-  gint i;
+  guint i;
 
   for (i = 0; i < np; i++)
   {

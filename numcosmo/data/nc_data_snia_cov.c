@@ -3486,10 +3486,11 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
     {
       NcmMatrix *L = ncm_matrix_new0 (nobs, nobs);
       GArray *ws   = ncm_lapack_dggglm_alloc (L, X, params, obs, y);
+      gint info;
+      guint i, j;
 
       nc_snia_dist_cov_mag_to_width_colour (dcov, cosmo, snia_cov, obs, X, TRUE);
 
-      gint i, j, info;
 
       for (i = 0; i < nobs; i++)
       {
@@ -3530,7 +3531,7 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
 #endif
 
     {
-      gint i;
+      guint i;
 
       for (i = 0; i < mu_len; i++)
       {
@@ -3821,7 +3822,7 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
   NcDataSNIACov *snia_cov_filter    = NULL;
   NcDataSNIACovPrivate * const self = snia_cov->priv;
   NcmISet *is                       = ncm_iset_new (self->mu_len);
-  gint i;
+  guint i;
 
   if (self->cat_version < 2)
   {
