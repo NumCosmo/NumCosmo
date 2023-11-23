@@ -299,6 +299,57 @@ ncm_enum_types = gnome.mkenums(
     sources: ncm_headers,
 )
 
+ncm_fit_nlopt_enum_types = []
+if nlopt_dep.found()
+    message('Generating ncm_fit_nlopt_enum_meta.h')
+
+    process_nlopt_enum = find_program('process_nlopt_enum.py', required: true)
+    glib_mkenums = find_program('glib-mkenums', required: true)
+
+    nlopt_header_tmp = cc.preprocess(
+        'ncm_fit_nlopt_enum_meta.c',
+        output: 'ncm_fit_nlopt_enum_meta.i',
+        dependencies: nlopt_dep,
+    )
+
+    nlopt_enum_meta = custom_target(
+        'ncm_fit_nlopt_enum_meta.h',
+        input: nlopt_header_tmp,
+        output: 'ncm_fit_nlopt_enum_meta.h',
+        command: [process_nlopt_enum, '@INPUT@', '@OUTPUT@'],
+    )
+
+    ncm_fit_nlopt_enum_h = custom_target(
+        'ncm_fit_nlopt_enum.h',
+        input: nlopt_enum_meta,
+        output: 'ncm_fit_nlopt_enum.h',
+        command: [
+            glib_mkenums,
+            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.h.template',
+            '@INPUT@',
+        ],
+        capture: true,
+        install: true,
+        install_dir: numcosmo_sub_includedir,
+    )
+
+    ncm_fit_nlopt_enum_c = custom_target(
+        'ncm_fit_nlopt_enum.c',
+        input: nlopt_enum_meta,
+        output: 'ncm_fit_nlopt_enum.c',
+        command: [
+            glib_mkenums,
+            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.c.template',
+            '@INPUT@',
+        ],
+        capture: true,
+    )
+
+    ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_h, ncm_fit_nlopt_enum_c]
+
+endif
+
+
 install_headers(ncm_headers, install_dir: numcosmo_sub_includedir)
 
 sundials_inc = include_directories('sundials/include')
@@ -315,6 +366,7 @@ libnumcosmo = library(
         ncm_headers_internal,
         numcosmo_sources,
         ncm_enum_types,
+        ncm_fit_nlopt_enum_types,
     ],
     version: library_version,
     soversion: soversion,
