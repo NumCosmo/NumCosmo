@@ -58,6 +58,7 @@
 #include <gsl/gsl_machine.h>
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_sort_vector.h>
+#include <gsl/gsl_multifit_nlin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum

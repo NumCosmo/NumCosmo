@@ -43,6 +43,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_multifit_nlin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFitGSLLS

@@ -38,15 +38,6 @@
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_fit_state.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_NLOPT_2_2
-#include <nlopt.h>
-#endif /* HAVE_NLOPT_2_2 */
-
-#include <gsl/gsl_multifit_nlin.h>
-#include <gsl/gsl_multimin.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FIT (ncm_fit_get_type ())

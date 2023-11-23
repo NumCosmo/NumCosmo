@@ -44,6 +44,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_multimin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
