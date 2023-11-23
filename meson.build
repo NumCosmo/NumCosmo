@@ -288,6 +288,12 @@ if cc.compiles(
 endif
 
 #######################################################################################
+# Fortran mangling
+#######################################################################################
+
+numcosmo_conf.set('F77_FUNC(name,NAME)', 'name ## _')
+
+#######################################################################################
 # Dependencies versions:
 #######################################################################################
 
@@ -545,13 +551,21 @@ if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate'
 else
   if lapack_name == 'auto'
     foreach _name : get_option('lapack-order')
-      lapack = dependency(_name, modules: ['lapack'] + blas_interface, required: false)
+      lapack = dependency(
+        _name,
+        modules: ['lapack'] + blas_interface,
+        required: false,
+      )
       if lapack.found()
         break
       endif
     endforeach
   else
-    lapack = dependency(lapack_name, modules: ['lapack'] + blas_interface, required: false)
+    lapack = dependency(
+      lapack_name,
+      modules: ['lapack'] + blas_interface,
+      required: false,
+    )
   endif
 endif
 

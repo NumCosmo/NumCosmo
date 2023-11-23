@@ -14,6 +14,8 @@ numcosmo_sources += numcosmo_build_cfg_h
 subdir('sundials')
 subdir('libcuba')
 subdir('levmar')
+subdir('misc')
+subdir('toeplitz')
 
 ncm_sources = files(
     'math/ncm_abc.c',
@@ -704,7 +706,7 @@ libnumcosmo = library(
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
-    link_with: [libsundials, libcuba, liblevmar],
+    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz],
     dependencies: [
         glib_dep,
         gobject_dep,
