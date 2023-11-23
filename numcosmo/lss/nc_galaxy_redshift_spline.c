@@ -68,10 +68,10 @@ static void
 nc_galaxy_redshift_spline_init (NcGalaxyRedshiftSpline *gzs)
 {
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv = nc_galaxy_redshift_spline_get_instance_private (gzs);
-  
+
   self->z_best = 0.0;
   self->normas = g_array_new (TRUE, TRUE, sizeof (gdouble));
-  
+
   self->dists = ncm_obj_array_new ();
 }
 
@@ -80,9 +80,9 @@ _nc_galaxy_redshift_spline_set_property (GObject *object, guint prop_id, const G
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (object);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   g_return_if_fail (NC_IS_GALAXY_REDSHIFT_SPLINE (object));
-  
+
   switch (prop_id)
   {
     case PROP_Z_BEST:
@@ -92,30 +92,30 @@ _nc_galaxy_redshift_spline_set_property (GObject *object, guint prop_id, const G
     {
       NcmObjArray *dists = g_value_get_boxed (value);
       gdouble norma_t    = 0.0;
-      gint i;
-      
+      guint i;
+
       g_clear_pointer (&self->dists, ncm_obj_array_unref);
       self->dists = ncm_obj_array_ref (dists);
-      
+
       g_array_set_size (self->normas, 0);
-      
+
       for (i = 0; i < dists->len; i++)
       {
         NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, i));
-        
+
         ncm_stats_dist1d_prepare (sd1);
-        
+
         norma_t += ncm_stats_dist1d_eval_norma (sd1);
       }
-      
+
       for (i = 0; i < dists->len; i++)
       {
         NcmStatsDist1d *sd1   = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, i));
         const gdouble norma_i = ncm_stats_dist1d_eval_norma (sd1) / norma_t;
-        
+
         g_array_append_val (self->normas, norma_i);
       }
-      
+
       break;
     }
     default:
@@ -129,9 +129,9 @@ _nc_galaxy_redshift_spline_get_property (GObject *object, guint prop_id, GValue 
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (object);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   g_return_if_fail (NC_IS_GALAXY_REDSHIFT_SPLINE (object));
-  
+
   switch (prop_id)
   {
     case PROP_Z_BEST:
@@ -151,10 +151,10 @@ _nc_galaxy_redshift_spline_dispose (GObject *object)
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (object);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   g_clear_pointer (&self->normas, g_array_unref);
   ncm_obj_array_clear (&self->dists);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->dispose (object);
 }
@@ -164,8 +164,8 @@ _nc_galaxy_redshift_spline_finalize (GObject *object)
 {
   /*NcGalaxyRedshiftSpline *gzs = NC_GALAXY_REDSHIFT_SPLINE (object);*/
   /*NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;*/
-  
-  
+
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_redshift_spline_parent_class)->finalize (object);
 }
@@ -183,12 +183,12 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
 {
   GObjectClass *object_class      = G_OBJECT_CLASS (klass);
   NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_galaxy_redshift_spline_set_property;
   object_class->get_property = &_nc_galaxy_redshift_spline_get_property;
   object_class->dispose      = &_nc_galaxy_redshift_spline_dispose;
   object_class->finalize     = &_nc_galaxy_redshift_spline_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_Z_BEST,
                                    g_param_spec_double ("z-best",
@@ -203,7 +203,7 @@ nc_galaxy_redshift_spline_class_init (NcGalaxyRedshiftSplineClass *klass)
                                                        "Distribution objects",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   gz_class->has_dist        = &_nc_galaxy_redshift_spline_has_dist;
   gz_class->mode            = &_nc_galaxy_redshift_spline_mode;
   gz_class->nintervals      = &_nc_galaxy_redshift_spline_nintervals;
@@ -224,7 +224,7 @@ _nc_galaxy_redshift_spline_mode (NcGalaxyRedshift *gz)
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (gz);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   return self->z_best;
 }
 
@@ -233,7 +233,7 @@ _nc_galaxy_redshift_spline_nintervals (NcGalaxyRedshift *gz)
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (gz);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   return self->dists->len;
 }
 
@@ -242,9 +242,9 @@ _nc_galaxy_redshift_spline_interval_weight (NcGalaxyRedshift *gz, const guint di
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (gz);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   g_assert_cmpuint (di, <, self->normas->len);
-  
+
   return g_array_index (self->normas, gdouble, di);
 }
 
@@ -253,10 +253,10 @@ _nc_galaxy_redshift_spline_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdo
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (gz);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   {
     NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, di));
-    
+
     zmin[0] = ncm_stats_dist1d_get_xi (sd1);
     zmax[0] = ncm_stats_dist1d_get_xf (sd1);
   }
@@ -267,10 +267,10 @@ _nc_galaxy_redshift_spline_pdf (NcGalaxyRedshift *gz, const guint di, const gdou
 {
   NcGalaxyRedshiftSpline *gzs                = NC_GALAXY_REDSHIFT_SPLINE (gz);
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   {
     NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, di));
-    
+
     return g_array_index (self->normas, gdouble, di) * ncm_stats_dist1d_eval_p (sd1, z);
   }
 }
@@ -284,24 +284,24 @@ _nc_galaxy_redshift_spline_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
   gboolean done                              = FALSE;
   gdouble z                                  = 0.0;
   guint i;
-  
+
   gsl_ran_multinomial (rng->r, self->normas->len, 1, (gdouble *) self->normas->data, n);
-  
+
   for (i = 0; i < self->normas->len; i++)
   {
     if (n[i] == 1)
     {
       NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, i));
-      
+
       g_assert (!done);
       z    = ncm_stats_dist1d_gen (sd1, rng);
       done = TRUE;
     }
   }
-  
+
   g_assert (done);
   g_free (n);
-  
+
   return z;
 }
 
@@ -317,7 +317,7 @@ nc_galaxy_redshift_spline_new (void)
 {
   NcGalaxyRedshiftSpline *gzs = g_object_new (NC_TYPE_GALAXY_REDSHIFT_SPLINE,
                                               NULL);
-  
+
   return gzs;
 }
 
@@ -374,7 +374,7 @@ void
 nc_galaxy_redshift_spline_set_z_best (NcGalaxyRedshiftSpline *gzs, const gdouble z_best)
 {
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   self->z_best = z_best;
 }
 
@@ -390,7 +390,7 @@ gdouble
 nc_galaxy_redshift_spline_get_z_best (NcGalaxyRedshiftSpline *gzs)
 {
   NcGalaxyRedshiftSplinePrivate * const self = gzs->priv;
-  
+
   return self->z_best;
 }
 
@@ -414,46 +414,46 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
   GArray *m2lnPz_a                           = NULL;
   gdouble z_best                             = 0.0;
   gdouble Pz_best                            = 0.0;
-  gint i;
-  
+  guint i;
+
   g_assert_cmpuint (ncm_vector_len (zv), ==, ncm_vector_len (Pzv));
-  
+
   g_ptr_array_set_size ((GPtrArray *) self->dists, 0);
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble z_i  = ncm_vector_get (zv, i);
     const gdouble Pz_i = ncm_vector_get (Pzv, i);
-    
+
     g_assert_cmpfloat (Pz_i, >=, 0.0);
-    
+
     if (Pz_i > Pz_best)
     {
       z_best  = z_i;
       Pz_best = Pz_i;
     }
-    
+
     if (Pz_i > 0.0)
     {
       const gdouble m2lnPz_i = -2.0 * log (Pz_i);
-      
+
       if (first_nz == -1)
       {
         first_nz = i;
-        
+
         z_a      = g_array_new (TRUE, TRUE, sizeof (gdouble));
         m2lnPz_a = g_array_new (TRUE, TRUE, sizeof (gdouble));
-        
+
         if (i > 0)
         {
           const gdouble z_im1      = ncm_vector_get (zv, i - 1);
           const gdouble m2lnPz_im1 = -2.0 * NC_GALAXY_REDSHIFT_SPLINE_LKNOT_DROP + m2lnPz_i;
-          
+
           g_array_append_val (z_a, z_im1);
           g_array_append_val (m2lnPz_a, m2lnPz_im1);
         }
       }
-      
+
       g_array_append_val (z_a, z_i);
       g_array_append_val (m2lnPz_a, m2lnPz_i);
     }
@@ -463,77 +463,77 @@ nc_galaxy_redshift_spline_init_from_vectors (NcGalaxyRedshiftSpline *gzs, NcmVec
       {
         NcmStatsDist1dSpline *dist = NULL;
         const gdouble m2lnPz_i     = -2.0 * (NC_GALAXY_REDSHIFT_SPLINE_LKNOT_DROP + log (ncm_vector_get (Pzv, i - 1)));
-        
+
         g_array_append_val (z_a, z_i);
         g_array_append_val (m2lnPz_a, m2lnPz_i);
-        
+
         {
           NcmSpline *s = (z_a->len >= 6) ? NCM_SPLINE (ncm_spline_cubic_notaknot_new ()) : NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_polynomial));
-          
+
           ncm_spline_set_array (s, z_a, m2lnPz_a, TRUE);
-          
+
           dist = ncm_stats_dist1d_spline_new (s);
-          
+
           /*ncm_vector_log_vals (s->xv, "XV", "% 22.15g", TRUE);*/
           /*ncm_vector_log_vals (s->yv, "YV", "% 22.15g", TRUE);*/
           ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
-          
+
           ncm_spline_free (s);
         }
-        
+
         ncm_obj_array_add (self->dists, G_OBJECT (dist));
-        
+
         ncm_stats_dist1d_free (NCM_STATS_DIST1D (dist));
         g_array_unref (z_a);
         g_array_unref (m2lnPz_a);
-        
+
         first_nz = -1;
       }
     }
   }
-  
+
   if (first_nz != -1)
   {
     NcmStatsDist1dSpline *dist = NULL;
     NcmSpline *s               = (z_a->len >= 6) ? NCM_SPLINE (ncm_spline_cubic_notaknot_new ()) : NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_polynomial));
-    
+
     ncm_spline_set_array (s, z_a, m2lnPz_a, TRUE);
     dist = ncm_stats_dist1d_spline_new (s);
     ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (dist));
-    
+
     ncm_obj_array_add (self->dists, G_OBJECT (dist));
-    
+
     ncm_stats_dist1d_free (NCM_STATS_DIST1D (dist));
     ncm_spline_free (s);
     g_array_unref (z_a);
     g_array_unref (m2lnPz_a);
-    
+
     first_nz = -1;
   }
-  
+
   if (self->dists->len == 0)
     g_error ("nc_galaxy_redshift_spline_init_from_vectors: empty P_z.");
-  
+
   {
     gdouble norma_t = 0.0;
-    
+
     g_array_set_size (self->normas, 0);
-    
+
     for (i = 0; i < self->dists->len; i++)
     {
       NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, i));
-      
+
       norma_t += ncm_stats_dist1d_eval_norma (sd1);
     }
-    
+
     for (i = 0; i < self->dists->len; i++)
     {
       NcmStatsDist1d *sd1   = NCM_STATS_DIST1D (ncm_obj_array_peek (self->dists, i));
       const gdouble norma_i = ncm_stats_dist1d_eval_norma (sd1) / norma_t;
-      
+
       g_array_append_val (self->normas, norma_i);
     }
-    
+
     self->z_best = z_best;
   }
 }

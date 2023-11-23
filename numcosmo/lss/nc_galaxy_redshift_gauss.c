@@ -72,7 +72,7 @@ static void
 nc_galaxy_redshift_gauss_init (NcGalaxyRedshiftGauss *gzg)
 {
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv = nc_galaxy_redshift_gauss_get_instance_private (gzg);
-  
+
   self->len         = 0;
   self->obs         = NULL;
   self->fpws        = g_ptr_array_new ();
@@ -81,7 +81,7 @@ nc_galaxy_redshift_gauss_init (NcGalaxyRedshiftGauss *gzg)
   self->nnodes      = g_array_new (FALSE, FALSE, sizeof (guint));
   self->norma       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->constructed = FALSE;
-  
+
 #ifdef HAVE_GSL_2_4
   g_ptr_array_set_free_func (self->fpws, (GDestroyNotify) gsl_integration_fixed_free);
 #endif /* HAVE_GSL_2_4 */
@@ -91,11 +91,11 @@ static void
 _nc_galaxy_redshift_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGalaxyRedshiftGauss *gzg = NC_GALAXY_REDSHIFT_GAUSS (object);
-  
+
   /*NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;*/
-  
+
   g_return_if_fail (NC_IS_GALAXY_REDSHIFT_GAUSS (object));
-  
+
   switch (prop_id)
   {
     case PROP_OBS:
@@ -111,11 +111,11 @@ static void
 _nc_galaxy_redshift_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGalaxyRedshiftGauss *gzg = NC_GALAXY_REDSHIFT_GAUSS (object);
-  
+
   /* NcGalaxyRedshiftGaussPrivate * const self = gzg->priv; */
-  
+
   g_return_if_fail (NC_IS_GALAXY_REDSHIFT_GAUSS (object));
-  
+
   switch (prop_id)
   {
     case PROP_OBS:
@@ -135,7 +135,7 @@ _nc_galaxy_redshift_gauss_constructed (GObject *object)
   {
     NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (object);
     NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
-    
+
     self->constructed = TRUE;
   }
 }
@@ -145,14 +145,14 @@ _nc_galaxy_redshift_gauss_dispose (GObject *object)
 {
   NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (object);
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
-  
+
   g_clear_pointer (&self->fpws,    g_ptr_array_unref);
   g_clear_pointer (&self->nodes,   g_ptr_array_unref);
   g_clear_pointer (&self->weights, g_ptr_array_unref);
-  
+
   g_clear_pointer (&self->nnodes, g_array_unref);
   g_clear_pointer (&self->norma,  g_array_unref);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_redshift_gauss_parent_class)->dispose (object);
 }
@@ -162,8 +162,8 @@ _nc_galaxy_redshift_gauss_finalize (GObject *object)
 {
   /*NcGalaxyRedshiftGauss *gzg = NC_GALAXY_REDSHIFT_GAUSS (object);*/
   /*NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;*/
-  
-  
+
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_redshift_gauss_parent_class)->finalize (object);
 }
@@ -183,13 +183,13 @@ nc_galaxy_redshift_gauss_class_init (NcGalaxyRedshiftGaussClass *klass)
 {
   GObjectClass *object_class      = G_OBJECT_CLASS (klass);
   NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_galaxy_redshift_gauss_set_property;
   object_class->get_property = &_nc_galaxy_redshift_gauss_get_property;
   object_class->constructed  = &_nc_galaxy_redshift_gauss_constructed;
   object_class->dispose      = &_nc_galaxy_redshift_gauss_dispose;
   object_class->finalize     = &_nc_galaxy_redshift_gauss_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_OBS,
                                    g_param_spec_object ("obs",
@@ -197,7 +197,7 @@ nc_galaxy_redshift_gauss_class_init (NcGalaxyRedshiftGaussClass *klass)
                                                         "Redshift observables",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   gz_class->has_dist           = &_nc_galaxy_redshift_gauss_has_dist;
   gz_class->mode               = &_nc_galaxy_redshift_gauss_mode;
   gz_class->nintervals         = &_nc_galaxy_redshift_gauss_nintervals;
@@ -220,7 +220,7 @@ _nc_galaxy_redshift_gauss_mode (NcGalaxyRedshift *gz)
 {
   /*NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (gz);*/
   /*NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;*/
-  
+
   return 0.0;
 }
 
@@ -241,7 +241,7 @@ _nc_galaxy_redshift_gauss_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdou
 {
   /*NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (gz);*/
   /*NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;*/
-  
+
   zmin[0] = 0.0;
   zmax[0] = 1.0;
 }
@@ -251,7 +251,7 @@ _nc_galaxy_redshift_gauss_pdf (NcGalaxyRedshift *gz, const guint di, const gdoub
 {
   /*NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (gz);*/
   /*NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;*/
-  
+
   return 0.0;
 }
 
@@ -267,7 +267,7 @@ _nc_galaxy_redshift_gauss_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
  *   z = ncm_rng_gaussian_gen (rng, self->z_obs, self->sigma_z);
  *  } while (z < 0.0);
  */
-  
+
   return 0.0;
 }
 
@@ -281,13 +281,13 @@ _nc_galaxy_redshift_gauss_compute_mean_m2lnf (NcGalaxyRedshift *gz, guint gal_i,
   const gdouble *nodes                      = g_ptr_array_index (self->nodes, gal_i);
   const gdouble *weights                    = g_ptr_array_index (self->weights, gal_i);
   gdouble res                               = 0.0;
-  gint i;
-  
+  guint i;
+
   for (i = 0; i < nnodes; i++)
   {
     res += weights[i] * exp (-0.5 * m2lnf (nodes[i], userdata));
   }
-  
+
   return -2.0 * log (res / norma);
 }
 
@@ -296,7 +296,7 @@ _nc_galaxy_redshift_gauss_len (NcGalaxyRedshift *gz)
 {
   NcGalaxyRedshiftGauss *gzg                = NC_GALAXY_REDSHIFT_GAUSS (gz);
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
-  
+
   return self->len;
 }
 
@@ -312,7 +312,7 @@ nc_galaxy_redshift_gauss_new (void)
 {
   NcGalaxyRedshiftGauss *gzg = g_object_new (NC_TYPE_GALAXY_REDSHIFT_GAUSS,
                                              NULL);
-  
+
   return gzg;
 }
 
@@ -374,23 +374,23 @@ nc_galaxy_redshift_gauss_set_obs (NcGalaxyRedshiftGauss *gzg, NcmMatrix *obs)
 #ifdef HAVE_GSL_2_4
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
   guint i;
-  
+
   g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 2);
   g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
-  
+
   ncm_matrix_clear (&self->obs);
-  
+
   self->len = ncm_matrix_nrows (obs);
   self->obs = ncm_matrix_ref (obs);
-  
+
   g_ptr_array_set_size (self->fpws, 0);
   g_ptr_array_set_size (self->fpws,    self->len);
   g_ptr_array_set_size (self->nodes,   self->len);
   g_ptr_array_set_size (self->weights, self->len);
-  
+
   g_array_set_size (self->nnodes, self->len);
   g_array_set_size (self->norma,  self->len);
-  
+
   for (i = 0; i < self->len; i++)
   {
     const gdouble z_obs                   = ncm_matrix_get (obs, i, 0);
@@ -401,20 +401,21 @@ nc_galaxy_redshift_gauss_set_obs (NcGalaxyRedshiftGauss *gzg, NcmMatrix *obs)
     gdouble *weights                      = gsl_integration_fixed_weights (fpws);
     const gdouble norma                   = sqrt (2.0 * M_PI) * sigma_z * 0.5 * (1.0 + erf (z_obs / (sqrt (2.0) * sigma_z)));
     gint j;
-    
+
     for (j = 0; j < N; j++)
     {
       if (nodes[j] > 0)
         break;
     }
-    
+
     g_ptr_array_index (self->fpws, i)    = fpws;
     g_ptr_array_index (self->nodes, i)   = &nodes[j];
     g_ptr_array_index (self->weights, i) = &weights[j];
-    
+
     g_array_index (self->nnodes, guint, i)   = N - j;
     g_array_index (self->norma,  gdouble, i) = norma;
   }
+
 #else /* HAVE_GSL_2_4 */
   g_error ("nc_galaxy_redshift_gauss_set_obs: gsl >= 2.4 required to use this object.");
 #endif /* HAVE_GSL_2_4 */
@@ -432,7 +433,7 @@ NcmMatrix *
 nc_galaxy_redshift_gauss_peek_obs (NcGalaxyRedshiftGauss *gzg)
 {
   NcGalaxyRedshiftGaussPrivate * const self = gzg->priv;
-  
+
   return self->obs;
 }
 

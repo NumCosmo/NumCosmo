@@ -75,7 +75,7 @@ static void
 nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv = nc_data_cluster_wl_get_instance_private (dcwl);
-  
+
   self->galaxy_array = ncm_obj_array_new ();
   self->z_cluster    = 0.0;
   self->ra_cluster   = 0.0;
@@ -88,18 +88,18 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
 {
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = dcwl->priv;
-  
+
   g_return_if_fail (NC_IS_DATA_CLUSTER_WL (object));
-  
+
   switch (prop_id)
   {
     case PROP_GALAXY_ARRAY:
     {
       NcmObjArray *galaxy_array = g_value_get_boxed (value);
-      
+
       g_clear_pointer (&self->galaxy_array, ncm_obj_array_unref);
       self->galaxy_array = ncm_obj_array_ref (galaxy_array);
-      
+
       break;
     }
     case PROP_PSF_SIZE:
@@ -125,9 +125,9 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
 {
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = dcwl->priv;
-  
+
   g_return_if_fail (NC_IS_DATA_CLUSTER_WL (object));
-  
+
   switch (prop_id)
   {
     case PROP_GALAXY_ARRAY:
@@ -156,9 +156,9 @@ nc_data_cluster_wl_dispose (GObject *object)
 {
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = dcwl->priv;
-  
+
   ncm_obj_array_clear (&self->galaxy_array);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->dispose (object);
 }
@@ -167,7 +167,7 @@ static void
 nc_data_cluster_wl_finalize (GObject *object)
 {
   /*NcDataClusterWL *dcwl = NC_DATA_CLUSTER_WL (object);*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->finalize (object);
 }
@@ -181,12 +181,12 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  
+
   object_class->set_property = nc_data_cluster_wl_set_property;
   object_class->get_property = nc_data_cluster_wl_get_property;
   object_class->dispose      = nc_data_cluster_wl_dispose;
   object_class->finalize     = nc_data_cluster_wl_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_GALAXY_ARRAY,
                                    g_param_spec_boxed ("galaxy-array",
@@ -201,7 +201,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         "PSF size",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_Z_CLUSTER,
                                    g_param_spec_double ("z-cluster",
@@ -223,7 +223,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         "Cluster (halo) DEC",
                                                         -360.0, 360.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_get_len;
   data_class->prepare    = &_nc_data_cluster_wl_prepare;
@@ -238,17 +238,17 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   const guint ngal                    = self->galaxy_array->len;
-  gint i;
-  
+  guint i;
+
   m2lnL[0] = 0.0;
-  
+
   for (i = 0; i < ngal; i++)
   {
     NcGalaxyWL *gwl_i = NC_GALAXY_WL (ncm_obj_array_peek (self->galaxy_array, i));
-    
+
     m2lnL[0] += nc_galaxy_wl_eval_m2lnP (gwl_i, cosmo, dp, smd, self->z_cluster);
   }
-  
+
   return;
 }
 
@@ -257,20 +257,20 @@ _nc_data_cluster_wl_get_len (NcmData *data)
 {
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
   NcDataClusterWLPrivate * const self = dcwl->priv;
-  
+
   if (self->galaxy_array != NULL)
   {
     const guint ngal = self->galaxy_array->len;
     guint len        = 0;
-    gint i;
-    
+    guint i;
+
     for (i = 0; i < ngal; i++)
     {
       NcGalaxyWL *gwl_i = NC_GALAXY_WL (ncm_obj_array_peek (self->galaxy_array, i));
-      
+
       len += nc_galaxy_wl_len (gwl_i);
     }
-    
+
     return len;
   }
   else
@@ -287,9 +287,9 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  
+
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
-  
+
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 }
 
@@ -305,7 +305,7 @@ nc_data_cluster_wl_new (void)
 {
   NcDataClusterWL *dcwl = g_object_new (NC_TYPE_DATA_CLUSTER_WL,
                                         NULL);
-  
+
   return dcwl;
 }
 
@@ -321,9 +321,9 @@ NcDataClusterWL *
 nc_data_cluster_wl_new_from_file (const gchar *filename)
 {
   NcDataClusterWL *dcwl = NC_DATA_CLUSTER_WL (ncm_serialize_global_from_file (filename));
-  
+
   g_assert (NC_IS_DATA_CLUSTER_WL (dcwl));
-  
+
   return dcwl;
 }
 
