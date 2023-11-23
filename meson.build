@@ -217,7 +217,74 @@ endif
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
 #######################################################################################
-# Checking dependencies:
+# Headers
+#######################################################################################
+
+headers = ['alloca.h']
+
+foreach h : headers
+  if cc.has_header(h)
+    define = 'HAVE_' + h.underscorify().to_upper()
+    numcosmo_conf.set(define, 1)
+  endif
+endforeach
+
+#######################################################################################
+# Functions
+#######################################################################################
+
+functions = [
+  'alloca',
+  'fork',
+  'shmget',
+  'getloadavg',
+  'erf',
+  'erfc',
+  'lgamma_r',
+  'lgammaf_r',
+  'powl',
+]
+
+foreach f : functions
+  if cc.has_function(f)
+    define = 'HAVE_' + f.underscorify().to_upper()
+    numcosmo_conf.set(define, 1)
+  endif
+endforeach
+
+#######################################################################################
+# Compiler features
+#######################################################################################
+
+if cc.compiles(
+  '''static int x;
+                  char some_func (void) {
+                    char a[++x];
+                    a[sizeof a - 1] = 0;
+                    int N;
+                    return a[0];
+                  }''',
+  name: 'C99 variable-size arrays',
+)
+  cc_supports_c99_vla = true
+endif
+
+#######################################################################################
+# Types
+#######################################################################################
+
+if cc.compiles(
+  '''/* The Stardent Vistra knows sizeof(long double), but does not support it.  */
+                  long double foo = 0.0;
+                  /* On Ultrix 4.3 cc, long double is 4 and double is 8.  */
+                  int array [2*(sizeof(long double) >= sizeof(double)) - 1];''',
+  name: 'long double',
+)
+  numcosmo_conf.set('HAVE_LONG_DOUBLE', 1)
+endif
+
+#######################################################################################
+# Dependencies versions:
 #######################################################################################
 
 glib_req = '>= 2.44.0'

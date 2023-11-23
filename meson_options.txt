@@ -82,3 +82,21 @@ option(
        value: false,
        description: 'Use ILP64 (64-bit integer) BLAS and LAPACK interfaces',
 )
+
+#######################################################################################
+# CUBA options
+#######################################################################################
+
+option(
+       'libcuba-max-dim',
+       type: 'integer',
+       value: 16,
+       description: 'Maximum number of dimensions for libcuba',
+)
+
+option(
+       'libcuba-max-comp',
+       type: 'integer',
+       value: 4,
+       description: 'Maximum number components for libcuba',
+)

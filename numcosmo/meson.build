@@ -12,6 +12,7 @@ numcosmo_build_cfg_h = configure_file(
 numcosmo_sources += numcosmo_build_cfg_h
 
 subdir('sundials')
+subdir('libcuba')
 
 ncm_sources = files(
     'math/ncm_abc.c',
@@ -376,6 +377,7 @@ libnumcosmo = library(
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc],
     link_with: [libsundials],
+    link_with: [libsundials, libcuba],
     dependencies: [
         glib_dep,
         gobject_dep,
