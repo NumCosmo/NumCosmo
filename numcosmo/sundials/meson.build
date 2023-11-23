@@ -158,6 +158,8 @@ sundials_sources = files(
 inc = include_directories('include')
 src_sundials = include_directories('src/sundials')
 
+sundials_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
+
 libsundials = static_library(
     'sundials',
     sources: [
@@ -170,7 +172,8 @@ libsundials = static_library(
         sundials_sources,
     ],
     dependencies: [omp_c],
-    include_directories: [inc, src_sundials],
+    include_directories: [configinc, inc, src_sundials],
     install: false,
     gnu_symbol_visibility: 'hidden',
+    c_args: sundials_c_args,
 )
