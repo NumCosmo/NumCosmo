@@ -1483,7 +1483,9 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
 
     lwork = g_array_index (self->work, gdouble, 0);
 
-    if (lwork > self->work->len)
+    g_assert_cmpint (lwork, >=, 0);
+
+    if ((guint) lwork > self->work->len)
       g_array_set_size (self->work, lwork);
 
     ret = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
@@ -1576,8 +1578,9 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     g_assert_cmpint (ret, ==, 0);
 
     lwork = g_array_index (self->work, gdouble, 0);
+    g_assert_cmpint (lwork, >=, 0);
 
-    if (lwork > self->work->len)
+    if ((guint) lwork > self->work->len)
       g_array_set_size (self->work, lwork);
 
     ret = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,

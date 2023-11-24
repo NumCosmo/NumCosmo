@@ -221,7 +221,17 @@ add_project_arguments(numcosmo_debug_cflags, language: 'c')
 #######################################################################################
 message('Checking for headers availability')
 
-headers = ['alloca.h']
+headers = [
+  'alloca.h',
+  'dlfcn.h',
+  'execinfo.h',
+  'float.h',
+  'math.h',
+  'stddef.h',
+  'stdint.h',
+  'stdio.h',
+  'stdlib.h',
+]
 
 foreach h : headers
   if cc.has_header(h)
@@ -230,6 +240,12 @@ foreach h : headers
   endif
 endforeach
 
+if numcosmo_conf.has('HAVE_DLFCN_H')
+  if cc.has_header_symbol('dlfcn.h', 'RTLD_DEFAULT', required: false)
+    numcosmo_conf.set('HAVE_RTLD_DEFAULT', 1)
+  endif
+endif
+
 #######################################################################################
 # Functions
 #######################################################################################
@@ -237,14 +253,25 @@ message('Checking for functions availability')
 
 functions = [
   'alloca',
-  'fork',
-  'shmget',
-  'getloadavg',
+  'backtrace_symbols',
+  'backtrace',
+  'cos',
+  'erf',
   'erf',
   'erfc',
+  'exp10',
+  'finite',
+  'fma',
+  'fork',
+  'getloadavg',
+  'isfinite',
   'lgamma_r',
   'lgammaf_r',
   'powl',
+  'powl',
+  'shmget',
+  'sin',
+  'sincos',
 ]
 
 foreach f : functions
@@ -574,6 +601,40 @@ lapack_dep = []
 if have_lapack
   numcosmo_conf.set('HAVE_LAPACK', true)
   lapack_dep = declare_dependency(dependencies: [lapack, blas_dep])
+  lapack_functions = [
+    'dgeev_',
+    'dgeevx_',
+    'dgelqf_',
+    'dgels_',
+    'dgelsd_',
+    'dgelsy_',
+    'dgeqlf_',
+    'dgeqrf_',
+    'dgerqf_',
+    'dggglm_',
+    'dposv_',
+    'dpotrf_',
+    'dpotri_',
+    'dpotrs_',
+    'dpstrf_',
+    'dptsv_',
+    'dsyevd_',
+    'dsyevr_',
+    'dsysv_',
+    'dsysvx_',
+    'dsysvxx_',
+    'dsytrf_',
+    'dsytri_',
+    'dsytrs_',
+    'dtrsv_',
+  ]
+  foreach f : lapack_functions
+    if cc.has_function(f, dependencies: lapack_dep)
+      define = 'HAVE_' + f.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+    endif
+  endforeach
+
 endif
 
 #######################################################################################
