@@ -337,17 +337,21 @@ cfitsio_req = '>= 3.25'
 #######################################################################################
 message('Checking for MPI')
 
-dependency(
+mpi_c_dep = dependency(
   'mpi',
   language: 'c',
   required: false,
 )
 
-dependency(
+mpi_fortran_dep = dependency(
   'mpi',
   language: 'fortran',
   required: false,
 )
+
+if mpi_c_dep.found()
+  numcosmo_conf.set('HAVE_MPI', true)
+endif
 
 #######################################################################################
 # Checking for OpenMP:
