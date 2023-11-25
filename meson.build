@@ -326,7 +326,7 @@ numcosmo_conf.set('F77_FUNC(name,NAME)', 'name ## _')
 
 glib_req = '>= 2.44.0'
 gobject_req = '>= 2.44.0'
-gsl_req = '>= 2.0'
+gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
 

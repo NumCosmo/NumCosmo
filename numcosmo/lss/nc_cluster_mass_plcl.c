@@ -683,19 +683,15 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
 {
   integrand_data *data    = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
+  gdouble p0[]            = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL] / mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL] / mszl->M0)};
+  gdouble lb[]            = {bounds[0], bounds[2]};
+  gdouble ub[]            = {bounds[1], bounds[3]};
+  const gdouble xtol      = 1e-11;
+  const gdouble gtol      = 1e-11;
+  const gdouble ftol      = 0.0;
   gsl_multifit_function_fdf f;
-
-  gdouble p0[] = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL] / mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL] / mszl->M0)};
-  gdouble lb[] = {bounds[0], bounds[2]};
-  gdouble ub[] = {bounds[1], bounds[3]};
-
-#ifdef HAVE_GSL_2_2
   gint status;
   gint info;
-  const gdouble xtol = 1e-11;
-  const gdouble gtol = 1e-11;
-  const gdouble ftol = 0.0;
-#endif /* HAVE_GSL_2_2 */
 
   p0[0] = GSL_MAX (p0[0], lb[0]);
   p0[1] = GSL_MAX (p0[1], lb[1]);
@@ -714,15 +710,10 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
   gsl_multifit_fdfsolver_set (mszl->s, &f, &p0_vec.vector);
 
   /* solve the system with a maximum of 20 iterations */
-#ifdef HAVE_GSL_2_2
   status = gsl_multifit_fdfsolver_driver (mszl->s, 20000, xtol, gtol, ftol, &info);
 
   if (status != GSL_SUCCESS)
     g_error ("_peakfinder: NcClusterMassPlCL peakfinder function.\n");
-
-#else /* HAVE_GSL_2_2 */
-  g_error ("_peakfinder: this model requires gsl >= 2.2.");
-#endif /* HAVE_GSL_2_2 */
 
   /*printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]); */
   /*printf ("2d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (mszl->s->x, 0), gsl_vector_get (mszl->s->x, 1)); */
