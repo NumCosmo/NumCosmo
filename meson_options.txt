@@ -43,6 +43,13 @@ option(
        description: 'Enable generating introspection data (requires gobject-introspection)',
 )
 
+option(
+       'vala',
+       type: 'feature',
+       value: 'auto',
+       description: 'Build VAPI and Vala plugins',
+)
+
 #######################################################################################
 # BLAS/LAPACK options, shamelessly copied from numpy
 #######################################################################################

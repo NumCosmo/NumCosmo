@@ -3,7 +3,7 @@ project(
   ['c', 'fortran'],
   version: '0.19.0',
   meson_version: '>= 1.2.0',
-  default_options: ['buildtype=debugoptimized', 'warning_level=3', 'c_std=gnu99'],
+  default_options: ['buildtype=debugoptimized', 'warning_level=2', 'c_std=gnu99'],
 )
 
 add_global_arguments(['-Wno-unused', '-Wno-pedantic'], language: 'c')
@@ -21,8 +21,8 @@ endforeach
 fc = meson.get_compiler('fortran')
 fortran_standards = {}
 
-foreach std : ['77', '90', '95', '2003', '2008', '2018']
-  arg = (fc.get_id() == 'msvc' ? '/std:' : '-std=') + 'f' + std
+foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
+  arg = (fc.get_id() == 'msvc' ? '/std:' : '-std=') + std
   if fc.has_argument(arg)
     fortran_standards += {std: arg}
   endif
@@ -371,6 +371,8 @@ omp_fortran = dependency(
 # Checking for GObject instrospection:
 #
 # GObject introspection is not required, but if it is found, we will use it.
+#
+# Also check for Vala, which is required for the Vala bindings.
 #######################################################################################
 message('Checking for GObject introspection')
 
@@ -390,6 +392,12 @@ endif
 gir_args = [
   '--quiet',
 ]
+
+have_vala = add_languages(
+  'vala',
+  required: get_option('vala'),
+  native: false,
+)
 
 #######################################################################################
 # Checking for Glib

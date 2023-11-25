@@ -681,6 +681,22 @@ install_headers(ncm_headers, install_dir: numcosmo_sub_includedir)
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
+libnucosmo_dep = [
+    blas_dep,
+    cfitsio_dep,
+    fftw3_dep,
+    fftw3f_dep,
+    gio_dep,
+    glib_dep,
+    gmp_dep,
+    gobject_dep,
+    gsl_dep,
+    lapack_dep,
+    mpfr_dep,
+    nlopt_dep,
+    omp_c,
+]
+
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 libnumcosmo = library(
     'numcosmo',
@@ -708,22 +724,79 @@ libnumcosmo = library(
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, libplc],
-    dependencies: [
-        glib_dep,
-        gobject_dep,
-        gio_dep,
-        omp_c,
-        gsl_dep,
-        gmp_dep,
-        mpfr_dep,
-        blas_dep,
-        lapack_dep,
-        fftw3_dep,
-        fftw3f_dep,
-        cfitsio_dep,
-        nlopt_dep,
-    ],
+    dependencies: libnucosmo_dep,
     c_args: numcosmo_c_args,
-    objc_args: numcosmo_c_args,
 )
 
+libnucosmo_dep = declare_dependency(
+    link_with: libnumcosmo,
+    dependencies: libnucosmo_dep,
+)
+
+if enable_gir
+
+    ncm_introspection_sources = [
+        'ncm_gir_scan.h',
+        ncm_sources,
+        ncm_headers,
+        ncm_enum_types,
+        ncm_fit_nlopt_enum_types,
+        'numcosmo-math.h',
+    ]
+
+    numcosmo_math_gir = gnome.generate_gir(
+        libnumcosmo,
+        namespace: 'NumCosmoMath',
+        nsversion: '1.0',
+        identifier_prefix: 'Ncm',
+        symbol_prefix: 'ncm',
+        header: 'numcosmo/numcosmo-math.h',
+        sources: ncm_introspection_sources,
+        dependencies: libnucosmo_dep,
+        includes: 'GObject-2.0',
+        install: true,
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+    )
+
+    nc_introspection_sources = [
+        'ncm_gir_scan.h',
+        nc_sources,
+        nc_headers,
+        nc_enum_types,
+        'numcosmo.h',
+    ]
+
+    numcosmo_gir = gnome.generate_gir(
+        libnumcosmo,
+        namespace: 'NumCosmo',
+        nsversion: '1.0',
+        identifier_prefix: 'Nc',
+        symbol_prefix: 'nc',
+        header: 'numcosmo/numcosmo.h',
+        sources: nc_introspection_sources,
+        dependencies: libnucosmo_dep,
+        includes: ['GObject-2.0', numcosmo_math_gir[0]],
+        install: true,
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+    )
+    if have_vala
+        vapi_deps = [
+            'glib-2.0',
+            'gobject-2.0',
+        ]
+
+        libnumcosmo_math_vapi = gnome.generate_vapi(
+            'numcosmo-math',
+            sources: numcosmo_math_gir[0],
+            packages: vapi_deps,
+            install: true,
+        )
+
+        libnumcosmo_vapi = gnome.generate_vapi(
+            'numcosmo',
+            sources: numcosmo_gir[0],
+            packages: vapi_deps + [libnumcosmo_math_vapi],
+            install: true,
+        )
+    endif
+endif

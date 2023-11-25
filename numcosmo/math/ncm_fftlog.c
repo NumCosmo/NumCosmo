@@ -1092,7 +1092,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     gdouble lnr0k0         = self->lnk0 + self->lnr0;
     fftw_complex *Ym_ndm1;
 
-    NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+    NCM_FFTLOG_GET_CLASS (fftlog)->compute_Ym (fftlog, Ym_0);
 
     if (self->noring)
     {
@@ -1200,7 +1200,7 @@ ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 
   fftw_complex *Ym_0 = g_ptr_array_index (self->Ym, 0);
 
-  NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+  NCM_FFTLOG_GET_CLASS (fftlog)->compute_Ym (fftlog, Ym_0);
 
   size[0] = ncm_fftlog_get_full_size (fftlog) * 2;
 

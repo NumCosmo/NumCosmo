@@ -218,7 +218,7 @@ _ncm_fftlog_sbessel_jljm_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_sbessel_jljm_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
@@ -253,8 +253,8 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
                                                         GSL_LOG_DBL_MIN, 0.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  fftlog_class->name   = "sbessel_jljm";
-  fftlog_class->get_Ym = &_ncm_fftlog_sbessel_jljm_get_Ym;
+  fftlog_class->name       = "sbessel_jljm";
+  fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_jljm_compute_Ym;
 }
 
 #if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
@@ -522,7 +522,7 @@ _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
 #define _NCM_FFTLOG_SBESSEL_JLJM_CACHE_FILE "ncm_fftlog_sbessel_j%dj%d_lnw%.14g_L%.14g.fftlog", self->ell, self->ell + self->dell, self->lnw, ncm_fftlog_get_full_length (fftlog)
 
 static void
-_ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
 #if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
   NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
@@ -734,7 +734,7 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     {
       /*printf ("INCREASING PREC: %6d %4ld %4u => %4u\n", i, prec_sf, prec, prec + 16);*/
       if (prec + 16 > maxprec)
-        g_error ("_ncm_fftlog_sbessel_jljm_get_Ym: max precision was not enough, giving up.");
+        g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: max precision was not enough, giving up.");
 
       i    -= 1;
       prec += 16;
@@ -815,7 +815,7 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   }
 
 #else
-  g_error ("_ncm_fftlog_sbessel_jljm_get_Ym: this object requires both FFTW3 and ARB dependencies.");
+  g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: this object requires both FFTW3 and ARB dependencies.");
 #endif /* HAVE_FFTW3 */
 }
 

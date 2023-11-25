@@ -95,7 +95,7 @@ _ncm_fftlog_tophatwin2_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_tophatwin2_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_tophatwin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
@@ -105,12 +105,12 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
 
   object_class->finalize = &_ncm_fftlog_tophatwin2_finalize;
 
-  fftlog_class->name   = "tophat_window_2";
-  fftlog_class->get_Ym = &_ncm_fftlog_tophatwin2_get_Ym;
+  fftlog_class->name       = "tophat_window_2";
+  fftlog_class->compute_Ym = &_ncm_fftlog_tophatwin2_compute_Ym;
 }
 
 static void
-_ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_tophatwin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
 #ifdef HAVE_FFTW3
 #if defined (HAVE_ACB_H) && defined (NCM_FFTLOG_USE_ACB)

@@ -200,7 +200,7 @@ _ncm_fftlog_sbessel_j_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_sbessel_j_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
@@ -241,12 +241,12 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  fftlog_class->name   = "sbessel_j";
-  fftlog_class->get_Ym = &_ncm_fftlog_sbessel_j_get_Ym;
+  fftlog_class->name       = "sbessel_j";
+  fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_j_compute_Ym;
 }
 
 static void
-_ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   NcmFftlogSBesselJ *fftlog_jl          = NCM_FFTLOG_SBESSEL_J (fftlog);
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);

@@ -379,24 +379,6 @@ ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 }
 
 /**
- * ncm_data_new_from_file:
- * @filename: file containing a serialized #NcmData child.
- *
- * Creates a new #NcmData from @filename.
- *
- * Returns: (transfer full): the newly created #NcmData.
- */
-NcmData *
-ncm_data_new_from_file (const gchar *filename)
-{
-  NcmData *data = NCM_DATA (ncm_serialize_global_from_file (filename));
-
-  g_assert (NCM_IS_DATA (data));
-
-  return data;
-}
-
-/**
  * ncm_data_get_length: (virtual get_length)
  * @data: a #NcmData.
  *

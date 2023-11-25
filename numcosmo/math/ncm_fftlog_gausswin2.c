@@ -89,7 +89,7 @@ _ncm_fftlog_gausswin2_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_gausswin2_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
@@ -99,12 +99,12 @@ ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
 
   object_class->finalize = &_ncm_fftlog_gausswin2_finalize;
 
-  fftlog_class->name   = "gaussian_window_2";
-  fftlog_class->get_Ym = &_ncm_fftlog_gausswin2_get_Ym;
+  fftlog_class->name       = "gaussian_window_2";
+  fftlog_class->compute_Ym = &_ncm_fftlog_gausswin2_compute_Ym;
 }
 
 static void
-_ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);

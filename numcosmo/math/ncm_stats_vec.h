@@ -83,8 +83,6 @@ typedef enum
   NCM_STATS_VEC_AR_LEN, /*< skip >*/
 } NcmStatsVecARType;
 
-GType ncm_stats_vec_get_type (void) G_GNUC_CONST;
-
 NcmStatsVec *ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x);
 NcmStatsVec *ncm_stats_vec_ref (NcmStatsVec *svec);
 void ncm_stats_vec_free (NcmStatsVec *svec);
