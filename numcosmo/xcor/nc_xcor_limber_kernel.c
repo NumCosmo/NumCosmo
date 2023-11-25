@@ -163,29 +163,6 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
 }
 
 /**
- * nc_xcor_limber_kernel_new_from_name:
- * @xcor_name: string which specifies the type of the observable
- *
- * This function returns a new #NcXcorLimberKernel whose type is defined by
- * @xcor_name.
- *
- * Returns: (transfer full): A new #NcXcorLimberKernel.
- */
-NcXcorLimberKernel *
-nc_xcor_limber_kernel_new_from_name (gchar *xcor_name)
-{
-  GObject *obj    = ncm_serialize_global_from_string (xcor_name);
-  GType xcor_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (xcor_type, NC_TYPE_XCOR_LIMBER_KERNEL))
-    g_error ("nc_xcor_limber_kernel_new_from_name: NcXcorLimberKernel %s do not "
-             "descend from %s.",
-             xcor_name, g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
-
-  return NC_XCOR_LIMBER_KERNEL (obj);
-}
-
-/**
  * nc_xcor_limber_kernel_ref:
  * @xclk: a #NcXcorLimberKernel
  *

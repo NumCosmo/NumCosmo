@@ -260,13 +260,13 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
-  parent_class->P              = &_nc_cluster_mass_vanderlinde_significance_m_p;
-  parent_class->intP           = &_nc_cluster_mass_vanderlinde_intp;
-  parent_class->P_limits       = &_nc_cluster_mass_vanderlinde_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_vanderlinde_n_limits;
-  parent_class->resample       = &_nc_cluster_mass_vanderlinde_resample;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_vanderlinde_significance_m_p;
+  parent_class->intP            = &_nc_cluster_mass_vanderlinde_intp;
+  parent_class->P_limits        = &_nc_cluster_mass_vanderlinde_p_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_vanderlinde_n_limits;
+  parent_class->resample        = &_nc_cluster_mass_vanderlinde_resample;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }

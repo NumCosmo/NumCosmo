@@ -132,7 +132,7 @@ struct _NcmFitClass
   gpointer padding[13];
 };
 
-NcmFit *ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+NcmFit *ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_ref (NcmFit *fit);
 NcmFit *ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_dup (NcmFit *fit, NcmSerialize *ser);

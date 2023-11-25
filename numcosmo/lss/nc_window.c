@@ -53,24 +53,25 @@
 
 G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT)
 
-/**
- * nc_window_new_from_name:
- * @window_name: "#NcWindowTophat" or "#NcWindowGaussian"
- *
- * This function returns a new #NcWindow whose type is defined by @window_name string.
- *
- * Returns: A new #NcWindow.
- */
-NcWindow *
-nc_window_new_from_name (gchar *window_name)
+static void
+nc_window_init (NcWindow *wf)
 {
-  GObject *obj      = ncm_serialize_global_from_string (window_name);
-  GType window_type = G_OBJECT_TYPE (obj);
-  
-  if (!g_type_is_a (window_type, NC_TYPE_WINDOW))
-    g_error ("nc_window_new_from_name: NcWindow %s do not descend from %s.", window_name, g_type_name (NC_TYPE_WINDOW));
-  
-  return NC_WINDOW (obj);
+  NCM_UNUSED (wf);
+}
+
+static void
+_nc_window_finalize (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_window_parent_class)->finalize (object);
+}
+
+static void
+nc_window_class_init (NcWindowClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize = _nc_window_finalize;
 }
 
 /**
@@ -166,26 +167,5 @@ void
 nc_window_clear (NcWindow **wf)
 {
   g_clear_object (wf);
-}
-
-static void
-nc_window_init (NcWindow *wf)
-{
-  NCM_UNUSED (wf);
-}
-
-static void
-_nc_window_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_window_parent_class)->finalize (object);
-}
-
-static void
-nc_window_class_init (NcWindowClass *klass)
-{
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
-  object_class->finalize = _nc_window_finalize;
 }
 

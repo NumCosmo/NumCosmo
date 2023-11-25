@@ -324,7 +324,7 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
 
   g_assert (clusterz != NULL && clusterm != NULL && cosmo != NULL && cpc != NULL);
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  g_assert_cmpuint (nc_cluster_redshift_obs_params_len (clusterz), ==, 0);
+  g_assert_cmpuint (nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)), ==, 0);
 
   nc_cluster_abundance_prepare_inv_dNdz (dcpc->cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
                                          lnMi);

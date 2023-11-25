@@ -325,7 +325,7 @@ _ncm_fit_constructed (GObject *object)
      * of m2lnL in the fit object.
      *
      * if (ncm_mset_fparam_len (self->mset) == 0)
-     * g_warning ("ncm_fit_new: mset object has 0 free parameters");
+     * g_warning ("ncm_fit_factory: mset object has 0 free parameters");
      *
      */
 
@@ -515,7 +515,7 @@ _ncm_fit_reset (NcmFit *fit)
 }
 
 /**
- * ncm_fit_new:
+ * ncm_fit_factory:
  * @ftype: a #NcmFitType
  * @algo_name: name of the algorithm to be used
  * @lh: a #NcmLikelihood
@@ -527,7 +527,7 @@ _ncm_fit_reset (NcmFit *fit)
  * Returns: (transfer full): a new #NcmFit object.
  */
 NcmFit *
-ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
+ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   switch (ftype)
   {
@@ -554,7 +554,7 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
       break;
 #endif /* NUMCOSMO_HAVE_NLOPT */
     default:
-      g_error ("ncm_fit_new: fit-type not found %d, try to compile the library with the optional package NLOpt.", ftype);
+      g_error ("ncm_fit_factory: fit-type not found %d, try to compile the library with the optional package NLOpt.", ftype);
       break;
   }
 }

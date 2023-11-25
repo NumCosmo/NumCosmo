@@ -72,7 +72,7 @@ struct _NcClusterRedshiftClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  
+
   gdouble (*P) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
   gdouble (*intP) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
   gdouble (*intP_bin) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
@@ -81,8 +81,8 @@ struct _NcClusterRedshiftClass
   void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
   gdouble (*volume) (NcClusterRedshift *clusterz);
-  guint obs_len;
-  guint obs_params_len;
+  guint _obs_len;
+  guint _obs_params_len;
 };
 
 struct _NcClusterRedshift
@@ -99,7 +99,6 @@ NCM_MSET_MODEL_DECLARE_ID (nc_cluster_redshift);
 guint nc_cluster_redshift_class_obs_len (NcClusterRedshiftClass *clusterz_class);
 guint nc_cluster_redshift_class_obs_params_len (NcClusterRedshiftClass *clusterz_class);
 
-NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_free (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_clear (NcClusterRedshift **clusterz);
@@ -112,9 +111,6 @@ void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo
 void nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
 gdouble nc_cluster_redshift_volume (NcClusterRedshift *clusterz);
-
-guint nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
-guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
 
 void nc_cluster_redshift_log_all_models (void);
 

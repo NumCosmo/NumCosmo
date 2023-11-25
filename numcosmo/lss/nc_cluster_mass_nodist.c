@@ -61,7 +61,7 @@ static void
 nc_cluster_mass_nodist_init (NcClusterMassNodist *mn)
 {
   NcClusterMassNodistPrivate * const self = mn->priv = nc_cluster_mass_nodist_get_instance_private (mn);
-  
+
   self->lnM_min = 0.0;
   self->lnM_max = 0.0;
   self->norma   = 0.0;
@@ -72,9 +72,9 @@ _nc_cluster_mass_nodist_set_property (GObject *object, guint prop_id, const GVal
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (object);
   NcClusterMassNodistPrivate * const self = mnodist->priv;
-  
+
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
-  
+
   switch (prop_id)
   {
     case PROP_LNM_MIN:
@@ -96,9 +96,9 @@ _nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *va
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (object);
   NcClusterMassNodistPrivate * const self = mnodist->priv;
-  
+
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
-  
+
   switch (prop_id)
   {
     case PROP_LNM_MIN:
@@ -135,15 +135,15 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   GObjectClass *object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
-  
+
   object_class->finalize =  &nc_cluster_mass_nodist_finalize;
-  
+
   model_class->set_property = &_nc_cluster_mass_nodist_set_property;
   model_class->get_property = &_nc_cluster_mass_nodist_get_property;
-  
+
   ncm_model_class_set_name_nick (model_class, "No mass distribution", "No_distribution");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   /**
    * NcClusterMassNodist:lnM_min:
    *
@@ -156,7 +156,7 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
                                                         "Minimum mass",
                                                         11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcClusterMassNodist:lnM_max:
    *
@@ -169,18 +169,18 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
                                                         "Maximum mass",
                                                         11.0 * M_LN10, G_MAXDOUBLE, 16.0 * M_LN10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  parent_class->P              = &_nc_cluster_mass_nodist_p;
-  parent_class->intP           = &_nc_cluster_mass_nodist_intp;
-  parent_class->intP_bin       = &_nc_cluster_mass_nodist_intp_bin;
-  parent_class->resample       = &_nc_cluster_mass_nodist_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_mass_nodist_p_bin_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
-  parent_class->volume         = &_nc_cluster_mass_nodist_volume;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
-  
+
+  parent_class->P               = &_nc_cluster_mass_nodist_p;
+  parent_class->intP            = &_nc_cluster_mass_nodist_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_nodist_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_nodist_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_nodist_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_nodist_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_nodist_n_limits;
+  parent_class->volume          = &_nc_cluster_mass_nodist_volume;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
+
   ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_MASS_N_LIMITS, NC_CLUSTER_MASS_RESAMPLE, -1);
 }
 
@@ -188,7 +188,7 @@ static gdouble
 _nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
   g_error ("This object don't implement p.");
-  
+
   return GSL_NAN;
 }
 
@@ -197,7 +197,7 @@ _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble
 {
   /*NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);*/
   /*NcClusterMassNodistPrivate * const self = mnodist->priv;*/
-  
+
   return 1.0;
 }
 
@@ -206,7 +206,7 @@ _nc_cluster_mass_nodist_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 {
   /*NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);*/
   /*NcClusterMassNodistPrivate * const self = mnodist->priv;*/
-  
+
   if ((lnM < lnM_obs_lower[0]) || (lnM > lnM_obs_upper[0]))
     return 0.0;
   else
@@ -218,9 +218,9 @@ _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
   NcClusterMassNodistPrivate * const self = mnodist->priv;
-  
+
   lnM_obs[0] = lnM;
-  
+
   return (lnM_obs[0] <= self->lnM_max) && (lnM_obs[0] >= self->lnM_min);
 }
 
@@ -229,10 +229,10 @@ _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, con
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
   NcClusterMassNodistPrivate * const self = mnodist->priv;
-  
+
   *lnM_lower = self->lnM_min;
   *lnM_upper = self->lnM_max;
-  
+
   return;
 }
 
@@ -241,7 +241,7 @@ _nc_cluster_mass_nodist_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo,
 {
   *lnM_lower = lnM_obs_lower[0];
   *lnM_upper = lnM_obs_upper[0];
-  
+
   return;
 }
 
@@ -250,10 +250,10 @@ _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
   NcClusterMassNodistPrivate * const self = mnodist->priv;
-  
+
   *lnm_lower = self->lnM_min;
   *lnm_upper = self->lnM_max;
-  
+
   return;
 }
 
@@ -262,3 +262,4 @@ _nc_cluster_mass_nodist_volume (NcClusterMass *clusterm)
 {
   return 1.0;
 }
+

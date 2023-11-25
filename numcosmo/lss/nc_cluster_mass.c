@@ -99,17 +99,17 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
                               NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 
-  klass->P              = &_nc_cluster_mass_p;
-  klass->intP           = &_nc_cluster_mass_intp;
-  klass->intP_bin       = &_nc_cluster_mass_intp_bin;
-  klass->resample       = &_nc_cluster_mass_resample;
-  klass->P_limits       = &_nc_cluster_mass_p_limits;
-  klass->P_bin_limits   = &_nc_cluster_mass_p_bin_limits;
-  klass->N_limits       = &_nc_cluster_mass_n_limits;
-  klass->volume         = &_nc_cluster_mass_volume;
-  klass->P_vec_z_lnMobs = &_nc_cluster_mass_p_vec_z_lnMobs;
-  klass->obs_len        = 0;
-  klass->obs_params_len = 0;
+  klass->P               = &_nc_cluster_mass_p;
+  klass->intP            = &_nc_cluster_mass_intp;
+  klass->intP_bin        = &_nc_cluster_mass_intp_bin;
+  klass->resample        = &_nc_cluster_mass_resample;
+  klass->P_limits        = &_nc_cluster_mass_p_limits;
+  klass->P_bin_limits    = &_nc_cluster_mass_p_bin_limits;
+  klass->N_limits        = &_nc_cluster_mass_n_limits;
+  klass->volume          = &_nc_cluster_mass_volume;
+  klass->P_vec_z_lnMobs  = &_nc_cluster_mass_p_vec_z_lnMobs;
+  klass->_obs_len        = 0;
+  klass->_obs_params_len = 0;
 }
 
 static gdouble
@@ -193,7 +193,7 @@ _nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, cons
 guint
 nc_cluster_mass_class_obs_len (NcClusterMassClass *clusterm_class)
 {
-  return clusterm_class->obs_len;
+  return clusterm_class->_obs_len;
 }
 
 /**
@@ -210,28 +210,7 @@ nc_cluster_mass_class_obs_len (NcClusterMassClass *clusterm_class)
 guint
 nc_cluster_mass_class_obs_params_len (NcClusterMassClass *clusterm_class)
 {
-  return clusterm_class->obs_params_len;
-}
-
-/**
- * nc_cluster_mass_new_from_name:
- * @mass_name: string which specifies the type of the mass distribution.
- *
- * This function returns a new #NcClusterMass whose type is defined by @mass_name.
- *
- * Returns: A new #NcClusterMass.
- */
-NcClusterMass *
-nc_cluster_mass_new_from_name (gchar *mass_name)
-{
-  GObject *obj    = ncm_serialize_global_from_string (mass_name);
-  GType mass_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (mass_type, NC_TYPE_CLUSTER_MASS))
-    g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s.",
-             mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));
-
-  return NC_CLUSTER_MASS (obj);
+  return clusterm_class->_obs_params_len;
 }
 
 /**
@@ -273,34 +252,6 @@ void
 nc_cluster_mass_clear (NcClusterMass **clusterm)
 {
   g_clear_object (clusterm);
-}
-
-/**
- * nc_cluster_mass_obs_len:
- * @clusterm: a #NcClusterMass
- *
- * See nc_cluster_mass_class_obs_len().
- *
- * Returns: The number of observable masses.
- */
-guint
-nc_cluster_mass_obs_len (NcClusterMass *clusterm)
-{
-  return nc_cluster_mass_class_obs_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
-}
-
-/**
- * nc_cluster_mass_obs_params_len:
- * @clusterm: a #NcClusterMass
- *
- * See nc_cluster_mass_class_obs_params_len().
- *
- * Returns: The number of parameters related to the observable masses.
- */
-guint
-nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
-{
-  return nc_cluster_mass_class_obs_params_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
 }
 
 /**

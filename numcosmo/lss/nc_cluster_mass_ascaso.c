@@ -304,17 +304,17 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->P              = &_nc_cluster_mass_ascaso_p;
-  parent_class->intP           = &_nc_cluster_mass_ascaso_intp;
-  parent_class->intP_bin       = &_nc_cluster_mass_ascaso_intp_bin;
-  parent_class->resample       = &_nc_cluster_mass_ascaso_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_mass_ascaso_p_bin_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
-  parent_class->volume         = &_nc_cluster_mass_ascaso_volume;
-  parent_class->P_vec_z_lnMobs = &_nc_cluster_mass_ascaso_p_vec_z_lnMobs;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_ascaso_p;
+  parent_class->intP            = &_nc_cluster_mass_ascaso_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_ascaso_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_ascaso_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_ascaso_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_ascaso_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_ascaso_n_limits;
+  parent_class->volume          = &_nc_cluster_mass_ascaso_volume;
+  parent_class->P_vec_z_lnMobs  = &_nc_cluster_mass_ascaso_p_vec_z_lnMobs;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }

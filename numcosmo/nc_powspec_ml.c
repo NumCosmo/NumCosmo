@@ -68,7 +68,7 @@ static void
 _nc_powspec_ml_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
-  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
+  NcmPowspec *ps      = NCM_POWSPEC (ps_mlt);
 
   g_return_if_fail (NC_IS_POWSPEC_ML (object));
 
@@ -96,7 +96,7 @@ static void
 _nc_powspec_ml_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
-  NcmPowspec *ps = NCM_POWSPEC (ps_mlt);
+  NcmPowspec *ps      = NCM_POWSPEC (ps_mlt);
 
   g_return_if_fail (NC_IS_POWSPEC_ML (object));
 
@@ -131,7 +131,7 @@ static void
 nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_powspec_ml_set_property;
   object_class->get_property = &_nc_powspec_ml_get_property;
   object_class->finalize     = &_nc_powspec_ml_finalize;
@@ -187,27 +187,6 @@ nc_powspec_ml_class_init (NcPowspecMLClass *klass)
                                                         "Maximum mode value",
                                                         0.0, G_MAXDOUBLE, 1.0e3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
-}
-
-/**
- * nc_powspec_ml_new_from_name:
- * @ps_ml_name: string which specifies the linear matter power spectrum object to be used
- *
- * This function returns a new #NcPowspecML whose type is defined by @ps_ml_name.
- *
- * Returns: A new #NcPowspecML.
- */
-NcPowspecML *
-nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (ps_ml_name);
-  
-  if (!NC_IS_POWSPEC_ML (obj))
-    g_error ("nc_powspec_ml_new_from_name: NcPowspecML %s do not descend from %s.", ps_ml_name, g_type_name (NC_TYPE_POWSPEC_ML));
-  
-  return NC_POWSPEC_ML (obj);
 }
 
 /**

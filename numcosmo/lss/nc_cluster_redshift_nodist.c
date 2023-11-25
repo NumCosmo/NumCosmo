@@ -65,7 +65,7 @@ static void
 nc_cluster_redshift_nodist_init (NcClusterRedshiftNodist *zn)
 {
   NcClusterRedshiftNodistPrivate * const self = zn->priv = nc_cluster_redshift_nodist_get_instance_private (zn);
-  
+
   self->z_min = 0.0;
   self->z_max = 0.0;
   self->norma = 0.0;
@@ -76,9 +76,9 @@ _nc_cluster_redshift_nodist_set_property (GObject *object, guint prop_id, const 
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
   NcClusterRedshiftNodistPrivate * const self = zn->priv;
-  
+
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
-  
+
   switch (prop_id)
   {
     case PROP_Z_MIN:
@@ -100,9 +100,9 @@ _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
   NcClusterRedshiftNodistPrivate * const self = zn->priv;
-  
+
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
-  
+
   switch (prop_id)
   {
     case PROP_Z_MIN:
@@ -139,15 +139,15 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   GObjectClass *object_class           = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass *parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
   NcmModelClass *model_class           = NCM_MODEL_CLASS (klass);
-  
+
   object_class->finalize =  &nc_cluster_redshift_nodist_finalize;
-  
+
   model_class->set_property = &_nc_cluster_redshift_nodist_set_property;
   model_class->get_property = &_nc_cluster_redshift_nodist_get_property;
-  
+
   ncm_model_class_set_name_nick (model_class, "No redshift distribution", "No_distribution");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   /**
    * NcClusterRedshiftNodist:z_min:
    *
@@ -160,7 +160,7 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
                                                         "Minimum z",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcClusterRedshiftNodist:z_max:
    *
@@ -173,21 +173,21 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
                                                         "Maximum z",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
-  
-  parent_class->P              = &_nc_cluster_redshift_nodist_p;
-  parent_class->intP           = &_nc_cluster_redshift_nodist_intp;
-  parent_class->intP_bin       = &_nc_cluster_redshift_nodist_intp_bin;
-  parent_class->resample       = &_nc_cluster_redshift_nodist_resample;
-  parent_class->P_limits       = &_nc_cluster_redshift_nodist_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_redshift_nodist_p_bin_limits;
-  parent_class->N_limits       = &_nc_cluster_redshift_nodist_n_limits;
-  parent_class->volume         = &_nc_cluster_redshift_nodist_volume;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
-  
+
+  parent_class->P               = &_nc_cluster_redshift_nodist_p;
+  parent_class->intP            = &_nc_cluster_redshift_nodist_intp;
+  parent_class->intP_bin        = &_nc_cluster_redshift_nodist_intp_bin;
+  parent_class->resample        = &_nc_cluster_redshift_nodist_resample;
+  parent_class->P_limits        = &_nc_cluster_redshift_nodist_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_redshift_nodist_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_redshift_nodist_n_limits;
+  parent_class->volume          = &_nc_cluster_redshift_nodist_volume;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
+
   ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_REDSHIFT_N_LIMTS, NC_CLUSTER_REDSHIFT_RESAMPLE, -1);
 }
 
@@ -195,7 +195,7 @@ static gdouble
 _nc_cluster_redshift_nodist_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params)
 {
   g_error ("This object don't implement p.");
-  
+
   return GSL_NAN;
 }
 
@@ -204,7 +204,7 @@ _nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo,
 {
   /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
   /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
-  
+
   return 1.0;
 }
 
@@ -213,7 +213,7 @@ _nc_cluster_redshift_nodist_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *co
 {
   /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
   /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
-  
+
   if ((z < z_obs_lower[0]) || (z > z_obs_upper[0]))
     return 0.0;
   else
@@ -225,9 +225,9 @@ _nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, NcHICosmo *co
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
   NcClusterRedshiftNodistPrivate * const self = zn->priv;
-  
+
   z_obs[0] = z;
-  
+
   return (z_obs[0] <= self->z_max) && (z_obs[0] >= self->z_min);
 }
 
@@ -236,10 +236,10 @@ _nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, NcHICosmo *co
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
   NcClusterRedshiftNodistPrivate * const self = zn->priv;
-  
+
   *z_lower = self->z_min;
   *z_upper = self->z_max;
-  
+
   return;
 }
 
@@ -255,10 +255,10 @@ _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *co
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
   NcClusterRedshiftNodistPrivate * const self = zn->priv;
-  
+
   *z_lower = self->z_min;
   *z_upper = self->z_max;
-  
+
   return;
 }
 
@@ -270,3 +270,4 @@ _nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz)
 
   return (self->z_max - self->z_min);
 }
+

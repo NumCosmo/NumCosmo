@@ -98,7 +98,6 @@ GType nc_xcor_limber_kernel_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_xcor_limber_kernel);
 
-NcXcorLimberKernel *nc_xcor_limber_kernel_new_from_name (gchar *xcor_name);
 NcXcorLimberKernel *nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk);
 void nc_xcor_limber_kernel_free (NcXcorLimberKernel *xclk);
 void nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk);
