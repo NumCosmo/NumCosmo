@@ -682,6 +682,7 @@ sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
 libnucosmo_dep = [
+    mpi_c_dep,
     blas_dep,
     cfitsio_dep,
     fftw3_dep,

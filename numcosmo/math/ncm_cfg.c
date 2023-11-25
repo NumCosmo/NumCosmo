@@ -997,7 +997,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 
   if (work_ret_request->len > 0)
   {
-    gint i;
+    guint i;
 
     MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
 

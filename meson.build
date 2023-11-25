@@ -351,6 +351,9 @@ mpi_fortran_dep = dependency(
 
 if mpi_c_dep.found()
   numcosmo_conf.set('HAVE_MPI', true)
+  numcosmo_build_cfg.set('have_mpi_support', '#define NUMCOSMO_HAVE_MPI 1')
+else
+  numcosmo_build_cfg.set('have_mpi_support', '')
 endif
 
 #######################################################################################

@@ -67,7 +67,7 @@ struct _NcmMPIJobClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*work_init) (NcmMPIJob *mpi_job);
   void (*work_clear) (NcmMPIJob *mpi_job);
   NcmMPIDatatype (*input_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
