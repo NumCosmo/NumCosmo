@@ -1,11 +1,10 @@
 
 numcosmo_sources = []
-numcosmo_sub_includedir = numcosmo_includedir / 'numcosmo'
 
 numcosmo_build_cfg_h = configure_file(
     input: 'build_cfg.h.in',
     output: 'build_cfg.h',
-    install_dir: join_paths(get_option('libdir'), 'numcosmo/include'),
+    install_dir: numcosmo_includedir,
     install_tag: 'devel',
     configuration: numcosmo_build_cfg,
 )
@@ -616,6 +615,8 @@ ncm_enum_types = gnome.mkenums(
     c_template: 'ncm_enum_types.c.template',
     h_template: 'ncm_enum_types.h.template',
     sources: ncm_headers,
+    install_header: true,
+    install_dir: numcosmo_includedir,
 )
 
 nc_enum_types = gnome.mkenums(
@@ -623,6 +624,8 @@ nc_enum_types = gnome.mkenums(
     c_template: 'nc_enum_types.c.template',
     h_template: 'nc_enum_types.h.template',
     sources: nc_headers,
+    install_header: true,
+    install_dir: numcosmo_includedir,
 )
 
 ncm_fit_nlopt_enum_types = []
@@ -656,7 +659,7 @@ if nlopt_dep.found()
         ],
         capture: true,
         install: true,
-        install_dir: numcosmo_sub_includedir,
+        install_dir: numcosmo_includedir,
     )
 
     ncm_fit_nlopt_enum_c = custom_target(
@@ -676,7 +679,17 @@ if nlopt_dep.found()
     ncm_headers += 'math/ncm_fit_nlopt.h'
 endif
 
-install_headers(ncm_headers, install_dir: numcosmo_sub_includedir)
+install_headers(
+    ncm_headers,
+    preserve_path: true,
+    subdir: 'numcosmo',
+)
+
+install_headers(
+    nc_headers,
+    preserve_path: true,
+    subdir: 'numcosmo',
+)
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')

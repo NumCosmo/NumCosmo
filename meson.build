@@ -218,7 +218,7 @@ endif
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
 #######################################################################################
-# Headers
+# Checking headers:
 #######################################################################################
 message('Checking for headers availability')
 
@@ -248,7 +248,7 @@ if numcosmo_conf.has('HAVE_DLFCN_H')
 endif
 
 #######################################################################################
-# Functions
+# Checking functions:
 #######################################################################################
 message('Checking for functions availability')
 
@@ -283,7 +283,7 @@ foreach f : functions
 endforeach
 
 #######################################################################################
-# Compiler features
+# Compiler features:
 #######################################################################################
 message('Checking for compiler features')
 
@@ -301,7 +301,7 @@ if cc.compiles(
 endif
 
 #######################################################################################
-# Types
+# Types:
 #######################################################################################
 message('Checking for types availability')
 
@@ -316,7 +316,7 @@ if cc.compiles(
 endif
 
 #######################################################################################
-# Fortran mangling
+# Fortran mangling:
 #######################################################################################
 
 numcosmo_conf.set('F77_FUNC(name,NAME)', 'name ## _')
@@ -408,7 +408,7 @@ have_vala = add_languages(
 )
 
 #######################################################################################
-# Checking for Glib
+# Checking for Glib:
 #######################################################################################
 message('Checking for Glib, GObject and GIO')
 
@@ -417,14 +417,14 @@ gobject_dep = dependency('gobject-2.0', version: glib_req)
 gio_dep = dependency('gio-2.0', version: glib_req)
 
 #######################################################################################
-# Checking for GSL
+# Checking for GSL:
 #######################################################################################
 message('Checking for GSL')
 
 gsl_dep = dependency('gsl', version: gsl_req)
 
 #######################################################################################
-# Checking for GMP and MPFR
+# Checking for GMP and MPFR:
 #######################################################################################
 message('Checking for GMP and MPFR')
 
@@ -432,7 +432,7 @@ gmp_dep = dependency('gmp')
 mpfr_dep = dependency('mpfr')
 
 #######################################################################################
-# Checking for FFTW (optional)
+# Checking for FFTW (optional):
 #######################################################################################
 message('Checking for FFTW')
 
@@ -457,7 +457,7 @@ if fftw3f_dep.found()
 endif
 
 #######################################################################################
-# Checking for cfitsio (optional)
+# Checking for cfitsio (optional):
 #######################################################################################
 message('Checking for cfitsio')
 
@@ -472,14 +472,14 @@ if cfitsio_dep.found()
 endif
 
 #######################################################################################
-# Using internal libcuba
+# Using internal libcuba:
 #######################################################################################
 
 numcosmo_conf.set('HAVE_LIBCUBA', 1)
 numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
 
 #######################################################################################
-# Checking for NLopt (optional)
+# Checking for NLopt (optional):
 #######################################################################################
 message('Checking for NLopt')
 
@@ -494,7 +494,7 @@ if nlopt_dep.found()
 endif
 
 #######################################################################################
-# Checking for BLAS/LAPACK
+# Checking for BLAS/LAPACK:
 #######################################################################################
 message('Checking for BLAS/LAPACK')
 
@@ -655,6 +655,14 @@ if have_lapack
 endif
 
 #######################################################################################
+# Checking for Python:
+#######################################################################################
+
+python_module = import('python')
+python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
+
+
+#######################################################################################
 # Creating the config.h file:
 #######################################################################################
 
@@ -668,6 +676,12 @@ configure_file(
   output: 'config_deps.h',
   configuration: numcosmo_conf,
 )
+
+#######################################################################################
+# Installing data files:
+#######################################################################################
+
+install_subdir('data', install_dir: numcosmo_pkgdatadir)
 
 #######################################################################################
 # Including the subdirectories:

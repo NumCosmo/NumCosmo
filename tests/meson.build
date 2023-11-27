@@ -1,104 +1,104 @@
 
 c_tests = [
     {
-        'name': 'test_ncm_cfg',
+        'name': 'ncm_cfg',
         'sources': ['test_ncm_cfg.c'],
     },
     {
-        'name': 'test_ncm_sparam',
+        'name': 'ncm_sparam',
         'sources': ['test_ncm_sparam.c'],
     },
     {
-        'name': 'test_ncm_diff',
+        'name': 'ncm_diff',
         'sources': ['test_ncm_diff.c'],
     },
     {
-        'name': 'test_ncm_ode',
+        'name': 'ncm_ode',
         'sources': ['test_ncm_ode.c'],
     },
     {
-        'name': 'test_ncm_fftlog',
+        'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
     },
     {
-        'name': 'test_ncm_vector',
+        'name': 'ncm_vector',
         'sources': ['test_ncm_vector.c'],
     },
     {
-        'name': 'test_ncm_matrix',
+        'name': 'ncm_matrix',
         'sources': ['test_ncm_matrix.c'],
     },
     {
-        'name': 'test_ncm_stats_vec',
+        'name': 'ncm_stats_vec',
         'sources': ['test_ncm_stats_vec.c'],
     },
     {
-        'name': 'test_ncm_stats_dist1d_epdf',
+        'name': 'ncm_stats_dist1d_epdf',
         'sources': ['test_ncm_stats_dist1d_epdf.c'],
     },
     {
-        'name': 'test_ncm_stats_dist',
+        'name': 'ncm_stats_dist',
         'sources': ['test_ncm_stats_dist.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_ncm_stats_dist_kernel',
+        'name': 'ncm_stats_dist_kernel',
         'sources': ['test_ncm_stats_dist_kernel.c'],
     },
     {
-        'name': 'test_ncm_spline',
+        'name': 'ncm_spline',
         'sources': ['test_ncm_spline.c'],
     },
     {
-        'name': 'test_ncm_spline2d',
+        'name': 'ncm_spline2d',
         'sources': ['test_ncm_spline2d.c'],
     },
     {
-        'name': 'test_ncm_integral1d',
+        'name': 'ncm_integral1d',
         'sources': ['test_ncm_integral1d.c'],
     },
     {
-        'name': 'test_ncm_integral_nd',
+        'name': 'ncm_integral_nd',
         'sources': ['test_ncm_integral_nd.c'],
     },
     {
-        'name': 'test_ncm_sf_sbessel',
+        'name': 'ncm_sf_sbessel',
         'sources': ['test_ncm_sf_sbessel.c'],
     },
     {
-        'name': 'test_ncm_mpsf_0F1',
+        'name': 'ncm_mpsf_0F1',
         'sources': ['test_ncm_mpsf_0F1.c'],
     },
     {
-        'name': 'test_ncm_mpsf_trig_int',
+        'name': 'ncm_mpsf_trig_int',
         'sources': ['test_ncm_mpsf_trig_int.c'],
     },
     {
-        'name': 'test_ncm_model',
+        'name': 'ncm_model',
         'sources': ['test_ncm_model.c', 'ncm_model_test.c', 'ncm_model_test.h'],
     },
     {
-        'name': 'test_ncm_model_ctrl',
+        'name': 'ncm_model_ctrl',
         'sources': ['test_ncm_model_ctrl.c'],
     },
     {
-        'name': 'test_ncm_mset',
+        'name': 'ncm_mset',
         'sources': ['test_ncm_mset.c'],
     },
     {
-        'name': 'test_ncm_mset_catalog',
+        'name': 'ncm_mset_catalog',
         'sources': ['test_ncm_mset_catalog.c'],
     },
     {
-        'name': 'test_ncm_obj_array',
+        'name': 'ncm_obj_array',
         'sources': ['test_ncm_obj_array.c'],
     },
     {
-        'name': 'test_ncm_serialize',
+        'name': 'ncm_serialize',
         'sources': ['test_ncm_serialize.c'],
     },
     {
-        'name': 'test_ncm_data_gauss_cov',
+        'name': 'ncm_data_gauss_cov',
         'sources': [
             'test_ncm_data_gauss_cov.c',
             'ncm_data_gauss_cov_test.c',
@@ -106,109 +106,109 @@ c_tests = [
         ],
     },
     {
-        'name': 'test_ncm_fit',
+        'name': 'ncm_fit',
         'sources': ['test_ncm_fit.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_ncm_fit_state',
+        'name': 'ncm_fit_state',
         'sources': ['test_ncm_fit_state.c'],
     },
     {
-        'name': 'test_ncm_fit_esmcmc',
+        'name': 'ncm_fit_esmcmc',
         'sources': ['test_ncm_fit_esmcmc.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_ncm_func_eval',
+        'name': 'ncm_func_eval',
         'sources': ['test_ncm_func_eval.c'],
     },
     {
-        'name': 'test_ncm_sf_spherical_harmonics',
+        'name': 'ncm_sf_spherical_harmonics',
         'sources': ['test_ncm_sf_spherical_harmonics.c'],
     },
     {
-        'name': 'test_ncm_sphere_map',
+        'name': 'ncm_sphere_map',
         'sources': ['test_ncm_sphere_map.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_nc_halo_bias',
+        'name': 'nc_halo_bias',
         'sources': ['test_nc_halo_bias.c'],
     },
     {
-        'name': 'test_nc_hicosmo_de',
+        'name': 'nc_hicosmo_de',
         'sources': ['test_nc_hicosmo_de.c'],
     },
     {
-        'name': 'test_nc_window',
+        'name': 'nc_window',
         'sources': ['test_nc_window.c'],
     },
     {
-        'name': 'test_nc_transfer_func',
+        'name': 'nc_transfer_func',
         'sources': ['test_nc_transfer_func.c'],
     },
     {
-        'name': 'test_nc_galaxy_acf',
+        'name': 'nc_galaxy_acf',
         'sources': ['test_nc_galaxy_acf.c'],
     },
     {
-        'name': 'test_nc_recomb',
+        'name': 'nc_recomb',
         'sources': ['test_nc_recomb.c'],
     },
     {
-        'name': 'test_nc_cbe',
+        'name': 'nc_cbe',
         'sources': ['test_nc_cbe.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_nc_hiqg_1d',
+        'name': 'nc_hiqg_1d',
         'sources': ['test_nc_hiqg_1d.c'],
     },
     {
-        'name': 'test_nc_data_bao_rdv',
+        'name': 'nc_data_bao_rdv',
         'sources': ['test_nc_data_bao_rdv.c'],
     },
     {
-        'name': 'test_nc_data_bao_dvdv',
+        'name': 'nc_data_bao_dvdv',
         'sources': ['test_nc_data_bao_dvdv.c'],
     },
     {
-        'name': 'test_nc_data_cluster_ncount',
+        'name': 'nc_data_cluster_ncount',
         'sources': ['test_nc_data_cluster_ncount.c'],
     },
     {
-        'name': 'test_nc_cluster_pseudo_counts',
+        'name': 'nc_cluster_pseudo_counts',
         'sources': ['test_nc_cluster_pseudo_counts.c'],
     },
     {
-        'name': 'test_nc_cluster_abundance',
+        'name': 'nc_cluster_abundance',
         'sources': ['test_nc_cluster_abundance.c'],
     },
     {
-        'name': 'test_nc_halo_density_profile',
+        'name': 'nc_halo_density_profile',
         'sources': ['test_nc_halo_density_profile.c'],
     },
     {
-        'name': 'test_nc_wl_surface_mass_density',
+        'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },
     {
-        'name': 'test_nc_powspec',
+        'name': 'nc_powspec',
         'sources': ['test_nc_powspec.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_nc_distance',
+        'name': 'nc_distance',
         'sources': ['test_nc_distance.c'],
     },
     {
-        'name': 'test_nc_galaxy_wl_ellipticity_kde',
+        'name': 'nc_galaxy_wl_ellipticity_kde',
         'sources': ['test_nc_galaxy_wl_ellipticity_kde.c'],
         'timeout': 0,
     },
     {
-        'name': 'test_nc_galaxy_wl_ellipticity_binned',
+        'name': 'nc_galaxy_wl_ellipticity_binned',
         'sources': ['test_nc_galaxy_wl_ellipticity_binned.c'],
     },
 ]
@@ -228,3 +228,50 @@ foreach c_test : c_tests
     endif
     test(c_test['name'], executable_test, timeout: timeout)
 endforeach
+
+python_tests = [
+    {
+        'name': 'py_cluster_abundance_sampling',
+        'source': 'test_py_cluster_abundance_sampling.py',
+    },
+    {
+        'name': 'py_diff',
+        'source': 'test_py_diff.py',
+    },
+    {
+        'name': 'py_integralnd',
+        'source': 'test_py_integralnd.py',
+    },
+    {
+        'name': 'py_sanity',
+        'source': 'test_py_sanity.py',
+    },
+]
+
+if enable_gir
+    env = environment()
+    env.prepend(
+        'GI_TYPELIB_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
+        'LD_LIBRARY_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
+        'PYTHONPATH',
+        numcosmo_source_dir,
+    )
+
+    foreach python_test : python_tests
+        test(
+            python_test['name'],
+            python,
+            args: ['-m', 'pytest', join_paths(meson.current_source_dir(), python_test['source'])],
+            depends: [numcosmo_gir, numcosmo_math_gir],
+            env: env,
+        )
+    endforeach
+endif
