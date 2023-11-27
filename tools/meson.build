@@ -5,7 +5,7 @@ executable(
     'cmb_maps.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 executable(
@@ -13,7 +13,7 @@ executable(
     'gobj_itest.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 executable(
@@ -21,7 +21,7 @@ executable(
     'mcat_analyze.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 executable(
@@ -29,7 +29,7 @@ executable(
     'mcat_join.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 executable(
@@ -37,7 +37,7 @@ executable(
     'mcat_trim_oob.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 executable(
@@ -45,7 +45,7 @@ executable(
     'mset_gen.c',
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )
 
 python_scripts = [
@@ -80,5 +80,5 @@ executable(
     ],
     install: true,
     include_directories: configinc,
-    dependencies: [libnucosmo_dep],
+    dependencies: [libnumcosmo_dep],
 )

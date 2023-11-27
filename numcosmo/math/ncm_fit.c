@@ -547,12 +547,12 @@ ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet 
       return ncm_fit_levmar_new_by_name (lh, mset, gtype, algo_name);
 
       break;
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
     case NCM_FIT_TYPE_NLOPT:
       return ncm_fit_nlopt_new_by_name (lh, mset, gtype, algo_name);
 
       break;
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
     default:
       g_error ("ncm_fit_factory: fit-type not found %d, try to compile the library with the optional package NLOpt.", ftype);
       break;

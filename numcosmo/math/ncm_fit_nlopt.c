@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_cfg.h"
@@ -60,12 +60,12 @@ struct _NcmFitNLOpt
 {
   /*< private >*/
   NcmFit parent_instance;
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   nlopt_opt nlopt;
   nlopt_opt local_nlopt;
   NcmFitNloptAlgorithm nlopt_algo;
   NcmFitNloptAlgorithm local_nlopt_algo;
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
   NcmVector *lb;
   NcmVector *ub;
   NcmVector *pabs;
@@ -661,7 +661,7 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 
   if (fit_nlopt->nlopt == NULL)
   {
-    fit_nlopt->nlopt      = nlopt_create (algo, fparam_len);
+    fit_nlopt->nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
     fit_nlopt->nlopt_algo = algo;
   }
 
@@ -692,7 +692,7 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 
   if (fit_nlopt->local_nlopt == NULL)
   {
-    fit_nlopt->local_nlopt      = nlopt_create (algo, fparam_len);
+    fit_nlopt->local_nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
     fit_nlopt->local_nlopt_algo = algo;
   }
 
@@ -703,5 +703,5 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
   }
 }
 
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 

@@ -672,16 +672,16 @@ if nlopt_dep.found()
     )
 
     ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_h, ncm_fit_nlopt_enum_c]
-
+    ncm_sources += 'math/ncm_fit_nlopt.c'
+    ncm_headers += 'math/ncm_fit_nlopt.h'
 endif
-
 
 install_headers(ncm_headers, install_dir: numcosmo_sub_includedir)
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
-libnucosmo_dep = [
+libnumcosmo_dep = [
     mpi_c_dep,
     blas_dep,
     cfitsio_dep,
@@ -725,13 +725,13 @@ libnumcosmo = library(
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, libplc],
-    dependencies: libnucosmo_dep,
+    dependencies: libnumcosmo_dep,
     c_args: numcosmo_c_args,
 )
 
-libnucosmo_dep = declare_dependency(
+libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnucosmo_dep,
+    dependencies: libnumcosmo_dep,
 )
 
 if enable_gir
@@ -753,7 +753,7 @@ if enable_gir
         symbol_prefix: 'ncm',
         header: 'numcosmo/numcosmo-math.h',
         sources: ncm_introspection_sources,
-        dependencies: libnucosmo_dep,
+        dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
         extra_args: ['-DNUMCOSMO_GIR_SCAN'],
@@ -775,7 +775,7 @@ if enable_gir
         symbol_prefix: 'nc',
         header: 'numcosmo/numcosmo.h',
         sources: nc_introspection_sources,
-        dependencies: libnucosmo_dep,
+        dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
         extra_args: ['-DNUMCOSMO_GIR_SCAN'],

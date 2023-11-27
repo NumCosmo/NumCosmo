@@ -2,6 +2,7 @@ project(
   'numcosmo',
   ['c', 'fortran'],
   version: '0.19.0',
+  license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: ['buildtype=debugoptimized', 'warning_level=2', 'c_std=gnu99'],
 )
@@ -489,6 +490,7 @@ nlopt_dep = dependency(
 
 if nlopt_dep.found()
   numcosmo_conf.set('HAVE_NLOPT', true)
+  numcosmo_build_cfg.set('have_nlopt_support', '#define NUMCOSMO_HAVE_NLOPT 1')
 endif
 
 #######################################################################################
@@ -673,3 +675,4 @@ configure_file(
 
 subdir('numcosmo')
 subdir('tools')
+subdir('tests')

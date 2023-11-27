@@ -563,9 +563,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
