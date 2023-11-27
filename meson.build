@@ -661,6 +661,12 @@ endif
 python_module = import('python')
 python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
 
+python_dir = python.get_install_dir()
+install_subdir(
+  'numcosmo_py',
+  install_dir: python_dir,
+  exclude_directories: ['__pycache__', '.mypy_cache'],
+)
 
 #######################################################################################
 # Creating the config.h file:
