@@ -2,8 +2,6 @@
 manual_head_xml = configure_file(
     input: 'manual_head.xml.in',
     output: 'manual_head.xml',
-    install_dir: numcosmo_includedir,
-    install_tag: 'docs',
     configuration: numcosmo_build_cfg,
 )
 
@@ -28,7 +26,6 @@ ignore_h_files = [
     'kdtree.h',
     'levmar',
     'libcuba',
-    'libcuba',
     'libqp_gsmo.c',
     'libqp_splx.c',
     'libqp.h',
@@ -42,7 +39,6 @@ ignore_h_files = [
     'ncm_stats_dist_private.h',
     'ncm_stats_dist_vkde_private.h',
     'nnls.c',
-    'numcosmo/sundials',
     'pcubature.c',
     'plc',
     'rb_knn_list.c',
@@ -59,47 +55,39 @@ ignore_h_files = [
 if not nlopt_dep.found()
     ignore_h_files += ['ncm_fit_nlopt_enum.h', 'ncm_fit_nlopt.h']
 endif
+ignore_files_str = '@0@'.format(' '.join(ignore_h_files))
 
-pandoc = find_program('pandoc', required: false)
-if pandoc.found()
-    references_xml = custom_target(
-        'references',
-        input: ['references.md', 'references.bib'],
-        output: 'references.xml',
-        command: [
-            pandoc,
-            '--to', 'docbook',
-            '--citeproc',
-            '--standalone', '@INPUT0@',
-            '--bibliography', '@INPUT1@',
-            '-o', '@OUTPUT@',
-        ],
-        install_dir: numcosmo_includedir,
-        install_tag: 'docs',
-        build_by_default: true,
-    )
+gnome.gtkdoc(
+    'numcosmo',
+    mode: 'sgml',
+    main_sgml: 'numcosmo-docs.sgml',
+    gobject_typesfile: 'numcosmo.types',
+    dependencies: [libnumcosmo_dep],
+    content_files: ['introduction.xml', 'refs.xml', manual_head_xml, 'references.xml'],
+    expand_content_files: [manual_head_xml],
+    src_dir: ['numcosmo'],
+    scan_args: [
+        '--rebuild-types',
+        '--rebuild-sections',
+        '--ignore-decorators=NCM_INLINE',
+    ],
+    mkdb_args: [
+        '--sgml-mode',
+        '--output-format=xml',
+        '--name-space=nc',
+        '--name-space=ncm',
+        '--ignore-files',
+        ignore_files_str,
+    ],
+    html_assets: [
+        'container.css',
+        'images/spline_func_knots_evolution.png',
+        'images/vkde.png',
+        'images/kde.png',
+        'images/apes.png',
+    ],
+    install: true,
+    ignore_headers: ignore_h_files,
+    include_directories: [numcosmo_includedir],
+)
 
-    ignore_files_str = '"@0@"'.format(' '.join(ignore_h_files))
-
-    gnome.gtkdoc(
-        'numcosmo',
-        mode: 'sgml',
-        main_sgml: 'numcosmo-docs.sgml',
-        gobject_typesfile: 'numcosmo.types',
-        dependencies: [libnumcosmo_dep],
-        content_files: ['introduction.xml', 'refs.xml', manual_head_xml, references_xml],
-        src_dir: ['numcosmo'],
-        scan_args: ['--rebuild-types', '--rebuild-sections', '--ignore-decorators="NCM_INLINE"'],
-        mkdb_args: [
-            '--sgml-mode',
-            '--output-format=xml',
-            '--name-space=nc',
-            '--name-space=ncm',
-            '--ignore-files',
-            ignore_files_str,
-        ],
-        install: true,
-        ignore_headers: ignore_h_files,
-        include_directories: [numcosmo_includedir],
-    )
-endif
