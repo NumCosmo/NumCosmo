@@ -80,7 +80,7 @@ def test_wl_likelihood() -> None:
     dset.append_data(d1)
 
     lh = Ncm.Likelihood(dataset=dset)
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
     )
 

@@ -89,11 +89,11 @@ def run_mcmc() -> None:
     lh = Ncm.Likelihood.new(dset)
 
     #
-    #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
-    #  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
-    #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
+    # Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
+    # fit the Modelset mset using the Likelihood lh and using a numerical
+    # differentiation algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
     #
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
     )
 
@@ -130,7 +130,7 @@ def run_mcmc() -> None:
     # multiplying by 2 and setting it as the covariance matrix
     # of the transition kernel.
     #
-    cov = fit.fstate.covar.dup()
+    cov = fit.peek_state().peek_covar().dup()
     cov.scale(2.0)
     gtkern.set_cov(cov)
 

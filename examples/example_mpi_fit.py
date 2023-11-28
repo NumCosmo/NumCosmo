@@ -33,7 +33,7 @@ from numcosmo_py import Nc, Ncm
 #  Initializing the library objects, this must be called before
 #  any other library function.
 #
-sys.argv = Ncm.cfg_init_full(len(sys.argv), sys.argv)
+sys.argv = Ncm.cfg_init_full(sys.argv)
 
 
 def test_mpi_fit(test_union: bool = False) -> None:
@@ -80,8 +80,10 @@ def test_mpi_fit(test_union: bool = False) -> None:
         mset.param_set_ftype(
             Nc.SNIADistCov.id(), Nc.SNIADistCovSParams.BETA, Ncm.ParamType.FREE
         )
-        # mset.param_set_ftype (Nc.SNIADistCov.id (), Nc.SNIADistCovSParams.M1,    Ncm.ParamType.FREE)
-        # mset.param_set_ftype (Nc.SNIADistCov.id (), Nc.SNIADistCovSParams.M2,    Ncm.ParamType.FREE)
+        # mset.param_set_ftype (Nc.SNIADistCov.id (), Nc.SNIADistCovSParams.M1,
+        # Ncm.ParamType.FREE)
+        # mset.param_set_ftype (Nc.SNIADistCov.id (), Nc.SNIADistCovSParams.M2,
+        # Ncm.ParamType.FREE)
         data_snia = Nc.DataSNIACov.new_from_cat_id(
             Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL, False
         )
@@ -98,11 +100,11 @@ def test_mpi_fit(test_union: bool = False) -> None:
     lh = Ncm.Likelihood(dataset=dset)
 
     #
-    #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
-    #  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
-    #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
+    # Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
+    # fit the Modelset mset using the Likelihood lh and using a numerical
+    # differentiation algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
     #
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
     )
 
