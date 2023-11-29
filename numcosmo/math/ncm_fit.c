@@ -2402,8 +2402,6 @@ ncm_fit_fisher (NcmFit *fit)
  *
  * Deprecated: 0.18.2: Use ncm_fit_obs_fisher() instead.
  */
-G_DEPRECATED_FOR (ncm_fit_obs_fisher)
-
 void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {

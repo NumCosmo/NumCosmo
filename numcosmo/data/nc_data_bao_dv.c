@@ -31,7 +31,7 @@
  * See [Eisenstein et al. (2005)][XEisenstein2005].
  *
  * The data is stored in a #NcDataBaoDV object. The data is stored in a
- * #NcDataGaussDiag base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the volume mean $D_V$ at the redshift
  * $z$.
  *

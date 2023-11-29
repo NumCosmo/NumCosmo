@@ -49,6 +49,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcXcorLimberKernelClass NcXcorLimberKernelClass;
 typedef struct _NcXcorLimberKernel NcXcorLimberKernel;
+typedef struct _NcXcorKinetic NcXcorKinetic;
 
 /**
  * NcXcorLimberKernelImpl:
@@ -67,12 +68,19 @@ typedef enum _NcXcorLimberKernelImpl
 
 #define NC_XCOR_LIMBER_KERNEL_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
-typedef struct _NcXcorKinetic
+/**
+ * NcXcorKinetic:
+ * @xi_z: FIXME
+ * @E_z: FIXME
+ *
+ * A boxed type for the kinetic quantities necessary to compute the kernels.
+ *
+ */
+struct _NcXcorKinetic
 {
   gdouble xi_z;
   gdouble E_z;
-} NcXcorKinetic;
-
+};
 
 struct _NcXcorLimberKernelClass
 {
@@ -86,6 +94,12 @@ struct _NcXcorLimberKernelClass
   guint (*obs_params_len) (NcXcorLimberKernel *xclk);
 };
 
+/**
+ * NcXcorLimberKernel:
+ *
+ * A #NcXcorLimberKernel is an abstract object for the kernels of projected observables used in cross-correlations.
+ *
+ */
 struct _NcXcorLimberKernel
 {
   /*< private >*/

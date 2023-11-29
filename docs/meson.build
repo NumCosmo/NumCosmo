@@ -57,7 +57,7 @@ if not nlopt_dep.found()
 endif
 ignore_files_str = '@0@'.format(' '.join(ignore_h_files))
 
-gnome.gtkdoc(
+docfiles = gnome.gtkdoc(
     'numcosmo',
     mode: 'sgml',
     main_sgml: 'numcosmo-docs.sgml',
@@ -89,5 +89,20 @@ gnome.gtkdoc(
     install: true,
     ignore_headers: ignore_h_files,
     include_directories: [numcosmo_includedir],
+    check: true,
 )
 
+python_bf4 = python_module.find_installation('python3', modules: ['bs4'], required: false)
+
+if not python_bf4.found()
+    message('WARNING: python3-bs4 not found, skipping adding mathjax to html docs')
+else
+    addmathjax = find_program('addmathjax.py', required: true)
+    custom_target(
+        'numcosmo-doc-mathjax',
+        input: docfiles,
+        output: 'numcosmo-mathjax-update',
+        command: [addmathjax, '@OUTDIR@' / 'html'],
+        build_by_default: true,
+    )
+endif

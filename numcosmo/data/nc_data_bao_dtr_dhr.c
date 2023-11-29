@@ -29,7 +29,7 @@
  * @short_description: Baryon Oscillation Data -- $(D_H/r,\; D_t/r)$ data.
  *
  * The data is stored in a #NcDataBaoDtrDHr object. The data is stored in a
- * #NcDataGaussCov base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the transverse distance $D_t$ and the
  * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
  * last scattering surface $r_s$.

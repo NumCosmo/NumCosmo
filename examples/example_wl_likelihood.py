@@ -47,9 +47,7 @@ def test_wl_likelihood() -> None:
     cosmo.props.Omegax = 0.7
     cosmo.param_set_by_name("Omegak", 0.0)
 
-    nfw = Nc.HaloDensityProfile.new_from_name(
-        "NcHaloDensityProfileNFW{'Delta':<200.0>}"
-    )
+    nfw = Nc.HaloDensityProfileNFW(Delta=200.0)
     # 4 as Douglas. In LCDM c = 5 corresponds to cluster masses.
     # (see Lokas and G. Mamon, astro-ph/0002395)
     nfw.param_set_by_name("cDelta", 5.0)

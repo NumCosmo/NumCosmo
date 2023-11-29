@@ -4,7 +4,14 @@ project(
   version: '0.19.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
-  default_options: ['buildtype=debugoptimized', 'warning_level=2', 'c_std=gnu99'],
+  default_options: [
+    'buildtype=debugoptimized',
+    'warning_level=2',
+    'c_std=gnu99',
+    'b_lto=true',
+    'b_lto_threads=2',
+    'optimization=3',
+  ],
 )
 
 add_global_arguments(['-Wno-unused', '-Wno-pedantic'], language: 'c')

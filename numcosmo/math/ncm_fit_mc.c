@@ -1057,7 +1057,7 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
  *
  * Computes the mean and covariance of the Monte Carlo run.
  * The mean and covariance are stored in the #NcmFit object of @mc.
- * The mean is stored in the #NcmFitFState object of the #NcmFit object
+ * The mean is stored in the #NcmFitState object of the #NcmFit object
  * and in the #NcmMSetCatalog object of @mc.
  *
  */

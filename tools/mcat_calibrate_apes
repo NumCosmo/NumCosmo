@@ -37,7 +37,7 @@ from numcosmo_py.interpolation.stats_dist import (
     create_stats_dist,
     InterpolationMethod,
     InterpolationKernel,
-    CrossValidationMethod
+    CrossValidationMethod,
 )
 
 
@@ -61,7 +61,7 @@ def calibrate_catalog(
     use_half: bool = True,
     verbose: bool = False,
     plot_2d: bool = False,
-    plot_2d_scatter: bool = False
+    plot_2d_scatter: bool = False,
 ):
     """Calibrate the APES sampler using a given catalog.
 
@@ -159,7 +159,9 @@ def calibrate_catalog(
                 for ii in range(0, int(sdist.get_n_kernels())):
                     y_i, cov_i, _, w_i = sdist.get_Ki(ii)
                     mean = np.array(y_i.dup_array())
-                    cov = np.array([[cov_i.get(i, j) for j in indices] for i in indices])
+                    cov = np.array(
+                        [[cov_i.get(i, j) for j in indices] for i in indices]
+                    )
                     cov = cov * 1.0
                     w_i = weights[ii]
 

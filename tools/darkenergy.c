@@ -295,9 +295,14 @@ main (gint argc, gchar *argv[])
     NcHIPrim *prim;
 
     if (de_model.model_prim != NULL)
-      prim = nc_hiprim_new_from_name (NC_TYPE_HIPRIM, de_model.model_prim);
+    {
+      prim = NC_HIPRIM (ncm_serialize_global_from_string (de_model.model_prim));
+      g_assert (NC_IS_HIPRIM (prim));
+    }
     else
+    {
       prim = NC_HIPRIM (nc_hiprim_power_law_new ());
+    }
 
     ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
     nc_hiprim_free (prim);
@@ -541,7 +546,11 @@ main (gint argc, gchar *argv[])
 
     if (ncm_mset_peek (mset, nc_planck_fi_id ()) == NULL)
     {
-      NcPlanckFI *planck_fi = nc_planck_fi_new_from_name (de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI);
+      NcPlanckFI *planck_fi = NC_PLANCK_FI (ncm_serialize_global_from_string (
+                                              de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI)
+                                           );
+
+      g_assert (NC_IS_PLANCK_FI (planck_fi));
 
       ncm_mset_push (mset, NCM_MODEL (planck_fi));
       nc_planck_fi_free (planck_fi);

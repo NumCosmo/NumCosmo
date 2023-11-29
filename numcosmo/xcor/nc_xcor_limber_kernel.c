@@ -206,9 +206,9 @@ nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
  * nc_xcor_kinetic_copy:
  * @xck: a #NcXcorKinetic
  *
- * FIXME
+ * Creates a copy of @xck.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcXcorKinetic copy of @xck.
  */
 NcXcorKinetic *
 nc_xcor_kinetic_copy (NcXcorKinetic *xck)
@@ -224,7 +224,7 @@ nc_xcor_kinetic_copy (NcXcorKinetic *xck)
  * nc_xcor_kinetic_free:
  * @xck: a #NcXcorKinetic
  *
- * FIXME
+ * Frees @xck.
  *
  */
 void

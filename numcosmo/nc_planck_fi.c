@@ -58,6 +58,7 @@ static void
 nc_planck_fi_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcPlanckFI *pfi = NC_PLANCK_FI (object);
+
   g_return_if_fail (NC_IS_PLANCK_FI (object));
 
   switch (prop_id)
@@ -75,6 +76,7 @@ static void
 nc_planck_fi_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcPlanckFI *pfi = NC_PLANCK_FI (object);
+
   g_return_if_fail (NC_IS_PLANCK_FI (object));
 
   switch (prop_id)
@@ -91,7 +93,6 @@ nc_planck_fi_get_property (GObject *object, guint prop_id, GValue *value, GParam
 static void
 nc_planck_fi_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_planck_fi_parent_class)->finalize (object);
 }
@@ -101,12 +102,12 @@ NCM_MSET_MODEL_REGISTER_ID (nc_planck_fi, NC_TYPE_PLANCK_FI);
 static void
 nc_planck_fi_class_init (NcPlanckFIClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = nc_planck_fi_set_property;
   model_class->get_property = nc_planck_fi_get_property;
-  object_class->finalize = nc_planck_fi_finalize;
+  object_class->finalize    = nc_planck_fi_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instrument Abstract Class", "PlanckFI");
   ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, PROP_SIZE);
@@ -134,19 +135,25 @@ _nc_planck_fi_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
   GType *models = g_type_children (model_type, &nc);
+
   for (i = 0; i < nc; i++)
   {
     guint ncc;
     GType *modelsc = g_type_children (models[i], &ncc);
 
     g_message ("#  ");
-    for (j = 0; j < n; j++) g_message (" ");
+
+    for (j = 0; j < n; j++)
+      g_message (" ");
+
     g_message ("%s\n", g_type_name (models[i]));
+
     if (ncc)
       _nc_planck_fi_log_all_models_go (models[i], n + 2);
 
     g_free (modelsc);
   }
+
   g_free (models);
 }
 
@@ -161,28 +168,6 @@ nc_planck_fi_log_all_models (void)
 {
   g_message ("# Registred NcPlanckFI:%s are:\n", g_type_name (NC_TYPE_PLANCK_FI));
   _nc_planck_fi_log_all_models_go (NC_TYPE_PLANCK_FI, 0);
-}
-
-
-
-/**
- * nc_planck_fi_new_from_name:
- * @pfi_name: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcPlanckFI *
-nc_planck_fi_new_from_name (gchar *pfi_name)
-{
-  GType parent_type = NC_TYPE_PLANCK_FI;
-  GObject *obj = ncm_serialize_global_from_string (pfi_name);
-  GType model_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (model_type, parent_type))
-    g_error ("nc_planck_fi_new_from_name: NcPlanckFI %s do not descend from %s.", pfi_name, g_type_name (parent_type));
-  return NC_PLANCK_FI (obj);
 }
 
 /**
@@ -224,3 +209,4 @@ nc_planck_fi_clear (NcPlanckFI **pfi)
 {
   g_clear_object (pfi);
 }
+

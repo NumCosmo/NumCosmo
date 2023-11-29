@@ -25,7 +25,7 @@ main (gint argc, gchar *argv[])
   /****************************************************************************
    * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm.
    ****************************************************************************/
-  cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  cosmo = nc_hicosmo_de_xcdm_new ();
 
   /****************************************************************************
    * New homogeneous and isotropic reionization object.
@@ -53,7 +53,7 @@ main (gint argc, gchar *argv[])
    * New transfer function 'NcTransferFuncEH' using the Einsenstein and Hu
    * fitting formula.
    ****************************************************************************/
-  tf = nc_transfer_func_new_from_name ("NcTransferFuncEH");
+  tf = nc_transfer_func_eh_new ();
 
   /****************************************************************************
    * New linear matter power spectrum object based of the EH transfer function.

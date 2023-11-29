@@ -58,17 +58,6 @@
  * \Pi(\vec{X})=\prod_{i}^{L}\pi(X_i)
  * .\end{align}
  *
- * The user must provide the input the values: @nparams - ncm\_fit\_esmcmc\_walker\_set\_nparams(), @size - ncm\_fit\_esmcmc\_walker\_set\_size(),
- * @walker\_@name - ncm\_fit\_esmcmc\_walker\_new\_from\_name(). For more information about the algorithm, see the description below.
- *
- *    - The #NcmFitESMCMCWalker class only has virtual methods, Therefore, to initialize this class, one must insert the @walker\_@name,
- *                which defines from which child object the class will inherit its methods.
- *
- *    - This class has the tools to implement the following methods: the step of the walker, which defines how the point $Y$ is proposed and how it should be accepted;
- *                and the acceptance probability, unnormalized and normalized;
- *
- *    - To use this class, one must use the ncm\_fit\_esmcmc\_walker\_new\_from\_name() function or initialize an instance from the child objects #NcmFitESMCMCWalkerAPES, #NcmFitESMCMCWalkerStretch  or #NcmFitESMCMCWalkerWalk. After the initiation, one shall define which parameters must be changed and then prepare the necessary data to implement this class in the #NcmFitESMCMC class.
- *                The #NcmFitESMCMCWalker class does not generate an MCMC sample by itself. For an example of implementation, check the documentation in  #NcmFitESMCMCWalkerAPES.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -247,25 +236,6 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
   klass->prob_norm   = _ncm_fit_esmcmc_walker_prob_norm;
   klass->clean       = _ncm_fit_esmcmc_walker_clean;
   klass->desc        = _ncm_fit_esmcmc_walker_desc;
-}
-
-/**
- * ncm_fit_esmcmc_walker_new_from_name:
- * @walker_name: string which specifies the walker object to be used
- *
- * This function returns a new #NcmFitESMCMCWalker whose type is defined by @walker_name.
- *
- * Returns: A new #NcmFitESMCMCWalker.
- */
-NcmFitESMCMCWalker *
-ncm_fit_esmcmc_walker_new_from_name (const gchar *walker_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (walker_name);
-
-  if (!NCM_IS_FIT_ESMCMC_WALKER (obj))
-    g_error ("ncm_fit_esmcmc_walker_new_from_name: NcmFitESMCMCWalker %s do not descend from %s.", walker_name, g_type_name (NCM_TYPE_FIT_ESMCMC_WALKER));
-
-  return NCM_FIT_ESMCMC_WALKER (obj);
 }
 
 /**

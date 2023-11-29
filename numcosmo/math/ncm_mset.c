@@ -379,7 +379,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * is not NCM_MSET_MODEL_MAIN(), this must be the id of the main model. This is used
  * to define an hierarchy of models. For example, the model class #NcHIPrim is a
  * submodel of #NcHICosmo. The main model of #NcHIPrim is #NcHICosmo. Thus, each
- * instance of #NnHICosmo can contain one instance of #NcHIPrim.
+ * instance of #NcHICosmo can contain one instance of #NcHIPrim.
  *
  */
 void

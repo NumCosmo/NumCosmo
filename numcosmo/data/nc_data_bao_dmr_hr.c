@@ -32,7 +32,7 @@
  * [Alam et al. (2016)][XAlam2016].
  *
  * The data is stored in a #NcDataBaoDMrHr object. The data is stored in a
- * #NcDataGaussCov base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the transverse distance $D_M$ and the
  * Hubble parameter $H$ at the redshift $z$ divided by the sound horizon at the
  * last scattering surface $r_s$.

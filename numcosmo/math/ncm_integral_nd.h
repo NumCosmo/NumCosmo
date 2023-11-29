@@ -150,6 +150,19 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
 #define NCM_INTEGRAL_ND_DEFAULT_RELTOL 1e-7
 #define NCM_INTEGRAL_ND_DEFAULT_ABSTOL 0.0
 
+/**
+ * NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE:
+ * @MODULE: the name of the module defining the type, all capitalized
+ * @OBJ_NAME: the name of the type to define, all capitalized
+ * @ModuleObjName: the name of the type to define, camel case
+ * @module_obj_name: the name of the type to define, sneake case
+ * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
+ * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
+ * @user_data: the type of the user data
+ * @user_data_free: the name of the method that frees the user data
+ * 
+ * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type and a custom method to free the user data.
+ */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, user_data_free) \
   G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND) \
   struct _ ## ModuleObjName { NcmIntegralND parent_instance; user_data data; }; \
@@ -174,6 +187,18 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
     intnd_class->integrand      = &method_integrand; \
   } \
 
+/**
+ * NCM_INTEGRAL_ND_DEFINE_TYPE:
+ * @MODULE: the name of the module defining the type, all capitalized
+ * @OBJ_NAME: the name of the type to define, all capitalized
+ * @ModuleObjName: the name of the type to define, camel case
+ * @module_obj_name: the name of the type to define, sneake case
+ * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
+ * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
+ * @user_data: the type of the user data
+ * 
+ * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type.
+ */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data) \
   NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE (MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, (void)) \
 

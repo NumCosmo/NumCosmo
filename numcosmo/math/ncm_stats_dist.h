@@ -80,6 +80,7 @@ struct _NcmStatsDist
  * @NCM_STATS_DIST_CV_NONE: No cross validation
  * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
  * @NCM_STATS_DIST_CV_SPLIT_NOFIT: Sample split cross validation without fitting
+ * @NCM_STATS_DIST_CV_LOO: Leave-one-out cross validation
  *
  * Cross-validation method to be applied.
  *
