@@ -50,6 +50,13 @@ option(
        description: 'Build VAPI and Vala plugins',
 )
 
+option(
+       'gtkdoc',
+       type: 'feature',
+       value: 'auto',
+       description: 'Build documentation with gtk-doc',
+)
+
 #######################################################################################
 # BLAS/LAPACK options, shamelessly copied from numpy
 #######################################################################################

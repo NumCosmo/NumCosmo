@@ -88,9 +88,8 @@ numcosmo_pkgconfigreldir = join_paths(numcosmo_libdir, 'pkgconfig')
 numcosmo_source_dir = meson.current_source_dir()
 numcosmo_build_dir = meson.current_build_dir()
 
-installed_tests_enabled = get_option('installed_tests')
 # Don’t build the tests unless we can run them (either natively, in an exe wrapper, or by installing them for later use)
-build_tests = get_option('tests') and (meson.can_run_host_binaries() or installed_tests_enabled)
+build_tests = get_option('tests') and meson.can_run_host_binaries()
 
 common_test_env = [
   'G_DEBUG=gc-friendly',
@@ -216,6 +215,9 @@ if not get_option('numcosmo_checks')
   numcosmo_debug_cflags += ['-DG_DISABLE_CHECKS']
   message('Disabling GLib checks')
 endif
+
+gtkdoc_dep = dependency('gtk-doc', required : get_option('gtkdoc'))
+build_gtk_doc = gtkdoc_dep.found()
 
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
