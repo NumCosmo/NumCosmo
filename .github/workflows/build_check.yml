@@ -43,7 +43,7 @@ jobs:
         ./example_ca
     - name: Test example compilation using installed library
       run: |
-        ninja -C build install
+        sudo ninja -C build install
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
