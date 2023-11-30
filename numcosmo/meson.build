@@ -749,6 +749,9 @@ libnumcosmo_dep = declare_dependency(
     ],
 )
 
+# Generate pkg-config files
+# Code using NumCosmo frequently depends directly on glib, gobject, and gio, so we
+# include them in the Requires field.
 pkg.generate(
     libnumcosmo,
     version: numcosmo_version,
