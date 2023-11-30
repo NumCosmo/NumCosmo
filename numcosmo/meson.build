@@ -680,13 +680,10 @@ if nlopt_dep.found()
 endif
 
 install_headers(
-    ncm_headers,
-    preserve_path: true,
-    subdir: 'numcosmo',
-)
-
-install_headers(
-    nc_headers,
+    ncm_headers + nc_headers + [
+        'numcosmo.h',
+        'numcosmo-math.h',
+    ],
     preserve_path: true,
     subdir: 'numcosmo',
 )
