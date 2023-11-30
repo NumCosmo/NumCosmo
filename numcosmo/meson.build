@@ -674,7 +674,7 @@ if nlopt_dep.found()
         capture: true,
     )
 
-    ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_h, ncm_fit_nlopt_enum_c]
+    ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_c, ncm_fit_nlopt_enum_h]
     ncm_sources += 'math/ncm_fit_nlopt.c'
     ncm_headers += 'math/ncm_fit_nlopt.h'
 endif
@@ -745,6 +745,11 @@ libnumcosmo = library(
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
     dependencies: libnumcosmo_dep,
+    sources: [
+        ncm_enum_types[1],
+        nc_enum_types[1],
+        ncm_fit_nlopt_enum_types[1],
+    ],
 )
 
 pkg.generate(
