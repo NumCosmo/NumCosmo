@@ -20,7 +20,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install meson gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
-        pip install pytest numpy
+        pip install meson ninja pytest numpy
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -68,8 +68,8 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install meson gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
-        pip install pytest numpy
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        pip install meson ninja pytest numpy
     - name: Configure NumCosmo
       run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
@@ -104,6 +104,7 @@ jobs:
         brew install meson ninja gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
         brew ls glib
         brew ls glib-utils
+        pip install meson ninja pytest
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
