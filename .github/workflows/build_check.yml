@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install prereq
+    - name: Install pre-requisites
       run: |
         sudo apt-get update
         sudo apt-get install meson ninja gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
@@ -58,7 +58,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: release
-        path: numcosmo-*.tar.gz
+        path: build/meson-dist/numcosmo-*.tar.xz
 
   coveralls-gcc-ubuntu:
 
@@ -66,21 +66,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install prereq
+    - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
-        pip install pytest pytest-tap numpy
-    - name: Autogen
-      run: NOCONFIGURE=yes ./autogen.sh
-    - name: configure
-      run: ./configure 'CFLAGS=-Wall -g -O0' 'FCFLAGS=-O0 -Wall' --enable-maintainer-mode --disable-gtk-doc --prefix=/usr --enable-code-coverage
-    - name: make
-      run: make -j8
-    - name: make check
-      run: make check -j8
-    - name: make code-coverage-capture
-      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info CODE_COVERAGE_LCOV_SHOPTS_DEFAULT="--config-file lcovrc"
+        sudo apt-get install meson ninja gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        pip install pytest numpy
+    - name: Configure NumCosmo
+        run:
+          meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: ninja -C build
+    - name: Check NumCosmo
+      run: ninja -C build test
+    - name: Generate coverage
+      run: ninja -C build coverage
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
@@ -102,18 +101,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install prereq
+    - name: Install pre-requisites
       run: |
-        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
+        brew install meson ninja gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
         brew ls glib
         brew ls glib-utils
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
-    - name: Autogen
-      run: NOCONFIGURE=yes ./autogen.sh
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make -j8
-    - name: make check
-      run: make check -j8
+    - name: Configure NumCosmo
+        run:
+          meson setup build -Ddebug=true || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: ninja -C build
+    - name: Check NumCosmo
+      run: ninja -C build test
