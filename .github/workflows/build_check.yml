@@ -41,14 +41,6 @@ jobs:
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
         ./example_simple
         ./example_ca
-    - name: Test example compilation using installed library
-      run: |
-        sudo ninja -C build install
-        cd examples
-        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
-        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
-        ./example_simple
-        ./example_ca
     - name: Check NumCosmo
       run: ninja -C build test
     - name: Create a NumCosmo tarball
@@ -58,6 +50,14 @@ jobs:
       with:
         name: release
         path: build/meson-dist/numcosmo-*.tar.xz
+    - name: Test example compilation using installed library
+      run: |
+        sudo ninja -C build install
+        cd examples
+        gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
+        gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
+        ./example_simple
+        ./example_ca
 
   coveralls-gcc-ubuntu:
 
@@ -79,10 +79,9 @@ jobs:
     - name: Generate coverage
       run: ninja -C build coverage
     - name: Coveralls
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ./build/meson-logs/numcosmo-coverage.info
 
   build-gcc-macos:
 
