@@ -37,7 +37,10 @@
 #else
 #  ifdef HAVE_CBLAS_H
 #    include <cblas.h>
-#    define CBLAS_H "cblas.h"
+#    ifndef CBLAS_H
+#      define CBLAS_H "cblas.h"
+#    endif
+#    define __GSL_CBLAS_H__
 #  else
 #    ifdef HAVE_GSL_CBLAS_H
 #      include <gsl/gsl_cblas.h>
@@ -53,20 +56,21 @@ G_BEGIN_DECLS
 #endif
 
 #ifdef BLAS_NOT_TYPEDEFED
-typedef  enum CBLAS_ORDER     CBLAS_ORDER;
+typedef  enum CBLAS_ORDER CBLAS_ORDER;
 typedef  enum CBLAS_TRANSPOSE CBLAS_TRANSPOSE;
-typedef  enum CBLAS_UPLO      CBLAS_UPLO;
-typedef  enum CBLAS_DIAG      CBLAS_DIAG;
-typedef  enum CBLAS_SIDE      CBLAS_SIDE;
+typedef  enum CBLAS_UPLO CBLAS_UPLO;
+typedef  enum CBLAS_DIAG CBLAS_DIAG;
+typedef  enum CBLAS_SIDE CBLAS_SIDE;
 #endif /* BLAS_NOT_TYPEDEFED */
 
-typedef  CBLAS_INDEX       CBLAS_INDEX_t;
-typedef  CBLAS_ORDER       CBLAS_ORDER_t;
-typedef  CBLAS_TRANSPOSE   CBLAS_TRANSPOSE_t;
-typedef  CBLAS_UPLO        CBLAS_UPLO_t;
-typedef  CBLAS_DIAG        CBLAS_DIAG_t;
-typedef  CBLAS_SIDE        CBLAS_SIDE_t;
+typedef  CBLAS_INDEX CBLAS_INDEX_t;
+typedef  CBLAS_ORDER CBLAS_ORDER_t;
+typedef  CBLAS_TRANSPOSE CBLAS_TRANSPOSE_t;
+typedef  CBLAS_UPLO CBLAS_UPLO_t;
+typedef  CBLAS_DIAG CBLAS_DIAG_t;
+typedef  CBLAS_SIDE CBLAS_SIDE_t;
 
 G_END_DECLS
 
 #endif /* _NCM_CBLAS_H_ */
+
