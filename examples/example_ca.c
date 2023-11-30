@@ -25,7 +25,7 @@ main (gint argc, gchar *argv[])
   /****************************************************************************
    * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm.
    ****************************************************************************/
-  cosmo = nc_hicosmo_de_xcdm_new ();
+  cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
   /****************************************************************************
    * New homogeneous and isotropic reionization object.
