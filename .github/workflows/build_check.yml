@@ -82,7 +82,7 @@ jobs:
       uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        base-path: build
+        files: build/meson-logs/coverage.info build/meson-logs/coverage.xml
         debug: true
 
   build-gcc-macos:
