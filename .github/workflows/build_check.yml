@@ -45,6 +45,8 @@ jobs:
       run: |
         sudo ninja -C build install
         cd examples
+        echo $(pkg-config numcosmo --libs --cflags)
+        ldd /usr/lib/libnumcosmo.so.0
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
         ./example_simple

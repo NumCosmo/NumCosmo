@@ -689,6 +689,22 @@ ncm_fit_get_sub_fit (NcmFit *fit)
   return ncm_fit_ref (self->sub_fit);
 }
 
+/**
+ * ncm_fit_has_sub_fit:
+ * @fit: a #NcmFit
+ *
+ * Checks if @fit has a subsidiary fit.
+ *
+ * Returns: TRUE if @fit has a subsidiary fit, FALSE otherwise.
+ */
+gboolean
+ncm_fit_has_sub_fit (NcmFit *fit)
+{
+  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+
+  return self->sub_fit != NULL;
+}
+
 static void _ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
 static void _ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
 static void _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);

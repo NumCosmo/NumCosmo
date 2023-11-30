@@ -141,6 +141,7 @@ void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit);
 NcmFit *ncm_fit_get_sub_fit (NcmFit *fit);
+gboolean ncm_fit_has_sub_fit (NcmFit *fit);
 
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
 void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
