@@ -216,7 +216,7 @@ if not get_option('numcosmo_checks')
   message('Disabling GLib checks')
 endif
 
-gtkdoc_dep = dependency('gtk-doc', required : get_option('gtkdoc'))
+gtkdoc_dep = dependency('gtk-doc', required: get_option('gtkdoc'))
 build_gtk_doc = gtkdoc_dep.found()
 
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
@@ -696,6 +696,8 @@ install_subdir('data', install_dir: numcosmo_pkgdatadir)
 #######################################################################################
 # Including the subdirectories:
 #######################################################################################
+
+pkg = import('pkgconfig')
 
 subdir('numcosmo')
 subdir('tools')

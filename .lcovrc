@@ -11,3 +11,15 @@ lcov_excl_br_line = LCOV_EXCL_BR_LINE|g_return_if_fail|g_return_val_if_fail|g_as
 
 # Similarly for unreachable assertions.
 lcov_excl_line = LCOV_EXCL_LINE|g_return_if_reached|g_return_val_if_reached|g_assert_not_reached|g_error|G_OBJECT_WARN
+
+# Excluding external projects
+ignore_errors = unused
+
+exclude = build/
+exclude = class/
+exclude = levmar/
+exclude = libcuba/
+exclude = plc/
+exclude = sundials/
+exclude = toeplitz/
+exclude = tools/

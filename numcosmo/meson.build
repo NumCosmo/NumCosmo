@@ -747,6 +747,15 @@ libnumcosmo_dep = declare_dependency(
     dependencies: libnumcosmo_dep,
 )
 
+pkg.generate(
+    libnumcosmo,
+    version: numcosmo_version,
+    install_dir: numcosmo_pkgconfigreldir,
+    filebase: 'numcosmo',
+    name: 'NumCosmo',
+    description: 'NumCosmo is a free software C Cosmology library',
+)
+
 if enable_gir
 
     ncm_introspection_sources = [
