@@ -101,7 +101,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install pre-requisites
       run: |
-        brew install meson ninja gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
+        brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
         brew ls glib
         brew ls glib-utils
         pip install meson ninja pytest
