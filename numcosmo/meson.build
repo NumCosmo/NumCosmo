@@ -756,6 +756,7 @@ pkg.generate(
     filebase: 'numcosmo',
     name: 'NumCosmo',
     description: 'NumCosmo is a free software C Cosmology library',
+    libraries: [glib_dep, gobject_dep, gio_dep],
 )
 
 if enable_gir
