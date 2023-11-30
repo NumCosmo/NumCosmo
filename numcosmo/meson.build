@@ -701,11 +701,11 @@ libnumcosmo_dep = [
     glib_dep,
     gmp_dep,
     gobject_dep,
-    gsl_dep,
     lapack_dep,
     mpfr_dep,
     nlopt_dep,
     omp_c,
+    gsl_dep,
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']

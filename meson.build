@@ -619,6 +619,14 @@ else
   endif
 endif
 
+if not lapack.found()
+  if lapack_name == 'openblas'
+    lapack = dependency(['openblas', 'OpenBLAS'])
+  else
+    lapack = dependency('lapack')
+  endif
+endif
+
 have_lapack = lapack.found()
 lapack_dep = []
 if have_lapack
