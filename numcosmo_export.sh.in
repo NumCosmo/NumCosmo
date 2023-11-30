@@ -1,11 +1,9 @@
 # NumCosmo buildir exports necessary to use 
 # the library without installation
 
-export NUMCOSMO_DIR=$(cd "@abs_top_srcdir@"; pwd)
-export NUMCOSMO_BUILD_DIR=$(cd "@abs_top_builddir@"; pwd)
+export NUMCOSMO_DIR="@numcosmo_source_dir@"
+export NUMCOSMO_BUILD_DIR="@numcosmo_build_dir@"
 export NUMCOSMO_DATA_DIR="${NUMCOSMO_DIR}"
-
-export BLA="@top_srcdir@"
 
 export CPATH="${NUMCOSMO_DIR}:${NUMCOSMO_BUILD_DIR}${CPATH:+:$CPATH}"
 export PYTHONPATH="${NUMCOSMO_DIR}${PYTHONPATH:+:$PYTHONPATH}"

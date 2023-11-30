@@ -151,6 +151,8 @@ numcosmo_build_cfg.set('NUMCOSMO_VERSION', numcosmo_version)
 
 numcosmo_build_cfg.set('have_inline_support', '#define NUMCOSMO_HAVE_INLINE 1')
 numcosmo_build_cfg.set('have_inline_macro', '#define NCM_INLINE static inline')
+numcosmo_build_cfg.set('numcosmo_source_dir', numcosmo_source_dir)
+numcosmo_build_cfg.set('numcosmo_build_dir', numcosmo_build_dir)
 
 # used by the .rc.in files
 numcosmo_build_cfg.set('LT_CURRENT_MINUS_AGE', soversion)
@@ -673,7 +675,7 @@ install_subdir(
 )
 
 #######################################################################################
-# Creating the config.h file:
+# Creating the configuration files:
 #######################################################################################
 
 configure_file(
@@ -685,6 +687,12 @@ configure_file(
 configure_file(
   output: 'config_deps.h',
   configuration: numcosmo_conf,
+)
+
+configure_file(
+  input: 'numcosmo_export.sh.in',
+  output: 'numcosmo_export.sh',
+  configuration: numcosmo_build_cfg,
 )
 
 #######################################################################################
