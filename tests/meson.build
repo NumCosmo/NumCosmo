@@ -220,6 +220,7 @@ foreach c_test : c_tests
         c_test['sources'],
         c_args: tests_c_args,
         dependencies: [libnumcosmo_dep],
+        include_directories: [configinc, numcosmoinc],
     )
     if c_test.has_key('timeout')
         timeout = c_test['timeout']
