@@ -43,7 +43,7 @@ jobs:
         ./example_ca
     - name: Test example compilation using installed library
       run: |
-        sudo ninja -C build install
+        sudo $(which ninja) -C build install
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
@@ -99,11 +99,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install pre-requisites
+    - name: Brew install pre-requisites
       run: |
-        brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
-        brew ls glib
-        brew ls glib-utils
+        brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib pygobject3
+    - name: Pip install pre-requisites
+      run: |
         pip install meson ninja pytest
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
