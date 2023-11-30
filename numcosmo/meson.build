@@ -750,8 +750,10 @@ libnumcosmo_dep = declare_dependency(
 )
 
 # Generate pkg-config files
-# Code using NumCosmo frequently depends directly on glib, gobject, and gio, so we
-# include them in the Requires field.
+# Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
+# include them in the Requires field. 
+# This happends mostly because of inlining, but also because of the many macros defined
+# in the glib headers.
 pkg.generate(
     libnumcosmo,
     version: numcosmo_version,
@@ -759,7 +761,7 @@ pkg.generate(
     filebase: 'numcosmo',
     name: 'NumCosmo',
     description: 'NumCosmo is a free software C Cosmology library',
-    libraries: [glib_dep, gobject_dep, gio_dep],
+    libraries: [gsl_dep, glib_dep, gobject_dep, gio_dep],
 )
 
 if enable_gir
