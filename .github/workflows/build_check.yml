@@ -35,7 +35,7 @@ jobs:
         python example_cbe.py
     - name: Test example compilation using non-installed library
       run: |
-        source numcosmo_export.sh
+        source build/numcosmo_export.sh
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
