@@ -117,5 +117,11 @@ jobs:
     - name: Building NumCosmo
       run: |
         ninja -C build
+    - name: Test python examples
+      run: |
+        source build/numcosmo_export.sh
+        cd examples
+        python example_simple.py
+        python example_cbe.py
     - name: Check NumCosmo
       run: ninja -C build test
