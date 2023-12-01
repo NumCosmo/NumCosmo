@@ -124,15 +124,13 @@ def run_gauss_constraint_mcmc(
 
         filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
         with open(filename, "w", encoding="utf-8") as f:
+            mean_array = [f"{v: 22.15g}" for v in sv.peek_mean().dup_array()]
+            stdev_array = [f"{sv.get_sd(i): 22.15g}" for i in range(dim)]
             f.write(f"#   Number of samples : {sv.nitens}\n")
-            f.write(
-                f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
-            )
-            f.write(
-                f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
-            )
+            f.write(f"#   Mean : {' '.join(mean_array)}\n")
+            f.write(f"#   Stdev: {' '.join(stdev_array)}\n")
 
-            for i in range(sv.nitens):
+            for i in range(sv.nitens()):
                 f.write(
                     " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()])
                     + "\n"

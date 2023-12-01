@@ -63,7 +63,7 @@ struct _NcPowspecMLCBEPrivate
   gdouble intern_k_max;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML);
+G_DEFINE_TYPE_WITH_PRIVATE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML)
 
 static void
 nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)

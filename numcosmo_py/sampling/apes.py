@@ -110,7 +110,7 @@ class APES:
 
         likelihood = Ncm.Likelihood(dataset=dset)
 
-        self.fit = Ncm.Fit.new(
+        self.fit = Ncm.Fit.factory(
             Ncm.FitType.NLOPT,
             "ln-neldermead",
             likelihood,

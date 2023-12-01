@@ -42,7 +42,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcmSpline2dSpline, ncm_spline2d_spline, NCM_TYPE_SPLINE2D);
+G_DEFINE_TYPE (NcmSpline2dSpline, ncm_spline2d_spline, NCM_TYPE_SPLINE2D)
 
 static void
 ncm_spline2d_spline_init (NcmSpline2dSpline *s2ds)

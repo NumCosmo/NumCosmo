@@ -63,7 +63,7 @@ def create_esmcmc(
     """Create a new ensemble sampler object."""
 
     # New fit object using the likelihood.
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT,
         "ln-neldermead",
         likelihood,

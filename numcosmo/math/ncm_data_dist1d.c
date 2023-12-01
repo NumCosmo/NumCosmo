@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_dist1d.c
  *
@@ -55,7 +56,7 @@ typedef struct _NcmDataDist1dPrivate
   NcmVector *x;
 } NcmDataDist1dPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist1d, ncm_data_dist1d, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist1d, ncm_data_dist1d, NCM_TYPE_DATA)
 
 static void
 ncm_data_dist1d_init (NcmDataDist1d *dist1d)

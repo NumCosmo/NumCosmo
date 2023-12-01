@@ -34,13 +34,6 @@
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/ncm_memory_pool.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FIT_MC (ncm_fit_mc_get_type ())

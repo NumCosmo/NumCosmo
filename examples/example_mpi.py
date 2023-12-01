@@ -35,7 +35,7 @@ from numcosmo_py import Ncm
 #  Initializing the library objects, this must be called before
 #  any other library function.
 #
-sys.argv = Ncm.cfg_init_full(len(sys.argv), sys.argv)
+sys.argv = Ncm.cfg_init_full(sys.argv)
 
 
 def test_mpi() -> None:

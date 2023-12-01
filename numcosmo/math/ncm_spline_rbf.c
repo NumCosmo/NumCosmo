@@ -65,7 +65,7 @@ struct _NcmSplineRBFPrivate
   gdouble (*integ) (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x0, const gdouble x1);
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmSplineRBF, ncm_spline_rbf, NCM_TYPE_SPLINE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSplineRBF, ncm_spline_rbf, NCM_TYPE_SPLINE)
 
 enum
 {

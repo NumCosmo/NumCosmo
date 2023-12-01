@@ -65,7 +65,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL,
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_1p2_integral,
@@ -78,7 +77,6 @@ main (gint argc, gchar *argv[])
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_m2lnL,
               &test_nc_cluster_pseudo_counts_free);
-#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }
@@ -104,19 +102,19 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
 void
 test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo                = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHICosmo *cosmo                = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion                = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim                  = NC_HIPRIM (nc_hiprim_power_law_new ());
   NcDistance *dist                = nc_distance_new (3.0);
-  NcWindow *wf                    = nc_window_new_from_name ("NcWindowTophat");
-  NcTransferFunc *tf              = nc_transfer_func_new_from_name ("NcTransferFuncEH");
+  NcWindow *wf                    = NC_WINDOW (ncm_serialize_global_from_string ("NcWindowTophat"));
+  NcTransferFunc *tf              = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml              = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   NcmPowspecFilter *psf           = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
   NcMultiplicityFunc *mulf        = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL, 500.0));
   NcHaloMassFunction *mfp         = nc_halo_mass_function_new (dist, psf, mulf);
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (1));
-  NcClusterMass *clusterm         = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassPlCL"));
-  NcClusterRedshift *clusterz     = NC_CLUSTER_REDSHIFT (nc_cluster_redshift_new_from_name ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
+  NcClusterMass *clusterm         = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassPlCL"));
+  NcClusterRedshift *clusterz     = NC_CLUSTER_REDSHIFT (ncm_serialize_global_from_string ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
   NcClusterAbundance *cad         = nc_cluster_abundance_new (mfp, NULL);
   NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new (cad);
   NcmMSet *mset                   = ncm_mset_new (cosmo, clusterz, clusterm, cpc, NULL);
@@ -194,7 +192,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_dataset_append_data (dset, NCM_DATA (test->dcpc));
 
   lh        = ncm_likelihood_new (dset);
-  fit       = ncm_fit_new (NCM_FIT_TYPE_NLOPT, "ln-neldermead", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  fit       = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   test->fit = fit;
 
   nc_cluster_abundance_prepare_if_needed (cad, cosmo, clusterz, clusterm);

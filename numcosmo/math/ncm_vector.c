@@ -40,15 +40,16 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_cblas.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -57,7 +58,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT)
 
 static void
 ncm_vector_init (NcmVector *cv)
@@ -243,12 +244,20 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
+#ifdef HAVE_FFTW3
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
 
   cv->type = NCM_VECTOR_MALLOC;
 
   return cv;
+
+#else
+  g_error ("ncm_vector_new_fftw: fftw3 not available");
+
+  return NULL;
+
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -1150,6 +1159,11 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  *
  * Returns: $\vec{v}_1 \cdot \vec{v}_2$.
  */
+gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
+}
 
 /**
  * ncm_vector_len:
@@ -1584,7 +1598,7 @@ void
 ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 

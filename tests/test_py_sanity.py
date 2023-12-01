@@ -40,7 +40,7 @@ def test_distances():
 
     Ncm.cfg_init()
 
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
+    cosmo = Ncm.Serialize.global_from_string("NcHICosmoDEXcdm{'massnu-length':<1>}")
     cosmo.set_reparam(Nc.HICosmoDEReparamCMB.new(cosmo.len()))
 
     dist = Nc.Distance.new(2.0)

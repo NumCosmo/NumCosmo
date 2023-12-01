@@ -77,7 +77,7 @@ struct _NcmFitLevmar
   NcmFitLevmarAlgos algo;
 };
 
-G_DEFINE_TYPE (NcmFitLevmar, ncm_fit_levmar, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitLevmar, ncm_fit_levmar, NCM_TYPE_FIT)
 
 static void
 ncm_fit_levmar_init (NcmFitLevmar *fit_levmar)

@@ -64,7 +64,7 @@ struct _NcmDataset
   NcmVector *ls_f;
 };
 
-G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT)
 
 #define _NCM_DATASET_INITIAL_ALLOC 10
 

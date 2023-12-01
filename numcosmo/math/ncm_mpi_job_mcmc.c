@@ -66,7 +66,7 @@ enum
   PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
@@ -399,7 +399,7 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
     /*printf ("# has oa?! %p\n", self->func_oa);*/
     if (self->func_oa != NULL)
     {
-      gint i;
+      guint i;
 
       for (i = 0; i < self->func_oa->len; i++)
       {

@@ -158,7 +158,7 @@
 
 #define X_TODAY 1.0
 
-G_DEFINE_ABSTRACT_TYPE (NcRecomb, nc_recomb, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcRecomb, nc_recomb, G_TYPE_OBJECT)
 
 enum
 {
@@ -175,8 +175,8 @@ static gdouble _nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer use
 static void
 nc_recomb_init (NcRecomb *recomb)
 {
-  NcmSpline *tau_s       = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *tau_drag_s  = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *tau_s      = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *tau_drag_s = ncm_spline_cubic_notaknot_new ();
 
   recomb->zi             = 0.0;
   recomb->prec           = 0.0;
@@ -192,11 +192,11 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
   recomb->ctrl_reion     = ncm_model_ctrl_new (NULL);
 
-  recomb->v_tau_max_z    = 0.0;
-  recomb->tau_z          = 0.0;
-  recomb->tau_drag_z     = 0.0;
-  recomb->tau_cutoff_z   = 0.0;
-  
+  recomb->v_tau_max_z  = 0.0;
+  recomb->tau_z        = 0.0;
+  recomb->tau_drag_z   = 0.0;
+  recomb->tau_cutoff_z = 0.0;
+
   ncm_spline_free (tau_s);
   ncm_spline_free (tau_drag_s);
 }
@@ -235,6 +235,7 @@ static void
 nc_recomb_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcRecomb *recomb = NC_RECOMB (object);
+
   g_return_if_fail (NC_IS_RECOMB (object));
 
   switch (prop_id)
@@ -260,6 +261,7 @@ static void
 nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcRecomb *recomb = NC_RECOMB (object);
+
   g_return_if_fail (NC_IS_RECOMB (object));
 
   switch (prop_id)
@@ -281,12 +283,12 @@ nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
 static gdouble _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 static gdouble _nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
-static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
+static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 static void
 nc_recomb_class_init (NcRecombClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &nc_recomb_set_property;
   object_class->get_property = &nc_recomb_get_property;
@@ -306,6 +308,7 @@ nc_recomb_class_init (NcRecombClass *klass)
                                                         "Initial fraction to start numerical integration",
                                                         0.0, 1.0, 1.0e-11,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcRecomb:zi:
    *
@@ -319,6 +322,7 @@ nc_recomb_class_init (NcRecombClass *klass)
                                                         "Initial redshift for recombination calculations",
                                                         0.0, G_MAXDOUBLE, NC_RECOMB_STARTING_X,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcRecomb:prec:
    *
@@ -339,44 +343,28 @@ nc_recomb_class_init (NcRecombClass *klass)
   klass->XHeII   = &_nc_recomb_XHeII;
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   g_error ("_nc_recomb_Xe: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+
   return 0.0;
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   g_error ("_nc_recomb_XHII: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+
   return 0.0;
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   g_error ("_nc_recomb_XHeII: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+
   return 0.0;
-}
-
-/**
- * nc_recomb_new_from_name:
- * @recomb_name: a string representing a #NcRecomb object
- *
- * This function instantiates a new object of type #NcRecomb given @recomb_name.
- *
- * Returns: a new #NcRecomb
- */
-NcRecomb *
-nc_recomb_new_from_name (const gchar *recomb_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (recomb_name);
-  GType multiplicity_type = G_OBJECT_TYPE (obj);
-  if (!g_type_is_a (multiplicity_type, NC_TYPE_RECOMB))
-    g_error ("nc_recomb_new_from_name: NcRecomb %s do not descend from %s.", recomb_name, g_type_name (NC_TYPE_RECOMB));
-
-  return NC_RECOMB (obj);
 }
 
 /**
@@ -450,11 +438,11 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
  * nc_recomb_set_zi:
  * @recomb: a #NcRecomb
  * @zi: initial redshift to prepare the recombination functions $z_i$
- * 
+ *
  * Sets the initial redshift of the integration $[0, z_i]$.
- * 
+ *
  */
-void 
+void
 nc_recomb_set_zi (NcRecomb *recomb, const gdouble zi)
 {
   if (recomb->zi != zi)
@@ -473,7 +461,7 @@ nc_recomb_set_zi (NcRecomb *recomb, const gdouble zi)
  * Requires the initial redshift of at least $z_i$ = @zi.
  *
  */
-void 
+void
 nc_recomb_require_zi (NcRecomb *recomb, const gdouble zi)
 {
   if (zi > recomb->zi)
@@ -489,13 +477,13 @@ nc_recomb_require_zi (NcRecomb *recomb, const gdouble zi)
  *
  * Returns: the current initial redshift $z_i$.
  */
-gdouble 
+gdouble
 nc_recomb_get_zi (NcRecomb *recomb)
 {
   return recomb->zi;
 }
 
-static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
+static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 static gdouble _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1);
 static gdouble _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdouble x);
@@ -513,13 +501,13 @@ static gdouble _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gd
 gdouble
 nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
 {
-  const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
-  const gdouble T = T0 * x;
-  const gdouble kbT = ncm_c_kb () * T;
-  const gdouble x3 = gsl_pow_3 (x);
+  const gdouble T0        = nc_hicosmo_T_gamma0 (cosmo);
+  const gdouble T         = T0 * x;
+  const gdouble kbT       = ncm_c_kb () * T;
+  const gdouble x3        = gsl_pow_3 (x);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T));
-  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
-  const gdouble n_H  = n_H0 * x3;
+  const gdouble n_H0      = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H       = n_H0 * x3;
 
   return gsl_sf_exp_mult (-ncm_c_HI_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
@@ -537,13 +525,13 @@ nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
 gdouble
 nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, gdouble x)
 {
-  const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
-  const gdouble T = T0 * x;
-  const gdouble kbT = ncm_c_kb () * (T);
-  const gdouble x3 = gsl_pow_3 (x);
-  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T));
-  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
-  const gdouble n_H  = n_H0 * x3;
+  const gdouble T0        = nc_hicosmo_T_gamma0 (cosmo);
+  const gdouble T         = T0 * x;
+  const gdouble kbT       = ncm_c_kb () * (T);
+  const gdouble x3        = gsl_pow_3 (x);
+  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T));
+  const gdouble n_H0      = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H       = n_H0 * x3;
 
   return gsl_sf_exp_mult (-ncm_c_HeI_ion_E_1s_1S0 () / kbT, 4.0 / (n_H * lambda_e3));
 }
@@ -561,13 +549,13 @@ nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, gdouble x)
 gdouble
 nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
 {
-  const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
-  const gdouble T = T0 * x;
-  const gdouble kbT = ncm_c_kb () * T;
-  const gdouble x3 = gsl_pow_3 (x);
-  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
-  const gdouble n_H  = n_H0 * x3;
+  const gdouble T0        = nc_hicosmo_T_gamma0 (cosmo);
+  const gdouble T         = T0 * x;
+  const gdouble kbT       = ncm_c_kb () * T;
+  const gdouble x3        = gsl_pow_3 (x);
+  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T0)) / sqrt (x3);
+  const gdouble n_H0      = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H       = n_H0 * x3;
 
   return gsl_sf_exp_mult (-ncm_c_HeII_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
@@ -587,11 +575,11 @@ nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
 gdouble
 nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
 {
-  const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
-  const gdouble kbT0 = ncm_c_kb () * T0;
-  const gdouble mE_kbT0 = -ncm_c_HeII_ion_E_1s_2S0_5 () / kbT0;
+  const gdouble T0          = nc_hicosmo_T_gamma0 (cosmo);
+  const gdouble kbT0        = ncm_c_kb () * T0;
+  const gdouble mE_kbT0     = -ncm_c_HeII_ion_E_1s_2S0_5 () / kbT0;
   const gdouble lambda_e3_0 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T0));
-  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H0        = nc_hicosmo_H_number_density (cosmo);
 
   const gdouble y = 3.0 / 2.0 * gsl_sf_lambert_Wm1 (2.0 / 3.0 * mE_kbT0 * cbrt (gsl_pow_2 (lambda_e3_0 * n_H0 * f))) / mE_kbT0;
 
@@ -616,8 +604,9 @@ nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
 gdouble
 nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
 {
-  const gdouble XHe = nc_hicosmo_XHe (cosmo);
+  const gdouble XHe   = nc_hicosmo_XHe (cosmo);
   const gdouble ratio = f * (1.0 + XHe * (1.0 + f)) / (1.0 - f);
+
   return nc_recomb_HeII_ion_saha_x (cosmo, ratio);
 }
 
@@ -638,10 +627,11 @@ nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
 gdouble
 nc_recomb_He_fully_ionized_Xe (NcHICosmo *cosmo, gdouble x)
 {
-  const gdouble XHe = nc_hicosmo_XHe (cosmo);
+  const gdouble XHe            = nc_hicosmo_XHe (cosmo);
   const gdouble XHeIIIXe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
-  const gdouble arg = XHe * (XHe + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
-  const gdouble Xe = (2.0 + XHe + (1.0 + XHeIIIXe_XHeII) * ncm_util_sqrt1px_m1 (arg)) / 2.0;
+  const gdouble arg            = XHe * (XHe + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
+  const gdouble Xe             = (2.0 + XHe + (1.0 + XHeIIIXe_XHeII) * ncm_util_sqrt1px_m1 (arg)) / 2.0;
+
   return Xe;
 }
 
@@ -658,12 +648,12 @@ static gdouble
 _nc_recomb_XHe_XHII (gdouble XHII, gpointer p)
 {
   _nc_recomb_XHe_params *XHe_p = (_nc_recomb_XHe_params *) p;
-  const gdouble fHI   = XHe_p->fHI;
-  const gdouble fHeI  = XHe_p->fHeI;
-  const gdouble fHeII = XHe_p->fHeII;
-  const gdouble XHe   = ((fHI * (-1.0 + XHII) + gsl_pow_2 (XHII)) * (gsl_pow_2 (fHI) * gsl_pow_2 (-1.0 + XHII) -
-   fHeI * fHI * (-1.0 + XHII) * XHII +
-   fHeI * fHeII * gsl_pow_2 (XHII))) / (fHeI * gsl_pow_2 (XHII) * (fHI * (-1.0 + XHII) - 2.0 * fHeII * XHII));
+  const gdouble fHI            = XHe_p->fHI;
+  const gdouble fHeI           = XHe_p->fHeI;
+  const gdouble fHeII          = XHe_p->fHeII;
+  const gdouble XHe            = ((fHI * (-1.0 + XHII) + gsl_pow_2 (XHII)) * (gsl_pow_2 (fHI) * gsl_pow_2 (-1.0 + XHII) -
+                                                                              fHeI * fHI * (-1.0 + XHII) * XHII +
+                                                                              fHeI * fHeII * gsl_pow_2 (XHII))) / (fHeI * gsl_pow_2 (XHII) * (fHI * (-1.0 + XHII) - 2.0 * fHeII * XHII));
 
   return XHe - XHe_p->XHe;
 }
@@ -672,16 +662,15 @@ static gdouble
 _nc_recomb_XHe_XHI (gdouble XHI, gpointer p)
 {
   _nc_recomb_XHe_params *XHe_p = (_nc_recomb_XHe_params *) p;
-  const gdouble fHI   = XHe_p->fHI;
-  const gdouble fHeI  = XHe_p->fHeI;
-  const gdouble fHeII = XHe_p->fHeII;
-  const gdouble XHe   = ((-fHI * XHI + gsl_pow_2 (1.0 - XHI)) * (gsl_pow_2 (fHI) * gsl_pow_2 (XHI) +
-   fHeI * fHI * XHI * (1.0 - XHI) +
-   fHeI * fHeII * gsl_pow_2 (1.0 - XHI))) / (fHeI * gsl_pow_2 (1.0 - XHI) * (-fHI * XHI - 2.0 * fHeII * (1.0 - XHI)));
+  const gdouble fHI            = XHe_p->fHI;
+  const gdouble fHeI           = XHe_p->fHeI;
+  const gdouble fHeII          = XHe_p->fHeII;
+  const gdouble XHe            = ((-fHI * XHI + gsl_pow_2 (1.0 - XHI)) * (gsl_pow_2 (fHI) * gsl_pow_2 (XHI) +
+                                                                          fHeI * fHI * XHI * (1.0 - XHI) +
+                                                                          fHeI * fHeII * gsl_pow_2 (1.0 - XHI))) / (fHeI * gsl_pow_2 (1.0 - XHI) * (-fHI * XHI - 2.0 * fHeII * (1.0 - XHI)));
 
   return XHe - XHe_p->XHe;
 }
-
 
 /**
  * nc_recomb_equilibrium_Xe:
@@ -699,29 +688,29 @@ _nc_recomb_XHe_XHI (gdouble XHI, gpointer p)
 gdouble
 nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 {
-   _nc_recomb_XHe_params XHe_p;
+  _nc_recomb_XHe_params XHe_p;
   gsl_function F;
 
   F.params = &XHe_p;
 
   g_assert_cmpfloat (x, >=, 0.0);
 
-  XHe_p.cosmo  = cosmo;
-  XHe_p.fHI    = nc_recomb_HI_ion_saha (cosmo, x);
-  XHe_p.fHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
-  XHe_p.fHeII  = nc_recomb_HeII_ion_saha (cosmo, x);
-  XHe_p.XHe    = nc_hicosmo_XHe (cosmo);
+  XHe_p.cosmo = cosmo;
+  XHe_p.fHI   = nc_recomb_HI_ion_saha (cosmo, x);
+  XHe_p.fHeI  = nc_recomb_HeI_ion_saha (cosmo, x);
+  XHe_p.fHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  XHe_p.XHe   = nc_hicosmo_XHe (cosmo);
 
   if (XHe_p.fHeII < 1e-30)
-  {
     return 0.5 * (sqrt (XHe_p.fHI * (4.0 + XHe_p.fHI)) - XHe_p.fHI);
-  }
+
 
   if (XHe_p.fHI < 1.0e3)
   {
     F.function = &_nc_recomb_XHe_XHII;
     {
       const gdouble XHII = _nc_recomb_root (recomb, &F, 1e-30, 1.0 - GSL_DBL_EPSILON);
+
       return XHe_p.fHI * (-1.0 + 1.0 / XHII);
     }
   }
@@ -730,10 +719,10 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
     F.function = &_nc_recomb_XHe_XHI;
     {
       const gdouble XHI = _nc_recomb_root (recomb, &F, 1e-30, 1.0 - GSL_DBL_EPSILON);
+
       return XHe_p.fHI * XHI / (1.0 - XHI);
     }
   }
-
 }
 
 /**
@@ -753,6 +742,7 @@ gdouble
 nc_recomb_equilibrium_XHI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 {
   const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+
   if (saha_XHII_Xe_XHI == 0.0)
   {
     return 1.0;
@@ -761,6 +751,7 @@ nc_recomb_equilibrium_XHI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
   {
     const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
     const gdouble f  = saha_XHII_Xe_XHI / Xe;
+
     return 1.0 / (1.0 + f);
   }
 }
@@ -782,6 +773,7 @@ gdouble
 nc_recomb_equilibrium_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 {
   const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+
   if (saha_XHII_Xe_XHI == 0.0)
   {
     return 0.0;
@@ -790,6 +782,7 @@ nc_recomb_equilibrium_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
   {
     const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
     const gdouble f  = saha_XHII_Xe_XHI / Xe;
+
     return f / (1.0 + f);
   }
 }
@@ -890,14 +883,13 @@ nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble 
  * Returns: $d\tau/d\lambda$
  */
 
-
 /**
  * nc_recomb_dtau_dx:
  * @recomb: a #NcRecomb
  * @cosmo: a #NcHICosmo
  * @lambda: $\lambda = - \ln(1+z)$
  *
- * Computes the derivative of the optical depth with respect to $x = 1 + z$, 
+ * Computes the derivative of the optical depth with respect to $x = 1 + z$,
  * $\frac{\mathrm{d}\tau}{\mathrm{d}x}$, at @lambda.
  *
  * Returns: $\left.\frac{\mathrm{d}\tau}{\mathrm{d}x}\right|_{\lambda}$
@@ -906,7 +898,8 @@ gdouble
 nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
-  return gsl_sf_exp_mult (lambda, - ncm_spline_eval (recomb->dtau_dlambda_s, lambda));
+
+  return gsl_sf_exp_mult (lambda, -ncm_spline_eval (recomb->dtau_dlambda_s, lambda));
 }
 
 /**
@@ -915,7 +908,7 @@ nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  * @cosmo: a #NcHICosmo
  * @lambda: $\lambda = - \ln(1+z)$
  *
- * Computes the derivative of the optical depth with respect to $\lambda$, 
+ * Computes the derivative of the optical depth with respect to $\lambda$,
  * $\frac{\mathrm{d}\tau}{\mathrm{d}\lambda}$, at @lambda.
  *
  * Returns: $\left.\frac{\mathrm{d}\tau}{\mathrm{d}\lambda}\right|_{\lambda}$
@@ -924,6 +917,7 @@ gdouble
 nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -933,7 +927,7 @@ nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda
  * @cosmo: a #NcHICosmo
  * @lambda: $\lambda = - \ln(1+z)$
  *
- * Computes the second derivative of the optical depth with respect to $\lambda$, 
+ * Computes the second derivative of the optical depth with respect to $\lambda$,
  * $\frac{\mathrm{d}^2\tau}{\mathrm{d}\lambda^2}$, at @lambda.
  *
  * Returns: $\left.\frac{\mathrm{d}^2\tau}{\mathrm{d}\lambda^2}\right|_{\lambda}$
@@ -942,6 +936,7 @@ gdouble
 nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval_deriv (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -951,7 +946,7 @@ nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lamb
  * @cosmo: a #NcHICosmo
  * @lambda: $\lambda = - \ln(1+z)$
  *
- * Computes the third derivative of the optical depth with respect to $\lambda$, 
+ * Computes the third derivative of the optical depth with respect to $\lambda$,
  * $\frac{\mathrm{d}^3\tau}{\mathrm{d}\lambda^3}$, at @lambda.
  *
  * Returns: $\left.\frac{\mathrm{d}^3\tau}{\mathrm{d}\lambda^3}\right|_{\lambda}$
@@ -960,6 +955,7 @@ gdouble
 nc_recomb_d3tau_dlambda3 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval_deriv2 (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -977,6 +973,7 @@ gdouble
 nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval (recomb->tau_s, -lambda);
 }
 
@@ -987,15 +984,16 @@ nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  * @lambda: $\lambda = - \ln(1+z)$
  *
  * Computes the drag depth,
- * $$\tau_d \equiv \int_0^\lambda \mathrm{d}\lambda R^{-1} \frac{n_e \sigma_T}{1+z},$$ 
+ * $$\tau_d \equiv \int_0^\lambda \mathrm{d}\lambda R^{-1} \frac{n_e \sigma_T}{1+z},$$
  * where $R = \frac{3\bar{\rho}_b}{4\bar{\rho}_\gamma}$.
- * 
+ *
  * Returns: $\tau_\mathrm{drag}$
  */
 gdouble
 nc_recomb_tau_drag (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval (ncm_ode_spline_peek_spline (recomb->tau_drag_ode_s), -lambda);
 }
 
@@ -1006,7 +1004,7 @@ nc_recomb_tau_drag (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  * @lambda0: $\lambda_0$
  * @lambda1: $\lambda_1$
  *
- * Computes the optical depth between @lambda1 and @lambda0. 
+ * Computes the optical depth between @lambda1 and @lambda0.
  *
  * Returns: $\tau(\lambda_1) - \tau(\lambda_0)$
  */
@@ -1014,8 +1012,9 @@ gdouble
 nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda0, const gdouble lambda1)
 {
   NCM_UNUSED (cosmo);
+
   return ncm_spline_eval (recomb->tau_s, -lambda1) -
-    ncm_spline_eval (recomb->tau_s, -lambda0);
+         ncm_spline_eval (recomb->tau_s, -lambda0);
 }
 
 /**
@@ -1034,7 +1033,7 @@ nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
   const gdouble tau          = nc_recomb_tau (recomb, cosmo, lambda);
   const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
 
-  return - tau + log (fabs (dtau_dlambda));
+  return -tau + log (fabs (dtau_dlambda));
 }
 
 /**
@@ -1069,9 +1068,10 @@ nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 gdouble
 nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
-  const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
-  const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
+  const gdouble tau            = nc_recomb_tau (recomb, cosmo, lambda);
+  const gdouble dtau_dlambda   = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
   const gdouble d2tau_dlambda2 = nc_recomb_d2tau_dlambda2 (recomb, cosmo, lambda);
+
   return gsl_sf_exp_mult (-tau, (d2tau_dlambda2 - dtau_dlambda * dtau_dlambda));
 }
 
@@ -1088,10 +1088,11 @@ nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lamb
 gdouble
 nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
-  const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
-  const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
+  const gdouble tau            = nc_recomb_tau (recomb, cosmo, lambda);
+  const gdouble dtau_dlambda   = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
   const gdouble d2tau_dlambda2 = nc_recomb_d2tau_dlambda2 (recomb, cosmo, lambda);
   const gdouble d3tau_dlambda3 = nc_recomb_d3tau_dlambda3 (recomb, cosmo, lambda);
+
   return gsl_sf_exp_mult (-tau, (gsl_pow_3 (dtau_dlambda) + d3tau_dlambda3
                                  - 3.0 * dtau_dlambda * d2tau_dlambda2));
 }
@@ -1132,16 +1133,19 @@ _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1)
 {
   gint status;
   gint iter = 0, max_iter = 1000000;
-  gdouble x = 0.0;
+  gdouble x          = 0.0;
   const gdouble prec = GSL_MIN (recomb->prec, 1e-1);
 
   gsl_root_fsolver_set (recomb->fsol, F, x0, x1);
+
   do {
     iter++;
     status = gsl_root_fsolver_iterate (recomb->fsol);
+
     if (status)
       g_error ("_nc_recomb_root_brent: Cannot find root (%s)", gsl_strerror (status));
-    x = gsl_root_fsolver_root (recomb->fsol);
+
+    x  = gsl_root_fsolver_root (recomb->fsol);
     x0 = gsl_root_fsolver_x_lower (recomb->fsol);
     x1 = gsl_root_fsolver_x_upper (recomb->fsol);
 
@@ -1166,6 +1170,7 @@ _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdoub
   do {
     iter++;
     status = gsl_min_fminimizer_iterate (recomb->fmin);
+
     if (status)
       g_error ("_nc_recomb_min: Cannot find minimum (%s)", gsl_strerror (status));
 
@@ -1175,17 +1180,20 @@ _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdoub
 
     status = gsl_min_test_interval (x0, x1, 0.0, prec);
 
-    if (x == lx && x0 == lx0 && x1 == lx1)
+    if ((x == lx) && (x0 == lx0) && (x1 == lx1))
     {
       const gdouble fl = gsl_min_fminimizer_f_lower (recomb->fmin);
       const gdouble fu = gsl_min_fminimizer_f_upper (recomb->fmin);
+
       if (fabs (2.0 * (fu - fl) / (fu + fl)) < prec)
         status = GSL_SUCCESS;
       else
         g_error ("_nc_recomb_min: Cannot find minimum.");
     }
 
-    lx = x; lx0 = x0; lx1 = x1;
+    lx  = x;
+    lx0 = x0;
+    lx1 = x1;
   } while (status == GSL_CONTINUE && iter < max_iter);
 
   return x;
@@ -1202,6 +1210,7 @@ static gdouble
 _nc_recomb_v_tau_features (gdouble lambda, gpointer params)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) params;
+
   return nc_recomb_log_v_tau (func->recomb, func->cosmo, lambda) - func->ref;
 }
 
@@ -1209,6 +1218,7 @@ static gdouble
 _nc_recomb_v_tau_min (gdouble lambda, gpointer params)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) params;
+
   return -nc_recomb_log_v_tau (func->recomb, func->cosmo, lambda);
 }
 
@@ -1251,18 +1261,19 @@ nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble log
   log_v_tau_f   = -_nc_recomb_v_tau_min (recomb->lambdaf, &func);
   func.ref      = log_v_tau_max - logref;
 
-  func.ref      = GSL_MAX (func.ref, (log_v_tau_max + log_v_tau_f) * 0.5);
+  func.ref = GSL_MAX (func.ref, (log_v_tau_max + log_v_tau_f) * 0.5);
 
-  F.function    = &_nc_recomb_v_tau_features;
+  F.function = &_nc_recomb_v_tau_features;
 
-  *lambda_l     = _nc_recomb_root (recomb, &F, lambda_ref, *lambda_max);
-  *lambda_u     = _nc_recomb_root (recomb, &F, *lambda_max, recomb->lambdaf);
+  *lambda_l = _nc_recomb_root (recomb, &F, lambda_ref, *lambda_max);
+  *lambda_u = _nc_recomb_root (recomb, &F, *lambda_max, recomb->lambdaf);
 }
 
 static gdouble
 _nc_recomb_tau_ref (gdouble lambda, gpointer params)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) params;
+
   return nc_recomb_tau (func->recomb, func->cosmo, lambda) - func->ref;
 }
 
@@ -1270,6 +1281,7 @@ static gdouble
 _nc_recomb_tau_drag_ref (gdouble lambda, gpointer params)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) params;
+
   return nc_recomb_tau_drag (func->recomb, func->cosmo, lambda) - func->ref;
 }
 
@@ -1366,25 +1378,27 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
   const gdouble Xe      = nc_recomb_Xe (func->recomb, func->cosmo, lambda);
+
   return Xe * nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_mdtau_dlambda (gdouble y, gdouble x, gpointer userdata)
 {
-  const gdouble lambda = - x;
-  return - _nc_recomb_dtau_dlambda (lambda, userdata);
+  const gdouble lambda = -x;
+
+  return -_nc_recomb_dtau_dlambda (lambda, userdata);
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer userdata)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) userdata;
-  const gdouble lambda = - x;
-  const gdouble z      = expm1 (x);
-  const gdouble R      = 4.0 / 3.0 * nc_hicosmo_E2Omega_g (func->cosmo, z) / nc_hicosmo_E2Omega_b (func->cosmo, z);
-  
-  return -R * _nc_recomb_dtau_dlambda (lambda, userdata);
+  const gdouble lambda  = -x;
+  const gdouble z       = expm1 (x);
+  const gdouble R       = 4.0 / 3.0 * nc_hicosmo_E2Omega_g (func->cosmo, z) / nc_hicosmo_E2Omega_b (func->cosmo, z);
+
+  return -R *_nc_recomb_dtau_dlambda (lambda, userdata);
 }
 
 void
@@ -1402,7 +1416,7 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   func.recomb = recomb;
   func.cosmo  = cosmo;
 
-  F.params   = &func;
+  F.params = &func;
 
   F.function = &_nc_recomb_dtau_dlambda;
   ncm_spline_set_func (recomb->dtau_dlambda_s, NCM_SPLINE_FUNCTION_SPLINE,
@@ -1415,7 +1429,7 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   ncm_ode_spline_auto_abstol (recomb->tau_drag_ode_s, TRUE);
   ncm_ode_spline_set_interval (recomb->tau_drag_ode_s, 0.0, -recomb->lambdaf, -recomb->lambdai);
   ncm_ode_spline_prepare (recomb->tau_drag_ode_s, &func);
-  
+
   ncm_spline_clear (&recomb->tau_s);
   recomb->tau_s = ncm_spline_ref (ncm_ode_spline_peek_spline (recomb->tau_ode_s));
 }
@@ -1483,13 +1497,13 @@ _nc_recomb_tau_cutoff_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
   gsl_function F;
 
   F.function = &_nc_recomb_tau_ref;
-  F.params = &func;
+  F.params   = &func;
 
   func.recomb = recomb;
   func.cosmo  = cosmo;
   func.ref    = -GSL_LOG_DBL_EPSILON;
 
-  return _nc_recomb_root (recomb, &F, 
+  return _nc_recomb_root (recomb, &F,
                           recomb->lambdai,
                           recomb->lambdaf);
 }
@@ -1502,8 +1516,9 @@ _nc_recomb_prepare_redshifts (NcRecomb *recomb, NcHICosmo *cosmo)
   recomb->tau_drag_lambda   = _nc_recomb_tau_drag_lambda (recomb, cosmo);
   recomb->tau_cutoff_lambda = _nc_recomb_tau_cutoff_lambda (recomb, cosmo);
 
-  recomb->v_tau_max_z       = expm1 (-recomb->v_tau_max_lambda);
-  recomb->tau_z             = expm1 (-recomb->tau_lambda);
-  recomb->tau_drag_z        = expm1 (-recomb->tau_drag_lambda);
-  recomb->tau_cutoff_z      = expm1 (-recomb->tau_cutoff_lambda);
+  recomb->v_tau_max_z  = expm1 (-recomb->v_tau_max_lambda);
+  recomb->tau_z        = expm1 (-recomb->tau_lambda);
+  recomb->tau_drag_z   = expm1 (-recomb->tau_drag_lambda);
+  recomb->tau_cutoff_z = expm1 (-recomb->tau_cutoff_lambda);
 }
+

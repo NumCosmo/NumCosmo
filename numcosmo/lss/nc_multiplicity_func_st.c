@@ -60,7 +60,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncST, nc_multiplicity_func_st, NC_TYPE_MULTIPLICITY_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncST, nc_multiplicity_func_st, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_st_init (NcMultiplicityFuncST *mst)

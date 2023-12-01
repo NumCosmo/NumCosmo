@@ -54,7 +54,7 @@ enum
   PROP_SEED,
 };
 
-G_DEFINE_TYPE (NcmRNG, ncm_rng, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmRNG, ncm_rng, G_TYPE_OBJECT)
 
 static void
 ncm_rng_init (NcmRNG *rng)

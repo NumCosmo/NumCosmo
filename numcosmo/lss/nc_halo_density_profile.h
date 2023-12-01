@@ -107,7 +107,6 @@ GType nc_halo_density_profile_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_halo_density_profile);
 
-NcHaloDensityProfile *nc_halo_density_profile_new_from_name (gchar *density_profile_name);
 NcHaloDensityProfile *nc_halo_density_profile_ref (NcHaloDensityProfile *dp);
 
 void nc_halo_density_profile_free (NcHaloDensityProfile *dp);

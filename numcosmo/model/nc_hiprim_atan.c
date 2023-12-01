@@ -44,7 +44,7 @@
 
 #include "nc_hiprim_atan.h"
 
-G_DEFINE_TYPE (NcHIPrimAtan, nc_hiprim_atan, NC_TYPE_HIPRIM);
+G_DEFINE_TYPE (NcHIPrimAtan, nc_hiprim_atan, NC_TYPE_HIPRIM)
 
 enum {
   PROP_0,

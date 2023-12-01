@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_funnel.c
  *
@@ -56,7 +57,7 @@ struct _NcmDataFunnel
   NcmDataFunnelPrivate *priv;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA)
 
 static void
 ncm_data_funnel_init (NcmDataFunnel *dfu)
@@ -118,7 +119,7 @@ _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   const gdouble sigma_nu = exp (0.5 * nu);
   const guint x_len      = ncm_model_vparam_len (NCM_MODEL (mrb), NCM_MODEL_FUNNEL_X);
   const guint x_0_i      = ncm_model_vparam_index (NCM_MODEL (mrb), NCM_MODEL_FUNNEL_X, 0);
-  gint i;
+  guint i;
 
   /*printf ("nu: % 22.15g\n", nu);*/
   m2lnL[0] = x_len * nu + gsl_pow_2 (nu / 3.0);

@@ -61,7 +61,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcDataBaoEmpiricalFit2d, nc_data_bao_empirical_fit_2d, NCM_TYPE_DATA_DIST2D);
+G_DEFINE_TYPE (NcDataBaoEmpiricalFit2d, nc_data_bao_empirical_fit_2d, NCM_TYPE_DATA_DIST2D)
 
 static void
 nc_data_bao_empirical_fit_2d_init (NcDataBaoEmpiricalFit2d *bao_ef)

@@ -38,7 +38,7 @@
 
 #include "model/nc_hicosmo_de_jbp.h"
 
-G_DEFINE_TYPE (NcHICosmoDEJbp, nc_hicosmo_de_jbp, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE (NcHICosmoDEJbp, nc_hicosmo_de_jbp, NC_TYPE_HICOSMO_DE)
 
 #define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))

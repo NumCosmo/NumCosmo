@@ -53,7 +53,7 @@ enum
   PROP_LEN
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT)
 
 static void
 nc_hipert_comp_init (NcHIPertComp *comp)

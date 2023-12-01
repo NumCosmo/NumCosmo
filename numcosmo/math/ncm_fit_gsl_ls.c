@@ -43,6 +43,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_multifit_nlin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFitGSLLS
@@ -55,7 +56,7 @@ struct _NcmFitGSLLS
 };
 
 
-G_DEFINE_TYPE (NcmFitGSLLS, ncm_fit_gsl_ls, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitGSLLS, ncm_fit_gsl_ls, NCM_TYPE_FIT)
 
 static void
 ncm_fit_gsl_ls_init (NcmFitGSLLS *fit_gsl_ls)

@@ -57,7 +57,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NCM_TYPE_DATA)
 
 static void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
 
