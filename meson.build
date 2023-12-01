@@ -591,7 +591,6 @@ have_lapack = lapack_dep.found()
 lapack_dep = []
 if have_lapack
   numcosmo_conf.set('HAVE_LAPACK', true)
-  lapack_dep = declare_dependency(dependencies: [lapack_dep, blas_dep])
   lapack_functions = [
     'dgeev_',
     'dgeevx_',
@@ -620,7 +619,7 @@ if have_lapack
     'dtrsv_',
   ]
   foreach f : lapack_functions
-    if cc.has_function(f, dependencies: lapack_dep)
+    if cc.has_function(f, dependencies: [lapack_dep, blas_dep])
       define = 'HAVE_' + f.underscorify().to_upper()
       numcosmo_conf.set(define, 1)
     endif

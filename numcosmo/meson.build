@@ -693,7 +693,6 @@ libcuba_inc = include_directories('libcuba')
 
 libnumcosmo_dep = [
     mpi_c_dep,
-    blas_dep,
     cfitsio_dep,
     fftw3_dep,
     fftw3f_dep,
@@ -701,10 +700,11 @@ libnumcosmo_dep = [
     glib_dep,
     gmp_dep,
     gobject_dep,
-    lapack_dep,
     mpfr_dep,
     nlopt_dep,
     omp_c,
+    blas_dep,
+    lapack_dep,
     gsl_dep,
 ]
 
