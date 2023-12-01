@@ -77,7 +77,7 @@ jobs:
     - name: Check NumCosmo
       run: meson test -C build
     - name: Generate coverage
-      run: ninja -C build coverage
+      run: ninja coverage -C build -v -d stats -d explain
     - name: Coveralls
       uses: coverallsapp/github-action@v2
       with:
