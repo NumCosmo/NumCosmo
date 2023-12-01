@@ -115,6 +115,8 @@ jobs:
       run: | 
         meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
-      run: ninja -C build
+      run: |
+        ninja -C build
+        find .
     - name: Check NumCosmo
       run: ninja -C build test
