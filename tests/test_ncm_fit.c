@@ -267,10 +267,10 @@ typedef struct _TestNcmFit
         }
 #endif
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 TESTS_NCM_DECL (nlopt, neldermead)
 TESTS_NCM_DECL (nlopt, slsqp)
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
 TESTS_NCM_DECL (gsl, ls)
 
@@ -328,10 +328,10 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   TESTS_NCM_ADD (nlopt, neldermead)
   TESTS_NCM_ADD (nlopt, slsqp)
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   TESTS_NCM_ADD (gsl, ls)
 
@@ -351,10 +351,10 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD (levmar, bc_dif)
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   TESTS_NCM_ADD_INVALID (nlopt, neldermead)
   TESTS_NCM_ADD_INVALID (nlopt, slsqp)
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   TESTS_NCM_ADD_INVALID (gsl, ls)
 
@@ -376,10 +376,10 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", 20, NCM_FIT_DEFAULT_MAXITER)
 TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      20, NCM_FIT_DEFAULT_MAXITER)
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
 TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, 20, 10000000)
 
@@ -1079,7 +1079,7 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_add_equality_constraint (fit, func, 1.0e-5);
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 
   if (NCM_IS_FIT_NLOPT (fit))
   {
@@ -1124,7 +1124,7 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_remove_equality_constraints (fit);
   g_assert_true (ncm_fit_equality_constraints_len (fit) == 0);
 
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
   ncm_mset_func_free (func);
 }
 
@@ -1136,7 +1136,7 @@ test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_add_inequality_constraint (fit, func, 1.0e-5);
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 
   if (NCM_IS_FIT_NLOPT (fit))
   {
@@ -1181,7 +1181,7 @@ test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_remove_inequality_constraints (fit);
   g_assert_true (ncm_fit_inequality_constraints_len (fit) == 0);
 
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
   ncm_mset_func_free (func);
 }
 
@@ -1361,10 +1361,10 @@ test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata)
   }
 }
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 TESTS_NCM_TRAPS (nlopt, neldermead)
 TESTS_NCM_TRAPS (nlopt, slsqp)
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
 TESTS_NCM_TRAPS (gsl, ls)
 

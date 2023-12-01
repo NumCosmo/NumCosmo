@@ -103,7 +103,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 
     switch (id)
     {
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
       case NC_DATA_CLUSTER_ABUNDANCE_FIT:
       {
         gint i = 0;
@@ -134,7 +134,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
         nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
 
         if (de_data_cluster->save_cata != NULL)
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
           nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
 
 #else

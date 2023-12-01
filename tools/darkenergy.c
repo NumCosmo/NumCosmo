@@ -638,7 +638,7 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit_type == NULL)
   {
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
     de_fit.fit_type = g_strdup ("nlopt");
 #else
     de_fit.fit_type = g_strdup ("gsl-mms");
