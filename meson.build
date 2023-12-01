@@ -511,14 +511,22 @@ lapack_name = get_option('lapack')
 # available blas library in the list of blas libraries specified in blas-order
 if blas_name == 'auto'
   foreach _name : get_option('blas-order')
-    blas_dep = dependency(_name, required: false)
+    blas_dep = dependency(
+      _name,
+      modules: ['cblas', 'interface: lp64'],
+      required: false,
+    )
     if blas_dep.found()
       blas_name = _name
       break
     endif
   endforeach
 else
-  blas_dep = dependency(blas_name, required: false)
+  blas_dep = dependency(
+    blas_name,
+    modules: ['cblas', 'interface: lp64'],
+    required: false,
+  )
 endif
 
 # If we still haven't found a blas library, try to find the blas library
@@ -550,18 +558,26 @@ endif
 
 # If we have either mkl or accelerate, we don't need lapack since they
 # provide lapack routines
-if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate' or blas_dep.name() == 'openblas'
+if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate'
   lapack_dep = blas_dep
 else
   if lapack_name == 'auto'
     foreach _name : get_option('lapack-order')
-      lapack_dep = dependency(_name, required: false)
+      lapack_dep = dependency(
+        _name,
+        modules: ['lapack', 'interface: lp64'],
+        required: false,
+      )
       if lapack_dep.found()
         break
       endif
     endforeach
   else
-    lapack_dep = dependency(lapack_name, required: false)
+    lapack_dep = dependency(
+      lapack_name,
+      modules: ['lapack', 'interface: lp64'],
+      required: false,
+    )
   endif
 endif
 
