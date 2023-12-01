@@ -619,6 +619,8 @@ else
   endif
 endif
 
+assert(lapack.found(), 'Lapack is required')
+
 have_lapack = lapack.found()
 lapack_dep = []
 if have_lapack
