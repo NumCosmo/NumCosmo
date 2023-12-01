@@ -77,7 +77,11 @@ jobs:
     - name: Check NumCosmo
       run: meson test -C build
     - name: Generate coverage
-      run: ninja coverage -C build -v -d stats -d explain
+      # For some reason, gcovr is ignoring the configured gcovr.cfg file
+      # ninja coverage -C build -v -d stats -d explain
+      run: |
+        gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
+        cat build/meson-logs/coverage.txt
     - name: Coveralls
       uses: coverallsapp/github-action@v2
       with:
