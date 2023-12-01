@@ -68,7 +68,7 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
         pip install meson ninja pytest numpy
     - name: Configure NumCosmo
       run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
@@ -81,8 +81,7 @@ jobs:
     - name: Coveralls
       uses: coverallsapp/github-action@v2
       with:
-        files: build/meson-logs/coverage.info
-        format: lcov
+        files: build/meson-logs/coverage.xml
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-gcc-macos:
