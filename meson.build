@@ -531,9 +531,11 @@ endif
 
 # If we still haven't found a blas library, try to find the blas library
 # specified by the user
-blas_dep_name = blas_dep.name()
 if not blas_dep.found()
   blas_dep = cc.find_library('blas', required: false)
+  blas_dep_name = 'generic'
+else
+  blas_dep_name = blas_dep.name()
 endif
 # If non of the above worked, we rely on the blas from gsl
 
