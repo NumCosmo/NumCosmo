@@ -10244,7 +10244,6 @@ class HIPrim(NumCosmoMath.Model):
     ::
 
         HIPrim(**properties)
-        new_from_name(parent_type:GType, prim_name:str) -> NumCosmo.HIPrim
 
     Object NcHIPrim
 
@@ -10313,8 +10312,6 @@ class HIPrim(NumCosmoMath.Model):
     def lnT_powspec_lnk(self, lnk: float) -> float: ...
     @staticmethod
     def log_all_models(parent: Type) -> None: ...
-    @classmethod
-    def new_from_name(cls, parent_type: Type, prim_name: str) -> HIPrim: ...
     def ref(self) -> HIPrim: ...
     def set_k_pivot(self, k_pivot: float) -> None: ...
     
@@ -11651,7 +11648,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
     ::
 
         HaloDensityProfile(**properties)
-        new_from_name(density_profile_name:str) -> NumCosmo.HaloDensityProfile
 
     Object NcHaloDensityProfile
 
@@ -11761,8 +11757,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def get_reltol(self) -> float: ...
     @staticmethod
     def id() -> int: ...
-    @classmethod
-    def new_from_name(cls, density_profile_name: str) -> HaloDensityProfile: ...
     def r_s(self, cosmo: HICosmo, z: float) -> float: ...
     def r_s_rho_s(self, cosmo: HICosmo, z: float) -> Tuple[float, float]: ...
     def ref(self) -> HaloDensityProfile: ...
@@ -12884,7 +12878,6 @@ class PlanckFI(NumCosmoMath.Model):
     ::
 
         PlanckFI(**properties)
-        new_from_name(pfi_name:str) -> NumCosmo.PlanckFI
 
     Object NcPlanckFI
 
@@ -12939,8 +12932,6 @@ class PlanckFI(NumCosmoMath.Model):
     def id() -> int: ...
     @staticmethod
     def log_all_models() -> None: ...
-    @classmethod
-    def new_from_name(cls, pfi_name: str) -> PlanckFI: ...
     def ref(self) -> PlanckFI: ...
     
 
