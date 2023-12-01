@@ -44,7 +44,7 @@ jobs:
     - name: Check NumCosmo
       run: meson test -C build
     - name: Create a NumCosmo tarball
-      run: meson -C build dist --no-tests 
+      run: meson dist -C build --no-tests 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
       with:
