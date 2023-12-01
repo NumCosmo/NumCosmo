@@ -532,7 +532,8 @@ endif
 # If we still haven't found a blas library, try to find the blas library
 # specified by the user
 if not blas_dep.found()
-  blas_dep = cc.find_library('blas', required: false)
+  blas_lib = cc.find_library('blas', required: false)
+  blas_dep = declare_dependency(dependencies: blas_lib)
 endif
 # If non of the above worked, we rely on the blas from gsl
 
@@ -582,7 +583,8 @@ else
 endif
 
 if not lapack_dep.found()
-  lapack_dep = cc.find_library('lapack', required: false)
+  lapack_lib = cc.find_library('lapack', required: false)
+  lapack_dep = declare_dependency(dependencies: lapack_lib)
 endif
 
 have_lapack = lapack_dep.found()
