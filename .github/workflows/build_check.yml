@@ -118,5 +118,7 @@ jobs:
       run: |
         ninja -C build
         find .
+        find ..
+        find ../..
     - name: Check NumCosmo
       run: ninja -C build test
