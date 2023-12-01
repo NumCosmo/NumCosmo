@@ -383,7 +383,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNRICH_EXT_CUT, "cut", "cut",
-                              0.0, 100.0, 1.0e-2,
+                              0.0, 1.0e16, 1.0e-2,
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT,
                               NCM_PARAM_TYPE_FIXED);
 
