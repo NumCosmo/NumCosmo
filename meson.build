@@ -531,9 +531,9 @@ endif
 
 # If we still haven't found a blas library, try to find the blas library
 # specified by the user
+blas_dep_name = blas_dep.name()
 if not blas_dep.found()
-  blas_lib = cc.find_library('blas', required: false)
-  blas_dep = declare_dependency(dependencies: blas_lib)
+  blas_dep = cc.find_library('blas', required: false)
 endif
 # If non of the above worked, we rely on the blas from gsl
 
@@ -559,7 +559,7 @@ endif
 
 # If we have either mkl or accelerate, we don't need lapack since they
 # provide lapack routines
-if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate'
+if 'mkl' in blas_dep_name or blas_dep_name == 'accelerate'
   lapack_dep = blas_dep
 else
   if lapack_name == 'auto'
