@@ -44,7 +44,7 @@ jobs:
     - name: Check NumCosmo
       run: ninja -C build test
     - name: Create a NumCosmo tarball
-      run: ninja -C build dist
+      run: ninja -C build dist --no-tests 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
       with:
