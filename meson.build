@@ -589,7 +589,6 @@ if not lapack_dep.found()
 endif
 
 have_lapack = lapack_dep.found()
-lapack_dep = []
 if have_lapack
   numcosmo_conf.set('HAVE_LAPACK', true)
   lapack_functions = [
