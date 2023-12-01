@@ -583,10 +583,7 @@ else
 endif
 
 if not lapack_dep.found()
-  lapack_lib = cc.find_library('lapack', required: false)
-  lapack_dep = declare_dependency(dependencies: lapack_lib)
-  assert(lapack_lib.found(), 'Found')
-  assert(not lapack_lib.found(), 'Not Found')
+  lapack_dep = cc.find_library('lapack', required: false)
 endif
 
 have_lapack = lapack_dep.found()
