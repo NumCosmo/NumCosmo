@@ -602,12 +602,15 @@ if have_lapack
     'dtrsv_',
   ]
   foreach f : lapack_functions
-    if cc.has_function(f, dependencies: lapack_dep)
+    if cc.has_function(
+      f,
+      dependencies: lapack_dep,
+      required: true,
+    )
       define = 'HAVE_' + f.underscorify().to_upper()
       numcosmo_conf.set(define, 1)
     endif
   endforeach
-
 endif
 
 #######################################################################################
