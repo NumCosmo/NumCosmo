@@ -262,6 +262,11 @@ if enable_gir
     )
 
     env.prepend(
+        'DYLD_LIBRARY_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
         'PYTHONPATH',
         numcosmo_source_dir,
     )
