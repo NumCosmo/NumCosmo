@@ -560,7 +560,7 @@ endif
 # If we have either mkl or accelerate, we don't need lapack since they
 # provide lapack routines
 if 'mkl' in blas_dep_name or blas_dep_name == 'accelerate'
-  alapack_dep = blas_dep
+  lapack_dep = blas_dep
 else
   if lapack_name == 'auto'
     foreach _name : get_option('lapack-order')

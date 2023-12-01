@@ -112,7 +112,9 @@ jobs:
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: | 
+        meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+        cat build/meson-logs/meson-log.txt
     - name: Building NumCosmo
       run: ninja -C build
     - name: Check NumCosmo
