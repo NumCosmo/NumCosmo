@@ -506,78 +506,30 @@ message('Checking for BLAS/LAPACK')
 
 blas_name = get_option('blas')
 lapack_name = get_option('lapack')
-allow_noblas = get_option('allow-noblas')
 
-use_ilp64 = get_option('use-ilp64')
-if use_ilp64
-  blas_interface = ['interface: ilp64']
-else
-  blas_interface = ['interface: lp64']
-endif
-mkl_opts = ['threading: seq']
-blas_opts = {'mkl': mkl_opts}
-mkl_version_req = '>=2023.0' # see gh-24824
-mkl_may_use_sdl = not use_ilp64
-
+# Trying to find the blas library, if 'auto' is specified, try to find the first
+# available blas library in the list of blas libraries specified in blas-order
 if blas_name == 'auto'
   foreach _name : get_option('blas-order')
-    if _name == 'mkl'
-      blas_dep = dependency(
-        'mkl',
-        modules: ['cblas'] + blas_interface + mkl_opts,
-        required: false, # may be required, but we need to emit a custom error message
-        version: mkl_version_req,
-      )
-      # Insert a second try with MKL, because we may be rejecting older versions
-      # or missing it because no pkg-config installed. If so, we need to retry
-      # with MKL SDL, and drop the version constraint (this always worked).
-      if not blas_dep.found() and mkl_may_use_sdl
-        blas_dep = dependency(
-          'mkl',
-          modules: ['cblas', 'sdl: true'],
-          required: false,
-        )
-      endif
-    else
-      if _name == 'flexiblas' and use_ilp64
-        _name = 'flexiblas64'
-      endif
-      blas_dep = dependency(
-        _name,
-        modules: ['cblas'] + blas_interface,
-        required: false,
-      )
-    endif
+    blas_dep = dependency(_name, required: false)
     if blas_dep.found()
       blas_name = _name
       break
     endif
   endforeach
 else
-  if blas_name == 'mkl'
-    blas_dep = dependency(
-      'mkl',
-      modules: ['cblas'] + blas_interface + mkl_opts,
-      required: false,
-      version: mkl_version_req,
-    )
-    # Same deal as above - try again for MKL
-    if not blas_dep.found() and mkl_may_use_sdl
-      blas_dep = dependency(
-        'mkl',
-        modules: ['cblas', 'sdl: true'],
-        required: false,
-      )
-    endif
-  else
-    blas_dep = dependency(
-      blas_name,
-      modules: ['cblas'] + blas_interface,
-      required: false,
-    )
-  endif
+  blas_dep = dependency(blas_name, required: false)
 endif
 
+# If we still haven't found a blas library, try to find the blas library
+# specified by the user
+if not blas_dep.found()
+  blas_dep = cc.find_library('blas', required: false)
+endif
+# If non of the above worked, we rely on the blas from gsl
+
+# Check if the blas library has a cblas header and if so, check if
+# it defines CBLAS_ORDER, if not, we need to define it ourselves
 if blas_name == 'mkl'
   if cc.has_header('mkl_cblas.h', required: true)
     numcosmo_conf.set('HAVE_MKL_CBLAS_H', true)
@@ -596,36 +548,32 @@ if not cc.has_header_symbol(cblas_header, 'CBLAS_ORDER', required: false)
   numcosmo_conf.set('BLAS_NOT_TYPEDEFED', true)
 endif
 
-if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate'
-  lapack = blas_dep
+# If we have either mkl or accelerate, we don't need lapack since they
+# provide lapack routines
+if 'mkl' in blas_dep.name() or blas_dep.name() == 'accelerate' or blas_dep.name() == 'openblas'
+  lapack_dep = blas_dep
 else
   if lapack_name == 'auto'
     foreach _name : get_option('lapack-order')
-      lapack = dependency(
-        _name,
-        modules: ['lapack'] + blas_interface,
-        required: false,
-      )
-      if lapack.found()
+      lapack_dep = dependency(_name, required: false)
+      if lapack_dep.found()
         break
       endif
     endforeach
   else
-    lapack = dependency(
-      lapack_name,
-      modules: ['lapack'] + blas_interface,
-      required: false,
-    )
+    lapack_dep = dependency(lapack_name, required: false)
   endif
 endif
 
-assert(lapack.found(), 'Lapack is required')
+if not lapack_dep.found()
+  lapack_dep = cc.find_library('lapack', required: false)
+endif
 
-have_lapack = lapack.found()
+have_lapack = lapack_dep.found()
 lapack_dep = []
 if have_lapack
   numcosmo_conf.set('HAVE_LAPACK', true)
-  lapack_dep = declare_dependency(dependencies: [lapack, blas_dep])
+  lapack_dep = declare_dependency(dependencies: [lapack_dep, blas_dep])
   lapack_functions = [
     'dgeev_',
     'dgeevx_',
