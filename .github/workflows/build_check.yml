@@ -108,13 +108,12 @@ jobs:
         brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
-        pip3 install meson ninja pytest pygobject
+        pip3 install meson ninja pytest numpy pygobject
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: | 
         meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
-        cat build/meson-logs/meson-log.txt
     - name: Building NumCosmo
       run: ninja -C build
     - name: Check NumCosmo
