@@ -34,6 +34,8 @@
 #ifdef HAVE_MKL_CBLAS_H
 #  include <mkl_cblas.h>
 #  define CBLAS_H "mkl_cblas.h"
+#  define __GSL_CBLAS_H__
+#  define __GSL_BLAS_TYPES_H__
 #else
 #  ifdef HAVE_CBLAS_H
 #    include <cblas.h>
@@ -41,6 +43,7 @@
 #      define CBLAS_H "cblas.h"
 #    endif
 #    define __GSL_CBLAS_H__
+#    define __GSL_BLAS_TYPES_H__
 #  else
 #    ifdef HAVE_GSL_CBLAS_H
 #      include <gsl/gsl_cblas.h>

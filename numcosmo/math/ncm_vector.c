@@ -40,7 +40,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_cblas.h"
+#include "math/ncm_cblas.h" /* This must be included before any gsl header */
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
