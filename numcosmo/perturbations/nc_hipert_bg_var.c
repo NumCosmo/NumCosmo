@@ -55,8 +55,8 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free);
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free)
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT)
 
 static void
 nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)

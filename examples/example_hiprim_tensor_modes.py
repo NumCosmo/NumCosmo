@@ -92,7 +92,7 @@ def test_hiprim_tensor_modes() -> None:
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
+    cosmo = Nc.HICosmoDEXcdm.new()
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("Omegak", 0.0)
 

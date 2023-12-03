@@ -75,7 +75,7 @@ struct _NcHaloMassFunctionPrivate
   gboolean constructed;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHaloMassFunction, nc_halo_mass_function, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHaloMassFunction, nc_halo_mass_function, G_TYPE_OBJECT)
 
 static void
 nc_halo_mass_function_init (NcHaloMassFunction *mfp)

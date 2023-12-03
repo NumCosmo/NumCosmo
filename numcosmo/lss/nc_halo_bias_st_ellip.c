@@ -58,7 +58,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcHaloBiasSTEllip, nc_halo_bias_st_ellip, NC_TYPE_HALO_BIAS);
+G_DEFINE_TYPE (NcHaloBiasSTEllip, nc_halo_bias_st_ellip, NC_TYPE_HALO_BIAS)
 
 enum
 {

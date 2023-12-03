@@ -69,8 +69,7 @@ enum
   PROP_METH,
 };
 
-G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free);
+G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT)
 
 static void
 nc_xcor_init (NcXcor *xc)
@@ -260,37 +259,6 @@ void
 nc_xcor_clear (NcXcor **xc)
 {
   g_clear_object (xc);
-}
-
-/**
- * nc_xcor_kinetic_copy:
- * @xck: a #NcXcorKinetic
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcXcorKinetic *
-nc_xcor_kinetic_copy (NcXcorKinetic *xck)
-{
-  NcXcorKinetic *xck_copy = g_new (NcXcorKinetic, 1);
-
-  xck_copy[0] = xck[0];
-
-  return xck_copy;
-}
-
-/**
- * nc_xcor_kinetic_free:
- * @xck: a #NcXcorKinetic
- *
- * FIXME
- *
- */
-void
-nc_xcor_kinetic_free (NcXcorKinetic *xck)
-{
-  g_free (xck);
 }
 
 /**
@@ -692,8 +660,8 @@ _nc_xcor_limber_gsl (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
 void
 nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp)
 {
-  const guint nell = ncm_vector_len (vp);
-  const gboolean isauto = (xclk2 == xclk1);
+  const guint nell          = ncm_vector_len (vp);
+  const gboolean isauto     = (xclk2 == NULL);
   const gdouble cons_factor = ((isauto) ? gsl_pow_2 (xclk1->cons_factor) : xclk1->cons_factor * xclk2->cons_factor) / gsl_pow_3 (xc->RH);
   gdouble zmin, zmax;
 

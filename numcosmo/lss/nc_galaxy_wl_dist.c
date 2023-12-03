@@ -52,7 +52,7 @@ struct _NcGalaxyWLDistPrivate
   gint placeholder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLDist, nc_galaxy_wl_dist, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLDist, nc_galaxy_wl_dist, G_TYPE_OBJECT)
 
 static void
 nc_galaxy_wl_dist_init (NcGalaxyWLDist *gwld)

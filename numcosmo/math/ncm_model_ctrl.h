@@ -97,9 +97,10 @@ NCM_INLINE gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
-  gboolean up = FALSE;
+  gboolean up          = FALSE;
 
   ctrl->last_update = FALSE;
+
   if (ctrl_model != model)
   {
     ncm_model_ctrl_set_model (ctrl, model);
@@ -107,9 +108,10 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
   }
   else if (ctrl->pkey != model->pkey)
   {
-    ctrl->pkey = model->pkey;
+    ctrl->pkey        = model->pkey;
     ctrl->last_update = TRUE;
   }
+
   up = up || ctrl->last_update;
 
   {
@@ -117,32 +119,37 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
     guint i;
 
     g_array_set_size (ctrl->submodel_last_update, n);
+
     for (i = 0; i < n; i++)
     {
       NcmModel *submodel = ncm_model_peek_submodel (model, i);
+
       g_array_index (ctrl->submodel_last_update, gboolean, i) = FALSE;
-      
+
       if (i >= ctrl->submodel_ctrl->len)
       {
         NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
+
         g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
-        
+
         g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
       }
       else
       {
         NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
+
         if (ncm_model_ctrl_update (sub_ctrl, submodel))
-        {
           g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-        }
       }
+
       up = up || g_array_index (ctrl->submodel_last_update, gboolean, i);
     }
+
     g_ptr_array_set_size (ctrl->submodel_ctrl, n);
   }
 
   ncm_model_clear (&ctrl_model);
+
   return up;
 }
 
@@ -150,69 +157,77 @@ NCM_INLINE gboolean
 ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
-  gboolean up = FALSE;
+  gboolean up          = FALSE;
 
   ctrl->last_update = FALSE;
+
   if (ctrl_model != model)
   {
     ncm_model_ctrl_set_model (ctrl, model);
     ctrl->last_update = TRUE;
   }
+
   up = up || ctrl->last_update;
-  
+
   {
     const guint n = ncm_model_get_submodel_len (model);
     guint i;
 
     g_array_set_size (ctrl->submodel_last_update, n);
-    
+
     for (i = 0; i < n; i++)
     {
       NcmModel *submodel = ncm_model_peek_submodel (model, i);
+
       g_array_index (ctrl->submodel_last_update, gboolean, i) = FALSE;
-      
+
       if (i >= ctrl->submodel_ctrl->len)
       {
         NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
+
         g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
-        
+
         g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
       }
       else
       {
         NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
+
         if (ncm_model_ctrl_model_update (sub_ctrl, submodel))
-        {
           g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-        }
       }
+
       up = up || g_array_index (ctrl->submodel_last_update, gboolean, i);
     }
+
     g_ptr_array_set_size (ctrl->submodel_ctrl, n);
   }
-  
-  ncm_model_clear (&ctrl_model);  
+
+  ncm_model_clear (&ctrl_model);
+
   return up;
 }
 
-NCM_INLINE gboolean 
+NCM_INLINE gboolean
 ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl)
 {
   return ctrl->last_update;
 }
 
-NCM_INLINE gboolean 
+NCM_INLINE gboolean
 ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+
   if (ctrl_model == NULL)
   {
     g_error ("ncm_model_ctrl_model_has_submodel: empty ctrl object.");
+
     return FALSE;
   }
   else
   {
-    NcmModel *submodel = ncm_model_peek_submodel_by_mid (ctrl_model, mid);
+    NcmModel *submodel    = ncm_model_peek_submodel_by_mid (ctrl_model, mid);
     gboolean has_submodel = FALSE;
 
     if (submodel != NULL)
@@ -224,26 +239,29 @@ ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
   }
 }
 
-NCM_INLINE gboolean 
+NCM_INLINE gboolean
 ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+
   if (ctrl_model == NULL)
   {
     g_error ("ncm_model_ctrl_submodel_last_update: empty ctrl object.");
+
     return FALSE;
   }
   else
   {
-    gint pos = ncm_model_peek_submodel_pos_by_mid (ctrl_model, mid);
+    gint pos    = ncm_model_peek_submodel_pos_by_mid (ctrl_model, mid);
     gboolean up = FALSE;
 
     if (pos < 0)
       g_error ("ncm_model_ctrl_submodel_last_update: submodel `%s' not found in the main model `%s'.",
                ncm_mset_get_ns_by_id (mid),
                G_OBJECT_TYPE_NAME (ctrl_model));
-    if (pos >= ctrl->submodel_last_update->len)
-      g_error ("ncm_model_ctrl_submodel_last_update: submodel `%s' not found in ctrl object.\n" 
+
+    if ((guint) pos >= ctrl->submodel_last_update->len)
+      g_error ("ncm_model_ctrl_submodel_last_update: submodel `%s' not found in ctrl object.\n"
                "ncm_model_ctrl_update() must always be called before ncm_model_ctrl_model_last_update_submodel().",
                ncm_mset_get_ns_by_id (mid));
 
@@ -260,3 +278,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MODEL_CTRL_INLINE_H_ */
+

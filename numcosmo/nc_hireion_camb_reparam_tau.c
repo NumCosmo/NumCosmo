@@ -36,7 +36,7 @@
 #include "nc_hireion_camb_reparam_tau.h"
 #include "nc_hireion_camb.h"
 
-G_DEFINE_TYPE (NcHIReionCambReparamTau, nc_hireion_camb_reparam_tau, NCM_TYPE_REPARAM);
+G_DEFINE_TYPE (NcHIReionCambReparamTau, nc_hireion_camb_reparam_tau, NCM_TYPE_REPARAM)
 
 enum
 {

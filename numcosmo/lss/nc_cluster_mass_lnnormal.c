@@ -43,7 +43,7 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR (NCM_MODEL (mlnn)->params)
 #define BIAS   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_BIAS))
@@ -189,15 +189,15 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->P              = &_nc_cluster_mass_lnnormal_p;
-  parent_class->intP           = &_nc_cluster_mass_lnnormal_intp;
-  parent_class->intP_bin       = &_nc_cluster_mass_lnnormal_intp_bin;
-  parent_class->resample       = &_nc_cluster_mass_lnnormal_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_lnnormal_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_mass_lnnormal_p_limits_bin;
-  parent_class->N_limits       = &_nc_cluster_mass_lnnormal_n_limits;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_lnnormal_p;
+  parent_class->intP            = &_nc_cluster_mass_lnnormal_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_lnnormal_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_lnnormal_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_lnnormal_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_lnnormal_p_limits_bin;
+  parent_class->N_limits        = &_nc_cluster_mass_lnnormal_n_limits;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }

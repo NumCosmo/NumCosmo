@@ -87,8 +87,8 @@ struct _NcmLHRatio2d
   NcmDiff *diff;
 };
 
-G_DEFINE_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcmLHRatio2dRegion, ncm_lh_ratio2d_region, ncm_lh_ratio2d_region_dup, ncm_lh_ratio2d_region_free);
+G_DEFINE_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcmLHRatio2dRegion, ncm_lh_ratio2d_region, ncm_lh_ratio2d_region_dup, ncm_lh_ratio2d_region_free)
 
 static void
 ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)

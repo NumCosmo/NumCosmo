@@ -47,7 +47,7 @@
 #include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE);
+G_DEFINE_ABSTRACT_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE)
 
 static void
 ncm_spline_cubic_init (NcmSplineCubic *sc)

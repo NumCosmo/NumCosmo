@@ -61,7 +61,7 @@ enum
   PROP_CBE,
 };
 
-G_DEFINE_TYPE (NcHIPertBoltzmannCBE, nc_hipert_boltzmann_cbe, NC_TYPE_HIPERT_BOLTZMANN);
+G_DEFINE_TYPE (NcHIPertBoltzmannCBE, nc_hipert_boltzmann_cbe, NC_TYPE_HIPERT_BOLTZMANN)
 
 static void
 nc_hipert_boltzmann_cbe_init (NcHIPertBoltzmannCBE *boltzmann_cbe)

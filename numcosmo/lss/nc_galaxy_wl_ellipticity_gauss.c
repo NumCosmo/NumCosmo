@@ -67,7 +67,7 @@ enum
   PROP_OBS,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityGauss, nc_galaxy_wl_ellipticity_gauss, NC_TYPE_GALAXY_WL_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityGauss, nc_galaxy_wl_ellipticity_gauss, NC_TYPE_GALAXY_WL_DIST)
 
 static void
 nc_galaxy_wl_ellipticity_gauss_init (NcGalaxyWLEllipticityGauss *gegauss)

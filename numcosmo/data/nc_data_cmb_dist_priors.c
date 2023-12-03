@@ -50,7 +50,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataCMBDistPriors, nc_data_cmb_dist_priors, NCM_TYPE_DATA_GAUSS);
+G_DEFINE_TYPE (NcDataCMBDistPriors, nc_data_cmb_dist_priors, NCM_TYPE_DATA_GAUSS)
 
 static void
 nc_data_cmb_dist_priors_init (NcDataCMBDistPriors *cmb_dist_priors)

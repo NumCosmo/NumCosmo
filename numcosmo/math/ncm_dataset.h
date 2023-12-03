@@ -36,7 +36,7 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_DATASET (ncm_dataset_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject);
+G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject)
 
 /**
  * NcmDatasetBStrapType:

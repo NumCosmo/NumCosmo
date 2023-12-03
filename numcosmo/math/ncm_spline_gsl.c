@@ -43,7 +43,7 @@
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
-G_DEFINE_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM_TYPE_SPLINE);
+G_DEFINE_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM_TYPE_SPLINE)
 
 enum
 {

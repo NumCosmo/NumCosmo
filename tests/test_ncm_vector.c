@@ -278,7 +278,7 @@ main (gint argc, gchar *argv[])
 void
 _random_fill (NcmVector *v)
 {
-  gint i;
+  guint i;
 
   for (i = 0; i < ncm_vector_len (v); i++)
     ncm_vector_set (v, i, g_test_rand_double ());
@@ -766,7 +766,7 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 
   {
     NcmVector *nv = ncm_vector_new_variant (var);
-    gint i;
+    guint i;
 
     g_assert_cmpuint (ncm_vector_len (v), ==, ncm_vector_len (nv));
 
@@ -789,7 +789,7 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v     = test->v;
   gchar *vser      = ncm_serialize_global_to_string (G_OBJECT (v), TRUE);
   NcmVector *v_dup = NCM_VECTOR (ncm_serialize_global_from_string (vser));
-  gint i;
+  guint i;
 
   g_free (vser);
   g_assert_cmpint (ncm_vector_len (v), ==, ncm_vector_len (v_dup));
@@ -807,7 +807,7 @@ test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata)
 {
   gdouble *orig_d = ncm_vector_data (test->v);
   gdouble local_d[_TEST_NCM_VECTOR_STATIC_SIZE];
-  gint i;
+  guint i;
 
   for (i = 0; i < test->v_size; i++)
   {

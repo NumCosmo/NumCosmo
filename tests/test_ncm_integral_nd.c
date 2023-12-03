@@ -115,12 +115,11 @@ NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_XPY, NcmTestIntXPY, ncm_test_int_x_p_
 
 NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_ACOSX_BY_P_CZ, NcmTestIntACosx, ncm_test_int_acosx_by_p_cz, test_acosx_by_p_cz_dim, test_acosx_by_p_cz, struct acosx_by_p_cz_data)
 
-
 static void
 test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
   NcmTestIntSin *test_int_sin = NCM_TEST_INT_SIN (intnd);
-  gint i;
+  guint i;
 
   for (i = 0; i < npoints; i++)
   {
@@ -148,15 +147,16 @@ test_ncm_integral_nd_new_sinx (TestNcmIntegralND *test, gconstpointer pdata)
   test_int_sin->data.a = 3.0;
 }
 
-
 static void
 test_x_p_y (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  gint i;
+  guint i;
+
   for (i = 0; i < npoints; i++)
   {
-    const gdouble x_i = ncm_vector_get (x, 2*i);
-    const gdouble y_i = ncm_vector_get (x, 2*i + 1);
+    const gdouble x_i = ncm_vector_get (x, 2 * i);
+    const gdouble y_i = ncm_vector_get (x, 2 * i + 1);
+
     ncm_vector_set (fval, i, x_i + y_i);
     printf ("%d % 22.15g % 22.15g % 22.15g\n", i, x_i, y_i, x_i + y_i);
   }
@@ -172,15 +172,17 @@ test_x_p_y_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 static void
 test_acosx_by_p_cz (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  gint i;
-  NcmTestIntACosx *test_int_acosx = NCM_TEST_INT_ACOSX_BY_P_CZ(intnd);
+  NcmTestIntACosx *test_int_acosx = NCM_TEST_INT_ACOSX_BY_P_CZ (intnd);
+  guint i;
+
   for (i = 0; i < npoints; i++)
   {
-    const gdouble x_i = ncm_vector_get (x, dim*i);
-    const gdouble y_i = ncm_vector_get (x, 3*i + 1);
-    const gdouble z_i = ncm_vector_get (x, 3*i + 2);
-    ncm_vector_set (fval, i, test_int_acosx->data.a * sin(x_i));
-    ncm_vector_set (fval, i+1, (test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i));
+    const gdouble x_i = ncm_vector_get (x, dim * i);
+    const gdouble y_i = ncm_vector_get (x, 3 * i + 1);
+    const gdouble z_i = ncm_vector_get (x, 3 * i + 2);
+
+    ncm_vector_set (fval, i, test_int_acosx->data.a * sin (x_i));
+    ncm_vector_set (fval, i + 1, (test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i));
     printf ("%d % 22.15g % 22.15g % 22.15g \n", i, y_i, z_i, test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i);
   }
 }
@@ -214,7 +216,6 @@ test_ncm_integral_nd_new_acosx_by_p_cz (TestNcmIntegralND *test, gconstpointer p
   test_int_acosx->data.c = 1.0;
 }
 
-
 void
 test_ncm_integral_nd_sinx_eval (TestNcmIntegralND *test, gconstpointer pdata)
 {
@@ -241,8 +242,6 @@ test_ncm_integral_nd_sinx_eval (TestNcmIntegralND *test, gconstpointer pdata)
   ncm_vector_free (xf);
   ncm_vector_free (res);
 }
-	
-	
 
 void
 test_ncm_integral_nd_x_p_y_eval (TestNcmIntegralND *test, gconstpointer pdata)
@@ -252,9 +251,9 @@ test_ncm_integral_nd_x_p_y_eval (TestNcmIntegralND *test, gconstpointer pdata)
   NcmVector *xf      = ncm_vector_new (2);
   NcmVector *res     = ncm_vector_new (1);
   gdouble xi_0       = 0.0;
-  gdouble xi_1 	     = 1.0;
+  gdouble xi_1       = 1.0;
   gdouble xf_0       = 2.0;
-  gdouble xf_1	     = 5.0;
+  gdouble xf_1       = 5.0;
   const gdouble prec = 1.0e-11;
   gdouble result, error;
 
@@ -265,30 +264,29 @@ test_ncm_integral_nd_x_p_y_eval (TestNcmIntegralND *test, gconstpointer pdata)
   ncm_integral_nd_set_reltol (test->intnd, prec);
   ncm_integral_nd_set_abstol (test->intnd, prec);
   ncm_integral_nd_eval (test->intnd, xi, xf, res, err);
-  error = ncm_vector_get (err, 0);
+  error  = ncm_vector_get (err, 0);
   result = ncm_vector_get (res, 0);
   g_assert_cmpfloat (fabs (error), <=, prec);
-  g_assert_cmpfloat (fabs(result - 32.0), <=, ncm_integral_nd_get_abstol (test->intnd));
+  g_assert_cmpfloat (fabs (result - 32.0), <=, ncm_integral_nd_get_abstol (test->intnd));
   ncm_vector_free (err);
   ncm_vector_free (xi);
   ncm_vector_free (xf);
   ncm_vector_free (res);
 }
 
-
 void
 test_ncm_integral_nd_acosx_by_p_cz_eval (TestNcmIntegralND *test, gconstpointer pdata)
 {
-  NcmVector *err     = ncm_vector_new (2);
-  NcmVector *xi      = ncm_vector_new (3);
-  NcmVector *xf      = ncm_vector_new (3);
-  NcmVector *res     = ncm_vector_new (2);
-  gdouble xi_0       = 0.0;
-  gdouble xi_1       = 1.0;
-  gdouble xi_2	     = 1.0;
-  gdouble xf_0       = 2.0 * ncm_c_pi ();
-  gdouble xf_1       = 2.0;
-  gdouble xf_2       = 2.0;
+  NcmVector *err = ncm_vector_new (2);
+  NcmVector *xi  = ncm_vector_new (3);
+  NcmVector *xf  = ncm_vector_new (3);
+  NcmVector *res = ncm_vector_new (2);
+  gdouble xi_0   = 0.0;
+  gdouble xi_1   = 1.0;
+  gdouble xi_2   = 1.0;
+  gdouble xf_0   = 2.0 * ncm_c_pi ();
+  gdouble xf_1   = 2.0;
+  gdouble xf_2   = 2.0;
 
   const gdouble prec = 1.0e-11;
   gdouble result_0, result_1, error_0, error_1;
@@ -299,22 +297,22 @@ test_ncm_integral_nd_acosx_by_p_cz_eval (TestNcmIntegralND *test, gconstpointer 
   ncm_vector_set (xf, 0, xf_0);
   ncm_vector_set (xf, 1, xf_1);
   ncm_vector_set (xf, 2, xf_2);
-  
+
   ncm_integral_nd_set_reltol (test->intnd, prec);
   ncm_integral_nd_set_abstol (test->intnd, prec);
   ncm_integral_nd_eval (test->intnd, xi, xf, res, err);
-  
-  error_0 = ncm_vector_get (err, 0);
+
+  error_0  = ncm_vector_get (err, 0);
   result_0 = ncm_vector_get (res, 0);
-  
-  error_1 = ncm_vector_get (err, 1);
+
+  error_1  = ncm_vector_get (err, 1);
   result_1 = ncm_vector_get (res, 1);
-  
+
   g_assert_cmpfloat (fabs (error_0), <=, prec);
   g_assert_cmpfloat (fabs (error_1), <=, prec);
 
   g_assert_cmpfloat (fabs (result_0 - 0.0), <=, prec);
-  g_assert_cmpfloat (fabs (result_1 / (2.0 * ncm_c_pi()) - 3.0), <=, prec);
+  g_assert_cmpfloat (fabsl (result_1 / (2.0 * ncm_c_pi ()) - 3.0), <=, prec);
 
   ncm_vector_free (err);
   ncm_vector_free (xi);

@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_rosenbrock.c
  *
@@ -50,7 +51,7 @@ struct _NcmDataRosenbrock
   NcmData parent_instance;
 };
 
-G_DEFINE_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM_TYPE_DATA)
 
 static void
 ncm_data_rosenbrock_init (NcmDataRosenbrock *drb)

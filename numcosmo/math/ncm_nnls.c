@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_nnls.c
  *
@@ -88,7 +89,7 @@ enum
   PROP_RELTOL,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmNNLS, ncm_nnls, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmNNLS, ncm_nnls, G_TYPE_OBJECT)
 
 static void
 ncm_nnls_init (NcmNNLS *nnls)
@@ -588,7 +589,7 @@ _ncm_nnls_solve_normal_LU (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
 
   lwork = g_array_index (self->work, gdouble, 0);
 
-  if (lwork > self->work->len)
+  if (lwork > (gint) self->work->len)
     g_array_set_size (self->work, lwork);
 
   ret = ncm_lapack_dsysv ('U', self->uncols, 1,
@@ -622,7 +623,7 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
 
   lwork = g_array_index (self->work, gdouble, 0);
 
-  if (lwork > self->work->len)
+  if (lwork > (gint) self->work->len)
     g_array_set_size (self->work, lwork);
 
   ret = ncm_lapack_dgels ('N', self->nrows, self->uncols, 1,
