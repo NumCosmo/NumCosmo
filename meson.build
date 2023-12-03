@@ -669,7 +669,7 @@ configure_file(
 )
 
 #######################################################################################
-# Installing data and exampels files:
+# Installing data and examples files:
 #######################################################################################
 
 install_subdir('data', install_dir: numcosmo_pkgdatadir)
