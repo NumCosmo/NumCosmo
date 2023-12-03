@@ -75,7 +75,7 @@ _nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z)
+_nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp)
 {
   g_error ("_nc_galaxy_sd_z_proxy_integ: method not implemented.");
 
@@ -148,6 +148,7 @@ nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp)
  * nc_galaxy_sd_z_proxy_integ: (virtual integ)
  * @gsdzp: a #NcGalaxySDZProxy
  * @z: source redshift $z$
+ * @zp: proxy redshift $z_p$
  *
  * Computes the probability density of the observable $z_p$ given the redshift.
  * The probability density is given by $P(z_p)P$.

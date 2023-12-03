@@ -82,6 +82,7 @@ NcDataClusterWLL *nc_data_cluster_wll_new_from_file (const gchar *filename);
 NcDataClusterWLL *nc_data_cluster_wll_ref (NcDataClusterWLL *dcwll);
 void nc_data_cluster_wll_free (NcDataClusterWLL *dcwll);
 void nc_data_cluster_wll_clear (NcDataClusterWLL **dcwll);
+void nc_data_cluster_wll_set_kde (NcDataClusterWLL *dcwll, gboolean kde);
 
 G_END_DECLS
 

@@ -53,7 +53,7 @@ struct _NcGalaxySDZProxyClass
   GObjectClass parent_class;
 
   gboolean (*gen) (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
-  gdouble (*integ) (NcGalaxySDZProxy *gsdzp, const gdouble z);
+  gdouble (*integ) (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp);
 };
 
 struct _NcGalaxySDZProxy
@@ -71,7 +71,7 @@ void nc_galaxy_sd_z_proxy_free (NcGalaxySDZProxy *gsdzp);
 void nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp);
 
 NCM_INLINE gboolean nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
-NCM_INLINE gdouble nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z);
+NCM_INLINE gdouble nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp);
 
 G_END_DECLS
 
@@ -91,9 +91,9 @@ nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z,
 }
 
 NCM_INLINE gdouble
-nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z)
+nc_galaxy_sd_z_proxy_integ (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp)
 {
-  return NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, z);
+  return NC_GALAXY_SD_Z_PROXY_GET_CLASS (gsdzp)->integ (gsdzp, z, zp);
 }
 
 G_END_DECLS

@@ -104,7 +104,7 @@ _nc_galaxy_sd_z_proxy_dirac_finalize (GObject *object)
 }
 
 static gboolean _nc_galaxy_sd_z_proxy_dirac_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
-static gdouble _nc_galaxy_sd_z_proxy_dirac_integ (NcGalaxySDZProxy *gsdp, const gdouble z);
+static gdouble _nc_galaxy_sd_z_proxy_dirac_integ (NcGalaxySDZProxy *gsdp, const gdouble z, const gdouble zp);
 
 static void
 nc_galaxy_sd_z_proxy_dirac_class_init (NcGalaxySDZProxyDiracClass *klass)
@@ -130,7 +130,7 @@ _nc_galaxy_sd_z_proxy_dirac_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdou
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_dirac_integ (NcGalaxySDZProxy *gsdp, gdouble z)
+_nc_galaxy_sd_z_proxy_dirac_integ (NcGalaxySDZProxy *gsdp, gdouble z, const gdouble zp)
 {
   return 0.0;
 }

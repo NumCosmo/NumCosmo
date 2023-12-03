@@ -238,7 +238,7 @@ _nc_galaxy_sd_position_srd_y1_integ (NcGalaxySDPosition *gsdp, const gdouble r, 
 
   const gdouble y = pow (z, self->alpha);
 
-  return gsl_ran_gamma_pdf (y, self->gamma_a, self->y0) * self->alpha * y / z;
+  return gsl_ran_gamma_pdf (y, self->gamma_a, self->y0) * self->alpha * y / z * r;
 }
 
 /**

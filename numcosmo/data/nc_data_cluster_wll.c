@@ -74,7 +74,7 @@ nc_data_cluster_wll_init (NcDataClusterWLL *dcwll)
 
   self->galaxy_array = ncm_obj_array_new ();
   self->z_cluster    = 0.0;
-  self->kde          = TRUE;
+  self->kde          = FALSE;
 }
 
 static void
@@ -100,7 +100,7 @@ nc_data_cluster_wll_set_property (GObject *object, guint prop_id, const GValue *
       self->z_cluster = g_value_get_double (value);
       break;
     case PROP_KDE:
-      self->kde = g_value_get_boolean (value);
+      nc_data_cluster_wll_set_kde (dcwll, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -255,8 +255,8 @@ _nc_data_cluster_wll_get_len (NcmData *data)
 static void
 _nc_data_cluster_wll_prepare (NcmData *data, NcmMSet *mset)
 {
-  /*NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);*/
-  /*NcDataClusterWLLPrivate * const self = dcwll->priv;*/
+  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLLPrivate * const self = dcwll->priv;
   NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
@@ -264,6 +264,11 @@ _nc_data_cluster_wll_prepare (NcmData *data, NcmMSet *mset)
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
+
+  if (self->kde)
+    printf("KDE\n");
+  else
+    printf("No KDE\n");
 }
 
 /**
@@ -339,5 +344,22 @@ void
 nc_data_cluster_wll_clear (NcDataClusterWLL **dcwll)
 {
   g_clear_object (dcwll);
+}
+
+/**
+ * nc_data_cluster_wll_set_kde:
+ * @dcwll: a #NcDataClusterWLL
+ * @kde: whether to use KDE method
+ *
+ * The reference count of @dcwll is decreased and the pointer is set to NULL.
+ *
+ */
+void
+nc_data_cluster_wll_set_kde (NcDataClusterWLL *data, gboolean kde)
+{
+  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLLPrivate * const self = dcwll->priv;
+
+  self->kde = kde;
 }
 
