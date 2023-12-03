@@ -1,0 +1,6 @@
+
+/* Including extra configuration */
+#include <numcosmo/config_extra.h>
+
+/* Including meson generated config file */
+#include "config_deps.h"

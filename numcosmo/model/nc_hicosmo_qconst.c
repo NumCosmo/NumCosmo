@@ -46,7 +46,7 @@
 #include <gsl/gsl_sf_log.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO)
 
 #define VECTOR   (NCM_MODEL (cosmo)->params)
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_H0))

@@ -80,7 +80,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT)
 
 enum
 {

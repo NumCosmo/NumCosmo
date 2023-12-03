@@ -397,6 +397,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                               -10.0, 10.0, 1.0e-2,
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1,
                               NCM_PARAM_TYPE_FIXED);
+
   /**
    * NcClusterMassLnrichExt:cut_Z1:
    *
@@ -411,17 +412,17 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->P              = &_nc_cluster_mass_lnrich_ext_p;
-  parent_class->intP           = &_nc_cluster_mass_lnrich_ext_intp;
-  parent_class->intP_bin       = &_nc_cluster_mass_lnrich_ext_intp_bin;
-  parent_class->resample       = &_nc_cluster_mass_lnrich_ext_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_lnrich_ext_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_mass_lnrich_ext_p_bin_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_lnrich_ext_n_limits;
-  parent_class->volume         = &_nc_cluster_mass_lnrich_ext_volume;
-  parent_class->P_vec_z_lnMobs = NULL;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_lnrich_ext_p;
+  parent_class->intP            = &_nc_cluster_mass_lnrich_ext_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_lnrich_ext_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_lnrich_ext_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_lnrich_ext_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_lnrich_ext_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_lnrich_ext_n_limits;
+  parent_class->volume          = &_nc_cluster_mass_lnrich_ext_volume;
+  parent_class->P_vec_z_lnMobs  = NULL;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
@@ -610,6 +611,6 @@ nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext, gdouble 
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
-  return CUT + CUT_M1 * DlnM + CUT_Z1 * Dln1pz ;
+  return CUT + CUT_M1 * DlnM + CUT_Z1 * Dln1pz;
 }
 

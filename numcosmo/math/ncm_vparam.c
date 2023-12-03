@@ -49,7 +49,7 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE (NcmVParam, ncm_vparam, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmVParam, ncm_vparam, G_TYPE_OBJECT)
 
 static void
 ncm_vparam_init (NcmVParam *vp)

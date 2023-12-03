@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_c.c
  *
@@ -70,7 +71,7 @@ struct _NcmC
   GObject parent_instance;
 };
 
-G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT)
 
 static void
 ncm_c_init (NcmC *ncm_c)

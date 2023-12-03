@@ -68,7 +68,7 @@ struct _NcmFitESMCMCWalkerWalk
   GArray *numbers;
 };
 
-G_DEFINE_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM_TYPE_FIT_ESMCMC_WALKER);
+G_DEFINE_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM_TYPE_FIT_ESMCMC_WALKER)
 
 static void
 ncm_fit_esmcmc_walker_walk_init (NcmFitESMCMCWalkerWalk *walk)

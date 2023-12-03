@@ -57,9 +57,7 @@ def test_wl_surface_mass_density() -> None:
     #
     # New matter density profile
     #
-    nfw = Nc.HaloDensityProfile.new_from_name(
-        "NcHaloDensityProfileNFW{'Delta':<200.0>}"
-    )
+    nfw = Nc.HaloDensityProfileNFW(Delta=200)
     # Setting 4 as Douglas. In LCDM c = 5 corresponds to cluster masses.
     # (see Lokas and G. Mamon, astro-ph/0002395)
     nfw.param_set_by_name("cDelta", 4.0)

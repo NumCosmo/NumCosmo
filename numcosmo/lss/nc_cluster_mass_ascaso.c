@@ -54,7 +54,7 @@ struct _NcClusterMassAscasoPrivate
   gdouble lnR_min;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR (NCM_MODEL (ascaso)->params)
 #define MU_P0 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_ASCASO_MU_P0))
@@ -315,17 +315,17 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->P              = &_nc_cluster_mass_ascaso_p;
-  parent_class->intP           = &_nc_cluster_mass_ascaso_intp;
-  parent_class->intP_bin       = &_nc_cluster_mass_ascaso_intp_bin;
-  parent_class->resample       = &_nc_cluster_mass_ascaso_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_ascaso_p_limits;
-  parent_class->P_bin_limits   = &_nc_cluster_mass_ascaso_p_bin_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_ascaso_n_limits;
-  parent_class->volume         = &_nc_cluster_mass_ascaso_volume;
-  parent_class->P_vec_z_lnMobs = &_nc_cluster_mass_ascaso_p_vec_z_lnMobs;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_ascaso_p;
+  parent_class->intP            = &_nc_cluster_mass_ascaso_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_ascaso_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_ascaso_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_ascaso_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_ascaso_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_ascaso_n_limits;
+  parent_class->volume          = &_nc_cluster_mass_ascaso_volume;
+  parent_class->P_vec_z_lnMobs  = &_nc_cluster_mass_ascaso_p_vec_z_lnMobs;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
@@ -477,7 +477,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
   gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
-  gint i;
+  guint i;
 
   if ((tda == 1) && (sz == 1))
   {

@@ -31,6 +31,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_scalefactor.h>
@@ -45,7 +46,6 @@ G_BEGIN_DECLS
 #define NC_HIPERT_BG_VAR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIPERT_BG_VAR, NcHIPertBGVarClass))
 
 typedef struct _NcHIPertBGVarClass NcHIPertBGVarClass;
-typedef struct _NcHIPertBGVar NcHIPertBGVar;
 typedef struct _NcHIPertBGVarPrivate NcHIPertBGVarPrivate;
 typedef struct _NcHIPertBGVarDesc NcHIPertBGVarDesc;
 typedef struct _NcHIPertBGVarYDY NcHIPertBGVarYDY;

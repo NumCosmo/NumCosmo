@@ -5,6 +5,7 @@ from gi.repository import GObject
 from gi.repository import NumCosmoMath
 
 
+CLUSTER_MASS_ASCASO_DEFAULT_CUT: int = 6
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -27,6 +28,22 @@ CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA: float = 0.04
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT: int = 6
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_Z1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU: float = 3.19
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_MZ: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_0: float = 0.33
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z2: float = 0.0
 CLUSTER_MASS_PLCL_DEFAULT_A_L: float = 0.9
 CLUSTER_MASS_PLCL_DEFAULT_A_SZ: float = 1.0
 CLUSTER_MASS_PLCL_DEFAULT_B_L: float = 0.0
@@ -1372,7 +1389,6 @@ class ClusterMass(NumCosmoMath.Model):
     ::
 
         ClusterMass(**properties)
-        new_from_name(mass_name:str) -> NumCosmo.ClusterMass
 
     Object NcClusterMass
 
@@ -1434,8 +1450,6 @@ class ClusterMass(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> Tuple[float, float]: ...
-    @classmethod
-    def new_from_name(cls, mass_name: str) -> ClusterMass: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def p(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Optional[Sequence[float]] = None) -> float: ...
@@ -1481,6 +1495,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1
       sigmap2 -> gdouble: sigmap2
         \sigma_p2
+      cut -> gdouble: cut
+        cut
       mup0-fit -> gboolean: mup0-fit
         mu_p0:fit
       mup1-fit -> gboolean: mup1-fit
@@ -1493,6 +1509,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1:fit
       sigmap2-fit -> gboolean: sigmap2-fit
         \sigma_p2:fit
+      cut-fit -> gboolean: cut-fit
+        cut:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -1519,6 +1537,8 @@ class ClusterMassAscaso(ClusterMass):
     """
     class Props:
         M0: float
+        cut: float
+        cut_fit: bool
         lnRichness_max: float
         lnRichness_min: float
         mup0: float
@@ -1547,6 +1567,8 @@ class ClusterMassAscaso(ClusterMass):
     parent_instance: ClusterMass = ...
     priv: ClusterMassAscasoPrivate = ...
     def __init__(self, M0: float = ...,
+                 cut: float = ...,
+                 cut_fit: bool = ...,
                  lnRichness_max: float = ...,
                  lnRichness_min: float = ...,
                  mup0: float = ...,
@@ -1565,6 +1587,7 @@ class ClusterMassAscaso(ClusterMass):
                  reparam: NumCosmoMath.Reparam = ...,
                  sparam_array: NumCosmoMath.ObjArray = ...,
                  submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def get_cut(self, lnM: float, z: float) -> float: ...
     def get_mean_richness(self, lnM: float, z: float) -> float: ...
     def get_std_richness(self, lnM: float, z: float) -> float: ...
     
@@ -1875,8 +1898,8 @@ class ClusterMassClass(GObject.GPointer):
     N_limits: Callable[[ClusterMass, HICosmo], Tuple[float, float]] = ...
     volume: Callable[[ClusterMass], float] = ...
     P_vec_z_lnMobs: Callable[[ClusterMass, HICosmo, float, NumCosmoMath.Vector, NumCosmoMath.Matrix, NumCosmoMath.Matrix, Sequence[float]], None] = ...
-    obs_len: int = ...
-    obs_params_len: int = ...
+    _obs_len: int = ...
+    _obs_params_len: int = ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     
@@ -1967,6 +1990,210 @@ class ClusterMassLnnormalClass(GObject.GPointer):
         ClusterMassLnnormalClass()
     """
     parent_class: ClusterMassClass = ...
+
+class ClusterMassLnrichExt(ClusterMass):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassLnrichExt(**properties)
+
+    Object NcClusterMassLnrichExt
+
+    Properties from NcClusterMassLnrichExt:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      mu -> gdouble: mu
+        \mu
+      muM1 -> gdouble: muM1
+        \mu_\mathrm{M_1}
+      muZ1 -> gdouble: muZ1
+        \mu_\mathrm{z_1}
+      muM2 -> gdouble: muM2
+        \mu_\mathrm{M_2}
+      muZ2 -> gdouble: muZ2
+        \mu_\mathrm{z_2}
+      muMZ -> gdouble: muMZ
+        \mu_\mathrm{MZ}
+      sigma0 -> gdouble: sigma0
+        \sigma_0
+      sigmaM1 -> gdouble: sigmaM1
+        \sigma_\mathrm{M_1}
+      sigmaZ1 -> gdouble: sigmaZ1
+        \sigma_\mathrm{z_1}
+      sigmaM2 -> gdouble: sigmaM2
+        \sigma_\mathrm{M_2}
+      sigmaZ2 -> gdouble: sigmaZ2
+        \sigma_\mathrm{z_2}
+      sigmaMZ -> gdouble: sigmaMZ
+        \sigma_\mathrm{MZ}
+      cut -> gdouble: cut
+        cut
+      cutM1 -> gdouble: cutM1
+        \cut_\mathrm{M_1}
+      cutZ1 -> gdouble: cutZ1
+        \cut_\mathrm{Z_1}
+      mu-fit -> gboolean: mu-fit
+        \mu:fit
+      muM1-fit -> gboolean: muM1-fit
+        \mu_\mathrm{M_1}:fit
+      muZ1-fit -> gboolean: muZ1-fit
+        \mu_\mathrm{z_1}:fit
+      muM2-fit -> gboolean: muM2-fit
+        \mu_\mathrm{M_2}:fit
+      muZ2-fit -> gboolean: muZ2-fit
+        \mu_\mathrm{z_2}:fit
+      muMZ-fit -> gboolean: muMZ-fit
+        \mu_\mathrm{MZ}:fit
+      sigma0-fit -> gboolean: sigma0-fit
+        \sigma_0:fit
+      sigmaM1-fit -> gboolean: sigmaM1-fit
+        \sigma_\mathrm{M_1}:fit
+      sigmaZ1-fit -> gboolean: sigmaZ1-fit
+        \sigma_\mathrm{z_1}:fit
+      sigmaM2-fit -> gboolean: sigmaM2-fit
+        \sigma_\mathrm{M_2}:fit
+      sigmaZ2-fit -> gboolean: sigmaZ2-fit
+        \sigma_\mathrm{z_2}:fit
+      sigmaMZ-fit -> gboolean: sigmaMZ-fit
+        \sigma_\mathrm{MZ}:fit
+      cut-fit -> gboolean: cut-fit
+        cut:fit
+      cutM1-fit -> gboolean: cutM1-fit
+        \cut_\mathrm{M_1}:fit
+      cutZ1-fit -> gboolean: cutZ1-fit
+        \cut_\mathrm{Z_1}:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjArray: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+    class Props:
+        M0: float
+        cut: float
+        cut_fit: bool
+        cutM1: float
+        cutM1_fit: bool
+        cutZ1: float
+        cutZ1_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        mu: float
+        mu_fit: bool
+        muM1: float
+        muM1_fit: bool
+        muM2: float
+        muM2_fit: bool
+        muMZ: float
+        muMZ_fit: bool
+        muZ1: float
+        muZ1_fit: bool
+        muZ2: float
+        muZ2_fit: bool
+        sigma0: float
+        sigma0_fit: bool
+        sigmaM1: float
+        sigmaM1_fit: bool
+        sigmaM2: float
+        sigmaM2_fit: bool
+        sigmaMZ: float
+        sigmaMZ_fit: bool
+        sigmaZ1: float
+        sigmaZ1_fit: bool
+        sigmaZ2: float
+        sigmaZ2_fit: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjArray
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+    props: Props = ...
+    parent_instance: ClusterMass = ...
+    priv: ClusterMassLnrichExtPrivate = ...
+    def __init__(self, M0: float = ...,
+                 cut: float = ...,
+                 cut_fit: bool = ...,
+                 cutM1: float = ...,
+                 cutM1_fit: bool = ...,
+                 cutZ1: float = ...,
+                 cutZ1_fit: bool = ...,
+                 lnRichness_max: float = ...,
+                 lnRichness_min: float = ...,
+                 mu: float = ...,
+                 mu_fit: bool = ...,
+                 muM1: float = ...,
+                 muM1_fit: bool = ...,
+                 muM2: float = ...,
+                 muM2_fit: bool = ...,
+                 muMZ: float = ...,
+                 muMZ_fit: bool = ...,
+                 muZ1: float = ...,
+                 muZ1_fit: bool = ...,
+                 muZ2: float = ...,
+                 muZ2_fit: bool = ...,
+                 sigma0: float = ...,
+                 sigma0_fit: bool = ...,
+                 sigmaM1: float = ...,
+                 sigmaM1_fit: bool = ...,
+                 sigmaM2: float = ...,
+                 sigmaM2_fit: bool = ...,
+                 sigmaMZ: float = ...,
+                 sigmaMZ_fit: bool = ...,
+                 sigmaZ1: float = ...,
+                 sigmaZ1_fit: bool = ...,
+                 sigmaZ2: float = ...,
+                 sigmaZ2_fit: bool = ...,
+                 z0: float = ...,
+                 reparam: NumCosmoMath.Reparam = ...,
+                 sparam_array: NumCosmoMath.ObjArray = ...,
+                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def get_cut(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    
+
+class ClusterMassLnrichExtClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassLnrichExtClass()
+    """
+    parent_class: ClusterMassClass = ...
+
+class ClusterMassLnrichExtPrivate(GObject.GPointer): ...
 
 class ClusterMassNodist(ClusterMass):
     r"""
@@ -2580,7 +2807,6 @@ class ClusterRedshift(NumCosmoMath.Model):
     ::
 
         ClusterRedshift(**properties)
-        new_from_name(redshift_name:str) -> NumCosmo.ClusterRedshift
 
     Object NcClusterRedshift
 
@@ -2641,8 +2867,6 @@ class ClusterRedshift(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> Tuple[float, float]: ...
-    @classmethod
-    def new_from_name(cls, redshift_name: str) -> ClusterRedshift: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def p(self, cosmo: HICosmo, lnM: float, z: float, z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
@@ -2670,8 +2894,8 @@ class ClusterRedshiftClass(GObject.GPointer):
     P_bin_limits: Callable[[ClusterRedshift, HICosmo, float, float, float, float, float], None] = ...
     N_limits: Callable[[ClusterRedshift, HICosmo, float, float], None] = ...
     volume: Callable[[ClusterRedshift], float] = ...
-    obs_len: int = ...
-    obs_params_len: int = ...
+    _obs_len: int = ...
+    _obs_params_len: int = ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     
@@ -3852,7 +4076,7 @@ class DataCMBShiftParamClass(GObject.GPointer):
     """
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
-class DataClusterMassRich(NumCosmoMath.DataGaussDiag):
+class DataClusterMassRich(NumCosmoMath.Data):
     r"""
     :Constructors:
 
@@ -3868,16 +4092,8 @@ class DataClusterMassRich(NumCosmoMath.DataGaussDiag):
         Clusters (halo) redshift array
       lnM-cluster -> NcmVector: lnM-cluster
         Clusters (halo) ln-mass array
-
-    Properties from NcmDataGaussDiag:
-      n-points -> guint: n-points
-        Data sample size
-      w-mean -> gboolean: w-mean
-        Whether to minimize analytically over the weighted mean
-      mean -> NcmVector: mean
-        Data mean
-      sigma -> NcmVector: sigma
-        Data standard deviation
+      lnR-cluster -> NcmVector: lnR-cluster
+        Clusters (halo) ln-richness array
 
     Properties from NcmData:
       name -> gchararray: name
@@ -3896,11 +4112,8 @@ class DataClusterMassRich(NumCosmoMath.DataGaussDiag):
     """
     class Props:
         lnM_cluster: NumCosmoMath.Vector
+        lnR_cluster: NumCosmoMath.Vector
         z_cluster: NumCosmoMath.Vector
-        mean: NumCosmoMath.Vector
-        n_points: int
-        sigma: NumCosmoMath.Vector
-        w_mean: bool
         bootstrap: NumCosmoMath.Bootstrap
         desc: str
         init: bool
@@ -3908,11 +4121,8 @@ class DataClusterMassRich(NumCosmoMath.DataGaussDiag):
         name: str
     props: Props = ...
     def __init__(self, lnM_cluster: NumCosmoMath.Vector = ...,
+                 lnR_cluster: NumCosmoMath.Vector = ...,
                  z_cluster: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
                  bootstrap: NumCosmoMath.Bootstrap = ...,
                  desc: str = ...,
                  init: bool = ...,
@@ -3934,7 +4144,7 @@ class DataClusterMassRichClass(GObject.GPointer):
 
         DataClusterMassRichClass()
     """
-    parent_class: NumCosmoMath.DataGaussDiagClass = ...
+    parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterNCount(NumCosmoMath.Data):
     r"""
@@ -5852,7 +6062,6 @@ class HICosmo(NumCosmoMath.Model):
     ::
 
         HICosmo(**properties)
-        new_from_name(parent_type:GType, cosmo_name:str) -> NumCosmo.HICosmo
 
     Object NcHICosmo
 
@@ -6010,8 +6219,6 @@ class HICosmo(NumCosmoMath.Model):
     def mqE2(self, z: float) -> float: ...
     def mqE2_max(self, z_max: float) -> Tuple[float, float]: ...
     def nec(self, z: float) -> float: ...
-    @classmethod
-    def new_from_name(cls, parent_type: Type, cosmo_name: str) -> HICosmo: ...
     def peek_prim(self) -> HIPrim: ...
     def peek_reion(self) -> HIReion: ...
     @staticmethod
@@ -10218,7 +10425,6 @@ class HIPertWKB(HIPert):
     ::
 
         HIPertWKB(**properties)
-        new_by_name(wkb_name:str) -> NumCosmo.HIPertWKB
 
     Object NcHIPertWKB
 
@@ -10273,8 +10479,6 @@ class HIPertWKB(HIPert):
     def get_nu_V(self, model: NumCosmoMath.Model, alpha: float, k: float) -> Tuple[float, float]: ...
     def maxtime(self, model: NumCosmoMath.Model, alpha0: float, alpha1: float) -> float: ...
     def maxtime_prec(self, model: NumCosmoMath.Model, cmp: HIPertWKBCmp, alpha0: float, alpha1: float) -> float: ...
-    @classmethod
-    def new_by_name(cls, wkb_name: str) -> HIPertWKB: ...
     def phase(self, model: NumCosmoMath.Model, alpha: float) -> float: ...
     def prepare(self, model: NumCosmoMath.Model) -> None: ...
     def q(self, model: NumCosmoMath.Model, alpha: float) -> Tuple[float, float]: ...
@@ -10343,7 +10547,6 @@ class HIPrim(NumCosmoMath.Model):
     ::
 
         HIPrim(**properties)
-        new_from_name(parent_type:GType, prim_name:str) -> NumCosmo.HIPrim
 
     Object NcHIPrim
 
@@ -10412,8 +10615,6 @@ class HIPrim(NumCosmoMath.Model):
     def lnT_powspec_lnk(self, lnk: float) -> float: ...
     @staticmethod
     def log_all_models(parent: Type) -> None: ...
-    @classmethod
-    def new_from_name(cls, parent_type: Type, prim_name: str) -> HIPrim: ...
     def ref(self) -> HIPrim: ...
     def set_k_pivot(self, k_pivot: float) -> None: ...
     
@@ -11208,7 +11409,6 @@ class HIReion(NumCosmoMath.Model):
     ::
 
         HIReion(**properties)
-        new_from_name(parent_type:GType, reion_name:str) -> NumCosmo.HIReion
 
     Object NcHIReion
 
@@ -11268,8 +11468,6 @@ class HIReion(NumCosmoMath.Model):
     def get_tau(self, cosmo: HICosmo) -> float: ...
     @staticmethod
     def id() -> int: ...
-    @classmethod
-    def new_from_name(cls, parent_type: Type, reion_name: str) -> HIReion: ...
     def ref(self) -> HIReion: ...
     
 
@@ -11753,7 +11951,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
     ::
 
         HaloDensityProfile(**properties)
-        new_from_name(density_profile_name:str) -> NumCosmo.HaloDensityProfile
 
     Object NcHaloDensityProfile
 
@@ -11863,8 +12060,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def get_reltol(self) -> float: ...
     @staticmethod
     def id() -> int: ...
-    @classmethod
-    def new_from_name(cls, density_profile_name: str) -> HaloDensityProfile: ...
     def r_s(self, cosmo: HICosmo, z: float) -> float: ...
     def r_s_rho_s(self, cosmo: HICosmo, z: float) -> Tuple[float, float]: ...
     def ref(self) -> HaloDensityProfile: ...
@@ -12986,7 +13181,6 @@ class PlanckFI(NumCosmoMath.Model):
     ::
 
         PlanckFI(**properties)
-        new_from_name(pfi_name:str) -> NumCosmo.PlanckFI
 
     Object NcPlanckFI
 
@@ -13041,8 +13235,6 @@ class PlanckFI(NumCosmoMath.Model):
     def id() -> int: ...
     @staticmethod
     def log_all_models() -> None: ...
-    @classmethod
-    def new_from_name(cls, pfi_name: str) -> PlanckFI: ...
     def ref(self) -> PlanckFI: ...
     
 
@@ -14251,7 +14443,6 @@ class PowspecML(NumCosmoMath.Powspec):
     ::
 
         PowspecML(**properties)
-        new_from_name(ps_ml_name:str) -> NumCosmo.PowspecML
 
     Object NcPowspecML
 
@@ -14296,8 +14487,6 @@ class PowspecML(NumCosmoMath.Powspec):
     @staticmethod
     def clear(ps_ml: PowspecML) -> None: ...
     def free(self) -> None: ...
-    @classmethod
-    def new_from_name(cls, ps_ml_name: str) -> PowspecML: ...
     def ref(self) -> PowspecML: ...
     
 
@@ -14561,7 +14750,6 @@ class PowspecMNL(NumCosmoMath.Powspec):
     ::
 
         PowspecMNL(**properties)
-        new_from_name(ps_mnl_name:str) -> NumCosmo.PowspecMNL
 
     Object NcPowspecMNL
 
@@ -14596,8 +14784,6 @@ class PowspecMNL(NumCosmoMath.Powspec):
     @staticmethod
     def clear(ps_mnl: PowspecMNL) -> None: ...
     def free(self) -> None: ...
-    @classmethod
-    def new_from_name(cls, ps_mnl_name: str) -> PowspecMNL: ...
     def ref(self) -> PowspecMNL: ...
     
 
@@ -14737,7 +14923,6 @@ class Recomb(GObject.Object):
     ::
 
         Recomb(**properties)
-        new_from_name(recomb_name:str) -> NumCosmo.Recomb
 
     Object NcRecomb
 
@@ -14830,8 +15015,6 @@ class Recomb(GObject.Object):
     def get_v_tau_max_z(self, cosmo: HICosmo) -> float: ...
     def get_zi(self) -> float: ...
     def log_v_tau(self, cosmo: HICosmo, lambda_: float) -> float: ...
-    @classmethod
-    def new_from_name(cls, recomb_name: str) -> Recomb: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Recomb: ...
@@ -15562,7 +15745,6 @@ class TransferFunc(GObject.Object):
     ::
 
         TransferFunc(**properties)
-        new_from_name(transfer_name:str) -> NumCosmo.TransferFunc
 
     Object NcTransferFunc
 
@@ -15578,8 +15760,6 @@ class TransferFunc(GObject.Object):
     def do_prepare(self, cosmo: HICosmo) -> None: ...
     def eval(self, cosmo: HICosmo, kh: float) -> float: ...
     def free(self) -> None: ...
-    @classmethod
-    def new_from_name(cls, transfer_name: str) -> TransferFunc: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> TransferFunc: ...
@@ -15846,7 +16026,6 @@ class Window(GObject.Object):
     ::
 
         Window(**properties)
-        new_from_name(window_name:str) -> NumCosmo.Window
 
     Object NcWindow
 
@@ -15863,8 +16042,6 @@ class Window(GObject.Object):
     def eval_fourier(self, k: float, R: float) -> float: ...
     def eval_realspace(self, r: float, R: float) -> float: ...
     def free(self) -> None: ...
-    @classmethod
-    def new_from_name(cls, window_name: str) -> Window: ...
     def volume(self) -> float: ...
     
 
@@ -16096,7 +16273,6 @@ class XcorLimberKernel(NumCosmoMath.Model):
     ::
 
         XcorLimberKernel(**properties)
-        new_from_name(xcor_name:str) -> NumCosmo.XcorLimberKernel
 
     Object NcXcorLimberKernel
 
@@ -16167,8 +16343,6 @@ class XcorLimberKernel(NumCosmoMath.Model):
     def id() -> int: ...
     @staticmethod
     def log_all_models() -> None: ...
-    @classmethod
-    def new_from_name(cls, xcor_name: str) -> XcorLimberKernel: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
@@ -16591,6 +16765,7 @@ class ABCClusterNCountSummary(GObject.GEnum):
     GAUSS_RBF: ABCClusterNCountSummary = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
+    CUT: ClusterMassAscasoSParams = ...
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
     MU_P2: ClusterMassAscasoSParams = ...
@@ -16620,6 +16795,23 @@ class ClusterMassImpl(GObject.GEnum):
 class ClusterMassLnnormalSParams(GObject.GEnum):
     BIAS: ClusterMassLnnormalSParams = ...
     SIGMA: ClusterMassLnnormalSParams = ...
+
+class ClusterMassLnrichExtSParams(GObject.GEnum):
+    CUT: ClusterMassLnrichExtSParams = ...
+    CUT_M1: ClusterMassLnrichExtSParams = ...
+    CUT_Z1: ClusterMassLnrichExtSParams = ...
+    MU: ClusterMassLnrichExtSParams = ...
+    MU_M1: ClusterMassLnrichExtSParams = ...
+    MU_M2: ClusterMassLnrichExtSParams = ...
+    MU_MZ: ClusterMassLnrichExtSParams = ...
+    MU_Z1: ClusterMassLnrichExtSParams = ...
+    MU_Z2: ClusterMassLnrichExtSParams = ...
+    SIGMA_0: ClusterMassLnrichExtSParams = ...
+    SIGMA_M1: ClusterMassLnrichExtSParams = ...
+    SIGMA_M2: ClusterMassLnrichExtSParams = ...
+    SIGMA_MZ: ClusterMassLnrichExtSParams = ...
+    SIGMA_Z1: ClusterMassLnrichExtSParams = ...
+    SIGMA_Z2: ClusterMassLnrichExtSParams = ...
 
 class ClusterMassPlCLSParams(GObject.GEnum):
     A_L: ClusterMassPlCLSParams = ...

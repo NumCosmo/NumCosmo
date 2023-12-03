@@ -54,7 +54,7 @@ struct _NcmModelRosenbrockPrivate
   gint place_holder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_MODEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_MODEL)
 
 static void
 ncm_model_rosenbrock_init (NcmModelRosenbrock *model_rosenbrock)

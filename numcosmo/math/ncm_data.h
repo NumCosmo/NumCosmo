@@ -80,7 +80,6 @@ void ncm_data_free (NcmData *data);
 void ncm_data_clear (NcmData **data);
 
 NcmData *ncm_data_dup (NcmData *data, NcmSerialize *ser_obj);
-NcmData *ncm_data_new_from_file (const gchar *filename);
 
 guint ncm_data_get_length (NcmData *data);
 guint ncm_data_get_dof (NcmData *data);

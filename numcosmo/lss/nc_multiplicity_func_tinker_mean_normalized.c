@@ -59,7 +59,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinkerMeanNormalized, nc_multiplicity_func_tinker_mean_normalized, NC_TYPE_MULTIPLICITY_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinkerMeanNormalized, nc_multiplicity_func_tinker_mean_normalized, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_tinker_mean_normalized_init (NcMultiplicityFuncTinkerMeanNormalized *mt10)

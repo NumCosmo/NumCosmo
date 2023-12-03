@@ -546,7 +546,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmSplineFuncTest, ncm_spline_func_test, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSplineFuncTest, ncm_spline_func_test, G_TYPE_OBJECT)
 
 static void
 ncm_spline_func_test_init (NcmSplineFuncTest *sft)

@@ -47,7 +47,7 @@ typedef struct _TestNcGalaxyWLEllipticityBinned
 
 static void test_nc_galaxy_wl_ellipticity_binned_new (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_ellipticity_binned_rep (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
-static void test_nc_galaxy_wl_ellipticity_binned_n_bins(TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_ellipticity_binned_n_bins (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_ellipticity_binned_binning (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_ellipticity_binned_free (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata);
 
@@ -58,7 +58,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  // g_test_set_nonfatal_assertions ();
+  /* g_test_set_nonfatal_assertions (); */
 
   g_test_add ("/nc/galaxy_wl_ellipticity_binned/binned_rep", TestNcGalaxyWLEllipticityBinned, NULL,
               &test_nc_galaxy_wl_ellipticity_binned_new,
@@ -78,36 +78,36 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-static void 
+static void
 test_nc_galaxy_wl_ellipticity_binned_new (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata)
 {
-  // NcGalaxyWLEllipticityBinned *gebin = nc_galaxy_wl_ellipticity_binned_new ();
-  NcHICosmo *cosmo                   = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoLCDM");
-  NcHaloDensityProfile *dp           = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
-  NcDistance *dist                   = nc_distance_new (3.0);
-  NcWLSurfaceMassDensity *smd        = nc_wl_surface_mass_density_new (dist);
-  NcmRNG *rng                        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const gdouble n                    = 10000;
-  NcmMatrix *data                    = ncm_matrix_new (n, 3);
-  NcmVector *z_vec                   = ncm_vector_new (n);
-  NcGalaxyRedshiftSpec *gzs          = nc_galaxy_redshift_spec_new ();
-  const gdouble rl                   = g_test_rand_double_range (0.0002, 0.1300);
-  const gdouble ru                   = g_test_rand_double_range (5.55, 5.65);
-  const gint bin_n                   = g_test_rand_int_range (10, 100);
-  NcmVector *bin_vector              = ncm_vector_new (bin_n+1);
-  const gdouble bin_size             = (ru - rl)/bin_n;
-  const gdouble mu_e                 = g_test_rand_double_range (0.015, 0.020);
-  const gdouble sigma_e              = g_test_rand_double_range (0.050, 0.055);
-  const gdouble e_noise              = g_test_rand_double_range (0.02, 0.08);
-  const gdouble mu_z                 = g_test_rand_double_range (1.30, 1.35);
-  const gdouble sigma_z              = g_test_rand_double_range (0.65, 0.75);
-  const gdouble z_cluster            = g_test_rand_double_range (0.2, 0.4);
+  /* NcGalaxyWLEllipticityBinned *gebin = nc_galaxy_wl_ellipticity_binned_new (); */
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
+  NcDistance *dist            = nc_distance_new (3.0);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const gdouble n             = 10000;
+  NcmMatrix *data             = ncm_matrix_new (n, 3);
+  NcmVector *z_vec            = ncm_vector_new (n);
+  NcGalaxyRedshiftSpec *gzs   = nc_galaxy_redshift_spec_new ();
+  const gdouble rl            = g_test_rand_double_range (0.0002, 0.1300);
+  const gdouble ru            = g_test_rand_double_range (5.55, 5.65);
+  const gint bin_n            = g_test_rand_int_range (10, 100);
+  NcmVector *bin_vector       = ncm_vector_new (bin_n + 1);
+  const gdouble bin_size      = (ru - rl) / bin_n;
+  const gdouble mu_e          = g_test_rand_double_range (0.015, 0.020);
+  const gdouble sigma_e       = g_test_rand_double_range (0.050, 0.055);
+  const gdouble e_noise       = g_test_rand_double_range (0.02, 0.08);
+  const gdouble mu_z          = g_test_rand_double_range (1.30, 1.35);
+  const gdouble sigma_z       = g_test_rand_double_range (0.65, 0.75);
+  const gdouble z_cluster     = g_test_rand_double_range (0.2, 0.4);
   gint i;
   gdouble j;
 
-  for (j = 0; j < bin_n+1; j++)
+  for (j = 0; j < bin_n + 1; j++)
   {
-    ncm_vector_set (bin_vector, j, rl + j*bin_size);
+    ncm_vector_set (bin_vector, j, rl + j * bin_size);
   }
 
   for (i = 0; i < n; i++)
@@ -142,27 +142,26 @@ static void
 test_nc_galaxy_wl_ellipticity_binned_rep (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata)
 {
   NcmObjArray *bin_obs = nc_galaxy_wl_ellipticity_binned_peek_binobs (test->gebin);
-  NcmVector *bins = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
-  gint i;
+  NcmVector *bins      = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
+  guint i;
 
-
-  for (i = 0; i < ncm_vector_len (bins)-1; i++)
+  for (i = 0; i < ncm_vector_len (bins) - 1; i++)
   {
     NcmMatrix *bin_data_i = NCM_MATRIX (ncm_obj_array_get (bin_obs, i));
-    gint j;
+    guint j;
 
 
     for (j = 0; j < ncm_matrix_nrows (bin_data_i); j++)
     {
       gdouble gal_j[3] = {ncm_matrix_get (bin_data_i, j, 0), ncm_matrix_get (bin_data_i, j, 1), ncm_matrix_get (bin_data_i, j, 2)};
-      gint k;
+      guint k;
 
-      for (k = 0; k < ncm_vector_len (bins)-1; k++)
+      for (k = 0; k < ncm_vector_len (bins) - 1; k++)
       {
         if (k != i)
         {
           NcmMatrix *bin_data_k = NCM_MATRIX (ncm_obj_array_get (bin_obs, k));
-          gint l;
+          guint l;
 
           for (l = 0; l < ncm_matrix_nrows (bin_data_k); l++)
           {
@@ -180,7 +179,7 @@ static void
 test_nc_galaxy_wl_ellipticity_binned_n_bins (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata)
 {
   NcmObjArray *bin_obs = nc_galaxy_wl_ellipticity_binned_peek_binobs (test->gebin);
-  NcmVector *bins = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
+  NcmVector *bins      = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
 
   g_assert_cmpfloat (ncm_obj_array_len (bin_obs) + 1, ==, ncm_vector_len (bins));
 }
@@ -190,26 +189,23 @@ test_nc_galaxy_wl_ellipticity_binned_binning (TestNcGalaxyWLEllipticityBinned *t
 {
   NcmObjArray *bin_obs = nc_galaxy_wl_ellipticity_binned_peek_binobs (test->gebin);
   NcmVector *bins      = nc_galaxy_wl_ellipticity_binned_peek_bins (test->gebin);
-  gint bin_i;
+  guint bin_i;
 
   for (bin_i = 0; bin_i < ncm_obj_array_len (bin_obs); bin_i++)
   {
     NcmMatrix *bin_data = NCM_MATRIX (ncm_obj_array_get (bin_obs, bin_i));
-    gint j;
+    guint j;
+
     printf ("%d\n", ncm_matrix_nrows (bin_data));
 
     for (j = 0; j < ncm_matrix_nrows (bin_data); j++)
     {
       gdouble gal_r = ncm_matrix_get (bin_data, j, 0);
 
-      if (bin_i == ncm_obj_array_len (bin_obs)-1)
-      {
-        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r <= ncm_vector_get (bins, bin_i+1)));
-      }
+      if (bin_i == ncm_obj_array_len (bin_obs) - 1)
+        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r <= ncm_vector_get (bins, bin_i + 1)));
       else
-      {
-        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r < ncm_vector_get (bins, bin_i+1)));
-      }
+        g_assert_true ((gal_r >= ncm_vector_get (bins, bin_i)) && (gal_r < ncm_vector_get (bins, bin_i + 1)));
     }
   }
 }
@@ -218,20 +214,21 @@ static void
 test_nc_galaxy_wl_ellipticity_binned_free (TestNcGalaxyWLEllipticityBinned *test, gconstpointer pdata)
 {
   g_assert_true (NC_IS_GALAXY_WL_ELLIPTICITY_BINNED (test->gebin));
-  NCM_TEST_FREE (nc_galaxy_wl_ellipticity_binned_free, NC_GALAXY_WL_ELLIPTICITY_BINNED(test->gebin));
+  NCM_TEST_FREE (nc_galaxy_wl_ellipticity_binned_free, NC_GALAXY_WL_ELLIPTICITY_BINNED (test->gebin));
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
   NCM_TEST_FREE (nc_halo_density_profile_free, test->dp);
   NCM_TEST_FREE (nc_wl_surface_mass_density_free, test->smd);
   NCM_TEST_FREE (nc_galaxy_redshift_free, test->gz);
 
 
-  // ncm_model_free (NCM_MODEL (test->cosmo));
-  // ncm_model_free (NCM_MODEL (test->dp));
+  /* ncm_model_free (NCM_MODEL (test->cosmo)); */
+  /* ncm_model_free (NCM_MODEL (test->dp)); */
 
-  // nc_cluster_redshift_free (NC_CLUSTER_REDSHIFT (test->gz));
-  // nc_distance_free (test->dist);
-  // ncm_vector_free (test->bin_vector);
-  // ncm_vector_free (test->z_vec);
-  // ncm_matrix_free (test->data);
-  // ncm_rng_free (test->rng);
+  /* nc_cluster_redshift_free (NC_CLUSTER_REDSHIFT (test->gz)); */
+  /* nc_distance_free (test->dist); */
+  /* ncm_vector_free (test->bin_vector); */
+  /* ncm_vector_free (test->z_vec); */
+  /* ncm_matrix_free (test->data); */
+  /* ncm_rng_free (test->rng); */
 }
+

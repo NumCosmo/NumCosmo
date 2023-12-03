@@ -58,7 +58,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  // g_test_set_nonfatal_assertions ();
+  /* g_test_set_nonfatal_assertions (); */
 
   g_test_add ("/nc/galaxy_wl_ellipticity_kde/reset", TestNcGalaxyWLEllipticityKDE, NULL,
               &test_nc_galaxy_wl_ellipticity_kde_new,
@@ -78,11 +78,11 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-static void 
+static void
 test_nc_galaxy_wl_ellipticity_kde_new (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
   NcGalaxyWLEllipticityKDE *gekde = nc_galaxy_wl_ellipticity_kde_new ();
-  NcHICosmo *cosmo                = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoLCDM");
+  NcHICosmo *cosmo                = NC_HICOSMO (nc_hicosmo_lcdm_new ());
   NcHaloDensityProfile *dp        = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
   NcDistance *dist                = nc_distance_new (3.0);
   NcWLSurfaceMassDensity *smd     = nc_wl_surface_mass_density_new (dist);
@@ -145,7 +145,7 @@ static void
 test_nc_galaxy_wl_ellipticity_kde_reset (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
   const guint nruns = 1000;
-  gint i;
+  guint i;
 
   for (i = 0; i < nruns; i++)
   {
@@ -154,18 +154,19 @@ test_nc_galaxy_wl_ellipticity_kde_reset (TestNcGalaxyWLEllipticityKDE *test, gco
     nc_galaxy_wl_dist_m2lnP_initial_prep (NC_GALAXY_WL_DIST (test->gekde), test->gz, test->cosmo, test->dp, test->smd, test->z_cluster);
 
     NcmStatsDist1dEPDF *kde = nc_galaxy_wl_ellipticity_kde_peek_kde (test->gekde);
+
     h = ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (kde));
 
     g_assert_cmpfloat (h, <, 1);
   }
 }
 
-static void 
+static void
 test_nc_galaxy_wl_ellipticity_kde_e_vec (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
   const guint nruns = 1000;
   const guint ndata = 10000;
-  gint i;
+  guint i;
 
   for (i = 0; i < nruns; i++)
   {
@@ -177,11 +178,11 @@ test_nc_galaxy_wl_ellipticity_kde_e_vec (TestNcGalaxyWLEllipticityKDE *test, gco
   }
 }
 
-static void 
+static void
 test_nc_galaxy_wl_ellipticity_kde_m2lnP (TestNcGalaxyWLEllipticityKDE *test, gconstpointer pdata)
 {
   const guint nruns = 1000;
-  gint i;
+  guint i;
 
   for (i = 0; i < nruns; i++)
   {
@@ -195,7 +196,7 @@ test_nc_galaxy_wl_ellipticity_kde_m2lnP (TestNcGalaxyWLEllipticityKDE *test, gco
     NcmVector *e_vec        = nc_galaxy_wl_ellipticity_kde_peek_e_vec (test->gekde);
 
     gal_i = g_test_rand_int_range (0, 10000);
-    e_i = ncm_vector_get (e_vec, gal_i);
+    e_i   = ncm_vector_get (e_vec, gal_i);
 
 
     p = ncm_stats_dist1d_eval_p (NCM_STATS_DIST1D (kde), e_i);
@@ -203,3 +204,4 @@ test_nc_galaxy_wl_ellipticity_kde_m2lnP (TestNcGalaxyWLEllipticityKDE *test, gco
     g_assert_cmpfloat (p, >, 0);
   }
 }
+

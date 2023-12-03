@@ -79,7 +79,7 @@ SUBROUTINE LOWLIKE_EXTRA_PARAMETER_INIT(tt_min,tt_max,te_min,te_max,m_use_gibbs,
 	USE LOWLIKE_EXTRA
 	use planck_likelihood
 	use planck_options
-	INTEGER,INTENT(IN)::tt_min,tt_max,te_min,te_max,m_use_gibbs,m_use_lowl_pol
+	INTEGER,INTENT(IN)::tt_min,tt_max,te_min,te_max,m_use_gibbs,m_use_lowl_pol,m_use_wmap_pol
 	
  	ttmin = tt_min
 	ttmax = tt_max

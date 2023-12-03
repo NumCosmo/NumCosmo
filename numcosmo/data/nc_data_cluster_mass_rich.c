@@ -231,7 +231,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
   {
     NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
     const guint ncluster        = ncm_vector_len (self->z_cluster);
-    gint i;
+    guint i;
 
     for (i = 0; i < ncluster; i++)
     {
@@ -257,7 +257,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
   {
     NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
     const guint ncluster               = ncm_vector_len (self->z_cluster);
-    gint i;
+    guint i;
 
     for (i = 0; i < ncluster; i++)
     {

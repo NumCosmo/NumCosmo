@@ -70,7 +70,7 @@ typedef struct _NcmDataGaussDiagPrivate
   gboolean wmean;
 } NcmDataGaussDiagPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussDiag, ncm_data_gauss_diag, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussDiag, ncm_data_gauss_diag, NCM_TYPE_DATA)
 
 static void
 ncm_data_gauss_diag_init (NcmDataGaussDiag *diag)

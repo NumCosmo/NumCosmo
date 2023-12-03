@@ -38,6 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_cblas.h" /* This must be included before any gsl header */
 #include "math/ncm_matrix.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_lapack.h"
@@ -52,7 +53,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT)
 
 static void
 ncm_matrix_init (NcmMatrix *m)
@@ -67,15 +68,15 @@ static void
 _ncm_matrix_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMatrix *m = NCM_MATRIX (object);
-  
+
   g_return_if_fail (NCM_IS_MATRIX (object));
-  
+
   switch (prop_id)
   {
     case PROP_VALS:
     {
       GVariant *var = ncm_matrix_get_variant (m);
-      
+
       g_value_take_variant (value, var);
       break;
     }
@@ -89,15 +90,15 @@ static void
 _ncm_matrix_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMatrix *m = NCM_MATRIX (object);
-  
+
   g_return_if_fail (NCM_IS_MATRIX (object));
-  
+
   switch (prop_id)
   {
     case PROP_VALS:
     {
       GVariant *var = g_value_get_variant (value);
-      
+
       ncm_matrix_set_from_variant (m, var);
       break;
     }
@@ -111,7 +112,7 @@ static void
 _ncm_matrix_dispose (GObject *object)
 {
   NcmMatrix *cm = NCM_MATRIX (object);
-  
+
   if (cm->pdata != NULL)
   {
     g_assert (cm->pfree != NULL);
@@ -119,7 +120,7 @@ _ncm_matrix_dispose (GObject *object)
     cm->pdata = NULL;
     cm->pfree = NULL;
   }
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
 }
@@ -128,7 +129,7 @@ static void
 _ncm_matrix_finalize (GObject *object)
 {
   NcmMatrix *cm = NCM_MATRIX (object);
-  
+
   switch (cm->type)
   {
     case NCM_MATRIX_SLICE:
@@ -143,9 +144,9 @@ _ncm_matrix_finalize (GObject *object)
       g_assert_not_reached ();
       break;
   }
-  
+
   cm->mv.matrix.data = NULL;
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
 }
@@ -154,17 +155,17 @@ static void
 ncm_matrix_class_init (NcmMatrixClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_matrix_set_property;
   object_class->get_property = &_ncm_matrix_get_property;
   object_class->dispose      = &_ncm_matrix_dispose;
   object_class->finalize     = &_ncm_matrix_finalize;
 
-  /**   
+  /**
    * NcmMatrix:values:
    *
    * GVariant representation of the matrix used to serialize the object.
-   * 
+   *
    */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
@@ -187,9 +188,9 @@ ncm_matrix_new (const guint nrows, const guint ncols)
 {
   gdouble *d    = g_slice_alloc (sizeof (gdouble) * nrows * ncols);
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols, NULL, NULL);
-  
+
   cm->type = NCM_MATRIX_SLICE;
-  
+
   return cm;
 }
 
@@ -208,9 +209,9 @@ ncm_matrix_new0 (const guint nrows, const guint ncols)
 {
   gdouble *d    = g_slice_alloc0 (sizeof (gdouble) * nrows * ncols);
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols, NULL, NULL);
-  
+
   cm->type = NCM_MATRIX_SLICE;
-  
+
   return cm;
 }
 
@@ -232,17 +233,17 @@ NcmMatrix *
 ncm_matrix_new_full (gdouble *d, guint nrows, guint ncols, guint tda, gpointer pdata, GDestroyNotify pfree)
 {
   NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-  
+
   if (tda == ncols)
     cm->mv = gsl_matrix_view_array (d, nrows, ncols);
   else
     cm->mv = gsl_matrix_view_array_with_tda (d, nrows, ncols, tda);
-  
+
   cm->type = NCM_MATRIX_DERIVED;
   g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
   cm->pdata = pdata;
   cm->pfree = pfree;
-  
+
   return cm;
 }
 
@@ -260,9 +261,9 @@ ncm_matrix_new_gsl (gsl_matrix *gm)
 {
   NcmMatrix *cm = ncm_matrix_new_full (gm->data, gm->size1, gm->size2, gm->tda,
                                        gm, (GDestroyNotify) & gsl_matrix_free);
-  
+
   cm->type = NCM_MATRIX_GSL_MATRIX;
-  
+
   return cm;
 }
 
@@ -280,7 +281,7 @@ ncm_matrix_new_gsl_static (gsl_matrix *gm)
 {
   NcmMatrix *cm = ncm_matrix_new_full (gm->data, gm->size1, gm->size2, gm->tda,
                                        NULL, NULL);
-  
+
   return cm;
 }
 
@@ -304,9 +305,9 @@ ncm_matrix_new_array (GArray *a, guint ncols)
                                          a->len / ncols, ncols, ncols,
                                          g_array_ref (a),
                                          (GDestroyNotify) & g_array_unref);
-    
+
     cm->type = NCM_MATRIX_GARRAY;
-    
+
     return cm;
   }
 }
@@ -329,9 +330,9 @@ ncm_matrix_new_data_slice (gdouble *d, guint nrows, guint ncols)
 {
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols,
                                        NULL, NULL);
-  
+
   cm->type = NCM_MATRIX_SLICE;
-  
+
   return cm;
 }
 
@@ -351,9 +352,9 @@ ncm_matrix_new_data_malloc (gdouble *d, guint nrows, guint ncols)
 {
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols,
                                        d, &g_free);
-  
+
   cm->type = NCM_MATRIX_MALLOC;
-  
+
   return cm;
 }
 
@@ -374,9 +375,9 @@ ncm_matrix_new_data_static (gdouble *d, guint nrows, guint ncols)
 {
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols,
                                        NULL, NULL);
-  
+
   cm->type = NCM_MATRIX_DERIVED;
-  
+
   return cm;
 }
 
@@ -398,9 +399,9 @@ ncm_matrix_new_data_static_tda (gdouble *d, guint nrows, guint ncols, guint tda)
 {
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, tda,
                                        NULL, NULL);
-  
+
   cm->type = NCM_MATRIX_DERIVED;
-  
+
   return cm;
 }
 
@@ -418,7 +419,7 @@ ncm_matrix_new_variant (GVariant *var)
   NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX,
                                 "values", var,
                                 NULL);
-  
+
   return cm;
 }
 
@@ -438,10 +439,10 @@ const NcmMatrix *
 ncm_matrix_const_new_data (const gdouble *d, guint nrows, guint ncols)
 {
   NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-  
+
   cm->mv   = gsl_matrix_view_array ((gdouble *) d, nrows, ncols);
   cm->type = NCM_MATRIX_DERIVED;
-  
+
   return cm;
 }
 
@@ -463,10 +464,10 @@ ncm_matrix_const_new_variant (GVariant *var)
     guint ncols        = g_variant_n_children (row);
     gconstpointer data = g_variant_get_data (var);
     const NcmMatrix *m = ncm_matrix_const_new_data (data, nrows, ncols);
-    
+
     NCM_MATRIX (m)->pdata = g_variant_ref_sink (var);
     NCM_MATRIX (m)->pfree = (GDestroyNotify) & g_variant_unref;
-    
+
     return m;
   }
 }
@@ -503,16 +504,16 @@ NcmMatrix *
 ncm_matrix_get_submatrix (NcmMatrix *cm, guint k1, guint k2, guint nrows, guint ncols)
 {
   NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
-  
+
   g_assert_cmpuint (nrows + k1, <=, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncols + k2, <=, ncm_matrix_ncols (cm));
-  
+
   scm->mv = gsl_matrix_submatrix (ncm_matrix_gsl (cm), k1, k2, nrows, ncols);
-  
+
   scm->pdata = g_object_ref (cm);
   scm->pfree = g_object_unref;
   scm->type  = NCM_MATRIX_DERIVED;
-  
+
   return scm;
 }
 
@@ -530,13 +531,13 @@ NcmVector *
 ncm_matrix_get_col (NcmMatrix *cm, const guint col)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  
+
   cv->vv   = gsl_matrix_column (ncm_matrix_gsl (cm), col);
   cv->type = NCM_VECTOR_DERIVED;
-  
+
   cv->pdata = g_object_ref (cm);
   cv->pfree = &g_object_unref;
-  
+
   return cv;
 }
 
@@ -554,13 +555,13 @@ NcmVector *
 ncm_matrix_get_row (NcmMatrix *cm, const guint row)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  
+
   cv->vv   = gsl_matrix_row (ncm_matrix_gsl (cm), row);
   cv->type = NCM_VECTOR_DERIVED;
-  
+
   cv->pdata = g_object_ref (cm);
   cv->pfree = &g_object_unref;
-  
+
   return cv;
 }
 
@@ -580,7 +581,7 @@ ncm_matrix_as_vector (NcmMatrix *cm)
   const guint ncols = ncm_matrix_ncols (cm);
   const guint len   = nrows * ncols;
 
-  NcmVector *v = ncm_vector_new_full (ncm_matrix_data (cm), len, 1, ncm_matrix_ref (cm), (GDestroyNotify)&ncm_matrix_free);
+  NcmVector *v = ncm_vector_new_full (ncm_matrix_data (cm), len, 1, ncm_matrix_ref (cm), (GDestroyNotify) & ncm_matrix_free);
 
   g_assert (ncm_matrix_tda (cm) == ncm_matrix_ncols (cm));
 
@@ -609,14 +610,14 @@ ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
     guint nrows   = g_variant_n_children (var);
     guint ncols   = g_variant_n_children (row);
     guint i;
-    
+
     g_variant_unref (row);
-    
+
     /* Sometimes we receive a NcmMatrix in the process of instantiation. */
     if ((ncm_matrix_nrows (cm) == 0) && (ncm_matrix_ncols (cm) == 0))
     {
       gdouble *d = g_slice_alloc (sizeof (gdouble) * nrows * ncols);
-      
+
       cm->mv   = gsl_matrix_view_array (d, nrows, ncols);
       cm->type = NCM_MATRIX_SLICE;
     }
@@ -624,20 +625,20 @@ ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
     {
       g_error ("ncm_matrix_set_from_variant: cannot set matrix values, variant contains (%u, %u) childs but matrix dimension is (%u, %u)", nrows, ncols, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm));
     }
-    
+
     for (i = 0; i < nrows; i++)
     {
       NcmVector *m_row = ncm_matrix_get_row (cm, i);
-      
+
       row = g_variant_get_child_value (var, i);
-      
+
       {
         gsize v_ncols           = 0;
         const gdouble *row_data = g_variant_get_fixed_array (row, &v_ncols, sizeof (gdouble));
-        
+
         g_assert_cmpuint (v_ncols, ==, ncols);
         ncm_vector_set_data (m_row, row_data, ncols);
-        
+
         g_variant_unref (row);
         ncm_vector_free (m_row);
       }
@@ -661,16 +662,16 @@ ncm_matrix_get_variant (NcmMatrix *cm)
   GVariant **rows   = g_new (GVariant *, nrows);
   GVariant *var;
   guint i;
-  
+
   for (i = 0; i < nrows; i++)
   {
     rows[i] = g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), ncm_matrix_ptr (cm, i, 0), ncols, sizeof (gdouble));
   }
-  
+
   var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
   g_free (rows);
   g_variant_ref_sink (var);
-  
+
   return var;
 }
 
@@ -692,25 +693,25 @@ ncm_matrix_peek_variant (NcmMatrix *cm)
   GVariant **rows = g_new (GVariant *, nrows);
   guint row_size  = ncols * sizeof (gdouble);
   guint i         = 0;
-  
+
   rows[i] = g_variant_new_from_data (G_VARIANT_TYPE ("ad"),
                                      ncm_matrix_ptr (cm, i, 0),
                                      row_size,
                                      TRUE,
                                      (GDestroyNotify) & ncm_matrix_free,
                                      ncm_matrix_ref (cm));
-  
+
   for (i = 1; i < nrows; i++)
   {
     rows[i] = g_variant_new_from_data (G_VARIANT_TYPE ("ad"),
                                        ncm_matrix_ptr (cm, i, 0),
                                        row_size, TRUE, NULL, NULL);
   }
-  
+
   var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
-  
+
   g_free (rows);
-  
+
   return g_variant_ref_sink (var);
 }
 
@@ -729,7 +730,7 @@ ncm_matrix_set_from_data (NcmMatrix *cm, gdouble *data)
   guint nrows = ncm_matrix_nrows (cm);
   guint ncols = ncm_matrix_ncols (cm);
   guint i, j;
-  
+
   for (i = 0; i < nrows; i++)
   {
     for (j = 0; j < ncols; j++)
@@ -754,9 +755,9 @@ ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a)
   guint nrows = ncm_matrix_nrows (cm);
   guint ncols = ncm_matrix_ncols (cm);
   guint i, j;
-  
+
   g_assert_cmpuint (nrows * ncols, ==, a->len);
-  
+
   for (i = 0; i < nrows; i++)
   {
     for (j = 0; j < ncols; j++)
@@ -820,9 +821,9 @@ NcmMatrix *
 ncm_matrix_dup (const NcmMatrix *cm)
 {
   NcmMatrix *cm_cp = ncm_matrix_new (ncm_matrix_col_len (cm), ncm_matrix_row_len (cm));
-  
+
   ncm_matrix_memcpy (cm_cp, cm);
-  
+
   return cm_cp;
 }
 
@@ -841,7 +842,7 @@ ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size)
 {
   if (*cm == nm)
     return;
-  
+
   if (*cm != NULL)
   {
     if ((nm != NULL) && check_size)
@@ -849,10 +850,10 @@ ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size)
       g_assert_cmpuint (ncm_matrix_nrows (*cm), ==, ncm_matrix_nrows (nm));
       g_assert_cmpuint (ncm_matrix_ncols (*cm), ==, ncm_matrix_ncols (nm));
     }
-    
+
     ncm_matrix_clear (cm);
   }
-  
+
   if (nm != NULL)
     *cm = ncm_matrix_ref (nm);
 }
@@ -871,14 +872,14 @@ ncm_matrix_add_mul (NcmMatrix *cm1, const gdouble a, NcmMatrix *cm2)
 {
   const gboolean no_pad_cm1 = ncm_matrix_gsl (cm1)->tda == ncm_matrix_ncols (cm1);
   const gboolean no_pad_cm2 = ncm_matrix_gsl (cm2)->tda == ncm_matrix_ncols (cm2);
-  
+
   g_assert (ncm_matrix_ncols (cm1) == ncm_matrix_ncols (cm2));
   g_assert (ncm_matrix_nrows (cm1) == ncm_matrix_nrows (cm2));
-  
+
   if (no_pad_cm1 && no_pad_cm2)
   {
     const gint N = ncm_matrix_ncols (cm2) * ncm_matrix_nrows (cm2);
-    
+
     cblas_daxpy (N, a,
                  ncm_matrix_data (cm2), 1,
                  ncm_matrix_data (cm1), 1);
@@ -889,7 +890,7 @@ ncm_matrix_add_mul (NcmMatrix *cm1, const gdouble a, NcmMatrix *cm2)
     const guint cm2_tda = ncm_matrix_gsl (cm2)->tda;
     const guint cm1_tda = ncm_matrix_gsl (cm1)->tda;
     guint i;
-    
+
     for (i = 0; i < ncm_matrix_nrows (cm2); i++)
     {
       cblas_daxpy (N, a,
@@ -914,12 +915,12 @@ ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
 {
   const guint nrows = ncm_matrix_nrows (cm1);
   const guint ncols = ncm_matrix_ncols (cm1);
-  gdouble reltol = 0.0;
-  gint i, j;
-  
+  gdouble reltol    = 0.0;
+  guint i, j;
+
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
-  
+
   for (i = 0; i < nrows; i++)
   {
     for (j = 0; j < ncols; j++)
@@ -927,11 +928,11 @@ ncm_matrix_cmp (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble scale)
       const gdouble cm1_ij    = ncm_matrix_get (cm1, i, j);
       const gdouble cm2_ij    = ncm_matrix_get (cm2, i, j);
       const gdouble reltol_ij = fabs ((cm1_ij - cm2_ij) / (scale + cm2_ij));
-      
+
       reltol = MAX (reltol, reltol_ij);
     }
   }
-  
+
   return reltol;
 }
 
@@ -953,19 +954,19 @@ ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble s
   const gdouble len = MIN (nrows, ncols);
   gdouble reltol    = 0.0;
   gint i;
-  
+
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble cm1_ii    = ncm_matrix_get (cm1, i, i);
     const gdouble cm2_ii    = ncm_matrix_get (cm2, i, i);
     const gdouble reltol_ii = fabs ((cm1_ii - cm2_ii) / (scale + cm2_ii));
-    
+
     reltol = MAX (reltol, reltol_ii);
   }
-  
+
   return reltol;
 }
 
@@ -984,13 +985,13 @@ ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
   const guint nrows = ncm_matrix_nrows (cm);
   const guint ncols = ncm_matrix_ncols (cm);
   guint i, j;
-  
+
   if (nrows != ncols)
     g_error ("ncm_matrix_copy_triangle: only works on square a matrix [%ux%u]", nrows, ncols);
-  
+
   if ((UL != 'U') && (UL != 'L'))
     g_error ("ncm_matrix_copy_triangle: expect U or L and received %c.", UL);
-  
+
   if (UL == 'U')
   {
     for (i = 0; i < nrows; i++)
@@ -1043,7 +1044,7 @@ ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, Nc
   g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (B));
   g_assert_cmpuint (ncm_matrix_ncols (A), ==, ncm_matrix_ncols (cm));
   g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (cm));
-  
+
   cblas_dsymm (CblasRowMajor, CblasLeft, (UL == 'U') ? CblasUpper : CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm),
                alpha,
                ncm_matrix_data (A), ncm_matrix_tda (A),
@@ -1059,17 +1060,17 @@ _ncm_matrix_check_trans (const gchar *func_name, gchar T)
   {
     case 'C':
     case 'T':
-    
+
       return CblasTrans;
-      
+
     case 'N':
-    
+
       return CblasNoTrans;
-      
+
       break;
     default:
       g_error ("%s: Unknown Trans type %c.", func_name, T);
-      
+
       return 0;
   }
 }
@@ -1096,12 +1097,12 @@ ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha
   const gsize opA_ncols        = (cblas_TransA == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
   const gsize opB_nrows        = (cblas_TransB == CblasNoTrans) ? ncm_matrix_nrows (B) : ncm_matrix_ncols (B);
   const gsize opB_ncols        = (cblas_TransB == CblasNoTrans) ? ncm_matrix_ncols (B) : ncm_matrix_nrows (B);
-  
+
   g_assert_cmpuint (opA_ncols, ==, opB_nrows);
-  
+
   g_assert_cmpuint (opA_nrows, ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (opB_ncols, ==, ncm_matrix_ncols (cm));
-  
+
   cblas_dgemm (CblasRowMajor, cblas_TransA, cblas_TransB, opA_nrows, opB_ncols, opA_ncols,
                alpha,
                ncm_matrix_data (A), ncm_matrix_tda (A),
@@ -1123,7 +1124,7 @@ gint
 ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 {
   gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
-  
+
   return ret;
 }
 
@@ -1140,7 +1141,7 @@ gint
 ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
   gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_tda (cm));
-  
+
   return ret;
 }
 
@@ -1162,16 +1163,16 @@ ncm_matrix_cholesky_lndet (NcmMatrix *cm)
   gdouble detL     = 1.0;
   glong exponent   = 0;
   guint i;
-  
+
   for (i = 0; i < n; i++)
   {
     const gdouble Lii   = fabs (ncm_matrix_get (cm, i, i));
     const gdouble ndetL = detL * Lii;
-    
+
     if (G_UNLIKELY ((ndetL < lb) || (ndetL > ub)))
     {
       gint exponent_i = 0;
-      
+
       detL      = frexp (ndetL, &exponent_i);
       exponent += exponent_i;
     }
@@ -1180,7 +1181,7 @@ ncm_matrix_cholesky_lndet (NcmMatrix *cm)
       detL = ndetL;
     }
   }
-  
+
   return 2.0 * (log (detL) + exponent * M_LN2);
 }
 
@@ -1200,7 +1201,7 @@ ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL)
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
   g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
-  
+
   return ncm_lapack_dposv (UL, ncm_matrix_nrows (cm), 1,
                            ncm_matrix_data (cm), ncm_matrix_tda (cm),
                            ncm_vector_data (b),  ncm_vector_len (b));
@@ -1223,7 +1224,7 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_vector_len (b));
   g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
-  
+
   return ncm_lapack_dpotrs (UL, ncm_matrix_nrows (cm), 1,
                             ncm_matrix_data (cm), ncm_matrix_tda (cm),
                             ncm_vector_data (b),  ncm_vector_len (b));
@@ -1246,34 +1247,35 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
 gint
 ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter)
 {
-  const guint n = ncm_matrix_ncols (cm);
-  NcmVector *eva = ncm_vector_new (n);
+  const guint n   = ncm_matrix_ncols (cm);
+  NcmVector *eva  = ncm_vector_new (n);
   NcmVector *diag = ncm_vector_new (n);
-  NcmMatrix *eve = ncm_matrix_new (n, n);
-  NcmMatrix *D_S = ncm_matrix_new (n, n);
-  NcmMatrix *R = ncm_matrix_new (n, n);
-  GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
+  NcmMatrix *eve  = ncm_matrix_new (n, n);
+  NcmMatrix *D_S  = ncm_matrix_new (n, n);
+  NcmMatrix *R    = ncm_matrix_new (n, n);
+  GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
-  gint neva = 0;
-  gint ret, i, iter;
-  
+  gint neva       = 0;
+  gint ret, i;
+  guint iter;
+
   g_array_set_size (isuppz, 2 * n);
-  
+
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
-  
+
   ncm_matrix_set_zero (D_S);
   ncm_matrix_get_diag (cm, diag);
-  
+
   iter = 0;
-  
+
   while (TRUE)
   {
     gdouble min_pos_ev = GSL_POSINF;
-    
+
     ncm_matrix_sub (cm, D_S);
-    
+
     ncm_matrix_memcpy (R, cm);
-    
+
     ret = ncm_lapack_dsyevr ('V', 'A', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm),
                              0.0, 0.0,
                              0, 0, 0.0,
@@ -1282,54 +1284,54 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
                              &g_array_index (isuppz, gint, 0),
                              ws);
     g_assert_cmpint (ret, ==, 0);
-    
+
     if (neva == 0)
       g_error ("ncm_matrix_nearPD: matrix is negative semi-definite.");
-    
+
     for (i = 0; i < neva; i++)
     {
       if (ncm_vector_get (eva, i) > 0.0)
         min_pos_ev = MIN (ncm_vector_get (eva, i), min_pos_ev);
     }
-    
+
     for (i = 0; i < neva; i++)
     {
       if (ncm_vector_get (eva, i) < 0.0)
         ncm_vector_set (eva, i, min_pos_ev * GSL_DBL_EPSILON);
-      
+
       cblas_dscal (n, sqrt (ncm_vector_get (eva, i)), ncm_matrix_ptr (eve, i, 0), 1);
       /*ncm_matrix_mul_row (eve, i, sqrt (ncm_vector_get (eva, i))); */
     }
-    
+
     /*ncm_vector_log_vals (eva, "EVA: ", "% 22.15g", TRUE);*/
     /*ncm_matrix_log_vals (eve, "EVE: ", "% 22.15g");*/
-    
+
     cblas_dsyrk (CblasRowMajor, (UL == 'U') ? CblasUpper : CblasLower,
                  CblasTrans, n, neva,
                  1.0, ncm_matrix_data (eve), ncm_matrix_tda (eve),
                  0.0, ncm_matrix_data (cm), ncm_matrix_tda (cm));
-    
+
     ncm_matrix_memcpy (D_S, cm);
     ncm_matrix_sub (D_S, R);
-    
+
     ncm_matrix_set_diag (cm, diag);
-    
+
     ncm_matrix_memcpy (R, cm);
-    
+
     if ((ret = ncm_matrix_cholesky_decomp (R, UL)) == 0)
       break;
-    
+
     if (iter > maxiter)
       break;
-    
+
     iter++;
     /*printf ("CHOLESKY: %4d, ITER %6d\n", ncm_matrix_cholesky_decomp (R, UL), iter++);*/
     /*ncm_matrix_log_vals (cm, "NewCM: ", "% 22.15g");*/
   }
-  
+
   if (cholesky_decomp)
     ncm_matrix_memcpy (cm, R);
-  
+
   g_array_unref (isuppz);
   ncm_lapack_ws_free (ws);
   ncm_vector_free (eva);
@@ -1337,7 +1339,7 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
   ncm_matrix_free (eve);
   ncm_matrix_free (R);
   ncm_matrix_free (D_S);
-  
+
   return ret;
 }
 
@@ -1354,22 +1356,23 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
 void
 ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec)
 {
-  const guint n = ncm_matrix_ncols (cm);
-  NcmVector *eva = ncm_vector_new (n);
-  NcmMatrix *eve = exp_cm_dec;
-  GArray *tau = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
+  const guint n   = ncm_matrix_ncols (cm);
+  NcmVector *eva  = ncm_vector_new (n);
+  NcmMatrix *eve  = exp_cm_dec;
+  GArray *tau     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
-  gint neva = 0;
-  gint ret, i;
-  
+  gint neva       = 0;
+  gint ret;
+  guint i;
+
   g_array_set_size (isuppz, 2 * n);
   g_array_set_size (tau, n);
-  
+
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (exp_cm_dec), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (exp_cm_dec), ==, ncm_matrix_nrows (exp_cm_dec));
-  
+
   ret = ncm_lapack_dsyevr ('V', 'A', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm),
                            0.0, 0.0,
                            0, 0, 0.0,
@@ -1378,13 +1381,13 @@ ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec)
                            &g_array_index (isuppz, gint, 0),
                            ws);
   g_assert_cmpint (ret, ==, 0);
-  
+
   for (i = 0; i < n; i++)
     cblas_dscal (n, exp (0.5 * ncm_vector_get (eva, i)), ncm_matrix_ptr (eve, i, 0), 1);
-  
+
   ret = ncm_lapack_dgeqrf (n, n, ncm_matrix_data (eve), ncm_matrix_tda (eve), &g_array_index (tau, gdouble, 0), ws);
   g_assert_cmpint (ret, ==, 0);
-  
+
   g_array_unref (isuppz);
   g_array_unref (tau);
   ncm_lapack_ws_free (ws);
@@ -1403,21 +1406,22 @@ ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec)
 void
 ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
 {
-  const guint n = ncm_matrix_ncols (cm);
-  NcmVector *eva = ncm_vector_new (n);
-  NcmMatrix *eve = ncm_matrix_new (n, n);
+  const guint n   = ncm_matrix_ncols (cm);
+  NcmVector *eva  = ncm_vector_new (n);
+  NcmMatrix *eve  = ncm_matrix_new (n, n);
   NcmMatrix *temp = ncm_matrix_new (n, n);
-  GArray *isuppz = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
   NcmLapackWS *ws = ncm_lapack_ws_new ();
-  gint neva = 0;
-  gint ret, i;
-  
+  gint neva       = 0;
+  gint ret;
+  guint i;
+
   g_array_set_size (isuppz, 2 * n);
-  
+
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (ln_cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (ln_cm), ==, ncm_matrix_nrows (ln_cm));
-  
+
   ret = ncm_lapack_dsyevr ('V', 'A', UL, n, ncm_matrix_data (cm), ncm_matrix_tda (cm),
                            0.0, 0.0,
                            0, 0, 0.0,
@@ -1426,25 +1430,25 @@ ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm)
                            &g_array_index (isuppz, gint, 0),
                            ws);
   g_assert_cmpint (ret, ==, 0);
-  
+
   ncm_matrix_memcpy (temp, eve);
-  
+
   for (i = 0; i < n; i++)
   {
     const gdouble e_val = ncm_vector_get (eva, i);
-    
+
     if (e_val <= 0.0)
       g_error ("ncm_matrix_sym_posdef_log: cannot compute the logarithm, matrix not positive definite [%d, % 22.15g].", i, e_val);
-    
+
     cblas_dscal (n, log (e_val), ncm_matrix_ptr (eve, i, 0), 1);
   }
-  
+
   cblas_dsyr2k (CblasRowMajor, (UL == 'U') ? CblasUpper : CblasLower,
                 CblasTrans, n, n,
                 0.5, ncm_matrix_data (temp), ncm_matrix_tda (temp),
                 ncm_matrix_data (eve), ncm_matrix_tda (eve),
                 0.0, ncm_matrix_data (ln_cm), ncm_matrix_tda (ln_cm));
-  
+
   g_array_unref (isuppz);
   ncm_lapack_ws_free (ws);
   ncm_vector_free (eva);
@@ -1473,20 +1477,20 @@ void
 ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym)
 {
   const guint n = ncm_matrix_ncols (cm);
-  gint i;
-  
+  guint i;
+
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (cm));
   g_assert_cmpuint (ncm_matrix_ncols (sym), ==, ncm_matrix_nrows (sym));
-  
+
   if (zero)
   {
     if (UL == 'U')
     {
       for (i = 0; i < n; i++)
       {
-        gint j;
-        
+        guint j;
+
         for (j = i + 1; j < n; j++)
         {
           ncm_matrix_set (cm, j, i, 0.0);
@@ -1497,8 +1501,8 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
     {
       for (i = 0; i < n; i++)
       {
-        gint j;
-        
+        guint j;
+
         for (j = i + 1; j < n; j++)
         {
           ncm_matrix_set (cm, i, j, 0.0);
@@ -1510,9 +1514,9 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
       g_assert_not_reached ();
     }
   }
-  
+
   ncm_matrix_memcpy (sym, cm);
-  
+
   if (UL == 'U')
     cblas_dtrmm (CblasRowMajor,
                  CblasLeft, CblasUpper, CblasTrans, CblasNonUnit, n, n,
@@ -1543,9 +1547,9 @@ ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym
 void
 ncm_matrix_square_to_sym (NcmMatrix *cm, gchar NT, gchar UL, NcmMatrix *sym)
 {
-  const guint nrows = ncm_matrix_nrows (cm);
-  const guint ncols = ncm_matrix_ncols (cm);
-  const CBLAS_UPLO Uplo       = (UL == 'U') ? CblasUpper : CblasLower;
+  const guint nrows     = ncm_matrix_nrows (cm);
+  const guint ncols     = ncm_matrix_ncols (cm);
+  const CBLAS_UPLO Uplo = (UL == 'U') ? CblasUpper : CblasLower;
   CBLAS_TRANSPOSE Trans;
   gint n, k;
 
@@ -1604,9 +1608,9 @@ ncm_matrix_update_vector (NcmMatrix *cm, gchar NT, const gdouble alpha, NcmVecto
   }
 
   cblas_dgemv (CblasRowMajor, Trans, nrows, ncols,
-      alpha, ncm_matrix_data (cm), ncm_matrix_tda (cm),
-      ncm_vector_data (v), ncm_vector_stride (v),
-      beta, ncm_vector_data (u), ncm_vector_stride (u));
+               alpha, ncm_matrix_data (cm), ncm_matrix_tda (cm),
+               ncm_vector_data (v), ncm_vector_stride (v),
+               beta, ncm_vector_data (u), ncm_vector_stride (u));
 }
 
 /**
@@ -1652,17 +1656,17 @@ void
 ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
 {
   guint i, j;
-  
+
   for (i = 0; i < ncm_matrix_nrows (cm); i++)
   {
     g_message ("%s", prefix);
-    
+
     for (j = 0; j < ncm_matrix_ncols (cm); j++)
     {
       g_message (" ");
       g_message (format, ncm_matrix_get (cm, i, j));
     }
-    
+
     g_message ("\n");
   }
 }
@@ -1684,45 +1688,46 @@ ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n   = ncm_matrix_nrows (cm);
   const guint nm1 = n - 1;
-  
+
   g_assert_cmpfloat (cor_level, >, 0.0);
   g_assert_cmpuint (n, ==, ncm_matrix_ncols (cm));
-  
+  g_assert_cmpuint (n, >, 0);
+
   ncm_rng_lock (rng);
   {
     NcmMatrix *P = ncm_matrix_dup (cm);
-    gint k;
-    
+    guint k;
+
     ncm_matrix_set_all (P, 0.0);
     ncm_matrix_set_identity (cm);
-    
+
     for (k = 0; k < nm1; k++)
     {
-      gint i;
-      
+      guint i;
+
       for (i = k + 1; i < n; i++)
       {
         gdouble p = (gsl_ran_beta (rng->r, cor_level, cor_level) - 0.5) * 2.0;
         gint l;
-        
+
         ncm_matrix_set (P, k, i, p);
-        
+
         for (l = k - 1; l >= 0; l--)
         {
           const gdouble Pli = ncm_matrix_get (P, l, i);
           const gdouble Plk = ncm_matrix_get (P, l, k);
-          
+
           p = p * sqrt ((1.0 - gsl_pow_2 (Pli)) * (1.0 - gsl_pow_2 (Plk))) + Pli * Plk;
         }
-        
+
         ncm_matrix_set (cm, k, i, p);
         ncm_matrix_set (cm, i, k, p);
       }
     }
-    
+
     ncm_matrix_free (P);
   }
-  
+
   ncm_rng_unlock (rng);
 }
 
@@ -1744,23 +1749,23 @@ void
 ncm_matrix_fill_rand_cov (NcmMatrix *cm, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n = ncm_matrix_nrows (cm);
-  gint k;
-  
+  guint k;
+
   g_assert_cmpfloat (sigma_min, >, 0.0);
   g_assert_cmpfloat (sigma_max, >, sigma_min);
-  
+
   ncm_matrix_fill_rand_cor (cm, cor_level, rng);
-  
+
   ncm_rng_lock (rng);
-  
+
   for (k = 0; k < n; k++)
   {
     const gdouble sigma_k = ncm_rng_uniform_gen (rng, sigma_min, sigma_max);
-    
+
     ncm_matrix_mul_col (cm, k, sigma_k);
     ncm_matrix_mul_row (cm, k, sigma_k);
   }
-  
+
   ncm_rng_unlock (rng);
 }
 
@@ -1783,26 +1788,26 @@ void
 ncm_matrix_fill_rand_cov2 (NcmMatrix *cm, NcmVector *mu, const gdouble reltol_min, const gdouble reltol_max, const gdouble cor_level, NcmRNG *rng)
 {
   const guint n = ncm_matrix_nrows (cm);
-  gint k;
-  
+  guint k;
+
   g_assert_cmpfloat (reltol_min, >, 0.0);
   g_assert_cmpfloat (reltol_max, >, reltol_min);
   g_assert_cmpuint (n, ==, ncm_vector_len (mu));
-  
+
   ncm_matrix_fill_rand_cor (cm, cor_level, rng);
-  
+
   ncm_rng_lock (rng);
-  
+
   for (k = 0; k < n; k++)
   {
     const gdouble mu_k    = ncm_vector_get (mu, k);
     const gdouble r_k     = exp (ncm_rng_uniform_gen (rng, log (reltol_min), log (reltol_max)));
     const gdouble sigma_k = mu_k != 0.0 ? fabs (mu_k) * r_k : r_k;
-    
+
     ncm_matrix_mul_col (cm, k, sigma_k);
     ncm_matrix_mul_row (cm, k, sigma_k);
   }
-  
+
   ncm_rng_unlock (rng);
 }
 
@@ -1820,19 +1825,19 @@ void
 ncm_matrix_cov2cor (const NcmMatrix *cov, NcmMatrix *cor)
 {
   const guint n = ncm_matrix_nrows (cov);
-  gint i;
-  
+  guint i;
+
   g_assert_cmpuint (ncm_matrix_ncols (cov), ==, n);
-  
+
   if (cov != cor)
     ncm_matrix_memcpy (cor, cov);
-  
+
   for (i = 0; i < n; i++)
   {
     NcmVector *row_i  = ncm_matrix_get_row (cor, i);
     NcmVector *col_i  = ncm_matrix_get_col (cor, i);
     const gdouble w_i = 1.0 / sqrt (fabs (ncm_matrix_get (cov, i, i)));
-    
+
     ncm_vector_scale (row_i, w_i);
     ncm_vector_scale (col_i, w_i);
 
@@ -1854,9 +1859,9 @@ NcmMatrix *
 ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
 {
   NcmMatrix *cor = ncm_matrix_dup (cov);
-  
+
   ncm_matrix_cov2cor (cov, cor);
-  
+
   return cor;
 }
 

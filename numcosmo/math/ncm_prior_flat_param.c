@@ -46,7 +46,7 @@ enum
   PROP_PID
 };
 
-G_DEFINE_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM_TYPE_PRIOR_FLAT);
+G_DEFINE_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM_TYPE_PRIOR_FLAT)
 
 static void
 ncm_prior_flat_param_init (NcmPriorFlatParam *pfp)

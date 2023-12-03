@@ -53,7 +53,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC_TYPE_MULTIPLICITY_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_watson_init (NcMultiplicityFuncWatson *mwat)

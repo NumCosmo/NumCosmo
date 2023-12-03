@@ -146,7 +146,7 @@ ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const g
 NCM_INLINE void
 ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
-  return NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
+  NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
 }
 
 NCM_INLINE NcmSpline2d *

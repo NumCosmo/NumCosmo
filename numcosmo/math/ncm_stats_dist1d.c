@@ -53,7 +53,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT)
 
 static gdouble
 _ncm_stats_dist1d_inv_cdf_dydx (gdouble y, gdouble x, gpointer userdata)

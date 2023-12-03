@@ -637,7 +637,7 @@ nc_hicosmo_qgrw_new (void)
 typedef NcHIPertWKB NcHIPertWKBQgrwZeta;
 typedef NcHIPertWKBClass NcHIPertWKBQgrwZetaClass;
 
-G_DEFINE_TYPE (NcHIPertWKBQgrwZeta, nc_hipert_wkb_qgrw_zeta, NC_TYPE_HIPERT_WKB);
+G_DEFINE_TYPE (NcHIPertWKBQgrwZeta, nc_hipert_wkb_qgrw_zeta, NC_TYPE_HIPERT_WKB)
 
 static void 
 nc_hipert_wkb_qgrw_zeta_init (NcHIPertWKBQgrwZeta *wkb_zeta)

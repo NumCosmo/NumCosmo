@@ -54,7 +54,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmLikelihood, ncm_likelihood, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmLikelihood, ncm_likelihood, G_TYPE_OBJECT)
 
 static void
 ncm_likelihood_init (NcmLikelihood *lh)

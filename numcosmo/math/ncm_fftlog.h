@@ -48,8 +48,8 @@ struct _NcmFftlogClass
   /*< private >*/
   GObjectClass parent_class;
   const gchar *name;
-  
-  void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
+
+  void (*compute_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[16];
 };
@@ -127,3 +127,4 @@ NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv);
 G_END_DECLS
 
 #endif /* _NCM_FFTLOG_H_ */
+

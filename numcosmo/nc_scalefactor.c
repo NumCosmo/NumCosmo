@@ -91,7 +91,7 @@ struct _NcScalefactorPrivate
   SUNLinearSolver LS;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcScalefactor, nc_scalefactor, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcScalefactor, nc_scalefactor, G_TYPE_OBJECT)
 
 static void
 nc_scalefactor_init (NcScalefactor *a)

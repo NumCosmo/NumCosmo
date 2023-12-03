@@ -77,7 +77,7 @@ struct _NcmLHRatio1d
   guint grad_eval;
 };
 
-G_DEFINE_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, G_TYPE_OBJECT)
 
 static void
 ncm_lh_ratio1d_init (NcmLHRatio1d *lhr1d)

@@ -46,7 +46,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmStatsDist2d, ncm_stats_dist2d, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmStatsDist2d, ncm_stats_dist2d, G_TYPE_OBJECT)
 
 static void
 ncm_stats_dist2d_init (NcmStatsDist2d *sd2)

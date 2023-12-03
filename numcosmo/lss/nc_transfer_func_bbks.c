@@ -78,7 +78,7 @@ enum
   PROP_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_TRANSFER_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_TRANSFER_FUNC)
 
 static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
