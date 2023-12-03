@@ -639,6 +639,7 @@ endif
 python_module = import('python')
 python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
 
+# Installing the python module:
 python_dir = python.get_install_dir()
 install_subdir(
   'numcosmo_py',
@@ -668,10 +669,11 @@ configure_file(
 )
 
 #######################################################################################
-# Installing data files:
+# Installing data and exampels files:
 #######################################################################################
 
 install_subdir('data', install_dir: numcosmo_pkgdatadir)
+install_subdir('examples', install_dir: numcosmo_pkgdatadir)
 
 #######################################################################################
 # Including the subdirectories:
