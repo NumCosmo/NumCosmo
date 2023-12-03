@@ -261,7 +261,7 @@ libplc = static_library(
         clik_lens_lkl_sources,
         clik_simall_sources,
     ],
-    dependencies: [omp_c],
+    dependencies: [omp_c, dl_dep],
     include_directories: [configinc, numcosmoinc, plc_inc],
     install: false,
     gnu_symbol_visibility: 'hidden',
