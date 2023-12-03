@@ -48,7 +48,7 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileDK14, nc_halo_density_profile_dk14, NC_TYPE_HALO_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileDK14, nc_halo_density_profile_dk14, NC_TYPE_HALO_DENSITY_PROFILE)
 
 #define VECTOR (NCM_MODEL (dpdk)->params)
 #define RT   (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_RT))

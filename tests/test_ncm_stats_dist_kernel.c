@@ -316,8 +316,8 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 static void
 test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  guint i = 0;
-  const guint n = g_test_rand_int_range (5, 100);
+  guint i        = 0;
+  const guint n  = g_test_rand_int_range (5, 100);
   gdouble lnnorm = g_test_rand_double_range (1.0, 200.0);
   gdouble lambda0, gamma0, gamma1, lambda1;
   gdouble lambda_test0   = 0.0;
@@ -431,7 +431,6 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
 static void
 test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  gint i, j;
   NcmRNG *rng             = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmMatrix *cov_decomp   = ncm_matrix_new (test->dim, test->dim);
   gdouble href            = g_test_rand_double_range (1.0, 200.0);
@@ -439,6 +438,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
   NcmVector *mu           = ncm_vector_new (test->dim);
   NcmStatsVec *test_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_VAR, FALSE);
   const guint ntests      = 300 * g_test_rand_int_range (1, 5);
+  guint i, j;
 
   for (i = 0; i < test->dim; i++)
   {
@@ -471,7 +471,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
     {
       gdouble dif_i;
 
-      dif_i = abs ((ncm_stats_vec_get_mean (test_stats, i) - ncm_vector_get (mu, i)) / ncm_vector_get (mu, i));
+      dif_i = fabs ((ncm_stats_vec_get_mean (test_stats, i) - ncm_vector_get (mu, i)) / ncm_vector_get (mu, i));
       dif   = dif + dif_i;
     }
 

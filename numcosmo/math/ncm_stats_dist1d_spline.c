@@ -47,7 +47,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmStatsDist1dSpline, ncm_stats_dist1d_spline, NCM_TYPE_STATS_DIST1D);
+G_DEFINE_TYPE (NcmStatsDist1dSpline, ncm_stats_dist1d_spline, NCM_TYPE_STATS_DIST1D)
 
 static void
 ncm_stats_dist1d_spline_init (NcmStatsDist1dSpline *sd1s)

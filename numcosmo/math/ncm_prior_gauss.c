@@ -47,7 +47,7 @@ enum
   PROP_VARIABLE,
 };
 
-G_DEFINE_TYPE (NcmPriorGauss, ncm_prior_gauss, NCM_TYPE_PRIOR);
+G_DEFINE_TYPE (NcmPriorGauss, ncm_prior_gauss, NCM_TYPE_PRIOR)
 
 static void
 ncm_prior_gauss_init (NcmPriorGauss *pg)

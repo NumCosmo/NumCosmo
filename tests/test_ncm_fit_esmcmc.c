@@ -143,7 +143,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
 
-  fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
 
   ncm_fit_set_maxiter (fit, 10000000);
 
@@ -290,7 +290,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
 
-  fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   ncm_fit_set_maxiter (fit, 10000000);
 
   stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
@@ -679,7 +679,7 @@ void
 test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run = MAX (test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div, 100);
-  gdouble prec = 1.0e-2;
+  gdouble prec   = 1.0e-2;
   gdouble lnnorm_sd, lnnorm;
 
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);

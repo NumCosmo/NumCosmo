@@ -39,7 +39,7 @@
 #include "model/nc_hicosmo_lcdm.h"
 #include "model/nc_hicosmo_de.h"
 
-G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO)
 
 #define VECTOR    (NCM_MODEL (cosmo)->params)
 #define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))

@@ -64,7 +64,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, G_TYPE_OBJECT)
 
 static void
 ncm_powspec_corr3d_init (NcmPowspecCorr3d *psc)

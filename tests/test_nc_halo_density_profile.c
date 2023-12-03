@@ -62,7 +62,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_add ("/nc/density_profile_nfw/eval_density", TestNcHaloDensityProfile, NULL,
               &test_nc_halo_density_profile_nfw_new,
               &test_nc_halo_density_profile_nfw_eval_density,
@@ -71,7 +71,7 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_density_profile_nfw_new,
               &test_nc_halo_density_profile_nfw_scale_radius,
               &test_nc_halo_density_profile_free);
-  
+
   g_test_add ("/nc/density_profile/nfw/eval_dl_spher_mass", TestNcHaloDensityProfile, NULL,
               &test_nc_halo_density_profile_nfw_new,
               &test_nc_halo_density_profile_eval_dl_spher_mass,
@@ -84,7 +84,7 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_density_profile_nfw_new,
               &test_nc_halo_density_profile_eval_dl_cyl_mass,
               &test_nc_halo_density_profile_free);
-  
+
   g_test_add ("/nc/density_profile/hernquist/eval_dl_spher_mass", TestNcHaloDensityProfile, NULL,
               &test_nc_halo_density_profile_hernquist_new,
               &test_nc_halo_density_profile_eval_dl_spher_mass,
@@ -97,7 +97,7 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_density_profile_hernquist_new,
               &test_nc_halo_density_profile_eval_dl_cyl_mass,
               &test_nc_halo_density_profile_free);
-  
+
   g_test_add ("/nc/density_profile/einasto/eval_dl_spher_mass", TestNcHaloDensityProfile, NULL,
               &test_nc_halo_density_profile_einasto_new,
               &test_nc_halo_density_profile_eval_dl_spher_mass,
@@ -110,7 +110,7 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_density_profile_einasto_new,
               &test_nc_halo_density_profile_eval_dl_cyl_mass,
               &test_nc_halo_density_profile_free);
-  
+
   g_test_run ();
 }
 
@@ -124,27 +124,27 @@ test_nc_halo_density_profile_free (TestNcHaloDensityProfile *test, gconstpointer
 void
 test_nc_halo_density_profile_nfw_new (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo         = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
-  
+
   g_assert_true (dp != NULL);
-  
+
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_NFW (dp));
-  
+
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
-  
+
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
-  
+
   ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
-  
+
   test->cosmo      = cosmo;
   test->dp         = dp;
   test->z          = 1.0;
@@ -153,34 +153,34 @@ test_nc_halo_density_profile_nfw_new (TestNcHaloDensityProfile *test, gconstpoin
   test->R3         = 10.0;
   test->ntests     = 1000;
   test->rng_params = NULL;
-  
+
   nc_distance_free (dist);
 }
 
 void
 test_nc_halo_density_profile_hernquist_new (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo         = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_hernquist_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
-  
+
   g_assert_true (dp != NULL);
-  
+
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_HERNQUIST (dp));
-  
+
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
-  
+
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
-  
+
   ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
-  
+
   test->cosmo      = cosmo;
   test->dp         = dp;
   test->z          = 1.0;
@@ -189,7 +189,7 @@ test_nc_halo_density_profile_hernquist_new (TestNcHaloDensityProfile *test, gcon
   test->R3         = 10.0;
   test->ntests     = 1000;
   test->rng_params = NULL;
-  
+
   nc_distance_free (dist);
 }
 
@@ -213,28 +213,28 @@ _test_nc_halo_density_profile_einasto_rng (TestNcHaloDensityProfile *test)
 void
 test_nc_halo_density_profile_einasto_new (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo         = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_einasto_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
-  
+
   g_assert_true (dp != NULL);
-  
+
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_EINASTO (dp));
-  
+
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
-  
+
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0);
-  
+
   ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", 15.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "cDelta", 4.0);
   ncm_model_param_set_by_name (NCM_MODEL (dp), "alpha", 0.25);
-  
+
   test->cosmo      = cosmo;
   test->dp         = dp;
   test->z          = 1.0;
@@ -243,7 +243,7 @@ test_nc_halo_density_profile_einasto_new (TestNcHaloDensityProfile *test, gconst
   test->R3         = 10.0;
   test->ntests     = 1000;
   test->rng_params = &_test_nc_halo_density_profile_einasto_rng;
-  
+
   nc_distance_free (dist);
 }
 
@@ -252,11 +252,11 @@ test_nc_halo_density_profile_nfw_eval_density (TestNcHaloDensityProfile *test, g
 {
   NcHICosmo *cosmo         = test->cosmo;
   NcHaloDensityProfile *dp = test->dp;
-  
+
   gdouble rho1 = nc_halo_density_profile_eval_density (dp, cosmo, test->R1, test->z);
   gdouble rho2 = nc_halo_density_profile_eval_density (dp, cosmo, test->R2, test->z);
   gdouble rho3 = nc_halo_density_profile_eval_density (dp, cosmo, test->R3, test->z);
-  
+
   ncm_assert_cmpdouble_e (rho1, ==, 7.670479e+14, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (rho2, ==, 5.557793e+14, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (rho3, ==, 9.171099e+10, 1.0e-5, 0.0);
@@ -267,9 +267,9 @@ test_nc_halo_density_profile_nfw_scale_radius (TestNcHaloDensityProfile *test, g
 {
   NcHICosmo *cosmo         = test->cosmo;
   NcHaloDensityProfile *dp = test->dp;
-  
+
   gdouble rs = nc_halo_density_profile_r_s (dp, cosmo, test->z);
-  
+
   ncm_assert_cmpdouble_e (rs, ==, 0.353629, 1.0e-5, 0.0);
 }
 
@@ -277,18 +277,16 @@ void
 test_nc_halo_density_profile_eval_dl_spher_mass (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
   NcHaloDensityProfile *dp = test->dp;
-  gint np = 10;
+  gint np                  = 10;
   gint i;
 
-  do 
-  {
-  
+  do {
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
       const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, X);
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_spher_mass (dp, X);
-    
+
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }
   } while ((test->rng_params != NULL) && test->rng_params (test) && np--);
@@ -298,17 +296,16 @@ void
 test_nc_halo_density_profile_eval_dl_2d_density (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
   NcHaloDensityProfile *dp = test->dp;
-  gint np = 10;
+  gint np                  = 10;
   gint i;
-  
-  do 
-  {
+
+  do {
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
       const gdouble ISigma  = nc_halo_density_profile_eval_dl_2d_density (dp, X);
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_2d_density (dp, X);
-    
+
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }
   } while ((test->rng_params != NULL) && test->rng_params (test) && np--);
@@ -318,18 +315,18 @@ void
 test_nc_halo_density_profile_eval_dl_cyl_mass (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
   NcHaloDensityProfile *dp = test->dp;
-  gint np = 10;
+  gint np                  = 10;
   gint i;
-  
-  do 
-  {
+
+  do {
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
       const gdouble ISigma  = nc_halo_density_profile_eval_dl_cyl_mass (dp, X);
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_cyl_mass (dp, X);
-    
+
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }
   } while ((test->rng_params != NULL) && test->rng_params (test) && np--);
 }
+

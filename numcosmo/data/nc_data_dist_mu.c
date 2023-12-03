@@ -50,7 +50,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataDistMu, nc_data_dist_mu, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataDistMu, nc_data_dist_mu, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_dist_mu_init (NcDataDistMu *dist_mu)

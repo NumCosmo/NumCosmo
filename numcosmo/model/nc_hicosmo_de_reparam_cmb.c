@@ -36,7 +36,7 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de.h"
 
-G_DEFINE_TYPE (NcHICosmoDEReparamCMB, nc_hicosmo_de_reparam_cmb, NCM_TYPE_REPARAM);
+G_DEFINE_TYPE (NcHICosmoDEReparamCMB, nc_hicosmo_de_reparam_cmb, NCM_TYPE_REPARAM)
 
 static void
 nc_hicosmo_de_reparam_cmb_init (NcHICosmoDEReparamCMB *de_reparam_ok)

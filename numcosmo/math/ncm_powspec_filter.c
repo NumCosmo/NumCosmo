@@ -81,7 +81,7 @@ enum
 	PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT)
 
 static void
 ncm_powspec_filter_init (NcmPowspecFilter *psf)

@@ -216,7 +216,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT)
 
 static void
 nc_cbe_precision_init (NcCBEPrecision *cbe_prec)

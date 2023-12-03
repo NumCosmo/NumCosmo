@@ -39,7 +39,7 @@
 
 #include "model/nc_hiprim_sbpl.h"
 
-G_DEFINE_TYPE (NcHIPrimSBPL, nc_hiprim_sbpl, NC_TYPE_HIPRIM);
+G_DEFINE_TYPE (NcHIPrimSBPL, nc_hiprim_sbpl, NC_TYPE_HIPRIM)
 
 enum {
   PROP_0,

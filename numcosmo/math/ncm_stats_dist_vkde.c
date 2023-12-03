@@ -87,7 +87,7 @@ enum
   PROP_USE_ROT_HREF,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE)
 
 static gpointer
 _ncm_stats_dist_vkde_stats_vec_new (gpointer userdata)
@@ -325,7 +325,7 @@ _cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const gu
 
     if (ncm_matrix_nearPD (cov_decomp, 'U', TRUE, maxiter) != 0)
     {
-      gint i;
+      guint i;
 
       ncm_matrix_set_zero (cov_decomp);
 
@@ -352,7 +352,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
    * Creates a near tree object and add all transformed vectors.
    */
   struct kdtree *tree = kdtree_init (ppself->d);
-  gint i;
+  guint i;
 
   g_assert_cmpint (ppself->n_obs, >, 2);
 
@@ -413,6 +413,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       NcmStatsVec **sample_ptr = ncm_memory_pool_get (self->mp_stats_vec);
       NcmStatsVec *sample      = *sample_ptr;
       rb_knn_list_table_t *table;
+
       /*gint tid = omp_get_thread_num(); */
       /*printf("Hello world from omp thread %d\n", tid); */
 
@@ -503,7 +504,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   const gdouble href2                  = ppself->href * ppself->href;
   const gdouble one_href2              = 1.0 / href2;
 
-  gint i;
+  guint i;
 
   #pragma omp parallel if (ppself->use_threads)
   {
@@ -516,7 +517,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
       NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
       gint ret;
-      gint j;
+      guint j;
 
       /*ncm_matrix_memcpy (pself->invUsample_matrix, pself->sample_matrix); */
       ncm_matrix_memcpy (invUsample_matrix, pself->sample_matrix);
@@ -619,7 +620,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
   NcmStatsDistVKDEEvalVars *ev         = *ev_ptr;
   gdouble s                            = 0.0;
   gint ret;
-  gint i;
+  guint i;
 
   {
     for (i = 0; i < ppself->n_kernels; i++)
@@ -668,7 +669,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   NcmStatsDistVKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistVKDEEvalVars *ev         = *ev_ptr;
   gint ret;
-  gint i;
+  guint i;
 
   {
     for (i = 0; i < ppself->n_kernels; i++)

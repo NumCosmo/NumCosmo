@@ -120,7 +120,7 @@ enum
   PROP_DIM,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistKernel, ncm_stats_dist_kernel, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistKernel, ncm_stats_dist_kernel, G_TYPE_OBJECT)
 
 static void
 ncm_stats_dist_kernel_init (NcmStatsDistKernel *sdk)

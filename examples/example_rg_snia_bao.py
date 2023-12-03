@@ -103,11 +103,11 @@ def test_rg_snia_bao() -> None:
     lh = Ncm.Likelihood(dataset=dset)
 
     #
-    #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
-    #  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
-    #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
+    # Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
+    # fit the Modelset mset using the Likelihood lh and using a numerical
+    # differentiation algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
     #
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
     )
 

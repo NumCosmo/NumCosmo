@@ -5,7 +5,7 @@
 ]>
 <?asciidoc-toc?>
 <?asciidoc-numbered?>
-<refentry lang="en" id="refs">
+<refentry lang="en" id="refs" xmlns:xi="http://www.w3.org/2001/XInclude">
 <refentryinfo>
     <title>Bibliography(3)</title>
     <author>

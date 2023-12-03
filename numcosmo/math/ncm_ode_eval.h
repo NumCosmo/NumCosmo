@@ -117,7 +117,7 @@ NCM_INLINE gint ncm_ode_eval_J_dense (NcmODEEval *ode_eval, const guint sys_size
 
 #define NCM_ODE_EVAL_DEFINE_IMPL(ModuleObjName, module_obj_name, MODULE, OBJ_NAME, LocalStruct, df0, J_dense0, clean_ls0) \
   struct _ ## ModuleObjName { NcmODEEval parent_instance; LocalStruct ls; };                                                  \
-  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_ODE_EVAL);                                                        \
+  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_ODE_EVAL)                                                        \
   static void module_obj_name ## _init (ModuleObjName * ode_eval1) {                                                           \
     memset (&ode_eval1->ls, 0, sizeof (LocalStruct));                                                                       \
   }                                                                                                                         \

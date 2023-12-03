@@ -454,7 +454,7 @@ test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_
 {
   NcmStatsVec *err_stats = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
   gulong N               = 0;
-  gint i;
+  guint i;
 
   for (i = 0; i < test->ntests; i++)
   {
@@ -644,7 +644,7 @@ test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer 
 
   for (i = 0; i < ntests; i++)
   {
-    const gint k_i = ncm_stats_dist_kernel_choose (test->sd, rng);
+    const guint k_i = ncm_stats_dist_kernel_choose (test->sd, rng);
 
     g_assert_true (k_i < n);
     ncm_vector_addto (cum, k_i, 1.0);

@@ -55,7 +55,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_pseudo_counts_init (NcDataClusterPseudoCounts *dcpc)
@@ -226,7 +226,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   if (dcpc->M_Z_FlatPrior)
   {
     /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
-    gint i;
+    guint i;
 
     for (i = 0; i < dcpc->np; i++)
     {
@@ -250,7 +250,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   {
     gdouble Ndet   = nc_cluster_pseudo_counts_ndet (cpc, dcpc->cad->mfp, cosmo);
     gdouble lnNdet = log (Ndet);
-    gint i;
+    guint i;
 
     *m2lnL = 0.0;
 
@@ -324,7 +324,7 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
 
   g_assert (clusterz != NULL && clusterm != NULL && cosmo != NULL && cpc != NULL);
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  g_assert_cmpuint (nc_cluster_redshift_obs_params_len (clusterz), ==, 0);
+  g_assert_cmpuint (nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)), ==, 0);
 
   nc_cluster_abundance_prepare_inv_dNdz (dcpc->cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
                                          lnMi);

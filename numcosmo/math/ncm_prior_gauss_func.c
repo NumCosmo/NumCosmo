@@ -45,7 +45,7 @@ enum
   PROP_MEAN_FUNC,
 };
 
-G_DEFINE_TYPE (NcmPriorGaussFunc, ncm_prior_gauss_func, NCM_TYPE_PRIOR_GAUSS);
+G_DEFINE_TYPE (NcmPriorGaussFunc, ncm_prior_gauss_func, NCM_TYPE_PRIOR_GAUSS)
 
 static void
 ncm_prior_gauss_func_init (NcmPriorGaussFunc *pgf)

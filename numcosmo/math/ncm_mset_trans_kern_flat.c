@@ -50,7 +50,7 @@ enum
   PROP_0,
 };
 
-G_DEFINE_TYPE (NcmMSetTransKernFlat, ncm_mset_trans_kern_flat, NCM_TYPE_MSET_TRANS_KERN);
+G_DEFINE_TYPE (NcmMSetTransKernFlat, ncm_mset_trans_kern_flat, NCM_TYPE_MSET_TRANS_KERN)
 
 static void
 ncm_mset_trans_kern_flat_init (NcmMSetTransKernFlat *tkernf)

@@ -61,7 +61,6 @@ GType nc_planck_fi_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_planck_fi);
 
-NcPlanckFI *nc_planck_fi_new_from_name (gchar *pfi_name);
 NcPlanckFI *nc_planck_fi_ref (NcPlanckFI *pfi);
 void nc_planck_fi_free (NcPlanckFI *pfi);
 void nc_planck_fi_clear (NcPlanckFI **pfi);

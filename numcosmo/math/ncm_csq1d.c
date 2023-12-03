@@ -152,7 +152,7 @@ enum
   PROP_MAX_ORDER_2,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT)
 
 static void
 ncm_csq1d_init (NcmCSQ1D *csq1d)
@@ -1887,7 +1887,7 @@ ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
   const guint len              = ncm_vector_len (asinh_t_v);
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
   gdouble s_t                  = 1.0e300;
-  gint i;
+  guint i;
 
   for (i = 0; i < len; i++)
   {
@@ -1976,7 +1976,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   else
   {
     NcmCSQ1DWS ws = {csq1d, model, reltol};
-    gint iter = 0, max_iter = 1000;
+    guint iter = 0, max_iter = 1000;
     const gdouble root_reltol = 1.0e-2;
     const gsl_root_fsolver_type *T;
     gsl_root_fsolver *s;
@@ -2105,7 +2105,7 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   {
     const gsl_root_fsolver_type *T;
     gsl_root_fsolver *s;
-    gint max_iter = 1000;
+    guint max_iter = 1000;
 
     iter = 0;
 

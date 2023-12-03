@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_cluster_abundance_sampling.py
+# test_py_cluster_abundance_sampling.py
 #
 # Fri May 19 10:00:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_cluster_abundance_sampling.py
+# test_py_cluster_abundance_sampling.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it

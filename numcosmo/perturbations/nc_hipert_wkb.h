@@ -108,7 +108,6 @@ struct _NcHIPertWKB
 
 GType nc_hipert_wkb_get_type (void) G_GNUC_CONST;
 
-NcHIPertWKB *nc_hipert_wkb_new_by_name (const gchar *wkb_name);
 NcHIPertWKB *nc_hipert_wkb_ref (NcHIPertWKB *wkb);
 void nc_hipert_wkb_free (NcHIPertWKB *wkb);
 void nc_hipert_wkb_clear (NcHIPertWKB **wkb);

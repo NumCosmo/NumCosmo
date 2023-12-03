@@ -152,7 +152,9 @@ main (gint argc, gchar *argv[])
 
     g_key_file_free (runconf);
 
-    for (i = 0; i < runconf_argc; i++)
+    g_assert_cmpint (runconf_argc, >=, 0);
+
+    for (i = 0; i < (guint) runconf_argc; i++)
     {
       runconf_argv_m[i] = runconf_argv[i];
     }
@@ -260,9 +262,14 @@ main (gint argc, gchar *argv[])
   if ((cosmo = NC_HICOSMO (ncm_mset_get (mset, nc_hicosmo_id ()))) == NULL)
   {
     if (de_model.model_name != NULL)
-      cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
+    {
+      cosmo = NC_HICOSMO (ncm_serialize_global_from_string (de_model.model_name));
+      g_assert (NC_IS_HICOSMO (cosmo));
+    }
     else
+    {
       cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+    }
   }
 
   if (ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
@@ -270,9 +277,14 @@ main (gint argc, gchar *argv[])
     NcHIReion *reion;
 
     if (de_model.model_reion != NULL)
-      reion = nc_hireion_new_from_name (NC_TYPE_HIREION, de_model.model_reion);
+    {
+      reion = NC_HIREION (ncm_serialize_global_from_string (de_model.model_reion));
+      g_assert (NC_IS_HIREION (reion));
+    }
     else
+    {
       reion = NC_HIREION (nc_hireion_camb_new ());
+    }
 
     ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
     nc_hireion_free (reion);
@@ -283,9 +295,14 @@ main (gint argc, gchar *argv[])
     NcHIPrim *prim;
 
     if (de_model.model_prim != NULL)
-      prim = nc_hiprim_new_from_name (NC_TYPE_HIPRIM, de_model.model_prim);
+    {
+      prim = NC_HIPRIM (ncm_serialize_global_from_string (de_model.model_prim));
+      g_assert (NC_IS_HIPRIM (prim));
+    }
     else
+    {
       prim = NC_HIPRIM (nc_hiprim_power_law_new ());
+    }
 
     ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
     nc_hiprim_free (prim);
@@ -303,7 +320,7 @@ main (gint argc, gchar *argv[])
 
   if (de_model.help_names)
   {
-    gint i;
+    guint i;
 
     ncm_message ("# Cosmological model name -- %s\n", ncm_model_name (NCM_MODEL (cosmo)));
 
@@ -529,7 +546,11 @@ main (gint argc, gchar *argv[])
 
     if (ncm_mset_peek (mset, nc_planck_fi_id ()) == NULL)
     {
-      NcPlanckFI *planck_fi = nc_planck_fi_new_from_name (de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI);
+      NcPlanckFI *planck_fi = NC_PLANCK_FI (ncm_serialize_global_from_string (
+                                              de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI)
+                                           );
+
+      g_assert (NC_IS_PLANCK_FI (planck_fi));
 
       ncm_mset_push (mset, NCM_MODEL (planck_fi));
       nc_planck_fi_free (planck_fi);
@@ -562,7 +583,10 @@ main (gint argc, gchar *argv[])
       }
       else
       {
-        NcmData *data = ncm_data_new_from_file (de_data_simple.data_files[i]);
+        NcmData *data = NCM_DATA (ncm_serialize_global_from_file (de_data_simple.data_files[i]));
+
+        g_assert (data != NULL);
+        g_assert (NCM_IS_DATA (data));
 
         ncm_dataset_append_data (dset, data);
         ncm_data_free (data);
@@ -614,7 +638,7 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit_type == NULL)
   {
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
     de_fit.fit_type = g_strdup ("nlopt");
 #else
     de_fit.fit_type = g_strdup ("gsl-mms");
@@ -634,7 +658,7 @@ main (gint argc, gchar *argv[])
     if (fit_diff_id == NULL)
       g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_diff);
 
-    fit = ncm_fit_new (fit_type_id->value, de_fit.fit_algo, lh, mset, fit_diff_id->value);
+    fit = ncm_fit_factory (fit_type_id->value, de_fit.fit_algo, lh, mset, fit_diff_id->value);
     ncm_fit_set_m2lnL_reltol (fit, de_fit.fit_reltol);
     ncm_fit_set_params_reltol (fit, de_fit.fit_params_reltol);
   }

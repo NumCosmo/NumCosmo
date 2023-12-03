@@ -50,7 +50,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHIPrim, nc_hiprim, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcHIPrim, nc_hiprim, NCM_TYPE_MODEL)
 
 static void
 nc_hiprim_init (NcHIPrim *prim)
@@ -62,7 +62,6 @@ nc_hiprim_init (NcHIPrim *prim)
 static void
 nc_hiprim_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_parent_class)->finalize (object);
 }
@@ -71,6 +70,7 @@ static void
 nc_hiprim_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPrim *prim = NC_HIPRIM (object);
+
   g_return_if_fail (NC_IS_HIPRIM (object));
 
   switch (prop_id)
@@ -88,6 +88,7 @@ static void
 nc_hiprim_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPrim *prim = NC_HIPRIM (object);
+
   g_return_if_fail (NC_IS_HIPRIM (object));
 
   switch (prop_id)
@@ -106,13 +107,13 @@ NCM_MSET_MODEL_REGISTER_ID (nc_hiprim, NC_TYPE_HIPRIM);
 static void
 nc_hiprim_class_init (NcHIPrimClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property  = nc_hiprim_set_property;
-  model_class->get_property  = nc_hiprim_get_property;
+  model_class->set_property = nc_hiprim_set_property;
+  model_class->get_property = nc_hiprim_get_property;
 
-  object_class->finalize     = nc_hiprim_finalize;
+  object_class->finalize = nc_hiprim_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Homogeneous and isotropic primordial cosmological models.", "NcHIPrim");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
@@ -134,26 +135,6 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
                                                         "Pivotal value of k",
                                                         G_MINDOUBLE, G_MAXDOUBLE, NC_HIPRIM_DEFAULT_K_PIVOT,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
-/**
- * nc_hiprim_new_from_name:
- * @parent_type: #GType of the parent model
- * @prim_name: name of the primordial spcetrum model
- *
- * This function instantiates a new object of type #NcHIPrim.
- *
- * Returns: A new #NcHIPrim
- */
-NcHIPrim *
-nc_hiprim_new_from_name (GType parent_type, gchar *prim_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (prim_name);
-  GType model_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (model_type, parent_type))
-    g_error ("nc_hiprim_new_from_name: NcHIPrim %s do not descend from %s.", prim_name, g_type_name (parent_type));
-  return NC_HIPRIM (obj);
 }
 
 /**
@@ -202,19 +183,25 @@ _nc_hiprim_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
   GType *models = g_type_children (model_type, &nc);
+
   for (i = 0; i < nc; i++)
   {
     guint ncc;
     GType *modelsc = g_type_children (models[i], &ncc);
 
     g_message ("#  ");
-    for (j = 0; j < n; j++) g_message (" ");
+
+    for (j = 0; j < n; j++)
+      g_message (" ");
+
     g_message ("%s\n", g_type_name (models[i]));
+
     if (ncc)
       _nc_hiprim_log_all_models_go (models[i], n + 2);
 
     g_free (modelsc);
   }
+
   g_free (models);
 }
 
@@ -237,7 +224,7 @@ nc_hiprim_log_all_models (GType parent)
  * @prim: a #NcHIPrim
  * @k_pivot: pivotal $k$ in units of $1/\mathrm{Mpc}$
  *
- * Sets @k_pivot to the respective property. 
+ * Sets @k_pivot to the respective property.
  *
  */
 void
@@ -349,7 +336,8 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnSA_powspec_lnk)
+NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnSA_powspec_lnk)
+
 /**
  * nc_hiprim_set_lnT_powspec_lnk_impl: (skip)
  * @model_class: FIXME
@@ -358,15 +346,15 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnSA_powspec_
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnT_powspec_lnk)
+NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnT_powspec_lnk)
 
 #define _NC_HIPRIM_FUNC1_TO_FLIST(fname) \
-static void _nc_hiprim_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
-{ \
- NcHIPrim *prim = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ())); \
- g_assert (prim != NULL); \
- res[0] = nc_hiprim_##fname (prim, x[0]); \
-}
+        static void _nc_hiprim_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHIPrim *prim = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ())); \
+          g_assert (prim != NULL); \
+          res[0] = nc_hiprim_ ## fname (prim, x[0]); \
+        }
 
 _NC_HIPRIM_FUNC1_TO_FLIST (lnSA_powspec_lnk)
 _NC_HIPRIM_FUNC1_TO_FLIST (lnT_powspec_lnk)
@@ -377,7 +365,9 @@ void
 _nc_hiprim_register_functions (void)
 {
   ncm_mset_func_list_register ("lnSA_powspec_lnk", "\\ln(P_\\mathrm{SA})", "NcHIPrim", "Logarithm of the SA power spectrum", G_TYPE_NONE, _nc_hiprim_flist_lnSA_powspec_lnk, 1, 1);
+
   ncm_mset_func_list_register ("lnT_powspec_lnk",  "\\ln(P_\\mathrm{T})",  "NcHIPrim", "Logarithm of the T power spectrum",  G_TYPE_NONE, _nc_hiprim_flist_lnT_powspec_lnk,  1, 1);
   ncm_mset_func_list_register ("SA_powspec_k",     "P_\\mathrm{SA}",       "NcHIPrim", "SA power spectrum",                  G_TYPE_NONE, _nc_hiprim_flist_SA_powspec_k,     1, 1);
   ncm_mset_func_list_register ("T_powspec_k",      "P_\\mathrm{T}",        "NcHIPrim", "T power spectrum",                   G_TYPE_NONE, _nc_hiprim_flist_T_powspec_k,      1, 1);
 }
+

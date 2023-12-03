@@ -34,21 +34,14 @@
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FIT_ESMCMC (ncm_fit_esmcmc_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, NCM, FIT_ESMCMC, GObject)
 
-NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, gint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
-NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
+NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, guint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
 NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 

@@ -107,7 +107,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_j_traps,
               &test_ncm_fftlog_free);
 
-#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
 
   g_test_add ("/ncm/fftlog/sbessel_jljm/eval", TestNcmFftlog, NULL,
               &test_ncm_fftlog_sbessel_jljm_new,
@@ -119,7 +119,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_jljm_traps,
               &test_ncm_fftlog_free);
 
-#endif /* defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H) */
+#endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
 
 #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
@@ -140,7 +140,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_free);
 #endif
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   g_test_run ();
 #endif
 }
@@ -388,8 +388,8 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
 
   for (i = 0; i < test->ntests; i++)
   {
-    guint l = g_test_rand_int_range ((len / 3), 2 * (len / 3));
-    const gdouble lnr_l = ncm_vector_get (lnr, l);
+    guint l                  = g_test_rand_int_range ((len / 3), 2 * (len / 3));
+    const gdouble lnr_l      = ncm_vector_get (lnr, l);
     const gdouble fftlog_res = ncm_fftlog_eval_output (NCM_FFTLOG (fftlog), 0, lnr_l);
     gdouble res, err;
 

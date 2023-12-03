@@ -57,7 +57,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorAB, nc_xcor_AB, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcXcorAB, nc_xcor_AB, G_TYPE_OBJECT)
 
 static void
 nc_xcor_AB_init (NcXcorAB *xcab)

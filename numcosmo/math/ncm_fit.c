@@ -58,6 +58,7 @@
 #include <gsl/gsl_machine.h>
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_sort_vector.h>
+#include <gsl/gsl_multifit_nlin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -101,7 +102,7 @@ typedef struct _NcmFitPrivate
   NcmDiff *diff;
 } NcmFitPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFit, ncm_fit, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFit, ncm_fit, G_TYPE_OBJECT)
 
 static void
 ncm_fit_init (NcmFit *fit)
@@ -324,7 +325,7 @@ _ncm_fit_constructed (GObject *object)
      * of m2lnL in the fit object.
      *
      * if (ncm_mset_fparam_len (self->mset) == 0)
-     * g_warning ("ncm_fit_new: mset object has 0 free parameters");
+     * g_warning ("ncm_fit_factory: mset object has 0 free parameters");
      *
      */
 
@@ -514,7 +515,7 @@ _ncm_fit_reset (NcmFit *fit)
 }
 
 /**
- * ncm_fit_new:
+ * ncm_fit_factory:
  * @ftype: a #NcmFitType
  * @algo_name: name of the algorithm to be used
  * @lh: a #NcmLikelihood
@@ -526,7 +527,7 @@ _ncm_fit_reset (NcmFit *fit)
  * Returns: (transfer full): a new #NcmFit object.
  */
 NcmFit *
-ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
+ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   switch (ftype)
   {
@@ -546,14 +547,14 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
       return ncm_fit_levmar_new_by_name (lh, mset, gtype, algo_name);
 
       break;
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
     case NCM_FIT_TYPE_NLOPT:
       return ncm_fit_nlopt_new_by_name (lh, mset, gtype, algo_name);
 
       break;
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
     default:
-      g_error ("ncm_fit_new: fit-type not found %d, try to compile the library with the optional package NLOpt.", ftype);
+      g_error ("ncm_fit_factory: fit-type not found %d, try to compile the library with the optional package NLOpt.", ftype);
       break;
   }
 }
@@ -686,6 +687,22 @@ ncm_fit_get_sub_fit (NcmFit *fit)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
   return ncm_fit_ref (self->sub_fit);
+}
+
+/**
+ * ncm_fit_has_sub_fit:
+ * @fit: a #NcmFit
+ *
+ * Checks if @fit has a subsidiary fit.
+ *
+ * Returns: TRUE if @fit has a subsidiary fit, FALSE otherwise.
+ */
+gboolean
+ncm_fit_has_sub_fit (NcmFit *fit)
+{
+  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+
+  return self->sub_fit != NULL;
 }
 
 static void _ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
@@ -2401,8 +2418,6 @@ ncm_fit_fisher (NcmFit *fit)
  *
  * Deprecated: 0.18.2: Use ncm_fit_obs_fisher() instead.
  */
-G_DEPRECATED_FOR (ncm_fit_obs_fisher)
-
 void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {
