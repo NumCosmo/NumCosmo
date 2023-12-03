@@ -14,8 +14,6 @@ project(
   ],
 )
 
-add_global_arguments(['-Wno-unused', '-Wno-pedantic'], language: 'c')
-
 cc = meson.get_compiler('c')
 c_standards = {}
 
@@ -33,6 +31,16 @@ foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
   arg = (fc.get_id() == 'msvc' ? '/std:' : '-std=') + std
   if fc.has_argument(arg)
     fortran_standards += {std: arg}
+  endif
+endforeach
+
+global_warn_suppress = [
+  '-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter'
+]
+
+foreach warn : global_warn_suppress
+  if cc.has_argument(warn)
+    add_global_arguments(warn, language: 'c')
   endif
 endforeach
 
@@ -287,6 +295,10 @@ foreach f : functions
     numcosmo_conf.set(define, 1)
   endif
 endforeach
+
+if cc.has_header_symbol('math.h', 'isfinite', required: false)
+  numcosmo_conf.set('HAVE_DECL_ISFINITE', 1)
+endif
 
 #######################################################################################
 # Compiler features:
