@@ -490,7 +490,7 @@ static void
 nc_galaxy_wl_likelihood_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
   NcGalaxyWLLikelihoodInt *lh_int = NC_GALAXY_WL_LIKELIHOOD_INT (intnd);
-  gint i;
+  guint i;
 
   for (i = 0; i < npoints; i++)
   {
@@ -584,7 +584,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
   gdouble zp_f                             = 10;
   const gdouble prec                       = 1.0e-11;
   gdouble result                           = 0;
-  gint gal_i;
+  guint gal_i;
 
   ncm_vector_set (zpi, 0, zp_i);
   ncm_vector_set (zpf, 0, zp_f);
@@ -610,7 +610,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
     ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
 
     result += ncm_vector_get (res, 0);
-    // g_assert_cmpfloat (fabs (result), <=, prec);
+    /* g_assert_cmpfloat (fabs (result), <=, prec); */
 
     ncm_integral_nd_clear (&lh_int);
   }
@@ -644,7 +644,7 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
   NcmVector *data_vec                      = ncm_vector_new (3);
   gdouble res                              = 0.0;
   glong in_cut                             = 0;
-  gint gal_i;
+  guint gal_i;
 
   nc_galaxy_wl_likelihood_prepare (gwl, cosmo, dp, smd, z_cluster);
 

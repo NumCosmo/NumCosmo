@@ -208,7 +208,7 @@ _nc_data_cluster_wll_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcWLSurfaceMassDensity *smd          = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp             = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   const guint ngal                     = self->galaxy_array->len;
-  gint i;
+  guint i;
 
   m2lnL[0] = 0.0;
 
@@ -235,7 +235,7 @@ _nc_data_cluster_wll_get_len (NcmData *data)
   {
     const guint ngal = self->galaxy_array->len;
     guint len        = 0;
-    gint i;
+    guint i;
 
     for (i = 0; i < ngal; i++)
     {
@@ -255,20 +255,20 @@ _nc_data_cluster_wll_get_len (NcmData *data)
 static void
 _nc_data_cluster_wll_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (data);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
-  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+  NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *smd          = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcHaloDensityProfile *dp             = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
 
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 
   if (self->kde)
-    printf("KDE\n");
+    printf ("KDE\n");
   else
-    printf("No KDE\n");
+    printf ("No KDE\n");
 }
 
 /**
@@ -357,7 +357,7 @@ nc_data_cluster_wll_clear (NcDataClusterWLL **dcwll)
 void
 nc_data_cluster_wll_set_kde (NcDataClusterWLL *data, gboolean kde)
 {
-  NcDataClusterWLL *dcwll               = NC_DATA_CLUSTER_WLL (data);
+  NcDataClusterWLL *dcwll              = NC_DATA_CLUSTER_WLL (data);
   NcDataClusterWLLPrivate * const self = dcwll->priv;
 
   self->kde = kde;

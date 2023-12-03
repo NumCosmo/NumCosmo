@@ -31,14 +31,14 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_stats_dist_kde.h>
 #include <numcosmo/math/ncm_stats_dist_kernel_gauss.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
-#include <math/ncm_integral_nd.h>
-
+#include <numcosmo/math/ncm_integral_nd.h>
 
 G_BEGIN_DECLS
 
