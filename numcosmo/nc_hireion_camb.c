@@ -52,7 +52,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION);
+G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION)
 
 #define VECTOR     (NCM_MODEL (reion)->params)
 #define HII_HEII_Z (ncm_vector_get (VECTOR, NC_HIREION_CAMB_HII_HEII_Z))

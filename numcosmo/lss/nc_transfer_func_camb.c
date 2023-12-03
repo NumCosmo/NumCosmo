@@ -40,7 +40,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_TYPE (NcTransferFuncCAMB, nc_transfer_func_camb, NC_TYPE_TRANSFER_FUNC);
+G_DEFINE_TYPE (NcTransferFuncCAMB, nc_transfer_func_camb, NC_TYPE_TRANSFER_FUNC)
 
 gchar *camb_filename = NULL;
 

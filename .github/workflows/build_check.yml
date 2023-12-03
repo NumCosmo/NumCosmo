@@ -8,12 +8,6 @@ on:
     branches:
       - '*'
 
-#env:
-#  CC: gcc-10
-#  FC: gfortran-10
-#  F77: gfortran-10
-#  F90: gfortran-10
-
 jobs:
 
   build-gcc-ubuntu:
@@ -21,78 +15,77 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install prereq
+    - uses: actions/checkout@v4
+    - name: Install pre-requisites
       run: |
         sudo apt-get update
         sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
-        pip install pytest pytest-tap numpy
+        sudo pip install meson ninja pytest numpy
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
-    - name: Autogen
-      run: NOCONFIGURE=yes ./autogen.sh
-    - name: configure
-      run: ./configure --enable-gtk-doc --enable-man --prefix=/usr --libdir=/usr/lib
-    - name: make
-      run: make -j8
+    - name: Configure NumCosmo
+      run: meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: meson compile -C build
     - name: Test python examples
       run: |
-        source numcosmo_export.sh
+        source build/numcosmo_export.sh
         cd examples
         python example_simple.py
         python example_cbe.py
     - name: Test example compilation using non-installed library
       run: |
-        source numcosmo_export.sh
+        source build/numcosmo_export.sh
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca -lnumcosmo -lgsl -lm $(pkg-config glib-2.0 gobject-2.0 --libs --cflags)
         ./example_simple
         ./example_ca
+    - name: Check NumCosmo
+      run: meson test -C build
+    - name: Create a NumCosmo tarball
+      run: meson dist -C build --no-tests 
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: release
+        path: build/meson-dist/numcosmo-*.tar.xz
     - name: Test example compilation using installed library
       run: |
-        sudo make install
+        sudo meson install -C build 
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
         ./example_simple
         ./example_ca
-    - name: make check
-      run: make check -j8
-    - name: make dist
-      run: make dist
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: release
-        path: numcosmo-*.tar.gz
 
   coveralls-gcc-ubuntu:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install prereq
+    - uses: actions/checkout@v4
+    - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran lcov pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
-        pip install pytest pytest-tap numpy
-    - name: Autogen
-      run: NOCONFIGURE=yes ./autogen.sh
-    - name: configure
-      run: ./configure 'CFLAGS=-Wall -g -O0' 'FCFLAGS=-O0 -Wall' --enable-maintainer-mode --disable-gtk-doc --prefix=/usr --enable-code-coverage
-    - name: make
-      run: make -j8
-    - name: make check
-      run: make check -j8
-    - name: make code-coverage-capture
-      run: make code-coverage-capture CODE_COVERAGE_OUTPUT_FILE=numcosmo-coverage.info CODE_COVERAGE_LCOV_SHOPTS_DEFAULT="--config-file lcovrc"
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        pip install meson ninja pytest numpy
+    - name: Configure NumCosmo
+      run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: meson compile -C build
+    - name: Check NumCosmo
+      run: meson test -C build
+    - name: Generate coverage
+      # For some reason, gcovr is ignoring the configured gcovr.cfg file
+      # ninja coverage -C build -v -d stats -d explain
+      run: |
+        gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
     - name: Coveralls
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
+        files: build/meson-logs/coverage.xml
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ./numcosmo-coverage.info
 
   build-gcc-macos:
 
@@ -108,19 +101,29 @@ jobs:
       CPATH: /usr/local/include
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install prereq
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4 
+      with:
+        python-version: '3.x' 
+    - name: Brew install pre-requisites
       run: |
-        brew install autoconf automake libtool gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib-utils glib pygobject3
-        brew ls glib
-        brew ls glib-utils
+        brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib openblas
+    - name: Pip install pre-requisites
+      run: |
+        pip3 install meson ninja pytest numpy pygobject
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
-    - name: Autogen
-      run: NOCONFIGURE=yes ./autogen.sh
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make -j8
-    - name: make check
-      run: make check -j8
+    - name: Configure NumCosmo
+      run: | 
+        meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: |
+        meson compile -C build
+    - name: Test python examples
+      run: |
+        source build/numcosmo_export.sh
+        cd examples
+        python example_simple.py
+        python example_cbe.py
+    - name: Check NumCosmo
+      run: meson test -C build

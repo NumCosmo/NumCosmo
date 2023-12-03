@@ -45,7 +45,7 @@ enum
   PROP_MEAN_FUNC,
 };
 
-G_DEFINE_TYPE (NcmPriorFlatFunc, ncm_prior_flat_func, NCM_TYPE_PRIOR_FLAT);
+G_DEFINE_TYPE (NcmPriorFlatFunc, ncm_prior_flat_func, NCM_TYPE_PRIOR_FLAT)
 
 static void
 ncm_prior_flat_func_init (NcmPriorFlatFunc *pff)

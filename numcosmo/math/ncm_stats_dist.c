@@ -134,7 +134,7 @@ enum
   PROP_PRINT_FIT,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT)
 
 #define NCM_NNLS_SOLVE ncm_nnls_solve
 
@@ -485,7 +485,7 @@ _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
-  gint i, j;
+  guint i, j;
 
   self->over_smooth = exp (lnos);
   self->href        = sqrt (2.0) * ncm_stats_dist_get_href (sd);
@@ -535,7 +535,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
-  gint i, j;
+  guint i, j;
 
   self->over_smooth = exp (lnos);
   self->href        = ncm_stats_dist_get_href (sd);
@@ -784,7 +784,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
   gdouble rnorm          = 0.0;
   gint i;
 
-  g_assert (eval->self->n_obs == n);
+  g_assert (eval->self->n_obs == (guint) n);
 
   eval->self->over_smooth = exp (p[0]);
   eval->self->href        = ncm_stats_dist_get_href (eval->sd);
@@ -813,7 +813,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
 }
 
 static void
-_ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const gint nrows, const gint ncols)
+_ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const guint nrows, const guint ncols)
 {
   NcmStatsDistPrivate * const self = sd->priv;
 
@@ -851,7 +851,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
     const gdouble dbl_limit     = 6.0;
-    gint i;
+    guint i;
 
     /*
      * Evaluating the right-hand-side
@@ -869,7 +869,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 
     if (self->max_m2lnp - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
     {
-      gint n_cut = 0;
+      guint n_cut = 0;
 
       g_array_set_size (self->m2lnp_sort, self->n_kernels);
       gsl_sort_index (&g_array_index (self->m2lnp_sort, size_t, 0),
@@ -879,7 +879,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 
       for (i = 0; i < self->n_kernels; i++)
       {
-        gint p                = g_array_index (self->m2lnp_sort, size_t, i);
+        guint p               = g_array_index (self->m2lnp_sort, size_t, i);
         const gdouble m2lnp_p = ncm_vector_get (m2lnp, p);
 
         if (m2lnp_p - self->min_m2lnp > -2.0 * dbl_limit * GSL_LOG_DBL_EPSILON)
@@ -895,13 +895,13 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
        * of the weight for the points falling outside and 90% for
        * the points falling inside.
        */
-      if (n_cut < (gint) (0.5 * self->n_obs))
+      if (n_cut < (guint) (0.5 * self->n_obs))
       {
         ncm_vector_set_all (self->weights, 0.1 / (self->n_kernels - n_cut));
 
         for (i = 0; i < n_cut; i++)
         {
-          gint p = g_array_index (self->m2lnp_sort, size_t, i);
+          guint p = g_array_index (self->m2lnp_sort, size_t, i);
 
           ncm_vector_set (self->weights, p, 0.9 / n_cut);
         }
@@ -912,7 +912,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       {
         NcmVector *m2lnp_cut        = ncm_vector_new (n_cut);
         GPtrArray *sample_array_cut = g_ptr_array_new ();
-        gint j                      = 0;
+        guint j                     = 0;
 
         for (i = 0; i < self->n_obs; i++)
         {
@@ -1487,11 +1487,11 @@ ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
  * a random kernel based on the computed weights.
  *
  */
-gint
+guint
 ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
 {
   NcmStatsDistPrivate * const self = sd->priv;
-  gint i;
+  guint i;
 
   if (!self->wcum_ready)
   {

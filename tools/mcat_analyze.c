@@ -100,7 +100,7 @@ main (gint argc, gchar *argv[])
   gint thin                 = -1;
   gdouble zi                = 0.0;
   gdouble zf                = 1.0;
-  gint nsteps               = 100;
+  guint nsteps              = 100;
   gint burnin               = 0;
   gint ntests               = 100;
   gchar **funcs             = NULL;
@@ -180,6 +180,8 @@ main (gint argc, gchar *argv[])
   }
 
   rng = ncm_rng_new (NULL);
+
+  g_assert_cmpuint (nsteps, <, 100000);
 
   if (list_hicosmo || list_all)
   {
@@ -370,7 +372,7 @@ main (gint argc, gchar *argv[])
 
         ncm_stats_vec_append (evol, e_mean, FALSE);
 
-        if (i == last_t - 1)
+        if (i + 1 == (gint) last_t)
           continue;
 
         ncm_message ("%10u", i);
@@ -393,7 +395,7 @@ main (gint argc, gchar *argv[])
     {
       GArray *accept_ratio_array = ncm_mset_catalog_peek_accept_ratio_array (mcat);
       guint last_t               = ncm_mset_catalog_max_time (mcat);
-      gint i;
+      guint i;
 
       ncm_message ("# Acceptance ratio from 1 to %u\n", last_t);
 
@@ -407,16 +409,16 @@ main (gint argc, gchar *argv[])
 
     if (calib_oversmooth)
     {
-      const guint last_t = ncm_mset_catalog_max_time (mcat);
-      const guint nchains = ncm_mset_catalog_nchains (mcat);
-      const gint i0 = (last_t - 2) * nchains;
-      const gint i1 = i0 + nchains;
-      const guint nadd_vals = ncm_mset_catalog_nadd_vals (mcat);
-      const gint fparams_len = ncm_mset_fparam_len (mset);
-      const gint m2lnL_i = ncm_mset_catalog_get_m2lnp_var (mcat);
+      const guint last_t         = ncm_mset_catalog_max_time (mcat);
+      const guint nchains        = ncm_mset_catalog_nchains (mcat);
+      const gint i0              = (last_t - 2) * nchains;
+      const gint i1              = i0 + nchains;
+      const guint nadd_vals      = ncm_mset_catalog_nadd_vals (mcat);
+      const gint fparams_len     = ncm_mset_fparam_len (mset);
+      const gint m2lnL_i         = ncm_mset_catalog_get_m2lnp_var (mcat);
       NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (fparams_len, 1.0));
-      NcmStatsDist *sd = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
-      NcmVector *m2lnL = ncm_vector_new (nchains);
+      NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
+      NcmVector *m2lnL           = ncm_vector_new (nchains);
       gint i, j;
 
       ncm_stats_dist_set_split_frac (sd, 0.5);
@@ -676,7 +678,7 @@ main (gint argc, gchar *argv[])
       for (i = 0; i < ndist_tab; i++)
       {
         NcmMSetFunc *mset_func = NULL;
-        gdouble *x = NULL;
+        gdouble *x             = NULL;
         guint len, dim;
         gchar *func_name = ncm_util_function_params (dist_tab[i], &x, &len);
         guint j;
@@ -846,8 +848,8 @@ main (gint argc, gchar *argv[])
       for (i = 0; i < nparams; i++)
       {
         const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params_evol[i]);
-        gchar *end_ptr = NULL;
-        glong add_param = strtol (params_evol[i], &end_ptr, 10);
+        gchar *end_ptr          = NULL;
+        glong add_param         = strtol (params_evol[i], &end_ptr, 10);
         guint t, k;
 
         if ((pi == NULL) && (params_evol[i] == end_ptr))
@@ -1440,7 +1442,7 @@ main (gint argc, gchar *argv[])
         for (i = 0; i < cat_size; i++)
         {
           NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
-          gint j;
+          guint j;
 
           ncm_message (" ");
 
@@ -1460,7 +1462,7 @@ main (gint argc, gchar *argv[])
     {
       const guint nchains = ncm_mset_catalog_nchains (mcat);
 
-      if (dump_chain >= nchains)
+      if (dump_chain >= (gint) nchains)
       {
         g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, nchains);
       }
@@ -1516,7 +1518,7 @@ main (gint argc, gchar *argv[])
           for (i = 0; i < nitens; i++)
           {
             NcmVector *vec = ncm_stats_vec_peek_row (chain, i);
-            gint j;
+            guint j;
 
             ncm_message (" ");
 

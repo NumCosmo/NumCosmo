@@ -59,7 +59,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHIPertBoltzmannStd, nc_hipert_boltzmann_std, NC_TYPE_HIPERT_BOLTZMANN);
+G_DEFINE_TYPE (NcHIPertBoltzmannStd, nc_hipert_boltzmann_std, NC_TYPE_HIPERT_BOLTZMANN)
 
 static void
 nc_hipert_boltzmann_std_init (NcHIPertBoltzmannStd *pbs)

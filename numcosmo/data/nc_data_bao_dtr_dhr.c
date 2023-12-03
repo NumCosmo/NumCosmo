@@ -29,7 +29,7 @@
  * @short_description: Baryon Oscillation Data -- $(D_H/r,\; D_t/r)$ data.
  *
  * The data is stored in a #NcDataBaoDtrDHr object. The data is stored in a
- * #NcDataGaussCov base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the transverse distance $D_t$ and the
  * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
  * last scattering surface $r_s$.
@@ -54,7 +54,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDtrDHr, nc_data_bao_dtr_dhr, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataBaoDtrDHr, nc_data_bao_dtr_dhr, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 nc_data_bao_dtr_dhr_init (NcDataBaoDtrDHr *dhdt)
@@ -177,7 +177,7 @@ _nc_data_bao_dtr_dhr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
   NcDataBaoDtrDHr *dhdt = NC_DATA_BAO_DTR_DHR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const guint np        = ncm_data_gauss_cov_get_size (gauss);
-  gint i;
+  guint i;
 
   for (i = 0; i < np; i++)
   {

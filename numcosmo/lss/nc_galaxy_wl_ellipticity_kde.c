@@ -69,7 +69,7 @@ enum
   PROP_E_VEC,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityKDE, nc_galaxy_wl_ellipticity_kde, NC_TYPE_GALAXY_WL_DIST)
 
 static void
 nc_galaxy_wl_ellipticity_kde_init (NcGalaxyWLEllipticityKDE *gekde)
@@ -179,9 +179,9 @@ nc_galaxy_wl_ellipticity_kde_class_init (NcGalaxyWLEllipticityKDEClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   wl_dist_class->m2lnP_initial_prep = &_nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep;
-  wl_dist_class->m2lnP = &_nc_galaxy_wl_ellipticity_kde_m2lnP;
-  wl_dist_class->gen   = &_nc_galaxy_wl_ellipticity_kde_gen;
-  wl_dist_class->len   = &_nc_galaxy_wl_ellipticity_kde_len;
+  wl_dist_class->m2lnP              = &_nc_galaxy_wl_ellipticity_kde_m2lnP;
+  wl_dist_class->gen                = &_nc_galaxy_wl_ellipticity_kde_gen;
+  wl_dist_class->len                = &_nc_galaxy_wl_ellipticity_kde_len;
 }
 
 static void
@@ -193,8 +193,8 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
   NcmVector *z_vec                             = nc_galaxy_redshift_spec_peek_z (NC_GALAXY_REDSHIFT_SPEC (gz));
   gdouble min_g_i                              = GSL_POSINF;
   gdouble max_g_i                              = GSL_NEGINF;
-  int j                                        = 0;
-  gint gal_i;
+  guint j                                      = 0;
+  guint gal_i;
 
   ncm_stats_dist1d_epdf_reset (self->kde);
   ncm_stats_dist1d_epdf_set_bw_type (self->kde, NCM_STATS_DIST1D_EPDF_BW_RoT);
@@ -391,3 +391,4 @@ nc_galaxy_wl_ellipticity_kde_peek_e_vec (NcGalaxyWLEllipticityKDE *gekde)
 
   return self->e_vec;
 }
+

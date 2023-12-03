@@ -33,7 +33,7 @@
  * [Aubourg et al. (2014)][XAubourg2014].
  *
  * The data is stored in a #NcDataBaoDHrDAr object. The data is stored in a
- * #NcDataGaussCov base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the transverse distance $D_A$ and the
  * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
  * last scattering surface $r_s$.
@@ -58,7 +58,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDHrDAr, nc_data_bao_dhr_dar, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataBaoDHrDAr, nc_data_bao_dhr_dar, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 nc_data_bao_dhr_dar_init (NcDataBaoDHrDAr *dhda)
@@ -181,7 +181,7 @@ _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const guint np        = ncm_data_gauss_cov_get_size (gauss);
-  gint i;
+  guint i;
 
   for (i = 0; i < np; i++)
   {

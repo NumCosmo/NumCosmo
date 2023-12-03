@@ -52,7 +52,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataHubbleBao, nc_data_hubble_bao, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataHubbleBao, nc_data_hubble_bao, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_hubble_bao_init (NcDataHubbleBao *hubble_bao)

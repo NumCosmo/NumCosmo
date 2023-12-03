@@ -63,7 +63,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT)
 
 static void
 nc_multiplicity_func_init (NcMultiplicityFunc *mulf)

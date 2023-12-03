@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_util.c
  *
@@ -51,12 +52,12 @@
 #include <gsl/gsl_sf_hyperg.h>
 
 #include <cvode/cvode.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#endif /* HAVE_FFTW3 */
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h> /* for nanosleep */
 #else
@@ -577,7 +578,7 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
   g_free (s);
 }
 
-G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free);
+G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free)
 
 /**
  * ncm_complex_new:
@@ -1015,6 +1016,7 @@ ncm_util_sleep_ms (gint milliseconds)
 {
 #if _POSIX_C_SOURCE >= 199309L
   struct timespec ts;
+
   ts.tv_sec  = milliseconds / 1000;
   ts.tv_nsec = (milliseconds % 1000) * 1000000;
   nanosleep (&ts, NULL);

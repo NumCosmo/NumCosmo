@@ -56,7 +56,7 @@ struct _NcmModelMVNDPrivate
   NcmVector *mu;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmModelMVND, ncm_model_mvnd, NCM_TYPE_MODEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmModelMVND, ncm_model_mvnd, NCM_TYPE_MODEL)
 
 static void
 ncm_model_mvnd_init (NcmModelMVND *model_mvnd)

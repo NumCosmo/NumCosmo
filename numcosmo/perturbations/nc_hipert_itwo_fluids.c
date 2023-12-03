@@ -39,9 +39,9 @@
 
 #include "nc_hipert_itwo_fluids.h"
 
-G_DEFINE_INTERFACE (NcHIPertITwoFluids, nc_hipert_itwo_fluids, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free);
-G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsTV, nc_hipert_itwo_fluids_tv, nc_hipert_itwo_fluids_tv_dup, nc_hipert_itwo_fluids_tv_free);
+G_DEFINE_INTERFACE (NcHIPertITwoFluids, nc_hipert_itwo_fluids, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsTV, nc_hipert_itwo_fluids_tv, nc_hipert_itwo_fluids_tv_dup, nc_hipert_itwo_fluids_tv_free)
 
 static void
 nc_hipert_itwo_fluids_default_init (NcHIPertITwoFluidsInterface *iface)

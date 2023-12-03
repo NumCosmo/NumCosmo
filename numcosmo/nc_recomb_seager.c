@@ -150,7 +150,7 @@ struct _NcRecombSeagerPrivate
   NcmSpline *XHeII_s;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
+G_DEFINE_TYPE_WITH_PRIVATE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB)
 
 enum
 {

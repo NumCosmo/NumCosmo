@@ -50,7 +50,7 @@
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcmSplineCubicD2, ncm_spline_cubic_d2, NCM_TYPE_SPLINE_CUBIC);
+G_DEFINE_TYPE (NcmSplineCubicD2, ncm_spline_cubic_d2, NCM_TYPE_SPLINE_CUBIC)
 
 static void
 ncm_spline_cubic_d2_init (NcmSplineCubicD2 *s)

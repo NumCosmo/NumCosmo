@@ -220,9 +220,9 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
 #include <gio/gio.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <cuba.h>
 
 #ifdef HAVE_MPI
@@ -371,9 +371,9 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_forget_wisdom ();
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -467,8 +467,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
+#ifdef HAVE_FFTW3
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
+
+#endif /* HAVE_FFTW3 */
 
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
@@ -492,9 +496,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   gsl_err = gsl_set_error_handler_off ();
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_set_timelimit (10.0);
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
@@ -569,9 +573,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
@@ -1014,7 +1018,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 
   if (work_ret_request->len > 0)
   {
-    gint i;
+    guint i;
 
     MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
 
@@ -1137,18 +1141,18 @@ ncm_cfg_set_logstream (FILE *stream)
   _log_stream = stream;
 }
 
+typedef struct _NcmCfgLoggerFuncContainer
+{
+  NcmCfgLoggerFunc logger;
+} NcmCfgLoggerFuncContainer;
+
 static void
 _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
-  NCM_UNUSED (log_domain);
-  NCM_UNUSED (log_level);
-  NCM_UNUSED (user_data);
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
 
   if (_enable_msg && _log_stream)
-  {
-    void (*logger) (const gchar *msg) = user_data;
-    logger (message);
-  }
+    container->logger (message);
 }
 
 /**
@@ -1161,7 +1165,11 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
 void
 ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1174,7 +1182,11 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1730,7 +1742,7 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
   g_type_class_unref (enum_class);
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 
 G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
@@ -1903,7 +1915,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   return TRUE;
 }
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_exists:
@@ -2085,7 +2097,7 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
 
 gdouble fftw_default_timeout = 60.0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
@@ -2111,5 +2123,5 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 #else
 guint fftw_default_flags = 0;
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 

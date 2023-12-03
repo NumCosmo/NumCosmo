@@ -3,6 +3,144 @@ CHANGELOG
 
 [Current]
 
+[v0.19.0]
+ * Testing before adding warn supp. Testing for isfinite declaration.
+
+ * Adding cfitstio to plc.
+
+ * Addind examples to installation.
+
+ * Added libdl dependency to plc.
+
+ * Added GSL blas definition to avoid double typedefs.
+
+ * Updated changelog.
+
+ * Updated stubs.
+
+ * Moving to meson (#120)
+
+     * Removing trailing ; from G_DECLARE and G_DEFINE.
+     * Removing wrong return statement in void functions.
+     * Moving NcXcorKinetic boxed object from Xcor to XcorLimberKernel.
+     * Removed vector_dot method from inlined methods.
+     * Uncrustified.
+     * Fixing sign and unsigned mixing.
+     * Fixed bug where we used height instead of nnodes.
+     * Adding blas header (we are removing an overall cblas include).
+     * Adding missing initialization.
+     * Fixing ifdef for optional FFTW.
+     * Fixing object to function pointer transformation.
+     * Better control for optional dependencies.
+     * Fixing fallthrough warnings.
+     * Removing NUMCOSMO_ prefix from internal macros.
+     * Encapsulating NcmStatsVec
+     * Moving NUMCOSMO_HAVE_CFITSIO to HAVE_CFITSIO and removing unnecessary
+     macros and includes.
+     * Organizing ncm_fit headers.
+     * Adding support for meson build system.
+     * Added support for generating vala binding.
+     * Removed outdated factory functions.
+     * Removed outdated GSL versions (new requires 2.4).
+     * Introduced HAVE_MPI.
+     * Updated stubs. Installing python modules.
+     * Updated factory functions.
+     * Using a fixed version of references.xml.
+     * Removing autotools.
+     * Removed makefile leftover.
+     * Removed makefiles.
+     * Removed old autotools files.
+     * Comment explaning pkg generation.
+     * Including gsl in numcosmo.pc.
+     * Forcing interface to avoid broken blas.
+     * Try calling gcovr directly.
+ * Minor improvements. (#119)
+
+     - Adding new sampler to the notebook with sampler comparions.
+     - Added support for weight samples.
+     - Fixed bug in ncm_stats_vec.c (first element with zero weight resulted in
+     a nan).
+ * Added correct prefix for NCM_FIT_GRAD.
+
+ * Kde loocv (#118)
+
+     * Testing new CV types.
+     * Removed wrong break.
+     * Fixed allocation error.
+     * Testing stopping criteria for integration.
+     * Testing amise integral.
+     * Removing debug printing.
+     * Sampling using antithetic variates to improve convergence.
+     * Optimizing MC integration for LOO.
+ * Creating tests and documentation for n-dimensional integration object (#108)
+
+     * Created initial test
+     * Introduced macros to simplify the creation of IntegralND subclasses and
+     resolved unit test issues.
+     * Improved tests
+     * Improved documentation
+     * Typo fix
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Improving documentation and encapsulating objects (#116)
+
+     * Now MPI jobs do not require setting nthreads.
+     * Using per rank fftw wisdom.
+     * Documenting NcmFitESMCMC.
+     * More documentation for BAO data objects.
+     * More docs for BAO and NcDataClusterNCount.
+     * More documentation for Fit* objects and Monte Carlo analysis object.
+     * Updated and encapsulated NcmFit and all depending objects.
+     * Moving examples to tests.
+     * Fixed test name and Makefiles.
+     * Moving example_diff.py -> ../tests/test_py_diff.py.
+     * Encapsulated FitState and updated all required objects.
+     * More tests for NcmFitState.
+     * Fixed possible negative precision.
+     * Excluing impossible lines from coverage.
+     * Included levmar in unit testing.
+     * Fixed bug in levmar and gsl_mm.
+     * Testing serialization of NcmFit.
+     * Removed old analytical derivative support.
+     * Removed last link on the analytical derivative support.
+     * Testing fit restart.
+     * More testing for NcmFit and documentation for NcmMSet.
+     * Fixed bug in fit_levmar, more testing for sub fits.
+     * Fixed bug in accurate grad (missing matrix transposition).
+     * More testing, fixed sub fit testing.
+     * Added missing reset states in _gsl_mms.
+     * Improved sub-vector manipulation and added necessary tests.
+     * Added equality constraint tests.
+     * Adding testing for inequality constraints.
+     * Testing constraints serialization.
+     * Adjusted diff to use a better estimate when errors cannot be estimated.
+     * Improving diff computation when never converging.
+     * Organized fisher.
+     * Testing Fisher matrix and covariances.
+     * Removing old unused methods.
+     * Removed option to print fisher matrix to file.
+ * Now MPI jobs do not require setting nthreads. (#115)
+
+     * Now MPI jobs do not require setting nthreads.
+     * Using per rank fftw wisdom.
+ * 109 example describing 3d correlation (#113)
+
+     * New tutorial.
+     * New version of FFT code with changes in scale and in the xi function.
+     Translated from portuguese to english.
+     * Added the generalized Fourier Transform function and its inverse in the
+     calculations to compare with xi(r,z).
+     * Working on the FFT
+     
+     ---------
+      Co-authored-by: Maria Vitoria Lazarin <mvitoria.lazarin@gmail.com>
+ * Added pocoMC to rosenbrock_simple.ipynb. (#112)
+
+
+ * Updated rosenbrock_simple.ipynb.
+
+
 [v0.18.2]
  * New version v0.18.2.
 

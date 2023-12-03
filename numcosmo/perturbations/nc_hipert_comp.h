@@ -125,13 +125,13 @@ nc_hipert_comp_get_id (NcHIPertComp *comp)
 NCM_INLINE void 
 nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
 {
-  return NC_HIPERT_COMP_GET_CLASS (comp)->get_T_scalar (comp, bg_var, ydy, T_scalar);
+  NC_HIPERT_COMP_GET_CLASS (comp)->get_T_scalar (comp, bg_var, ydy, T_scalar);
 }
 
 NCM_INLINE void 
 nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
-  return NC_HIPERT_COMP_GET_CLASS (comp)->get_dy_scalar (comp, bg_var, ydy, T_scalar, G_scalar);
+  NC_HIPERT_COMP_GET_CLASS (comp)->get_dy_scalar (comp, bg_var, ydy, T_scalar, G_scalar);
 }
 
 G_END_DECLS

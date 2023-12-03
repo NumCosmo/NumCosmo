@@ -64,7 +64,7 @@ enum
   PROP_BINOBS,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityBinned, nc_galaxy_wl_ellipticity_binned, NC_TYPE_GALAXY_WL_DIST);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLEllipticityBinned, nc_galaxy_wl_ellipticity_binned, NC_TYPE_GALAXY_WL_DIST)
 
 static void
 nc_galaxy_wl_ellipticity_binned_init (NcGalaxyWLEllipticityBinned *gebin)
@@ -105,7 +105,7 @@ _nc_galaxy_wl_ellipticity_binned_get_property (GObject *object, guint prop_id, G
 
   switch (prop_id)
   {
-    case PROP_BINS: 
+    case PROP_BINS:
       g_value_set_object (value, nc_galaxy_wl_ellipticity_binned_peek_bins (gebin));
       break;
     case PROP_BINOBS:
@@ -136,7 +136,7 @@ _nc_galaxy_wl_ellipticity_binned_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_wl_ellipticity_binned_parent_class)->finalize (object);
 }
 
-// static void _nc_galaxy_wl_ellipticity_binned_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+/* static void _nc_galaxy_wl_ellipticity_binned_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster); */
 static gdouble _nc_galaxy_wl_ellipticity_binned_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z);
 static gdouble _nc_galaxy_wl_ellipticity_binned_gen (NcGalaxyWLDist *gwld, const gdouble g_true, NcmRNG *rng);
 static guint _nc_galaxy_wl_ellipticity_binned_len (NcGalaxyWLDist *gwld);
@@ -161,20 +161,20 @@ nc_galaxy_wl_ellipticity_binned_class_init (NcGalaxyWLEllipticityBinnedClass *kl
   g_object_class_install_property (object_class,
                                    PROP_BINOBS,
                                    g_param_spec_boxed ("binobs",
-                                                        NULL,
-                                                        "Array with observables matrices for each bin",
-                                                        NCM_TYPE_OBJ_ARRAY,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Array with observables matrices for each bin",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   wl_dist_class->m2lnP = &_nc_galaxy_wl_ellipticity_binned_m2lnP;
   wl_dist_class->gen   = &_nc_galaxy_wl_ellipticity_binned_gen;
   wl_dist_class->len   = &_nc_galaxy_wl_ellipticity_binned_len;
 }
 
-// static void
-// _nc_galaxy_wl_ellipticity_binned_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
-// {
-// }
+/* static void */
+/* _nc_galaxy_wl_ellipticity_binned_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxyRedshift *gz, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster) */
+/* { */
+/* } */
 
 static gdouble
 _nc_galaxy_wl_ellipticity_binned_m2lnP (NcGalaxyWLDist *gwld, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const guint gal_i, const gdouble z)
@@ -208,7 +208,7 @@ NcGalaxyWLEllipticityBinned *
 nc_galaxy_wl_ellipticity_binned_new ()
 {
   NcGalaxyWLEllipticityBinned *gebin = g_object_new (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED,
-                                                  NULL);
+                                                     NULL);
 
   return gebin;
 }
@@ -266,15 +266,15 @@ void
 nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, NcmMatrix *obs, NcmVector *bins)
 {
   NcGalaxyWLEllipticityBinnedPrivate * const self = gebin->priv;
-  gint bin_i;
+  guint bin_i;
 
   for (bin_i = 0; bin_i < ncm_vector_len (bins) - 1; bin_i++)
   {
     NcmMatrix *bin_data = ncm_matrix_new (0, 3);
-    gdouble bin_ll         = ncm_vector_get (bins, bin_i);
-    gdouble bin_ul         = ncm_vector_get (bins, bin_i+1);
-    gint gal_i;
-    gint i;
+    gdouble bin_ll      = ncm_vector_get (bins, bin_i);
+    gdouble bin_ul      = ncm_vector_get (bins, bin_i + 1);
+    guint gal_i;
+    guint i;
 
     for (gal_i = 0; gal_i < ncm_matrix_nrows (obs); gal_i++)
     {
@@ -282,9 +282,9 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
       gdouble e_i   = ncm_matrix_get (obs, gal_i, 1);
       gdouble err_i = ncm_matrix_get (obs, gal_i, 2);
 
-      if ((r_i >= bin_ll && r_i < bin_ul && bin_i != ncm_vector_len (bins) - 2) || (r_i >= bin_ll && r_i <= bin_ul && bin_i == ncm_vector_len (bins) - 2))
+      if (((r_i >= bin_ll) && (r_i < bin_ul) && (bin_i + 2 != ncm_vector_len (bins))) || ((r_i >= bin_ll) && (r_i <= bin_ul) && (bin_i + 2 == ncm_vector_len (bins))))
       {
-        NcmMatrix *data = ncm_matrix_new (ncm_matrix_nrows (bin_data)+1, 3);
+        NcmMatrix *data = ncm_matrix_new (ncm_matrix_nrows (bin_data) + 1, 3);
 
         ncm_matrix_set (data, ncm_matrix_nrows (data) - 1, 0, r_i);
         ncm_matrix_set (data, ncm_matrix_nrows (data) - 1, 1, e_i);
@@ -299,9 +299,8 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
             ncm_matrix_set (data, i, 2, ncm_matrix_get (bin_data, i, 2));
           }
         }
-        
-        ncm_matrix_substitute (&bin_data, data, FALSE);
 
+        ncm_matrix_substitute (&bin_data, data, FALSE);
       }
     }
 
@@ -310,7 +309,6 @@ nc_galaxy_wl_ellipticity_binned_set_binobs (NcGalaxyWLEllipticityBinned *gebin, 
 
   self->bins = bins;
   self->len  = ncm_matrix_nrows (obs);
-
 }
 
 /**
@@ -344,3 +342,4 @@ nc_galaxy_wl_ellipticity_binned_peek_bins (NcGalaxyWLEllipticityBinned *gebin)
 
   return self->bins;
 }
+

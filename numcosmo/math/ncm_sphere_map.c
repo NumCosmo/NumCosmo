@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_sphere_map.c
  *
@@ -54,13 +55,13 @@
 /*#define _NCM_SPHERE_MAP_MEASURE 1*/
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #ifndef HAVE_FFTW3_ALLOC
@@ -91,12 +92,12 @@
 #else
 #  define _fft_complex complex double
 #  define _fft_vec_alloc_complex(N) g_new (_fft_complex, (N))
-#  define _fft_vec_alloc gsl_vector_float_alloc
-#  define _fft_vec_free  gsl_vector_float_free
-#  define _fft_vec_set_zero(v, s) gsl_vector_float_set_zero (v)
-#  define _fft_vec_set_zero_complex(v, s)
-#  define _fft_vec_memcpy(dest, orig, s) gsl_vector_float_memcpy ((dest), (orig))
-#  define _fft_vec_ptr(v, i) (gsl_vector_float_ptr ((v), (i)))
+#  define _fft_vec_alloc(N) g_new (gdouble, (N))
+#  define _fft_vec_free  g_free
+#  define _fft_vec_set_zero(v, s) memset ((v), 0, sizeof (gdouble) * (s))
+#  define _fft_vec_set_zero_complex(v, s) memset ((v), 0, sizeof (_fft_complex) * (s))
+#  define _fft_vec_memcpy(dest, orig, s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
+#  define _fft_vec_ptr(v, i) (&((gdouble *) (v))[i])
 #endif
 #define _fft_vec_idx(v, i) (*_fft_vec_ptr (v, i))
 
@@ -176,7 +177,7 @@ enum
   PROP_LMAX,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT)
 
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)
@@ -200,7 +201,7 @@ ncm_sphere_map_init (NcmSphereMap *smap)
   self->fft_pvec          = NULL;
   self->fft_plan_r2c      = g_ptr_array_new ();
   self->fft_plan_c2r      = g_ptr_array_new ();
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
   g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify) fftwf_destroy_plan);
   g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify) fftwf_destroy_plan);
@@ -468,7 +469,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
     self->block_ring_size   = 0;
     self->last_sing_ring    = 0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
     g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftwf_free);
 #  else
@@ -496,7 +497,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 
       _fft_vec_set_zero (self->pvec, self->npix);
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
       self->fft_pvec = fftwf_alloc_complex (self->npix);
 #  else
@@ -508,7 +509,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 
       {
         const gint64 nrings_2 = self->nrings / 2;
-        const gint64 nblocks = nrings_2 / NCM_SPHERE_MAP_BLOCK_NC;
+        const gint64 nblocks  = nrings_2 / NCM_SPHERE_MAP_BLOCK_NC;
         gint64 i, j;
 
         self->block_ring_size = nblocks * NCM_SPHERE_MAP_BLOCK_NC;
@@ -1349,9 +1350,9 @@ static void
 _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *nest_index)
 {
   NcmSphereMapPrivate * const self = smap->priv;
-  const gdouble two_3 = 2.0 / 3.0;
-  const gdouble abs_z = fabs (z);
-  const gdouble tt = fmod (phi / M_PI_2, 4.0);
+  const gdouble two_3              = 2.0 / 3.0;
+  const gdouble abs_z              = fabs (z);
+  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
   gint64 x, y, f;
 
   if (abs_z <= two_3)
@@ -1597,6 +1598,7 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdoubl
 void
 ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name)
 {
+#ifdef HAVE_CFITSIO
   NcmSphereMapPrivate * const self = smap->priv;
   gchar comment[FLEN_COMMENT];
   gchar ordering[FLEN_VALUE];
@@ -1681,6 +1683,10 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
+#else
+  g_error ("ncm_sphere_map_load_fits: CFITSIO not available.");
+
+#endif
 }
 
 /**
@@ -1696,6 +1702,7 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 void
 ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name, gboolean overwrite)
 {
+#ifdef HAVE_CFITSIO
   NcmSphereMapPrivate * const self = smap->priv;
   const gchar *sname               = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
   const gchar *ttype[]             = { sname };
@@ -1787,6 +1794,9 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
+#else
+  g_error ("ncm_sphere_map_save_fits: CFITSIO not available.");
+#endif
 }
 
 static void
@@ -1810,6 +1820,7 @@ _ncm_sphere_map_radec_to_ang (const gdouble RA, const gdouble DEC, gdouble *thet
 void
 ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S)
 {
+#ifdef HAVE_CFITSIO
   gchar comment[FLEN_COMMENT];
   gint status, hdutype, anynul;
   glong naxis2;
@@ -1893,12 +1904,16 @@ ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_fil
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
+#else
+  g_error ("ncm_sphere_map_load_from_fits_catalog: CFITSIO not available.");
+
+#endif
 }
 
 static void
 _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
 
   if (self->fft_plan_r2c->len == 0)
@@ -1966,6 +1981,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
                                                      &pvec[cap_size], NULL,
                                                      1, ring_size,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
+
       /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, self->npix, plan_r2c);*/
       g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
@@ -2004,6 +2020,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
                                                    &pvec[ring_fi_north], NULL,
                                                    1, dist,
                                                    fftw_default_flags | FFTW_DESTROY_INPUT);
+
       g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }
@@ -2046,7 +2063,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 #endif
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include "ncm_sphere_map_block.c"
 #endif
 
@@ -2054,7 +2071,7 @@ static void
 _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 {
   NcmSphereMapPrivate * const self = smap->priv;
-  gint m, l, lm_index = 0;
+  guint m, l, lm_index = 0;
 
   ncm_vector_set_zero (self->Cl);
 
@@ -2101,9 +2118,9 @@ _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 void
 ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
-  gint i;
+  guint i;
 
   if (self->lmax == 0)
   {
@@ -2326,7 +2343,7 @@ ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
 void
 ncm_sphere_map_alm2map (NcmSphereMap *smap)
 {
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = smap->priv;
   guint i;
 
@@ -2397,7 +2414,7 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
   gdouble p_ellm2                  = 1.0;
   gdouble p_ellm1                  = x;
   gdouble p_ell;
-  gint ell;
+  guint ell;
 
   gdouble Ctheta =
     1.0 * (2.0 * 0.0 + 1.0) * ncm_vector_fast_get (self->Cl, 0) +

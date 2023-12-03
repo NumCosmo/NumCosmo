@@ -56,7 +56,7 @@ enum
   PROP_FIT_TYPE
 };
 
-G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT)
 
 
 static void

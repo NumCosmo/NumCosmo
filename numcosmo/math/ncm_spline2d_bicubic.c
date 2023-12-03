@@ -42,7 +42,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D);
+G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D)
 
 static void
 ncm_spline2d_bicubic_init (NcmSpline2dBicubic *object)
@@ -734,7 +734,7 @@ _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble 
 
   gsize jl = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), xl, 0, ncm_vector_len (s2d->xv) - 1);
   gsize ju = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), xu, 0, ncm_vector_len (s2d->xv) - 1);
-  gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+  gsize i  = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble x0, x1, result;
   const gdouble y0 = ncm_vector_get (s2d->yv, i);
   guint k;
@@ -893,7 +893,7 @@ _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble y
 {
   NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
 
-  gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+  gsize j  = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
   gsize il = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yl, 0, ncm_vector_len (s2d->yv) - 1);
   gsize iu = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yu, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble y0, y1, result;
@@ -1190,7 +1190,7 @@ _ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *
   const gdouble dx          = x - x0;
   const guint len           = ncm_vector_len (y);
   NcmSpline2dBicubicCoeffs *sa;
-  gint k, i;
+  guint k, i;
   size_t l;
   gdouble y0, y_l, a0, a1, a2, a3;
 

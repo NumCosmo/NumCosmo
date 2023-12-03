@@ -44,6 +44,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_multimin.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -65,7 +66,7 @@ struct _NcmFitGSLMMS
 };
 
 
-G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT)
 
 static void
 ncm_fit_gsl_mms_init (NcmFitGSLMMS *fit_gsl_mms)
@@ -235,7 +236,7 @@ _ncm_fit_gsl_mms_reset (NcmFit *fit)
       if (fparam_len > 0)
       {
         NcmMSet *mset = ncm_fit_peek_mset (fit);
-        gint i;
+        guint i;
 
         ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
 
