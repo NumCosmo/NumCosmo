@@ -4,6 +4,18 @@ CHANGELOG
 [Current]
 
 [v0.19.0]
+ * Testing before adding warn supp. Testing for isfinite declaration.
+
+ * Adding cfitstio to plc.
+
+ * Addind examples to installation.
+
+ * Added libdl dependency to plc.
+
+ * Added GSL blas definition to avoid double typedefs.
+
+ * Updated changelog.
+
  * Updated stubs.
 
  * Moving to meson (#120)
