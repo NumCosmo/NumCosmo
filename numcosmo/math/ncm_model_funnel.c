@@ -54,7 +54,7 @@ struct _NcmModelFunnelPrivate
   gint place_holder;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL)
 
 static void
 ncm_model_funnel_init (NcmModelFunnel *model_funnel)

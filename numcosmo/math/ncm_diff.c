@@ -78,7 +78,7 @@ struct _NcmDiff
   GObject parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT)
 
 static void
 ncm_diff_init (NcmDiff *diff)

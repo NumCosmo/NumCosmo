@@ -38,19 +38,11 @@
  * 
  */
 
-@have_fftw3_support@
-@have_fftw3f_support@
-@have_cfitsio_support@
-
 @have_nlopt_support@
 @have_mpi_support@
 
 @have_inline_support@
 @have_inline_macro@
-
-#ifndef NUMCOSMO_GIR_SCAN
-@numcosmo_blas_include@
-#endif /* NUMCOSMO_GIR_SCAN */
 
 #define NUMCOSMO_MAJOR_VERSION @NUMCOSMO_MAJOR_VERSION@
 #define NUMCOSMO_MINOR_VERSION @NUMCOSMO_MINOR_VERSION@

@@ -45,7 +45,7 @@ enum
   PROP_MODEL,
 };
 
-G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT)
 
 static void
 ncm_model_ctrl_init (NcmModelCtrl *ctrl)
@@ -77,7 +77,7 @@ static void
 ncm_model_ctrl_finalize (GObject *object)
 {
   /*NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->finalize (object);
 }
@@ -86,6 +86,7 @@ static void
 ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
+
   g_return_if_fail (NCM_IS_MODEL_CTRL (object));
 
   switch (prop_id)
@@ -103,6 +104,7 @@ static void
 ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
+
   g_return_if_fail (NCM_IS_MODEL_CTRL (object));
 
   switch (prop_id)
@@ -119,8 +121,9 @@ ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 static void
 ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  /*GObjectClass* parent_class = G_OBJECT_CLASS (klass); */
 
   object_class->set_property = ncm_model_set_property;
   object_class->get_property = ncm_model_get_property;
@@ -139,7 +142,7 @@ ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
 /**
  * ncm_model_ctrl_new:
  * @model: (allow-none): FIXME
-   *
+ *
  * FIXME
  *
  * Returns: FIXME
@@ -182,17 +185,17 @@ ncm_model_ctrl_new (NcmModel *model)
 /**
  * ncm_model_ctrl_model_last_update:
  * @ctrl: a #NcmModelCtrl
- * 
+ *
  * Checks if the main model was updated during the last call to
  * ncm_model_ctrl_update().
- * 
+ *
  * Returns: TRUE if the main model was updated.
  */
 /**
  * ncm_model_ctrl_model_has_submodel:
  * @ctrl: a #NcmModelCtrl
  * @mid: a @NcmModelID
- * 
+ *
  * Checks if there is a submode inside ctrl model, it is an
  * error to call this function in an empty @ctrl.
  *
@@ -221,41 +224,45 @@ ncm_model_ctrl_new (NcmModel *model)
 gboolean
 ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
 {
-  gboolean up = FALSE;
+  gboolean up          = FALSE;
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
 
   if (model != ctrl_model)
   {
     g_weak_ref_set (&ctrl->model_wr, model);
-    ctrl->pkey  = model->pkey;
-    up          = TRUE;
+    ctrl->pkey = model->pkey;
+    up         = TRUE;
   }
 
   {
     const guint n = ncm_model_get_submodel_len (model);
     guint i;
+
     for (i = 0; i < n; i++)
     {
       NcmModel *submodel = ncm_model_peek_submodel (model, i);
+
       if (i >= ctrl->submodel_ctrl->len)
       {
         NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
+
         g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
         up = TRUE;
       }
       else
       {
         NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
+
         if (ncm_model_ctrl_set_model (sub_ctrl, submodel))
-        {
           up = TRUE;
-        }
       }
     }
+
     g_ptr_array_set_size (ctrl->submodel_ctrl, n);
   }
-  
+
   ncm_model_clear (&ctrl_model);
+
   return up;
 }
 
@@ -272,7 +279,7 @@ gboolean
 ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
-  gboolean is_model = (model == ctrl_model);
+  gboolean is_model    = (model == ctrl_model);
 
   ncm_model_clear (&ctrl_model);
 
@@ -292,6 +299,7 @@ ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
   g_weak_ref_set (&ctrl->model_wr, NULL);
   g_ptr_array_set_size (ctrl->submodel_ctrl, 0);
   g_array_set_size (ctrl->submodel_last_update, 0);
+
   return;
 }
 
@@ -320,3 +328,4 @@ ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
 {
   g_clear_object (ctrl);
 }
+

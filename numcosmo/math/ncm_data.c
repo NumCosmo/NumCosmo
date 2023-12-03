@@ -68,7 +68,7 @@ typedef struct _NcmDataPrivate
   NcmDiff *diff;
 } NcmDataPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT)
 
 static void
 ncm_data_init (NcmData *data)
@@ -378,24 +378,6 @@ NcmData *
 ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 {
   return NCM_DATA (ncm_serialize_dup_obj (ser_obj, G_OBJECT (data)));
-}
-
-/**
- * ncm_data_new_from_file:
- * @filename: file containing a serialized #NcmData child.
- *
- * Creates a new #NcmData from @filename.
- *
- * Returns: (transfer full): the newly created #NcmData.
- */
-NcmData *
-ncm_data_new_from_file (const gchar *filename)
-{
-  NcmData *data = NCM_DATA (ncm_serialize_global_from_file (filename));
-
-  g_assert (NCM_IS_DATA (data));
-
-  return data;
 }
 
 /**

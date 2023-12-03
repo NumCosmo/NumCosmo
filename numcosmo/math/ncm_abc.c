@@ -89,7 +89,7 @@ typedef struct _NcmABCPrivate
   guint nparticles;
 } NcmABCPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmABC, ncm_abc, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmABC, ncm_abc, G_TYPE_OBJECT)
 
 static void
 ncm_abc_init (NcmABC *abc)
@@ -1017,7 +1017,7 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
   if (!self->started)
     g_error ("ncm_abc_run: run not started, run ncm_abc_start_run() first.");
 
-  if (nparticles <= (self->cur_sample_id + 1))
+  if (nparticles <= (guint) (self->cur_sample_id + 1))
   {
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     {

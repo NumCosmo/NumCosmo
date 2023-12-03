@@ -46,7 +46,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmMSetTransKern, ncm_mset_trans_kern, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmMSetTransKern, ncm_mset_trans_kern, G_TYPE_OBJECT)
 
 static void
 ncm_mset_trans_kern_init (NcmMSetTransKern *tkern)

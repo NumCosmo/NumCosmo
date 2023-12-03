@@ -672,7 +672,7 @@ nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGr
 
 #define __NC_HIPERT_COMP_ADD_PAD(a,pad) \
 G_BEGIN_DECLS { \
-  gint __i; \
+  guint __i; \
   for (__i = 0; __i < (a)->len; __i++) \
   { \
     if (g_array_index ((a), gint, __i) >= 0) \
@@ -745,13 +745,13 @@ nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav)
 NCM_INLINE void
 nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
-  return NC_HIPERT_GRAV_GET_CLASS (grav)->get_G_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
+  NC_HIPERT_GRAV_GET_CLASS (grav)->get_G_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
 }
 
 NCM_INLINE void
 nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
-  return NC_HIPERT_GRAV_GET_CLASS (grav)->get_dy_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
+  NC_HIPERT_GRAV_GET_CLASS (grav)->get_dy_scalar (grav, bg_var, ydy, T_scalar, G_scalar);
 }
 
 G_END_DECLS

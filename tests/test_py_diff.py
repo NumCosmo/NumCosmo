@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # test_py_diff.py
 #

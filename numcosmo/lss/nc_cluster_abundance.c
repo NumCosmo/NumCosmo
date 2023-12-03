@@ -56,7 +56,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcClusterAbundance, nc_cluster_abundance, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcClusterAbundance, nc_cluster_abundance, G_TYPE_OBJECT)
 
 #define INTEG_D2NDZDLNM_NNODES (200)
 #define LNM_MIN (10.0 * M_LN10)

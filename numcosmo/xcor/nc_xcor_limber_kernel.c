@@ -50,7 +50,8 @@
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
+G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
 
 enum
 {
@@ -162,29 +163,6 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
 }
 
 /**
- * nc_xcor_limber_kernel_new_from_name:
- * @xcor_name: string which specifies the type of the observable
- *
- * This function returns a new #NcXcorLimberKernel whose type is defined by
- * @xcor_name.
- *
- * Returns: (transfer full): A new #NcXcorLimberKernel.
- */
-NcXcorLimberKernel *
-nc_xcor_limber_kernel_new_from_name (gchar *xcor_name)
-{
-  GObject *obj    = ncm_serialize_global_from_string (xcor_name);
-  GType xcor_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (xcor_type, NC_TYPE_XCOR_LIMBER_KERNEL))
-    g_error ("nc_xcor_limber_kernel_new_from_name: NcXcorLimberKernel %s do not "
-             "descend from %s.",
-             xcor_name, g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
-
-  return NC_XCOR_LIMBER_KERNEL (obj);
-}
-
-/**
  * nc_xcor_limber_kernel_ref:
  * @xclk: a #NcXcorLimberKernel
  *
@@ -222,6 +200,37 @@ void
 nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
 {
   g_clear_object (xclk);
+}
+
+/**
+ * nc_xcor_kinetic_copy:
+ * @xck: a #NcXcorKinetic
+ *
+ * Creates a copy of @xck.
+ *
+ * Returns: (transfer full): a new #NcXcorKinetic copy of @xck.
+ */
+NcXcorKinetic *
+nc_xcor_kinetic_copy (NcXcorKinetic *xck)
+{
+  NcXcorKinetic *xck_copy = g_new (NcXcorKinetic, 1);
+
+  xck_copy[0] = xck[0];
+
+  return xck_copy;
+}
+
+/**
+ * nc_xcor_kinetic_free:
+ * @xck: a #NcXcorKinetic
+ *
+ * Frees @xck.
+ *
+ */
+void
+nc_xcor_kinetic_free (NcXcorKinetic *xck)
+{
+  g_free (xck);
 }
 
 /**

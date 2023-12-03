@@ -39,7 +39,7 @@
 
 #include "model/nc_hiprim_expc.h"
 
-G_DEFINE_TYPE (NcHIPrimExpc, nc_hiprim_expc, NC_TYPE_HIPRIM);
+G_DEFINE_TYPE (NcHIPrimExpc, nc_hiprim_expc, NC_TYPE_HIPRIM)
 
 enum {
   PROP_0,

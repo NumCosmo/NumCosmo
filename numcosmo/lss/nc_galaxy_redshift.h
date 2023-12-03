@@ -129,7 +129,7 @@ nc_galaxy_redshift_interval_weight (NcGalaxyRedshift *gz, const guint di)
 NCM_INLINE void
 nc_galaxy_redshift_pdf_limits (NcGalaxyRedshift *gz, const guint di, gdouble *zmin, gdouble *zmax)
 {
-  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf_limits (gz, di, zmin, zmax);
+  NC_GALAXY_REDSHIFT_GET_CLASS (gz)->pdf_limits (gz, di, zmin, zmax);
 }
 
 NCM_INLINE gdouble

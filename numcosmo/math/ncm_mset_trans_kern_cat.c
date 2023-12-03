@@ -75,7 +75,7 @@ enum
   PROP_CHOOSE_PERCENTILE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN)
 
 static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data);
 
@@ -308,9 +308,9 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
   else
     nth = cat_len;
 
-  if (g_tree_height (self->m2lnL_tree) >= nth)
-    g_error ("_ncm_mset_trans_kern_cat_generate_choose: cannot choose from %u points, only %u available.",
-             nth, nth - g_tree_height (self->m2lnL_tree));
+  if ((guint) g_tree_nnodes (self->m2lnL_tree) >= nth)
+    g_error ("_ncm_mset_trans_kern_cat_generate_choose: cannot choose from %u points, no rows available.",
+             nth);
 
   ncm_rng_lock (rng);
 
@@ -363,13 +363,13 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
   if (!self->sd_prep)
   {
     const guint nchains = ncm_mset_catalog_nchains (self->mcat);
-    const guint np = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
-    const guint n = MIN (cat_len, np);
-    const guint nadd = ncm_mset_catalog_nadd_vals (self->mcat);
+    const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
+    const guint n       = MIN (cat_len, np);
+    const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
     const guint m2lnp_i = ncm_mset_catalog_get_m2lnp_var (self->mcat);
-    NcmVector *m2lnp = ncm_vector_new (np);
+    NcmVector *m2lnp    = ncm_vector_new (np);
     NcmVector *last_row = NULL;
-    gint i, j;
+    guint i, j;
 
     ncm_stats_dist_reset (self->sd);
 
@@ -434,7 +434,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     const guint n       = MIN (cat_len, np);
     const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
     NcmVector *last_row = NULL;
-    gint i;
+    guint i;
 
     ncm_stats_dist_reset (self->sd);
 

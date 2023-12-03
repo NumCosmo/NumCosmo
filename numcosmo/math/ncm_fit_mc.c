@@ -99,7 +99,7 @@ struct _NcmFitMC
   GCond write_cond;
 };
 
-G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT)
 
 static void
 ncm_fit_mc_init (NcmFitMC *mc)
@@ -815,7 +815,7 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
   if (!mc->started)
     g_error ("ncm_fit_mc_run: run not started, run ncm_fit_mc_start_run() first.");
 
-  if (n <= (mc->cur_sample_id + 1))
+  if (n <= (guint) (mc->cur_sample_id + 1))
   {
     if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -1057,7 +1057,7 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
  *
  * Computes the mean and covariance of the Monte Carlo run.
  * The mean and covariance are stored in the #NcmFit object of @mc.
- * The mean is stored in the #NcmFitFState object of the #NcmFit object
+ * The mean is stored in the #NcmFitState object of the #NcmFit object
  * and in the #NcmMSetCatalog object of @mc.
  *
  */

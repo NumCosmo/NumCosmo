@@ -150,10 +150,7 @@ void nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full
 void nc_data_snia_cov_set_cov_mbc_mbc (NcDataSNIACov *snia_cov, NcmMatrix *cov_mbc_mbc);
 
 void nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename);
-
-#ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean overwrite);
-#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 gdouble nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
 NcmVector *nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet *mset);

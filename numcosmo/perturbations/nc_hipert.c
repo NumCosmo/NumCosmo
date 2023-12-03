@@ -66,7 +66,7 @@ enum {
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT)
 
 static void
 nc_hipert_init (NcHIPert *pert)

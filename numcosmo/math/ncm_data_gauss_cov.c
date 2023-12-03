@@ -72,7 +72,7 @@ typedef struct _NcmDataGaussCovPrivate
 } NcmDataGaussCovPrivate;
 
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA); /* LCOV_EXCL_BR_LINE */
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA) /* LCOV_EXCL_BR_LINE */
 
 static void
 ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)

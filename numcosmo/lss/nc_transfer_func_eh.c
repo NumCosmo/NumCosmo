@@ -114,7 +114,7 @@ enum
   PROP_CCL_COMP,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANSFER_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANSFER_FUNC)
 
 static void
 nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)

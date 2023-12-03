@@ -85,7 +85,6 @@ struct _NcRecomb
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;
 
-NcRecomb *nc_recomb_new_from_name (const gchar *recomb_name);
 NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);

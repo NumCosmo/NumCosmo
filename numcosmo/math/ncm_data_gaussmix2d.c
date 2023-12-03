@@ -56,7 +56,7 @@ struct _NcmDataGaussMix2D
   NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA)
 
 static void
 ncm_data_gaussmix2d_init (NcmDataGaussMix2D *gm2d)

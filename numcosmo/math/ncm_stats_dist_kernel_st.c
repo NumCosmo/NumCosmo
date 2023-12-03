@@ -107,7 +107,7 @@ enum
   PROP_NU,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM_TYPE_STATS_DIST_KERNEL);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM_TYPE_STATS_DIST_KERNEL)
 
 static void
 ncm_stats_dist_kernel_st_init (NcmStatsDistKernelST *sdkst)
@@ -255,7 +255,7 @@ _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *c
 {
   /*NcmStatsDistKernelPrivate * const pself = sdk->priv;*/
   const guint n = ncm_vector_len (chi2);
-  gint i;
+  guint i;
 
   g_assert (ncm_vector_len (Ku) == n);
 
@@ -287,10 +287,10 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n       = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
-  gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  gdouble lnt_max     = GSL_NEGINF;
+  guint i, i_max = 0;
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnnorms));
@@ -334,10 +334,10 @@ _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
   NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n       = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
-  gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  gdouble lnt_max     = GSL_NEGINF;
+  guint i, i_max = 0;
 
   g_assert_cmpuint (n, ==, ncm_vector_len (weights));
   g_assert_cmpuint (n, ==, ncm_vector_len (lnK));
@@ -379,7 +379,8 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
   NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
   NcmStatsDistKernelPrivate * const pself  = sdk->priv;
   gdouble chi_scale;
-  gint i, ret;
+  gint ret;
+  guint i;
 
   for (i = 0; i < pself->d; i++)
   {

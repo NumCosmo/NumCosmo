@@ -30,7 +30,7 @@
  * @include: numcosmo/math/ncm_integrate.h
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,13 +51,14 @@ static gpointer
 _integral_ws_alloc (gpointer userdata)
 {
   NCM_UNUSED (userdata);
+
   return gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 }
 
 static void
 _integral_ws_free (gpointer p)
 {
-  gsl_integration_workspace_free ((gsl_integration_workspace *)p);
+  gsl_integration_workspace_free ((gsl_integration_workspace *) p);
 }
 
 /**
@@ -70,16 +71,19 @@ _integral_ws_free (gpointer p)
  * in order to return to the pool. This must be done using the #ncm_memory_pool_return.
  *
  * Returns: a pointer to #gsl_integration_workspace structure.
-*/
+ */
 gsl_integration_workspace **
 ncm_integral_get_workspace ()
 {
   G_LOCK_DEFINE_STATIC (create_lock);
+
   static NcmMemoryPool *mp = NULL;
 
   G_LOCK (create_lock);
+
   if (mp == NULL)
     mp = ncm_memory_pool_new (_integral_ws_alloc, NULL, _integral_ws_free);
+
   G_UNLOCK (create_lock);
 
   return ncm_memory_pool_get (mp);
@@ -103,12 +107,14 @@ ncm_integral_get_workspace ()
 gint
 ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
 {
-  gsl_integration_workspace **w = ncm_integral_get_workspace();
-  gint error_code = gsl_integration_qag (F, a, b, abstol, reltol, NCM_INTEGRAL_PARTITION, 6, *w, result, error);
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gint error_code               = gsl_integration_qag (F, a, b, abstol, reltol, NCM_INTEGRAL_PARTITION, 6, *w, result, error);
 
   ncm_memory_pool_return (w);
-  if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
+
+  if ((error_code != GSL_SUCCESS) && (error_code != GSL_EROUND))
     *result = GSL_POSINF;
+
   return error_code;
 }
 
@@ -133,12 +139,11 @@ ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble r
   gint error_code               = gsl_integration_qagiu (F, a, abstol, reltol, NCM_INTEGRAL_PARTITION, *w, result, error);
 
   ncm_memory_pool_return (w);
-  
-  if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
+
+  if ((error_code != GSL_SUCCESS) && (error_code != GSL_EROUND))
   {
     g_error ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
     *result = GSL_POSINF;
-
   }
 
   return error_code;
@@ -161,20 +166,23 @@ ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble r
 gint
 ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
-  gdouble x_found = 0.0;
+  gdouble x_found     = 0.0;
   NcmVector *p_result = NULL;
-  gint error_code = GSL_SUCCESS;
+  gint error_code     = GSL_SUCCESS;
 
   if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
   {
     if (x == x_found)
+    {
       *result = ncm_vector_get (p_result, 0);
+    }
     else
     {
       error_code = ncm_integral_locked_a_b (F, x_found, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
-      *result += ncm_vector_get (p_result, 0);
+      *result   += ncm_vector_get (p_result, 0);
       ncm_function_cache_insert (cache, x, *result);
     }
+
     ncm_vector_clear (&p_result);
   }
   else
@@ -182,6 +190,7 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
     error_code = ncm_integral_locked_a_b (F, 0.0, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
     ncm_function_cache_insert (cache, x, *result);
   }
+
   return error_code;
 }
 
@@ -192,19 +201,19 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
  * @x: lower integration limit.
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
- * 
+ *
  * This function searchs for the nearest x_near value previously chosed as the lower integration limit
  * and perform the integration at $[x, x_{near}]$ interval. This result is summed to that
  * obtained at $[x_{near}, \infty]$ and then it is saved in the cache.
- * 
+ *
  * Returns: the error code returned by gsl_integration_qagiu.
  */
 gint
 ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
-  gdouble x_found = 0.0;
+  gdouble x_found     = 0.0;
   NcmVector *p_result = NULL;
-  gint error_code = GSL_SUCCESS;
+  gint error_code     = GSL_SUCCESS;
 
   if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NCM_FUNCTION_CACHE_SEARCH_BOTH))
   {
@@ -215,10 +224,11 @@ ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, 
     else
     {
       error_code = ncm_integral_locked_a_b (F, x, x_found, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
-      *result += ncm_vector_get(p_result, 0);
+      *result   += ncm_vector_get (p_result, 0);
 
       ncm_function_cache_insert (cache, x, *result);
     }
+
     ncm_vector_clear (&p_result);
   }
   else
@@ -226,6 +236,7 @@ ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, 
     error_code = ncm_integral_locked_a_inf (F, x, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
     ncm_function_cache_insert (cache, x, *result);
   }
+
   return error_code;
 }
 
@@ -243,11 +254,13 @@ typedef struct _iCLIntegrand2dim
 static gint
 _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
-	iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
+  iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
+
   NCM_UNUSED (ndim);
   NCM_UNUSED (ncomp);
   f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
-	return 0;
+
+  return 0;
 }
 
 static void
@@ -256,23 +269,25 @@ _peakfinder_2dim (const gint *ndim, const gdouble b[], gint *n, gdouble x[], voi
   iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
   gint i;
   gdouble newb[4];
+
   newb[0] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[0];
   newb[1] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[1];
   newb[2] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[2];
   newb[3] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[3];
 
-  //printf ("bounds: %.5g %.5g %.5g %.5g\n", b[0], b[1], b[2], b[3]);
-  //printf ("new bounds: %.5g %.5g %.5g %.5g\n", newb[0], newb[1], newb[2], newb[3]);
+  /*printf ("bounds: %.5g %.5g %.5g %.5g\n", b[0], b[1], b[2], b[3]); */
+  /*printf ("new bounds: %.5g %.5g %.5g %.5g\n", newb[0], newb[1], newb[2], newb[3]); */
 
   iinteg->p (ndim, newb, n, x, iinteg->integ->userdata);
 
-  //printf ("real minimo: %.15g, %.15g\n", x[0], x[1]);
+  /*printf ("real minimo: %.15g, %.15g\n", x[0], x[1]); */
   for (i = 0; i < *n; i++)
   {
     x[i * iinteg->ldxgiven + 0] = (x[i * iinteg->ldxgiven + 0] - iinteg->xi) / (iinteg->xf - iinteg->xi);
     x[i * iinteg->ldxgiven + 1] = (x[i * iinteg->ldxgiven + 1] - iinteg->yi) / (iinteg->yf - iinteg->yi);
   }
-  //printf ("minimo: %.15g, %.15g\n", x[0], x[1]);
+
+  /*printf ("minimo: %.15g, %.15g\n", x[0], x[1]); */
 }
 
 /**
@@ -294,10 +309,10 @@ _peakfinder_2dim (const gint *ndim, const gdouble b[], gint *n, gdouble x[], voi
 gboolean
 ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint mineval = 1;
-  const gint maxeval = 10000000;
-  const gint key = 11; /* 13 points rule */
+  gboolean ret            = FALSE;
+  const gint mineval      = 1;
+  const gint maxeval      = 10000000;
+  const gint key          = 11; /* 13 points rule */
   iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
   gint nregions, neval, fail;
   gdouble prob;
@@ -310,39 +325,42 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
   Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
 #else
   Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
-#endif /* HAVE_LIBCUBA_3_1 */         
+#endif /* HAVE_LIBCUBA_3_1 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim: number of evaluations %d >= maximum number of evaluations %d (nregions %d, fail %d, result % 22.15g, error % 22.15g).\n",
-        neval, maxeval, nregions, fail, *result, *error);
+               neval, maxeval, nregions, fail, *result, *error);
 
   *result *= (xf - xi) * (yf - yi);
-  *error *= (xf - xi) * (yf - yi);
+  *error  *= (xf - xi) * (yf - yi);
 
   ret = (fail == 0);
+
   return ret;
 }
 
 typedef struct _iCLIntegrand3dim
 {
-	NcmIntegrand3dim *integ;
-	gdouble xi;
-	gdouble xf;
-	gdouble yi;
-	gdouble yf;
+  NcmIntegrand3dim *integ;
+  gdouble xi;
+  gdouble xf;
+  gdouble yi;
+  gdouble yf;
   gdouble zi;
-	gdouble zf;
+  gdouble zf;
   gint ldxgiven;
 } iCLIntegrand3dim;
 
 static gint
 _integrand_3dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
-	iCLIntegrand3dim *iinteg = (iCLIntegrand3dim *) userdata;
+  iCLIntegrand3dim *iinteg = (iCLIntegrand3dim *) userdata;
+
   NCM_UNUSED (ndim);
   NCM_UNUSED (ncomp);
   f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, (iinteg->zf - iinteg->zi) * x[2] + iinteg->zi, iinteg->integ->userdata);
-	return 0;
+
+  return 0;
 }
 
 /**
@@ -366,34 +384,34 @@ _integrand_3dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
 gboolean
 ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-	const gint mineval = 1;
-	const gint maxeval = 10000000;
-	const gint key = 11; /* 11 points rule */
+  gboolean ret            = FALSE;
+  const gint mineval      = 1;
+  const gint maxeval      = 10000000;
+  const gint key          = 11; /* 11 points rule */
   iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
-	gint nregions, neval, fail;
-	gdouble prob;
+  gint nregions, neval, fail;
+  gdouble prob;
 
 #ifdef HAVE_LIBCUBA_3_1
-	Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
 #elif defined (HAVE_LIBCUBA_3_3)
-	Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
 #elif defined (HAVE_LIBCUBA_4_0)
-	Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
+  Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
 #else
   Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
-#endif /* HAVE_LIBCUBA_3_1 */         
+#endif /* HAVE_LIBCUBA_3_1 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-    
-	*result *= (xf - xi) * (yf - yi) * (zf - zi);
-	*error *= (xf - xi) * (yf - yi) * (zf - zi);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi) * (zf - zi);
+  *error  *= (xf - xi) * (yf - yi) * (zf - zi);
+
+  ret = (fail == 0);
+
+  return ret;
 }
-
 
 /**
  * ncm_integrate_2dim_divonne:
@@ -421,46 +439,52 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
   gboolean ret               = FALSE;
   const gint nvec            = 1;
   const gint seed            = 0;
-	const gint mineval         = 1;
-	const gint maxeval         = 10000000;
-	const gint key1            = 13; // 13 points rule 
+  const gint mineval         = 1;
+  const gint maxeval         = 10000000;
+  const gint key1            = 13; /* 13 points rule */
   const gint key2            = 13;
   const gint key3            = 1;
   const gint maxpass         = 10;
   const gdouble border       = 0.0;
   const gdouble maxchisq     = 0.10;
   const gdouble mindeviation = 0.25;
-  const gint nextra = 0;
-  peakfinder_t peakfinder = NULL;
-  guint i;
-  
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, NULL};
-	gint nregions, neval, fail;
-	gdouble prob;
+  const gint nextra          = 0;
+  peakfinder_t peakfinder    = NULL;
+  gint i;
 
-  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, NULL};
+  gint nregions, neval, fail;
+  gdouble prob;
+
+  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
   for (i = 0; i < ngiven; i++)
   {
     xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
     xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
-    //printf ("conv xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+    /*printf ("conv xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
   }
-  
+
 #ifdef HAVE_LIBCUBA_4_0
-	Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail, 
-           result, error, &prob);  
+  Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
+           result, error, &prob);
+
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-	*result *= (xf - xi) * (yf - yi);
-	*error *= (xf - xi) * (yf - yi);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi);
+  *error  *= (xf - xi) * (yf - yi);
+
+  ret = (fail == 0);
+
+  return ret;
+
 #else
   g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
+
   return FALSE;
-#endif //HAVE_LIBCUBA_4_0      
+
+#endif //HAVE_LIBCUBA_4_0
 }
 
 /**
@@ -476,7 +500,7 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
  * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
  * point and the next in memory (ref. libcuba documentation)
  * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
- * @nextra: the maximum number of extra points the peakfinder will return. 
+ * @nextra: the maximum number of extra points the peakfinder will return.
  * @peakfinder: (scope call): a #NcmIntegralPeakfinder
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
@@ -488,48 +512,50 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
 gboolean
 ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint nvec = 1;
-  const gint seed = 0;
-	const gint mineval = 1;
-	const gint maxeval = 100000000;
-	const gint key1 = 13; // 13 points rule 
-  const gint key2 = 13;
-  const gint key3 = 1;
-  const int maxpass = 10;
-  const double border = 0.0;
-  const double maxchisq = 0.10;
+  gboolean ret              = FALSE;
+  const gint nvec           = 1;
+  const gint seed           = 0;
+  const gint mineval        = 1;
+  const gint maxeval        = 100000000;
+  const gint key1           = 13; /* 13 points rule */
+  const gint key2           = 13;
+  const gint key3           = 1;
+  const int maxpass         = 10;
+  const double border       = 0.0;
+  const double maxchisq     = 0.10;
   const double mindeviation = 0.25;
-  
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, peakfinder};
-	gint nregions, neval, fail;
-	gdouble prob;
-  guint i;
 
-  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, peakfinder};
+  gint nregions, neval, fail;
+  gdouble prob;
+  gint i;
+
+  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
   for (i = 0; i < ngiven; i++)
   {
     xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
     xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
   }
-  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
-//printf ("chamando divonne\n");
+
+  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
+/*printf ("chamando divonne\n"); */
 #ifdef HAVE_LIBCUBA_4_0
-	Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, _peakfinder_2dim, NULL, NULL, &nregions, &neval, &fail, 
-           result, error, &prob);  
+  Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, _peakfinder_2dim, NULL, NULL, &nregions, &neval, &fail,
+           result, error, &prob);
 #else
   g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0  
+#endif //HAVE_LIBCUBA_4_0
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_divonne_peakfinder: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-  
-	*result *= (xf - xi) * (yf - yi);
-	*error *= (xf - xi) * (yf - yi);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi);
+  *error  *= (xf - xi) * (yf - yi);
+
+  ret = (fail == 0);
+
+  return ret;
 }
 
 /**
@@ -552,34 +578,35 @@ ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdou
 gboolean
 ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint nvec = 1;
-  const gint seed = 0;
-	const gint mineval = 1;
-	const gint maxeval = 10000;
-	const gint nincrease = 500;
-  const int nbatch = 1000;
-  const int gridno = 0;
-  
+  gboolean ret         = FALSE;
+  const gint nvec      = 1;
+  const gint seed      = 0;
+  const gint mineval   = 1;
+  const gint maxeval   = 10000;
+  const gint nincrease = 500;
+  const int nbatch     = 1000;
+  const int gridno     = 0;
+
   iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
-	gint neval, fail;
-	gdouble prob;
-  
+  gint neval, fail;
+  gdouble prob;
+
 #ifdef HAVE_LIBCUBA_4_0
-	Vegas (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, 
-         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);  
+  Vegas (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval,
+         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
 #else
   g_error ("ncm_integrate_2dim_vegas: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0  
+#endif //HAVE_LIBCUBA_4_0
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-    
-	*result *= (xf - xi) * (yf - yi);
-	*error  *= (xf - xi) * (yf - yi);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi);
+  *error  *= (xf - xi) * (yf - yi);
+
+  ret = (fail == 0);
+
+  return ret;
 }
 
 /**
@@ -607,24 +634,24 @@ ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdoub
 gboolean
 ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint nvec = 1;
-  const gint seed = 0;
-	const gint mineval = 1; //1000000;
-	const gint maxeval = G_MAXINT;
-	const gint key1 = 11; // 11 points rule 
-  const gint key2 = 11;
-  const gint key3 = 1;
-  const int maxpass = 1;
-  const double border = 0.0;
-  const double maxchisq = 0.10;
+  gboolean ret              = FALSE;
+  const gint nvec           = 1;
+  const gint seed           = 0;
+  const gint mineval        = 1; /*1000000; */
+  const gint maxeval        = G_MAXINT;
+  const gint key1           = 11; /* 11 points rule */
+  const gint key2           = 11;
+  const gint key3           = 1;
+  const int maxpass         = 1;
+  const double border       = 0.0;
+  const double maxchisq     = 0.10;
   const double mindeviation = 0.25;
-  const int nextra = 0;
-  peakfinder_t peakfinder = NULL;
-  
+  const int nextra          = 0;
+  peakfinder_t peakfinder   = NULL;
+
   iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, ldxgiven};
-	gint nregions, neval, fail, i;
-	gdouble prob;
+  gint nregions, neval, fail, i;
+  gdouble prob;
 
   for (i = 0; i < ngiven; i++)
   {
@@ -632,23 +659,24 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
     xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
     xgiven[i * ldxgiven + 2] = (xgiven[i * ldxgiven + 2] - zi) / (zf - zi);
   }
-  
+
 #ifdef HAVE_LIBCUBA_4_0
-	Divonne (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail, 
-           result, error, &prob);  
+  Divonne (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
+           result, error, &prob);
 #else
   g_error ("ncm_integrate_3dim_divonne: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0  
+#endif //HAVE_LIBCUBA_4_0
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
- 
-	*result *= (xf - xi) * (yf - yi) * (zf - zi);
-	*error  *= (xf - xi) * (yf - yi) * (zf - zi);
 
-	ret = (fail == 0);
-	return ret;
+  *result *= (xf - xi) * (yf - yi) * (zf - zi);
+  *error  *= (xf - xi) * (yf - yi) * (zf - zi);
+
+  ret = (fail == 0);
+
+  return ret;
 }
 
 /**
@@ -673,34 +701,35 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
 gboolean
 ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
 {
-  gboolean ret = FALSE;
-  const gint nvec = 1;
-  const gint seed = 0;
-	const gint mineval = 1;
-	const gint maxeval = G_MAXINT;
-	const gint nincrease = 500;
-  const int nbatch = 1000;
-  const int gridno = 0;
-  
+  gboolean ret         = FALSE;
+  const gint nvec      = 1;
+  const gint seed      = 0;
+  const gint mineval   = 1;
+  const gint maxeval   = G_MAXINT;
+  const gint nincrease = 500;
+  const int nbatch     = 1000;
+  const int gridno     = 0;
+
   iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
-	gint neval, fail;
-	gdouble prob;
-  
+  gint neval, fail;
+  gdouble prob;
+
 #ifdef HAVE_LIBCUBA_4_0
-	Vegas (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, 
-         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);  
+  Vegas (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval,
+         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
 #else
   g_error ("ncm_integrate_3dim_vegas: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0  
+#endif //HAVE_LIBCUBA_4_0
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-    
-	*result *= (xf - xi) * (yf - yi) * (zf - zi);
-	*error  *= (xf - xi) * (yf - yi) * (zf - zi);
-  
-	ret = (fail == 0);
-	return ret;
+
+  *result *= (xf - xi) * (yf - yi) * (zf - zi);
+  *error  *= (xf - xi) * (yf - yi) * (zf - zi);
+
+  ret = (fail == 0);
+
+  return ret;
 }
 
 /**
@@ -716,16 +745,17 @@ ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdoub
  * interval inner points. This results in a grid with (n_nodes - 1) * rule_n points.
  *
  * Returns: a pointer to the newly created #NcmIntegralFixed structure.
-*/
+ */
 NcmIntegralFixed *
 ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 {
   NcmIntegralFixed *intf = g_slice_new (NcmIntegralFixed);
-  intf->n_nodes = n_nodes;
-  intf->rule_n = rule_n;
-  intf->int_nodes = g_slice_alloc (sizeof(gdouble) * n_nodes * rule_n);
-  intf->xl = xl;
-  intf->xu = xu;
+
+  intf->n_nodes   = n_nodes;
+  intf->rule_n    = rule_n;
+  intf->int_nodes = g_slice_alloc (sizeof (gdouble) * n_nodes * rule_n);
+  intf->xl        = xl;
+  intf->xu        = xu;
 
   intf->glt = gsl_integration_glfixed_table_alloc (rule_n);
 
@@ -738,11 +768,11 @@ ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
  *
  * This function frees the memory associated to #NcmIntegralFixed.
  *
-*/
+ */
 void
 ncm_integral_fixed_free (NcmIntegralFixed *intf)
 {
-  g_slice_free1 (sizeof(gdouble) * intf->n_nodes * intf->rule_n, intf->int_nodes);
+  g_slice_free1 (sizeof (gdouble) * intf->n_nodes * intf->rule_n, intf->int_nodes);
   gsl_integration_glfixed_table_free (intf->glt);
   g_slice_free (NcmIntegralFixed, intf);
 }
@@ -754,26 +784,29 @@ ncm_integral_fixed_free (NcmIntegralFixed *intf)
  *
  * This function FIXME
  *
-*/
+ */
 void
 ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
 {
-  const gulong r2 = intf->rule_n / 2;
+  const gulong r2         = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
   gulong i, j, k = 0;
 
   if (odd_rule)
   {
     for (i = 0; i < intf->n_nodes - 1; i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
       for (j = 1; j < r2 + 1; j++)
         intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
+
       intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2) * intf->glt->w[0];
+
       for (j = 1; j < r2 + 1; j++)
         intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
     }
@@ -782,12 +815,14 @@ ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
   {
     for (i = 0; i < intf->n_nodes - 1; i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
       for (j = 0; j < r2; j++)
         intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
+
       for (j = 0; j < r2; j++)
         intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
     }
@@ -801,17 +836,18 @@ ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
  * This function
  *
  * Returns: FIXME
-*/
+ */
 gdouble
 ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
 {
   glong i;
-  glong maxi = (intf->n_nodes - 1) * intf->rule_n;
-  gdouble res = 0.0;
+  glong maxi            = (intf->n_nodes - 1) * intf->rule_n;
+  gdouble res           = 0.0;
   const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
 
   for (i = 0; i < maxi; i++)
     res += intf->int_nodes[i];
+
   return res * delta_x * 0.5;
 }
 
@@ -823,27 +859,30 @@ ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
  * This function
  *
  * Returns: FIXME
-*/
+ */
 gdouble
 ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 {
-  const gulong r2 = intf->rule_n / 2;
+  const gulong r2         = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
-  gdouble res = 0.0;
+  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  gdouble res             = 0.0;
   gulong i, j, k = 0;
 
   if (odd_rule)
   {
     for (i = 0; i < intf->n_nodes - 1; i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
       for (j = 1; j < r2 + 1; j++)
         res += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       res += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
+
       for (j = 1; j < r2 + 1; j++)
         res += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
     }
@@ -852,12 +891,14 @@ ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
   {
     for (i = 0; i < intf->n_nodes - 1; i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
       for (j = 0; j < r2; j++)
         res += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       for (j = 0; j < r2; j++)
         res += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
     }
@@ -876,15 +917,15 @@ ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
  * This function
  *
  * Returns: FIXME
-*/
+ */
 gdouble
 ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)
 {
-  const gulong r2 = intf->rule_n / 2;
+  const gulong r2         = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
-  const glong mnode = max / delta_x;
-  gdouble res = 0.0;
+  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  const glong mnode       = max / delta_x;
+  gdouble res             = 0.0;
   glong i, j, k = 0;
 
   g_assert (mnode < (glong) intf->n_nodes);
@@ -893,40 +934,49 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
   {
     for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part = 0.0;
+      gdouble part          = 0.0;
+
       k = i * intf->rule_n;
 
       for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
+
       for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       res += part;
 
-      if (fabs(part / res) < reltol)
+      if (fabs (part / res) < reltol)
         break;
     }
 
     for (i = mnode - 1; i >= 0; i--)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part = 0.0;
+      gdouble part          = 0.0;
+
       k = i * intf->rule_n;
 
-      for (j = 1; j < (glong)(r2 + 1); j++)
+      for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-      for (j = 1; j < (glong)(r2 + 1); j++)
+
+      for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       res += part;
-      if (fabs(part / res) < reltol)
+
+      if (fabs (part / res) < reltol)
         break;
     }
   }
@@ -934,42 +984,49 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
   {
     for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part = 0.0;
+      gdouble part          = 0.0;
+
       k = i * intf->rule_n;
 
-      for (j = 0; j < (glong)r2; j++)
+      for (j = 0; j < (glong) r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-      for (j = 0; j < (glong)r2; j++)
+
+      for (j = 0; j < (glong) r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       res += part;
 
-      if (fabs(part / res) < reltol)
+      if (fabs (part / res) < reltol)
         break;
     }
 
     for (i = mnode - 1; i >= 0; i--)
     {
-      const gdouble x0 = intf->xl + delta_x * i;
-      const gdouble x1 = x0 + delta_x;
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
       const gdouble x1px0_2 = (x1 + x0) / 2.0;
       const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part = 0.0;
+      gdouble part          = 0.0;
+
       k = i * intf->rule_n;
 
-      for (j = 0; j < (glong)r2; j++)
+      for (j = 0; j < (glong) r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-      for (j = 0; j < (glong)r2; j++)
+
+      for (j = 0; j < (glong) r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
+
       res += part;
 
-      if (fabs(part / res) < reltol)
+      if (fabs (part / res) < reltol)
         break;
     }
   }
 
   return res * delta_x * 0.5;
 }
+

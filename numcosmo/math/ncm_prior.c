@@ -41,7 +41,7 @@
 
 #include "math/ncm_prior.h"
 
-G_DEFINE_TYPE (NcmPrior, ncm_prior, NCM_TYPE_MSET_FUNC);
+G_DEFINE_TYPE (NcmPrior, ncm_prior, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_prior_init (NcmPrior *prior)

@@ -68,7 +68,7 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT);
+G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT)
 
 static guint _nc_hipert_igw_nsing (NcHIPertIGW *igw, const gdouble k) { return 0; }
 static void _nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st) { g_error ("_nc_hipert_igw_get_sing_info: no singularity implemented."); return; }
@@ -94,7 +94,7 @@ nc_hipert_igw_default_init (NcHIPertIGWInterface *iface)
 	iface->eval_powspec_factor = &_nc_hipert_igw_eval_powspec_factor;
 }
 
-G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_HOAA);
+G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_HOAA)
 
 enum {
   PROP_0,

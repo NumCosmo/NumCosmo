@@ -38,15 +38,6 @@
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_fit_state.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_NLOPT_2_2
-#include <nlopt.h>
-#endif /* HAVE_NLOPT_2_2 */
-
-#include <gsl/gsl_multifit_nlin.h>
-#include <gsl/gsl_multimin.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FIT (ncm_fit_get_type ())
@@ -141,7 +132,7 @@ struct _NcmFitClass
   gpointer padding[13];
 };
 
-NcmFit *ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+NcmFit *ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_ref (NcmFit *fit);
 NcmFit *ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_dup (NcmFit *fit, NcmSerialize *ser);
@@ -150,6 +141,7 @@ void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit);
 NcmFit *ncm_fit_get_sub_fit (NcmFit *fit);
+gboolean ncm_fit_has_sub_fit (NcmFit *fit);
 
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
 void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
@@ -211,6 +203,8 @@ void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_obs_fisher (NcmFit *fit);
 void ncm_fit_ls_fisher (NcmFit *fit);
 void ncm_fit_fisher (NcmFit *fit);
+
+G_DEPRECATED_FOR (ncm_fit_obs_fisher)
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
 
 gdouble ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit);

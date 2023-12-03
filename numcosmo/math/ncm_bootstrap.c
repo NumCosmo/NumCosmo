@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_bootstrap.c
  *
@@ -65,7 +66,7 @@ struct _NcmBootstrap
 };
 
 
-G_DEFINE_TYPE (NcmBootstrap, ncm_bootstrap, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmBootstrap, ncm_bootstrap, G_TYPE_OBJECT)
 
 static void
 ncm_bootstrap_init (NcmBootstrap *bstrap)
@@ -153,6 +154,7 @@ _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GPar
 
 #if GLIB_CHECK_VERSION (2, 68, 0)
         gpointer mem = g_memdup2 (bstrap->bootstrap_index->data, msize);
+
 #else
         gpointer mem = g_memdup (bstrap->bootstrap_index->data, msize);
 #endif /* GLIB_CHECK_VERSION(2,68,0) */
@@ -478,7 +480,7 @@ static gint _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b);
 GArray *
 ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
 {
-  GArray *res = g_array_sized_new (FALSE, TRUE, sizeof (guint), bstrap->bsize);
+  GArray *res     = g_array_sized_new (FALSE, TRUE, sizeof (guint), bstrap->bsize);
   const guint one = 1;
   guint i, j, n_c;
 
@@ -493,6 +495,7 @@ ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
   for (i = 1; i < bstrap->bsize; i++)
   {
     const guint n_i = g_array_index (bstrap->bootstrap_index, guint, i);
+
     if (n_i == n_c)
     {
       g_array_index (res, guint, 2 * j + 1)++;

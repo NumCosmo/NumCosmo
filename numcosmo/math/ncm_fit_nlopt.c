@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
 
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_cfg.h"
@@ -60,12 +60,12 @@ struct _NcmFitNLOpt
 {
   /*< private >*/
   NcmFit parent_instance;
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   nlopt_opt nlopt;
   nlopt_opt local_nlopt;
   NcmFitNloptAlgorithm nlopt_algo;
   NcmFitNloptAlgorithm local_nlopt_algo;
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
   NcmVector *lb;
   NcmVector *ub;
   NcmVector *pabs;
@@ -74,7 +74,7 @@ struct _NcmFitNLOpt
   guint fparam_len;
 };
 
-G_DEFINE_TYPE (NcmFitNLOpt, ncm_fit_nlopt, NCM_TYPE_FIT);
+G_DEFINE_TYPE (NcmFitNLOpt, ncm_fit_nlopt, NCM_TYPE_FIT)
 
 static void
 ncm_fit_nlopt_init (NcmFitNLOpt *fit_nlopt)
@@ -399,7 +399,11 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   }
 
   {
-    const gdouble m2lnL_prec = ncm_fit_state_get_m2lnL_prec (fstate);
+    /*
+     * When subfitting the precision is degraded since any new parameter setting
+     * triggers a new subfit. So we need to decrease the precision.
+     */
+    const gdouble m2lnL_prec = ncm_fit_has_sub_fit (fit) ? ncm_fit_state_get_m2lnL_prec (fstate) * 1.0e2 : ncm_fit_state_get_m2lnL_prec (fstate);
     gdouble m2lnL            = 0.0;
 
     ncm_fit_params_set_vector (fit, fparams);
@@ -408,6 +412,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     if (ncm_cmp (m2lnL, minf, m2lnL_prec, 0.0) != 0)
       g_warning ("_ncm_fit_nlopt_run: algorithm minimum differs from evaluated m2lnL % 22.15g != % 22.15g (prec = %e)\n",
                  m2lnL, minf, m2lnL_prec);
+
 
     ncm_fit_state_set_m2lnL_curval (fstate, minf);
   }
@@ -421,6 +426,7 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   NcmFit *fit         = NCM_FIT (userdata);
   NcmFitState *fstate = ncm_fit_peek_state (fit);
   NcmMSet *mset       = ncm_fit_peek_mset (fit);
+
   gdouble m2lnL;
   guint i;
 
@@ -462,6 +468,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   NcmFit *fit          = fc->fit;
   NcmMSet *mset        = ncm_fit_peek_mset (fit);
   NcmFitState *fstate  = ncm_fit_peek_state (fit);
+
   gdouble constraint;
 
   ncm_fit_state_add_func_eval (fstate, 1);
@@ -652,8 +659,9 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 void
 ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 {
-  NcmFit *fit            = NCM_FIT (fit_nlopt);
-  NcmFitState *fstate    = ncm_fit_peek_state (fit);
+  NcmFit *fit         = NCM_FIT (fit_nlopt);
+  NcmFitState *fstate = ncm_fit_peek_state (fit);
+
   const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->nlopt_algo != algo)
@@ -661,7 +669,7 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 
   if (fit_nlopt->nlopt == NULL)
   {
-    fit_nlopt->nlopt      = nlopt_create (algo, fparam_len);
+    fit_nlopt->nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
     fit_nlopt->nlopt_algo = algo;
   }
 
@@ -683,8 +691,9 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 void
 ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 {
-  NcmFit *fit            = NCM_FIT (fit_nlopt);
-  NcmFitState *fstate    = ncm_fit_peek_state (fit);
+  NcmFit *fit         = NCM_FIT (fit_nlopt);
+  NcmFitState *fstate = ncm_fit_peek_state (fit);
+
   const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->local_nlopt_algo != algo)
@@ -692,7 +701,7 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
 
   if (fit_nlopt->local_nlopt == NULL)
   {
-    fit_nlopt->local_nlopt      = nlopt_create (algo, fparam_len);
+    fit_nlopt->local_nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
     fit_nlopt->local_nlopt_algo = algo;
   }
 
@@ -703,5 +712,5 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
   }
 }
 
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
