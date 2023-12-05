@@ -264,11 +264,6 @@ _nc_data_cluster_wll_prepare (NcmData *data, NcmMSet *mset)
   g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL));
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
-
-  if (self->kde)
-    printf ("KDE\n");
-  else
-    printf ("No KDE\n");
 }
 
 /**
