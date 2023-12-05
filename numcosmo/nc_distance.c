@@ -131,7 +131,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDistance, nc_distance, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcDistance, nc_distance, G_TYPE_OBJECT)
 
 static void
 nc_distance_init (NcDistance *dist)

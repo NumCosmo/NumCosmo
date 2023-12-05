@@ -39,7 +39,7 @@
 #include "model/nc_hicosmo_de_xcdm.h"
 #include "model/nc_hicosmo_de_cpl.h"
 
-G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE)
 
 enum
 {

@@ -112,7 +112,7 @@ enum
   PROP_X_I,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT)
 
 static void
 nc_growth_func_init (NcGrowthFunc *gf)

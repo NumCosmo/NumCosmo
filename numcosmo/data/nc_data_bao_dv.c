@@ -30,6 +30,11 @@
  *
  * See [Eisenstein et al. (2005)][XEisenstein2005].
  *
+ * The data is stored in a #NcDataBaoDV object. The data is stored in a
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
+ * The data represents the mean values of the volume mean $D_V$ at the redshift
+ * $z$.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,7 +54,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDV, nc_data_bao_dv, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataBaoDV, nc_data_bao_dv, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_bao_dv_init (NcDataBaoDV *bao_dv)
@@ -62,6 +67,7 @@ static void
 nc_data_bao_dv_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DV (object));
 
   switch (prop_id)
@@ -82,6 +88,7 @@ static void
 nc_data_bao_dv_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DV (object));
 
   switch (prop_id)
@@ -110,7 +117,6 @@ nc_data_bao_dv_dispose (GObject *object)
   G_OBJECT_CLASS (nc_data_bao_dv_parent_class)->dispose (object);
 }
 
-
 static void
 nc_data_bao_dv_finalize (GObject *object)
 {
@@ -125,9 +131,9 @@ static void _nc_data_bao_dv_set_size (NcmDataGaussDiag *diag, guint np);
 static void
 nc_data_bao_dv_class_init (NcDataBaoDVClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass* diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
+  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
   object_class->set_property = &nc_data_bao_dv_set_property;
   object_class->get_property = &nc_data_bao_dv_get_property;
@@ -159,7 +165,8 @@ static void
 _nc_data_bao_dv_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (bao_dv->dist, cosmo);
 }
 
@@ -173,8 +180,9 @@ _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 
   for (i = 0; i < np; i++)
   {
-    const gdouble z = ncm_vector_get (bao_dv->x, i);
+    const gdouble z  = ncm_vector_get (bao_dv->x, i);
     const gdouble DV = nc_distance_dilation_scale (bao_dv->dist, cosmo, z) * nc_hicosmo_RH_Mpc (cosmo);
+
     ncm_vector_set (vp, i, DV);
   }
 }
@@ -207,6 +215,7 @@ NcDataBaoDV *
 nc_data_bao_dv_new_from_file (const gchar *filename)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_BAO_DV (bao_dv));
 
   return bao_dv;
@@ -217,7 +226,8 @@ nc_data_bao_dv_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
- * FIXME
+ * Creates a new acustic scale data object #NcDataBaoDV from @id.
+ * This object requires a #NcDistance object to be set.
  *
  * Returns: a #NcDataBaoDV
  */
@@ -258,3 +268,4 @@ nc_data_bao_dv_set_dist (NcDataBaoDV *bao_dv, NcDistance *dist)
   nc_distance_clear (&bao_dv->dist);
   bao_dv->dist = nc_distance_ref (dist);
 }
+

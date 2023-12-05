@@ -81,15 +81,9 @@ struct _NcXcorClass
 {
   /*< private > */
   GObjectClass parent_class;
-  
+
   gpointer (*alloc) (void);
 };
-
-typedef struct _NcXcorKinetic
-{
-  gdouble xi_z;
-  gdouble E_z;
-} NcXcorKinetic;
 
 GType nc_xcor_get_type (void) G_GNUC_CONST;
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
@@ -98,9 +92,6 @@ NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
 NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
-
-NcXcorKinetic *nc_xcor_kinetic_copy (NcXcorKinetic *xck);
-void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 

@@ -294,7 +294,6 @@ void nc_hicosmo_set_MassNuInfo_impl (NcHICosmoClass *model_class, NcHICosmoFuncM
 
 void nc_hicosmo_set_get_bg_var_impl (NcHICosmoClass *model_class, NcHICosmoGetBGVar f);
 
-NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
 void nc_hicosmo_free (NcHICosmo *cosmo);
 void nc_hicosmo_clear (NcHICosmo **cosmo);

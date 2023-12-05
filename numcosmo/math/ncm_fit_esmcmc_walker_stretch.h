@@ -35,41 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH             (ncm_fit_esmcmc_walker_stretch_get_type ())
-#define NCM_FIT_ESMCMC_WALKER_STRETCH(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH, NcmFitESMCMCWalkerStretch))
-#define NCM_FIT_ESMCMC_WALKER_STRETCH_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH, NcmFitESMCMCWalkerStretchClass))
-#define NCM_IS_FIT_ESMCMC_WALKER_STRETCH(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH))
-#define NCM_IS_FIT_ESMCMC_WALKER_STRETCH_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH))
-#define NCM_FIT_ESMCMC_WALKER_STRETCH_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH, NcmFitESMCMCWalkerStretchClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH (ncm_fit_esmcmc_walker_stretch_get_type ())
 
-typedef struct _NcmFitESMCMCWalkerStretchClass NcmFitESMCMCWalkerStretchClass;
-typedef struct _NcmFitESMCMCWalkerStretch NcmFitESMCMCWalkerStretch;
-
-struct _NcmFitESMCMCWalkerStretchClass
-{
-  /*< private >*/
-  NcmFitESMCMCWalkerClass parent_class;
-};
-
-struct _NcmFitESMCMCWalkerStretch
-{
-  /*< private >*/
-  NcmFitESMCMCWalker parent_instance;
-  guint size;
-  guint size_2;
-  guint nparams;
-  gdouble a;
-  NcmMatrix *z;
-  NcmMatrix *box;
-  NcmVector *norm_box;
-  GArray *use_box;
-  GArray *indices;
-  GArray *numbers;
-  gboolean multi;
-  gchar *desc;
-};
-
-GType ncm_fit_esmcmc_walker_stretch_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerStretch, ncm_fit_esmcmc_walker_stretch, NCM, FIT_ESMCMC_WALKER_STRETCH, NcmFitESMCMCWalker)
 
 NcmFitESMCMCWalkerStretch *ncm_fit_esmcmc_walker_stretch_new (guint nwalkers, guint nparams);
 

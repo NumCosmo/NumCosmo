@@ -51,7 +51,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcPlanckFICorTT, nc_planck_fi_cor_tt, NC_TYPE_PLANCK_FI);
+G_DEFINE_TYPE (NcPlanckFICorTT, nc_planck_fi_cor_tt, NC_TYPE_PLANCK_FI)
 
 static void
 nc_planck_fi_cor_tt_init (NcPlanckFICorTT *nc_planck_fi_cor_tt)

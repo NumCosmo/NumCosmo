@@ -76,7 +76,7 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC_TYPE_HALO_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC_TYPE_HALO_DENSITY_PROFILE)
 
 #define VECTOR  (NCM_MODEL (dpnfw)->params)
 #define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))

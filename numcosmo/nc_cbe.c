@@ -93,7 +93,7 @@ struct _NcCBEPrivate
   struct lensing ple;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBE, nc_cbe, G_TYPE_OBJECT)
 
 static void
 nc_cbe_init (NcCBE *cbe)
@@ -102,7 +102,11 @@ nc_cbe_init (NcCBE *cbe)
   cbe->prec       = NULL;
   cbe->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   cbe->ctrl_prim  = ncm_model_ctrl_new (NULL);
+<<<<<<< HEAD
   cbe->a          = nc_scalefactor_new (10.0, NULL);
+=======
+  cbe->a          = NULL;
+>>>>>>> master
 
   cbe->target_Cls     = 0;
   cbe->calc_transfer  = FALSE;
@@ -119,6 +123,7 @@ nc_cbe_init (NcCBE *cbe)
 
   /* background structure */
 
+<<<<<<< HEAD
   cbe->priv->pba.N_ncdm              = 0;
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
@@ -134,6 +139,49 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pba.use_ppf             = _FALSE_;
   cbe->priv->pba.c_gamma_over_c_fld  = 0.0;
   cbe->priv->pba.shooting_failed     = _FALSE_;
+=======
+  cbe->priv->pba.h                       = 0.0;
+  cbe->priv->pba.H0                      = 0.0;
+  cbe->priv->pba.T_cmb                   = 0.0;
+  cbe->priv->pba.Omega0_g                = 0.0;
+  cbe->priv->pba.Omega0_ur               = 0.0;
+  cbe->priv->pba.Omega0_b                = 0.0;
+  cbe->priv->pba.Omega0_cdm              = 0.0;
+  cbe->priv->pba.Omega0_dcdmdr           = 0.0;
+  cbe->priv->pba.Omega0_dcdm             = 0.0;
+  cbe->priv->pba.Gamma_dcdm              = 0.0;
+  cbe->priv->pba.N_ncdm                  = 0;
+  cbe->priv->pba.Omega0_ncdm_tot         = 0.0;
+  cbe->priv->pba.ksi_ncdm_default        = 0.0;
+  cbe->priv->pba.ksi_ncdm                = NULL;
+  cbe->priv->pba.T_ncdm_default          = 0.0;
+  cbe->priv->pba.T_ncdm                  = NULL;
+  cbe->priv->pba.deg_ncdm_default        = 0.0;
+  cbe->priv->pba.deg_ncdm                = NULL;
+  cbe->priv->pba.ncdm_psd_parameters     = NULL;
+  cbe->priv->pba.ncdm_psd_files          = NULL;
+  cbe->priv->pba.Omega0_scf              = 0.0;
+  cbe->priv->pba.attractor_ic_scf        = _FALSE_;
+  cbe->priv->pba.scf_parameters          = NULL;
+  cbe->priv->pba.scf_parameters_size     = 0;
+  cbe->priv->pba.scf_tuning_index        = 0;
+  cbe->priv->pba.phi_ini_scf             = 0;
+  cbe->priv->pba.phi_prime_ini_scf       = 0;
+  cbe->priv->pba.Omega0_k                = 0.0;
+  cbe->priv->pba.K                       = 0.0;
+  cbe->priv->pba.sgnK                    = 0;
+  cbe->priv->pba.Omega0_lambda           = 0.0;
+  cbe->priv->pba.Omega0_fld              = 0.0;
+  cbe->priv->pba.fluid_equation_of_state = 0;
+  cbe->priv->pba.a_today                 = 0.0;
+  cbe->priv->pba.w0_fld                  = 0.0;
+  cbe->priv->pba.wa_fld                  = 0.0;
+  cbe->priv->pba.Omega_EDE               = 0.0;
+  cbe->priv->pba.cs2_fld                 = 0.0;
+  cbe->priv->pba.use_ppf                 = _FALSE_;
+  cbe->priv->pba.c_gamma_over_c_fld      = 0.0;
+  cbe->priv->pba.shooting_failed         = _FALSE_;
+>>>>>>> master
 
   cbe->priv->pba.got_files                = NULL;
   cbe->priv->pba.m_ncdm_in_eV             = NULL;
@@ -1134,10 +1182,23 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   if (!g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     g_error ("_nc_cbe_set_bg: CLASS backend is compatible with darkenergy models only.");
 
+<<<<<<< HEAD
   cbe->priv->pba.cosmo       = cosmo;
   cbe->priv->pba.scalefactor = cbe->a;
   cbe->priv->pba.dist        = nc_scalefactor_peek_distance (cbe->a);
 
+=======
+  cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
+  cbe->priv->pba.H0                  = cbe->priv->pba.h * 1.0e5 / ncm_c_c ();
+  cbe->priv->pba.T_cmb               = nc_hicosmo_T_gamma0 (cosmo);
+  cbe->priv->pba.Omega0_g            = nc_hicosmo_Omega_g0 (cosmo);
+  cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu0 (cosmo);
+  cbe->priv->pba.Omega0_b            = nc_hicosmo_Omega_b0 (cosmo);
+  cbe->priv->pba.Omega0_cdm          = nc_hicosmo_Omega_c0 (cosmo);
+  cbe->priv->pba.Omega0_dcdmdr       = 0.0;
+  cbe->priv->pba.Omega0_dcdm         = 0.0;
+  cbe->priv->pba.Gamma_dcdm          = 0.0;
+>>>>>>> master
   cbe->priv->pba.Omega0_ncdm_tot     = 0.0;
   cbe->priv->pba.ksi_ncdm_default    = 0.0;
   cbe->priv->pba.ksi_ncdm            = NULL;
@@ -1172,7 +1233,13 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 
       pba->Omega0_ncdm_tot = 0.0;
 
+<<<<<<< HEAD
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
+=======
+      g_assert_cmpuint (pba->N_ncdm, >=, 0);
+
+      for (nu_i = 0; nu_i < (guint) pba->N_ncdm; nu_i++)
+>>>>>>> master
       {
         pba->got_files[nu_i] = _FALSE_;
 
@@ -1216,7 +1283,11 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
                                    NULL,
                                    NULL);
 
+<<<<<<< HEAD
           pba->Omega0_ncdm[n] = rho_ncdm / H0 / H0;
+=======
+          pba->Omega0_ncdm[n] = rho_ncdm / pba->H0 / pba->H0;
+>>>>>>> master
         }
         else
         {
@@ -1241,6 +1312,7 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     }
   }
 
+<<<<<<< HEAD
   cbe->priv->pba.cs2_fld = 1.0;
   cbe->priv->pba.a_today = 1.0;
 
@@ -1248,6 +1320,80 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
 
   cbe->priv->pba.c_gamma_over_c_fld = 0.4;
+=======
+  cbe->priv->pba.Omega0_scf       = 0.0;
+  cbe->priv->pba.attractor_ic_scf = _TRUE_;
+  cbe->priv->pba.scf_parameters   = NULL;
+
+  cbe->priv->pba.scf_parameters_size = 0;
+  cbe->priv->pba.scf_tuning_index    = 0;
+  cbe->priv->pba.phi_ini_scf         = 1;
+  cbe->priv->pba.phi_prime_ini_scf   = 1;
+
+  cbe->priv->pba.Omega0_k = nc_hicosmo_Omega_k0 (cosmo);
+
+  if (fabs (cbe->priv->pba.Omega0_k) > NC_HICOSMO_OMEGA_K0_LIMIT)
+  {
+    cbe->priv->pba.a_today = 1.0;
+    cbe->priv->pba.K       = -cbe->priv->pba.Omega0_k * gsl_pow_2 (cbe->priv->pba.a_today * cbe->priv->pba.H0);
+    cbe->priv->pba.sgnK    = GSL_SIGN (cbe->priv->pba.K);
+  }
+  else
+  {
+    cbe->priv->pba.Omega0_k = 0.0;
+    cbe->priv->pba.a_today  = 1.0;
+    cbe->priv->pba.K        = 0.0;
+    cbe->priv->pba.sgnK     = 0;
+  }
+
+  if (NC_IS_HICOSMO_DE_XCDM (cosmo))
+  {
+    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
+    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+
+    if (w0 != -1.0)
+    {
+      cbe->priv->pba.fluid_equation_of_state = CLP;
+      cbe->priv->pba.Omega0_lambda           = 0.0; /* Disable cosmological constant in CLASS */
+
+      cbe->priv->pba.Omega0_fld = Omega_X0; /* Enable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld     = w0;
+      cbe->priv->pba.wa_fld     = 0.0;
+      cbe->priv->pba.cs2_fld    = 1.0;
+    }
+    else
+    {
+      cbe->priv->pba.Omega0_lambda = Omega_X0; /* Enable cosmological constant in CLASS */
+
+      cbe->priv->pba.Omega0_fld = 0.0; /* Disable DE fluid in CLASS */
+      cbe->priv->pba.w0_fld     = -1.0;
+      cbe->priv->pba.wa_fld     = 0.0;
+      cbe->priv->pba.cs2_fld    = 1.0;
+    }
+  }
+  else if (NC_IS_HICOSMO_DE_CPL (cosmo))
+  {
+    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0);
+    const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1);
+    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+
+    cbe->priv->pba.fluid_equation_of_state = CLP;
+    cbe->priv->pba.Omega0_lambda           = 0.0; /* Disable cosmological constant in CLASS */
+
+    cbe->priv->pba.Omega0_fld = Omega_X0; /* Enable DE fluid in CLASS */
+    cbe->priv->pba.w0_fld     = w0;
+    cbe->priv->pba.wa_fld     = w1;
+    cbe->priv->pba.cs2_fld    = 1.0;
+  }
+  else
+  {
+    g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
+  }
+
+  cbe->priv->pba.Omega_EDE          = 0.0;
+  cbe->priv->pba.c_gamma_over_c_fld = 0.4;
+  cbe->priv->pba.Omega_ini_dcdm     = 0.0;
+>>>>>>> master
 
   cbe->priv->pba.shooting_failed    = _FALSE_;
   cbe->priv->pba.background_verbose = cbe->bg_verbose;
@@ -1584,6 +1730,23 @@ _nc_cbe_call_thermo (NcCBE *cbe, NcHICosmo *cosmo)
 
   _nc_cbe_set_thermo (cbe, cosmo);
 
+<<<<<<< HEAD
+=======
+  if (FALSE)
+  {
+    struct background *pba = &cbe->priv->pba;
+    struct thermo *pth     = &cbe->priv->pth;
+
+    printf ("#NC:  % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g %d % 22.15g % 22.15g\n",
+            pba->h, pba->T_cmb, pba->Omega0_g, pba->Omega0_ur,
+            pba->Omega0_b, pba->Omega0_cdm, pba->Omega0_dcdmdr, pba->Omega0_dcdm,
+            pba->Gamma_dcdm, pba->N_ncdm, pba->Omega0_ncdm_tot, pba->Omega0_scf,
+            pba->Omega0_k, pba->Omega0_lambda, pba->Omega0_fld, pba->a_today,
+            pba->w0_fld, pba->wa_fld, pba->cs2_fld, pba->use_ppf, pba->c_gamma_over_c_fld,
+            pth->z_reio);
+  }
+
+>>>>>>> master
   if (thermodynamics_init (ppr, &cbe->priv->pba, &cbe->priv->pth) == _FAILURE_)
     g_error ("_nc_cbe_call_thermo: Error running thermodynamics_init `%s'\n", cbe->priv->pth.error_message);
 }
@@ -1916,15 +2079,36 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
 {
   nc_cbe_prepare (cbe, cosmo);
   {
+<<<<<<< HEAD
     struct background *pba  = &cbe->priv->pba;
     const gdouble RH        = nc_hicosmo_RH_Mpc (cosmo);
     const gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
     const gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
     gdouble err             = 0.0;
+=======
+    struct precision *ppr  = (struct precision *) cbe->prec->priv;
+    struct background *pba = &cbe->priv->pba;
+    const gdouble RH       = nc_hicosmo_RH_Mpc (cosmo);
+    const gdouble zf       = 1.0 / ppr->a_ini_over_a_today_default;
+
+>>>>>>> master
     gdouble pvecback[pba->bg_size];
     guint i;
 
+<<<<<<< HEAD
     for (i = 0; i < pba->bt_size; i++)
+=======
+    if (cbe->a == NULL)
+      cbe->a = nc_scalefactor_new (zf, NULL);
+    else
+      nc_scalefactor_set_zf (cbe->a, zf);
+
+    nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
+
+    g_assert_cmpint (pba->bt_size, >=, 0);
+
+    for (i = 0; i < (guint) pba->bt_size; i++)
+>>>>>>> master
     {
       gint last_index = 0;
 
@@ -1950,7 +2134,11 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
         const gdouble rho_b      = nc_hicosmo_E2Omega_b  (cosmo, z) * RH_pow_m2;
         const gdouble rho_cdm    = nc_hicosmo_E2Omega_c  (cosmo, z) * RH_pow_m2;
         const gdouble rho_Lambda = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) * RH_pow_m2;
+<<<<<<< HEAD
         /* const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2; */
+=======
+        const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2;
+>>>>>>> master
 
         /* CLASS defines Omega_X = rho_X / rho_total */
         const gdouble E2Omega_t = nc_hicosmo_E2Omega_t (cosmo, z);
@@ -1975,7 +2163,11 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
           const gdouble Omega_m0_diff = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
           const gdouble Omega_r0_diff = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
 
+<<<<<<< HEAD
           /*const gdouble Omega_k_diff  = (rho_k == -pba->K / a / a) ? 0.0 : fabs ((rho_k - (-pba->K / a / a)) / (-pba->K / a / a + 1.0 - 2)); */
+=======
+          const gdouble Omega_k_diff  = (rho_k == -pba->K / a / a) ? 0.0 : fabs ((rho_k - (-pba->K / a / a)) / (-pba->K / a / a + 1.0 - 2));
+>>>>>>> master
           const gdouble rho_crit_diff = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
 
           err = GSL_MAX (err, a_diff);
@@ -2097,15 +2289,27 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
   const gint partz   = 4;
   const gint z_tsize = (z_size - 1) * partz + 1;
 
+<<<<<<< HEAD
   NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
   NcmVector *z_v = ncm_vector_new (z_tsize);
   NcmMatrix *lnPk = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+=======
+  NcmVector *lnk_v  = ncm_vector_new (cbe->priv->psp.ln_k_size);
+  NcmVector *z_v    = ncm_vector_new (z_tsize);
+  NcmMatrix *lnPk   = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+>>>>>>> master
   gdouble *pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
-  gdouble *temp = g_new (gdouble, cbe->priv->psp.ln_k_size);
+  gdouble *temp     = g_new (gdouble, cbe->priv->psp.ln_k_size);
   gdouble z_i_a, z_i_b = 0.0;
   guint i, m;
 
+<<<<<<< HEAD
   for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
+=======
+  g_assert_cmpint (cbe->priv->psp.ln_k_size, >=, 0);
+
+  for (i = 0; i < (guint) cbe->priv->psp.ln_k_size; i++)
+>>>>>>> master
   {
     ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
   }
@@ -2142,7 +2346,11 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
     }
   }
 
+<<<<<<< HEAD
   for (i = 1; i < z_size - 1; i++)
+=======
+  for (i = 1; i + 1 < (guint) z_size; i++)
+>>>>>>> master
   {
     gdouble ln_tau_i;
     gint last_index_back;

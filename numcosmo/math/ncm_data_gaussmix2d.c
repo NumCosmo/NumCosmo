@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_gaussmix2d.c
  *
@@ -45,17 +46,21 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmDataGaussMix2DPrivate
+typedef struct _NcmDataGaussMix2DPrivate
 {
   gint unused;
+} NcmDataGaussMix2DPrivate;
+
+struct _NcmDataGaussMix2D
+{
+  NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA)
 
 static void
 ncm_data_gaussmix2d_init (NcmDataGaussMix2D *gm2d)
 {
-  gm2d->priv = ncm_data_gaussmix2d_get_instance_private (gm2d);
 }
 
 static void

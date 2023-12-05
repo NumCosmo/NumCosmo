@@ -43,7 +43,7 @@
 
 #include "nc_hiprim_power_law.h"
 
-G_DEFINE_TYPE (NcHIPrimPowerLaw, nc_hiprim_power_law, NC_TYPE_HIPRIM);
+G_DEFINE_TYPE (NcHIPrimPowerLaw, nc_hiprim_power_law, NC_TYPE_HIPRIM)
 
 enum {
   PROP_0,

@@ -38,7 +38,7 @@
 
 #include "model/nc_hicosmo_de_jbp.h"
 
-G_DEFINE_TYPE (NcHICosmoDEJbp, nc_hicosmo_de_jbp, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE (NcHICosmoDEJbp, nc_hicosmo_de_jbp, NC_TYPE_HICOSMO_DE)
 
 
 enum

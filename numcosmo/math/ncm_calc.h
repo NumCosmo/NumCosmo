@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -51,7 +51,7 @@ typedef void (*NcmCalcPrepare4) (NcmCalc *calc, NcmModel *m1, NcmModel *m2, NcmM
 typedef void (*NcmCalcPrepare5) (NcmCalc *calc, NcmModel *m1, NcmModel *m2, NcmModel *m3, NcmModel *m4, NcmModel *m5);
 typedef void (*NcmCalcPrepare6) (NcmCalc *calc, NcmModel *m1, NcmModel *m2, NcmModel *m3, NcmModel *m4, NcmModel *m5, NcmModel *m6);
 
-#define NCM_CALC_PREPARE(prepare_ptr) ((NcmCalcPrepare0 *)(prepare_ptr))
+#define NCM_CALC_PREPARE(prepare_ptr) ((NcmCalcPrepare0 *) (prepare_ptr))
 
 struct _NcmCalcClass
 {
@@ -94,3 +94,4 @@ gdouble ncm_calc_get_abstol (NcmCalc *calc);
 G_END_DECLS
 
 #endif /* _NCM_CALC_H_ */
+

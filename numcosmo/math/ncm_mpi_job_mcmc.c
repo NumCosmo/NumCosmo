@@ -66,16 +66,16 @@ enum
   PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
 {
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
-  
+
   self->fit     = NULL;
   self->func_oa = NULL;
-  
+
   self->fparam_len = 0;
   self->nadd_vals  = 0;
 
@@ -87,9 +87,9 @@ _ncm_mpi_job_mcmc_set_property (GObject *object, guint prop_id, const GValue *va
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   g_return_if_fail (NCM_IS_MPI_JOB_MCMC (object));
-  
+
   switch (prop_id)
   {
     case PROP_FIT:
@@ -101,21 +101,21 @@ _ncm_mpi_job_mcmc_set_property (GObject *object, guint prop_id, const GValue *va
     {
       ncm_obj_array_clear (&self->func_oa);
       self->func_oa = g_value_dup_boxed (value);
-      
+
       if (self->func_oa != NULL)
       {
         guint i;
-        
+
         for (i = 0; i < self->func_oa->len; i++)
         {
           NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
-          
+
           g_assert (NCM_IS_MSET_FUNC (func));
           g_assert (ncm_mset_func_is_scalar (func));
           g_assert (ncm_mset_func_is_const (func));
         }
       }
-      
+
       break;
     }
     default:
@@ -129,9 +129,9 @@ _ncm_mpi_job_mcmc_get_property (GObject *object, guint prop_id, GValue *value, G
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   g_return_if_fail (NCM_IS_MPI_JOB_MCMC (object));
-  
+
   switch (prop_id)
   {
     case PROP_FIT:
@@ -151,10 +151,11 @@ _ncm_mpi_job_mcmc_constructed (GObject *object)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
-  self->fparam_len = ncm_mset_fparam_len (self->fit->mset);
+  NcmMSet *mset                     = ncm_fit_peek_mset (self->fit);
+
+  self->fparam_len = ncm_mset_fparam_len (mset);
   self->nadd_vals  = 1 + ((self->func_oa != NULL) ? self->func_oa->len : 0);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_mcmc_parent_class)->constructed (object);
 }
@@ -164,12 +165,12 @@ _ncm_mpi_job_mcmc_dispose (GObject *object)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
   ncm_timer_clear (&self->nt);
-  
-  
+
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_mcmc_parent_class)->dispose (object);
 }
@@ -209,13 +210,13 @@ ncm_mpi_job_mcmc_class_init (NcmMPIJobMCMCClass *klass)
 {
   GObjectClass *object_class    = G_OBJECT_CLASS (klass);
   NcmMPIJobClass *mpi_job_class = NCM_MPI_JOB_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_mpi_job_mcmc_set_property;
   object_class->get_property = &_ncm_mpi_job_mcmc_get_property;
   object_class->constructed  = &_ncm_mpi_job_mcmc_constructed;
   object_class->dispose      = &_ncm_mpi_job_mcmc_dispose;
   object_class->finalize     = &_ncm_mpi_job_mcmc_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_FIT,
                                    g_param_spec_object ("fit",
@@ -230,28 +231,28 @@ ncm_mpi_job_mcmc_class_init (NcmMPIJobMCMCClass *klass)
                                                        "Functions array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   mpi_job_class->input_datatype  = &_ncm_mpi_job_mcmc_input_datatype;
   mpi_job_class->return_datatype = &_ncm_mpi_job_mcmc_return_datatype;
-  
+
   mpi_job_class->create_input  = &_ncm_mpi_job_mcmc_create_input;
   mpi_job_class->create_return = &_ncm_mpi_job_mcmc_create_return;
-  
+
   mpi_job_class->destroy_input  = &_ncm_mpi_job_mcmc_destroy_input;
   mpi_job_class->destroy_return = &_ncm_mpi_job_mcmc_destroy_return;
-  
+
   mpi_job_class->get_input_buffer  = &_ncm_mpi_job_mcmc_get_input_buffer;
   mpi_job_class->get_return_buffer = &_ncm_mpi_job_mcmc_get_return_buffer;
-  
+
   mpi_job_class->destroy_input_buffer  = &_ncm_mpi_job_mcmc_destroy_input_buffer;
   mpi_job_class->destroy_return_buffer = &_ncm_mpi_job_mcmc_destroy_return_buffer;
-  
+
   mpi_job_class->pack_input  = &_ncm_mpi_job_mcmc_pack_input;
   mpi_job_class->pack_return = &_ncm_mpi_job_mcmc_pack_return;
-  
+
   mpi_job_class->unpack_input  = &_ncm_mpi_job_mcmc_unpack_input;
   mpi_job_class->unpack_return = &_ncm_mpi_job_mcmc_unpack_return;
-  
+
   mpi_job_class->run = &_ncm_mpi_job_mcmc_run;
 }
 
@@ -260,10 +261,10 @@ _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   len[0]  = self->fparam_len + NCM_FIT_ESMCMC_MPI_IN_LEN;
   size[0] = sizeof (gdouble) * len[0];
-  
+
   return MPI_DOUBLE;
 }
 
@@ -272,10 +273,10 @@ _ncm_mpi_job_mcmc_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   len[0]  = NCM_FIT_ESMCMC_MPI_OUT_LEN + self->nadd_vals;
   size[0] = sizeof (gdouble) * len[0];
-  
+
   return MPI_DOUBLE;
 }
 
@@ -284,7 +285,7 @@ _ncm_mpi_job_mcmc_create_input (NcmMPIJob *mpi_job)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   return ncm_vector_new (self->fparam_len + NCM_FIT_ESMCMC_MPI_IN_LEN);
 }
 
@@ -293,7 +294,7 @@ _ncm_mpi_job_mcmc_create_return (NcmMPIJob *mpi_job)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
   NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
-  
+
   return ncm_vector_new (NCM_FIT_ESMCMC_MPI_OUT_LEN + self->nadd_vals);
 }
 
@@ -362,15 +363,17 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
   NcmMPIJobMCMC *mjt                = NCM_MPI_JOB_MCMC (mpi_job);
   NcmMPIJobMCMCPrivate * const self = mjt->priv;
+  NcmMSet *mset                     = ncm_fit_peek_mset (self->fit);
   const gdouble m2lnL_cur           = ncm_vector_get (input, self->fparam_len + 0);
   const gdouble norm                = ncm_vector_get (input, self->fparam_len + 1);
   const gdouble jump                = ncm_vector_get (input, self->fparam_len + 2);
   gdouble *m2lnL_star               = ncm_vector_ptr (ret, NCM_FIT_ESMCMC_MPI_OUT_LEN);
   gdouble prob                      = 0.0;
   gboolean accepted                 = FALSE;
-  
+
   ncm_fit_params_set_vector (self->fit, input);
-  if (!ncm_mset_params_valid (self->fit->mset))
+
+  if (!ncm_mset_params_valid (mset))
     m2lnL_star[0] = GSL_POSINF;
   else
     ncm_fit_m2lnL_val (self->fit, m2lnL_star);
@@ -388,21 +391,21 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
       accepted = TRUE;
     }
   }
-  
+
   if (accepted)
   {
     ncm_vector_set (ret, 0, 1.0);
-    
+
     /*printf ("# has oa?! %p\n", self->func_oa);*/
     if (self->func_oa != NULL)
     {
-      gint i;
-      
+      guint i;
+
       for (i = 0; i < self->func_oa->len; i++)
       {
         NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
-        const gdouble a_i = ncm_mset_func_eval0 (func, self->fit->mset);
-        
+        const gdouble a_i = ncm_mset_func_eval0 (func, mset);
+
         /*printf ("### %d % 22.15g\n", i, a_i);*/
         ncm_vector_set (ret, i + 1 + NCM_FIT_ESMCMC_MPI_OUT_LEN, a_i);
       }
@@ -430,7 +433,7 @@ ncm_mpi_job_mcmc_new (NcmFit *fit, NcmObjArray *func_oa)
                                         "fit",            fit,
                                         "function-array", func_oa,
                                         NULL);
-  
+
   return mjmcmc;
 }
 

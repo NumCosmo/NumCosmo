@@ -60,7 +60,7 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL);
+G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL)
 
 #define VECTOR (NCM_MODEL (xclkg)->params)
 #define MAG_BIAS (ncm_vector_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))

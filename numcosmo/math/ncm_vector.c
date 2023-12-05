@@ -40,15 +40,16 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_cblas.h" /* This must be included before any gsl header */
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -57,7 +58,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT)
 
 static void
 ncm_vector_init (NcmVector *cv)
@@ -243,12 +244,20 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
+#ifdef HAVE_FFTW3
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
 
   cv->type = NCM_VECTOR_MALLOC;
 
   return cv;
+
+#else
+  g_error ("ncm_vector_new_fftw: fftw3 not available");
+
+  return NULL;
+
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -618,6 +627,31 @@ ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
   scv->pfree = (GDestroyNotify) & ncm_vector_free;
 
   return scv;
+}
+
+/**
+ * ncm_vector_get_subvector2:
+ * @sub_cv: a #NcmVector
+ * @cv: a #NcmVector
+ * @k: component index of the original vector
+ * @size: number of components of the subvector
+ *
+ * This function sets @sub_cv to be a subvector of the vector @cv.
+ * The start of the new vector is the component @k from the original vector @cv.
+ * The new vector has @size elements.
+ *
+ * It is assumed that @sub_cv is a static vector allocated with
+ * ncm_vector_new_data_static(). If a different type of vector is passed
+ * then the function will lead to a memory leak.
+ *
+ */
+void
+ncm_vector_get_subvector2 (NcmVector *sub_cv, NcmVector *cv, const gsize k, const gsize size)
+{
+  g_assert_cmpuint (size, >, 0);
+  g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
+
+  sub_cv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
 }
 
 /**
@@ -1086,6 +1120,19 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  */
 
 /**
+ * ncm_vector_replace_data: (skip)
+ * @cv: a #NcmVector
+ * @data: a pointer to the new data
+ *
+ * This function replaces the data of the vector @cv by @data.
+ * It does not make any check on the size of the new data.
+ * It assumes that the new data has the same size of the vector @cv
+ * and that the original data was statically allocated.
+ *
+ * It is useful when one needs to convert a data pointer to a #NcmVector.
+ *
+ */
+/**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector
  *
@@ -1112,6 +1159,11 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  *
  * Returns: $\vec{v}_1 \cdot \vec{v}_2$.
  */
+gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
+}
 
 /**
  * ncm_vector_len:
@@ -1546,7 +1598,7 @@ void
 ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 

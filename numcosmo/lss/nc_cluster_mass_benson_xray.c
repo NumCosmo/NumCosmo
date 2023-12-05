@@ -46,7 +46,7 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassBensonXRay, nc_cluster_mass_benson_xray, NC_TYPE_CLUSTER_MASS_BENSON);
+G_DEFINE_TYPE (NcClusterMassBensonXRay, nc_cluster_mass_benson_xray, NC_TYPE_CLUSTER_MASS_BENSON)
 
 #define VECTOR (NCM_MODEL (mx)->params)
 #define A_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_A_X))
@@ -78,6 +78,200 @@ typedef struct _integrand_data
   gdouble mu;
   gdouble Dx2_2;
 } integrand_data;
+
+static void
+nc_cluster_mass_benson_xray_init (NcClusterMassBensonXRay *mx)
+{
+  mx->Yx_obs_min = 0.0;
+  mx->Yx_obs_max = 0.0;
+  mx->M0x        = 0.0;
+  mx->Y0         = 0.0;
+}
+
+static void
+_nc_cluster_mass_benson_xray_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (object);
+
+  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON_XRAY (object));
+
+  switch (prop_id)
+  {
+    case PROP_YX_OBS_MIN:
+      mx->Yx_obs_min = g_value_get_double (value);
+      break;
+    case PROP_YX_OBS_MAX:
+      mx->Yx_obs_max = g_value_get_double (value);
+      break;
+    case PROP_M0X:
+      mx->M0x = g_value_get_double (value);
+      break;
+    case PROP_Y0:
+      mx->Y0 = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_benson_xray_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (object);
+
+  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON_XRAY (object));
+
+  switch (prop_id)
+  {
+    case PROP_YX_OBS_MIN:
+      g_value_set_double (value, mx->Yx_obs_min);
+      break;
+    case PROP_YX_OBS_MAX:
+      g_value_set_double (value, mx->Yx_obs_max);
+      break;
+    case PROP_M0X:
+      g_value_set_double (value, mx->M0x);
+      break;
+    case PROP_Y0:
+      g_value_set_double (value, mx->Y0);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_benson_xray_finalize (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_mass_benson_xray_parent_class)->finalize (object);
+}
+
+static gdouble _nc_cluster_mass_benson_xray_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params);
+static gdouble _nc_cluster_mass_benson_xray_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z);
+static void _nc_cluster_mass_benson_xray_p_limits (NcClusterMass *clusterm, NcHICosmo *model, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_benson_xray_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper);
+static gboolean _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng);
+
+static void
+nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
+{
+  GObjectClass *object_class             = G_OBJECT_CLASS (klass);
+  NcClusterMassClass *grand_parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class             = NCM_MODEL_CLASS (klass);
+
+  model_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
+  model_class->get_property = &_nc_cluster_mass_benson_xray_get_property;
+  object_class->finalize    = &_nc_cluster_mass_benson_xray_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Benson- SZ and XRay", "Benson_SZ_XRay");
+  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
+
+  /**
+   * NcClusterMassBensonXRay:Yx_obs_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_YX_OBS_MIN,
+                                   g_param_spec_double ("Yx-obs-min",
+                                                        NULL,
+                                                        "Minimum obsevational Yx",
+                                                        1.0e-20, G_MAXDOUBLE, 1.0e-1,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassBensonXray:Yx_obs_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_YX_OBS_MAX,
+                                   g_param_spec_double ("Yx-obs-max",
+                                                        NULL,
+                                                        "Maximum obsevational Yx",
+                                                        2.0, G_MAXDOUBLE, 50.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassBensonXRay:M0:
+   *
+   * Reference mass (in h^(-1) * M_sun unit) in the X-Ray proxy-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_M0X,
+                                   g_param_spec_double ("M0x",
+                                                        NULL,
+                                                        "X Ray Reference mass",
+                                                        1.0e13, G_MAXDOUBLE, 1.0e14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassBensonXRay:Y0:
+   *
+   * Yx reference (in 10^{14} * M_sun * keV unit) in the X-Ray proxy-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_Y0,
+                                   g_param_spec_double ("Y0",
+                                                        NULL,
+                                                        "Reference Yx",
+                                                        1.0, G_MAXDOUBLE, 3.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /*
+   * X-ray signal-mass scaling parameter: Ax.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_A_X, "A_{X}", "Ax",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_X,
+                              NCM_PARAM_TYPE_FREE);
+
+  /*
+   * X-ray signal-mass scaling parameter: Bx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_B_X, "B_{X}", "Bx",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * X-ray signal-mass scaling parameter: Cx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_C_X, "C_{X}", "Cx",
+                              -2.0,  8.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_X,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * X-ray signal-mass scaling parameter: Dx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_D_X, "D_{X}", "Dx",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_X,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
+
+  grand_parent_class->P               = &_nc_cluster_mass_benson_xray_m_p;
+  grand_parent_class->intP            = &_nc_cluster_mass_benson_xray_intp;
+  grand_parent_class->P_limits        = &_nc_cluster_mass_benson_xray_p_limits;
+  grand_parent_class->N_limits        = &_nc_cluster_mass_benson_xray_n_limits;
+  grand_parent_class->resample        = &_nc_cluster_mass_benson_xray_resample;
+  grand_parent_class->_obs_len        = 2;
+  grand_parent_class->_obs_params_len = 0;
+
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
+}
 
 static gdouble
 _nc_cluster_mass_benson_xray_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params)
@@ -200,193 +394,5 @@ _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model
   xi_obs_return = NC_CLUSTER_MASS_CLASS (nc_cluster_mass_benson_xray_parent_class)->resample (clusterm, model, lnM, z, xi, xi_params, rng);
 
   return (xi_obs_return && xi[1] >= mx->Yx_obs_min);
-}
-
-static void
-_nc_cluster_mass_benson_xray_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (object);
-
-  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON_XRAY (object));
-
-  switch (prop_id)
-  {
-    case PROP_YX_OBS_MIN:
-      mx->Yx_obs_min = g_value_get_double (value);
-      break;
-    case PROP_YX_OBS_MAX:
-      mx->Yx_obs_max = g_value_get_double (value);
-      break;
-    case PROP_M0X:
-      mx->M0x = g_value_get_double (value);
-      break;
-    case PROP_Y0:
-      mx->Y0 = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_cluster_mass_benson_xray_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (object);
-
-  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON_XRAY (object));
-
-  switch (prop_id)
-  {
-    case PROP_YX_OBS_MIN:
-      g_value_set_double (value, mx->Yx_obs_min);
-      break;
-    case PROP_YX_OBS_MAX:
-      g_value_set_double (value, mx->Yx_obs_max);
-      break;
-    case PROP_M0X:
-      g_value_set_double (value, mx->M0x);
-      break;
-    case PROP_Y0:
-      g_value_set_double (value, mx->Y0);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_cluster_mass_benson_xray_init (NcClusterMassBensonXRay *mx)
-{
-  mx->Yx_obs_min = 0.0;
-  mx->Yx_obs_max = 0.0;
-  mx->M0x        = 0.0;
-  mx->Y0         = 0.0;
-}
-
-static void
-_nc_cluster_mass_benson_xray_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_benson_xray_parent_class)->finalize (object);
-}
-
-static void
-nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
-{
-  GObjectClass *object_class             = G_OBJECT_CLASS (klass);
-  NcClusterMassClass *grand_parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class             = NCM_MODEL_CLASS (klass);
-
-  model_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
-  model_class->get_property = &_nc_cluster_mass_benson_xray_get_property;
-  object_class->finalize    = &_nc_cluster_mass_benson_xray_finalize;
-
-  ncm_model_class_set_name_nick (model_class, "Benson- SZ and XRay", "Benson_SZ_XRay");
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-
-  /**
-   * NcClusterMassBensonXRay:Yx_obs_min:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_YX_OBS_MIN,
-                                   g_param_spec_double ("Yx-obs-min",
-                                                        NULL,
-                                                        "Minimum obsevational Yx",
-                                                        1.0e-20, G_MAXDOUBLE, 1.0e-1,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterMassBensonXray:Yx_obs_max:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_YX_OBS_MAX,
-                                   g_param_spec_double ("Yx-obs-max",
-                                                        NULL,
-                                                        "Maximum obsevational Yx",
-                                                        2.0, G_MAXDOUBLE, 50.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterMassBensonXRay:M0:
-   *
-   * Reference mass (in h^(-1) * M_sun unit) in the X-Ray proxy-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_M0X,
-                                   g_param_spec_double ("M0x",
-                                                        NULL,
-                                                        "X Ray Reference mass",
-                                                        1.0e13, G_MAXDOUBLE, 1.0e14,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterMassBensonXRay:Y0:
-   *
-   * Yx reference (in 10^{14} * M_sun * keV unit) in the X-Ray proxy-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Y0,
-                                   g_param_spec_double ("Y0",
-                                                        NULL,
-                                                        "Reference Yx",
-                                                        1.0, G_MAXDOUBLE, 3.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /*
-   * X-ray signal-mass scaling parameter: Ax.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_A_X, "A_{X}", "Ax",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_X,
-                              NCM_PARAM_TYPE_FREE);
-
-  /*
-   * X-ray signal-mass scaling parameter: Bx.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_B_X, "B_{X}", "Bx",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /*
-   * X-ray signal-mass scaling parameter: Cx.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_C_X, "C_{X}", "Cx",
-                              -2.0,  8.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_X,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /*
-   * X-ray signal-mass scaling parameter: Dx.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_D_X, "D_{X}", "Dx",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_X,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /* Check for errors in parameters initialization */
-  ncm_model_class_check_params_info (model_class);
-
-  grand_parent_class->P              = &_nc_cluster_mass_benson_xray_m_p;
-  grand_parent_class->intP           = &_nc_cluster_mass_benson_xray_intp;
-  grand_parent_class->P_limits       = &_nc_cluster_mass_benson_xray_p_limits;
-  grand_parent_class->N_limits       = &_nc_cluster_mass_benson_xray_n_limits;
-  grand_parent_class->resample       = &_nc_cluster_mass_benson_xray_resample;
-  grand_parent_class->obs_len        = 2;
-  grand_parent_class->obs_params_len = 0;
-
-  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
 

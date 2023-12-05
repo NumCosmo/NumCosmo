@@ -27,7 +27,7 @@
  * @title: NcHICosmoDE
  * @short_description: Abstract class for implementing dark energy models
  *
- * #NcHICosmoDE is an abstract class for implementing dark energy models.
+ * NcHICosmoDE is an abstract class for implementing dark energy models.
  *
  */
 
@@ -59,7 +59,7 @@ struct _NcHICosmoDEPrivate
   gsl_min_fminimizer *min;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO)
 
 enum
 {
@@ -151,7 +151,7 @@ _nc_hicosmo_de_constructed (GObject *object)
     if (m_len != 0)
     {
       NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (model);
-      gint i;
+      guint i;
 
       cosmo_de->priv->nu_rho = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_rho_integrand, NULL);
       cosmo_de->priv->nu_p   = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_p_integrand, NULL);
@@ -448,7 +448,7 @@ _nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
 
     if (m_len > 0)
     {
-      gint n;
+      guint n;
 
       for (n = 0; n < m_len; n++)
       {
@@ -1052,17 +1052,17 @@ _nc_hicosmo_de_ln_rho_rho0 (NcHICosmoDE *cosmo_de, gdouble z)
   return 0.0;
 }
 
-#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                    \
-  void                                                                                                       \
-  nc_hicosmo_de_set_ ## name ## _impl (NcHICosmoDEClass * cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
-  {                                                                                                          \
-    ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);         \
-    g_assert (f != NULL);                                                                                    \
-    cosmo_de_class->name    = *ncm_func_stub;                                                                   \
-    cosmo_de_class->name.f  = f;                                                                              \
-    cosmo_de_class->name.pf = pf;                                                                            \
-    cosmo_de_class->name.df = df;                                                                            \
-  }
+#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                         \
+        void                                                                                                            \
+        nc_hicosmo_de_set_ ## name ## _impl (NcHICosmoDEClass * cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
+        {                                                                                                               \
+          ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);            \
+          g_assert (f != NULL);                                                                                         \
+          cosmo_de_class->name    = *ncm_func_stub;                                                                     \
+          cosmo_de_class->name.f  = f;                                                                                  \
+          cosmo_de_class->name.pf = pf;                                                                                 \
+          cosmo_de_class->name.df = df;                                                                                 \
+        }
 
 /**
  * nc_hicosmo_de_set_E2Omega_de_impl: (skip)

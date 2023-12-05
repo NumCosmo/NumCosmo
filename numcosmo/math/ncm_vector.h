@@ -108,6 +108,7 @@ const NcmVector *ncm_vector_const_new_variant (GVariant *var);
 const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
+void ncm_vector_get_subvector2 (NcmVector *sub_cv, NcmVector *cv, const gsize k, const gsize size);
 NcmVector *ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride);
 GVariant *ncm_vector_get_variant (const NcmVector *cv);
 GVariant *ncm_vector_peek_variant (const NcmVector *cv);
@@ -161,9 +162,12 @@ NCM_INLINE GArray *ncm_vector_dup_array (NcmVector *cv);
 NCM_INLINE gdouble *ncm_vector_data (NcmVector *cv);
 NCM_INLINE const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
+NCM_INLINE void ncm_vector_replace_data (NcmVector *cv, gdouble *data);
 NCM_INLINE gsl_vector *ncm_vector_gsl (NcmVector *cv);
 NCM_INLINE const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
-NCM_INLINE gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
+
+gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
+
 NCM_INLINE guint ncm_vector_len (const NcmVector *cv);
 NCM_INLINE guint ncm_vector_stride (const NcmVector *cv);
 
@@ -396,7 +400,7 @@ ncm_vector_get_array (NcmVector *cv)
 {
   g_assert (cv->type == NCM_VECTOR_ARRAY);
 
-  return g_array_ref (cv->pdata);
+  return g_array_ref ((GArray *) cv->pdata);
 }
 
 NCM_INLINE GArray *
@@ -415,7 +419,7 @@ ncm_vector_dup_array (NcmVector *cv)
   else
   {
     GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-    gint i;
+    guint i;
 
     g_array_set_size (a, len);
 
@@ -438,6 +442,12 @@ ncm_vector_const_data (const NcmVector *cv)
   return (cv)->vv.vector.data;
 }
 
+NCM_INLINE void
+ncm_vector_replace_data (NcmVector *cv, gdouble *data)
+{
+  cv->vv.vector.data = data;
+}
+
 NCM_INLINE gsl_vector *
 ncm_vector_gsl (NcmVector *cv)
 {
@@ -448,12 +458,6 @@ NCM_INLINE const gsl_vector *
 ncm_vector_const_gsl (const NcmVector *cv)
 {
   return &(cv->vv.vector);
-}
-
-NCM_INLINE gdouble
-ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
-{
-  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
 }
 
 NCM_INLINE guint
@@ -517,7 +521,7 @@ NCM_INLINE gboolean
 ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
@@ -534,7 +538,7 @@ NCM_INLINE gboolean
 ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
@@ -551,7 +555,7 @@ NCM_INLINE gboolean
 ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector *cv_ub, gint type)
 {
   const guint len = ncm_vector_len (cv);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv_lb));
   g_assert_cmpuint (len, ==, ncm_vector_len (cv_ub));

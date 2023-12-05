@@ -68,7 +68,7 @@ def test_halo_mass_function() -> None:
     # New transfer function 'NcTransferFuncEH' using the Einsenstein, Hu
     # fitting formula.
     #
-    tf = Nc.TransferFunc.new_from_name("NcTransferFuncEH")
+    tf = Nc.TransferFuncEH()
 
     #
     # New linear matter power spectrum object based of the EH transfer function.
@@ -222,8 +222,9 @@ def test_halo_mass_function() -> None:
     plt.clf()
 
     #
-    # Calculating the halo mass function at z = 0.7, and integrated in the mass interval [1e14, 1e16]
-    # for the redhshifts in the interval [0, 2.0] and area 200 squared degrees.
+    # Calculating the halo mass function at z = 0.7, and integrated in the mass
+    # interval [1e14, 1e16] for the redhshifts in the interval [0, 2.0] and area 200
+    # squared degrees.
     #
 
     mf.set_area_sd(200.0)

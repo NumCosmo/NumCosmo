@@ -67,7 +67,7 @@
 #include <gsl/gsl_sf_bessel.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcWindowTophat, nc_window_tophat, NC_TYPE_WINDOW);
+G_DEFINE_TYPE (NcWindowTophat, nc_window_tophat, NC_TYPE_WINDOW)
 
 /**
  * nc_window_tophat_new:

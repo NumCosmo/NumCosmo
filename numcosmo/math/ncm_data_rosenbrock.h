@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_rosenbrock.h
  *
@@ -34,7 +35,7 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_DATA_ROSENBROCK             (ncm_data_rosenbrock_get_type ())
+#define NCM_TYPE_DATA_ROSENBROCK (ncm_data_rosenbrock_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmDataRosenbrock, ncm_data_rosenbrock, NCM, DATA_ROSENBROCK, NcmData)
 

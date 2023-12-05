@@ -80,6 +80,7 @@ struct _NcmStatsDist
  * @NCM_STATS_DIST_CV_NONE: No cross validation
  * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
  * @NCM_STATS_DIST_CV_SPLIT_NOFIT: Sample split cross validation without fitting
+ * @NCM_STATS_DIST_CV_LOO: Leave-one-out cross validation
  *
  * Cross-validation method to be applied.
  *
@@ -89,6 +90,7 @@ typedef enum _NcmStatsDistCV
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,
   NCM_STATS_DIST_CV_SPLIT_NOFIT,
+  NCM_STATS_DIST_CV_LOO,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
@@ -130,7 +132,7 @@ void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
 gdouble ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x);
 gdouble ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x);
 
-gint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
+guint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
 void ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng);
 
 gdouble ncm_stats_dist_get_rnorm (NcmStatsDist *sd);

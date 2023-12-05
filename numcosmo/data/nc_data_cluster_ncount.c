@@ -28,7 +28,8 @@
  * @title: NcDataClusterNCount
  * @short_description: Cluster number count data.
  *
- * FIXME
+ * A likelihood function for cluster number count data.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,9 +52,9 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -117,7 +118,7 @@ struct _NcDataClusterNCountPrivate
   gchar *rnd_name;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
@@ -738,9 +739,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
  * @redshift_type: #NcClusterRedshift class string
  * @mass_type: #NcClusterMass class string
  *
- * FIXME
+ * Creates a new #NcDataClusterNCount object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): the newly created #NcDataClusterNCount
  */
 NcDataClusterNCount *
 nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type, const gchar *mass_type)
@@ -758,9 +759,9 @@ nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type,
  * nc_data_cluster_ncount_ref:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * Increases the reference count of the #NcDataClusterNCount.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the #NcDataClusterNCount
  */
 NcDataClusterNCount *
 nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
@@ -772,7 +773,8 @@ nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
  * nc_data_cluster_ncount_free:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * Decreases the reference count of the #NcDataClusterNCount.
+ * If the reference count reaches zero, the #NcDataClusterNCount is freed.
  *
  */
 void
@@ -785,7 +787,9 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
  * nc_data_cluster_ncount_clear:
  * @ncount: a #NcDataClusterNCount
  *
- * FIXME
+ * If *@ncount is not %NULL, decreases the reference count of the #NcDataClusterNCount.
+ * If the reference count reaches zero, the #NcDataClusterNCount is freed.
+ * Sets the *@ncount to %NULL.
  *
  */
 void
@@ -1356,7 +1360,7 @@ func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim,
 {
   _Evald2N *evald2n       = (_Evald2N *) fdata;
   NcClusterAbundance *cad = evald2n->cad;
-  gint n;
+  guint n;
 
   nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, NULL, evald2n->self->p_z);
   ncm_spline2d_eval_vec_y (cad->mfp->d2NdzdlnM, x[0], evald2n->self->z_true, evald2n->self->z_order, evald2n->self->d2n);
@@ -1410,7 +1414,7 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
   }
   else
   {
-    gulong len = f - i;
+    gulong len   = f - i;
     gdouble *val = &g_array_index (evald2n->self->m2lnL_a, gdouble, 0);
     gdouble *err = &g_array_index (evald2n->self->m2lnL_err_a, gdouble, 0);
     gdouble lnMl, lnMu;
@@ -1424,7 +1428,7 @@ _eval_lnM_p_d2n (glong i, glong f, gpointer data)
     ret = pcubature (len, func_eval_lnM_p_d2n, evald2n, 1, &lnMl, &lnMu, 0, 0.0, 1.0e-7, ERROR_INDIVIDUAL, val, err);
     g_assert (ret == 0);
 
-    for (i = 0; i < len; i++)
+    for (i = 0; i < (glong) len; i++)
     {
       g_array_index (evald2n->self->m2lnL_a, gdouble, i) = -log (g_array_index (evald2n->self->m2lnL_a, gdouble, i) * evald2n->v_pp);
     }
@@ -1482,7 +1486,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     const guint len   = self->z_obs_bins->len;
     const guint nbins = len / 2;
     gdouble lambda    = 0.0;
-    gint i;
+    guint i;
 
     if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
       g_error ("_nc_data_cluster_ncount_m2lnL_val: cannot use bin data, inconsistent bins (%u %u).",
@@ -1490,7 +1494,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
     g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
 
-    if ((self->lnM_obs_params > 0) || (self->z_obs_params > 0))
+    if ((self->lnM_obs_params != NULL) || (self->z_obs_params != NULL))
       g_error ("_nc_data_cluster_ncount_m2lnL_val: binned distribution with parameters not supported yet.");
 
     for (i = 0; i < nbins; i++)
@@ -1605,9 +1609,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 /**
  * nc_data_cluster_ncount_true_data:
  * @ncount: a #NcDataClusterNCount
- * @use_true_data: FIXME
+ * @use_true_data: if TRUE it will use the true data.
  *
- * FIXME
+ * Sets whether to use the true data or not.
  *
  */
 void
@@ -1647,7 +1651,9 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
  * @area_survey: area in units of square degrees
  * @rng: a #NcmRNG
  *
- * FIXME
+ * Initialize @ncount from a sampling using @mset as the fiducial model.
+ * The area of the survey is @area_survey in units of square degrees.
+ * The random number generator @rng is used to sample the data.
  *
  */
 void
@@ -1713,9 +1719,9 @@ nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
 /**
  * nc_data_cluster_ncount_set_binned:
  * @ncount: a #NcDataClusterNCount.
- * @on: FIXME
+ * @on: whether to use binned data or not.
  *
- * FIXME
+ * Sets whether to use binned data or not.
  *
  */
 void
@@ -1757,7 +1763,7 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
   {
     NcmVector *lnM_obs_row = ncm_matrix_get_row (self->lnM_obs, i);
     NcmVector *z_obs_row   = ncm_matrix_get_row (self->z_obs, i);
-    gint j;
+    guint j;
 
     for (j = 0; j < len; j += 2)
     {
@@ -1777,15 +1783,15 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
   }
 }
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 
 /**
  * nc_data_cluster_ncount_catalog_save:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * @filename: name of the file
- * @overwrite: FIXME
+ * @overwrite: whether to overwrite the file or not
  *
- * FIXME
+ * Saves the current data present in @ncount to a FITS file.
  *
  */
 void
@@ -1923,7 +1929,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
     if (len > 0)
     {
       guint colnum;
-      gint i;
+      guint i;
 
       if ((len != self->lnM_obs_bins->len) || (len % 2 == 1))
         g_error ("nc_data_cluster_ncount_catalog_save: cannot save binning information, inconsistent bins (%u %u).",
@@ -2011,7 +2017,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
  * @ncount: a #NcDataClusterNCount.
  * @filename: name of the file
  *
- * FIXME
+ * Loads the data present in @filename to @ncount.
  *
  */
 void
@@ -2288,5 +2294,5 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
   return;
 }
 
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 

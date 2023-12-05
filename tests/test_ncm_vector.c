@@ -59,10 +59,13 @@ void test_ncm_vector_data_const_new (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_data_const_free (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_setget (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_subvector2 (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -83,9 +86,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_free);
 
+  g_test_add ("/ncm/vector/default/setget", TestNcmVector, NULL,
+              &test_ncm_vector_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_free);
+
   g_test_add ("/ncm/vector/default/subvector", TestNcmVector, NULL,
               &test_ncm_vector_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_free);
+
+  g_test_add ("/ncm/vector/default/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_free);
 
   g_test_add ("/ncm/vector/default/variant", TestNcmVector, NULL,
@@ -110,9 +123,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_gsl_free);
 
+  g_test_add ("/ncm/vector/gsl/setget", TestNcmVector, NULL,
+              &test_ncm_vector_gsl_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_gsl_free);
+
   g_test_add ("/ncm/vector/gsl/subvector", TestNcmVector, NULL,
               &test_ncm_vector_gsl_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_gsl_free);
+
+  g_test_add ("/ncm/vector/gsl/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_gsl_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_gsl_free);
 
   g_test_add ("/ncm/vector/gsl/variant", TestNcmVector, NULL,
@@ -137,9 +160,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_array_free);
 
+  g_test_add ("/ncm/vector/array/setget", TestNcmVector, NULL,
+              &test_ncm_vector_array_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_array_free);
+
   g_test_add ("/ncm/vector/array/subvector", TestNcmVector, NULL,
               &test_ncm_vector_array_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_array_free);
+
+  g_test_add ("/ncm/vector/array/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_array_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_array_free);
 
   g_test_add ("/ncm/vector/array/variant", TestNcmVector, NULL,
@@ -164,9 +197,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_data_slice_free);
 
+  g_test_add ("/ncm/vector/data_slice/setget", TestNcmVector, NULL,
+              &test_ncm_vector_data_slice_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_data_slice_free);
+
   g_test_add ("/ncm/vector/data_slice/subvector", TestNcmVector, NULL,
               &test_ncm_vector_data_slice_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_data_slice_free);
+
+  g_test_add ("/ncm/vector/data_slice/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_data_slice_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_data_slice_free);
 
   g_test_add ("/ncm/vector/data_slice/variant", TestNcmVector, NULL,
@@ -191,9 +234,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_data_malloc_free);
 
+  g_test_add ("/ncm/vector/data_malloc/setget", TestNcmVector, NULL,
+              &test_ncm_vector_data_malloc_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_data_malloc_free);
+
   g_test_add ("/ncm/vector/data_malloc/subvector", TestNcmVector, NULL,
               &test_ncm_vector_data_malloc_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_data_malloc_free);
+
+  g_test_add ("/ncm/vector/data_malloc/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_data_malloc_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_data_malloc_free);
 
   g_test_add ("/ncm/vector/data_malloc/variant", TestNcmVector, NULL,
@@ -213,9 +266,19 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_operations,
               &test_ncm_vector_data_static_free);
 
+  g_test_add ("/ncm/vector/data_static/setget", TestNcmVector, NULL,
+              &test_ncm_vector_data_static_new,
+              &test_ncm_vector_setget,
+              &test_ncm_vector_data_static_free);
+
   g_test_add ("/ncm/vector/data_static/subvector", TestNcmVector, NULL,
               &test_ncm_vector_data_static_new,
               &test_ncm_vector_subvector,
+              &test_ncm_vector_data_static_free);
+
+  g_test_add ("/ncm/vector/data_static/subvector2", TestNcmVector, NULL,
+              &test_ncm_vector_data_static_new,
+              &test_ncm_vector_subvector2,
               &test_ncm_vector_data_static_free);
 
   g_test_add ("/ncm/vector/data_static/variant", TestNcmVector, NULL,
@@ -226,6 +289,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/vector/data_static/serialization", TestNcmVector, NULL,
               &test_ncm_vector_data_static_new,
               &test_ncm_vector_serialization,
+              &test_ncm_vector_data_static_free);
+
+  g_test_add ("/ncm/vector/data_static/replace_data", TestNcmVector, NULL,
+              &test_ncm_vector_data_static_new,
+              &test_ncm_vector_replace_data,
               &test_ncm_vector_data_static_free);
 
   /* Data static vector allocation */
@@ -241,7 +309,7 @@ main (gint argc, gchar *argv[])
 void
 _random_fill (NcmVector *v)
 {
-  gint i;
+  guint i;
 
   for (i = 0; i < ncm_vector_len (v); i++)
     ncm_vector_set (v, i, g_test_rand_double ());
@@ -666,6 +734,26 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
 }
 
 void
+test_ncm_vector_setget (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size  = test->v_size;
+  NcmVector *v  = test->v;
+  NcmVector *cv = ncm_vector_dup (v);
+  guint i;
+
+  for (i = 0; i < 1000000; i++)
+  {
+    const gdouble d = i * 1.0e3;
+    guint ii        = i % v_size;
+
+    ncm_vector_set (v, ii, d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, ii), ==, d);
+  }
+
+  ncm_vector_clear (&cv);
+}
+
+void
 test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata)
 {
   guint v_size  = test->v_size;
@@ -693,6 +781,31 @@ test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata)
 }
 
 void
+test_ncm_vector_subvector2 (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *sv = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1);
+  guint v_size  = test->v_size;
+  NcmVector *v  = test->v;
+  guint ntests  = 20 * v_size;
+
+  ncm_vector_get_subvector2 (sv, v, 1, v_size - 1);
+
+  g_assert_cmpuint (ncm_vector_len (sv), ==, (v_size - 1));
+
+  while (ntests--)
+  {
+    guint i = g_test_rand_int_range (0, v_size - 1);
+
+    ncm_vector_set (sv, i, g_test_rand_double ());
+    ncm_assert_cmpdouble (ncm_vector_get (sv, i), ==, ncm_vector_get (v, i + 1));
+  }
+
+  g_assert_true (NCM_IS_VECTOR (sv));
+
+  NCM_TEST_FREE (ncm_vector_free, sv);
+}
+
+void
 test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v  = test->v;
@@ -704,7 +817,7 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 
   {
     NcmVector *nv = ncm_vector_new_variant (var);
-    gint i;
+    guint i;
 
     g_assert_cmpuint (ncm_vector_len (v), ==, ncm_vector_len (nv));
 
@@ -727,7 +840,7 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v     = test->v;
   gchar *vser      = ncm_serialize_global_to_string (G_OBJECT (v), TRUE);
   NcmVector *v_dup = NCM_VECTOR (ncm_serialize_global_from_string (vser));
-  gint i;
+  guint i;
 
   g_free (vser);
   g_assert_cmpint (ncm_vector_len (v), ==, ncm_vector_len (v_dup));
@@ -738,5 +851,27 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
   }
 
   NCM_TEST_FREE (ncm_vector_free, v_dup);
+}
+
+void
+test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata)
+{
+  gdouble *orig_d = ncm_vector_data (test->v);
+  gdouble local_d[_TEST_NCM_VECTOR_STATIC_SIZE];
+  guint i;
+
+  for (i = 0; i < test->v_size; i++)
+  {
+    ncm_vector_set (test->v, i, 10.0 * i);
+    local_d[i] = 100.0 * i;
+  }
+
+  ncm_vector_replace_data (test->v, local_d);
+
+  for (i = 0; i < test->v_size; i++)
+  {
+    ncm_assert_cmpdouble (ncm_vector_get (test->v, i), ==, 100.0 * i);
+    ncm_assert_cmpdouble (orig_d[i], ==, 10.0 * i);
+  }
 }
 

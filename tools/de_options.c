@@ -47,6 +47,7 @@ nc_de_opt_get_run_group (NcDERunEntries *de_run)
     { NULL }
   };
   GOptionGroup *run_group = g_option_group_new ("run", " - Run configuration options", "Show help options related to a run", NULL, NULL);
+
   g_option_group_add_entries (run_group, run_entries);
 
   return run_group;
@@ -81,6 +82,7 @@ static gboolean
 _nc_de_print_snia_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_ID, "Supernovae Type Ia - Sample IDs");
+
   return TRUE;
 }
 
@@ -88,6 +90,7 @@ static gboolean
 _nc_de_print_bao_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_BAO_ID, "Baryonic Acoustic Oscillations samples");
+
   return TRUE;
 }
 
@@ -95,6 +98,7 @@ static gboolean
 _nc_de_print_cmb_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_CMB_ID, "Cosmic Microwave Background samples");
+
   return TRUE;
 }
 
@@ -102,6 +106,7 @@ static gboolean
 _nc_de_print_H_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_HUBBLE_ID, "Hubble function samples");
+
   return TRUE;
 }
 
@@ -109,6 +114,7 @@ static gboolean
 _nc_de_print_H_BAO_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_HUBBLE_BAO_ID, "Hubble BAO samples");
+
   return TRUE;
 }
 
@@ -116,6 +122,7 @@ static gboolean
 _nc_de_print_cluster_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_CLUSTER_ABUNDANCE_ID, "Cluster samples");
+
   return TRUE;
 }
 
@@ -183,6 +190,7 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
   memcpy (*de_data_cluster_entries, entries_cluster, sizeof (entries_cluster));
 
   g_option_group_add_entries (data_cluster_group, entries_cluster);
+
   return data_cluster_group;
 }
 
@@ -190,14 +198,15 @@ static gboolean
 _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_TYPE, "Minimization objects");
-    
+
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMM_ALGOS, "Minimization algorithims [gsl-mm]");
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMMS_ALGOS, "Minimization algorithims [gsl-mms]");
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithims [levmar]");
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithims [nlopt]");
 #endif
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GRAD_TYPE, "Differentiation methods");
+
   return TRUE;
 }
 
@@ -209,17 +218,23 @@ _nc_de_print_fisher_type (const gchar *option_name, const gchar *value, gpointer
   if (value != NULL)
   {
     if (g_ascii_strcasecmp (value, "O") == 0)
+    {
       fisher[0] = 1;
+    }
     else if (g_ascii_strcasecmp (value, "E") == 0)
+    {
       fisher[0] = 2;
+    }
     else
     {
       GQuark error_quark = g_quark_from_static_string ("nc-darkenergy-error");
+
       g_set_error (error,
                    error_quark,
                    G_OPTION_ERROR_FAILED,
-                   "Invalid option for --fisher: `%s', the valid options are O or E", 
+                   "Invalid option for --fisher: `%s', the valid options are O or E",
                    value);
+
       return FALSE;
     }
   }
@@ -227,7 +242,7 @@ _nc_de_print_fisher_type (const gchar *option_name, const gchar *value, gpointer
   {
     fisher[0] = 1;
   }
-  
+
   return TRUE;
 }
 
@@ -254,8 +269,8 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithim method", NULL },
     { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithim", NULL },
     { "fit-reltol",       0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_reltol,       "Fitting relative tolerance for the minimum", NULL },
-    { "fit-params-reltol",0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol,"Fitting relative tolerance for the parameters", NULL },
-    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable", NULL },    
+    { "fit-params-reltol", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol, "Fitting relative tolerance for the parameters", NULL },
+    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable", NULL },
     { "restart-abstol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_abstol,   "Restart absolute tolerance", NULL },
     { "restart-reltol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_reltol,   "Restart relative tolerance", NULL },
     { "max-iter",         0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,         "Max number of iterations used by the minimization algorithms", NULL },
@@ -273,15 +288,14 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads", NULL},
     { "mc-seed",          0, 0, G_OPTION_ARG_INT64,        &de_fit->mc_seed,          "Seed to be used by the Monte Carlo simulation", NULL},
     { "mc-lre",           0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->mc_lre,           "Will run Monte Carlo until largest relative error lre is attained", NULL},
-    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},
-    { "mc-prerun",        0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values", NULL},
+    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},
+    { "mc-prerun",        0, 0, G_OPTION_ARG_INT,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values", NULL},
     { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep Monte Carlo run data", NULL},
     { "mc-unordered",     0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_unordered,     "Do not maintain the sample order in the catalog", NULL},
-    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT   ,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS", NULL},
+    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS", NULL},
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample", NULL},
     { "qspline-cp",       0, 0, G_OPTION_ARG_NONE,         &de_fit->qspline_cp,       "Include the continuity priors on a NcHICosmoQSpline model", NULL},
     { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors", NULL},
-    { "save-fisher",      0, 0, G_OPTION_ARG_NONE,         &de_fit->save_fisher,      "Create a file and print the Fisher matrix", NULL},
     { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones)", NULL},
     { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage", NULL},
     { NULL }
@@ -292,5 +306,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
   memcpy (*de_fit_entries, fit_entries, sizeof (fit_entries));
 
   g_option_group_add_entries (fit_group, fit_entries);
+
   return fit_group;
 }
+

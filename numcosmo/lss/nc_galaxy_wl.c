@@ -70,7 +70,7 @@ enum
   PROP_GZ_DIST,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWL, nc_galaxy_wl, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWL, nc_galaxy_wl, G_TYPE_OBJECT)
 
 static void
 nc_galaxy_wl_init (NcGalaxyWL *gwl)
@@ -298,7 +298,7 @@ nc_galaxy_wl_eval_m2lnP (NcGalaxyWL *gwl, NcHICosmo *cosmo, NcHaloDensityProfile
   NcGalaxyWLPrivate * const self = gwl->priv;
   NcGalaxyWLEval gwleval         = {self->wl_dist, cosmo, dp, smd, z_cluster, 0};
   gdouble res                    = 0.0;
-  gint gal_i;
+  guint gal_i;
 
   nc_galaxy_wl_dist_m2lnP_initial_prep (self->wl_dist, self->gz_dist, cosmo, dp, smd, z_cluster);
 

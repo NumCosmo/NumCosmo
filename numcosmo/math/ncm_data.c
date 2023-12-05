@@ -67,7 +67,7 @@ typedef struct _NcmDataPrivate
   NcmDiff *diff;
 } NcmDataPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmData, ncm_data, G_TYPE_OBJECT)
 
 static void
 ncm_data_init (NcmData *data)
@@ -257,17 +257,13 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         NCM_TYPE_BOOTSTRAP,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->name             = NULL;
-  data_class->get_length       = NULL;
-  data_class->begin            = NULL;
-  data_class->prepare          = NULL;
-  data_class->resample         = NULL;
-  data_class->leastsquares_f   = NULL;
-  data_class->leastsquares_J   = NULL;
-  data_class->leastsquares_f_J = NULL;
-  data_class->m2lnL_val        = NULL;
-  data_class->m2lnL_grad       = NULL;
-  data_class->m2lnL_val_grad   = NULL;
+  data_class->name           = NULL;
+  data_class->get_length     = NULL;
+  data_class->begin          = NULL;
+  data_class->prepare        = NULL;
+  data_class->resample       = NULL;
+  data_class->leastsquares_f = NULL;
+  data_class->m2lnL_val      = NULL;
 
   data_class->mean_vector = NULL;
   data_class->inv_cov_UH  = NULL;
@@ -380,24 +376,6 @@ NcmData *
 ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 {
   return NCM_DATA (ncm_serialize_dup_obj (ser_obj, G_OBJECT (data)));
-}
-
-/**
- * ncm_data_new_from_file:
- * @filename: file containing a serialized #NcmData child.
- *
- * Creates a new #NcmData from @filename.
- *
- * Returns: (transfer full): the newly created #NcmData.
- */
-NcmData *
-ncm_data_new_from_file (const gchar *filename)
-{
-  NcmData *data = NCM_DATA (ncm_serialize_global_from_file (filename));
-
-  g_assert (NCM_IS_DATA (data));
-
-  return data;
 }
 
 /**
@@ -771,52 +749,6 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
 }
 
 /**
- * ncm_data_leastsquares_J: (virtual leastsquares_J)
- * @data: a #NcmData.
- * @mset: a #NcmMSet.
- * @J: a #NcmMatrix.
- *
- * Calculates the least squares jacobian matrix $$J_{ij} = \frac{df_i}{dx_j},$$
- * where $f_i$ is the component of the least squares vector $\vec{f}$ and $x_j$
- * is the j-th parameter.
- *
- */
-void
-ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
-{
-  ncm_data_prepare (data, mset);
-
-  if (NCM_DATA_GET_CLASS (data)->leastsquares_J == NULL)
-    g_error ("ncm_data_leastsquares_J: The data (%s) does not implement leastsquares_J.",
-             ncm_data_get_desc (data));
-
-  NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J);
-}
-
-/**
- * ncm_data_leastsquares_f_J: (virtual leastsquares_f_J)
- * @data: a #NcmData.
- * @mset: a #NcmMSet.
- * @f: a #NcmVector.
- * @J: a #NcmMatrix
- *
- * Calculates both least squares vector and matrix as in ncm_data_leastsquares_f()
- * and ncm_data_leastsquares_J().
- *
- */
-void
-ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
-{
-  ncm_data_prepare (data, mset);
-
-  if (NCM_DATA_GET_CLASS (data)->leastsquares_f_J == NULL)
-    g_error ("ncm_data_leastsquares_f_J: The data (%s) does not implement leastsquares_f_J.",
-             ncm_data_get_desc (data));
-
-  NCM_DATA_GET_CLASS (data)->leastsquares_f_J (data, mset, f, J);
-}
-
-/**
  * ncm_data_m2lnL_val: (virtual m2lnL_val)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
@@ -836,52 +768,6 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);
-}
-
-/**
- * ncm_data_m2lnL_grad: (virtual m2lnL_grad)
- * @data: a #NcmData.
- * @mset: a #NcmMSet.
- * @grad: a #NcmVector.
- *
- * Calculates the gradient of $-2\ln(L)$, i.e., $$g_i = -2\frac{d\ln(L)}{dx_i}.$$
- * where $L$ represents the likelihood of the data given the models in @mset.
- * The result is stored in @grad.
- *
- */
-void
-ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
-{
-  ncm_data_prepare (data, mset);
-
-  if (NCM_DATA_GET_CLASS (data)->m2lnL_grad == NULL)
-    g_error ("ncm_data_m2lnL_grad: The data (%s) does not implement m2lnL_grad.",
-             ncm_data_get_desc (data));
-
-  NCM_DATA_GET_CLASS (data)->m2lnL_grad (data, mset, grad);
-}
-
-/**
- * ncm_data_m2lnL_val_grad: (virtual m2lnL_val_grad)
- * @data: a #NcmData.
- * @mset: a #NcmMSet.
- * @m2lnL: (out): a #double.
- * @grad: a #NcmVector.
- *
- * Calculates both the value and the gradient of $-2\ln(L)$ as in ncm_data_m2lnL_val() and
- * ncm_data_m2lnL_grad().
- *
- */
-void
-ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
-{
-  ncm_data_prepare (data, mset);
-
-  if (NCM_DATA_GET_CLASS (data)->m2lnL_val_grad == NULL)
-    g_error ("ncm_data_m2lnL_val_grad: The data (%s) does not implement m2lnL_val_grad.",
-             ncm_data_get_desc (data));
-
-  NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, m2lnL, grad);
 }
 
 /**

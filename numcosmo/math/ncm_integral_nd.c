@@ -35,8 +35,46 @@
  *
  * The integration can be performed using the cubature library. The cubature
  * library is a library for adaptive multidimensional integration. The original
- * code can be found at https://github.com/stevengj/cubature .
+ * code can be found at https://github.com/stevengj/cubature.
  *
+ * To use this object, the user must initialize a child object that implements
+ * two functions: get_dimensions and integrand. To do so, the user must
+ * first define these two functions as the prototypes described
+ * in ncm_integral_nd.h. The get dimensions function should return the
+ * dimension of the arguments to be integrated and the function dimension.
+ * For instance, if the integrand is given by $F(x,y) = x + y$, the get
+ * dimensions function must return $(2,1)$, such that it will compute
+ * \begin{align}
+ * \int \int F(x, y) dxdy
+ * ,\end{align}
+ * returning a scalar for the integral evaluated in the given intervals.
+ *
+ * This object can also be used with multi-dimensional functions that return
+ * an array instead of a scalar. Considering the integrand
+ * $F(x,y,z) = [x^2, y+z ]$, the get dimensions method should return $(3,2)$
+ * and the object will compute the integral
+ * \begin{align}
+ * \int \int \int F(x,y,z) dxdy = [\frac{yzx^3}{3}, frac{x(y^2+z^2)}{2}]
+ * \end{align}
+ * for the given intervals.
+ *
+ * Having the functions, the user must instantiate an object of the type
+ * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro
+ * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which
+ * will later be instantiable. Examples of how to define the objects
+ * containing the integrand can be found in the test folder under
+ * test\textunderscore ncm\textunderscore integral\textunderscore nd.c.
+ * For an example of the Python implementation of the integrand in a class,
+ * check test\textunderscore py\textunderscore integralnd.py in the same folder.
+ * This object cannot be used without the child object containing the cited functions.
+ *
+ * After defining the child class with the necessary functions,
+ * the user may use the integration object with the prefered method
+ * from the cubature library.
+ *
+ * The user may provide the input values for: @rel_tol - ncm_integral_nd_set_reltol(), @abs_tol - ncm_integral_nd_set_abstol(),
+ * @integ_method - ncm_integral_nd_set_method(), @max_eval - ncm_integral_nd_set_maxeval(), @error - ncm_integral_nd_set_error().
+ * If these functions are not called, default parameters are chosen.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,16 +95,16 @@
 #include <gsl/gsl_errno.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmIntegralNDPrivate
+typedef struct _NcmIntegralNDPrivate
 {
   NcmIntegralNDMethod method;
   NcmIntegralNDError error;
   guint maxeval;
   gdouble reltol;
   gdouble abstol;
-};
+} NcmIntegralNDPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT)
 
 enum
 {
@@ -82,7 +120,7 @@ enum
 static void
 ncm_integral_nd_init (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv = ncm_integral_nd_get_instance_private (intnd);
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->method  = NCM_INTEGRAL_ND_METHOD_LEN;
   self->error   = NCM_INTEGRAL_ND_ERROR_LEN;
@@ -286,7 +324,7 @@ ncm_integral_nd_clear (NcmIntegralND **intnd)
 void
 ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->method = method;
 }
@@ -302,7 +340,7 @@ ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
 void
 ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->error = error;
 }
@@ -318,7 +356,7 @@ ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
 void
 ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->maxeval = maxeval;
 }
@@ -334,7 +372,7 @@ ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
 void
 ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->reltol = reltol;
 }
@@ -350,7 +388,7 @@ ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
 void
 ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   self->abstol = abstol;
 }
@@ -364,7 +402,7 @@ ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
 NcmIntegralNDMethod
 ncm_integral_nd_get_method (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->method;
 }
@@ -378,7 +416,7 @@ ncm_integral_nd_get_method (NcmIntegralND *intnd)
 NcmIntegralNDError
 ncm_integral_nd_get_error (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->error;
 }
@@ -392,7 +430,7 @@ ncm_integral_nd_get_error (NcmIntegralND *intnd)
 guint
 ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->maxeval;
 }
@@ -406,7 +444,7 @@ ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
 gdouble
 ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->reltol;
 }
@@ -420,7 +458,7 @@ ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
 gdouble
 ncm_integral_nd_get_abstol (NcmIntegralND *intnd)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
   return self->abstol;
 }
@@ -470,7 +508,7 @@ _ncm_integral_nd_cubature_vint (unsigned ndim, size_t npt, const double *x, void
 void
 ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
 {
-  NcmIntegralNDPrivate * const self = intnd->priv;
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
   gint error                        = 0;
 
   guint dim, fdim;
@@ -556,6 +594,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         ncm_vector_data (res),
         ncm_vector_data (err)
                         );
+      break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
       ret = pcubature_v (
         fdim,

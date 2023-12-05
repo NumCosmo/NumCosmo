@@ -51,7 +51,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataHubble, nc_data_hubble, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataHubble, nc_data_hubble, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_hubble_init (NcDataHubble *hubble)

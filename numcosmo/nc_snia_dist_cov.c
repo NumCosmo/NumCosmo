@@ -60,7 +60,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcSNIADistCov, nc_snia_dist_cov, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcSNIADistCov, nc_snia_dist_cov, NCM_TYPE_MODEL)
 
 static void
 nc_snia_dist_cov_init (NcSNIADistCov *dcov)

@@ -54,7 +54,7 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL)
 
 static void
 nc_hicosmo_init (NcHICosmo *cosmo)
@@ -892,28 +892,6 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncMassNuI
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoGetBGVar, get_bg_var)
 
 /**
- * nc_hicosmo_new_from_name:
- * @parent_type: parent's #GType
- * @cosmo_name: Cosmological model's name
- *
- * Creates a new instance of @cosmo_name,
- * asserting that it descends from @parent_type.
- *
- * Returns: newly created @cosmo_name object.
- */
-NcHICosmo *
-nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
-{
-  GObject *obj     = ncm_serialize_global_from_string (cosmo_name);
-  GType model_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (model_type, parent_type))
-    g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
-
-  return NC_HICOSMO (obj);
-}
-
-/**
  * nc_hicosmo_ref:
  * @cosmo: a #NcHICosmo
  *
@@ -922,7 +900,7 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
  * Returns: (transfer full): @cosmo.
  */
 NcHICosmo *
-nc_hicosmo_ref (NcHICosmo *cosmo)
+nc_hicosmo_ref (NcHICosmo * cosmo)
 {
   return g_object_ref (cosmo);
 }
@@ -2067,11 +2045,11 @@ nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
 }
 
 #define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
-  static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-  { \
-    NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-    res[0] = nc_hicosmo_ ## fname (cosmo); \
-  }
+        static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+          res[0] = nc_hicosmo_ ## fname (cosmo); \
+        }
 
 _NC_HICOSMO_FUNC0_TO_FLIST (H0)
 _NC_HICOSMO_FUNC0_TO_FLIST (RH_Mpc)
@@ -2112,11 +2090,11 @@ _nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
   }
 
 #define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \
-  static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-  { \
-    NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-    res[0] = nc_hicosmo_ ## fname (cosmo, x[0]); \
-  }
+        static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+          res[0] = nc_hicosmo_ ## fname (cosmo, x[0]); \
+        }
 
 _NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_b)
 _NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_c)
@@ -2147,11 +2125,11 @@ _NC_HICOSMO_FUNC1_TO_FLIST (mqE2)
 _NC_HICOSMO_FUNC1_TO_FLIST (zt)
 
 #define _NC_HICOSMO_FUNC1R2_TO_FLIST(fname) \
-  static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-  { \
-    NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-    nc_hicosmo_ ## fname (cosmo, x[0], &res[0], &res[1]); \
-  }
+        static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+          nc_hicosmo_ ## fname (cosmo, x[0], &res[0], &res[1]); \
+        }
 
 _NC_HICOSMO_FUNC1R2_TO_FLIST (mqE2_max)
 _NC_HICOSMO_FUNC1R2_TO_FLIST (dec_min)

@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_cfg.c
  *
@@ -209,9 +210,9 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
 #include <gio/gio.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <cuba.h>
 
 #ifdef HAVE_MPI
@@ -360,9 +361,9 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_forget_wisdom ();
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -456,8 +457,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
+#ifdef HAVE_FFTW3
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
+
+#endif /* HAVE_FFTW3 */
 
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
@@ -481,9 +486,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   gsl_err = gsl_set_error_handler_off ();
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
   fftw_set_timelimit (10.0);
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
@@ -519,7 +524,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
@@ -558,9 +563,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
-#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
@@ -992,7 +997,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 
   if (work_ret_request->len > 0)
   {
-    gint i;
+    guint i;
 
     MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
 
@@ -1064,6 +1069,7 @@ ncm_cfg_register_obj (GType obj)
 {
 #if GLIB_CHECK_VERSION (2, 34, 0)
   g_type_ensure (obj);
+
 #endif /* GLIB >= 2.34*/
   gpointer obj_class = g_type_class_ref (obj);
 
@@ -1114,18 +1120,18 @@ ncm_cfg_set_logstream (FILE *stream)
   _log_stream = stream;
 }
 
+typedef struct _NcmCfgLoggerFuncContainer
+{
+  NcmCfgLoggerFunc logger;
+} NcmCfgLoggerFuncContainer;
+
 static void
 _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
-  NCM_UNUSED (log_domain);
-  NCM_UNUSED (log_level);
-  NCM_UNUSED (user_data);
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
 
   if (_enable_msg && _log_stream)
-  {
-    void (*logger) (const gchar *msg) = user_data;
-    logger (message);
-  }
+    container->logger (message);
 }
 
 /**
@@ -1138,7 +1144,11 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
 void
 ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1151,7 +1161,11 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1410,13 +1424,14 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 
 /**
  * ncm_cfg_keyfile_to_arg:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
- * @argv: FIXME
- * @argc: FIXME
+ * @kfile: keyfile filename
+ * @group_name: group name
+ * @entries: a #GOptionEntry
+ * @argv: an array of strings
+ * @argc: a pointer to an integer
  *
- * FIXME
+ * Transforms the @entries in a keyfile @kfile group @group_name into an array of
+ * strings representing the command line arguments.
  *
  */
 void
@@ -1476,11 +1491,11 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
 
 /**
  * ncm_cfg_string_to_comment:
- * @str: FIXME
+ * @str: a string
  *
- * FIXME
+ * Transforms @str into a comment string.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a comment string.
  */
 gchar *
 ncm_cfg_string_to_comment (const gchar *str)
@@ -1498,11 +1513,11 @@ ncm_cfg_string_to_comment (const gchar *str)
 
 /**
  * ncm_cfg_entries_to_keyfile:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
+ * @kfile: a #GKeyFile
+ * @group_name: group name
+ * @entries: a null terminated array of #GOptionEntry
  *
- * FIXME
+ * Transforms the @entries into a keyfile @kfile group @group_name.
  *
  */
 void
@@ -1587,12 +1602,12 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
 
 /**
  * ncm_cfg_get_enum_by_id_name_nick:
- * @enum_type: FIXME
- * @id_name_nick: FIXME
+ * @enum_type: enum type #GType
+ * @id_name_nick: id, name or nick
  *
- * FIXME
+ * Gets the enum value from @enum_type by @id_name_nick.
  *
- * Returns: FIXME
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
@@ -1628,12 +1643,12 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
 
 /**
  * ncm_cfg_enum_get_value:
- * @enum_type: FIXME
- * @n: FIXME
+ * @enum_type: enum type #GType
+ * @n: enum value position
  *
- * FIXME
+ * Gets the enum value from @enum_type by @n.
  *
- * Returns: (transfer none)
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_enum_get_value (GType enum_type, guint n)
@@ -1653,10 +1668,10 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
 
 /**
  * ncm_cfg_enum_print_all:
- * @enum_type: FIXME
- * @header: FIXME
+ * @enum_type: enum type #GType
+ * @header: header string
  *
- * FIXME
+ * Prints all enum values from @enum_type.
  *
  */
 void
@@ -1706,7 +1721,7 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
   g_type_class_unref (enum_class);
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 
 G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
@@ -1715,7 +1730,7 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 /**
  * ncm_cfg_lock_plan_fftw:
  *
- * FIXME
+ * Locks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1727,7 +1742,7 @@ ncm_cfg_lock_plan_fftw (void)
 /**
  * ncm_cfg_unlock_plan_fftw:
  *
- * FIXME
+ * Unlocks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1738,12 +1753,12 @@ ncm_cfg_unlock_plan_fftw (void)
 
 /**
  * ncm_cfg_load_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to load the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Loads the FFTW wisdom from @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was loaded.
  */
 gboolean
 ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
@@ -1762,7 +1777,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   va_end (ap);
 
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -1799,12 +1814,12 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
 /**
  * ncm_cfg_save_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to save the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Saves the current FFTW wisdom to @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was saved.
  */
 gboolean
 ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
@@ -1822,7 +1837,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_end (ap);
 
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -1879,16 +1894,16 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   return TRUE;
 }
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_exists:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to search in the numcosmo path.
+ * @...: a variable number of arguments for @filename string.
  *
- * FIXME
+ * Checks if @filename exists in the numcosmo path.
  *
- * Returns: FIXME
+ * Returns: TRUE if @filename exists.
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)
@@ -1960,12 +1975,12 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
 
 /**
  * ncm_cfg_command_line:
- * @argv: FIXME
- * @argc: FIXME
+ * @argv: array of strings
+ * @argc: number of strings in @argv
  *
- * FIXME
+ * Converts @argv to a single string.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a command line string.
  */
 gchar *
 ncm_cfg_command_line (gchar *argv[], gint argc)
@@ -2018,7 +2033,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
  * @a: a #GArray.
  * @var: a variant of array type.
  *
- * FIXME
+ * Transfers the data from @var to @a.
  *
  */
 void
@@ -2037,9 +2052,9 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
  * @a: a #GArray.
  * @etype: element type.
  *
- * FIXME
+ * Creates a variant of array type from @a.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a variant of array type.
  */
 GVariant *
 ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
@@ -2061,7 +2076,7 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
 
 gdouble fftw_default_timeout = 60.0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
@@ -2087,5 +2102,5 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 #else
 guint fftw_default_flags = 0;
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 

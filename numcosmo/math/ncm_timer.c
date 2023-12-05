@@ -58,7 +58,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmTimer, ncm_timer, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmTimer, ncm_timer, G_TYPE_OBJECT)
 
 #define _NCM_TIMER_MSG_PREALLOC_SIZE 100
 

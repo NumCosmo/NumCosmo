@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -59,6 +59,8 @@ struct _NcmLikelihood
   NcmObjArray *priors_f;
   NcmObjArray *priors_m2lnL;
   NcmVector *m2lnL_v;
+  NcmVector *ls_f_data;
+  NcmVector *ls_f_priors;
 };
 
 GType ncm_likelihood_get_type (void) G_GNUC_CONST;
@@ -87,19 +89,12 @@ guint ncm_likelihood_priors_length_f (NcmLikelihood *lh);
 NcmPrior *ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh);
 
-gboolean ncm_likelihood_has_leastsquares_J (NcmLikelihood *lh);
-gboolean ncm_likelihood_has_m2lnL_grad (NcmLikelihood *lh);
-
 void ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_f);
 void ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f);
-void ncm_likelihood_leastsquares_J (NcmLikelihood *lh, NcmMSet *mset, NcmMatrix *J);
-void ncm_likelihood_leastsquares_f_J (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
 
 void ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *priors_m2lnL);
 void ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_m2lnL_v);
 void ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL);
-void ncm_likelihood_m2lnL_grad (NcmLikelihood *lh, NcmMSet *mset, NcmVector *grad);
-void ncm_likelihood_m2lnL_val_grad (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
 
 G_END_DECLS
 

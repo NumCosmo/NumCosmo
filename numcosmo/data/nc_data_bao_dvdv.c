@@ -30,6 +30,11 @@
  *
  * See [Percival et al. (2007)][XPercival2007].
  *
+ * The data is stored in a #NcDataBaoDVDV object. The data is stored in a
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
+ * The data represents the mean values of the volume mean $D_V$ at the redshift
+ * $z$.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -47,7 +52,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_bao_dvdv_init (NcDataBaoDVDV *bao_dvdv)
@@ -59,6 +64,7 @@ static void
 nc_data_bao_dvdv_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DVDV (object));
 
   switch (prop_id)
@@ -76,6 +82,7 @@ static void
 nc_data_bao_dvdv_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DVDV (object));
 
   switch (prop_id)
@@ -100,7 +107,6 @@ nc_data_bao_dvdv_dispose (GObject *object)
   G_OBJECT_CLASS (nc_data_bao_dvdv_parent_class)->dispose (object);
 }
 
-
 static void
 nc_data_bao_dvdv_finalize (GObject *object)
 {
@@ -114,9 +120,9 @@ static void _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, 
 static void
 nc_data_bao_dvdv_class_init (NcDataBaoDVDVClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass* diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
+  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
   object_class->set_property = &nc_data_bao_dvdv_set_property;
   object_class->get_property = &nc_data_bao_dvdv_get_property;
@@ -139,7 +145,8 @@ static void
 _nc_data_bao_dvdv_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (bao_dvdv->dist, cosmo);
 }
 
@@ -152,7 +159,7 @@ static void
 _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   const gdouble Dv_035 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.35);
   const gdouble Dv_020 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.20);
@@ -172,6 +179,7 @@ NcDataBaoDVDV *
 nc_data_bao_dvdv_new_from_file (const gchar *filename)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_BAO_DVDV (bao_dvdv));
 
   return bao_dvdv;
@@ -182,7 +190,8 @@ nc_data_bao_dvdv_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
- * FIXME
+ * Creates a new volume mean $D_V$ data object.
+ * This object requires a #NcDistance object to be set.
  *
  * Returns: a #NcDataBaoDVDV
  */
@@ -226,3 +235,4 @@ nc_data_bao_dvdv_set_dist (NcDataBaoDVDV *bao_dvdv, NcDistance *dist)
   nc_distance_clear (&bao_dvdv->dist);
   bao_dvdv->dist = nc_distance_ref (dist);
 }
+

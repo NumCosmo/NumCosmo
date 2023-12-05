@@ -52,7 +52,7 @@
 
 #include "perturbations/nc_hipert_private.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT);
+G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT)
 
 enum
 {

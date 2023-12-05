@@ -64,13 +64,13 @@ typedef struct _NcmDataPoissonPrivate
   guint nbins;
 } NcmDataPoissonPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataPoisson, ncm_data_poisson, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataPoisson, ncm_data_poisson, NCM_TYPE_DATA)
 
 static void
 ncm_data_poisson_init (NcmDataPoisson *poisson)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  
+
   self->nbins    = 0;
   self->h        = NULL;
   self->means    = NULL;
@@ -89,7 +89,7 @@ _ncm_data_poisson_constructed (GObject *object)
 static void
 ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (object);
+  NcmDataPoisson *poisson            = NCM_DATA_POISSON (object);
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
 
   g_return_if_fail (NCM_IS_DATA_POISSON (object));
@@ -111,7 +111,7 @@ ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 ncm_data_poisson_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (object);
+  NcmDataPoisson *poisson            = NCM_DATA_POISSON (object);
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
 
   g_return_if_fail (NCM_IS_DATA_POISSON (object));
@@ -203,7 +203,7 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
 static guint
 _ncm_data_poisson_get_length (NcmData *data)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
+  NcmDataPoisson *poisson            = NCM_DATA_POISSON (data);
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
 
   return self->nbins;
@@ -212,7 +212,7 @@ _ncm_data_poisson_get_length (NcmData *data)
 static void
 _ncm_data_poisson_begin (NcmData *data)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
+  NcmDataPoisson *poisson            = NCM_DATA_POISSON (data);
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
   guint i;
 
@@ -314,7 +314,7 @@ static void
 _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  NcmData *data = NCM_DATA (poisson);
+  NcmData *data                      = NCM_DATA (poisson);
 
   if (nbins != self->nbins)
   {
@@ -361,10 +361,10 @@ _ncm_data_poisson_get_size (NcmDataPoisson *poisson)
 /**
  * ncm_data_poisson_init_from_vector:
  * @poisson: a #NcmDataPoisson
- * @nodes: FIXME
- * @N: FIXME
+ * @nodes: bins edges
+ * @N: counts in each bin
  *
- * FIXME
+ * Initializes a #NcmDataPoisson from a vector of bin edges and a vector of counts.
  *
  */
 void
@@ -391,10 +391,10 @@ ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, Nc
 /**
  * ncm_data_poisson_init_from_binning:
  * @poisson: a #NcmDataPoisson
- * @nodes: FIXME
- * @x: FIXME
+ * @nodes: bins edges
+ * @x: data to be binned
  *
- * FIXME
+ * Initializes a #NcmDataPoisson from a vector of bin edges and a vector of data to be binned.
  *
  */
 void
@@ -421,9 +421,9 @@ ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, N
 /**
  * ncm_data_poisson_init_from_histogram: (skip)
  * @poisson: a #NcmDataPoisson
- * @h: FIXME
+ * @h: a #gsl_histogram
  *
- * FIXME
+ * Initializes a #NcmDataPoisson from a #gsl_histogram.
  *
  */
 void
@@ -442,7 +442,7 @@ ncm_data_poisson_init_from_histogram (NcmDataPoisson *poisson, gsl_histogram *h)
  * @poisson: a #NcmDataPoisson
  * @nodes: a #NcmVector
  *
- * FIXME
+ * Initializes a #NcmDataPoisson with zero counts.
  *
  */
 void
@@ -505,7 +505,7 @@ gdouble
 ncm_data_poisson_get_sum (NcmDataPoisson *poisson)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  gdouble hsum = 0.0;
+  gdouble hsum                       = 0.0;
   guint i;
 
   for (i = 0; i < self->h->n; i++)
@@ -530,7 +530,7 @@ NcmVector *
 ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  NcmVector *v = ncm_vector_new (self->h->n);
+  NcmVector *v                       = ncm_vector_new (self->h->n);
   guint i;
 
   for (i = 0; i < self->h->n; i++)

@@ -49,7 +49,7 @@ struct _NcTransferFuncClass
 {
   /*< private > */
   GObjectClass parent_class;
-  
+
   gpointer (*alloc) (void);
   void (*prepare) (NcTransferFunc *tf, NcHICosmo *cosmo);
   gdouble (*calc) (NcTransferFunc *tf, gdouble k);
@@ -65,7 +65,6 @@ struct _NcTransferFunc
 
 GType nc_transfer_func_get_type (void) G_GNUC_CONST;
 
-NcTransferFunc *nc_transfer_func_new_from_name (gchar *transfer_name);
 NcTransferFunc *nc_transfer_func_ref (NcTransferFunc *tf);
 
 void nc_transfer_func_free (NcTransferFunc *tf);

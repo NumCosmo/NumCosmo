@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_csq1d.c
  *
@@ -151,8 +152,8 @@ enum
   PROP_SING_DETECT,
 };
 
-G_DEFINE_BOXED_TYPE (NcmCSQ1DSingFitUp, ncm_csq1d_sing_fit_up, ncm_csq1d_sing_fit_up_dup, ncm_csq1d_sing_fit_up_free);
-G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcmCSQ1DSingFitUp, ncm_csq1d_sing_fit_up, ncm_csq1d_sing_fit_up_dup, ncm_csq1d_sing_fit_up_free)
+G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT)
 
 static void
 ncm_csq1d_init (NcmCSQ1D *csq1d)
@@ -1132,7 +1133,8 @@ ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold)
  * @csq1d: a #NcmCSQ1D
  * @save: whether to save all evolution
  *
- * If true saves all evolution to be evaluted later through FIXME
+ * If true saves all evolution to be evaluted later through
+ * ncm_csq1d_eval_at() and related methods.
  *
  */
 void
@@ -2168,7 +2170,7 @@ _ncm_csq1d_sing_detect (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, gdoubl
 {
   /*NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);*/
   gdouble tsing = 0.5 * (tf + ti);
-  gint iter = 0, max_iter = 1000;
+  guint iter = 0, max_iter = 1000;
   const gdouble root_reltol = 1.0e-12;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
@@ -2261,7 +2263,7 @@ ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
   const guint len              = ncm_vector_len (asinh_t_v);
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
   gdouble s_t                  = 1.0e300;
-  gint i;
+  guint i;
 
   for (i = 0; i < len; i++)
   {
@@ -2345,7 +2347,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   else
   {
     NcmCSQ1DWS ws = {csq1d, model, reltol};
-    gint iter = 0, max_iter = 1000;
+    guint iter = 0, max_iter = 1000;
     const gdouble root_reltol = 1.0e-2;
     const gsl_root_fsolver_type *T;
     gsl_root_fsolver *s;
@@ -2474,7 +2476,7 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   {
     const gsl_root_fsolver_type *T;
     gsl_root_fsolver *s;
-    gint max_iter = 1000;
+    guint max_iter = 1000;
 
     iter = 0;
 
@@ -2561,13 +2563,13 @@ void
 ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws = {csq1d, model, 0.0};
-  const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
-  const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
-  const gdouble F1_2 = F1 * F1;
-  const gdouble F1_3 = F1_2 * F1;
-  const gdouble nu = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
-  const gdouble twonu = 2.0 * nu;
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
+  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
+  const gdouble F1_2           = F1 * F1;
+  const gdouble F1_3           = F1_2 * F1;
+  const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
+  const gdouble twonu          = 2.0 * nu;
   gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
 
   F3             = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
@@ -3355,7 +3357,7 @@ _ncm_csq1d_prepare_prop_q2mnu2 (gdouble t, gpointer params)
  * ncm_csq1d_get_tf_prop:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: FIXME
+ * Returns: current final time $t_f$ for the propagator.
  */
 gdouble
 ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
@@ -3468,14 +3470,16 @@ ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdo
  * ncm_csq1d_alpha_gamma_circle:
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
- * @alpha: FIXME
- * @gamma: FIXME
- * @r: FIXME
- * @theta: FIXME
- * @alphap: (out): FIXME
- * @gammap: (out): FIXME
+ * @alpha: $\alpha$ variable
+ * @gamma: $\gamma$ variable
+ * @r: radius
+ * @theta: angle
+ * @alphap: (out): output $\alpha$ variable
+ * @gammap: (out): output $\gamma$ variable
  *
- * FIXME
+ * Computes the complex structure matrix parameters for a circle
+ * around the point $(\alpha, \gamma)$ with radius $r$ and angle
+ * $\theta$.
  *
  */
 void

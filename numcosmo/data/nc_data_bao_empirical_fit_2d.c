@@ -31,6 +31,13 @@
  * This object implements the BAO data when its likelihood function is provided,
  * e.g., [Bautista et al. (2017)][XBautista2017].
  *
+ * The data is stored in a #NcDataBaoEmpiricalFit2d object. The data is stored in a
+ * #NcmDataDist2d base class object, which is a subclass of #NcmData.
+ * The data represents the likelihood function of the transverse distance $D_t$ and the
+ * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
+ * last scattering surface $r_s$. The likelihood function is provided as a
+ * #NcmSpline2d object.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,7 +61,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE (NcDataBaoEmpiricalFit2d, nc_data_bao_empirical_fit_2d, NCM_TYPE_DATA_DIST2D);
+G_DEFINE_TYPE (NcDataBaoEmpiricalFit2d, nc_data_bao_empirical_fit_2d, NCM_TYPE_DATA_DIST2D)
 
 static void
 nc_data_bao_empirical_fit_2d_init (NcDataBaoEmpiricalFit2d *bao_ef)
@@ -227,11 +234,11 @@ static gdouble
 _nc_data_bao_empirical_fit_2d_m2lnL_val (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y)
 {
   NcDataBaoEmpiricalFit2d *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT_2D (dist2d);
-  const gdouble alpha_par = nc_data_bao_empirical_fit_2d_get_alpha_parallel (bao_ef, mset);
-  const gdouble alpha_per = nc_data_bao_empirical_fit_2d_get_alpha_perpendicular (bao_ef, mset);
-  const gdouble alphax = alpha_per - x;
-  const gdouble alphay = alpha_par - y;
-  gdouble m2lnL = ncm_stats_dist2d_eval_m2lnp (bao_ef->p, alphax, alphay);
+  const gdouble alpha_par         = nc_data_bao_empirical_fit_2d_get_alpha_parallel (bao_ef, mset);
+  const gdouble alpha_per         = nc_data_bao_empirical_fit_2d_get_alpha_perpendicular (bao_ef, mset);
+  const gdouble alphax            = alpha_per - x;
+  const gdouble alphay            = alpha_par - y;
+  gdouble m2lnL                   = ncm_stats_dist2d_eval_m2lnp (bao_ef->p, alphax, alphay);
   gdouble xl, xu, yl, yu;
 
   ncm_stats_dist2d_xbounds (bao_ef->p, &xl, &xu);
@@ -265,7 +272,7 @@ _nc_data_bao_empirical_fit_2d_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdo
  * @Dt_rd_fiduc: fiducial $D_t/r_d$
  * @z: data redshift
  *
- * Creates a new #NcDataBaoEmpiricalFit2d.
+ * Creates a new empirical BAO data object.
  *
  * Returns: the newly created #NcDataBaoEmpiricalFit2d.
  */

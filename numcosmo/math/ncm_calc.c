@@ -48,7 +48,7 @@ enum
   PROP_ABSTOL
 };
 
-G_DEFINE_TYPE (NcmCalc, ncm_calc, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmCalc, ncm_calc, G_TYPE_OBJECT)
 
 static void
 ncm_calc_init (NcmCalc *calc)
@@ -327,33 +327,8 @@ ncm_calc_prepare_array (NcmCalc *calc, NcmModel **ma)
                g_type_name (dep_i));
   }
 
-  switch (calc_class->dep_list->len)
-  {
-    case 0:
-      ((NcmCalcPrepare0) calc_class->prepare) (calc);
-      break;
-    case 1:
-      ((NcmCalcPrepare1) calc_class->prepare) (calc, ma[order[0]]);
-      break;
-    case 2:
-      ((NcmCalcPrepare2) calc_class->prepare) (calc, ma[order[0]], ma[order[1]]);
-      break;
-    case 3:
-      ((NcmCalcPrepare3) calc_class->prepare) (calc, ma[order[0]], ma[order[1]], ma[order[2]]);
-      break;
-    case 4:
-      ((NcmCalcPrepare4) calc_class->prepare) (calc, ma[order[0]], ma[order[1]], ma[order[2]], ma[order[3]]);
-      break;
-    case 5:
-      ((NcmCalcPrepare5) calc_class->prepare) (calc, ma[order[0]], ma[order[1]], ma[order[2]], ma[order[3]], ma[order[4]]);
-      break;
-    case 6:
-      ((NcmCalcPrepare6) calc_class->prepare) (calc, ma[order[0]], ma[order[1]], ma[order[2]], ma[order[3]], ma[order[4]], ma[order[5]]);
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
+  g_assert_not_reached ();
+  calc_class->prepare (calc);
 }
 
 /**

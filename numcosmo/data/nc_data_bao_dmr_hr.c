@@ -31,7 +31,11 @@
  * See: [Ross et al. (2016)][XRoss2016] and
  * [Alam et al. (2016)][XAlam2016].
  *
- * FIXME
+ * The data is stored in a #NcDataBaoDMrHr object. The data is stored in a
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
+ * The data represents the mean values of the transverse distance $D_M$ and the
+ * Hubble parameter $H$ at the redshift $z$ divided by the sound horizon at the
+ * last scattering surface $r_s$.
  *
  */
 
@@ -53,7 +57,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDMrHr, nc_data_bao_dmr_hr, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataBaoDMrHr, nc_data_bao_dmr_hr, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 nc_data_bao_dmr_hr_init (NcDataBaoDMrHr *dmh)
@@ -67,6 +71,7 @@ static void
 nc_data_bao_dmr_hr_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DMR_HR (object));
 
   switch (prop_id)
@@ -90,6 +95,7 @@ static void
 nc_data_bao_dmr_hr_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_DMR_HR (object));
 
   switch (prop_id)
@@ -137,7 +143,7 @@ static void _nc_data_bao_dmr_hr_set_size (NcmDataGaussCov *gauss, guint np);
 static void
 nc_data_bao_dmr_hr_class_init (NcDataBaoDMrHrClass *klass)
 {
-  GObjectClass* object_class        = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
   NcmDataGaussCovClass *gauss_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
@@ -179,7 +185,8 @@ static void
 _nc_data_bao_dmr_hr_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (data);
-  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (dmh->dist, cosmo);
 }
 
@@ -190,22 +197,24 @@ _nc_data_bao_dmr_hr_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector 
   NcHICosmo *cosmo    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const gdouble rd    = nc_distance_r_zd (dmh->dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo);
   const guint np      = ncm_data_gauss_cov_get_size (gauss);
-  gint i;
-    
+  guint i;
+
   for (i = 0; i < np; i++)
   {
     if (i % 2 == 0)
     {
-      const gdouble z1    = ncm_vector_get (dmh->x, i);
-      const gdouble z2    = ncm_vector_get (dmh->x, i + 1);
-      const gdouble DM_r  = (1.0 + z1) * nc_distance_DA_r (dmh->dist, cosmo, z1) * dmh->rs_fiduc;
-      const gdouble Hr    = nc_hicosmo_H (cosmo, z2) * rd / dmh->rs_fiduc;
+      const gdouble z1   = ncm_vector_get (dmh->x, i);
+      const gdouble z2   = ncm_vector_get (dmh->x, i + 1);
+      const gdouble DM_r = (1.0 + z1) * nc_distance_DA_r (dmh->dist, cosmo, z1) * dmh->rs_fiduc;
+      const gdouble Hr   = nc_hicosmo_H (cosmo, z2) * rd / dmh->rs_fiduc;
 
       ncm_vector_set (vp, i, DM_r);
       ncm_vector_set (vp, i + 1, Hr);
     }
     else
+    {
       continue;
+    }
   }
 }
 
@@ -237,7 +246,9 @@ NcDataBaoDMrHr *
 nc_data_bao_dmr_hr_new_from_file (const gchar *filename)
 {
   NcDataBaoDMrHr *dmh = NC_DATA_BAO_DMR_HR (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_BAO_DMR_HR (dmh));
+
   return dmh;
 }
 
@@ -246,7 +257,9 @@ nc_data_bao_dmr_hr_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
- * FIXME
+ * Creates a new acustic scale data object #NcDataBaoDMrHr from @id.
+ * This object requires a #NcDistance object to be set.
+ *
  *
  * Returns: (transfer full): a #NcDataBaoDMrHr
  */
@@ -265,6 +278,7 @@ nc_data_bao_dmr_hr_new_from_id (NcDistance *dist, NcDataBaoId id)
       g_error ("nc_data_bao_dmr_hr_new_from_id: id %d not recognized.", id);
       break;
   }
+
   dmh = nc_data_bao_dmr_hr_new_from_file (filename);
   nc_data_bao_dmr_hr_set_dist (dmh, dist);
   g_free (filename);
@@ -286,3 +300,4 @@ nc_data_bao_dmr_hr_set_dist (NcDataBaoDMrHr *dmh, NcDistance *dist)
   nc_distance_clear (&dmh->dist);
   dmh->dist = nc_distance_ref (dist);
 }
+

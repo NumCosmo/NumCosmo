@@ -140,9 +140,11 @@ void
 test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>}");
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0);
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -163,7 +165,7 @@ void
 test_nc_cbe_lcdm_halofit_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>}");
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
 
@@ -188,9 +190,11 @@ void
 test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.1>}");
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.1);
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -211,9 +215,12 @@ void
 test_nc_cbe_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -234,9 +241,12 @@ void
 test_nc_cbe_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -257,9 +267,12 @@ void
 test_nc_cbe_flat_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEXcdm{'w' : <-1.0>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -283,9 +296,12 @@ void
 test_nc_cbe_flat_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.1>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -309,9 +325,12 @@ void
 test_nc_cbe_flat_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -335,9 +354,12 @@ void
 test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -361,9 +383,12 @@ void
 test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, "NcHICosmoDEPad");
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEPad"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;

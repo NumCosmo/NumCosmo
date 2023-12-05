@@ -66,7 +66,7 @@ typedef struct _NcmDataGaussPrivate
   gboolean prepared_LLT;
 } NcmDataGaussPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGauss, ncm_data_gauss, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGauss, ncm_data_gauss, NCM_TYPE_DATA)
 
 static void
 ncm_data_gauss_init (NcmDataGauss *gauss)
@@ -295,10 +295,10 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 static void
 _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update = FALSE;
+  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
+  gboolean inv_cov_update          = FALSE;
   guint i, j;
 
   *m2lnL = 0.0;

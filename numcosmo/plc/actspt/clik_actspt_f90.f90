@@ -106,7 +106,7 @@ SUBROUTINE ACTSPT_EXTRA_PARAMETER_INIT(datadir,l_datadir,ilmin11,ilmin12,ilmin22
 	use highell_likelihood
 	use ACTSPT_EXTRA
 
-	INTEGER,INTENT(IN)::l_datadir,ilmin11,ilmin12,ilmin22,ilmax11,ilmax12,ilmax22,iuse_act_south  , iuse_act_equa    , iuse_spt_highell
+	INTEGER,INTENT(IN)::l_datadir,ilmin11,ilmin12,ilmin22,ilmax11,ilmax12,ilmax22,itt_lmax_mc,iuse_act_south  , iuse_act_equa    , iuse_spt_highell
 	character(len=l_datadir)::datadir
 	
 	

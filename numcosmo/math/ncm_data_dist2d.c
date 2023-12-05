@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_dist2d.c
  *
@@ -55,7 +56,7 @@ typedef struct _NcmDataDist2dPrivate
   NcmMatrix *m;
 } NcmDataDist2dPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist2d, ncm_data_dist2d, NCM_TYPE_DATA);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataDist2d, ncm_data_dist2d, NCM_TYPE_DATA)
 
 static void
 ncm_data_dist2d_init (NcmDataDist2d *dist2d)

@@ -89,7 +89,7 @@ typedef struct _NcmABCPrivate
   guint nparticles;
 } NcmABCPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmABC, ncm_abc, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmABC, ncm_abc, G_TYPE_OBJECT)
 
 static void
 ncm_abc_init (NcmABC *abc)
@@ -1017,7 +1017,7 @@ ncm_abc_run (NcmABC *abc, guint nparticles)
   if (!self->started)
     g_error ("ncm_abc_run: run not started, run ncm_abc_start_run() first.");
 
-  if (nparticles <= (self->cur_sample_id + 1))
+  if (nparticles <= (guint) (self->cur_sample_id + 1))
   {
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -1297,13 +1297,16 @@ void
 ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
 {
   NcmABCPrivate * const self = ncm_abc_get_instance_private (abc);
+  NcmMSet *mset              = ncm_mset_catalog_peek_mset (self->mcat);
+  NcmFitState *fstate        = ncm_fit_peek_state (fit);
+  NcmVector *fparams         = ncm_fit_state_peek_fparams (fstate);
+  NcmMatrix *covar           = ncm_fit_state_peek_covar (fstate);
 
-  NcmMSet *mset = ncm_mset_catalog_peek_mset (self->mcat);
+  ncm_mset_catalog_get_mean (self->mcat, &fparams);
+  ncm_mset_catalog_get_covar (self->mcat, &covar);
+  ncm_mset_fparams_set_vector (mset, fparams);
 
-  ncm_mset_catalog_get_mean (self->mcat, &fit->fstate->fparams);
-  ncm_mset_catalog_get_covar (self->mcat, &fit->fstate->covar);
-  ncm_mset_fparams_set_vector (mset, fit->fstate->fparams);
-  fit->fstate->has_covar = TRUE;
+  ncm_fit_state_set_has_covar (fstate, TRUE);
 }
 
 /**

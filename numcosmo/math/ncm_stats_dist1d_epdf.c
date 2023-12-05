@@ -45,9 +45,9 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -62,7 +62,7 @@ enum
   PROP_OUTLIERS_THRESHOLD,
 };
 
-G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D);
+G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D)
 
 typedef struct _NcmStatsDist1dEPDFObs
 {
@@ -208,8 +208,10 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
 
+#ifdef HAVE_FFTW3
   g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
   g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
+#endif /* HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -297,7 +299,7 @@ _ncm_stats_dist1d_epdf_cmp_double (gconstpointer a,
 #undef B
 
 #define _NCM_STATS_DIST1D_EPDF_OBS_N(obs, epdf1d, sd) \
-  0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
+        0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
 
 static gdouble _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x);
 
@@ -414,12 +416,13 @@ _ncm_stats_dist1d_epdf_estimate_h (NcmVector *p_tilde2, NcmVector *Iv, const gui
 static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
-  const guint nbins = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
+#ifdef HAVE_FFTW3
+  const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
   const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
-  const gdouble deltax = delta_l / nbins;
-  const gdouble xm = (epdf1d->max + epdf1d->min) * 0.5;
-  const gdouble lb = xm - delta_l * 0.5;
-  gdouble xc = lb + deltax;
+  const gdouble deltax  = delta_l / nbins;
+  const gdouble xm      = (epdf1d->max + epdf1d->min) * 0.5;
+  const gdouble lb      = xm - delta_l * 0.5;
+  gdouble xc            = lb + deltax;
   guint i, j;
 
   if (epdf1d->fftsize != nbins)
@@ -560,6 +563,10 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
     ncm_spline_prepare (epdf1d->ph_spline);
   }
+
+#else
+  g_error ("ncm_stats_dist1d_epdf_autobw: FFTW3 not available."); /* LCOV_EXCL_LINE */
+#endif /* HAVE_FFTW3 */
 }
 
 static void
@@ -605,6 +612,8 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   if ((x < epdf1d->min) || (x > epdf1d->max))
     return 0.0;
 
+  g_assert_cmpuint (epdf1d->obs->len, >, 0);
+
   _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
@@ -617,8 +626,9 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
 
   {
-    gint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
-    gint i;
+    guint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
+    guint i;
+    gint j;
 
     for (i = s; i < epdf1d->obs->len; i++)
     {
@@ -634,17 +644,17 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
         break;
     }
 
-    for (i = s - 1; i >= 0; i--)
+    for (j = s - 1; j >= 0; j--)
     {
-      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      const gdouble x_i          = obs->x;
-      const gdouble de_i         = (x - x_i) / epdf1d->h;
-      const gdouble de2_i        = de_i * de_i;
-      const gdouble wexp_i       = obs->w * exp (-de2_i * 0.5);
+      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
+      const gdouble x_j          = obs->x;
+      const gdouble de_j         = (x - x_j) / epdf1d->h;
+      const gdouble de2_j        = de_j * de_j;
+      const gdouble wexp_j       = obs->w * exp (-de2_j * 0.5);
 
-      res += wexp_i;
+      res += wexp_j;
 
-      if (wexp_i / res < GSL_DBL_EPSILON)
+      if (wexp_j / res < GSL_DBL_EPSILON)
         break;
     }
   }

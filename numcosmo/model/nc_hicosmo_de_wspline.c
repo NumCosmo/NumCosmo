@@ -55,7 +55,7 @@ struct _NcHICosmoDEWSplinePrivate
   NcmSpline *w_alpha;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE)
 
 enum
 {
