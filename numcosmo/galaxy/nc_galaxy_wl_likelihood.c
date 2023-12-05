@@ -71,6 +71,7 @@ struct _NcGalaxyWLLikelihoodPrivate
   gdouble r_max;
   gdouble scale_cut;
   gint ndata;
+  gdouble prec;
   gboolean constructed;
   guint len;
 };
@@ -89,6 +90,7 @@ enum
   PROP_ZP_MAX,
   PROP_SCALE_CUT,
   PROP_NDATA,
+  PROP_PREC,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLLikelihood, nc_galaxy_wl_likelihood, G_TYPE_OBJECT);
@@ -109,6 +111,7 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
   self->r_max       = 0.0;
   self->r_min       = 0.0;
   self->ndata       = 0.0;
+  self->prec        = 1.0e-11;
   self->constructed = FALSE;
 }
 
@@ -151,6 +154,9 @@ _nc_galaxy_wl_likelihood_set_property (GObject *object, guint prop_id, const GVa
     case PROP_NDATA:
       nc_galaxy_wl_likelihood_set_ndata (gwl, g_value_get_int (value));
       break;
+    case PROP_PREC:
+      nc_galaxy_wl_likelihood_set_prec (gwl, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -190,6 +196,9 @@ _nc_galaxy_wl_likelihood_get_property (GObject *object, guint prop_id, GValue *v
       break;
     case PROP_NDATA:
       g_value_set_int (value, self->ndata);
+      break;
+    case PROP_PREC:
+      g_value_set_double (value, self->prec);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -348,6 +357,21 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                                      "Number of data points to sample for KDE",
                                                      0.0, G_MAXINT, 10000.0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLLikelihood:prec:
+   *
+   * Precision for integral.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_PREC,
+                                   g_param_spec_double ("prec",
+                                                        NULL,
+                                                        "Precision for integral",
+                                                        0.0, G_MAXDOUBLE, 1.e-11,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -580,9 +604,8 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
   NcmVector *zpi                           = ncm_vector_new (1);
   NcmVector *zpf                           = ncm_vector_new (1);
   NcmVector *res                           = ncm_vector_new (1);
-  gdouble zp_i                             = z_cluster;
+  gdouble zp_i                             = 1.0e-11;
   gdouble zp_f                             = 10;
-  const gdouble prec                       = 1.0e-11;
   gdouble result                           = 0;
   guint gal_i;
 
@@ -605,12 +628,11 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
     likelihood_integral->data.zp        = ncm_matrix_get (self->obs, gal_i, 1);
     likelihood_integral->data.et        = ncm_matrix_get (self->obs, gal_i, 2);
 
-    ncm_integral_nd_set_reltol (lh_int, prec);
-    ncm_integral_nd_set_abstol (lh_int, prec);
+    ncm_integral_nd_set_reltol (lh_int, self->prec);
+    ncm_integral_nd_set_abstol (lh_int, self->prec);
     ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
 
-    result += ncm_vector_get (res, 0);
-    /* g_assert_cmpfloat (fabs (result), <=, prec); */
+    result += -2 * log (ncm_vector_get (res, 0));
 
     ncm_integral_nd_clear (&lh_int);
   }
@@ -720,6 +742,22 @@ nc_galaxy_wl_likelihood_set_ndata (NcGalaxyWLLikelihood *gwl, gdouble ndata)
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
 
   self->ndata = ndata;
+}
+
+/**
+ * nc_galaxy_wl_likelihood_set_prec:
+ * @gwl: a #NcGalaxyWL
+ * @prec: precision for integral
+ *
+ * Sets the number of samples ndata.
+ *
+ */
+void
+nc_galaxy_wl_likelihood_set_prec (NcGalaxyWLLikelihood *gwl, gdouble prec)
+{
+  NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
+
+  self->prec = prec;
 }
 
 /**
