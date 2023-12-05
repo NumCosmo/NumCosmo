@@ -202,6 +202,7 @@ G_END_DECLS
 #define _NCM_VECTOR_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
 #ifndef __GTK_DOC_IGNORE__
+#ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
 
@@ -598,6 +599,7 @@ ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_GIR_SCAN */
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_VECTOR_INLINE_H_ */

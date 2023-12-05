@@ -208,6 +208,7 @@ G_END_DECLS
 #define _NCM_MATRIX_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
 #ifndef __GTK_DOC_IGNORE__
+#ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
 
@@ -257,7 +258,7 @@ NCM_INLINE void
 ncm_matrix_addto (NcmMatrix *cm, guint i, guint j, gdouble val)
 {
   gdouble *m = gsl_matrix_ptr (ncm_matrix_gsl (cm), i, j);
-  
+
   *m += val;
 }
 
@@ -265,7 +266,7 @@ NCM_INLINE void
 ncm_matrix_transpose (NcmMatrix *cm)
 {
   const gint ret = gsl_matrix_transpose (ncm_matrix_gsl (cm));
-  
+
   NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
 }
 
@@ -336,7 +337,7 @@ ncm_matrix_mul_row (NcmMatrix *cm, const guint row_i, const gdouble val)
 {
   const guint ncols = ncm_matrix_ncols (cm);
   guint i;
-  
+
   for (i = 0; i < ncols; i++)
   {
     ncm_matrix_ptr (cm, row_i, i)[0] *= val;
@@ -348,7 +349,7 @@ ncm_matrix_mul_col (NcmMatrix *cm, const guint col_i, const gdouble val)
 {
   const guint nrows = ncm_matrix_nrows (cm);
   guint i;
-  
+
   for (i = 0; i < nrows; i++)
   {
     ncm_matrix_ptr (cm, i, col_i)[0] *= val;
@@ -362,9 +363,9 @@ ncm_matrix_get_diag (NcmMatrix *cm, NcmVector *diag)
   const guint ncols = ncm_matrix_ncols (cm);
   const guint n     = MIN (nrows, ncols);
   guint i;
-  
+
   g_assert_cmpuint (ncm_vector_len (diag), >=, n);
-  
+
   for (i = 0; i < n; i++)
   {
     ncm_vector_set (diag, i, ncm_matrix_get (cm, i, i));
@@ -378,9 +379,9 @@ ncm_matrix_set_diag (NcmMatrix *cm, NcmVector *diag)
   const guint ncols = ncm_matrix_ncols (cm);
   const guint n     = MIN (nrows, ncols);
   guint i;
-  
+
   g_assert_cmpuint (ncm_vector_len (diag), >=, n);
-  
+
   for (i = 0; i < n; i++)
   {
     ncm_matrix_set (cm, i, i, ncm_vector_get (diag, i));
@@ -417,13 +418,14 @@ ncm_matrix_memcpy_to_colmajor (NcmMatrix *cm1, const NcmMatrix *cm2)
   const guint nrows = ncm_matrix_nrows (cm1);
   const guint ncols = ncm_matrix_ncols (cm1);
   register guint i;
-  
+
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
-  
+
   for (i = 0; i < nrows; i++)
   {
     register guint j;
+
     for (j = 0; j < ncols; j++)
     {
       ncm_matrix_set_colmajor (cm1, i, j, ncm_matrix_get (cm2, i, j));
@@ -435,7 +437,7 @@ NCM_INLINE void
 ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv)
 {
   gint ret = gsl_matrix_set_col (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
-  
+
   g_assert (ret == GSL_SUCCESS);
 }
 
@@ -443,7 +445,7 @@ NCM_INLINE void
 ncm_matrix_set_row (NcmMatrix *cm, const guint n, const NcmVector *cv)
 {
   gint ret = gsl_matrix_set_row (ncm_matrix_gsl (cm), n, ncm_vector_const_gsl (cv));
-  
+
   g_assert (ret == GSL_SUCCESS);
 }
 
@@ -451,7 +453,7 @@ NCM_INLINE GArray *
 ncm_matrix_get_array (NcmMatrix *cm)
 {
   g_assert (cm->type == NCM_MATRIX_GARRAY);
-  
+
   return g_array_ref (cm->pdata);
 }
 
@@ -461,7 +463,7 @@ ncm_matrix_dup_array (NcmMatrix *cm)
   const guint nrows = ncm_matrix_nrows (cm);
   const guint ncols = ncm_matrix_ncols (cm);
   const guint total = nrows * ncols;
-  GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total);
+  GArray *a         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total);
   register guint i;
   register guint j;
   register guint k;
@@ -469,6 +471,7 @@ ncm_matrix_dup_array (NcmMatrix *cm)
   g_array_set_size (a, total);
 
   k = 0;
+
   for (i = 0; i < nrows; i++)
     for (j = 0; j < ncols; j++)
       g_array_index (a, gdouble, k++) = ncm_matrix_get (cm, i, j);
@@ -552,6 +555,7 @@ ncm_matrix_const_data (const NcmMatrix *cm)
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_GIR_SCAN */
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_MATRIX_INLINE_H_ */
