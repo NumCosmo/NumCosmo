@@ -179,10 +179,13 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = gsdsgauss->priv;
+  gdouble gt = 0.0;
 
-  gdouble gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
+  if (z > z_cluster)
+    gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
 
-  return gsl_ran_gaussian_pdf (et - gt, self->sigma);
+  return exp (-pow (et - gt, 2) / (2.0 * pow (self->sigma, 2))) / sqrt (2.0 * M_PI) * self->sigma;
+  /* return gsl_ran_gaussian_pdf (et - gt, self->sigma); */
 }
 
 /**

@@ -185,7 +185,8 @@ _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z, cons
   NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdp);
   NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
 
-  return gsl_ran_gaussian_pdf (zp - z, self->sigma * (1.0 + z));
+  return exp (-pow (zp - z, 2.0) / (2.0 * pow (self->sigma * (1.0 + z), 2.0))) / (self->sigma * (1.0 + z) * sqrt (2.0 * M_PI));
+  /* return gsl_ran_gaussian_pdf (zp - z, self->sigma * (1.0 + z)); */
 }
 
 /**
