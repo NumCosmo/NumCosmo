@@ -775,6 +775,8 @@ if enable_gir
         'numcosmo-math.h',
     ]
 
+    # -U__OPTIMIZE__ is needed to avoid a bug in gobject-introspection
+    # It has no effect on the generated code
     numcosmo_math_gir = gnome.generate_gir(
         libnumcosmo,
         namespace: 'NumCosmoMath',
@@ -786,7 +788,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
     )
 
     nc_introspection_sources = [
@@ -797,6 +799,8 @@ if enable_gir
         'numcosmo.h',
     ]
 
+    # -U__OPTIMIZE__ is needed to avoid a bug in gobject-introspection
+    # It has no effect on the generated code
     numcosmo_gir = gnome.generate_gir(
         libnumcosmo,
         namespace: 'NumCosmo',
@@ -808,7 +812,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
     )
     if have_vala
         vapi_deps = [
