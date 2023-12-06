@@ -44,11 +44,16 @@
 
 #include "math/ncm_integral1d_ptr.h"
 
-struct _NcmIntegral1dPtrPrivate
+typedef struct _NcmIntegral1dPtrPrivate
 {
   NcmIntegral1dF F;
   gpointer userdata;
   GDestroyNotify userfree;
+} NcmIntegral1dPtrPrivate;
+
+struct _NcmIntegral1dPtr
+{
+  NcmIntegral1d parent_instance;
 };
 
 enum
@@ -64,29 +69,31 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM_TYPE_INTEG
 static void
 ncm_integral1d_ptr_init (NcmIntegral1dPtr *int1d_ptr)
 {
-  int1d_ptr->priv           = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
-  int1d_ptr->priv->F        = NULL;
-  int1d_ptr->priv->userdata = NULL;
-  int1d_ptr->priv->userfree = NULL;
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
+
+  self->F        = NULL;
+  self->userdata = NULL;
+  self->userfree = NULL;
 }
 
 static void
 _ncm_integral1d_ptr_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmIntegral1dPtr *int1d_ptr = NCM_INTEGRAL1D_PTR (object);
+  NcmIntegral1dPtr *int1d_ptr          = NCM_INTEGRAL1D_PTR (object);
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
 
   g_return_if_fail (NCM_IS_INTEGRAL1D_PTR (object));
 
   switch (prop_id)
   {
     case PROP_INTEGRAND:
-      int1d_ptr->priv->F = g_value_get_pointer (value);
+      self->F = g_value_get_pointer (value);
       break;
     case PROP_USERDATA:
       ncm_integral1d_ptr_set_userdata (int1d_ptr, g_value_get_pointer (value));
       break;
     case PROP_USERFREE:
-      int1d_ptr->priv->userfree = g_value_get_pointer (value);
+      self->userfree = g_value_get_pointer (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -97,20 +104,21 @@ _ncm_integral1d_ptr_set_property (GObject *object, guint prop_id, const GValue *
 static void
 _ncm_integral1d_ptr_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmIntegral1dPtr *int1d_ptr = NCM_INTEGRAL1D_PTR (object);
+  NcmIntegral1dPtr *int1d_ptr          = NCM_INTEGRAL1D_PTR (object);
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
 
   g_return_if_fail (NCM_IS_INTEGRAL1D_PTR (object));
 
   switch (prop_id)
   {
     case PROP_INTEGRAND:
-      g_value_set_pointer (value, int1d_ptr->priv->F);
+      g_value_set_pointer (value, self->F);
       break;
     case PROP_USERDATA:
-      g_value_set_pointer (value, int1d_ptr->priv->userdata);
+      g_value_set_pointer (value, self->userdata);
       break;
     case PROP_USERFREE:
-      g_value_set_pointer (value, int1d_ptr->priv->userfree);
+      g_value_set_pointer (value, self->userfree);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -162,9 +170,10 @@ ncm_integral1d_ptr_class_init (NcmIntegral1dPtrClass *klass)
 static gdouble
 _ncm_integral1d_ptr_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w)
 {
-  NcmIntegral1dPtr *int1d_ptr = NCM_INTEGRAL1D_PTR (int1d);
+  NcmIntegral1dPtr *int1d_ptr          = NCM_INTEGRAL1D_PTR (int1d);
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
 
-  return int1d_ptr->priv->F (int1d_ptr->priv->userdata, x, w);
+  return self->F (self->userdata, x, w);
 }
 
 /**
@@ -267,12 +276,14 @@ ncm_integral1d_ptr_clear (NcmIntegral1dPtr **int1d_ptr)
 void
 ncm_integral1d_ptr_set_userdata (NcmIntegral1dPtr *int1d_ptr, gpointer userdata)
 {
-  if ((int1d_ptr->priv->userdata != NULL) && (int1d_ptr->priv->userfree != NULL))
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
+
+  if ((self->userdata != NULL) && (self->userfree != NULL))
   {
-    int1d_ptr->priv->userfree (int1d_ptr->priv->userdata);
-    int1d_ptr->priv->userdata = NULL;
+    self->userfree (self->userdata);
+    self->userdata = NULL;
   }
 
-  int1d_ptr->priv->userdata = userdata;
+  self->userdata = userdata;
 }
 
