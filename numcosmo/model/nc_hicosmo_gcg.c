@@ -36,10 +36,12 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "model/nc_hicosmo_gcg.h"
 #include "math/ncm_mset_func_list.h"
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "model/nc_hicosmo_gcg.h"
+#include "math/ncm_cfg.h"
+
 
 struct _NcHICosmoGCGPrivate
 {

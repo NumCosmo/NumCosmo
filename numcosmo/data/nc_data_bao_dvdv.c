@@ -43,6 +43,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_bao_dvdv.h"
+#include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum

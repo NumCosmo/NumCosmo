@@ -41,6 +41,7 @@
 #include "math/ncm_spline_func.h"
 #include "math/ncm_stats_dist1d_epdf.h"
 #include "math/ncm_c.h"
+#include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
