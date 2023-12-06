@@ -32,12 +32,12 @@
  *
  * This object is a subclass of #NcmMPIJob and is designed to implement an MPI job
  * for evaluating fit steps. It is employed by #NcmFit to parallelize the evaluation
- * of the likelihood function. The job entails computing the likelihood function and,
+ * of the posterior function. The job entails computing the posterior function and,
  * if applicable, additional functions (e.g., derived quantities) at a specified
  * point within the parameter space.
  *
  * The MPI job is implemented as a function that takes a vector of parameters as input
- * and produces a vector of values as output. The first value represents the likelihood
+ * and produces a vector of values as output. The first value represents the posterior
  * function's value, while the subsequent values correspond to those of additional functions.
  *
  */
