@@ -45,7 +45,7 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define VECTOR (model->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (model))
 #define Z_BIAS (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))
 #define SIGMA0 (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0))
 
@@ -371,7 +371,7 @@ nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_globa
  * Returns: the value of #NcClusterPhotozGaussGlobal:z-bias property.
  */
 gdouble
-nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg_global)
+nc_cluster_photoz_gauss_global_get_z_bias (NcClusterPhotozGaussGlobal *pzg_global)
 {
   NcmModel *model = NCM_MODEL (pzg_global);
 
@@ -401,7 +401,7 @@ nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_globa
  * Returns: the value of #NcClusterPhotozGaussGlobal:sigma0 property.
  */
 gdouble
-nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlobal *pzg_global)
+nc_cluster_photoz_gauss_global_get_sigma0 (NcClusterPhotozGaussGlobal *pzg_global)
 {
   NcmModel *model = NCM_MODEL (pzg_global);
 

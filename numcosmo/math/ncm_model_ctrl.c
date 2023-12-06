@@ -221,6 +221,7 @@ gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  guint64 pkey         = ncm_model_state_get_pkey (model);
   gboolean up          = FALSE;
 
   ctrl->last_update = FALSE;
@@ -230,9 +231,9 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
     ncm_model_ctrl_set_model (ctrl, model);
     ctrl->last_update = TRUE;
   }
-  else if (ctrl->pkey != model->pkey)
+  else if (ctrl->pkey != pkey)
   {
-    ctrl->pkey        = model->pkey;
+    ctrl->pkey        = pkey;
     ctrl->last_update = TRUE;
   }
 
@@ -462,13 +463,14 @@ ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
 gboolean
 ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
 {
-  gboolean up          = FALSE;
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  guint64 pkey         = ncm_model_state_get_pkey (model);
+  gboolean up          = FALSE;
 
   if (model != ctrl_model)
   {
     g_weak_ref_set (&ctrl->model_wr, model);
-    ctrl->pkey = model->pkey;
+    ctrl->pkey = pkey;
     up         = TRUE;
   }
 

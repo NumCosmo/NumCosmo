@@ -47,7 +47,7 @@
 
 G_DEFINE_TYPE (NcClusterMassVanderlinde, nc_cluster_mass_vanderlinde, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (msz)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (msz)))
 #define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_A_SZ))
 #define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_B_SZ))
 #define C_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_C_SZ))

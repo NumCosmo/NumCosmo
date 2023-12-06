@@ -45,7 +45,7 @@
 
 G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (mlnn)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (mlnn)))
 #define BIAS   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_BIAS))
 #define SIGMA  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_SIGMA))
 

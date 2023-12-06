@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,9 @@
  * SECTION:nc_hiprim_expc
  * @title: NcHIPrimExpc
  * @short_description: Exponential cutoff modification of the power law primordial spectrum
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,7 +41,8 @@
 
 G_DEFINE_TYPE (NcHIPrimExpc, nc_hiprim_expc, NC_TYPE_HIPRIM)
 
-enum {
+enum
+{
   PROP_0,
   PROP_SIZE,
 };
@@ -54,7 +55,6 @@ nc_hiprim_expc_init (NcHIPrimExpc *nc_hiprim_expc)
 static void
 nc_hiprim_expc_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_expc_parent_class)->finalize (object);
 }
@@ -65,7 +65,7 @@ static gdouble _nc_hiprim_expc_lnT_powespec_lnk (NcHIPrim *prim, const gdouble l
 static void
 nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcHIPrimClass *prim_class  = NC_HIPRIM_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
@@ -107,7 +107,7 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
                               0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
-  
+
   /* Set N_T param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_N_T, "n_{\\mathrm{T}}", "n_T",
                               -0.5, 0.5, 1.0e-2,
@@ -133,10 +133,11 @@ nc_hiprim_expc_new (void)
 {
   NcHIPrimExpc *prim_expc = g_object_new (NC_TYPE_HIPRIM_EXPC,
                                           NULL);
+
   return prim_expc;
 }
 
-#define VECTOR     (NCM_MODEL (prim)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (prim)))
 #define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_LN10E10ASA))
 #define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_N_SA))
 #define LAMBDAC    (ncm_vector_get (VECTOR, NC_HIPRIM_EXPC_LAMBDAC))
@@ -152,7 +153,7 @@ nc_hiprim_expc_new (void)
 static gdouble
 _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  const gdouble ln_ka = lnk - prim->lnk_pivot;
+  const gdouble ln_ka    = lnk - prim->lnk_pivot;
   const gdouble lambda_c = LAMBDAC;
   const gdouble lnk_c    = LNKC;
   const gdouble c        = C;
@@ -162,9 +163,9 @@ _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   gdouble ln_expc_fac;
 
   if (k_kc_lambda_c > 1.0)
-    ln_expc_fac = log1p (- exp (- k_kc_lambda_c));
+    ln_expc_fac = log1p (-exp (-k_kc_lambda_c));
   else
-    ln_expc_fac = log (- expm1 (- k_kc_lambda_c));
+    ln_expc_fac = log (-expm1 (-k_kc_lambda_c));
 
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_expc_fac;
 }
@@ -173,5 +174,7 @@ static gdouble
 _nc_hiprim_expc_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
   const gdouble ln_ka = lnk - prim->lnk_pivot;
+
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }
+

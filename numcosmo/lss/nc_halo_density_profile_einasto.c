@@ -48,8 +48,8 @@
  * \end{equation}
  * where $c_{\Delta}$ is the concentration parameter.
  *
- * References: Einasto (1965), arXiv:1712.04512. $\alpha$ parameter range values: Gao et al. (2008) https://ui.adsabs.harvard.edu/abs/2008MNRAS.387..536G/abstract, 
- * Dutton \& Maccio (2014) https://academic.oup.com/mnras/article/441/4/3359/1209689. 
+ * References: Einasto (1965), arXiv:1712.04512. $\alpha$ parameter range values: Gao et al. (2008) https://ui.adsabs.harvard.edu/abs/2008MNRAS.387..536G/abstract,
+ * Dutton \& Maccio (2014) https://academic.oup.com/mnras/article/441/4/3359/1209689.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -69,7 +69,7 @@
 
 G_DEFINE_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einasto, NC_TYPE_HALO_DENSITY_PROFILE)
 
-#define VECTOR (NCM_MODEL (dp)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (dp)))
 #define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
 #define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 #define ALPHA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA))
@@ -90,7 +90,7 @@ _nc_halo_density_profile_einasto_set_property (GObject *object, guint prop_id, c
 {
   /* NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -104,7 +104,7 @@ _nc_halo_density_profile_einasto_get_property (GObject *object, guint prop_id, G
 {
   /* NcHaloDensityProfileEinasto *dpe = NC_HALO_DENSITY_PROFILE_EINASTO (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_EINASTO (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -129,14 +129,14 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   GObjectClass *object_class          = G_OBJECT_CLASS (klass);
   NcHaloDensityProfileClass *dp_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
   NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
-  
+
   model_class->set_property = &_nc_halo_density_profile_einasto_set_property;
   model_class->get_property = &_nc_halo_density_profile_einasto_get_property;
   object_class->finalize    = &nc_halo_density_profile_einasto_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "Einasto Density Profile", "Einasto");
   ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_LOCAL_SPARAM_LEN, 0, PROP_SIZE);
-  
+
   /**
    * NcHaloDensityProfileEinasto:alpha:
    *
@@ -147,10 +147,10 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
                               0.12,  0.35, 0.01,
                               NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
-  
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
-  
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_einasto_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_einasto_eval_dl_spher_mass;
 }

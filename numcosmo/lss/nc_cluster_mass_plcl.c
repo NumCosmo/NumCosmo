@@ -50,7 +50,7 @@
 
 G_DEFINE_TYPE (NcClusterMassPlCL, nc_cluster_mass_plcl, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (mszl)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (mszl)))
 #define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_SZ))
 #define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_SZ))
 #define SD_SZ  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_SZ))

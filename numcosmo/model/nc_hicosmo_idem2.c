@@ -72,7 +72,7 @@ nc_hicosmo_idem2_init (NcHICosmoIDEM2 *cosmo_de)
 
   g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));
   ncm_serialize_clear (&ser);
-  cosmo_de->priv->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+  cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (NCM_MODEL (cosmo_de)) - 1;
 
   cosmo_de->priv->nu_rho = NULL;
   cosmo_de->priv->nu_p   = NULL;
@@ -109,13 +109,13 @@ _nc_hicosmo_idem2_constructed (GObject *object)
     if (nmassnu > 0)
     {
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_T) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_T) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_T, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_MU) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_MU) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_MU, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_G) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_G) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_G, nmassnu);
     }
   }
   /* Chain up : start */
@@ -350,7 +350,7 @@ nc_hicosmo_idem2_class_init (NcHICosmoIDEM2Class *klass)
 static gdouble _nc_hicosmo_idem2_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
 static gdouble _nc_hicosmo_idem2_Omega_gnu0 (NcHICosmo *cosmo);
 
-#define VECTOR (NCM_MODEL (cosmo)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_H0))
 #define OMEGA_C (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_C))
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_X))
@@ -576,13 +576,13 @@ _nc_hicosmo_idem2_Yp_4He (NcHICosmo *cosmo)
     }
     else
     {
-      if (model->pkey != cosmo_de->priv->HE4_Yp_key)
+      if (ncm_model_state_get_pkey (model) != cosmo_de->priv->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_IDEM2 (cosmo)->priv->BBN_spline2d,
                                               wb, DNeff);
 
         ncm_model_orig_param_set (model, NC_HICOSMO_IDEM2_HE_YP, Yp);
-        cosmo_de->priv->HE4_Yp_key = model->pkey;
+        cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (model);
         /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp); */
       }
     }

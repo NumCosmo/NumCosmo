@@ -48,7 +48,7 @@
 
 G_DEFINE_TYPE (NcClusterMassBensonXRay, nc_cluster_mass_benson_xray, NC_TYPE_CLUSTER_MASS_BENSON)
 
-#define VECTOR (NCM_MODEL (mx)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (mx)))
 #define A_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_A_X))
 #define B_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_B_X))
 #define C_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_C_X))

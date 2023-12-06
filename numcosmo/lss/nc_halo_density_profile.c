@@ -198,7 +198,7 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL)
 
-#define VECTOR  (NCM_MODEL (dp)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (dp)))
 #define LOG10M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA))
 #define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 

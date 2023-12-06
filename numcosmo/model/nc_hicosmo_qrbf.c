@@ -95,6 +95,7 @@ _nc_hicosmo_qrbf_constructed (GObject *object)
     NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (object);
     NcHICosmoQRBFPrivate * const self = qrbf->priv;
     NcmModel *model                   = NCM_MODEL (qrbf);
+    NcmVector *orig_vec               = ncm_model_orig_params_peek_vector (model);
     const guint rbf_size              = ncm_model_vparam_len (model, NC_HICOSMO_QRBF_RBF_CENTERS);
     guint centers_i, coeffs_i;
     guint i;
@@ -104,8 +105,8 @@ _nc_hicosmo_qrbf_constructed (GObject *object)
     centers_i = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_CENTERS, 0);
     coeffs_i  = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_COEFFS, 0);
 
-    self->centers  = ncm_vector_get_subvector (model->params, centers_i, rbf_size);
-    self->coeffs   = ncm_vector_get_subvector (model->params, coeffs_i, rbf_size);
+    self->centers  = ncm_vector_get_subvector (orig_vec, centers_i, rbf_size);
+    self->coeffs   = ncm_vector_get_subvector (orig_vec, coeffs_i, rbf_size);
     self->int_z0   = ncm_vector_dup (self->centers);
     self->rbf_size = rbf_size;
 
@@ -269,7 +270,7 @@ nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qrbf_as_drag);
 }
 
-#define VECTOR     (NCM_MODEL (cosmo)->params)
+#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
 #define QRBF_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_H0))
 #define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_OMEGA_T))
 #define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_AS_DRAG))
