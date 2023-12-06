@@ -40,6 +40,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_iset.h"
+#include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_permutation.h>

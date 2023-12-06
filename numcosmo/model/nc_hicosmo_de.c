@@ -42,6 +42,7 @@
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
+#include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
