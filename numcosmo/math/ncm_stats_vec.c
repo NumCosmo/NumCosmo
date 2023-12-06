@@ -83,9 +83,6 @@
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
-#include "math/gsl_rstat.h"
-#include "math/rquantile.c"
-
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_FFTW3
 #include <fftw3.h>
@@ -96,6 +93,8 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_rstat.h>
+#include <gsl/gsl_sort.h>
 
 #include <math.h>
 

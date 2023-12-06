@@ -30,7 +30,10 @@
  * @stability: Stable
  * @include: numcosmo/math/ncm_integral1d_ptr.h
  *
- * FIXME
+ * This object facilitates one-dimensional integration by employing a function pointer
+ * to evaluate the integrand. It's worth mentioning that this object is not well suited
+ * for serialization or for integration with GObject introspection bindings, as it
+ * relies on raw function pointers.
  *
  */
 

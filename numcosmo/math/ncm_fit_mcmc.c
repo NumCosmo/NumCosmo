@@ -488,6 +488,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   NcmMSet *mset       = ncm_fit_peek_mset (mcmc->fit);
   NcmLikelihood *lh   = ncm_fit_peek_likelihood (mcmc->fit);
   NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (lh);
   const gint cur_id   = ncm_mset_catalog_get_cur_id (mcmc->mcat);
 
   if (mcmc->started)
@@ -499,7 +500,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMCMC: Starting Markov Chain Monte Carlo...\n");
-      ncm_dataset_log_info (lh->dset);
+      ncm_dataset_log_info (dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMCMC: Model set:\n");
       ncm_mset_pretty_log (mset);
