@@ -38,10 +38,11 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmModelCtrl, ncm_model_ctrl, NCM, MODEL_CTRL, GObject)
 
 NcmModelCtrl *ncm_model_ctrl_new (NcmModel * model);
-gboolean ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model);
-void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_free (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_clear (NcmModelCtrl **ctrl);
+
+gboolean ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model);
+void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 
 NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
 gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);

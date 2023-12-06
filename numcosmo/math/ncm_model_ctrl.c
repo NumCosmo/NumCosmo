@@ -171,6 +171,35 @@ ncm_model_ctrl_new (NcmModel *model)
 }
 
 /**
+ * ncm_model_ctrl_free:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * Decreases the reference count of @ctrl. If the reference count
+ * reaches zero, @ctrl is freed.
+ *
+ */
+void
+ncm_model_ctrl_free (NcmModelCtrl *ctrl)
+{
+  g_object_unref (ctrl);
+}
+
+/**
+ * ncm_model_ctrl_clear:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * Checks if *@ctrl is not %NULL, and if so, decreases the reference count
+ * of @ctrl. If the reference count reaches zero, @ctrl is freed. The
+ * pointer to @ctrl is set to %NULL.
+ *
+ */
+void
+ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
+{
+  g_clear_object (ctrl);
+}
+
+/**
  * ncm_model_ctrl_update:
  * @ctrl: a #NcmModelCtrl
  * @model: a #NcmModel
@@ -511,34 +540,5 @@ ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
   g_array_set_size (ctrl->submodel_last_update, 0);
 
   return;
-}
-
-/**
- * ncm_model_ctrl_free:
- * @ctrl: a #NcmModelCtrl
- *
- * Decreases the reference count of @ctrl. If the reference count
- * reaches zero, @ctrl is freed.
- *
- */
-void
-ncm_model_ctrl_free (NcmModelCtrl *ctrl)
-{
-  g_object_unref (ctrl);
-}
-
-/**
- * ncm_model_ctrl_clear:
- * @ctrl: a #NcmModelCtrl
- *
- * Checks if *@ctrl is not %NULL, and if so, decreases the reference count
- * of @ctrl. If the reference count reaches zero, @ctrl is freed. The
- * pointer to @ctrl is set to %NULL.
- *
- */
-void
-ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
-{
-  g_clear_object (ctrl);
 }
 
