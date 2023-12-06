@@ -523,14 +523,14 @@ _nc_hicosmo_Vexp_init_dx_alpha_series (const gdouble dalpha)
   return res;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_H0))
-#define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_C))
-#define OMEGA_L   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_L))
-#define SIGMA_PHI (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_SIGMA_PHI))
-#define D_PHI     (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_D_PHI))
-#define ALPHA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_ALPHA_B))
-#define X_B       (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_X_B))
+#define VECTOR    (NCM_MODEL (cosmo))
+#define MACRO_H0  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_H0))
+#define OMEGA_C   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_C))
+#define OMEGA_L   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_L))
+#define SIGMA_PHI (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_SIGMA_PHI))
+#define D_PHI     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_D_PHI))
+#define ALPHA_B   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_ALPHA_B))
+#define X_B       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_X_B))
 
 #define LAMBDAp (1.0 + 1.0 / M_SQRT2)
 #define LAMBDAm (1.0 - 1.0 / M_SQRT2)
@@ -1260,7 +1260,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
           const gdouble c2      = c1 / (OMEGA_C * LpLm * LmLp);
 
           if (set_xb_max && (tQ_f < 0.0))
-            ncm_vector_set (VECTOR, NC_HICOSMO_VEXP_X_B, a_0 / exp (Vexp->priv->alpha_b));
+            ncm_model_orig_param_set (VECTOR, NC_HICOSMO_VEXP_X_B, a_0 / exp (Vexp->priv->alpha_b));
 
           if (!root1_found)
             g_warning ("_nc_hicosmo_Vexp_evolve_qt: imperfect match of the classical solution.");

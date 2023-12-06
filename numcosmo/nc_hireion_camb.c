@@ -54,9 +54,9 @@ enum
 
 G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (reion)))
-#define HII_HEII_Z (ncm_vector_get (VECTOR, NC_HIREION_CAMB_HII_HEII_Z))
-#define HEIII_Z    (ncm_vector_get (VECTOR, NC_HIREION_CAMB_HEIII_Z))
+#define VECTOR     (NCM_MODEL (reion))
+#define HII_HEII_Z (ncm_model_orig_param_get (VECTOR, NC_HIREION_CAMB_HII_HEII_Z))
+#define HEIII_Z    (ncm_model_orig_param_get (VECTOR, NC_HIREION_CAMB_HEIII_Z))
 
 static void
 nc_hireion_camb_init (NcHIReionCamb *reion_camb)

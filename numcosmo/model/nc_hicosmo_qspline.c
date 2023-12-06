@@ -305,10 +305,10 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qspline_as_drag);
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define QSPLINE_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
-#define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
-#define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
+#define VECTOR     (NCM_MODEL (cosmo))
+#define QSPLINE_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
+#define OMEGA_T    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
+#define AS_DRAG    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
 
 static void
 _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)

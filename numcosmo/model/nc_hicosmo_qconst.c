@@ -48,58 +48,6 @@
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_H0))
-#define OMEGA_T  (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_OMEGA_T))
-#define CD       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_CD))
-#define E        (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_E))
-#define Q        (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Q))
-#define Z1       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Z1))
-
-static gdouble
-_nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z)
-{
-  gdouble x1, x, ln_x_x1;
-
-  x1      = 1.0 + Z1;
-  x       = 1.0 + z;
-  ln_x_x1 = gsl_sf_log (x / x1);
-
-  if (Z1 == z)
-    return CD;
-
-  return CD + x1 * ln_x_x1 / E * gsl_sf_exprel (-Q * ln_x_x1);
-}
-
-/****************************************************************************
- * Hubble constant
- ****************************************************************************/
-static gdouble
-_nc_hicosmo_qconst_H0 (NcHICosmo *cosmo)
-{
-  return MACRO_H0;
-}
-
-static gdouble
-_nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo)
-{
-  return OMEGA_T;
-}
-
-/**
- * nc_hicosmo_qconst_new:
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcHICosmoQConst *
-nc_hicosmo_qconst_new (void)
-{
-  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_HICOSMO_QCONST, NULL);
-
-  return qconst;
-}
 
 enum
 {
@@ -119,6 +67,10 @@ nc_hicosmo_qconst_finalize (GObject *object)
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qconst_parent_class)->finalize (object);
 }
+
+static gdouble _nc_hicosmo_qconst_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo);
 
 static void
 nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
@@ -168,5 +120,58 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
   nc_hicosmo_set_H0_impl (parent_class, &_nc_hicosmo_qconst_H0);
   nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qconst_Dc);
   nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qconst_Omega_t0);
+}
+
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_H0))
+#define OMEGA_T  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_OMEGA_T))
+#define CD       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_CD))
+#define E        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_E))
+#define Q        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_Q))
+#define Z1       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_Z1))
+
+static gdouble
+_nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z)
+{
+  gdouble x1, x, ln_x_x1;
+
+  x1      = 1.0 + Z1;
+  x       = 1.0 + z;
+  ln_x_x1 = gsl_sf_log (x / x1);
+
+  if (Z1 == z)
+    return CD;
+
+  return CD + x1 * ln_x_x1 / E * gsl_sf_exprel (-Q * ln_x_x1);
+}
+
+/****************************************************************************
+ * Hubble constant
+ ****************************************************************************/
+static gdouble
+_nc_hicosmo_qconst_H0 (NcHICosmo *cosmo)
+{
+  return MACRO_H0;
+}
+
+static gdouble
+_nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo)
+{
+  return OMEGA_T;
+}
+
+/**
+ * nc_hicosmo_qconst_new:
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcHICosmoQConst *
+nc_hicosmo_qconst_new (void)
+{
+  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_HICOSMO_QCONST, NULL);
+
+  return qconst;
 }
 

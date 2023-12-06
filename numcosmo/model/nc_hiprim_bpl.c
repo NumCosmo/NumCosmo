@@ -133,13 +133,13 @@ nc_hiprim_bpl_new (void)
   return prim_bpl;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (prim)))
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_LN10E10ASA))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_SA))
-#define DELTA      (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_DELTA))
-#define LNKB       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_LNKB))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_T_SA_RATIO))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_LN10E10ASA))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_N_SA))
+#define DELTA      (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_DELTA))
+#define LNKB       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_LNKB))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_T_SA_RATIO))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_N_T))
 
 /****************************************************************************
  * Power spectrum

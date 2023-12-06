@@ -142,12 +142,12 @@ nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
   iface->tv  = &_nc_hipert_itwo_fluids_tv;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QGRW_H0))
-#define OMEGA_R  (ncm_vector_get (VECTOR, NC_HICOSMO_QGRW_OMEGA_R))
-#define OMEGA_W  (ncm_vector_get (VECTOR, NC_HICOSMO_QGRW_OMEGA_W))
-#define W        (ncm_vector_get (VECTOR, NC_HICOSMO_QGRW_W))
-#define X_B      (ncm_vector_get (VECTOR, NC_HICOSMO_QGRW_X_B))
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGRW_H0))
+#define OMEGA_R  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGRW_OMEGA_R))
+#define OMEGA_W  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGRW_OMEGA_W))
+#define W        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGRW_W))
+#define X_B      (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGRW_X_B))
 
 /****************************************************************************
  * Normalized Hubble function

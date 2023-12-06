@@ -147,11 +147,11 @@ nc_reduced_shear_calib_wtg_class_init (NcReducedShearCalibWtgClass *klass)
   rs_calib_class->eval = &_nc_reduced_shear_calib_wtg_eval;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (rs_wtg)))
-#define MSLOPE     (ncm_vector_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE))
-#define MB         (ncm_vector_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_MB))
-#define C          (ncm_vector_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_C))
-#define SIZE_RATIO (ncm_vector_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO))
+#define VECTOR     (NCM_MODEL (rs_wtg))
+#define MSLOPE     (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE))
+#define MB         (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_MB))
+#define C          (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_C))
+#define SIZE_RATIO (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO))
 
 static gdouble
 _nc_reduced_shear_calib_wtg_eval (NcReducedShearCalib *rs_calib, const gdouble g_th, const gdouble psf_size, const gdouble gal_size)

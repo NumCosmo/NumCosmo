@@ -125,11 +125,11 @@ nc_hiprim_power_law_new (void)
   return prim_pl;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (prim)))
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_LN10E10ASA))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_T_SA_RATIO))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_SA))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_LN10E10ASA))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_T_SA_RATIO))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_N_SA))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_N_T))
 
 /****************************************************************************
  * Power spectra

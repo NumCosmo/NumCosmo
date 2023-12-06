@@ -375,18 +375,17 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 static gdouble _nc_hicosmo_de_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
 static gdouble _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo);
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))
-#define OMEGA_C (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define T_GAMMA0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
-#define HE_YP (ncm_vector_get (VECTOR, NC_HICOSMO_DE_HE_YP))
-#define ENNU (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
-#define OMEGA_R (_nc_hicosmo_de_Omega_gnu0 (NC_HICOSMO (cosmo)))
-#define OMEGA_B (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
-
-#define OMEGA_M (OMEGA_B + OMEGA_C)
-#define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_de_Omega_mnu0 (cosmo)))
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_H0))
+#define OMEGA_C  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
+#define OMEGA_X  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define T_GAMMA0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
+#define HE_YP    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_HE_YP))
+#define ENNU     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_ENNU))
+#define OMEGA_R  (_nc_hicosmo_de_Omega_gnu0 (NC_HICOSMO (cosmo)))
+#define OMEGA_B  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
+#define OMEGA_M  (OMEGA_B + OMEGA_C)
+#define OMEGA_K  (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_de_Omega_mnu0 (cosmo)))
 
 typedef struct _NcHICosmoDENuInt
 {

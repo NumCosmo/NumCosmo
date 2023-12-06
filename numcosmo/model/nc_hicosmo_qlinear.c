@@ -51,14 +51,14 @@
 
 G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)))
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_H0))
-#define OMEGA_T  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_OMEGA_T))
-#define QLIN_CD  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_CD))
-#define QLIN_E   (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_E))
-#define QLIN_Q   (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_Q))
-#define QLIN_QP  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_QP))
-#define QLIN_Z1  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_Z1))
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_H0))
+#define OMEGA_T  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_OMEGA_T))
+#define QLIN_CD  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_CD))
+#define QLIN_E   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_E))
+#define QLIN_Q   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_Q))
+#define QLIN_QP  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_QP))
+#define QLIN_Z1  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QLINEAR_Z1))
 
 enum
 {
@@ -77,6 +77,65 @@ nc_hicosmo_qlinear_finalize (GObject *object)
 {
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qlinear_parent_class)->finalize (object);
+}
+
+static gdouble _nc_hicosmo_qlinear_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qlinear_Omega_t0 (NcHICosmo *cosmo);
+
+static void
+nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
+{
+  GObjectClass *object_class   = G_OBJECT_CLASS (klass);
+  NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
+  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
+
+  object_class->finalize = &nc_hicosmo_qlinear_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Q Linear", "qlinear");
+  ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_H0, "H_0", "H0",
+                              10.0, 500.0, 1.0,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_H0,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_OMEGA_T, "\\Omega_{t0}", "Omegat",
+                              -5.0, 5.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_CD, "D_c", "Dc",
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_CD,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_E, "E", "E",
+                              0.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_E,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_Q, "q", "q",
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_Q,
+                              NCM_PARAM_TYPE_FREE);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_QP, "q^\\prime", "qp",
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_QP,
+                              NCM_PARAM_TYPE_FREE);
+
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_Z1, "z_\\star", "zs",
+                              0.0, 5.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_Z1,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
+
+  nc_hicosmo_set_H0_impl (parent_class, &_nc_hicosmo_qlinear_H0);
+  nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qlinear_Dc);
+  nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qlinear_Omega_t0);
 }
 
 /****************************************************************************
@@ -137,61 +196,6 @@ _nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z)
     return QLIN_CD;
 
   return QLIN_CD + Dc_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
-}
-
-static void
-nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
-{
-  GObjectClass *object_class   = G_OBJECT_CLASS (klass);
-  NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
-  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
-
-  object_class->finalize = &nc_hicosmo_qlinear_finalize;
-
-  ncm_model_class_set_name_nick (model_class, "Q Linear", "qlinear");
-  ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_H0, "H_0", "H0",
-                              10.0, 500.0, 1.0,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_H0,
-                              NCM_PARAM_TYPE_FIXED);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_OMEGA_T, "\\Omega_{t0}", "Omegat",
-                              -5.0, 5.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T,
-                              NCM_PARAM_TYPE_FIXED);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_CD, "D_c", "Dc",
-                              -50.0, 50.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_CD,
-                              NCM_PARAM_TYPE_FIXED);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_E, "E", "E",
-                              0.0, 50.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_E,
-                              NCM_PARAM_TYPE_FIXED);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_Q, "q", "q",
-                              -50.0, 50.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_Q,
-                              NCM_PARAM_TYPE_FREE);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_QP, "q^\\prime", "qp",
-                              -50.0, 50.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_QP,
-                              NCM_PARAM_TYPE_FREE);
-
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_Z1, "z_\\star", "zs",
-                              0.0, 5.0, 1.0e-1,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_Z1,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /* Check for errors in parameters initialization */
-  ncm_model_class_check_params_info (model_class);
-
-  nc_hicosmo_set_H0_impl (parent_class, &_nc_hicosmo_qlinear_H0);
-  nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qlinear_Dc);
-  nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qlinear_Omega_t0);
 }
 
 /**

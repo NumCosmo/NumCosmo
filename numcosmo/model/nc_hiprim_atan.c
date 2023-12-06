@@ -147,15 +147,15 @@ nc_hiprim_atan_new (void)
   return prim_pl;
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (prim)))
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LN10E10ASA))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_N_SA))
-#define LNKC       (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LNKC))
-#define C2         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C2))
-#define C3         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C3))
-#define LAMBDA     (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LAMBDA))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_T_SA_RATIO))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_LN10E10ASA))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_N_SA))
+#define LNKC       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_LNKC))
+#define C2         (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_C2))
+#define C3         (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_C3))
+#define LAMBDA     (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_LAMBDA))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_T_SA_RATIO))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_ATAN_N_T))
 
 /****************************************************************************
  * Power spectrum

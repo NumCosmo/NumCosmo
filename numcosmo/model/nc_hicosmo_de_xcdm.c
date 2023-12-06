@@ -41,9 +41,9 @@
 
 G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo_de)))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define W       (ncm_vector_get (VECTOR, NC_HICOSMO_DE_XCDM_W))
+#define VECTOR  (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define W       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_XCDM_W))
 
 static gdouble
 _nc_hicosmo_de_xcdm_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)

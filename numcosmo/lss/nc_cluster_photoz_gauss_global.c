@@ -45,9 +45,9 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define VECTOR (ncm_model_orig_params_peek_vector (model))
-#define Z_BIAS (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))
-#define SIGMA0 (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0))
+#define VECTOR (model)
+#define Z_BIAS (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))
+#define SIGMA0 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0))
 
 G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT)
 

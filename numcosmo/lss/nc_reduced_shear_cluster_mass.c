@@ -250,13 +250,13 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
                               NCM_MSET_MODEL_MAIN);
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (rscm)))
-#define A      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
-#define B      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
-#define C      (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
-#define XP     (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
-#define VSIGMA (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
-#define VGAMMA (ncm_vector_fast_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
+#define VECTOR (NCM_MODEL (rscm))
+#define A      (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_A))
+#define B      (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_B))
+#define C      (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_C))
+#define XP     (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_XP))
+#define VSIGMA (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA))
+#define VGAMMA (ncm_model_orig_param_get (VECTOR, NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA))
 
 /**
  * nc_reduced_shear_cluster_mass_new:

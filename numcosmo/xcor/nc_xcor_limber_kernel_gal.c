@@ -62,9 +62,9 @@
 
 G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg)))
-#define MAG_BIAS (ncm_vector_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
-#define NOISE_BIAS (ncm_vector_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
+#define VECTOR     (NCM_MODEL (xclkg))
+#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
+#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
 
 enum
 {

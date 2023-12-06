@@ -65,6 +65,7 @@ typedef struct _NcmModelPrivate
   guint64 pkey;
   guint64 skey;
   guint64 slkey[NCM_MODEL_MAX_STATES];
+  gdouble *params_ptr;
 } NcmModelPrivate;
 
 enum
@@ -100,6 +101,7 @@ ncm_model_init (NcmModel *model)
   self->sparams         = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_sparam_free);
   self->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
   self->params          = NULL;
+  self->params_ptr      = NULL;
   self->p               = NULL;
   self->vparam_len      = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
   self->vparam_pos      = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
@@ -216,8 +218,9 @@ _ncm_model_constructed (GObject *object)
       self->total_len                           += g_array_index (self->vparam_len, guint, i);
     }
 
-    self->params = ncm_vector_new (self->total_len == 0 ? 1 : self->total_len);
-    self->p      = ncm_vector_ref (self->params);
+    self->params     = ncm_vector_new (self->total_len == 0 ? 1 : self->total_len);
+    self->params_ptr = ncm_vector_data (self->params);
+    self->p          = ncm_vector_ref (self->params);
     g_array_set_size (self->ptypes, self->total_len);
     _ncm_model_set_sparams (model);
     ncm_model_params_set_default (model);
@@ -1351,7 +1354,7 @@ ncm_model_orig_params_log_all (NcmModel *model)
   guint i;
 
   for (i = 0; i < self->total_len; i++)
-    g_message ("  % 20.16g", ncm_vector_get (self->params, i));
+    g_message ("  % 20.16g", ncm_vector_fast_get (self->params, i));
 
   g_message ("\n");
 
@@ -1772,7 +1775,7 @@ ncm_model_params_finite (NcmModel *model)
 
   for (i = 0; i < ncm_model_len (model); i++)
   {
-    if (!gsl_finite (ncm_vector_get (self->params, i)))
+    if (!gsl_finite (ncm_vector_fast_get (self->params, i)))
       return FALSE;
   }
 
@@ -1823,7 +1826,12 @@ ncm_model_orig_params_update (NcmModel *model)
  * @model: a #NcmModel
  *
  * Peeks the original parameters vector. This functions is provided for
- * reparametrization implementations, do not use it in other contexts.
+ * reparametrization implementations and subclassing, do not use it in other contexts.
+ *
+ * The returned vector is the original parameters vector, that is, the parameters
+ * before the reparametrization. It is guaranteed that the returned vector is
+ * always the same and will stay valid until the model is destroyed.
+ * The vector also always have stride 1, so it is safe to call ncm_vector_fast_get().
  *
  * Returns: (transfer none): the original parameters #NcmVector
  */
@@ -2043,7 +2051,7 @@ ncm_model_orig_param_get (NcmModel *model, guint n)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
 
-  return ncm_vector_get (self->params, n);
+  return self->params_ptr[n];
 }
 
 /**
@@ -2082,7 +2090,7 @@ ncm_model_orig_vparam_get (NcmModel *model, guint n, guint i)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
 
-  return ncm_vector_get (self->params, ncm_model_vparam_index (model, n, i));
+  return ncm_vector_fast_get (self->params, ncm_model_vparam_index (model, n, i));
 }
 
 /**

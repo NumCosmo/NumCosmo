@@ -69,10 +69,10 @@
 
 G_DEFINE_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einasto, NC_TYPE_HALO_DENSITY_PROFILE)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (dp)))
-#define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
-#define ALPHA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA))
+#define VECTOR  (NCM_MODEL (dp))
+#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
+#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
+#define ALPHA   (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA))
 
 enum
 {

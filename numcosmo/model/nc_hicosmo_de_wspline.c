@@ -256,8 +256,8 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wspline_w_de);
 }
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo_de)))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define VECTOR (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 
 static void
 _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)

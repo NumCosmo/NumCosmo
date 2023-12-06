@@ -48,11 +48,11 @@
 
 G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cpc)))
-#define LNMCUT  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))
-#define SD_MCUT (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT))
-#define ZMIN    (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_ZMIN))
-#define DELTAZ  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ))
+#define VECTOR  (NCM_MODEL (cpc))
+#define LNMCUT  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))
+#define SD_MCUT (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT))
+#define ZMIN    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_ZMIN))
+#define DELTAZ  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ))
 
 enum
 {

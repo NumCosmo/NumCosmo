@@ -44,13 +44,13 @@
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_cfg.h"
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (dcov)))
-#define ALPHA        (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
-#define BETA         (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
-#define ABSMAG1      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
-#define ABSMAG2      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
-#define LNSIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
-#define LNSIGMA_LENS (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_LENS))
+#define VECTOR       (NCM_MODEL (dcov))
+#define ALPHA        (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
+#define BETA         (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_BETA))
+#define ABSMAG1      (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_M1))
+#define ABSMAG2      (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_M2))
+#define LNSIGMA_PECZ (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
+#define LNSIGMA_LENS (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_LENS))
 
 enum
 {

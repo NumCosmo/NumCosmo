@@ -40,10 +40,10 @@
 
 G_DEFINE_TYPE (NcHICosmoDEJbp, nc_hicosmo_de_jbp, NC_TYPE_HICOSMO_DE)
 
-#define VECTOR (ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo_de)))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_JBP_W0))
-#define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_JBP_W1))
+#define VECTOR  (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define OMEGA_0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_JBP_W0))
+#define OMEGA_1 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_JBP_W1))
 
 static gdouble
 _nc_hicosmo_de_jbp_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
