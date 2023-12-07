@@ -401,8 +401,12 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
         }
       }
 
-      xclkg->bias_old       = *(xclkg->bias);
-      xclkg->noise_bias_old = ncm_vector_get (NCM_MODEL (xclkg)->params, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS);
+      {
+        NcmVector *orig_vec = ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg));
+
+        xclkg->bias_old       = *(xclkg->bias);
+        xclkg->noise_bias_old = ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS);
+      }
 
       return TRUE;
     }

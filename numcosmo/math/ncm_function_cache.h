@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_function_cache.h
  *
@@ -33,29 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FUNCTION_CACHE             (ncm_function_cache_get_type ())
-#define NCM_FUNCTION_CACHE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FUNCTION_CACHE, NcmFunctionCache))
-#define NCM_FUNCTION_CACHE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FUNCTION_CACHE, NcmFunctionCacheClass))
-#define NCM_IS_FUNCTION_CACHE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FUNCTION_CACHE))
-#define NCM_IS_FUNCTION_CACHE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FUNCTION_CACHE))
-#define NCM_FUNCTION_CACHE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FUNCTION_CACHE, NcmFunctionCacheClass))
+#define NCM_TYPE_FUNCTION_CACHE (ncm_function_cache_get_type ())
 
-typedef struct _NcmFunctionCacheClass NcmFunctionCacheClass;
-typedef struct _NcmFunctionCache NcmFunctionCache;
-typedef struct _NcmFunctionCachePrivate NcmFunctionCachePrivate;
-
-struct _NcmFunctionCacheClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmFunctionCache
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFunctionCachePrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmFunctionCache, ncm_function_cache, NCM, FUNCTION_CACHE, GObject)
 
 /**
  * NcmFunctionCacheSearchType:
@@ -71,8 +52,6 @@ typedef enum _NcmFunctionCacheSearchType
   NCM_FUNCTION_CACHE_SEARCH_GT,
   NCM_FUNCTION_CACHE_SEARCH_LT,
 } NcmFunctionCacheSearchType;
-
-GType ncm_function_cache_get_type (void) G_GNUC_CONST;
 
 NcmFunctionCache *ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol);
 NcmFunctionCache *ncm_function_cache_ref (NcmFunctionCache *cache);
@@ -92,3 +71,4 @@ gboolean ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdoubl
 G_END_DECLS
 
 #endif /* _NCM_FUNCTION_CACHE_H_ */
+

@@ -16,7 +16,6 @@ option(
        'numcosmo_debug',
        type: 'feature',
        value: 'auto',
-       yield: true,
        description: 'Enable NumCosmo debug infrastructure',
 )
 
@@ -24,7 +23,6 @@ option(
        'numcosmo_assert',
        type: 'boolean',
        value: true,
-       yield: true,
        description: 'Enable NumCosmo assertion',
 )
 
@@ -32,7 +30,6 @@ option(
        'numcosmo_checks',
        type: 'boolean',
        value: true,
-       yield: true,
        description: 'Enable NumCosmo checks such as API guards',
 )
 
@@ -100,4 +97,15 @@ option(
        type: 'integer',
        value: 4,
        description: 'Maximum number components for libcuba',
+)
+
+#######################################################################################
+# GSL options
+#######################################################################################
+
+option(
+       'gsl_range_check',
+       type: 'boolean',
+       value: false,
+       description: 'Enable gsl range checking',
 )

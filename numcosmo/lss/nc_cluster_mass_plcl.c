@@ -50,14 +50,14 @@
 
 G_DEFINE_TYPE (NcClusterMassPlCL, nc_cluster_mass_plcl, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (mszl)->params)
-#define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_SZ))
-#define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_SZ))
-#define SD_SZ  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_SZ))
-#define A_L    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_L))
-#define B_L    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_L))
-#define SD_L   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_L))
-#define COR    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_COR))
+#define VECTOR (NCM_MODEL (mszl))
+#define A_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_SZ))
+#define B_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_SZ))
+#define SD_SZ  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_SZ))
+#define A_L    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_L))
+#define B_L    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_L))
+#define SD_L   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_L))
+#define COR    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_COR))
 
 enum
 {

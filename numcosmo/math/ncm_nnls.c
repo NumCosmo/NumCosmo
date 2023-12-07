@@ -43,6 +43,7 @@
 #include "math/ncm_nnls.h"
 #include "math/ncm_iset.h"
 #include "math/ncm_lapack.h"
+#include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

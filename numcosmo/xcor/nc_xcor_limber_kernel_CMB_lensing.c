@@ -50,7 +50,7 @@
 
 G_DEFINE_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC_TYPE_XCOR_LIMBER_KERNEL)
 
-#define VECTOR (NCM_MODEL (xclkl)->params)
+#define VECTOR (NCM_MODEL (xclkl))
 
 enum
 {
