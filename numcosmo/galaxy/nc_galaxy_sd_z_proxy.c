@@ -139,6 +139,7 @@ nc_galaxy_sd_z_proxy_clear (NcGalaxySDZProxy **gsdzp)
  * @gsdzp: a #NcGalaxySDZProxy
  * @rng: a #NcmRNG
  * @z: source redshift $z$
+ * @gen_zp: (out): generated proxy redshift $z_p$
  *
  * Generates a $z_p$ value from the distribution using @rng.
  *

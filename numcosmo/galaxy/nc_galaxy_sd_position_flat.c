@@ -301,9 +301,11 @@ nc_galaxy_sd_position_flat_set_z_lim (NcGalaxySDPositionFlat *gsdpflat, NcmVecto
 
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
-  ncm_vector_clear (&self->z_lim);
-
-  self->z_lim = ncm_vector_ref (lim);
+  if (self->z_lim != lim)
+  {
+    ncm_vector_clear (&self->z_lim);
+    self->z_lim = ncm_vector_ref (lim);
+  }
 }
 
 /**
@@ -336,9 +338,11 @@ nc_galaxy_sd_position_flat_set_r_lim (NcGalaxySDPositionFlat *gsdpflat, NcmVecto
 
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
-  ncm_vector_clear (&self->r_lim);
-
-  self->r_lim = ncm_vector_ref (lim);
+  if (self->r_lim != lim)
+  {
+    ncm_vector_clear (&self->r_lim);
+    self->r_lim = ncm_vector_ref (lim);
+  }
 }
 
 /**

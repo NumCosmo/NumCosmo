@@ -112,17 +112,22 @@ test_nc_galaxy_sd_position_flat_set_lim (TestNcGalaxySDPositionFlat *test, gcons
     nc_galaxy_sd_position_flat_set_z_lim (test->gsdpflat, z_lim);
     nc_galaxy_sd_position_flat_set_r_lim (test->gsdpflat, r_lim);
 
-    NcmVector *z_lim_peek = nc_galaxy_sd_position_flat_peek_z_lim (test->gsdpflat);
-    NcmVector *r_lim_peek = nc_galaxy_sd_position_flat_peek_r_lim (test->gsdpflat);
-
-    g_assert_cmpint (ncm_vector_len (z_lim), ==, ncm_vector_len (z_lim_peek));
-    g_assert_cmpint (ncm_vector_len (r_lim), ==, ncm_vector_len (r_lim_peek));
-
-    for (j = 0; j < 2; j++)
     {
-      g_assert_cmpfloat (ncm_vector_get (z_lim_peek, j), ==, ncm_vector_get (z_lim, j));
-      g_assert_cmpfloat (ncm_vector_get (r_lim_peek, j), ==, ncm_vector_get (r_lim, j));
+      NcmVector *z_lim_peek = nc_galaxy_sd_position_flat_peek_z_lim (test->gsdpflat);
+      NcmVector *r_lim_peek = nc_galaxy_sd_position_flat_peek_r_lim (test->gsdpflat);
+
+      g_assert_cmpint (ncm_vector_len (z_lim), ==, ncm_vector_len (z_lim_peek));
+      g_assert_cmpint (ncm_vector_len (r_lim), ==, ncm_vector_len (r_lim_peek));
+
+      for (j = 0; j < 2; j++)
+      {
+        g_assert_cmpfloat (ncm_vector_get (z_lim_peek, j), ==, ncm_vector_get (z_lim, j));
+        g_assert_cmpfloat (ncm_vector_get (r_lim_peek, j), ==, ncm_vector_get (r_lim, j));
+      }
     }
+
+    ncm_vector_free (z_lim);
+    ncm_vector_free (r_lim);
   }
 }
 
@@ -151,19 +156,20 @@ test_nc_galaxy_sd_position_flat_gen_lim (TestNcGalaxySDPositionFlat *test, gcons
 
     nc_galaxy_sd_position_flat_set_z_lim (test->gsdpflat, z_lim);
     nc_galaxy_sd_position_flat_set_r_lim (test->gsdpflat, r_lim);
-
-    NcmVector *z_lim_peek = nc_galaxy_sd_position_flat_peek_z_lim (test->gsdpflat);
-    NcmVector *r_lim_peek = nc_galaxy_sd_position_flat_peek_r_lim (test->gsdpflat);
-
-    for (j = 0; j < nruns; j++)
     {
-      const gdouble gen_z = nc_galaxy_sd_position_gen_z (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
-      const gdouble gen_r = nc_galaxy_sd_position_gen_r (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
+      NcmVector *z_lim_peek = nc_galaxy_sd_position_flat_peek_z_lim (test->gsdpflat);
+      NcmVector *r_lim_peek = nc_galaxy_sd_position_flat_peek_r_lim (test->gsdpflat);
 
-      g_assert_cmpfloat (gen_z, >, ncm_vector_get (z_lim_peek, 0));
-      g_assert_cmpfloat (gen_z, <, ncm_vector_get (z_lim_peek, 1));
-      g_assert_cmpfloat (gen_r, >, ncm_vector_get (r_lim_peek, 0));
-      g_assert_cmpfloat (gen_r, <, ncm_vector_get (r_lim_peek, 1));
+      for (j = 0; j < nruns; j++)
+      {
+        const gdouble gen_z = nc_galaxy_sd_position_gen_z (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
+        const gdouble gen_r = nc_galaxy_sd_position_gen_r (NC_GALAXY_SD_POSITION (test->gsdpflat), rng);
+
+        g_assert_cmpfloat (gen_z, >, ncm_vector_get (z_lim_peek, 0));
+        g_assert_cmpfloat (gen_z, <, ncm_vector_get (z_lim_peek, 1));
+        g_assert_cmpfloat (gen_r, >, ncm_vector_get (r_lim_peek, 0));
+        g_assert_cmpfloat (gen_r, <, ncm_vector_get (r_lim_peek, 1));
+      }
     }
   }
 }
