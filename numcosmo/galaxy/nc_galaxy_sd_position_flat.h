@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_position_flat.h
  *
@@ -37,31 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_POSITION_FLAT             (nc_galaxy_sd_position_flat_get_type ())
-#define NC_GALAXY_SD_POSITION_FLAT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_POSITION_FLAT, NcGalaxySDPositionFlat))
-#define NC_GALAXY_SD_POSITION_FLAT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_POSITION_FLAT, NcGalaxySDPositionFlatClass))
-#define NC_IS_GALAXY_SD_POSITION_FLAT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_POSITION_FLAT))
-#define NC_IS_GALAXY_SD_POSITION_FLAT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_POSITION_FLAT))
-#define NC_GALAXY_SD_POSITION_FLAT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_POSITION_FLAT, NcGalaxySDPositionFlatClass))
+#define NC_TYPE_GALAXY_SD_POSITION_FLAT (nc_galaxy_sd_position_flat_get_type ())
 
-typedef struct _NcGalaxySDPositionFlatClass NcGalaxySDPositionFlatClass;
-typedef struct _NcGalaxySDPositionFlat NcGalaxySDPositionFlat;
-typedef struct _NcGalaxySDPositionFlatPrivate NcGalaxySDPositionFlatPrivate;
-
-struct _NcGalaxySDPositionFlatClass
-{
-  /*< private >*/
-  NcGalaxySDPositionClass parent_class;
-};
-
-struct _NcGalaxySDPositionFlat
-{
-  /*< private >*/
-  NcGalaxySDPosition parent_instance;
-  NcGalaxySDPositionFlatPrivate *priv;
-};
-
-GType nc_galaxy_sd_position_flat_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcGalaxySDPositionFlat, nc_galaxy_sd_position_flat, NC, GALAXY_SD_POSITION_FLAT, NcGalaxySDPosition)
 
 NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new ();
 NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *gsdpflat);

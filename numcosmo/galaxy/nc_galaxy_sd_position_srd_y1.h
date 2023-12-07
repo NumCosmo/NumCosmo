@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_position_srd_y1.h
  *
@@ -37,31 +35,33 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_POSITION_SRD_Y1             (nc_galaxy_sd_position_srd_y1_get_type ())
-#define NC_GALAXY_SD_POSITION_SRD_Y1(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_POSITION_SRD_Y1, NcGalaxySDPositionSRDY1))
-#define NC_GALAXY_SD_POSITION_SRD_Y1_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_POSITION_SRD_Y1, NcGalaxySDPositionSRDY1Class))
-#define NC_IS_GALAXY_SD_POSITION_SRD_Y1(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_POSITION_SRD_Y1))
-#define NC_IS_GALAXY_SD_POSITION_SRD_Y1_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_POSITION_SRD_Y1))
-#define NC_GALAXY_SD_POSITION_SRD_Y1_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_POSITION_SRD_Y1, NcGalaxySDPositionSRDY1Class))
+#define NC_TYPE_GALAXY_SD_POSITION_SRD_Y1 (nc_galaxy_sd_position_srd_y1_get_type ())
 
-typedef struct _NcGalaxySDPositionSRDY1Class NcGalaxySDPositionSRDY1Class;
-typedef struct _NcGalaxySDPositionSRDY1 NcGalaxySDPositionSRDY1;
-typedef struct _NcGalaxySDPositionSRDY1Private NcGalaxySDPositionSRDY1Private;
+G_DECLARE_FINAL_TYPE (NcGalaxySDPositionSRDY1, nc_galaxy_sd_position_srd_y1, NC, GALAXY_SD_POSITION_SRD_Y1, NcGalaxySDPosition)
 
-struct _NcGalaxySDPositionSRDY1Class
+/**
+ * NcGalaxySDPositionSRDY1SParams:
+ * @NC_GALAXY_SD_POSITION_SRD_Y1_ALPHA: redshift exponential slope
+ * @NC_GALAXY_SD_POSITION_SRD_Y1_BETA: redshift power law slope
+ * @NC_GALAXY_SD_POSITION_SRD_Y1_Z0: Pivot redshift
+ *
+ * LSST SRD galaxy redshift distribution model parameters.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_GALAXY_SD_POSITION_SPARAMS >*/
 {
-  /*< private >*/
-  NcGalaxySDPositionClass parent_class;
-};
+  NC_GALAXY_SD_POSITION_SRD_Y1_ALPHA = 0,
+  NC_GALAXY_SD_POSITION_SRD_Y1_BETA,
+  NC_GALAXY_SD_POSITION_SRD_Y1_Z0,
+  /* < private > */
+  NC_GALAXY_SD_POSITION_SRD_Y1_SPARAM_LEN, /*< skip >*/
+} NcGalaxySDPositionSParams;
 
-struct _NcGalaxySDPositionSRDY1
-{
-  /*< private >*/
-  NcGalaxySDPosition parent_instance;
-  NcGalaxySDPositionSRDY1Private *priv;
-};
+#define NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_ALPHA  (0.78)
+#define NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_BETA   (2.00)
+#define NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_Z0     (0.13)
 
-GType nc_galaxy_sd_position_srd_y1_get_type (void) G_GNUC_CONST;
+#define NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxySDPositionSRDY1 *nc_galaxy_sd_position_srd_y1_new ();
 NcGalaxySDPositionSRDY1 *nc_galaxy_sd_position_srd_y1_ref (NcGalaxySDPositionSRDY1 *gsdpsrdy1);

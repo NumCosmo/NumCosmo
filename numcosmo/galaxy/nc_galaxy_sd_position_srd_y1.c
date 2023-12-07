@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_position_srd_y1.c
  *
@@ -28,12 +26,12 @@
 /**
  * SECTION:nc_galaxy_sd_position_srd_y1
  * @title: NcGalaxySDPositionSRDY1
- * @short_description: Class describing galaxy sample position distributions with SRD year 1 distribution
+ * @short_description: Class describing galaxy sample position distributions as in LSST-SRD
  * @stability: Unstable
  *
- *
- * Class defining a galaxy sample position distribution with SRD year 1
- * probability distribution $P(z)$.
+ * Class defining a galaxy sample position distribution as described in the LSST
+ * Science Roadmap Document, it includes the redshift distribution and a angular radius
+ * distribution.
  *
  */
 
@@ -55,15 +53,22 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
 
-struct _NcGalaxySDPositionSRDY1Private
+typedef struct _NcGalaxySDPositionSRDY1Private
 {
   NcmVector *z_lim;
   NcmVector *r_lim;
-  gdouble alpha;
-  gdouble beta;
-  gdouble z0;
-  gdouble y0;
-  gdouble gamma_a;
+  gdouble z_lb;
+  gdouble z_ub;
+  gdouble r_norm;
+  gdouble r_lb;
+  gdouble r_ub;
+  gdouble r_lb2;
+  gdouble r_ub2;
+} NcGalaxySDPositionSRDY1Private;
+
+struct _NcGalaxySDPositionSRDY1
+{
+  NcGalaxySDPosition parent_instance;
 };
 
 enum
@@ -72,6 +77,7 @@ enum
   PROP_Z_LIM,
   PROP_R_LIM,
   PROP_Z_DIST,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPositionSRDY1, nc_galaxy_sd_position_srd_y1, NC_TYPE_GALAXY_SD_POSITION);
@@ -79,15 +85,17 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPositionSRDY1, nc_galaxy_sd_position_srd_y
 static void
 nc_galaxy_sd_position_srd_y1_init (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 {
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
-  self->z_lim   = NULL;
-  self->r_lim   = NULL;
-  self->alpha   = 0.78;
-  self->beta    = 2.0;
-  self->z0      = 0.13;
-  self->y0      = pow (self->z0, self->alpha);
-  self->gamma_a = (1.0 + self->beta) / self->alpha;
+  self->z_lim  = NULL;
+  self->r_lim  = NULL;
+  self->z_lb   = 0.0;
+  self->z_ub   = 0.0;
+  self->r_norm = 0.0;
+  self->r_lb   = 0.0;
+  self->r_ub   = 0.0;
+  self->r_lb2  = 0.0;
+  self->r_ub2  = 0.0;
 }
 
 static void
@@ -136,7 +144,7 @@ static void
 _nc_galaxy_sd_position_srd_y1_dispose (GObject *object)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (object);
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
   ncm_vector_clear (&self->z_lim);
   ncm_vector_clear (&self->r_lim);
@@ -159,11 +167,15 @@ nc_galaxy_sd_position_srd_y1_class_init (NcGalaxySDPositionSRDY1Class *klass)
 {
   NcGalaxySDPositionClass *sd_position_class = NC_GALAXY_SD_POSITION_CLASS (klass);
   GObjectClass *object_class                 = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class                 = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_sd_position_srd_y1_set_property;
-  object_class->get_property = &_nc_galaxy_sd_position_srd_y1_get_property;
-  object_class->dispose      = &_nc_galaxy_sd_position_srd_y1_dispose;
-  object_class->finalize     = &_nc_galaxy_sd_position_srd_y1_finalize;
+  model_class->set_property = &_nc_galaxy_sd_position_srd_y1_set_property;
+  model_class->get_property = &_nc_galaxy_sd_position_srd_y1_get_property;
+  object_class->dispose     = &_nc_galaxy_sd_position_srd_y1_dispose;
+  object_class->finalize    = &_nc_galaxy_sd_position_srd_y1_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "LSST SRD Galaxy Distribution", "LSST_SRD");
+  ncm_model_class_add_params (model_class, NC_GALAXY_SD_POSITION_SRD_Y1_SPARAM_LEN, 0, PROP_LEN);
 
   /**
    * NcGalaxySDPositionSRDY1:z-lim:
@@ -180,7 +192,7 @@ nc_galaxy_sd_position_srd_y1_class_init (NcGalaxySDPositionSRDY1Class *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcGalaxySDPositionSRDY1:R-lim:
+   * NcGalaxySDPositionSRDY1:r-lim:
    *
    * Galaxy sample radius distribution limits.
    *
@@ -193,39 +205,79 @@ nc_galaxy_sd_position_srd_y1_class_init (NcGalaxySDPositionSRDY1Class *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcGalaxySDPositionSRDY1:alpha:
+   *
+   * The redshift exponential slope.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_POSITION_SRD_Y1_ALPHA, "\\alpha", "alpha",
+                              1e-8,  1.0, 1.0e-2,
+                              NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_ALPHA,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcGalaxySDPositionSRDY1:beta:
+   *
+   * The redshift power law slope.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_POSITION_SRD_Y1_BETA, "\\beta", "beta",
+                              1e-8,  5.0, 1.0e-1,
+                              NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_BETA,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcGalaxySDPositionSRDY1:z0:
+   *
+   * The redshift pivot.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_POSITION_SRD_Y1_Z0, "z_0", "z0",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_POSITION_SRD_Y1_DEFAULT_Z0,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_check_params_info (model_class);
+
   sd_position_class->gen_r = &_nc_galaxy_sd_position_srd_y1_gen_r;
   sd_position_class->gen_z = &_nc_galaxy_sd_position_srd_y1_gen_z;
   sd_position_class->integ = &_nc_galaxy_sd_position_srd_y1_integ;
 }
 
+#define VECTOR (NCM_MODEL (gsdp))
+#define ALPHA  (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_POSITION_SRD_Y1_ALPHA))
+#define BETA   (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_POSITION_SRD_Y1_BETA))
+#define Z0     (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_POSITION_SRD_Y1_Z0))
+
 static gdouble
 _nc_galaxy_sd_position_srd_y1_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
-  const gdouble r_lb                          = ncm_vector_get (self->r_lim, 0);
-  const gdouble r_ub                          = ncm_vector_get (self->r_lim, 1);
-  const gdouble r_lb2                         = r_lb * r_lb;
-  const gdouble r_ub2                         = r_ub * r_ub;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
   const gdouble cumul_gen                     = ncm_rng_uniform_gen (rng, 0.0, 1.0);
 
-  return sqrt (cumul_gen * (r_ub2 - r_lb2) + r_lb2);
+  return sqrt (cumul_gen * 2.0 / self->r_norm + self->r_lb2);
 }
 
 static gdouble
 _nc_galaxy_sd_position_srd_y1_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
-  const gdouble z_lb                          = ncm_vector_get (self->z_lim, 0);
-  const gdouble z_ub                          = ncm_vector_get (self->z_lim, 1);
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
+  const gdouble alpha                         = ALPHA;
+  const gdouble beta                          = BETA;
+  const gdouble z0                            = Z0;
+  const gdouble y0                            = pow (z0, alpha);
+  const gdouble gamma_a                       = (1.0 + beta) / alpha;
+
   gdouble z;
 
   do {
-    const gdouble gen_y = ncm_rng_gamma_gen (rng, self->gamma_a, self->y0);
+    const gdouble gen_y = ncm_rng_gamma_gen (rng, gamma_a, y0);
 
-    z = pow (gen_y, 1.0 / self->alpha);
-  } while (z < z_lb || z > z_ub);
+    z = pow (gen_y, 1.0 / alpha);
+  } while (z < self->z_lb || z > self->z_ub);
 
   return z;
 }
@@ -234,10 +286,15 @@ static gdouble
 _nc_galaxy_sd_position_srd_y1_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
 {
   NcGalaxySDPositionSRDY1 *gsdpsrdy1          = NC_GALAXY_SD_POSITION_SRD_Y1 (gsdp);
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
+  const gdouble alpha                         = ALPHA;
+  const gdouble beta                          = BETA;
+  const gdouble z0                            = Z0;
+  const gdouble y0                            = pow (z0, alpha);
+  const gdouble gamma_a                       = (1.0 + beta) / alpha;
+  const gdouble y                             = pow (z, alpha);
 
-  /* return gsl_ran_gamma_pdf (y, self->gamma_a, self->y0) * self->alpha * y / z * r; */
-  return pow (z, self->beta) * exp (-pow (z / self->z0, self->alpha)) * r;
+  return gsl_ran_gamma_pdf (y, gamma_a, y0) * alpha * y / z * r * self->r_norm;
 }
 
 /**
@@ -307,12 +364,16 @@ nc_galaxy_sd_position_srd_y1_clear (NcGalaxySDPositionSRDY1 **gsdpsrdy1)
 void
 nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmVector *lim)
 {
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
-  ncm_vector_clear (&self->z_lim);
+  self->z_lb = ncm_vector_get (lim, 0);
+  self->z_ub = ncm_vector_get (lim, 1);
 
+  g_assert_cmpfloat (self->z_lb, <, self->z_ub);
+
+  ncm_vector_clear (&self->z_lim);
   self->z_lim = ncm_vector_ref (lim);
 }
 
@@ -320,14 +381,14 @@ nc_galaxy_sd_position_srd_y1_set_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmV
  * nc_galaxy_sd_position_srd_y1_peek_z_lim:
  * @gsdpsrdy1: a #NcGalaxySDPositionSRDY1
  *
- * Gets the redshift limits.
+ * Gets the redshift limits. The returned vector should not be modified.
  *
  * Returns: (transfer none): the redshift limits.
  */
 NcmVector *
 nc_galaxy_sd_position_srd_y1_peek_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 {
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
   return self->z_lim;
 }
@@ -342,27 +403,36 @@ nc_galaxy_sd_position_srd_y1_peek_z_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 void
 nc_galaxy_sd_position_srd_y1_set_r_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1, NcmVector *lim)
 {
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
   g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
 
+  self->r_lb = ncm_vector_get (lim, 0);
+  self->r_ub = ncm_vector_get (lim, 1);
+
+  g_assert_cmpfloat (self->r_lb, <, self->r_ub);
+
+  self->r_lb2 = self->r_lb * self->r_lb;
+  self->r_ub2 = self->r_ub * self->r_ub;
+
   ncm_vector_clear (&self->r_lim);
 
-  self->r_lim = ncm_vector_ref (lim);
+  self->r_lim  = ncm_vector_ref (lim);
+  self->r_norm = 2.0 / (self->r_ub2 - self->r_lb2);
 }
 
 /**
  * nc_galaxy_sd_position_srd_y1_peek_r_lim:
  * @gsdpsrdy1: a #NcGalaxySDPositionSRDY1
  *
- * Gets the radius limits.
+ * Gets the radius limits. The returned vector should not be modified.
  *
  * Returns: (transfer none): the radius limits.
  */
 NcmVector *
 nc_galaxy_sd_position_srd_y1_peek_r_lim (NcGalaxySDPositionSRDY1 *gsdpsrdy1)
 {
-  NcGalaxySDPositionSRDY1Private * const self = gsdpsrdy1->priv;
+  NcGalaxySDPositionSRDY1Private * const self = nc_galaxy_sd_position_srd_y1_get_instance_private (gsdpsrdy1);
 
   return self->r_lim;
 }

@@ -52,7 +52,7 @@ typedef struct _NcGalaxySDPositionPrivate
   gint placeholder;
 } NcGalaxySDPositionPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, NCM_TYPE_MODEL)
 
 static void
 nc_galaxy_sd_position_init (NcGalaxySDPosition *gsdp)
@@ -64,6 +64,8 @@ _nc_galaxy_sd_position_finalize (GObject *object)
 {
   G_OBJECT_CLASS (nc_galaxy_sd_position_parent_class)->finalize (object);
 }
+
+NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_position, NC_TYPE_GALAXY_SD_POSITION)
 
 static gdouble
 _nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
@@ -93,8 +95,21 @@ static void
 nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_sd_position_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Galaxy sample position distribution", "NcGalaxySDPosition");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_mset_model_register_id (model_class,
+                              "NcGalaxySDPosition",
+                              "Galaxy sample position distribution.",
+                              NULL,
+                              TRUE,
+                              NCM_MSET_MODEL_MAIN);
+
+  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 
   klass->gen_r = &_nc_galaxy_sd_position_gen_r;
   klass->gen_z = &_nc_galaxy_sd_position_gen_z;

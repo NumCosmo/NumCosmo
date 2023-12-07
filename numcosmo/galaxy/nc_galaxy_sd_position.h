@@ -33,12 +33,13 @@
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_mset.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_SD_POSITION (nc_galaxy_sd_position_get_type ())
 
-G_DECLARE_DERIVABLE_TYPE (NcGalaxySDPosition, nc_galaxy_sd_position, NC, GALAXY_SD_POSITION, GObject);
+G_DECLARE_DERIVABLE_TYPE (NcGalaxySDPosition, nc_galaxy_sd_position, NC, GALAXY_SD_POSITION, NcmModel)
 
 struct _NcGalaxySDPositionClass
 {
@@ -52,6 +53,8 @@ struct _NcGalaxySDPositionClass
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
 };
+
+NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_position);
 
 NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 
