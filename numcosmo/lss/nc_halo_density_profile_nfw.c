@@ -78,9 +78,9 @@
 
 G_DEFINE_TYPE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC_TYPE_HALO_DENSITY_PROFILE)
 
-#define VECTOR  (NCM_MODEL (dpnfw)->params)
-#define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
+#define VECTOR  (NCM_MODEL (dpnfw))
+#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
+#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 enum
 {
@@ -98,7 +98,7 @@ _nc_halo_density_profile_nfw_set_property (GObject *object, guint prop_id, const
 {
   /* NcHaloDensityProfileNFW *dpnfw = NC_HALO_DENSITY_PROFILE_NFW (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_NFW (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -112,7 +112,7 @@ _nc_halo_density_profile_nfw_get_property (GObject *object, guint prop_id, GValu
 {
   /* NcHaloDensityProfileNFW *dpnfw = NC_HALO_DENSITY_PROFILE_NFW (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_NFW (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -139,17 +139,17 @@ nc_halo_density_profile_nfw_class_init (NcHaloDensityProfileNFWClass *klass)
   GObjectClass *object_class          = G_OBJECT_CLASS (klass);
   NcHaloDensityProfileClass *dp_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
   NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
-  
+
   model_class->set_property = &_nc_halo_density_profile_nfw_set_property;
   model_class->get_property = &_nc_halo_density_profile_nfw_get_property;
   object_class->finalize    = &_nc_halo_density_profile_nfw_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "NFW Density Profile", "NFW");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
-  
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_nfw_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
   dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
@@ -177,7 +177,7 @@ _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const
   const gdouble X2m1             = Xm1 * Xp1;
   const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-  
+
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
     return 2.0 * (1.0 / 3.0 + (-2.0 / 5.0 + (13.0 / 35.0 - 20.0 / 63.0 * Xm1) * Xm1) * Xm1);
@@ -188,7 +188,7 @@ _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const
     {
       const gdouble X_2     = 0.5 * X;
       const gdouble log_X_2 = log (X_2);
-      
+
       return 2.0 / X2m1 * (
         (1.0        +  1.0 * log_X_2) +
         (1.0        +  2.0 * log_X_2) * X_2 * X_2 +
@@ -216,7 +216,7 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
   const gdouble abs_Xm1          = fabs (Xm1);
   const gdouble sqrt_abs_X2m1    = sqrt (abs_Xm1 * Xp1);
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-  
+
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
     return 2.0 * (1.0 - M_LN2) + (2.0 / 3.0 + (-1.0 / 15.0 - 2.0 / 105.0 * Xm1) * Xm1) * Xm1;
@@ -228,7 +228,7 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
       const gdouble X_2    = 0.5 * X;
       const gdouble X_22   = X_2 * X_2;
       const gdouble ln_X_2 = log (X_2);
-      
+
       return -2.0 * (
         (
           (1.0 + 2.0 * ln_X_2) +
@@ -260,20 +260,20 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
 
 /**
  * nc_halo_density_profile_nfw_class_set_ni:
- * @num: boolean (true - numeric; false - analytic)  
+ * @num: boolean (true - numeric; false - analytic)
  *
- * This function substitutes the child methods by the parent ones if num is TRUE. 
+ * This function substitutes the child methods by the parent ones if num is TRUE.
  * It enforces the computations to be performed by numerical integration.
  *
- * WARNING: this function modifies the behavior object. It should be used for testing only!   
+ * WARNING: this function modifies the behavior object. It should be used for testing only!
  *
  */
-void 
+void
 nc_halo_density_profile_nfw_class_set_ni (gboolean num)
 {
   NcHaloDensityProfileClass *dp_class        = g_type_class_ref (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   NcHaloDensityProfileClass *dp_parent_class = g_type_class_peek_parent (dp_class);
-  
+
   if (num)
   {
     dp_class->eval_dl_spher_mass = dp_parent_class->eval_dl_spher_mass;
@@ -287,9 +287,8 @@ nc_halo_density_profile_nfw_class_set_ni (gboolean num)
     dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
   }
 
-  g_type_class_unref (dp_class);  
+  g_type_class_unref (dp_class);
 }
-
 
 /**
  * nc_halo_density_profile_nfw_new:
@@ -309,7 +308,7 @@ nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const g
                                                   "mass-def", mdef,
                                                   "Delta",    Delta,
                                                   NULL);
-  
+
   return dp_nfw;
 }
 
