@@ -27,9 +27,22 @@
 /**
  * SECTION:ncm_mset_trans_kern_cat
  * @title: NcmMSetTransKernCat
- * @short_description: Catalog sampler.
+ * @short_description: Catalog sampler
  *
- * FIXME
+ * This object subclasses NcmMSetTransKern and implements a catalog sampler.
+ *
+ * Implementation of a catalog sampler class, capable of drawing samples from a catalog
+ * of points. Users can select the desired sampling method as described in
+ * #NcmMSetTransKernCatSampling.
+ *
+ * **Key Functionality:**
+ *
+ * - Draws samples from a catalog of points.
+ * - Allows users to choose the sampling method from #NcmMSetTransKernCatSampling.
+ *
+ * This class is designed for scenarios where sampling from a pre-existing catalog is
+ * useful, providing flexibility through the selection of various sampling methods
+ * described in #NcmMSetTransKernCatSampling.
  *
  */
 

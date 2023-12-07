@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_iset.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -35,31 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_ISET             (ncm_iset_get_type ())
-#define NCM_ISET(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_ISET, NcmISet))
-#define NCM_ISET_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_ISET, NcmISetClass))
-#define NCM_IS_ISET(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_ISET))
-#define NCM_IS_ISET_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_ISET))
-#define NCM_ISET_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_ISET, NcmISetClass))
+#define NCM_TYPE_ISET (ncm_iset_get_type ())
 
-typedef struct _NcmISetClass NcmISetClass;
-typedef struct _NcmISet NcmISet;
-typedef struct _NcmISetPrivate NcmISetPrivate;
-
-struct _NcmISetClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmISet
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmISetPrivate *priv;
-};
-
-GType ncm_iset_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmISet, ncm_iset, NCM, ISET, GObject)
 
 NcmISet *ncm_iset_new (guint n);
 NcmISet *ncm_iset_ref (NcmISet *iset);
@@ -98,3 +77,4 @@ void ncm_iset_log_vals (NcmISet *iset, const gchar *prefix);
 G_END_DECLS
 
 #endif /* _NCM_ISET_H_ */
+

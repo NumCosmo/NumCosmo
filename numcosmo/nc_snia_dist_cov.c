@@ -44,13 +44,13 @@
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_cfg.h"
 
-#define VECTOR       (NCM_MODEL (dcov)->params)
-#define ALPHA        (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
-#define BETA         (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
-#define ABSMAG1      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
-#define ABSMAG2      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
-#define LNSIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
-#define LNSIGMA_LENS (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_LENS))
+#define VECTOR       (NCM_MODEL (dcov))
+#define ALPHA        (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
+#define BETA         (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_BETA))
+#define ABSMAG1      (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_M1))
+#define ABSMAG2      (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_M2))
+#define LNSIGMA_PECZ (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
+#define LNSIGMA_LENS (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_LENS))
 
 enum
 {
@@ -567,25 +567,25 @@ _nc_snia_dist_cov_calc_empty_fac (NcSNIADistCov *dcov, gdouble z_cmb)
 gboolean
 nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov)
 {
-  NcmModel *model = NCM_MODEL (dcov);
-  const gdouble alpha = ALPHA;
-  const gdouble beta = BETA;
-  const gdouble alpha2 = alpha * alpha;
-  const gdouble beta2 = beta * beta;
+  NcmModel *model              = NCM_MODEL (dcov);
+  const gdouble alpha          = ALPHA;
+  const gdouble beta           = BETA;
+  const gdouble alpha2         = alpha * alpha;
+  const gdouble beta2          = beta * beta;
   const gdouble two_alpha_beta = 2.0 * alpha * beta;
-  const gdouble two_alpha = 2.0 * alpha;
-  const gdouble two_beta = 2.0 * beta;
-  const gdouble lnsigma_pecz = LNSIGMA_PECZ;
-  const gdouble lnsigma_lens = LNSIGMA_LENS;
-  const gdouble var_pecz = exp (2.0 * lnsigma_pecz);
-  const gdouble var_lens = exp (2.0 * lnsigma_lens);
-  const guint mu_len = nc_data_snia_cov_snia_len (snia_cov);
-  const guint dataset_len = nc_data_snia_cov_sigma_int_len (snia_cov);
-  const NcmVector *cov_packed = nc_data_snia_cov_peek_cov_packed (snia_cov);
-  const GArray *dataset = nc_data_snia_cov_peek_dataset (snia_cov);
-  const NcmVector *v_z_cmb = nc_data_snia_cov_peek_z_cmb (snia_cov);
-  const NcmVector *v_sigma_z = nc_data_snia_cov_peek_sigma_z (snia_cov);
-  gboolean needs_update = FALSE;
+  const gdouble two_alpha      = 2.0 * alpha;
+  const gdouble two_beta       = 2.0 * beta;
+  const gdouble lnsigma_pecz   = LNSIGMA_PECZ;
+  const gdouble lnsigma_lens   = LNSIGMA_LENS;
+  const gdouble var_pecz       = exp (2.0 * lnsigma_pecz);
+  const gdouble var_lens       = exp (2.0 * lnsigma_lens);
+  const guint mu_len           = nc_data_snia_cov_snia_len (snia_cov);
+  const guint dataset_len      = nc_data_snia_cov_sigma_int_len (snia_cov);
+  const NcmVector *cov_packed  = nc_data_snia_cov_peek_cov_packed (snia_cov);
+  const GArray *dataset        = nc_data_snia_cov_peek_dataset (snia_cov);
+  const NcmVector *v_z_cmb     = nc_data_snia_cov_peek_z_cmb (snia_cov);
+  const NcmVector *v_sigma_z   = nc_data_snia_cov_peek_sigma_z (snia_cov);
+  gboolean needs_update        = FALSE;
   register guint i, j, ij;
 
   g_assert (ncm_data_is_init (NCM_DATA (snia_cov)));

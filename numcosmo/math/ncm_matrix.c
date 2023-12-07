@@ -463,7 +463,7 @@ ncm_matrix_const_new_variant (GVariant *var)
     guint nrows        = g_variant_n_children (var);
     guint ncols        = g_variant_n_children (row);
     gconstpointer data = g_variant_get_data (var);
-    const NcmMatrix *m = ncm_matrix_const_new_data (data, nrows, ncols);
+    NcmMatrix *m       = (NcmMatrix *) ncm_matrix_const_new_data (data, nrows, ncols);
 
     NCM_MATRIX (m)->pdata = g_variant_ref_sink (var);
     NCM_MATRIX (m)->pfree = (GDestroyNotify) & g_variant_unref;
@@ -806,7 +806,7 @@ ncm_matrix_clear (NcmMatrix **cm)
 void
 ncm_matrix_const_free (const NcmMatrix *cm)
 {
-  ncm_matrix_free (NCM_MATRIX (cm));
+  ncm_matrix_free (NCM_MATRIX ((NcmMatrix *) cm));
 }
 
 /**

@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_model_mvnd.c
  *
@@ -232,10 +233,11 @@ ncm_model_mvnd_mean (NcmModelMVND *model_mvnd, NcmVector *y)
   if (model_mvnd->priv->mu == NULL)
   {
     NcmModel *model     = NCM_MODEL (model_mvnd);
+    NcmVector *orig_vec = ncm_model_orig_params_peek_vector (model);
     const guint mu_size = ncm_model_vparam_len (model, NCM_MODEL_MVND_MEAN);
     const guint mu_i    = ncm_model_vparam_index (model, NCM_MODEL_MVND_MEAN, 0);
 
-    model_mvnd->priv->mu = ncm_vector_get_subvector (model->params, mu_i, mu_size);
+    model_mvnd->priv->mu = ncm_vector_get_subvector (orig_vec, mu_i, mu_size);
   }
 
   ncm_vector_memcpy (y, model_mvnd->priv->mu);

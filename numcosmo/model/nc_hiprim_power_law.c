@@ -30,7 +30,7 @@
  *
  * Primordial adiabatic scalar power spectrum:
  * $$ \mathcal{P}_{SA}(k) = \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 }.$$
- * 
+ *
  * Primordial tensor power spectrum:
  * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  *
@@ -45,7 +45,8 @@
 
 G_DEFINE_TYPE (NcHIPrimPowerLaw, nc_hiprim_power_law, NC_TYPE_HIPRIM)
 
-enum {
+enum
+{
   PROP_0,
   PROP_SIZE,
 };
@@ -58,7 +59,6 @@ nc_hiprim_power_law_init (NcHIPrimPowerLaw *nc_hiprim_power_law)
 static void
 _nc_hiprim_power_law_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_power_law_parent_class)->finalize (object);
 }
@@ -121,14 +121,15 @@ nc_hiprim_power_law_new (void)
 {
   NcHIPrimPowerLaw *prim_pl = g_object_new (NC_TYPE_HIPRIM_POWER_LAW,
                                             NULL);
+
   return prim_pl;
 }
 
-#define VECTOR     (NCM_MODEL (prim)->params)
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_LN10E10ASA))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_T_SA_RATIO))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_SA))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_LN10E10ASA))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_T_SA_RATIO))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_N_SA))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_POWER_LAW_N_T))
 
 /****************************************************************************
  * Power spectra
@@ -138,12 +139,15 @@ static gdouble
 _nc_hiprim_power_law_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
   const gdouble ln_ka = lnk - prim->lnk_pivot;
+
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10;
 }
 
 static gdouble
 _nc_hiprim_power_law_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  const gdouble ln_ka = lnk - prim->lnk_pivot;  
+  const gdouble ln_ka = lnk - prim->lnk_pivot;
+
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }
+

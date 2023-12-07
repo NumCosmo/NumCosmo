@@ -310,12 +310,13 @@ _ncm_fit_constructed (GObject *object)
   {
     NcmFit *fit         = NCM_FIT (object);
     NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-    gint n              = ncm_dataset_get_n (self->lh->dset);
+    NcmDataset *dset    = ncm_likelihood_peek_dataset (self->lh);
+    gint n              = ncm_dataset_get_n (dset);
     gint n_priors       = ncm_likelihood_priors_length_f (self->lh) +
                           ncm_likelihood_priors_length_m2lnL (self->lh);
-    gint data_dof = ncm_dataset_get_dof (self->lh->dset);
+    gint data_dof = ncm_dataset_get_dof (dset);
 
-    g_assert (ncm_dataset_all_init (self->lh->dset));
+    g_assert (ncm_dataset_all_init (dset));
 
     if (!self->mset->valid_map)
       ncm_mset_prepare_fparam_map (self->mset);
@@ -498,14 +499,15 @@ _ncm_fit_reset (NcmFit *fit)
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   /*ncm_mset_prepare_fparam_map (self->mset);*/
   {
-    guint n          = ncm_dataset_get_n (self->lh->dset);
+    NcmDataset *dset = ncm_likelihood_peek_dataset (self->lh);
+    guint n          = ncm_dataset_get_n (dset);
     gint n_priors    = ncm_likelihood_priors_length_f (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
     guint data_len   = n + n_priors;
     guint fparam_len = ncm_mset_fparam_len (self->mset);
-    gint data_dof    = ncm_dataset_get_dof (self->lh->dset);
+    gint data_dof    = ncm_dataset_get_dof (dset);
     gint dof         = data_dof - fparam_len;
 
-    g_assert (ncm_dataset_all_init (self->lh->dset));
+    g_assert (ncm_dataset_all_init (dset));
     g_assert (data_len > 0);
 
     ncm_fit_state_set_all (self->fstate, data_len, fparam_len, dof,
@@ -1069,7 +1071,7 @@ ncm_fit_params_set_vector (NcmFit *fit, NcmVector *x)
  * ncm_fit_params_set_vector_offset:
  * @fit: a #NcmFit
  * @x: a #NcmVector
- * @offset: FIXME
+ * @offset: offset
  *
  * Sets the parameters from vector @x starting at @offset.
  *
@@ -1747,10 +1749,11 @@ ncm_fit_log_state (NcmFit *fit)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    gdouble elap_sec = g_timer_elapsed (self->timer, NULL);
-    gulong elap_min  = elap_sec / 60;
-    gulong elap_hour = elap_min / 60;
-    gulong elap_day  = elap_hour / 24;
+    NcmVector *m2lnL_v = ncm_likelihoood_peek_m2lnL_v (self->lh);
+    gdouble elap_sec   = g_timer_elapsed (self->timer, NULL);
+    gulong elap_min    = elap_sec / 60;
+    gulong elap_hour   = elap_min / 60;
+    gulong elap_day    = elap_hour / 24;
 
     elap_sec  = fmod (elap_sec, 60);
     elap_min  = elap_min % 60;
@@ -1761,13 +1764,13 @@ ncm_fit_log_state (NcmFit *fit)
     g_message ("#  gradient evaluations [%06d]\n", ncm_fit_state_get_grad_eval (self->fstate));
     g_message ("#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
 
-    if (self->lh->m2lnL_v != NULL)
+    if (m2lnL_v != NULL)
     {
       g_message ("#  m2lnL     = % 20.15g ( ", ncm_fit_state_get_m2lnL_curval (self->fstate));
 
-      for (i = 0; i < ncm_vector_len (self->lh->m2lnL_v); i++)
+      for (i = 0; i < ncm_vector_len (m2lnL_v); i++)
       {
-        g_message ("% 13.8g ", ncm_vector_get (self->lh->m2lnL_v, i));
+        g_message ("% 13.8g ", ncm_vector_get (m2lnL_v, i));
       }
 
       g_message (")\n");
@@ -1826,8 +1829,9 @@ void
 ncm_fit_log_info (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (self->lh);
 
-  ncm_dataset_log_info (self->lh->dset);
+  ncm_dataset_log_info (dset);
   ncm_mset_pretty_log (self->mset);
 
   return;
@@ -1865,8 +1869,9 @@ void
 ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (self->lh);
 
-  ncm_dataset_m2lnL_val (self->lh->dset, self->mset, data_m2lnL);
+  ncm_dataset_m2lnL_val (dset, self->mset, data_m2lnL);
 }
 
 /**
@@ -2397,12 +2402,13 @@ void
 ncm_fit_fisher (NcmFit *fit)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (self->lh);
   NcmMatrix *IM       = NULL;
 
   if ((ncm_likelihood_priors_length_f (self->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (self->lh) > 0))
     g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
-  ncm_dataset_fisher_matrix (self->lh->dset, self->mset, &IM);
+  ncm_dataset_fisher_matrix (dset, self->mset, &IM);
   _ncm_fit_fisher_to_covar (fit, IM);
 
   ncm_matrix_clear (&IM);
@@ -2740,68 +2746,21 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
   return result;
 }
 
-/*
- * ncm_fit_chisq_test:
- * @fit: a #NcmFit
- * @bins: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- *
- *  gdouble
- *  ncm_fit_chisq_test (NcmFit *fit, size_t bins)
- *  {
- *  NcmLikelihood *lh = self->lh;
- *  NcmDataset *ds = lh->ds;
- *  NcmData *data = nc_dataset_get_data (ds, 0);
- *  NcFunction distance = nc_function_get (data->res_type);
- *  gsl_histogram *obs = gsl_histogram_alloc (bins);
- *  gsl_histogram *exp = gsl_histogram_alloc (bins);
- *  gsl_vector_view y_exp;
- *  gdouble y_min, y_max;
- *  gint i;
- *  if (data == NULL)
- *  return GSL_NAN;
- *
- *  ncm_distance_thread_pool (distance.f, self->cp, data->x, self->f, NULL, NULL);
- *  y_exp = gsl_vector_subvector (self->f, 0, data->x->size);
- *  y_min = GSL_MIN (gsl_vector_min (data->y), gsl_vector_min (&y_exp.vector))*0.999;
- *  y_max = GSL_MAX (gsl_vector_max (data->y), gsl_vector_max (&y_exp.vector))*1.001;
- *
- *  gsl_histogram_set_ranges_uniform (obs, y_min, y_max);
- *  gsl_histogram_set_ranges_uniform (exp, y_min, y_max);
- *
- *  for (i = 0; i < data->x->size; i++)
- *  {
- *    gsl_histogram_increment (obs, gsl_vector_get (data->y, i));
- *    gsl_histogram_increment (exp, gsl_vector_get (&y_exp.vector, i));
- *    }
- *
- *    gsl_histogram_sub (obs, exp);
- *    //  if (gsl_histogram_min_val (exp) == 0.0)
- *    //    g_error ("Cannot chisq test");
- *    gsl_histogram_mul (obs, obs);
- *    gsl_histogram_div (obs, exp);
- *    //gsl_histogram_fprintf (self->log, obs, "%f", "%f");
- *    g_message ("\n");
- *    //gsl_histogram_fprintf (self->log, exp, "%f", "%f");
- *    g_message ("\n");
- *    g_message ("BLA [%g, %g] %zu %g [%g]\n", y_min, y_max, bins, gsl_histogram_sum (obs), gsl_histogram_sum (exp));
- *    return gsl_histogram_sum (obs);
- *    }
- */
-
 /**
  * ncm_fit_function_error:
  * @fit: a #NcmFit
  * @func: a #NcmMSetFunc
- * @x: FIXME
- * @pretty_print: FIXME
- * @f: (out): FIXME
- * @sigma_f: (out): FIXME
+ * @x: the argument for the function
+ * @pretty_print: whether to print the result to the log
+ * @f: (out): the function value
+ * @sigma_f: (out): the error in the function value
  *
- * FIXME
+ * Propagates the errors in the free parameters to the function @func.
+ * If no free parameters are set in the #NcmMSet object associated to the
+ * @fit object, the computed error is 0.
+ *
+ * Note that the covariance matrix must be calculated before calling this
+ * function. Otherwise, it will raise an error.
  *
  */
 void
@@ -2845,72 +2804,5 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
 
     return;
   }
-}
-
-/**
- * ncm_fit_function_cov:
- * @fit: a #NcmFit
- * @func1: a #NcmMSetFunc
- * @z1: FIXME
- * @func2: a #NcmMSetFunc
- * @z2: FIXME
- * @pretty_print: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print)
-{
-  NCM_UNUSED (fit);
-  NCM_UNUSED (func1);
-  NCM_UNUSED (z1);
-  NCM_UNUSED (func2);
-  NCM_UNUSED (z2);
-  NCM_UNUSED (pretty_print);
-  g_assert_not_reached ();
-
-  /*
-   *  gdouble result, cor, s1, s2;
-   *  gint ret;
-   *  NcmVector *tmp1 = ncm_fit_params_get_tmp_vector (self->pt, self->mset);
-   *  NcmVector *tmp2 = ncm_fit_params_get_tmp_vector (self->pt, self->mset);
-   *
-   *  NCM_FUNC_DF (func1, self->mset, self->pt, z1, tmp1);
-   *  NCM_FUNC_DF (func2, self->mset, self->pt, z2, tmp2);
-   *
-   *  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (self->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (self->df));
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
-   *  ret = gsl_blas_ddot (ncm_vector_gsl (self->df), ncm_vector_gsl (tmp1), &result);
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
-   *  s1 = sqrt(result);
-   *
-   *  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (self->fstate->covar), ncm_vector_gsl (tmp2), 0.0, ncm_vector_gsl (self->df));
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
-   *  ret = gsl_blas_ddot (ncm_vector_gsl (self->df), ncm_vector_gsl (tmp2), &result);
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
-   *  s2 = sqrt(result);
-   *
-   *  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (self->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (self->df));
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
-   *  ret = gsl_blas_ddot (ncm_vector_gsl (self->df), ncm_vector_gsl (tmp2), &result);
-   *  NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
-   *  cor = result / (s1*s2);
-   *
-   *  if (pretty_print)
-   *  {
-   *  g_message ("# % -12.4g\t| % -12.4g\n", NCM_FUNC_F(func1, self->mset, z1), NCM_FUNC_F(func2, self->mset, z2));
-   *  g_message ("#---------------------------------------------\n");
-   *  g_message ("# % -12.4g\t | % -12.4g\t| % -12.4g\n", s1, 1.0, cor);
-   *  g_message ("# % -12.4g\t | % -12.4g\t| % -12.4g\n", s2, cor, 1.0);
-   *  g_message ("#---------------------------------------------\n");
-   *  }
-   *
-   *  ncm_fit_params_return_tmp_vector (self->pt, tmp1);
-   *  ncm_fit_params_return_tmp_vector (self->pt, tmp2);
-   *
-   *  return sqrt(result);
-   */
 }
 

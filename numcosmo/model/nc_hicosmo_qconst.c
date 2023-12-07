@@ -27,11 +27,11 @@
  * @title: NcHICosmoQConst
  * @short_description:  Kinetic model -- Constant deceleration function
  *
- * The deceleration function is defined as a constant, $q(z) = q_0$.  
+ * The deceleration function is defined as a constant, $q(z) = q_0$.
  * The comoving distance in units of the Hubble radius today is
- * 
+ *
  * $$D_c(z) = CD + \frac{(1+ z_1)^{-q_0}}{q_0} \left[ 1 - \left( \frac{1+z}{1+z_1} \right)^{-q_0} \right],$$
- * where 	CD is the comoving distance from 0 to $z_1$.
+ * where  CD is the comoving distance from 0 to $z_1$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,49 +48,9 @@
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO)
 
-#define VECTOR   (NCM_MODEL (cosmo)->params)
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_H0))
-#define OMEGA_T  (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_OMEGA_T))
-#define CD       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_CD))
-#define E        (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_E))
-#define Q        (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Q))
-#define Z1       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Z1))
 
-static gdouble
-_nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z)
+enum
 {
-  gdouble x1, x, ln_x_x1;
-  x1 = 1.0 + Z1;
-  x = 1.0 + z;
-  ln_x_x1 = gsl_sf_log (x/x1);
-
-  if (Z1 == z)
-    return CD;
-
-  return CD + x1 * ln_x_x1 / E * gsl_sf_exprel (-Q * ln_x_x1);
-}
-
-/****************************************************************************
- * Hubble constant
- ****************************************************************************/
-static gdouble _nc_hicosmo_qconst_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
-
-/**
- * nc_hicosmo_qconst_new:
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcHICosmoQConst *
-nc_hicosmo_qconst_new (void)
-{
-  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_HICOSMO_QCONST, NULL);
-  return qconst;
-}
-
-enum {
   PROP_0,
   PROP_SIZE,
 };
@@ -104,52 +64,55 @@ nc_hicosmo_qconst_init (NcHICosmoQConst *qconst)
 static void
 nc_hicosmo_qconst_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qconst_parent_class)->finalize (object);
 }
 
+static gdouble _nc_hicosmo_qconst_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo);
+
 static void
 nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class   = G_OBJECT_CLASS (klass);
+  NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
+  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
-  object_class->finalize     = &nc_hicosmo_qconst_finalize;
+  object_class->finalize = &nc_hicosmo_qconst_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Q Constant", "qconst");
   ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_H0, "H_0", "H0",
-                               10.0, 500.0, 1.0,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_H0,
-                               NCM_PARAM_TYPE_FIXED);
+                              10.0, 500.0, 1.0,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_H0,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_OMEGA_T, "\\Omega_{t0}", "Omegat",
-                               -5.0, 5.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_OMEGA_T,
-                               NCM_PARAM_TYPE_FIXED);
+                              -5.0, 5.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_OMEGA_T,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_CD, "D_c", "Dc",
-                               -50.0, 50.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_CD,
-                               NCM_PARAM_TYPE_FIXED);
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_CD,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_E, "E", "E",
-                               0.0, 50.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_E,
-                               NCM_PARAM_TYPE_FIXED);
+                              0.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_E,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_Q, "q", "q",
-                               -50.0, 50.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_Q,
-                               NCM_PARAM_TYPE_FREE);
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_Q,
+                              NCM_PARAM_TYPE_FREE);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_Z1, "z_\\star", "zs",
-                               0.0, 5.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_Z1,
-                               NCM_PARAM_TYPE_FIXED);
+                              0.0, 5.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_Z1,
+                              NCM_PARAM_TYPE_FIXED);
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
@@ -158,3 +121,57 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
   nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qconst_Dc);
   nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qconst_Omega_t0);
 }
+
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_H0))
+#define OMEGA_T  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_OMEGA_T))
+#define CD       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_CD))
+#define E        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_E))
+#define Q        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_Q))
+#define Z1       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QCONST_Z1))
+
+static gdouble
+_nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z)
+{
+  gdouble x1, x, ln_x_x1;
+
+  x1      = 1.0 + Z1;
+  x       = 1.0 + z;
+  ln_x_x1 = gsl_sf_log (x / x1);
+
+  if (Z1 == z)
+    return CD;
+
+  return CD + x1 * ln_x_x1 / E * gsl_sf_exprel (-Q * ln_x_x1);
+}
+
+/****************************************************************************
+ * Hubble constant
+ ****************************************************************************/
+static gdouble
+_nc_hicosmo_qconst_H0 (NcHICosmo *cosmo)
+{
+  return MACRO_H0;
+}
+
+static gdouble
+_nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo)
+{
+  return OMEGA_T;
+}
+
+/**
+ * nc_hicosmo_qconst_new:
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcHICosmoQConst *
+nc_hicosmo_qconst_new (void)
+{
+  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_HICOSMO_QCONST, NULL);
+
+  return qconst;
+}
+

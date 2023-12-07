@@ -47,11 +47,11 @@
 
 G_DEFINE_TYPE (NcClusterMassBenson, nc_cluster_mass_benson, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (msz)->params)
-#define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_A_SZ))
-#define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_B_SZ))
-#define C_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_C_SZ))
-#define D_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_D_SZ))
+#define VECTOR (NCM_MODEL (msz))
+#define A_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_BENSON_A_SZ))
+#define B_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_BENSON_B_SZ))
+#define C_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_BENSON_C_SZ))
+#define D_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_BENSON_D_SZ))
 
 enum
 {

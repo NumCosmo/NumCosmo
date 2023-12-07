@@ -36,10 +36,11 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "model/nc_hicosmo_idem2.h"
 #include "math/ncm_mset_func_list.h"
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "model/nc_hicosmo_idem2.h"
+#include "math/ncm_cfg.h"
 
 struct _NcHICosmoIDEM2Private
 {
@@ -72,7 +73,7 @@ nc_hicosmo_idem2_init (NcHICosmoIDEM2 *cosmo_de)
 
   g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));
   ncm_serialize_clear (&ser);
-  cosmo_de->priv->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+  cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (NCM_MODEL (cosmo_de)) - 1;
 
   cosmo_de->priv->nu_rho = NULL;
   cosmo_de->priv->nu_p   = NULL;
@@ -109,13 +110,13 @@ _nc_hicosmo_idem2_constructed (GObject *object)
     if (nmassnu > 0)
     {
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_T) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_T) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_T, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_MU) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_MU) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_MU, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_G) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_IDEM2_MASSNU_G) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_IDEM2_MASSNU_G, nmassnu);
     }
   }
   /* Chain up : start */
@@ -350,19 +351,18 @@ nc_hicosmo_idem2_class_init (NcHICosmoIDEM2Class *klass)
 static gdouble _nc_hicosmo_idem2_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
 static gdouble _nc_hicosmo_idem2_Omega_gnu0 (NcHICosmo *cosmo);
 
-#define VECTOR (NCM_MODEL (cosmo)->params)
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_H0))
-#define OMEGA_C (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_C))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_X))
-#define T_GAMMA0 (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_T_GAMMA0))
-#define HE_YP (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_HE_YP))
-#define ENNU (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_ENNU))
-#define OMEGA_R (_nc_hicosmo_idem2_Omega_gnu0 (NC_HICOSMO (cosmo)))
-#define OMEGA_B (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_B))
-#define GAMMA (ncm_vector_get (VECTOR, NC_HICOSMO_IDEM2_GAMMA))
-
-#define OMEGA_M (OMEGA_B + OMEGA_C)
-#define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_idem2_Omega_mnu0 (cosmo)))
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_H0))
+#define OMEGA_C  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_C))
+#define OMEGA_X  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_X))
+#define T_GAMMA0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_T_GAMMA0))
+#define HE_YP    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_HE_YP))
+#define ENNU     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_ENNU))
+#define OMEGA_R  (_nc_hicosmo_idem2_Omega_gnu0 (NC_HICOSMO (cosmo)))
+#define OMEGA_B  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_OMEGA_B))
+#define GAMMA    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_IDEM2_GAMMA))
+#define OMEGA_M  (OMEGA_B + OMEGA_C)
+#define OMEGA_K  (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_idem2_Omega_mnu0 (cosmo)))
 
 typedef struct _NcHICosmoIDEM2NuInt
 {
@@ -576,13 +576,13 @@ _nc_hicosmo_idem2_Yp_4He (NcHICosmo *cosmo)
     }
     else
     {
-      if (model->pkey != cosmo_de->priv->HE4_Yp_key)
+      if (ncm_model_state_get_pkey (model) != cosmo_de->priv->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_IDEM2 (cosmo)->priv->BBN_spline2d,
                                               wb, DNeff);
 
         ncm_model_orig_param_set (model, NC_HICOSMO_IDEM2_HE_YP, Yp);
-        cosmo_de->priv->HE4_Yp_key = model->pkey;
+        cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (model);
         /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp); */
       }
     }

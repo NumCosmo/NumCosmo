@@ -40,6 +40,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_diff.h"
+#include "math/ncm_cfg.h"
 
 typedef struct _NcmDiffPrivate
 {
