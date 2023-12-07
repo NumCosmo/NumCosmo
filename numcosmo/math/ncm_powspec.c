@@ -823,7 +823,9 @@ _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
  * @xi1: the value of $\xi_1$
  * @xi2: the value of $\xi_2$
  *
- * Computes $C_\ell (z_1, z_2) = \int\dots$. FIXME
+ * Computes \(C_\ell (z_1, z_2) = \int\dots\). This method calculates the angular power
+ * spectrum directly from the power spectrum by integrating over the wave-numbers. It
+ * is slow and intended for testing purposes only.
  *
  */
 gdouble

@@ -48,11 +48,11 @@
 
 G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL)
 
-#define VECTOR  (NCM_MODEL (cpc)->params)
-#define LNMCUT  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))
-#define SD_MCUT (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT))
-#define ZMIN    (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_ZMIN))
-#define DELTAZ  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ))
+#define VECTOR  (NCM_MODEL (cpc))
+#define LNMCUT  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))
+#define SD_MCUT (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT))
+#define ZMIN    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_ZMIN))
+#define DELTAZ  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ))
 
 enum
 {
@@ -684,7 +684,7 @@ _peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bound
   gsl_multifit_fdfsolver_set (cpc->s, &f, &p0_vec.vector);
 
   /* solve the system with a maximum of 20 iterations */
-    status = gsl_multifit_fdfsolver_driver (cpc->s, 2.0e4, xtol, gtol, ftol, &info);
+  status = gsl_multifit_fdfsolver_driver (cpc->s, 2.0e4, xtol, gtol, ftol, &info);
 
   if (status != GSL_SUCCESS)
     g_error ("error: NcClusterPseudoCounts peakfinder function.\n");

@@ -42,6 +42,19 @@
 #include "math/ncm_model.h"
 #include "math/ncm_mset.h"
 
+struct _NcmModelBuilder
+{
+  /*< private >*/
+  GObject parent_instance;
+  gchar *name;
+  gchar *desc;
+  GType ptype;
+  GType type;
+  GPtrArray *sparams;
+  GPtrArray *vparams;
+  gboolean created;
+};
+
 enum
 {
   PROP_0,

@@ -523,14 +523,14 @@ _nc_hicosmo_Vexp_init_dx_alpha_series (const gdouble dalpha)
   return res;
 }
 
-#define VECTOR    (NCM_MODEL (cosmo)->params)
-#define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_H0))
-#define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_C))
-#define OMEGA_L   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_L))
-#define SIGMA_PHI (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_SIGMA_PHI))
-#define D_PHI     (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_D_PHI))
-#define ALPHA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_ALPHA_B))
-#define X_B       (ncm_vector_get (VECTOR, NC_HICOSMO_VEXP_X_B))
+#define VECTOR    (NCM_MODEL (cosmo))
+#define MACRO_H0  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_H0))
+#define OMEGA_C   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_C))
+#define OMEGA_L   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_L))
+#define SIGMA_PHI (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_SIGMA_PHI))
+#define D_PHI     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_D_PHI))
+#define ALPHA_B   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_ALPHA_B))
+#define X_B       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_X_B))
 
 #define LAMBDAp (1.0 + 1.0 / M_SQRT2)
 #define LAMBDAm (1.0 - 1.0 / M_SQRT2)
@@ -882,7 +882,7 @@ _nc_hicosmo_Vexp_qt_f (realtype tQ, N_Vector y_qt, N_Vector ydot_qt, gpointer f_
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (f_data);
   const gdouble alpha = NV_Ith_S (y_qt, 0) + Vexp->priv->alpha_b;
-  const gdouble phi = NV_Ith_S (y_qt, 1);
+  const gdouble phi   = NV_Ith_S (y_qt, 1);
   gdouble dalpha, dphi;
 
   _nc_hicosmo_Vexp_dalpha_dtau_dphi_dtQ (Vexp, alpha, phi, &dalpha, &dphi);
@@ -1260,7 +1260,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
           const gdouble c2      = c1 / (OMEGA_C * LpLm * LmLp);
 
           if (set_xb_max && (tQ_f < 0.0))
-            ncm_vector_set (VECTOR, NC_HICOSMO_VEXP_X_B, a_0 / exp (Vexp->priv->alpha_b));
+            ncm_model_orig_param_set (VECTOR, NC_HICOSMO_VEXP_X_B, a_0 / exp (Vexp->priv->alpha_b));
 
           if (!root1_found)
             g_warning ("_nc_hicosmo_Vexp_evolve_qt: imperfect match of the classical solution.");
@@ -1740,7 +1740,7 @@ _nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gd
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -1814,7 +1814,7 @@ _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdo
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -1876,7 +1876,7 @@ _nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -1945,7 +1945,7 @@ _nc_hicosmo_Vexp_zeta_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2074,7 +2074,7 @@ _nc_hicosmo_Vexp_zeta_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_ta
         case 1: /* Quantum phase */
         {
           const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-          const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+          const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
           gdouble H_lp, xq;
 
           _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2168,7 +2168,7 @@ _nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m
         case 1: /* Quantum phase */
         {
           const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-          const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+          const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
           gdouble H_lp, xq;
 
           _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2282,7 +2282,7 @@ _nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble 
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2352,7 +2352,7 @@ _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdou
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2811,7 +2811,7 @@ nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2895,7 +2895,7 @@ nc_hicosmo_Vexp_eval_nu (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -2989,7 +2989,7 @@ nc_hicosmo_Vexp_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B,
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
@@ -3092,7 +3092,7 @@ nc_hicosmo_Vexp_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k
       case 1: /* Quantum phase */
       {
         const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-        const gdouble phi = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
         gdouble H_lp, xq;
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);

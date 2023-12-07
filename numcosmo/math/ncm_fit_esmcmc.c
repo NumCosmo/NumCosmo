@@ -1487,7 +1487,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       if (self->nthreads > 0)
         g_message ("#   Using MPI:         %s.\n", self->use_mpi ? ((self->nslaves > 0) ? "yes" : "no - use MPI enabled but no slaves available") : "no");
 
-      ncm_dataset_log_info (lh->dset);
+      ncm_dataset_log_info (ncm_likelihood_peek_dataset (lh));
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Model set:\n");
       ncm_mset_pretty_log (mset);

@@ -39,15 +39,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MATRIX             (ncm_matrix_get_type ())
-#define NCM_MATRIX(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MATRIX, NcmMatrix))
-#define NCM_MATRIX_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MATRIX, NcmMatrixClass))
-#define NCM_IS_MATRIX(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MATRIX))
-#define NCM_IS_MATRIX_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MATRIX))
-#define NCM_MATRIX_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MATRIX, NcmMatrixClass))
+#define NCM_TYPE_MATRIX (ncm_matrix_get_type ())
 
-typedef struct _NcmMatrixClass NcmMatrixClass;
-typedef struct _NcmMatrix NcmMatrix;
+G_DECLARE_FINAL_TYPE (NcmMatrix, ncm_matrix, NCM, MATRIX, GObject)
 
 /**
  * NcmMatrixInternal:
@@ -69,12 +63,6 @@ typedef enum _NcmMatrixInternal
   NCM_MATRIX_DERIVED,
 } NcmMatrixInternal;
 
-struct _NcmMatrixClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmMatrix
 {
   /*< private >*/
@@ -84,8 +72,6 @@ struct _NcmMatrix
   GDestroyNotify pfree;
   NcmMatrixInternal type;
 };
-
-GType ncm_matrix_get_type (void) G_GNUC_CONST;
 
 NcmMatrix *ncm_matrix_new (const guint nrows, const guint ncols);
 NcmMatrix *ncm_matrix_new0 (const guint nrows, const guint ncols);
