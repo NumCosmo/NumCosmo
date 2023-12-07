@@ -58,22 +58,22 @@ struct _NcClusterMassLnrichExtPrivate
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, NC_TYPE_CLUSTER_MASS);
 
-#define VECTOR (NCM_MODEL (lnrich_ext)->params)
-#define MU    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU))
-#define MU_M1 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_M1))
-#define MU_Z1 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_Z1))
-#define MU_M2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_M2))
-#define MU_Z2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_Z2))
-#define MU_MZ (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_MZ))
-#define SIGMA_0  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_0))
-#define SIGMA_M1 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M1))
-#define SIGMA_Z1 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z1))
-#define SIGMA_M2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2))
-#define SIGMA_Z2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
-#define SIGMA_MZ (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
-#define CUT      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
-#define CUT_M1      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1))
-#define CUT_Z1      (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1))
+#define VECTOR   (NCM_MODEL (lnrich_ext))
+#define MU       (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU))
+#define MU_M1    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_M1))
+#define MU_Z1    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_Z1))
+#define MU_M2    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_M2))
+#define MU_Z2    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_Z2))
+#define MU_MZ    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_MU_MZ))
+#define SIGMA_0  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_0))
+#define SIGMA_M1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M1))
+#define SIGMA_Z1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z1))
+#define SIGMA_M2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2))
+#define SIGMA_Z2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
+#define SIGMA_MZ (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
+#define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
+#define CUT_M1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1))
+#define CUT_Z1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1))
 
 enum
 {
