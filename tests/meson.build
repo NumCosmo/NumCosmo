@@ -203,8 +203,8 @@ c_tests = [
         'sources': ['test_nc_distance.c'],
     },
     {
-        'name': 'nc_galaxy_sd_position_flat',
-        'sources': ['test_nc_galaxy_sd_position_flat.c'],
+        'name': 'nc_galaxy_sd_position',
+        'sources': ['test_nc_galaxy_sd_position.c'],
     },
     {
         'name': 'nc_galaxy_wl_ellipticity_kde',
@@ -223,7 +223,7 @@ foreach c_test : c_tests
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args,
-        dependencies: [libnumcosmo_dep],
+        dependencies: [libnumcosmo_dep, gsl_dep],
         include_directories: [configinc, numcosmoinc],
     )
     if c_test.has_key('timeout')
