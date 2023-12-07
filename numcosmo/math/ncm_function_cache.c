@@ -43,7 +43,12 @@
 #include "math/ncm_function_cache.h"
 #include "math/ncm_util.h"
 
-struct _NcmFunctionCachePrivate
+struct _NcmFunctionCache
+{
+  GObject parent_instance;
+};
+
+typedef struct _NcmFunctionCachePrivate
 {
   GTree *tree;
   GMutex lock;
@@ -51,7 +56,7 @@ struct _NcmFunctionCachePrivate
   guint n;
   gdouble abstol;
   gdouble reltol;
-};
+} NcmFunctionCachePrivate;
 
 enum
 {
@@ -70,7 +75,7 @@ static gboolean cache_clean (NcmFunctionCache *cache);
 static void
 ncm_function_cache_init (NcmFunctionCache *cache)
 {
-  NcmFunctionCachePrivate * const self = cache->priv = ncm_function_cache_get_instance_private (cache);
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   self->tree   = g_tree_new_full (&gdouble_compare, NULL, &gdouble_free, (GDestroyNotify) & ncm_vector_free);
   self->clear  = FALSE;
@@ -85,7 +90,7 @@ static void
 _ncm_function_cache_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFunctionCache *cache              = NCM_FUNCTION_CACHE (object);
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   g_return_if_fail (NCM_IS_FUNCTION_CACHE (object));
 
@@ -110,7 +115,7 @@ static void
 _ncm_function_cache_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFunctionCache *cache              = NCM_FUNCTION_CACHE (object);
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   g_return_if_fail (NCM_IS_FUNCTION_CACHE (object));
 
@@ -135,7 +140,7 @@ static void
 _ncm_function_cache_dispose (GObject *object)
 {
   NcmFunctionCache *cache              = NCM_FUNCTION_CACHE (object);
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   g_clear_pointer (&self->tree, g_tree_unref);
 
@@ -259,7 +264,7 @@ ncm_function_cache_clear (NcmFunctionCache **cache)
 gdouble
 ncm_function_cache_get_reltol (NcmFunctionCache *cache)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   return self->reltol;
 }
@@ -273,7 +278,7 @@ ncm_function_cache_get_reltol (NcmFunctionCache *cache)
 gdouble
 ncm_function_cache_get_abstol (NcmFunctionCache *cache)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   return self->abstol;
 }
@@ -288,7 +293,7 @@ ncm_function_cache_get_abstol (NcmFunctionCache *cache)
 void
 ncm_function_cache_empty_cache (NcmFunctionCache *cache)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   self->clear = TRUE;
 }
@@ -305,7 +310,7 @@ ncm_function_cache_empty_cache (NcmFunctionCache *cache)
 void
 ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, NcmVector *p)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
   gdouble *x_ptr                       = g_slice_new (gdouble);
 
   g_assert_cmpuint (self->n, ==, ncm_vector_len (p));
@@ -339,7 +344,7 @@ ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, NcmVector 
 void
 ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
   gdouble *x_ptr;
   NcmVector *v;
   guint i;
@@ -399,7 +404,7 @@ static gint gdouble_search_near (gconstpointer a, gconstpointer b);
 gboolean
 ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, NcmVector **v, NcmFunctionCacheSearchType type)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
   NcmFunctionCacheSearch search        = {FALSE, x, 0.0, GSL_POSINF, 0, NCM_FUNCTION_CACHE_SEARCH_BOTH, self->reltol};
   NcmVector *res                       = NULL;
 
@@ -439,17 +444,17 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
 /**
  * ncm_function_cache_get: (skip)
  * @cache: a #NcmFunctionCache
- * @x_ptr: FIXME
- * @v: FIXME
+ * @x_ptr: the argument $x$
+ * @v: (out) (transfer none): the function at $x$ or NULL if no point was not found
  *
- * FIXME
+ * Searches the @cache and returns the value of the function at $x$.
  *
- * Returns: FIXME
+ * Returns: whether a point $x$ was found.
  */
 gboolean
 ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, NcmVector **v)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
   NcmVector *res;
 
   g_mutex_lock (&self->lock);
@@ -479,7 +484,7 @@ ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, NcmVector **v)
 gboolean
 cache_clean (NcmFunctionCache *cache)
 {
-  NcmFunctionCachePrivate * const self = cache->priv;
+  NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
 
   if (self->clear)
   {

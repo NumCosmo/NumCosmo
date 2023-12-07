@@ -416,8 +416,9 @@ static gint
 _ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
 {
   NcmLikelihood *lh = ncm_fit_peek_likelihood (fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
 
-  mc->resample (lh->dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
+  mc->resample (dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
   mc->cur_sample_id++;
 
   return mc->cur_sample_id;
@@ -436,6 +437,7 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 {
   const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
   NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
 
   if (mc->started)
     g_error ("ncm_fit_mc_set_rtype: Cannot change resample type during a run, call ncm_fit_mc_end_run() first.");
@@ -448,15 +450,15 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
   {
     case NCM_FIT_MC_RESAMPLE_FROM_MODEL:
       mc->resample = &ncm_dataset_resample;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_PARTIAL);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_PARTIAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN:
       g_assert_not_reached ();
@@ -642,6 +644,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
   const guint param_len  = ncm_mset_total_len (mc->fiduc);
   const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
   NcmRNG *mcat_rng       = ncm_mset_catalog_peek_rng (mc->mcat);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
 
   if (mc->started)
     g_error ("ncm_fit_mc_start_run: run already started, run ncm_fit_mc_end_run() first.");
@@ -656,7 +659,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Starting Monte Carlo...\n");
-      ncm_dataset_log_info (lh->dset);
+      ncm_dataset_log_info (dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Fiducial model set:\n");
       ncm_mset_pretty_log (mc->fiduc);

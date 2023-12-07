@@ -80,9 +80,9 @@
 
 G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODEL)
 
-#define VECTOR (NCM_MODEL (smd)->params)
-#define PCC   (ncm_vector_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_PCC))
-#define ROFF   (ncm_vector_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_ROFF))
+#define VECTOR (NCM_MODEL (smd))
+#define PCC    (ncm_model_orig_param_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_PCC))
+#define ROFF   (ncm_model_orig_param_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_ROFF))
 
 enum
 {

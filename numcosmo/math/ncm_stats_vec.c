@@ -83,9 +83,6 @@
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
-#include "math/gsl_rstat.h"
-#include "math/rquantile.c"
-
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_FFTW3
 #include <fftw3.h>
@@ -96,6 +93,8 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_rstat.h>
+#include <gsl/gsl_sort.h>
 
 #include <math.h>
 
@@ -399,7 +398,7 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
  *
  * Creates a new #NcmStatsVec.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmStatsVec.
  */
 NcmStatsVec *
 ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x)
@@ -1894,8 +1893,11 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
  * ncm_stats_vec_compute_cov_robust_ogk:
  * @svec: a #NcmStatsVec
  *
- * Compute the covariance using the OGK method FIXME.
- *
+ * Compute the covariance matrix employing the Orthogonalized Gnanadesikan-Kettenring (OGK)
+ * method. This method utilizes saved data and incorporates a robust scale estimator
+ * for each degree of freedom. The OGK method provides a robust and efficient approach
+ * to compute covariance, ensuring reliable estimates even in the presence of outliers
+ * or skewed distributions.
  *
  * Returns: (transfer full): A diagonal #NcmMatrix $V$ containing the estimated covariance.
  */
