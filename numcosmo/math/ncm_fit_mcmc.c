@@ -28,9 +28,10 @@
  * @title: NcmFitMCMC
  * @short_description: Markov Chain Monte Carlo analysis.
  *
- * FIXME
- *
- * Metropolis–Hastings sampler.
+ * Markov Chain Monte Carlo (MCMC) analysis is a method for sampling the posterior
+ * probability distribution of a set of parameters. It relies on the
+ * Metropolis–Hastings algorithm. The transition kernel utilized in this implementation
+ * is specified by the #NcmMSetTransKern object.
  *
  */
 
@@ -268,11 +269,12 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
  * ncm_fit_mcmc_new:
  * @fit: a #NcmFit
  * @tkern: a #NcmMSetTransKern.
- * @mtype: FIXME
+ * @mtype: messages type
  *
- * FIXME
+ * Creates a new #NcmFitMCMC object that will use the @tkern transition kernel to
+ * generate the MCMC proposals.
  *
- * Returns: FIXME
+ * Returns: a new #NcmFitMCMC.
  */
 NcmFitMCMC *
 ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype)
@@ -290,7 +292,7 @@ ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype)
  * ncm_fit_mcmc_free:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Decrement the reference count of @mcmc and frees the memory used by it.
  *
  */
 void
@@ -303,7 +305,8 @@ ncm_fit_mcmc_free (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_clear:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * If *@mcmc is not NULL, decrement the reference count of @mcmc and sets *@mcmc to
+ * NULL.
  *
  */
 void
@@ -317,7 +320,8 @@ ncm_fit_mcmc_clear (NcmFitMCMC **mcmc)
  * @mcmc: a #NcmFitMCMC
  * @filename: a filename.
  *
- * FIXME
+ * Sets the data file to be used to save the Markov Chain Monte Carlo realizations
+ * catalog.
  *
  */
 void
@@ -340,9 +344,9 @@ ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
 /**
  * ncm_fit_mcmc_set_mtype:
  * @mcmc: a #NcmFitMCMC
- * @mtype: FIXME
+ * @mtype: messages type #NcmFitRunMsgs
  *
- * FIXME
+ * Sets the messages type to be used during the Markov Chain Monte Carlo run.
  *
  */
 void
@@ -356,7 +360,7 @@ ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype)
  * @mcmc: a #NcmFitMCMC
  * @tkern: a #NcmMSetTransKern.
  *
- * FIXME
+ * Sets the transition kernel to be used during the Markov Chain Monte Carlo run.
  *
  */
 void
@@ -376,9 +380,9 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
 /**
  * ncm_fit_mcmc_set_nthreads:
  * @mcmc: a #NcmFitMCMC
- * @nthreads: FIXME
+ * @nthreads: number of threads to run
  *
- * FIXME
+ * Sets the number of threads to be used during the Markov Chain Monte Carlo run.
  *
  */
 void
@@ -390,9 +394,9 @@ ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads)
 /**
  * ncm_fit_mcmc_set_rng:
  * @mcmc: a #NcmFitMCMC
- * @rng: FIXME
+ * @rng: a #NcmRNG
  *
- * FIXME
+ * Sets the random number generator to be used during the Markov Chain Monte Carlo run.
  *
  */
 void
@@ -408,9 +412,9 @@ ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng)
  * ncm_fit_mcmc_get_accept_ratio:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Gets the acceptance ratio of the Markov Chain Monte Carlo run.
  *
- * Returns: FIXME
+ * Returns: the current acceptance ratio.
  */
 gdouble
 ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc)
@@ -479,7 +483,7 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
  * ncm_fit_mcmc_start_run:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Starts a new run, setup the Markov Chain Monte Carlo object and syncs the catalog.
  *
  */
 void
@@ -583,7 +587,8 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_end_run:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Ends the current run, frees the memory used by the Markov Chain Monte Carlo and
+ * syncs the catalog.
  *
  */
 void
@@ -607,7 +612,7 @@ ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_reset:
  * @mcmc: a #NcmFitMCMC
  *
- * FIXME
+ * Resets the Markov Chain Monte Carlo object and the catalog.
  *
  */
 void
@@ -648,9 +653,9 @@ ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
 /**
  * ncm_fit_mcmc_set_first_sample_id:
  * @mcmc: a #NcmFitMCMC
- * @first_sample_id: FIXME
+ * @first_sample_id: id
  *
- * FIXME
+ * Sets the first sample id to be used in the Markov Chain Monte Carlo.
  *
  */
 void
@@ -871,10 +876,12 @@ _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc)
 /**
  * ncm_fit_mcmc_run_lre:
  * @mcmc: a #NcmFitMCMC
- * @prerun: FIXME
- * @lre: FIXME
+ * @prerun: number of pre-runs to do
+ * @lre: largest relative error to attain
  *
- * FIXME
+ * Runs the Markov Chain Monte Carlo until it reaches the @n-th realization. It starts
+ * by running @prerun realizations and then it runs more realizations until the largest
+ * relative error is less than @lre.
  *
  */
 void

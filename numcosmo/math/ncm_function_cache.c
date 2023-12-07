@@ -444,12 +444,12 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
 /**
  * ncm_function_cache_get: (skip)
  * @cache: a #NcmFunctionCache
- * @x_ptr: FIXME
- * @v: FIXME
+ * @x_ptr: the argument $x$
+ * @v: (out) (transfer none): the function at $x$ or NULL if no point was not found
  *
- * FIXME
+ * Searches the @cache and returns the value of the function at $x$.
  *
- * Returns: FIXME
+ * Returns: whether a point $x$ was found.
  */
 gboolean
 ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, NcmVector **v)

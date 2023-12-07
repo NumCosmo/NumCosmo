@@ -183,7 +183,7 @@ ncm_mset_trans_kern_free (NcmMSetTransKern *tkern)
  * ncm_mset_trans_kern_clear:
  * @tkern: a #NcmMSetTransKern.
  *
- * FIXME
+ * If *@tkern is not %NULL, unrefs it and sets *@tkern to %NULL.
  *
  */
 void
@@ -197,7 +197,7 @@ ncm_mset_trans_kern_clear (NcmMSetTransKern **tkern)
  * @tkern: a #NcmMSetTransKern.
  * @mset: a #NcmMSet.
  *
- * FIXME
+ * Sets the @mset as the internal set #NcmMSet to be used by the transition kernel.
  *
  */
 void

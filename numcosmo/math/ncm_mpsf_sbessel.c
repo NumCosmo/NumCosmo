@@ -27,7 +27,11 @@
  * @title: NcmMpsfSBessel
  * @short_description: Multiple precision spherical bessel implementation.
  *
- * FIXME
+ * Implementation of multiple precision spherical Bessel functions using the GNU MPFR
+ * library. This module utilizes binary splitting to compute the functions, employing
+ * both the Taylor series and asymptotic expansion methods. It ensures high precision,
+ * making it suitable for accurate computations in scenarios involving spherical Bessel
+ * functions.
  *
  */
 
@@ -79,6 +83,7 @@ _besselj_bs_free (gpointer p)
 }
 
 G_LOCK_DEFINE_STATIC (__create_lock);
+
 static NcmMemoryPool *__mp = NULL;
 
 NcmBinSplit **

@@ -398,7 +398,7 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
  *
  * Creates a new #NcmStatsVec.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmStatsVec.
  */
 NcmStatsVec *
 ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x)
@@ -1893,8 +1893,11 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
  * ncm_stats_vec_compute_cov_robust_ogk:
  * @svec: a #NcmStatsVec
  *
- * Compute the covariance using the OGK method FIXME.
- *
+ * Compute the covariance matrix employing the Orthogonalized Gnanadesikan-Kettenring (OGK)
+ * method. This method utilizes saved data and incorporates a robust scale estimator
+ * for each degree of freedom. The OGK method provides a robust and efficient approach
+ * to compute covariance, ensuring reliable estimates even in the presence of outliers
+ * or skewed distributions.
  *
  * Returns: (transfer full): A diagonal #NcmMatrix $V$ containing the estimated covariance.
  */
