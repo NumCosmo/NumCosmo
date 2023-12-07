@@ -28,7 +28,16 @@
  * @title: NcmMSetTransKern
  * @short_description: Abstract Class for a transition kernel and prior.
  *
- * FIXME
+ * This object defines the abstract class for a transition kernel and prior. It serves
+ * as the base class for all transition kernels and priors, with two main purposes:
+ *
+ * - To define the interface for all transition kernels for use in the NcmFitMCMC
+ *   object.
+ * - To define the interface for all priors, generating random parameter vectors with
+ *   multivariate parameters.
+ *
+ * Notably, it acts as a prior sampler for NcmFitESMCMC, generating the initial
+ * population's first set of random parameter vectors.
  *
  */
 
@@ -174,7 +183,7 @@ ncm_mset_trans_kern_free (NcmMSetTransKern *tkern)
  * ncm_mset_trans_kern_clear:
  * @tkern: a #NcmMSetTransKern.
  *
- * FIXME
+ * If *@tkern is not %NULL, unrefs it and sets *@tkern to %NULL.
  *
  */
 void
@@ -188,7 +197,7 @@ ncm_mset_trans_kern_clear (NcmMSetTransKern **tkern)
  * @tkern: a #NcmMSetTransKern.
  * @mset: a #NcmMSet.
  *
- * FIXME
+ * Sets the @mset as the internal set #NcmMSet to be used by the transition kernel.
  *
  */
 void

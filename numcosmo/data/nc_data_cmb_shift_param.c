@@ -40,6 +40,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cmb_shift_param.h"
+#include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum
@@ -63,9 +64,9 @@ static void
 nc_data_cmb_shift_param_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
-  
+
   g_return_if_fail (NC_IS_DATA_CMB_SHIFT_PARAM (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIST:
@@ -84,9 +85,9 @@ static void
 nc_data_cmb_shift_param_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
-  
+
   g_return_if_fail (NC_IS_DATA_CMB_SHIFT_PARAM (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIST:
@@ -105,10 +106,10 @@ static void
 nc_data_cmb_shift_param_dispose (GObject *object)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (object);
-  
+
   nc_distance_clear (&cmb_shift_param->dist);
   ncm_vector_clear (&cmb_shift_param->x);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cmb_shift_param_parent_class)->dispose (object);
 }
@@ -130,12 +131,12 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
   NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
-  
+
   object_class->set_property = &nc_data_cmb_shift_param_set_property;
   object_class->get_property = &nc_data_cmb_shift_param_get_property;
   object_class->dispose      = &nc_data_cmb_shift_param_dispose;
   object_class->finalize     = &nc_data_cmb_shift_param_finalize;
-  
+
   /**
    * NcDataCMBShiftParam:dist:
    *
@@ -148,7 +149,7 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcDataCMBShiftParam:z:
    *
@@ -161,7 +162,7 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
                                                         "Data redshift",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->prepare   = &_nc_data_cmb_shift_param_prepare;
   diag_class->mean_func = &_nc_data_cmb_shift_param_mean_func;
   diag_class->set_size  = &_nc_data_cmb_shift_param_set_size;
@@ -172,7 +173,7 @@ _nc_data_cmb_shift_param_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (data);
   NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
+
   nc_distance_prepare_if_needed (cmb_shift_param->dist, cosmo);
 }
 
@@ -188,7 +189,7 @@ _nc_data_cmb_shift_param_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVe
   NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const gdouble zrec                   = ncm_vector_get (cmb_shift_param->x, 0);
   const gdouble R                      = nc_distance_shift_parameter (cmb_shift_param->dist, cosmo, zrec);
-  
+
   ncm_vector_set (vp, 0, R);
 }
 
@@ -197,13 +198,13 @@ _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
   const guint cnp                      = ncm_data_gauss_diag_get_size (diag);
-  
+
   if ((np == 0) || (np != cnp))
     ncm_vector_clear (&cmb_shift_param->x);
-  
+
   if ((np != 0) && (np != cnp))
     cmb_shift_param->x = ncm_vector_new (np);
-  
+
   /* Chain up : start */
   NCM_DATA_GAUSS_DIAG_CLASS (nc_data_cmb_shift_param_parent_class)->set_size (diag, np);
 }
@@ -212,7 +213,7 @@ _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
  * nc_data_cmb_shift_param_new_empty:
  * @dist: a #NcDistance
  *
- * This function allocates an empty #NcDataCMBShiftParam object. 
+ * This function allocates an empty #NcDataCMBShiftParam object.
  *
  * Returns: a #NcDataCMBShiftParam.
  */
@@ -222,7 +223,7 @@ nc_data_cmb_shift_param_new_empty (NcDistance *dist)
   NcDataCMBShiftParam *cmb_shift_param = g_object_new (NC_TYPE_DATA_CMB_SHIFT_PARAM,
                                                        "dist", dist,
                                                        NULL);
-  
+
   return cmb_shift_param;
 }
 
@@ -238,9 +239,9 @@ NcDataCMBShiftParam *
 nc_data_cmb_shift_param_new_from_file (const gchar *filename)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (ncm_serialize_global_from_file (filename));
-  
+
   g_assert (NC_IS_DATA_CMB_SHIFT_PARAM (cmb_shift_param));
-  
+
   return cmb_shift_param;
 }
 
@@ -259,7 +260,7 @@ nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
 {
   NcDataCMBShiftParam *cmb_shift_param;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
@@ -275,11 +276,11 @@ nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
       g_error ("nc_data_cmb_shift_param_new_from_id: id %d not recognized.", id);
       break;
   }
-  
+
   cmb_shift_param = nc_data_cmb_shift_param_new_from_file (filename);
   nc_data_cmb_shift_param_set_dist (cmb_shift_param, dist);
   g_free (filename);
-  
+
   return cmb_shift_param;
 }
 

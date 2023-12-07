@@ -35,42 +35,19 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_LIKELIHOOD             (ncm_likelihood_get_type ())
-#define NCM_LIKELIHOOD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_LIKELIHOOD, NcmLikelihood))
-#define NCM_LIKELIHOOD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_LIKELIHOOD, NcmLikelihoodClass))
-#define NCM_IS_LIKELIHOOD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_LIKELIHOOD))
-#define NCM_IS_LIKELIHOOD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_LIKELIHOOD))
-#define NCM_LIKELIHOOD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_LIKELIHOOD, NcmLikelihoodClass))
+#define NCM_TYPE_LIKELIHOOD (ncm_likelihood_get_type ())
 
-typedef struct _NcmLikelihoodClass NcmLikelihoodClass;
-typedef struct _NcmLikelihood NcmLikelihood;
+G_DECLARE_FINAL_TYPE (NcmLikelihood, ncm_likelihood, NCM, LIKELIHOOD, GObject)
 
-struct _NcmLikelihoodClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmLikelihood
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmDataset *dset;
-  NcmObjArray *priors_f;
-  NcmObjArray *priors_m2lnL;
-  NcmVector *m2lnL_v;
-  NcmVector *ls_f_data;
-  NcmVector *ls_f_priors;
-};
-
-GType ncm_likelihood_get_type (void) G_GNUC_CONST;
-
-NcmLikelihood *ncm_likelihood_new (NcmDataset *dset);
+NcmLikelihood *ncm_likelihood_new (NcmDataset * dset);
 NcmLikelihood *ncm_likelihood_ref (NcmLikelihood *lh);
 NcmLikelihood *ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser);
 
 void ncm_likelihood_free (NcmLikelihood *lh);
 void ncm_likelihood_clear (NcmLikelihood **lh);
+
+NcmDataset *ncm_likelihood_peek_dataset (NcmLikelihood *lh);
+NcmVector *ncm_likelihoood_peek_m2lnL_v (NcmLikelihood *lh);
 
 void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior);
 

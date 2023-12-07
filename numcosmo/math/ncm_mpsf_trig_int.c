@@ -27,7 +27,9 @@
  * @title: NcmMpsfTrigInt
  * @short_description: Multiple precision sin integral implementation.
  *
- * FIXME
+ * Implementation of multiple precision sine integral using the GNU MPFR library.
+ * This implementation employs binary splitting to compute the integral utilizing
+ * the Taylor series and asymptotic expansion methods.
  *
  */
 

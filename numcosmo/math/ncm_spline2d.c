@@ -775,10 +775,11 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @y: a #NcmVector
- * @order: (element-type size_t) (allow-none): FIXME
- * @res: (element-type gdouble): a #NcmVector
+ * @order: (element-type size_t) (allow-none): an array of containing the order of the indices of @y
+ * @res: (element-type gdouble): an array of the same size as @y to store the interpolated values
  *
- * FIXME
+ * Computes the interpolated values of a function computed at the point (@x, @y) for
+ * each element of @y. The order of the indices of @y is given by @order.
  *
  */
 

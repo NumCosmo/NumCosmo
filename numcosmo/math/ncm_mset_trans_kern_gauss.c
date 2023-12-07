@@ -28,7 +28,32 @@
  * @title: NcmMSetTransKernGauss
  * @short_description: A multivariate gaussian sampler.
  *
- * FIXME
+ * This object subclasses NcmMSetTransKern and implements a multivariate gaussian
+ * sampler.
+ *
+ * Implementation of a multivariate Gaussian sampler, providing a straightforward
+ * method for generating random parameter vectors with multivariate parameters. This
+ * sampler generates vectors with a normal distribution. The covariance of parameters
+ * can be configured directly using ncm_mset_trans_kern_gauss_set_cov() or by
+ * specifying individual standard deviations as parameter scales, assuming zero
+ * correlation.
+ *
+ * **Key Functionality:**
+ *
+ * - Generates random parameter vectors with multivariate parameters.
+ * - Utilizes a multivariate Gaussian distribution for sampling.
+ * - Allows direct setting of covariance using ncm_mset_trans_kern_gauss_set_cov().
+ * - Supports alternative methods:
+ *    - Using ncm_mset_trans_kern_gauss_set_cov_from_scale() sets covariance using
+ *      the scale property of parameters as standard deviation with zero correlation.
+ *    - Using ncm_mset_trans_kern_gauss_set_cov_from_rescale() sets covariance using
+ *      the scale property of parameters times @epsilon as standard deviation with zero
+ *      correlation.
+ *
+ * This implementation is particularly useful when a Gaussian sampling approach is
+ * required for generating random parameter vectors with multivariate parameters,
+ * offering flexibility in specifying covariance through direct settings or individual
+ * standard deviations.
  *
  */
 
