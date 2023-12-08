@@ -23,6 +23,7 @@
       <xi:include href="xml/ncm_util.xml"/>
       <xi:include href="xml/ncm_iset.xml"/>
       <xi:include href="xml/ncm_diff.xml"/>
+      <xi:include href="xml/ncm_dtuple.xml"/>
       <xi:include href="xml/ncm_vector.xml"/>
       <xi:include href="xml/ncm_matrix.xml"/>
       <xi:include href="xml/ncm_nnls.xml"/>
