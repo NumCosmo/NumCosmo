@@ -53,6 +53,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_obj_array.h"
+#include "math/ncm_dtuple.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_matrix.h"
 #include "ncm_enum_types.h"
@@ -1037,7 +1038,25 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
 
       names[i] = g_variant_get_string (var_key, NULL);
 
-      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)) && !is_NcmVector)
+      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_DTUPLE2_TYPE)))
+      {
+        NcmDTuple2 *dtuple2 = ncm_dtuple2_new_from_variant (val);
+        GValue lval         = G_VALUE_INIT;
+
+        g_value_init (&lval, NCM_TYPE_DTUPLE2);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], dtuple2);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_DTUPLE3_TYPE)))
+      {
+        NcmDTuple3 *dtuple3 = ncm_dtuple3_new_from_variant (val);
+        GValue lval         = G_VALUE_INIT;
+
+        g_value_init (&lval, NCM_TYPE_DTUPLE3);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], dtuple3);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)) && !is_NcmVector)
       {
         NcmVector *vec = ncm_vector_new_variant (val);
         GValue lval    = G_VALUE_INIT;
@@ -1312,7 +1331,21 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
         break;
       case G_TYPE_BOXED:
       {
-        if (g_type_is_a (t, NCM_TYPE_OBJ_ARRAY))
+        if (g_type_is_a (t, NCM_TYPE_DTUPLE2))
+        {
+          NcmDTuple2 *dtuple2 = g_value_get_boxed (val);
+
+          if (dtuple2 != NULL)
+            var = ncm_dtuple2_serialize (dtuple2);
+        }
+        else if (g_type_is_a (t, NCM_TYPE_DTUPLE3))
+        {
+          NcmDTuple3 *dtuple3 = g_value_get_boxed (val);
+
+          if (dtuple3 != NULL)
+            var = ncm_dtuple3_serialize (dtuple3);
+        }
+        else if (g_type_is_a (t, NCM_TYPE_OBJ_ARRAY))
         {
           NcmObjArray *oa = g_value_get_boxed (val);
 
