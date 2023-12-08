@@ -207,6 +207,10 @@ c_tests = [
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
     {
+        'name': 'nc_galaxy_wl_likelihood',
+        'sources': ['test_nc_galaxy_wl_likelihood.c'],
+    },
+    {
         'name': 'nc_galaxy_wl_ellipticity_kde',
         'sources': ['test_nc_galaxy_wl_ellipticity_kde.c'],
         'timeout': 0,

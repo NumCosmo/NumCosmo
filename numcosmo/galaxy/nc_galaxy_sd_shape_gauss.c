@@ -171,6 +171,8 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   if (z > z_cluster)
     e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
 
+  printf ("% 22.15g % 22.15g %.2f\n", (et_source + creal (gt)), creal (e_obs), 100.0 * fabs ((et_source + creal (gt)) / creal (e_obs) - 1.0));
+
   return creal (e_obs);
 }
 
@@ -179,12 +181,12 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = gsdsgauss->priv;
-  gdouble gt = 0.0;
+  complex double gt                        = 0.0;
 
   if (z > z_cluster)
     gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
 
-  return exp (-pow (et - gt, 2) / (2.0 * pow (self->sigma, 2))) / sqrt (2.0 * M_PI) * self->sigma;
+  return exp (-pow (et - gt, 2) / (2.0 * pow (self->sigma, 2))) / (sqrt (2.0 * M_PI) * self->sigma);
   /* return gsl_ran_gaussian_pdf (et - gt, self->sigma); */
 }
 

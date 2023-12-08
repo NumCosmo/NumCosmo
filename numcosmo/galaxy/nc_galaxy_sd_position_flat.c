@@ -225,8 +225,6 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, co
       (r >= ncm_vector_get (self->r_lim, 0)) && (r <= ncm_vector_get (self->r_lim, 1)))
     return r;
 
-  g_assert_not_reached ();
-
   return 0.0;
 }
 

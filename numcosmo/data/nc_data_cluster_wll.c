@@ -215,11 +215,12 @@ _nc_data_cluster_wll_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   for (i = 0; i < ngal; i++)
   {
     NcGalaxyWLLikelihood *gwll_i = NC_GALAXY_WL_LIKELIHOOD (ncm_obj_array_peek (self->galaxy_array, i));
+    NcmMatrix *gal_obs           = nc_galaxy_wl_likelihood_peek_obs (gwll_i);
 
     if (self->kde)
-      m2lnL[0] += nc_galaxy_wl_likelihood_kde_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
+      m2lnL[0] += nc_galaxy_wl_likelihood_kde_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster, gal_obs, NULL);
     else
-      m2lnL[0] += nc_galaxy_wl_likelihood_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster);
+      m2lnL[0] += nc_galaxy_wl_likelihood_eval_m2lnP (gwll_i, cosmo, dp, smd, self->z_cluster, gal_obs, NULL);
   }
 
   return;

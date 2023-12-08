@@ -875,7 +875,7 @@ _nc_hicosmo_de_valid (NcmModel *model)
     gdouble z_max         = 4.0;
     gint i;
 
-    for (i = 0; i <= 40; i++)
+    for (i = 0; i <= 120; i++)
     {
       const gdouble z  = 0.05 * i;
       const gdouble E2 = _nc_hicosmo_de_E2 (NC_HICOSMO (model), z);
@@ -903,19 +903,22 @@ _nc_hicosmo_de_valid (NcmModel *model)
       F.function = &min_E2;
       F.params   = model;
 
-      ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
-
-      if (ret == GSL_SUCCESS)
+      if (z_min > 0.0)
       {
-        do {
-          iter++;
-          status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
-          z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
-          a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
-          b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+        ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
 
-          status = gsl_min_test_interval (a, b, 0.01, 0.0);
-        } while (status == GSL_CONTINUE && iter < max_iter);
+        if (ret == GSL_SUCCESS)
+        {
+          do {
+            iter++;
+            status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
+            z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
+            a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
+            b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+
+            status = gsl_min_test_interval (a, b, 0.01, 0.0);
+          } while (status == GSL_CONTINUE && iter < max_iter);
+        }
       }
 
       {
