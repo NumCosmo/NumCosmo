@@ -66,14 +66,22 @@ struct _NcmDTuple3
 };
 
 NcmDTuple2 *ncm_dtuple2_new (const gdouble x, const gdouble y);
+NcmDTuple2 *ncm_dtuple2_new_from_variant (GVariant *var);
+
 NcmDTuple3 *ncm_dtuple3_new (const gdouble x, const gdouble y, const gdouble z);
+NcmDTuple3 *ncm_dtuple3_new_from_variant (GVariant *var);
 
-NcmDTuple2 *ncm_dtuple2_copy (const NcmDTuple2 *tuple);
-NcmDTuple3 *ncm_dtuple3_copy (const NcmDTuple3 *tuple);
+NcmDTuple2 *ncm_dtuple2_copy (const NcmDTuple2 *dt2);
+NcmDTuple3 *ncm_dtuple3_copy (const NcmDTuple3 *dt3);
 
-void ncm_dtuple2_free (NcmDTuple2 *tuple);
-void ncm_dtuple3_free (NcmDTuple3 *tuple);
+GVariant *ncm_dtuple2_serialize (const NcmDTuple2 *dt2);
+GVariant *ncm_dtuple3_serialize (const NcmDTuple3 *dt3);
 
+void ncm_dtuple2_free (NcmDTuple2 *dt2);
+void ncm_dtuple3_free (NcmDTuple3 *dt3);
+
+void ncm_dtuple2_clear (NcmDTuple2 **dt2);
+void ncm_dtuple3_clear (NcmDTuple3 **dt3);
 
 /**
  * NCM_DTUPLE2_STATIC_INIT:
@@ -112,6 +120,20 @@ void ncm_dtuple3_free (NcmDTuple3 *tuple);
         { \
           { x, y, z } \
         }
+
+/**
+ * NCM_DTUPLE2_TYPE:
+ *
+ * GVariant type string for #NcmDTuple2.
+ */
+#define NCM_DTUPLE2_TYPE "(dd)"
+
+/**
+ * NCM_DTUPLE3_TYPE:
+ *
+ * GVariant type string for #NcmDTuple3.
+ */
+#define NCM_DTUPLE3_TYPE "(ddd)"
 
 G_END_DECLS
 

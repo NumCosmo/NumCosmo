@@ -56,43 +56,77 @@ G_DEFINE_BOXED_TYPE (NcmDTuple3, ncm_dtuple3, ncm_dtuple3_copy, ncm_dtuple3_free
 NcmDTuple2 *
 ncm_dtuple2_new (const gdouble x, const gdouble y)
 {
-  NcmDTuple2 *tuple = g_slice_new (NcmDTuple2);
+  NcmDTuple2 *dt2 = g_slice_new (NcmDTuple2);
 
-  tuple->elements[0] = x;
-  tuple->elements[1] = y;
+  dt2->elements[0] = x;
+  dt2->elements[1] = y;
 
-  return tuple;
+  return dt2;
+}
+
+/**
+ * ncm_dtuple2_new_from_variant:
+ * @var: a #GVariant
+ *
+ * Creates a new #NcmDTuple2 from a #GVariant.
+ * The #GVariant must be of type #NCM_DTUPLE2_TYPE.
+ *
+ */
+NcmDTuple2 *
+ncm_dtuple2_new_from_variant (GVariant *var)
+{
+  NcmDTuple2 *dt2 = g_slice_new (NcmDTuple2);
+
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_DTUPLE2_TYPE)));
+
+  g_variant_get (var, NCM_DTUPLE2_TYPE, &dt2->elements[0], &dt2->elements[1]);
+
+  return dt2;
 }
 
 /**
  * ncm_dtuple2_copy:
- * @tuple: (in): a #NcmDTuple2
+ * @dt2: (in): a #NcmDTuple2
  *
- * Creates a new #NcmDTuple2 with the same values of @tuple.
+ * Creates a new #NcmDTuple2 with the same values of @dt2.
  *
  * Returns: (transfer full): a new #NcmDTuple2.
  */
 NcmDTuple2 *
-ncm_dtuple2_copy (const NcmDTuple2 *tuple)
+ncm_dtuple2_copy (const NcmDTuple2 *dt2)
 {
-  NcmDTuple2 *new_tuple = g_slice_new (NcmDTuple2);
+  NcmDTuple2 *new_dt2 = g_slice_new (NcmDTuple2);
 
-  new_tuple->elements[0] = tuple->elements[0];
-  new_tuple->elements[1] = tuple->elements[1];
+  new_dt2->elements[0] = dt2->elements[0];
+  new_dt2->elements[1] = dt2->elements[1];
 
-  return new_tuple;
+  return new_dt2;
+}
+
+/**
+ * ncm_dtuple2_serialize:
+ * @dt2: a #NcmDTuple2
+ *
+ * Serializes a #NcmDTuple2.
+ *
+ * Returns: (transfer full): a #GVariant.
+ */
+GVariant *
+ncm_dtuple2_serialize (const NcmDTuple2 *dt2)
+{
+  return g_variant_ref_sink (g_variant_new (NCM_DTUPLE2_TYPE, dt2->elements[0], dt2->elements[1]));
 }
 
 /**
  * ncm_dtuple2_free:
- * @tuple: (in): a #NcmDTuple2
+ * @dt2: (in): a #NcmDTuple2
  *
  * Frees a #NcmDTuple2.
  */
 void
-ncm_dtuple2_free (NcmDTuple2 *tuple)
+ncm_dtuple2_free (NcmDTuple2 *dt2)
 {
-  g_slice_free (NcmDTuple2, tuple);
+  g_slice_free (NcmDTuple2, dt2);
 }
 
 /**
@@ -109,44 +143,114 @@ ncm_dtuple2_free (NcmDTuple2 *tuple)
 NcmDTuple3 *
 ncm_dtuple3_new (const gdouble x, const gdouble y, const gdouble z)
 {
-  NcmDTuple3 *tuple = g_slice_new (NcmDTuple3);
+  NcmDTuple3 *dt3 = g_slice_new (NcmDTuple3);
 
-  tuple->elements[0] = x;
-  tuple->elements[1] = y;
-  tuple->elements[2] = z;
+  dt3->elements[0] = x;
+  dt3->elements[1] = y;
+  dt3->elements[2] = z;
 
-  return tuple;
+  return dt3;
 }
 
 /**
- * ncm_dtuple3_copy:
- * @tuple: (in): a #NcmDTuple3
+ * ncm_dtuple3_new_from_variant:
+ * @var: a #GVariant
  *
- * Creates a new #NcmDTuple3 with the same values of @tuple.
+ * Creates a new #NcmDTuple3 from a #GVariant.
+ *
+ * The #GVariant must be of type #NCM_DTUPLE3_TYPE.
  *
  * Returns: (transfer full): a new #NcmDTuple3.
  */
 NcmDTuple3 *
-ncm_dtuple3_copy (const NcmDTuple3 *tuple)
+ncm_dtuple3_new_from_variant (GVariant *var)
 {
-  NcmDTuple3 *new_tuple = g_slice_new (NcmDTuple3);
+  NcmDTuple3 *dt3 = g_slice_new (NcmDTuple3);
 
-  new_tuple->elements[0] = tuple->elements[0];
-  new_tuple->elements[1] = tuple->elements[1];
-  new_tuple->elements[2] = tuple->elements[2];
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_DTUPLE3_TYPE)));
 
-  return new_tuple;
+  g_variant_get (var, NCM_DTUPLE3_TYPE, &dt3->elements[0], &dt3->elements[1], &dt3->elements[2]);
+
+  return dt3;
+}
+
+/**
+ * ncm_dtuple3_copy:
+ * @dt3: (in): a #NcmDTuple3
+ *
+ * Creates a new #NcmDTuple3 with the same values of @dt3.
+ *
+ * Returns: (transfer full): a new #NcmDTuple3.
+ */
+NcmDTuple3 *
+ncm_dtuple3_copy (const NcmDTuple3 *dt3)
+{
+  NcmDTuple3 *new_dt3 = g_slice_new (NcmDTuple3);
+
+  new_dt3->elements[0] = dt3->elements[0];
+  new_dt3->elements[1] = dt3->elements[1];
+  new_dt3->elements[2] = dt3->elements[2];
+
+  return new_dt3;
+}
+
+/**
+ * ncm_dtuple3_serialize:
+ * @dt3: a #NcmDTuple3
+ *
+ * Serializes a #NcmDTuple3.
+ *
+ * Returns: (transfer full): a #GVariant.
+ */
+GVariant *
+ncm_dtuple3_serialize (const NcmDTuple3 *dt3)
+{
+  return g_variant_ref_sink (g_variant_new (NCM_DTUPLE3_TYPE, dt3->elements[0], dt3->elements[1], dt3->elements[2]));
 }
 
 /**
  * ncm_dtuple3_free:
- * @tuple: (in): a #NcmDTuple3
+ * @dt3: (in): a #NcmDTuple3
  *
  * Frees a #NcmDTuple3.
  */
 void
-ncm_dtuple3_free (NcmDTuple3 *tuple)
+ncm_dtuple3_free (NcmDTuple3 *dt3)
 {
-  g_slice_free (NcmDTuple3, tuple);
+  g_slice_free (NcmDTuple3, dt3);
+}
+
+/**
+ * ncm_dtuple2_clear:
+ * @dt2: a #NcmDTuple2
+ *
+ * If *@dt2 is not NULL, frees it and sets it to NULL.
+ *
+ */
+void
+ncm_dtuple2_clear (NcmDTuple2 **dt2)
+{
+  if (*dt2 != NULL)
+  {
+    ncm_dtuple2_free (*dt2);
+    *dt2 = NULL;
+  }
+}
+
+/**
+ * ncm_dtuple3_clear:
+ * @dt3: a #NcmDTuple3
+ *
+ * If *@dt3 is not NULL, frees it and sets it to NULL.
+ *
+ */
+void
+ncm_dtuple3_clear (NcmDTuple3 **dt3)
+{
+  if (*dt3 != NULL)
+  {
+    ncm_dtuple3_free (*dt3);
+    *dt3 = NULL;
+  }
 }
 
