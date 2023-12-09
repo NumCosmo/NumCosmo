@@ -50,6 +50,11 @@ static void test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test
 static void test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata);
 
+#ifdef HAVE_LIBFYAML
+static void test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata);
+
+#endif /* HAVE_LIBFYAML */
+
 static void test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata);
 
 static void test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata);
@@ -107,12 +112,18 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new_noclean_dup,
               &test_ncm_serialize_to_binfile_from_binfile,
               &test_ncm_serialize_free);
+#ifdef HAVE_LIBFYAML
+  g_test_add ("/ncm/serialize/to_yaml/from_yaml", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new,
+              &test_ncm_serialize_to_yaml_from_yaml,
+              &test_ncm_serialize_free);
+#endif /* HAVE_LIBFYAML */
 
   g_test_add ("/ncm/serialize/traps", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_traps,
               &test_ncm_serialize_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/serialize/invalid/from_string/syntax/subprocess", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_global_invalid_from_string_syntax,
@@ -137,7 +148,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_invalid_from_string_wrongorder,
               &test_ncm_serialize_free);
-#endif
 
   g_test_run ();
 }
@@ -471,10 +481,41 @@ test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointe
   }
 }
 
+#ifdef HAVE_LIBFYAML
+
+static void
+test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata)
+{
+  NcDistance *dist = nc_distance_new (3.0);
+  NcmData *bao1    = nc_data_bao_create (dist, NC_DATA_BAO_A_EISENSTEIN2005);
+  NcmData *bao2    = nc_data_bao_create (dist, NC_DATA_BAO_RDV_BOSS_QSO_ATA2017);
+  GObject *obj     = G_OBJECT (ncm_dataset_new_list (bao1, bao2, NULL));
+  gchar *yaml_str  = ncm_serialize_to_yaml (test->ser, obj);
+  GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
+
+  g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+
+  ncm_serialize_reset (test->ser, FALSE);
+  {
+    gchar *yaml_str_new = ncm_serialize_to_yaml (test->ser, obj_new);
+
+    g_assert_cmpstr (yaml_str, ==, yaml_str_new);
+    g_free (yaml_str_new);
+  }
+
+  nc_distance_free (dist);
+  ncm_data_free (bao1);
+  ncm_data_free (bao2);
+  g_object_unref (obj);
+  g_object_unref (obj_new);
+  g_free (yaml_str);
+}
+
+#endif /* HAVE_LIBFYAML */
+
 void
 test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/serialize/invalid/from_string/syntax/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
@@ -489,7 +530,6 @@ test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)
 
   g_test_trap_subprocess ("/ncm/serialize/invalid/from_string/wrongorder/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
