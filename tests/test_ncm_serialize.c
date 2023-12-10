@@ -29,6 +29,151 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+
+G_DECLARE_FINAL_TYPE (NcmObjectTest, ncm_object_test, NCM, OBJECT_TEST, GObject)
+
+struct _NcmObjectTest
+{
+  GObject parent_instance;
+
+  NcmDTuple2 *dt2;
+  NcmDTuple3 *dt3;
+  NcmVector *vector;
+  NcmMatrix *matrix;
+};
+
+enum
+{
+  PROP_0,
+  PROP_DT2,
+  PROP_DT3,
+  PROP_VECTOR,
+  PROP_MATRIX,
+  PROP_LEN,
+};
+
+G_DEFINE_TYPE (NcmObjectTest, ncm_object_test, G_TYPE_OBJECT)
+
+static void
+ncm_object_test_init (NcmObjectTest *self)
+{
+  self->dt2 = NULL;
+  self->dt3 = NULL;
+}
+
+static void
+ncm_object_test_finalize (GObject *object)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  ncm_dtuple2_clear (&self->dt2);
+  ncm_dtuple3_clear (&self->dt3);
+  ncm_vector_clear (&self->vector);
+  ncm_matrix_clear (&self->matrix);
+
+  /* Chain up to the parent class */
+  G_OBJECT_CLASS (ncm_object_test_parent_class)->finalize (object);
+}
+
+static void
+ncm_object_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec   *pspec)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_DT2:
+      ncm_dtuple2_clear (&self->dt2);
+      self->dt2 = g_value_dup_boxed (value);
+      break;
+    case PROP_DT3:
+      ncm_dtuple3_clear (&self->dt3);
+      self->dt3 = g_value_dup_boxed (value);
+      break;
+    case PROP_VECTOR:
+      ncm_vector_clear (&self->vector);
+      self->vector = g_value_dup_object (value);
+      break;
+    case PROP_MATRIX:
+      ncm_matrix_clear (&self->matrix);
+      self->matrix = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_DT2:
+      g_value_set_boxed (value, self->dt2);
+      break;
+    case PROP_DT3:
+      g_value_set_boxed (value, self->dt3);
+      break;
+    case PROP_VECTOR:
+      g_value_set_object (value, self->vector);
+      break;
+    case PROP_MATRIX:
+      g_value_set_object (value, self->matrix);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_test_class_init (NcmObjectTestClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize     = ncm_object_test_finalize;
+  object_class->set_property = ncm_object_test_set_property;
+  object_class->get_property = ncm_object_test_get_property;
+
+  g_object_class_install_property (object_class,
+                                   PROP_DT2,
+                                   g_param_spec_boxed ("dt2",
+                                                       NULL,
+                                                       "dt2",
+                                                       NCM_TYPE_DTUPLE2,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DT3,
+                                   g_param_spec_boxed ("dt3",
+                                                       NULL,
+                                                       "dt3",
+                                                       NCM_TYPE_DTUPLE3,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_VECTOR,
+                                   g_param_spec_object ("vector",
+                                                        NULL,
+                                                        "vector",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MATRIX,
+                                   g_param_spec_object ("matrix",
+                                                        NULL,
+                                                        "matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+typedef struct _TestNcmObjectTest
+{
+  NcmObjectTest *obj;
+} TestNcmObjectTest;
+
 typedef struct _TestNcmSerialize
 {
   NcmSerialize *ser;
@@ -52,6 +197,8 @@ static void test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, 
 
 #ifdef HAVE_LIBFYAML
 static void test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata);
+static void test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointer pdata);
+static void test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, gconstpointer pdata);
 
 #endif /* HAVE_LIBFYAML */
 
@@ -71,6 +218,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
+  ncm_cfg_register_obj (ncm_object_test_get_type ());
 
   g_test_add ("/ncm/serialize/global/from_string/plain", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
@@ -117,6 +265,15 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_to_yaml_from_yaml,
               &test_ncm_serialize_free);
+  g_test_add ("/ncm/serialize/from_yaml/special_types", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new,
+              &test_ncm_serialize_from_yaml_special_types,
+              &test_ncm_serialize_free);
+  g_test_add ("/ncm/serialize/from_yaml/special_types/block_flow", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new,
+              &test_ncm_serialize_from_yaml_special_types_block_flow,
+              &test_ncm_serialize_free);
+
 #endif /* HAVE_LIBFYAML */
 
   g_test_add ("/ncm/serialize/traps", TestNcmSerialize, NULL,
@@ -509,6 +666,119 @@ test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdat
   g_object_unref (obj);
   g_object_unref (obj_new);
   g_free (yaml_str);
+}
+
+static void
+test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointer pdata)
+{
+  const gchar *yaml_str =
+    "NcmObjectTest:\n"
+    "  dt2: (3.4, -3.3)\n"
+    "  dt3: (0.4, 4.3,1.0e44)\n"
+    "  vector: [1.0, 2.0, 3.0]\n"
+    "  matrix: [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]\n";
+  GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
+
+  g_assert (G_IS_OBJECT (obj_new));
+  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+
+  {
+    NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
+    NcmDTuple2 *dt2;
+    NcmDTuple3 *dt3;
+    NcmVector *vector;
+    NcmMatrix *matrix;
+
+    g_object_get (obj_new, "dt2", &dt2,
+                  "dt3", &dt3,
+                  "vector", &vector,
+                  "matrix", &matrix,
+                  NULL);
+
+    g_assert_cmpfloat (dt2->elements[0], ==, 3.4);
+    g_assert_cmpfloat (dt2->elements[1], ==, -3.3);
+
+    g_assert_cmpfloat (dt3->elements[0], ==, 0.4);
+    g_assert_cmpfloat (dt3->elements[1], ==, 4.3);
+    g_assert_cmpfloat (dt3->elements[2], ==, 1.0e44);
+
+    g_assert_cmpfloat (ncm_vector_get (vector, 0), ==, 1.0);
+    g_assert_cmpfloat (ncm_vector_get (vector, 1), ==, 2.0);
+    g_assert_cmpfloat (ncm_vector_get (vector, 2), ==, 3.0);
+
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 0), ==, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 1), ==, 2.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 2), ==, 3.0);
+
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 0), ==, 4.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 1), ==, 5.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 2), ==, 6.0);
+
+    ncm_dtuple2_free (dt2);
+    ncm_dtuple3_free (dt3);
+
+    ncm_vector_free (vector);
+    ncm_matrix_free (matrix);
+  }
+}
+
+static void
+test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, gconstpointer pdata)
+{
+  const gchar *yaml_str =
+    "NcmObjectTest:\n"
+    "  dt2: (3.4, -3.3)\n"
+    "  dt3: (0.4, 4.3,1.0e44)\n"
+    "  vector:\n"
+    "   - 1.0\n"
+    "   - 2.0\n"
+    "   - 3.0\n"
+    "  matrix:\n"
+    "   - [1.0, 2.0, 3.0]\n"
+    "   - [4.0, 5.0, 6.0]\n";
+  GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
+
+  g_assert (G_IS_OBJECT (obj_new));
+  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+
+  {
+    NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
+    NcmDTuple2 *dt2;
+    NcmDTuple3 *dt3;
+    NcmVector *vector;
+    NcmMatrix *matrix;
+
+    g_object_get (obj_new, "dt2", &dt2,
+                  "dt3", &dt3,
+                  "vector", &vector,
+                  "matrix", &matrix,
+                  NULL);
+
+    g_assert_cmpfloat (dt2->elements[0], ==, 3.4);
+    g_assert_cmpfloat (dt2->elements[1], ==, -3.3);
+
+    g_assert_cmpfloat (dt3->elements[0], ==, 0.4);
+    g_assert_cmpfloat (dt3->elements[1], ==, 4.3);
+    g_assert_cmpfloat (dt3->elements[2], ==, 1.0e44);
+
+    g_assert_cmpfloat (ncm_vector_get (vector, 0), ==, 1.0);
+    g_assert_cmpfloat (ncm_vector_get (vector, 1), ==, 2.0);
+    g_assert_cmpfloat (ncm_vector_get (vector, 2), ==, 3.0);
+
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 0), ==, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 1), ==, 2.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 0, 2), ==, 3.0);
+
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 0), ==, 4.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 1), ==, 5.0);
+    g_assert_cmpfloat (ncm_matrix_get (matrix, 1, 2), ==, 6.0);
+
+    ncm_dtuple2_free (dt2);
+    ncm_dtuple3_free (dt3);
+
+    ncm_vector_free (vector);
+    ncm_matrix_free (matrix);
+  }
 }
 
 #endif /* HAVE_LIBFYAML */

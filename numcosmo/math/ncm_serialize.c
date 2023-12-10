@@ -880,80 +880,6 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   return obj;
 }
 
-/**
- * ncm_serialize_from_file:
- * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object
- *
- * Parses the serialized string in @filename and returns the newly created object.
- *
- * Returns: (transfer full): A new #GObject.
- */
-GObject *
-ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
-{
-  GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
-  GObject *obj  = NULL;
-
-  g_assert (filename != NULL);
-
-  if (!g_file_get_contents (filename, &file, &length, &error))
-    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
-             filename, error->message);
-
-  g_assert_cmpint (length, >, 0);
-
-  obj = ncm_serialize_from_string (ser, file);
-
-  g_free (file);
-
-  return obj;
-}
-
-/**
- * ncm_serialize_from_binfile:
- * @ser: a #NcmSerialize.
- * @filename: File containing the binary serialized version of the object.
- *
- * Parses the serialized binary data in @filename and returns the newly created object.
- *
- * Returns: (transfer full): A new #GObject.
- */
-GObject *
-ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
-{
-  GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
-  GObject *obj  = NULL;
-
-  g_assert (filename != NULL);
-
-  if (!g_file_get_contents (filename, &file, &length, &error))
-    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
-             filename, error->message);
-
-  g_assert_cmpint (length, >, 0);
-
-  {
-    GVariant *obj_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
-                                                 file,
-                                                 length,
-                                                 TRUE,
-                                                 g_free,
-                                                 file
-                                                );
-
-    obj = ncm_serialize_from_variant (ser, obj_ser);
-
-    g_variant_unref (obj_ser);
-  }
-
-  return obj;
-}
-
 static const GVariantType *_ncm_serialize_gtype_to_gvariant_type (GType t);
 
 #ifdef HAVE_LIBFYAML
@@ -1075,15 +1001,63 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                 }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_OBJECT))
                 {
-                  if (!fy_node_is_mapping (prop_val))
-                  {
-                    g_error ("_ncm_serialize_from_node: object property of type GObject `%s' must be a mapping.", names[i]);
-                  }
-                  else
+                  if (fy_node_is_mapping (prop_val))
                   {
                     GObject *item_obj = _ncm_serialize_from_node (ser, prop_val);
 
                     g_value_take_object (&lval, item_obj);
+                  }
+                  else if (g_type_is_a (pspec->value_type, NCM_TYPE_VECTOR))
+                  {
+                    if (!fy_node_is_sequence (prop_val))
+                    {
+                      g_error ("_ncm_serialize_from_node: object property of type NcmVector `%s' "
+                               "must be either a sequence of a proper NcmVector object", names[i]);
+                    }
+                    else
+                    {
+                      GError *error       = NULL;
+                      gchar *prop_val_str = fy_emit_node_to_string (prop_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
+                      GVariant *var       = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE), prop_val_str, NULL, NULL, &error);
+                      NcmVector *vector   = NULL;
+
+                      if (error != NULL)
+                        g_error ("_ncm_serialize_from_node: cannot parse property `%s' value `%s': %s.", names[i], prop_val_str, error->message);
+
+                      vector = ncm_vector_new_variant (var);
+
+                      g_value_take_object (&lval, vector);
+
+                      g_free (prop_val_str);
+                    }
+                  }
+                  else if (g_type_is_a (pspec->value_type, NCM_TYPE_MATRIX))
+                  {
+                    if (!fy_node_is_sequence (prop_val))
+                    {
+                      g_error ("_ncm_serialize_from_node: object property of type NcmMatrix `%s' "
+                               "must be either a sequence of a proper NcmMatrix object", names[i]);
+                    }
+                    else
+                    {
+                      GError *error       = NULL;
+                      gchar *prop_val_str = fy_emit_node_to_string (prop_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
+                      GVariant *var       = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE), prop_val_str, NULL, NULL, &error);
+                      NcmMatrix *matrix   = NULL;
+
+                      if (error != NULL)
+                        g_error ("_ncm_serialize_from_node: cannot parse property `%s' value `%s': %s.", names[i], prop_val_str, error->message);
+
+                      matrix = ncm_matrix_new_variant (var);
+
+                      g_value_take_object (&lval, matrix);
+
+                      g_free (prop_val_str);
+                    }
+                  }
+                  else
+                  {
+                    g_error ("_ncm_serialize_from_node: object property of type `%s' must be a mapping.", names[i]);
                   }
                 }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_VARIANT))
@@ -1102,6 +1076,32 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                     g_value_take_variant (&lval, var);
                     g_free (prop_val_str);
                   }
+                }
+                else if (g_type_is_a (pspec->value_type, NCM_TYPE_DTUPLE2))
+                {
+                  GError *error             = NULL;
+                  const gchar *prop_val_str = fy_node_get_scalar0 (prop_val);
+                  GVariant *var             = g_variant_parse (G_VARIANT_TYPE (NCM_DTUPLE2_TYPE), prop_val_str, NULL, NULL, &error);
+                  NcmDTuple2 *dtuple2;
+
+                  if (error != NULL)
+                    g_error ("_ncm_serialize_from_node: cannot parse property `%s' value `%s': %s.", names[i], prop_val_str, error->message);
+
+                  dtuple2 = ncm_dtuple2_new_from_variant (var);
+                  g_value_take_boxed (&lval, dtuple2);
+                }
+                else if (g_type_is_a (pspec->value_type, NCM_TYPE_DTUPLE3))
+                {
+                  GError *error             = NULL;
+                  const gchar *prop_val_str = fy_node_get_scalar0 (prop_val);
+                  GVariant *var             = g_variant_parse (G_VARIANT_TYPE (NCM_DTUPLE3_TYPE), prop_val_str, NULL, NULL, &error);
+                  NcmDTuple3 *dtuple3;
+
+                  if (error != NULL)
+                    g_error ("_ncm_serialize_from_node: cannot parse property `%s' value `%s': %s.", names[i], prop_val_str, error->message);
+
+                  dtuple3 = ncm_dtuple3_new_from_variant (var);
+                  g_value_take_boxed (&lval, dtuple3);
                 }
                 else
                 {
@@ -1169,7 +1169,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 /**
  * ncm_serialize_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: String containing the serialized version of the object in YAML format
+ * @yaml_obj: string containing the serialized version of the object in YAML format
  *
  * Parses the serialized string in @yaml_obj and returns the newly created object.
  *
@@ -1201,6 +1201,112 @@ ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
   return NULL;
 
 #endif /* HAVE_LIBFYAML */
+}
+
+/**
+ * ncm_serialize_from_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object
+ *
+ * Parses the serialized string in @filename and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *file   = NULL;
+  gsize length  = 0;
+  GObject *obj  = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  obj = ncm_serialize_from_string (ser, file);
+
+  g_free (file);
+
+  return obj;
+}
+
+/**
+ * ncm_serialize_from_binfile:
+ * @ser: a #NcmSerialize.
+ * @filename: File containing the binary serialized version of the object.
+ *
+ * Parses the serialized binary data in @filename and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *file   = NULL;
+  gsize length  = 0;
+  GObject *obj  = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  {
+    GVariant *obj_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
+                                                 file,
+                                                 length,
+                                                 TRUE,
+                                                 g_free,
+                                                 file
+                                                );
+
+    obj = ncm_serialize_from_variant (ser, obj_ser);
+
+    g_variant_unref (obj_ser);
+  }
+
+  return obj;
+}
+
+/**
+ * ncm_serialize_from_yaml_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object in YAML format
+ *
+ * Parses the YAML in @filename and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *file   = NULL;
+  gsize length  = 0;
+  GObject *obj  = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  obj = ncm_serialize_from_yaml (ser, file);
+
+  g_free (file);
+
+  return obj;
 }
 
 /**
@@ -2377,6 +2483,25 @@ ncm_serialize_global_from_string (const gchar *obj_ser)
 }
 
 /**
+ * ncm_serialize_global_from_yaml:
+ * @yaml_obj: a string containing the serialized version of the object in YAML format
+ *
+ * Global version of ncm_serialize_from_yaml().
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_global_from_yaml (const gchar *yaml_obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  GObject *ret      = ncm_serialize_from_yaml (ser, yaml_obj);
+
+  ncm_serialize_unref (ser);
+
+  return ret;
+}
+
+/**
  * ncm_serialize_global_from_file:
  * @filename: File containing the serialized version of the object.
  *
@@ -2415,18 +2540,18 @@ ncm_serialize_global_from_binfile (const gchar *filename)
 }
 
 /**
- * ncm_serialize_global_from_yaml:
+ * ncm_serialize_global_from_yaml_file:
  * @filename: File containing the serialized version of the object.
  *
- * Global version of ncm_serialize_from_yaml().
+ * Global version of ncm_serialize_from_yaml_file().
  *
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
-ncm_serialize_global_from_yaml (const gchar *yaml_obj)
+ncm_serialize_global_from_yaml_file (const gchar *filename)
 {
   NcmSerialize *ser = ncm_serialize_global ();
-  GObject *ret      = ncm_serialize_from_yaml (ser, yaml_obj);
+  GObject *ret      = ncm_serialize_from_yaml_file (ser, filename);
 
   ncm_serialize_unref (ser);
 
