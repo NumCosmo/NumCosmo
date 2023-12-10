@@ -251,7 +251,6 @@ typedef struct _TestNcmFit
           ncm_fit_clear (&fit); \
         }
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
 #define TESTS_NCM_TRAPS(lib, algo) \
         void \
         test_ncm_fit_ ## lib ## _ ## algo ## _traps (TestNcmFit * test, gconstpointer pdata) \
@@ -259,13 +258,6 @@ typedef struct _TestNcmFit
           g_test_trap_subprocess ("/ncm/fit/" #lib "/" #algo "/invalid/run/subprocess", 0, 0); \
           g_test_trap_assert_failed (); \
         }
-#else
-#define TESTS_NCM_TRAPS(lib, algo) \
-        void \
-        test_ncm_fit_ ## lib ## _ ## algo ## _traps (TestNcmFit * test, gconstpointer pdata) \
-        { \
-        }
-#endif
 
 #ifdef HAVE_NLOPT
 TESTS_NCM_DECL (nlopt, neldermead)
@@ -350,7 +342,6 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD (levmar, bc_der)
   TESTS_NCM_ADD (levmar, bc_dif)
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
 #ifdef HAVE_NLOPT
   TESTS_NCM_ADD_INVALID (nlopt, neldermead)
   TESTS_NCM_ADD_INVALID (nlopt, slsqp)
@@ -372,7 +363,7 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD_INVALID (levmar, dif)
   TESTS_NCM_ADD_INVALID (levmar, bc_der)
   TESTS_NCM_ADD_INVALID (levmar, bc_dif)
-#endif
+
   g_test_run ();
 }
 
