@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,22 @@
  * @title: NcmPriorGauss
  * @short_description: A gaussian prior for NcmLikelihood
  *
- * FIXME
- * 
+ * This object is a subclass of #NcmPrior, serving as a base class for Gaussian priors
+ * used by NcmLikelihood. These objects describe Gaussian prior distributions
+ * applicable to parameters or any derived quantity.
+ *
+ * The Gaussian prior is defined as:
+ * $$
+ * -2\ln P(x) = \frac{\left(x - \mu\right)^2}{\sigma},
+ * $$
+ * where $\mu$ is the mean and $\sigma$ is the standard deviation. This Gaussian prior
+ * places higher probability density around the mean and decreases exponentially as the
+ * parameter deviates from the mean.
+ *
+ * The prior is not normalized. It is particularly useful for defining a Gaussian prior
+ * when the analysis benefits from a smooth and symmetric distribution around the mean.
+ * Additionally, it is compatible with least-squares based analysis.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,6 +75,7 @@ static void
 _ncm_prior_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
+
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 
   switch (prop_id)
@@ -84,6 +99,7 @@ static void
 _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
+
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 
   switch (prop_id)
@@ -106,7 +122,6 @@ _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GP
 static void
 _ncm_prior_gauss_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_prior_gauss_parent_class)->finalize (object);
 }
@@ -147,24 +162,24 @@ ncm_prior_gauss_class_init (NcmPriorGaussClass *klass)
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   NCM_PRIOR_CLASS (klass)->is_m2lnL = FALSE;
-  mset_func_class->eval = &_ncm_prior_gauss_eval;
+  mset_func_class->eval             = &_ncm_prior_gauss_eval;
 }
 
-static void 
+static void
 _ncm_prior_gauss_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
   NcmPriorGauss *pg  = NCM_PRIOR_GAUSS (func);
   const gdouble mean = NCM_PRIOR_GAUSS_GET_CLASS (pg)->mean (pg, mset);
-  
+
   res[0] = (mean - pg->mu) / pg->sigma;
 }
 
 /**
  * ncm_prior_gauss_ref:
  * @pg: a #NcmPriorGauss
- * 
+ *
  * Increases the reference count of @pg atomically.
- * 
+ *
  * Returns: (transfer full): @pg.
  */
 NcmPriorGauss *
@@ -176,11 +191,11 @@ ncm_prior_gauss_ref (NcmPriorGauss *pg)
 /**
  * ncm_prior_gauss_free:
  * @pg: a #NcmPriorGauss
- * 
+ *
  * Decreases the reference count of @pg atomically.
- * 
+ *
  */
-void 
+void
 ncm_prior_gauss_free (NcmPriorGauss *pg)
 {
   g_object_unref (pg);
@@ -189,12 +204,13 @@ ncm_prior_gauss_free (NcmPriorGauss *pg)
 /**
  * ncm_prior_gauss_clear:
  * @pg: a #NcmPriorGauss
- * 
+ *
  * Decreases the reference count of *@pg and sets *@pg to NULL.
- * 
+ *
  */
-void 
+void
 ncm_prior_gauss_clear (NcmPriorGauss **pg)
 {
   g_clear_object (pg);
 }
+

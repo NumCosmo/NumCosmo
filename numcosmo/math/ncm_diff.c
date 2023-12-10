@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_diff.c
  *
@@ -40,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_diff.h"
+#include "math/ncm_cfg.h"
 
 typedef struct _NcmDiffPrivate
 {

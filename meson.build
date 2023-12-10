@@ -34,9 +34,7 @@ foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
   endif
 endforeach
 
-global_warn_suppress = [
-  '-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter'
-]
+global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
 
 foreach warn : global_warn_suppress
   if cc.has_argument(warn)
@@ -161,6 +159,7 @@ numcosmo_build_cfg.set('have_inline_support', '#define NUMCOSMO_HAVE_INLINE 1')
 numcosmo_build_cfg.set('have_inline_macro', '#define NCM_INLINE static inline')
 numcosmo_build_cfg.set('numcosmo_source_dir', numcosmo_source_dir)
 numcosmo_build_cfg.set('numcosmo_build_dir', numcosmo_build_dir)
+numcosmo_conf.set('HAVE_INLINE', 1)
 
 # used by the .rc.in files
 numcosmo_build_cfg.set('LT_CURRENT_MINUS_AGE', soversion)
@@ -349,8 +348,7 @@ dl_dep = dependency('dl', method: 'auto')
 # Dependencies versions:
 #######################################################################################
 
-glib_req = '>= 2.44.0'
-gobject_req = '>= 2.44.0'
+glib_req = '>= 2.54.0'
 gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
@@ -447,6 +445,10 @@ message('Checking for GSL')
 
 gsl_dep = dependency('gsl', version: gsl_req)
 
+if not get_option('gsl_range_check')
+  numcosmo_conf.set('GSL_RANGE_CHECK_OFF', true)
+endif
+
 #######################################################################################
 # Checking for GMP and MPFR:
 #######################################################################################
@@ -493,6 +495,20 @@ cfitsio_dep = dependency(
 
 if cfitsio_dep.found()
   numcosmo_conf.set('HAVE_CFITSIO', true)
+endif
+
+#######################################################################################
+# Checking for libfyaml
+#######################################################################################
+message('Checking for libfyaml')
+
+libfyaml_dep = dependency(
+  'libfyaml',
+  required: false,
+)
+
+if libfyaml_dep.found()
+  numcosmo_conf.set('HAVE_LIBFYAML', true)
 endif
 
 #######################################################################################

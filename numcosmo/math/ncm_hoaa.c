@@ -716,7 +716,7 @@ ncm_hoaa_set_tf (NcmHOAA *hoaa, const gdouble tf)
  * @hoaa: a #NcmHOAA
  * @save_evol: whether to save all evolution
  *
- * If true saves all evolution to be evaluted later through FIXME
+ * If true saves all evolution to be evaluted later through.
  *
  */
 void

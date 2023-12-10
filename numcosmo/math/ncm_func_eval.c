@@ -27,7 +27,9 @@
  * @title: NcmFuncEval
  * @short_description: A general purpose multi-threaded function evaluator.
  *
- * FIXME
+ * Thread pool based function evaluator. This module is used by the different
+ * objects in NumCosmo that need to evaluate functions in parallel.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,8 +66,9 @@ static GThreadPool *_function_thread_pool = NULL;
 static void
 func (gpointer data, gpointer empty)
 {
-  NcmFuncEvalLoopEval *arg = (NcmFuncEvalLoopEval *)data;
-  NcmFuncEvalCtrl *ctrl = arg->ctrl;
+  NcmFuncEvalLoopEval *arg = (NcmFuncEvalLoopEval *) data;
+  NcmFuncEvalCtrl *ctrl    = arg->ctrl;
+
   NCM_UNUSED (empty);
   arg->lfunc (arg->i, arg->f, arg->data);
   g_slice_free (NcmFuncEvalLoopEval, arg);
@@ -73,6 +76,7 @@ func (gpointer data, gpointer empty)
   g_mutex_lock (&ctrl->update);
 
   ctrl->active_threads--;
+
   if (ctrl->active_threads == 0)
     g_cond_signal (&ctrl->finish);
 
@@ -93,16 +97,21 @@ GThreadPool *
 ncm_func_eval_get_pool (void)
 {
   G_LOCK_DEFINE_STATIC (create_lock);
+
   GError *err = NULL;
 
   G_LOCK (create_lock);
+
   if (_function_thread_pool == NULL)
   {
     _function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, FALSE, &err);
+
     if (err != NULL)
       g_error ("ncm_func_eval_get_pool: %s", err->message);
+
     g_clear_error (&err);
   }
+
   G_UNLOCK (create_lock);
 
   return _function_thread_pool;
@@ -121,8 +130,10 @@ void
 ncm_func_eval_set_max_threads (gint mt)
 {
   GError *err = NULL;
+
   ncm_func_eval_get_pool ();
   g_thread_pool_set_max_threads (_function_thread_pool, mt, &err);
+
   if (err != NULL)
     g_error ("ncm_func_eval_set_max_threads: %s", err->message);
 }
@@ -145,7 +156,7 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   guint delta, res;
 
   ncm_func_eval_get_pool ();
-  
+
   g_mutex_init (&ctrl.update);
   g_cond_init (&ctrl.finish);
 
@@ -154,7 +165,7 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   g_assert_cmpuint (nworkers, >, 0);
 
   delta = (f - i) / nworkers;
-  res = (f - i) % nworkers;
+  res   = (f - i) % nworkers;
 
   if ((g_thread_pool_get_max_threads (_function_thread_pool) == 0) || (delta == 0))
   {
@@ -163,26 +174,30 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   else
   {
     GError *err = NULL;
-    glong li = i;
-    glong lf = i + delta + res;
+    glong li    = i;
+    glong lf    = i + delta + res;
+
     ctrl.active_threads = nworkers;
 
     do {
       NcmFuncEvalLoopEval *arg = g_slice_new (NcmFuncEvalLoopEval);
+
       arg->lfunc = lfunc;
-      arg->i = li;
-      arg->f = lf;
-      arg->data = data;
-      arg->ctrl = &ctrl;
+      arg->i     = li;
+      arg->f     = lf;
+      arg->data  = data;
+      arg->ctrl  = &ctrl;
       g_thread_pool_push (_function_thread_pool, arg, &err);
-      li = lf;
+      li  = lf;
       lf += delta;
     } while (--nworkers);
   }
 
   g_mutex_lock (&ctrl.update);
+
   while (ctrl.active_threads != 0)
     g_cond_wait (&ctrl.finish, &ctrl.update);
+
   g_mutex_unlock (&ctrl.update);
 
   g_mutex_clear (&ctrl.update);
@@ -205,6 +220,7 @@ ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer d
   ncm_func_eval_get_pool ();
   {
     guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+
     ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
   }
 }
@@ -220,6 +236,7 @@ ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer d
  *
  */
 #if NCM_THREAD_POOL_MAX > 1
+
 void
 ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
@@ -235,11 +252,13 @@ ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpoin
   {
     GError *err = NULL;
     glong l;
+
     ctrl.active_threads = f - i;
 
     for (l = i; l < f; l++)
     {
       NcmFuncEvalLoopEval *arg = g_slice_new (NcmFuncEvalLoopEval);
+
       arg->lfunc = lfunc;
       arg->i     = l;
       arg->f     = l + 1;
@@ -249,25 +268,32 @@ ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpoin
     }
   }
   else
+  {
     lfunc (i, f, data);
+  }
 
   g_mutex_lock (&ctrl.update);
+
   while (ctrl.active_threads != 0)
     g_cond_wait (&ctrl.finish, &ctrl.update);
+
   g_mutex_unlock (&ctrl.update);
 
   g_mutex_clear (&ctrl.update);
   g_cond_clear (&ctrl.finish);
 }
+
 #else
+
 void
 ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
   lfunc (i, f, data);
 }
+
 #endif
 
-void 
+void
 ncm_func_eval_log_pool_stats ()
 {
   ncm_func_eval_get_pool ();
@@ -275,5 +301,6 @@ ncm_func_eval_log_pool_stats ()
   g_message  ("# NcmThreadPool:Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());
   g_message  ("# NcmThreadPool:Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));
   g_message  ("# NcmThreadPool:Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));
-  g_message  ("# NcmThreadPool:Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));  
+  g_message  ("# NcmThreadPool:Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));
 }
+

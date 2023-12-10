@@ -39,6 +39,7 @@ ncm_sources = files(
     'math/ncm_data_rosenbrock.c',
     'math/ncm_dataset.c',
     'math/ncm_diff.c',
+    'math/ncm_dtuple.c',
     'math/ncm_fftlog.c',
     'math/ncm_fftlog_gausswin2.c',
     'math/ncm_fftlog_sbessel_j.c',
@@ -174,6 +175,7 @@ ncm_headers = files(
     'math/ncm_data_rosenbrock.h',
     'math/ncm_dataset.h',
     'math/ncm_diff.h',
+    'math/ncm_dtuple.h',
     'math/ncm_fftlog.h',
     'math/ncm_fftlog_gausswin2.h',
     'math/ncm_fftlog_sbessel_j.h',
@@ -694,6 +696,7 @@ libcuba_inc = include_directories('libcuba')
 libnumcosmo_dep = [
     mpi_c_dep,
     cfitsio_dep,
+    libfyaml_dep,
     fftw3_dep,
     fftw3f_dep,
     gio_dep,
@@ -775,6 +778,8 @@ if enable_gir
         'numcosmo-math.h',
     ]
 
+    # -U__OPTIMIZE__ is needed to avoid a bug in gobject-introspection
+    # It has no effect on the generated code
     numcosmo_math_gir = gnome.generate_gir(
         libnumcosmo,
         namespace: 'NumCosmoMath',
@@ -786,7 +791,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
     )
 
     nc_introspection_sources = [
@@ -797,6 +802,8 @@ if enable_gir
         'numcosmo.h',
     ]
 
+    # -U__OPTIMIZE__ is needed to avoid a bug in gobject-introspection
+    # It has no effect on the generated code
     numcosmo_gir = gnome.generate_gir(
         libnumcosmo,
         namespace: 'NumCosmo',
@@ -808,7 +815,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
     )
     if have_vala
         vapi_deps = [

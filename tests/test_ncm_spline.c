@@ -200,8 +200,6 @@ _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer p
 {
   guint i;
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
-
   for (i = 0; _test_ncm_spline_traps[i].func != NULL; i++)
   {
     gchar *tname = g_strdup_printf ("/ncm/%s%s", name, _test_ncm_spline_traps[i].name);
@@ -209,8 +207,6 @@ _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer p
     g_test_add (tname, TestNcmSpline, NULL, tnew, _test_ncm_spline_traps[i].func, tfree);
     g_free (tname);
   }
-
-#endif
 
   for (i = 0; _test_ncm_spline_tests[i].func != NULL; i++)
   {
@@ -949,7 +945,6 @@ test_ncm_spline_invalid_xy_array (TestNcmSpline *test, gconstpointer pdata)
 void
 test_ncm_spline_traps (TestNcmSpline *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   guint i;
 
   for (i = 0; _test_ncm_spline_traps[i].func != NULL; i++)
@@ -960,7 +955,5 @@ test_ncm_spline_traps (TestNcmSpline *test, gconstpointer pdata)
     g_test_trap_assert_failed ();
     g_free (tname);
   }
-
-#endif
 }
 

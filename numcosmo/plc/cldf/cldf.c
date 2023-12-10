@@ -596,7 +596,11 @@ char* cldf_readstr(cldf *df, char *key, int *sz,error **err) {
       res = malloc_err(size+1,err);
       forwardError(*err,__LINE__,NULL);
       f = fopen_err(pth,"r",err);
-      fread(res, 1, size, f);
+      if (fread(res, 1, size, f) != size)
+      {
+        fprintf(stderr, "Error reading file.\n");
+        exit (1);
+      }
       res[size] = '\0';
       fclose(f);
       if (nsz<0 && sz !=NULL) {

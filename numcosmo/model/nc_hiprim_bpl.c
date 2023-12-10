@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,9 @@
  * SECTION:nc_hiprim_bpl
  * @title: NcHIPrimBPL
  * @short_description: Broken power law modification of the power law primordial spectrum
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,7 +41,8 @@
 
 G_DEFINE_TYPE (NcHIPrimBPL, nc_hiprim_bpl, NC_TYPE_HIPRIM)
 
-enum {
+enum
+{
   PROP_0,
   PROP_SIZE,
 };
@@ -54,7 +55,6 @@ nc_hiprim_bpl_init (NcHIPrimBPL *nc_hiprim_bpl)
 static void
 nc_hiprim_bpl_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_bpl_parent_class)->finalize (object);
 }
@@ -65,7 +65,7 @@ static gdouble _nc_hiprim_bpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble ln
 static void
 nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcHIPrimClass *prim_class  = NC_HIPRIM_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
@@ -102,14 +102,14 @@ nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
                               0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
-  
+
   /* Set N_T param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_N_T, "n_{\\mathrm{T}}", "n_T",
                               -0.5, 0.5, 1.0e-2,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_N_T,
                               NCM_PARAM_TYPE_FIXED);
 
-  
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -128,17 +128,18 @@ NcHIPrimBPL *
 nc_hiprim_bpl_new (void)
 {
   NcHIPrimBPL *prim_bpl = g_object_new (NC_TYPE_HIPRIM_BPL,
-                                          NULL);
+                                        NULL);
+
   return prim_bpl;
 }
 
-#define VECTOR     (NCM_MODEL (prim)->params)
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_LN10E10ASA))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_SA))
-#define DELTA      (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_DELTA))
-#define LNKB       (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_LNKB))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_T_SA_RATIO))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_BPL_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_LN10E10ASA))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_N_SA))
+#define DELTA      (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_DELTA))
+#define LNKB       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_LNKB))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_T_SA_RATIO))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_BPL_N_T))
 
 /****************************************************************************
  * Power spectrum
@@ -150,8 +151,8 @@ _nc_hiprim_bpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble ln_ka = lnk - prim->lnk_pivot;
   const gdouble delta = DELTA;
   const gdouble lnk_b = LNKB;
-  gdouble n_tot   = N_SA - 1.0;
-  gdouble lnA_eff = LN10E10ASA - 10.0 * M_LN10;
+  gdouble n_tot       = N_SA - 1.0;
+  gdouble lnA_eff     = LN10E10ASA - 10.0 * M_LN10;
 
   if (lnk < lnk_b)
   {
@@ -166,6 +167,7 @@ static gdouble
 _nc_hiprim_bpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
   const gdouble ln_ka = lnk - prim->lnk_pivot;
+
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }
 

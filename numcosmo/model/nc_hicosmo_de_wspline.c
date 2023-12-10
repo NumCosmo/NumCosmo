@@ -133,6 +133,7 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
     NcHICosmoDEWSplinePrivate * const self = wspline->priv;
     NcmModel *model                        = NCM_MODEL (wspline);
+    NcmVector *orig_vec                    = ncm_model_orig_params_peek_vector (model);
     NcmModelClass *model_class             = NCM_MODEL_GET_CLASS (model);
     guint wz_size                          = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
     const gdouble alpha1                   = log1p (self->z_1);
@@ -149,7 +150,7 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     wvi = ncm_model_vparam_index (model, NC_HICOSMO_DE_WSPLINE_W, 0);
 
     alphav = ncm_vector_new (wz_size);
-    wv     = ncm_vector_get_subvector (model->params, wvi, wz_size);
+    wv     = ncm_vector_get_subvector (orig_vec, wvi, wz_size);
 
     ncm_vector_set (alphav, 0, 0.0);
     ncm_vector_set (alphav, 1, alpha1);

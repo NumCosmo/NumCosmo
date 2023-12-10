@@ -41,6 +41,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cmb_dist_priors.h"
+#include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum
@@ -69,9 +70,9 @@ static void
 nc_data_cmb_dist_priors_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (object);
-  
+
   g_return_if_fail (NC_IS_DATA_CMB_DIST_PRIORS (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIST:
@@ -87,9 +88,9 @@ static void
 nc_data_cmb_dist_priors_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (object);
-  
+
   g_return_if_fail (NC_IS_DATA_CMB_DIST_PRIORS (object));
-  
+
   switch (prop_id)
   {
     case PROP_DIST:
@@ -105,9 +106,9 @@ static void
 nc_data_cmb_dist_priors_dispose (GObject *object)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (object);
-  
+
   nc_distance_clear (&cmb_dist_priors->dist);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cmb_dist_priors_parent_class)->dispose (object);
 }
@@ -128,13 +129,13 @@ nc_data_cmb_dist_priors_class_init (NcDataCMBDistPriorsClass *klass)
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class       = NCM_DATA_CLASS (klass);
   NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_CLASS (klass);
-  
+
   object_class->constructed  = &_nc_data_cmb_dist_priors_constructed;
   object_class->set_property = &nc_data_cmb_dist_priors_set_property;
   object_class->get_property = &nc_data_cmb_dist_priors_get_property;
   object_class->dispose      = &nc_data_cmb_dist_priors_dispose;
   object_class->finalize     = &nc_data_cmb_dist_priors_finalize;
-  
+
   /**
    * NcDataCMBDistPriors:dist:
    *
@@ -147,7 +148,7 @@ nc_data_cmb_dist_priors_class_init (NcDataCMBDistPriorsClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->prepare    = &_nc_data_cmb_dist_priors_prepare;
   gauss_class->mean_func = &_nc_data_cmb_dist_priors_mean_func;
 }
@@ -157,7 +158,7 @@ _nc_data_cmb_dist_priors_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (data);
   NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
+
   nc_distance_prepare_if_needed (cmb_dist_priors->dist, cosmo);
 }
 
@@ -166,11 +167,11 @@ _nc_data_cmb_dist_priors_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVecto
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (gauss);
   NcHICosmo *cosmo                     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
+
   const gdouble Ascale = nc_distance_acoustic_scale (cmb_dist_priors->dist, cosmo);
   const gdouble Rlss   = nc_distance_shift_parameter_lss (cmb_dist_priors->dist, cosmo);
   const gdouble zdec   = nc_distance_decoupling_redshift (cmb_dist_priors->dist, cosmo);
-  
+
   ncm_vector_set (vp, 0, Ascale);
   ncm_vector_set (vp, 1, Rlss);
   ncm_vector_set (vp, 2, zdec);
@@ -190,7 +191,7 @@ nc_data_cmb_dist_priors_new_empty (NcDistance *dist)
   NcDataCMBDistPriors *cmb_dist_priors = g_object_new (NC_TYPE_DATA_CMB_DIST_PRIORS,
                                                        "dist", dist,
                                                        NULL);
-  
+
   return cmb_dist_priors;
 }
 
@@ -206,9 +207,9 @@ NcDataCMBDistPriors *
 nc_data_cmb_dist_priors_new_from_file (const gchar *filename)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (ncm_serialize_global_from_file (filename));
-  
+
   g_assert (NC_IS_DATA_CMB_DIST_PRIORS (cmb_dist_priors));
-  
+
   return cmb_dist_priors;
 }
 
@@ -227,7 +228,7 @@ nc_data_cmb_dist_priors_new_from_id (NcDistance *dist, NcDataCMBId id)
 {
   NcDataCMBDistPriors *cmb_dist_priors;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
@@ -243,11 +244,11 @@ nc_data_cmb_dist_priors_new_from_id (NcDistance *dist, NcDataCMBId id)
       g_error ("nc_data_cmb_dist_priors_new_from_id: id %d not recognized.", id);
       break;
   }
-  
+
   cmb_dist_priors = nc_data_cmb_dist_priors_new_from_file (filename);
   nc_data_cmb_dist_priors_set_dist (cmb_dist_priors, dist);
   g_free (filename);
-  
+
   return cmb_dist_priors;
 }
 
@@ -263,7 +264,7 @@ void
 nc_data_cmb_dist_priors_set_dist (NcDataCMBDistPriors *cmb_dist_priors, NcDistance *dist)
 {
   nc_distance_clear (&cmb_dist_priors->dist);
-  
+
   if (dist != NULL)
     cmb_dist_priors->dist = nc_distance_ref (dist);
 }

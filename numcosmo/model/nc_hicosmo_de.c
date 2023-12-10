@@ -42,6 +42,7 @@
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
+#include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
@@ -79,7 +80,7 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 
   g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));
   ncm_serialize_clear (&ser);
-  cosmo_de->priv->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+  cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (NCM_MODEL (cosmo_de)) - 1;
 
   cosmo_de->priv->nu_rho = NULL;
   cosmo_de->priv->nu_p   = NULL;
@@ -118,13 +119,13 @@ _nc_hicosmo_de_constructed (GObject *object)
     if (nmassnu > 0)
     {
       if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_DE_MASSNU_T) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_DE_MASSNU_T, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_MU) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_DE_MASSNU_MU) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_DE_MASSNU_MU, nmassnu);
 
       if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_G) == 0)
-        g_array_index (model->vparam_len, guint, NC_HICOSMO_DE_MASSNU_G) = nmassnu;
+        ncm_model_set_vparam_len (model, NC_HICOSMO_DE_MASSNU_G, nmassnu);
     }
   }
   /* Chain up : start */
@@ -379,18 +380,17 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 static gdouble _nc_hicosmo_de_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
 static gdouble _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo);
 
-#define VECTOR (NCM_MODEL (cosmo)->params)
-#define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))
-#define OMEGA_C (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define T_GAMMA0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
-#define HE_YP (ncm_vector_get (VECTOR, NC_HICOSMO_DE_HE_YP))
-#define ENNU (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
-#define OMEGA_R (_nc_hicosmo_de_Omega_gnu0 (NC_HICOSMO (cosmo)))
-#define OMEGA_B (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
-
-#define OMEGA_M (OMEGA_B + OMEGA_C)
-#define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_de_Omega_mnu0 (cosmo)))
+#define VECTOR   (NCM_MODEL (cosmo))
+#define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_H0))
+#define OMEGA_C  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
+#define OMEGA_X  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define T_GAMMA0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
+#define HE_YP    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_HE_YP))
+#define ENNU     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_ENNU))
+#define OMEGA_R  (_nc_hicosmo_de_Omega_gnu0 (NC_HICOSMO (cosmo)))
+#define OMEGA_B  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
+#define OMEGA_M  (OMEGA_B + OMEGA_C)
+#define OMEGA_K  (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_de_Omega_mnu0 (cosmo)))
 
 typedef struct _NcHICosmoDENuInt
 {
@@ -579,13 +579,13 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
     }
     else
     {
-      if (model->pkey != cosmo_de->priv->HE4_Yp_key)
+      if (ncm_model_state_get_pkey (model) != cosmo_de->priv->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->priv->BBN_spline2d,
                                               wb, DNeff);
 
         ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
-        cosmo_de->priv->HE4_Yp_key = model->pkey;
+        cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (model);
         /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp);*/
       }
     }

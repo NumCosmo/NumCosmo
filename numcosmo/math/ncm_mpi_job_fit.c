@@ -30,7 +30,17 @@
  * @title: NcmMPIJobFit
  * @short_description: MPI job object for running #NcmFit
  *
- * FIXME
+ * This object is a subclass of #NcmMPIJob, tailored for computing best fits starting
+ * at various points in the parameter space. It is employed by #NcmFit to parallelize
+ * the computation of best fits. The job involves computing the likelihood function,
+ * and if applicable, additional functions (e.g., derived quantities) at different
+ * points within the parameter space.
+ *
+ * The MPI job is implemented as a function that takes a vector of parameters as input
+ * and produces a vector of values as output. The first value represents the m2lnL
+ * (minus twice the natural logarithm of the likelihood) at the best fit, while the
+ * subsequent values correspond to those of additional functions computed at the best
+ * fit.
  *
  */
 

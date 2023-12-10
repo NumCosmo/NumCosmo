@@ -27,7 +27,12 @@
  * @title: NcmSFSBessel
  * @short_description: Double precision spherical bessel implementation.
  *
- * FIXME
+ * Implementation of double precision spherical Bessel functions. This module leverages
+ * the multiple precision spherical Bessel functions implementation for precise
+ * computations. It involves converting the arguments to multiple precision, performing
+ * the calculations, and then converting the results back to double precision, ensuring
+ * accuracy in the computation of spherical Bessel functions with the convenience of
+ * double precision output.
  *
  */
 

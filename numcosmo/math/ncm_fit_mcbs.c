@@ -321,6 +321,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   NcmFitState *fstate  = ncm_fit_peek_state (mcbs->fit);
   NcmLikelihood *lh    = ncm_fit_peek_likelihood (mcbs->fit);
   gboolean cat_has_rng = FALSE;
+  NcmDataset *dset     = ncm_likelihood_peek_dataset (lh);
   guint i;
 
   ncm_fit_mc_set_rtype (mcbs->mc_resample, NCM_FIT_MC_RESAMPLE_FROM_MODEL);
@@ -354,10 +355,10 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
 
   for (i = ni; i < nf; i++)
   {
-    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
     /*ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1); */
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
+    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
 
     if (mcbs->base_name != NULL)
     {

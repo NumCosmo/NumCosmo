@@ -30,7 +30,21 @@
  * @title: NcmMPIJobMCMC
  * @short_description: MPI job object for running MCMC steps
  *
- * FIXME
+ * This object is a subclass of #NcmMPIJob, designed to implement an MPI job for
+ * evaluating the posterior at the proposal points during an MCMC run. It is utilized
+ * by #NcmFitESMCMC to parallelize the evaluation of the posterior function. The job
+ * involves computing the posterior function and, if applicable, additional functions
+ * (e.g., derived quantities) at a specified point within the parameter space. Notably,
+ * the slave also receives the current point and the current value for the acceptance
+ * probability. Consequently, it decides whether to accept or reject the proposal point
+ * and only computes the additional functions if the proposal point is accepted.
+ *
+ * The MPI job is implemented as a function that takes a vector consisting of the set
+ * parameters, the current value of the posterior function, the acceptance probability,
+ * and the jump probability as input. The function returns a vector with the first
+ * element being 1.0 if the proposal point is accepted and 0.0 otherwise. The next
+ * value is the value of the posterior function at the proposal point. The remaining
+ * values are the values of the additional functions at the proposal point.
  *
  */
 

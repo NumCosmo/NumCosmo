@@ -30,7 +30,34 @@
  * @title: NcmMPIJob
  * @short_description: Abstract class to implement MPI jobs
  *
- * FIXME
+ * This abstract class simplifies the implementation of MPI jobs through a master/slave
+ * model. Subclasses must implement virtual methods. The master dispatches jobs to the
+ * slaves, awaits results, and slaves execute the job, sending results back to the
+ * master.
+ *
+ * For example, NcmMPIJobMCMC is a specific subclass that implements an MCMC job. Each
+ * slave creates an instance of #NcmLikelihood, evaluating the likelihood function for
+ * samples received from the master.
+ *
+ * The master/slave model leverages MPI. The subclass is responsible for implementing
+ * virtual methods for packing/unpacking input and return objects into/from MPI buffers.
+ *
+ * When NumCosmo is compiled with MPI support, the rank 0 process executes normally,
+ * while other ranks wait for commands from the master. The method
+ * ncm_mpi_job_init_all_slaves() sends a serialized version of itself to all slaves.
+ * Slaves deserialize it and wait for commands.
+ *
+ * Each call to ncm_mpi_job_run_array() sends an array of inputs to the slaves in a
+ * round-robin fashion. Slaves execute the job and return results to the master,
+ * maintaining the input order. This method uses rank 0 to control the slaves, so the
+ * master isn't involved in computations.
+ *
+ * Conversely, ncm_mpi_job_run_array_async() sends inputs to the slaves and creates a
+ * lightweight thread to receive results while the master concurrently executes the job.
+ *
+ * After job completion, the master calls ncm_mpi_job_free_all_slaves() to release the
+ * slaves. It's an error to use two or more instances of any subclass of #NcmMPIJob
+ * simultaneously.
  *
  */
 
