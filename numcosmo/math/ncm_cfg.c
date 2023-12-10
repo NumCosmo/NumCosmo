@@ -503,10 +503,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
 
-#if !GLIB_CHECK_VERSION (2, 36, 0)
-  g_type_init ();
-#endif
-
   _log_stream     = stdout;
   _log_stream_err = stderr;
 
@@ -1088,14 +1084,13 @@ static guint nreg_model = 0;
 void
 ncm_cfg_register_obj (GType obj)
 {
-#if GLIB_CHECK_VERSION (2, 34, 0)
   g_type_ensure (obj);
+  {
+    gpointer obj_class = g_type_class_ref (obj);
 
-#endif /* GLIB >= 2.34*/
-  gpointer obj_class = g_type_class_ref (obj);
-
-  g_type_class_unref (obj_class);
-  nreg_model++;
+    g_type_class_unref (obj_class);
+    nreg_model++;
+  }
 }
 
 /**

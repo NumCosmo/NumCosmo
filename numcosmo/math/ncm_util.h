@@ -178,30 +178,6 @@ void _ncm_util_set_destroyed (gpointer b);
     g_assert (destroyed); \
   } G_STMT_END
 
-/* Minumum version here is 2.38 but it segfault during tests so we start at 2.40. */
-#if !GLIB_CHECK_VERSION (2, 40, 0)
-#define NCM_TEST_FAIL(cmd) \
-  G_STMT_START { \
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
-    { \
-      cmd; \
-      exit (0); \
-    } \
-    g_test_trap_assert_failed (); \
-  } G_STMT_END
-
-#define NCM_TEST_PASS(cmd) \
-  G_STMT_START { \
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
-    { \
-      cmd; \
-      exit (0); \
-    } \
-    g_test_trap_assert_passed (); \
-  } G_STMT_END
-
-#else
-
 #define NCM_TEST_FAIL(cmd) \
   G_STMT_START { \
     if (g_test_subprocess ()) \
@@ -229,7 +205,7 @@ void _ncm_util_set_destroyed (gpointer b);
       g_test_trap_assert_passed (); \
     } \
   } G_STMT_END
-#endif /* !GLIB_CHECK_VERSION(2,40,0) */
+
 
 #define NCM_CVODE_CHECK(chk, name, val, ret) \
   G_STMT_START { \
@@ -238,7 +214,7 @@ void _ncm_util_set_destroyed (gpointer b);
   } \
   G_STMT_END
 
-  G_END_DECLS
+G_END_DECLS
 #endif /* _NCM_UTIL_H_ */
 
 #ifndef _NCM_UTIL_INLINE_H_

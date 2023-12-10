@@ -137,12 +137,12 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_traps,
               &test_nc_data_cluster_ncount_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/nc/data_cluster_ncount/invalid/test/subprocess", TestNcDataClusterNCount, NULL,
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_invalid_test,
               &test_nc_data_cluster_ncount_free);
-#endif
+
   g_test_run ();
 }
 
@@ -485,10 +485,8 @@ test_nc_data_cluster_ncount_m2lnL_saveload_binned (TestNcDataClusterNCount *test
 void
 test_nc_data_cluster_ncount_traps (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/nc/data_cluster_ncount/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

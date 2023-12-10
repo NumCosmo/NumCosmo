@@ -160,6 +160,20 @@ nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcGalaxySDZProxyGauss:sigma:
+   *
+   * Proxy redshift standard deviation.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGMA,
+                                   g_param_spec_double ("sigma",
+                                                        NULL,
+                                                        "Proxy redshift standard deviation",
+                                                        0.0, G_MAXDOUBLE, 5.0e-2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 
 
   sd_position_class->gen   = &_nc_galaxy_sd_z_proxy_gauss_gen;

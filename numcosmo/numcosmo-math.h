@@ -40,6 +40,7 @@
 #include <numcosmo/math/ncm_mpi_job_feval.h>
 
 /* Base types and components */
+#include <numcosmo/math/ncm_dtuple.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_nnls.h>

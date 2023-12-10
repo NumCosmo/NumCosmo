@@ -13,6 +13,10 @@ c_tests = [
         'sources': ['test_ncm_diff.c'],
     },
     {
+        'name': 'ncm_dtuple',
+        'sources': ['test_ncm_dtuple.c'],
+    },
+    {
         'name': 'ncm_ode',
         'sources': ['test_ncm_ode.c'],
     },
