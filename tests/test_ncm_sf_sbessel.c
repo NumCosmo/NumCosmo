@@ -55,9 +55,9 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_set_nonfatal_assertions ();
-  
+
   g_test_add ("/ncm/sf/sbessel/cmp/gsl", TestNcmSFSBessel, NULL,
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_cmp_gsl,
@@ -72,17 +72,17 @@ main (gint argc, gchar *argv[])
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_spline_cmp_gsl,
               &test_ncm_sf_sbessel_free);
-  
+
   g_test_add ("/ncm/sf/sbessel/traps", TestNcmSFSBessel, NULL,
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_traps,
               &test_ncm_sf_sbessel_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/sf/sbessel/invalid/st/subprocess", TestNcmSFSBessel, NULL,
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_invalid_st,
               &test_ncm_sf_sbessel_free);
-#endif
+
   g_test_run ();
 }
 
@@ -101,7 +101,7 @@ void
 test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 {
   guint i, j;
-  
+
   for (j = 0; j <= L; j++)
   {
     if (j == 0)
@@ -114,7 +114,7 @@ test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
       const gdouble x      = j * 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * i);
       const gdouble ncm_jl = ncm_sf_sbessel (j, x);
       const gdouble gsl_jl = gsl_sf_bessel_jl (j, x);
-      
+
       ncm_assert_cmpdouble_e (ncm_jl, ==, gsl_jl, 1.0e-7, 0.0);
     }
   }
@@ -123,7 +123,8 @@ test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 static gdouble
 _gsl_sf_bessel_jl (const gdouble x, gpointer user_data)
 {
-  guint *j = (guint *)user_data;
+  guint *j = (guint *) user_data;
+
   /*printf ("%u % 22.15g % 22.15g % 22.15g\n", j[0], x, gsl_sf_bessel_jl (j[0], x), gsl_sf_bessel_jl (j[0], x) / x);*/
 
   return gsl_sf_bessel_jl (j[0], x);
@@ -164,8 +165,8 @@ test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
   for (j = 0; j <= 10; j++)
   {
     const gdouble xi = j * 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * 0) + 1.0e-2;
-    const gdouble xf = j * 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * (NTOT-1.0)) + 2.0e-2;
-    NcmSpline *s = ncm_sf_sbessel_spline (j, xi, xf, 1.0e-5);
+    const gdouble xf = j * 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * (NTOT - 1.0)) + 2.0e-2;
+    NcmSpline *s     = ncm_sf_sbessel_spline (j, xi, xf, 1.0e-5);
 
     for (i = 0; i < NTOT; i++)
     {
@@ -175,6 +176,7 @@ test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 
       ncm_assert_cmpdouble_e (ncm_jl, ==, gsl_jl, 1.0e-3, 0.0);
     }
+
     ncm_spline_free (s);
   }
 }
@@ -182,10 +184,8 @@ test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 void
 test_ncm_sf_sbessel_traps (TestNcmSFSBessel *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/sf/sbessel/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

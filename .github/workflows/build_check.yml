@@ -19,7 +19,7 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev gtk-doc-tools texlive texlive-bibtex-extra texlive-science texlive-publishers tex4ht perl libxml-libxml-perl
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools
         sudo pip install meson ninja pytest numpy
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
@@ -68,7 +68,7 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
         pip install meson ninja pytest numpy
     - name: Configure NumCosmo
       run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
@@ -107,7 +107,7 @@ jobs:
         python-version: '3.x' 
     - name: Brew install pre-requisites
       run: |
-        brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran gtk-doc glib openblas
+        brew install gobject-introspection gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
         pip3 install meson ninja pytest numpy pygobject

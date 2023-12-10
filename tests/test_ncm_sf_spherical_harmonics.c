@@ -106,12 +106,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_sf_spherical_harmonics_new,
               &test_ncm_sf_spherical_harmonics_traps,
               &test_ncm_sf_spherical_harmonics_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/sf/spherical_harmonics/invalid/test/subprocess", TestNcmSFSphericalHarmonics, NULL,
               &test_ncm_sf_spherical_harmonics_new,
               &test_ncm_sf_spherical_harmonics_invalid_test,
               &test_ncm_sf_spherical_harmonics_free);
-#endif
 
   g_test_run ();
 }
@@ -736,10 +735,8 @@ test_ncm_sf_spherical_harmonics_array_recn (TestNcmSFSphericalHarmonics *test, g
 static void
 test_ncm_sf_spherical_harmonics_traps (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/sf/spherical_harmonics/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 static void
