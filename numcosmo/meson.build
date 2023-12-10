@@ -700,6 +700,7 @@ libcuba_inc = include_directories('libcuba')
 libnumcosmo_dep = [
     mpi_c_dep,
     cfitsio_dep,
+    libfyaml_dep,
     fftw3_dep,
     fftw3f_dep,
     gio_dep,

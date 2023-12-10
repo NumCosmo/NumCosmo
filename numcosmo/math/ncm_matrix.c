@@ -169,7 +169,7 @@ ncm_matrix_class_init (NcmMatrixClass *klass)
    */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
-                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_VARIANT_TYPE ("aad"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 

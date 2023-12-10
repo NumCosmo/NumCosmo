@@ -348,8 +348,7 @@ dl_dep = dependency('dl', method: 'auto')
 # Dependencies versions:
 #######################################################################################
 
-glib_req = '>= 2.44.0'
-gobject_req = '>= 2.44.0'
+glib_req = '>= 2.54.0'
 gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
@@ -496,6 +495,20 @@ cfitsio_dep = dependency(
 
 if cfitsio_dep.found()
   numcosmo_conf.set('HAVE_CFITSIO', true)
+endif
+
+#######################################################################################
+# Checking for libfyaml
+#######################################################################################
+message('Checking for libfyaml')
+
+libfyaml_dep = dependency(
+  'libfyaml',
+  required: false,
+)
+
+if libfyaml_dep.found()
+  numcosmo_conf.set('HAVE_LIBFYAML', true)
 endif
 
 #######################################################################################
