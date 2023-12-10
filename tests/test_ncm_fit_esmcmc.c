@@ -110,12 +110,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_fit_esmcmc_traps,
               &test_ncm_fit_esmcmc_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new_stretch,
               &test_ncm_fit_invalid_run,
               &test_ncm_fit_esmcmc_free);
-#endif
+
   g_test_run ();
 }
 
@@ -716,23 +715,12 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
   }
 }
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
-
 void
 test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 }
-
-#else
-
-void
-test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-}
-
-#endif
 
 void
 test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata)

@@ -269,12 +269,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_diff_traps,
               &test_ncm_diff_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/diff/invalid/st/subprocess", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_invalid_st,
               &test_ncm_diff_free);
-#endif
+
   g_test_run ();
 }
 
@@ -1883,10 +1882,8 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_traps (TestNcmDiff *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/diff/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
