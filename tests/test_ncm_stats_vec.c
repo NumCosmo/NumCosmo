@@ -101,7 +101,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_subsample_autocorr_test,
               &test_ncm_stats_vec_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_mean_new,
               &test_ncm_stats_vec_invalid_get_var,
@@ -114,7 +113,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_var_new,
               &test_ncm_stats_vec_invalid_get_cov,
               &test_ncm_stats_vec_free);
-#endif
 
   g_test_add ("/ncm/stats_vec/traps", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_var_new,
@@ -594,7 +592,6 @@ test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata)
 void
 test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/stats_vec/mean/get_var/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
@@ -603,6 +600,5 @@ test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 
   g_test_trap_subprocess ("/ncm/stats_vec/var/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 

@@ -61,57 +61,57 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_add ("/ncm/integral1d/sinx/eval", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_sinx_eval,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/sinx/hermite_p", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_sinx_hermite_p,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/sinx/hermite", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_sinx_hermite,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/sinx/laguerre", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_sinx_laguerre,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/x5_2_sinx/eval", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_x5_2_sinx,
               &test_ncm_integral1d_x5_2_sinx_eval,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/x5_2_sinx/hermite_p", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_x5_2_sinx,
               &test_ncm_integral1d_x5_2_sinx_hermite_p,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/x5_2_sinx/hermite", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_x5_2_sinx,
               &test_ncm_integral1d_x5_2_sinx_hermite,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/x5_2_sinx/laguerre", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_x5_2_sinx,
               &test_ncm_integral1d_x5_2_sinx_laguerre,
               &test_ncm_integral1d_free);
-  
+
   g_test_add ("/ncm/integral1d/traps", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_traps,
               &test_ncm_integral1d_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/integral1d/invalid/test/subprocess", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_invalid_test,
               &test_ncm_integral1d_free);
-#endif
+
   g_test_run ();
 }
 
@@ -132,13 +132,13 @@ test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   test->int1d  = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&test_sin, NULL));
   test->reltol = ncm_integral1d_get_reltol (test->int1d);
-  
+
   g_assert_cmpfloat (test->reltol, ==, NCM_INTEGRAL1D_DEFAULT_RELTOL);
-  
+
   g_assert_cmpfloat (ncm_integral1d_get_abstol (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ABSTOL);
   g_assert_cmpuint (ncm_integral1d_get_rule (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ALG);
   g_assert_cmpuint (ncm_integral1d_get_partition (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_PARTITION);
-  
+
   g_assert_true (NCM_IS_INTEGRAL1D (test->int1d));
 }
 
@@ -146,14 +146,14 @@ void
 test_ncm_integral1d_new_x5_2_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   test->int1d = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&test_x5_2_sin, NULL));
-  
+
   test->reltol = ncm_integral1d_get_reltol (test->int1d);
   g_assert_cmpfloat (test->reltol, ==, NCM_INTEGRAL1D_DEFAULT_RELTOL);
-  
+
   g_assert_cmpfloat (ncm_integral1d_get_abstol (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ABSTOL);
   g_assert_cmpuint (ncm_integral1d_get_rule (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ALG);
   g_assert_cmpuint (ncm_integral1d_get_partition (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_PARTITION);
-  
+
   g_assert_true (NCM_IS_INTEGRAL1D (test->int1d));
 }
 
@@ -161,7 +161,7 @@ void
 _set_destroyed (gpointer b)
 {
   gboolean *destroyed = b;
-  
+
   *destroyed = TRUE;
 }
 
@@ -180,12 +180,12 @@ test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata)
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, prec);
   result = ncm_integral1d_eval (test->int1d, 0.0, 2.0 * ncm_c_pi (), &err);
   NCM_INTEGRAL1D_TESTCMP_ABS;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval (test->int1d, 0.0, 3.0 * ncm_c_pi (), &err);
@@ -198,19 +198,19 @@ test_ncm_integral1d_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer pdata
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
-  
+
   result = ncm_integral1d_eval_gauss_hermite_p (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (0.724778459007076331818227967606L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (1.01985127282864194182872307604L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite1_p (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (0.76017345053314040280597007337L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (0.99069139051646674889119598685L);
 }
@@ -221,7 +221,7 @@ test_ncm_integral1d_sinx_hermite (TestNcmIntegral1d *test, gconstpointer pdata)
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval_gauss_hermite_mur (test->int1d, 3.0 / 4.0, 1.0, &err);
@@ -234,13 +234,13 @@ test_ncm_integral1d_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer pdata)
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval_gauss_laguerre (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (0.5L);
   g_assert_cmpfloat (fabs (result - (0.5)), <=, prec);
-  
+
   result = ncm_integral1d_eval_gauss_laguerre_r (test->int1d, 8.0, &err);
   NCM_INTEGRAL1D_TESTCMP (0.0153846153846153846153846153846L);
 }
@@ -251,12 +251,12 @@ test_ncm_integral1d_x5_2_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval (test->int1d, 0.0, 2.0 * ncm_c_pi (), &err);
   NCM_INTEGRAL1D_TESTCMP (-91.8526176365063540430190011327L);
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval (test->int1d, 0.0, 3.0 * ncm_c_pi (), &err);
@@ -269,19 +269,19 @@ test_ncm_integral1d_x5_2_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer 
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
-  
+
   result = ncm_integral1d_eval_gauss_hermite_p (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (1.21497294652280121151075656545L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (2.15674842608261378569273430710L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite1_p (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (1.94952102958065012896733613706L);
-  
+
   result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
   NCM_INTEGRAL1D_TESTCMP (2.84228407966796943455719401910L);
 }
@@ -292,7 +292,7 @@ test_ncm_integral1d_x5_2_sinx_hermite (TestNcmIntegral1d *test, gconstpointer pd
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval_gauss_hermite_mur (test->int1d, 3.0 / 4.0, 1.0, &err);
@@ -305,12 +305,12 @@ test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer p
   gdouble err;
   gdouble result;
   const gdouble prec = 1.0e-11;
-  
+
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval_gauss_laguerre (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (0.378105832435112890110047422239L);
-  
+
   result = ncm_integral1d_eval_gauss_laguerre_r (test->int1d, 8.0, &err);
   NCM_INTEGRAL1D_TESTCMP (0.000941693635000236963348513154712L);
 }
@@ -318,10 +318,8 @@ test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer p
 void
 test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/integral1d/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

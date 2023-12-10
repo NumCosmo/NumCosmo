@@ -121,7 +121,6 @@ main (gint argc, gchar *argv[])
 
 #endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
               &test_ncm_fftlog_invalid_st,
@@ -138,7 +137,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_jljm_new,
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
-#endif
 
 #ifdef HAVE_FFTW3
   g_test_run ();
@@ -408,37 +406,29 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
 void
 test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
 test_ncm_fftlog_gausswin2_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/fftlog/gausswin2/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
 test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
 test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
