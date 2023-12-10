@@ -93,9 +93,9 @@ nc_hicosmo_de_xcdm_class_init (NcHICosmoDEXcdmClass *klass)
   nc_hicosmo_de_set_ln_rho_rho0_impl (parent_class, &_nc_hicosmo_de_xcdm_ln_rho_rho0);
 }
 
-#define VECTOR  (NCM_MODEL (cosmo_de)->params)
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define W       (ncm_vector_get (VECTOR, NC_HICOSMO_DE_XCDM_W))
+#define VECTOR  (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define W       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_XCDM_W))
 
 static gdouble
 _nc_hicosmo_de_xcdm_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)

@@ -130,13 +130,13 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_de_wspline_parent_class)->constructed (object);
   {
-    NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (object);
+    NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
     NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-    NcmModel *model = NCM_MODEL (wspline);
-    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-    guint wz_size = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
-    const gdouble alpha1 = log1p (self->z_1);
-    const gdouble alphaf = log1p (self->z_f);
+    NcmModel *model                        = NCM_MODEL (wspline);
+    NcmModelClass *model_class             = NCM_MODEL_GET_CLASS (model);
+    guint wz_size                          = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
+    const gdouble alpha1                   = log1p (self->z_1);
+    const gdouble alphaf                   = log1p (self->z_f);
     NcmVector *alphav, *wv;
     guint i, wvi;
 
@@ -259,8 +259,8 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_ln_rho_rho0_impl (parent_class, &_nc_hicosmo_de_wspline_ln_rho_rho0);
 }
 
-#define VECTOR  (NCM_MODEL (cosmo_de)->params)
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define VECTOR (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 
 static void
 _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
