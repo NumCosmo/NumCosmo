@@ -112,12 +112,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_traps,
               &test_ncm_mset_catalog_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/mset/catalog/invalid/run/subprocess", TestNcmMSetCatalog, NULL,
               &test_ncm_mset_catalog_new,
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
-#endif
+
   g_test_run ();
 }
 
@@ -667,23 +666,12 @@ test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointe
   }
 }
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
-
 void
 test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/mset/catalog/invalid/run/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 }
-
-#else
-
-void
-test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata)
-{
-}
-
-#endif
 
 void
 test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata)

@@ -72,12 +72,12 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral_nd_new_acosx_by_p_cz,
               &test_ncm_integral_nd_acosx_by_p_cz_eval,
               &test_ncm_integral_nd_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/integralnd/invalid/test/subprocess", TestNcmIntegralND, NULL,
               &test_ncm_integral_nd_new_sinx,
               &test_ncm_integral_nd_invalid_test,
               &test_ncm_integral_nd_free);
-#endif
+
   g_test_run ();
 }
 
@@ -329,10 +329,8 @@ test_ncm_integral_nd_free (TestNcmIntegralND *test, gconstpointer pdata)
 void
 test_ncm_integral_nd_traps (TestNcmIntegralND *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/integral_nd/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

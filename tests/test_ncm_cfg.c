@@ -84,12 +84,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_cfg_traps,
               &test_ncm_cfg_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/cfg/logfile/subprocess", TesNcmCfg, NULL,
               &test_ncm_cfg_new,
               &test_ncm_cfg_invalid,
               &test_ncm_cfg_free);
-#endif
+
   g_test_run ();
 }
 
@@ -202,10 +201,8 @@ test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata)
 void
 test_ncm_cfg_traps (TesNcmCfg *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/cfg/logfile/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

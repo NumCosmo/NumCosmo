@@ -118,13 +118,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_dist_kernel_traps,
               &test_ncm_stats_dist_kernel_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/stats/dist/kernel/gauss/invalid/stub/subprocess", TestNcmStatsDistKernel, NULL,
               &test_ncm_stats_dist_kernel_new_gauss,
               &test_ncm_stats_dist_kernel_invalid_stub,
               &test_ncm_stats_dist_kernel_free);
-#endif
-
 
   g_test_run ();
 }
@@ -505,10 +502,8 @@ test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pda
 static void
 test_ncm_stats_dist_kernel_traps (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/stats/dist/kernel/gauss/invalid/stub/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  #endif
 }
 
 static void
