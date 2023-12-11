@@ -67,17 +67,12 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_POSITION_SPARAMS >*/
 
 #define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new ();
-NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new_y10 ();
+NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
+NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
 NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_ref (NcGalaxySDPositionLSSTSRD *gsdplsst);
 
 void nc_galaxy_sd_position_lsst_srd_free (NcGalaxySDPositionLSSTSRD *gsdplsst);
 void nc_galaxy_sd_position_lsst_srd_clear (NcGalaxySDPositionLSSTSRD **gsdplsst);
-
-void nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPositionLSSTSRD *gsdplsst, NcmVector *lim);
-NcmVector *nc_galaxy_sd_position_lsst_srd_peek_z_lim (NcGalaxySDPositionLSSTSRD *gsdplsst);
-void nc_galaxy_sd_position_lsst_srd_set_r_lim (NcGalaxySDPositionLSSTSRD *gsdplsst, NcmVector *lim);
-NcmVector *nc_galaxy_sd_position_lsst_srd_peek_r_lim (NcGalaxySDPositionLSSTSRD *gsdplsst);
 
 G_END_DECLS
 

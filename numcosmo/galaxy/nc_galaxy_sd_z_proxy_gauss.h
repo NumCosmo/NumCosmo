@@ -37,40 +37,18 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS             (nc_galaxy_sd_z_proxy_gauss_get_type ())
-#define NC_GALAXY_SD_Z_PROXY_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS, NcGalaxySDZProxyGauss))
-#define NC_GALAXY_SD_Z_PROXY_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS, NcGalaxySDZProxyGaussClass))
-#define NC_IS_GALAXY_SD_Z_PROXY_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS))
-#define NC_IS_GALAXY_SD_Z_PROXY_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS))
-#define NC_GALAXY_SD_Z_PROXY_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS, NcGalaxySDZProxyGaussClass))
+#define NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS (nc_galaxy_sd_z_proxy_gauss_get_type ())
 
-typedef struct _NcGalaxySDZProxyGaussClass NcGalaxySDZProxyGaussClass;
-typedef struct _NcGalaxySDZProxyGauss NcGalaxySDZProxyGauss;
-typedef struct _NcGalaxySDZProxyGaussPrivate NcGalaxySDZProxyGaussPrivate;
+G_DECLARE_FINAL_TYPE (NcGalaxySDZProxyGauss, nc_galaxy_sd_z_proxy_gauss, NC, GALAXY_SD_Z_PROXY_GAUSS, NcGalaxySDZProxy)
 
-struct _NcGalaxySDZProxyGaussClass
-{
-  /*< private >*/
-  NcGalaxySDZProxyClass parent_class;
-};
-
-struct _NcGalaxySDZProxyGauss
-{
-  /*< private >*/
-  NcGalaxySDZProxy parent_instance;
-  NcGalaxySDZProxyGaussPrivate *priv;
-};
-
-GType nc_galaxy_sd_z_proxy_gauss_get_type (void) G_GNUC_CONST;
-
-NcGalaxySDZProxyGauss *nc_galaxy_sd_z_proxy_gauss_new ();
+NcGalaxySDZProxyGauss *nc_galaxy_sd_z_proxy_gauss_new (const gdouble z_min, const gdouble z_max, const gdouble sigma);
 NcGalaxySDZProxyGauss *nc_galaxy_sd_z_proxy_gauss_ref (NcGalaxySDZProxyGauss *gsdzpgauss);
 
 void nc_galaxy_sd_z_proxy_gauss_free (NcGalaxySDZProxyGauss *gsdzpgauss);
 void nc_galaxy_sd_z_proxy_gauss_clear (NcGalaxySDZProxyGauss **gsdzpgauss);
 
-void nc_galaxy_sd_z_proxy_gauss_set_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, NcmVector *lim);
-NcmVector *nc_galaxy_sd_z_proxy_gauss_peek_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss);
+void nc_galaxy_sd_z_proxy_gauss_set_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_z_proxy_gauss_get_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble *z_min, gdouble *z_max);
 void nc_galaxy_sd_z_proxy_gauss_set_sigma (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble sigma);
 gdouble nc_galaxy_sd_z_proxy_gauss_get_sigma (NcGalaxySDZProxyGauss *gsdzpgauss);
 

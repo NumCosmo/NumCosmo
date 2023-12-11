@@ -622,6 +622,6 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
       break;
   }
 
-  g_assert (ret == 0);
+  g_assert_cmpint (ret, ==, 0);
 }
 

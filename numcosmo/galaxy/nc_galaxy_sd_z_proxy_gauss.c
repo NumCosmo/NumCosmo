@@ -45,13 +45,20 @@
 /* #include "nc_enum_types.h" */
 #include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
 #include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "math/ncm_dtuple.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
-struct _NcGalaxySDZProxyGaussPrivate
+typedef struct _NcGalaxySDZProxyGaussPrivate
 {
-  NcmVector *z_lim;
+  gdouble z_min;
+  gdouble z_max;
   gdouble sigma;
+} NcGalaxySDZProxyGaussPrivate;
+
+struct _NcGalaxySDZProxyGauss
+{
+  NcGalaxySDZProxy parent_instance;
 };
 
 enum
@@ -59,6 +66,7 @@ enum
   PROP_0,
   PROP_Z_LIM,
   PROP_SIGMA,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDZProxyGauss, nc_galaxy_sd_z_proxy_gauss, NC_TYPE_GALAXY_SD_Z_PROXY);
@@ -66,9 +74,10 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDZProxyGauss, nc_galaxy_sd_z_proxy_gauss, N
 static void
 nc_galaxy_sd_z_proxy_gauss_init (NcGalaxySDZProxyGauss *gsdzpgauss)
 {
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
-  self->z_lim = NULL;
+  self->z_min = 0.0;
+  self->z_max = 0.0;
   self->sigma = 0.0;
 }
 
@@ -82,8 +91,15 @@ _nc_galaxy_sd_z_proxy_gauss_set_property (GObject *object, guint prop_id, const 
   switch (prop_id)
   {
     case PROP_Z_LIM:
-      nc_galaxy_sd_z_proxy_gauss_set_z_lim (gsdzpgauss, g_value_get_object (value));
+    {
+      NcmDTuple2 *z_lim = g_value_get_boxed (value);
+
+      if (z_lim == NULL)
+        g_error ("_nc_galaxy_sd_position_set_property: z_lim is NULL.");
+
+      nc_galaxy_sd_z_proxy_gauss_set_z_lim (gsdzpgauss, z_lim->elements[0], z_lim->elements[1]);
       break;
+    }
     case PROP_SIGMA:
       nc_galaxy_sd_z_proxy_gauss_set_sigma (gsdzpgauss, g_value_get_double (value));
       break;
@@ -97,15 +113,21 @@ static void
 _nc_galaxy_sd_z_proxy_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (object);
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
   g_return_if_fail (NC_IS_GALAXY_SD_Z_PROXY_GAUSS (object));
 
   switch (prop_id)
   {
     case PROP_Z_LIM:
-      g_value_set_object (value, nc_galaxy_sd_z_proxy_gauss_peek_z_lim (gsdzpgauss));
+    {
+      gdouble z_min, z_max;
+
+      nc_galaxy_sd_z_proxy_gauss_get_z_lim (gsdzpgauss, &z_min, &z_max);
+
+      g_value_take_boxed (value, ncm_dtuple2_new (z_min, z_max));
       break;
+    }
     case PROP_SIGMA:
       g_value_set_double (value, self->sigma);
       break;
@@ -118,11 +140,7 @@ _nc_galaxy_sd_z_proxy_gauss_get_property (GObject *object, guint prop_id, GValue
 static void
 _nc_galaxy_sd_z_proxy_gauss_dispose (GObject *object)
 {
-  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (object);
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
-
-  ncm_vector_clear (&self->z_lim);
-
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_sd_z_proxy_gauss_parent_class)->dispose (object);
 }
 
@@ -132,19 +150,24 @@ _nc_galaxy_sd_z_proxy_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_z_proxy_gauss_parent_class)->finalize (object);
 }
 
-static gboolean _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
-static gdouble _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z, const gdouble zp);
+static gboolean _nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp);
+static gdouble _nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp);
+static void _nc_galaxy_sd_z_proxy_gauss_get_true_z_lim (NcGalaxySDZProxy *gsdzp, const gdouble zp, gdouble *z_min, gdouble *z_max);
 
 static void
 nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
 {
   NcGalaxySDZProxyClass *sd_position_class = NC_GALAXY_SD_Z_PROXY_CLASS (klass);
+  NcmModelClass *model_class               = NCM_MODEL_CLASS (klass);
   GObjectClass *object_class               = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_sd_z_proxy_gauss_set_property;
-  object_class->get_property = &_nc_galaxy_sd_z_proxy_gauss_get_property;
-  object_class->dispose      = &_nc_galaxy_sd_z_proxy_gauss_dispose;
-  object_class->finalize     = &_nc_galaxy_sd_z_proxy_gauss_finalize;
+  model_class->set_property = &_nc_galaxy_sd_z_proxy_gauss_set_property;
+  model_class->get_property = &_nc_galaxy_sd_z_proxy_gauss_get_property;
+  object_class->dispose     = &_nc_galaxy_sd_z_proxy_gauss_dispose;
+  object_class->finalize    = &_nc_galaxy_sd_z_proxy_gauss_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Gaussian photometric redshift distribution", "GAUSS_PHOTO_Z");
+  ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
    * NcGalaxySDZProxyGauss:z-lim:
@@ -154,11 +177,11 @@ nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
    */
   g_object_class_install_property (object_class,
                                    PROP_Z_LIM,
-                                   g_param_spec_object ("z-lim",
-                                                        NULL,
-                                                        "Galaxy sample photometric redshift distribution limits",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_boxed ("z-lim",
+                                                       NULL,
+                                                       "Galaxy sample photometric redshift distribution limits",
+                                                       NCM_TYPE_DTUPLE2,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxySDZProxyGauss:sigma:
@@ -171,49 +194,70 @@ nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
                                    g_param_spec_double ("sigma",
                                                         NULL,
                                                         "Proxy redshift standard deviation",
-                                                        0.0, G_MAXDOUBLE, 5.0e-2,
+                                                        1.0e-4, G_MAXDOUBLE, 5.0e-2,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  ncm_model_class_check_params_info (model_class);
 
-
-  sd_position_class->gen   = &_nc_galaxy_sd_z_proxy_gauss_gen;
-  sd_position_class->integ = &_nc_galaxy_sd_z_proxy_gauss_integ;
+  sd_position_class->gen            = &_nc_galaxy_sd_z_proxy_gauss_gen;
+  sd_position_class->integ          = &_nc_galaxy_sd_z_proxy_gauss_integ;
+  sd_position_class->get_true_z_lim = &_nc_galaxy_sd_z_proxy_gauss_get_true_z_lim;
 }
 
 static gboolean
-_nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdouble z, gdouble *gen_zp)
+_nc_galaxy_sd_z_proxy_gauss_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp)
 {
-  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdp);
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
-  gdouble z_ll                              = ncm_vector_get (self->z_lim, 0);
-  gdouble z_ul                              = ncm_vector_get (self->z_lim, 1);
+  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdzp);
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
   gen_zp[0] = ncm_rng_gaussian_gen (rng, z, self->sigma * (1.0 + z));
 
-  return (gen_zp[0] > z_ll) && (gen_zp[0] < z_ul);
+  return (gen_zp[0] > self->z_min) && (gen_zp[0] < self->z_max);
 }
 
 static gdouble
-_nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdp, const gdouble z, const gdouble zp)
+_nc_galaxy_sd_z_proxy_gauss_integ (NcGalaxySDZProxy *gsdzp, const gdouble z, const gdouble zp)
 {
-  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdp);
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdzp);
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
   return exp (-pow (zp - z, 2.0) / (2.0 * pow (self->sigma * (1.0 + z), 2.0))) / (self->sigma * (1.0 + z) * sqrt (2.0 * M_PI));
   /* return gsl_ran_gaussian_pdf (zp - z, self->sigma * (1.0 + z)); */
 }
 
+static void
+_nc_galaxy_sd_z_proxy_gauss_get_true_z_lim (NcGalaxySDZProxy *gsdzp, const gdouble zp, gdouble *z_min, gdouble *z_max)
+{
+  NcGalaxySDZProxyGauss *gsdzpgauss         = NC_GALAXY_SD_Z_PROXY_GAUSS (gsdzp);
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
+  const gdouble sigma                       = self->sigma * (1.0 + zp);
+  const gdouble max_z                       = zp + 5.0 * sigma;
+  const gdouble sigma_max                   = self->sigma * (1.0 + max_z);
+
+  g_assert_nonnull (z_min);
+  g_assert_nonnull (z_max);
+
+  *z_min = MAX (zp - 8.0 * sigma_max, 0.0);
+  *z_max = zp + 8.0 * sigma_max;
+}
+
 /**
  * nc_galaxy_sd_z_proxy_gauss_new:
+ * @z_min: the minimum photometric redshift
+ * @z_max: the maximum photometric redshift
+ * @sigma: the standard deviation
  *
  * Creates a new #NcGalaxySDZProxyGauss
  *
  * Returns: (transfer full): a new NcGalaxySDZProxyGauss.
  */
 NcGalaxySDZProxyGauss *
-nc_galaxy_sd_z_proxy_gauss_new ()
+nc_galaxy_sd_z_proxy_gauss_new (const gdouble z_min, const gdouble z_max, const gdouble sigma)
 {
+  NcmDTuple2 z_lim                  = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDZProxyGauss *gsdzpgauss = g_object_new (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS,
+                                                    "z-lim", &z_lim,
+                                                    "sigma", sigma,
                                                     NULL);
 
   return gsdzpgauss;
@@ -263,36 +307,42 @@ nc_galaxy_sd_z_proxy_gauss_clear (NcGalaxySDZProxyGauss **gsdzpgauss)
 /**
  * nc_galaxy_sd_z_proxy_gauss_set_z_lim:
  * @gsdzpgauss: a #NcGalaxySDZProxyGauss
- * @lim: a #NcmVector
+ * @z_min: the minimum photometric redshift
+ * @z_max: the maximum photometric redshift
  *
- * Sets the redshift limits @lim.
+ * Sets the photometric redshift limits.
+ *
  */
 void
-nc_galaxy_sd_z_proxy_gauss_set_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, NcmVector *lim)
+nc_galaxy_sd_z_proxy_gauss_set_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, const gdouble z_min, const gdouble z_max)
 {
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
-  g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
+  g_assert_cmpfloat (z_min, <, z_max);
 
-  ncm_vector_clear (&self->z_lim);
-
-  self->z_lim = ncm_vector_ref (lim);
+  self->z_min = z_min;
+  self->z_max = z_max;
 }
 
 /**
- * nc_galaxy_sd_z_proxy_gauss_peek_z_lim:
+ * nc_galaxy_sd_z_proxy_gauss_get_z_lim:
  * @gsdzpgauss: a #NcGalaxySDZProxyGauss
+ * @z_min: (out): the minimum photometric redshift
+ * @z_max: (out): the maximum photometric redshift
  *
- * Gets the redshift limits.
+ * Gets the photometric redshift limits.
  *
- * Returns: (transfer none): the redshift limits.
  */
-NcmVector *
-nc_galaxy_sd_z_proxy_gauss_peek_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss)
+void
+nc_galaxy_sd_z_proxy_gauss_get_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble *z_min, gdouble *z_max)
 {
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
-  return self->z_lim;
+  g_assert_nonnull (z_min);
+  g_assert_nonnull (z_max);
+
+  z_min[0] = self->z_min;
+  z_max[0] = self->z_max;
 }
 
 /**
@@ -305,7 +355,7 @@ nc_galaxy_sd_z_proxy_gauss_peek_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss)
 void
 nc_galaxy_sd_z_proxy_gauss_set_sigma (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble sigma)
 {
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
   self->sigma = sigma;
 }
@@ -321,7 +371,7 @@ nc_galaxy_sd_z_proxy_gauss_set_sigma (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble
 gdouble
 nc_galaxy_sd_z_proxy_gauss_get_sigma (NcGalaxySDZProxyGauss *gsdzpgauss)
 {
-  NcGalaxySDZProxyGaussPrivate * const self = gsdzpgauss->priv;
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
   return self->sigma;
 }

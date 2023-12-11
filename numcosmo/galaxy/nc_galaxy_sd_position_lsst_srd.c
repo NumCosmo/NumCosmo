@@ -45,6 +45,7 @@
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_stats_dist1d.h"
 #include "math/ncm_stats_dist1d_spline.h"
+#include "math/ncm_dtuple.h"
 #include "math/ncm_spline.h"
 #include "math/ncm_spline_func.h"
 #include "math/ncm_spline_cubic.h"
@@ -55,8 +56,6 @@
 
 typedef struct _NcGalaxySDPositionLSSTSRDPrivate
 {
-  NcmVector *z_lim;
-  NcmVector *r_lim;
   gdouble z_lb;
   gdouble z_ub;
   gdouble r_norm;
@@ -74,9 +73,6 @@ struct _NcGalaxySDPositionLSSTSRD
 enum
 {
   PROP_0,
-  PROP_Z_LIM,
-  PROP_R_LIM,
-  PROP_Z_DIST,
   PROP_LEN,
 };
 
@@ -87,8 +83,6 @@ nc_galaxy_sd_position_lsst_srd_init (NcGalaxySDPositionLSSTSRD *gsdplsst)
 {
   NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
 
-  self->z_lim  = NULL;
-  self->r_lim  = NULL;
   self->z_lb   = 0.0;
   self->z_ub   = 0.0;
   self->r_norm = 0.0;
@@ -99,68 +93,26 @@ nc_galaxy_sd_position_lsst_srd_init (NcGalaxySDPositionLSSTSRD *gsdplsst)
 }
 
 static void
-_nc_galaxy_sd_position_lsst_srd_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcGalaxySDPositionLSSTSRD *gsdplsst = NC_GALAXY_SD_POSITION_LSST_SRD (object);
-
-  g_return_if_fail (NC_IS_GALAXY_SD_POSITION_LSST_SRD (object));
-
-  switch (prop_id)
-  {
-    case PROP_Z_LIM:
-      nc_galaxy_sd_position_lsst_srd_set_z_lim (gsdplsst, g_value_get_object (value));
-      break;
-    case PROP_R_LIM:
-      nc_galaxy_sd_position_lsst_srd_set_r_lim (gsdplsst, g_value_get_object (value));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_galaxy_sd_position_lsst_srd_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcGalaxySDPositionLSSTSRD *gsdplsst = NC_GALAXY_SD_POSITION_LSST_SRD (object);
-
-  g_return_if_fail (NC_IS_GALAXY_SD_POSITION_LSST_SRD (object));
-
-  switch (prop_id)
-  {
-    case PROP_Z_LIM:
-      g_value_set_object (value, nc_galaxy_sd_position_lsst_srd_peek_z_lim (gsdplsst));
-      break;
-    case PROP_R_LIM:
-      g_value_set_object (value, nc_galaxy_sd_position_lsst_srd_peek_r_lim (gsdplsst));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
 _nc_galaxy_sd_position_lsst_srd_dispose (GObject *object)
 {
-  NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (object);
-  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-
-  ncm_vector_clear (&self->z_lim);
-  ncm_vector_clear (&self->r_lim);
-
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_sd_position_lsst_srd_parent_class)->dispose (object);
 }
 
 static void
 _nc_galaxy_sd_position_lsst_srd_finalize (GObject *object)
 {
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_sd_position_lsst_srd_parent_class)->finalize (object);
 }
 
 static gdouble _nc_galaxy_sd_position_lsst_srd_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_lsst_srd_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_lsst_srd_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
+static void _nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPosition *gsdp, gdouble z_min, gdouble z_max);
+static void _nc_galaxy_sd_position_lsst_srd_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdouble *z_max);
+static void _nc_galaxy_sd_position_lsst_srd_set_r_lim (NcGalaxySDPosition *gsdp, gdouble r_min, gdouble r_max);
+static void _nc_galaxy_sd_position_lsst_srd_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max);
 
 static void
 nc_galaxy_sd_position_lsst_srd_class_init (NcGalaxySDPositionLSSTSRDClass *klass)
@@ -169,41 +121,11 @@ nc_galaxy_sd_position_lsst_srd_class_init (NcGalaxySDPositionLSSTSRDClass *klass
   GObjectClass *object_class                 = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class                 = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_galaxy_sd_position_lsst_srd_set_property;
-  model_class->get_property = &_nc_galaxy_sd_position_lsst_srd_get_property;
-  object_class->dispose     = &_nc_galaxy_sd_position_lsst_srd_dispose;
-  object_class->finalize    = &_nc_galaxy_sd_position_lsst_srd_finalize;
+  object_class->dispose  = &_nc_galaxy_sd_position_lsst_srd_dispose;
+  object_class->finalize = &_nc_galaxy_sd_position_lsst_srd_finalize;
 
   ncm_model_class_set_name_nick (model_class, "LSST SRD Galaxy Distribution", "LSST_SRD");
   ncm_model_class_add_params (model_class, NC_GALAXY_SD_POSITION_LSST_SRD_SPARAM_LEN, 0, PROP_LEN);
-
-  /**
-   * NcGalaxySDPositionLSSTSRD:z-lim:
-   *
-   * Galaxy sample redshift distribution limits.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Z_LIM,
-                                   g_param_spec_object ("z-lim",
-                                                        NULL,
-                                                        "Galaxy sample redshift distribution limits",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcGalaxySDPositionLSSTSRD:r-lim:
-   *
-   * Galaxy sample radius distribution limits.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_R_LIM,
-                                   g_param_spec_object ("r-lim",
-                                                        NULL,
-                                                        "Galaxy sample radius distribution limits",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxySDPositionLSSTSRD:alpha:
@@ -240,9 +162,13 @@ nc_galaxy_sd_position_lsst_srd_class_init (NcGalaxySDPositionLSSTSRDClass *klass
 
   ncm_model_class_check_params_info (model_class);
 
-  sd_position_class->gen_r = &_nc_galaxy_sd_position_lsst_srd_gen_r;
-  sd_position_class->gen_z = &_nc_galaxy_sd_position_lsst_srd_gen_z;
-  sd_position_class->integ = &_nc_galaxy_sd_position_lsst_srd_integ;
+  sd_position_class->gen_r     = &_nc_galaxy_sd_position_lsst_srd_gen_r;
+  sd_position_class->gen_z     = &_nc_galaxy_sd_position_lsst_srd_gen_z;
+  sd_position_class->integ     = &_nc_galaxy_sd_position_lsst_srd_integ;
+  sd_position_class->set_z_lim = &_nc_galaxy_sd_position_lsst_srd_set_z_lim;
+  sd_position_class->get_z_lim = &_nc_galaxy_sd_position_lsst_srd_get_z_lim;
+  sd_position_class->set_r_lim = &_nc_galaxy_sd_position_lsst_srd_set_r_lim;
+  sd_position_class->get_r_lim = &_nc_galaxy_sd_position_lsst_srd_get_r_lim;
 }
 
 #define VECTOR (NCM_MODEL (gsdp))
@@ -297,8 +223,66 @@ _nc_galaxy_sd_position_lsst_srd_integ (NcGalaxySDPosition *gsdp, const gdouble r
   return gsl_ran_gamma_pdf (y, gamma_a, y0) * alpha * y / z * r * self->r_norm;
 }
 
+static void
+_nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPosition *gsdp, gdouble z_min, gdouble z_max)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
+  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
+
+  g_assert_cmpfloat (z_min, <, z_max);
+
+  self->z_lb = z_min;
+  self->z_ub = z_max;
+}
+
+static void
+_nc_galaxy_sd_position_lsst_srd_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdouble *z_max)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
+  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
+
+  g_assert_nonnull (z_min);
+  g_assert_nonnull (z_max);
+
+  *z_min = self->z_lb;
+  *z_max = self->z_ub;
+}
+
+static void
+_nc_galaxy_sd_position_lsst_srd_set_r_lim (NcGalaxySDPosition *gsdp, gdouble r_min, gdouble r_max)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
+  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
+
+  g_assert_cmpfloat (r_min, <, r_max);
+
+  self->r_lb = r_min;
+  self->r_ub = r_max;
+
+  self->r_lb2  = self->r_lb * self->r_lb;
+  self->r_ub2  = self->r_ub * self->r_ub;
+  self->r_norm = 2.0 / (self->r_ub2 - self->r_lb2);
+}
+
+static void
+_nc_galaxy_sd_position_lsst_srd_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
+  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
+
+  g_assert_nonnull (r_min);
+  g_assert_nonnull (r_max);
+
+  *r_min = self->r_lb;
+  *r_max = self->r_ub;
+}
+
 /**
  * nc_galaxy_sd_position_lsst_srd_new:
+ * @z_min: the minimum redshift
+ * @z_max: the maximum redshift
+ * @r_min: the minimum angular radius
+ * @r_max: the maximum angular radius
  *
  * Creates a new #NcGalaxySDPositionLSSTSRD, the parameter values correspond to the
  * LSST SRD year 1.
@@ -306,9 +290,13 @@ _nc_galaxy_sd_position_lsst_srd_integ (NcGalaxySDPosition *gsdp, const gdouble r
  * Returns: (transfer full): a new NcGalaxySDPositionLSSTSRD.
  */
 NcGalaxySDPositionLSSTSRD *
-nc_galaxy_sd_position_lsst_srd_new ()
+nc_galaxy_sd_position_lsst_srd_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max)
 {
+  NcmDTuple2 z_lim                    = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
+  NcmDTuple2 r_lim                    = NCM_DTUPLE2_STATIC_INIT (r_min, r_max);
   NcGalaxySDPositionLSSTSRD *gsdplsst = g_object_new (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD,
+                                                      "z-lim", &z_lim,
+                                                      "r-lim", &r_lim,
                                                       NULL);
 
   return gsdplsst;
@@ -316,6 +304,10 @@ nc_galaxy_sd_position_lsst_srd_new ()
 
 /**
  * nc_galaxy_sd_position_lsst_srd_new_y10:
+ * @z_min: the minimum redshift
+ * @z_max: the maximum redshift
+ * @r_min: the minimum angular radius
+ * @r_max: the maximum angular radius
  *
  * Creates a new #NcGalaxySDPositionLSSTSRD, the parameter values correspond to the
  * LSST SRD year 10.
@@ -323,12 +315,16 @@ nc_galaxy_sd_position_lsst_srd_new ()
  * Returns: (transfer full): a new NcGalaxySDPositionLSSTSRD.
  */
 NcGalaxySDPositionLSSTSRD *
-nc_galaxy_sd_position_lsst_srd_new_y10 ()
+nc_galaxy_sd_position_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max)
 {
+  NcmDTuple2 z_lim                    = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
+  NcmDTuple2 r_lim                    = NCM_DTUPLE2_STATIC_INIT (r_min, r_max);
   NcGalaxySDPositionLSSTSRD *gsdplsst = g_object_new (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD,
                                                       "alpha", NC_GALAXY_SD_POSITION_LSST_SRD_Y10_ALPHA,
                                                       "beta", NC_GALAXY_SD_POSITION_LSST_SRD_Y10_BETA,
                                                       "z0", NC_GALAXY_SD_POSITION_LSST_SRD_Y10_Z0,
+                                                      "z-lim", &z_lim,
+                                                      "r-lim", &r_lim,
                                                       NULL);
 
   return gsdplsst;
@@ -373,93 +369,5 @@ void
 nc_galaxy_sd_position_lsst_srd_clear (NcGalaxySDPositionLSSTSRD **gsdplsst)
 {
   g_clear_object (gsdplsst);
-}
-
-/**
- * nc_galaxy_sd_position_lsst_srd_set_z_lim:
- * @gsdplsst: a #NcGalaxySDPositionLSSTSRD
- * @lim: a #NcmVector
- *
- * Sets the redshift limits @lim.
- */
-void
-nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPositionLSSTSRD *gsdplsst, NcmVector *lim)
-{
-  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-
-  g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
-
-  self->z_lb = ncm_vector_get (lim, 0);
-  self->z_ub = ncm_vector_get (lim, 1);
-
-  g_assert_cmpfloat (self->z_lb, <, self->z_ub);
-
-  if (self->z_lim != lim)
-  {
-    ncm_vector_clear (&self->z_lim);
-    self->z_lim = ncm_vector_ref (lim);
-  }
-}
-
-/**
- * nc_galaxy_sd_position_lsst_srd_peek_z_lim:
- * @gsdplsst: a #NcGalaxySDPositionLSSTSRD
- *
- * Gets the redshift limits. The returned vector should not be modified.
- *
- * Returns: (transfer none): the redshift limits.
- */
-NcmVector *
-nc_galaxy_sd_position_lsst_srd_peek_z_lim (NcGalaxySDPositionLSSTSRD *gsdplsst)
-{
-  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-
-  return self->z_lim;
-}
-
-/**
- * nc_galaxy_sd_position_lsst_srd_set_r_lim:
- * @gsdplsst: a #NcGalaxySDPositionLSSTSRD
- * @lim: a #NcmVector
- *
- * Sets the radius limits @lim.
- */
-void
-nc_galaxy_sd_position_lsst_srd_set_r_lim (NcGalaxySDPositionLSSTSRD *gsdplsst, NcmVector *lim)
-{
-  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-
-  g_assert_cmpuint (ncm_vector_len (lim), ==, 2);
-
-  self->r_lb = ncm_vector_get (lim, 0);
-  self->r_ub = ncm_vector_get (lim, 1);
-
-  g_assert_cmpfloat (self->r_lb, <, self->r_ub);
-
-  self->r_lb2  = self->r_lb * self->r_lb;
-  self->r_ub2  = self->r_ub * self->r_ub;
-  self->r_norm = 2.0 / (self->r_ub2 - self->r_lb2);
-
-  if (self->r_lim != lim)
-  {
-    ncm_vector_clear (&self->r_lim);
-    self->r_lim = ncm_vector_ref (lim);
-  }
-}
-
-/**
- * nc_galaxy_sd_position_lsst_srd_peek_r_lim:
- * @gsdplsst: a #NcGalaxySDPositionLSSTSRD
- *
- * Gets the radius limits. The returned vector should not be modified.
- *
- * Returns: (transfer none): the radius limits.
- */
-NcmVector *
-nc_galaxy_sd_position_lsst_srd_peek_r_lim (NcGalaxySDPositionLSSTSRD *gsdplsst)
-{
-  NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-
-  return self->r_lim;
 }
 

@@ -559,8 +559,6 @@ nc_galaxy_wl_likelihood_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, gu
   NcGalaxyWLLikelihoodInt *lh_int = NC_GALAXY_WL_LIKELIHOOD_INT (intnd);
   guint i;
 
-  ncm_integral_nd_set_method (intnd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
-
   for (i = 0; i < npoints; i++)
   {
     const gdouble z = ncm_vector_get (x, i);
@@ -658,14 +656,16 @@ gdouble
 nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmMatrix *gal_obs, NcmVector *m2lnP_gal)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
-  NcmVector *err                           = ncm_vector_new (1);
-  NcmVector *zpi                           = ncm_vector_new (1);
-  NcmVector *zpf                           = ncm_vector_new (1);
-  NcmVector *res                           = ncm_vector_new (1);
-  const guint len                          = ncm_matrix_nrows (gal_obs);
-  gdouble zp_i                             = 1.0e-11;
-  gdouble zp_f                             = 100.0;
-  gdouble result                           = 0;
+  gdouble verr, vzpi, vzpf, vres, vtmp;
+  NcmVector *err  = ncm_vector_new_data_static (&verr, 1, 1);
+  NcmVector *zpi  = ncm_vector_new_data_static (&vzpi, 1, 1);
+  NcmVector *zpf  = ncm_vector_new_data_static (&vzpf, 1, 1);
+  NcmVector *res  = ncm_vector_new_data_static (&vres, 1, 1);
+  NcmVector *tmp  = ncm_vector_new_data_static (&vtmp, 1, 1);
+  const guint len = ncm_matrix_nrows (gal_obs);
+  gdouble zp_i    = 1.0e-11;
+  gdouble zp_f    = 100.0;
+  gdouble result  = 0;
   guint gal_i;
 
   ncm_vector_set (zpi, 0, zp_i);
@@ -681,6 +681,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
     NcGalaxyWLLikelihoodInt *likelihood_integral = g_object_new (nc_galaxy_wl_likelihood_int_get_type (), NULL);
     NcmIntegralND *lh_int                        = NCM_INTEGRAL_ND (likelihood_integral);
     gdouble m2lnP_gal_i;
+    gdouble z_min, z_max;
 
     likelihood_integral->data.rz_dist   = NC_GALAXY_SD_POSITION (self->rz_dist);
     likelihood_integral->data.zp_dist   = NC_GALAXY_SD_Z_PROXY (self->zp_dist);
@@ -693,11 +694,31 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
     likelihood_integral->data.zp        = ncm_matrix_get (gal_obs, gal_i, 1);
     likelihood_integral->data.et        = ncm_matrix_get (gal_obs, gal_i, 2);
 
+    ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+
+    nc_galaxy_sd_z_proxy_get_true_z_lim (self->zp_dist, likelihood_integral->data.zp, &z_min, &z_max);
     ncm_integral_nd_set_reltol (lh_int, self->prec);
     ncm_integral_nd_set_abstol (lh_int, 0.0);
-    ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
 
-    m2lnP_gal_i = -2.0 * log (ncm_vector_get (res, 0));
+    if (z_min < z_cluster)
+    {
+      vzpi = z_min;
+      vzpf = z_cluster;
+      ncm_integral_nd_eval (lh_int, zpi, zpf, tmp, err);
+
+      vzpi = z_cluster;
+      vzpf = z_max;
+      ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
+      vres += vtmp;
+    }
+    else
+    {
+      vzpi = z_min;
+      vzpf = z_max;
+      ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
+    }
+
+    m2lnP_gal_i = -2.0 * log (vres);
 
     if (m2lnP_gal != NULL)
       ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
@@ -711,6 +732,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
   ncm_vector_free (zpi);
   ncm_vector_free (zpf);
   ncm_vector_free (res);
+  ncm_vector_free (tmp);
 
   return result;
 }

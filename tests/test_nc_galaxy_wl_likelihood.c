@@ -38,7 +38,8 @@ typedef struct _TestNcGalaxyWLLikelihood
 } TestNcGalaxyWLLikelihood;
 
 
-static void test_nc_galaxy_wl_likelihood_new (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_likelihood_new_flat (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_likelihood_new_lsst_srd (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_likelihood_free (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 
@@ -51,8 +52,13 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-  g_test_add ("/nc/galaxy_wl_likelihood/fit", TestNcGalaxyWLLikelihood, NULL,
-              &test_nc_galaxy_wl_likelihood_new,
+  g_test_add ("/nc/galaxy_wl_likelihood/flat/fit", TestNcGalaxyWLLikelihood, NULL,
+              &test_nc_galaxy_wl_likelihood_new_flat,
+              &test_nc_galaxy_wl_likelihood_fit,
+              &test_nc_galaxy_wl_likelihood_free);
+
+  g_test_add ("/nc/galaxy_wl_likelihood/lsst_srd/fit", TestNcGalaxyWLLikelihood, NULL,
+              &test_nc_galaxy_wl_likelihood_new_lsst_srd,
               &test_nc_galaxy_wl_likelihood_fit,
               &test_nc_galaxy_wl_likelihood_free);
 
@@ -62,50 +68,43 @@ main (gint argc, gchar *argv[])
 }
 
 static void
-test_nc_galaxy_wl_likelihood_new (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_galaxy_wl_likelihood_new_flat (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
 {
-  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new ();
-  NcGalaxySDZProxyGauss *gsdzpg = nc_galaxy_sd_z_proxy_gauss_new ();
+  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0.0, 2.0, 0.4, 1.2);
+  NcGalaxySDZProxyGauss *gsdzpg = nc_galaxy_sd_z_proxy_gauss_new (0.4, 1.0, 0.03);
   NcGalaxySDShapeGauss *gss     = nc_galaxy_sd_shape_gauss_new ();
   NcGalaxyWLLikelihood *gwl     = nc_galaxy_wl_likelihood_new (NC_GALAXY_SD_SHAPE (gss),
                                                                NC_GALAXY_SD_Z_PROXY (gsdzpg),
                                                                NC_GALAXY_SD_POSITION (gsdpf));
 
-  {
-    NcmVector *z_lim = ncm_vector_new (2);
-    NcmVector *r_lim = ncm_vector_new (2);
-
-    ncm_vector_set (z_lim, 0, 0.0);
-    ncm_vector_set (z_lim, 1, 2.0);
-
-    ncm_vector_set (r_lim, 0, 0.5);
-    ncm_vector_set (r_lim, 1, 1.5);
-
-    nc_galaxy_sd_position_flat_set_z_lim (gsdpf, z_lim);
-    nc_galaxy_sd_position_flat_set_r_lim (gsdpf, r_lim);
-
-    ncm_vector_free (z_lim);
-    ncm_vector_free (r_lim);
-  }
-
-  {
-    NcmVector *z_lim = ncm_vector_new (2);
-
-    ncm_vector_set (z_lim, 0, 0.2);
-    ncm_vector_set (z_lim, 1, 1.0);
-
-    nc_galaxy_sd_z_proxy_gauss_set_z_lim (gsdzpg, z_lim);
-    nc_galaxy_sd_z_proxy_gauss_set_sigma (gsdzpg, 0.03);
-
-    ncm_vector_free (z_lim);
-  }
-
-  nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.1);
+  nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_galaxy_wl_likelihood_set_cut (gwl, 0.0, 2.0);
 
   test->gwl = gwl;
 
   nc_galaxy_sd_position_flat_free (gsdpf);
+  nc_galaxy_sd_z_proxy_gauss_free (gsdzpg);
+  nc_galaxy_sd_shape_gauss_free (gss);
+
+  g_assert_true (NC_IS_GALAXY_WL_LIKELIHOOD (gwl));
+}
+
+static void
+test_nc_galaxy_wl_likelihood_new_lsst_srd (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsst = nc_galaxy_sd_position_lsst_srd_new (0.0, 2.0, 0.4, 1.2);
+  NcGalaxySDZProxyGauss *gsdzpg       = nc_galaxy_sd_z_proxy_gauss_new (0.4, 1.0, 0.03);
+  NcGalaxySDShapeGauss *gss           = nc_galaxy_sd_shape_gauss_new ();
+  NcGalaxyWLLikelihood *gwl           = nc_galaxy_wl_likelihood_new (NC_GALAXY_SD_SHAPE (gss),
+                                                                     NC_GALAXY_SD_Z_PROXY (gsdzpg),
+                                                                     NC_GALAXY_SD_POSITION (gsdplsst));
+
+  nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
+  nc_galaxy_wl_likelihood_set_cut (gwl, 0.0, 2.0);
+
+  test->gwl = gwl;
+
+  nc_galaxy_sd_position_lsst_srd_free (gsdplsst);
   nc_galaxy_sd_z_proxy_gauss_free (gsdzpg);
   nc_galaxy_sd_shape_gauss_free (gss);
 
@@ -126,7 +125,7 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
-  const guint ngals           = 10000;
+  const guint ngals           = 200;
   NcmVector *m2lnP_int_gal    = ncm_vector_new (ngals);
   NcmVector *m2lnP_kde_gal    = ncm_vector_new (ngals);
   NcmMatrix *gal_obs          = NULL;
@@ -160,12 +159,21 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
       NcmMSet *mset             = ncm_mset_new (cosmo, dp, smd, NULL);
       NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", likelihood, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
 
-      ncm_fit_log_start (fit);
-      ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_SIMPLE, 1.0e-3, 0.0, NULL, NULL);
-      ncm_fit_log_info (fit);
-
+      ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
       ncm_fit_obs_fisher (fit);
-      ncm_fit_log_covar (fit);
+
+      {
+        const gdouble c_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA);
+        const gdouble m_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA);
+        const gdouble c_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_DENSITY_PROFILE_C_DELTA);
+        const gdouble m_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA);
+
+        g_assert_cmpfloat (c_bf, <, 4.0 + 5.0 * c_sd);
+        g_assert_cmpfloat (c_bf, >, 4.0 - 5.0 * c_sd);
+
+        g_assert_cmpfloat (m_bf, <, 14.0 + 5.0 * m_sd);
+        g_assert_cmpfloat (m_bf, >, 14.0 - 5.0 * m_sd);
+      }
 
       ncm_dataset_free (dataset);
       ncm_likelihood_free (likelihood);

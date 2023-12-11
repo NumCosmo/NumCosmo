@@ -171,8 +171,6 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   if (z > z_cluster)
     e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
 
-  printf ("% 22.15g % 22.15g %.2f\n", (et_source + creal (gt)), creal (e_obs), 100.0 * fabs ((et_source + creal (gt)) / creal (e_obs) - 1.0));
-
   return creal (e_obs);
 }
 
