@@ -492,8 +492,8 @@ _ncm_integral_nd_cubature_vint (unsigned ndim, size_t npt, const double *x, void
   NcmIntegralND *intnd              = NCM_INTEGRAL_ND (fdata);
   NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
-  ncm_vector_replace_data_full (self->x_vec, (gdouble *) x, ndim, 1);
-  ncm_vector_replace_data_full (self->fval_vec, fval, fdim, 1);
+  ncm_vector_replace_data_full (self->x_vec, (gdouble *) x, ndim * npt, 1);
+  ncm_vector_replace_data_full (self->fval_vec, fval, fdim * npt, 1);
 
   NCM_INTEGRAL_ND_GET_CLASS (intnd)->integrand (intnd, self->x_vec, ndim, npt, fdim, self->fval_vec);
 
