@@ -66,16 +66,14 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_shape_parent_class)->finalize (object);
 }
 
-static gdouble
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble r, const gdouble z)
+static void
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble r, const gdouble z, gdouble *et, gdouble *ex)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
-
-  return 0.0;
 }
 
 static gdouble
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et)
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
@@ -144,11 +142,18 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @rng: a #NcmRNG
  * @r: a #gdouble
  * @z: a #gdouble
+ * @et: (out): the generated tangential ellipticity component $e_\mathrm{t}$
+ * @ex: (out): the generated cross ellipticity component $e_\mathrm{x}$
  *
  * Generates a shape value from the position using @rng.
  *
- * Returns: the generated shape value.
  */
+void
+nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z, gdouble *et, gdouble *ex)
+{
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, z_cluster, rng, r, z, et, ex);
+}
+
 /**
  * nc_galaxy_sd_shape_integ: (virtual integ)
  * @gsds: a #NcGalaxySDShape
@@ -156,13 +161,20 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
  * @z_cluster: cluster redshift $z_\mathrm{cl}$
- * @r: a #gdouble
- * @z: a #gdouble
- * @et: a #gdouble
+ * @r: the projected radius $r$
+ * @z: the redshift $z$
+ * @et: the tangential ellipticity component $e_\mathrm{t}$
+ * @ex: the cross ellipticity component $e_\mathrm{x}$
+ *
  *
  * Computes the probability density of the observable shape given the position.
  * The probability density is given by $P(s)P$.
  *
  * Returns: the probability density of observable shape, $P(s)$.
  */
+gdouble
+nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex)
+{
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, z_cluster, r, z, et, ex);
+}
 

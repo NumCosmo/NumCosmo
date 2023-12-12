@@ -101,7 +101,7 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv = nc_galaxy_wl_likelihood_get_instance_private (gwl);
 
-  NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (3);
+  NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (4);
 
   self->obs         = NULL;
   self->s_dist      = NULL;
@@ -451,7 +451,7 @@ nc_galaxy_wl_likelihood_set_obs (NcGalaxyWLLikelihood *gwl, NcmMatrix *obs)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
 
-  g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 3);
+  g_assert_cmpuint (ncm_matrix_ncols (obs), ==, 4);
   g_assert_cmpuint (ncm_matrix_nrows (obs), >, 0);
 
   ncm_matrix_clear (&self->obs);
@@ -472,8 +472,8 @@ void
 nc_galaxy_wl_likelihood_gen_obs (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, guint nobs, NcmRNG *rng)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
-  NcmMatrix *obs                           = ncm_matrix_new (nobs, 3);
-  NcmVector *sample                        = ncm_vector_new (3);
+  NcmMatrix *obs                           = ncm_matrix_new (nobs, 4);
+  NcmVector *sample                        = ncm_vector_new (4);
   guint i;
 
   for (i = 0; i < nobs; i++)
@@ -496,7 +496,7 @@ nc_galaxy_wl_likelihood_gen_obs (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
     ncm_vector_set (sample, 0, r);
     ncm_vector_set (sample, 1, zp);
-    ncm_vector_set (sample, 2, nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z));
+    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z, ncm_vector_ptr (sample, 2), ncm_vector_ptr (sample, 3));
 
     ncm_matrix_set_row (obs, i, sample);
   }
@@ -550,6 +550,7 @@ struct int_data
   gdouble z_cluster;
   gdouble zp;
   gdouble et;
+  gdouble ex;
   gdouble r;
 };
 
@@ -576,7 +577,8 @@ nc_galaxy_wl_likelihood_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, gu
                                                 lh_int->data.z_cluster,
                                                 lh_int->data.r,
                                                 z,
-                                                lh_int->data.et);
+                                                lh_int->data.et,
+                                                lh_int->data.ex);
 
     ncm_vector_set (fval, i, res);
   }
@@ -593,7 +595,7 @@ void
 nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
-  NcmVector *sample                        = ncm_vector_new (3);
+  NcmVector *sample                        = ncm_vector_new (4);
   NcmRNG *rng                              = ncm_rng_new (NULL);
   gdouble in_cut                           = 0;
   gdouble out_cut                          = 0;
@@ -622,11 +624,9 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
     i++;
 
-    const gdouble s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
-
     ncm_vector_set (sample, 0, r);
     ncm_vector_set (sample, 1, zp);
-    ncm_vector_set (sample, 2, s);
+    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z, ncm_vector_ptr (sample, 2), ncm_vector_ptr (sample, 3));
 
     ncm_stats_dist_add_obs (self->kde, sample);
   }
@@ -676,7 +676,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
   ncm_vector_set (zpi, 0, zp_i);
   ncm_vector_set (zpf, 0, zp_f);
 
-  g_assert_cmpuint (ncm_matrix_ncols (gal_obs), ==, 3);
+  g_assert_cmpuint (ncm_matrix_ncols (gal_obs), ==, 4);
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, len);
@@ -698,6 +698,7 @@ nc_galaxy_wl_likelihood_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo,
     likelihood_integral->data.r         = ncm_matrix_get (gal_obs, gal_i, 0);
     likelihood_integral->data.zp        = ncm_matrix_get (gal_obs, gal_i, 1);
     likelihood_integral->data.et        = ncm_matrix_get (gal_obs, gal_i, 2);
+    likelihood_integral->data.ex        = ncm_matrix_get (gal_obs, gal_i, 3);
 
     ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
 
@@ -762,14 +763,14 @@ gdouble
 nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmMatrix *gal_obs, NcmVector *m2lnP_gal)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
-  NcmVector *data_vec                      = ncm_vector_new (3);
+  NcmVector *data_vec                      = ncm_vector_new (4);
   const guint len                          = ncm_matrix_nrows (gal_obs);
   gdouble res                              = 0.0;
   glong in_cut                             = 0;
 
   guint gal_i;
 
-  g_assert_cmpuint (ncm_matrix_ncols (gal_obs), ==, 3);
+  g_assert_cmpuint (ncm_matrix_ncols (gal_obs), ==, 4);
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, len);
@@ -780,13 +781,15 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
   {
     for (gal_i = 0; gal_i < len; gal_i++)
     {
-      const gdouble r_i = ncm_matrix_get (gal_obs, gal_i, 0);
-      const gdouble z_i = ncm_matrix_get (gal_obs, gal_i, 1);
-      const gdouble s_i = ncm_matrix_get (gal_obs, gal_i, 2);
+      const gdouble r_i  = ncm_matrix_get (gal_obs, gal_i, 0);
+      const gdouble z_i  = ncm_matrix_get (gal_obs, gal_i, 1);
+      const gdouble et_i = ncm_matrix_get (gal_obs, gal_i, 2);
+      const gdouble ex_i = ncm_matrix_get (gal_obs, gal_i, 3);
 
       ncm_vector_set (data_vec, 0, r_i);
       ncm_vector_set (data_vec, 1, z_i);
-      ncm_vector_set (data_vec, 2, s_i);
+      ncm_vector_set (data_vec, 2, et_i);
+      ncm_vector_set (data_vec, 3, ex_i);
 
       if ((self->r_min <= r_i) && (r_i <= self->r_max))
       {
@@ -926,11 +929,9 @@ nc_galaxy_wl_likelihood_gen (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, NcHalo
       break;
   }
 
-  s = nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z);
-
   ncm_vector_set (sample, 0, r);
   ncm_vector_set (sample, 1, zp);
-  ncm_vector_set (sample, 2, s);
+  nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z, ncm_vector_ptr (sample, 2), ncm_vector_ptr (sample, 3));
 
   return sample;
 }
