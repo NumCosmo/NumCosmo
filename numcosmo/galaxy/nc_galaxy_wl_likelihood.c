@@ -51,6 +51,7 @@
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_stats_dist.h"
 #include "math/ncm_stats_dist_kde.h"
+#include "math/ncm_stats_dist_vkde.h"
 #include "math/ncm_stats_dist_kernel_gauss.h"
 #include "math/ncm_stats_dist_kernel_st.h"
 #include "math/ncm_integral_nd.h"
@@ -63,7 +64,7 @@ struct _NcGalaxyWLLikelihoodPrivate
   NcGalaxySDShape *s_dist;
   NcGalaxySDZProxy *zp_dist;
   NcGalaxySDPosition *rz_dist;
-  NcmStatsDistKDE *kde;
+  NcmStatsDist *kde;
   gdouble cut_fraction;
   gdouble zp_min;
   gdouble zp_max;
@@ -106,7 +107,7 @@ nc_galaxy_wl_likelihood_init (NcGalaxyWLLikelihood *gwl)
   self->s_dist      = NULL;
   self->zp_dist     = NULL;
   self->rz_dist     = NULL;
-  self->kde         = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE);
+  self->kde         = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE));
   self->len         = 0;
   self->r_max       = 0.0;
   self->r_min       = 0.0;
@@ -217,7 +218,7 @@ _nc_galaxy_wl_likelihood_dispose (GObject *object)
   nc_galaxy_sd_z_proxy_clear (&self->zp_dist);
   nc_galaxy_sd_position_clear (&self->rz_dist);
 
-  ncm_stats_dist_kde_clear (&self->kde);
+  ncm_stats_dist_clear (&self->kde);
 
   G_OBJECT_CLASS (nc_galaxy_wl_likelihood_parent_class)->dispose (object);
 }
@@ -355,7 +356,7 @@ nc_galaxy_wl_likelihood_class_init (NcGalaxyWLLikelihoodClass *klass)
                                    g_param_spec_int ("ndata",
                                                      NULL,
                                                      "Number of data points to sample for KDE",
-                                                     0.0, G_MAXINT, 10000.0,
+                                                     0, G_MAXINT, 10000,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -477,9 +478,13 @@ nc_galaxy_wl_likelihood_gen_obs (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
 
   for (i = 0; i < nobs; i++)
   {
-    const gdouble r = nc_galaxy_sd_position_gen_r (self->rz_dist, rng);
-    gdouble z       = 0.0;
-    gdouble zp      = 0.0;
+    gdouble r  = 0.0;
+    gdouble z  = 0.0;
+    gdouble zp = 0.0;
+
+    do {
+      r = nc_galaxy_sd_position_gen_r (self->rz_dist, rng);
+    } while ((self->r_min > r) || (r > self->r_max));
 
     while (TRUE)
     {
@@ -526,7 +531,7 @@ nc_galaxy_wl_likelihood_peek_obs (NcGalaxyWLLikelihood *gwl)
  *
  * Returns: (transfer none): the observables matrix.
  */
-NcmStatsDistKDE *
+NcmStatsDist *
 nc_galaxy_wl_likelihood_peek_kde (NcGalaxyWLLikelihood *gwl)
 {
   NcGalaxyWLLikelihoodPrivate * const self = gwl->priv;
@@ -594,7 +599,7 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
   gdouble out_cut                          = 0;
   gint i                                   = 0;
 
-  ncm_stats_dist_reset (NCM_STATS_DIST (self->kde));
+  ncm_stats_dist_reset (self->kde);
 
   while (i < self->ndata)
   {
@@ -623,14 +628,14 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
     ncm_vector_set (sample, 1, zp);
     ncm_vector_set (sample, 2, s);
 
-    ncm_stats_dist_add_obs (NCM_STATS_DIST (self->kde), sample);
+    ncm_stats_dist_add_obs (self->kde, sample);
   }
 
   printf ("# in_cut: %g\n", in_cut);
 
   self->cut_fraction = (gdouble) in_cut / (gdouble) (in_cut + out_cut);
 
-  ncm_stats_dist_prepare (NCM_STATS_DIST (self->kde));
+  ncm_stats_dist_prepare (self->kde);
 
   ncm_rng_clear (&rng);
   ncm_vector_clear (&sample);
@@ -785,7 +790,7 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
 
       if ((self->r_min <= r_i) && (r_i <= self->r_max))
       {
-        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
+        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (self->kde, data_vec);
 
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
@@ -808,7 +813,7 @@ nc_galaxy_wl_likelihood_kde_eval_m2lnP (NcGalaxyWLLikelihood *gwl, NcHICosmo *co
 
       if ((self->r_min <= r_i) && (r_i <= self->r_max))
       {
-        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (NCM_STATS_DIST (self->kde), data_vec);
+        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (self->kde, data_vec);
 
         in_cut++;
         res += m2lnP_gal_i;

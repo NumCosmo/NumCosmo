@@ -40,8 +40,10 @@ typedef struct _TestNcGalaxyWLLikelihood
 
 static void test_nc_galaxy_wl_likelihood_new_flat (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_likelihood_new_lsst_srd (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
-static void test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_likelihood_free (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+
+static void test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_likelihood_kde_cmp (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -57,9 +59,19 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_likelihood_fit,
               &test_nc_galaxy_wl_likelihood_free);
 
+  g_test_add ("/nc/galaxy_wl_likelihood/flat/kde_cmp", TestNcGalaxyWLLikelihood, NULL,
+              &test_nc_galaxy_wl_likelihood_new_flat,
+              &test_nc_galaxy_wl_likelihood_kde_cmp,
+              &test_nc_galaxy_wl_likelihood_free);
+
   g_test_add ("/nc/galaxy_wl_likelihood/lsst_srd/fit", TestNcGalaxyWLLikelihood, NULL,
               &test_nc_galaxy_wl_likelihood_new_lsst_srd,
               &test_nc_galaxy_wl_likelihood_fit,
+              &test_nc_galaxy_wl_likelihood_free);
+
+  g_test_add ("/nc/galaxy_wl_likelihood/lsst_srd/kde_cmp", TestNcGalaxyWLLikelihood, NULL,
+              &test_nc_galaxy_wl_likelihood_new_lsst_srd,
+              &test_nc_galaxy_wl_likelihood_kde_cmp,
               &test_nc_galaxy_wl_likelihood_free);
 
   g_test_run ();
@@ -126,8 +138,6 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   const guint ngals           = 200;
-  NcmVector *m2lnP_int_gal    = ncm_vector_new (ngals);
-  NcmVector *m2lnP_kde_gal    = ncm_vector_new (ngals);
   NcmMatrix *gal_obs          = NULL;
   const gdouble z_cluster     = 0.4;
 
@@ -184,6 +194,84 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
     nc_data_cluster_wll_free (data_wll);
     ncm_obj_array_unref (obs);
   }
+
+  ncm_rng_free (rng);
+  nc_hicosmo_free (cosmo);
+  nc_halo_density_profile_free (dp);
+  nc_distance_free (dist);
+  nc_wl_surface_mass_density_free (smd);
+}
+
+static void
+test_nc_galaxy_wl_likelihood_kde_cmp (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+{
+  NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcDistance *dist            = nc_distance_new (100.0);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  const guint ngals           = 1000;
+  NcmStatsVec *m2lnP_stats    = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
+  NcmVector *m2lnP_int_gal    = ncm_vector_new (ngals);
+  NcmVector *m2lnP_kde_gal    = ncm_vector_new (ngals);
+  NcmMatrix *gal_obs          = NULL;
+  const gdouble z_cluster     = 0.4;
+  NcmMatrix *obs;
+  guint i;
+
+  ncm_stats_vec_enable_quantile (m2lnP_stats, 0.5);
+
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+
+  nc_galaxy_wl_likelihood_gen_obs (test->gwl, cosmo, dp, smd, z_cluster, ngals, rng);
+  nc_galaxy_wl_likelihood_set_ndata (test->gwl, 1000);
+
+  obs = nc_galaxy_wl_likelihood_peek_obs (test->gwl);
+
+  nc_galaxy_wl_likelihood_eval_m2lnP (test->gwl, cosmo, dp, smd, z_cluster, obs, m2lnP_int_gal);
+  nc_galaxy_wl_likelihood_kde_eval_m2lnP (test->gwl, cosmo, dp, smd, z_cluster, obs, m2lnP_kde_gal);
+
+  for (i = 0; i < ngals; i++)
+  {
+    const gdouble m2lnP_int = ncm_vector_get (m2lnP_int_gal, i);
+    const gdouble m2lnP_kde = ncm_vector_get (m2lnP_kde_gal, i);
+
+    ncm_stats_vec_set (m2lnP_stats, 0, m2lnP_int);
+    ncm_stats_vec_set (m2lnP_stats, 1, m2lnP_kde);
+    ncm_stats_vec_set (m2lnP_stats, 2, m2lnP_int - m2lnP_kde);
+
+    ncm_stats_vec_update (m2lnP_stats);
+  }
+
+  {
+    const gdouble mean_diff = ncm_stats_vec_get_mean (m2lnP_stats, 2);
+
+    ncm_stats_vec_reset (m2lnP_stats, TRUE);
+
+    for (i = 0; i < ngals; i++)
+    {
+      const gdouble m2lnP_int = ncm_vector_get (m2lnP_int_gal, i) - mean_diff;
+      const gdouble m2lnP_kde = ncm_vector_get (m2lnP_kde_gal, i);
+
+      ncm_stats_vec_set (m2lnP_stats, 0, m2lnP_int);
+      ncm_stats_vec_set (m2lnP_stats, 1, m2lnP_kde);
+      ncm_stats_vec_set (m2lnP_stats, 2, fabs (m2lnP_int / m2lnP_kde - 1.0));
+
+      ncm_stats_vec_update (m2lnP_stats);
+    }
+  }
+
+  /*
+   *  printf ("mean: %g\n", ncm_stats_vec_get_mean (m2lnP_stats, 2));
+   *  printf ("sd: %g\n", ncm_stats_vec_get_sd (m2lnP_stats, 2));
+   *  printf ("q50: %g\n", ncm_stats_vec_get_quantile (m2lnP_stats, 2));
+   */
+  g_assert_cmpfloat (ncm_stats_vec_get_quantile (m2lnP_stats, 2), <, 0.1);
 
   ncm_vector_free (m2lnP_int_gal);
   ncm_vector_free (m2lnP_kde_gal);
