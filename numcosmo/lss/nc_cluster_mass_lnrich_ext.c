@@ -433,10 +433,14 @@ _nc_cluster_mass_lnrich_ext_lnR_sigma (NcClusterMass *clusterm, const gdouble ln
   NcClusterMassLnrichExt *lnrich_ext         = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  const gdouble Dz                       = z / self-> z0;
 
-  lnR[0]   = MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
-  sigma[0] = SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
+  // lnR[0]   = MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
+  lnR[0] = MU      + MU_M1    * DlnM + MU_Z1    * Dz + MU_M2    * DlnM * DlnM + MU_Z2    * Dz * Dz + MU_MZ    * DlnM * Dz;
+    
+  // sigma[0] = SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
+  sigma[0] = SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Dz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Dz * Dz ) + ( SIGMA_MZ * DlnM * Dz );
 }
 
 static gdouble
@@ -570,9 +574,13 @@ nc_cluster_mass_lnrich_ext_get_mean_richness (NcClusterMassLnrichExt *lnrich_ext
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  const gdouble Dz                       = z / self-> z0;
 
-  return MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
+
+  // return MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
+  
+  return MU      + MU_M1    * DlnM + MU_Z1    * Dz + MU_M2    * DlnM * DlnM + MU_Z2    * Dz * Dz + MU_MZ    * DlnM * Dz;
 }
 
 /**
@@ -589,9 +597,13 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  
+  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  const gdouble Dz                       = z / self-> z0;
 
-  return SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
+  // return SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
+    
+    return SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Dz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Dz * Dz ) + ( SIGMA_MZ * DlnM * Dz );
 }
 
 /**
