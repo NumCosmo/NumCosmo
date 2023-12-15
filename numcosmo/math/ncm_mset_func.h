@@ -73,6 +73,8 @@ gboolean ncm_mset_func_has_nvar (NcmMSetFunc *func, guint nvar);
 guint ncm_mset_func_get_nvar (NcmMSetFunc *func);
 guint ncm_mset_func_get_dim (NcmMSetFunc *func);
 
+void ncm_mset_func_set_meta (NcmMSetFunc *func, const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, const guint nvar, const guint dim);
+
 const gchar *ncm_mset_func_peek_name (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_symbol (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_ns (NcmMSetFunc *func);
@@ -86,3 +88,4 @@ void ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdou
 G_END_DECLS
 
 #endif /* _NCM_MSET_FUNC_H_ */
+

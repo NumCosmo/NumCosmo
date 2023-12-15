@@ -77,12 +77,6 @@ typedef struct _NcmMSetFuncPrivate
   NcmDiff *diff;
 } NcmMSetFuncPrivate;
 
-struct _NcmMSetFunc
-{
-  GObject parent_instance;
-};
-
-
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT)
 
 static void
@@ -612,6 +606,46 @@ ncm_mset_func_get_dim (NcmMSetFunc *func)
   NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
   return self->dim;
+}
+
+/**
+ * ncm_mset_func_set_meta:
+ * @func: a #NcmMSetFunc
+ * @name: function name
+ * @symbol: function symbol
+ * @ns: function namespace
+ * @desc: function description
+ * @nvar: number of variables
+ * @dim: function dimension
+ *
+ * Sets the function's metadata. This function is called by subclasses'
+ * to set the function's metadata. It should not be called by users.
+ *
+ */
+void
+ncm_mset_func_set_meta (NcmMSetFunc *func, const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, const guint nvar, const guint dim)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  g_clear_pointer (&self->name,   g_free);
+  g_clear_pointer (&self->symbol, g_free);
+  g_clear_pointer (&self->ns,     g_free);
+  g_clear_pointer (&self->desc,   g_free);
+
+  if (name != NULL)
+    self->name = g_strdup (name);
+
+  if (symbol != NULL)
+    self->symbol = g_strdup (symbol);
+
+  if (ns != NULL)
+    self->ns = g_strdup (ns);
+
+  if (desc != NULL)
+    self->desc = g_strdup (desc);
+
+  self->nvar = nvar;
+  self->dim  = dim;
 }
 
 /**

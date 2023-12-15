@@ -768,10 +768,10 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
       guint stepi          = (self->cur_sample_id + 1) % step;
       gboolean log_timeout = FALSE;
 
-      if ((self->nt->pos_time - self->nt->last_log_time) > 60.0)
+      if (ncm_timer_elapsed_since_last_log (self->nt) > 60.0)
         log_timeout = TRUE;
 
-      if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (self->nt))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (self->mcat);

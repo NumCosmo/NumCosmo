@@ -78,8 +78,8 @@ _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *
         g_assert (g_type_is_a (G_OBJECT_TYPE (flist->obj), flist->obj_type));
       else if (flist->obj_type != G_TYPE_NONE)
         g_error ("_ncm_mset_func_list_set_property: object %s:%s requires an object `%s'.",
-                 func->ns,
-                 func->name,
+                 ncm_mset_func_peek_ns (func),
+                 ncm_mset_func_peek_name (func),
                  g_type_name (flist->obj_type));
 
       break;
@@ -101,7 +101,9 @@ _ncm_mset_func_list_get_property (GObject *object, guint prop_id, GValue *value,
   {
     case PROP_FULL_NAME:
     {
-      gchar *ns_name = g_strdup_printf ("%s:%s", func->ns, func->name);
+      gchar *ns_name = g_strdup_printf ("%s:%s",
+                                        ncm_mset_func_peek_ns (func),
+                                        ncm_mset_func_peek_name (func));
 
       g_value_take_string (value, ns_name);
       break;
@@ -196,20 +198,10 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
       {
         NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, GPOINTER_TO_INT (fdata_i));
 
-        g_clear_pointer (&func->name, g_free);
-        g_clear_pointer (&func->symbol, g_free);
-        g_clear_pointer (&func->ns, g_free);
-        g_clear_pointer (&func->desc, g_free);
+        ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, fdata->dim);
 
-        func->name      = g_strdup (fdata->name);
-        func->symbol    = g_strdup (fdata->symbol);
-        func->ns        = g_strdup (fdata->ns);
-        func->desc      = g_strdup (fdata->desc);
         flist->obj_type = fdata->obj_type;
         flist->func     = fdata->func;
-
-        func->nvar = fdata->nvar;
-        func->dim  = fdata->dim;
       }
       else
       {

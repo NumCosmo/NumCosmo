@@ -1181,10 +1181,10 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
       guint stepi          = (self->cur_sample_id + 1) % step;
       gboolean log_timeout = FALSE;
 
-      if ((self->nt->pos_time - self->nt->last_log_time) > self->log_time_interval)
+      if (ncm_timer_elapsed_since_last_log (self->nt) > self->log_time_interval)
         log_timeout = ((self->cur_sample_id + 1) % self->nwalkers == 0);
 
-      if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (self->nt))
       {
         NcmVector *e_var = ncm_mset_catalog_peek_current_e_var (self->mcat);
 
