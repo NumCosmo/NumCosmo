@@ -487,7 +487,7 @@ ncm_vector_ref (NcmVector *cv)
 const NcmVector *
 ncm_vector_const_ref (const NcmVector *cv)
 {
-  return g_object_ref (NCM_VECTOR (cv));
+  return g_object_ref (NCM_VECTOR ((NcmVector *) cv));
 }
 
 /**
@@ -502,9 +502,9 @@ ncm_vector_const_ref (const NcmVector *cv)
 const NcmVector *
 ncm_vector_const_new_variant (GVariant *var)
 {
-  gsize n             = g_variant_n_children (var);
-  gconstpointer data  = g_variant_get_data (var);
-  const NcmVector *cv = ncm_vector_const_new_data (data, n, 1);
+  gsize n            = g_variant_n_children (var);
+  gconstpointer data = g_variant_get_data (var);
+  NcmVector *cv      = (NcmVector *) ncm_vector_const_new_data (data, n, 1);
 
   NCM_VECTOR (cv)->pdata = g_variant_ref_sink (var);
   NCM_VECTOR (cv)->pfree = (GDestroyNotify) & g_variant_unref;
@@ -537,7 +537,7 @@ ncm_vector_free (NcmVector *cv)
 void
 ncm_vector_const_free (const NcmVector *cv)
 {
-  ncm_vector_free (NCM_VECTOR (cv));
+  ncm_vector_free (NCM_VECTOR ((NcmVector *) cv));
 }
 
 /**
@@ -740,7 +740,7 @@ ncm_vector_peek_variant (const NcmVector *cv)
                                                   sizeof (gdouble) * n,
                                                   TRUE,
                                                   (GDestroyNotify) & ncm_vector_const_free,
-                                                  NCM_VECTOR (ncm_vector_const_ref (cv)));
+                                                  NCM_VECTOR ((NcmVector *) ncm_vector_const_ref (cv)));
 
     return g_variant_ref_sink (vvar);
   }

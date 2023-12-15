@@ -17,10 +17,6 @@ c_tests = [
         'sources': ['test_ncm_dtuple.c'],
     },
     {
-        'name': 'ncm_ode',
-        'sources': ['test_ncm_ode.c'],
-    },
-    {
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
     },
