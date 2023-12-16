@@ -33,34 +33,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_VPARAM             (ncm_vparam_get_type ())
-#define NCM_VPARAM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_VPARAM, NcmVParam))
-#define NCM_VPARAM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_VPARAM, NcmVParamClass))
-#define NCM_IS_VPARAM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_VPARAM))
-#define NCM_IS_VPARAM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_VPARAM))
-#define NCM_VPARAM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_VPARAM, NcmVParamClass))
+#define NCM_TYPE_VPARAM (ncm_vparam_get_type ())
 
-typedef struct _NcmVParamClass NcmVParamClass;
-typedef struct _NcmVParam NcmVParam;
+G_DECLARE_FINAL_TYPE (NcmVParam, ncm_vparam, NCM, VPARAM, GObject)
 
-struct _NcmVParamClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmVParam
-{
-  /*< private >*/
-  GObject parent_instance;
-  guint len;
-  NcmSParam *default_sparam;
-  GPtrArray *sparam;
-};
-
-GType ncm_vparam_get_type (void) G_GNUC_CONST;
-
-NcmVParam *ncm_vparam_new (guint len, NcmSParam *default_param);
+NcmVParam *ncm_vparam_new (guint len, NcmSParam * default_param);
 NcmVParam *ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmVParam *ncm_vparam_ref (NcmVParam *vparam);
 NcmVParam *ncm_vparam_copy (NcmVParam *vparam);
@@ -96,3 +73,4 @@ guint ncm_vparam_len (const NcmVParam *vparam);
 G_END_DECLS
 
 #endif /* _NCM_VPARAM_H_ */
+
