@@ -33,31 +33,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_PRIOR_GAUSS_PARAM             (ncm_prior_gauss_param_get_type ())
-#define NCM_PRIOR_GAUSS_PARAM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_PRIOR_GAUSS_PARAM, NcmPriorGaussParam))
-#define NCM_PRIOR_GAUSS_PARAM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_PRIOR_GAUSS_PARAM, NcmPriorGaussParamClass))
-#define NCM_IS_PRIOR_GAUSS_PARAM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_PRIOR_GAUSS_PARAM))
-#define NCM_IS_PRIOR_GAUSS_PARAM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_PRIOR_GAUSS_PARAM))
-#define NCM_PRIOR_GAUSS_PARAM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_PRIOR_GAUSS_PARAM, NcmPriorGaussParamClass))
+#define NCM_TYPE_PRIOR_GAUSS_PARAM (ncm_prior_gauss_param_get_type ())
 
-typedef struct _NcmPriorGaussParamClass NcmPriorGaussParamClass;
-typedef struct _NcmPriorGaussParam NcmPriorGaussParam;
-
-struct _NcmPriorGaussParamClass
-{
-  /*< private >*/
-  NcmPriorGaussClass parent_class;
-};
-
-struct _NcmPriorGaussParam
-{
-  /*< private >*/
-  NcmPriorGauss parent_instance;
-  NcmModelID mid;
-  guint pid;
-};
-
-GType ncm_prior_gauss_param_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM, PRIOR_GAUSS_PARAM, NcmPriorGauss)
 
 NcmPriorGaussParam *ncm_prior_gauss_param_new (NcmModelID mid, guint pid, gdouble mu, gdouble sigma);
 NcmPriorGaussParam *ncm_prior_gauss_param_new_pindex (const NcmMSetPIndex *pi, gdouble mu, gdouble sigma);

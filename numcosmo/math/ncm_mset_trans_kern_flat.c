@@ -129,7 +129,7 @@ _ncm_mset_trans_kern_flat_generate (NcmMSetTransKern *tkern, NcmVector *theta, N
   {
     const gdouble lb  = ncm_mset_fparam_get_lower_bound (tkern->mset, i);
     const gdouble ub  = ncm_mset_fparam_get_upper_bound (tkern->mset, i);
-    const gdouble val = lb + (ub - lb) * gsl_rng_uniform_pos (rng->r);
+    const gdouble val = lb + (ub - lb) * ncm_rng_uniform01_pos_gen (rng);
 
     ncm_vector_set (thetastar, i, val);
   }

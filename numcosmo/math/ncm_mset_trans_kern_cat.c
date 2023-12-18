@@ -329,7 +329,7 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
 
   while (++iter < max_iter)
   {
-    gulong i        = gsl_rng_uniform_int (rng->r, cat_len);
+    gulong i        = ncm_rng_uniform_int_gen (rng, cat_len);
     NcmVector *row  = ncm_mset_catalog_peek_row (self->mcat, i);
     gdouble m2lnL_i = ncm_vector_get (row, m2lnL_index);
 

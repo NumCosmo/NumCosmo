@@ -332,7 +332,7 @@ _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_dec
 
   for (i = 0; i < pself->d; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (x, i, u_i * href);
   }

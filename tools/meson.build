@@ -9,14 +9,6 @@ executable(
 )
 
 executable(
-    'gobj_itest',
-    'gobj_itest.c',
-    install: true,
-    include_directories: configinc,
-    dependencies: [libnumcosmo_dep],
-)
-
-executable(
     'mcat_analyze',
     'mcat_analyze.c',
     install: true,

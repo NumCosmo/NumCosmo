@@ -1862,7 +1862,7 @@ _ncm_fit_esmcmc_get_jumps (NcmFitESMCMC *esmcmc, guint ki, guint kf)
 
   for (k = ki; k < kf; k++)
   {
-    const gdouble jump = gsl_rng_uniform (rng->r);
+    const gdouble jump = ncm_rng_uniform01_gen (rng);
 
     ncm_vector_set (self->jumps, k, jump);
   }

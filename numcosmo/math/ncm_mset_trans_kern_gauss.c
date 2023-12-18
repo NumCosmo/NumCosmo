@@ -216,7 +216,7 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
 
     for (i = 0; i < tkerng->len; i++)
     {
-      const gdouble u_i = gsl_ran_ugaussian (rng->r);
+      const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
       ncm_vector_set (thetastar, i, u_i);
     }

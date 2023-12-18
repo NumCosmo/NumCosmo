@@ -47,6 +47,14 @@ enum
   PROP_MEAN_FUNC,
 };
 
+struct _NcmPriorGaussFunc
+{
+  /*< private >*/
+  NcmPriorGauss parent_instance;
+  NcmMSetFunc *mean_func;
+};
+
+
 G_DEFINE_TYPE (NcmPriorGaussFunc, ncm_prior_gauss_func, NCM_TYPE_PRIOR_GAUSS)
 
 static void
@@ -141,8 +149,9 @@ static gdouble
 _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
 {
   NcmPriorGaussFunc *pgf = NCM_PRIOR_GAUSS_FUNC (pg);
+  const gdouble var      = ncm_prior_gauss_get_var (pg);
 
-  return ncm_mset_func_eval1 (pgf->mean_func, mset, pg->var);
+  return ncm_mset_func_eval1 (pgf->mean_func, mset, var);
 }
 
 /**

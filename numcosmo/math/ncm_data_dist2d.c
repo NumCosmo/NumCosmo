@@ -250,8 +250,8 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   {
     gdouble x_i;
     gdouble y_i;
-    const gdouble u_i = gsl_rng_uniform (rng->r);
-    const gdouble v_i = gsl_rng_uniform (rng->r);
+    const gdouble u_i = ncm_rng_uniform01_gen (rng);
+    const gdouble v_i = ncm_rng_uniform01_gen (rng);
 
     dist2d_class->inv_pdf (dist2d, mset, u_i, v_i, &x_i, &y_i);
     ncm_matrix_set (self->m, i, 0, x_i);

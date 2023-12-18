@@ -28,7 +28,7 @@
  * @short_description: Quaternions algebra, three-vectors and mapping to matrix.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,13 +58,14 @@ NcmTriVec *
 ncm_trivec_new (void)
 {
   NcmTriVec *v = g_new0 (NcmTriVec, 1);
+
   return v;
 }
 
 /**
  * ncm_trivec_new_full: (constructor)
  * @c: components
- * 
+ *
  * FIXME
  *
  * Returns: (transfer full): FIXME
@@ -73,7 +74,9 @@ NcmTriVec *
 ncm_trivec_new_full (const gdouble c[3])
 {
   NcmTriVec *v = g_new0 (NcmTriVec, 1);
+
   memcpy (v->c, c, sizeof (gdouble) * 3);
+
   return v;
 }
 
@@ -82,7 +85,7 @@ ncm_trivec_new_full (const gdouble c[3])
  * @x: x-component
  * @y: y-component
  * @z: z-component
- * 
+ *
  * FIXME
  *
  * Returns: (transfer full): FIXME
@@ -95,14 +98,14 @@ ncm_trivec_new_full_c (const gdouble x, const gdouble y, const gdouble z)
   v->c[0] = x;
   v->c[1] = y;
   v->c[2] = z;
-  
+
   return v;
 }
 
 /**
  * ncm_trivec_dup:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
  *
  * Returns: (transfer full): FIXME
@@ -111,18 +114,20 @@ NcmTriVec *
 ncm_trivec_dup (NcmTriVec *v)
 {
   NcmTriVec *cv = ncm_trivec_new ();
+
   ncm_trivec_memcpy (cv, v);
+
   return cv;
 }
 
 /**
  * ncm_trivec_free:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
  *
  */
-void 
+void
 ncm_trivec_free (NcmTriVec *v)
 {
   g_free (v);
@@ -132,11 +137,11 @@ ncm_trivec_free (NcmTriVec *v)
  * ncm_trivec_memcpy:
  * @dest: a #NcmTriVec
  * @orig: a #NcmTriVec
- * 
+ *
  * FIXME
  *
  */
-void 
+void
 ncm_trivec_memcpy (NcmTriVec *dest, const NcmTriVec *orig)
 {
   memcpy (dest, orig, sizeof (NcmTriVec));
@@ -145,11 +150,11 @@ ncm_trivec_memcpy (NcmTriVec *dest, const NcmTriVec *orig)
 /**
  * ncm_trivec_set_0:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
  *
  */
-void 
+void
 ncm_trivec_set_0 (NcmTriVec *v)
 {
   memset (v, 0, sizeof (NcmTriVec));
@@ -159,11 +164,11 @@ ncm_trivec_set_0 (NcmTriVec *v)
  * ncm_trivec_scale:
  * @v: a #NcmTriVec
  * @scale: FIXME
- * 
+ *
  * FIXME
  *
  */
-void 
+void
 ncm_trivec_scale (NcmTriVec *v, const gdouble scale)
 {
   v->c[0] *= scale;
@@ -174,9 +179,9 @@ ncm_trivec_scale (NcmTriVec *v, const gdouble scale)
 /**
  * ncm_trivec_norm:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -189,9 +194,9 @@ ncm_trivec_norm (NcmTriVec *v)
  * ncm_trivec_dot:
  * @v1: a #NcmTriVec
  * @v2: a #NcmTriVec
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -203,9 +208,9 @@ ncm_trivec_dot (const NcmTriVec *v1, const NcmTriVec *v2)
 /**
  * ncm_trivec_normalize:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
- * 
+ *
  */
 void
 ncm_trivec_normalize (NcmTriVec *v)
@@ -216,12 +221,12 @@ ncm_trivec_normalize (NcmTriVec *v)
 /**
  * ncm_trivec_get_phi:
  * @v: a #NcmTriVec
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
-gdouble 
+gdouble
 ncm_trivec_get_phi (NcmTriVec *v)
 {
   return atan2 (v->c[1], v->c[0]);
@@ -233,11 +238,11 @@ ncm_trivec_get_phi (NcmTriVec *v)
  * @r: FIXME
  * @theta: FIXME
  * @phi: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
-void 
+void
 ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble phi)
 {
   v->c[0] = r * sin (theta) * cos (phi);
@@ -250,14 +255,15 @@ ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble 
  * @v: a #NcmTriVec
  * @theta: (out): FIXME
  * @phi: (out): FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
-void 
+void
 ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *theta, gdouble *phi)
 {
   const gdouble norm = ncm_trivec_norm (v);
+
   theta[0] = acos (v->c[2] / norm);
   phi[0]   = ncm_trivec_get_phi (v);
 }
@@ -273,6 +279,7 @@ NcmQuaternion *
 ncm_quaternion_new (void)
 {
   NcmQuaternion *q = (NcmQuaternion *) g_new0 (NcmQuaternion, 1);
+
   return q;
 }
 
@@ -283,13 +290,15 @@ ncm_quaternion_new (void)
  * FIXME
  *
  * Returns: (transfer full): FIXME
-*/
+ */
 NcmQuaternion *
 ncm_quaternion_new_from_vector (NcmTriVec *v)
 {
   NcmQuaternion *q = ncm_quaternion_new ();
+
   ncm_trivec_memcpy (&q->v, v);
   q->s = 0.0;
+
   return q;
 }
 
@@ -308,8 +317,8 @@ NcmQuaternion *
 ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
 {
   NcmQuaternion *q = ncm_quaternion_new ();
-  
-  theta /= 2.0;
+
+  theta    /= 2.0;
   q->v.c[0] = x;
   q->v.c[1] = y;
   q->v.c[2] = z;
@@ -317,7 +326,7 @@ ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
   ncm_trivec_normalize (&q->v);
   ncm_trivec_scale (&q->v, sin (theta));
   q->s = cos (theta);
-  
+
   return q;
 }
 
@@ -326,15 +335,16 @@ ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
  * @q: a #NcmQuaternion
  *
  * FIXME
- * 
+ *
  * Returns: (transfer full): FIXME
  */
 NcmQuaternion *
 ncm_quaternion_dup (NcmQuaternion *q)
 {
   NcmQuaternion *cq = ncm_quaternion_new ();
+
   ncm_quaternion_memcpy (cq, q);
-  
+
   return cq;
 }
 
@@ -343,7 +353,7 @@ ncm_quaternion_dup (NcmQuaternion *q)
  * @q: a #NcmQuaternion
  *
  * FIXME
- * 
+ *
  */
 void
 ncm_quaternion_free (NcmQuaternion *q)
@@ -378,15 +388,15 @@ ncm_quaternion_memcpy (NcmQuaternion *dest, const NcmQuaternion *orig)
 void
 ncm_quaternion_set_from_data (NcmQuaternion *q, gdouble x, gdouble y, gdouble z, gdouble theta)
 {
-  theta /= 2.0;
+  theta    /= 2.0;
   q->v.c[0] = x;
   q->v.c[1] = y;
   q->v.c[2] = z;
 
   ncm_trivec_normalize (&q->v);
   ncm_trivec_scale (&q->v, sin (theta));
-  
-  q->s = cos(theta);
+
+  q->s = cos (theta);
 }
 
 /**
@@ -396,7 +406,7 @@ ncm_quaternion_set_from_data (NcmQuaternion *q, gdouble x, gdouble y, gdouble z,
  * FIXME
  *
  */
-void 
+void
 ncm_quaternion_set_I (NcmQuaternion *q)
 {
   q->s = 1.0;
@@ -410,7 +420,7 @@ ncm_quaternion_set_I (NcmQuaternion *q)
  * FIXME
  *
  */
-void 
+void
 ncm_quaternion_set_0 (NcmQuaternion *q)
 {
   q->s = 0.0;
@@ -425,10 +435,10 @@ ncm_quaternion_set_0 (NcmQuaternion *q)
  *
  * Returns: FIXME
  */
-gdouble 
+gdouble
 ncm_quaternion_norm (NcmQuaternion *q)
 {
-  return sqrt (q->s * q->s + q->v.c[0] * q->v.c[0] + q->v.c[1] * q->v.c[1] + q->v.c[2] * q->v.c[2]); 
+  return sqrt (q->s * q->s + q->v.c[0] * q->v.c[0] + q->v.c[1] * q->v.c[1] + q->v.c[2] * q->v.c[2]);
 }
 
 /**
@@ -444,12 +454,12 @@ ncm_quaternion_set_random (NcmQuaternion *q, NcmRNG *rng)
 {
   ncm_rng_lock (rng);
   ncm_quaternion_set_from_data (q,
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
-                                 2.0 * M_PI * gsl_rng_uniform (rng->r));
+                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
+                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
+                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
+                                2.0 * M_PI * ncm_rng_uniform01_gen (rng));
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);   
+  ncm_rng_free (rng);
 }
 
 /**
@@ -464,7 +474,7 @@ ncm_quaternion_normalize (NcmQuaternion *q)
 {
   const gdouble norm = ncm_quaternion_norm (q);
 
-  q->s /= norm;
+  q->s      /= norm;
   q->v.c[0] /= norm;
   q->v.c[1] /= norm;
   q->v.c[2] /= norm;
@@ -495,7 +505,7 @@ ncm_quaternion_conjugate (NcmQuaternion *q)
 void
 ncm_quaternion_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
 {
-  res->s = q->s * u->s - ncm_trivec_dot (&q->v, &u->v);
+  res->s      = q->s * u->s - ncm_trivec_dot (&q->v, &u->v);
   res->v.c[0] = q->s * u->v.c[0] + u->s * q->v.c[0] + q->v.c[1] * u->v.c[2] - q->v.c[2] * u->v.c[1];
   res->v.c[1] = q->s * u->v.c[1] + u->s * q->v.c[1] + q->v.c[2] * u->v.c[0] - q->v.c[0] * u->v.c[2];
   res->v.c[2] = q->s * u->v.c[2] + u->s * q->v.c[2] + q->v.c[0] * u->v.c[1] - q->v.c[1] * u->v.c[0];
@@ -547,7 +557,7 @@ ncm_quaternion_rmul (NcmQuaternion *q, NcmQuaternion *u)
 void
 ncm_quaternion_conjugate_q_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
 {
-  res->s = q->s * u->s + ncm_trivec_dot (&q->v, &u->v);
+  res->s      = q->s * u->s + ncm_trivec_dot (&q->v, &u->v);
   res->v.c[0] = q->s * u->v.c[0] - u->s * q->v.c[0] - q->v.c[1] * u->v.c[2] + q->v.c[2] * u->v.c[1];
   res->v.c[1] = q->s * u->v.c[1] - u->s * q->v.c[1] - q->v.c[2] * u->v.c[0] + q->v.c[0] * u->v.c[2];
   res->v.c[2] = q->s * u->v.c[2] - u->s * q->v.c[2] - q->v.c[0] * u->v.c[1] + q->v.c[1] * u->v.c[0];
@@ -565,10 +575,10 @@ ncm_quaternion_conjugate_q_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternio
 void
 ncm_quaternion_conjugate_u_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
 {
-  res->s = q->s * u->s + ncm_trivec_dot (&q->v, &u->v);
-  res->v.c[0] = - q->s * u->v.c[0] + u->s * q->v.c[0] - q->v.c[1] * u->v.c[2] + q->v.c[2] * u->v.c[1];
-  res->v.c[1] = - q->s * u->v.c[1] + u->s * q->v.c[1] - q->v.c[2] * u->v.c[0] + q->v.c[0] * u->v.c[2];
-  res->v.c[2] = - q->s * u->v.c[2] + u->s * q->v.c[2] - q->v.c[0] * u->v.c[1] + q->v.c[1] * u->v.c[0];
+  res->s      = q->s * u->s + ncm_trivec_dot (&q->v, &u->v);
+  res->v.c[0] = -q->s * u->v.c[0] + u->s * q->v.c[0] - q->v.c[1] * u->v.c[2] + q->v.c[2] * u->v.c[1];
+  res->v.c[1] = -q->s * u->v.c[1] + u->s * q->v.c[1] - q->v.c[2] * u->v.c[0] + q->v.c[0] * u->v.c[2];
+  res->v.c[2] = -q->s * u->v.c[2] + u->s * q->v.c[2] - q->v.c[0] * u->v.c[1] + q->v.c[1] * u->v.c[0];
 }
 
 /**
@@ -586,7 +596,7 @@ ncm_quaternion_rotate (NcmQuaternion *q, NcmTriVec *v)
   NcmQuaternion t;
 
   ncm_trivec_memcpy (&qv.v, v);
-  
+
   ncm_quaternion_mul (q, &qv, &t);
   ncm_quaternion_conjugate_u_mul (&t, q, &qv);
 
@@ -606,7 +616,7 @@ ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v)
 {
   NcmQuaternion qv = NCM_QUATERNION_INIT;
   NcmQuaternion t;
-  
+
   ncm_trivec_memcpy (&qv.v, v);
 
   ncm_quaternion_mul (&qv, q, &t);
@@ -614,3 +624,4 @@ ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v)
 
   ncm_trivec_memcpy (v, &qv.v);
 }
+

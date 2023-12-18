@@ -774,7 +774,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 
     if (prob != 1.0)
     {
-      jump = gsl_rng_uniform (rng->r);
+      jump = ncm_rng_uniform01_gen (rng);
 
       if (jump > prob)
       {

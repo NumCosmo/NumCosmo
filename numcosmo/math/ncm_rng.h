@@ -37,15 +37,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_RNG             (ncm_rng_get_type ())
-#define NCM_RNG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_RNG, NcmRNG))
-#define NCM_RNG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_RNG, NcmRNGClass))
-#define NCM_IS_RNG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_RNG))
-#define NCM_IS_RNG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_RNG))
-#define NCM_RNG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_RNG, NcmRNGClass))
+#define NCM_TYPE_RNG (ncm_rng_get_type ())
+#define NCM_TYPE_RNG_DISCRETE (ncm_rng_discrete_get_type ())
 
-typedef struct _NcmRNGClass NcmRNGClass;
-typedef struct _NcmRNG NcmRNG;
+G_DECLARE_DERIVABLE_TYPE (NcmRNG, ncm_rng, NCM, RNG, GObject)
+typedef struct _NcmRNGDiscrete NcmRNGDiscrete;
 
 struct _NcmRNGClass
 {
@@ -53,19 +49,16 @@ struct _NcmRNGClass
   GObjectClass parent_class;
   GRand *seed_gen;
   GHashTable *seed_hash;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[16];
 };
 
-struct _NcmRNG
-{
-  /*< private >*/
-  GObject parent_instance;
-  gsl_rng *r;
-  gulong seed_val;
-  gboolean seed_set;
-  GMutex lock;
-};
+GType ncm_rng_discrete_get_type (void) G_GNUC_CONST;
 
-GType ncm_rng_get_type (void) G_GNUC_CONST;
+NcmRNGDiscrete *ncm_rng_discrete_new (const gdouble *weights, const guint n);
+NcmRNGDiscrete *ncm_rng_discrete_copy (NcmRNGDiscrete *rng);
+void ncm_rng_discrete_free (NcmRNGDiscrete *rng);
 
 NcmRNG *ncm_rng_new (const gchar *algo);
 NcmRNG *ncm_rng_seeded_new (const gchar *algo, gulong seed);
@@ -89,91 +82,29 @@ void ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions);
 
 NcmRNG *ncm_rng_pool_get (const gchar *name);
 
-NCM_INLINE gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu);
-NCM_INLINE gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma);
-NCM_INLINE gdouble ncm_rng_ugaussian_gen (NcmRNG *rng);
-NCM_INLINE gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma);
-NCM_INLINE gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu);
-NCM_INLINE gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
-NCM_INLINE gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
-NCM_INLINE gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
-NCM_INLINE gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
-NCM_INLINE gdouble ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu);
+gulong ncm_rng_gen_ulong (NcmRNG *rng);
+gulong ncm_rng_uniform_int_gen (NcmRNG *rng, gulong n);
+gdouble ncm_rng_uniform01_gen (NcmRNG *rng);
+gdouble ncm_rng_uniform01_pos_gen (NcmRNG *rng);
+gdouble ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu);
+gdouble ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma);
+gdouble ncm_rng_ugaussian_gen (NcmRNG *rng);
+gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma);
+gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu);
+gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
+gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+gdouble ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu);
+gdouble ncm_rng_poisson_gen (NcmRNG *rng, const gdouble mu);
+gdouble ncm_rng_rayleigh_gen (NcmRNG *rng, const gdouble sigma);
+gsize ncm_rng_discrete_gen (NcmRNG *rng, NcmRNGDiscrete *rng_discrete);
+void ncm_rng_sample (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size);
+void ncm_rng_choose (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size);
+void ncm_rng_multinomial (NcmRNG *rng, gsize K, guint N, const gdouble *p, guint *n);
+void ncm_rng_bivariate_gaussian_gen (NcmRNG *rng, const gdouble sigma_x, const gdouble sigma_y, const gdouble rho, gdouble *x, gdouble *y);
 
 G_END_DECLS
 
 #endif /* _NCM_RNG_H_ */
-
-#ifndef _NCM_RNG_INLINE_H_
-#define _NCM_RNG_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE gdouble
-ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)
-{
-  return gsl_ran_flat (rng->r, xl, xu);
-}
-
-NCM_INLINE gdouble
-ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)
-{
-  return gsl_ran_gaussian (rng->r, sigma) + mu;
-}
-
-NCM_INLINE gdouble
-ncm_rng_ugaussian_gen (NcmRNG *rng)
-{
-  return gsl_ran_ugaussian (rng->r);
-}
-
-NCM_INLINE gdouble
-ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma)
-{
-  return gsl_ran_gaussian_tail (rng->r, a, sigma);
-}
-
-NCM_INLINE gdouble
-ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)
-{
-  return gsl_ran_exponential (rng->r, mu);
-}
-
-NCM_INLINE gdouble
-ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)
-{
-  return gsl_ran_laplace (rng->r, a);
-}
-
-NCM_INLINE gdouble
-ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)
-{
-  return gsl_ran_exppow (rng->r, a, b);
-}
-
-NCM_INLINE gdouble
-ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)
-{
-  return gsl_ran_beta (rng->r, a, b);
-}
-
-NCM_INLINE gdouble
-ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)
-{
-  return gsl_ran_gamma (rng->r, a, b);
-}
-
-NCM_INLINE gdouble
-ncm_rng_chisq_gen(NcmRNG *rng, const gdouble nu)
-{
-  return gsl_ran_chisq(rng->r, nu);
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_RNG_INLINE_H_ */
 

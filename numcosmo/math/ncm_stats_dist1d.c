@@ -545,7 +545,7 @@ ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
 gdouble
 ncm_stats_dist1d_gen (NcmStatsDist1d *sd1, NcmRNG *rng)
 {
-  const gdouble u = gsl_rng_uniform (rng->r);
+  const gdouble u = ncm_rng_uniform01_gen (rng);
 
   return ncm_stats_dist1d_eval_inv_pdf (sd1, u);
 }

@@ -994,7 +994,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);
   lhr2d->shift[0]  = 0.0;
   lhr2d->shift[1]  = 0.0;
-  lhr2d->theta     = gsl_rng_uniform (lhr2d->rng->r) * 2.0 * M_PI;
+  lhr2d->theta     = ncm_rng_uniform01_gen (lhr2d->rng) * 2.0 * M_PI;
 
   switch (lhr2d->rtype)
   {

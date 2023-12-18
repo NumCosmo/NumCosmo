@@ -56,6 +56,14 @@ enum
   PROP_PID
 };
 
+struct _NcmPriorFlatParam
+{
+  /*< private >*/
+  NcmPriorFlat parent_instance;
+  NcmModelID mid;
+  guint pid;
+};
+
 G_DEFINE_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM_TYPE_PRIOR_FLAT)
 
 static void

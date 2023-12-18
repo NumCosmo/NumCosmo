@@ -2283,7 +2283,7 @@ ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng)
 
   for (i = 0; i < self->npix; i++)
   {
-    const gdouble n_i = gsl_ran_gaussian (rng->r, sd);
+    const gdouble n_i = ncm_rng_gaussian_gen (rng, 0.0, sd);
 
     _fft_vec_idx (self->pvec, i) += n_i;
   }

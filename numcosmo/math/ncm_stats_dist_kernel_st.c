@@ -384,7 +384,7 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
 
   for (i = 0; i < pself->d; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (x, i, u_i * href);
   }
@@ -394,7 +394,7 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
                         ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_st_sample", ret);
 
-  chi_scale = sqrt (self->nu / gsl_ran_chisq (rng->r, self->nu));
+  chi_scale = sqrt (self->nu / ncm_rng_chisq_gen (rng, self->nu));
 
   ncm_vector_scale (x, chi_scale);
   ncm_vector_add (x, mu);

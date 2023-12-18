@@ -246,7 +246,7 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (i = 0; i < self->np; i++)
   {
-    const gdouble u_i = gsl_rng_uniform (rng->r);
+    const gdouble u_i = ncm_rng_uniform01_gen (rng);
     const gdouble x_i = dist1d_class->inv_pdf (dist1d, mset, u_i);
 
     ncm_vector_set (self->x, i, x_i);
