@@ -2076,7 +2076,7 @@ _nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
   {
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
-  res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (flist->obj));
+  res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (ncm_mset_func_list_peek_obj (flist)));
   }
 
 #define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \

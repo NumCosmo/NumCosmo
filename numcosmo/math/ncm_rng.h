@@ -31,10 +31,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_randist.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_RNG (ncm_rng_get_type ())

@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_sphere_map.h
  *
@@ -40,22 +41,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPHERE_MAP             (ncm_sphere_map_get_type ())
-#define NCM_SPHERE_MAP(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPHERE_MAP, NcmSphereMap))
-#define NCM_SPHERE_MAP_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPHERE_MAP, NcmSphereMapClass))
-#define NCM_IS_SPHERE_MAP(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPHERE_MAP))
-#define NCM_IS_SPHERE_MAP_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPHERE_MAP))
-#define NCM_SPHERE_MAP_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPHERE_MAP, NcmSphereMapClass))
+#define NCM_TYPE_SPHERE_MAP (ncm_sphere_map_get_type ())
 
-typedef struct _NcmSphereMapClass NcmSphereMapClass;
-typedef struct _NcmSphereMap NcmSphereMap;
-typedef struct _NcmSphereMapPrivate NcmSphereMapPrivate;
-
-struct _NcmSphereMapClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmSphereMap, ncm_sphere_map, NCM, SPHERE_MAP, GObject)
 
 /**
  * NcmSphereMapOrder:
@@ -90,15 +78,6 @@ typedef enum _NcmSphereMapCoordSys
   /* < private > */
   NCM_SPHERE_MAP_COORD_SYS_LEN, /*< skip >*/
 } NcmSphereMapCoordSys;
-
-struct _NcmSphereMap
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmSphereMapPrivate *priv;
-};
-
-GType ncm_sphere_map_get_type (void) G_GNUC_CONST;
 
 NcmSphereMap *ncm_sphere_map_new (const gint64 nside);
 NcmSphereMap *ncm_sphere_map_ref (NcmSphereMap *smap);
@@ -168,27 +147,27 @@ NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 
 #define NCM_SPHERE_MAP_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_INT_TO_XY(i, x, y) \
-  G_STMT_START { \
-    gint shift = 0, shifted = i; \
-    x          = y = 0; \
-    do { \
-      x |= ((shifted & 1) << shift); \
-      y |= (((shifted & 2) >> 1) << shift); \
-      shift++; \
-    } while (shifted >>= 2); \
-  } G_STMT_END
+        G_STMT_START { \
+          gint shift = 0, shifted = i; \
+          x = y = 0; \
+          do { \
+            x |= ((shifted & 1) << shift); \
+            y |= (((shifted & 2) >> 1) << shift); \
+            shift++; \
+          } while (shifted >>= 2); \
+        } G_STMT_END
 
 #define NCM_SPHERE_MAP_XY_TO_INT(x, y, i) \
-  G_STMT_START { \
-    gint shift = 0, shifted_x = x, shifted_y = y; \
-    g_assert (shifted_x >= 0 && shifted_y >= 0); \
-    i = 0; \
-    do { \
-      i     |= ((shifted_x & 1) << (shift + 0)); \
-      i     |= ((shifted_y & 1) << (shift + 1)); \
-      shift += 2; shifted_x >>= 1; shifted_y >>= 1; \
-    } while (shifted_x || shifted_y); \
-  } G_STMT_END
+        G_STMT_START { \
+          gint shift = 0, shifted_x = x, shifted_y = y; \
+          g_assert (shifted_x >= 0 && shifted_y >= 0); \
+          i = 0; \
+          do { \
+            i     |= ((shifted_x & 1) << (shift + 0)); \
+            i     |= ((shifted_y & 1) << (shift + 1)); \
+            shift += 2; shifted_x >>= 1; shifted_y >>= 1; \
+          } while (shifted_x || shifted_y); \
+        } G_STMT_END
 
 #define NCM_SPHERE_MAP_HEALPIX_NULLVAL (-1.6375e30)
 #define NCM_SPHERE_MAP_DEFAULT_SIGNAL "SIGNAL"

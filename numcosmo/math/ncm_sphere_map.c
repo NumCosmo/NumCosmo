@@ -127,7 +127,7 @@
 #define NCM_SPHERE_MAP_BLOCK_DEC(name) NCM_SPHERE_MAP_BLOCK_DEC_X (name, NCM_SPHERE_MAP_BLOCK_STEP, NCM_SPHERE_MAP_BLOCK_NC)
 #define NCM_SPHERE_MAP_BLOCK_INV_DEC(name) NCM_SPHERE_MAP_BLOCK_DEC_X (name, NCM_SPHERE_MAP_BLOCK_INV_STEP, NCM_SPHERE_MAP_BLOCK_INV_NC)
 
-struct _NcmSphereMapPrivate
+typedef struct _NcmSphereMapPrivate
 {
   gint64 nside;
   gint64 npix;
@@ -157,7 +157,7 @@ struct _NcmSphereMapPrivate
   GPtrArray *sphaY_array;
   GPtrArray *sphaYa_array;
   GArray *block_data;
-};
+} NcmSphereMapPrivate;
 
 typedef struct _NcmSphereMapBlock
 {
@@ -177,12 +177,17 @@ enum
   PROP_LMAX,
 };
 
+struct _NcmSphereMap
+{
+  GObject parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT)
 
 static void
 ncm_sphere_map_init (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv = ncm_sphere_map_get_instance_private (smap);
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   self->nside             = 0;
   self->npix              = 0;
@@ -255,7 +260,7 @@ static void
 _ncm_sphere_map_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmSphereMap *smap               = NCM_SPHERE_MAP (object);
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   g_return_if_fail (NCM_IS_SPHERE_MAP (object));
 
@@ -283,7 +288,7 @@ static void
 _ncm_sphere_map_dispose (GObject *object)
 {
   NcmSphereMap *smap               = NCM_SPHERE_MAP (object);
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   /*ncm_vector_clear (&self->alm);*/
   g_clear_pointer (&self->alm,  _fft_vec_free);
@@ -300,7 +305,7 @@ static void
 _ncm_sphere_map_finalize (GObject *object)
 {
   NcmSphereMap *smap               = NCM_SPHERE_MAP (object);
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   ncm_sphere_map_set_nside (smap, 0);
   g_ptr_array_unref (self->fft_plan_r2c);
@@ -426,7 +431,7 @@ _l_pow_2 (gint64 n)
 static void
 _ncm_sphere_map_prepare_circle (NcmSphereMap *smap, NcmSphereMapBlock *block, const gint64 r_i, const gint64 i)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gint64 ring_fi             = ncm_sphere_map_get_ring_first_index (smap, r_i);
 
   block->ring_size[i]   = ncm_sphere_map_get_ring_size (smap, r_i);
@@ -448,7 +453,7 @@ _ncm_sphere_map_prepare_circle (NcmSphereMap *smap, NcmSphereMapBlock *block, co
 void
 ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (nside > 0)
     g_assert_cmpint (nside, ==, (gint64) exp2 ((gint64) log2 (nside)));
@@ -553,7 +558,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 gint64
 ncm_sphere_map_get_nside (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->nside;
 }
@@ -569,7 +574,7 @@ ncm_sphere_map_get_nside (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_npix (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->npix;
 }
@@ -585,7 +590,7 @@ ncm_sphere_map_get_npix (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_cap_size (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->cap_size;
 }
@@ -601,7 +606,7 @@ ncm_sphere_map_get_cap_size (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_middle_size (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->middle_size;
 }
@@ -617,7 +622,7 @@ ncm_sphere_map_get_middle_size (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_nrings (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->nrings;
 }
@@ -633,7 +638,7 @@ ncm_sphere_map_get_nrings (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_nrings_cap (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->nrings_cap;
 }
@@ -649,7 +654,7 @@ ncm_sphere_map_get_nrings_cap (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_nrings_middle (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->nrings_middle;
 }
@@ -666,7 +671,7 @@ ncm_sphere_map_get_nrings_middle (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_get_ring_size (NcmSphereMap *smap, gint64 r_i)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (r_i < self->nrings_cap) /* North cap (nside - 1 rings) */
   {
@@ -696,7 +701,7 @@ ncm_sphere_map_get_ring_size (NcmSphereMap *smap, gint64 r_i)
 gint64
 ncm_sphere_map_get_ring_first_index (NcmSphereMap *smap, gint64 r_i)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (r_i < self->nrings_cap) /* North cap (nside - 1 rings) */
   {
@@ -727,7 +732,7 @@ ncm_sphere_map_get_ring_first_index (NcmSphereMap *smap, gint64 r_i)
 void
 ncm_sphere_map_set_order (NcmSphereMap *smap, NcmSphereMapOrder order)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (self->order != order)
   {
@@ -768,7 +773,7 @@ ncm_sphere_map_set_order (NcmSphereMap *smap, NcmSphereMapOrder order)
 NcmSphereMapOrder
 ncm_sphere_map_get_order (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->order;
 }
@@ -784,7 +789,7 @@ ncm_sphere_map_get_order (NcmSphereMap *smap)
 void
 ncm_sphere_map_set_coordsys (NcmSphereMap *smap, NcmSphereMapCoordSys coordsys)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (self->coordsys != coordsys)
   {
@@ -813,7 +818,7 @@ ncm_sphere_map_set_coordsys (NcmSphereMap *smap, NcmSphereMapCoordSys coordsys)
 NcmSphereMapCoordSys
 ncm_sphere_map_get_coordsys (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->coordsys;
 }
@@ -830,7 +835,7 @@ ncm_sphere_map_get_coordsys (NcmSphereMap *smap)
 void
 ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (self->lmax != lmax)
   {
@@ -854,7 +859,7 @@ ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax)
 guint
 ncm_sphere_map_get_lmax (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return self->lmax;
 }
@@ -869,7 +874,7 @@ ncm_sphere_map_get_lmax (NcmSphereMap *smap)
 void
 ncm_sphere_map_clear_pixels (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (self->nside > 0)
     _fft_vec_set_zero (self->pvec, self->npix);
@@ -887,7 +892,7 @@ ncm_sphere_map_clear_pixels (NcmSphereMap *smap)
 gint64
 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 ring_index;
   gint64 base_pixel;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
@@ -984,7 +989,7 @@ ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index)
 gint64
 ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 nest_index;
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
@@ -1102,7 +1107,7 @@ _t_p_w_to_vector (const gint64 nside, const gint tm1, const gint pm1, const gint
 void
 ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdouble *theta, gdouble *phi)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
   gint64 x, y;
@@ -1190,7 +1195,7 @@ ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdoubl
 void
 ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdouble *theta, gdouble *phi)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
 
   g_assert (ring_index < self->npix);
@@ -1230,7 +1235,7 @@ ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdoubl
 void
 ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *vec)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
 
   g_assert (ring_index < self->npix);
@@ -1270,7 +1275,7 @@ ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *v
 void
 ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *vec)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
   gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
   gint64 x, y;
@@ -1349,7 +1354,7 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *v
 static void
 _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *nest_index)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
   const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
@@ -1402,7 +1407,7 @@ _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdoubl
 static void
 _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdouble onemz2, const gdouble phi, gint64 *ring_index)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
   const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
@@ -1535,7 +1540,7 @@ ncm_sphere_map_vec2pix_nest (NcmSphereMap *smap, NcmTriVec *vec, gint64 *nest_in
 void
 ncm_sphere_map_add_to_vec (NcmSphereMap *smap, NcmTriVec *vec, const gdouble s)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 index                     = 0;
 
   switch (self->order)
@@ -1567,7 +1572,7 @@ ncm_sphere_map_add_to_vec (NcmSphereMap *smap, NcmTriVec *vec, const gdouble s)
 void
 ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdouble phi, const gdouble s)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint64 index                     = 0;
 
   switch (self->order)
@@ -1599,7 +1604,7 @@ void
 ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name)
 {
 #ifdef HAVE_CFITSIO
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gchar comment[FLEN_COMMENT];
   gchar ordering[FLEN_VALUE];
   gchar coordsys[FLEN_VALUE];
@@ -1703,7 +1708,7 @@ void
 ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name, gboolean overwrite)
 {
 #ifdef HAVE_CFITSIO
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gchar *sname               = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
   const gchar *ttype[]             = { sname };
   const gchar *tform[]             = { "1E" };
@@ -1914,7 +1919,7 @@ static void
 _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 {
 #ifdef HAVE_FFTW3
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (self->fft_plan_r2c->len == 0)
   {
@@ -2070,7 +2075,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 static void
 _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint m, l, lm_index = 0;
 
   ncm_vector_set_zero (self->Cl);
@@ -2119,7 +2124,7 @@ void
 ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 {
 #ifdef HAVE_FFTW3
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
   if (self->lmax == 0)
@@ -2202,7 +2207,7 @@ ncm_sphere_map_update_Cl (NcmSphereMap *smap)
 void
 ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint lm_index                    = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
 
   /*Re_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 0);*/
@@ -2225,7 +2230,7 @@ ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, g
 void
 ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gint lm_index                    = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
 
   self->alm[lm_index] = Re_alm + I * Im_alm;
@@ -2243,7 +2248,7 @@ ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gd
 gdouble
 ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return ncm_vector_fast_get (self->Cl, l);
 }
@@ -2259,7 +2264,7 @@ ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l)
 gdouble
 ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   return _fft_vec_idx (self->pvec, i);
 }
@@ -2276,7 +2281,7 @@ ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i)
 void
 ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
   ncm_rng_lock (rng);
@@ -2302,7 +2307,7 @@ ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng)
 void
 ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
   g_assert_cmpuint (map->len, ==, self->npix);
@@ -2324,7 +2329,7 @@ ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map)
 void
 ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   g_assert_cmpint (self->lmax, >, 0);
 
@@ -2344,7 +2349,7 @@ void
 ncm_sphere_map_alm2map (NcmSphereMap *smap)
 {
 #ifdef HAVE_FFTW3
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
   /*gfloat *temp_pix = _fft_vec_alloc (self->npix);*/
@@ -2445,7 +2450,7 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
 NcmSpline *
 ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 {
-  NcmSphereMapPrivate * const self = smap->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
   if (!self->has_Cls)
   {

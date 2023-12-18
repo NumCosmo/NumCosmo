@@ -46,6 +46,10 @@
 #include "math/ncm_rng.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 typedef struct _NcmRNGPrivate
 {
   /*< private >*/

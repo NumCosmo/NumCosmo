@@ -46,14 +46,26 @@ enum
   PROP_OBJECT,
 };
 
-G_DEFINE_TYPE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC)
+
+typedef struct _NcmMSetFuncListPrivate
+{
+  /*< private >*/
+  NcmMSetFunc parent_instance;
+  GType obj_type;
+  NcmMSetFuncListN func;
+  GObject *obj;
+} NcmMSetFuncListPrivate;
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_mset_func_list_init (NcmMSetFuncList *flist)
 {
-  flist->obj_type = G_TYPE_NONE;
-  flist->func     = NULL;
-  flist->obj      = NULL;
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+
+  self->obj_type = G_TYPE_NONE;
+  self->func     = NULL;
+  self->obj      = NULL;
 }
 
 static void _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *full_name);
@@ -61,8 +73,9 @@ static void _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, con
 static void
 _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmMSetFuncList *flist = NCM_MSET_FUNC_LIST (object);
-  NcmMSetFunc *func      = NCM_MSET_FUNC (object);
+  NcmMSetFuncList *flist              = NCM_MSET_FUNC_LIST (object);
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+  NcmMSetFunc *func                   = NCM_MSET_FUNC (object);
 
   g_return_if_fail (NCM_IS_MSET_FUNC_LIST (object));
 
@@ -72,15 +85,15 @@ _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *
       _ncm_mset_func_list_init_from_full_name (flist, g_value_get_string (value));
       break;
     case PROP_OBJECT:
-      flist->obj = g_value_dup_object (value);
+      self->obj = g_value_dup_object (value);
 
-      if (flist->obj != NULL)
-        g_assert (g_type_is_a (G_OBJECT_TYPE (flist->obj), flist->obj_type));
-      else if (flist->obj_type != G_TYPE_NONE)
+      if (self->obj != NULL)
+        g_assert (g_type_is_a (G_OBJECT_TYPE (self->obj), self->obj_type));
+      else if (self->obj_type != G_TYPE_NONE)
         g_error ("_ncm_mset_func_list_set_property: object %s:%s requires an object `%s'.",
                  ncm_mset_func_peek_ns (func),
                  ncm_mset_func_peek_name (func),
-                 g_type_name (flist->obj_type));
+                 g_type_name (self->obj_type));
 
       break;
     default:
@@ -92,8 +105,9 @@ _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *
 static void
 _ncm_mset_func_list_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmMSetFuncList *flist = NCM_MSET_FUNC_LIST (object);
-  NcmMSetFunc *func      = NCM_MSET_FUNC (object);
+  NcmMSetFuncList *flist              = NCM_MSET_FUNC_LIST (object);
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+  NcmMSetFunc *func                   = NCM_MSET_FUNC (object);
 
   g_return_if_fail (NCM_IS_MSET_FUNC_LIST (object));
 
@@ -109,7 +123,7 @@ _ncm_mset_func_list_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     }
     case PROP_OBJECT:
-      g_value_set_object (value, flist->obj);
+      g_value_set_object (value, self->obj);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -120,9 +134,10 @@ _ncm_mset_func_list_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 _ncm_mset_func_list_dispose (GObject *object)
 {
-  NcmMSetFuncList *flist = NCM_MSET_FUNC_LIST (object);
+  NcmMSetFuncList *flist              = NCM_MSET_FUNC_LIST (object);
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
 
-  g_clear_object (&flist->obj);
+  g_clear_object (&self->obj);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_list_parent_class)->dispose (object);
@@ -177,8 +192,9 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
 {
   G_LOCK (insert_lock);
   {
-    NcmMSetFunc *func                 = NCM_MSET_FUNC (flist);
-    NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
+    NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+    NcmMSetFunc *func                   = NCM_MSET_FUNC (flist);
+    NcmMSetFuncListClass *flist_class   = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
 
     gchar **ns_name       = g_strsplit (full_name, ":", 2);
     GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns_name[0]);
@@ -200,8 +216,8 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
 
         ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, fdata->dim);
 
-        flist->obj_type = fdata->obj_type;
-        flist->func     = fdata->func;
+        self->obj_type = fdata->obj_type;
+        self->func     = fdata->func;
       }
       else
       {
@@ -219,12 +235,13 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
 static void
 _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  NcmMSetFuncList *flist = NCM_MSET_FUNC_LIST (func);
+  NcmMSetFuncList *flist              = NCM_MSET_FUNC_LIST (func);
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
 
-  if ((flist->obj_type != G_TYPE_NONE) && (flist->obj == NULL))
-    g_error ("_ncm_mset_func_list_eval: calling function without object `%s'.", g_type_name (flist->obj_type));
+  if ((self->obj_type != G_TYPE_NONE) && (self->obj == NULL))
+    g_error ("_ncm_mset_func_list_eval: calling function without object `%s'.", g_type_name (self->obj_type));
 
-  flist->func (flist, mset, x, res);
+  self->func (flist, mset, x, res);
 }
 
 /**
@@ -469,5 +486,21 @@ ncm_mset_func_list_has_full_name (const gchar *full_name)
   }
 
   return FALSE;
+}
+
+/**
+ * ncm_mset_func_list_peek_obj:
+ * @flist: #NcmMSetFuncList
+ *
+ * Gets the object associated with the function.
+ *
+ * Returns: (transfer none): contained object.
+ */
+GObject *
+ncm_mset_func_list_peek_obj (NcmMSetFuncList *flist)
+{
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+
+  return self->obj;
 }
 
