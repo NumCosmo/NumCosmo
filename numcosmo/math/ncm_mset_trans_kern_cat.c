@@ -65,7 +65,7 @@
 #include <gsl/gsl_rstat.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmMSetTransKernCatPrivate
+typedef struct _NcmMSetTransKernCatPrivate
 {
   NcmMSetCatalog *mcat;
   NcmMSetTransKernCatSampling stype;
@@ -75,7 +75,7 @@ struct _NcmMSetTransKernCatPrivate
   GTree *m2lnL_tree;
   gboolean choose_cut;
   gdouble choose_percentile;
-};
+} NcmMSetTransKernCatPrivate;
 
 enum
 {
@@ -88,6 +88,12 @@ enum
   PROP_CHOOSE_PERCENTILE,
 };
 
+struct _NcmMSetTransKernCat
+{
+  /*< private >*/
+  NcmMSetTransKern parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM_TYPE_MSET_TRANS_KERN)
 
 static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data);
@@ -95,7 +101,7 @@ static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_dat
 static void
 ncm_mset_trans_kern_cat_init (NcmMSetTransKernCat *tcat)
 {
-  NcmMSetTransKernCatPrivate * const self = tcat->priv = ncm_mset_trans_kern_cat_get_instance_private (tcat);
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   self->mcat              = NULL;
   self->stype             = NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN;
@@ -114,7 +120,7 @@ static void
 _ncm_mset_trans_kern_cat_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (object);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN_CAT (object));
 
@@ -154,7 +160,7 @@ static void
 _ncm_mset_trans_kern_cat_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (object);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN_CAT (object));
 
@@ -188,7 +194,7 @@ static void
 _ncm_mset_trans_kern_cat_dispose (GObject *object)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (object);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   ncm_mset_catalog_clear (&self->mcat);
   ncm_stats_dist_clear (&self->sd);
@@ -201,7 +207,7 @@ static void
 _ncm_mset_trans_kern_cat_finalize (GObject *object)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (object);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   g_tree_destroy (self->m2lnL_tree);
 
@@ -291,7 +297,7 @@ static void
 _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
 
   NCM_UNUSED (mset);
@@ -303,8 +309,9 @@ _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 static void
 _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
+  NcmMSet *mset                           = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   guint nth                               = 0;
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
   const guint cat_len                     = ncm_mset_catalog_len (self->mcat);
@@ -338,7 +345,7 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
 
     ncm_vector_memcpy2 (thetastar, row, 0, ncm_mset_catalog_nadd_vals (self->mcat), theta_size);
 
-    if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
+    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
     {
       if (g_tree_lookup_extended (self->m2lnL_tree, &m2lnL_i, NULL, NULL))
       {
@@ -365,8 +372,9 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
 static void
 _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
+  NcmMSet *mset                           = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
   const guint cat_len                     = ncm_mset_catalog_len (self->mcat);
   const guint theta_size                  = ncm_mset_fparams_len (mcat_mset);
@@ -422,7 +430,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
   {
     ncm_stats_dist_sample (self->sd, thetastar, rng);
 
-    if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
+    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
       break;
   }
 
@@ -432,8 +440,9 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
 static void
 _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
+  NcmMSet *mset                           = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
   const guint cat_len                     = ncm_mset_catalog_len (self->mcat);
   const guint theta_size                  = ncm_mset_fparams_len (mcat_mset);
@@ -481,7 +490,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
   {
     ncm_stats_dist_sample (self->sd, thetastar, rng);
 
-    if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
+    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
       break;
   }
 
@@ -492,7 +501,7 @@ static void
 _ncm_mset_trans_kern_cat_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   switch (self->stype)
   {
@@ -531,7 +540,7 @@ void
 _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   self->sd_prep = FALSE;
 
@@ -588,7 +597,7 @@ ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat, NcmStatsDist *sd)
 void
 ncm_mset_trans_kern_cat_set_sampling (NcmMSetTransKernCat *tcat, NcmMSetTransKernCatSampling sampling)
 {
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   self->stype   = sampling;
   self->sd_prep = FALSE;
@@ -605,7 +614,7 @@ ncm_mset_trans_kern_cat_set_sampling (NcmMSetTransKernCat *tcat, NcmMSetTransKer
 NcmMSetTransKernCatSampling
 ncm_mset_trans_kern_cat_get_sampling (NcmMSetTransKernCat *tcat)
 {
-  NcmMSetTransKernCatPrivate * const self = tcat->priv;
+  NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
 
   return self->stype;
 }

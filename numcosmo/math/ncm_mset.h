@@ -38,17 +38,12 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET             (ncm_mset_get_type ())
-#define NCM_MSET(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET, NcmMSet))
-#define NCM_MSET_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET, NcmMSetClass))
-#define NCM_IS_MSET(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET))
-#define NCM_IS_MSET_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET))
-#define NCM_MSET_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET, NcmMSetClass))
+#define NCM_TYPE_MSET (ncm_mset_get_type ())
+
+G_DECLARE_DERIVABLE_TYPE (NcmMSet, ncm_mset, NCM, MSET, GObject)
 
 #define NCM_TYPE_MSET_PINDEX (ncm_mset_pindex_get_type ())
 
-typedef struct _NcmMSetClass NcmMSetClass;
-typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
 typedef struct _NcmMSetModelDesc NcmMSetModelDesc;
 
@@ -72,24 +67,9 @@ struct _NcmMSetClass
   GObjectClass parent_class;
   GHashTable *ns_table;
   GArray *model_desc_array;
-};
 
-struct _NcmMSet
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmObjArray *model_array;
-  GHashTable *mid_item_hash;
-  GHashTable *model_item_hash;
-  GHashTable *fpi_hash;
-  GPtrArray *fullname_parray;
-  GArray *pi_array;
-  GArray *mid_array;
-  GRegex *fullname_regex;
-  gboolean valid_map;
-  guint total_len;
-  guint fparam_len;
-  NcmVector *temp_fparams;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[16];
 };
 
 struct _NcmMSetPIndex
@@ -99,7 +79,6 @@ struct _NcmMSetPIndex
   guint pid;
 };
 
-GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
 void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
@@ -191,6 +170,7 @@ GType ncm_mset_get_type_by_id (NcmModelID id);
 void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
+gboolean ncm_mset_fparam_map_valid (NcmMSet *mset);
 
 guint ncm_mset_total_len (NcmMSet *mset);
 guint ncm_mset_fparam_len (NcmMSet *mset);

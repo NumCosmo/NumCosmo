@@ -66,6 +66,13 @@ enum
   PROP_0,
 };
 
+struct _NcmMSetTransKernFlat
+{
+  /*< private >*/
+  NcmMSetTransKern parent_instance;
+  gdouble parea;
+};
+
 G_DEFINE_TYPE (NcmMSetTransKernFlat, ncm_mset_trans_kern_flat, NCM_TYPE_MSET_TRANS_KERN)
 
 static void
@@ -104,15 +111,16 @@ static void
 _ncm_mset_trans_kern_flat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
   NcmMSetTransKernFlat *tkernf = NCM_MSET_TRANS_KERN_FLAT (tkern);
-  guint fparam_len             = ncm_mset_fparam_len (tkern->mset);
+  NcmMSet *mset0               = ncm_mset_trans_kern_peek_mset (tkern);
+  guint fparam_len             = ncm_mset_fparam_len (mset0);
   guint i;
 
   tkernf->parea = 1.0;
 
   for (i = 0; i < fparam_len; i++)
   {
-    const gdouble lb = ncm_mset_fparam_get_lower_bound (tkern->mset, i);
-    const gdouble ub = ncm_mset_fparam_get_upper_bound (tkern->mset, i);
+    const gdouble lb = ncm_mset_fparam_get_lower_bound (mset0, i);
+    const gdouble ub = ncm_mset_fparam_get_upper_bound (mset0, i);
 
     tkernf->parea *= ub - lb;
     g_assert_cmpfloat (tkernf->parea, >, 0.0);
@@ -122,13 +130,14 @@ _ncm_mset_trans_kern_flat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 static void
 _ncm_mset_trans_kern_flat_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
-  guint fparam_len = ncm_mset_fparam_len (tkern->mset);
+  NcmMSet *mset    = ncm_mset_trans_kern_peek_mset (tkern);
+  guint fparam_len = ncm_mset_fparam_len (mset);
   guint i;
 
   for (i = 0; i < fparam_len; i++)
   {
-    const gdouble lb  = ncm_mset_fparam_get_lower_bound (tkern->mset, i);
-    const gdouble ub  = ncm_mset_fparam_get_upper_bound (tkern->mset, i);
+    const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+    const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
     const gdouble val = lb + (ub - lb) * ncm_rng_uniform01_pos_gen (rng);
 
     ncm_vector_set (thetastar, i, val);
