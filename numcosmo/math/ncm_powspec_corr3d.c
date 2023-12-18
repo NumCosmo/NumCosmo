@@ -64,6 +64,25 @@ enum
   PROP_SIZE,
 };
 
+struct _NcmPowspecCorr3d
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmPowspec *ps;
+  NcmFftlog *fftlog;
+  gdouble lnr0;
+  gdouble lnk0;
+  gdouble Lk;
+  gdouble zi;
+  gdouble zf;
+  gboolean calibrated;
+  gdouble reltol;
+  gdouble reltol_z;
+  NcmSpline2d *xi;
+  NcmModelCtrl *ctrl;
+  gboolean constructed;
+};
+
 G_DEFINE_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, G_TYPE_OBJECT)
 
 static void
@@ -354,6 +373,66 @@ void
 ncm_powspec_corr3d_clear (NcmPowspecCorr3d **psc)
 {
   g_clear_object (psc);
+}
+
+/**
+ * ncm_powspec_corr3d_set_reltol:
+ * @psc: a #NcmPowspecCorr3d
+ * @reltol: the relative tolerance for calibration
+ *
+ * Sets the relative tolerance for calibration in the distance direction.
+ * This function forces the recalibration of the transform.
+ *
+ */
+void
+ncm_powspec_corr3d_set_reltol (NcmPowspecCorr3d *psc, const gdouble reltol)
+{
+  psc->reltol     = reltol;
+  psc->calibrated = FALSE;
+}
+
+/**
+ * ncm_powspec_corr3d_set_reltol_z:
+ * @psc: a #NcmPowspecCorr3d
+ * @reltol_z: the relative tolerance for calibration in the redshift direction
+ *
+ * Sets the relative tolerance for calibration in the redshift direction.
+ * This function forces the recalibration of the transform.
+ *
+ */
+void
+ncm_powspec_corr3d_set_reltol_z (NcmPowspecCorr3d *psc, const gdouble reltol_z)
+{
+  psc->reltol_z   = reltol_z;
+  psc->calibrated = FALSE;
+}
+
+/**
+ * ncm_powspec_corr3d_get_reltol:
+ * @psc: a #NcmPowspecCorr3d
+ *
+ * Gets the relative tolerance for calibration in the distance direction.
+ *
+ * Returns: the relative tolerance for calibration in the distance direction.
+ */
+gdouble
+ncm_powspec_corr3d_get_reltol (NcmPowspecCorr3d *psc)
+{
+  return psc->reltol;
+}
+
+/**
+ * ncm_powspec_corr3d_get_reltol_z:
+ * @psc: a #NcmPowspecCorr3d
+ *
+ * Gets the relative tolerance for calibration in the redshift direction.
+ *
+ * Returns: the relative tolerance for calibration in the redshift direction.
+ */
+gdouble
+ncm_powspec_corr3d_get_reltol_z (NcmPowspecCorr3d *psc)
+{
+  return psc->reltol_z;
 }
 
 typedef struct _NcmPowspecCorr3dArg

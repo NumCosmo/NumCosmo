@@ -245,7 +245,7 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
         const gdouble k = ncm_vector_get (kv, j);
 
         ncm_assert_cmpdouble_e (ncm_vector_get (Pkv, j), ==, ncm_spline2d_eval (Pks, z, k),
-                                test->ps->reltol_spline * 10.0, 0.0);
+                                ncm_powspec_get_reltol_spline (test->ps) * 10.0, 0.0);
       }
     }
 
@@ -309,6 +309,7 @@ test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
   const gdouble zf      = ncm_powspec_get_zf (test->ps);
   const gdouble kmin    = ncm_powspec_get_kmin (test->ps);
   const gdouble kmax    = ncm_powspec_get_kmax (test->ps);
+  const gdouble reltol  = ncm_powspec_corr3d_get_reltol (psc);
 
   ncm_powspec_corr3d_prepare (psc, test->model);
 
@@ -330,10 +331,10 @@ test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
       {
         const gdouble lnR = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
         const gdouble R   = exp (lnR);
-        const gdouble xi0 = ncm_powspec_corr3d (test->ps, test->model, psc->reltol, z, R);
+        const gdouble xi0 = ncm_powspec_corr3d (test->ps, test->model, reltol, z, R);
         const gdouble xi1 = ncm_powspec_corr3d_eval_xi_lnr (psc, z, lnR);
 
-        ncm_assert_cmpdouble_e (xi0, ==, xi1, psc->reltol * 10.0, 0.0);
+        ncm_assert_cmpdouble_e (xi0, ==, xi1, reltol * 10.0, 0.0);
       }
     }
   }
