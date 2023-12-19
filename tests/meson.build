@@ -244,6 +244,10 @@ python_tests = [
         'source': 'test_py_integralnd.py',
     },
     {
+        'name': 'py_spline_cubic_d2',
+        'source': 'test_py_spline_cubic_d2.py',
+    },
+    {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
