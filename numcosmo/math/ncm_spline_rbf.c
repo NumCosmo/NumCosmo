@@ -56,7 +56,7 @@ struct _NcmSplineRBFPrivate
   NcmMatrix *interp_matrix;
   NcmVector *coeff;
   NcmVector *shape_params;
-  
+
   void (*default_shape_params) (NcmSplineRBFPrivate * const self, NcmVector *xv);
   void (*prepare_matrix) (NcmSplineRBFPrivate * const self, NcmVector *xv, NcmMatrix *interp_matrix, const guint len);
   gdouble (*eval) (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x);
@@ -91,7 +91,7 @@ static gdouble
 _ncm_spline_rbf_type_eval (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x)
 {
   g_error ("_ncm_spline_rbf_type_eval: method not set.");
-  
+
   return 0.0;
 }
 
@@ -99,7 +99,7 @@ static gdouble
 _ncm_spline_rbf_type_deriv (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x)
 {
   g_error ("_ncm_spline_rbf_type_deriv: method not set.");
-  
+
   return 0.0;
 }
 
@@ -107,7 +107,7 @@ static gdouble
 _ncm_spline_rbf_type_deriv2 (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x)
 {
   g_error ("_ncm_spline_rbf_type_deriv2: method not set.");
-  
+
   return 0.0;
 }
 
@@ -115,13 +115,13 @@ static void
 ncm_spline_rbf_init (NcmSplineRBF *rbf)
 {
   NcmSplineRBFPrivate * const self = rbf->priv = ncm_spline_rbf_get_instance_private (rbf);
-  
+
   self->type_id       = NCM_SPLINE_RBF_TYPE_LEN;
   self->name          = NULL;
   self->interp_matrix = NULL;
   self->coeff         = NULL;
   self->shape_params  = NULL;
-  
+
   self->default_shape_params = &_ncm_spline_rbf_default_shape_params;
   self->prepare_matrix       = &_ncm_spline_rbf_type_prepare_matrix;
   self->eval                 = &_ncm_spline_rbf_type_eval;
@@ -133,9 +133,9 @@ static void
 _ncm_spline_rbf_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmSplineRBF *rbf = NCM_SPLINE_RBF (object);
-  
+
   g_return_if_fail (NCM_IS_SPLINE_RBF (object));
-  
+
   switch (prop_id)
   {
     case PROP_TYPE_ID:
@@ -155,9 +155,9 @@ _ncm_spline_rbf_get_property (GObject *object, guint prop_id, GValue *value, GPa
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (object);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   g_return_if_fail (NCM_IS_SPLINE_RBF (object));
-  
+
   switch (prop_id)
   {
     case PROP_TYPE_ID:
@@ -179,11 +179,11 @@ _ncm_spline_rbf_dispose (GObject *object)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (object);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   ncm_matrix_clear (&self->interp_matrix);
   ncm_vector_clear (&self->coeff);
   ncm_vector_clear (&self->shape_params);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_rbf_parent_class)->dispose (object);
 }
@@ -193,9 +193,9 @@ _ncm_spline_rbf_finalize (GObject *object)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (object);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   g_clear_pointer (&self->name, g_free);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_rbf_parent_class)->finalize (object);
 }
@@ -217,17 +217,17 @@ ncm_spline_rbf_class_init (NcmSplineRBFClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmSplineClass *s_class    = NCM_SPLINE_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_spline_rbf_set_property;
   object_class->get_property = &_ncm_spline_rbf_get_property;
   object_class->dispose      = &_ncm_spline_rbf_dispose;
   object_class->finalize     = &_ncm_spline_rbf_finalize;
-  
+
   /**
    * NcmSplineRBF:type-id:
    *
-   * The [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) method to be applied by the object. 
-   * 
+   * The [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) method to be applied by the object.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_TYPE_ID,
@@ -236,8 +236,8 @@ ncm_spline_rbf_class_init (NcmSplineRBFClass *klass)
                                                       "Type ID",
                                                       NCM_TYPE_SPLINE_RBF_TYPE, NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  
+
+
   s_class->name         = &_ncm_spline_rbf_name;
   s_class->prepare      = &_ncm_spline_rbf_prepare;
   s_class->prepare_base = NULL;
@@ -256,7 +256,7 @@ _ncm_spline_rbf_name (NcmSpline *s)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   return self->name;
 }
 
@@ -265,13 +265,14 @@ _ncm_spline_rbf_reset (NcmSpline *s)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  if ((self->coeff == NULL) || (ncm_vector_len (self->coeff) != s->len))
+  const guint s_len                = ncm_spline_get_len (s);
+
+  if ((self->coeff == NULL) || (ncm_vector_len (self->coeff) != s_len))
   {
     ncm_vector_clear (&self->coeff);
-    self->coeff = ncm_vector_new (s->len);
+    self->coeff = ncm_vector_new (s_len);
   }
-  
+
   ncm_vector_set_all (self->shape_params, GSL_NAN);
 }
 
@@ -279,19 +280,19 @@ gint
 ATimes (gpointer user_data, N_Vector v_vec, N_Vector z_vec)
 {
   NcmSplineRBFPrivate * const self = user_data;
-  const gint len = ncm_matrix_nrows (self->interp_matrix);
+  const gint len                   = ncm_matrix_nrows (self->interp_matrix);
   gdouble *v, *z;
-  
+
   v = N_VGetArrayPointer (v_vec);
   z = N_VGetArrayPointer (z_vec);
-  
+
   cblas_dsymv (CblasRowMajor, CblasLower, len,
                1.0,
                ncm_matrix_data (self->interp_matrix), ncm_matrix_tda (self->interp_matrix),
                v, 1,
                0.0,
                z, 1);
-  
+
   return 0;
 }
 
@@ -299,20 +300,20 @@ gint
 PSolve (gpointer user_data, N_Vector r_vec, N_Vector z_vec, realtype tol, int lr)
 {
   NcmSplineRBFPrivate * const self = user_data;
-  const gint len = ncm_matrix_nrows (self->interp_matrix);
+  const gint len                   = ncm_matrix_nrows (self->interp_matrix);
   gdouble *r, *z;
   gint i;
-  
+
   r = N_VGetArrayPointer (r_vec);
   z = N_VGetArrayPointer (z_vec);
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble Aiim1 = /*sqrt*/ (1.0 / ncm_matrix_get (self->interp_matrix, i, i));
-    
+
     z[i] = r[i] * Aiim1;
   }
-  
+
   return 0;
 }
 
@@ -328,23 +329,23 @@ _ncm_spline_rbf_calc_coeff (NcmSplineRBFPrivate * const self, NcmVector *xv, Ncm
   if (TRUE)
   {
     gint ret;
-    
+
     self->prepare_matrix (self, xv, self->interp_matrix, len);
     ncm_vector_memcpy (self->coeff, yv);
     ret = ncm_matrix_cholesky_solve (self->interp_matrix, self->coeff, 'L');
-    
+
     if (ret != 0)
       g_error ("_ncm_spline_rbf_prepare[ncm_matrix_cholesky_solve]: %d.", ret);
   }
   else
   {
     NcmVector *Q = ncm_vector_new (len);
-    
+
     self->prepare_matrix (self, xv, self->interp_matrix, len);
-    
+
     ncm_vector_set_zero (Q);
     ncm_vector_memcpy (self->coeff, yv);
-    
+
     cblas_dsymv (CblasRowMajor, CblasLower, len,
                  1.0,
                  ncm_matrix_data (self->interp_matrix), ncm_matrix_tda (self->interp_matrix),
@@ -360,40 +361,40 @@ _ncm_spline_rbf_LOOCV_err2 (gdouble h, gpointer user_data)
   NcmSpline *s                     = user_data;
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  const guint len = ncm_spline_get_len (s);
-  gdouble err     = 0.0;
+  const guint len                  = ncm_spline_get_len (s);
+  NcmVector *s_xv                  = ncm_spline_peek_xv (s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv (s);
+  gdouble err                      = 0.0;
   guint i;
   gint ret;
-  
+
   ncm_vector_set (self->shape_params, 0, h);
-  self->prepare_matrix (self, s->xv, self->interp_matrix, len);
-  
+  self->prepare_matrix (self, s_xv, self->interp_matrix, len);
+
   ret = ncm_matrix_cholesky_decomp (self->interp_matrix, 'L');
-  
+
   if (ret != 0)
-    
     /*printf ("h % 22.15g err % 22.15e\n", h, 1.0e20);*/
     return 1.0e200;
-    
 
-  ncm_vector_memcpy (self->coeff, s->yv);
+
+  ncm_vector_memcpy (self->coeff, s_yv);
   ret = ncm_matrix_cholesky_solve2 (self->interp_matrix, self->coeff, 'L');
-  
+
   if (ret != 0)
     g_error ("_ncm_spline_rbf_LOOCV_err2[ncm_matrix_cholesky_solve]: %d.", ret);
-  
+
   ncm_matrix_cholesky_inverse (self->interp_matrix, 'L');
-  
+
   if (ret != 0)
     g_error ("_ncm_spline_rbf_LOOCV_err2[ncm_matrix_cholesky_decomp]: %d.", ret);
-  
+
   for (i = 0; i < len; i++)
   {
-    /*err += gsl_pow_2 (ncm_vector_get (self->coeff, i) / (ncm_matrix_get (self->interp_matrix, i, i) * ncm_vector_get (s->yv, i)));*/
+    /*err += gsl_pow_2 (ncm_vector_get (self->coeff, i) / (ncm_matrix_get (self->interp_matrix, i, i) * ncm_vector_get (s_yv, i)));*/
     err += gsl_pow_2 (ncm_vector_get (self->coeff, i) / (ncm_matrix_get (self->interp_matrix, i, i)));
   }
-  
+
   /*printf ("h % 22.15g err % 22.15e\n", h, err);*/
   return err;
 }
@@ -404,15 +405,17 @@ _ncm_spline_rbf_prepare (NcmSpline *s)
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
   const guint len                  = ncm_spline_get_len (s);
-  
+  NcmVector *s_xv                  = ncm_spline_peek_xv (s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv (s);
+
   if (len == 0)
     g_error ("_ncm_spline_rbf_prepare: empty spline.");
-  
+
   if (!ncm_vector_is_finite (self->shape_params))
-    self->default_shape_params (self, s->xv);
-  
+    self->default_shape_params (self, s_xv);
+
   self->interp_matrix = ncm_matrix_new (len, len);
-  
+
   if (FALSE)
   {
     gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
@@ -425,45 +428,45 @@ _ncm_spline_rbf_prepare (NcmSpline *s)
     gint status;
     gsl_function F;
     gint ret;
-    
+
     F.params   = s;
     F.function = &_ncm_spline_rbf_LOOCV_err2;
-    
+
     ret = gsl_min_fminimizer_set (fmin, &F, ht, hi, hf);
     NCM_TEST_GSL_RESULT ("_ncm_spline_rbf_prepare", ret);
-    
+
     do {
       iter++;
       status = gsl_min_fminimizer_iterate (fmin);
-      
+
       if (status)
         g_error ("_ncm_spline_rbf_prepare: Cannot find minimum (%s)", gsl_strerror (status));
-      
+
       ht = gsl_min_fminimizer_x_minimum (fmin);
       hi = gsl_min_fminimizer_x_lower (fmin);
       hf = gsl_min_fminimizer_x_upper (fmin);
-      
+
       status = gsl_min_test_interval (hi, hf, 0.0, 1.0e-2);
-      
+
       if ((status == GSL_CONTINUE) && (hi == last_hi) && (hf == last_hf))
       {
         g_warning ("_ncm_spline_rbf_prepare: minimization not improving, giving up...");
         break;
       }
-      
+
       printf ("[%d] % 22.15e % 22.15e % 22.15e\n", status, ht, hi, hf);
-      
+
       last_hi = hi;
       last_hf = hf;
     } while (status == GSL_CONTINUE && iter < 1000);
-    
+
     ncm_vector_set (self->shape_params, 0, gsl_min_fminimizer_x_minimum (fmin));
     gsl_min_fminimizer_free (fmin);
   }
-  
-  
-  _ncm_spline_rbf_calc_coeff (self, s->xv, s->yv, len);
-  
+
+
+  _ncm_spline_rbf_calc_coeff (self, s_xv, s_yv, len);
+
   ncm_matrix_clear (&self->interp_matrix);
 }
 
@@ -478,8 +481,10 @@ _ncm_spline_rbf_eval (const NcmSpline *s, const gdouble x)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  return self->eval (self, s->xv, x);
+  NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *) s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *) s);
+
+  return self->eval (self, s_xv, x);
 }
 
 static gdouble
@@ -487,8 +492,10 @@ _ncm_spline_rbf_deriv (const NcmSpline *s, const gdouble x)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  return self->deriv (self, s->xv, x);
+  NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *) s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *) s);
+
+  return self->deriv (self, s_xv, x);
 }
 
 static gdouble
@@ -496,8 +503,10 @@ _ncm_spline_rbf_deriv2 (const NcmSpline *s, const gdouble x)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  return self->deriv2 (self, s->xv, x);
+  NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *)s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *)s);
+
+  return self->deriv2 (self, s_xv, x);
 }
 
 static gdouble
@@ -505,8 +514,10 @@ _ncm_spline_rbf_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
-  return self->integ (self, s->xv, x0, x1);
+  NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *)s);
+  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *)s);
+
+  return self->integ (self, s_xv, x0, x1);
 }
 
 static NcmSpline *
@@ -514,7 +525,7 @@ _ncm_spline_rbf_copy_empty (const NcmSpline *s)
 {
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF (s);
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   return NCM_SPLINE (ncm_spline_rbf_new (self->type_id));
 }
 
@@ -524,7 +535,7 @@ _ncm_spline_rbf_posdef_gauss_default_shape_params (NcmSplineRBFPrivate * const s
   const guint len  = ncm_vector_len (xv);
   const gdouble xi = ncm_vector_get (xv, 0);
   const gdouble xf = ncm_vector_get (xv, len - 1);
-  
+
   ncm_vector_set (self->shape_params, 0, 1.0 / (2.5 * (xf - xi) / (1.0 * len)));
 }
 
@@ -544,7 +555,7 @@ static gdouble
 _ncm_spline_rbf_posdef_gauss_kern_deriv2 (const gdouble x1, const gdouble x2, const gdouble h)
 {
   const gdouble h2 = h * h;
-  
+
   return h2 * x2 * (x1 * (h2 * gsl_pow_2 (x1 - x2) - 3.0) + 2.0 * x2) * exp (-0.5 * gsl_pow_2 ((x1 - x2) * h));
 }
 
@@ -553,17 +564,17 @@ _ncm_spline_rbf_posdef_gauss_prepare_matrix (NcmSplineRBFPrivate * const self, N
 {
   const gdouble h = ncm_vector_get (self->shape_params, 0);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble x1 = ncm_vector_get (xv, i);
     guint j;
-    
+
     for (j = i; j < len; j++)
     {
       const gdouble x2    = ncm_vector_get (xv, j);
       const gdouble Kx1x2 = _ncm_spline_rbf_posdef_gauss_kern (x1, x2, h);
-      
+
       ncm_matrix_set (interp_matrix, j, i, Kx1x2);
     }
   }
@@ -576,15 +587,15 @@ _ncm_spline_rbf_posdef_gauss_eval (NcmSplineRBFPrivate * const self, NcmVector *
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_posdef_gauss_kern (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -595,15 +606,15 @@ _ncm_spline_rbf_posdef_gauss_deriv (NcmSplineRBFPrivate * const self, NcmVector 
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_posdef_gauss_kern_deriv (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -614,15 +625,15 @@ _ncm_spline_rbf_posdef_gauss_deriv2 (NcmSplineRBFPrivate * const self, NcmVector
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_posdef_gauss_kern_deriv2 (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -630,7 +641,7 @@ static gdouble
 _ncm_spline_rbf_integ_placeholder (NcmSplineRBFPrivate * const self, NcmVector *xv, const gdouble x0, const gdouble x1)
 {
   g_error ("_ncm_spline_rbf_integ_placeholder: method not implemented!");
-  
+
   return 0.0;
 }
 
@@ -640,7 +651,7 @@ _ncm_spline_rbf_gauss_default_shape_params (NcmSplineRBFPrivate * const self, Nc
   const guint len  = ncm_vector_len (xv);
   const gdouble xi = ncm_vector_get (xv, 0);
   const gdouble xf = ncm_vector_get (xv, len - 1);
-  
+
   ncm_vector_set (self->shape_params, 0, 1.0 / (2.5 * (xf - xi) / (1.0 * len)));
 }
 
@@ -660,7 +671,7 @@ static gdouble
 _ncm_spline_rbf_gauss_kern_deriv2 (const gdouble x1, const gdouble x2, const gdouble h)
 {
   const gdouble h2 = h * h;
-  
+
   return h2 * (-1.0 + gsl_pow_2 ((x1 - x2) * h)) * exp (-0.5 * gsl_pow_2 ((x1 - x2) * h));
 }
 
@@ -669,17 +680,17 @@ _ncm_spline_rbf_gauss_prepare_matrix (NcmSplineRBFPrivate * const self, NcmVecto
 {
   const gdouble h = ncm_vector_get (self->shape_params, 0);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble x1 = ncm_vector_get (xv, i);
     guint j;
-    
+
     for (j = i; j < len; j++)
     {
       const gdouble x2    = ncm_vector_get (xv, j);
       const gdouble Kx1x2 = _ncm_spline_rbf_gauss_kern (x1, x2, h);
-      
+
       ncm_matrix_set (interp_matrix, j, i, Kx1x2);
     }
   }
@@ -692,15 +703,15 @@ _ncm_spline_rbf_gauss_eval (NcmSplineRBFPrivate * const self, NcmVector *xv, con
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_gauss_kern (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -711,15 +722,15 @@ _ncm_spline_rbf_gauss_deriv (NcmSplineRBFPrivate * const self, NcmVector *xv, co
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_gauss_kern_deriv (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -730,15 +741,15 @@ _ncm_spline_rbf_gauss_deriv2 (NcmSplineRBFPrivate * const self, NcmVector *xv, c
   const guint len = ncm_vector_len (self->coeff);
   gdouble res     = 0.0;
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble xi = ncm_vector_get (xv, i);
     const gdouble ci = ncm_vector_get (self->coeff, i);
-    
+
     res += ci * _ncm_spline_rbf_gauss_kern_deriv2 (x, xi, h);
   }
-  
+
   return res;
 }
 
@@ -756,7 +767,7 @@ ncm_spline_rbf_new (NcmSplineRBFType type_id)
   NcmSplineRBF *rbf = g_object_new (NCM_TYPE_SPLINE_RBF,
                                     "type-id", type_id,
                                     NULL);
-  
+
   return rbf;
 }
 
@@ -813,12 +824,12 @@ void
 ncm_spline_rbf_set_type (NcmSplineRBF *rbf, NcmSplineRBFType type_id)
 {
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   if (type_id != self->type_id)
   {
     g_clear_pointer (&self->name, g_free);
     ncm_vector_clear (&self->shape_params);
-    
+
     switch (type_id)
     {
       case NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS:
@@ -828,10 +839,10 @@ ncm_spline_rbf_set_type (NcmSplineRBF *rbf, NcmSplineRBFType type_id)
         self->deriv                = &_ncm_spline_rbf_posdef_gauss_deriv;
         self->deriv2               = &_ncm_spline_rbf_posdef_gauss_deriv2;
         self->integ                = &_ncm_spline_rbf_integ_placeholder;
-        
+
         self->name         = g_strdup ("NcmSplineRBF:Posdef-Gaussian");
         self->shape_params = ncm_vector_new (1);
-        
+
         ncm_vector_set (self->shape_params, 0, GSL_NAN);
         break;
       case NCM_SPLINE_RBF_TYPE_GAUSS:
@@ -840,10 +851,10 @@ ncm_spline_rbf_set_type (NcmSplineRBF *rbf, NcmSplineRBFType type_id)
         self->eval                 = &_ncm_spline_rbf_gauss_eval;
         self->deriv                = &_ncm_spline_rbf_gauss_deriv;
         self->deriv2               = &_ncm_spline_rbf_gauss_deriv2;
-        
+
         self->name         = g_strdup ("NcmSplineRBF:Gaussian");
         self->shape_params = ncm_vector_new (1);
-        
+
         ncm_vector_set (self->shape_params, 0, GSL_NAN);
         break;
       default:
@@ -865,7 +876,7 @@ void
 ncm_spline_rbf_set_shape_params (NcmSplineRBF *rbf, NcmVector *shape_params)
 {
   NcmSplineRBFPrivate * const self = rbf->priv;
-  
+
   ncm_vector_memcpy (self->shape_params, shape_params);
 }
 

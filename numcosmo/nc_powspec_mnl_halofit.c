@@ -605,16 +605,18 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
   }
 
   {
-    const guint len  = ncm_vector_len (self->Rsigma->xv);
-    NcmVector *neffv = ncm_vector_new (len);
-    NcmVector *Curv  = ncm_vector_new (len);
+    NcmVector *Rsigma_xv = ncm_spline_peek_xv (self->Rsigma);
+    NcmVector *Rsigma_yv = ncm_spline_peek_yv (self->Rsigma);
+    const guint len      = ncm_vector_len (Rsigma_xv);
+    NcmVector *neffv     = ncm_vector_new (len);
+    NcmVector *Curv      = ncm_vector_new (len);
 
     for (i = 0; i < len; i++)
     {
       if (FALSE)
       {
-        const gdouble z        = ncm_vector_get (self->Rsigma->xv, i);
-        const gdouble R        = ncm_vector_get (self->Rsigma->yv, i);
+        const gdouble z        = ncm_vector_get (Rsigma_xv, i);
+        const gdouble R        = ncm_vector_get (Rsigma_yv, i);
         const gdouble sigma2_0 = _nc_powspec_mnl_halofit_var_moment (self->psml, cosmo, R, z, 0);
         const gdouble sigma2_1 = _nc_powspec_mnl_halofit_var_moment (self->psml, cosmo, R, z, 1);
         const gdouble sigma2_2 = _nc_powspec_mnl_halofit_var_moment (self->psml, cosmo, R, z, 2);
@@ -626,8 +628,8 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
       }
       else
       {
-        const gdouble z   = ncm_vector_get (self->Rsigma->xv, i);
-        const gdouble R   = ncm_vector_get (self->Rsigma->yv, i);
+        const gdouble z   = ncm_vector_get (Rsigma_xv, i);
+        const gdouble R   = ncm_vector_get (Rsigma_yv, i);
         const gdouble lnR = log (R);
         const gdouble d1  = ncm_powspec_filter_eval_dlnvar_dlnr (self->psml_gauss, z, lnR);
         const gdouble d2  = ncm_powspec_filter_eval_dnlnvar_dlnrn (self->psml_gauss, z, lnR, 2);
@@ -637,8 +639,8 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
       }
     }
 
-    ncm_spline_set (self->neff, self->Rsigma->xv, neffv, TRUE);
-    ncm_spline_set (self->Cur, self->Rsigma->xv, Curv, TRUE);
+    ncm_spline_set (self->neff, Rsigma_xv, neffv, TRUE);
+    ncm_spline_set (self->Cur, Rsigma_xv, Curv, TRUE);
 
     ncm_vector_free (neffv);
     ncm_vector_free (Curv);
@@ -872,7 +874,7 @@ _nc_powspec_mnl_halofit_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
 
   ncm_powspec_get_nknots (NCM_POWSPEC (self->psml), Nz, Nk);
-  *Nz = ncm_vector_len (self->Rsigma->xv);
+  *Nz = ncm_vector_len (ncm_spline_peek_xv (self->Rsigma));
 }
 
 /**

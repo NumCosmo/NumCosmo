@@ -214,8 +214,10 @@ _ncm_spline2d_gsl_reset (NcmSpline2d *s2d)
 
   if (s2d->init)
   {
+    NcmVector *s_hor0_xv = ncm_spline_peek_xv (s2dgsl->s_hor[0]);
+
     if ((ncm_matrix_nrows (s2d->zm) != ncm_vector_len (s2dgsl->vertv)) ||
-        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s2dgsl->s_hor[0]->xv)))
+        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s_hor0_xv)))
     {
       _ncm_spline2d_gsl_free (s2dgsl);
       _ncm_spline2d_gsl_alloc (s2dgsl);
@@ -462,7 +464,7 @@ _ncm_spline2d_gsl_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 
   gsize jl = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), xl, 0, ncm_vector_len (s2d->xv) - 1);
   gsize ju = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), xu, 0, ncm_vector_len (s2d->xv) - 1);
-  gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+  gsize i  = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble x0, x1, result;
   const gdouble y0 = ncm_vector_get (s2d->yv, i);
   const gdouble y1 = ncm_vector_get (s2d->yv, i + 1);
@@ -520,7 +522,7 @@ _ncm_spline2d_gsl_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (s2d);
 
-  gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+  gsize j  = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
   gsize il = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yl, 0, ncm_vector_len (s2d->yv) - 1);
   gsize iu = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yu, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble y0, y1, result;

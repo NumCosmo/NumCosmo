@@ -89,10 +89,10 @@ ncm_spline_cubic_d2_class_init (NcmSplineCubicD2Class *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmSplineClass *s_class    = NCM_SPLINE_CLASS (klass);
-  
+
   object_class->dispose  = &_ncm_spline_cubic_d2_dispose;
   object_class->finalize = &_ncm_spline_cubic_d2_finalize;
-  
+
   s_class->reset        = &_ncm_spline_cubic_d2_reset;
   s_class->name         = &_ncm_spline_cubic_d2_name;
   s_class->prepare      = &_ncm_spline_cubic_d2_prepare;
@@ -136,7 +136,7 @@ _ncm_spline_cubic_d2_prepare_base (NcmSpline *s)
 
   ncm_vector_memcpy (sc->c, scd2->d2);
   ncm_vector_scale (sc->c, 0.5);
-  
+
   return;
 }
 
@@ -144,23 +144,26 @@ static void
 _ncm_spline_cubic_d2_prepare (NcmSpline *s)
 {
   NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
-  const size_t size  = s->len;
+  const size_t size  = ncm_spline_get_len (s);
   const size_t n     = size - 1;
+  NcmVector *xv      = ncm_spline_peek_xv (s);
+  NcmVector *yv      = ncm_spline_peek_yv (s);
+
   size_t i;
-  
+
   _ncm_spline_cubic_d2_prepare_base (s);
 
   for (i = 0; i < n; i++)
   {
-    const gdouble dx    = ncm_vector_get (s->xv, i + 1) - ncm_vector_get (s->xv, i);
-    const gdouble dy    = ncm_vector_get (s->yv, i + 1) - ncm_vector_get (s->yv, i);
+    const gdouble dx    = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
+    const gdouble dy    = ncm_vector_get (yv, i + 1) - ncm_vector_get (yv, i);
     const gdouble c_ip1 = ncm_vector_fast_get (sc->c, i + 1);
     const gdouble c_i   = ncm_vector_fast_get (sc->c, i);
-    
+
     ncm_vector_fast_set (sc->b, i, (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0);
     ncm_vector_fast_set (sc->d, i, (c_ip1 - c_i) / (3.0 * dx));
   }
-  
+
   return;
 }
 
@@ -208,3 +211,4 @@ ncm_spline_cubic_d2_new (NcmVector *xv, NcmVector *yv, NcmVector *d2yv, gboolean
 
   return scd2;
 }
+

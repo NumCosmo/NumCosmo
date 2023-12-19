@@ -197,8 +197,10 @@ _ncm_spline2d_spline_reset (NcmSpline2d *s2d)
 
   if (s2d->init)
   {
+    NcmVector *s_hor0_xv = ncm_spline_peek_xv (s2ds->s_hor[0]);
+
     if ((ncm_matrix_nrows (s2d->zm) != ncm_vector_len (s2ds->vertv)) ||
-        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s2ds->s_hor[0]->yv)))
+        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s_hor0_xv)))
     {
       _ncm_spline2d_spline_free (s2d);
       _ncm_spline2d_spline_alloc (s2d);

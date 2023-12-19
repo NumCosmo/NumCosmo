@@ -321,7 +321,7 @@ test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata)
     NcmSpline *s = ncm_spline_new (test->s_base, x, y, FALSE);
 
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == FALSE);
+    g_assert_true (!ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 
@@ -343,7 +343,7 @@ test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata)
 
     s = ncm_spline_new (test->s_base, x, y, TRUE);
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == TRUE);
+    g_assert_true (ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 }
@@ -361,7 +361,7 @@ test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata)
     NcmSpline *s = ncm_spline_new_array (test->s_base, x, y, FALSE);
 
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == FALSE);
+    g_assert_true (!ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 
@@ -386,7 +386,7 @@ test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata)
 
     s = ncm_spline_new_array (test->s_base, x, y, TRUE);
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == TRUE);
+    g_assert_true (ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 }
@@ -400,7 +400,7 @@ test_ncm_spline_new_data (TestNcmSpline *test, gconstpointer pdata)
     NcmSpline *s = ncm_spline_new_data (test->s_base, x, y, test->nknots, FALSE);
 
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == FALSE);
+    g_assert_true (!ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 
@@ -422,7 +422,7 @@ test_ncm_spline_new_data (TestNcmSpline *test, gconstpointer pdata)
 
     s = ncm_spline_new_data (test->s_base, x, y, test->nknots, TRUE);
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == TRUE);
+    g_assert_true (ncm_spline_is_init (s));
     ncm_spline_free (s);
   }
 }
@@ -451,14 +451,18 @@ test_ncm_spline_copy (TestNcmSpline *test, gconstpointer pdata)
 
   ncm_spline_set (test->s_base, xv, yv, FALSE);
   {
-    NcmSpline *s = ncm_spline_copy (test->s_base);
+    NcmSpline *s         = ncm_spline_copy (test->s_base);
+    NcmVector *s_xv      = ncm_spline_peek_xv (s);
+    NcmVector *s_yv      = ncm_spline_peek_yv (s);
+    NcmVector *s_base_xv = ncm_spline_peek_xv (test->s_base);
+    NcmVector *s_base_yv = ncm_spline_peek_yv (test->s_base);
 
-    g_assert_true (s->xv != test->s_base->xv && s->yv != test->s_base->yv);
+    g_assert_true (s_xv != s_base_xv && s_yv != s_base_yv);
 
     for (i = 0; i < test->nknots; i++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s->xv, i), ==, ncm_vector_get (test->s_base->xv, i));
-      ncm_assert_cmpdouble (ncm_vector_get (s->yv, i), ==, ncm_vector_get (test->s_base->yv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s_xv, i), ==, ncm_vector_get (s_base_xv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s_yv, i), ==, ncm_vector_get (s_base_yv, i));
     }
 
     ncm_spline_free (s);
@@ -480,18 +484,22 @@ test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata)
 
   ncm_spline_set (test->s_base, xv, yv, FALSE);
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-    NcmSpline *s      = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
+    NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSpline *s         = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
+    NcmVector *s_xv      = ncm_spline_peek_xv (s);
+    NcmVector *s_yv      = ncm_spline_peek_yv (s);
+    NcmVector *s_base_xv = ncm_spline_peek_xv (test->s_base);
+    NcmVector *s_base_yv = ncm_spline_peek_yv (test->s_base);
 
     ncm_spline_prepare (s);
     ncm_serialize_free (ser);
 
-    g_assert_true (s->xv != test->s_base->xv && s->yv != test->s_base->yv);
+    g_assert_true (s_xv != s_base_xv && s_yv != s_base_yv);
 
     for (i = 0; i < test->nknots; i++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s->xv, i), ==, ncm_vector_get (test->s_base->xv, i));
-      ncm_assert_cmpdouble (ncm_vector_get (s->yv, i), ==, ncm_vector_get (test->s_base->yv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s_xv, i), ==, ncm_vector_get (s_base_xv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s_yv, i), ==, ncm_vector_get (s_base_yv, i));
     }
 
     ncm_spline_free (s);
@@ -541,7 +549,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 
     s = ncm_spline_new (test->s_base, x, y, TRUE);
     test_ncm_spline_new_sanity (s);
-    g_assert_true (s->init == TRUE);
+    g_assert_true (ncm_spline_is_init (s) == TRUE);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
