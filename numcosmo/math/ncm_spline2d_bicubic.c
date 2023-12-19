@@ -816,6 +816,7 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
   guint y_len_m1            = ncm_vector_len (s2d->yv) - 1;
   NcmVector *a_vec          = ncm_spline_peek_yv (s2dbc->optimize_dx.s);
   NcmSplineCubic *sc;
+  NcmVector *b_vec, *c_vec, *d_vec;
   gdouble x0, x1;
   gsize i, j;
 
@@ -824,11 +825,15 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 
   sc = NCM_SPLINE_CUBIC (s2dbc->optimize_dx.s);
 
+  b_vec = ncm_spline_cubic_peek_b_vec (sc);
+  c_vec = ncm_spline_cubic_peek_c_vec (sc);
+  d_vec = ncm_spline_cubic_peek_d_vec (sc);
+
 #define _NC_AIJ NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)
 #define _NCM_INTEGRAL_A (a_vec)
-#define _NCM_INTEGRAL_B (sc->b)
-#define _NCM_INTEGRAL_C (sc->c)
-#define _NCM_INTEGRAL_D (sc->d)
+#define _NCM_INTEGRAL_B (b_vec)
+#define _NCM_INTEGRAL_C (c_vec)
+#define _NCM_INTEGRAL_D (d_vec)
 
   g_assert (jl <= ju);
 
@@ -977,19 +982,23 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
   guint x_len_m1            = ncm_vector_len (s2d->xv) - 1;
   NcmVector *a_vec          = ncm_spline_peek_yv (s2dbc->optimize_dy.s);
   NcmSplineCubic *sc;
+  NcmVector *b_vec, *c_vec, *d_vec;
   gdouble y0, y1;
   gsize i, j;
 
   if ((s2dbc->optimize_dy.init && (s2dbc->optimize_dy.l == yl) && (s2dbc->optimize_dy.u == yu)))
     return s2dbc->optimize_dy.s;
 
-  sc = NCM_SPLINE_CUBIC (s2dbc->optimize_dy.s);
+  sc    = NCM_SPLINE_CUBIC (s2dbc->optimize_dy.s);
+  b_vec = ncm_spline_cubic_peek_b_vec (sc);
+  c_vec = ncm_spline_cubic_peek_c_vec (sc);
+  d_vec = ncm_spline_cubic_peek_d_vec (sc);
 
 #define _NC_AIJ NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)
 #define _NCM_INTEGRAL_A (a_vec)
-#define _NCM_INTEGRAL_B (sc->b)
-#define _NCM_INTEGRAL_C (sc->c)
-#define _NCM_INTEGRAL_D (sc->d)
+#define _NCM_INTEGRAL_B (b_vec)
+#define _NCM_INTEGRAL_C (c_vec)
+#define _NCM_INTEGRAL_D (d_vec)
 
   g_assert (il <= iu);
 
@@ -1392,10 +1401,11 @@ ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx,
 gdouble
 ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i)
 {
+  NcmVector *c_vec    = ncm_spline_cubic_peek_c_vec (sc);
   const gdouble dx    = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
   const gdouble dy    = ncm_vector_get (yv, i + 1) - ncm_vector_get (yv, i);
-  const gdouble c_ip1 = ncm_vector_get (sc->c, i + 1);
-  const gdouble c_i   = ncm_vector_get (sc->c, i);
+  const gdouble c_ip1 = ncm_vector_get (c_vec, i + 1);
+  const gdouble c_i   = ncm_vector_get (c_vec, i);
   const gdouble dy_dx = (dy / dx);
   const gdouble b_i   = dy_dx - dx * (c_ip1 + 2.0 * c_i) / 3.0;
 
@@ -1405,10 +1415,11 @@ ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize
 void
 ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i, gdouble *b_i, gdouble *b_ip1)
 {
+  NcmVector *c_vec    = ncm_spline_cubic_peek_c_vec (sc);
   const gdouble dx    = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
   const gdouble dy    = ncm_vector_get (yv, i + 1) - ncm_vector_get (yv, i);
-  const gdouble c_ip1 = ncm_vector_get (sc->c, i + 1);
-  const gdouble c_i   = ncm_vector_get (sc->c, i);
+  const gdouble c_ip1 = ncm_vector_get (c_vec, i + 1);
+  const gdouble c_i   = ncm_vector_get (c_vec, i);
   const gdouble dy_dx = (dy / dx);
 
   *b_i   = dy_dx - dx * (c_ip1 + 2.0 * c_i) / 3.0;

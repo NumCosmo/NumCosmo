@@ -50,6 +50,14 @@
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcmSplineCubicD2
+{
+  /*< private >*/
+  NcmSplineCubic parent_instance;
+  NcmVector *d2;
+  gsize len;
+};
+
 G_DEFINE_TYPE (NcmSplineCubicD2, ncm_spline_cubic_d2, NCM_TYPE_SPLINE_CUBIC)
 
 static void
@@ -109,13 +117,14 @@ _ncm_spline_cubic_d2_reset (NcmSpline *s)
   {
     NcmSplineCubic *sc     = NCM_SPLINE_CUBIC (s);
     NcmSplineCubicD2 *scd2 = NCM_SPLINE_CUBIC_D2 (s);
+    const guint sc_len     = ncm_spline_get_len (s);
 
-    if (sc->len != scd2->len)
+    if (sc_len != scd2->len)
     {
       ncm_vector_clear (&scd2->d2);
 
-      scd2->d2  = ncm_vector_new (sc->len);
-      scd2->len = sc->len;
+      scd2->d2  = ncm_vector_new (sc_len);
+      scd2->len = sc_len;
     }
   }
 }
@@ -133,9 +142,10 @@ _ncm_spline_cubic_d2_prepare_base (NcmSpline *s)
 {
   NcmSplineCubic *sc     = NCM_SPLINE_CUBIC (s);
   NcmSplineCubicD2 *scd2 = NCM_SPLINE_CUBIC_D2 (s);
+  NcmVector *c_vec       = ncm_spline_cubic_peek_c_vec (sc);
 
-  ncm_vector_memcpy (sc->c, scd2->d2);
-  ncm_vector_scale (sc->c, 0.5);
+  ncm_vector_memcpy (c_vec, scd2->d2);
+  ncm_vector_scale (c_vec, 0.5);
 
   return;
 }
@@ -146,22 +156,27 @@ _ncm_spline_cubic_d2_prepare (NcmSpline *s)
   NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
   const size_t size  = ncm_spline_get_len (s);
   const size_t n     = size - 1;
-  NcmVector *xv      = ncm_spline_peek_xv (s);
-  NcmVector *yv      = ncm_spline_peek_yv (s);
 
   size_t i;
 
   _ncm_spline_cubic_d2_prepare_base (s);
-
-  for (i = 0; i < n; i++)
   {
-    const gdouble dx    = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
-    const gdouble dy    = ncm_vector_get (yv, i + 1) - ncm_vector_get (yv, i);
-    const gdouble c_ip1 = ncm_vector_fast_get (sc->c, i + 1);
-    const gdouble c_i   = ncm_vector_fast_get (sc->c, i);
+    NcmVector *xv    = ncm_spline_peek_xv (s);
+    NcmVector *yv    = ncm_spline_peek_yv (s);
+    NcmVector *b_vec = ncm_spline_cubic_peek_b_vec (sc);
+    NcmVector *c_vec = ncm_spline_cubic_peek_c_vec (sc);
+    NcmVector *d_vec = ncm_spline_cubic_peek_d_vec (sc);
 
-    ncm_vector_fast_set (sc->b, i, (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0);
-    ncm_vector_fast_set (sc->d, i, (c_ip1 - c_i) / (3.0 * dx));
+    for (i = 0; i < n; i++)
+    {
+      const gdouble dx    = ncm_vector_get (xv, i + 1) - ncm_vector_get (xv, i);
+      const gdouble dy    = ncm_vector_get (yv, i + 1) - ncm_vector_get (yv, i);
+      const gdouble c_ip1 = ncm_vector_fast_get (c_vec, i + 1);
+      const gdouble c_i   = ncm_vector_fast_get (c_vec, i);
+
+      ncm_vector_fast_set (b_vec, i, (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0);
+      ncm_vector_fast_set (d_vec, i, (c_ip1 - c_i) / (3.0 * dx));
+    }
   }
 
   return;

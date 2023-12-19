@@ -322,7 +322,10 @@ test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata)
 
     test_ncm_spline_new_sanity (s);
     g_assert_true (!ncm_spline_is_init (s));
+
     ncm_spline_free (s);
+    ncm_vector_free (x);
+    ncm_vector_free (y);
   }
 
   {
@@ -344,7 +347,10 @@ test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata)
     s = ncm_spline_new (test->s_base, x, y, TRUE);
     test_ncm_spline_new_sanity (s);
     g_assert_true (ncm_spline_is_init (s));
+
     ncm_spline_free (s);
+    ncm_vector_free (x);
+    ncm_vector_free (y);
   }
 }
 
@@ -362,7 +368,10 @@ test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata)
 
     test_ncm_spline_new_sanity (s);
     g_assert_true (!ncm_spline_is_init (s));
+
     ncm_spline_free (s);
+    g_array_unref (x);
+    g_array_unref (y);
   }
 
   {
@@ -387,7 +396,10 @@ test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata)
     s = ncm_spline_new_array (test->s_base, x, y, TRUE);
     test_ncm_spline_new_sanity (s);
     g_assert_true (ncm_spline_is_init (s));
+
     ncm_spline_free (s);
+    g_array_unref (x);
+    g_array_unref (y);
   }
 }
 
@@ -467,6 +479,9 @@ test_ncm_spline_copy (TestNcmSpline *test, gconstpointer pdata)
 
     ncm_spline_free (s);
   }
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 void
@@ -504,6 +519,9 @@ test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata)
 
     ncm_spline_free (s);
   }
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 #define _TEST_EPSILON (1.00000001)
@@ -553,14 +571,20 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
-      gdouble xval = ncm_vector_get (x, 0) + (ncm_vector_get (x, test->nknots - 1) - ncm_vector_get (x, 0)) / (2.0 * test->nknots - 1.0) * i;
-      gdouble f    = GSL_FN_EVAL (&F, xval);
-      gdouble fs   = ncm_spline_eval (s, xval);
+      const gdouble xi = ncm_vector_get (x, 0);
+      const gdouble xf = ncm_vector_get (x, test->nknots - 1);
+      gdouble xval0    = xi + (xf - xi) / (2.0 * test->nknots - 1.0) * i;
+      gdouble xval1    = GSL_MAX (xval0, xi);
+      gdouble xval     = GSL_MIN (xval1, xf);
+      gdouble f        = GSL_FN_EVAL (&F, xval);
+      gdouble fs       = ncm_spline_eval (s, xval);
 
       ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
     }
 
     ncm_spline_free (s);
+    ncm_vector_free (x);
+    ncm_vector_free (y);
   }
 
   {

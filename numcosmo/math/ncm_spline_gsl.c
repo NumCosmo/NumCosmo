@@ -43,6 +43,16 @@
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
+struct _NcmSplineGsl
+{
+  /*< private >*/
+  NcmSpline parent_instance;
+  gsl_interp *interp;
+  NcmSplineGslType type_id;
+  gchar *inst_name;
+  const gsl_interp_type *type;
+};
+
 G_DEFINE_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM_TYPE_SPLINE)
 
 enum
@@ -209,7 +219,7 @@ _ncm_spline_gsl_prepare (NcmSpline *s)
 static gsize
 _ncm_spline_gsl_min_size (const NcmSpline *s)
 {
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg = NCM_SPLINE_GSL ((NcmSpline *) s);
 
   return sg->type->min_size;
 }
@@ -217,7 +227,7 @@ _ncm_spline_gsl_min_size (const NcmSpline *s)
 static gdouble
 _ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
 {
-  NcmSplineGsl *sg        = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg        = NCM_SPLINE_GSL ((NcmSpline *) s);
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
@@ -228,7 +238,7 @@ _ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
 static gdouble
 _ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x)
 {
-  NcmSplineGsl *sg        = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg        = NCM_SPLINE_GSL ((NcmSpline *) s);
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
@@ -239,7 +249,7 @@ _ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x)
 static gdouble
 _ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x)
 {
-  NcmSplineGsl *sg        = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg        = NCM_SPLINE_GSL ((NcmSpline *) s);
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
@@ -250,7 +260,7 @@ _ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x)
 static gdouble
 _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
 {
-  NcmSplineGsl *sg        = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg        = NCM_SPLINE_GSL ((NcmSpline *) s);
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
@@ -282,7 +292,7 @@ _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
 static gdouble
 _ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
-  NcmSplineGsl *sg        = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg        = NCM_SPLINE_GSL ((NcmSpline *) s);
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
@@ -293,7 +303,7 @@ _ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 static NcmSpline *
 _ncm_spline_gsl_copy_empty (const NcmSpline *s)
 {
-  NcmSplineGsl *sg = NCM_SPLINE_GSL (s);
+  NcmSplineGsl *sg = NCM_SPLINE_GSL ((NcmSpline *) s);
 
   return ncm_spline_gsl_new (sg->type);
 }

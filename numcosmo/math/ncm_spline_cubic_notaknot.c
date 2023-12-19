@@ -50,6 +50,11 @@
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcmSplineCubicNotaknot
+{
+  NcmSplineCubic parent_instance;
+};
+
 G_DEFINE_TYPE (NcmSplineCubicNotaknot, ncm_spline_cubic_notaknot, NCM_TYPE_SPLINE_CUBIC)
 
 static void
@@ -170,11 +175,9 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
   register gdouble h_ip1       = h_1;
   register gdouble ydiff_i     = ydiff_0;
   register gdouble ydiff_ip1   = ydiff_1;
-
-  NcmVector *g = sc->g;
-
-  sc->g = sc->c;
-
+  NcmVector *c_vec             = ncm_spline_cubic_peek_c_vec (sc);
+  NcmVector *diag              = ncm_spline_cubic_peek_diag_vec (sc);
+  NcmVector *offdiag           = ncm_spline_cubic_peek_offdiag_vec (sc);
   size_t i;
 
   g_assert (sys_size > 1);
@@ -208,9 +211,9 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
       const gdouble g_i   = 1.0 / h_i;
       const gdouble g_ip1 = 1.0 / h_ip1;
 
-      ncm_vector_fast_set (sc->offdiag, i, h_ip1);
-      ncm_vector_fast_set (sc->diag,    i, 2.0 * (h_ip1 + h_i));
-      ncm_vector_fast_set (sc->g,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
+      ncm_vector_fast_set (offdiag, i, h_ip1);
+      ncm_vector_fast_set (diag,    i, 2.0 * (h_ip1 + h_i));
+      ncm_vector_fast_set (c_vec,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
     }
   }
 
@@ -218,11 +221,11 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
     const gdouble g_0 = 1.0 / h_0;
     const gdouble g_1 = 1.0 / h_1;
 
-    ncm_vector_fast_set (sc->c,         0, 3.0 * (ydiff_1 * g_1 -  ydiff_0 * g_0) / h_0_p_2h_1);
-    ncm_vector_fast_set (sc->c,         1, ncm_vector_fast_get (sc->c, 0) * h_1 / (h_1 + h_0));
+    ncm_vector_fast_set (c_vec,         0, 3.0 * (ydiff_1 * g_1 -  ydiff_0 * g_0) / h_0_p_2h_1);
+    ncm_vector_fast_set (c_vec,         1, ncm_vector_fast_get (c_vec, 0) * h_1 / (h_1 + h_0));
 
-    ncm_vector_fast_addto (sc->diag,    1, (h_0 - h_1) * h_1 / h_0_p_2h_1);
-    ncm_vector_fast_subfrom (sc->g,     2, h_1 * ncm_vector_fast_get (sc->c, 1));
+    ncm_vector_fast_addto (diag,    1, (h_0 - h_1) * h_1 / h_0_p_2h_1);
+    ncm_vector_fast_subfrom (c_vec,     2, h_1 * ncm_vector_fast_get (c_vec, 1));
   }
 
   {
@@ -231,34 +234,33 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
     const gdouble g_nm2     = 1.0 / h_nm2;
     const gdouble g_nm1     = 1.0 / h_nm1;
 
-    ncm_vector_fast_set (sc->c,   n, 3.0 * (ydiff_nm1 * g_nm1 - ydiff_nm2 * g_nm2) / h_nm1_p_2h_nm2);
-    ncm_vector_fast_set (sc->c, nm1, ncm_vector_fast_get (sc->c, n) * h_nm2 / (h_nm2 + h_nm1));
+    ncm_vector_fast_set (c_vec,   n, 3.0 * (ydiff_nm1 * g_nm1 - ydiff_nm2 * g_nm2) / h_nm1_p_2h_nm2);
+    ncm_vector_fast_set (c_vec, nm1, ncm_vector_fast_get (c_vec, n) * h_nm2 / (h_nm2 + h_nm1));
 
-    ncm_vector_fast_addto (sc->diag,    nm1 - 2, (h_nm1 - h_nm2) * h_nm2 / h_nm1_p_2h_nm2);
-    ncm_vector_fast_subfrom (sc->g, 1 + nm1 - 2, h_nm2 * ncm_vector_fast_get (sc->c, nm1));
+    ncm_vector_fast_addto (diag,    nm1 - 2, (h_nm1 - h_nm2) * h_nm2 / h_nm1_p_2h_nm2);
+    ncm_vector_fast_subfrom (c_vec, 1 + nm1 - 2, h_nm2 * ncm_vector_fast_get (c_vec, nm1));
   }
 
   {
     gsize loc_sys_size = sys_size - 2;
-    gint info          = ncm_lapack_dptsv (ncm_vector_ptr (sc->diag, 1),
-                                           ncm_vector_ptr (sc->offdiag, 1),
-                                           ncm_vector_ptr (sc->g, 2),
-                                           ncm_vector_ptr (sc->g, 2),
+    gint info          = ncm_lapack_dptsv (ncm_vector_ptr (diag, 1),
+                                           ncm_vector_ptr (offdiag, 1),
+                                           ncm_vector_ptr (c_vec, 2),
+                                           ncm_vector_ptr (c_vec, 2),
                                            loc_sys_size);
 
-    sc->g = g;
     NCM_LAPACK_CHECK_INFO ("dptsv", info);
   }
 
   {
-    const gdouble c_2   = ncm_vector_fast_get (sc->c, 2);
-    const gdouble c_nm2 = ncm_vector_fast_get (sc->c, nm2);
+    const gdouble c_2   = ncm_vector_fast_get (c_vec, 2);
+    const gdouble c_nm2 = ncm_vector_fast_get (c_vec, nm2);
 
-    ncm_vector_fast_subfrom (sc->c, 0, c_2 * (2.0 * h_0 + h_1) / h_0_p_2h_1);
-    ncm_vector_fast_subfrom (sc->c, 1, c_2 * (h_1 - h_0) / h_0_p_2h_1);
+    ncm_vector_fast_subfrom (c_vec, 0, c_2 * (2.0 * h_0 + h_1) / h_0_p_2h_1);
+    ncm_vector_fast_subfrom (c_vec, 1, c_2 * (h_1 - h_0) / h_0_p_2h_1);
 
-    ncm_vector_fast_subfrom (sc->c, nm1, c_nm2 * (h_nm2 - h_nm1) / h_nm1_p_2h_nm2);
-    ncm_vector_fast_subfrom (sc->c,   n, c_nm2 * (h_nm2 + 2.0 * h_nm1) / h_nm1_p_2h_nm2);
+    ncm_vector_fast_subfrom (c_vec, nm1, c_nm2 * (h_nm2 - h_nm1) / h_nm1_p_2h_nm2);
+    ncm_vector_fast_subfrom (c_vec,   n, c_nm2 * (h_nm2 + 2.0 * h_nm1) / h_nm1_p_2h_nm2);
   }
 
   return;
@@ -277,15 +279,21 @@ _ncm_spline_cubic_notaknot_prepare (NcmSpline *s)
 
   _ncm_spline_cubic_notaknot_prepare_base (s);
 
-  for (i = 0; i < n; i++)
   {
-    const gdouble dx    = ncm_vector_get (s_xv, i + 1) - ncm_vector_get (s_xv, i);
-    const gdouble dy    = ncm_vector_get (s_yv, i + 1) - ncm_vector_get (s_yv, i);
-    const gdouble c_ip1 = ncm_vector_fast_get (sc->c, i + 1);
-    const gdouble c_i   = ncm_vector_fast_get (sc->c, i);
+    NcmVector *b_vec = ncm_spline_cubic_peek_b_vec (sc);
+    NcmVector *c_vec = ncm_spline_cubic_peek_c_vec (sc);
+    NcmVector *d_vec = ncm_spline_cubic_peek_d_vec (sc);
 
-    ncm_vector_fast_set (sc->b, i, (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0);
-    ncm_vector_fast_set (sc->d, i, (c_ip1 - c_i) / (3.0 * dx));
+    for (i = 0; i < n; i++)
+    {
+      const gdouble dx    = ncm_vector_get (s_xv, i + 1) - ncm_vector_get (s_xv, i);
+      const gdouble dy    = ncm_vector_get (s_yv, i + 1) - ncm_vector_get (s_yv, i);
+      const gdouble c_ip1 = ncm_vector_fast_get (c_vec, i + 1);
+      const gdouble c_i   = ncm_vector_fast_get (c_vec, i);
+
+      ncm_vector_fast_set (b_vec, i, (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0);
+      ncm_vector_fast_set (d_vec, i, (c_ip1 - c_i) / (3.0 * dx));
+    }
   }
 
   return;

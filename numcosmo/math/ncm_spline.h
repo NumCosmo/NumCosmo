@@ -57,6 +57,9 @@ struct _NcmSplineClass
   gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
   gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
   NcmSpline *(*copy_empty) (const NcmSpline *s);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
 NcmSpline *ncm_spline_copy_empty (const NcmSpline *s);
