@@ -264,6 +264,7 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
   const gdouble zf      = ncm_powspec_get_zf (test->ps);
   const gdouble kmin    = ncm_powspec_get_kmin (test->ps);
   const gdouble kmax    = ncm_powspec_get_kmax (test->ps);
+  const gdouble reltol  = ncm_powspec_filter_get_reltol (psf);
 
   ncm_powspec_filter_prepare (psf, test->model);
 
@@ -285,15 +286,15 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
       {
         const gdouble lnR    = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
         const gdouble R      = exp (lnR);
-        const gdouble var0   = ncm_powspec_var_tophat_R (test->ps, test->model, psf->reltol, z, R);
-        const gdouble sigma0 = ncm_powspec_sigma_tophat_R (test->ps, test->model, psf->reltol, z, R);
+        const gdouble var0   = ncm_powspec_var_tophat_R (test->ps, test->model, reltol, z, R);
+        const gdouble sigma0 = ncm_powspec_sigma_tophat_R (test->ps, test->model, reltol, z, R);
         const gdouble var1   = ncm_powspec_filter_eval_var_lnr (psf, z, lnR);
         const gdouble sigma1 = ncm_powspec_filter_eval_sigma_lnr (psf, z, lnR);
 
         if (var0 > 1.0e-4)
         {
-          ncm_assert_cmpdouble_e (var0, ==, var1, psf->reltol * 10.0, 0.0);
-          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, psf->reltol * 10.0, 0.0);
+          ncm_assert_cmpdouble_e (var0, ==, var1, reltol * 10.0, 0.0);
+          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, reltol * 10.0, 0.0);
         }
       }
     }

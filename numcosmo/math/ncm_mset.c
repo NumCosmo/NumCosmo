@@ -1774,7 +1774,7 @@ ncm_mset_params_valid_bounds (NcmMSet *mset)
  * @cmp_model: whether to compare if the models correspond to the same objects
  *
  * Compares @mset0 and @mset1 and returns TRUE if both contains the same models types.
- * If @cmp_model is TRUE compare also if the models correspond to the same objects.
+ * If @cmp_model is TRUE compare also if the models correspond to the same objects types.
  *
  * Returns: TRUE if @mset0 == @mset1.
  */
@@ -1784,9 +1784,6 @@ ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
   NcmMSetPrivate * const self0 = ncm_mset_get_instance_private (mset0);
   NcmMSetPrivate * const self1 = ncm_mset_get_instance_private (mset1);
   guint i;
-
-  if (ncm_mset_total_len (mset0) != ncm_mset_total_len (mset1))
-    return FALSE;
 
   if (self0->model_array->len != self1->model_array->len)
     return FALSE;
