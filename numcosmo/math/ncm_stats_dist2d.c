@@ -182,7 +182,7 @@ ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
  * @xi: (out): x lower bound
  * @xf: (out): x upper bound
  *
- * FIXME
+ * Gets the x bounds of the distribution.
  *
  */
 void
@@ -197,7 +197,7 @@ ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
  * @yi: (out): y lower bound
  * @yf: (out): y upper bound
  *
- * FIXME
+ * Gets the y bounds of the distribution.
  *
  */
 void
@@ -259,9 +259,9 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y
  * @sd2: a #NcmStatsDist2d
  * @xy: x or y
  *
- * FIXME
+ * Evaluates the marginal PDF at @xy.
  *
- * Returns: FIXME
+ * Returns: the marginal PDF value at @xy
  */
 gdouble
 ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
@@ -274,9 +274,9 @@ ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
  * @sd2: a #NcmStatsDist2d
  * @xy: x or y
  *
- * FIXME
+ * Evaluates the marginal CDF at @xy.
  *
- * Returns: FIXME
+ * Returns: the marginal CDF value at @xy
  */
 gdouble
 ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
@@ -290,9 +290,9 @@ ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
  * @u: a number between [0, 1]
  * @xy: x or y
  *
- * FIXME
+ * Evaluates the inverse conditional CDF at @u and @xy.
  *
- * Returns: FIXME
+ * Returns: the inverse conditional CDF value at @u and @xy.
  */
 gdouble
 ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy)

@@ -296,14 +296,15 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
 
 /**
  * ncm_lh_ratio2d_new:
- * @fit: FIXME
- * @pi1: FIXME
- * @pi2: FIXME
+ * @fit: a #NcmFit
+ * @pi1: a #NcmMSetPIndex for the first parameter
+ * @pi2: a #NcmMSetPIndex for the second parameter
  * @border_prec: precision on the border finder.
  *
- * FIXME
+ * Creates a new #NcmLHRatio2d object. The parameters @pi1 and @pi2 must be
+ * parameters of the model set of @fit.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmLHRatio2d.
  */
 NcmLHRatio2d *
 ncm_lh_ratio2d_new (NcmFit *fit, const NcmMSetPIndex *pi1, const NcmMSetPIndex *pi2, gdouble border_prec)

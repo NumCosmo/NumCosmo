@@ -156,10 +156,10 @@ _ncm_prior_flat_func_mean (NcmPriorFlat *pf, NcmMSet *mset)
 /**
  * ncm_prior_flat_func_new:
  * @mean_func: a #NcmMSetFunc
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- * @variable: FIXME
+ * @x_low: lower limit
+ * @x_upp: upper limit
+ * @scale: scale
+ * @variable: variable
  *
  * Creates a new Flat prior for parameter @pid of model @mid.
  *

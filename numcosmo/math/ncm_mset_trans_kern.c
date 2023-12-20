@@ -344,7 +344,9 @@ ncm_mset_trans_kern_prior_sample (NcmMSetTransKern *tkern, NcmVector *thetastar,
  * @tkern: a #NcmMSetTransKern.
  * @thetastar: try point.
  *
- * FIXME
+ * Computes the value of the kernel at (@ktern->theta, @thetastar).
+ * To use as a prior one must call the ncm_mset_trans_kern_set_prior()
+ * or ncm_mset_trans_kern_set_prior_from_mset() first.
  *
  * Returns: the value of the kernel at (@ktern->theta, @thetastar).
  */

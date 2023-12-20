@@ -111,10 +111,10 @@ _ncm_coarse_dbl_get_bs (void)
 
 /**
  * ncm_rational_coarce_double: (skip)
- * @x: FIXME
- * @q: FIXME
+ * @x: a double
+ * @q: a #mpq_t to store the result
  *
- * FIXME
+ * Computes a rational approximation for @x and stores the result in @q.
  *
  */
 void
@@ -211,10 +211,10 @@ ncm_rational_coarce_double (gdouble x, mpq_t q)
 
 /**
  * ncm_mpz_inits: (skip)
- * @z: FIXME
- * @...: FIXME
+ * @z: a #mpz_t to initialize
+ * @...: a null terminated list of #mpz_t to initialize
  *
- * FIXME
+ * Initializes @z and all the #mpz_t in the list.
  *
  */
 void
@@ -234,10 +234,10 @@ ncm_mpz_inits (mpz_t z, ...)
 
 /**
  * ncm_mpz_clears: (skip)
- * @z: FIXME
- * @...: FIXME
+ * @z: a #mpz_t to clear
+ * @...: a null terminated list of #mpz_t to clear
  *
- * FIXME
+ * Clears @z and all the #mpz_t in the list.
  *
  */
 void
@@ -328,7 +328,10 @@ ncm_mpz_clears (mpz_t z, ...)
  * @x: a double.
  * @y: a double.
  *
- * Returns: FIXME
+ * Compares @x and @y and returns the difference between them
+ * relative to their mean.
+ *
+ * Returns: $\frac{2(x-y)}{x+y}$.
  */
 gdouble
 ncm_cmpdbl (const gdouble x, const gdouble y)
@@ -343,7 +346,9 @@ ncm_cmpdbl (const gdouble x, const gdouble y)
  * ncm_exprel:
  * @x: a double
  *
- * Returns: FIXME
+ * Computes the relative exponential $(\exp(x) - 1)/x$.
+ *
+ * Returns: $(\exp(x) - 1)/x$.
  */
 gdouble
 ncm_exprel (const gdouble x)
@@ -355,7 +360,9 @@ ncm_exprel (const gdouble x)
  * ncm_d1exprel:
  * @x: a double
  *
- * Returns: FIXME
+ * Computes the first derivative of the relative exponential $(\exp(x) - 1)/x$.
+ *
+ * Returns: first derivative of $(\exp(x) - 1)/x$.
  */
 gdouble
 ncm_d1exprel (const gdouble x)
@@ -367,7 +374,9 @@ ncm_d1exprel (const gdouble x)
  * ncm_d2exprel:
  * @x: a double
  *
- * Returns: FIXME
+ * Computes the second derivative of the relative exponential $(\exp(x) - 1)/x$.
+ *
+ * Returns: second derivative of $(\exp(x) - 1)/x$.
  */
 gdouble
 ncm_d2exprel (const gdouble x)
@@ -379,7 +388,9 @@ ncm_d2exprel (const gdouble x)
  * ncm_d3exprel:
  * @x: a double
  *
- * Returns: FIXME
+ * Computes the third derivative of the relative exponential $(\exp(x) - 1)/x$.
+ *
+ * Returns: third derivative of $(\exp(x) - 1)/x$.
  */
 gdouble
 ncm_d3exprel (const gdouble x)
@@ -390,6 +401,9 @@ ncm_d3exprel (const gdouble x)
 /**
  * ncm_util_sinh1:
  * @x: a double
+ *
+ * Computes $\frac{\sinh(x)}{x}$. For small values of @x the taylor series is used.
+ * For large values of @x the value is computed using the standard library function.
  *
  * Returns: $\frac{\sinh(x)}{x}$
  */
@@ -739,13 +753,13 @@ ncm_complex_clear (NcmComplex **c)
 
 /**
  * ncm_util_cvode_check_flag:
- * @flagvalue: FIXME
- * @funcname: FIXME
- * @opt: FIXME
+ * @flagvalue: pointer to flag value
+ * @funcname: cvode function name
+ * @opt: option
  *
- * FIXME
+ * Checks the CVode flag value and prints a message if an error occured.
  *
- * Returns: FIXME
+ * Returns: TRUE if no error occured, FALSE otherwise.
  */
 gboolean
 ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
@@ -798,11 +812,11 @@ ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
 
 /**
  * ncm_util_cvode_print_stats:
- * @cvode: FIXME
+ * @cvode: a #CVodeMem
  *
- * FIXME
+ * Prints the statistics of the #CVodeMem object @cvode.
  *
- * Returns: FIXME
+ * Returns: TRUE.
  */
 gboolean
 ncm_util_cvode_print_stats (gpointer cvode)

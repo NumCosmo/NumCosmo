@@ -28,7 +28,8 @@
  * @title: NcmLHRatio1d
  * @short_description: Likelihood ratio for one dimensional parameter analysis.
  *
- * FIXME
+ * This object subclasses #NcmLHRatio and defines a likelihood ratio for one
+ * dimensional parameter analysis.
  *
  */
 
@@ -254,9 +255,11 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
  * @fit: a #NcmFit
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
+ * Creates a new #NcmLHRatio1d object. The parameter @pi must be a free
+ * parameter of the model @mid.
  *
- * Returns: FIXME
+ *
+ * Returns: (transfer full): a #NcmLHRatio1d.
  */
 NcmLHRatio1d *
 ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi)
@@ -271,7 +274,7 @@ ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi)
  * ncm_lh_ratio1d_free:
  * @lhr1d: a #NcmLHRatio1d
  *
- * FIXME
+ * Decrement the reference count of @lhr1d, if it reaches zero, free it.
  *
  */
 void
@@ -284,7 +287,8 @@ ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d)
  * ncm_lh_ratio1d_clear:
  * @lhr1d: a #NcmLHRatio1d
  *
- * FIXME
+ * If *@lhr1d is not %NULL, decrement the reference count of @lhr1d. Sets
+ * *@lhr1d to %NULL.
  *
  */
 void
@@ -298,7 +302,8 @@ ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d)
  * @lhr1d: a #NcmLHRatio1d
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
+ * Sets the parameter index of @lhr1d to @pi. The parameter @pi must be a free
+ * parameter of the model @mid.
  *
  */
 void
@@ -616,7 +621,9 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
  * @lb: (out): lower bound
  * @ub: (out): upper bound
  *
- * FIXME
+ * Finds the lower and upper bounds of the parameter @pid of model @mid
+ * constrained by the likelihood ratio @clevel. The bounds are stored in
+ * *@lb and *@ub.
  *
  */
 void

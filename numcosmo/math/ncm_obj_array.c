@@ -29,7 +29,8 @@
  * @title: NcmObjArray
  * @short_description: GObjects array with serialization support.
  *
- * FIXME
+ * A #NcmObjArray is a #GPtrArray that holds #GObject's. It is used to
+ * store #GObject's that can be serialized to a #GVariant.
  *
  */
 
@@ -46,9 +47,9 @@ G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_arra
 /**
  * ncm_obj_array_new:
  *
- * FIXME
+ * Creates a new #NcmObjArray.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_new ()
@@ -65,9 +66,9 @@ ncm_obj_array_new ()
  * @ser: a #NcmSerialize.
  * @var: a #GVariant containing an array of objects.
  *
- * FIXME
+ * Creates a new #NcmObjArray from a #GVariant.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var)
@@ -95,9 +96,9 @@ ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var)
  * ncm_obj_array_sized_new:
  * @n: initial allocation size.
  *
- * FIXME
+ * Creates a new #NcmObjArray with @n elements preallocated.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_sized_new (guint n)
@@ -113,9 +114,9 @@ ncm_obj_array_sized_new (guint n)
  * ncm_obj_array_ref:
  * @oa: a #NcmObjArray.
  *
- * FIXME
+ * Increases the reference count of @oa by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @oa.
  */
 NcmObjArray *
 ncm_obj_array_ref (NcmObjArray *oa)
@@ -127,7 +128,8 @@ ncm_obj_array_ref (NcmObjArray *oa)
  * ncm_obj_array_unref:
  * @oa: a #NcmObjArray.
  *
- * FIXME
+ * Decreases the reference count of @oa by one. If the reference count
+ * reaches zero, all objects in the array are unreferenced.
  *
  */
 void
@@ -140,7 +142,7 @@ ncm_obj_array_unref (NcmObjArray *oa)
  * ncm_obj_array_clear:
  * @oa: a pointer to a #NcmObjArray.
  *
- * FIXME
+ * If *@oa is not %NULL, unreferences it and sets *@oa to %NULL.
  *
  */
 void
@@ -154,9 +156,9 @@ ncm_obj_array_clear (NcmObjArray **oa)
  * @oa: a #NcmObjArray.
  * @ser: a #NcmSerialize.
  *
- * FIXME
+ * Serializes a #NcmObjArray to a #GVariant.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the serialized #GVariant.
  */
 GVariant *
 ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
@@ -187,9 +189,9 @@ ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
  * @oa: a #NcmObjArray.
  * @ser: a #NcmSerialize.
  *
- * FIXME
+ * Duplicates a #NcmObjArray, all objects are duplicated.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_dup (NcmObjArray *oa, NcmSerialize *ser)
@@ -207,7 +209,7 @@ ncm_obj_array_dup (NcmObjArray *oa, NcmSerialize *ser)
  * @oa: a #NcmObjArray.
  * @obj: a #GObject.
  *
- * FIXME
+ * Adds a #GObject to a #NcmObjArray.
  *
  */
 void
@@ -223,7 +225,8 @@ ncm_obj_array_add (NcmObjArray *oa, GObject *obj)
  * @i: object index.
  * @obj: a #GObject.
  *
- * FIXME
+ * Sets a #GObject to a #NcmObjArray. If there is already a #GObject
+ * at position @i, it is unreferenced.
  *
  */
 void
@@ -242,12 +245,12 @@ ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj)
 
 /**
  * ncm_obj_array_get:
- * @oa: a #NcmObjArray.
- * @i: object index.
+ * @oa: a #NcmObjArray
+ * @i: object index
  *
- * FIXME
+ * Gets a #GObject from a #NcmObjArray at position @i.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the #GObject at position @i.
  */
 GObject *
 ncm_obj_array_get (NcmObjArray *oa, guint i)
@@ -260,9 +263,10 @@ ncm_obj_array_get (NcmObjArray *oa, guint i)
  * @oa: a #NcmObjArray.
  * @i: object index.
  *
- * FIXME
+ * Peeks a #GObject from a #NcmObjArray at position @i without increasing its reference
+ * count.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #GObject at position @i.
  */
 GObject *
 ncm_obj_array_peek (NcmObjArray *oa, guint i)
@@ -276,7 +280,7 @@ ncm_obj_array_peek (NcmObjArray *oa, guint i)
  * ncm_obj_array_len:
  * @oa: a #NcmObjArray
  *
- * FIXME
+ * Gets the length of a #NcmObjArray.
  *
  * Returns: array length
  */
@@ -290,10 +294,10 @@ ncm_obj_array_len (NcmObjArray *oa)
  * ncm_obj_array_save:
  * @oa: a #NcmObjArray
  * @ser: a #NcmSerialize
- * @filename: FIXME
- * @save_comment: FIXME
+ * @filename: oa filename
+ * @save_comment: whether to save comments
  *
- * FIXME
+ * Saves a #NcmObjArray to a file using a #NcmSerialize and a #GKeyFile.
  *
  */
 void
@@ -399,9 +403,9 @@ ncm_obj_array_save (NcmObjArray *oa, NcmSerialize *ser, const gchar *filename, g
  * @filename: oa filename
  * @ser: a #NcmSerialize
  *
- * FIXME
+ * Loads a #NcmObjArray from a file using a #NcmSerialize and a #GKeyFile.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_load (const gchar *filename, NcmSerialize *ser)

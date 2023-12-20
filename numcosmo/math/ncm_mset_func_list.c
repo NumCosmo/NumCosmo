@@ -28,7 +28,12 @@
  * @title: NcmMSetFuncList
  * @short_description: NcmMSet Functions list.
  *
- * FIXME
+ * This object is a subclass of #NcmMSetFunc, designed to manage a list of functions.
+ * To register these functions, the #ncm_mset_func_list_register function is employed.
+ * Selection of functions is accomplished through the use of the
+ * ncm_mset_func_list_select() function. Additionally, external objects have the
+ * capability to register functions by utilizing the #ncm_mset_func_list_register
+ * function.
  *
  */
 
@@ -346,9 +351,11 @@ ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
 /**
  * ncm_mset_func_list_new:
  * @full_name: function full name
- * @obj: (allow-none): FIXME
+ * @obj: (allow-none): associated object
  *
- * FIXME
+ * Generates a new instance of #NcmMSetFuncList based on the provided @full_name. The
+ * @full_name should adhere to the "namespace:name" format, aligning with a registered
+ * function. The associated @obj must match the type as the registered object.
  *
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */
@@ -367,9 +374,10 @@ ncm_mset_func_list_new (const gchar *full_name, GObject *obj)
  * ncm_mset_func_list_new_ns_name:
  * @ns: function namespace
  * @name: function name
- * @obj: (allow-none): FIXME
+ * @obj: (allow-none): associated object
  *
- * FIXME
+ * Creates a new instance of #NcmMSetFuncList based on the provided @ns and @name.
+ * The @obj must match the type as the registered object.
  *
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */

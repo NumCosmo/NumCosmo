@@ -2901,9 +2901,9 @@ ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
  * @k: mode $k$
  * @sing: singularity index
  * @ts: (out): singularity time $t_s$
- * @dts_i: (out): FIXME
- * @dts_f: (out): FIXME
- * @st: (out): FIXME
+ * @dts_i: (out): singularity time interval $t_s - t_i$
+ * @dts_f: (out): singularity time interval $t_f - t_s$
+ * @st: (out): singularity type
  *
  * Gets the time $t_s$ where the @sing-th singularity occour.
  *

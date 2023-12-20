@@ -3858,7 +3858,7 @@ ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
  * ncm_mset_catalog_log_full_covar:
  * @mcat: a #NcmMSetCatalog
  *
- * FIXME
+ * Logs the current full (including additional values) covariance matrix.
  *
  */
 void
@@ -4083,9 +4083,9 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
  * where $n$ is the number of points of one chain, $m$ is the number of chains and $\lambda_1$ is the largest
  * eigenvalue of the positive definite matrix $W^{-1}B/n$.
  *
- * $W$ is the within-chain variance: $$W = $$ FIXME
+ * $W$ is the within-chain covariance: $$W = $$ arithmetical mean of the covariance matrices of each chain.
  *
- * $B$ is the between-chain variance: $$B = $$ FIXME
+ * $B$ is the between-chain covariance: $$B = $$ covariance between the means of each chain.
  *
  * Refined version:
  * $$\hat{R}^p = \sqrt{\frac{\hat{d} + 3}{\hat{d} + 1} \left(\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1\right)},$$
@@ -4185,7 +4185,6 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
  * @i: parameter index.
  *
  * Bins and calculates the pdf associated with the parameter @i.
- * (not ready yet FIXME)
  *
  */
 void

@@ -733,7 +733,7 @@ ncm_powspec_sphere_proj_prepare_if_needed (NcmPowspecSphereProj *psp, NcmModel *
  * @psp: a #NcmPowspecSphereProj
  * @xi_i: the output initial scale $\xi_i$
  *
- * FIXME
+ * Sets the initial scale $\xi$ to @xi_i.
  *
  */
 void
@@ -754,7 +754,7 @@ ncm_powspec_sphere_proj_set_xi_i (NcmPowspecSphereProj *psp, gdouble xi_i)
  * @psp: a #NcmPowspecSphereProj
  * @xi_f: the output final scale $\xi_f$
  *
- * FIXME
+ * Sets the final scale $\xi$ to @xi_f.
  *
  */
 void
@@ -775,7 +775,7 @@ ncm_powspec_sphere_proj_set_xi_f (NcmPowspecSphereProj *psp, gdouble xi_f)
  * @psp: a #NcmPowspecSphereProj
  * @k_pivot: the pivot k
  *
- * FIXME
+ * Sets the pivot k to @k_pivot.
  *
  */
 void
@@ -795,9 +795,9 @@ ncm_powspec_sphere_proj_set_k_pivot (NcmPowspecSphereProj *psp, gdouble k_pivot)
  * ncm_powspec_sphere_proj_get_r_min:
  * @psp: a #NcmPowspecSphereProj
  *
- * FIXME
+ * Gets the minimum $r$.
  *
- * Returns: FIXME
+ * Returns: the minimum $r$.
  */
 gdouble
 ncm_powspec_sphere_proj_get_r_min (NcmPowspecSphereProj *psp)
@@ -811,9 +811,9 @@ ncm_powspec_sphere_proj_get_r_min (NcmPowspecSphereProj *psp)
  * ncm_powspec_sphere_proj_get_r_max:
  * @psp: a #NcmPowspecSphereProj
  *
- * FIXME
+ * Gets the maximum $r$.
  *
- * Returns: FIXME
+ * Returns: the maximum $r$.
  */
 gdouble
 ncm_powspec_sphere_proj_get_r_max (NcmPowspecSphereProj *psp)
