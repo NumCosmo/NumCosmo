@@ -4634,10 +4634,10 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
         const gdouble l = g_array_index (lim, gdouble, j);
         gdouble pvalue;
 
-        if (l < dist1d->xi)
+        if (l < ncm_stats_dist1d_get_xi (dist1d))
           pvalue = 0.0;
 
-        else if (l > dist1d->xf)
+        else if (l > ncm_stats_dist1d_get_xf (dist1d))
           pvalue = 1.0;
 
         else

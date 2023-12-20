@@ -47,6 +47,16 @@ enum
   PROP_SIZE,
 };
 
+struct _NcmStatsDist2dSpline
+{
+  /*< private >*/
+  NcmStatsDist2d parent_instance;
+  NcmSpline2d *m2lnp;
+  gboolean marginal_x;
+  gdouble norma;
+  gdouble m2lnnorma;
+};
+
 G_DEFINE_TYPE (NcmStatsDist2dSpline, ncm_stats_dist2d_spline, NCM_TYPE_STATS_DIST2D)
 
 static void

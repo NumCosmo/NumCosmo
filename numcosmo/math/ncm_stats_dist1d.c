@@ -54,14 +54,31 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT)
+typedef struct _NcmStatsDist1dPrivate
+{
+  /*< private >*/
+  GObject parent_instance;
+  gdouble xi;
+  gdouble xf;
+  gdouble norma;
+  gdouble reltol;
+  gdouble abstol;
+  gdouble max_prob;
+  gboolean compute_cdf;
+  NcmOdeSpline *inv_cdf;
+  NcmOdeSpline *pdf;
+  gsl_min_fminimizer *fmin;
+} NcmStatsDist1dPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT)
 
 static gdouble
 _ncm_stats_dist1d_inv_cdf_dydx (gdouble y, gdouble x, gpointer userdata)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (userdata);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  return sd1->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
+  return self->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
 }
 
 static gdouble
@@ -76,22 +93,23 @@ _ncm_stats_dist1d_pdf_dydx (gdouble y, gdouble x, gpointer userdata)
 static void
 ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
 {
-  NcmSpline *s1 = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s2 = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s3 = ncm_spline_cubic_notaknot_new ();
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+  NcmSpline *s1               = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s2               = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s3               = ncm_spline_cubic_notaknot_new ();
 
-  sd1->xi          = 0.0;
-  sd1->xf          = 0.0;
-  sd1->norma       = 0.0;
-  sd1->reltol      = 0.0;
-  sd1->max_prob    = 0.0;
-  sd1->inv_cdf     = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
-  sd1->pdf         = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
-  sd1->fmin        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  sd1->compute_cdf = FALSE;
+  self->xi          = 0.0;
+  self->xf          = 0.0;
+  self->norma       = 0.0;
+  self->reltol      = 0.0;
+  self->max_prob    = 0.0;
+  self->inv_cdf     = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
+  self->pdf         = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
+  self->fmin        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+  self->compute_cdf = FALSE;
 
   /* hnil is not an error in this case */
-  /*sd1->inv_pdf->stop_hnil = FALSE;*/
+  /*self->inv_pdf->stop_hnil = FALSE;*/
 
   ncm_spline_free (s1);
   ncm_spline_free (s2);
@@ -101,10 +119,11 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
 static void
 ncm_stats_dist1d_dispose (GObject *object)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (object);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  ncm_ode_spline_clear (&sd1->inv_cdf);
-  ncm_ode_spline_clear (&sd1->pdf);
+  ncm_ode_spline_clear (&self->inv_cdf);
+  ncm_ode_spline_clear (&self->pdf);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_parent_class)->dispose (object);
@@ -113,9 +132,10 @@ ncm_stats_dist1d_dispose (GObject *object)
 static void
 ncm_stats_dist1d_finalize (GObject *object)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (object);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  gsl_min_fminimizer_free (sd1->fmin);
+  gsl_min_fminimizer_free (self->fmin);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_parent_class)->finalize (object);
@@ -124,26 +144,27 @@ ncm_stats_dist1d_finalize (GObject *object)
 static void
 ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (object);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
   g_return_if_fail (NCM_IS_STATS_DIST1D (object));
 
   switch (prop_id)
   {
     case PROP_XI:
-      sd1->xi = g_value_get_double (value);
+      self->xi = g_value_get_double (value);
       break;
     case PROP_XF:
-      sd1->xf = g_value_get_double (value);
+      self->xf = g_value_get_double (value);
       break;
     case PROP_RELTOL:
-      sd1->reltol = g_value_get_double (value);
+      self->reltol = g_value_get_double (value);
       break;
     case PROP_ABSTOL:
-      sd1->abstol = g_value_get_double (value);
+      self->abstol = g_value_get_double (value);
       break;
     case PROP_MAX_PROB:
-      sd1->max_prob = g_value_get_double (value);
+      self->max_prob = g_value_get_double (value);
       break;
     case PROP_COMPUTE_CDF:
       ncm_stats_dist1d_set_compute_cdf (sd1, g_value_get_boolean (value));
@@ -157,7 +178,8 @@ ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (object);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
   g_return_if_fail (NCM_IS_STATS_DIST1D (object));
 
@@ -170,16 +192,16 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_double (value, ncm_stats_dist1d_get_xf (sd1));
       break;
     case PROP_NORMA:
-      g_value_set_double (value, sd1->norma);
+      g_value_set_double (value, self->norma);
       break;
     case PROP_RELTOL:
-      g_value_set_double (value, sd1->reltol);
+      g_value_set_double (value, self->reltol);
       break;
     case PROP_ABSTOL:
-      g_value_set_double (value, sd1->abstol);
+      g_value_set_double (value, self->abstol);
       break;
     case PROP_MAX_PROB:
-      g_value_set_double (value, sd1->max_prob);
+      g_value_set_double (value, self->max_prob);
       break;
     case PROP_COMPUTE_CDF:
       g_value_set_boolean (value, ncm_stats_dist1d_get_compute_cdf (sd1));
@@ -309,34 +331,65 @@ void
 ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dClass *sd1_class = NCM_STATS_DIST1D_GET_CLASS (sd1);
+  NcmStatsDist1dPrivate *self    = ncm_stats_dist1d_get_instance_private (sd1);
 
   if (sd1_class->prepare != NULL)
     sd1_class->prepare (sd1);
 
-  if (G_LIKELY (sd1->xi != sd1->xf) && sd1->compute_cdf)
+  if (G_LIKELY (self->xi != self->xf) && self->compute_cdf)
   {
-    ncm_ode_spline_set_reltol (sd1->inv_cdf, sd1->reltol);
-    ncm_ode_spline_set_reltol (sd1->pdf, sd1->reltol);
+    ncm_ode_spline_set_reltol (self->inv_cdf, self->reltol);
+    ncm_ode_spline_set_reltol (self->pdf, self->reltol);
 
-    ncm_ode_spline_set_abstol (sd1->inv_cdf, sd1->abstol);
-    ncm_ode_spline_set_abstol (sd1->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
+    ncm_ode_spline_set_abstol (self->inv_cdf, self->abstol);
+    ncm_ode_spline_set_abstol (self->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
 
-    ncm_ode_spline_set_xi (sd1->inv_cdf, 0.0);
-    ncm_ode_spline_set_yi (sd1->inv_cdf, sd1->xi);
-    ncm_ode_spline_set_yf (sd1->inv_cdf, sd1->xf);
+    ncm_ode_spline_set_xi (self->inv_cdf, 0.0);
+    ncm_ode_spline_set_yi (self->inv_cdf, self->xi);
+    ncm_ode_spline_set_yf (self->inv_cdf, self->xf);
 
-    ncm_ode_spline_set_interval (sd1->pdf, 0.0, sd1->xi, sd1->xf);
+    ncm_ode_spline_set_interval (self->pdf, 0.0, self->xi, self->xf);
 
-    sd1->norma = 1.0;
-    ncm_ode_spline_prepare (sd1->pdf, sd1);
-    sd1->norma = ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), sd1->xf);
+    self->norma = 1.0;
+    ncm_ode_spline_prepare (self->pdf, sd1);
+    self->norma = ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), self->xf);
 
-    ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
+    ncm_ode_spline_prepare (self->inv_cdf, sd1);
   }
   else
   {
-    sd1->norma = 1.0;
+    self->norma = 1.0;
   }
+}
+
+/**
+ * ncm_stats_dist1d_set_xi:
+ * @sd1: a #NcmStatsDist1d
+ * @xi: a double
+ *
+ * Sets the lower bound of the distribution $x_i$.
+ */
+void
+ncm_stats_dist1d_set_xi (NcmStatsDist1d *sd1, gdouble xi)
+{
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  self->xi = xi;
+}
+
+/**
+ * ncm_stats_dist1d_set_xf:
+ * @sd1: a #NcmStatsDist1d
+ * @xf: a double
+ *
+ * Sets the upper bound of the distribution $x_f$.
+ */
+void
+ncm_stats_dist1d_set_xf (NcmStatsDist1d *sd1, gdouble xf)
+{
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  self->xf = xf;
 }
 
 /**
@@ -348,7 +401,9 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 gdouble
 ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
 {
-  return sd1->xi;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  return self->xi;
 }
 
 /**
@@ -360,7 +415,9 @@ ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
 gdouble
 ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
 {
-  return sd1->xf;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  return self->xf;
 }
 
 /**
@@ -388,7 +445,9 @@ ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1)
 void
 ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf)
 {
-  sd1->compute_cdf = compute_cdf;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  self->compute_cdf = compute_cdf;
 }
 
 /**
@@ -400,7 +459,9 @@ ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf)
 gboolean
 ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1)
 {
-  return sd1->compute_cdf;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  return self->compute_cdf;
 }
 
 /**
@@ -415,10 +476,12 @@ ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1)
 gdouble
 ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
-    return sd1->xi == x ? 1.0 : 0.0;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x) / sd1->norma;
+  if (G_UNLIKELY (self->xi == self->xf))
+    return self->xi == x ? 1.0 : 0.0;
+
+  return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x) / self->norma;
 }
 
 /**
@@ -435,8 +498,10 @@ ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
 gdouble
 ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
-    return sd1->xi == x ? 0.0 : GSL_NEGINF;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  if (G_UNLIKELY (self->xi == self->xf))
+    return self->xi == x ? 0.0 : GSL_NEGINF;
 
   return NCM_STATS_DIST1D_GET_CLASS (sd1)->m2lnp (sd1, x);
 }
@@ -453,10 +518,12 @@ ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 gdouble
 ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
-    return sd1->xi <= x ? 1.0 : 0.0;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->pdf), x) / sd1->norma;
+  if (G_UNLIKELY (self->xi == self->xf))
+    return self->xi <= x ? 1.0 : 0.0;
+
+  return ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), x) / self->norma;
 }
 
 /**
@@ -471,10 +538,12 @@ ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
 gdouble
 ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  if (G_UNLIKELY (self->xi == self->xf))
     return 1.0;
 
-  return sd1->norma;
+  return self->norma;
 }
 
 /**
@@ -490,14 +559,16 @@ ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
 gdouble
 ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
-    return sd1->xi;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  if (G_UNLIKELY (self->xi == self->xf))
+    return self->xi;
   else if (G_UNLIKELY (u <= 0.0))
-    return sd1->xi;
+    return self->xi;
   else if (G_UNLIKELY (u >= 1.0))
-    return sd1->xf;
+    return self->xf;
   else
-    return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->inv_cdf), atanh (u));
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (self->inv_cdf), atanh (u));
 }
 
 /**
@@ -513,23 +584,25 @@ ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
 gdouble
 ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
 {
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+
+  if (G_UNLIKELY (self->xi == self->xf))
   {
-    return sd1->xi;
+    return self->xi;
   }
   else if (G_UNLIKELY (v <= 0.0))
   {
-    return sd1->xf;
+    return self->xf;
   }
   else if (G_UNLIKELY (v >= 1.0))
   {
-    return sd1->xi;
+    return self->xi;
   }
   else
   {
     const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (-0.5 * v) - log (v));
 
-    return ncm_spline_eval (ncm_ode_spline_peek_spline (sd1->inv_cdf), atan_1mv);
+    return ncm_spline_eval (ncm_ode_spline_peek_spline (self->inv_cdf), atan_1mv);
   }
 }
 
@@ -569,22 +642,23 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
 gdouble
 ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 {
-  const gdouble reltol     = sqrt (sd1->reltol);
-  const gint max_iter      = 1000000;
-  const gint linear_search = 1000;
-  gdouble x0               = sd1->xi;
-  gdouble x1               = sd1->xf;
-  gdouble x                = 0.5 * (sd1->xf + sd1->xi);
-  gdouble last_x0          = x0;
-  gdouble last_x1          = x1;
-  gint iter                = 0;
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
+  const gdouble reltol        = sqrt (self->reltol);
+  const gint max_iter         = 1000000;
+  const gint linear_search    = 1000;
+  gdouble x0                  = self->xi;
+  gdouble x1                  = self->xf;
+  gdouble x                   = 0.5 * (self->xf + self->xi);
+  gdouble last_x0             = x0;
+  gdouble last_x1             = x1;
+  gint iter                   = 0;
   gsl_function F;
   gdouble fmin;
   gint status;
   gint ret;
 
-  if (G_UNLIKELY (sd1->xi == sd1->xf))
-    return sd1->xi;
+  if (G_UNLIKELY (self->xi == self->xf))
+    return self->xi;
 
   F.params   = sd1;
   F.function = &_ncm_stats_dist1d_m2lnp;
@@ -593,7 +667,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
   for (iter = 0; iter < linear_search; iter++)
   {
-    const gdouble x_try = sd1->xi + (sd1->xf - sd1->xi) / (linear_search - 1.0) * iter;
+    const gdouble x_try = self->xi + (self->xf - self->xi) / (linear_search - 1.0) * iter;
     const gdouble f_try = ncm_stats_dist1d_eval_m2lnp (sd1, x_try);
 
     if (f_try < fmin)
@@ -605,21 +679,21 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
   iter = 0;
 
-  ret = gsl_min_fminimizer_set (sd1->fmin, &F, x, x0, x1);
+  ret = gsl_min_fminimizer_set (self->fmin, &F, x, x0, x1);
   NCM_TEST_GSL_RESULT ("ncm_stats_dist1d_eval_mode", ret);
 
   do {
     iter++;
-    status = gsl_min_fminimizer_iterate (sd1->fmin);
+    status = gsl_min_fminimizer_iterate (self->fmin);
 
     if (status)
       g_error ("ncm_stats_dist1d_mode: Cannot find minimum (%s)", gsl_strerror (status));  /* LCOV_EXCL_LINE */
 
-    x  = gsl_min_fminimizer_x_minimum (sd1->fmin);
-    x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
-    x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
+    x  = gsl_min_fminimizer_x_minimum (self->fmin);
+    x0 = gsl_min_fminimizer_x_lower (self->fmin);
+    x1 = gsl_min_fminimizer_x_upper (self->fmin);
 
-    status = gsl_min_test_interval (x0, x1, sd1->abstol, reltol);
+    status = gsl_min_test_interval (x0, x1, self->abstol, reltol);
 
     if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {

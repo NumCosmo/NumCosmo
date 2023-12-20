@@ -38,15 +38,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST1D             (ncm_stats_dist1d_get_type ())
-#define NCM_STATS_DIST1D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST1D, NcmStatsDist1d))
-#define NCM_STATS_DIST1D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST1D, NcmStatsDist1dClass))
-#define NCM_IS_STATS_DIST1D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST1D))
-#define NCM_IS_STATS_DIST1D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST1D))
-#define NCM_STATS_DIST1D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST1D, NcmStatsDist1dClass))
+#define NCM_TYPE_STATS_DIST1D (ncm_stats_dist1d_get_type ())
 
-typedef struct _NcmStatsDist1dClass NcmStatsDist1dClass;
-typedef struct _NcmStatsDist1d NcmStatsDist1d;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDist1d, ncm_stats_dist1d, NCM, STATS_DIST1D, GObject)
 
 struct _NcmStatsDist1dClass
 {
@@ -57,25 +51,10 @@ struct _NcmStatsDist1dClass
   gdouble (*m2lnp) (NcmStatsDist1d *sd1, gdouble x);
   void (*prepare) (NcmStatsDist1d *sd1);
   gdouble (*get_current_h) (NcmStatsDist1d *sd1);
-};
 
-struct _NcmStatsDist1d
-{
-  /*< private >*/
-  GObject parent_instance;
-  gdouble xi;
-  gdouble xf;
-  gdouble norma;
-  gdouble reltol;
-  gdouble abstol;
-  gdouble max_prob;
-  gboolean compute_cdf;
-  NcmOdeSpline *inv_cdf;
-  NcmOdeSpline *pdf;
-  gsl_min_fminimizer *fmin;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[14];
 };
-
-GType ncm_stats_dist1d_get_type (void) G_GNUC_CONST;
 
 NcmStatsDist1d *ncm_stats_dist1d_ref (NcmStatsDist1d *sd1);
 void ncm_stats_dist1d_free (NcmStatsDist1d *sd1);
@@ -86,6 +65,9 @@ gdouble ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1);
 
 void ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf);
 gboolean ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1);
+
+void ncm_stats_dist1d_set_xi (NcmStatsDist1d *sd1, gdouble xi);
+void ncm_stats_dist1d_set_xf (NcmStatsDist1d *sd1, gdouble xf);
 
 gdouble ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1);
 gdouble ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1);

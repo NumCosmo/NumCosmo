@@ -57,11 +57,9 @@ static void
 _ncm_stats_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-  
+
   g_return_if_fail (NCM_IS_STATS_DIST2D (object));
-  
-  NCM_UNUSED (sd2);
-  
+
   switch (prop_id)
   {
     default:
@@ -74,11 +72,11 @@ static void
 _ncm_stats_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-  
+
   g_return_if_fail (NCM_IS_STATS_DIST2D (object));
-  
+
   NCM_UNUSED (sd2);
-  
+
   switch (prop_id)
   {
     default:
@@ -105,12 +103,12 @@ static void
 ncm_stats_dist2d_class_init (NcmStatsDist2dClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->dispose      = &_ncm_stats_dist2d_dispose;
   object_class->finalize     = &_ncm_stats_dist2d_finalize;
   object_class->set_property = &_ncm_stats_dist2d_set_property;
   object_class->get_property = &_ncm_stats_dist2d_get_property;
-  
+
   klass->xbounds          = NULL;
   klass->ybounds          = NULL;
   klass->pdf              = NULL;
@@ -173,7 +171,7 @@ void
 ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
 {
   NcmStatsDist2dClass *sd2_class = NCM_STATS_DIST2D_GET_CLASS (sd2);
-  
+
   if (sd2_class->prepare != NULL)
     sd2_class->prepare (sd2);
 }
