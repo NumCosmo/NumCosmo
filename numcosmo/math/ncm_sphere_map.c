@@ -365,12 +365,11 @@ ncm_sphere_map_class_init (NcmSphereMapClass *klass)
 
 /**
  * ncm_sphere_map_new:
- * @nside: FIXME
+ * @nside: the healpix nside parameter
  *
- * FIXME
+ * Creates a new #NcmSphereMap for a given @nside.
  *
- *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmSphereMap.
  */
 NcmSphereMap *
 ncm_sphere_map_new (const gint64 nside)
@@ -386,9 +385,9 @@ ncm_sphere_map_new (const gint64 nside)
  * ncm_sphere_map_ref:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Increases the reference count of @smap.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @smap.
  */
 NcmSphereMap *
 ncm_sphere_map_ref (NcmSphereMap *smap)
@@ -400,7 +399,8 @@ ncm_sphere_map_ref (NcmSphereMap *smap)
  * ncm_sphere_map_free:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Decreases the reference count of @smap. When its reference count
+ * drops to 0, the object is finalized (i.e. its memory is freed).
  *
  */
 void
@@ -413,7 +413,10 @@ ncm_sphere_map_free (NcmSphereMap *smap)
  * ncm_sphere_map_clear:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * If *@smap is not %NULL, decreases the reference count of @smap.
+ * When its reference count drops to 0, the object is finalized
+ * (i.e. its memory is freed).
+ * Set *@smap to %NULL.
  *
  */
 void
@@ -445,9 +448,9 @@ _ncm_sphere_map_prepare_circle (NcmSphereMap *smap, NcmSphereMapBlock *block, co
 /**
  * ncm_sphere_map_set_nside:
  * @smap: a #NcmSphereMap
- * @nside: FIXME
+ * @nside: the healpix nside parameter
  *
- * FIXME
+ * Sets the nside parameter of @smap.
  *
  */
 void
@@ -551,9 +554,9 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
  * ncm_sphere_map_get_nside:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the nside parameter of @smap.
  *
- * Returns: FIXME
+ * Returns: the nside parameter of @smap.
  */
 gint64
 ncm_sphere_map_get_nside (NcmSphereMap *smap)
@@ -567,9 +570,9 @@ ncm_sphere_map_get_nside (NcmSphereMap *smap)
  * ncm_sphere_map_get_npix:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Gets the number of pixels of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of pixels of @smap.
  */
 gint64
 ncm_sphere_map_get_npix (NcmSphereMap *smap)
@@ -583,9 +586,9 @@ ncm_sphere_map_get_npix (NcmSphereMap *smap)
  * ncm_sphere_map_get_cap_size:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the number of pixels of the north cap of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of pixels of the north cap of @smap.
  */
 gint64
 ncm_sphere_map_get_cap_size (NcmSphereMap *smap)
@@ -599,9 +602,10 @@ ncm_sphere_map_get_cap_size (NcmSphereMap *smap)
  * ncm_sphere_map_get_middle_size:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the number of pixels of the middle of @smap. That is
+ * the number of pixels of the middle rings.
  *
- * Returns: FIXME
+ * Returns: the number of pixels of the middle of @smap.
  */
 gint64
 ncm_sphere_map_get_middle_size (NcmSphereMap *smap)
@@ -615,9 +619,9 @@ ncm_sphere_map_get_middle_size (NcmSphereMap *smap)
  * ncm_sphere_map_get_nrings:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the number of rings of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of rings of @smap.
  */
 gint64
 ncm_sphere_map_get_nrings (NcmSphereMap *smap)
@@ -631,9 +635,9 @@ ncm_sphere_map_get_nrings (NcmSphereMap *smap)
  * ncm_sphere_map_get_nrings_cap:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the number of rings of the north cap of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of rings of the north cap of @smap.
  */
 gint64
 ncm_sphere_map_get_nrings_cap (NcmSphereMap *smap)
@@ -647,9 +651,9 @@ ncm_sphere_map_get_nrings_cap (NcmSphereMap *smap)
  * ncm_sphere_map_get_nrings_middle:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Get the number of rings of the middle of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of rings of the middle of @smap.
  */
 gint64
 ncm_sphere_map_get_nrings_middle (NcmSphereMap *smap)
@@ -664,9 +668,9 @@ ncm_sphere_map_get_nrings_middle (NcmSphereMap *smap)
  * @smap: a #NcmSphereMap
  * @r_i: ring index
  *
- * FIXME
+ * Get the number of pixels of the ring @r_i of @smap.
  *
- * Returns: FIXME
+ * Returns: the number of pixels of the ring @r_i of @smap.
  */
 gint64
 ncm_sphere_map_get_ring_size (NcmSphereMap *smap, gint64 r_i)
@@ -694,9 +698,9 @@ ncm_sphere_map_get_ring_size (NcmSphereMap *smap, gint64 r_i)
  * @smap: a #NcmSphereMap
  * @r_i: ring index
  *
- * FIXME
+ * Get the first pixel index of the ring @r_i of @smap.
  *
- * Returns: FIXME
+ * Returns: the first pixel index of the ring @r_i of @smap.
  */
 gint64
 ncm_sphere_map_get_ring_first_index (NcmSphereMap *smap, gint64 r_i)
@@ -724,9 +728,9 @@ ncm_sphere_map_get_ring_first_index (NcmSphereMap *smap, gint64 r_i)
 /**
  * ncm_sphere_map_set_order:
  * @smap: a #NcmSphereMap
- * @order: FIXME
+ * @order: the pixel ordering
  *
- * FIXME
+ * Sets the pixel ordering of @smap.
  *
  */
 void
@@ -766,9 +770,9 @@ ncm_sphere_map_set_order (NcmSphereMap *smap, NcmSphereMapOrder order)
  * ncm_sphere_map_get_order:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Gets the pixel ordering of @smap.
  *
- * Returns: FIXME
+ * Returns: the pixel ordering of @smap.
  */
 NcmSphereMapOrder
 ncm_sphere_map_get_order (NcmSphereMap *smap)
@@ -781,9 +785,9 @@ ncm_sphere_map_get_order (NcmSphereMap *smap)
 /**
  * ncm_sphere_map_set_coordsys:
  * @smap: a #NcmSphereMap
- * @coordsys: FIXME
+ * @coordsys: the coordinate system
  *
- * FIXME
+ * Sets the coordinate system of @smap.
  *
  */
 void
@@ -811,9 +815,9 @@ ncm_sphere_map_set_coordsys (NcmSphereMap *smap, NcmSphereMapCoordSys coordsys)
  * ncm_sphere_map_get_coordsys:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Gets the coordinate system of @smap.
  *
- * Returns: FIXME
+ * Returns: the coordinate system of @smap.
  */
 NcmSphereMapCoordSys
 ncm_sphere_map_get_coordsys (NcmSphereMap *smap)
@@ -868,7 +872,7 @@ ncm_sphere_map_get_lmax (NcmSphereMap *smap)
  * ncm_sphere_map_clear_pixels:
  * @smap: a #NcmSphereMap
  *
- * FIXME
+ * Clear the pixels of @smap, i.e. set all pixels to zero.
  *
  */
 void
@@ -883,11 +887,11 @@ ncm_sphere_map_clear_pixels (NcmSphereMap *smap)
 /**
  * ncm_sphere_map_nest2ring:
  * @smap: a #NcmSphereMap
- * @nest_index: FIXME
+ * @nest_index: a pixel index in NESTED ordering
  *
- * FIXME
+ * Converts a pixel index from NESTED to RING ordering.
  *
- * Returns: FIXME
+ * Returns: the pixel index in RING ordering.
  */
 gint64
 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index)
@@ -980,11 +984,11 @@ ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index)
 /**
  * ncm_sphere_map_ring2nest:
  * @smap: a #NcmSphereMap
- * @ring_index: FIXME
+ * @ring_index: a pixel index in RING ordering
  *
- * FIXME
+ * Converts a pixel index from RING to NESTED ordering.
  *
- * Returns: FIXME
+ * Returns: the pixel index in NESTED ordering.
  */
 gint64
 ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index)
@@ -1098,11 +1102,13 @@ _t_p_w_to_vector (const gint64 nside, const gint tm1, const gint pm1, const gint
 /**
  * ncm_sphere_map_pix2ang_nest:
  * @smap: a #NcmSphereMap
- * @nest_index: FIXME
- * @theta: (out): FIXME
- * @phi: (out): FIXME
+ * @nest_index: a pixel index in NESTED ordering
+ * @theta: (out): the polar angle of the pixel
+ * @phi: (out): the azimuthal angle of the pixel
  *
- * FIXME
+ * Converts a pixel index from NESTED to spherical coordinates and
+ * returns the angles @theta and @phi.
+ *
  */
 void
 ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdouble *theta, gdouble *phi)
@@ -1186,11 +1192,13 @@ ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdoubl
 /**
  * ncm_sphere_map_pix2ang_ring:
  * @smap: a #NcmSphereMap
- * @ring_index: FIXME
- * @theta: (out): FIXME
- * @phi: (out): FIXME
+ * @ring_index: a pixel index in RING ordering
+ * @theta: (out): the polar angle of the pixel
+ * @phi: (out): the azimuthal angle of the pixel
  *
- * FIXME
+ * Converts a pixel index from RING to spherical coordinates and
+ * returns the angles @theta and @phi.
+ *
  */
 void
 ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdouble *theta, gdouble *phi)
@@ -1227,10 +1235,11 @@ ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdoubl
 /**
  * ncm_sphere_map_pix2vec_ring:
  * @smap: a #NcmSphereMap
- * @ring_index: FIXME
+ * @ring_index: a pixel index in RING ordering
  * @vec: a #NcmTriVec
  *
- * FIXME
+ * Converts a pixel index from RING to a unit vector.
+ *
  */
 void
 ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *vec)
@@ -1267,10 +1276,11 @@ ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *v
 /**
  * ncm_sphere_map_pix2vec_nest:
  * @smap: a #NcmSphereMap
- * @nest_index: FIXME
+ * @nest_index: a pixel index in NESTED ordering
  * @vec: a #NcmTriVec
  *
- * FIXME
+ * Converts a pixel index from NESTED to a unit vector.
+ *
  */
 void
 ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *vec)
@@ -1451,11 +1461,11 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdoubl
 /**
  * ncm_sphere_map_ang2pix_nest:
  * @smap: a #NcmSphereMap
- * @theta: FIXME
- * @phi: FIXME
- * @nest_index: (out): FIXME
+ * @theta: a polar angle
+ * @phi: an azimuthal angle
+ * @nest_index: (out): the pixel index in NESTED ordering
  *
- * FIXME
+ * Converts spherical coordinates to a pixel index in NESTED ordering.
  *
  */
 void
@@ -1472,11 +1482,11 @@ ncm_sphere_map_ang2pix_nest (NcmSphereMap *smap, const gdouble theta, const gdou
 /**
  * ncm_sphere_map_ang2pix_ring:
  * @smap: a #NcmSphereMap
- * @theta: FIXME
- * @phi: FIXME
- * @ring_index: (out): FIXME
+ * @theta: a polar angle
+ * @phi: an azimuthal angle
+ * @ring_index: (out): the pixel index in RING ordering
  *
- * FIXME
+ * Converts spherical coordinates to a pixel index in RING ordering.
  *
  */
 void
@@ -1494,9 +1504,9 @@ ncm_sphere_map_ang2pix_ring (NcmSphereMap *smap, const gdouble theta, const gdou
  * ncm_sphere_map_vec2pix_ring:
  * @smap: a #NcmSphereMap
  * @vec: a #NcmTriVec
- * @ring_index: (out): FIXME
+ * @ring_index: (out): the pixel index in RING ordering
  *
- * FIXME
+ * Converts a unit vector to a pixel index in RING ordering.
  *
  */
 void
@@ -1513,9 +1523,9 @@ ncm_sphere_map_vec2pix_ring (NcmSphereMap *smap, NcmTriVec *vec, gint64 *ring_in
  * ncm_sphere_map_vec2pix_nest:
  * @smap: a #NcmSphereMap
  * @vec: a #NcmTriVec
- * @nest_index: (out): FIXME
+ * @nest_index: (out): the pixel index in NESTED ordering
  *
- * FIXME
+ * Converts a unit vector to a pixel index in NESTED ordering.
  *
  */
 void
@@ -1534,7 +1544,7 @@ ncm_sphere_map_vec2pix_nest (NcmSphereMap *smap, NcmTriVec *vec, gint64 *nest_in
  * @vec: a #NcmTriVec
  * @s: signal
  *
- * FIXME
+ * Adds @s to the signal at the pixel corresponding to @vec.
  *
  */
 void
@@ -1566,7 +1576,7 @@ ncm_sphere_map_add_to_vec (NcmSphereMap *smap, NcmTriVec *vec, const gdouble s)
  * @phi: $\phi$
  * @s: signal
  *
- * FIXME
+ * Adds @s to the signal at the pixel corresponding to @theta and @phi.
  *
  */
 void
@@ -1597,7 +1607,7 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdoubl
  * @fits_file: fits filename
  * @signal_name: (allow-none): signal column name in @fits_file
  *
- * FIXME
+ * Loads a #NcmSphereMap from a fits file.
  *
  */
 void
@@ -1699,9 +1709,9 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
  * @smap: a #NcmSphereMap
  * @fits_file: fits filename
  * @signal_name: (allow-none): signal column name in @fits_file
- * @overwrite: FIXME
+ * @overwrite: whether to overwrite @fits_file if it exists
  *
- * FIXME
+ * Saves a #NcmSphereMap to a fits file.
  *
  */
 void
@@ -1819,7 +1829,7 @@ _ncm_sphere_map_radec_to_ang (const gdouble RA, const gdouble DEC, gdouble *thet
  * @DEC: DEC column name in @fits_file
  * @S: (allow-none): Signal column name in @fits_file
  *
- * FIXME
+ * Loads a #NcmSphereMap from a fits catalog.
  *
  */
 void
