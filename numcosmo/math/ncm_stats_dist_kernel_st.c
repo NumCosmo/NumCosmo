@@ -96,10 +96,10 @@
 
 #include "math/ncm_stats_dist_kernel_private.h"
 
-struct _NcmStatsDistKernelSTPrivate
+typedef struct _NcmStatsDistKernelSTPrivate
 {
   gdouble nu;
-};
+} NcmStatsDistKernelSTPrivate;
 
 enum
 {
@@ -107,12 +107,23 @@ enum
   PROP_NU,
 };
 
+struct _NcmStatsDistKernelST
+{
+  NcmStatsDistKernel parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM_TYPE_STATS_DIST_KERNEL)
+
+static NcmStatsDistKernelPrivate *
+ncm_stats_dist_kernel_get_instance_private (NcmStatsDistKernel * sdk)
+{
+  return g_type_instance_get_private ((GTypeInstance *) sdk, NCM_TYPE_STATS_DIST_KERNEL);
+}
 
 static void
 ncm_stats_dist_kernel_st_init (NcmStatsDistKernelST *sdkst)
 {
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
   self->nu = 0.0;
 }
@@ -122,7 +133,7 @@ _ncm_stats_dist_kernel_st_set_property (GObject *object, guint prop_id, const GV
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = sdkst->priv;*/
+  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
   switch (prop_id)
@@ -141,7 +152,7 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = sdkst->priv;*/
+  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
 
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
@@ -160,7 +171,7 @@ static void
 _ncm_stats_dist_kernel_st_dispose (GObject *object)
 {
   /*NcmStatsDistKernelST *sdkst               = NCM_STATS_DIST_KERNEL_ST (object);*/
-  /*NcmStatsDistKernelSTPrivate * const self = sdkst->priv;*/
+  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->dispose (object);
@@ -170,7 +181,7 @@ static void
 _ncm_stats_dist_kernel_st_finalize (GObject *object)
 {
   /* NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object); */
-  /* NcmStatsDistKernelSTPrivate * const self = sdkst->priv; */
+  /* NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst); */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->finalize (object);
@@ -216,7 +227,7 @@ static gdouble
 _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n)
 {
   NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
   const guint d    = ncm_stats_dist_kernel_get_dim (sdk);
   const gdouble nu = (self->nu >= 3.0) ? self->nu : 3.0;
@@ -231,7 +242,7 @@ static gdouble
 _ncm_stats_dist_kernel_st_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
 {
   NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
   const guint d             = ncm_stats_dist_kernel_get_dim (sdk);
   const gdouble lg_lnnorm   = lgamma (self->nu / 2.0) - lgamma ((self->nu + d) / 2.0);
@@ -244,8 +255,9 @@ _ncm_stats_dist_kernel_st_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_de
 static gdouble
 _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2)
 {
-  NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
-  NcmStatsDistKernelPrivate * const pself  = sdk->priv;
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+  NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   return pow (1.0 + chi2 / self->nu, -0.5 * (self->nu + pself->d));
 }
@@ -253,7 +265,7 @@ _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble ch
 static void
 _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku)
 {
-  /*NcmStatsDistKernelPrivate * const pself = sdk->priv;*/
+  /*NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);*/
   const guint n = ncm_vector_len (chi2);
   guint i;
 
@@ -284,8 +296,9 @@ _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *c
 static void
 _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
-  NcmStatsDistKernelPrivate * const pself  = sdk->priv;
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+  NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   const guint n       = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
@@ -331,8 +344,9 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
 static void
 _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  NcmStatsDistKernelSTPrivate * const self = NCM_STATS_DIST_KERNEL_ST (sdk)->priv;
-  NcmStatsDistKernelPrivate * const pself  = sdk->priv;
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+  NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   const guint n       = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
@@ -376,8 +390,8 @@ static void
 _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
-  NcmStatsDistKernelPrivate * const pself  = sdk->priv;
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+  NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
   gdouble chi_scale;
   gint ret;
   guint i;
@@ -473,7 +487,7 @@ ncm_stats_dist_kernel_st_clear (NcmStatsDistKernelST **sdkst)
 void
 ncm_stats_dist_kernel_st_set_nu (NcmStatsDistKernelST *sdkst, const gdouble nu)
 {
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
   self->nu = nu;
 }
@@ -487,7 +501,7 @@ ncm_stats_dist_kernel_st_set_nu (NcmStatsDistKernelST *sdkst, const gdouble nu)
 gdouble
 ncm_stats_dist_kernel_st_get_nu (NcmStatsDistKernelST *sdkst)
 {
-  NcmStatsDistKernelSTPrivate * const self = sdkst->priv;
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
 
   return self->nu;
 }

@@ -36,17 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST_KERNEL             (ncm_stats_dist_kernel_get_type ())
-#define NCM_STATS_DIST_KERNEL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_KERNEL, NcmStatsDistKernel))
-#define NCM_STATS_DIST_KERNEL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_KERNEL, NcmStatsDistKernelClass))
-#define NCM_IS_STATS_DIST_KERNEL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_KERNEL))
-#define NCM_IS_STATS_DIST_KERNEL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_KERNEL))
-#define NCM_STATS_DIST_KERNEL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_KERNEL, NcmStatsDistKernelClass))
+#define NCM_TYPE_STATS_DIST_KERNEL (ncm_stats_dist_kernel_get_type ())
 
-typedef struct _NcmStatsDistKernelClass NcmStatsDistKernelClass;
-typedef struct _NcmStatsDistKernel NcmStatsDistKernel;
-typedef struct _NcmStatsDistKernelPrivate NcmStatsDistKernelPrivate;
-
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKernel, ncm_stats_dist_kernel, NCM, STATS_DIST_KERNEL, GObject)
 
 struct _NcmStatsDistKernelClass
 {
@@ -61,16 +53,10 @@ struct _NcmStatsDistKernelClass
   void (*eval_sum0_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
   void (*eval_sum1_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
   void (*sample) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[9];
 };
-
-struct _NcmStatsDistKernel
-{
-  GObject parent_instance;
-
-  NcmStatsDistKernelPrivate *priv;
-};
-
-GType ncm_stats_dist_kernel_get_type (void) G_GNUC_CONST;
 
 NcmStatsDistKernel *ncm_stats_dist_kernel_ref (NcmStatsDistKernel *sdk);
 void ncm_stats_dist_kernel_free (NcmStatsDistKernel *sdk);
