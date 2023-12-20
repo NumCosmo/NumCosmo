@@ -39,16 +39,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST             (ncm_stats_dist_get_type ())
-#define NCM_STATS_DIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST, NcmStatsDist))
-#define NCM_STATS_DIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST, NcmStatsDistClass))
-#define NCM_IS_STATS_DIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST))
-#define NCM_IS_STATS_DIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST))
-#define NCM_STATS_DIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST, NcmStatsDistClass))
+#define NCM_TYPE_STATS_DIST (ncm_stats_dist_get_type ())
 
-typedef struct _NcmStatsDistClass NcmStatsDistClass;
-typedef struct _NcmStatsDist NcmStatsDist;
-typedef struct _NcmStatsDistPrivate NcmStatsDistPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDist, ncm_stats_dist, NCM, STATS_DIST, GObject)
 
 struct _NcmStatsDistClass
 {
@@ -66,13 +59,9 @@ struct _NcmStatsDistClass
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*reset) (NcmStatsDist *sd);
-};
 
-struct _NcmStatsDist
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmStatsDistPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
 /**
@@ -94,8 +83,6 @@ typedef enum _NcmStatsDistCV
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
-
-GType ncm_stats_dist_get_type (void) G_GNUC_CONST;
 
 NcmStatsDist *ncm_stats_dist_ref (NcmStatsDist *sd);
 void ncm_stats_dist_free (NcmStatsDist *sd);

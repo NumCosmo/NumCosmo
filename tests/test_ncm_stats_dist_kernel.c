@@ -38,8 +38,8 @@
 
 typedef enum _NcmStatsDistKernelType
 {
-  NCM_STATS_DIST_KERNEL_GAUSS,
-  NCM_STATS_DIST_KERNEL_ST3,
+  NCM_STATS_DIST_KERNEL_TYPE_GAUSS,
+  NCM_STATS_DIST_KERNEL_TYPE_ST3,
 } NcmStatsDistKernelType;
 
 typedef struct _TestNcmStatsDistKernel
@@ -134,7 +134,7 @@ test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointe
 
   test->dim         = dim;
   test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
-  test->kernel_type = NCM_STATS_DIST_KERNEL_GAUSS;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
   test->nfail       = 0;
 
   ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
@@ -156,7 +156,7 @@ test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer p
 
   test->dim         = dim;
   test->nu          = nu;
-  test->kernel_type = NCM_STATS_DIST_KERNEL_ST3;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
   test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
   test->nfail       = 0;
 
@@ -185,10 +185,10 @@ test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointe
 
   switch (test->kernel_type)
   {
-    case NCM_STATS_DIST_KERNEL_GAUSS:
+    case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
       h_test = pow (4.0 / (n * (test->dim + 2.0)), 1.0 / (test->dim + 4.0));
       break;
-    case NCM_STATS_DIST_KERNEL_ST3:
+    case NCM_STATS_DIST_KERNEL_TYPE_ST3:
       h_test = pow (16.0 * gsl_pow_2 (test->nu - 2) * (1.0 + test->dim + test->nu) * (3.0 + test->dim + test->nu) / ((2.0 + test->dim) * (test->dim + test->nu) * (2.0 + test->dim + test->nu) * (test->dim + 2.0 * test->nu) * (2.0 + test->dim + 2.0 * test->nu) * n), 1.0 / (test->dim + 4.0));
       break;
     default:
@@ -232,7 +232,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 
   switch (test->kernel_type)
   {
-    case NCM_STATS_DIST_KERNEL_GAUSS:
+    case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
     {
       gdouble norm_test    = 0.5 * (test->dim * ncm_c_ln2pi () + lndet_cov);
       const gdouble lnnorm = ncm_stats_dist_kernel_get_lnnorm (test->kernel, cov);
@@ -240,7 +240,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
       ncm_assert_cmpdouble_e (norm_test, ==, lnnorm, 1.0e-14, 0.0);
       break;
     }
-    case NCM_STATS_DIST_KERNEL_ST3:
+    case NCM_STATS_DIST_KERNEL_TYPE_ST3:
     {
       const guint d             = test->dim;
       const gdouble lg_lnnorm   = lgamma (test->nu / 2.0) - lgamma ((test->nu + d) / 2.0);
@@ -273,7 +273,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 
     switch (test->kernel_type)
     {
-      case NCM_STATS_DIST_KERNEL_GAUSS:
+      case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
 
         for (i = 0; i < ntests; i++)
         {
@@ -284,7 +284,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
         }
 
         break;
-      case NCM_STATS_DIST_KERNEL_ST3:
+      case NCM_STATS_DIST_KERNEL_TYPE_ST3:
 
         for (i = 0; i < ntests; i++)
         {
@@ -353,11 +353,11 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
 
     switch (test->kernel_type)
     {
-      case NCM_STATS_DIST_KERNEL_GAUSS:
+      case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
         lnt_i0 = -0.5 * chi2_i - lnu_i + log (w_i);
         lnt_i1 = -0.5 * chi2_i + log (w_i);
         break;
-      case NCM_STATS_DIST_KERNEL_ST3:
+      case NCM_STATS_DIST_KERNEL_TYPE_ST3:
         lnt_i0 = kappa * log1p (chi2_i / test->nu) - lnu_i + log (w_i);
         lnt_i1 = kappa * log1p (chi2_i / test->nu) + log (w_i);
         break;

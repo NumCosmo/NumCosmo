@@ -275,7 +275,7 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (i = 0; i < self->np; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (self->v, i, u_i);
   }

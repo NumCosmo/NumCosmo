@@ -40,6 +40,8 @@ typedef enum _NcMCatFunc
 void
 _nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *center_desc, gdouble *lb, gdouble *ub)
 {
+  const gdouble xi = ncm_stats_dist1d_get_xi (sd1);
+  const gdouble xf = ncm_stats_dist1d_get_xf (sd1);
   gdouble P_bf, Pa_2;
 
   P_bf = ncm_stats_dist1d_eval_pdf (sd1, center);
@@ -52,7 +54,7 @@ _nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *cente
     ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%% (%5.2f-sigma).\n",
                  P_bf * 100.0, (Pa - P_bf) * 100.0, Pa * 100.0, sqrt (gsl_cdf_chisq_Pinv (Pa, 1.0)));
 
-    lb[0] = sd1->xi;
+    lb[0] = xi;
     ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, Pa);
   }
   else if (P_bf > 1.0 - Pa_2)
@@ -62,7 +64,7 @@ _nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *cente
     ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%% (%5.2f-sigma).\n",
                  (Pa - 1.0 + P_bf) * 100.0, (1.0 - P_bf) * 100.0, Pa * 100.0, sqrt (gsl_cdf_chisq_Pinv (Pa, 1.0)));
     lb[0] = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, Pa);
-    ub[0] = sd1->xf;
+    ub[0] = xf;
   }
   else
   {
@@ -633,10 +635,12 @@ main (gint argc, gchar *argv[])
 
         {
           NcmStatsDist1d *sd1 = ncm_mset_catalog_calc_distrib (mcat, mset_func, NCM_FIT_RUN_MSGS_SIMPLE);
+          const gdouble xi    = ncm_stats_dist1d_get_xi (sd1);
+          const gdouble xf    = ncm_stats_dist1d_get_xf (sd1);
 
           for (k = 0; k < nsteps; k++)
           {
-            gdouble x = sd1->xi + (sd1->xf - sd1->xi) / (nsteps - 1.0) * k;
+            gdouble x = xi + (xf - xi) / (nsteps - 1.0) * k;
             gdouble u = 1.0 / (nsteps - 1.0) * k;
 
             ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
@@ -816,20 +820,24 @@ main (gint argc, gchar *argv[])
           else
             sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
 
-          for (k = 0; k < nsteps; k++)
           {
-            gdouble x = sd1->xi + (sd1->xf - sd1->xi) / (nsteps - 1.0) * k;
-            gdouble u = 1.0 / (nsteps - 1.0) * k;
+            const gdouble xi = ncm_stats_dist1d_get_xi (sd1);
+            const gdouble xf = ncm_stats_dist1d_get_xf (sd1);
 
-            ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
-                         x,
-                         ncm_stats_dist1d_eval_p (sd1, x),
-                         ncm_stats_dist1d_eval_pdf (sd1, x),
-                         u,
-                         ncm_stats_dist1d_eval_inv_pdf (sd1, u),
-                         ncm_stats_dist1d_eval_inv_pdf_tail (sd1, u));
+            for (k = 0; k < nsteps; k++)
+            {
+              gdouble x = xi + (xf - xi) / (nsteps - 1.0) * k;
+              gdouble u = 1.0 / (nsteps - 1.0) * k;
+
+              ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
+                           x,
+                           ncm_stats_dist1d_eval_p (sd1, x),
+                           ncm_stats_dist1d_eval_pdf (sd1, x),
+                           u,
+                           ncm_stats_dist1d_eval_inv_pdf (sd1, u),
+                           ncm_stats_dist1d_eval_inv_pdf_tail (sd1, u));
+            }
           }
-
           ncm_stats_dist1d_free (sd1);
         }
         ncm_message ("\n\n");

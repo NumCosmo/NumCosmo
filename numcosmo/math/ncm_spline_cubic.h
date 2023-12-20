@@ -33,37 +33,25 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPLINE_CUBIC             (ncm_spline_cubic_get_type ())
-#define NCM_SPLINE_CUBIC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPLINE_CUBIC, NcmSplineCubic))
-#define NCM_SPLINE_CUBIC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPLINE_CUBIC, NcmSplineCubicClass))
-#define NCM_IS_SPLINE_CUBIC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPLINE_CUBIC))
-#define NCM_IS_SPLINE_CUBIC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPLINE_CUBIC))
-#define NCM_SPLINE_CUBIC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPLINE_CUBIC, NcmSplineCubicClass))
+#define NCM_TYPE_SPLINE_CUBIC (ncm_spline_cubic_get_type ())
 
-typedef struct _NcmSplineCubicClass NcmSplineCubicClass;
-typedef struct _NcmSplineCubic NcmSplineCubic;
+G_DECLARE_DERIVABLE_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM, SPLINE_CUBIC, NcmSpline)
 
 struct _NcmSplineCubicClass
 {
   /*< private >*/
   NcmSplineClass parent_class;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
 
-struct _NcmSplineCubic
-{
-  /*< private >*/
-  NcmSpline parent_instance;
-  NcmVector *b;
-  NcmVector *c;
-  NcmVector *d;
-  NcmVector *g;
-  NcmVector *diag;
-  NcmVector *offdiag;
-  gboolean init;
-  gsize len;
-};
+NcmVector *ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s);
+NcmVector *ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s);
+NcmVector *ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s);
 
-GType ncm_spline_cubic_get_type (void) G_GNUC_CONST;
+NcmVector *ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s);
+NcmVector *ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s);
 
 G_END_DECLS
 

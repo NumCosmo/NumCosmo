@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_model_funnel.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,9 +50,14 @@ enum
   PROP_SIZE,
 };
 
-struct _NcmModelFunnelPrivate
+typedef struct _NcmModelFunnelPrivate
 {
   gint place_holder;
+} NcmModelFunnelPrivate;
+
+struct _NcmModelFunnel
+{
+  NcmModel parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL)
@@ -59,7 +65,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL)
 static void
 ncm_model_funnel_init (NcmModelFunnel *model_funnel)
 {
-  model_funnel->priv = ncm_model_funnel_get_instance_private (model_funnel);
 }
 
 static void
@@ -94,7 +99,7 @@ static void
 _ncm_model_funnel_dispose (GObject *object)
 {
   /*NcmModelFunnel *model_funnel = NCM_MODEL_FUNNEL (object);*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_funnel_parent_class)->dispose (object);
 }
@@ -102,7 +107,6 @@ _ncm_model_funnel_dispose (GObject *object)
 static void
 _ncm_model_funnel_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_funnel_parent_class)->finalize (object);
 }
@@ -112,14 +116,14 @@ NCM_MSET_MODEL_REGISTER_ID (ncm_model_funnel, NCM_TYPE_MODEL_FUNNEL);
 static void
 ncm_model_funnel_class_init (NcmModelFunnelClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_ncm_model_funnel_set_property;
   model_class->get_property = &_ncm_model_funnel_get_property;
-  
-  object_class->dispose      = &_ncm_model_funnel_dispose;
-  object_class->finalize     = &_ncm_model_funnel_finalize;
+
+  object_class->dispose  = &_ncm_model_funnel_dispose;
+  object_class->finalize = &_ncm_model_funnel_finalize;
 
   ncm_model_class_set_name_nick (model_class, "MFU", "NcmModelFunnel");
   ncm_model_class_add_params (model_class, NNCM_MODEL_FUNNEL_SPARAM_LEN, NNCM_MODEL_FUNNEL_VPARAM_LEN, PROP_SIZE);
@@ -142,9 +146,9 @@ ncm_model_funnel_class_init (NcmModelFunnelClass *klass)
 /**
  * ncm_model_funnel_new:
  * @n: number of $x$ variables
- * 
+ *
  * Creates a new Funnel model.
- * 
+ *
  * Returns: (transfer full): the newly created #NcmModelFunnel
  */
 NcmModelFunnel *
@@ -153,15 +157,16 @@ ncm_model_funnel_new (guint n)
   NcmModelFunnel *mfu = g_object_new (NCM_TYPE_MODEL_FUNNEL,
                                       "x-length", n,
                                       NULL);
+
   return mfu;
 }
 
 /**
  * ncm_model_funnel_ref:
  * @mfu: a #NcmModelFunnel
- * 
+ *
  * Increases the reference count of @mfu by one.
- * 
+ *
  * Returns: (transfer full): @mfu
  */
 NcmModelFunnel *
@@ -173,11 +178,11 @@ ncm_model_funnel_ref (NcmModelFunnel *mfu)
 /**
  * ncm_model_funnel_free:
  * @mfu: a #NcmModelFunnel
- * 
+ *
  * Decreases the reference count of @mfu by one.
- * 
+ *
  */
-void 
+void
 ncm_model_funnel_free (NcmModelFunnel *mfu)
 {
   g_object_unref (mfu);
@@ -186,13 +191,14 @@ ncm_model_funnel_free (NcmModelFunnel *mfu)
 /**
  * ncm_model_funnel_clear:
  * @mfu: a #NcmModelFunnel
- * 
+ *
  * If @mfu is different from NULL, decreases the reference count of
  * @mfu by one and sets @mfu to NULL.
- * 
+ *
  */
-void 
+void
 ncm_model_funnel_clear (NcmModelFunnel **mfu)
 {
   g_clear_object (mfu);
 }
+

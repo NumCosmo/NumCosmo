@@ -39,24 +39,13 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_SF_SPHERICAL_HARMONICS             (ncm_sf_spherical_harmonics_get_type ())
-#define NCM_SF_SPHERICAL_HARMONICS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SF_SPHERICAL_HARMONICS, NcmSFSphericalHarmonics))
-#define NCM_SF_SPHERICAL_HARMONICS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SF_SPHERICAL_HARMONICS, NcmSFSphericalHarmonicsClass))
-#define NCM_IS_SF_SPHERICAL_HARMONICS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SF_SPHERICAL_HARMONICS))
-#define NCM_IS_SF_SPHERICAL_HARMONICS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SF_SPHERICAL_HARMONICS))
-#define NCM_SF_SPHERICAL_HARMONICS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SF_SPHERICAL_HARMONICS, NcmSFSphericalHarmonicsClass))
 
-typedef struct _NcmSFSphericalHarmonicsClass NcmSFSphericalHarmonicsClass;
-typedef struct _NcmSFSphericalHarmonics NcmSFSphericalHarmonics;
+G_DECLARE_FINAL_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, NCM, SF_SPHERICAL_HARMONICS, GObject)
+
 typedef struct _NcmSFSphericalHarmonicsK NcmSFSphericalHarmonicsK;
 typedef struct _NcmSFSphericalHarmonicsY NcmSFSphericalHarmonicsY;
 typedef struct _NcmSFSphericalHarmonicsP NcmSFSphericalHarmonicsP;
 typedef struct _NcmSFSphericalHarmonicsYArray NcmSFSphericalHarmonicsYArray;
-
-struct _NcmSFSphericalHarmonicsClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
 
 /**
  * NcmSFSphericalHarmonicsK:
@@ -174,7 +163,6 @@ struct _NcmSFSphericalHarmonicsYArray
 
 GType ncm_sf_spherical_harmonics_Y_get_type (void) G_GNUC_CONST;
 GType ncm_sf_spherical_harmonics_Y_array_get_type (void) G_GNUC_CONST;
-GType ncm_sf_spherical_harmonics_get_type (void) G_GNUC_CONST;
 
 NcmSFSphericalHarmonicsY *ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha, const gdouble abstol);
 NcmSFSphericalHarmonicsY *ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY);

@@ -81,6 +81,8 @@ struct _NcmIntegralNDClass
 
   NcmIntegralNDF integrand;
   NcmIntegralNDGetDimensions get_dimensions;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[16];
 };
 
@@ -160,32 +162,33 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
  * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
  * @user_data: the type of the user data
  * @user_data_free: the name of the method that frees the user data
- * 
+ *
  * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type and a custom method to free the user data.
  */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, user_data_free) \
-  G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND) \
-  struct _ ## ModuleObjName { NcmIntegralND parent_instance; user_data data; }; \
-  G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_INTEGRAL_ND) \
-  static void \
-  module_obj_name ## _init (ModuleObjName * intnd) \
-  { \
-  } \
-  static void \
-  module_obj_name ## _finalize (GObject * object) \
-  { \
-    ModuleObjName *intnd = MODULE ## _ ## OBJ_NAME (object); \
-    user_data_free (&intnd->data); \
-    G_OBJECT_CLASS (module_obj_name ## _parent_class)->finalize (object); \
-  } \
-  static void module_obj_name ## _class_init (ModuleObjName ## Class * klass) \
-  { \
-    NcmIntegralNDClass *intnd_class = NCM_INTEGRAL_ND_CLASS (klass); \
-    GObjectClass *gobject_class     = G_OBJECT_CLASS (klass); \
-    gobject_class->finalize     = &module_obj_name ## _finalize; \
-    intnd_class->get_dimensions = &method_get_dimensions; \
-    intnd_class->integrand      = &method_integrand; \
-  } \
+        G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND) \
+        struct _ ## ModuleObjName { NcmIntegralND parent_instance; user_data data; }; \
+        G_DEFINE_TYPE (ModuleObjName, module_obj_name, NCM_TYPE_INTEGRAL_ND) \
+        static void \
+        module_obj_name ## _init (ModuleObjName * intnd) \
+        { \
+        } \
+        static void \
+        module_obj_name ## _finalize (GObject * object) \
+        { \
+          ModuleObjName *intnd = MODULE ## _ ## OBJ_NAME (object); \
+          user_data_free (&intnd->data); \
+          G_OBJECT_CLASS (module_obj_name ## _parent_class)->finalize (object); \
+        } \
+        static void module_obj_name ## _class_init (ModuleObjName ## Class * klass) \
+        { \
+          NcmIntegralNDClass *intnd_class = NCM_INTEGRAL_ND_CLASS (klass); \
+          GObjectClass *gobject_class     = G_OBJECT_CLASS (klass); \
+          gobject_class->finalize     = &module_obj_name ## _finalize; \
+          intnd_class->get_dimensions = &method_get_dimensions; \
+          intnd_class->integrand      = &method_integrand; \
+        } \
+
 
 /**
  * NCM_INTEGRAL_ND_DEFINE_TYPE:
@@ -196,11 +199,11 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
  * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
  * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
  * @user_data: the type of the user data
- * 
+ *
  * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type.
  */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data) \
-  NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE (MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, (void)) \
+        NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE (MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, (void)) \
 
 G_END_DECLS
 

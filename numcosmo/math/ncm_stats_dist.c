@@ -142,7 +142,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT
 static void
 ncm_stats_dist_init (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv = ncm_stats_dist_get_instance_private (sd);
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->kernel          = NULL;
   self->sample_array    = g_ptr_array_new ();
@@ -221,7 +221,7 @@ static void
 _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (object);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   g_return_if_fail (NCM_IS_STATS_DIST (object));
 
@@ -258,7 +258,7 @@ static void
 _ncm_stats_dist_dispose (GObject *object)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (object);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   ncm_stats_dist_kernel_clear (&self->kernel);
 
@@ -289,7 +289,7 @@ static void
 _ncm_stats_dist_finalize (GObject *object)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (object);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->levmar_n = 0;
   g_clear_pointer (&self->levmar_workz, g_free);
@@ -436,7 +436,7 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
 static void
 _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->d = dim;
 }
@@ -444,7 +444,7 @@ _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim)
 static gdouble
 _ncm_stats_dist_get_href (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->over_smooth * ncm_stats_dist_kernel_get_rot_bandwidth (self->kernel, self->n_kernels);
 }
@@ -453,7 +453,7 @@ gdouble
 _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (params);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble m2lnp                    = 0.0;
   gint i;
@@ -482,7 +482,7 @@ gdouble
 _ncm_stats_dist_amise_kde_gauss (const gsl_vector *v, void *params)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (params);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
@@ -532,7 +532,7 @@ gdouble
 _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 {
   NcmStatsDist *sd                 = NCM_STATS_DIST (params);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
   const double lnos                = gsl_vector_get (v, 0);
   gdouble amise                    = 0.0;
@@ -628,7 +628,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 static void
 _ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective)(const gsl_vector *, void *))
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   gdouble s                        = 0.1;
   gdouble lnos                     = log (self->over_smooth);
   NcmVector *x                     = ncm_vector_new_data_static (&lnos, 1, 1);
@@ -669,7 +669,7 @@ static void
 _ncm_stats_dist_prepare (NcmStatsDist *sd)
 {
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   switch (self->cv_type)
   {
@@ -757,7 +757,7 @@ static void
 _ncm_stats_dist_compute_IM_full (NcmStatsDist *sd)
 {
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   gint i;
 
   sd_class->compute_IM (sd, self->IM);
@@ -816,7 +816,7 @@ _ncm_stats_dist_prepare_interp_fit_nnls_f (gdouble *p, gdouble *hx, gint m, gint
 static void
 _ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const guint nrows, const guint ncols)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   if ((self->nnls == NULL) ||
       ((ncm_nnls_get_nrows (self->nnls) != nrows) || (ncm_nnls_get_ncols (self->nnls) != ncols)))
@@ -843,7 +843,7 @@ _ncm_stats_dist_alloc_nnls (NcmStatsDist *sd, const guint nrows, const guint nco
 static void
 _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   _ncm_stats_dist_prepare (sd);
 
@@ -1060,7 +1060,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 static void
 _ncm_stats_dist_reset (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   g_ptr_array_set_size (self->sample_array, 0);
 }
@@ -1117,7 +1117,7 @@ ncm_stats_dist_clear (NcmStatsDist **sd)
 void
 ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   ncm_stats_dist_kernel_clear (&self->kernel);
   self->kernel = ncm_stats_dist_kernel_ref (sdk);
@@ -1136,7 +1136,7 @@ ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
 NcmStatsDistKernel *
 ncm_stats_dist_peek_kernel (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->kernel;
 }
@@ -1152,7 +1152,7 @@ ncm_stats_dist_peek_kernel (NcmStatsDist *sd)
 NcmStatsDistKernel *
 ncm_stats_dist_get_kernel (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return ncm_stats_dist_kernel_ref (self->kernel);
 }
@@ -1166,7 +1166,7 @@ ncm_stats_dist_get_kernel (NcmStatsDist *sd)
 guint
 ncm_stats_dist_get_dim (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->d;
 }
@@ -1183,7 +1183,7 @@ ncm_stats_dist_get_dim (NcmStatsDist *sd)
 guint
 ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->n_obs;
 }
@@ -1200,7 +1200,7 @@ ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
 guint
 ncm_stats_dist_get_n_kernels (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->n_kernels;
 }
@@ -1233,7 +1233,7 @@ ncm_stats_dist_get_href (NcmStatsDist *sd)
 void
 ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->over_smooth = over_smooth;
 }
@@ -1247,7 +1247,7 @@ ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth)
 gdouble
 ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->over_smooth;
 }
@@ -1266,7 +1266,7 @@ ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
 void
 ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   g_assert_cmpfloat (split_frac, >=, 0.01);
   g_assert_cmpfloat (split_frac, <=, 1.0);
@@ -1283,7 +1283,7 @@ ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac)
 gdouble
 ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->split_frac;
 }
@@ -1299,7 +1299,7 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
 void
 ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->print_fit = print_fit;
 }
@@ -1313,7 +1313,7 @@ ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit)
 gboolean
 ncm_stats_dist_get_print_fit (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->print_fit;
 }
@@ -1334,7 +1334,7 @@ ncm_stats_dist_get_print_fit (NcmStatsDist *sd)
 void
 ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->cv_type = cv_type;
 }
@@ -1348,7 +1348,7 @@ ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type)
 NcmStatsDistCV
 ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->cv_type;
 }
@@ -1364,7 +1364,7 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
 void
 ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   self->use_threads = use_threads;
 }
@@ -1378,7 +1378,7 @@ ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads)
 gboolean
 ncm_stats_dist_get_use_threads (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->use_threads;
 }
@@ -1454,7 +1454,7 @@ gdouble
 ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x)
 {
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return sd_class->eval_weights (sd, self->weights, x);
 }
@@ -1474,7 +1474,7 @@ gdouble
 ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
 {
   NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return sd_class->eval_weights_m2lnp (sd, self->weights, x);
 }
@@ -1491,7 +1491,7 @@ ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
 guint
 ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   guint i;
 
   if (!self->wcum_ready)
@@ -1544,7 +1544,7 @@ ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
 void
 ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   const gint i                     = ncm_stats_dist_kernel_choose (sd, rng);
   NcmVector *x_i                   = g_ptr_array_index (self->sample_array, i);
   NcmMatrix *cov_U                 = ncm_stats_dist_peek_cov_decomp (sd, i);
@@ -1558,7 +1558,7 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
 void
 ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *rng)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   const gint i                     = ncm_stats_dist_kernel_choose (sd, rng);
   const gint o_i                   = g_array_index (self->m2lnp_sort, size_t, i);
   NcmVector *x_i                   = g_ptr_array_index (self->sample_array, o_i);
@@ -1589,7 +1589,7 @@ ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG *
 gdouble
 ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->rnorm * self->rnorm;
 }
@@ -1606,7 +1606,7 @@ ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
 void
 ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *x)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   g_ptr_array_add (self->sample_array, ncm_vector_dup (x));
 }
@@ -1620,7 +1620,7 @@ ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *x)
 GPtrArray *
 ncm_stats_dist_peek_sample_array (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->sample_array;
 }
@@ -1669,7 +1669,7 @@ ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
 NcmVector *
 ncm_stats_dist_peek_weights (NcmStatsDist *sd)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->weights;
 }
@@ -1704,7 +1704,7 @@ ncm_stats_dist_reset (NcmStatsDist *sd)
 void
 ncm_stats_dist_get_Ki (NcmStatsDist *sd, const guint i, NcmVector **y_i, NcmMatrix **cov_i, gdouble *n_i, gdouble *w_i)
 {
-  NcmStatsDistPrivate * const self = sd->priv;
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   NcmMatrix *cov_decomp            = ncm_stats_dist_peek_cov_decomp (sd, i);
   const gdouble lnnorm             = ncm_stats_dist_get_lnnorm (sd, i);
   const gdouble href               = ncm_stats_dist_get_href (sd);

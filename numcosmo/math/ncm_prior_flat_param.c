@@ -56,6 +56,14 @@ enum
   PROP_PID
 };
 
+struct _NcmPriorFlatParam
+{
+  /*< private >*/
+  NcmPriorFlat parent_instance;
+  NcmModelID mid;
+  guint pid;
+};
+
 G_DEFINE_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM_TYPE_PRIOR_FLAT)
 
 static void
@@ -155,9 +163,9 @@ _ncm_prior_flat_param_mean (NcmPriorFlat *pf, NcmMSet *mset)
  * ncm_prior_flat_param_new:
  * @mid: model id
  * @pid: parameter id
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
+ * @x_low: parameter lower limit
+ * @x_upp: parameter upper limit
+ * @scale: parameter scale
  *
  * Creates a new Flat prior for parameter @pid of model @mid.
  *
@@ -180,9 +188,9 @@ ncm_prior_flat_param_new (NcmModelID mid, guint pid, gdouble x_low, gdouble x_up
 /**
  * ncm_prior_flat_param_new_pindex:
  * @pi: a #NcmMSetPIndex
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
+ * @x_low: parameter lower limit
+ * @x_upp: parameter upper limit
+ * @scale: parameter scale
  *
  * Creates a new Flat prior for parameter @pid of model @mid.
  *
@@ -198,9 +206,9 @@ ncm_prior_flat_param_new_pindex (const NcmMSetPIndex *pi, gdouble x_low, gdouble
  * ncm_prior_flat_param_new_name:
  * @mset: a #NcmMSet
  * @name: parameter name
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
+ * @x_low: parameter lower limit
+ * @x_upp: parameter upper limit
+ * @scale: parameter scale
  *
  * Creates a new Flat prior for parameter named @name in @mset.
  *
