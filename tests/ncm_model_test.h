@@ -29,33 +29,13 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MODEL_TEST             (ncm_model_test_get_type ())
-#define NCM_MODEL_TEST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST, NcmModelTest))
-#define NCM_MODEL_TEST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST, NcmModelTestClass))
-#define NCM_IS_MODEL_TEST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST))
-#define NCM_IS_MODEL_TEST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST))
-#define NCM_MODEL_TEST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST, NcmModelTestClass))
-
+#define NCM_TYPE_MODEL_TEST (ncm_model_test_get_type ())
 #define NCM_TYPE_MODEL_TEST_CHILD             (ncm_model_test_child_get_type ())
-#define NCM_MODEL_TEST_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChild))
-#define NCM_MODEL_TEST_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChildClass))
-#define NCM_IS_MODEL_TEST_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST_CHILD))
-#define NCM_IS_MODEL_TEST_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST_CHILD))
-#define NCM_MODEL_TEST_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChildClass))
-
 #define NCM_TYPE_MODEL_TEST_CHILD_CHILD             (ncm_model_test_child_child_get_type ())
-#define NCM_MODEL_TEST_CHILD_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChild))
-#define NCM_MODEL_TEST_CHILD_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
-#define NCM_IS_MODEL_TEST_CHILD_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD))
-#define NCM_IS_MODEL_TEST_CHILD_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST_CHILD_CHILD))
-#define NCM_MODEL_TEST_CHILD_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
 
-typedef struct _NcmModelTestClass NcmModelTestClass;
-typedef struct _NcmModelTest NcmModelTest;
-typedef struct _NcmModelTestChildClass NcmModelTestChildClass;
-typedef struct _NcmModelTestChild NcmModelTestChild;
-typedef struct _NcmModelTestChildChildClass NcmModelTestChildChildClass;
-typedef struct _NcmModelTestChildChild NcmModelTestChildChild;
+G_DECLARE_DERIVABLE_TYPE (NcmModelTest, ncm_model_test, NCM, MODEL_TEST, NcmModel)
+G_DECLARE_DERIVABLE_TYPE (NcmModelTestChild, ncm_model_test_child, NCM, MODEL_TEST_CHILD, NcmModelTest)
+G_DECLARE_DERIVABLE_TYPE (NcmModelTestChildChild, ncm_model_test_child_child, NCM, MODEL_TEST_CHILD_CHILD, NcmModelTestChild)
 
 struct _NcmModelTestClass
 {
@@ -71,28 +51,6 @@ struct _NcmModelTestChildChildClass
 {
   NcmModelTestChildClass parent_class;
 };
-
-struct _NcmModelTest
-{
-  NcmModel parent_instance;
-  gdouble A;
-};
-
-struct _NcmModelTestChild
-{
-  NcmModelTest parent_instance;
-  gdouble B;
-};
-
-struct _NcmModelTestChildChild
-{
-  NcmModelTestChild parent_instance;
-  gdouble C;
-};
-
-GType ncm_model_test_get_type (void) G_GNUC_CONST;
-GType ncm_model_test_child_get_type (void) G_GNUC_CONST;
-GType ncm_model_test_child_child_get_type (void) G_GNUC_CONST;
 
 #define SPARAM_LEN1 4
 #define SPARAM_LEN2 3

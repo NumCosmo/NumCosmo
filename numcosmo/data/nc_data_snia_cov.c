@@ -3409,7 +3409,7 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
     for (i = 0; i < total_len; i++)
     {
-      const gdouble u_i = gsl_ran_ugaussian (rng->r);
+      const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
       ncm_vector_set (self->mag_width_colour, i, u_i);
     }
@@ -3425,7 +3425,7 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       const gdouble mag_th    = nc_snia_dist_cov_mag (dcov, cosmo, snia_cov, i, width_th, colour_th);
       const gdouble var_tot   = nc_snia_dist_cov_extra_var (dcov, snia_cov, i);
 
-      const gdouble delta_mag    = ncm_vector_get (self->mag_width_colour, i + 0 * self->mu_len) + gsl_ran_ugaussian (rng->r) * sqrt (var_tot);
+      const gdouble delta_mag    = ncm_vector_get (self->mag_width_colour, i + 0 * self->mu_len) + ncm_rng_ugaussian_gen (rng) * sqrt (var_tot);
       const gdouble delta_width  = ncm_vector_get (self->mag_width_colour, i + 1 * self->mu_len);
       const gdouble delta_colour = ncm_vector_get (self->mag_width_colour, i + 2 * self->mu_len);
 

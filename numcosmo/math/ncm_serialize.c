@@ -73,6 +73,20 @@ enum
   PROP_OPTS,
 };
 
+struct _NcmSerialize
+{
+  /*< private >*/
+  GObject parent_instance;
+  GHashTable *name_ptr;
+  GHashTable *ptr_name;
+  GHashTable *saved_ptr_name;
+  GHashTable *saved_name_ser;
+  GRegex *is_named_regex;
+  GRegex *parse_obj_regex;
+  NcmSerializeOpt opts;
+  guint autosave_count;
+};
+
 G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT)
 
 static void

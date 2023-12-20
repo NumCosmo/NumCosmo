@@ -473,7 +473,7 @@ test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata)
 void
 test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata)
 {
-  g_assert_true (NCM_IS_VECTOR (test->cv));
+  g_assert_true (NCM_IS_VECTOR ((NcmVector *) test->cv));
 }
 
 void

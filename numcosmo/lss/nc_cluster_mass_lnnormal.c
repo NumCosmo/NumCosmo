@@ -259,7 +259,7 @@ _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, 
   NCM_UNUSED (z);
 
   ncm_rng_lock (rng);
-  lnM_obs[0] = lnM + BIAS + gsl_ran_gaussian (rng->r, SIGMA);
+  lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnM + BIAS, SIGMA);
   ncm_rng_unlock (rng);
 
   return (lnM_obs[0] <= mlnn->lnMobs_max) && (lnM_obs[0] >= mlnn->lnMobs_min);

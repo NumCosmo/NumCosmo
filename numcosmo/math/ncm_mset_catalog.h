@@ -35,22 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET_CATALOG             (ncm_mset_catalog_get_type ())
-#define NCM_MSET_CATALOG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_CATALOG, NcmMSetCatalog))
-#define NCM_MSET_CATALOG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_CATALOG, NcmMSetCatalogClass))
-#define NCM_IS_MSET_CATALOG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_CATALOG))
-#define NCM_IS_MSET_CATALOG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_CATALOG))
-#define NCM_MSET_CATALOG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_CATALOG, NcmMSetCatalogClass))
+#define NCM_TYPE_MSET_CATALOG (ncm_mset_catalog_get_type ())
 
-typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
-typedef struct _NcmMSetCatalog NcmMSetCatalog;
-typedef struct _NcmMSetCatalogPrivate NcmMSetCatalogPrivate;
-
-struct _NcmMSetCatalogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmMSetCatalog, ncm_mset_catalog, NCM, MSET_CATALOG, GObject)
 
 /**
  * NcmMSetCatalogSync:
@@ -121,15 +108,6 @@ typedef enum _NcmMSetCatalogTauMethod
   /* < private > */
   NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogTauMethod;
-
-struct _NcmMSetCatalog
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMSetCatalogPrivate *priv;
-};
-
-GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);

@@ -440,7 +440,7 @@ test_ncm_spline2d_new (TestNcmSpline2d *test, gconstpointer pdata)
     NcmSpline2d *s2d = ncm_spline2d_new (test->s2d_base, xv, yv, zm, FALSE);
 
     test_ncm_spline2d_new_sanity (s2d);
-    g_assert_true (s2d->init == FALSE);
+    g_assert_true (!ncm_spline2d_is_init (s2d));
     NCM_TEST_FREE (ncm_spline2d_free, s2d);
     NCM_TEST_FREE (ncm_vector_free, xv);
     NCM_TEST_FREE (ncm_vector_free, yv);
@@ -471,7 +471,7 @@ test_ncm_spline2d_new (TestNcmSpline2d *test, gconstpointer pdata)
 
     s2d = ncm_spline2d_new (test->s2d_base, xv, yv, zm, TRUE);
     test_ncm_spline2d_new_sanity (s2d);
-    g_assert_true (s2d->init == TRUE);
+    g_assert_true (ncm_spline2d_is_init (s2d));
     NCM_TEST_FREE (ncm_spline2d_free, s2d);
     NCM_TEST_FREE (ncm_vector_free, xv);
     NCM_TEST_FREE (ncm_vector_free, yv);
@@ -505,16 +505,16 @@ test_ncm_spline2d_copy (TestNcmSpline2d *test, gconstpointer pdata)
     NcmSpline2d *s2d_cp = ncm_spline2d_copy (s2d);
     guint i, j;
 
-    g_assert_true (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
+    g_assert_true (ncm_spline2d_peek_xv (s2d_cp) != ncm_spline2d_peek_xv (s2d) && ncm_spline2d_peek_yv (s2d_cp) != ncm_spline2d_peek_yv (s2d) && ncm_spline2d_peek_zm (s2d_cp) != ncm_spline2d_peek_zm (s2d));
 
     for (j = 0; j < _NCM_SPLINE2D_TEST_NKNOTS_Y; j++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->yv, j), ==, ncm_vector_get (s2d->yv, j));
+      ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_yv (s2d_cp), j), ==, ncm_vector_get (ncm_spline2d_peek_yv (s2d), j));
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
-        ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->xv, i), ==, ncm_vector_get (s2d->xv, i));
-        ncm_assert_cmpdouble (ncm_matrix_get (s2d_cp->zm, j, i), ==, ncm_matrix_get (s2d->zm, j, i));
+        ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_xv (s2d_cp), i), ==, ncm_vector_get (ncm_spline2d_peek_xv (s2d), i));
+        ncm_assert_cmpdouble (ncm_matrix_get (ncm_spline2d_peek_zm (s2d_cp), j, i), ==, ncm_matrix_get (ncm_spline2d_peek_zm (s2d), j, i));
       }
     }
 
@@ -544,16 +544,16 @@ test_ncm_spline2d_serialize (TestNcmSpline2d *test, gconstpointer pdata)
     NcmSpline2d *s2d_cp = NCM_SPLINE2D (ncm_serialize_dup_obj (ser, G_OBJECT (s2d)));
     guint i, j;
 
-    g_assert_true (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
+    g_assert_true (ncm_spline2d_peek_xv (s2d_cp) != ncm_spline2d_peek_xv (s2d) && ncm_spline2d_peek_yv (s2d_cp) != ncm_spline2d_peek_yv (s2d) && ncm_spline2d_peek_zm (s2d_cp) != ncm_spline2d_peek_zm (s2d));
 
     for (j = 0; j < _NCM_SPLINE2D_TEST_NKNOTS_Y; j++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->yv, j), ==, ncm_vector_get (s2d->yv, j));
+      ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_yv (s2d_cp), j), ==, ncm_vector_get (ncm_spline2d_peek_yv (s2d), j));
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
-        ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->xv, i), ==, ncm_vector_get (s2d->xv, i));
-        ncm_assert_cmpdouble (ncm_matrix_get (s2d_cp->zm, j, i), ==, ncm_matrix_get (s2d->zm, j, i));
+        ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_xv (s2d_cp), i), ==, ncm_vector_get (ncm_spline2d_peek_xv (s2d), i));
+        ncm_assert_cmpdouble (ncm_matrix_get (ncm_spline2d_peek_zm (s2d_cp), j, i), ==, ncm_matrix_get (ncm_spline2d_peek_zm (s2d), j, i));
       }
     }
 
@@ -601,16 +601,16 @@ test_ncm_spline2d_serialize_init (TestNcmSpline2d *test, gconstpointer pdata)
     NcmSpline2d *s2d_cp = NCM_SPLINE2D (ncm_serialize_dup_obj (ser, G_OBJECT (s2d)));
     guint i, j;
 
-    g_assert_true (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
+    g_assert_true (ncm_spline2d_peek_xv (s2d_cp) != ncm_spline2d_peek_xv (s2d) && ncm_spline2d_peek_yv (s2d_cp) != ncm_spline2d_peek_yv (s2d) && ncm_spline2d_peek_zm (s2d_cp) != ncm_spline2d_peek_zm (s2d));
 
     for (j = 0; j < _NCM_SPLINE2D_TEST_NKNOTS_Y; j++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->yv, j), ==, ncm_vector_get (s2d->yv, j));
+      ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_yv (s2d_cp), j), ==, ncm_vector_get (ncm_spline2d_peek_yv (s2d), j));
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
-        ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->xv, i), ==, ncm_vector_get (s2d->xv, i));
-        ncm_assert_cmpdouble (ncm_matrix_get (s2d_cp->zm, j, i), ==, ncm_matrix_get (s2d->zm, j, i));
+        ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_xv (s2d_cp), i), ==, ncm_vector_get (ncm_spline2d_peek_xv (s2d), i));
+        ncm_assert_cmpdouble (ncm_matrix_get (ncm_spline2d_peek_zm (s2d_cp), j, i), ==, ncm_matrix_get (ncm_spline2d_peek_zm (s2d), j, i));
       }
     }
 
@@ -648,16 +648,16 @@ test_ncm_spline2d_no_stride (TestNcmSpline2d *test, gconstpointer pdata)
     NcmSpline2d *s2d_cp = NCM_SPLINE2D (ncm_serialize_dup_obj (ser, G_OBJECT (s2d)));
     guint i, j;
 
-    g_assert_true (s2d_cp->xv != s2d->xv && s2d_cp->yv != s2d->yv && s2d_cp->zm != s2d->zm);
+    g_assert_true (ncm_spline2d_peek_xv (s2d_cp) != ncm_spline2d_peek_xv (s2d) && ncm_spline2d_peek_yv (s2d_cp) != ncm_spline2d_peek_yv (s2d) && ncm_spline2d_peek_zm (s2d_cp) != ncm_spline2d_peek_zm (s2d));
 
     for (j = 0; j < _NCM_SPLINE2D_TEST_NKNOTS_Y; j++)
     {
-      ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->yv, j), ==, ncm_vector_get (s2d->yv, j));
+      ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_yv (s2d_cp), j), ==, ncm_vector_get (ncm_spline2d_peek_yv (s2d), j));
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
-        ncm_assert_cmpdouble (ncm_vector_get (s2d_cp->xv, i), ==, ncm_vector_get (s2d->xv, i));
-        ncm_assert_cmpdouble (ncm_matrix_get (s2d_cp->zm, j, i), ==, ncm_matrix_get (s2d->zm, j, i));
+        ncm_assert_cmpdouble (ncm_vector_get (ncm_spline2d_peek_xv (s2d_cp), i), ==, ncm_vector_get (ncm_spline2d_peek_xv (s2d), i));
+        ncm_assert_cmpdouble (ncm_matrix_get (ncm_spline2d_peek_zm (s2d_cp), j, i), ==, ncm_matrix_get (ncm_spline2d_peek_zm (s2d), j, i));
       }
     }
 
@@ -693,15 +693,15 @@ test_ncm_spline2d_eval (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -737,15 +737,15 @@ test_ncm_spline2d_eval (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -787,19 +787,19 @@ test_ncm_spline2d_eval (TestNcmSpline2d *test, gconstpointer pdata)
                                _NCM_SPLINE2D_TEST_YI, _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * (_NCM_SPLINE2D_TEST_NKNOTS_Y - 1.0),
                                1.0e-7);
 
-    npx = ncm_vector_len (s2d->xv);
-    npy = ncm_vector_len (s2d->yv);
+    npx = ncm_vector_len (ncm_spline2d_peek_xv (s2d));
+    npy = ncm_vector_len (ncm_spline2d_peek_yv (s2d));
 
     for (j = 0; j < npy; j++)
     {
-      gdouble y = ncm_vector_get (s2d->yv, j);
+      gdouble y = ncm_vector_get (ncm_spline2d_peek_yv (s2d), j);
 
       for (i = 0; i < npx; i++)
       {
-        gdouble x = ncm_vector_get (s2d->xv, i);
+        gdouble x = ncm_vector_get (ncm_spline2d_peek_xv (s2d), i);
         gdouble f = F_func (x, y, d);
 
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
         /*printf ("x = %.5g y = %.5g z = %.5g\n", x, y, f); */
       }
     }
@@ -848,15 +848,15 @@ test_ncm_spline2d_eval_acc (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -894,15 +894,15 @@ test_ncm_spline2d_eval_acc (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -946,19 +946,19 @@ test_ncm_spline2d_eval_acc (TestNcmSpline2d *test, gconstpointer pdata)
 
     ncm_spline2d_use_acc (s2d, TRUE);
 
-    npx = ncm_vector_len (s2d->xv);
-    npy = ncm_vector_len (s2d->yv);
+    npx = ncm_vector_len (ncm_spline2d_peek_xv (s2d));
+    npy = ncm_vector_len (ncm_spline2d_peek_yv (s2d));
 
     for (j = 0; j < npy; j++)
     {
-      gdouble y = ncm_vector_get (s2d->yv, j);
+      gdouble y = ncm_vector_get (ncm_spline2d_peek_yv (s2d), j);
 
       for (i = 0; i < npx; i++)
       {
-        gdouble x = ncm_vector_get (s2d->xv, i);
+        gdouble x = ncm_vector_get (ncm_spline2d_peek_xv (s2d), i);
         gdouble f = F_func (x, y, d);
 
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
         /*printf ("x = %.5g y = %.5g z = %.5g\n", x, y, f); */
       }
     }
@@ -1005,15 +1005,15 @@ test_ncm_spline2d_deriv (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1092,15 +1092,15 @@ test_ncm_spline2d_eval_integ_dx (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1136,15 +1136,15 @@ test_ncm_spline2d_eval_integ_dx (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1193,15 +1193,15 @@ test_ncm_spline2d_eval_integ_dy (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1237,15 +1237,15 @@ test_ncm_spline2d_eval_integ_dy (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1294,15 +1294,15 @@ test_ncm_spline2d_eval_integ_dxdy (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1340,15 +1340,15 @@ test_ncm_spline2d_eval_integ_dxdy (TestNcmSpline2d *test, gconstpointer pdata)
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1399,15 +1399,15 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (TestNcmSpline2d *test, gconstpointer
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_linear (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
@@ -1455,23 +1455,23 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (TestNcmSpline2d *test, gconstpointer
     {
       gdouble y = _NCM_SPLINE2D_TEST_YI + _NCM_SPLINE2D_TEST_DY * j;
 
-      ncm_vector_set (s2d->yv, j, y);
+      ncm_vector_set (ncm_spline2d_peek_yv (s2d), j, y);
 
       for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
       {
         gdouble x = _NCM_SPLINE2D_TEST_XI + _NCM_SPLINE2D_TEST_DX * i;
         gdouble f = F_poly (x, y, d);
 
-        ncm_vector_set (s2d->xv, i, x);
-        ncm_matrix_set (s2d->zm, j, i, f);
+        ncm_vector_set (ncm_spline2d_peek_xv (s2d), i, x);
+        ncm_matrix_set (ncm_spline2d_peek_zm (s2d), j, i, f);
       }
     }
 
-    sx = ncm_spline2d_integ_dx_spline (s2d, _NCM_SPLINE2D_TEST_XI, ncm_vector_get (s2d->xv, _NCM_SPLINE2D_TEST_NKNOTS_X - 1));
+    sx = ncm_spline2d_integ_dx_spline (s2d, _NCM_SPLINE2D_TEST_XI, ncm_vector_get (ncm_spline2d_peek_xv (s2d), _NCM_SPLINE2D_TEST_NKNOTS_X - 1));
 
     NCM_TEST_FREE (ncm_spline_free, sx);
 
-    sy = ncm_spline2d_integ_dy_spline (s2d, _NCM_SPLINE2D_TEST_YI, ncm_vector_get (s2d->yv, _NCM_SPLINE2D_TEST_NKNOTS_Y - 1));
+    sy = ncm_spline2d_integ_dy_spline (s2d, _NCM_SPLINE2D_TEST_YI, ncm_vector_get (ncm_spline2d_peek_yv (s2d), _NCM_SPLINE2D_TEST_NKNOTS_Y - 1));
 
     NCM_TEST_FREE (ncm_spline_free, sy);
 

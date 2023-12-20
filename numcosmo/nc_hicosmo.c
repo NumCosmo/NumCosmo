@@ -2026,7 +2026,9 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
 gdouble
 nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
 {
-  if (psf->type != NCM_POWSPEC_FILTER_TYPE_TOPHAT)
+  NcmPowspecFilterType type = ncm_powspec_filter_get_filter_type (psf);
+
+  if (type != NCM_POWSPEC_FILTER_TYPE_TOPHAT)
     g_error ("nc_hicosmo_sigma8: sigma_8 is defined with a tophat filter, but psf is another type of filter.");
 
   ncm_powspec_filter_prepare_if_needed (psf, NCM_MODEL (cosmo));
@@ -2076,7 +2078,7 @@ _nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
   {
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
-  res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (flist->obj));
+  res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (ncm_mset_func_list_peek_obj (flist)));
   }
 
 #define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \

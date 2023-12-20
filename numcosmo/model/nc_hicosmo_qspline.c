@@ -790,6 +790,7 @@ _nc_prior_qspline_cont_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x,
 {
   NcHICosmoQSpline *qspline             = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (ncm_mset_peek (mset, nc_hicosmo_qspline_cont_prior_id ()));
+  NcmVector *q_z_xv                     = ncm_spline_peek_xv (qspline->q_z);
   guint knot;
 
   NCM_UNUSED (x);
@@ -800,9 +801,9 @@ _nc_prior_qspline_cont_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x,
   {
     const gdouble sigma  = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (qspline_cp, knot));
     const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (qspline_cp);
-    const gdouble zi     = ncm_vector_get (qspline->q_z->xv, knot + 0);
-    const gdouble zip1   = ncm_vector_get (qspline->q_z->xv, knot + 1);
-    const gdouble zip2   = ncm_vector_get (qspline->q_z->xv, knot + 2);
+    const gdouble zi     = ncm_vector_get (q_z_xv, knot + 0);
+    const gdouble zip1   = ncm_vector_get (q_z_xv, knot + 1);
+    const gdouble zip2   = ncm_vector_get (q_z_xv, knot + 2);
     const gdouble q1     = ncm_spline_eval (qspline->q_z, zi);
     const gdouble q2     = ncm_spline_eval (qspline->q_z, zip1);
     const gdouble q3     = ncm_spline_eval (qspline->q_z, zip2);

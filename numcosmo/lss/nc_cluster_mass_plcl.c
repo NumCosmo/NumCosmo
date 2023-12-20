@@ -1117,7 +1117,7 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   fflush (stdout);
 
   ncm_rng_lock (rng);
-  gsl_ran_bivariate_gaussian (rng->r, SD_SZ, SD_L, COR, &r_SZ, &r_L);
+  ncm_rng_bivariate_gaussian_gen (rng, SD_SZ, SD_L, COR, &r_SZ, &r_L);
   lnM_SZ_ran = lnM_SZ + r_SZ;
   lnM_L_ran  = lnM_L + r_L;
   ncm_rng_unlock (rng);
@@ -1128,14 +1128,12 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   ncm_rng_lock (rng);
 
   do {
-    sz_ran = gsl_ran_gaussian (rng->r, lnMobs_params[0]);
-    M_pl   = M_SZ_ran + sz_ran;
+    M_pl = ncm_rng_gaussian_gen (rng, M_SZ_ran, lnMobs_params[0]);
   } while (M_pl < 0.0);
 
   /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_SZ_ran, sz_ran, 100.0 * fabs (sz_ran / M_SZ_ran));*/
   do {
-    l_ran = gsl_ran_gaussian (rng->r, lnMobs_params[1]);
-    M_cl  = M_L_ran + l_ran;
+    M_cl = ncm_rng_gaussian_gen (rng, M_L_ran, lnMobs_params[1]);
   } while (M_cl < 0.0);
 
   /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_L_ran, l_ran, 100.0 * fabs (l_ran / M_L_ran));*/

@@ -318,7 +318,7 @@ _ncm_fit_constructed (GObject *object)
 
     g_assert (ncm_dataset_all_init (dset));
 
-    if (!self->mset->valid_map)
+    if (!ncm_mset_fparam_map_valid (self->mset))
       ncm_mset_prepare_fparam_map (self->mset);
 
     /*

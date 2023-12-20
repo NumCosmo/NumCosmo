@@ -1103,7 +1103,7 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
     self->reparam = ncm_reparam_ref (reparam);
 
     ncm_vector_clear (&self->p);
-    self->p = ncm_vector_ref (self->reparam->new_params);
+    self->p = ncm_vector_ref (ncm_reparam_peek_params (self->reparam));
 
     ncm_reparam_old2new (self->reparam, model);
   }
@@ -1753,7 +1753,7 @@ gboolean
 ncm_model_param_finite (NcmModel *model, guint i)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-  NcmVector *params            = self->reparam ? self->reparam->new_params : self->params;
+  NcmVector *params            = self->reparam ? ncm_reparam_peek_params (self->reparam) : self->params;
 
   return gsl_finite (ncm_vector_get (params, i));
 }

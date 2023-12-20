@@ -61,33 +61,45 @@ enum
   PROP_VARIABLE,
 };
 
-G_DEFINE_TYPE (NcmPriorGauss, ncm_prior_gauss, NCM_TYPE_PRIOR)
+typedef struct _NcmPriorGaussPrivate
+{
+  /*< private >*/
+  NcmPrior parent_instance;
+  gdouble mu;
+  gdouble sigma;
+  gdouble var;
+} NcmPriorGaussPrivate;
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmPriorGauss, ncm_prior_gauss, NCM_TYPE_PRIOR)
 
 static void
 ncm_prior_gauss_init (NcmPriorGauss *pg)
 {
-  pg->mu    = 0.0;
-  pg->sigma = 0.0;
-  pg->var   = 0.0;
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  self->mu    = 0.0;
+  self->sigma = 0.0;
+  self->var   = 0.0;
 }
 
 static void
 _ncm_prior_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
+  NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (object);
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
 
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 
   switch (prop_id)
   {
     case PROP_MU:
-      pg->mu = g_value_get_double (value);
+      ncm_prior_gauss_set_mean (pg, g_value_get_double (value));
       break;
     case PROP_SIGMA:
-      pg->sigma = g_value_get_double (value);
+      ncm_prior_gauss_set_sigma (pg, g_value_get_double (value));
       break;
     case PROP_VARIABLE:
-      pg->var = g_value_get_double (value);
+      ncm_prior_gauss_set_var (pg, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -98,20 +110,22 @@ _ncm_prior_gauss_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
+  NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (object);
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
 
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 
   switch (prop_id)
   {
     case PROP_MU:
-      g_value_set_double (value, pg->mu);
+      g_value_set_double (value, ncm_prior_gauss_get_mean (pg));
       break;
     case PROP_SIGMA:
-      g_value_set_double (value, pg->sigma);
+      g_value_set_double (value, ncm_prior_gauss_get_sigma (pg));
       break;
     case PROP_VARIABLE:
-      g_value_set_double (value, pg->var);
+      g_value_set_double (value, ncm_prior_gauss_get_var (pg));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -168,10 +182,11 @@ ncm_prior_gauss_class_init (NcmPriorGaussClass *klass)
 static void
 _ncm_prior_gauss_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  NcmPriorGauss *pg  = NCM_PRIOR_GAUSS (func);
-  const gdouble mean = NCM_PRIOR_GAUSS_GET_CLASS (pg)->mean (pg, mset);
+  NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (func);
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+  const gdouble mean                = NCM_PRIOR_GAUSS_GET_CLASS (pg)->mean (pg, mset);
 
-  res[0] = (mean - pg->mu) / pg->sigma;
+  res[0] = (mean - self->mu) / self->sigma;
 }
 
 /**
@@ -212,5 +227,96 @@ void
 ncm_prior_gauss_clear (NcmPriorGauss **pg)
 {
   g_clear_object (pg);
+}
+
+/**
+ * ncm_prior_gauss_set_mean:
+ * @pg: a #NcmPriorGauss
+ * @mean: mean
+ *
+ * Sets the mean of @pg.
+ *
+ */
+void
+ncm_prior_gauss_set_mean (NcmPriorGauss *pg, const gdouble mean)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  self->mu = mean;
+}
+
+/**
+ * ncm_prior_gauss_set_sigma:
+ * @pg: a #NcmPriorGauss
+ * @sigma: standard deviation
+ *
+ * Sets the standard deviation of @pg.
+ *
+ */
+void
+ncm_prior_gauss_set_sigma (NcmPriorGauss *pg, const gdouble sigma)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  g_assert_cmpfloat (sigma, >, 0.0);
+  self->sigma = sigma;
+}
+
+/**
+ * ncm_prior_gauss_set_var:
+ * @pg: a #NcmPriorGauss
+ * @var: variable
+ *
+ * Sets the variable of @pg.
+ *
+ */
+void
+ncm_prior_gauss_set_var (NcmPriorGauss *pg, const gdouble var)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  self->var = var;
+}
+
+/**
+ * ncm_prior_gauss_get_mean:
+ * @pg: a #NcmPriorGauss
+ *
+ * Returns: the mean of @pg.
+ */
+gdouble
+ncm_prior_gauss_get_mean (NcmPriorGauss *pg)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  return self->mu;
+}
+
+/**
+ * ncm_prior_gauss_get_sigma:
+ * @pg: a #NcmPriorGauss
+ *
+ * Returns: the standard deviation of @pg.
+ */
+gdouble
+ncm_prior_gauss_get_sigma (NcmPriorGauss *pg)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  return self->sigma;
+}
+
+/**
+ * ncm_prior_gauss_get_var:
+ * @pg: a #NcmPriorGauss
+ *
+ * Returns: the variable of @pg.
+ */
+gdouble
+ncm_prior_gauss_get_var (NcmPriorGauss *pg)
+{
+  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+
+  return self->var;
 }
 
