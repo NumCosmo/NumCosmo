@@ -596,8 +596,9 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
   }
   else
   {
-    NcmMatrix *lnvar  = psf->var->zm;
-    NcmMatrix *dlnvar = psf->dvar->zm;
+    NcmMatrix *lnvar  = ncm_spline2d_peek_zm (psf->var);
+    NcmMatrix *dlnvar = ncm_spline2d_peek_zm (psf->dvar);
+    NcmVector *var_yv = ncm_spline2d_peek_yv (psf->var);
 
     guint N_z = ncm_matrix_nrows (lnvar);
     guint i;
@@ -607,7 +608,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
       NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
 
-      arg.z = ncm_vector_get (psf->var->yv, i);
+      arg.z = ncm_vector_get (var_yv, i);
       ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));

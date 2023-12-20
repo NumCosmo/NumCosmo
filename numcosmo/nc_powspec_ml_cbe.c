@@ -284,8 +284,8 @@ _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
   NcPowspecMLCBE *ps_cbe             = NC_POWSPEC_ML_CBE (powspec);
   NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
 
-  Nz[0] = ncm_vector_len (self->lnPk->yv);
-  Nk[0] = ncm_vector_len (self->lnPk->xv);
+  Nz[0] = ncm_vector_len (ncm_spline2d_peek_yv (self->lnPk));
+  Nk[0] = ncm_vector_len (ncm_spline2d_peek_xv (self->lnPk));
 }
 
 /**

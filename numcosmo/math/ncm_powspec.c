@@ -258,19 +258,23 @@ _ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
                              self->kmin, self->kmax,
                              self->reltol_spline);
   {
-    const guint nz = ncm_vector_len (pk_s2d->xv);
-    const guint nk = ncm_vector_len (pk_s2d->yv);
+    NcmVector *xv = ncm_spline2d_peek_xv (pk_s2d);
+    NcmVector *yv = ncm_spline2d_peek_yv (pk_s2d);
+    NcmMatrix *zm = ncm_spline2d_peek_zm (pk_s2d);
+
+    const guint nz = ncm_vector_len (xv);
+    const guint nk = ncm_vector_len (yv);
 
     for (i = 0; i < nk; i++)
     {
-      const gdouble k = ncm_vector_get (pk_s2d->yv, i);
+      const gdouble k = ncm_vector_get (yv, i);
 
       for (j = 0; j < nz; j++)
       {
-        const gdouble z   = ncm_vector_get (pk_s2d->xv, j);
+        const gdouble z   = ncm_vector_get (xv, j);
         const gdouble Pkz = ncm_powspec_eval (powspec, model, z, k);
 
-        ncm_matrix_set (pk_s2d->zm, i, j, Pkz);
+        ncm_matrix_set (zm, i, j, Pkz);
       }
     }
   }

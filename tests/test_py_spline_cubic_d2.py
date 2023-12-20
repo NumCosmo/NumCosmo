@@ -24,8 +24,8 @@
 
 """Tests on NcmSplineCubicD2 class."""
 
-import pytest
 import math
+import pytest
 import numpy as np
 
 from numcosmo_py import Ncm
@@ -79,14 +79,14 @@ def d2f_cos(x: float) -> float:
 
 
 @pytest.mark.parametrize(
-    "f,df,d2f,interp_nknots,rtol,atol",
+    "f,df,d2f,interp_nknots,tol",
     [
-        (f_x2, df_x2, d2f_x2, 10, 1.0e-10, 1.0e-10),
-        (f_x3, df_x3, d2f_x3, 12, 1.0e-10, 1.0e-10),
-        (f_cos, df_cos, d2f_cos, 1000, 1.0e-5, 1.0e-5),
+        (f_x2, df_x2, d2f_x2, 10, (1.0e-10, 1.0e-10)),
+        (f_x3, df_x3, d2f_x3, 12, (1.0e-10, 1.0e-10)),
+        (f_cos, df_cos, d2f_cos, 1000, (1.0e-5, 1.0e-5)),
     ],
 )
-def test_func_x2(f, df, d2f, interp_nknots, rtol, atol) -> None:
+def test_func_x2(f, df, d2f, interp_nknots, tol) -> None:
     """Test the numcosmo library to calculate derivatives of functions."""
 
     interp_knots = np.linspace(0.0, 4.0, interp_nknots)
@@ -108,8 +108,8 @@ def test_func_x2(f, df, d2f, interp_nknots, rtol, atol) -> None:
     d2f_interp = [s.eval_deriv2(x) for x in knots]
     d2f_true = [d2f(x) for x in knots]
 
-    np.testing.assert_allclose(f_interp, f_true, rtol=rtol, atol=atol)
-    np.testing.assert_allclose(df_interp, df_true, rtol=rtol, atol=atol)
+    np.testing.assert_allclose(f_interp, f_true, rtol=tol[0], atol=tol[1])
+    np.testing.assert_allclose(df_interp, df_true, rtol=tol[0], atol=tol[1])
 
     d2f_interp = [s.eval_deriv2(x) for x in knots]
-    np.testing.assert_allclose(d2f_interp, d2f_true, rtol=rtol, atol=atol)
+    np.testing.assert_allclose(d2f_interp, d2f_true, rtol=tol[0], atol=tol[1])

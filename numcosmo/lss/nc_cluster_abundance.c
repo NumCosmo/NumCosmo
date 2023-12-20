@@ -962,6 +962,8 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
   gboolean use_spline                          = FALSE;
   guint middle                                 = inv_z_len / 2;
   gdouble z0                                   = cad->zi;
+  NcmVector *inv_lnM_z_xv                      = ncm_spline2d_peek_xv (cad->inv_lnM_z);
+  NcmMatrix *inv_lnM_z_zm                      = ncm_spline2d_peek_zm (cad->inv_lnM_z);
   guint i, j;
 
   g_assert (cad->zi != 0);
@@ -980,34 +982,34 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
 
     nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, zm);
 
-    ncm_vector_set (cad->inv_lnM_z->xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon));
-    ncm_matrix_set (cad->inv_lnM_z->zm, middle, 0, lnMi);
+    ncm_vector_set (inv_lnM_z_xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon));
+    ncm_matrix_set (inv_lnM_z_zm, middle, 0, lnMi);
     {
       NcmVector *inv_lnM_xv = ncm_spline_peek_xv (cad->inv_lnM);
 
-      for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+      for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
       {
         gdouble u2 = ncm_vector_get (inv_lnM_xv, j);
 
-        ncm_vector_set (cad->inv_lnM_z->xv, j, u2);
-        ncm_matrix_set (cad->inv_lnM_z->zm, middle, j, ncm_spline_eval (cad->inv_lnM, u2));
+        ncm_vector_set (inv_lnM_z_xv, j, u2);
+        ncm_matrix_set (inv_lnM_z_zm, middle, j, ncm_spline_eval (cad->inv_lnM, u2));
       }
     }
-    ncm_vector_set (cad->inv_lnM_z->xv, j, _nc_cad_inv_dNdz_convergence_f_onemn (0.0, cad->lnM_epsilon));
-    ncm_matrix_set (cad->inv_lnM_z->zm, middle, j, cad->lnMf);
+    ncm_vector_set (inv_lnM_z_xv, j, _nc_cad_inv_dNdz_convergence_f_onemn (0.0, cad->lnM_epsilon));
+    ncm_matrix_set (inv_lnM_z_zm, middle, j, cad->lnMf);
   }
 
   nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z0);
-  ncm_matrix_set (cad->inv_lnM_z->zm, 0, 0, lnMi);
+  ncm_matrix_set (inv_lnM_z_zm, 0, 0, lnMi);
 
-  for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+  for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
   {
-    gdouble u2 = ncm_vector_get (cad->inv_lnM_z->xv, j);
+    gdouble u2 = ncm_vector_get (inv_lnM_z_xv, j);
 
-    ncm_matrix_set (cad->inv_lnM_z->zm, 0, j, ncm_spline_eval (cad->inv_lnM, u2));
+    ncm_matrix_set (inv_lnM_z_zm, 0, j, ncm_spline_eval (cad->inv_lnM, u2));
   }
 
-  ncm_matrix_set (cad->inv_lnM_z->zm, 0, j, cad->lnMf);
+  ncm_matrix_set (inv_lnM_z_zm, 0, j, cad->lnMf);
 
   {
     gdouble nztot         = 0.0;
@@ -1051,16 +1053,16 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
 
       nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z1);
 
-      ncm_matrix_set (cad->inv_lnM_z->zm, i, 0, lnMi);
+      ncm_matrix_set (inv_lnM_z_zm, i, 0, lnMi);
 
-      for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+      for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
       {
-        gdouble u2 = ncm_vector_get (cad->inv_lnM_z->xv, j);
+        gdouble u2 = ncm_vector_get (inv_lnM_z_xv, j);
 
-        ncm_matrix_set (cad->inv_lnM_z->zm, i, j, ncm_spline_eval (cad->inv_lnM, u2));
+        ncm_matrix_set (inv_lnM_z_zm, i, j, ncm_spline_eval (cad->inv_lnM, u2));
       }
 
-      ncm_matrix_set (cad->inv_lnM_z->zm, i, j, cad->lnMf);
+      ncm_matrix_set (inv_lnM_z_zm, i, j, cad->lnMf);
     }
   }
 

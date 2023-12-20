@@ -569,16 +569,16 @@ ncm_powspec_corr3d_prepare (NcmPowspecCorr3d *psc, NcmModel *model)
   }
   else
   {
-    NcmMatrix *xi = psc->xi->zm;
-
-    guint N_z = ncm_matrix_nrows (xi);
+    NcmMatrix *xi = ncm_spline2d_peek_zm (psc->xi);
+    NcmVector *yv = ncm_spline2d_peek_yv (psc->xi);
+    guint N_z     = ncm_matrix_nrows (xi);
     guint i;
 
     for (i = 0; i < N_z; i++)
     {
       NcmVector *xi_z = ncm_matrix_get_row (xi, i);
 
-      arg.z = ncm_vector_get (psc->xi->yv, i);
+      arg.z = ncm_vector_get (yv, i);
       ncm_fftlog_eval_by_gsl_function (psc->fftlog, &F);
 
       ncm_vector_memcpy (xi_z, ncm_fftlog_peek_output_vector (psc->fftlog, 0));

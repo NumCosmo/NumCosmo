@@ -33,27 +33,15 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPLINE2D_BICUBIC             (ncm_spline2d_bicubic_get_type ())
-#define NCM_SPLINE2D_BICUBIC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPLINE2D_BICUBIC, NcmSpline2dBicubic))
-#define NCM_SPLINE2D_BICUBIC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPLINE2D_BICUBIC, NcmSpline2dBicubicClass))
-#define NCM_IS_SPLINE2D_BICUBIC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPLINE2D_BICUBIC))
-#define NCM_IS_SPLINE2D_BICUBIC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPLINE2D_BICUBIC))
-#define NCM_SPLINE2D_BICUBIC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPLINE2D_BICUBIC, NcmSpline2dBicubicClass))
+#define NCM_TYPE_SPLINE2D_BICUBIC (ncm_spline2d_bicubic_get_type ())
 
-typedef struct _NcmSpline2dBicubicClass NcmSpline2dBicubicClass;
-typedef struct _NcmSpline2dBicubic NcmSpline2dBicubic;
-typedef struct __NcmSpline2dBicubicOptimizeInt _NcmSpline2dBicubicOptimizeInt;
-
-struct _NcmSpline2dBicubicClass
-{
-  /*< private >*/
-  NcmSpline2dClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM, SPLINE2D_BICUBIC, NcmSpline2d)
 
 /**
  * NcmSpline2dBicubicCoeffs:
  *
- * FIXME
+ * Structure to hold the coefficients of a bicubic spline.
+ *
  */
 typedef struct _NcmSpline2dBicubicCoeffs NcmSpline2dBicubicCoeffs;
 
@@ -62,30 +50,6 @@ struct _NcmSpline2dBicubicCoeffs
   /*< private >*/
   gdouble ij[4][4];
 };
-
-struct __NcmSpline2dBicubicOptimizeInt
-{
-  /*< private >*/
-  gdouble l;
-  gdouble u;
-  gboolean init;
-  NcmSpline *s;
-};
-
-struct _NcmSpline2dBicubic
-{
-  /*< private >*/
-  NcmSpline2d parent_instance;
-  NcmSpline *z_x;
-  NcmSpline *dzdy_x;
-  NcmSpline *z_y;
-  guint z_x_len;
-  NcmSpline2dBicubicCoeffs *bicoeff;
-  _NcmSpline2dBicubicOptimizeInt optimize_dx;
-  _NcmSpline2dBicubicOptimizeInt optimize_dy;
-};
-
-GType ncm_spline2d_bicubic_get_type (void) G_GNUC_CONST;
 
 NcmSpline2d *ncm_spline2d_bicubic_new (NcmSpline *s);
 NcmSpline2d *ncm_spline2d_bicubic_notaknot_new (void);

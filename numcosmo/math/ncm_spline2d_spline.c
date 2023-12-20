@@ -42,6 +42,25 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_util.h"
 
+struct _NcmSpline2dSpline
+{
+  /*< private >*/
+  NcmSpline2d parent_instance;
+  gboolean first_prepare;
+  gboolean first_prepare_integ;
+  gdouble last_x;
+  gdouble last_xl;
+  gdouble last_xu;
+  gdouble last_yl;
+  gdouble last_yu;
+  NcmVector *vertv;
+  NcmVector *vertintv;
+  NcmSpline **s_hor;
+  NcmSpline *s_ver;
+  NcmSpline *s_ver_integ;
+  guint s_hor_len;
+};
+
 G_DEFINE_TYPE (NcmSpline2dSpline, ncm_spline2d_spline, NCM_TYPE_SPLINE2D)
 
 static void
@@ -84,7 +103,8 @@ _ncm_spline2d_spline_dispose (GObject *object)
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
 
   _ncm_spline2d_spline_clear (s2d);
-  s2d->init = FALSE;
+
+  ncm_spline2d_set_init (s2d, FALSE);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_spline_parent_class)->dispose (object);
@@ -149,18 +169,24 @@ ncm_spline2d_spline_class_init (NcmSpline2dSplineClass *klass)
 NcmSpline2d *
 _ncm_spline2d_spline_copy_empty (const NcmSpline2d *s2d)
 {
-  return ncm_spline2d_spline_new (s2d->s);
+  NcmSpline *s = ncm_spline2d_peek_spline ((NcmSpline2d *) s2d);
+
+  return ncm_spline2d_spline_new (s);
 }
 
 static void
 _ncm_spline2d_spline_alloc (NcmSpline2d *s2d)
 {
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
+  NcmVector *xv           = ncm_spline2d_peek_xv (s2d);
+  NcmVector *yv           = ncm_spline2d_peek_yv (s2d);
+  NcmMatrix *zm           = ncm_spline2d_peek_zm (s2d);
+  NcmSpline *s            = ncm_spline2d_peek_spline (s2d);
   guint i;
 
   s2ds->first_prepare = TRUE;
 
-  s2ds->s_hor_len = ncm_matrix_nrows (s2d->zm);
+  s2ds->s_hor_len = ncm_matrix_nrows (zm);
 
   s2ds->vertv    = ncm_vector_new (s2ds->s_hor_len);
   s2ds->vertintv = ncm_vector_new (s2ds->s_hor_len);
@@ -169,14 +195,14 @@ _ncm_spline2d_spline_alloc (NcmSpline2d *s2d)
 
   for (i = 0; i < s2ds->s_hor_len; i++)
   {
-    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    NcmVector *zm_row_i = ncm_matrix_get_row (zm, i);
 
-    s2ds->s_hor[i] = ncm_spline_new (s2d->s, s2d->xv, zm_row_i, FALSE);
+    s2ds->s_hor[i] = ncm_spline_new (s, xv, zm_row_i, FALSE);
     ncm_vector_free (zm_row_i);
   }
 
-  s2ds->s_ver       = ncm_spline_new (s2d->s, s2d->yv, s2ds->vertv, FALSE);
-  s2ds->s_ver_integ = ncm_spline_new (s2d->s, s2d->yv, s2ds->vertintv, FALSE);
+  s2ds->s_ver       = ncm_spline_new (s, yv, s2ds->vertv, FALSE);
+  s2ds->s_ver_integ = ncm_spline_new (s, yv, s2ds->vertintv, FALSE);
 }
 
 static void
@@ -195,12 +221,13 @@ _ncm_spline2d_spline_reset (NcmSpline2d *s2d)
 {
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
 
-  if (s2d->init)
+  if (ncm_spline2d_is_init (s2d))
   {
     NcmVector *s_hor0_xv = ncm_spline_peek_xv (s2ds->s_hor[0]);
+    NcmMatrix *zm        = ncm_spline2d_peek_zm (s2d);
 
-    if ((ncm_matrix_nrows (s2d->zm) != ncm_vector_len (s2ds->vertv)) ||
-        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s_hor0_xv)))
+    if ((ncm_matrix_nrows (zm) != ncm_vector_len (s2ds->vertv)) ||
+        (ncm_matrix_ncols (zm) != ncm_vector_len (s_hor0_xv)))
     {
       _ncm_spline2d_spline_free (s2d);
       _ncm_spline2d_spline_alloc (s2d);
@@ -221,7 +248,8 @@ _ncm_spline2d_spline_prepare (NcmSpline2d *s2d)
   for (i = 0; i < s2ds->s_hor_len; i++)
     ncm_spline_prepare (s2ds->s_hor[i]);
 
-  s2d->init                 = TRUE;
+  ncm_spline2d_set_init (s2d, TRUE);
+
   s2ds->first_prepare       = TRUE;
   s2ds->first_prepare_integ = TRUE;
 }
@@ -232,7 +260,7 @@ _ncm_spline2d_spline_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
   guint i;
 
-  if (!s2d->init)
+  if (!ncm_spline2d_is_init (s2d))
     ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_x != x) || s2ds->first_prepare)
@@ -298,7 +326,7 @@ _ncm_spline2d_spline_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
   guint i;
 
-  if (!s2d->init)
+  if (!ncm_spline2d_is_init (s2d))
     ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_xl != xl) || (s2ds->last_xu != xu) || s2ds->first_prepare_integ)
@@ -321,7 +349,7 @@ _ncm_spline2d_spline_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
   guint i;
 
-  if (!s2d->init)
+  if (!ncm_spline2d_is_init (s2d))
     ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_x != x) || s2ds->first_prepare)
@@ -343,7 +371,7 @@ _ncm_spline2d_spline_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble
   NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
   guint i;
 
-  if (!s2d->init)
+  if (!ncm_spline2d_is_init (s2d))
     ncm_spline2d_prepare (s2d);  /* LCOV_EXCL_LINE */
 
   if ((s2ds->last_xl != xl) || (s2ds->last_xu != xu) || s2ds->first_prepare_integ)

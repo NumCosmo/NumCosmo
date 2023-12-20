@@ -739,24 +739,25 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
   if (mfp->d2NdzdlnM == NULL)
     _nc_halo_mass_function_generate_2Dspline_knots (mfp, cosmo, self->prec);
 
-#define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
-#define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
-#define D2NDZDLNM_VAL(cad) ((cad)->d2NdzdlnM->zm)
-
-  for (i = 0; i < ncm_vector_len (D2NDZDLNM_Z (mfp)); i++)
   {
-    const gdouble z    = ncm_vector_get (D2NDZDLNM_Z (mfp), i);
-    const gdouble dVdz = self->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, z);
+    NcmVector *z_vec   = ncm_spline2d_peek_yv (mfp->d2NdzdlnM);
+    NcmVector *lnM_vec = ncm_spline2d_peek_xv (mfp->d2NdzdlnM);
+    NcmMatrix *val_mat = ncm_spline2d_peek_zm (mfp->d2NdzdlnM);
 
-    for (j = 0; j < ncm_vector_len (D2NDZDLNM_LNM (mfp)); j++)
+    for (i = 0; i < ncm_vector_len (z_vec); i++)
     {
-      const gdouble lnM          = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
-      const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnM (mfp, cosmo, lnM, z));
+      const gdouble z    = ncm_vector_get (z_vec, i);
+      const gdouble dVdz = self->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, z);
 
-      ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, GSL_MAX (d2NdzdlnM_ij, self->mf_lb));
+      for (j = 0; j < ncm_vector_len (lnM_vec); j++)
+      {
+        const gdouble lnM          = ncm_vector_get (lnM_vec, j);
+        const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnM (mfp, cosmo, lnM, z));
+
+        ncm_matrix_set (val_mat, i, j, GSL_MAX (d2NdzdlnM_ij, self->mf_lb));
+      }
     }
   }
-
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
 
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
