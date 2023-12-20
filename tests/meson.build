@@ -17,10 +17,6 @@ c_tests = [
         'sources': ['test_ncm_dtuple.c'],
     },
     {
-        'name': 'ncm_ode',
-        'sources': ['test_ncm_ode.c'],
-    },
-    {
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
     },
@@ -254,6 +250,10 @@ python_tests = [
     {
         'name': 'py_integralnd',
         'source': 'test_py_integralnd.py',
+    },
+    {
+        'name': 'py_spline_cubic_d2',
+        'source': 'test_py_spline_cubic_d2.py',
     },
     {
         'name': 'py_sanity',

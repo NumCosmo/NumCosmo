@@ -308,7 +308,7 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < self->np; i++)
   {
     const gdouble sigma_i = ncm_vector_get (self->sigma, i);
-    const gdouble u_i     = gsl_ran_gaussian_ziggurat (rng->r, sigma_i);
+    const gdouble u_i     = ncm_rng_gaussian_gen (rng, 0.0, sigma_i);
 
     ncm_vector_subfrom (self->y, i, u_i);
   }

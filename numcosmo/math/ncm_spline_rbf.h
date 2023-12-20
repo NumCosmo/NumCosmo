@@ -36,29 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPLINE_RBF             (ncm_spline_rbf_get_type ())
-#define NCM_SPLINE_RBF(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPLINE_RBF, NcmSplineRBF))
-#define NCM_SPLINE_RBF_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPLINE_RBF, NcmSplineRBFClass))
-#define NCM_IS_SPLINE_RBF(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPLINE_RBF))
-#define NCM_IS_SPLINE_RBF_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPLINE_RBF))
-#define NCM_SPLINE_RBF_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPLINE_RBF, NcmSplineRBFClass))
+#define NCM_TYPE_SPLINE_RBF (ncm_spline_rbf_get_type ())
 
-typedef struct _NcmSplineRBFClass NcmSplineRBFClass;
-typedef struct _NcmSplineRBF NcmSplineRBF;
-typedef struct _NcmSplineRBFPrivate NcmSplineRBFPrivate;
-
-struct _NcmSplineRBFClass
-{
-  /*< private >*/
-  NcmSplineClass parent_class;
-};
-
-struct _NcmSplineRBF
-{
-  /*< private >*/
-  NcmSpline parent_instance;
-  NcmSplineRBFPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmSplineRBF, ncm_spline_rbf, NCM, SPLINE_RBF, NcmSpline)
 
 /**
  * NcmSplineRBFType:
@@ -75,8 +55,6 @@ typedef enum _NcmSplineRBFType
   /* < private > */
   NCM_SPLINE_RBF_TYPE_LEN, /*< skip >*/
 } NcmSplineRBFType;
-
-GType ncm_spline_rbf_get_type (void) G_GNUC_CONST;
 
 NcmSplineRBF *ncm_spline_rbf_new (NcmSplineRBFType type_id);
 NcmSplineRBF *ncm_spline_rbf_ref (NcmSplineRBF *rbf);

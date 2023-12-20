@@ -411,13 +411,13 @@ _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *cosmo
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log ((1.0 + z) / (1.0 + msz->z0)) + log (A_SZ);
 
   ncm_rng_lock (rng);
-  lnzeta_obs = lnzeta + gsl_ran_gaussian (rng->r, D_SZ);
+  lnzeta_obs = ncm_rng_gaussian_gen (rng, lnzeta, D_SZ);
 
   zeta_obs = exp (lnzeta_obs);
 
   xi_mean = sqrt (zeta_obs * zeta_obs + 3.0);
 
-  xi[0] = xi_mean + gsl_ran_gaussian (rng->r, 1.0);
+  xi[0] = ncm_rng_gaussian_gen (rng, xi_mean, 1.0);
   ncm_rng_unlock (rng);
 
   /*printf ("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0]); */

@@ -32,22 +32,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SERIALIZE             (ncm_serialize_get_type ())
-#define NCM_SERIALIZE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SERIALIZE, NcmSerialize))
-#define NCM_SERIALIZE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SERIALIZE, NcmSerializeClass))
-#define NCM_IS_SERIALIZE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SERIALIZE))
-#define NCM_IS_SERIALIZE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SERIALIZE))
-#define NCM_SERIALIZE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SERIALIZE, NcmSerializeClass))
+#define NCM_TYPE_SERIALIZE (ncm_serialize_get_type ())
 
-typedef struct _NcmSerializeClass NcmSerializeClass;
-typedef struct _NcmSerialize NcmSerialize;
-typedef struct _NcmSerializePrivate NcmSerializePrivate;
-
-struct _NcmSerializeClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmSerialize, ncm_serialize, NCM, SERIALIZE, GObject)
 
 /**
  * NcmSerializeOpt:
@@ -66,22 +53,6 @@ typedef enum _NcmSerializeOpt
   NCM_SERIALIZE_OPT_AUTONAME_SER = 1 << 1,
   NCM_SERIALIZE_OPT_CLEAN_DUP = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
 } NcmSerializeOpt;
-
-struct _NcmSerialize
-{
-  /*< private >*/
-  GObject parent_instance;
-  GHashTable *name_ptr;
-  GHashTable *ptr_name;
-  GHashTable *saved_ptr_name;
-  GHashTable *saved_name_ser;
-  GRegex *is_named_regex;
-  GRegex *parse_obj_regex;
-  NcmSerializeOpt opts;
-  guint autosave_count;
-};
-
-GType ncm_serialize_get_type (void) G_GNUC_CONST;
 
 NcmSerialize *ncm_serialize_new (NcmSerializeOpt sopt);
 NcmSerialize *ncm_serialize_ref (NcmSerialize *ser);

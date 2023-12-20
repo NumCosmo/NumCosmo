@@ -420,7 +420,7 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
 
   ncm_rng_lock (rng);
-  gsl_ran_sample (rng->r, bdata, bsize, idata, fsize, element_size);
+  ncm_rng_sample (rng, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
   bstrap->init = TRUE;
 }
@@ -446,7 +446,7 @@ ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
 
   ncm_rng_lock (rng);
-  gsl_ran_choose (rng->r, bdata, bsize, idata, fsize, element_size);
+  ncm_rng_choose (rng, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
   bstrap->init = TRUE;
 }

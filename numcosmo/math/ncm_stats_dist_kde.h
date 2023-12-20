@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_stats_dist_kde.h
  *
@@ -39,28 +40,17 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST_KDE             (ncm_stats_dist_kde_get_type ())
-#define NCM_STATS_DIST_KDE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDE))
-#define NCM_STATS_DIST_KDE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDEClass))
-#define NCM_IS_STATS_DIST_KDE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_KDE))
-#define NCM_IS_STATS_DIST_KDE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_KDE))
-#define NCM_STATS_DIST_KDE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDEClass))
+#define NCM_TYPE_STATS_DIST_KDE (ncm_stats_dist_kde_get_type ())
 
-typedef struct _NcmStatsDistKDEClass NcmStatsDistKDEClass;
-typedef struct _NcmStatsDistKDE NcmStatsDistKDE;
-typedef struct _NcmStatsDistKDEPrivate NcmStatsDistKDEPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM, STATS_DIST_KDE, NcmStatsDist)
 
 struct _NcmStatsDistKDEClass
 {
   /*< private >*/
   NcmStatsDistClass parent_class;
-};
 
-struct _NcmStatsDistKDE
-{
-  /*< private >*/
-  NcmStatsDist parent_instance;
-  NcmStatsDistKDEPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
 /**
@@ -82,8 +72,6 @@ typedef enum _NcmStatsDistKDECovType
   /* < private > */
   NCM_STATS_DIST_KDE_COV_TYPE_LEN, /*< skip >*/
 } NcmStatsDistKDECovType;
-
-GType ncm_stats_dist_kde_get_type (void) G_GNUC_CONST;
 
 NcmStatsDistKDE *ncm_stats_dist_kde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type);
 NcmStatsDistKDE *ncm_stats_dist_kde_ref (NcmStatsDistKDE *sdkde);

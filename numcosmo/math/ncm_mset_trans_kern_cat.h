@@ -35,29 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET_TRANS_KERN_CAT             (ncm_mset_trans_kern_cat_get_type ())
-#define NCM_MSET_TRANS_KERN_CAT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_TRANS_KERN_CAT, NcmMSetTransKernCat))
-#define NCM_MSET_TRANS_KERN_CAT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_TRANS_KERN_CAT, NcmMSetTransKernCatClass))
-#define NCM_IS_MSET_TRANS_KERN_CAT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_TRANS_KERN_CAT))
-#define NCM_IS_MSET_TRANS_KERN_CAT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_TRANS_KERN_CAT))
-#define NCM_MSET_TRANS_KERN_CAT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_TRANS_KERN_CAT, NcmMSetTransKernCatClass))
+#define NCM_TYPE_MSET_TRANS_KERN_CAT (ncm_mset_trans_kern_cat_get_type ())
 
-typedef struct _NcmMSetTransKernCatClass NcmMSetTransKernCatClass;
-typedef struct _NcmMSetTransKernCat NcmMSetTransKernCat;
-typedef struct _NcmMSetTransKernCatPrivate NcmMSetTransKernCatPrivate;
-
-struct _NcmMSetTransKernCatClass
-{
-  /*< private >*/
-  NcmMSetTransKernClass parent_class;
-};
-
-struct _NcmMSetTransKernCat
-{
-  /*< private >*/
-  NcmMSetTransKern parent_instance;
-  NcmMSetTransKernCatPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM, MSET_TRANS_KERN_CAT, NcmMSetTransKern)
 
 /**
  * NcmMSetTransKernCatSampling:
@@ -76,8 +56,6 @@ typedef enum _NcmMSetTransKernCatSampling
   /* < private > */
   NCM_MSET_TRANS_KERN_CAT_SAMPLING_LEN, /*< skip >*/
 } NcmMSetTransKernCatSampling;
-
-GType ncm_mset_trans_kern_cat_get_type (void) G_GNUC_CONST;
 
 NcmMSetTransKernCat *ncm_mset_trans_kern_cat_new (NcmMSetCatalog *mcat, NcmStatsDist *sd);
 

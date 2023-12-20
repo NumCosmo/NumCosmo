@@ -28,7 +28,8 @@
  * @title: NcmStatsDist1dEPDF
  * @short_description: One dimensional probability distribution based on an EPDF
  *
- * Reconstruction of an arbitrary one dimensional probability distribution based on a Empirical Probability Distribution Function (EPDF).
+ * Reconstruction of an arbitrary one dimensional probability distribution based on a
+ * Empirical Probability Distribution Function (EPDF).
  *
  */
 
@@ -61,6 +62,40 @@ enum
   PROP_H_FIXED,
   PROP_SD_MIN_SCALE,
   PROP_OUTLIERS_THRESHOLD,
+};
+
+
+struct _NcmStatsDist1dEPDF
+{
+  /*< private >*/
+  NcmStatsDist1d parent_instance;
+  NcmStatsVec *obs_stats;
+  guint max_obs;
+  NcmStatsDist1dEPDFBw bw;
+  gdouble h_fixed;
+  gdouble sd_min_scale;
+  gdouble outliers_threshold;
+  gdouble h;
+  guint n_obs;
+  guint np_obs;
+  gdouble WT;
+  GArray *obs;
+  gdouble min;
+  gdouble max;
+  gboolean list_sorted;
+  guint fftsize;
+  NcmVector *Iv;
+  NcmVector *p_data;
+  NcmVector *p_tilde;
+  NcmVector *p_tilde2;
+  NcmVector *p_est;
+  NcmVector *xv;
+  NcmVector *pv;
+  gpointer fft_data_to_tilde;
+  gpointer fft_tilde_to_est;
+  NcmSpline *ph_spline;
+  NcmSpline *p_spline;
+  gboolean bw_set;
 };
 
 G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D)
@@ -661,7 +696,9 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
 
   {
-    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (sd1->xf - sd1->xi)) / (epdf1d->WT + 1.0);
+    const gdouble xi        = ncm_stats_dist1d_get_xi (sd1);
+    const gdouble xf        = ncm_stats_dist1d_get_xf (sd1);
+    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (xf - xi)) / (epdf1d->WT + 1.0);
     const gdouble bias_corr = 0.5 * (erf ((x - epdf1d->min) / (M_SQRT2 * epdf1d->h)) + erf ((epdf1d->max - x) / (M_SQRT2 * epdf1d->h)));
 
     return phat / bias_corr;
@@ -690,8 +727,8 @@ _ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (epdf1d);
 
-  sd1->xi = epdf1d->min;
-  sd1->xf = epdf1d->max;
+  ncm_stats_dist1d_set_xi (sd1, epdf1d->min);
+  ncm_stats_dist1d_set_xf (sd1, epdf1d->max);
 
   return;
 }
@@ -705,9 +742,14 @@ _ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
   if (G_UNLIKELY (epdf1d->min == epdf1d->max))
-    sd1->xi = sd1->xf = epdf1d->min;
+  {
+    ncm_stats_dist1d_set_xi (sd1, epdf1d->min);
+    ncm_stats_dist1d_set_xf (sd1, epdf1d->min);
+  }
   else
+  {
     _ncm_stats_dist1d_epdf_update_limits (epdf1d);
+  }
 
   return;
 }
@@ -832,6 +874,36 @@ NcmStatsDist1dEPDFBw
 ncm_stats_dist1d_epdf_get_bw_type (NcmStatsDist1dEPDF *epdf1d)
 {
   return epdf1d->bw;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_set_h_fixed:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ * @h_fixed: fixed bandwidth
+ *
+ * Sets the fixed bandwidth to @h_fixed. The object
+ * must be (re)prepared after the call to this method to be used.
+ * This value is used only if the bandwidth computation type is
+ * #NCM_STATS_DIST1D_EPDF_BW_FIXED.
+ *
+ */
+void
+ncm_stats_dist1d_epdf_set_h_fixed (NcmStatsDist1dEPDF *epdf1d, gdouble h_fixed)
+{
+  epdf1d->h_fixed = h_fixed;
+  epdf1d->bw_set  = FALSE;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_get_h_fixed:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ *
+ * Returns: the current fixed bandwidth.
+ */
+gdouble
+ncm_stats_dist1d_epdf_get_h_fixed (NcmStatsDist1dEPDF *epdf1d)
+{
+  return epdf1d->h_fixed;
 }
 
 /**

@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.19.0',
+  version: '0.19.1',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -407,15 +407,19 @@ omp_fortran = dependency(
 message('Checking for GObject introspection')
 
 gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'))
-enable_gir = (
-  get_option('introspection').allowed()
-  and gir_scanner.found()
-  and meson.can_run_host_binaries()
-)
+
+enable_gir = false
+if gir_scanner.found()
+  if get_option('introspection').auto() and meson.can_run_host_binaries()
+    enable_gir = true
+  elif get_option('introspection').enabled()
+    enable_gir = true
+  endif
+endif
 
 if get_option('introspection').enabled() and not meson.can_run_host_binaries()
-  error(
-    'Running binaries on the build host needs to be supported to build with -Dintrospection=enabled',
+  message(
+    'To build GObject introspection files in a cross build, you need to set the appropriate GI_CROSS_LAUNCHER variable.',
   )
 endif
 

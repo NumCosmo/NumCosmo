@@ -641,7 +641,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       guint n = ncm_dataset_get_n (dset);
 
       ncm_rng_lock (rng);
-      gsl_ran_multinomial (rng->r, dset->oa->len, n,
+      ncm_rng_multinomial (rng, dset->oa->len, n,
                            (gdouble *) dset->data_prob->data,
                            (guint *) dset->bstrap->data);
       ncm_rng_unlock (rng);

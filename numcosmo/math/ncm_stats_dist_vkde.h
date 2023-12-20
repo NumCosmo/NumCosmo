@@ -39,31 +39,18 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST_VKDE             (ncm_stats_dist_vkde_get_type ())
-#define NCM_STATS_DIST_VKDE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_VKDE, NcmStatsDistVKDE))
-#define NCM_STATS_DIST_VKDE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_VKDE, NcmStatsDistVKDEClass))
-#define NCM_IS_STATS_DIST_VKDE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_VKDE))
-#define NCM_IS_STATS_DIST_VKDE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_VKDE))
-#define NCM_STATS_DIST_VKDE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_VKDE, NcmStatsDistVKDEClass))
+#define NCM_TYPE_STATS_DIST_VKDE (ncm_stats_dist_vkde_get_type ())
 
-typedef struct _NcmStatsDistVKDEClass NcmStatsDistVKDEClass;
-typedef struct _NcmStatsDistVKDE NcmStatsDistVKDE;
-typedef struct _NcmStatsDistVKDEPrivate NcmStatsDistVKDEPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM, STATS_DIST_VKDE, NcmStatsDistKDE)
 
 struct _NcmStatsDistVKDEClass
 {
   /*< private >*/
   NcmStatsDistKDEClass parent_class;
-};
 
-struct _NcmStatsDistVKDE
-{
-  /*< private >*/
-  NcmStatsDistKDE parent_instance;
-  NcmStatsDistVKDEPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
-
-GType ncm_stats_dist_vkde_get_type (void) G_GNUC_CONST;
 
 NcmStatsDistVKDE *ncm_stats_dist_vkde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type);
 NcmStatsDistVKDE *ncm_stats_dist_vkde_ref (NcmStatsDistVKDE *sdvkde);

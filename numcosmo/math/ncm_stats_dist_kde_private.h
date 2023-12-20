@@ -34,7 +34,7 @@
 
 G_BEGIN_DECLS
 
-struct _NcmStatsDistKDEPrivate
+typedef struct _NcmStatsDistKDEPrivate
 {
   /*< private >*/
   NcmStatsVec *sample;
@@ -48,7 +48,7 @@ struct _NcmStatsDistKDEPrivate
   guint nearPD_maxiter;
   NcmMemoryPool *mp_eval_vars;
   guint mp_eval_vars_len;
-};
+} NcmStatsDistKDEPrivate;
 
 G_END_DECLS
 

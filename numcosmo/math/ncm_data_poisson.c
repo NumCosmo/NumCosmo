@@ -237,7 +237,7 @@ _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < self->h->n; i++)
   {
     const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
-    const gdouble N_i      = gsl_ran_poisson (rng->r, lambda_i);
+    const gdouble N_i      = ncm_rng_poisson_gen (rng, lambda_i);
 
     self->h->bin[i] = N_i;
   }
