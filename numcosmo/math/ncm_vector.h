@@ -39,21 +39,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_VECTOR             (ncm_vector_get_type ())
-#define NCM_VECTOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_VECTOR, NcmVector))
-#define NCM_VECTOR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_VECTOR, NcmVectorClass))
-#define NCM_IS_VECTOR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_VECTOR))
-#define NCM_IS_VECTOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_VECTOR))
-#define NCM_VECTOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_VECTOR, NcmVectorClass))
+#define NCM_TYPE_VECTOR (ncm_vector_get_type ())
 
-typedef struct _NcmVectorClass NcmVectorClass;
-typedef struct _NcmVector NcmVector;
-
-struct _NcmVectorClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmVector, ncm_vector, NCM, VECTOR, GObject)
 
 /**
  * NcmVectorInternal:
@@ -86,8 +74,6 @@ struct _NcmVector
 };
 
 typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);
-
-GType ncm_vector_get_type (void) G_GNUC_CONST;
 
 #define NCM_N2VECTOR(v) ((NcmVector *) ((v)->content))
 

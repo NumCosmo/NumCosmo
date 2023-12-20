@@ -28,7 +28,20 @@
  * @title: NcmMSetFunc
  * @short_description: Abstract class for arbitrary MSet functions.
  *
- * FIXME
+ * This abstract class provides a framework for functions that operate on any model
+ * in a #NcmMSet and additional extra variables. It establishes methods to
+ * inquire about the function's expectations and characteristics.
+ *
+ * The functions implemented by subclasses may depend on any model specified by
+ * #NcmMSet and may incorporate extra variables. The method
+ * `ncm_mset_func_get_nvar()` retrieves the count of extra variables expected
+ * by the function, and `ncm_mset_func_get_dim()` returns the number of values
+ * returned by the function.
+ *
+ * Functions can be categorized as scalar or vectorial. A scalar function returns
+ * a single value, while a vectorial function returns an array of values. The
+ * method `ncm_mset_func_is_scalar()` returns %TRUE if the function is scalar.
+ *
  *
  */
 
@@ -48,41 +61,60 @@ enum
   PROP_EVAL_X,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT)
+typedef struct _NcmMSetFuncPrivate
+{
+  /*< private >*/
+  GObject parent_instance;
+  guint nvar;
+  guint dim;
+  NcmVector *eval_x;
+  gchar *name;
+  gchar *symbol;
+  gchar *ns;
+  gchar *desc;
+  gchar *uname;
+  gchar *usymbol;
+  NcmDiff *diff;
+} NcmMSetFuncPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT)
 
 static void
 ncm_mset_func_init (NcmMSetFunc *func)
 {
-  func->nvar    = 0;
-  func->dim     = 0;
-  func->eval_x  = NULL;
-  func->name    = NULL;
-  func->symbol  = NULL;
-  func->ns      = NULL;
-  func->desc    = NULL;
-  func->uname   = NULL;
-  func->usymbol = NULL;
-  func->diff    = ncm_diff_new ();
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  self->nvar    = 0;
+  self->dim     = 0;
+  self->eval_x  = NULL;
+  self->name    = NULL;
+  self->symbol  = NULL;
+  self->ns      = NULL;
+  self->desc    = NULL;
+  self->uname   = NULL;
+  self->usymbol = NULL;
+  self->diff    = ncm_diff_new ();
 }
 
 static void
 _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+  NcmMSetFunc *func               = NCM_MSET_FUNC (object);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
   g_return_if_fail (NCM_IS_MSET_FUNC (object));
 
   switch (prop_id)
   {
     case PROP_NVAR:
-      func->nvar = g_value_get_uint (value);
+      self->nvar = g_value_get_uint (value);
       break;
     case PROP_DIM:
-      func->dim = g_value_get_uint (value);
+      self->dim = g_value_get_uint (value);
       break;
     case PROP_EVAL_X:
-      ncm_vector_clear (&func->eval_x);
-      func->eval_x = g_value_dup_object (value);
+      ncm_vector_clear (&self->eval_x);
+      self->eval_x = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -93,7 +125,8 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
 static void
 _ncm_mset_func_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+  NcmMSetFunc *func               = NCM_MSET_FUNC (object);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
   g_return_if_fail (NCM_IS_MSET_FUNC (object));
 
@@ -106,7 +139,7 @@ _ncm_mset_func_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_set_uint (value, ncm_mset_func_get_dim (func));
       break;
     case PROP_EVAL_X:
-      g_value_set_object (value, func->eval_x);
+      g_value_set_object (value, self->eval_x);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -117,10 +150,11 @@ _ncm_mset_func_get_property (GObject *object, guint prop_id, GValue *value, GPar
 static void
 _ncm_mset_func_dispose (GObject *object)
 {
-  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+  NcmMSetFunc *func               = NCM_MSET_FUNC (object);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  ncm_vector_clear (&func->eval_x);
-  ncm_diff_clear (&func->diff);
+  ncm_vector_clear (&self->eval_x);
+  ncm_diff_clear (&self->diff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
@@ -129,15 +163,16 @@ _ncm_mset_func_dispose (GObject *object)
 static void
 _ncm_mset_func_finalize (GObject *object)
 {
-  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+  NcmMSetFunc *func               = NCM_MSET_FUNC (object);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  g_clear_pointer (&func->name,    g_free);
-  g_clear_pointer (&func->symbol,  g_free);
-  g_clear_pointer (&func->ns,      g_free);
-  g_clear_pointer (&func->desc,    g_free);
+  g_clear_pointer (&self->name,    g_free);
+  g_clear_pointer (&self->symbol,  g_free);
+  g_clear_pointer (&self->ns,      g_free);
+  g_clear_pointer (&self->desc,    g_free);
 
-  g_clear_pointer (&func->uname,   g_free);
-  g_clear_pointer (&func->usymbol, g_free);
+  g_clear_pointer (&self->uname,   g_free);
+  g_clear_pointer (&self->usymbol, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->finalize (object);
@@ -190,9 +225,9 @@ _ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble
  * ncm_mset_func_ref:
  * @func: a #NcmMSetFunc.
  *
- * FIXME
+ * Increases the reference count of @func by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @func.
  */
 NcmMSetFunc *
 ncm_mset_func_ref (NcmMSetFunc *func)
@@ -204,7 +239,8 @@ ncm_mset_func_ref (NcmMSetFunc *func)
  * ncm_mset_func_free:
  * @func: a #NcmMSetFunc.
  *
- * FIXME
+ * Decreases the reference count of @func by one. If the reference count
+ * reaches zero, @func is freed.
  *
  */
 void
@@ -217,7 +253,8 @@ ncm_mset_func_free (NcmMSetFunc *func)
  * ncm_mset_func_clear:
  * @func: a #NcmMSetFunc.
  *
- * FIXME
+ * If *@func is not %NULL, decreases the reference count of @func by one
+ * and sets *@func to %NULL.
  *
  */
 void
@@ -229,9 +266,9 @@ ncm_mset_func_clear (NcmMSetFunc **func)
 /**
  * ncm_mset_func_array_new:
  *
- * FIXME
+ * Creates a new #GPtrArray to hold #NcmMSetFunc pointers.
  *
- * Returns: (element-type NcmMSetFunc) (transfer full): FIXME
+ * Returns: (element-type NcmMSetFunc) (transfer full): the new #GPtrArray.
  */
 GPtrArray *
 ncm_mset_func_array_new (void)
@@ -243,69 +280,137 @@ ncm_mset_func_array_new (void)
  * ncm_mset_func_eval: (virtual eval)
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: (array) (element-type double): FIXME
- * @res: (array) (element-type double): FIXME
+ * @x: (array) (element-type double): function arguments
+ * @res: (array) (element-type double): function values
  *
- * Evaluate the function.
+ * Evaluate the function @func at @x and store the result in @res.
  *
  */
+void
+ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  if (self->eval_x != NULL)
+  {
+    if (x != NULL)
+      g_warning ("ncm_mset_func_eval: function called with arguments while an eval x was already used, ignoring argument.");
+
+    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_data (self->eval_x), res);
+  }
+  else
+  {
+    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, res);
+  }
+}
+
 /**
  * ncm_mset_func_eval_nvar:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: FIXME
+ * @x: function arguments
  *
- * FIXME
+ * Evaluate the function @func at @x and return the result. This
+ * function is only valid if @func is a scalar function.
  *
- * Returns: FIXME
+ * Returns: function value.
  */
+gdouble
+ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
+{
+  gdouble res;
+
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, &res);
+
+  return res;
+}
+
 /**
  * ncm_mset_func_eval0:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Evaluate the function @func and return the result. This
+ * function is only valid if @func is a scalar function.
+ * The function's arguments are either none, if the function is constant,
+ * or the arguments passed to ncm_mset_func_set_eval_x().
  *
- * Returns: FIXME
+ * Returns: function value.
  */
+gdouble
+ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+  gdouble res;
+
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (self->eval_x != NULL) ? ncm_vector_data (self->eval_x) : NULL, &res);
+
+  return res;
+}
+
 /**
  * ncm_mset_func_eval1:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: FIXME
+ * @x: function argument
  *
- * FIXME
+ * Evaluate the function @func at @x and return the result. This
+ * function is only valid if @func is a scalar function.
  *
- * Returns: FIXME
+ * Returns: function value.
  */
+gdouble
+ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
+{
+  gdouble res;
+
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, &x, &res);
+
+  return res;
+}
+
 /**
  * ncm_mset_func_eval_vector:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x_v: FIXME
- * @res_v: FIXME
+ * @x_v: function arguments in a #NcmVector
+ * @res_v: a #NcmVector to store the function values
  *
- * FIXME
+ * Compute the function @func at @x_v and store the result in @res_v. This function is
+ * only valid if @func is a vectorial function.
  *
  */
+void
+ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (x_v); i++)
+  {
+    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_ptr (x_v, i), ncm_vector_ptr (res_v, i));
+  }
+}
 
 /**
  * ncm_mset_func_set_eval_x:
  * @func: a #NcmMSetFunc
- * @x: (in) (array length=len): FIXME
- * @len: FIXME
+ * @x: (in) (array length=len): function arguments
+ * @len: length of @x
  *
- * FIXME
+ * Sets the function's arguments to @x. Once this function is called, the
+ * function's arguments are fixed and @func becomes a constant function.
  *
  */
 void
 ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
 {
-  ncm_vector_clear (&func->eval_x);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  g_assert_cmpuint (func->nvar, ==, len);
+  ncm_vector_clear (&self->eval_x);
 
-  func->eval_x = ncm_vector_new_data_dup (x, func->nvar, 1);
+  g_assert_cmpuint (self->nvar, ==, len);
+
+  self->eval_x = ncm_vector_new_data_dup (x, self->nvar, 1);
 
   ncm_mset_func_peek_name (func);
   ncm_mset_func_peek_desc (func);
@@ -323,16 +428,16 @@ ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
 
     args = g_string_free (args_s, FALSE);
 
-    g_clear_pointer (&func->usymbol, g_free);
-    g_clear_pointer (&func->uname,   g_free);
+    g_clear_pointer (&self->usymbol, g_free);
+    g_clear_pointer (&self->uname,   g_free);
 
-    func->usymbol = g_strjoin (NULL, func->symbol, args, NULL);
+    self->usymbol = g_strjoin (NULL, self->symbol, args, NULL);
 
     {
       GRegex *reg  = g_regex_new ("[^0-9]+", 0, 0, NULL);
       gchar *nargs = g_regex_replace_literal (reg, args, -1, 0, "_", 0, NULL);
 
-      func->uname = g_strjoin (NULL, func->name, nargs, NULL);
+      self->uname = g_strjoin (NULL, self->name, nargs, NULL);
 
       g_regex_unref (reg);
     }
@@ -345,58 +450,66 @@ ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
  * ncm_mset_func_is_scalar:
  * @func: a #NcmMSetFunc
  *
- * FIXME
+ * Checks if @func is a scalar function.
  *
- * Returns: FIXME
+ * Returns: %TRUE if @func is scalar.
  */
 gboolean
 ncm_mset_func_is_scalar (NcmMSetFunc *func)
 {
-  return (func->dim == 1);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return (self->dim == 1);
 }
 
 /**
  * ncm_mset_func_is_vector:
  * @func: a #NcmMSetFunc
- * @dim: FIXME
+ * @dim: function dimension
  *
- * FIXME
+ * Checks if @func is a vectorial function with dimension @dim.
  *
- * Returns: FIXME
+ * Returns: %TRUE if @func is vectorial with dimension @dim.
  */
 gboolean
 ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim)
 {
-  return (func->dim == dim);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return (self->dim == dim);
 }
 
 /**
  * ncm_mset_func_is_const:
  * @func: a #NcmMSetFunc
  *
- * FIXME
+ * Checks if @func is a constant function.
  *
- * Returns: FIXME
+ * Returns: %TRUE if @func is constant.
  */
 gboolean
 ncm_mset_func_is_const (NcmMSetFunc *func)
 {
-  return ((func->nvar == 0) || (func->eval_x != NULL));
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return ((self->nvar == 0) || (self->eval_x != NULL));
 }
 
 /**
  * ncm_mset_func_has_nvar:
  * @func: a #NcmMSetFunc
- * @nvar: FIXME
+ * @nvar: number of variables
  *
- * FIXME
+ * Checks if @func expects @nvar extra variables.
  *
- * Returns: FIXME
+ * Returns: %TRUE if @func expects @nvar extra variables.
  */
 gboolean
 ncm_mset_func_has_nvar (NcmMSetFunc *func, guint nvar)
 {
-  return (func->nvar == nvar);
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return (self->nvar == nvar);
 }
 
 typedef struct __ncm_mset_func_numdiff_fparams_1
@@ -420,19 +533,21 @@ _mset_func_numdiff_fparams_1_val (NcmVector *x_v, gpointer userdata)
  * ncm_mset_func_numdiff_fparams:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: FIXME
- * @out: (out) (transfer full): FIXME
+ * @x: (array): function arguments
+ * @out: (out) (transfer full): function gradient
  *
- * FIXME
+ * Computes the gradient of @func at @x and stores the result in @out.
+ * This function is only valid if @func is a scalar function.
  *
  */
 void
 ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector **out)
 {
-  const guint fparam_len = ncm_mset_fparam_len (mset);
-  GArray *x_a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  NcmVector *x_v         = NULL;
-  GArray *grad_a         = NULL;
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+  const guint fparam_len          = ncm_mset_fparam_len (mset);
+  GArray *x_a                     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x_v                  = NULL;
+  GArray *grad_a                  = NULL;
   _ncm_mset_func_numdiff_fparams_1 nd;
 
   g_array_set_size (x_a, fparam_len);
@@ -443,7 +558,7 @@ ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *
   nd.func = func;
   nd.x    = x;
 
-  grad_a = ncm_diff_rf_d1_N_to_1 (func->diff, x_a, _mset_func_numdiff_fparams_1_val, &nd, NULL);
+  grad_a = ncm_diff_rf_d1_N_to_1 (self->diff, x_a, _mset_func_numdiff_fparams_1_val, &nd, NULL);
 
   ncm_mset_fparams_set_vector (mset, x_v);
 
@@ -472,7 +587,9 @@ ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *
 guint
 ncm_mset_func_get_nvar (NcmMSetFunc *func)
 {
-  return func->nvar;
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return self->nvar;
 }
 
 /**
@@ -486,7 +603,49 @@ ncm_mset_func_get_nvar (NcmMSetFunc *func)
 guint
 ncm_mset_func_get_dim (NcmMSetFunc *func)
 {
-  return func->dim;
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  return self->dim;
+}
+
+/**
+ * ncm_mset_func_set_meta:
+ * @func: a #NcmMSetFunc
+ * @name: function name
+ * @symbol: function symbol
+ * @ns: function namespace
+ * @desc: function description
+ * @nvar: number of variables
+ * @dim: function dimension
+ *
+ * Sets the function's metadata. This function is called by subclasses'
+ * to set the function's metadata. It should not be called by users.
+ *
+ */
+void
+ncm_mset_func_set_meta (NcmMSetFunc *func, const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, const guint nvar, const guint dim)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  g_clear_pointer (&self->name,   g_free);
+  g_clear_pointer (&self->symbol, g_free);
+  g_clear_pointer (&self->ns,     g_free);
+  g_clear_pointer (&self->desc,   g_free);
+
+  if (name != NULL)
+    self->name = g_strdup (name);
+
+  if (symbol != NULL)
+    self->symbol = g_strdup (symbol);
+
+  if (ns != NULL)
+    self->ns = g_strdup (ns);
+
+  if (desc != NULL)
+    self->desc = g_strdup (desc);
+
+  self->nvar = nvar;
+  self->dim  = dim;
 }
 
 /**
@@ -498,13 +657,15 @@ ncm_mset_func_get_dim (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_name (NcmMSetFunc *func)
 {
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  if (func->name == NULL)
-    func->name = g_strdup_printf ("%s:no-name", func->ns);
+  if (self->ns == NULL)
+    self->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
 
-  return func->name;
+  if (self->name == NULL)
+    self->name = g_strdup_printf ("%s:no-name", self->ns);
+
+  return self->name;
 }
 
 /**
@@ -516,13 +677,15 @@ ncm_mset_func_peek_name (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_symbol (NcmMSetFunc *func)
 {
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  if (func->symbol == NULL)
-    func->symbol = g_strdup_printf ("%s:no-symbol", func->ns);
+  if (self->ns == NULL)
+    self->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
 
-  return func->symbol;
+  if (self->symbol == NULL)
+    self->symbol = g_strdup_printf ("%s:no-symbol", self->ns);
+
+  return self->symbol;
 }
 
 /**
@@ -534,10 +697,12 @@ ncm_mset_func_peek_symbol (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_ns (NcmMSetFunc *func)
 {
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  return func->ns;
+  if (self->ns == NULL)
+    self->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+
+  return self->ns;
 }
 
 /**
@@ -549,13 +714,15 @@ ncm_mset_func_peek_ns (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_desc (NcmMSetFunc *func)
 {
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
-  if (func->desc == NULL)
-    func->desc = g_strdup_printf ("%s:no-desc", func->ns);
+  if (self->ns == NULL)
+    self->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
 
-  return func->desc;
+  if (self->desc == NULL)
+    self->desc = g_strdup_printf ("%s:no-desc", self->ns);
+
+  return self->desc;
 }
 
 /**
@@ -569,8 +736,10 @@ ncm_mset_func_peek_desc (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_uname (NcmMSetFunc *func)
 {
-  if (func->uname != NULL)
-    return func->uname;
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  if (self->uname != NULL)
+    return self->uname;
   else
     return ncm_mset_func_peek_name (func);
 }
@@ -586,8 +755,10 @@ ncm_mset_func_peek_uname (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_usymbol (NcmMSetFunc *func)
 {
-  if (func->usymbol != NULL)
-    return func->usymbol;
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  if (self->usymbol != NULL)
+    return self->usymbol;
   else
     return ncm_mset_func_peek_symbol (func);
 }

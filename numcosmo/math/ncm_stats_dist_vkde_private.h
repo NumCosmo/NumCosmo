@@ -34,7 +34,7 @@
 
 G_BEGIN_DECLS
 
-struct _NcmStatsDistVKDEPrivate
+typedef struct _NcmStatsDistVKDEPrivate
 {
   /*< private >*/
   GPtrArray *cov_array;
@@ -43,7 +43,7 @@ struct _NcmStatsDistVKDEPrivate
   gboolean use_rot_href;
   NcmMemoryPool *mp_stats_vec;
   NcmMemoryPool *mp_eval_vars;
-};
+} NcmStatsDistVKDEPrivate;
 
 G_END_DECLS
 

@@ -212,7 +212,7 @@ _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo
   ncm_rng_lock (rng);
 
   do {
-    z_obs[0] = z + z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] + gsl_ran_gaussian (rng->r, sigma_z);
+    z_obs[0] = ncm_rng_gaussian_gen (rng, z + z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS], sigma_z);
   } while (z_obs[0] < 0);
 
   ncm_rng_unlock (rng);

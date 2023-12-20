@@ -62,8 +62,7 @@ _ncm_prior_constructed (GObject *object)
 
   NcmMSetFunc *func = NCM_MSET_FUNC (object);
 
-  func->dim  = 1;
-  func->nvar = 0;
+  ncm_mset_func_set_meta (func, NULL, NULL, NULL, NULL, 0, 1);
 }
 
 static void

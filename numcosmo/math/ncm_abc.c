@@ -74,10 +74,10 @@ typedef struct _NcmABCPrivate
   GArray *weights_tm1;
   GArray *pchoice;
   GArray *dists;
+  NcmRNGDiscrete *rng_discrete;
   gdouble epsilon;
   gdouble depsilon;
   gboolean dists_sorted;
-  gsl_ran_discrete_t *wran;
   gboolean started;
   gboolean started_up;
   gint cur_sample_id;
@@ -111,10 +111,10 @@ ncm_abc_init (NcmABC *abc)
   self->weights       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->weights_tm1   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->dists         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->rng_discrete  = NULL;
   self->dists_sorted  = FALSE;
   self->epsilon       = 0.0;
   self->depsilon      = 0.0;
-  self->wran          = NULL;
   self->started       = FALSE;
   self->started_up    = FALSE;
   self->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
@@ -245,7 +245,7 @@ _ncm_abc_dispose (GObject *object)
   g_clear_pointer (&self->weights, g_array_unref);
   g_clear_pointer (&self->weights_tm1, g_array_unref);
   g_clear_pointer (&self->dists, g_array_unref);
-  g_clear_pointer (&self->wran, gsl_ran_discrete_free);
+  g_clear_pointer (&self->rng_discrete, ncm_rng_discrete_free);
 
   if (self->mp != NULL)
   {
@@ -768,10 +768,10 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
       guint stepi          = (self->cur_sample_id + 1) % step;
       gboolean log_timeout = FALSE;
 
-      if ((self->nt->pos_time - self->nt->last_log_time) > 60.0)
+      if (ncm_timer_elapsed_since_last_log (self->nt) > 60.0)
         log_timeout = TRUE;
 
-      if (log_timeout || (stepi == 0) || (self->nt->task_pos == self->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (self->nt))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (self->mcat);
@@ -1099,7 +1099,7 @@ _ncm_abc_run_single (NcmABC *abc)
 
     self->ntotal++;
 
-    if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (rng->r) < prob)))
+    if ((prob == 1.0) || ((prob != 0.0) && (ncm_rng_uniform01_gen (rng) < prob)))
     {
       self->cur_sample_id++;
       self->naccepted++;
@@ -1135,7 +1135,7 @@ _ncm_abc_dup_thread (gpointer userdata)
     abct->thetastar = ncm_vector_dup (self->thetastar);
     abct->rng       = ncm_rng_new (NULL);
 
-    ncm_rng_set_seed (abct->rng, gsl_rng_get (rng->r));
+    ncm_rng_set_seed (abct->rng, ncm_rng_gen_ulong (rng));
 
     ncm_serialize_reset (self->ser, TRUE);
 
@@ -1184,7 +1184,7 @@ _ncm_abc_thread_eval (glong i, glong f, gpointer data)
     self->ntotal++;
     G_UNLOCK (update_lock);
 
-    if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (abct->rng->r) < prob)))
+    if ((prob == 1.0) || ((prob != 0.0) && (ncm_rng_uniform01_gen (abct->rng) < prob)))
     {
       G_LOCK (update_lock);
       self->cur_sample_id++;
@@ -1394,13 +1394,14 @@ ncm_abc_start_update (NcmABC *abc)
   }
 
   g_assert_cmpuint (self->weights->len, ==, self->nparticles);
-  g_clear_pointer (&self->wran, gsl_ran_discrete_free);
   g_array_set_size (self->weights_tm1, self->nparticles);
 
   ncm_abc_update_tkern (abc);
 
   memcpy (self->weights_tm1->data, self->weights->data, sizeof (gdouble) * self->nparticles);
-  self->wran = gsl_ran_discrete_preproc (self->nparticles, (gdouble *) self->weights->data);
+
+  g_clear_pointer (&self->rng_discrete, ncm_rng_discrete_free);
+  self->rng_discrete = ncm_rng_discrete_new ((gdouble *) self->weights->data, self->nparticles);
 
   ncm_mset_catalog_reset_stats (self->mcat);
 
@@ -1437,7 +1438,7 @@ ncm_abc_end_update (NcmABC *abc)
   if (ncm_timer_task_is_running (self->nt))
     ncm_timer_task_end (self->nt);
 
-  g_clear_pointer (&self->wran, gsl_ran_discrete_free);
+  g_clear_pointer (&self->rng_discrete, ncm_rng_discrete_free);
 
   for (i = 0; i < self->nparticles; i++)
     WT += g_array_index (self->weights, gdouble, i);
@@ -1531,8 +1532,9 @@ _ncm_abc_update_single (NcmABC *abc)
 
   for (i = 0; i < self->n;)
   {
-    gdouble dist = 0.0, prob = 0.0;
-    gsize np = gsl_ran_discrete (rng->r, self->wran);
+    gsize np     = ncm_rng_discrete_gen (rng, self->rng_discrete);
+    gdouble dist = 0.0;
+    gdouble prob = 0.0;
 
     NcmVector *row   = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
@@ -1547,7 +1549,7 @@ _ncm_abc_update_single (NcmABC *abc)
 
     self->ntotal++;
 
-    if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (rng->r) < prob)))
+    if ((prob == 1.0) || ((prob != 0.0) && (ncm_rng_uniform01_gen (rng) < prob)))
     {
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (self->prior, self->thetastar);
       gdouble denom      = 0.0;
@@ -1584,8 +1586,9 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
 
   for (j = i; j < f;)
   {
-    gdouble dist = 0.0, prob = 0.0;
-    gsize np = gsl_ran_discrete (abct->rng->r, self->wran);
+    gsize np     = ncm_rng_discrete_gen (abct->rng, self->rng_discrete);
+    gdouble dist = 0.0;
+    gdouble prob = 0.0;
 
     NcmVector *row   = ncm_mset_catalog_peek_row (self->mcat, self->nparticles * self->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
@@ -1612,7 +1615,7 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
     self->ntotal++;
     G_UNLOCK (update_lock);
 
-    if ((prob == 1.0) || ((prob != 0.0) && (gsl_rng_uniform (abct->rng->r) < prob)))
+    if ((prob == 1.0) || ((prob != 0.0) && (ncm_rng_uniform01_gen (abct->rng) < prob)))
     {
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (self->prior, abct->thetastar);
       gdouble denom      = 0.0;

@@ -38,21 +38,15 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST2D             (ncm_stats_dist2d_get_type ())
-#define NCM_STATS_DIST2D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST2D, NcmStatsDist2d))
-#define NCM_STATS_DIST2D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST2D, NcmStatsDist2dClass))
-#define NCM_IS_STATS_DIST2D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST2D))
-#define NCM_IS_STATS_DIST2D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST2D))
-#define NCM_STATS_DIST2D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST2D, NcmStatsDist2dClass))
+#define NCM_TYPE_STATS_DIST2D (ncm_stats_dist2d_get_type ())
 
-typedef struct _NcmStatsDist2dClass NcmStatsDist2dClass;
-typedef struct _NcmStatsDist2d NcmStatsDist2d;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDist2d, ncm_stats_dist2d, NCM, STATS_DIST2D, GObject)
 
 struct _NcmStatsDist2dClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*xbounds) (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf);
   void (*ybounds) (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf);
   gdouble (*pdf) (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
@@ -63,15 +57,10 @@ struct _NcmStatsDist2dClass
   gdouble (*marginal_inv_cdf) (NcmStatsDist2d *sd2, const gdouble u);
   gdouble (*inv_cond) (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
   void (*prepare) (NcmStatsDist2d *sd2);
-};
 
-struct _NcmStatsDist2d
-{
-  /*< private >*/
-  GObject parent_instance;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[8];
 };
-
-GType ncm_stats_dist2d_get_type (void) G_GNUC_CONST;
 
 NcmStatsDist2d *ncm_stats_dist2d_ref (NcmStatsDist2d *sd2);
 void ncm_stats_dist2d_free (NcmStatsDist2d *sd2);
