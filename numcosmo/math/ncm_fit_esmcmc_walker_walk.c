@@ -284,12 +284,12 @@ _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (pi = 0; pi < walk->nparams; pi++)
     {
-      const gdouble zi = gsl_ran_ugaussian (rng->r);
+      const gdouble zi = ncm_rng_ugaussian_gen (rng);
 
       ncm_matrix_set (walk->z, k, pi, zi);
     }
 
-    gsl_ran_choose (rng->r,
+    ncm_rng_choose (rng,
                     &g_array_index (walk->indices, guint, k * walk->nparams),
                     walk->nparams,
                     &g_array_index (walk->numbers, guint, subensemble),

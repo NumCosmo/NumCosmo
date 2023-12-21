@@ -274,7 +274,7 @@ _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, NcHICosmo
   ncm_rng_lock (rng);
 
   do {
-    z_obs[0] = z + Z_BIAS + gsl_ran_gaussian (rng->r, sigma_z);
+    z_obs[0] = ncm_rng_gaussian_gen (rng, z + Z_BIAS, sigma_z);
   } while (z_obs[0] < 0.0);
 
   ncm_rng_unlock (rng);

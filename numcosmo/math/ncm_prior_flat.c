@@ -65,40 +65,56 @@ enum
   PROP_VARIABLE,
 };
 
-G_DEFINE_TYPE (NcmPriorFlat, ncm_prior_flat, NCM_TYPE_PRIOR)
+
+typedef struct _NcmPriorFlatPrivate
+{
+  /*< private >*/
+  NcmPrior parent_instance;
+  gdouble x_low;
+  gdouble x_upp;
+  gdouble s;
+  gdouble var;
+  gdouble h0;
+} NcmPriorFlatPrivate;
+
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmPriorFlat, ncm_prior_flat, NCM_TYPE_PRIOR)
 
 static void
 ncm_prior_flat_init (NcmPriorFlat *pf)
 {
-  pf->x_low = 0.0;
-  pf->x_upp = 0.0;
-  pf->s     = 0.0;
-  pf->h0    = 0.0;
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->x_low = 0.0;
+  self->x_upp = 0.0;
+  self->s     = 0.0;
+  self->h0    = 0.0;
 }
 
 static void
 _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmPriorFlat *pf = NCM_PRIOR_FLAT (object);
+  NcmPriorFlat *pf                 = NCM_PRIOR_FLAT (object);
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
 
   g_return_if_fail (NCM_IS_PRIOR_FLAT (object));
 
   switch (prop_id)
   {
     case PROP_X_LOW:
-      pf->x_low = g_value_get_double (value);
+      ncm_prior_flat_set_x_low (pf, g_value_get_double (value));
       break;
     case PROP_X_UPP:
-      pf->x_upp = g_value_get_double (value);
+      ncm_prior_flat_set_x_upp (pf, g_value_get_double (value));
       break;
     case PROP_S:
-      pf->s = g_value_get_double (value);
+      ncm_prior_flat_set_scale (pf, g_value_get_double (value));
       break;
     case PROP_VARIABLE:
-      pf->var = g_value_get_double (value);
+      ncm_prior_flat_set_var (pf, g_value_get_double (value));
       break;
     case PROP_H0:
-      pf->h0 = g_value_get_double (value);
+      ncm_prior_flat_set_h0 (pf, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -109,26 +125,27 @@ _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *valu
 static void
 _ncm_prior_flat_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmPriorFlat *pf = NCM_PRIOR_FLAT (object);
+  NcmPriorFlat *pf                 = NCM_PRIOR_FLAT (object);
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
 
   g_return_if_fail (NCM_IS_PRIOR_FLAT (object));
 
   switch (prop_id)
   {
     case PROP_X_LOW:
-      g_value_set_double (value, pf->x_low);
+      g_value_set_double (value, ncm_prior_flat_get_x_low (pf));
       break;
     case PROP_X_UPP:
-      g_value_set_double (value, pf->x_upp);
+      g_value_set_double (value, ncm_prior_flat_get_x_upp (pf));
       break;
     case PROP_S:
-      g_value_set_double (value, pf->s);
+      g_value_set_double (value, ncm_prior_flat_get_scale (pf));
       break;
     case PROP_VARIABLE:
-      g_value_set_double (value, pf->var);
+      g_value_set_double (value, ncm_prior_flat_get_var (pf));
       break;
     case PROP_H0:
-      g_value_set_double (value, pf->h0);
+      g_value_set_double (value, ncm_prior_flat_get_h0 (pf));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -198,12 +215,13 @@ ncm_prior_flat_class_init (NcmPriorFlatClass *klass)
 static void
 _ncm_prior_flat_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  NcmPriorFlat *pf   = NCM_PRIOR_FLAT (func);
-  const gdouble mean = NCM_PRIOR_FLAT_GET_CLASS (pf)->mean (pf, mset);
+  NcmPriorFlat *pf                 = NCM_PRIOR_FLAT (func);
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+  const gdouble mean               = NCM_PRIOR_FLAT_GET_CLASS (pf)->mean (pf, mset);
 
   res[0] =
-    exp (2.0 * pf->h0 / pf->s * ((pf->x_low - mean) + pf->s / 2.0)) +
-    exp (2.0 * pf->h0 / pf->s * ((mean - pf->x_upp) + pf->s / 2.0))
+    exp (2.0 * self->h0 / self->s * ((self->x_low - mean) + self->s / 2.0)) +
+    exp (2.0 * self->h0 / self->s * ((mean - self->x_upp) + self->s / 2.0))
   ;
 }
 
@@ -245,5 +263,155 @@ void
 ncm_prior_flat_clear (NcmPriorFlat **pf)
 {
   g_clear_object (pf);
+}
+
+/**
+ * ncm_prior_flat_set_x_low:
+ * @pf: a #NcmPriorFlat
+ * @x_low: lower limit
+ *
+ * Sets the lower limit of @pf.
+ *
+ */
+void
+ncm_prior_flat_set_x_low (NcmPriorFlat *pf, const gdouble x_low)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->x_low = x_low;
+}
+
+/**
+ * ncm_prior_flat_set_x_upp:
+ * @pf: a #NcmPriorFlat
+ * @x_upp: upper limit
+ *
+ * Sets the upper limit of @pf.
+ *
+ */
+void
+ncm_prior_flat_set_x_upp (NcmPriorFlat *pf, const gdouble x_upp)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->x_upp = x_upp;
+}
+
+/**
+ * ncm_prior_flat_set_scale:
+ * @pf: a #NcmPriorFlat
+ * @scale: border scale
+ *
+ * Sets the border scale of @pf.
+ *
+ */
+void
+ncm_prior_flat_set_scale (NcmPriorFlat *pf, const gdouble scale)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->s = scale;
+}
+
+/**
+ * ncm_prior_flat_set_var:
+ * @pf: a #NcmPriorFlat
+ * @var: variable
+ *
+ * Sets the variable of @pf.
+ *
+ */
+void
+ncm_prior_flat_set_var (NcmPriorFlat *pf, const gdouble var)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->var = var;
+}
+
+/**
+ * ncm_prior_flat_set_h0:
+ * @pf: a #NcmPriorFlat
+ * @h0: Cut magnitude
+ *
+ * Sets the cut magnitude of @pf.
+ *
+ */
+void
+ncm_prior_flat_set_h0 (NcmPriorFlat *pf, const gdouble h0)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  self->h0 = h0;
+}
+
+/**
+ * ncm_prior_flat_get_x_low:
+ * @pf: a #NcmPriorFlat
+ *
+ * Returns: the lower limit of @pf.
+ */
+gdouble
+ncm_prior_flat_get_x_low (NcmPriorFlat *pf)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  return self->x_low;
+}
+
+/**
+ * ncm_prior_flat_get_x_upp:
+ * @pf: a #NcmPriorFlat
+ *
+ * Returns: the upper limit of @pf.
+ */
+gdouble
+ncm_prior_flat_get_x_upp (NcmPriorFlat *pf)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  return self->x_upp;
+}
+
+/**
+ * ncm_prior_flat_get_scale:
+ * @pf: a #NcmPriorFlat
+ *
+ * Returns: the border scale of @pf.
+ */
+gdouble
+ncm_prior_flat_get_scale (NcmPriorFlat *pf)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  return self->s;
+}
+
+/**
+ * ncm_prior_flat_get_var:
+ * @pf: a #NcmPriorFlat
+ *
+ * Returns: the variable of @pf.
+ */
+gdouble
+ncm_prior_flat_get_var (NcmPriorFlat *pf)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  return self->var;
+}
+
+/**
+ * ncm_prior_flat_get_h0:
+ * @pf: a #NcmPriorFlat
+ *
+ * Returns: the cut magnitude of @pf.
+ */
+gdouble
+ncm_prior_flat_get_h0 (NcmPriorFlat *pf)
+{
+  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+
+  return self->h0;
 }
 

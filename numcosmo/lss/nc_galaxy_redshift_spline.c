@@ -285,7 +285,7 @@ _nc_galaxy_redshift_spline_gen (NcGalaxyRedshift *gz, NcmRNG *rng)
   gdouble z                                  = 0.0;
   guint i;
 
-  gsl_ran_multinomial (rng->r, self->normas->len, 1, (gdouble *) self->normas->data, n);
+  ncm_rng_multinomial (rng, self->normas->len, 1, (gdouble *) self->normas->data, n);
 
   for (i = 0; i < self->normas->len; i++)
   {

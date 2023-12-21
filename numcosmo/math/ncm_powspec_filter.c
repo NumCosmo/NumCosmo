@@ -29,12 +29,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -45,14 +45,14 @@
  * @short_description: Class to compute filtered power spectrum
  * @stability: Stable
  * @include: numcosmo/math/ncm_powspec_filter.h
- * 
- * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$ 
+ *
+ * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$
  * (#ncm_powspec_filter_eval_dnvar_dlnrn()) using the FFTLog approach (see #NcmFftlog),
  * \begin{equation}\label{eq:variance}
- * \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) \vert W(k,r) \vert^2 \ \mathrm{d}k, 
+ * \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) \vert W(k,r) \vert^2 \ \mathrm{d}k,
  * \end{equation}
  * where $P(k, z)$ is the power spectrum at mode $k$ and redshift $z$ and $W(k, r)$ is the filter (or window function).
- *  
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -78,7 +78,28 @@ enum
   PROP_RELTOL,
   PROP_RELTOL_Z,
   PROP_POWERSPECTRUM,
-	PROP_SIZE,
+  PROP_SIZE,
+};
+
+struct _NcmPowspecFilter
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmPowspec *ps;
+  NcmPowspecFilterType type;
+  NcmFftlog *fftlog;
+  gdouble lnr0;
+  gdouble lnk0;
+  gdouble Lk;
+  gdouble zi;
+  gdouble zf;
+  gboolean calibrated;
+  gdouble reltol;
+  gdouble reltol_z;
+  NcmSpline2d *var;
+  NcmSpline2d *dvar;
+  NcmModelCtrl *ctrl;
+  gboolean constructed;
 };
 
 G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT)
@@ -107,7 +128,7 @@ static void
 _ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
-  
+
   g_return_if_fail (NCM_IS_POWSPEC_FILTER (object));
 
   switch (prop_id)
@@ -145,7 +166,7 @@ static void
 _ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
-  
+
   g_return_if_fail (NCM_IS_POWSPEC_FILTER (object));
 
   switch (prop_id)
@@ -205,7 +226,7 @@ _ncm_powspec_filter_dispose (GObject *object)
   ncm_spline2d_clear (&psf->dvar);
 
   ncm_model_ctrl_clear (&psf->ctrl);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_filter_parent_class)->dispose (object);
 }
@@ -220,7 +241,7 @@ _ncm_powspec_filter_finalize (GObject *object)
 static void
 ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_powspec_filter_set_property;
   object_class->get_property = &_ncm_powspec_filter_get_property;
@@ -240,7 +261,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output center value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:zi:
    *
@@ -253,7 +274,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output initial time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:zf:
    *
@@ -266,7 +287,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output final time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:reltol:
    *
@@ -279,7 +300,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Relative tolerance for calibration",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:reltol-z:
    *
@@ -292,7 +313,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Relative tolerance for calibration in the redshift direction",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:type:
    *
@@ -305,7 +326,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                       "Filter type",
                                                       NCM_TYPE_POWSPEC_FILTER_TYPE, NCM_POWSPEC_FILTER_TYPE_TOPHAT,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspecFilter:powerspectrum:
    *
@@ -324,9 +345,9 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
  * ncm_powspec_filter_new:
  * @ps: a #NcmPowspec
  * @type: a type from #NcmPowspecFilterType
- * 
- * Creates a new #NcmPowspecFilter from the power spectrum @ps. 
- * 
+ *
+ * Creates a new #NcmPowspecFilter from the power spectrum @ps.
+ *
  * Returns: (transfer full): the newly created #NcmPowspecFilter.
  */
 NcmPowspecFilter *
@@ -336,16 +357,16 @@ ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type)
                                         "type", type,
                                         "powerspectrum", ps,
                                         NULL);
-  
+
   return psf;
 }
 
 /**
  * ncm_powspec_filter_ref:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * Increases the reference count of @psf by one atomically.
- * 
+ *
  * Returns: (transfer full): @psf
  */
 NcmPowspecFilter *
@@ -357,10 +378,10 @@ ncm_powspec_filter_ref (NcmPowspecFilter *psf)
 /**
  * ncm_powspec_filter_free:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * Atomically decrements the reference count of @psf by one.
  * If the reference count drops to 0, all memory allocated by @psf is released.
- * 
+ *
  */
 void
 ncm_powspec_filter_free (NcmPowspecFilter *psf)
@@ -371,12 +392,12 @@ ncm_powspec_filter_free (NcmPowspecFilter *psf)
 /**
  * ncm_powspec_filter_clear:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * If @psf is different from NULL,
  * atomically decrements the reference count of @psf by one.
  * If the reference count drops to 0,
  * all memory allocated by @psf is released and @psf is set to NULL.
- * 
+ *
  */
 void
 ncm_powspec_filter_clear (NcmPowspecFilter **psf)
@@ -388,9 +409,9 @@ ncm_powspec_filter_clear (NcmPowspecFilter **psf)
  * ncm_powspec_filter_set_type:
  * @psf: a #NcmPowspecFilter
  * @type: a type from #NcmPowspecFilterType
- * 
- * Sets the @type of the #NcmPowspecFilter to be used. 
- * 
+ *
+ * Sets the @type of the #NcmPowspecFilter to be used.
+ *
  */
 void
 ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
@@ -427,7 +448,7 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     ncm_fftlog_set_nderivs (psf->fftlog, 1);
 
     ncm_powspec_filter_set_best_lnr0 (psf);
-    
+
     ncm_model_ctrl_force_update (psf->ctrl);
     psf->calibrated = FALSE;
   }
@@ -440,29 +461,29 @@ typedef struct _NcmPowspecFilterArg
   gdouble z;
 } NcmPowspecFilterArg;
 
-static gdouble 
+static gdouble
 _ncm_powspec_filter_k2Pk (gdouble k, gpointer userdata)
 {
   NcmPowspecFilterArg *arg = (NcmPowspecFilterArg *) userdata;
-  const gdouble k2 = k * k;
-  const gdouble Pk = ncm_powspec_eval (arg->psf->ps, arg->model, arg->z, k);
-  const gdouble f  = Pk * k2 / ncm_c_2_pi_2 ();
-  
+  const gdouble k2         = k * k;
+  const gdouble Pk         = ncm_powspec_eval (arg->psf->ps, arg->model, arg->z, k);
+  const gdouble f          = Pk * k2 / ncm_c_2_pi_2 ();
+
   return f;
 }
 
-static gdouble 
+static gdouble
 _ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
 {
   NcmPowspecFilterArg *arg = (NcmPowspecFilterArg *) userdata;
   gsl_function F;
-  
+
   F.function = &_ncm_powspec_filter_k2Pk;
   F.params   = arg;
 
   arg->z = z;
   ncm_fftlog_eval_by_gsl_function (arg->psf->fftlog, &F);
-  
+
   /*printf ("# z-knots % 20.15g % 20.15g\n", z, ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0));*/
   return ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0);
 }
@@ -471,9 +492,9 @@ _ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
  * ncm_powspec_filter_prepare:
  * @psf: a #NcmPowspecFilter
  * @model: a #NcmModel
- * 
+ *
  * Prepares the object applying the filter to the power spectrum.
- * 
+ *
  */
 void
 ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
@@ -489,7 +510,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
   arg.z     = 0.0;
 
   ncm_powspec_prepare_if_needed (psf->ps, model);
-  
+
   {
     const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
     const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
@@ -513,7 +534,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     guint i;
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
-    
+
     ncm_fftlog_calibrate_size_gsl (psf->fftlog, &F, psf->reltol);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
@@ -527,25 +548,25 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol_z);
 
       z_vec = ncm_spline_get_xv (dummy_z);
-      N_z = ncm_vector_len (z_vec);
+      N_z   = ncm_vector_len (z_vec);
 
       ncm_spline_clear (&dummy_z);
     }
 
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
-    
-/*    
+
+/*
  *   printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
  *           psf->zi, psf->zf,
  *           ncm_powspec_filter_get_r_min (psf),
  *           ncm_powspec_filter_get_r_max (psf),
  *           N_z, N_k);
-*/    
+ */
     lnvar   = ncm_matrix_new (N_z, N_k);
     dlnvar  = ncm_matrix_new (N_z, N_k);
     lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
-        
+
     for (i = 0; i < N_z; i++)
     {
       NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
@@ -575,9 +596,10 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
   }
   else
   {
-    NcmMatrix *lnvar  = psf->var->zm;
-    NcmMatrix *dlnvar = psf->dvar->zm;
-    
+    NcmMatrix *lnvar  = ncm_spline2d_peek_zm (psf->var);
+    NcmMatrix *dlnvar = ncm_spline2d_peek_zm (psf->dvar);
+    NcmVector *var_yv = ncm_spline2d_peek_yv (psf->var);
+
     guint N_z = ncm_matrix_nrows (lnvar);
     guint i;
 
@@ -586,7 +608,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
       NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
 
-      arg.z = ncm_vector_get (psf->var->yv, i);
+      arg.z = ncm_vector_get (var_yv, i);
       ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
@@ -605,9 +627,9 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
  * ncm_powspec_filter_prepare_if_needed:
  * @psf: a #NcmPowspecFilter
  * @model: a #NcmModel
- * 
+ *
  * Prepares (if necessary) the object applying the filter to the power spectrum.
- * 
+ *
  */
 void
 ncm_powspec_filter_prepare_if_needed (NcmPowspecFilter *psf, NcmModel *model)
@@ -622,11 +644,11 @@ ncm_powspec_filter_prepare_if_needed (NcmPowspecFilter *psf, NcmModel *model)
  * ncm_powspec_filter_set_lnr0:
  * @psf: a #NcmPowspecFilter
  * @lnr0: the output center value $\ln(r_0)$
- * 
+ *
  * Sets the center of the transform output $\ln(r_0)$ (see ncm_fftlog_set_lnr0()).
- * 
+ *
  */
-void 
+void
 ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 {
   if (psf->lnr0 != lnr0)
@@ -639,7 +661,7 @@ ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 
     ncm_fftlog_set_lnk0 (psf->fftlog, psf->lnk0);
     ncm_fftlog_set_length (psf->fftlog, psf->Lk);
-    
+
     psf->lnr0 = lnr0;
     ncm_model_ctrl_force_update (psf->ctrl);
     psf->calibrated = FALSE;
@@ -653,12 +675,12 @@ ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 /**
  * ncm_powspec_filter_set_best_lnr0:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * Sets the value of $\ln(r_0)$ which gives the best results for
  * the transformation based on the current value of $\ln(k_0)$.
- * 
+ *
  */
-void 
+void
 ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf)
 {
   const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
@@ -669,19 +691,47 @@ ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf)
 
   ncm_fftlog_set_lnk0 (psf->fftlog, psf->lnk0);
   ncm_fftlog_set_length (psf->fftlog, psf->Lk);
-  
+
   ncm_powspec_filter_set_lnr0 (psf, -psf->lnk0);
+}
+
+/**
+ * ncm_powspec_filter_set_reltol:
+ * @psf: a #NcmPowspecFilter
+ * @reltol: the relative tolerance for calibration
+ *
+ * Sets the relative tolerance for calibration in the distance direction.
+ *
+ */
+void
+ncm_powspec_filter_set_reltol (NcmPowspecFilter *psf, const gdouble reltol)
+{
+  psf->reltol = reltol;
+}
+
+/**
+ * ncm_powspec_filter_set_reltol_z:
+ * @psf: a #NcmPowspecFilter
+ * @reltol_z: the relative tolerance for calibration in the redshift direction
+ *
+ * Sets the relative tolerance for calibration in the redshift direction.
+ *
+ */
+void
+ncm_powspec_filter_set_reltol_z (NcmPowspecFilter *psf, const gdouble reltol_z)
+{
+  psf->reltol_z = reltol_z;
 }
 
 /**
  * ncm_powspec_filter_set_zi:
  * @psf: a #NcmPowspecFilter
  * @zi: the output initial time $z_i$
- * 
+ *
  * Sets the inital time $z_i$.
- * 
+ *
  */
-void 
+void
 ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi)
 {
   if (psf->zi != zi)
@@ -697,11 +747,11 @@ ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi)
  * ncm_powspec_filter_set_zf:
  * @psf: a #NcmPowspecFilter
  * @zf: the output final time $z_f$
- * 
+ *
  * Sets the final time $z_f$.
- * 
+ *
  */
-void 
+void
 ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf)
 {
   if (psf->zf != zf)
@@ -725,7 +775,7 @@ void
 ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi)
 {
   if (psf->zi > zi)
-	ncm_powspec_filter_set_zi (psf, zi);
+    ncm_powspec_filter_set_zi (psf, zi);
 }
 
 /**
@@ -740,15 +790,57 @@ void
 ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf)
 {
   if (psf->zf < zf)
-	ncm_powspec_filter_set_zf (psf, zf);
+    ncm_powspec_filter_set_zf (psf, zf);
+}
+
+/**
+ * ncm_powspec_filter_get_filter_type:
+ * @psf: a #NcmPowspecFilter
+ *
+ * Gets the type of filter used.
+ *
+ * Returns: the type of filter used.
+ */
+NcmPowspecFilterType
+ncm_powspec_filter_get_filter_type (NcmPowspecFilter *psf)
+{
+  return psf->type;
+}
+
+/**
+ * ncm_powspec_filter_get_reltol:
+ * @psf: a #NcmPowspecFilter
+ *
+ * Gets the relative tolerance for calibration in the distance direction.
+ *
+ * Returns: the relative tolerance for calibration in the distance direction.
+ */
+gdouble
+ncm_powspec_filter_get_reltol (NcmPowspecFilter *psf)
+{
+  return psf->reltol;
+}
+
+/**
+ * ncm_powspec_filter_get_reltol_z:
+ * @psf: a #NcmPowspecFilter
+ *
+ * Gets the relative tolerance for calibration in the redshift direction.
+ *
+ * Returns: the relative tolerance for calibration in the redshift direction.
+ */
+gdouble
+ncm_powspec_filter_get_reltol_z (NcmPowspecFilter *psf)
+{
+  return psf->reltol_z;
 }
 
 /**
  * ncm_powspec_filter_get_r_min:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * This function returns $\sigma^2(r, z)$'s minimum evaluated distance.
- * 
+ *
  * Returns: the minimum distance $r_{\mathrm{min}}$.
  */
 gdouble
@@ -760,9 +852,9 @@ ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf)
 /**
  * ncm_powspec_filter_get_r_max:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * This function returns $\sigma^2(r, z)$'s maximum evaluated distance.
- * 
+ *
  * Returns: the maximum distance $r_{\mathrm{max}}$.
  */
 gdouble
@@ -776,9 +868,9 @@ ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluates the logarithm base e of the filtered power spectrum at @lnr and @z.
- * 
+ *
  * Returns: $\ln \left[ \sigma^2(\ln r, z)  \right]$.
  */
 gdouble
@@ -792,9 +884,9 @@ ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluates the filtered power spectrum at @lnr and @z.
- * 
+ *
  * Returns: $\sigma^2(\ln r, z)$.
  */
 gdouble
@@ -808,9 +900,9 @@ ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const g
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @r: distance $r$
- * 
+ *
  * Evaluate the filtered variance at $r$.
- * 
+ *
  * Returns: $\sigma^2(r, z)$.
  */
 gdouble
@@ -824,9 +916,9 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluate the square root of the filtered power spectrum at @lnr and @z.
- * 
+ *
  * Returns: $\sqrt{ \sigma^2(\ln r, z) }$.
  */
 gdouble
@@ -840,9 +932,9 @@ ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @r: distance $r$
- * 
+ *
  * Evaluates the square root of the filtered power spectrum at @r and @z.
- * 
+ *
  * Returns: $\sqrt{ \sigma^2(r, z) }$.
  */
 gdouble
@@ -856,10 +948,10 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluates the first derivative of the filtered
  * variance with respect to $\ln r$ at @lnr and @z.
- * 
+ *
  * Returns: $\frac{\mathrm{d} \sigma^2(\ln r, z) }{\mathrm{d} \ln r }$.
  */
 gdouble
@@ -873,10 +965,10 @@ ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluates the first derivative of the logarithm of the filtered
  * variance with respect to $\ln r$ at @lnr and @z.
- * 
+ *
  * Returns:  $\frac{\mathrm{d} \left[ \ln \sigma^2(\ln r, z) \right] }{\mathrm{d} \ln r }$.
  */
 gdouble
@@ -890,10 +982,10 @@ ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, con
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
- * 
+ *
  * Evaluates the first derivative of the logarithm of the filtered
  * variance with respect to $r$ at @lnr and @z.
- * 
+ *
  * Returns:  $\frac{\mathrm{d} \left[ \ln \sigma^2(\ln r, z) \right] }{\mathrm{d} r }$.
  */
 gdouble
@@ -908,45 +1000,45 @@ ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * @n: number of derivatives $n$
- * 
+ *
  * Evaluates the derivatives of the filtered variance at @lnr and @z, namely:
  * - $n = 0 \rightarrow \sigma(r, z)^2$,
  * - $n = 1 \rightarrow \frac{\mathrm{d}\sigma^2}{\mathrm{d} \ln r}$,
  * - $n = 2 \rightarrow \frac{\mathrm{d}^2\sigma^2}{\mathrm{d}(\ln r)^2}$,
  * - $n = 3 \rightarrow \frac{\mathrm{d}^3\sigma^2}{\mathrm{d}(\ln r)^3}$.
- * 
+ *
  * Returns: one of the four derivatives described above.
  */
-gdouble 
+gdouble
 ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
 {
   switch (n)
   {
     case 0:
-    
+
       return ncm_spline2d_eval (psf->var, lnr, z);
-      
+
       break;
     case 1:
-    
+
       return ncm_spline2d_eval (psf->dvar, lnr, z);
-      
+
       break;
     case 2:
-    
+
       return ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
-      
+
       break;
     case 3:
-    
+
       return ncm_spline2d_deriv_d2zdx2 (psf->dvar, lnr, z);
-      
+
       break;
     default:
       g_error ("ncm_powspec_filter_eval_dnvar_dlnrn: %u derivative not implemented.", n);
-      
+
       return 0.0;
-      
+
       break;
   }
 }
@@ -957,29 +1049,29 @@ ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, con
  * @z: redshift $z$
  * @lnr: logarithm base e of $r$
  * @n: number of derivatives $n$
- * 
+ *
  * Evaluates the derivatives of the logarithm of the filtered variance at @lnr and @z, namely:
  * - $n = 0 \rightarrow \ln \left[ \sigma(r, z)^2 \right]$,
  * - $n = 1 \rightarrow \frac{\mathrm{d}\ln \left( \sigma^2 \right)}{\mathrm{d} \ln r}$,
  * - $n = 2 \rightarrow \frac{\mathrm{d}^2 \ln \left( \sigma^2 \right)}{\mathrm{d}(\ln r)^2}$,
  * - $n = 3 \rightarrow \frac{\mathrm{d}^3 \ln \left( \sigma^2 \right)}{\mathrm{d}(\ln r)^3}$.
- * 
+ *
  * Returns: one of the four derivatives described above.
  */
-gdouble 
+gdouble
 ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
 {
   switch (n)
   {
     case 0:
-    
+
       return ncm_powspec_filter_eval_lnvar_lnr (psf, z, lnr);
-      
+
       break;
     case 1:
-    
+
       return ncm_powspec_filter_eval_dlnvar_dlnr (psf, z, lnr);
-      
+
       break;
     case 2:
     {
@@ -988,16 +1080,16 @@ ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, c
       const gdouble d2var = ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
 
       const gdouble dlnvar = dvar / var;
-        
+
       return d2var / var - dlnvar * dlnvar;
-      
+
       break;
     }
     default:
       g_error ("ncm_powspec_filter_eval_dnlnvar_dlnrn: %u derivative not implemented.", n);
-      
+
       return 0.0;
-      
+
       break;
   }
 }
@@ -1005,35 +1097,49 @@ ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, c
 /**
  * ncm_powspec_filter_volume_rm3:
  * @psf: a #NcmPowspecFilter
- * 
+ *
  * Calculates the volume of the filter over $r^3$.
- * 
- * Returns: Filter's volume over the radius squared $V r^{-3}$. 
+ *
+ * Returns: Filter's volume over the radius squared $V r^{-3}$.
  */
-gdouble 
+gdouble
 ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf)
 {
   const gdouble tophat_volumeRm3 = 4.0 * M_PI / 3.0;
-  const gdouble gauss_volumeRm3  = sqrt (2.0 * M_PI) * sqrt(2.0 * M_PI) * sqrt(2.0 * M_PI);
+  const gdouble gauss_volumeRm3  = sqrt (2.0 * M_PI) * sqrt (2.0 * M_PI) * sqrt (2.0 * M_PI);
 
   switch (psf->type)
   {
     case NCM_POWSPEC_FILTER_TYPE_TOPHAT:
-    
+
       return tophat_volumeRm3;
-      
+
       break;
     case NCM_POWSPEC_FILTER_TYPE_GAUSS:
-    
+
       return gauss_volumeRm3;
-      
+
       break;
     default:
       g_assert_not_reached ();
-      
+
       return 0.0;
-      
+
       break;
   }
+}
+
+/**
+ * ncm_powspec_filter_peek_powspec:
+ * @psf: a #NcmPowspecFilter
+ *
+ * Gets the #NcmPowspec object used to compute the filtered variance $\sigma^{2}(r,z)$.
+ *
+ * Returns: (transfer none): the #NcmPowspec object.
+ */
+NcmPowspec *
+ncm_powspec_filter_peek_powspec (NcmPowspecFilter *psf)
+{
+  return psf->ps;
 }
 

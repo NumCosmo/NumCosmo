@@ -27,7 +27,7 @@
  * @title: NcmMpsf0F1
  * @short_description: Multiple precision implementation of the hypergeometric 0F1.
  *
- * FIXME
+ * Multiple precision implementation of the hypergeometric 0F1.
  *
  */
 
@@ -79,14 +79,16 @@ _besselj_bs_free (gpointer p)
 }
 
 static NcmMemoryPool *__mp = NULL;
+
 G_LOCK_DEFINE_STATIC (__create_lock);
 
 /**
  * _ncm_mpsf_0F1_get_bs: (skip)
  *
- * FIXME
+ * Returns a pointer to a NcmBinSplit structure to be used in the
+ * computation of the hypergeometric function ${}_0F_1(b;x)$.
  *
- * Returns: FIXME
+ * Returns: a pointer to a NcmBinSplit structure to be used in the computation of the hypergeometric function ${}_0F_1(b;x)$.
  */
 NcmBinSplit **
 _ncm_mpsf_0F1_get_bs (void)
