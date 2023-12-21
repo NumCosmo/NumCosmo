@@ -48,11 +48,6 @@
       <xi:include href="xml/ncm_mpi_job_feval.xml"/>
     </section>    
     <section>
-      <title>ODE Solvers objects</title>
-      <xi:include href="xml/ncm_ode.xml"/>
-      <xi:include href="xml/ncm_ode_eval.xml"/>
-    </section>
-    <section>
       <title>FFTLog</title>
       <xi:include href="xml/ncm_fftlog.xml"/>
       <xi:include href="xml/ncm_fftlog_sbessel_j.xml"/>
@@ -110,7 +105,6 @@
       <xi:include href="xml/ncm_mset_func.xml"/>
       <xi:include href="xml/ncm_mset_func1.xml"/>
       <xi:include href="xml/ncm_mset_func_list.xml"/>
-      <xi:include href="xml/ncm_calc.xml"/>
     </section>
     <section>
       <title>Reparametrization</title>

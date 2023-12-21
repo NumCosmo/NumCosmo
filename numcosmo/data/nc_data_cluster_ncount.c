@@ -598,7 +598,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   g_assert (G_OBJECT_TYPE (clusterm) == self->mass_type);
 
   ncm_rng_lock (rng);
-  total_np = gsl_ran_poisson (rng->r, cad->norma);
+  total_np = ncm_rng_poisson_gen (rng, cad->norma);
   ncm_rng_unlock (rng);
 
   if (total_np == 0)
@@ -638,8 +638,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   {
     ncm_rng_lock (rng);
     {
-      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
-      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
+      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), cad->z_epsilon);
+      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), cad->lnM_epsilon);
       const gdouble z_true   = ncm_spline_eval (cad->inv_z, u1);
       const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
 

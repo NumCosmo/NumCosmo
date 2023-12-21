@@ -31,29 +31,17 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPARAM             (ncm_sparam_get_type ())
-#define NCM_SPARAM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPARAM, NcmSParam))
-#define NCM_SPARAM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPARAM, NcmSParamClass))
-#define NCM_IS_SPARAM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPARAM))
-#define NCM_IS_SPARAM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPARAM))
-#define NCM_SPARAM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPARAM, NcmSParamClass))
+#define NCM_TYPE_SPARAM (ncm_sparam_get_type ())
 
-typedef struct _NcmSParamClass NcmSParamClass;
-typedef struct _NcmSParam NcmSParam;
-
-struct _NcmSParamClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmSParam, ncm_sparam, NCM, SPARAM, GObject)
 
 /**
  * NcmParamType:
  * @NCM_PARAM_TYPE_FREE: parameter to be fitted
  * @NCM_PARAM_TYPE_FIXED: fixed parameter
  *
- * NcmParamType indicates if the parameter must be fitted, @NCM_PARAM_TYPE_FREE, 
- * or if it remains fixed, @NCM_PARAM_TYPE_FIXED, when a statistical analysis is 
+ * NcmParamType indicates if the parameter must be fitted, @NCM_PARAM_TYPE_FREE,
+ * or if it remains fixed, @NCM_PARAM_TYPE_FIXED, when a statistical analysis is
  * carried out.
  */
 typedef enum _NcmParamType
@@ -61,22 +49,6 @@ typedef enum _NcmParamType
   NCM_PARAM_TYPE_FREE = 0,
   NCM_PARAM_TYPE_FIXED,
 } NcmParamType;
-
-struct _NcmSParam
-{
-  /*< private >*/
-  GObject parent_instance;
-  gchar *name;
-  gchar *symbol;
-  gdouble lower_bound;
-  gdouble upper_bound;
-  gdouble scale;
-  gdouble abstol;
-  gdouble default_val;
-  NcmParamType ftype;
-};
-
-GType ncm_sparam_get_type (void) G_GNUC_CONST;
 
 NcmSParam *ncm_sparam_new (const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmSParam *ncm_sparam_copy (NcmSParam *sparam);
@@ -106,3 +78,4 @@ NcmParamType ncm_sparam_get_fit_type (const NcmSParam *sparam);
 G_END_DECLS
 
 #endif /* _NCM_SPARAM_H_ */
+

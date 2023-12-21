@@ -42,7 +42,7 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -C build
+      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests 
     - name: Upload a Build Artifact
@@ -75,7 +75,7 @@ jobs:
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Check NumCosmo
-      run: meson test -C build
+      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Generate coverage
       # For some reason, gcovr is ignoring the configured gcovr.cfg file
       # ninja coverage -C build -v -d stats -d explain
@@ -126,4 +126,4 @@ jobs:
         python example_simple.py
         python example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build
+      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)

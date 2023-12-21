@@ -591,7 +591,9 @@ _nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand (gdouble lnM, gdouble z, g
     ncm_model_params_log_all (NCM_MODEL (obs_data->cosmo));
     ncm_model_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (obs_data->cosmo), nc_hiprim_id ()));
 
-    printf ("lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g\n", lnM, z, z_intp, lnM_intp, d2NdzdlnM);
+    g_error ("_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at: "
+             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g\n",
+             lnM, z, z_intp, lnM_intp, d2NdzdlnM);
   }
 
   return z_intp * lnM_intp * d2NdzdlnM;
@@ -963,12 +965,16 @@ void
 nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi)
 {
   NcHaloMassFunctionSplineOptimize sp_optimize = NC_HALO_MASS_FUNCTION_SPLINE_Z;
-  const gdouble delta_z = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
-  const gdouble delta_lnM = (cad->lnMf - lnMi) / (cad->inv_lnM->len - 1.0);
-  const gdouble norma = nc_halo_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, cad->zi, cad->zf, NC_HALO_MASS_FUNCTION_SPLINE_LNM);
-  gboolean use_spline = FALSE;
-  guint middle = cad->inv_z->len / 2;
-  gdouble z0 = cad->zi;
+  const guint inv_z_len                        = ncm_spline_get_len (cad->inv_z);
+  const guint inv_lnM_len                      = ncm_spline_get_len (cad->inv_lnM);
+  const gdouble delta_z                        = (cad->zf - cad->zi) / (inv_z_len - 1.0);
+  const gdouble delta_lnM                      = (cad->lnMf - lnMi) / (inv_lnM_len - 1.0);
+  const gdouble norma                          = nc_halo_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, cad->zi, cad->zf, NC_HALO_MASS_FUNCTION_SPLINE_LNM);
+  gboolean use_spline                          = FALSE;
+  guint middle                                 = inv_z_len / 2;
+  gdouble z0                                   = cad->zi;
+  NcmVector *inv_lnM_z_xv                      = ncm_spline2d_peek_xv (cad->inv_lnM_z);
+  NcmMatrix *inv_lnM_z_zm                      = ncm_spline2d_peek_zm (cad->inv_lnM_z);
   guint i, j;
 
   g_assert (cad->zi != 0);
@@ -987,41 +993,46 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
 
     nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, zm);
 
-    ncm_vector_set (cad->inv_lnM_z->xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon));
-    ncm_matrix_set (cad->inv_lnM_z->zm, middle, 0, lnMi);
-
-    for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+    ncm_vector_set (inv_lnM_z_xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon));
+    ncm_matrix_set (inv_lnM_z_zm, middle, 0, lnMi);
     {
-      gdouble u2 = ncm_vector_get (cad->inv_lnM->xv, j);
+      NcmVector *inv_lnM_xv = ncm_spline_peek_xv (cad->inv_lnM);
 
-      ncm_vector_set (cad->inv_lnM_z->xv, j, u2);
-      ncm_matrix_set (cad->inv_lnM_z->zm, middle, j, ncm_spline_eval (cad->inv_lnM, u2));
+      for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
+      {
+        gdouble u2 = ncm_vector_get (inv_lnM_xv, j);
+
+        ncm_vector_set (inv_lnM_z_xv, j, u2);
+        ncm_matrix_set (inv_lnM_z_zm, middle, j, ncm_spline_eval (cad->inv_lnM, u2));
+      }
     }
-
-    ncm_vector_set (cad->inv_lnM_z->xv, j, _nc_cad_inv_dNdz_convergence_f_onemn (0.0, cad->lnM_epsilon));
-    ncm_matrix_set (cad->inv_lnM_z->zm, middle, j, cad->lnMf);
+    ncm_vector_set (inv_lnM_z_xv, j, _nc_cad_inv_dNdz_convergence_f_onemn (0.0, cad->lnM_epsilon));
+    ncm_matrix_set (inv_lnM_z_zm, middle, j, cad->lnMf);
   }
 
   nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z0);
-  ncm_matrix_set (cad->inv_lnM_z->zm, 0, 0, lnMi);
+  ncm_matrix_set (inv_lnM_z_zm, 0, 0, lnMi);
 
-  for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+  for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
   {
-    gdouble u2 = ncm_vector_get (cad->inv_lnM_z->xv, j);
+    gdouble u2 = ncm_vector_get (inv_lnM_z_xv, j);
 
-    ncm_matrix_set (cad->inv_lnM_z->zm, 0, j, ncm_spline_eval (cad->inv_lnM, u2));
+    ncm_matrix_set (inv_lnM_z_zm, 0, j, ncm_spline_eval (cad->inv_lnM, u2));
   }
 
-  ncm_matrix_set (cad->inv_lnM_z->zm, 0, j, cad->lnMf);
+  ncm_matrix_set (inv_lnM_z_zm, 0, j, cad->lnMf);
 
   {
-    gdouble nztot = 0.0;
-    gdouble f     = _nc_cad_inv_dNdz_convergence_f (0.0, cad->z_epsilon);
+    gdouble nztot         = 0.0;
+    gdouble f             = _nc_cad_inv_dNdz_convergence_f (0.0, cad->z_epsilon);
+    NcmVector *inv_z_xv   = ncm_spline_peek_xv (cad->inv_z);
+    NcmVector *inv_z_yv   = ncm_spline_peek_yv (cad->inv_z);
+    const guint inv_z_len = ncm_spline_get_len (cad->inv_z);
 
-    ncm_vector_set (cad->inv_z->xv, 0, f);
-    ncm_vector_set (cad->inv_z->yv, 0, z0);
+    ncm_vector_set (inv_z_xv, 0, f);
+    ncm_vector_set (inv_z_yv, 0, z0);
 
-    for (i = 1; i < cad->inv_z->len; i++)
+    for (i = 1; i < inv_z_len; i++)
     {
       gdouble z1 = cad->zi + delta_z * i;
 
@@ -1043,8 +1054,8 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
           f = f_try;
       }
 
-      ncm_vector_set (cad->inv_z->xv, i, f);
-      ncm_vector_set (cad->inv_z->yv, i, z1);
+      ncm_vector_set (inv_z_xv, i, f);
+      ncm_vector_set (inv_z_yv, i, z1);
 
       z0 = z1;
 
@@ -1053,16 +1064,16 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
 
       nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z1);
 
-      ncm_matrix_set (cad->inv_lnM_z->zm, i, 0, lnMi);
+      ncm_matrix_set (inv_lnM_z_zm, i, 0, lnMi);
 
-      for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
+      for (j = 1; j < ncm_vector_len (inv_lnM_z_xv) - 1; j++)
       {
-        gdouble u2 = ncm_vector_get (cad->inv_lnM_z->xv, j);
+        gdouble u2 = ncm_vector_get (inv_lnM_z_xv, j);
 
-        ncm_matrix_set (cad->inv_lnM_z->zm, i, j, ncm_spline_eval (cad->inv_lnM, u2));
+        ncm_matrix_set (inv_lnM_z_zm, i, j, ncm_spline_eval (cad->inv_lnM, u2));
       }
 
-      ncm_matrix_set (cad->inv_lnM_z->zm, i, j, cad->lnMf);
+      ncm_matrix_set (inv_lnM_z_zm, i, j, cad->lnMf);
     }
   }
 
@@ -1086,20 +1097,23 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
 void
 nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi, gdouble z)
 {
-  gboolean use_spline = FALSE;
-  gdouble dNdz        = nc_halo_mass_function_dn_dz (cad->mfp, cosmo, lnMi, cad->lnMf, z, use_spline);
-  gdouble lnM0        = lnMi;
-  gdouble ntot        = 0.0;
-  gdouble f           = _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon);
-  const gdouble dlnM  = (cad->lnMf - lnMi) / (cad->inv_lnM->len - 1.0);
+  gboolean use_spline     = FALSE;
+  gdouble dNdz            = nc_halo_mass_function_dn_dz (cad->mfp, cosmo, lnMi, cad->lnMf, z, use_spline);
+  gdouble lnM0            = lnMi;
+  gdouble ntot            = 0.0;
+  gdouble f               = _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon);
+  const guint inv_lnM_len = ncm_spline_get_len (cad->inv_lnM);
+  const gdouble dlnM      = (cad->lnMf - lnMi) / (inv_lnM_len - 1.0);
+  NcmVector *inv_lnM_xv   = ncm_spline_peek_xv (cad->inv_lnM);
+  NcmVector *inv_lnM_yv   = ncm_spline_peek_yv (cad->inv_lnM);
   guint i;
 
   g_assert (z > 0.0);
 
-  ncm_vector_set (cad->inv_lnM->xv, 0, f);
-  ncm_vector_set (cad->inv_lnM->yv, 0, lnM0);
+  ncm_vector_set (inv_lnM_xv, 0, f);
+  ncm_vector_set (inv_lnM_yv, 0, lnM0);
 
-  for (i = 1; i < cad->inv_lnM->len; i++)
+  for (i = 1; i < inv_lnM_len; i++)
   {
     const gdouble lnM1 = lnMi + dlnM * i;
 
@@ -1121,8 +1135,8 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *c
         f = f_try;
     }
 
-    ncm_vector_set (cad->inv_lnM->xv, i, f);
-    ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
+    ncm_vector_set (inv_lnM_xv, i, f);
+    ncm_vector_set (inv_lnM_yv, i, lnM1);
     lnM0 = lnM1;
   }
 
@@ -1294,7 +1308,7 @@ nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *
 GPtrArray *
 nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, guint n_realizations)
 {
-  FILE *frealization = fopen (file_realization, "r");
+  FILE *frealization      = fopen (file_realization, "r");
   GPtrArray *realizations = g_ptr_array_sized_new (n_realizations);
   guint i, j;
   glong file_position, goby;

@@ -27,7 +27,8 @@
  * @title: NcmReparam
  * @short_description: Abstract class for model reparametrization.
  *
- * FIXME
+ * #NcmReparam is an abstract class for model reparametrization.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,7 +44,18 @@
 #include <gsl/gsl_blas.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcmReparam, ncm_reparam, G_TYPE_OBJECT)
+typedef struct _NcmReparamPrivate
+{
+  /*< private >*/
+  GObject parent_instance;
+  guint length;
+  NcmVector *new_params;
+  GPtrArray *sparams;
+  GHashTable *sparams_name_id;
+  GType compat_type;
+} NcmReparamPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmReparam, ncm_reparam, G_TYPE_OBJECT)
 
 enum
 {
@@ -56,24 +68,27 @@ enum
 static void
 ncm_reparam_init (NcmReparam *reparam)
 {
-  reparam->length          = 0;
-  reparam->sparams         = NULL;
-  reparam->new_params      = NULL;
-  reparam->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
-  reparam->compat_type     = G_TYPE_INVALID;
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  self->length          = 0;
+  self->sparams         = NULL;
+  self->new_params      = NULL;
+  self->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
+  self->compat_type     = G_TYPE_INVALID;
 }
 
 static void
 _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmReparam *reparam = NCM_REPARAM (object);
+  NcmReparam *reparam            = NCM_REPARAM (object);
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
   g_return_if_fail (NCM_IS_REPARAM (object));
 
   switch (prop_id)
   {
     case PROP_LEN:
-      g_value_set_uint (value, reparam->length);
+      g_value_set_uint (value, self->length);
       break;
     case PROP_PARAMS_DESC:
     {
@@ -81,7 +96,7 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
       break;
     }
     case PROP_COMPAT_TYPE:
-      g_value_set_string (value, g_type_name (reparam->compat_type));
+      g_value_set_string (value, g_type_name (self->compat_type));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -92,22 +107,25 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
 static void
 _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmReparam *reparam = NCM_REPARAM (object);
+  NcmReparam *reparam            = NCM_REPARAM (object);
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
   g_return_if_fail (NCM_IS_REPARAM (object));
 
   switch (prop_id)
   {
     case PROP_LEN:
-      reparam->length = g_value_get_uint (value);
+      self->length = g_value_get_uint (value);
       break;
     case PROP_PARAMS_DESC:
       ncm_reparam_set_params_desc_dict (reparam, g_value_get_variant (value));
       break;
     case PROP_COMPAT_TYPE:
-      reparam->compat_type = g_type_from_name (g_value_get_string (value));
-      if (reparam->compat_type == G_TYPE_INVALID)
+      self->compat_type = g_type_from_name (g_value_get_string (value));
+
+      if (self->compat_type == G_TYPE_INVALID)
         g_error ("_ncm_reparam_set_property: GType `%s' unregistered or invalid.", g_value_get_string (value));
+
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -121,33 +139,37 @@ _ncm_reparam_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_reparam_parent_class)->constructed (object);
   {
-    NcmReparam *reparam = NCM_REPARAM (object);
-    g_assert_cmpuint (reparam->length, >, 0);
+    NcmReparam *reparam            = NCM_REPARAM (object);
+    NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
-    reparam->new_params = ncm_vector_new (reparam->length);
+    g_assert_cmpuint (self->length, >, 0);
 
-    reparam->sparams = g_ptr_array_sized_new (reparam->length);
-    
-    g_ptr_array_set_size (reparam->sparams, reparam->length);
+    self->new_params = ncm_vector_new (self->length);
+
+    self->sparams = g_ptr_array_sized_new (self->length);
+
+    g_ptr_array_set_size (self->sparams, self->length);
   }
 }
 
 static void
 _ncm_reparam_finalize (GObject *object)
 {
-  NcmReparam *reparam = NCM_REPARAM (object);
+  NcmReparam *reparam            = NCM_REPARAM (object);
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
   guint i;
 
-  for (i = 0; i < reparam->sparams->len; i++)
+  for (i = 0; i < self->sparams->len; i++)
   {
-    NcmSParam *sp_i = g_ptr_array_index (reparam->sparams, i);
+    NcmSParam *sp_i = g_ptr_array_index (self->sparams, i);
+
     if (sp_i != NULL)
       ncm_sparam_free (sp_i);
   }
 
-  g_clear_pointer (&reparam->sparams_name_id, g_hash_table_unref);
-  g_clear_pointer (&reparam->sparams, g_ptr_array_unref);
-  ncm_vector_clear (&reparam->new_params);
+  g_clear_pointer (&self->sparams_name_id, g_hash_table_unref);
+  g_clear_pointer (&self->sparams, g_ptr_array_unref);
+  ncm_vector_clear (&self->new_params);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_reparam_parent_class)->finalize (object);
@@ -156,10 +178,7 @@ _ncm_reparam_finalize (GObject *object)
 static void
 ncm_reparam_class_init (NcmReparamClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  klass->old2new = NULL;
-  klass->new2old = NULL;
-  klass->jac     = NULL;
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_reparam_set_property;
   object_class->get_property = &_ncm_reparam_get_property;
@@ -188,15 +207,18 @@ ncm_reparam_class_init (NcmReparamClass *klass)
                                                         "Compatible type",
                                                         g_type_name (NCM_TYPE_MODEL),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->old2new = NULL;
+  klass->new2old = NULL;
 }
 
 /**
  * ncm_reparam_ref:
  * @reparam: a #NcmReparam
  *
- * FIXME
+ * Increases the reference count of @reparam by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the passed #NcmReparam.
  */
 NcmReparam *
 ncm_reparam_ref (NcmReparam *reparam)
@@ -208,7 +230,9 @@ ncm_reparam_ref (NcmReparam *reparam)
  * ncm_reparam_free:
  * @reparam: a #NcmReparam
  *
- * FIXME
+ * Decreases the reference count of @reparam by one. If the reference count
+ * reaches zero, the #NcmReparam is freed.
+ *
  */
 void
 ncm_reparam_free (NcmReparam *reparam)
@@ -220,7 +244,9 @@ ncm_reparam_free (NcmReparam *reparam)
  * ncm_reparam_clear:
  * @reparam: a #NcmReparam
  *
- * FIXME
+ * If *@reparam is not NULL, unrefs it and sets *@reparam to NULL.
+ * If *@reparam is NULL, does nothing.
+ *
  */
 void
 ncm_reparam_clear (NcmReparam **reparam)
@@ -229,17 +255,35 @@ ncm_reparam_clear (NcmReparam **reparam)
 }
 
 /**
+ * ncm_reparam_set_compat_type:
+ * @reparam: a #NcmReparam
+ * @compat_type: a #GType
+ *
+ * Sets the compatible #GType for this reparametrization.
+ *
+ */
+void
+ncm_reparam_set_compat_type (NcmReparam *reparam, GType compat_type)
+{
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  self->compat_type = compat_type;
+}
+
+/**
  * ncm_reparam_get_compat_type:
  * @reparam: a #NcmReparam
  *
- * FIXME
+ * Gets the compatible #GType for this reparametrization.
  *
  * Returns: the compatible #GType for this reparametrization.
  */
 GType
 ncm_reparam_get_compat_type (NcmReparam *reparam)
 {
-  return reparam->compat_type;
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  return self->compat_type;
 }
 
 /**
@@ -273,58 +317,6 @@ ncm_reparam_new2old (NcmReparam *reparam, NcmModel *model)
 }
 
 /**
- * ncm_reparam_jac: (virtual jac)
- * @reparam: a #NcmReparam
- * @model: a #NcmModel
- * @jac: a #NcmMatrix
- *
- * FIXME
- */
-void
-ncm_reparam_jac (NcmReparam *reparam, NcmModel *model, NcmMatrix *jac)
-{
-  NCM_REPARAM_GET_CLASS (reparam)->jac (reparam, model, jac);
-}
-
-/**
- * ncm_reparam_grad_old2new:
- * @reparam: a #NcmReparam
- * @model: FIXME
- * @jac: a #NcmMatrix
- * @old_grad: a #NcmVector
- * @new_grad: a #NcmVector
- *
- * FIXME
- */
-void
-ncm_reparam_grad_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmVector *old_grad, NcmVector *new_grad)
-{
-  gint ret;
-  NCM_REPARAM_GET_CLASS (reparam)->jac (reparam, model, jac);
-  ret = gsl_blas_dgemv (CblasTrans, 1.0, ncm_matrix_gsl (jac), ncm_vector_gsl (old_grad), 0.0, ncm_vector_gsl (new_grad));
-  NCM_TEST_GSL_RESULT("ncm_reparam_grad_old2new", ret);
-}
-
-/**
- * ncm_reparam_M_old2new:
- * @reparam: a #NcmReparam
- * @model: FIXME
- * @jac: a #NcmMatrix
- * @old_M: a #NcmMatrix
- * @new_M: a #NcmMatrix
- *
- * FIXME
- */
-void
-ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmMatrix *old_M, NcmMatrix *new_M)
-{
-  gint ret;
-  NCM_REPARAM_GET_CLASS (reparam)->jac (reparam, model, jac);
-  ret = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, ncm_matrix_gsl (old_M), ncm_matrix_gsl (jac), 0.0, ncm_matrix_gsl (new_M));
-  NCM_TEST_GSL_RESULT("ncm_reparam_jac_old2new", ret);
-}
-
-/**
  * ncm_reparam_get_params_desc_dict:
  * @reparam: a #NcmReparam.
  *
@@ -335,19 +327,22 @@ ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *
 GVariant *
 ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
 {
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
   GVariantBuilder builder;
   guint i;
 
   g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE));
 
-  for (i = 0; i < reparam->length; i++)
+  for (i = 0; i < self->length; i++)
   {
-    NcmSParam *sp_i = g_ptr_array_index (reparam->sparams, i);
+    NcmSParam *sp_i = g_ptr_array_index (self->sparams, i);
+
     if (sp_i != NULL)
     {
-      GVariant *i_var = g_variant_new_uint32 (i);
+      GVariant *i_var    = g_variant_new_uint32 (i);
       GVariant *sp_var_i = ncm_serialize_global_to_variant (G_OBJECT (sp_i));
-      GVariant *entry_i = g_variant_new_dict_entry (i_var, sp_var_i);
+      GVariant *entry_i  = g_variant_new_dict_entry (i_var, sp_var_i);
+
       g_variant_builder_add_value (&builder, entry_i);
       g_variant_unref (sp_var_i);
     }
@@ -373,12 +368,14 @@ ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict)
     {
       gsize n = g_variant_n_children (pdesc_dict);
       guint i;
+
       for (i = 0; i < n; i++)
       {
         GVariant *sp_var = NULL;
         guint j;
         NcmSParam *sp = NULL;
-        g_variant_get_child (pdesc_dict, i, "{u@"NCM_SERIALIZE_OBJECT_TYPE"}", &j, &sp_var);
+
+        g_variant_get_child (pdesc_dict, i, "{u@"NCM_SERIALIZE_OBJECT_TYPE "}", &j, &sp_var);
         sp = NCM_SPARAM (ncm_serialize_global_from_variant (sp_var));
         ncm_reparam_set_param_desc (reparam, j, sp);
         ncm_sparam_free (sp);
@@ -400,20 +397,22 @@ ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict)
 void
 ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 {
-  NcmSParam **old_sp = (NcmSParam **) &g_ptr_array_index (reparam->sparams, i);
-  g_assert (i < reparam->sparams->len);
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+  NcmSParam **old_sp             = (NcmSParam **) &g_ptr_array_index (self->sparams, i);
+
+  g_assert (i < self->sparams->len);
 
   if (*old_sp != NULL)
   {
-    g_assert (g_hash_table_remove (reparam->sparams_name_id, ncm_sparam_name (*old_sp)));
+    g_assert (g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (*old_sp)));
     ncm_sparam_clear (old_sp);
   }
 
-  g_hash_table_insert (reparam->sparams_name_id,
+  g_hash_table_insert (self->sparams_name_id,
                        g_strdup (ncm_sparam_name (sp)),
                        GUINT_TO_POINTER (i));
 
-  g_ptr_array_index (reparam->sparams, i) = ncm_sparam_ref (sp);
+  g_ptr_array_index (self->sparams, i) = ncm_sparam_ref (sp);
 }
 
 /**
@@ -428,8 +427,11 @@ ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 NcmSParam *
 ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
 {
-  g_assert_cmpuint (i, <, reparam->sparams->len);
-  return g_ptr_array_index (reparam->sparams, i);
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  g_assert_cmpuint (i, <, self->sparams->len);
+
+  return g_ptr_array_index (self->sparams, i);
 }
 
 /**
@@ -444,9 +446,12 @@ ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
 NcmSParam *
 ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
 {
-  g_assert (i < reparam->sparams->len);
-  if (g_ptr_array_index (reparam->sparams, i) != NULL)
-    return ncm_sparam_ref (g_ptr_array_index (reparam->sparams, i));
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  g_assert (i < self->sparams->len);
+
+  if (g_ptr_array_index (self->sparams, i) != NULL)
+    return ncm_sparam_ref (g_ptr_array_index (self->sparams, i));
   else
     return NULL;
 }
@@ -464,7 +469,7 @@ ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
  * @default_val: value of #NcmSParam:default-value.
  * @ftype: a #NcmParamType.
  *
- * FIXME
+ * Change the @i-th parameter description using the given values.
  *
  */
 void
@@ -475,7 +480,7 @@ ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name
 
   ncm_reparam_set_param_desc (reparam, i, sp);
 
-  
+
   ncm_sparam_free (sp);
 }
 
@@ -493,11 +498,50 @@ ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name
 gboolean
 ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint *i)
 {
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
   gpointer param_id;
-  gboolean found = g_hash_table_lookup_extended (reparam->sparams_name_id, param_name, NULL, &param_id);
+  gboolean found = g_hash_table_lookup_extended (self->sparams_name_id, param_name, NULL, &param_id);
+
   if (found)
     *i = GPOINTER_TO_UINT (param_id);
   else
-    *i = -1; /* Yes, I known. */
+    *i = -1;  /* Yes, I known. */
+
   return found;
 }
+
+/**
+ * ncm_reparam_get_length:
+ * @reparam: a #NcmReparam
+ *
+ * Gets the number of parameters.
+ *
+ */
+guint
+ncm_reparam_get_length (NcmReparam *reparam)
+{
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  return self->length;
+}
+
+/**
+ * ncm_reparam_peek_params:
+ * @reparam: a #NcmReparam.
+ *
+ * Gets the #NcmVector containing the new parameters. This vector is owned by
+ * the #NcmReparam and should not be freed. This method is used by #NcmModel
+ * and subclasses to get the new parameters and should not be used by the
+ * user. The pointer returned by this method is guaranteed to be valid until
+ * the destruction of the #NcmReparam.
+ *
+ * Returns: (transfer none): a #NcmVector containing the new parameters.
+ */
+NcmVector *
+ncm_reparam_peek_params (NcmReparam *reparam)
+{
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+
+  return self->new_params;
+}
+

@@ -384,7 +384,7 @@ _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model
   lnYx = mu3 / log (mx->Y0);
 
   ncm_rng_lock (rng);
-  lnYx_obs = lnYx + gsl_ran_gaussian (rng->r, D_X);
+  lnYx_obs = ncm_rng_gaussian_gen (rng, lnYx, D_X);
   ncm_rng_unlock (rng);
 
   xi[1] = exp (lnYx_obs);

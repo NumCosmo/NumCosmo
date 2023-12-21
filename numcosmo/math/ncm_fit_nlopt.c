@@ -520,14 +520,14 @@ _ncm_fit_nlopt_get_desc (NcmFit *fit)
 
 /**
  * ncm_fit_nlopt_new:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
- * @algo: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
+ * @algo: a #NcmFitNloptAlgorithm
  *
- * FIXME
+ * Creates a new #NcmFitNLOpt object using the specified @algo.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmFitNLOpt object.
  */
 NcmFit *
 ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitNloptAlgorithm algo)
@@ -543,15 +543,16 @@ ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFi
 
 /**
  * ncm_fit_nlopt_local_new:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
- * @algo: FIXME
- * @local_algo: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
+ * @algo: a #NcmFitNloptAlgorithm
+ * @local_algo: a #NcmFitNloptAlgorithm
  *
- * FIXME
+ * Creates a new #NcmFitNLOpt object using the specified @algo and @local_algo.
+ * The @local_algo is used to refine the solution found by @algo.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmFitNLOpt object.
  */
 NcmFit *
 ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitNloptAlgorithm algo, NcmFitNloptAlgorithm local_algo)
@@ -568,13 +569,13 @@ ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype,
 
 /**
  * ncm_fit_nlopt_new_default:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
  *
- * FIXME
+ * Creates a new #NcmFitNLOpt object using the default algorithm.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmFitNLOpt object.
  */
 NcmFit *
 ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -589,14 +590,14 @@ ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 
 /**
  * ncm_fit_nlopt_new_by_name:
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
- * @algo_name: FIXME
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
+ * @algo_name: a string containing the name of the algorithm to be used
  *
- * FIXME
+ * Creates a new #NcmFitNLOpt object using the specified @algo_name.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmFitNLOpt object.
  */
 NcmFit *
 ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name)
@@ -649,11 +650,11 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 }
 
 /**
- * ncm_fit_nlopt_set_algo: (skip)
+ * ncm_fit_nlopt_set_algo:
  * @fit_nlopt: a #NcmFitNLOpt.
  * @algo: a #NcmFitNloptAlgorithm.
  *
- * FIXME
+ * Sets the algorithm to be used by @fit_nlopt.
  *
  */
 void
@@ -685,7 +686,8 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
  * @fit_nlopt: a #NcmFitNLOpt.
  * @algo: a #NcmFitNloptAlgorithm.
  *
- * FIXME
+ * Sets the local algorithm to be used by @fit_nlopt. This algorithm is used to
+ * refine the solution found by the main algorithm.
  *
  */
 void

@@ -47,6 +47,13 @@ enum
   PROP_MEAN_FUNC,
 };
 
+struct _NcmPriorFlatFunc
+{
+  /*< private >*/
+  NcmPriorFlat parent_instance;
+  NcmMSetFunc *mean_func;
+};
+
 G_DEFINE_TYPE (NcmPriorFlatFunc, ncm_prior_flat_func, NCM_TYPE_PRIOR_FLAT)
 
 static void
@@ -141,17 +148,18 @@ static gdouble
 _ncm_prior_flat_func_mean (NcmPriorFlat *pf, NcmMSet *mset)
 {
   NcmPriorFlatFunc *pff = NCM_PRIOR_FLAT_FUNC (pf);
+  const gdouble var     = ncm_prior_flat_get_var (pf);
 
-  return ncm_mset_func_eval1 (pff->mean_func, mset, pf->var);
+  return ncm_mset_func_eval1 (pff->mean_func, mset, var);
 }
 
 /**
  * ncm_prior_flat_func_new:
  * @mean_func: a #NcmMSetFunc
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- * @variable: FIXME
+ * @x_low: lower limit
+ * @x_upp: upper limit
+ * @scale: scale
+ * @variable: variable
  *
  * Creates a new Flat prior for parameter @pid of model @mid.
  *

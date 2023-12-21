@@ -55,6 +55,14 @@ enum
   PROP_PID
 };
 
+struct _NcmPriorGaussParam
+{
+  /*< private >*/
+  NcmPriorGauss parent_instance;
+  NcmModelID mid;
+  guint pid;
+};
+
 G_DEFINE_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM_TYPE_PRIOR_GAUSS)
 
 static void

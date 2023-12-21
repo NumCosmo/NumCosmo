@@ -34,15 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET_TRANS_KERN             (ncm_mset_trans_kern_get_type ())
-#define NCM_MSET_TRANS_KERN(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_TRANS_KERN, NcmMSetTransKern))
-#define NCM_MSET_TRANS_KERN_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_TRANS_KERN, NcmMSetTransKernClass))
-#define NCM_IS_MSET_TRANS_KERN(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_TRANS_KERN))
-#define NCM_IS_MSET_TRANS_KERN_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_TRANS_KERN))
-#define NCM_MSET_TRANS_KERN_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_TRANS_KERN, NcmMSetTransKernClass))
+#define NCM_TYPE_MSET_TRANS_KERN (ncm_mset_trans_kern_get_type ())
 
-typedef struct _NcmMSetTransKernClass NcmMSetTransKernClass;
-typedef struct _NcmMSetTransKern NcmMSetTransKern;
+G_DECLARE_DERIVABLE_TYPE (NcmMSetTransKern, ncm_mset_trans_kern, NCM, MSET_TRANS_KERN, GObject)
 
 struct _NcmMSetTransKernClass
 {
@@ -56,23 +50,18 @@ struct _NcmMSetTransKernClass
   void (*reset) (NcmMSetTransKern *tkern);
 
   const gchar *(*get_name) (NcmMSetTransKern *tkern);
-};
 
-struct _NcmMSetTransKern
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMSet *mset;
-  NcmVector *theta;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[13];
 };
-
-GType ncm_mset_trans_kern_get_type (void) G_GNUC_CONST;
 
 NcmMSetTransKern *ncm_mset_trans_kern_ref (NcmMSetTransKern *tkern);
 void ncm_mset_trans_kern_free (NcmMSetTransKern *tkern);
 void ncm_mset_trans_kern_clear (NcmMSetTransKern **tkern);
 
 void ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset);
+NcmMSet *ncm_mset_trans_kern_peek_mset (NcmMSetTransKern *tkern);
+
 void ncm_mset_trans_kern_set_prior (NcmMSetTransKern *tkern, NcmVector *theta);
 void ncm_mset_trans_kern_set_prior_from_mset (NcmMSetTransKern *tkern);
 void ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
