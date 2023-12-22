@@ -671,13 +671,30 @@ endif
 python_module = import('python')
 python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
 
-# Installing the python module:
-python_dir = python.get_install_dir()
-install_subdir(
-  'numcosmo_py',
-  install_dir: python_dir,
-  exclude_directories: ['__pycache__', '.mypy_cache'],
+python_pip = python_module.find_installation(
+  'python3',
+  modules: ['pip'],
+  required: false,
 )
+
+# Installing the python module:
+if get_option('numcosmo_py')
+  if python_pip.found()
+    pip_cmd = [
+      'python',
+      '-m',
+      'pip',
+      'install',
+      meson.source_root(),
+      '-t',
+      python.get_install_dir(),
+      '--no-dependencies',
+    ]
+    meson.add_install_script(pip_cmd, skip_if_destdir: true)
+  else
+    error('Python pip not found, cannot install the NumCosmoPy python module')
+  endif
+endif
 
 #######################################################################################
 # Creating the configuration files:

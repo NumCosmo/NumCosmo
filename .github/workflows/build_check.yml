@@ -24,7 +24,7 @@ jobs:
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: meson setup build -Ddebug=true -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Test python examples
@@ -71,7 +71,7 @@ jobs:
         sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
         pip install meson ninja pytest numpy
     - name: Configure NumCosmo
-      run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Check NumCosmo
@@ -115,7 +115,7 @@ jobs:
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: | 
-        meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+        meson setup build -Ddebug=true -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
         meson compile -C build
