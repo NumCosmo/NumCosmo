@@ -8,6 +8,10 @@ dependencies:
   - flake8
   - fortran-compiler
   - getdist
+  - glib
+  - glib-tools
+  - gobject-introspection
+  - gsl
   - libfyaml
   - matplotlib-base
   - meson
@@ -16,6 +20,7 @@ dependencies:
   - nlopt
   - numpy >= 1.21.0
   - openblas
+  - openmpi
   - pip
   - pip:
     - pygobject-stubs
@@ -24,9 +29,4 @@ dependencies:
   - pylint
   - pytest
   - python >= 3.9
-  - gsl
-  - gobject-introspection
-  - glib
-  - glib-tools
-  - openmpi
 
