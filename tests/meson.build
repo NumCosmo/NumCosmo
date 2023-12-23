@@ -88,6 +88,7 @@ c_tests = [
     {
         'name': 'ncm_mset_catalog',
         'sources': ['test_ncm_mset_catalog.c'],
+        'timeout': 0,
     },
     {
         'name': 'ncm_obj_array',

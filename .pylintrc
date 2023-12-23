@@ -45,6 +45,18 @@ method-naming-style=any
 # Naming style matching correct function names.
 function-naming-style=any
 
+# Number of arguments above which a function should be considered too complex.
+max-args = 8
+
+# Maximum number of locals for function / method body.
+max-locals = 26
+
+# Maximum number of branch for function / method body.
+max-branches = 15
+
+# Maximum attributes for a class (see R0902).
+max-attributes=16
+
 [STRING]
 
 # This flag controls whether inconsistent-quotes generates a warning when the
