@@ -83,8 +83,8 @@ def create_nc_obj(
     else:
         raise ValueError(
             "Transfer function type `"
-            + ccl_cosmo._config_init_kwargs["transfer_function"]
-            + "` not supported"
+            + ccl_cosmo._config_init_kwargs["transfer_function"]  # noqa: W503
+            + "` not supported"  # noqa: W503
         )
 
     ps_lin.set_kmin(k_min)
@@ -98,7 +98,7 @@ def create_nc_obj(
         A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
-            / ps_lin.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())
+            / ps_lin.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())  # noqa: W503
         ) ** 2
         hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * A_s * fact))
 
