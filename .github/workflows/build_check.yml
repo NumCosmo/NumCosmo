@@ -137,6 +137,9 @@ jobs:
       matrix:
         os: ["ubuntu", "macos"]
         python-version: ["3.9"]
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v3
       - name: Setup miniforge
@@ -151,7 +154,6 @@ jobs:
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
       - name: Cache Conda env
         uses: actions/cache@v3
         with:
@@ -165,10 +167,9 @@ jobs:
           conda env update -q -v -n numcosmo_developer -f devel_environment.yml
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
-        shell: bash -l {0}
         run: |
-          export FIRECROWN_DIR=${PWD}
-          conda env config vars set FIRECROWN_DIR=${FIRECROWN_DIR}
+          export NUMCOSMO_DIR=${PWD}
+          conda env config vars set NUMCOSMO_DIR=${NUMCOSMO_DIR}
           conda activate numcosmo_developer
           meson setup build -Ddebug=true -Dnumcosmo_py=true --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
