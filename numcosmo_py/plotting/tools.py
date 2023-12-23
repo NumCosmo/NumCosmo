@@ -27,13 +27,12 @@ import math
 import numpy as np
 
 from matplotlib.patches import Ellipse
-import matplotlib.transforms as transforms
+from matplotlib import transforms
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib import cm
 
 
-# pylint:disable-next=invalid-name
 def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
     """Adds a confidence ellipse to the given axis based on the given
     covariance matrix.
@@ -80,14 +79,14 @@ def latex_float(value: float):
         if base == 1.0:
             if exponent == 0.0:
                 return r"1"
-            else:
-                return f"10^{{{int(exponent)}}}"
-        elif exponent == 0.0:
+            return f"10^{{{int(exponent)}}}"
+
+        if exponent == 0.0:
             return f"{base}"
-        else:
-            return f"{base} \times 10^{{{int(exponent)}}}"
-    else:
-        return float_str
+
+        return f"{base} \times 10^{{{int(exponent)}}}"
+
+    return float_str
 
 
 def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int = 1):
@@ -113,10 +112,10 @@ def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int
 
 
 def plot_m2lnp(
-    x: np.ndarray,  # pylint:disable-msg=invalid-name
-    y: np.ndarray,  # pylint:disable-msg=invalid-name
-    z: np.ndarray,  # pylint:disable-msg=invalid-name
-    ax: plt.Axes,  # pylint:disable-msg=invalid-name
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    ax: plt.Axes,
     *,
     plotn: int = 150,
     vmin: float = 1.0e-12,

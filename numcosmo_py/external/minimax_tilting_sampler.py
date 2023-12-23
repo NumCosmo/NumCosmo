@@ -1,6 +1,6 @@
 """Module for sampling from a TMVN distribution.
 
-A TMVN distribution is a multivariate normal distribution subject to 
+A TMVN distribution is a multivariate normal distribution subject to
 linear inequality constraints.
 Original code in https://github.com/brunzema/truncated-mvn-sampler
 """
@@ -8,8 +8,7 @@ Original code in https://github.com/brunzema/truncated-mvn-sampler
 import math
 import numpy as np
 
-from scipy import special
-from scipy import optimize
+from scipy import special, optimize, stats
 
 
 EPS = 10e-15
@@ -253,11 +252,11 @@ class TruncatedMVN:
         a = 0.66  # threshold used in MATLAB implementation
         # three cases to consider
         # case 1: a<lb<ub
-        I = lb > a
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.ntail(tl, tu)
+        I0 = lb > a
+        if np.any(I0):
+            tl = lb[I0]
+            tu = ub[I0]
+            x[I0] = self.ntail(tl, tu)
         # case 2: lb<ub<-a
         J = ub < -a
         if np.any(J):
@@ -265,11 +264,11 @@ class TruncatedMVN:
             tu = -lb[J]
             x[J] = -self.ntail(tl, tu)
         # case 3: otherwise use inverse transform or accept-reject
-        I = ~(I | J)
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.tn(tl, tu)
+        I0 = ~(I0 | J)
+        if np.any(I0):
+            tl = lb[I0]
+            tu = ub[I0]
+            x[I0] = self.tn(tl, tu)
         return x
 
     def tn(self, lb, ub, tol=2):
@@ -283,21 +282,21 @@ class TruncatedMVN:
         # maximum speed for each platform
         x = np.empty_like(lb)
         # case 1: abs(ub-lb)>tol, uses accept-reject from randn
-        I = abs(ub - lb) > sw
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.trnd(tl, tu)
+        I0 = abs(ub - lb) > sw
+        if np.any(I0):
+            tl = lb[I0]
+            tu = ub[I0]
+            x[I0] = self.trnd(tl, tu)
 
         # case 2: abs(u-l)<tol, uses inverse-transform
         # pylint: disable=no-member
-        I = ~I
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
+        I0 = ~I0
+        if np.any(I0):
+            tl = lb[I0]
+            tu = ub[I0]
             pl = special.erfc(tl / np.sqrt(2)) / 2
             pu = special.erfc(tu / np.sqrt(2)) / 2
-            x[I] = np.sqrt(2) * special.erfcinv(
+            x[I0] = np.sqrt(2) * special.erfcinv(
                 2 * (pl - (pl - pu) * self.random_state.rand(len(tl)))
             )
         # pylint: enable=no-member
@@ -308,16 +307,16 @@ class TruncatedMVN:
         # uses acceptance rejection to simulate from truncated normal
         x = self.random_state.randn(len(lb))  # sample normal
         test = (x < lb) | (x > ub)
-        I = np.where(test)[0]
-        d = len(I)
+        I0 = np.where(test)[0]
+        d = len(I0)
         while d > 0:  # while there are rejections
-            ly = lb[I]
-            uy = ub[I]
+            ly = lb[I0]
+            uy = ub[I0]
             y = self.random_state.randn(len(uy))  # resample
             idx = (y > ly) & (y < uy)  # accepted
-            x[I[idx]] = y[idx]
-            I = I[~idx]
-            d = len(I)
+            x[I0[idx]] = y[idx]
+            I0 = I0[~idx]
+            d = len(I0)
         return x
 
     def ntail(self, lb, ub):
@@ -335,15 +334,15 @@ class TruncatedMVN:
         f = np.expm1(c - ub**2 / 2)
         x = c - np.log(1 + self.random_state.rand(n) * f)  # sample using Rayleigh
         # keep list of rejected
-        I = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
-        d = len(I)
+        I0 = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
+        d = len(I0)
         while d > 0:  # while there are rejections
-            cy = c[I]
-            y = cy - np.log(1 + self.random_state.rand(d) * f[I])
+            cy = c[I0]
+            y = cy - np.log(1 + self.random_state.rand(d) * f[I0])
             idx = (self.random_state.rand(d) ** 2 * y) < cy  # accepted
-            x[I[idx]] = y[idx]  # store the accepted
-            I = I[~idx]  # remove accepted from the list
-            d = len(I)
+            x[I0[idx]] = y[idx]  # store the accepted
+            I0 = I0[~idx]  # remove accepted from the list
+            d = len(I0)
         return np.sqrt(2 * x)  # this Rayleigh transform can be delayed till the end
 
     def psy(self, x, mu):
@@ -361,7 +360,7 @@ class TruncatedMVN:
         """Returns a function to compute the gradient of psi(x)."""
         # wrapper to avoid dependancy on self
 
-        def gradpsi(y, L, l, u):
+        def gradpsi(y, L, l0, u):
             # implements gradient of psi(x) to find optimal exponential twisting,
             # returns also the Jacobian
             # NOTE: assumes scaled 'L' with zero diagonal
@@ -373,7 +372,7 @@ class TruncatedMVN:
 
             # compute now ~l and ~u
             c[1:d] = L[1:d, :] @ x
-            lt = l - mu - c
+            lt = l0 - mu - c
             ut = u - mu - c
 
             # compute gradients avoiding catastrophic cancellation
@@ -410,14 +409,14 @@ class TruncatedMVN:
 
         for j in perm.copy():
             pr = np.ones_like(z) * np.inf  # compute marginal prob.
-            I = np.arange(j, self.dim)  # search remaining dimensions
+            I0 = np.arange(j, self.dim)  # search remaining dimensions
             D = np.diag(self.cov)
-            s = D[I] - np.sum(L[I, 0:j] ** 2, axis=1)
+            s = D[I0] - np.sum(L[I0, 0:j] ** 2, axis=1)
             s[s < 0] = self.eps
             s = np.sqrt(s)
-            tl = (self.lb[I] - L[I, 0:j] @ z[0:j]) / s
-            tu = (self.ub[I] - L[I, 0:j] @ z[0:j]) / s
-            pr[I] = lnNormalProb(tl, tu)
+            tl = (self.lb[I0] - L[I0, 0:j] @ z[0:j]) / s
+            tu = (self.ub[I0] - L[I0, 0:j] @ z[0:j]) / s
+            pr[I0] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
             k = np.argmin(pr)
 
@@ -435,7 +434,7 @@ class TruncatedMVN:
             s = self.cov[j, j] - np.sum(L[j, 0:j] ** 2, axis=0)
             if s < -0.01:
                 raise RuntimeError("Sigma is not positive semi-definite")
-            elif s < 0:
+            if s < 0:
                 s = self.eps
             L[j, j] = np.sqrt(s)
             new_L = (
@@ -461,11 +460,11 @@ def lnNormalProb(a, b):
     # computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'
     p = np.zeros_like(a)
     # case b>a>0
-    I = a > 0
-    if np.any(I):
-        pa = lnPhi(a[I])
-        pb = lnPhi(b[I])
-        p[I] = pa + np.log1p(-np.exp(pb - pa))
+    I0 = a > 0
+    if np.any(I0):
+        pa = lnPhi(a[I0])
+        pb = lnPhi(b[I0])
+        p[I0] = pa + np.log1p(-np.exp(pb - pa))
     # case a<b<0
     idx = b < 0
     if np.any(idx):
@@ -473,12 +472,12 @@ def lnNormalProb(a, b):
         pb = lnPhi(-b[idx])
         p[idx] = pb + np.log1p(-np.exp(pa - pb))
     # case a < 0 < b
-    I = (~I) & (~idx)
-    if np.any(I):
+    I0 = (~I0) & (~idx)
+    if np.any(I0):
         # pylint: disable=no-member
-        pa = special.erfc(-a[I] / np.sqrt(2)) / 2  # lower tail
-        pb = special.erfc(b[I] / np.sqrt(2)) / 2  # upper tail
-        p[I] = np.log1p(-pa - pb)
+        pa = special.erfc(-a[I0] / np.sqrt(2)) / 2  # lower tail
+        pb = special.erfc(b[I0] / np.sqrt(2)) / 2  # upper tail
+        p[I0] = np.log1p(-pa - pb)
         # pylint: enable=no-member
     return p
 
@@ -496,7 +495,6 @@ def lnPhi(x):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    import scipy.stats as stats
 
     d_test = 50
     # random mu and cov

@@ -1,0 +1,36 @@
+name: numcosmo_developer
+channels:
+  - conda-forge
+dependencies:
+  - black
+  - c-compiler
+  - fftw
+  - cfitsio
+  - flake8
+  - fortran-compiler
+  - getdist
+  - glib
+  - glib-tools
+  - gmp
+  - gobject-introspection
+  - gsl
+  - hdf5
+  - libfyaml
+  - matplotlib-base
+  - meson
+  - mpfr
+  - mypy
+  - ninja
+  - nlopt
+  - numpy >= 1.21.0
+  - openblas
+  - openmpi
+  - pip
+  - pip:
+    - pygobject-stubs
+  - pyccl >= 3.0.0
+  - pygobject
+  - pylint
+  - pytest
+  - python >= 3.9
+
