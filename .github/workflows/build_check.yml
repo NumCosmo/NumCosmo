@@ -171,6 +171,9 @@ jobs:
           export NUMCOSMO_DIR=${PWD}
           conda env config vars set NUMCOSMO_DIR=${NUMCOSMO_DIR}
           conda activate numcosmo_developer
+          [[ -e $GCC_AR ]] && AR=$GCC_AR
+          [[ -e $GCC_NM ]] && NM=$GCC_NM
+          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Ddebug=true -Dnumcosmo_py=true --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
