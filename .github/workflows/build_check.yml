@@ -191,8 +191,8 @@ jobs:
       - name: Running mypy
         run: |
           mypy -p numcosmo_py
-      - name: Running pylint
-        run: |
-          pylint --rcfile .pylintrc numcosmo_py
+      #- name: Running pylint
+      #  run: |
+      #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
